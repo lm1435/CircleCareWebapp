@@ -1,0 +1,4 @@
+# CircleCare web companion (my.circlecare.app) — authenticated app, not indexable.
+# Everything here lives behind login; there is no public content to crawl.
+User-agent: *
+Disallow: /

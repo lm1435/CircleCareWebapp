@@ -1,0 +1,37 @@
+# Apache config for the CircleCare web companion (static SPA on shared hosting).
+# Vite copies public/ into dist/, so this ships inside the zip automatically.
+# Mirrors the intent of nginx.conf for Apache/cPanel (Namecheap) hosts.
+
+# --- SPA fallback: send non-file routes to index.html so client routing works -
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Don't rewrite real files or directories (assets, .well-known, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  # Everything else -> index.html
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# --- Universal-link association files: serve as JSON, no redirect -------------
+<Files "apple-app-site-association">
+  ForceType application/json
+</Files>
+
+# --- Caching: hashed assets immutable; index.html never cached ---------------
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2?|png|jpg|jpeg|svg|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <Files "index.html">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </Files>
+
+  # --- Security headers (replicate nginx.conf; edit origins to match prod) ----
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self'; connect-src 'self' https://api.circlecare.app https://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com; frame-src 'self' blob: https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  Header always set X-Frame-Options "DENY"
+</IfModule>
