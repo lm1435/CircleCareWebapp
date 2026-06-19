@@ -1,0 +1,47 @@
+{
+  "appName": "CircleCare",
+  "loading": "Loading...",
+  "error": "Error",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "save": "Save",
+  "close": "Close",
+  "today": "Today",
+  "comingSoon": "Coming soon",
+  "skipToContent": "Skip to content",
+  "nav": {
+    "label": "Main navigation",
+    "circles": "My Circles",
+    "calendar": "Calendar",
+    "activity": "Activity",
+    "health": "Health",
+    "emergency": "Emergency Info",
+    "documents": "Documents",
+    "members": "Members"
+  },
+  "menu": {
+    "toggle": "Navigation menu",
+    "close": "Close navigation menu"
+  },
+  "header": {
+    "switchCircle": "Switch circle",
+    "circlesError": "Couldn't load your circles",
+    "account": "Account",
+    "logout": "Log out"
+  },
+  "downloadApp": {
+    "title": "Get the full experience.",
+    "subtitle": "Download CircleCare for iOS or Android.",
+    "cta": "Download the App",
+    "appStore": "Download on the App Store",
+    "googlePlay": "Get it on Google Play"
+  },
+  "downloadBanner": {
+    "regionLabel": "Get the app",
+    "message": "Get the full CircleCare experience in the app.",
+    "mobileMessage": "CircleCare is better in the app.",
+    "getApp": "Get the app",
+    "dismiss": "Dismiss app download banner"
+  }
+}

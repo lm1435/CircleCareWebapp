@@ -1,0 +1,116 @@
+/*
+ * Print styles for the Emergency Info page (plan Task 31).
+ * Imported by src/pages/EmergencyInfoPage.tsx — NOT part of globals.css.
+ *
+ * The page adds `emergency-print-scope` to <body> while mounted, so these
+ * rules never affect printing of other pages.
+ *
+ * Families pin this sheet to the fridge: clean single column, black on white,
+ * big legible type, no app chrome, and a header identifying whose info it is.
+ */
+
+/* Screen: print-only elements stay hidden until printing. */
+.print-only {
+  display: none;
+}
+
+@media print {
+  body.emergency-print-scope {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* Hide all app chrome: top header, sidebar nav, and anything opted out
+     (in-page nav, print button, download-the-app CTAs, banners). */
+  body.emergency-print-scope header,
+  body.emergency-print-scope aside,
+  body.emergency-print-scope nav,
+  body.emergency-print-scope .no-print {
+    display: none !important;
+  }
+
+  body.emergency-print-scope .print-only {
+    display: block;
+  }
+
+  body.emergency-print-scope main {
+    padding: 0 !important;
+  }
+
+  /* Print header: "CircleCare Emergency Information" + recipient + date. */
+  body.emergency-print-scope .print-header {
+    margin-bottom: 16pt;
+    padding-bottom: 8pt;
+    border-bottom: 2pt solid #000;
+  }
+
+  body.emergency-print-scope .print-header p {
+    margin: 0;
+    color: #000;
+  }
+
+  /* Clean single column, full width — no max-width constraint on paper. */
+  body.emergency-print-scope .emergency-content {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  body.emergency-print-scope .emergency-content section {
+    margin-bottom: 14pt;
+  }
+
+  /* Never split a card (a doctor, a contact, an insurance plan) across
+     pages — each stays whole. */
+  body.emergency-print-scope .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1pt solid #000 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    padding: 8pt 10pt !important;
+    margin-bottom: 8pt;
+  }
+
+  body.emergency-print-scope h1,
+  body.emergency-print-scope h2,
+  body.emergency-print-scope h3,
+  body.emergency-print-scope p,
+  body.emergency-print-scope dt,
+  body.emergency-print-scope dd,
+  body.emergency-print-scope span {
+    color: #000 !important;
+  }
+
+  body.emergency-print-scope h2 {
+    break-after: avoid;
+    page-break-after: avoid;
+    font-size: 14pt;
+  }
+
+  /* Phone numbers print as plain black text — keep them prominent. */
+  body.emergency-print-scope a {
+    color: #000 !important;
+    text-decoration: none !important;
+    font-weight: 600;
+  }
+
+  /* Badges (Primary, plan labels) become simple outlined black text. */
+  body.emergency-print-scope .print-card .rounded-full,
+  body.emergency-print-scope .print-card [class*='bg-'] {
+    background: #fff !important;
+    color: #000 !important;
+    border: 0.5pt solid #000;
+  }
+
+  /* dt labels: small caps style survives in black. */
+  body.emergency-print-scope dt {
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}

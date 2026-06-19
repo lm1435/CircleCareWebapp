@@ -1,0 +1,33 @@
+{
+  "title": "Documents",
+  "count_one": "{{count}} document",
+  "count_other": "{{count}} documents",
+  "storageUsed": "{{used}} of {{limit}} used",
+  "filterLabel": "Filter by category",
+  "categories": {
+    "all": "All",
+    "medical_records": "Medical Records",
+    "insurance": "Insurance",
+    "legal": "Legal",
+    "prescriptions": "Prescriptions",
+    "other": "Other"
+  },
+  "uploadCtaTitle": "Need to add a document?",
+  "uploadCta": "Upload documents from the CircleCare app on your phone.",
+  "errorTitle": "We couldn't load the documents.",
+  "errorHint": "Check your connection and try again.",
+  "noDocuments": "No documents yet",
+  "noDocumentsHint": "Documents uploaded in the CircleCare app will appear here.",
+  "noCategoryDocuments": "No documents in this category",
+  "uploadedOn": "Uploaded {{date}}",
+  "preview": "Preview",
+  "previewDocument": "Preview {{name}}",
+  "download": "Download",
+  "downloading": "Downloading...",
+  "downloadDocument": "Download {{name}}",
+  "downloadFailed": "Download failed. Please try again.",
+  "closePreview": "Close preview",
+  "previewFailed": "We couldn't load the preview.",
+  "pdfFallbackHint": "PDF not displaying? Open it in a new tab or download it.",
+  "openInNewTab": "Open in new tab"
+}

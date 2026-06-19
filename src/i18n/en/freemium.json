@@ -1,0 +1,13 @@
+{
+  "viewOnly": {
+    "banner": "View-only access. Contact {{ownerName}} for details.",
+    "bannerShort": "View-only access"
+  },
+  "readOnly": {
+    "ownerBanner": "Re-subscribe to manage this circle.",
+    "memberBanner": "You can view but not edit this circle."
+  },
+  "circleSelection": {
+    "banner": "Open the CircleCare app to choose which circle to keep."
+  }
+}

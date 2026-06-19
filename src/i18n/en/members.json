@@ -1,0 +1,38 @@
+{
+  "picker": {
+    "heading": "My Circles",
+    "subheading": "Choose a circle to see its calendar and care details.",
+    "open": "Open {{name}}",
+    "caringFor": "Caring for {{name}}",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "errorTitle": "Unable to load circles",
+    "errorBody": "Please check your connection and try again.",
+    "empty": {
+      "title": "You're not part of any care circle yet.",
+      "body": "Download the app to create one or ask someone to invite you."
+    }
+  },
+  "roles": {
+    "owner": "Owner",
+    "caregiver": "Caregiver",
+    "careRecipient": "Care Recipient"
+  },
+  "access": {
+    "readOnly": "Read-only",
+    "viewOnly": "View Only",
+    "readOnlyOwnerSubtitle": "Re-subscribe to manage this circle",
+    "readOnlyMemberSubtitle": "You can view but not edit this circle",
+    "viewOnlySubtitle": "View-only access. Contact owner for details."
+  },
+  "list": {
+    "heading": "Members",
+    "subheading": "Everyone in this care circle. Invite or remove members in the app.",
+    "joined": "Joined {{date}}",
+    "you": "(you)",
+    "medResponsible": "Manages medication reminders",
+    "errorTitle": "Unable to load members",
+    "errorBody": "Please check your connection and try again.",
+    "empty": "No members in this circle yet."
+  }
+}

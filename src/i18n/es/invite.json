@@ -1,0 +1,25 @@
+{
+  "title": "{{inviterName}} te invitó a ayudar a cuidar a {{recipientName}}",
+  "circleLabel": "Círculo de cuidado",
+  "appDescription": "CircleCare ayuda a las familias a coordinar juntas los medicamentos, las citas y el cuidado diario.",
+  "roles": {
+    "caregiver": "Cuidador",
+    "care_recipient": "Receptor de Cuidado"
+  },
+  "downloadPrompt": "Descarga la app para aceptar tu invitación",
+  "appStore": "Descargar en el App Store",
+  "googlePlay": "Disponible en Google Play",
+  "codeLabel": "Tu código de invitación:",
+  "copyCode": "Copiar código de invitación",
+  "copied": "Copiado",
+  "codeCopied": "Código de invitación copiado al portapapeles",
+  "loading": "Cargando tu invitación",
+  "error": {
+    "title": "Esta invitación venció o no es válida",
+    "suggestion": "Pídele a la persona que te invitó que te envíe una nueva invitación. Mientras tanto, puedes descargar la app y unirte en cuanto llegue tu nueva invitación."
+  },
+  "og": {
+    "title": "{{inviterName}} te invitó a CircleCare",
+    "description": "Únete a {{circleName}} para ayudar a coordinar el cuidado de {{recipientName}}"
+  }
+}

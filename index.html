@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>CircleCare</title>
+    <!--
+      Static default meta tags for the whole SPA. Route-specific tags
+      (e.g. per-invite OG tags on /invite/:code) are set at runtime via
+      react-helmet-async — but link-preview crawlers do NOT execute JS, so
+      the deployment config must add a prerender rule for /invite/* if rich
+      previews matter (handled in the deployment task).
+    -->
+    <meta
+      name="description"
+      content="CircleCare helps families coordinate medications, appointments, and everyday care together."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CircleCare" />
+    <meta property="og:title" content="CircleCare" />
+    <meta
+      property="og:description"
+      content="CircleCare helps families coordinate medications, appointments, and everyday care together."
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

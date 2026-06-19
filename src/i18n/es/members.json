@@ -1,0 +1,38 @@
+{
+  "picker": {
+    "heading": "Mis Círculos",
+    "subheading": "Elige un círculo para ver su calendario y detalles de cuidado.",
+    "open": "Abrir {{name}}",
+    "caringFor": "Cuidando a {{name}}",
+    "memberCount_one": "{{count}} miembro",
+    "memberCount_other": "{{count}} miembros",
+    "errorTitle": "No se pudieron cargar los círculos",
+    "errorBody": "Por favor revisa tu conexión e intenta de nuevo.",
+    "empty": {
+      "title": "Aún no formas parte de ningún círculo de cuidado.",
+      "body": "Descarga la app para crear uno o pide que alguien te invite."
+    }
+  },
+  "roles": {
+    "owner": "Dueño",
+    "caregiver": "Cuidador",
+    "careRecipient": "Receptor de Cuidado"
+  },
+  "access": {
+    "readOnly": "Solo lectura",
+    "viewOnly": "Solo Lectura",
+    "readOnlyOwnerSubtitle": "Vuelve a suscribirte para administrar este círculo",
+    "readOnlyMemberSubtitle": "Puedes ver este círculo, pero no editarlo",
+    "viewOnlySubtitle": "Acceso de solo lectura. Contacta al dueño para más detalles."
+  },
+  "list": {
+    "heading": "Miembros",
+    "subheading": "Todos en este círculo de cuidado. Invita o elimina miembros en la app.",
+    "joined": "Se unió el {{date}}",
+    "you": "(tú)",
+    "medResponsible": "Administra los recordatorios de medicamentos",
+    "errorTitle": "No se pudieron cargar los miembros",
+    "errorBody": "Por favor revisa tu conexión e intenta de nuevo.",
+    "empty": "Aún no hay miembros en este círculo."
+  }
+}

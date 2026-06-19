@@ -1,0 +1,73 @@
+{
+  "title": "Info de Emergencia",
+  "subtitle": "Comparte con paramédicos o proveedores de salud.",
+  "loadingLabel": "Cargando información de emergencia",
+  "errorTitle": "No pudimos cargar la información de emergencia.",
+  "retry": "Reintentar",
+  "print": "Imprimir",
+  "printHeading": "Información de Emergencia de CircleCare",
+  "preparedFor": "Información de emergencia para {{name}}",
+  "printedOn": "Generado el {{date}}",
+  "onThisPage": "En esta página",
+  "readOnlyNotice": "Esta página es de solo lectura.",
+  "downloadToEdit": "Descarga la app de CircleCare para agregar o editar esta información.",
+  "downloadCta": "Descargar la app",
+  "emptyTitle": "Aún no hay información de emergencia",
+  "emptyHint": "Agrega doctores, alergias, seguro y contactos de emergencia en la app de CircleCare y aparecerán aquí.",
+  "primary": "Principal",
+  "callAria": "Llamar a {{name}}",
+  "atAGlance": {
+    "title": "De un vistazo",
+    "bloodType": "Tipo de Sangre",
+    "allergies": "Alergias",
+    "conditions": "Condiciones",
+    "primaryContact": "Contacto de Emergencia"
+  },
+  "recipient": {
+    "dob": "Fecha de nacimiento",
+    "conditions": "Condiciones"
+  },
+  "sections": {
+    "medicalInfo": "Información Médica",
+    "doctors": "Doctores",
+    "contacts": "Contactos de Emergencia",
+    "insurance": "Seguro",
+    "directives": "Estado de Código"
+  },
+  "medicalInfo": {
+    "bloodType": "Tipo de Sangre",
+    "medicationAllergies": "Alergias a Medicamentos",
+    "otherAllergies": "Otras Alergias",
+    "conditions": "Condiciones"
+  },
+  "doctors": {
+    "specialty": "Especialidad",
+    "phone": "Teléfono",
+    "address": "Dirección"
+  },
+  "contacts": {
+    "relationship": "Parentesco",
+    "phone": "Teléfono"
+  },
+  "insurance": {
+    "policyNumber": "No. de Póliza",
+    "groupNumber": "No. de Grupo",
+    "phone": "Teléfono",
+    "rxBin": "Rx BIN",
+    "rxPcn": "Rx PCN",
+    "rxGroup": "Rx Group"
+  },
+  "directives": {
+    "dnrStatus": "Estado DNR",
+    "dnrYes": "Sí",
+    "dnrNo": "No",
+    "details": "Directivas Anticipadas"
+  },
+  "empty": {
+    "medicalInfo": "Aún no hay información médica agregada",
+    "doctors": "Aún no hay doctores agregados",
+    "contacts": "Aún no hay contactos de emergencia agregados",
+    "insurance": "Aún no hay información del seguro agregada",
+    "directives": "Sin estado de código registrado"
+  }
+}

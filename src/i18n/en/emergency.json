@@ -1,0 +1,73 @@
+{
+  "title": "Emergency Info",
+  "subtitle": "Share with first responders or care providers.",
+  "loadingLabel": "Loading emergency information",
+  "errorTitle": "We couldn't load the emergency information.",
+  "retry": "Try again",
+  "print": "Print",
+  "printHeading": "CircleCare Emergency Information",
+  "preparedFor": "Emergency information for {{name}}",
+  "printedOn": "Generated {{date}}",
+  "onThisPage": "On this page",
+  "readOnlyNotice": "This page is read-only.",
+  "downloadToEdit": "Download the CircleCare app to add or edit this information.",
+  "downloadCta": "Download the app",
+  "emptyTitle": "No emergency information yet",
+  "emptyHint": "Add doctors, allergies, insurance, and emergency contacts in the CircleCare app, and they will appear here.",
+  "primary": "Primary",
+  "callAria": "Call {{name}}",
+  "atAGlance": {
+    "title": "At a glance",
+    "bloodType": "Blood Type",
+    "allergies": "Allergies",
+    "conditions": "Conditions",
+    "primaryContact": "Emergency Contact"
+  },
+  "recipient": {
+    "dob": "Date of birth",
+    "conditions": "Conditions"
+  },
+  "sections": {
+    "medicalInfo": "Medical Information",
+    "doctors": "Doctors",
+    "contacts": "Emergency Contacts",
+    "insurance": "Insurance",
+    "directives": "Code Status"
+  },
+  "medicalInfo": {
+    "bloodType": "Blood Type",
+    "medicationAllergies": "Medication Allergies",
+    "otherAllergies": "Other Allergies",
+    "conditions": "Conditions"
+  },
+  "doctors": {
+    "specialty": "Specialty",
+    "phone": "Phone",
+    "address": "Address"
+  },
+  "contacts": {
+    "relationship": "Relationship",
+    "phone": "Phone"
+  },
+  "insurance": {
+    "policyNumber": "Policy #",
+    "groupNumber": "Group #",
+    "phone": "Phone",
+    "rxBin": "Rx BIN",
+    "rxPcn": "Rx PCN",
+    "rxGroup": "Rx Group"
+  },
+  "directives": {
+    "dnrStatus": "DNR Status",
+    "dnrYes": "Yes",
+    "dnrNo": "No",
+    "details": "Advance Directives"
+  },
+  "empty": {
+    "medicalInfo": "No medical information added yet",
+    "doctors": "No doctors added yet",
+    "contacts": "No emergency contacts added yet",
+    "insurance": "No insurance information added yet",
+    "directives": "No code status on file"
+  }
+}

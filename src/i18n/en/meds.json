@@ -1,0 +1,27 @@
+{
+  "title": "Today's Meds",
+  "empty": "No medications today",
+  "loadError": "Couldn't load today's medications",
+  "confirm": "Confirm",
+  "skip": "Skip",
+  "status": {
+    "taken": "Taken",
+    "missed": "Missed",
+    "pending": "Pending",
+    "skipped": "Skipped"
+  },
+  "dialog": {
+    "title": "Confirm medication",
+    "statusLabel": "Medication status",
+    "taken": "Taken",
+    "skipped": "Skipped",
+    "noteLabel": "Note (optional)",
+    "notePlaceholder": "Add a note",
+    "submit": "Save",
+    "submitting": "Saving...",
+    "success": "Medication updated",
+    "error": "Couldn't save. Please try again.",
+    "cancel": "Cancel"
+  },
+  "permissionDenied": "You don't have permission to confirm medications in this circle."
+}

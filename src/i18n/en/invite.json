@@ -1,0 +1,25 @@
+{
+  "title": "{{inviterName}} invited you to help care for {{recipientName}}",
+  "circleLabel": "Care circle",
+  "appDescription": "CircleCare helps families coordinate medications, appointments, and everyday care together.",
+  "roles": {
+    "caregiver": "Caregiver",
+    "care_recipient": "Care Recipient"
+  },
+  "downloadPrompt": "Download the app to accept your invite",
+  "appStore": "Download on the App Store",
+  "googlePlay": "Get it on Google Play",
+  "codeLabel": "Your invite code:",
+  "copyCode": "Copy invite code",
+  "copied": "Copied",
+  "codeCopied": "Invite code copied to clipboard",
+  "loading": "Loading your invitation",
+  "error": {
+    "title": "This invite has expired or is invalid",
+    "suggestion": "Ask the person who invited you to send you a new invite. In the meantime, you can download the app and join as soon as your new invite arrives."
+  },
+  "og": {
+    "title": "{{inviterName}} invited you to CircleCare",
+    "description": "Join {{circleName}} to help coordinate care for {{recipientName}}"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "title": "Medicamentos de hoy",
+  "empty": "No hay medicamentos hoy",
+  "loadError": "No se pudieron cargar los medicamentos de hoy",
+  "confirm": "Confirmar",
+  "skip": "Omitir",
+  "status": {
+    "taken": "Tomado",
+    "missed": "No tomado",
+    "pending": "Pendiente",
+    "skipped": "Omitido"
+  },
+  "dialog": {
+    "title": "Confirmar medicamento",
+    "statusLabel": "Estado del medicamento",
+    "taken": "Tomado",
+    "skipped": "Omitido",
+    "noteLabel": "Nota (opcional)",
+    "notePlaceholder": "Agregar una nota",
+    "submit": "Guardar",
+    "submitting": "Guardando...",
+    "success": "Medicamento actualizado",
+    "error": "No se pudo guardar. Inténtalo de nuevo.",
+    "cancel": "Cancelar"
+  },
+  "permissionDenied": "No tienes permiso para confirmar medicamentos en este círculo."
+}

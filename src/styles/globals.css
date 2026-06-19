@@ -1,0 +1,279 @@
+@import 'tailwindcss';
+
+/*
+ * CircleCare design tokens — mirrored EXACTLY from the mobile app's design
+ * system (mobile/src/theme/index.ts, the `CC` palette + `fontFamily`).
+ * Warm paper aesthetic, Instrument Serif for display, Inter for UI/data,
+ * desaturated section-scoped tints.
+ *
+ * Fonts are SELF-HOSTED via @fontsource packages (imported in src/main.tsx);
+ * CSP forbids third-party runtime origins, so never add a fonts CDN here.
+ *
+ * Section tint → domain mapping (matches mobile):
+ *   moss       → profile / adherence / tasks
+ *   terracotta → emergency
+ *   clay       → medications
+ *   dusk       → activity / appointments
+ * Text-on-tint contrast pattern (mobile): the tint at full strength sits on
+ * its `*-soft` background. `*-deep` variants exist only where a darker text
+ * color is needed for WCAG AA on light surfaces.
+ */
+
+@theme {
+  /* Paper-warm neutrals (CC) */
+  --color-ink: #1a1916;
+  --color-ink-2: #4a4742;
+  --color-ink-3: #6e6961;
+  --color-cream: #ffffff;
+  --color-bg: #fbf9f5;
+  --color-bg-2: #f3efe6;
+  --color-bg-3: #ebe5da;
+  --color-line: rgba(26, 25, 22, 0.14);
+  --color-line-2: rgba(26, 25, 22, 0.08);
+
+  /* Section tints + soft variants (CC). Deep = darker text where needed. */
+  --color-moss: #5c6b4e;
+  --color-moss-soft: #eef0e8;
+  --color-moss-deep: #3a4832;
+  --color-terracotta: #a84b3a;
+  --color-terracotta-soft: #f6ece6;
+  --color-terracotta-deep: #8b3a2c;
+  --color-clay: #8b5c32;
+  --color-clay-soft: #f5eadf;
+  --color-clay-deep: #6e4825;
+  --color-dusk: #4a6073;
+  --color-dusk-soft: #e8edf1;
+  --color-dusk-deep: #3a4e5e;
+
+  --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --radius-pill: 999px;
+}
+
+@layer base {
+  :root {
+    /* Section tints (CC) */
+    --moss: #5c6b4e;
+    --moss-soft: #eef0e8;
+    --moss-deep: #3a4832;
+    --terracotta: #a84b3a;
+    --terracotta-soft: #f6ece6;
+    --terracotta-deep: #8b3a2c;
+    --clay: #8b5c32;
+    --clay-soft: #f5eadf;
+    --clay-deep: #6e4825;
+    --dusk: #4a6073;
+    --dusk-soft: #e8edf1;
+    --dusk-deep: #3a4e5e;
+    /* Paper-warm neutrals (CC) */
+    --ink: #1a1916;
+    --ink-2: #4a4742;
+    --ink-3: #6e6961;
+    --cream: #ffffff;
+    --bg: #fbf9f5;
+    --bg-2: #f3efe6;
+    --bg-3: #ebe5da;
+    --line: rgba(26, 25, 22, 0.14);
+    --line-2: rgba(26, 25, 22, 0.08);
+    --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --mono: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* Type scale — 6 sizes */
+    --text-xs: 0.75rem; /* 12px — eyebrows, badges, mono labels */
+    --text-sm: 0.9375rem; /* 15px — captions, meta */
+    --text-base: 1.125rem; /* 18px — body, descriptions, links, buttons */
+    --text-lg: 1.375rem; /* 22px — brand, card titles, subheadlines */
+    --text-xl: 2rem; /* 32px — section subheads, card headlines */
+    /* Display: clamp() per element — hero/section headlines */
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 1.125rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: inherit;
+    font-family: var(--sans);
+  }
+
+  /* Accessible keyboard focus — visible ring, none for mouse users */
+  *:focus-visible {
+    outline: 2px solid var(--terracotta);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer components {
+  /* Typography utilities */
+  .serif {
+    font-family: var(--serif);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  .mono {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Pill buttons (999px radius). On terracotta backgrounds always use
+     --terracotta-deep for contrast — never raw --terracotta behind text. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 22px;
+    border-radius: 999px;
+    font-family: var(--sans);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--cream);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--terracotta-deep);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 25, 22, 0.15);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: var(--ink);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 25, 22, 0.08);
+  }
+  .btn-ghost:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+  .btn-terracotta {
+    background: var(--terracotta-deep);
+    color: var(--cream);
+  }
+  .btn-terracotta:hover:not(:disabled) {
+    background: var(--terracotta-deep);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(168, 75, 58, 0.2);
+  }
+  .btn-terracotta:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /*
+   * Skeleton shimmer — mirrors mobile's directional highlight sweep
+   * (Skeleton.tsx LinearGradient translateX). A moving highlight gradient
+   * rides across the bg-3 base. prefers-reduced-motion falls back to a
+   * static tint with no motion (handled by the .cc-shimmer rule below;
+   * the global reduced-motion block also neutralizes the animation).
+   */
+  @keyframes cc-shimmer {
+    0% {
+      background-position: 150% 0;
+    }
+    100% {
+      background-position: -150% 0;
+    }
+  }
+
+  .cc-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: cc-shimmer 1.5s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cc-shimmer {
+      animation: none;
+      background-image: none;
+    }
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

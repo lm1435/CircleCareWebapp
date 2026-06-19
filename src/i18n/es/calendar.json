@@ -1,0 +1,58 @@
+{
+  "week": "Semana",
+  "month": "Mes",
+  "viewLabel": "Vista del calendario",
+  "weekViewLabel": "Calendario en vista de semana",
+  "monthViewLabel": "Calendario en vista de mes",
+  "previousWeek": "Semana anterior",
+  "nextWeek": "Próxima semana",
+  "previousMonth": "Mes anterior",
+  "nextMonth": "Próximo mes",
+  "timesShownIn": "Las horas se muestran en {{timezone}}",
+  "allDay": "Todo el día",
+  "noEventsWeek": "Sin eventos esta semana",
+  "noEventsMonth": "Sin eventos este mes",
+  "noEventsDay": "Nada programado para este día",
+  "errorTitle": "No se pudo cargar el calendario",
+  "errorHint": "Verifica tu conexión e intenta de nuevo.",
+  "eventCount_one": "{{count}} evento",
+  "eventCount_other": "{{count}} eventos",
+  "moreEvents": "{{count}} más",
+  "selectDayHint": "Selecciona un día para ver sus eventos",
+  "dayPanelLabel": "Eventos del día seleccionado",
+  "timeColumnLabel": "Hora",
+  "currentTimeLabel": "Hora actual",
+  "eventTypes": {
+    "medication": "Medicamento",
+    "appointment": "Cita",
+    "task": "Tarea"
+  },
+  "status": {
+    "taken": "Tomado",
+    "missed": "Perdido",
+    "skipped": "Omitido",
+    "pending": "Pendiente"
+  },
+  "eventDetail": {
+    "title": "Detalles del Evento",
+    "date": "Fecha",
+    "time": "Hora",
+    "location": "Ubicación",
+    "notes": "Notas",
+    "repeats": "Se repite",
+    "status": "Estado",
+    "takenAt": "Tomado a las {{time}}",
+    "takenLateAt": "Tomado tarde a las {{time}}",
+    "skippedAt": "Omitido a las {{time}}",
+    "missed": "Perdido",
+    "close": "Cerrar detalles del evento"
+  },
+  "recurrence": {
+    "daily": "Diario",
+    "everyOtherDay": "Cada tercer día",
+    "weekly": "Semanal",
+    "weeklyOn": "Semanal los {{days}}",
+    "everyNDays_one": "Cada día",
+    "everyNDays_other": "Cada {{count}} días"
+  }
+}

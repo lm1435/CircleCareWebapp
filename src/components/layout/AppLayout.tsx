@@ -1,0 +1,147 @@
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
+import { AppDownloadBanner } from './AppDownloadBanner';
+import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function CloseIcon(): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+    >
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+/**
+ * Authenticated layout shell (plan Task 13): download banner + header on top,
+ * sidebar left, page content in <main>. Below lg the sidebar becomes a
+ * focus-trapped hamburger drawer (Escape closes, body scroll locked).
+ * No UI state is persisted to storage.
+ */
+export function AppLayout(): ReactElement {
+  const { t } = useTranslation('common');
+  const [navOpen, setNavOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+  const location = useLocation();
+
+  // Close the drawer on any navigation.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
+
+  // Drawer behavior: focus trap, Escape to close, body scroll lock,
+  // focus restored to the trigger on close.
+  useEffect(() => {
+    if (!navOpen) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const drawer = drawerRef.current;
+    const getFocusables = (): HTMLElement[] =>
+      Array.from(drawer?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []);
+
+    getFocusables()[0]?.focus();
+
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setNavOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusables = getFocusables();
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey) {
+        if (active === first || !drawer?.contains(active)) {
+          event.preventDefault();
+          last?.focus();
+        }
+      } else if (active === last || !drawer?.contains(active)) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [navOpen]);
+
+  return (
+    <div className="grid min-h-screen grid-rows-[auto_auto_1fr] bg-bg">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
+      >
+        {t('skipToContent')}
+      </a>
+
+      <AppDownloadBanner />
+
+      <Header navOpen={navOpen} onToggleNav={() => setNavOpen((open) => !open)} />
+
+      <div className="grid lg:grid-cols-[16rem_1fr]">
+        <Sidebar variant="desktop" />
+        <main id="main" className="min-w-0">
+          <NeedsCircleSelectionBanner />
+          <Outlet />
+        </main>
+      </div>
+
+      {navOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div
+            aria-hidden="true"
+            onClick={() => setNavOpen(false)}
+            className="absolute inset-0 bg-ink/40"
+          />
+          <div
+            ref={drawerRef}
+            id="mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('nav.label')}
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-bg shadow-xl"
+          >
+            <div className="flex justify-end p-2">
+              <button
+                type="button"
+                onClick={() => setNavOpen(false)}
+                aria-label={t('menu.close')}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <Sidebar variant="drawer" onNavigate={() => setNavOpen(false)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

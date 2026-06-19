@@ -1,0 +1,58 @@
+{
+  "week": "Week",
+  "month": "Month",
+  "viewLabel": "Calendar view",
+  "weekViewLabel": "Week view calendar",
+  "monthViewLabel": "Month view calendar",
+  "previousWeek": "Previous week",
+  "nextWeek": "Next week",
+  "previousMonth": "Previous month",
+  "nextMonth": "Next month",
+  "timesShownIn": "Times shown in {{timezone}}",
+  "allDay": "All day",
+  "noEventsWeek": "No events this week",
+  "noEventsMonth": "No events this month",
+  "noEventsDay": "Nothing scheduled for this day",
+  "errorTitle": "Couldn't load the calendar",
+  "errorHint": "Check your connection and try again.",
+  "eventCount_one": "{{count}} event",
+  "eventCount_other": "{{count}} events",
+  "moreEvents": "{{count}} more",
+  "selectDayHint": "Select a day to see its events",
+  "dayPanelLabel": "Events for the selected day",
+  "timeColumnLabel": "Time",
+  "currentTimeLabel": "Current time",
+  "eventTypes": {
+    "medication": "Medication",
+    "appointment": "Appointment",
+    "task": "Task"
+  },
+  "status": {
+    "taken": "Taken",
+    "missed": "Missed",
+    "skipped": "Skipped",
+    "pending": "Pending"
+  },
+  "eventDetail": {
+    "title": "Event Details",
+    "date": "Date",
+    "time": "Time",
+    "location": "Location",
+    "notes": "Notes",
+    "repeats": "Repeats",
+    "status": "Status",
+    "takenAt": "Taken at {{time}}",
+    "takenLateAt": "Taken late at {{time}}",
+    "skippedAt": "Skipped at {{time}}",
+    "missed": "Missed",
+    "close": "Close event details"
+  },
+  "recurrence": {
+    "daily": "Daily",
+    "everyOtherDay": "Every other day",
+    "weekly": "Weekly",
+    "weeklyOn": "Weekly on {{days}}",
+    "everyNDays_one": "Every day",
+    "everyNDays_other": "Every {{count}} days"
+  }
+}
