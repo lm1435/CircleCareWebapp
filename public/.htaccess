@@ -5,11 +5,17 @@
 # --- SPA fallback: send non-file routes to index.html so client routing works -
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  # Don't rewrite real files or directories (assets, .well-known, etc.)
+
+  # ACME / SSL HTTP validation (Sectigo/PositiveSSL) must reach .well-known/*
+  # untouched, even before the validation file exists on disk. Keep this FIRST.
+  RewriteRule ^\.well-known/ - [L]
+
+  # Serve real files and directories directly (hashed assets/, images, etc.)
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
-  # Everything else -> index.html
+
+  # Everything else -> index.html (SPA client-side routing)
   RewriteRule ^ index.html [L]
 </IfModule>
 

@@ -43,5 +43,11 @@
     "mobileMessage": "CircleCare is better in the app.",
     "getApp": "Get the app",
     "dismiss": "Dismiss app download banner"
+  },
+  "authHero": {
+    "tagline": "Keep your whole family coordinated — medications, appointments, and who's doing what.",
+    "imageAlt1": "Family laughing together around a table",
+    "imageAlt2": "Multigenerational family sharing a meal outdoors",
+    "imageAlt3": "Family looking at a tablet together on the couch"
   }
 }

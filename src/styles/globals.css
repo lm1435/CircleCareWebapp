@@ -145,6 +145,12 @@
     font-family: var(--serif);
     font-weight: 400;
     letter-spacing: -0.01em;
+    /* Instrument Serif ships a single light weight; the global grayscale
+       smoothing thins it further on macOS. Render serif display text with the
+       default (subpixel) smoothing so strokes land at full weight — closer to
+       how the app renders it on iOS. */
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
   }
   .mono {
     font-family: var(--mono);
