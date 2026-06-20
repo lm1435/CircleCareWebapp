@@ -1,10 +1,7 @@
 import { useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-
-// TODO: replace placeholder store URLs with the real CircleCare
-// App Store / Play Store listing IDs once published.
-const APP_STORE_URL = 'https://apps.apple.com/';
-const PLAY_STORE_URL = 'https://play.google.com/';
+import { APP_STORE_URL, PLAY_STORE_URL } from '@/lib/storeLinks';
+import { AppleGlyph, GooglePlayGlyph } from './StoreBadges';
 
 interface MobileDetection {
   isMobile: boolean;
@@ -66,7 +63,7 @@ export function AppDownloadBanner(): ReactElement | null {
   // Captured once on mount: if already dismissed this session, render nothing.
   const initiallyDismissed = useRef(dismissedThisSession).current;
   const [dismissed, setDismissed] = useState(dismissedThisSession);
-  const [{ isMobile, platform }] = useState(detectMobile);
+  const [{ platform }] = useState(detectMobile);
 
   if (initiallyDismissed) return null;
 
@@ -85,88 +82,66 @@ export function AppDownloadBanner(): ReactElement | null {
       }`}
     >
       <div className="min-h-0 overflow-hidden">
-        {isMobile ? (
-          <div
-            role="region"
-            aria-label={t('downloadBanner.regionLabel')}
-            data-variant="smart"
-            className="flex items-center gap-3 bg-ink px-4 py-2 text-cream"
-          >
-            <p className="m-0 min-w-0 flex-1 text-sm leading-snug">
-              {t('downloadBanner.mobileMessage')}
-            </p>
-            {platform !== null ? (
+        {/* One prominent dark banner at every breakpoint (plan Task 14 originally
+            split mobile/desktop variants; unified per design). On mobile the
+            platform is known, so it deep-links with a single "Get the app"
+            button; on desktop both store buttons are shown. */}
+        <div
+          role="region"
+          aria-label={t('downloadBanner.regionLabel')}
+          data-variant="prominent"
+          className="flex items-center gap-3 bg-ink px-4 py-2 text-cream sm:px-6"
+        >
+          <p className="m-0 min-w-0 flex-1 text-sm leading-snug">
+            {t('downloadBanner.mobileMessage')}
+          </p>
+          {platform !== null ? (
+            <a
+              href={singleStoreUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-terracotta min-h-11 shrink-0 gap-2 px-4 py-2 text-sm"
+            >
+              {platform === 'ios' ? (
+                <AppleGlyph className="h-4 w-4 shrink-0" />
+              ) : (
+                <GooglePlayGlyph className="h-4 w-4 shrink-0" />
+              )}
+              {t('downloadBanner.getApp')}
+            </a>
+          ) : (
+            <div className="flex shrink-0 items-center gap-2">
               <a
-                href={singleStoreUrl}
+                href={APP_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-terracotta min-h-11 shrink-0 px-4 py-2 text-sm"
+                aria-label={t('downloadApp.appStore')}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-cream/30 px-3.5 text-sm font-medium text-cream transition-colors hover:bg-cream/10"
               >
-                {t('downloadBanner.getApp')}
+                <AppleGlyph className="h-4 w-4 shrink-0" />
+                {t('downloadApp.appStoreName')}
               </a>
-            ) : (
-              <span className="flex shrink-0 items-center gap-3">
-                <a
-                  href={APP_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center text-sm font-medium text-cream underline"
-                >
-                  {t('downloadApp.appStore')}
-                </a>
-                <a
-                  href={PLAY_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center text-sm font-medium text-cream underline"
-                >
-                  {t('downloadApp.googlePlay')}
-                </a>
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={handleDismiss}
-              aria-label={t('downloadBanner.dismiss')}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-cream transition-colors hover:bg-ink-2"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        ) : (
-          <div
-            role="region"
-            aria-label={t('downloadBanner.regionLabel')}
-            data-variant="subtle"
-            className="flex flex-wrap items-center justify-center gap-x-4 gap-y-0 border-b border-line bg-bg-2 px-4 py-1"
+              <a
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t('downloadApp.googlePlay')}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-cream/30 px-3.5 text-sm font-medium text-cream transition-colors hover:bg-cream/10"
+              >
+                <GooglePlayGlyph className="h-4 w-4 shrink-0" />
+                {t('downloadApp.playName')}
+              </a>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleDismiss}
+            aria-label={t('downloadBanner.dismiss')}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-cream transition-colors hover:bg-ink-2"
           >
-            <p className="m-0 text-sm text-ink-2">{t('downloadBanner.message')}</p>
-            <a
-              href={APP_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center text-sm font-medium text-terracotta-deep underline transition-colors hover:text-ink"
-            >
-              {t('downloadApp.appStore')}
-            </a>
-            <a
-              href={PLAY_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center text-sm font-medium text-terracotta-deep underline transition-colors hover:text-ink"
-            >
-              {t('downloadApp.googlePlay')}
-            </a>
-            <button
-              type="button"
-              onClick={handleDismiss}
-              aria-label={t('downloadBanner.dismiss')}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-bg-3 hover:text-ink"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        )}
+            <CloseIcon />
+          </button>
+        </div>
       </div>
     </div>
   );

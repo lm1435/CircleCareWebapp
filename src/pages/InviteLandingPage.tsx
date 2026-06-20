@@ -4,18 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Skeleton } from '@/components/ui';
+import { StoreBadges } from '@/components/layout/StoreBadges';
 import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
 
-// ⚠️ NEXT STEPS to ship invite-link sharing (gated on the app being on the stores):
-//   1. Publish the app on the App Store AND Google Play.
-//   2. Replace the two PLACEHOLDER URLs below with the real store listing URLs.
-//   3. Re-enable the Share/Copy buttons in the mobile app — they're commented out
+// ⚠️ NEXT STEPS to ship invite-link sharing:
+//   1. Re-enable the Share/Copy buttons in the mobile app — they're commented out
 //      in mobile/src/screens/circle/InviteMemberScreen.tsx (search "Share / Copy buttons").
-//   4. (nice-to-have) Wire deferred deep-linking so a fresh installer auto-joins the
+//   2. (nice-to-have) Wire deferred deep-linking so a fresh installer auto-joins the
 //      circle instead of having to type the invite code.
-// Until #1+#2 are done, these buttons would send invitees to a dead "download" link.
-const APP_STORE_URL = 'https://apps.apple.com/app/circlecare'; // PLACEHOLDER — not a real listing yet
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.circlecare'; // PLACEHOLDER — not a real listing yet
+// Store listing URLs are live (see src/lib/storeLinks.ts).
 
 const COPIED_FEEDBACK_MS = 2000;
 
@@ -30,16 +27,10 @@ function Wordmark(): ReactElement {
 }
 
 function DownloadButtons({ prompt }: { prompt: string }): ReactElement {
-  const { t } = useTranslation('invite');
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col items-center gap-3">
       <p className="eyebrow m-0 text-center">{prompt}</p>
-      <a className="btn btn-primary w-full" href={APP_STORE_URL} target="_blank" rel="noreferrer">
-        {t('appStore')}
-      </a>
-      <a className="btn btn-ghost w-full" href={PLAY_STORE_URL} target="_blank" rel="noreferrer">
-        {t('googlePlay')}
-      </a>
+      <StoreBadges layout="stack" className="w-full max-w-xs" />
     </div>
   );
 }

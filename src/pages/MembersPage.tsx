@@ -32,7 +32,7 @@ export default function MembersPage(): ReactElement {
       <ul
         aria-busy="true"
         aria-label={t('common:loading')}
-        className="m-0 mt-6 flex list-none flex-col gap-3 p-0"
+        className="m-0 mt-6 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2"
       >
         <MemberRowSkeleton />
         <MemberRowSkeleton />
@@ -57,7 +57,7 @@ export default function MembersPage(): ReactElement {
     );
   } else {
     content = (
-      <ul className="m-0 mt-6 flex list-none flex-col gap-3 p-0">
+      <ul className="m-0 mt-6 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
         {members.map((member) => (
           <MemberRow key={member.id} member={member} />
         ))}
@@ -66,7 +66,7 @@ export default function MembersPage(): ReactElement {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl p-8">
+    <section className="mx-auto w-full max-w-4xl p-8">
       <h1 className="serif m-0 text-2xl text-ink">{t('list.heading')}</h1>
       <p className="mt-2 text-ink-3">{t('list.subheading')}</p>
       {content}

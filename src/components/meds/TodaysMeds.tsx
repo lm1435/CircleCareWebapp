@@ -146,36 +146,39 @@ export function TodaysMeds({ circleId }: TodaysMedsProps): ReactElement | null {
               : 'bg-clay-soft text-clay-deep';
           return (
             <li key={med.id} className="rounded-xl border border-line-2 bg-cream p-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 {/* Leading status/type icon tile */}
                 <span
                   aria-hidden="true"
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${tileClass}`}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] ${tileClass}`}
                 >
                   <MedTileIcon status={status} />
                 </span>
 
+                {/* The name gets the full column width (no longer competing with
+                    the badge on one line) so it stays readable in the sidebar. */}
                 <div className="min-w-0 flex-1">
                   <p
-                    className={`m-0 truncate text-sm font-medium ${
+                    className={`m-0 text-sm font-medium leading-snug ${
                       isDone ? 'text-ink-3 line-through' : 'text-ink'
                     }`}
                   >
                     {med.medication_name || med.title}
                   </p>
-                  <p className="m-0 truncate text-xs text-ink-3">
-                    {med.medication_dosage && <span>{med.medication_dosage}</span>}
-                    {med.medication_dosage && med.scheduled_time ? <span> · </span> : null}
-                    {med.scheduled_time && (
-                      <span>{formatEventTimeCompact(med.scheduled_time, timezone)}</span>
-                    )}
-                  </p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className="m-0 min-w-0 truncate text-xs text-ink-3">
+                      {med.medication_dosage && <span>{med.medication_dosage}</span>}
+                      {med.medication_dosage && med.scheduled_time ? <span> · </span> : null}
+                      {med.scheduled_time && (
+                        <span>{formatEventTimeCompact(med.scheduled_time, timezone)}</span>
+                      )}
+                    </p>
+                    {/* Status badge — reflects the current state. */}
+                    <Badge variant={STATUS_BADGE_VARIANT[status]} className="shrink-0">
+                      {t(`status.${status}`)}
+                    </Badge>
+                  </div>
                 </div>
-
-                {/* Trailing status badge — always reflects the current state. */}
-                <Badge variant={STATUS_BADGE_VARIANT[status]} className="shrink-0">
-                  {t(`status.${status}`)}
-                </Badge>
               </div>
 
               {showActions && (

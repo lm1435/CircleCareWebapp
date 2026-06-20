@@ -36,11 +36,13 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps): ReactE
           alt={t(hero.altKey)}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/25 to-transparent" />
+        {/* Gradient overlay — mirrors mobile WelcomeScreen: bottom ~40% ramps to
+            0.95 opacity so the cream tagline/logo keep AA contrast on any photo. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/95 from-10% via-ink/55 via-55% to-ink/25" />
         <div className="absolute inset-x-0 bottom-0 p-10">
           <div className="flex items-center gap-3">
-            <img src="/icon.png" alt="" className="h-11 w-11 rounded-[12px]" />
-            <p className="serif m-0 text-2xl text-cream">{t('appName')}</p>
+            <img src="/icon.png" alt="" className="h-14 w-14 rounded-[14px]" />
+            <p className="serif m-0 text-4xl text-cream">{t('appName')}</p>
           </div>
           <p className="m-0 mt-3 max-w-md text-base leading-snug text-cream/90">
             {t('authHero.tagline')}

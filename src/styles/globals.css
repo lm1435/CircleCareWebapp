@@ -274,6 +274,30 @@
     }
   }
 
+  /*
+   * Mobile nav drawer entrance: the panel slides in from the left and the
+   * backdrop fades. Used via animate-[drawer-in_…] / animate-[fade-in_…] in
+   * AppLayout. The global prefers-reduced-motion block (in @layer base)
+   * neutralizes both by collapsing animation-duration.
+   */
+  @keyframes drawer-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

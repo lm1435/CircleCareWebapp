@@ -2,8 +2,19 @@
   "picker": {
     "heading": "Mis Círculos",
     "subheading": "Elige un círculo para ver su calendario y detalles de cuidado.",
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches"
+    },
+    "careCircleCount_one": "{{count}} círculo de cuidado",
+    "careCircleCount_other": "{{count}} círculos de cuidado",
     "open": "Abrir {{name}}",
     "caringFor": "Cuidando a {{name}}",
+    "caringWith_one": "Cuidando junto a {{count}} persona",
+    "caringWith_other": "Cuidando junto a {{count}} personas",
+    "personHelping_one": "{{count}} persona ayudando a coordinar el cuidado",
+    "personHelping_other": "{{count}} personas ayudando a coordinar el cuidado",
     "memberCount_one": "{{count}} miembro",
     "memberCount_other": "{{count}} miembros",
     "errorTitle": "No se pudieron cargar los círculos",
@@ -12,6 +23,12 @@
       "title": "Aún no formas parte de ningún círculo de cuidado.",
       "body": "Descarga la app para crear uno o pide que alguien te invite."
     }
+  },
+  "med": {
+    "noMedsToday": "Sin medicamentos hoy",
+    "allTaken": "Todos los medicamentos tomados",
+    "takenToday": "{{taken}}/{{total}} tomados hoy",
+    "takenOverdue": "{{taken}}/{{total}} tomados · {{overdue}} atrasados"
   },
   "roles": {
     "owner": "Dueño",

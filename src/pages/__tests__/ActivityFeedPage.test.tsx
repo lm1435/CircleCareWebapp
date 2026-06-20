@@ -71,6 +71,16 @@ function renderPage() {
 describe('ActivityFeedPage', () => {
   beforeEach(() => {
     mockedGetActivityFeed.mockReset();
+    // Pin "now" to a deterministic mid-afternoon NY instant so Today/Yesterday
+    // grouping never depends on the real wall clock (it previously flaked
+    // between ~midnight–1am ET). Fake ONLY Date — real setTimeout/microtasks
+    // keep React Query + userEvent working.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-06-15T18:00:00Z')); // 2:00 PM America/New_York (EDT)
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders activity items by type with icon, actor name, action text, and timestamp', async () => {

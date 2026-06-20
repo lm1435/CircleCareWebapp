@@ -97,6 +97,39 @@ export async function confirmMedication(
   return response.data.confirmation;
 }
 
+/**
+ * Aggregate "today" medication stats for a circle — the same shape mobile's
+ * CircleListScreen snapshot row uses (mobile/src/api/medicationConfirmations.ts
+ * → MedicationTodaySummary). Powers the per-card status line on the circle
+ * picker. Aggregate counts only; for the full per-med list use getTodaysMedications.
+ */
+export interface MedicationTodaySummary {
+  total_today: number;
+  taken: number;
+  overdue: number; // past due but within the 2-hour grace window
+  not_marked_today: number;
+  not_marked_yesterday: number;
+  not_marked_total: number; // today + yesterday — the "urgent" count
+  next_due: string | null; // HH:MM:SS in the care recipient's timezone
+  next_due_medication: string | null;
+  timezone: string;
+}
+
+interface TodaySummaryEnvelope {
+  success: boolean;
+  data: { summary: MedicationTodaySummary };
+}
+
+/** GET /circles/:circleId/medications/today-summary — aggregate stats only. */
+export async function getMedicationTodaySummary(
+  circleId: string
+): Promise<MedicationTodaySummary> {
+  const response = (await apiClient.get(
+    `/circles/${circleId}/medications/today-summary`
+  )) as unknown as TodaySummaryEnvelope;
+  return response.data.summary;
+}
+
 interface EventsEnvelope {
   success: boolean;
   data: { events: TodaysMedication[] };

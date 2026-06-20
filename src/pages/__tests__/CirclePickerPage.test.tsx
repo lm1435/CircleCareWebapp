@@ -10,6 +10,22 @@ vi.mock('@/api/circles', () => ({
   getCircles: vi.fn(),
 }));
 
+// The hero cards fetch a per-circle today's-meds summary. Stub it to an
+// empty-day summary so cards settle deterministically on "No medications today".
+vi.mock('@/api/medicationConfirmations', () => ({
+  getMedicationTodaySummary: vi.fn().mockResolvedValue({
+    total_today: 0,
+    taken: 0,
+    overdue: 0,
+    not_marked_today: 0,
+    not_marked_yesterday: 0,
+    not_marked_total: 0,
+    next_due: null,
+    next_due_medication: null,
+    timezone: 'America/New_York',
+  }),
+}));
+
 const mockGetCircles = vi.mocked(getCircles);
 
 function makeCircle(overrides: Partial<Circle> = {}): Circle {
@@ -52,7 +68,7 @@ describe('CirclePickerPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders circle cards with name, care recipient, member count, and role', async () => {
+  it('renders circle cards with name, care-together subtitle, and role', async () => {
     mockGetCircles.mockResolvedValue([
       makeCircle(),
       makeCircle({
@@ -67,14 +83,13 @@ describe('CirclePickerPage', () => {
 
     const momCard = await screen.findByRole('link', { name: "Open Mom's Care" });
     expect(within(momCard).getByText("Mom's Care")).toBeInTheDocument();
-    expect(within(momCard).getByText('Caring for Rose')).toBeInTheDocument();
-    expect(within(momCard).getByText('4 members')).toBeInTheDocument();
+    expect(within(momCard).getByText('Caring together with 4 people')).toBeInTheDocument();
     expect(within(momCard).getByText('Owner')).toBeInTheDocument();
     expect(momCard).toHaveAttribute('href', '/circles/c1/calendar');
 
     const dadCard = screen.getByRole('link', { name: "Open Dad's Circle" });
     expect(within(dadCard).getByText('Caregiver')).toBeInTheDocument();
-    expect(within(dadCard).getByText('1 member')).toBeInTheDocument();
+    expect(within(dadCard).getByText('Caring together with 1 person')).toBeInTheDocument();
   });
 
   it('shows the Care Recipient role for is_care_recipient memberships', async () => {
@@ -156,11 +171,11 @@ describe('CirclePickerPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute(
       'href',
-      'https://apps.apple.com/'
+      'https://apps.apple.com/app/id6757629684'
     );
     expect(screen.getByRole('link', { name: 'Get it on Google Play' })).toHaveAttribute(
       'href',
-      'https://play.google.com/'
+      'https://play.google.com/store/apps/details?id=com.circlecare.circlecare'
     );
   });
 

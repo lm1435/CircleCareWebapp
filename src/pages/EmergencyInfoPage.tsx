@@ -56,9 +56,7 @@ function hasInsurance(info: EmergencyInfo): boolean {
 }
 
 function hasDirectives(info: EmergencyInfo): boolean {
-  return info.has_dnr !== null && info.has_dnr !== undefined
-    ? true
-    : !!info.advance_directives;
+  return info.has_dnr !== null && info.has_dnr !== undefined ? true : !!info.advance_directives;
 }
 
 /**
@@ -163,7 +161,7 @@ export default function EmergencyInfoPage(): ReactElement {
   );
 
   return (
-    <section className="mx-auto max-w-3xl p-6 md:p-8">
+    <section className="mx-auto max-w-5xl p-6 md:p-8">
       {/* Print-only header: whose info this is + when the sheet was generated. */}
       <div className="print-only print-header">
         <p className="text-lg font-semibold">{t('printHeading')}</p>
@@ -210,7 +208,7 @@ export default function EmergencyInfoPage(): ReactElement {
         </p>
       </Card>
 
-      <div className="emergency-content mt-8 grid gap-10">
+      <div className="emergency-content mt-8 flex flex-col gap-10">
         {circleDetail && (
           <RecipientHeader
             name={recipientName}
@@ -222,82 +220,88 @@ export default function EmergencyInfoPage(): ReactElement {
 
         <GlanceTiles info={info} />
 
-        <EmergencySection id="medical-info" title={t('sections.medicalInfo')}>
-          {sectionHasData.medicalInfo ? (
-            <MedicalInfoCard
-              bloodType={info.blood_type}
-              medicationAllergies={info.medication_allergies ?? []}
-              allergies={info.allergies ?? []}
-              conditions={info.medical_conditions ?? []}
-            />
-          ) : (
-            <EmptySection message={t('empty.medicalInfo')} />
-          )}
-        </EmergencySection>
-
-        <EmergencySection id="doctors" title={t('sections.doctors')}>
-          {sectionHasData.doctors ? (
-            <>
-              {info.primary_doctor_name && (
-                <DoctorCard
-                  name={info.primary_doctor_name}
-                  specialty={info.primary_doctor_specialty}
-                  phone={info.primary_doctor_phone}
-                  countryCode={info.primary_doctor_country_code}
-                  address={info.primary_doctor_address}
-                  isPrimary
-                />
-              )}
-              {(info.additional_doctors ?? []).map((doctor, index) => (
-                <DoctorCard
-                  key={`${doctor.name}-${index}`}
-                  name={doctor.name}
-                  specialty={doctor.specialty}
-                  phone={doctor.phone}
-                  countryCode={doctor.country_code}
-                  address={doctor.address}
-                />
-              ))}
-            </>
-          ) : (
-            <EmptySection message={t('empty.doctors')} />
-          )}
-        </EmergencySection>
-
-        <EmergencySection id="contacts" title={t('sections.contacts')}>
-          {sectionHasData.contacts ? (
-            (info.emergency_contacts ?? []).map((contact, index) => (
-              <ContactCard
-                key={`${contact.name}-${index}`}
-                name={contact.name}
-                relationship={contact.relationship}
-                phone={contact.phone}
-                countryCode={contact.country_code}
-                isPrimary={contact.is_primary}
+        {/* Reference sections flow into two balanced columns on desktop to cut
+            dead space (the hero + glance tiles above stay full-width). Each
+            section avoids splitting across columns. Single column on mobile and
+            in print — see .emergency-sections in print.css. */}
+        <div className="emergency-sections lg:columns-2 lg:gap-x-8 [&>section]:mb-10 [&>section]:break-inside-avoid lg:[&>section]:mt-0">
+          <EmergencySection id="medical-info" title={t('sections.medicalInfo')}>
+            {sectionHasData.medicalInfo ? (
+              <MedicalInfoCard
+                bloodType={info.blood_type}
+                medicationAllergies={info.medication_allergies ?? []}
+                allergies={info.allergies ?? []}
+                conditions={info.medical_conditions ?? []}
               />
-            ))
-          ) : (
-            <EmptySection message={t('empty.contacts')} />
-          )}
-        </EmergencySection>
+            ) : (
+              <EmptySection message={t('empty.medicalInfo')} />
+            )}
+          </EmergencySection>
 
-        <EmergencySection id="insurance" title={t('sections.insurance')}>
-          {sectionHasData.insurance ? (
-            (info.insurance_plans ?? []).map((plan, index) => (
-              <InsuranceCard key={`${plan.carrier}-${index}`} plan={plan} />
-            ))
-          ) : (
-            <EmptySection message={t('empty.insurance')} />
-          )}
-        </EmergencySection>
+          <EmergencySection id="doctors" title={t('sections.doctors')}>
+            {sectionHasData.doctors ? (
+              <>
+                {info.primary_doctor_name && (
+                  <DoctorCard
+                    name={info.primary_doctor_name}
+                    specialty={info.primary_doctor_specialty}
+                    phone={info.primary_doctor_phone}
+                    countryCode={info.primary_doctor_country_code}
+                    address={info.primary_doctor_address}
+                    isPrimary
+                  />
+                )}
+                {(info.additional_doctors ?? []).map((doctor, index) => (
+                  <DoctorCard
+                    key={`${doctor.name}-${index}`}
+                    name={doctor.name}
+                    specialty={doctor.specialty}
+                    phone={doctor.phone}
+                    countryCode={doctor.country_code}
+                    address={doctor.address}
+                  />
+                ))}
+              </>
+            ) : (
+              <EmptySection message={t('empty.doctors')} />
+            )}
+          </EmergencySection>
 
-        <EmergencySection id="directives" title={t('sections.directives')}>
-          {sectionHasData.directives ? (
-            <DirectivesCard hasDnr={!!info.has_dnr} directives={info.advance_directives} />
-          ) : (
-            <EmptySection message={t('empty.directives')} />
-          )}
-        </EmergencySection>
+          <EmergencySection id="contacts" title={t('sections.contacts')}>
+            {sectionHasData.contacts ? (
+              (info.emergency_contacts ?? []).map((contact, index) => (
+                <ContactCard
+                  key={`${contact.name}-${index}`}
+                  name={contact.name}
+                  relationship={contact.relationship}
+                  phone={contact.phone}
+                  countryCode={contact.country_code}
+                  isPrimary={contact.is_primary}
+                />
+              ))
+            ) : (
+              <EmptySection message={t('empty.contacts')} />
+            )}
+          </EmergencySection>
+
+          <EmergencySection id="insurance" title={t('sections.insurance')}>
+            {sectionHasData.insurance ? (
+              (info.insurance_plans ?? []).map((plan, index) => (
+                <InsuranceCard key={`${plan.carrier}-${index}`} plan={plan} />
+              ))
+            ) : (
+              <EmptySection message={t('empty.insurance')} />
+            )}
+          </EmergencySection>
+
+          <EmergencySection id="directives" title={t('sections.directives')}>
+            {sectionHasData.directives ? (
+              <DirectivesCard hasDnr={!!info.has_dnr} directives={info.advance_directives} />
+            ) : (
+              <EmptySection message={t('empty.directives')} />
+            )}
+          </EmergencySection>
+        </div>
       </div>
     </section>
   );

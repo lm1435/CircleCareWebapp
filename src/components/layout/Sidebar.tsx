@@ -2,6 +2,7 @@ import type { ComponentType, ReactElement } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TodaysMeds } from '@/components/meds/TodaysMeds';
+import { StoreBadges } from '@/components/layout/StoreBadges';
 
 // TodaysMeds is owned by the meds agent (plan Task 22). Its final API takes a
 // circleId prop; the current stub takes no props, so this cast keeps both
@@ -103,7 +104,7 @@ export interface SidebarProps {
 }
 
 const VARIANT_CLASS: Record<NonNullable<SidebarProps['variant']>, string> = {
-  desktop: 'hidden w-64 border-r border-line lg:flex',
+  desktop: 'hidden w-72 border-r border-line lg:flex',
   drawer: 'flex w-full flex-1',
 };
 
@@ -159,26 +160,7 @@ export function Sidebar({ variant = 'desktop', onNavigate }: SidebarProps = {}):
       <div className="mt-auto rounded-2xl border border-line bg-cream p-4">
         <h2 className="serif m-0 text-base text-ink">{t('downloadApp.title')}</h2>
         <p className="mb-3 mt-1 text-sm text-ink-3">{t('downloadApp.subtitle')}</p>
-        {/* TODO: replace placeholder store URLs with the real CircleCare
-            App Store / Play Store listing IDs once published. */}
-        <div className="flex flex-col gap-2">
-          <a
-            href="https://apps.apple.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-ghost min-h-11 w-full text-sm"
-          >
-            {t('downloadApp.appStore')}
-          </a>
-          <a
-            href="https://play.google.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-ghost min-h-11 w-full text-sm"
-          >
-            {t('downloadApp.googlePlay')}
-          </a>
-        </div>
+        <StoreBadges layout="stack" />
       </div>
     </aside>
   );

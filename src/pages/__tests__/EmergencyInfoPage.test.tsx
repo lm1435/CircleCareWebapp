@@ -31,7 +31,7 @@ const circleDetailEnvelope = {
       recipient_name: 'Rose',
       recipient_photo_url: null,
       recipient_dob: '1948-03-12',
-      recipient_conditions: 'Hypertension, Type 2 diabetes',
+      recipient_conditions: ['Hypertension', 'Type 2 diabetes'],
       owner_id: 'owner-1',
       created_at: '2026-01-01T00:00:00.000Z',
       is_self_care: false,

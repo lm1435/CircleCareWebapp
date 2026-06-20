@@ -20,21 +20,19 @@ describe('AppDownloadBanner', () => {
     Reflect.deleteProperty(window.navigator, 'userAgent');
   });
 
-  it('renders the subtle desktop variant with both store links', () => {
+  it('renders the prominent banner with both store buttons on desktop', () => {
     render(<AppDownloadBanner />);
 
     const region = screen.getByRole('region', { name: 'Get the app' });
-    expect(region).toHaveAttribute('data-variant', 'subtle');
-    expect(
-      screen.getByText('Get the full CircleCare experience in the app.')
-    ).toBeInTheDocument();
+    expect(region).toHaveAttribute('data-variant', 'prominent');
+    expect(screen.getByText('CircleCare is better in the app.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute(
       'href',
-      'https://apps.apple.com/'
+      'https://apps.apple.com/app/id6757629684'
     );
     expect(screen.getByRole('link', { name: 'Get it on Google Play' })).toHaveAttribute(
       'href',
-      'https://play.google.com/'
+      'https://play.google.com/store/apps/details?id=com.circlecare.circlecare'
     );
   });
 
@@ -61,15 +59,15 @@ describe('AppDownloadBanner', () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 
-  it('renders the prominent smart-banner variant with a single store CTA on iOS', () => {
+  it('renders a single deep-linked store CTA on iOS', () => {
     setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15');
     render(<AppDownloadBanner />);
 
     const region = screen.getByRole('region', { name: 'Get the app' });
-    expect(region).toHaveAttribute('data-variant', 'smart');
+    expect(region).toHaveAttribute('data-variant', 'prominent');
     expect(screen.getByRole('link', { name: 'Get the app' })).toHaveAttribute(
       'href',
-      'https://apps.apple.com/'
+      'https://apps.apple.com/app/id6757629684'
     );
   });
 
@@ -79,7 +77,7 @@ describe('AppDownloadBanner', () => {
 
     expect(screen.getByRole('link', { name: 'Get the app' })).toHaveAttribute(
       'href',
-      'https://play.google.com/'
+      'https://play.google.com/store/apps/details?id=com.circlecare.circlecare'
     );
   });
 });

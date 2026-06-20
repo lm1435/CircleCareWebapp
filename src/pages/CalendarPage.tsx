@@ -16,6 +16,8 @@ import {
   startOfMonth,
   startOfWeek,
 } from '@/components/calendar/dateMath';
+import { EVENT_TYPE_DOT_CLASS } from '@/components/calendar/eventStyles';
+import type { EventType } from '@/api/calendarEvents';
 import { useCalendarEvents, useCareRecipientTimezone } from '@/hooks/useCalendarEvents';
 import {
   getDateInTimezone,
@@ -41,6 +43,30 @@ function ChevronIcon({ direction }: { direction: 'left' | 'right' }): ReactEleme
     >
       {direction === 'left' ? <path d="m15 18-6-6 6-6" /> : <path d="m9 18 6-6-6-6" />}
     </svg>
+  );
+}
+
+const LEGEND_TYPES: EventType[] = ['medication', 'appointment', 'task'];
+
+/**
+ * Color key for the event-type palette (clay = meds, dusk = appointments,
+ * moss = tasks). Surfaces the full color system even when the current view
+ * only contains one type, so the calendar never reads as monochromatic.
+ */
+function CalendarLegend(): ReactElement {
+  const { t } = useTranslation('calendar');
+  return (
+    <ul
+      aria-label={t('legendLabel')}
+      className="m-0 flex list-none flex-wrap items-center gap-x-4 gap-y-1 p-0"
+    >
+      {LEGEND_TYPES.map((type) => (
+        <li key={type} className="flex items-center gap-1.5 text-xs text-ink-3">
+          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${EVENT_TYPE_DOT_CLASS[type]}`} />
+          {t(`eventTypes.${type}`)}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -142,6 +168,7 @@ export default function CalendarPage(): ReactElement {
               })}
             </p>
           )}
+          {!isError && <div className="mt-2"><CalendarLegend /></div>}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

@@ -2,8 +2,19 @@
   "picker": {
     "heading": "My Circles",
     "subheading": "Choose a circle to see its calendar and care details.",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "careCircleCount_one": "{{count}} care circle",
+    "careCircleCount_other": "{{count}} care circles",
     "open": "Open {{name}}",
     "caringFor": "Caring for {{name}}",
+    "caringWith_one": "Caring together with {{count}} person",
+    "caringWith_other": "Caring together with {{count}} people",
+    "personHelping_one": "{{count}} person helping coordinate care",
+    "personHelping_other": "{{count}} people helping coordinate care",
     "memberCount_one": "{{count}} member",
     "memberCount_other": "{{count}} members",
     "errorTitle": "Unable to load circles",
@@ -12,6 +23,12 @@
       "title": "You're not part of any care circle yet.",
       "body": "Download the app to create one or ask someone to invite you."
     }
+  },
+  "med": {
+    "noMedsToday": "No medications today",
+    "allTaken": "All medications taken",
+    "takenToday": "{{taken}}/{{total}} taken today",
+    "takenOverdue": "{{taken}}/{{total}} taken · {{overdue}} overdue"
   },
   "roles": {
     "owner": "Owner",

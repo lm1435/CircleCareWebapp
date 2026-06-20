@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { formatEventTimeCompact, getCurrentHoursInTimezone } from '@/utils/timezone';
@@ -64,6 +64,28 @@ export function WeekView({
     (eventsByDay.get(day) ?? []).filter((event) => !event.scheduled_time);
   const hasAllDayRow = days.some((day) => allDayEvents(day).length > 0);
 
+  // Earliest timed event in the week (so the grid opens on real content instead
+  // of a wall of empty pre-dawn hours). Falls back to the current hour.
+  const earliestHour = useMemo(() => {
+    let min = Number.POSITIVE_INFINITY;
+    for (const day of days) {
+      for (const event of eventsByDay.get(day) ?? []) {
+        if (event.scheduled_time) min = Math.min(min, parseTimeToHours(event.scheduled_time));
+      }
+    }
+    return Number.isFinite(min) ? min : null;
+  }, [days, eventsByDay]);
+
+  // Auto-scroll the timed grid to that anchor on mount / week change. Mirrors
+  // mobile's scrollToCurrentTime — keeps one hour of lead-in above the target.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const targetHour = earliestHour ?? getCurrentHoursInTimezone(careRecipientTimezone);
+    el.scrollTop = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
+  }, [earliestHour, careRecipientTimezone, days]);
+
   const renderEventButton = (event: CalendarEvent, positioned: boolean): ReactElement => {
     const status = getMedicationStatus(event, careRecipientTimezone, now);
     const title = event.medication_name || event.title;
@@ -121,121 +143,158 @@ export function WeekView({
   };
 
   return (
-    <div role="grid" aria-label={t('calendar:weekViewLabel')} className="rounded-2xl border border-line bg-cream">
-      {/* Day headers */}
-      <div role="row" className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-line-2">
-        <div role="columnheader" className="p-2">
-          <span className="sr-only">{t('calendar:timeColumnLabel')}</span>
-        </div>
-        {days.map((day) => {
-          const count = (eventsByDay.get(day) ?? []).length;
-          const isToday = day === todayStr;
-          return (
+    <div
+      role="grid"
+      aria-label={t('calendar:weekViewLabel')}
+      className="overflow-hidden rounded-2xl border border-line bg-cream"
+    >
+      {/* Mobile: day columns take a fixed readable width (~2 fit a phone, more on
+          tablets) so the week pages cleanly with scroll-snap instead of a cramped
+          7-across grid — mirroring the mobile app's responsive day count. Headers
+          + timed grid share one horizontal scroller so they pan together, and the
+          grid reverts to a full 7-across fit at lg. */}
+      <div
+        role="presentation"
+        className="snap-x snap-mandatory overflow-x-auto scroll-pl-14 lg:snap-none"
+      >
+        <div
+          role="rowgroup"
+          className="[--dc:calc((100vw_-_2rem_-_3.5rem)/2)] md:[--dc:calc((100vw_-_3rem_-_3.5rem)/3)] lg:min-w-0 lg:[--dc:minmax(0,1fr)]"
+        >
+          {/* Day headers */}
+          <div
+            role="row"
+            className="grid grid-cols-[3.5rem_repeat(7,var(--dc))] border-b border-line-2"
+          >
+            <div role="columnheader" className="sticky left-0 z-[5] bg-cream p-2">
+              <span className="sr-only">{t('calendar:timeColumnLabel')}</span>
+            </div>
+            {days.map((day) => {
+              const count = (eventsByDay.get(day) ?? []).length;
+              const isToday = day === todayStr;
+              return (
+                <div
+                  key={day}
+                  role="columnheader"
+                  aria-label={`${formatDateForDisplay(day, locale, {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}, ${t('calendar:eventCount', { count })}`}
+                  className="snap-start border-l border-line-2 p-1 text-center"
+                >
+                  <div
+                    aria-hidden="true"
+                    className={`mx-auto flex flex-col items-center justify-center rounded-lg px-1 py-1 ${
+                      isToday ? 'bg-ink' : ''
+                    }`}
+                  >
+                    <span
+                      className={`mono block uppercase ${isToday ? 'text-cream' : 'text-ink-3'}`}
+                    >
+                      {formatDateForDisplay(day, locale, { weekday: 'short' })}
+                    </span>
+                    <span
+                      className={`mt-0.5 text-sm font-medium ${isToday ? 'text-cream' : 'text-ink'}`}
+                    >
+                      {formatDateForDisplay(day, locale, { day: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* All-day row */}
+          {hasAllDayRow && (
             <div
-              key={day}
-              role="columnheader"
-              aria-label={`${formatDateForDisplay(day, locale, {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}, ${t('calendar:eventCount', { count })}`}
-              className="border-l border-line-2 p-1 text-center"
+              role="row"
+              className="grid grid-cols-[3.5rem_repeat(7,var(--dc))] border-b border-line-2"
             >
-              <div
-                aria-hidden="true"
-                className={`mx-auto flex flex-col items-center justify-center rounded-lg px-1 py-1 ${
-                  isToday ? 'bg-ink' : ''
-                }`}
-              >
-                <span
-                  className={`mono block uppercase ${isToday ? 'text-cream' : 'text-ink-3'}`}
-                >
-                  {formatDateForDisplay(day, locale, { weekday: 'short' })}
-                </span>
-                <span
-                  className={`mt-0.5 text-sm font-medium ${isToday ? 'text-cream' : 'text-ink'}`}
-                >
-                  {formatDateForDisplay(day, locale, { day: 'numeric' })}
-                </span>
+              <div role="rowheader" className="sticky left-0 z-[5] bg-cream p-1 text-right">
+                <span className="mono">{t('calendar:allDay')}</span>
               </div>
+              {days.map((day) => (
+                <div
+                  key={day}
+                  role="gridcell"
+                  data-date={day}
+                  className="snap-start flex flex-col gap-1 border-l border-line-2 p-1"
+                >
+                  {allDayEvents(day).map((event) => renderEventButton(event, false))}
+                </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
+          )}
 
-      {/* All-day row */}
-      {hasAllDayRow && (
-        <div role="row" className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-line-2">
-          <div role="rowheader" className="p-1 text-right">
-            <span className="mono">{t('calendar:allDay')}</span>
-          </div>
-          {days.map((day) => (
-            <div key={day} role="gridcell" data-date={day} className="flex flex-col gap-1 border-l border-line-2 p-1">
-              {allDayEvents(day).map((event) => renderEventButton(event, false))}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Timed grid */}
-      <div className="max-h-[60vh] overflow-y-auto">
-        <div role="row" className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]">
-          {/* Hour axis */}
-          <div role="rowheader" aria-hidden="true" className="relative" style={{ height: 24 * HOUR_HEIGHT }}>
-            {HOURS.map((hour) => (
-              <span
-                key={hour}
-                className="mono absolute right-1 -translate-y-1/2 normal-case"
-                style={{ top: hour * HOUR_HEIGHT }}
-              >
-                {hour === 0 ? '' : formatHourLabel(hour, locale)}
-              </span>
-            ))}
-          </div>
-
-          {days.map((day) => {
-            const events = timedEvents(day);
-            const isToday = day === todayStr;
-            return (
+          {/* Timed grid. overflow-x:clip (not auto) keeps this from becoming its
+              own horizontal scroll container, so the sticky hour rail below pins
+              to the OUTER scroller as the week pans sideways. */}
+          <div ref={scrollRef} className="max-h-[60vh] overflow-y-auto [overflow-x:clip]">
+            <div role="row" className="grid grid-cols-[3.5rem_repeat(7,var(--dc))]">
+              {/* Hour axis — pinned so the labels stay visible while days scroll. */}
               <div
-                key={day}
-                role="gridcell"
-                data-date={day}
-                aria-label={`${formatDateForDisplay(day, locale, {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}, ${t('calendar:eventCount', { count: events.length })}`}
-                className={`relative border-l border-line-2 ${isToday ? 'bg-bg-2/50' : ''}`}
+                role="rowheader"
+                aria-hidden="true"
+                className="sticky left-0 z-[5] bg-cream"
                 style={{ height: 24 * HOUR_HEIGHT }}
               >
-                {/* Hour gridlines */}
-                {HOURS.slice(1).map((hour) => (
-                  <div
+                {HOURS.map((hour) => (
+                  <span
                     key={hour}
-                    aria-hidden="true"
-                    className="absolute inset-x-0 border-t border-line-2"
+                    className="mono absolute right-1 -translate-y-1/2 normal-case"
                     style={{ top: hour * HOUR_HEIGHT }}
-                  />
-                ))}
-
-                {/* Current-time indicator — ONLY on today's column (today in recipient TZ) */}
-                {isToday && (
-                  <div
-                    data-testid="current-time-indicator"
-                    aria-hidden="true"
-                    title={t('calendar:currentTimeLabel')}
-                    className="absolute inset-x-0 z-[2] h-0.5 bg-terracotta-deep"
-                    style={{ top: currentTimeTop }}
                   >
-                    <span className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-terracotta-deep" />
-                  </div>
-                )}
-
-                {events.map((event) => renderEventButton(event, true))}
+                    {hour === 0 ? '' : formatHourLabel(hour, locale)}
+                  </span>
+                ))}
               </div>
-            );
-          })}
+
+              {days.map((day) => {
+                const events = timedEvents(day);
+                const isToday = day === todayStr;
+                return (
+                  <div
+                    key={day}
+                    role="gridcell"
+                    data-date={day}
+                    aria-label={`${formatDateForDisplay(day, locale, {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}, ${t('calendar:eventCount', { count: events.length })}`}
+                    className={`relative snap-start border-l border-line-2 ${isToday ? 'bg-bg-2/50' : ''}`}
+                    style={{ height: 24 * HOUR_HEIGHT }}
+                  >
+                    {/* Hour gridlines */}
+                    {HOURS.slice(1).map((hour) => (
+                      <div
+                        key={hour}
+                        aria-hidden="true"
+                        className="absolute inset-x-0 border-t border-line-2"
+                        style={{ top: hour * HOUR_HEIGHT }}
+                      />
+                    ))}
+
+                    {/* Current-time indicator — ONLY on today's column (today in recipient TZ) */}
+                    {isToday && (
+                      <div
+                        data-testid="current-time-indicator"
+                        aria-hidden="true"
+                        title={t('calendar:currentTimeLabel')}
+                        className="absolute inset-x-0 z-[2] h-0.5 bg-terracotta-deep"
+                        style={{ top: currentTimeTop }}
+                      >
+                        <span className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-terracotta-deep" />
+                      </div>
+                    )}
+
+                    {events.map((event) => renderEventButton(event, true))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

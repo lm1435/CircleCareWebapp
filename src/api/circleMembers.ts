@@ -33,7 +33,9 @@ export interface CircleDetail {
   recipient_name: string;
   recipient_photo_url: string | null;
   recipient_dob: string | null;
-  recipient_conditions: string | null;
+  // Backend stores this as an array of condition strings (circles route:
+  // recipient_conditions = z.array(z.string())), NOT a free-text string.
+  recipient_conditions: string[] | null;
   owner_id: string;
   created_at: string;
   is_self_care: boolean;

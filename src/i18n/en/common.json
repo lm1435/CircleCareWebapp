@@ -35,7 +35,11 @@
     "subtitle": "Download CircleCare for iOS or Android.",
     "cta": "Download the App",
     "appStore": "Download on the App Store",
-    "googlePlay": "Get it on Google Play"
+    "googlePlay": "Get it on Google Play",
+    "appStoreLead": "Download on the",
+    "appStoreName": "App Store",
+    "playLead": "Get it on",
+    "playName": "Google Play"
   },
   "downloadBanner": {
     "regionLabel": "Get the app",

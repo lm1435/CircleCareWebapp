@@ -22,6 +22,7 @@
   "dayPanelLabel": "Eventos del día seleccionado",
   "timeColumnLabel": "Hora",
   "currentTimeLabel": "Hora actual",
+  "legendLabel": "Clave de colores",
   "eventTypes": {
     "medication": "Medicamento",
     "appointment": "Cita",

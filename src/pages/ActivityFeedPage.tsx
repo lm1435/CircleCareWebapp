@@ -45,7 +45,7 @@ export default function ActivityFeedPage(): ReactElement {
   }, [activities]);
 
   return (
-    <section className="mx-auto max-w-3xl p-6 md:p-8">
+    <section className="mx-auto max-w-4xl p-6 md:p-8">
       <header>
         <h1 className="serif m-0 text-xl text-ink">{t('activity:title')}</h1>
         <p className="m-0 mt-1 text-sm text-ink-3">{t('activity:subtitle')}</p>

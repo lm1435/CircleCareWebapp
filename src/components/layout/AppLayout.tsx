@@ -93,7 +93,7 @@ export function AppLayout(): ReactElement {
   }, [navOpen]);
 
   return (
-    <div className="grid min-h-screen grid-rows-[auto_auto_1fr] bg-bg">
+    <div className="grid min-h-screen grid-rows-[auto_auto_1fr] overflow-x-hidden bg-bg">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
@@ -105,7 +105,12 @@ export function AppLayout(): ReactElement {
 
       <Header navOpen={navOpen} onToggleNav={() => setNavOpen((open) => !open)} />
 
-      <div className="grid lg:grid-cols-[16rem_1fr]">
+      {/* grid-cols-1 (minmax(0,1fr)) is required on mobile: without an explicit
+          column the implicit `auto` track grows to the content's max-content
+          width, so a wide child like the calendar makes <main> balloon past the
+          viewport and the whole page scrolls sideways. The 0-min column clamps
+          <main> to the viewport so wide content scrolls inside its own card. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr]">
         <Sidebar variant="desktop" />
         <main id="main" className="min-w-0">
           <NeedsCircleSelectionBanner />
@@ -118,7 +123,7 @@ export function AppLayout(): ReactElement {
           <div
             aria-hidden="true"
             onClick={() => setNavOpen(false)}
-            className="absolute inset-0 bg-ink/40"
+            className="absolute inset-0 bg-ink/40 animate-[fade-in_240ms_ease-out]"
           />
           <div
             ref={drawerRef}
@@ -126,7 +131,7 @@ export function AppLayout(): ReactElement {
             role="dialog"
             aria-modal="true"
             aria-label={t('nav.label')}
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-bg shadow-xl"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-bg shadow-xl animate-[drawer-in_280ms_cubic-bezier(0.2,0.7,0.2,1)]"
           >
             <div className="flex justify-end p-2">
               <button

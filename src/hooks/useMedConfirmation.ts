@@ -9,9 +9,11 @@ import { useTranslation } from 'react-i18next';
 import {
   confirmMedication,
   getTodaysMedications,
+  getMedicationTodaySummary,
   isPermissionDeniedError,
   type ConfirmMedicationRequest,
   type MedicationConfirmation,
+  type MedicationTodaySummary,
   type TodaysMedication,
 } from '@/api/medicationConfirmations';
 import { queryKeys } from '@/lib/queryKeys';
@@ -44,6 +46,22 @@ export function useTodaysMeds(
     queryKey: [...todaysMedsKey(circleId ?? ''), dateStr ?? ''],
     queryFn: () => getTodaysMedications(circleId!, dateStr!),
     enabled: !!circleId && !!dateStr,
+  });
+}
+
+/**
+ * Aggregate "today" medication summary for a circle — drives the circle-picker
+ * card status line. Mirrors mobile's useMedicationTodaySummary (same query key
+ * family as the confirm mutation invalidates). "Today" is resolved server-side
+ * in the care recipient's timezone, so no client date is needed here.
+ */
+export function useMedicationTodaySummary(
+  circleId: string | undefined
+): UseQueryResult<MedicationTodaySummary> {
+  return useQuery({
+    queryKey: queryKeys.medicationTodaySummary(circleId ?? ''),
+    queryFn: () => getMedicationTodaySummary(circleId!),
+    enabled: !!circleId,
   });
 }
 

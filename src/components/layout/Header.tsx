@@ -176,9 +176,11 @@ function CircleSwitcher(): ReactElement {
         aria-label={
           current ? `${t('header.switchCircle')}: ${current.name}` : t('header.switchCircle')
         }
-        className="flex min-h-11 items-center gap-2 rounded-full border border-line bg-bg px-4 text-sm text-ink transition-colors hover:bg-bg-2"
+        className="flex min-h-11 min-w-0 items-center gap-2 rounded-full border border-line bg-bg px-3 text-sm text-ink transition-colors hover:bg-bg-2 sm:px-4"
       >
-        <span className="max-w-40 truncate">{current?.name ?? t('header.switchCircle')}</span>
+        <span className="max-w-[7rem] truncate sm:max-w-40">
+          {current?.name ?? t('header.switchCircle')}
+        </span>
         <ChevronDownIcon />
       </button>
 
@@ -326,16 +328,15 @@ export function Header({ navOpen = false, onToggleNav }: HeaderProps = {}): Reac
             <MenuIcon />
           </button>
         )}
-        <Link
-          to="/circles"
-          className="flex min-h-11 items-center gap-2 px-1 no-underline"
-        >
+        <Link to="/circles" className="flex min-h-11 min-w-0 items-center gap-2 px-1 no-underline">
           <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
-          <span className="serif truncate text-lg text-ink">{t('appName')}</span>
+          {/* Wordmark hides on the smallest screens so the header fits the circle
+              switcher + account avatar without overflowing. */}
+          <span className="serif hidden truncate text-lg text-ink sm:inline">{t('appName')}</span>
         </Link>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <CircleSwitcher />
         <UserMenu />
       </div>

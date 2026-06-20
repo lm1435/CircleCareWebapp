@@ -76,11 +76,11 @@ describe('Sidebar', () => {
     expect(screen.getByText('Get the full experience.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute(
       'href',
-      'https://apps.apple.com/'
+      'https://apps.apple.com/app/id6757629684'
     );
     expect(screen.getByRole('link', { name: 'Get it on Google Play' })).toHaveAttribute(
       'href',
-      'https://play.google.com/'
+      'https://play.google.com/store/apps/details?id=com.circlecare.circlecare'
     );
   });
 });

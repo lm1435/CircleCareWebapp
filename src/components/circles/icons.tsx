@@ -58,6 +58,111 @@ export function BellIcon({ size = 11 }: IconProps): ReactElement {
   );
 }
 
+/** Chevron pointing right — "open this circle" affordance. Decorative. */
+export function ChevronRightIcon({ size = 20 }: IconProps): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
+}
+
+/** Outline pill/capsule — "medications" glyph for the snapshot row. Decorative. */
+export function PillIcon({ size = 16 }: IconProps): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(45 12 12)" />
+      <path d="m8.5 8.5 7 7" />
+    </svg>
+  );
+}
+
+/** Circle with a check — "all taken" status. Decorative; row text carries meaning. */
+export function CheckCircleIcon({ size = 16 }: IconProps): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5L16 9" />
+    </svg>
+  );
+}
+
+/** Circle with a clock — "pending / next due" status. Decorative. */
+export function ClockIcon({ size = 16 }: IconProps): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5V12l3 1.8" />
+    </svg>
+  );
+}
+
+/** Circle with an exclamation — "overdue / needs attention" status. Decorative. */
+export function AlertCircleIcon({ size = 16 }: IconProps): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v4.5" />
+      <path d="M12 16h.01" />
+    </svg>
+  );
+}
+
 /** Inline eye icon for "View Only" badges. Decorative — badge text carries meaning. */
 export function EyeIcon({ size = 12 }: IconProps): ReactElement {
   return (

@@ -13,6 +13,17 @@ import { API_TIMEOUT } from '@/constants/config';
 //   callback (registered via setter to avoid circular deps with the auth store).
 // - NEVER log tokens, response bodies, or full error objects.
 
+/**
+ * API origin. In a production build this is the same-site api host
+ * (`https://api.circlecare.app`). In dev it is EMPTY so every request is
+ * relative (`/api/...`) and hits the Vite dev server, which proxies `/api` to
+ * VITE_API_URL (see vite.config.ts). That keeps the browser same-origin with
+ * the API even when the backend is a Cloudflare tunnel on a different site —
+ * without it the httpOnly session cookies would be cross-site and dropped,
+ * logging the user out on every reload.
+ */
+const API_ORIGIN = import.meta.env.DEV ? '' : env.VITE_API_URL;
+
 /** Logout handler registered by the auth store (breaks circular dependency). */
 type AuthFailureHandler = () => void | Promise<void>;
 let onAuthFailure: AuthFailureHandler | null = null;
@@ -52,7 +63,7 @@ function isAuthEndpoint(url: string | undefined): boolean {
 }
 
 export const apiClient = axios.create({
-  baseURL: `${env.VITE_API_URL}/api`,
+  baseURL: `${API_ORIGIN}/api`,
   timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
@@ -91,7 +102,7 @@ interface RefreshResponseBody {
  */
 async function refreshAccessToken(): Promise<void> {
   const response = await axios.post<RefreshResponseBody>(
-    `${env.VITE_API_URL}/api/auth/refresh`,
+    `${API_ORIGIN}/api/auth/refresh`,
     {},
     {
       timeout: API_TIMEOUT,

@@ -31,8 +31,22 @@ export interface RecipientHeaderProps {
   photoUrl?: string | null;
   /** Date-only `YYYY-MM-DD` string, or null when not on file. */
   dob?: string | null;
-  /** Comma/free-text conditions string (web stores this as a string), or null. */
-  conditions?: string | null;
+  /**
+   * Recipient conditions. The backend sends an array of strings
+   * (recipient_conditions = z.array(z.string())); we also tolerate a plain
+   * string defensively so a shape change can never crash the emergency sheet.
+   */
+  conditions?: string[] | string | null;
+}
+
+/** Normalize conditions (array | string | nullish) to a single display line. */
+function formatConditions(conditions: string[] | string | null | undefined): string | null {
+  const parts = Array.isArray(conditions) ? conditions : conditions ? [conditions] : [];
+  const text = parts
+    .map((c) => (typeof c === 'string' ? c.trim() : ''))
+    .filter(Boolean)
+    .join(', ');
+  return text || null;
 }
 
 /**
@@ -47,7 +61,7 @@ export function RecipientHeader({
 }: RecipientHeaderProps): ReactElement {
   const { t, i18n } = useTranslation('emergency');
   const dobLabel = dob ? formatDob(dob, i18n.language) : null;
-  const conditionsText = conditions?.trim() || null;
+  const conditionsText = formatConditions(conditions);
 
   return (
     <Card className="print-card flex flex-col gap-4">

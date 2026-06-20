@@ -59,6 +59,13 @@
     display: block !important;
   }
 
+  /* Collapse the desktop two-column section masonry back to one column on
+     paper (the screen layout uses CSS columns at lg+). */
+  body.emergency-print-scope .emergency-sections {
+    columns: 1 !important;
+    column-count: 1 !important;
+  }
+
   body.emergency-print-scope .emergency-content section {
     margin-bottom: 14pt;
   }
