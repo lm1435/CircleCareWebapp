@@ -17,6 +17,10 @@ export function initAnalytics(): void {
   posthog.init(env.VITE_POSTHOG_KEY, {
     autocapture: false,
     capture_pageview: false,
+    // Capture unhandled errors/rejections as $exception events so crashes feed
+    // the admin error digest. Distinct from `autocapture` (DOM events), which
+    // stays off to avoid capturing PHI-adjacent text.
+    capture_exceptions: true,
     persistence: 'memory',
     session_recording: {
       maskAllInputs: true,

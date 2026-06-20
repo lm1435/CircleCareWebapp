@@ -39,6 +39,22 @@ const AUTH_CHANNEL_NAME = 'cc-auth';
 let channel: BroadcastChannel | null = null;
 let bootstrapPromise: Promise<void> | null = null;
 
+/**
+ * True when the backend's readable `cc_session` companion cookie is present —
+ * our only client-visible signal that a session might exist (the real refresh
+ * token is in an httpOnly cookie we can't read). When absent, bootstrap skips
+ * the `/auth/refresh` call entirely so logged-out / first-time visitors never
+ * hit that rate-limited endpoint on page load. The cookie carries no token and
+ * is set/cleared in lockstep with the httpOnly refresh cookie.
+ */
+function hasSessionHint(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split('; ').some((entry) => {
+    const [name, value] = entry.split('=');
+    return name === 'cc_session' && value === '1';
+  });
+}
+
 /** Local-only teardown (no network, no broadcast) — shared by signOut and the
  *  cross-tab logout listener. */
 function clearLocalSession(): void {
@@ -83,6 +99,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   bootstrap: () => {
     if (bootstrapPromise) return bootstrapPromise;
     bootstrapPromise = (async () => {
+      // No session hint → no point calling the rate-limited /auth/refresh.
+      // A logged-out / first-time visitor stays logged out without a network
+      // request (mirrors how mobile checks SecureStore before refreshing).
+      if (!hasSessionHint()) {
+        set({ user: null, isAuthenticated: false, isBootstrapping: false });
+        return;
+      }
       try {
         // Silent cookie refresh — the apiClient interceptor adds
         // `X-Session-Mode: cookie` + withCredentials on /auth/* calls.

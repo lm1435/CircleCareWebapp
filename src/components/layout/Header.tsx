@@ -328,9 +328,10 @@ export function Header({ navOpen = false, onToggleNav }: HeaderProps = {}): Reac
         )}
         <Link
           to="/circles"
-          className="serif flex min-h-11 items-center truncate px-1 text-lg text-ink no-underline"
+          className="flex min-h-11 items-center gap-2 px-1 no-underline"
         >
-          {t('appName')}
+          <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
+          <span className="serif truncate text-lg text-ink">{t('appName')}</span>
         </Link>
       </div>
 

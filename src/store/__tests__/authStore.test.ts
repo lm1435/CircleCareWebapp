@@ -30,8 +30,16 @@ const testUser = {
   last_name: 'Rivera',
 };
 
+/** Set or clear the readable `cc_session` hint cookie bootstrap checks. */
+function setSessionHint(present: boolean): void {
+  document.cookie = present
+    ? 'cc_session=1; path=/'
+    : 'cc_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+}
+
 describe('authStore', () => {
   beforeEach(() => {
+    setSessionHint(false); // no session by default — tests opt in explicitly
     vi.resetModules();
     // The `@/lib/api` mock factory result is cached by vitest across
     // vi.resetModules(), so its vi.fn() call history leaks between tests
@@ -107,6 +115,7 @@ describe('authStore', () => {
   });
 
   it('bootstrap performs a silent cookie refresh and loads the current user', async () => {
+    setSessionHint(true); // a returning user has the cc_session hint cookie
     const { api, tokenAccessor, useAuthStore } = await loadModules();
     vi.mocked(api.apiClient.post).mockResolvedValue({
       success: true,
@@ -127,7 +136,21 @@ describe('authStore', () => {
     expect(useAuthStore.getState().isBootstrapping).toBe(false);
   });
 
-  it('bootstrap failure (no cookie / first visit) resolves silently as logged out', async () => {
+  it('bootstrap SKIPS the refresh call entirely when there is no session hint (first visit)', async () => {
+    // No cc_session cookie → logged-out / first-time visitor. Bootstrap must not
+    // touch the rate-limited /auth/refresh endpoint at all.
+    const { api, tokenAccessor, useAuthStore } = await loadModules();
+
+    await expect(useAuthStore.getState().bootstrap()).resolves.toBeUndefined();
+
+    expect(api.apiClient.post).not.toHaveBeenCalled();
+    expect(tokenAccessor.getAuthToken()).toBeNull();
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().isBootstrapping).toBe(false);
+  });
+
+  it('bootstrap with a hint but a failing refresh (expired session) resolves silently as logged out', async () => {
+    setSessionHint(true); // hint present, but the cookie session has expired
     const { api, tokenAccessor, useAuthStore } = await loadModules();
     vi.mocked(api.apiClient.post).mockRejectedValue({
       success: false,
@@ -136,12 +159,14 @@ describe('authStore', () => {
 
     await expect(useAuthStore.getState().bootstrap()).resolves.toBeUndefined();
 
+    expect(api.apiClient.post).toHaveBeenCalledWith('/auth/refresh', {});
     expect(tokenAccessor.getAuthToken()).toBeNull();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().isBootstrapping).toBe(false);
   });
 
   it('bootstrap is single-flight (StrictMode-safe)', async () => {
+    setSessionHint(true); // need the hint so refresh is actually attempted
     const { api, useAuthStore } = await loadModules();
     vi.mocked(api.apiClient.post).mockRejectedValue(new Error('no cookie'));
 

@@ -6,10 +6,16 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Skeleton } from '@/components/ui';
 import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
 
-// TODO: replace placeholder store URLs once the App Store / Play Store
-// listings are live (deployment task).
-const APP_STORE_URL = 'https://apps.apple.com/app/circlecare';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.circlecare';
+// ⚠️ NEXT STEPS to ship invite-link sharing (gated on the app being on the stores):
+//   1. Publish the app on the App Store AND Google Play.
+//   2. Replace the two PLACEHOLDER URLs below with the real store listing URLs.
+//   3. Re-enable the Share/Copy buttons in the mobile app — they're commented out
+//      in mobile/src/screens/circle/InviteMemberScreen.tsx (search "Share / Copy buttons").
+//   4. (nice-to-have) Wire deferred deep-linking so a fresh installer auto-joins the
+//      circle instead of having to type the invite code.
+// Until #1+#2 are done, these buttons would send invitees to a dead "download" link.
+const APP_STORE_URL = 'https://apps.apple.com/app/circlecare'; // PLACEHOLDER — not a real listing yet
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.circlecare'; // PLACEHOLDER — not a real listing yet
 
 const COPIED_FEEDBACK_MS = 2000;
 
