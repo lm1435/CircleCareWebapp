@@ -61,7 +61,23 @@ describe('JoinCircleModal', () => {
     await waitFor(() => expect(screen.getByText("Rose's Circle")).toBeInTheDocument());
     expect(screen.getByText('Rose Meza')).toBeInTheDocument();
     expect(screen.getByText('Ada')).toBeInTheDocument();
-    expect(screen.getByText('Joining as Caregiver')).toBeInTheDocument();
+    expect(screen.getByText('Your role')).toBeInTheDocument();
+    expect(screen.getByText('Caregiver')).toBeInTheDocument();
+  });
+
+  it('collapses the duplicate circle row when the circle is named after the recipient', async () => {
+    const user = userEvent.setup();
+    const sameName = { ...INVITE, circle: { ...INVITE.circle, name: 'Grandma', recipient_name: 'Grandma' } };
+    lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(sameName));
+    renderModal();
+
+    await user.type(screen.getByLabelText('Invite code'), 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Look up code' }));
+
+    // "Caring for" still shows the name; the redundant "Circle" label is gone.
+    await waitFor(() => expect(screen.getByText('Caring for')).toBeInTheDocument());
+    expect(screen.queryByText('Circle')).not.toBeInTheDocument();
+    expect(screen.getByText('Grandma')).toBeInTheDocument();
   });
 
   it('shows a localized error when the code is invalid', async () => {

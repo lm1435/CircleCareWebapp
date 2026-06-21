@@ -1,5 +1,6 @@
 {
   "appName": "CircleCare",
+  "otpDigit": "Dígito {{index}} de {{length}}",
   "loading": "Cargando...",
   "error": "Error",
   "retry": "Reintentar",

@@ -244,7 +244,7 @@ export function Sidebar({
           here would be the document's first heading (an h2 before the page's h1),
           tripping WCAG 1.3.1 heading-order. It's chrome in a complementary
           landmark, not a content section, so a styled <p> is the correct element. */}
-      <div className="mt-auto rounded-2xl border border-line bg-cream p-4">
+      <div className="rounded-2xl border border-line bg-cream p-4">
         <p className="serif m-0 text-base text-ink">{t('downloadApp.title')}</p>
         <p className="mb-3 mt-1 text-sm text-ink-3">{t('downloadApp.subtitle')}</p>
         <StoreBadges layout="stack" />

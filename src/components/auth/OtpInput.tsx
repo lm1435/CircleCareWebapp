@@ -1,4 +1,5 @@
 import { useId, useRef, type ClipboardEvent, type KeyboardEvent, type ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface OtpInputProps {
   /** Number of digit boxes. */
@@ -38,6 +39,7 @@ export function OtpInput({
   disabled = false,
   autoFocus = false,
 }: OtpInputProps): ReactElement {
+  const { t } = useTranslation('common');
   const generatedId = useId();
   const groupErrorId = errorId ?? `${generatedId}-otp-error`;
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
@@ -129,7 +131,7 @@ export function OtpInput({
               disabled={disabled}
               autoFocus={autoFocus && index === 0}
               value={digit}
-              aria-label={`Digit ${index + 1} of ${length}`}
+              aria-label={t('otpDigit', { index: index + 1, length })}
               aria-invalid={error ? true : undefined}
               onChange={(event) => handleChange(index, event.target.value)}
               onKeyDown={(event) => handleKeyDown(index, event)}

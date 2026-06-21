@@ -28,6 +28,17 @@ function inviterName(invite: InviteByCode): string {
   return email;
 }
 
+/**
+ * Most circles are named after the person being cared for, so the circle name
+ * and the recipient name are frequently identical. When they are, showing both
+ * the "Circle" and "Caring for" rows is pure repetition — collapse to one.
+ */
+function circleNameIsDistinct(invite: InviteByCode): boolean {
+  const name = invite.circle.name?.trim().toLowerCase() ?? '';
+  const recipient = invite.circle.recipient_name?.trim().toLowerCase() ?? '';
+  return name.length > 0 && name !== recipient;
+}
+
 /** Pull the backend error CODE out of the `{ error: { code } }` envelope. */
 function errorCodeOf(error: unknown): string | undefined {
   return (error as { error?: { code?: string } } | null)?.error?.code;
@@ -136,11 +147,13 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
       ) : (
         <div className="flex flex-col gap-4">
           <Card className="flex flex-col gap-3 p-4">
-            <div>
-              <p className="eyebrow m-0">{t('joinModal.circle')}</p>
-              <p className="serif m-0 text-lg text-ink">{invite.circle.name}</p>
-            </div>
-            <div className="border-t border-line-2 pt-3">
+            {circleNameIsDistinct(invite) ? (
+              <div>
+                <p className="eyebrow m-0">{t('joinModal.circle')}</p>
+                <p className="serif m-0 text-lg text-ink">{invite.circle.name}</p>
+              </div>
+            ) : null}
+            <div className={circleNameIsDistinct(invite) ? 'border-t border-line-2 pt-3' : undefined}>
               <p className="eyebrow m-0">{t('joinModal.caringFor')}</p>
               <p className="m-0 font-medium text-ink">{invite.circle.recipient_name}</p>
             </div>
@@ -148,15 +161,15 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
               <p className="eyebrow m-0">{t('joinModal.invitedBy')}</p>
               <p className="m-0 font-medium text-ink">{inviterName(invite)}</p>
             </div>
+            <div className="flex items-center justify-between gap-3 border-t border-line-2 pt-3">
+              <p className="eyebrow m-0">{t('joinModal.yourRole')}</p>
+              <Badge variant={invite.member_type === 'care_recipient' ? 'terracotta' : 'moss'}>
+                {invite.member_type === 'care_recipient'
+                  ? t('joinModal.roleCareRecipient')
+                  : t('joinModal.roleCaregiver')}
+              </Badge>
+            </div>
           </Card>
-
-          <div className="flex justify-center">
-            <Badge variant={invite.member_type === 'care_recipient' ? 'terracotta' : 'moss'}>
-              {invite.member_type === 'care_recipient'
-                ? t('joinModal.joiningAsCareRecipient')
-                : t('joinModal.joiningAsCaregiver')}
-            </Badge>
-          </div>
 
           <Button onClick={handleAccept} disabled={accept.isPending} className="w-full">
             {accept.isPending ? t('joinModal.joining') : t('joinModal.joinCircle')}
