@@ -11,6 +11,16 @@ export interface DocumentRowProps {
   circleId: string;
   /** Open the preview modal for this document (images + PDFs only). */
   onPreview: (doc: CircleDocument) => void;
+  /**
+   * Whether the current user may edit/delete THIS document (uploader or circle
+   * owner, AND the circle is editable). When false, the edit/delete buttons are
+   * hidden. The backend re-checks regardless.
+   */
+  canManage?: boolean;
+  /** Open the metadata edit modal for this document. */
+  onEdit?: (doc: CircleDocument) => void;
+  /** Open the delete-confirm dialog for this document. */
+  onDelete?: (doc: CircleDocument) => void;
 }
 
 // Browsers can render JPEG/PNG and (natively or via fallback) PDFs.
@@ -26,7 +36,14 @@ export function isPreviewable(fileType: string): boolean {
  * human file size, preview (when renderable) + download actions.
  * Download fetches a FRESH signed URL at click time — never a cached one.
  */
-export function DocumentRow({ doc, circleId, onPreview }: DocumentRowProps): ReactElement {
+export function DocumentRow({
+  doc,
+  circleId,
+  onPreview,
+  canManage = false,
+  onEdit,
+  onDelete,
+}: DocumentRowProps): ReactElement {
   const { t, i18n } = useTranslation('documents');
   const { showToast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -92,6 +109,24 @@ export function DocumentRow({ doc, circleId, onPreview }: DocumentRowProps): Rea
         >
           {isDownloading ? t('downloading') : t('download')}
         </Button>
+        {canManage && onEdit && (
+          <Button
+            variant="ghost"
+            aria-label={t('editDocument', { name: doc.label })}
+            onClick={() => onEdit(doc)}
+          >
+            {t('editAction')}
+          </Button>
+        )}
+        {canManage && onDelete && (
+          <Button
+            variant="ghost"
+            aria-label={t('deleteDocument', { name: doc.label })}
+            onClick={() => onDelete(doc)}
+          >
+            {t('deleteAction')}
+          </Button>
+        )}
       </div>
     </li>
   );

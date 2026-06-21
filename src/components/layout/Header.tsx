@@ -109,6 +109,47 @@ function LogoutIcon(): ReactElement {
   );
 }
 
+function ProfileIcon(): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function HelpIcon(): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
 const MENU_PANEL_CLASS =
   'absolute right-0 top-full z-30 mt-2 flex w-64 flex-col gap-1 rounded-2xl border border-line bg-cream p-2 shadow-lg';
 
@@ -200,10 +241,7 @@ function CircleSwitcher(): ReactElement {
               onClick={() => selectCircle(circle.id)}
               className={`${MENU_ITEM_CLASS} justify-between`}
             >
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate">{circle.name}</span>
-                <span className="truncate text-xs text-ink-3">{circle.recipient_name}</span>
-              </span>
+              <span className="min-w-0 truncate">{circle.name}</span>
               {circle.id === circleId && <CheckIcon />}
             </button>
           ))}
@@ -225,7 +263,7 @@ function CircleSwitcher(): ReactElement {
   );
 }
 
-function UserMenu(): ReactElement {
+export function UserMenu(): ReactElement {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -290,6 +328,30 @@ function UserMenu(): ReactElement {
             type="button"
             role="menuitem"
             onClick={() => {
+              menu.close();
+              navigate('/profile');
+            }}
+            className={MENU_ITEM_CLASS}
+          >
+            <ProfileIcon />
+            {t('nav.profile')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              menu.close();
+              navigate('/help');
+            }}
+            className={MENU_ITEM_CLASS}
+          >
+            <HelpIcon />
+            {t('nav.help')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
               void handleLogout();
             }}
             className={MENU_ITEM_CLASS}
@@ -312,6 +374,10 @@ export interface HeaderProps {
 
 export function Header({ navOpen = false, onToggleNav }: HeaderProps = {}): ReactElement {
   const { t } = useTranslation('common');
+  const { circleId } = useParams<{ circleId: string }>();
+  // Inside a circle the brand returns to that circle's overview (mirrors mobile's
+  // home tab); elsewhere it goes to the circle picker.
+  const brandTo = circleId ? `/circles/${circleId}` : '/circles';
 
   return (
     <header className="flex items-center justify-between gap-3 border-b border-line bg-cream px-4 py-3 sm:px-6">
@@ -323,12 +389,16 @@ export function Header({ navOpen = false, onToggleNav }: HeaderProps = {}): Reac
             aria-expanded={navOpen}
             aria-controls="mobile-nav"
             aria-label={t('menu.toggle')}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2 lg:hidden"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2 xl:hidden"
           >
             <MenuIcon />
           </button>
         )}
-        <Link to="/circles" className="flex min-h-11 min-w-0 items-center gap-2 px-1 no-underline">
+        <Link
+          to={brandTo}
+          aria-label={t('appName')}
+          className="flex min-h-11 min-w-0 items-center gap-2 px-1 no-underline"
+        >
           <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
           {/* Wordmark hides on the smallest screens so the header fits the circle
               switcher + account avatar without overflowing. */}

@@ -17,8 +17,10 @@ const sizeClass: Record<AvatarSize, string> = {
   xs: 'h-7 w-7 text-xs',
   sm: 'h-9 w-9 text-sm',
   md: 'h-12 w-12 text-base',
-  lg: 'h-16 w-16 text-xl',
-  xl: 'h-24 w-24 text-3xl',
+  // lg/xl initials reduced one step so two wide caps (e.g. "MM") aren't crowded
+  // against the circle edge — the glyphs now sit with comfortable padding.
+  lg: 'h-16 w-16 text-lg',
+  xl: 'h-24 w-24 text-2xl',
 };
 
 // Deterministic soft-tint surfaces, mirroring mobile's gradient-initials feel

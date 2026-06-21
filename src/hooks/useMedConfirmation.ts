@@ -19,6 +19,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { useToast } from '@/components/ui';
 import { getDateInTimezone } from '@/utils/timezone';
+import { Analytics } from '@/lib/analytics';
 
 // Plan Tasks 23 + 39 — confirm mutation + today's meds query.
 //
@@ -86,6 +87,8 @@ export function useConfirmMedication(
   return useMutation({
     mutationFn: (data: ConfirmMedicationRequest) => confirmMedication(circleId, data),
     onSuccess: (_confirmation, variables) => {
+      // PHI-safe: only circle_id + the status enum (never the medication name).
+      Analytics.medicationConfirmed(circleId, variables.status);
       void queryClient.invalidateQueries({ queryKey: todaysMedsKey(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(circleId) });

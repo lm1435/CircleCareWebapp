@@ -1,0 +1,52 @@
+{
+  "title": "Tareas",
+  "subtitle": "Pendientes de tu círculo: asígnalos, dales seguimiento y márcalos como listos.",
+  "addTask": "Agregar tarea",
+  "loading": "Cargando tareas",
+  "filter": {
+    "statusLabel": "Estado",
+    "status": {
+      "open": "Pendientes",
+      "completed": "Completadas",
+      "all": "Todas"
+    },
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "due_date": "Fecha límite",
+      "assignee": "Responsable",
+      "created_at": "Agregadas recientemente"
+    }
+  },
+  "row": {
+    "completeLabel": "Marcar \"{{title}}\" como completada",
+    "undoLabel": "Marcar \"{{title}}\" como no completada",
+    "unassigned": "Sin asignar",
+    "noDueDate": "Sin fecha límite",
+    "allDay": "Todo el día",
+    "editLabel": "Editar \"{{title}}\"",
+    "completedOn": "Completada el {{date}}",
+    "completing": "Completando…",
+    "undo": "Deshacer",
+    "undoAction": "Deshacer completar \"{{title}}\"",
+    "pendingAnnounce": "\"{{title}}\" se completará. Toca deshacer para cancelar."
+  },
+  "due": {
+    "today": "Hoy",
+    "yesterday": "Ayer"
+  },
+  "empty": {
+    "open": "No hay tareas pendientes",
+    "openHint": "Coordina los pendientes que mantienen al día el cuidado de tu ser querido: mandados, resurtidos, seguimientos, y compártelos con todos los que ayudan.",
+    "completed": "Aún no hay tareas completadas",
+    "completedHint": "Las tareas que el círculo termine aparecerán aquí para que todos vean qué ya se atendió.",
+    "all": "Aún no hay tareas",
+    "allHint": "Coordina los pendientes que mantienen al día el cuidado de tu ser querido: mandados, resurtidos, seguimientos, y compártelos con todos los que ayudan.",
+    "cta": "Agregar tarea"
+  },
+  "errorTitle": "No se pudieron cargar las tareas",
+  "errorHint": "Revisa tu conexión e inténtalo de nuevo.",
+  "toast": {
+    "completed": "Tarea completada",
+    "reopened": "Tarea reabierta"
+  }
+}

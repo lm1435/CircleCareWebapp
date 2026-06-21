@@ -6,7 +6,7 @@ import { formatDateForDisplay, getWeekdayName, isSameMonth } from './dateMath';
 import {
   EVENT_TYPE_DOT_CLASS,
   getEventCardClass,
-  getEventStatusCue,
+  getEventTextClass,
   getMedicationStatus,
 } from './eventStyles';
 
@@ -50,7 +50,11 @@ export function MonthView({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <div role="grid" aria-label={t('calendar:monthViewLabel')} className="rounded-2xl border border-line bg-cream">
+      <div
+        role="grid"
+        aria-label={t('calendar:monthViewLabel')}
+        className="rounded-2xl border border-line bg-cream"
+      >
         {/* Weekday headers — names via Intl with the active locale */}
         <div role="row" className="grid grid-cols-7 border-b border-line-2">
           {WEEKDAY_INDEXES.map((dayIndex) => (
@@ -136,7 +140,7 @@ export function MonthView({
       >
         {selectedDay ? (
           <>
-            <h3 className="serif m-0 text-lg text-ink">
+            <h3 className="m-0 text-lg font-semibold text-ink">
               {formatDateForDisplay(selectedDay, locale, {
                 weekday: 'long',
                 month: 'long',
@@ -168,17 +172,19 @@ export function MonthView({
                           .filter(Boolean)
                           .join(', ')}
                         onClick={() => onEventClick(event)}
-                        className={`block w-full rounded p-1.5 text-left ${getEventCardClass(event)} ${getEventStatusCue(status)}`}
+                        className={`block min-h-[44px] w-full rounded p-1.5 text-left ${getEventCardClass(event, status)}`}
                       >
                         <span className="flex items-baseline gap-1.5">
                           <span
-                            className={`mono min-w-0 flex-1 truncate text-xs leading-tight text-cream ${
+                            className={`mono min-w-0 flex-1 truncate text-xs leading-tight ${getEventTextClass(event, status)} ${
                               status === 'skipped' ? 'line-through' : ''
                             }`}
                           >
                             {title}
                           </span>
-                          <span className="mono shrink-0 text-[11px] leading-tight text-cream/75">
+                          <span
+                            className={`mono shrink-0 text-[11px] leading-tight ${getEventTextClass(event, status)}`}
+                          >
                             {timeLabel}
                           </span>
                         </span>

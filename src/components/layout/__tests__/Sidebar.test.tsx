@@ -3,12 +3,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { Sidebar } from '@/components/layout/Sidebar';
 
-// TodaysMeds is owned by the meds agent — stub it so its future data fetching
-// never leaks into layout tests.
-vi.mock('@/components/meds/TodaysMeds', () => ({
-  TodaysMeds: () => <div data-testid="todays-meds" />,
-}));
-
 function renderSidebar(initialPath = '/circles/c1/calendar'): void {
   render(
     <MemoryRouter initialEntries={[initialPath]}>
@@ -23,6 +17,8 @@ describe('Sidebar', () => {
   it('renders all nav links scoped to the current circle', () => {
     renderSidebar();
 
+    // Home points at the circle overview (index route, no section segment).
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/circles/c1');
     expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
       'href',
       '/circles/c1/calendar'
@@ -65,9 +61,9 @@ describe('Sidebar', () => {
     expect(healthList).toContainElement(screen.getByRole('link', { name: 'Documents' }));
   });
 
-  it("renders the Today's Meds quick section", () => {
+  it('no longer renders an inline Today\'s Meds widget (it lives on the Home overview)', () => {
     renderSidebar();
-    expect(screen.getByTestId('todays-meds')).toBeInTheDocument();
+    expect(screen.queryByTestId('todays-meds')).not.toBeInTheDocument();
   });
 
   it('renders the download-app CTA with store links', () => {

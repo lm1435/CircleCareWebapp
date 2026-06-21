@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { authApi, getApiError } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
+import { Analytics } from '@/lib/analytics';
 import { Button } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { FormField } from '@/components/auth/FormField';
@@ -74,12 +75,16 @@ export default function LoginPage(): ReactElement {
     }
 
     setIsSubmitting(true);
+    Analytics.loginStarted('email');
     try {
       const response = await authApi.login({ email: trimmedEmail, password });
       signIn(response.data.session, response.data.user);
+      Analytics.loginCompleted('email');
       navigate(destination, { replace: true });
     } catch (err) {
       const apiError = getApiError(err);
+      // PHI-safe: only the backend error CODE, never the email or full error.
+      Analytics.loginFailed('email', apiError?.code ?? 'LOGIN_FAILED');
       if (apiError?.code === 'EMAIL_NOT_VERIFIED') {
         const verifyEmail = apiError.email || trimmedEmail;
         // Best-effort fresh code before the verify screen (mirrors mobile).
@@ -100,6 +105,7 @@ export default function LoginPage(): ReactElement {
 
   const handleOAuth = async (provider: OAuthProvider): Promise<void> => {
     setFormError(null);
+    Analytics.loginStarted(provider);
     const failureMessage =
       provider === 'google' ? t('login.errors.googleFailed') : t('login.errors.appleFailed');
     try {
@@ -114,9 +120,11 @@ export default function LoginPage(): ReactElement {
         },
       });
       if (error) {
+        Analytics.loginFailed(provider, 'OAUTH_INIT_FAILED');
         setFormError(failureMessage);
       }
     } catch {
+      Analytics.loginFailed(provider, 'OAUTH_INIT_FAILED');
       setFormError(failureMessage);
     }
   };
@@ -196,7 +204,10 @@ export default function LoginPage(): ReactElement {
       />
 
       <p className="m-0 mt-6 text-center text-sm text-ink-3">
-        {t('login.noAccount')} {t('login.downloadAppCta')}
+        {t('login.noAccount')}{' '}
+        <Link to="/signup" className="font-medium text-terracotta-deep">
+          {t('login.createAccount')}
+        </Link>
       </p>
     </AuthShell>
   );

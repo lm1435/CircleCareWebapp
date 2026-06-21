@@ -480,7 +480,13 @@ describe('syncDeviceTimezone', () => {
 // new Date().getHours() (device local time). When user and care recipient
 // are in different timezones, this produces wrong results.
 // ============================================================================
-import { isEventPastDue, getCurrentHoursInTimezone, getRelativeDateLabel } from '../../utils/timezone';
+import {
+  isEventPastDue,
+  getCurrentHoursInTimezone,
+  getRelativeDateLabel,
+  formatTimeForAPI,
+  formatDateTimeForAPI,
+} from '../../utils/timezone';
 
 describe('isEventPastDue', () => {
   // Scenario: User in ET (UTC-5), care recipient in MT (UTC-7)
@@ -864,5 +870,109 @@ describe('getRelativeDateLabel', () => {
 
     const result = getRelativeDateLabel('2026-01-14', 'America/Denver', now);
     expect(result).toBe('yesterday');
+  });
+});
+
+// ============================================================================
+// WRITE-SIDE FORMATTERS: formatTimeForAPI
+// ============================================================================
+// Returns the time-of-day of an instant AS SEEN IN a timezone, "HH:MM" (24h).
+// Inputs are built explicitly from UTC so tests never depend on machine TZ
+// (dev machine is America/Denver).
+// ============================================================================
+describe('formatTimeForAPI', () => {
+  it('should format an afternoon instant in the given timezone', () => {
+    // 19:00 UTC on Jan 15 = 14:00 ET (EST = UTC-5)
+    const date = new Date(Date.UTC(2026, 0, 15, 19, 0, 0));
+    expect(formatTimeForAPI(date, 'America/New_York')).toBe('14:00');
+  });
+
+  it('should render the same instant differently across timezones', () => {
+    // 19:00 UTC = 14:00 ET = 12:00 MT (EST=UTC-5, MST=UTC-7)
+    const date = new Date(Date.UTC(2026, 0, 15, 19, 0, 0));
+    expect(formatTimeForAPI(date, 'America/New_York')).toBe('14:00');
+    expect(formatTimeForAPI(date, 'America/Denver')).toBe('12:00');
+  });
+
+  it('should format midnight as 00:00 (not 24:00)', () => {
+    // 05:00 UTC on Jan 15 = 00:00 ET (EST = UTC-5)
+    const date = new Date(Date.UTC(2026, 0, 15, 5, 0, 0));
+    expect(formatTimeForAPI(date, 'America/New_York')).toBe('00:00');
+  });
+
+  it('should format noon as 12:00', () => {
+    // 17:00 UTC on Jan 15 = 12:00 ET (EST = UTC-5)
+    const date = new Date(Date.UTC(2026, 0, 15, 17, 0, 0));
+    expect(formatTimeForAPI(date, 'America/New_York')).toBe('12:00');
+  });
+
+  it('should zero-pad single-digit hours and minutes', () => {
+    // 14:05 UTC on Jan 15 = 09:05 ET (EST = UTC-5)
+    const date = new Date(Date.UTC(2026, 0, 15, 14, 5, 0));
+    expect(formatTimeForAPI(date, 'America/New_York')).toBe('09:05');
+  });
+
+  it('should handle UTC directly', () => {
+    const date = new Date(Date.UTC(2026, 0, 15, 8, 30, 0));
+    expect(formatTimeForAPI(date, 'UTC')).toBe('08:30');
+  });
+});
+
+// ============================================================================
+// WRITE-SIDE FORMATTERS: formatDateTimeForAPI
+// ============================================================================
+// Returns { scheduled_date (YYYY-MM-DD), scheduled_time (HH:MM) } for an instant
+// AS SEEN IN a timezone. A TZ shift that crosses midnight must roll the DATE.
+// ============================================================================
+describe('formatDateTimeForAPI', () => {
+  it('should roll the date forward when the TZ shift crosses midnight (Denver -> NY)', () => {
+    // A late-evening Denver instant is already the next calendar day in NY.
+    // 23:00 MST (Jan 15, MST = UTC-7) = 06:00 UTC (Jan 16) = 01:00 ET (Jan 16).
+    // Recipient in NY: date must be D+1 (Jan 16), time 01:00 — NOT the Denver date.
+    const instant = new Date(Date.UTC(2026, 0, 16, 6, 0, 0));
+    const result = formatDateTimeForAPI(instant, 'America/New_York');
+    expect(result.scheduled_date).toBe('2026-01-16');
+    expect(result.scheduled_time).toBe('01:00');
+  });
+
+  it('should keep a 9:00 PM Denver instant on the same NY date when it does not cross', () => {
+    // 21:00 MST (Jan 15) = 04:00 UTC (Jan 16) = 23:00 ET (Jan 15) -> still Jan 15 in NY.
+    const instant = new Date(Date.UTC(2026, 0, 16, 4, 0, 0));
+    const result = formatDateTimeForAPI(instant, 'America/New_York');
+    expect(result.scheduled_date).toBe('2026-01-15');
+    expect(result.scheduled_time).toBe('23:00');
+  });
+
+  it('should return the same date and time when the TZ matches (no shift)', () => {
+    // 14:30 ET on Jan 15 = 19:30 UTC (EST = UTC-5)
+    const instant = new Date(Date.UTC(2026, 0, 15, 19, 30, 0));
+    const result = formatDateTimeForAPI(instant, 'America/New_York');
+    expect(result.scheduled_date).toBe('2026-01-15');
+    expect(result.scheduled_time).toBe('14:30');
+  });
+
+  it('should roll the date BACKWARD when the TZ is west and the instant is just past UTC midnight', () => {
+    // 02:00 UTC Jan 16 = 21:00 ET (Jan 15, EST = UTC-5) -> NY date is the prior day.
+    const instant = new Date(Date.UTC(2026, 0, 16, 2, 0, 0));
+    const result = formatDateTimeForAPI(instant, 'America/New_York');
+    expect(result.scheduled_date).toBe('2026-01-15');
+    expect(result.scheduled_time).toBe('21:00');
+  });
+
+  it('should handle a DST-boundary instant correctly (summer EDT = UTC-4)', () => {
+    // 2026-06-15 23:30 MDT (UTC-6) = 05:30 UTC Jun 16 = 01:30 EDT (UTC-4) Jun 16.
+    // Recipient in NY: date rolls to Jun 16, time 01:30.
+    const instant = new Date(Date.UTC(2026, 5, 16, 5, 30, 0));
+    const result = formatDateTimeForAPI(instant, 'America/New_York');
+    expect(result.scheduled_date).toBe('2026-06-16');
+    expect(result.scheduled_time).toBe('01:30');
+  });
+
+  it('should format correctly for the recipient TZ even when device TZ differs', () => {
+    // Same instant, recipient in Denver: 05:30 UTC Jun 16 = 23:30 MDT (UTC-6) Jun 15.
+    const instant = new Date(Date.UTC(2026, 5, 16, 5, 30, 0));
+    const result = formatDateTimeForAPI(instant, 'America/Denver');
+    expect(result.scheduled_date).toBe('2026-06-15');
+    expect(result.scheduled_time).toBe('23:30');
   });
 });

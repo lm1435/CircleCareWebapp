@@ -597,3 +597,63 @@ export function getCurrentHoursInTimezone(timezone: string, now: Date = new Date
     return now.getHours() + now.getMinutes() / 60;
   }
 }
+
+// ─── WRITE-SIDE FORMATTERS ─────────────────────────────────────────────────
+// Times/dates a form SENDS must be the care recipient's local naive value, never
+// device-local. These mirror mobile's AddEventScreen handleSubmit (~lines
+// 925-948) — read the instant `date` AS SEEN IN `timeZone` via
+// Intl.DateTimeFormat formatToParts. NEVER use `new Date(`${d}T${t}`)`,
+// `.getHours()`, `.split('T')[0]`, or `toLocaleDateString()` without `timeZone`.
+
+/**
+ * Format the time-of-day of an instant AS SEEN IN a timezone, for the API.
+ *
+ * Returns a 24-hour `"HH:MM"` string. The backend stores scheduled_time as a
+ * naive local TIME in the care recipient's timezone, so we render the instant
+ * `date` in that timezone rather than the device's local time.
+ *
+ * @param date - The instant to format
+ * @param timeZone - IANA timezone to render the instant in
+ * @returns Time string in "HH:MM" (24h) format
+ */
+export function formatTimeForAPI(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone,
+  }).formatToParts(date);
+
+  let hour = parts.find((p) => p.type === 'hour')?.value || '00';
+  const minute = parts.find((p) => p.type === 'minute')?.value || '00';
+
+  // Some engines emit "24" for midnight under hour12:false — normalize to "00".
+  if (hour === '24') {
+    hour = '00';
+  }
+
+  return `${hour}:${minute}`;
+}
+
+/**
+ * Format BOTH the date (YYYY-MM-DD) and time (HH:MM) of an instant AS SEEN IN a
+ * timezone, for the API.
+ *
+ * Both halves are recomputed from the SAME instant `date` in `timeZone`, so a
+ * timezone shift that crosses midnight is handled correctly: e.g. 9:00 PM on
+ * date D in America/Denver is the next calendar day in America/New_York, and the
+ * returned `scheduled_date` reflects D+1 (not D).
+ *
+ * @param date - The combined date+time instant to format
+ * @param timeZone - The care recipient's IANA timezone
+ * @returns `{ scheduled_date, scheduled_time }` both in the recipient's timezone
+ */
+export function formatDateTimeForAPI(
+  date: Date,
+  timeZone: string
+): { scheduled_date: string; scheduled_time: string } {
+  return {
+    scheduled_date: getDateInTimezone(timeZone, date),
+    scheduled_time: formatTimeForAPI(date, timeZone),
+  };
+}

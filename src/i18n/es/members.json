@@ -10,6 +10,8 @@
     "careCircleCount_one": "{{count}} círculo de cuidado",
     "careCircleCount_other": "{{count}} círculos de cuidado",
     "open": "Abrir {{name}}",
+    "openWithRole": "Abrir {{name}} ({{role}})",
+    "openWithRoleOverdue": "Abrir {{name}} ({{role}}) — {{status}}",
     "caringFor": "Cuidando a {{name}}",
     "caringWith_one": "Cuidando junto a {{count}} persona",
     "caringWith_other": "Cuidando junto a {{count}} personas",
@@ -21,7 +23,13 @@
     "errorBody": "Por favor revisa tu conexión e intenta de nuevo.",
     "empty": {
       "title": "Aún no formas parte de ningún círculo de cuidado.",
-      "body": "Descarga la app para crear uno o pide que alguien te invite."
+      "body": "Crea un círculo para empezar, o pide que alguien te invite.",
+      "howItWorksTitle": "Cómo funciona CircleCare",
+      "step1": "Crea un círculo para tu ser querido.",
+      "step2": "Invita a familiares y cuidadores a unirse.",
+      "step3": "Lleva el control de medicamentos y citas en conjunto.",
+      "learnMore": "Conoce más",
+      "companion": "¿Prefieres el teléfono? Descarga la app complementaria."
     }
   },
   "med": {
@@ -45,11 +53,77 @@
   "list": {
     "heading": "Miembros",
     "subheading": "Todos en este círculo de cuidado. Invita o elimina miembros en la app.",
+    "subheadingReadOnly": "Todos los que ayudan a coordinar el cuidado en este círculo.",
     "joined": "Se unió el {{date}}",
     "you": "(tú)",
     "medResponsible": "Administra los recordatorios de medicamentos",
     "errorTitle": "No se pudieron cargar los miembros",
     "errorBody": "Por favor revisa tu conexión e intenta de nuevo.",
-    "empty": "Aún no hay miembros en este círculo."
+    "empty": "Aún no hay miembros en este círculo.",
+    "soloTitle": "Cuidar es más fácil en equipo",
+    "soloBody": "Invita a un familiar o cuidador a ayudar a coordinar el cuidado de tu ser querido: compartan tareas, citas y novedades para que nadie lo lleve solo.",
+    "soloCta": "Invita a tu primer cuidador"
+  },
+  "errors": {
+    "subscriptionRequired": "Los círculos gratuitos permiten un cuidador. Abre la app de CircleCare para mejorar tu plan y agregar más.",
+    "permissionDenied": "No tienes permiso para hacer eso.",
+    "saveFailed": "Algo salió mal. Por favor intenta de nuevo."
+  },
+  "invite": {
+    "cta": "Invitar miembro",
+    "title": "Invitar a un miembro",
+    "subtitle": "Le enviaremos un correo con la invitación para unirse a este círculo de cuidado.",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "nombre@ejemplo.com",
+    "roleLabel": "Su rol",
+    "roleHints": {
+      "caregiver": "Puede ver y ayudar a coordinar el cuidado.",
+      "careRecipient": "La persona que recibe el cuidado."
+    },
+    "circleLabel": "Círculo de cuidado",
+    "send": "Enviar invitación",
+    "sending": "Enviando…",
+    "success": "Invitación enviada a {{email}}.",
+    "capReached": "Los círculos gratuitos permiten un cuidador. Abre la app de CircleCare para mejorar tu plan y agregar más.",
+    "errors": {
+      "emailInvalid": "Por favor ingresa un correo electrónico válido.",
+      "roleRequired": "Por favor elige un rol."
+    }
+  },
+  "manage": {
+    "subheading": "Todos en este círculo de cuidado. Invita, elimina o administra miembros abajo.",
+    "remove": "Eliminar",
+    "removeMemberLabel": "Eliminar a {{name}}",
+    "removeConfirmTitle": "¿Eliminar miembro?",
+    "removeConfirmBody": "{{name}} perderá el acceso a este círculo de cuidado. Puedes volver a invitarlo más tarde.",
+    "removeSuccess": "{{name}} fue eliminado de este círculo.",
+    "setMedResponsible": "Asignar de medicamentos",
+    "clearMedResponsible": "Quitar de medicamentos",
+    "medResponsibleSet": "{{name}} ahora administra los recordatorios de medicamentos.",
+    "medResponsibleCleared": "Se quitó el encargado de medicamentos.",
+    "pendingHeading": "Invitaciones pendientes",
+    "cancelInvite": "Cancelar",
+    "cancelInviteLabel": "Cancelar invitación para {{email}}",
+    "cancelInviteSuccess": "Invitación cancelada.",
+    "cancelInviteConfirmTitle": "¿Cancelar esta invitación?",
+    "cancelInviteConfirmBody": "{{email}} ya no podrá unirse con esta invitación.",
+    "cancelInviteConfirm": "Cancelar invitación",
+    "keepInvite": "Mantener invitación",
+    "leave": "Salir del círculo",
+    "leaveConfirmTitle": "¿Salir de este círculo?",
+    "leaveConfirmBody": "Perderás el acceso a este círculo de cuidado. El dueño puede volver a invitarte más tarde.",
+    "leaveSuccess": "Saliste del círculo."
+  },
+  "pending": {
+    "heading": "Tus invitaciones",
+    "subheading": "Círculos de cuidado que te han invitado a ayudar.",
+    "invitedYou": "{{inviter}} te invitó a ayudar a cuidar a {{recipient}}",
+    "accept": "Aceptar",
+    "accepting": "Uniéndote…",
+    "accepted": "Te uniste a {{circle}}.",
+    "emptyTitle": "No hay invitaciones pendientes",
+    "emptyBody": "Cuando alguien te invite a un círculo de cuidado, aparecerá aquí.",
+    "errorTitle": "No se pudieron cargar las invitaciones",
+    "errorBody": "Por favor revisa tu conexión e intenta de nuevo."
   }
 }

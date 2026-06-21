@@ -1,4 +1,13 @@
 import { apiClient } from '@/lib/api';
+// Re-exported from the shared lib (generalized out of this module). Anything
+// importing `isPermissionDeniedError`/`PERMISSION_ERROR_CODES` from here keeps
+// working unchanged; new code may import the finer-grained helpers directly.
+export {
+  isPermissionDeniedError,
+  isSubscriptionRequiredError,
+  isAccessDeniedError,
+  PERMISSION_ERROR_CODES,
+} from '@/lib/apiErrors';
 
 // PORT of mobile/src/api/medicationConfirmations.ts (confirm subset) plus the
 // web-only "today's meds" fetch. Today's meds come from the calendar events
@@ -57,28 +66,6 @@ export interface TodaysMedication {
     confirmed_at: string;
     confirmed_by: string;
   } | null;
-}
-
-interface ApiErrorEnvelope {
-  success?: boolean;
-  error?: { code?: string; message?: string };
-}
-
-const PERMISSION_ERROR_CODES = new Set([
-  'VIEW_ONLY',
-  'SUBSCRIPTION_REQUIRED',
-  'FORBIDDEN',
-  'PAYMENT_REQUIRED',
-]);
-
-/**
- * True when an apiClient rejection is a 402/403 access rejection from
- * requireCircleEditAccess. The response interceptor rejects with the backend
- * envelope (`{ success: false, error: { code } }`), not an AxiosError.
- */
-export function isPermissionDeniedError(err: unknown): boolean {
-  const code = (err as ApiErrorEnvelope | null)?.error?.code;
-  return typeof code === 'string' && PERMISSION_ERROR_CODES.has(code);
 }
 
 interface ConfirmEnvelope {

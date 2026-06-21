@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
@@ -23,6 +23,12 @@ export default function ForgotPasswordPage(): ReactElement {
   const [sent, setSent] = useState(false);
 
   const emailRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  // Move focus to the inline error when it appears (mirrors LoginPage).
+  useEffect(() => {
+    if (formError) errorRef.current?.focus();
+  }, [formError]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -82,7 +88,9 @@ export default function ForgotPasswordPage(): ReactElement {
     <AuthShell title={t('forgotPassword.title')} subtitle={t('forgotPassword.subtitle')}>
       {formError ? (
         <div
+          ref={errorRef}
           role="alert"
+          tabIndex={-1}
           className="mb-4 rounded-xl border border-terracotta-deep/40 bg-bg-2 p-3 text-sm text-terracotta-deep"
         >
           {formError}

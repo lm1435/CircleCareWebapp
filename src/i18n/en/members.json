@@ -10,6 +10,8 @@
     "careCircleCount_one": "{{count}} care circle",
     "careCircleCount_other": "{{count}} care circles",
     "open": "Open {{name}}",
+    "openWithRole": "Open {{name}} ({{role}})",
+    "openWithRoleOverdue": "Open {{name}} ({{role}}) — {{status}}",
     "caringFor": "Caring for {{name}}",
     "caringWith_one": "Caring together with {{count}} person",
     "caringWith_other": "Caring together with {{count}} people",
@@ -21,7 +23,13 @@
     "errorBody": "Please check your connection and try again.",
     "empty": {
       "title": "You're not part of any care circle yet.",
-      "body": "Download the app to create one or ask someone to invite you."
+      "body": "Create a circle to get started, or ask someone to invite you.",
+      "howItWorksTitle": "How CircleCare works",
+      "step1": "Create a circle for your loved one.",
+      "step2": "Invite family and caregivers to join.",
+      "step3": "Track medications and appointments together.",
+      "learnMore": "Learn more",
+      "companion": "Prefer your phone? Get the companion app."
     }
   },
   "med": {
@@ -45,11 +53,77 @@
   "list": {
     "heading": "Members",
     "subheading": "Everyone in this care circle. Invite or remove members in the app.",
+    "subheadingReadOnly": "Everyone helping coordinate care in this circle.",
     "joined": "Joined {{date}}",
     "you": "(you)",
     "medResponsible": "Manages medication reminders",
     "errorTitle": "Unable to load members",
     "errorBody": "Please check your connection and try again.",
-    "empty": "No members in this circle yet."
+    "empty": "No members in this circle yet.",
+    "soloTitle": "Care is easier together",
+    "soloBody": "Invite a family member or caregiver to help coordinate your loved one's care — share tasks, appointments, and updates so no one carries it alone.",
+    "soloCta": "Invite your first caregiver"
+  },
+  "errors": {
+    "subscriptionRequired": "Free circles can have one caregiver. Open the CircleCare app to upgrade and add more.",
+    "permissionDenied": "You don't have permission to do that.",
+    "saveFailed": "Something went wrong. Please try again."
+  },
+  "invite": {
+    "cta": "Invite member",
+    "title": "Invite a member",
+    "subtitle": "We'll email them an invitation to join this care circle.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "name@example.com",
+    "roleLabel": "Their role",
+    "roleHints": {
+      "caregiver": "Can view and help coordinate care.",
+      "careRecipient": "The person receiving care."
+    },
+    "circleLabel": "Care circle",
+    "send": "Send invite",
+    "sending": "Sending…",
+    "success": "Invitation sent to {{email}}.",
+    "capReached": "Free circles can have one caregiver. Open the CircleCare app to upgrade and add more.",
+    "errors": {
+      "emailInvalid": "Please enter a valid email address.",
+      "roleRequired": "Please choose a role."
+    }
+  },
+  "manage": {
+    "subheading": "Everyone in this care circle. Invite, remove, or manage members below.",
+    "remove": "Remove",
+    "removeMemberLabel": "Remove {{name}}",
+    "removeConfirmTitle": "Remove member?",
+    "removeConfirmBody": "{{name}} will lose access to this care circle. You can invite them again later.",
+    "removeSuccess": "{{name}} was removed from this circle.",
+    "setMedResponsible": "Make med manager",
+    "clearMedResponsible": "Remove med manager",
+    "medResponsibleSet": "{{name}} now manages medication reminders.",
+    "medResponsibleCleared": "Medication manager cleared.",
+    "pendingHeading": "Pending invites",
+    "cancelInvite": "Cancel",
+    "cancelInviteLabel": "Cancel invite for {{email}}",
+    "cancelInviteSuccess": "Invitation canceled.",
+    "cancelInviteConfirmTitle": "Cancel this invite?",
+    "cancelInviteConfirmBody": "{{email}} will no longer be able to join with this invitation.",
+    "cancelInviteConfirm": "Cancel invite",
+    "keepInvite": "Keep invite",
+    "leave": "Leave circle",
+    "leaveConfirmTitle": "Leave this circle?",
+    "leaveConfirmBody": "You'll lose access to this care circle. The owner can invite you again later.",
+    "leaveSuccess": "You left the circle."
+  },
+  "pending": {
+    "heading": "Your invitations",
+    "subheading": "Care circles that have invited you to help.",
+    "invitedYou": "{{inviter}} invited you to help care for {{recipient}}",
+    "accept": "Accept",
+    "accepting": "Joining…",
+    "accepted": "You joined {{circle}}.",
+    "emptyTitle": "No pending invitations",
+    "emptyBody": "When someone invites you to a care circle, it will appear here.",
+    "errorTitle": "Unable to load invitations",
+    "errorBody": "Please check your connection and try again."
   }
 }

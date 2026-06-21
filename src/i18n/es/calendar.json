@@ -13,6 +13,10 @@
   "noEventsWeek": "Sin eventos esta semana",
   "noEventsMonth": "Sin eventos este mes",
   "noEventsDay": "Nada programado para este día",
+  "empty": {
+    "hint": "Agrega un medicamento o una cita para empezar a coordinar el cuidado aquí.",
+    "hintReadOnly": "Cuando el equipo de cuidado agregue medicamentos o citas, aparecerán aquí."
+  },
   "errorTitle": "No se pudo cargar el calendario",
   "errorHint": "Verifica tu conexión e intenta de nuevo.",
   "eventCount_one": "{{count}} evento",
@@ -55,5 +59,111 @@
     "weeklyOn": "Semanal los {{days}}",
     "everyNDays_one": "Cada día",
     "everyNDays_other": "Cada {{count}} días"
+  },
+  "errors": {
+    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y desbloquear esto.",
+    "permissionDenied": "No tienes permiso para hacer cambios en este círculo.",
+    "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo."
+  },
+  "addEvent": {
+    "addEvent": "Agregar evento",
+    "newTitle": "Nuevo evento",
+    "editTitle": "Editar evento",
+    "close": "Cerrar el formulario de evento",
+    "create": "Crear",
+    "saveChanges": "Guardar cambios",
+    "creating": "Guardando…",
+    "created": "Evento creado",
+    "updated": "Cambios guardados",
+    "viewOnly": "Solo lectura",
+    "types": {
+      "medication": "Medicamento",
+      "appointment": "Cita",
+      "task": "Tarea"
+    },
+    "fields": {
+      "type": "Tipo",
+      "title": "Título",
+      "medicationName": "Nombre del medicamento",
+      "dosage": "Dosis",
+      "date": "Fecha",
+      "time": "Hora",
+      "endTime": "Hora de fin",
+      "location": "Ubicación",
+      "notes": "Notas",
+      "repeat": "Repetir",
+      "daysOn": "Días activos",
+      "daysOff": "Días de descanso",
+      "endDate": "Fecha de fin",
+      "assignedTo": "Asignado a"
+    },
+    "placeholders": {
+      "appointmentTitle": "ej. Chequeo con el Dr. Smith",
+      "taskTitle": "ej. Recoger la receta",
+      "medicationName": "ej. Metformina",
+      "dosage": "ej. 500 mg",
+      "location": "ej. Clínica de la calle Main",
+      "notes": "Agrega cualquier detalle…"
+    },
+    "hints": {
+      "timeOptional": "Déjalo en blanco para un evento de todo el día.",
+      "endDate": "Déjalo en blanco para repetir indefinidamente.",
+      "timesShownIn": "Las horas se guardan en {{timezone}}."
+    },
+    "anyone": "Cualquiera",
+    "recurrence": {
+      "never": "No se repite",
+      "daily": "Diario",
+      "everyOtherDay": "Cada tercer día",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "cycle": "Ciclo (días activos / descanso)"
+    },
+    "reminders": {
+      "section": "Recordatorios",
+      "enable": "Enviar recordatorios",
+      "enableHint": "Avisa al círculo antes de la hora programada.",
+      "additional": "Recordatorios adicionales",
+      "h24": "24 horas antes",
+      "h1": "1 hora antes",
+      "m30": "30 minutos antes",
+      "m15": "15 minutos antes"
+    },
+    "validation": {
+      "titleRequired": "Ingresa un título.",
+      "medicationRequired": "Ingresa el nombre del medicamento.",
+      "dateRequired": "Elige una fecha.",
+      "timeRequired": "Los medicamentos necesitan una hora programada.",
+      "endTimeRequired": "Agrega una hora de fin.",
+      "endTimeAfterStart": "La hora de fin debe ser posterior a la de inicio."
+    }
+  },
+  "deleteEvent": {
+    "title": "Eliminar evento",
+    "close": "Cerrar el diálogo de eliminación",
+    "confirmMessage": "¿Eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
+    "recurringMessage": "\"{{title}}\" se repite. ¿Qué deseas eliminar?",
+    "scopeSingle": "Solo este evento",
+    "scopeFuture": "Este y todos los eventos futuros",
+    "delete": "Eliminar",
+    "deleting": "Eliminando…",
+    "deleted": "Evento eliminado"
+  },
+  "notes": {
+    "title": "Notas",
+    "composerLabel": "Agregar una nota",
+    "composerPlaceholder": "Agrega una nota para el círculo…",
+    "editLabel": "Editar nota",
+    "add": "Agregar nota",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "deleteTitle": "Eliminar nota",
+    "deleteConfirm": "¿Eliminar esta nota? Esta acción no se puede deshacer.",
+    "empty": "Aún no hay notas.",
+    "loadError": "No se pudieron cargar las notas.",
+    "errorSaving": "No se pudo guardar tu nota. Inténtalo de nuevo."
   }
 }

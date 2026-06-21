@@ -1,0 +1,19 @@
+{
+  "title": "Care Assistant",
+  "subtitle": "Ask about caregiving, medications, or health",
+  "intro": "Ask me questions about caregiving, medications, or health management. I can help with appointments, medications, adherence, and recent activity.",
+  "disclaimer": "AI responses are for informational purposes only. Always consult healthcare professionals. To protect privacy, no personal health details are sent to the AI.",
+  "inputPlaceholder": "Ask a question...",
+  "inputLabel": "Your message",
+  "send": "Send",
+  "sending": "Sending...",
+  "thinking": "Thinking...",
+  "emptyTitle": "How can I help?",
+  "remainingCount": "{{count}} left today",
+  "errors": {
+    "subscriptionRequired": "The Care Assistant is a premium feature. Open the CircleCare app to upgrade.",
+    "rateLimited": "You've reached your daily limit of 50 questions. Please try again tomorrow.",
+    "unavailable": "The Care Assistant is unavailable right now. Please try again later.",
+    "sendFailed": "Sorry, I encountered an error. Please try again."
+  }
+}

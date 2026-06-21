@@ -6,24 +6,38 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // file. Namespaces other than `common` start empty — feature agents fill them.
 import enCommon from './en/common.json';
 import enAuth from './en/auth.json';
+import enOverview from './en/overview.json';
 import enCalendar from './en/calendar.json';
+import enTasks from './en/tasks.json';
 import enMeds from './en/meds.json';
 import enActivity from './en/activity.json';
 import enEmergency from './en/emergency.json';
 import enDocuments from './en/documents.json';
 import enMembers from './en/members.json';
 import enInvite from './en/invite.json';
+import enVitals from './en/vitals.json';
+import enProfile from './en/profile.json';
+import enCircles from './en/circles.json';
+import enAi from './en/ai.json';
+import enHelp from './en/help.json';
 import enFreemium from './en/freemium.json';
 
 import esCommon from './es/common.json';
 import esAuth from './es/auth.json';
+import esOverview from './es/overview.json';
 import esCalendar from './es/calendar.json';
+import esTasks from './es/tasks.json';
 import esMeds from './es/meds.json';
 import esActivity from './es/activity.json';
 import esEmergency from './es/emergency.json';
 import esDocuments from './es/documents.json';
 import esMembers from './es/members.json';
 import esInvite from './es/invite.json';
+import esVitals from './es/vitals.json';
+import esProfile from './es/profile.json';
+import esCircles from './es/circles.json';
+import esAi from './es/ai.json';
+import esHelp from './es/help.json';
 import esFreemium from './es/freemium.json';
 
 export const supportedLanguages = {
@@ -36,13 +50,20 @@ export type SupportedLanguage = keyof typeof supportedLanguages;
 export const namespaces = [
   'common',
   'auth',
+  'overview',
   'calendar',
+  'tasks',
   'meds',
   'activity',
   'emergency',
   'documents',
   'members',
   'invite',
+  'vitals',
+  'profile',
+  'circles',
+  'ai',
+  'help',
   'freemium',
 ] as const;
 
@@ -52,25 +73,39 @@ const resources = {
   en: {
     common: enCommon,
     auth: enAuth,
+    overview: enOverview,
     calendar: enCalendar,
+    tasks: enTasks,
     meds: enMeds,
     activity: enActivity,
     emergency: enEmergency,
     documents: enDocuments,
     members: enMembers,
     invite: enInvite,
+    vitals: enVitals,
+    profile: enProfile,
+    circles: enCircles,
+    ai: enAi,
+    help: enHelp,
     freemium: enFreemium,
   },
   es: {
     common: esCommon,
     auth: esAuth,
+    overview: esOverview,
     calendar: esCalendar,
+    tasks: esTasks,
     meds: esMeds,
     activity: esActivity,
     emergency: esEmergency,
     documents: esDocuments,
     members: esMembers,
     invite: esInvite,
+    vitals: esVitals,
+    profile: esProfile,
+    circles: esCircles,
+    ai: esAi,
+    help: esHelp,
     freemium: esFreemium,
   },
 };

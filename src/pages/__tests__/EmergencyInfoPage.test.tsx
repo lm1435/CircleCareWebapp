@@ -4,12 +4,24 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { apiClient } from '@/lib/api';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
+import { ToastProvider } from '@/components/ui';
 import EmergencyInfoPage from '@/pages/EmergencyInfoPage';
 
 // @/lib/api is mocked globally in src/test/setup.ts. The real apiClient's
 // response interceptor unwraps to the `{ success, data }` envelope, so the
 // mock resolves with the envelope directly.
 const mockedGet = vi.mocked(apiClient.get);
+const mockedPut = vi.mocked(apiClient.put);
+
+/** Typed view of the last PUT body for assertions. */
+function lastPutBody(): {
+  additional_doctors?: { name: string }[];
+  emergency_contacts?: { name: string }[];
+  insurance_plans?: { carrier: string }[];
+} {
+  const call = mockedPut.mock.calls[0];
+  return (call?.[1] ?? {}) as ReturnType<typeof lastPutBody>;
+}
 
 const CIRCLE_ID = 'circle-1';
 
@@ -76,10 +88,21 @@ const fullInfo: EmergencyInfo = {
   updated_at: '2026-01-01T00:00:00.000Z',
 };
 
-function mockApi(emergencyInfo: EmergencyInfo | null): void {
+function mockApi(emergencyInfo: EmergencyInfo | null, canEdit = false): void {
+  const detail = {
+    ...circleDetailEnvelope,
+    data: {
+      circle: {
+        ...circleDetailEnvelope.data.circle,
+        can_edit: canEdit,
+        view_only: !canEdit,
+        access_level: canEdit ? 'edit' : 'view',
+      },
+    },
+  };
   mockedGet.mockImplementation(async (url: string) => {
     if (url === '/circles') return circlesEnvelope;
-    if (url === `/circles/${CIRCLE_ID}`) return circleDetailEnvelope;
+    if (url === `/circles/${CIRCLE_ID}`) return detail;
     if (url === `/circles/${CIRCLE_ID}/emergency-info`) {
       return { success: true, data: { emergency_info: emergencyInfo } };
     }
@@ -93,11 +116,13 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/emergency`]}>
-        <Routes>
-          <Route path="/circles/:circleId/emergency" element={<EmergencyInfoPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/emergency`]}>
+          <Routes>
+            <Route path="/circles/:circleId/emergency" element={<EmergencyInfoPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -105,20 +130,24 @@ function renderPage() {
 describe('EmergencyInfoPage', () => {
   beforeEach(() => {
     mockedGet.mockReset();
+    mockedPut.mockReset();
   });
 
   it('renders all five sections with data', async () => {
     mockApi(fullInfo);
     renderPage();
 
+    // Collapsible accordion headers carry a count in their meta slot, so the
+    // h2 accessible name includes the number (e.g. "Doctors 2"). Match loosely.
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Medical Information' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Doctors' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: /Doctors/ })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Emergency Contacts' })
+      screen.getByRole('heading', { level: 2, name: /Emergency Contacts/ })
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Insurance' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: /Insurance/ })).toBeInTheDocument();
+    // Code Status stays always-visible (a plain section, not an accordion).
     expect(screen.getByRole('heading', { level: 2, name: 'Code Status' })).toBeInTheDocument();
 
     // Section contents. Blood type and the primary contact name also appear in
@@ -223,11 +252,21 @@ describe('EmergencyInfoPage', () => {
     // Doctors section still has data
     expect(await screen.findByText('Dr. Chen')).toBeInTheDocument();
 
-    // The other four sections show their empty states
-    expect(screen.getByText('No medical information added yet')).toBeInTheDocument();
-    expect(screen.getByText('No emergency contacts added yet')).toBeInTheDocument();
-    expect(screen.getByText('No insurance information added yet')).toBeInTheDocument();
-    expect(screen.getByText('No code status on file')).toBeInTheDocument();
+    // The other four sections show their (purpose-driven) empty states
+    expect(
+      screen.getByText(
+        'Add blood type, allergies, and conditions so first responders know your loved one in seconds.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Add the people to call first in an emergency so no one is left guessing.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Add insurance details so coverage is ready when care can't wait.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Record your loved one's code status so their wishes are clear in a crisis.")
+    ).toBeInTheDocument();
   });
 
   it('shows the fully-empty state when there is no emergency info record', async () => {
@@ -237,7 +276,7 @@ describe('EmergencyInfoPage', () => {
     expect(await screen.findByText('No emergency information yet')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Add doctors, allergies, insurance, and emergency contacts in the CircleCare app, and they will appear here.'
+        "Keep the details first responders need — allergies, doctors, insurance, and who to call — ready in one place for your loved one. Add them in the CircleCare app and they'll appear here."
       )
     ).toBeInTheDocument();
     // No sections or print button in the fully-empty state
@@ -287,6 +326,114 @@ describe('EmergencyInfoPage', () => {
     mockApi(fullInfo);
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByText('Dr. Chen')).toBeInTheDocument();
+  });
+
+  // ── Edit affordances (canEdit gating + delete flow) ──────────────────────
+
+  it('hides Add / Edit / Delete affordances when the requester cannot edit', async () => {
+    mockApi(fullInfo, false);
+    renderPage();
+
+    await screen.findByText('Dr. Chen');
+    expect(screen.queryByRole('button', { name: 'Add doctor' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add contact' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add insurance' })).not.toBeInTheDocument();
+    // Read-only notice present instead.
+    expect(screen.getByText('This page is read-only.')).toBeInTheDocument();
+  });
+
+  it('shows Add buttons and no read-only notice when the requester can edit', async () => {
+    mockApi(fullInfo, true);
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Add doctor' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add contact' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add insurance' })).toBeInTheDocument();
+    expect(screen.queryByText('This page is read-only.')).not.toBeInTheDocument();
+  });
+
+  it('adds a doctor via the modal, sending a partial additional_doctors PUT', async () => {
+    mockApi(fullInfo, true);
+    mockedPut.mockResolvedValue({ success: true, data: { emergency_info: fullInfo } });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add doctor' }));
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Name *'), { target: { value: 'Dr. Lee' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockedPut).toHaveBeenCalledTimes(1));
+    expect(mockedPut.mock.calls[0][0]).toBe(`/circles/${CIRCLE_ID}/emergency-info`);
+    const body = lastPutBody();
+    expect(Object.keys(body)).toEqual(['additional_doctors']);
+    // Existing Dr. Patel preserved, Dr. Lee appended.
+    expect(body.additional_doctors).toHaveLength(2);
+    expect(body.additional_doctors?.[1].name).toBe('Dr. Lee');
+  });
+
+  it('deletes an additional doctor via confirm, sending the filtered array', async () => {
+    mockApi(fullInfo, true);
+    mockedPut.mockResolvedValue({ success: true, data: { emergency_info: fullInfo } });
+    renderPage();
+
+    // Per-item delete button is labelled with the doctor name.
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete doctor Dr. Patel' }));
+
+    // Confirm dialog → Delete.
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(mockedPut).toHaveBeenCalledTimes(1));
+    // fullInfo had exactly one additional doctor → filtered to empty.
+    expect(lastPutBody().additional_doctors).toEqual([]);
+  });
+
+  // ── Collapsible accordion sections ──────────────────────────────────────
+
+  it('collapses a section but keeps its content in the DOM (for print/SR)', async () => {
+    mockApi(fullInfo);
+    renderPage();
+
+    const doctorsHeader = await screen.findByRole('button', { name: /Doctors/ });
+    expect(doctorsHeader).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(doctorsHeader);
+    expect(doctorsHeader).toHaveAttribute('aria-expanded', 'false');
+
+    // Collapsed = visually hidden, but the panel + its content stay mounted so
+    // window.print() (panels are print:block) still reveals everything.
+    const panel = document.getElementById('doctors-accordion-panel');
+    expect(panel).not.toBeNull();
+    expect(panel?.className).toContain('hidden');
+    expect(panel?.className).toContain('print:block');
+    expect(within(panel as HTMLElement).getByText('Dr. Chen')).toBeInTheDocument();
+  });
+
+  it('Expand all / Collapse all flips every collapsible section', async () => {
+    mockApi(fullInfo);
+    renderPage();
+
+    // Default: all open → control reads "Collapse all".
+    const control = await screen.findByRole('button', { name: 'Collapse all' });
+    fireEvent.click(control);
+
+    // Now all four collapsible headers are collapsed; control reads "Expand all".
+    expect(screen.getByRole('button', { name: 'Expand all' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Doctors/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    expect(screen.getByRole('button', { name: /Insurance/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+    expect(screen.getByRole('button', { name: /Doctors/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
   });
 
   it('scopes print styles to this page via a body class', async () => {

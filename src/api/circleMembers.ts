@@ -27,6 +27,18 @@ export interface CircleMember {
   view_only?: boolean;
 }
 
+/**
+ * A pending invite returned on the circle detail (`pending_invites`). Only the
+ * inviter/owner perspective — shape from backend/src/routes/circles.ts GET
+ * /:circleId (`select('id, invited_email, created_at, expires_at')`).
+ */
+export interface PendingCircleInvite {
+  id: string;
+  invited_email: string;
+  created_at: string;
+  expires_at: string;
+}
+
 export interface CircleDetail {
   id: string;
   name: string;
@@ -41,6 +53,9 @@ export interface CircleDetail {
   is_self_care: boolean;
   care_recipient_timezone: string;
   members: CircleMember[];
+  /** Pending invites for this circle (owner/inviter perspective). Optional —
+   *  only returned to owners; consumers default to []. */
+  pending_invites?: PendingCircleInvite[];
   // Subscription-aware access info (requester's perspective)
   access_level: 'full' | 'edit' | 'view';
   is_premium_circle: boolean;
@@ -58,4 +73,39 @@ export async function getCircleDetail(circleId: string): Promise<CircleDetail> {
     `/circles/${circleId}`
   )) as unknown as CircleDetailEnvelope;
   return response.data.circle;
+}
+
+// ===========================================================================
+// Member-management WRITE functions (plan Stage 5, Task 5.1)
+// ---------------------------------------------------------------------------
+// Mirrors mobile/src/api/circles.ts (removeMember, leaveCircle) + mobile's
+// useSetMedicationResponsible hook. Backend contracts verified against
+// backend/src/routes/circles.ts:
+//   - DELETE /circles/:circleId/members/:userId  (requireAuth, owner kicks).
+//   - POST   /circles/:circleId/leave            (requireAuth, owner blocked).
+//   - PUT    /circles/:circleId/medication-responsible (requireAuth, owner)
+//       body { userId: uuid | null } — null clears the assignment.
+// All return the `{ success, data }` envelope (unwrapped by the interceptor);
+// these write helpers don't need the payload, so they resolve to void.
+// ===========================================================================
+
+/** DELETE /circles/:circleId/members/:userId — owner removes a member. */
+export async function removeMember(circleId: string, userId: string): Promise<void> {
+  await apiClient.delete(`/circles/${circleId}/members/${userId}`);
+}
+
+/** POST /circles/:circleId/leave — current member voluntarily leaves (owner blocked). */
+export async function leaveCircle(circleId: string): Promise<void> {
+  await apiClient.post(`/circles/${circleId}/leave`);
+}
+
+/**
+ * PUT /circles/:circleId/medication-responsible — owner sets or clears the
+ * medication-responsible member. Pass `null` to clear the assignment.
+ */
+export async function setMedicationResponsible(
+  circleId: string,
+  userId: string | null
+): Promise<void> {
+  await apiClient.put(`/circles/${circleId}/medication-responsible`, { userId });
 }

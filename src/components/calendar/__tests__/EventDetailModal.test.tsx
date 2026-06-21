@@ -3,6 +3,13 @@ import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { EventDetailModal } from '../EventDetailModal';
 
+// The notes panel pulls in React Query + auth + toast context; these
+// detail-modal tests are scoped to the detail rendering, so stub it out.
+// EventNotesPanel has its own dedicated test (EventNotesPanel.test.tsx).
+vi.mock('../EventNotesPanel', () => ({
+  EventNotesPanel: () => null,
+}));
+
 // Pin the "device" timezone (only getDeviceTimezone reads resolvedOptions —
 // formatToParts/format are unaffected). Dev machine is America/Denver; tests
 // must never depend on it.

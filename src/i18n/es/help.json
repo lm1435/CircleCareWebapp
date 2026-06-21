@@ -1,0 +1,101 @@
+{
+  "title": "Ayuda y Preguntas Frecuentes",
+  "subtitle": "Encuentra respuestas a preguntas comunes",
+  "sections": {
+    "gettingStarted": {
+      "title": "Primeros Pasos",
+      "items": [
+        {
+          "question": "¿Qué es un Círculo de Cuidado?",
+          "answer": "Un Círculo de Cuidado es un grupo privado para coordinar el cuidado de una persona (como un padre o abuelo). Los familiares se unen al círculo para compartir actualizaciones, dar seguimiento a medicamentos y mantenerse conectados."
+        },
+        {
+          "question": "¿Cuántos círculos puedo crear?",
+          "answer": "Los suscriptores pueden crear hasta 5 círculos, ideal para familias que cuidan a varios seres queridos."
+        },
+        {
+          "question": "¿Necesito pagar para unirme al círculo de alguien?",
+          "answer": "¡No! Unirte al círculo de otra persona siempre es gratis. Solo los dueños de círculos necesitan una suscripción activa para crear círculos e invitar miembros."
+        }
+      ]
+    },
+    "roles": {
+      "title": "Círculos y Roles",
+      "items": [
+        {
+          "question": "¿Cuál es la diferencia entre Dueño, Cuidador y Receptor de Cuidado?",
+          "answer": "El Dueño crea el círculo y puede invitar miembros, administrar la configuración y eliminar el círculo. Los Cuidadores son familiares que ayudan a coordinar el cuidado: pueden ver y actualizar la información. El Receptor de Cuidado es la persona que recibe el cuidado: recibe recordatorios de medicamentos y puede confirmar cuando los ha tomado."
+        },
+        {
+          "question": "¿Puedo estar en varios círculos?",
+          "answer": "¡Sí! Puedes ser miembro de varios círculos. Por ejemplo, puedes ser dueño del círculo de tu mamá y cuidador en el círculo de tu papá creado por un hermano."
+        }
+      ]
+    },
+    "medications": {
+      "title": "Seguimiento de Medicamentos",
+      "items": [
+        {
+          "question": "¿Cómo funcionan los recordatorios de medicamentos?",
+          "answer": "Cuando agregas un medicamento, el receptor de cuidado recibe una notificación a la hora programada. Toca 'Lo tomé' para confirmar, y todos los familiares del círculo son notificados. Si la dosis no se confirma en 15 minutos, tu ser querido recibe un recordatorio amable. Después de 30 minutos, todos los cuidadores del círculo son notificados. Después de 1 hora, la dosis se marca como no tomada y todos reciben una alerta."
+        },
+        {
+          "question": "¿Qué pasa si no se toma un medicamento?",
+          "answer": "Después de 1 hora sin confirmación, el medicamento se marca como no tomado y todos los miembros del círculo son notificados. La dosis queda sin resolver hasta que alguien la marque como tomada o saltada. Puedes ver el historial de medicamentos para identificar patrones, incluyendo tasas de adherencia y qué dosis se pierden con más frecuencia."
+        },
+        {
+          "question": "¿Puedo configurar medicamentos que no son diarios?",
+          "answer": "¡Sí! Puedes configurar medicamentos diarios, cada tercer día, semanales (días específicos) o con intervalos personalizados. También puedes marcar medicamentos como 'según necesidad' para medicamentos PRN."
+        }
+      ]
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "items": [
+        {
+          "question": "¿Dónde recibo las notificaciones?",
+          "answer": "Los recordatorios y avisos se envían como notificaciones push a través de la app móvil de CircleCare. Puedes administrar tus preferencias de notificaciones aquí en la web, pero para recibir los recordatorios, instala la app en tu teléfono y activa las notificaciones."
+        },
+        {
+          "question": "¿Qué notificaciones voy a recibir?",
+          "answer": "Recibirás notificaciones de recordatorios de medicamentos (si eres el receptor de cuidado), confirmaciones de medicamentos, medicamentos no tomados, recordatorios de citas y cuando familiares se unan a tu círculo."
+        },
+        {
+          "question": "¿Qué son las Horas de Silencio?",
+          "answer": "Las Horas de Silencio pausan las notificaciones durante los horarios que configures (por ejemplo, de 10 PM a 7 AM). Ve a Perfil > Configuración para configurar tus horas de silencio."
+        },
+        {
+          "question": "¿Puedo desactivar ciertas notificaciones?",
+          "answer": "¡Sí! Ve a Perfil > Notificaciones para personalizar qué tipos de notificaciones recibes para cada círculo."
+        }
+      ]
+    },
+    "premium": {
+      "title": "Funciones Premium",
+      "items": [
+        {
+          "question": "¿Qué incluye Premium?",
+          "answer": "CircleCare Premium incluye hasta 5 círculos de cuidado, invitaciones ilimitadas por círculo y soporte prioritario. Consulta la página de suscripción para ver los precios actuales de los planes mensuales y anuales."
+        },
+        {
+          "question": "¿Puedo probar antes de pagar?",
+          "answer": "¡Sí! CircleCare es gratis para empezar con un grupo de cuidado y dos cuidadores. Cuando necesites más grupos, cuidadores ilimitados o funciones premium como IA, solo mejora tu plan."
+        },
+        {
+          "question": "¿Cómo restauro mis compras?",
+          "answer": "Ve a Perfil > Suscripción > Restaurar Compras. Esto es útil si reinstalas la app o cambias de dispositivo."
+        }
+      ]
+    }
+  },
+  "contact": {
+    "title": "¿Aún necesitas ayuda?",
+    "body": "Escríbele a nuestro equipo de soporte y te responderemos.",
+    "email": "support@circlecare.app",
+    "cta": "Escribir a soporte"
+  },
+  "download": {
+    "title": "Obtén la experiencia completa",
+    "body": "Descarga CircleCare en tu teléfono para recordatorios, ayuda con IA y más."
+  }
+}

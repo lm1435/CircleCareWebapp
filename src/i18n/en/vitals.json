@@ -1,0 +1,87 @@
+{
+  "title": "Vitals",
+  "subtitle": "Track health readings for your circle — blood pressure, heart rate, glucose, and weight.",
+  "loading": "Loading vitals",
+  "errorTitle": "Couldn't load vitals",
+  "errorHint": "Check your connection and try again.",
+  "types": {
+    "blood_pressure": "Blood pressure",
+    "heart_rate": "Heart rate",
+    "glucose": "Glucose",
+    "weight": "Weight"
+  },
+  "filter": {
+    "typeLabel": "Type",
+    "allTypes": "All types",
+    "rangeLabel": "Time range",
+    "range": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
+    }
+  },
+  "fields": {
+    "systolic": "Systolic",
+    "diastolic": "Diastolic",
+    "unitSuffix": "in {{unit}}",
+    "date": "Date",
+    "time": "Time",
+    "timesShownIn": "Times shown in {{timezone}}",
+    "notes": "Notes",
+    "notesPlaceholder": "Add a note (optional)"
+  },
+  "add": {
+    "cta": "Add reading",
+    "title": "Add reading",
+    "typeLabel": "Reading type",
+    "save": "Save reading",
+    "saving": "Saving…"
+  },
+  "edit": {
+    "title": "Edit reading",
+    "save": "Save changes"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "editLabel": "Edit reading {{value}}",
+    "deleteLabel": "Delete reading {{value}}"
+  },
+  "delete": {
+    "title": "Delete this reading?",
+    "message": "This reading will be permanently removed. This can't be undone."
+  },
+  "synced": {
+    "badge": "Synced",
+    "readOnly": "Synced from a connected device — this reading can't be edited here."
+  },
+  "empty": {
+    "title": "No readings yet",
+    "hint": "Track your loved one's vitals over time so the whole circle can spot trends and share them at the next appointment.",
+    "hintReadOnly": "Readings logged for this circle will appear here so everyone can follow your loved one's health over time.",
+    "cta": "Log a reading"
+  },
+  "toast": {
+    "added": "Reading saved",
+    "updated": "Reading updated",
+    "deleted": "Reading deleted"
+  },
+  "validation": {
+    "invalid": "Please check this value.",
+    "valueRequired": "Please enter a value.",
+    "dateRequired": "Please choose a date.",
+    "timeRequired": "Please choose a time.",
+    "valueOutOfRange": "That value is outside the expected range.",
+    "diastolicRequired": "Please enter the diastolic value.",
+    "value2NotAllowed": "This reading takes a single value.",
+    "invalidUnit": "That unit isn't valid for this reading.",
+    "invalidDate": "Please choose a valid date and time.",
+    "recordedAtFuture": "The reading time can't be in the future.",
+    "notesTooLong": "Notes must be 500 characters or fewer."
+  },
+  "errors": {
+    "subscriptionRequired": "Open the CircleCare app to upgrade and unlock this.",
+    "permissionDenied": "You don't have permission to make this change.",
+    "saveFailed": "Couldn't save your changes. Please try again."
+  }
+}

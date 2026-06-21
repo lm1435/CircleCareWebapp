@@ -5,6 +5,12 @@ node_modules/
 dist/
 coverage/
 
+# Playwright E2E artifacts (auth state holds live session cookies — never commit)
+/test-results/
+/playwright-report/
+/playwright/.cache/
+e2e/.auth/
+
 # Environment — NEVER commit credentials
 .env
 .env.local

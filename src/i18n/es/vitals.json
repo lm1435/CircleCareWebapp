@@ -1,0 +1,87 @@
+{
+  "title": "Signos vitales",
+  "subtitle": "Lleva el registro de las lecturas de salud de tu círculo: presión arterial, frecuencia cardíaca, glucosa y peso.",
+  "loading": "Cargando signos vitales",
+  "errorTitle": "No se pudieron cargar los signos vitales",
+  "errorHint": "Revisa tu conexión e inténtalo de nuevo.",
+  "types": {
+    "blood_pressure": "Presión arterial",
+    "heart_rate": "Frecuencia cardíaca",
+    "glucose": "Glucosa",
+    "weight": "Peso"
+  },
+  "filter": {
+    "typeLabel": "Tipo",
+    "allTypes": "Todos los tipos",
+    "rangeLabel": "Período",
+    "range": {
+      "7d": "Últimos 7 días",
+      "30d": "Últimos 30 días",
+      "90d": "Últimos 90 días"
+    }
+  },
+  "fields": {
+    "systolic": "Sistólica",
+    "diastolic": "Diastólica",
+    "unitSuffix": "en {{unit}}",
+    "date": "Fecha",
+    "time": "Hora",
+    "timesShownIn": "Horas mostradas en {{timezone}}",
+    "notes": "Notas",
+    "notesPlaceholder": "Agrega una nota (opcional)"
+  },
+  "add": {
+    "cta": "Agregar lectura",
+    "title": "Agregar lectura",
+    "typeLabel": "Tipo de lectura",
+    "save": "Guardar lectura",
+    "saving": "Guardando…"
+  },
+  "edit": {
+    "title": "Editar lectura",
+    "save": "Guardar cambios"
+  },
+  "actions": {
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "editLabel": "Editar lectura {{value}}",
+    "deleteLabel": "Eliminar lectura {{value}}"
+  },
+  "delete": {
+    "title": "¿Eliminar esta lectura?",
+    "message": "Esta lectura se eliminará de forma permanente. No se puede deshacer."
+  },
+  "synced": {
+    "badge": "Sincronizada",
+    "readOnly": "Sincronizada desde un dispositivo conectado: esta lectura no se puede editar aquí."
+  },
+  "empty": {
+    "title": "Aún no hay lecturas",
+    "hint": "Lleva el registro de los signos vitales de tu ser querido con el tiempo para que todo el círculo note las tendencias y las comparta en la próxima cita.",
+    "hintReadOnly": "Las lecturas registradas para este círculo aparecerán aquí para que todos sigan la salud de tu ser querido con el tiempo.",
+    "cta": "Registrar una lectura"
+  },
+  "toast": {
+    "added": "Lectura guardada",
+    "updated": "Lectura actualizada",
+    "deleted": "Lectura eliminada"
+  },
+  "validation": {
+    "invalid": "Revisa este valor.",
+    "valueRequired": "Ingresa un valor.",
+    "dateRequired": "Elige una fecha.",
+    "timeRequired": "Elige una hora.",
+    "valueOutOfRange": "Ese valor está fuera del rango esperado.",
+    "diastolicRequired": "Ingresa el valor diastólico.",
+    "value2NotAllowed": "Esta lectura admite un solo valor.",
+    "invalidUnit": "Esa unidad no es válida para esta lectura.",
+    "invalidDate": "Elige una fecha y hora válidas.",
+    "recordedAtFuture": "La hora de la lectura no puede estar en el futuro.",
+    "notesTooLong": "Las notas deben tener 500 caracteres o menos."
+  },
+  "errors": {
+    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y desbloquear esto.",
+    "permissionDenied": "No tienes permiso para hacer este cambio.",
+    "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo."
+  }
+}

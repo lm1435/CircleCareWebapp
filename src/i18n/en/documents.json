@@ -17,7 +17,8 @@
   "errorTitle": "We couldn't load the documents.",
   "errorHint": "Check your connection and try again.",
   "noDocuments": "No documents yet",
-  "noDocumentsHint": "Documents uploaded in the CircleCare app will appear here.",
+  "noDocumentsHint": "Keep your loved one's important documents in one place — insurance cards, records, directives — so everyone helping can find them when it matters.",
+  "noDocumentsHintReadOnly": "Documents shared with this circle will appear here so everyone helping can find them when it matters.",
   "noCategoryDocuments": "No documents in this category",
   "uploadedOn": "Uploaded {{date}}",
   "preview": "Preview",
@@ -29,5 +30,54 @@
   "closePreview": "Close preview",
   "previewFailed": "We couldn't load the preview.",
   "pdfFallbackHint": "PDF not displaying? Open it in a new tab or download it.",
-  "openInNewTab": "Open in new tab"
+  "openInNewTab": "Open in new tab",
+  "editAction": "Edit",
+  "editDocument": "Edit {{name}}",
+  "deleteAction": "Delete",
+  "deleteDocument": "Delete {{name}}",
+  "upload": {
+    "openButton": "Upload document",
+    "title": "Upload a document",
+    "submit": "Upload",
+    "uploading": "Uploading...",
+    "success": "Document uploaded.",
+    "fileLabel": "File",
+    "fileHint": "JPG, PNG, HEIC, or PDF. Up to {{max}}.",
+    "storageRemaining": "{{remaining}} remaining",
+    "storageFull": "This circle has reached its storage limit. Free up space or upgrade in the CircleCare app to add more.",
+    "labelLabel": "Name",
+    "categoryLabel": "Category",
+    "noteLabel": "Note (optional)",
+    "noteHint": "Add context for other caregivers.",
+    "errors": {
+      "fileRequired": "Choose a file to upload.",
+      "fileType": "Use a JPG, PNG, HEIC, or PDF file.",
+      "fileTooLarge": "This file is too large. The limit is {{max}}.",
+      "storageFull": "This file would exceed the circle's storage limit.",
+      "labelRequired": "Enter a name for this document.",
+      "noteTooLong": "Notes can be up to 500 characters."
+    }
+  },
+  "edit": {
+    "title": "Edit document",
+    "saving": "Saving...",
+    "success": "Document updated.",
+    "errors": {
+      "labelRequired": "Enter a name for this document.",
+      "noteTooLong": "Notes can be up to 500 characters."
+    }
+  },
+  "delete": {
+    "title": "Delete document?",
+    "message": "Delete \"{{name}}\"? This can't be undone.",
+    "confirm": "Delete",
+    "deleting": "Deleting...",
+    "success": "Document deleted."
+  },
+  "errors": {
+    "storageFull": "This circle has reached its storage limit. Free up space to add more documents.",
+    "subscriptionRequired": "You've reached the free storage limit. Open the CircleCare app to upgrade.",
+    "permissionDenied": "You don't have permission to do that.",
+    "saveFailed": "Something went wrong. Please try again."
+  }
 }

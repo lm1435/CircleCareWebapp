@@ -58,9 +58,9 @@ describe('Header', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the wordmark linking to the circle picker', () => {
+  it('renders the wordmark linking to the current circle overview', () => {
     renderHeader();
-    expect(screen.getByRole('link', { name: 'CircleCare' })).toHaveAttribute('href', '/circles');
+    expect(screen.getByRole('link', { name: 'CircleCare' })).toHaveAttribute('href', '/circles/c1');
   });
 
   describe('circle switcher', () => {

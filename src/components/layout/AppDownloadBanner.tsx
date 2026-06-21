@@ -26,11 +26,23 @@ function detectMobile(): MobileDetection {
   return { isMobile: false, platform: null };
 }
 
-// Session-only dismissal — in-memory by design (never storage; web threat
-// model keeps JS-readable storage empty). Resets on full page reload.
+// Dismissal persists across reloads via localStorage. This is a non-sensitive
+// UI preference, not a secret — the "keep JS-readable storage empty" rule is
+// specifically about auth tokens, which still never touch storage. An in-memory
+// flag mirrors it so a dismiss takes effect instantly without a storage read.
+const DISMISS_KEY = 'cc-download-banner-dismissed';
 let dismissedThisSession = false;
 
-/** Test-only helper — resets the module-level session dismissal flag. */
+function isBannerDismissed(): boolean {
+  if (dismissedThisSession) return true;
+  try {
+    return window.localStorage.getItem(DISMISS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Test-only helper — resets the in-memory dismissal flag (simulates a reload). */
 export function resetAppDownloadBannerDismissal(): void {
   dismissedThisSession = false;
 }
@@ -60,15 +72,21 @@ function CloseIcon(): ReactElement {
  */
 export function AppDownloadBanner(): ReactElement | null {
   const { t } = useTranslation('common');
-  // Captured once on mount: if already dismissed this session, render nothing.
-  const initiallyDismissed = useRef(dismissedThisSession).current;
-  const [dismissed, setDismissed] = useState(dismissedThisSession);
+  // Captured once on mount: if already dismissed (this session or a prior visit),
+  // render nothing.
+  const initiallyDismissed = useRef(isBannerDismissed()).current;
+  const [dismissed, setDismissed] = useState(initiallyDismissed);
   const [{ platform }] = useState(detectMobile);
 
   if (initiallyDismissed) return null;
 
   const handleDismiss = (): void => {
     dismissedThisSession = true;
+    try {
+      window.localStorage.setItem(DISMISS_KEY, '1');
+    } catch {
+      // Storage unavailable (private mode / blocked) — fall back to session-only.
+    }
     setDismissed(true);
   };
 

@@ -6,6 +6,10 @@
     "caregiver": "Caregiver",
     "care_recipient": "Care Recipient"
   },
+  "accept": "Accept invitation",
+  "accepting": "Joining…",
+  "acceptSuccess": "You joined the circle.",
+  "acceptFailed": "We couldn't accept this invitation. Please try again.",
   "downloadPrompt": "Download the app to accept your invite",
   "appStore": "Download on the App Store",
   "googlePlay": "Get it on Google Play",

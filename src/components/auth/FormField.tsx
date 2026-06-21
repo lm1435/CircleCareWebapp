@@ -1,4 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from 'react';
+import { RequiredMarker } from '@/components/ui';
 
 export interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   id: string;
@@ -15,7 +16,7 @@ export interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
  * - error text is a live region target the pages can focus via the input ref
  */
 export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function FormField(
-  { id, label, error, hint, className, ...rest },
+  { id, label, error, hint, className, required, ...rest },
   ref
 ) {
   const errorId = `${id}-error`;
@@ -31,10 +32,13 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function F
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium text-ink-2">
         {label}
+        {required ? <RequiredMarker /> : null}
       </label>
       <input
         ref={ref}
         id={id}
+        required={required}
+        aria-required={required ? true : undefined}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={className ? `${base} ${className}` : base}

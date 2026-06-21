@@ -58,6 +58,45 @@ const TILE_CLASS: Record<ActivityIconName, string> = {
   generic: 'bg-bg-3 text-ink-3',
 };
 
+/**
+ * Per-icon accent token family, so the LatestHero's hero treatment (accent
+ * rail, solid icon medallion, LIVE pill) can pick up the SAME event-type color
+ * as the small feed icon — keeping one source of truth for the tint mapping.
+ * `tile` = soft surface + deep text (matches TILE_CLASS at hero scale);
+ * `solid` = full-strength tint behind cream glyphs; `rail` = the left accent;
+ * `text` = deep variant for the action text reading AA on the soft card.
+ */
+export interface ActivityAccent {
+  tile: string;
+  solid: string;
+  rail: string;
+  text: string;
+}
+
+const ACCENT: Record<ActivityIconName, ActivityAccent> = {
+  medication: { tile: 'bg-clay-soft', solid: 'bg-clay', rail: 'bg-clay', text: 'text-clay-deep' },
+  appointment: { tile: 'bg-dusk-soft', solid: 'bg-dusk', rail: 'bg-dusk', text: 'text-dusk-deep' },
+  task: { tile: 'bg-moss-soft', solid: 'bg-moss', rail: 'bg-moss', text: 'text-moss-deep' },
+  emergency: {
+    tile: 'bg-terracotta-soft',
+    solid: 'bg-terracotta',
+    rail: 'bg-terracotta',
+    text: 'text-terracotta-deep',
+  },
+  circle: { tile: 'bg-moss-soft', solid: 'bg-moss', rail: 'bg-moss', text: 'text-moss-deep' },
+  generic: { tile: 'bg-bg-3', solid: 'bg-ink-2', rail: 'bg-ink-3', text: 'text-ink-2' },
+};
+
+/** Accent token family for an action type (used by the LatestHero). */
+export function getActivityAccent(actionType: string): ActivityAccent {
+  return ACCENT[getActivityIconName(actionType)];
+}
+
+/** Raw SVG path(s) for an action type — lets the hero render a larger glyph. */
+export function getActivityIconPaths(actionType: string): ReactElement {
+  return ICON_PATHS[getActivityIconName(actionType)];
+}
+
 const ICON_PATHS: Record<ActivityIconName, ReactElement> = {
   // Medkit (mobile: medkit-outline)
   medication: (

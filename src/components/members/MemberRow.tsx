@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Badge, type BadgeVariant } from '@/components/ui';
 import type { CircleMember } from '@/api/circleMembers';
@@ -7,6 +7,8 @@ import { useAuthStore } from '@/store/authStore';
 
 export interface MemberRowProps {
   member: CircleMember;
+  /** Owner-only action slot (set-med-responsible / remove). Rendered after the badges. */
+  actions?: ReactNode;
 }
 
 type RoleKey = 'owner' | 'caregiver' | 'careRecipient';
@@ -33,7 +35,7 @@ function getDisplayName(member: CircleMember): string {
  * with overlaid role indicators (heart = care recipient, bell = med-responsible),
  * name with "(you)", and an email/role subtitle. No invite / remove actions on web.
  */
-export function MemberRow({ member }: MemberRowProps): ReactElement {
+export function MemberRow({ member, actions }: MemberRowProps): ReactElement {
   const { t } = useTranslation('members');
   const currentUserId = useAuthStore((s) => s.user?.id);
   const roleKey = getRoleKey(member);
@@ -93,6 +95,7 @@ export function MemberRow({ member }: MemberRowProps): ReactElement {
             {t('access.viewOnly')}
           </Badge>
         )}
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
     </li>
   );

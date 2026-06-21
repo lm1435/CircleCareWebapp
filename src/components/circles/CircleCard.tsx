@@ -5,14 +5,8 @@ import { Avatar, Badge, Skeleton, type BadgeVariant } from '@/components/ui';
 import type { Circle } from '@/api/circles';
 import { useMedicationTodaySummary } from '@/hooks/useMedConfirmation';
 import type { MedicationTodaySummary } from '@/api/medicationConfirmations';
-import {
-  EyeIcon,
-  LockIcon,
-  PillIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  AlertCircleIcon,
-} from './icons';
+import { Analytics } from '@/lib/analytics';
+import { EyeIcon, LockIcon, PillIcon, CheckCircleIcon, ClockIcon, AlertCircleIcon } from './icons';
 
 export interface CircleCardProps {
   circle: Circle;
@@ -93,7 +87,7 @@ function deriveMedStatus(
 }
 
 /**
- * Circle picker card. The whole card is a link to the circle's calendar.
+ * Circle picker card. The whole card is a link to the circle's overview.
  *
  * Non-restricted circles get a "hero" treatment mirroring mobile's
  * CircleListScreen: avatar with a role status dot (+ red alert badge when meds
@@ -132,11 +126,25 @@ export function CircleCard({ circle }: CircleCardProps): ReactElement {
     ? 'border-line-2 bg-bg-2'
     : 'border-line bg-cream hover:border-ink/25 hover:shadow-sm';
 
+  // The role status dot and the overdue alert badge are both color-only +
+  // aria-hidden — surface their meaning to AT through the card's link label
+  // (WCAG SC 1.1.1 / 1.4.1). Include the role, and when meds are overdue append
+  // the meds status (which already carries the counts).
+  const roleLabel = t(`roles.${roleKey}`);
+  const cardLabel = medStatus?.alert
+    ? t('picker.openWithRoleOverdue', {
+        name: circle.name,
+        role: roleLabel,
+        status: medStatus.label,
+      })
+    : t('picker.openWithRole', { name: circle.name, role: roleLabel });
+
   return (
     <li className="list-none">
       <Link
-        to={`/circles/${circle.id}/calendar`}
-        aria-label={t('picker.open', { name: circle.name })}
+        to={`/circles/${circle.id}`}
+        aria-label={cardLabel}
+        onClick={() => Analytics.circleViewed(circle.id)}
         data-restricted={restricted || undefined}
         className={`group block h-full rounded-2xl border p-5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-deep ${surface}`}
       >
@@ -148,13 +156,26 @@ export function CircleCard({ circle }: CircleCardProps): ReactElement {
               aria-hidden="true"
               className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-cream ${restricted ? 'bg-bg-3' : roleDotClass[roleKey]}`}
             />
-            {/* Overdue alert badge */}
+            {/* Overdue alert badge — solid deep-terracotta dot with a bold "!"
+                (the badge IS the circle, so the glyph is just the exclamation,
+                not AlertCircleIcon's competing outline). */}
             {medStatus?.alert && (
               <span
                 aria-hidden="true"
-                className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-cream bg-terracotta text-cream"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-cream bg-terracotta-deep text-cream shadow-sm"
               >
-                <AlertCircleIcon size={10} />
+                <svg
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                >
+                  <path d="M12 6.5v7" />
+                  <path d="M12 17.5h.01" />
+                </svg>
               </span>
             )}
           </div>

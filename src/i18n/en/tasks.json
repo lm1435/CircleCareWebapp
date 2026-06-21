@@ -1,0 +1,52 @@
+{
+  "title": "Tasks",
+  "subtitle": "Things to do for your circle — assign, track, and check them off.",
+  "addTask": "Add task",
+  "loading": "Loading tasks",
+  "filter": {
+    "statusLabel": "Status",
+    "status": {
+      "open": "Open",
+      "completed": "Completed",
+      "all": "All"
+    },
+    "sortLabel": "Sort by",
+    "sort": {
+      "due_date": "Due date",
+      "assignee": "Assignee",
+      "created_at": "Recently added"
+    }
+  },
+  "row": {
+    "completeLabel": "Mark \"{{title}}\" complete",
+    "undoLabel": "Mark \"{{title}}\" not complete",
+    "unassigned": "Unassigned",
+    "noDueDate": "No due date",
+    "allDay": "All day",
+    "editLabel": "Edit \"{{title}}\"",
+    "completedOn": "Completed {{date}}",
+    "completing": "Completing…",
+    "undo": "Undo",
+    "undoAction": "Undo completing \"{{title}}\"",
+    "pendingAnnounce": "\"{{title}}\" will be completed. Tap undo to cancel."
+  },
+  "due": {
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "empty": {
+    "open": "No open tasks",
+    "openHint": "Coordinate the to-dos that keep your loved one's care on track — errands, refills, follow-ups — and share them with everyone helping.",
+    "completed": "No completed tasks yet",
+    "completedHint": "Tasks the circle finishes will show up here so everyone can see what's been handled.",
+    "all": "No tasks yet",
+    "allHint": "Coordinate the to-dos that keep your loved one's care on track — errands, refills, follow-ups — and share them with everyone helping.",
+    "cta": "Add task"
+  },
+  "errorTitle": "Couldn't load tasks",
+  "errorHint": "Check your connection and try again.",
+  "toast": {
+    "completed": "Task completed",
+    "reopened": "Task reopened"
+  }
+}

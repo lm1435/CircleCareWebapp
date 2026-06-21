@@ -337,4 +337,32 @@ describe('TodaysMeds', () => {
       expect(circlesCallsAfter).toBeGreaterThan(circlesCallsBefore);
     });
   });
+
+  it('caps the list at `limit` and toggles the rest in place', async () => {
+    mockApi(); // 4 meds
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <TodaysMeds circleId={CIRCLE_ID} limit={2} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+
+    // Only the first two (by time) render; the rest are hidden behind the toggle.
+    expect(await screen.findByText('Lisinopril')).toBeInTheDocument();
+    expect(screen.getByText('Metformin')).toBeInTheDocument();
+    expect(screen.queryByText('Atorvastatin')).not.toBeInTheDocument();
+    expect(screen.queryByText('Levothyroxine')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show all 4' }));
+    expect(screen.getByText('Atorvastatin')).toBeInTheDocument();
+    expect(screen.getByText('Levothyroxine')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show less' }));
+    expect(screen.queryByText('Atorvastatin')).not.toBeInTheDocument();
+  });
 });

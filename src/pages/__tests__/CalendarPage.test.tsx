@@ -10,13 +10,45 @@ import { getCircleDetail, getEvents, type CalendarEvent } from '@/api/calendarEv
 // fetched range, event rendering with type/status styling, detail modal with
 // focus management, timezone caption, current-time indicator only on today.
 
-vi.mock('@/api/calendarEvents', () => ({
-  getEvents: vi.fn(),
+vi.mock('@/api/calendarEvents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/calendarEvents')>();
+  return {
+    ...actual,
+    getEvents: vi.fn(),
+    getCircleDetail: vi.fn(),
+  };
+});
+
+// useCircle (canEdit + members for the write flow) reads GET /circles/:id via
+// @/api/circleMembers, and GET /circles via @/api/circles — under the same
+// query keys as the calendar's own circle-detail fetch. Mock both so the
+// shared-key queries resolve and never surface a network error.
+vi.mock('@/api/circleMembers', () => ({
   getCircleDetail: vi.fn(),
 }));
+vi.mock('@/api/circles', () => ({
+  getCircles: vi.fn(),
+}));
+// The detail modal now mounts EventNotesPanel (needs ToastProvider + React Query
+// auth context); stub it so the page test stays focused on calendar behavior.
+vi.mock('@/components/calendar/EventNotesPanel', () => ({
+  EventNotesPanel: () => null,
+}));
+// The GettingStartedChecklist (rendered on the landing) reads emergency info; stub
+// the fetcher so the page test doesn't make an unmocked network call. The checklist
+// hides on its own (it stays open here with events present + no emergency info, but
+// renders into a labelled region that doesn't collide with the assertions below).
+vi.mock('@/api/emergencyInfo', () => ({
+  getEmergencyInfo: vi.fn().mockResolvedValue(null),
+}));
+
+import { getCircleDetail as getMembersCircleDetail } from '@/api/circleMembers';
+import { getCircles } from '@/api/circles';
 
 const mockGetEvents = vi.mocked(getEvents);
 const mockGetCircleDetail = vi.mocked(getCircleDetail);
+const mockGetMembersCircleDetail = vi.mocked(getMembersCircleDetail);
+const mockGetCircles = vi.mocked(getCircles);
 
 // Pin the "device" timezone to America/New_York (dev machine is
 // America/Denver — tests must never depend on it). Only getDeviceTimezone
@@ -126,10 +158,32 @@ afterAll(() => {
   vi.useRealTimers();
 });
 
+const MEMBERS_DETAIL = {
+  id: 'circle-1',
+  name: "Mom's Care",
+  recipient_name: 'Mom',
+  recipient_photo_url: null,
+  recipient_dob: null,
+  recipient_conditions: null,
+  owner_id: 'u1',
+  created_at: '2026-01-01T00:00:00Z',
+  is_self_care: false,
+  care_recipient_timezone: TZ,
+  members: [],
+  access_level: 'view' as const,
+  is_premium_circle: false,
+  can_edit: false,
+  view_only: false,
+};
+
 beforeEach(() => {
   mockGetEvents.mockReset();
   mockGetCircleDetail.mockReset();
+  mockGetMembersCircleDetail.mockReset();
+  mockGetCircles.mockReset();
   mockGetCircleDetail.mockResolvedValue(CIRCLE);
+  mockGetMembersCircleDetail.mockResolvedValue(MEMBERS_DETAIL);
+  mockGetCircles.mockResolvedValue([]);
   mockGetEvents.mockResolvedValue(EVENTS);
 });
 
@@ -208,24 +262,29 @@ describe('CalendarPage', () => {
     renderPage();
     await screen.findByRole('grid', { name: 'Week view calendar' });
 
-    // Mobile parity: solid type-colored blocks with white text. Medication
-    // blocks are clay regardless of status; status is exposed via data attrs.
+    // Pending/missed med blocks are SOLID clay with white text. Done events
+    // (taken/skipped) use the muted soft-tint + deep-text treatment (WCAG AA —
+    // never white-on-light or opacity). Status is also exposed via data attrs.
     const taken = screen.getByRole('button', { name: /Metformin/ });
     expect(taken).toHaveAttribute('data-event-type', 'medication');
     expect(taken).toHaveAttribute('data-med-status', 'taken');
-    expect(taken.className).toContain('bg-clay');
-    expect(taken.className).toContain('text-cream');
+    expect(taken.className).toContain('bg-clay-soft');
+    expect(taken.className).toContain('text-clay-deep');
+    expect(taken.className).not.toContain('text-cream');
 
     const missed = screen.getByRole('button', { name: /Lisinopril/ });
     expect(missed).toHaveAttribute('data-med-status', 'missed');
     expect(missed.className).toContain('bg-clay');
+    expect(missed.className).toContain('text-cream');
 
     const pending = screen.getByRole('button', { name: /Vitamin D/ });
     expect(pending).toHaveAttribute('data-med-status', 'pending');
+    expect(pending.className).toContain('text-cream');
 
     const skipped = screen.getByRole('button', { name: /Aspirin/ });
     expect(skipped).toHaveAttribute('data-med-status', 'skipped');
-    expect(skipped.className).toContain('bg-clay');
+    expect(skipped.className).toContain('bg-clay-soft');
+    expect(skipped.className).toContain('text-clay-deep');
 
     const appointment = screen.getByRole('button', { name: /Dr\. Smith/ });
     expect(appointment).toHaveAttribute('data-event-type', 'appointment');
@@ -273,16 +332,23 @@ describe('CalendarPage', () => {
     expect(trigger).toHaveFocus();
   });
 
-  it('shows the empty state when the window has no events', async () => {
+  it('shows the rich empty state when the window has no events', async () => {
     mockGetEvents.mockResolvedValue([]);
     renderPage();
 
     expect(await screen.findByText('No events this week')).toBeInTheDocument();
+    // Read-only viewer (can_edit: false) sees the descriptive hint, no Add CTA.
+    expect(
+      screen.getByText("When the care team adds medications or appointments, they'll show up here.")
+    ).toBeInTheDocument();
     expect(screen.queryByRole('grid')).not.toBeInTheDocument();
   });
 
   it('shows the error state and recovers on retry', async () => {
-    mockGetEvents.mockRejectedValueOnce(new Error('network down'));
+    // Both the calendar window AND the GettingStartedChecklist's wide-window
+    // presence query call getEvents — reject ALL calls (not once) so the
+    // calendar's own query actually lands in its error state.
+    mockGetEvents.mockRejectedValue(new Error('network down'));
     const user = userEvent.setup();
     renderPage();
 

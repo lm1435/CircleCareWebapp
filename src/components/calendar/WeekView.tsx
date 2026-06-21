@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { formatEventTimeCompact, getCurrentHoursInTimezone } from '@/utils/timezone';
 import { formatDateForDisplay } from './dateMath';
-import { getEventCardClass, getEventStatusCue, getMedicationStatus } from './eventStyles';
+import { getEventCardClass, getEventTextClass, getMedicationStatus } from './eventStyles';
 
 export interface WeekViewProps {
   /** 7 YYYY-MM-DD strings (Sunday-first) in the care recipient's timezone. */
@@ -79,11 +79,15 @@ export function WeekView({
   // Auto-scroll the timed grid to that anchor on mount / week change. Mirrors
   // mobile's scrollToCurrentTime — keeps one hour of lead-in above the target.
   const scrollRef = useRef<HTMLDivElement>(null);
+  const timedRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const targetHour = earliestHour ?? getCurrentHoursInTimezone(careRecipientTimezone);
-    el.scrollTop = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
+    // The day-headers/all-day head is sticky and still occupies scroll height, so
+    // offset by the timed grid's position before scrolling to the target hour.
+    const base = timedRef.current?.offsetTop ?? 0;
+    el.scrollTop = base + Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
   }, [earliestHour, careRecipientTimezone, days]);
 
   const renderEventButton = (event: CalendarEvent, positioned: boolean): ReactElement => {
@@ -121,19 +125,24 @@ export function WeekView({
         onClick={() => onEventClick(event)}
         style={style}
         className={`${
-          positioned ? 'absolute inset-x-0.5 z-[1]' : 'relative w-full'
-        } block overflow-hidden rounded p-1 text-left ${getEventCardClass(event)} ${getEventStatusCue(status)}`}
+          // All-day chips get a ≥44px touch target (WCAG SC 2.5.5). The TIMED
+          // chip is absolutely positioned with a height computed from the
+          // event's duration — forcing min-h there would distort short events
+          // and overlap neighbours, so it keeps its computed height (known
+          // limitation; a min-height on timed chips would break the grid).
+          positioned ? 'absolute inset-x-0.5 z-[1]' : 'relative min-h-[44px] w-full'
+        } block overflow-hidden rounded p-1 text-left ${getEventCardClass(event, status)}`}
       >
         <span className="flex items-baseline gap-1">
           <span
-            className={`mono min-w-0 flex-1 truncate text-[11px] leading-[14px] text-cream ${
+            className={`mono min-w-0 flex-1 truncate text-[11px] leading-[14px] ${getEventTextClass(event, status)} ${
               status === 'skipped' ? 'line-through' : ''
             }`}
           >
             {title}
           </span>
           {event.scheduled_time && (
-            <span className="mono shrink-0 text-[10px] leading-[14px] text-cream/75">
+            <span className={`mono shrink-0 text-[10px] leading-[14px] ${getEventTextClass(event, status)}`}>
               {timeLabel}
             </span>
           )}
@@ -148,25 +157,31 @@ export function WeekView({
       aria-label={t('calendar:weekViewLabel')}
       className="overflow-hidden rounded-2xl border border-line bg-cream"
     >
-      {/* Mobile: day columns take a fixed readable width (~2 fit a phone, more on
-          tablets) so the week pages cleanly with scroll-snap instead of a cramped
-          7-across grid — mirroring the mobile app's responsive day count. Headers
-          + timed grid share one horizontal scroller so they pan together, and the
-          grid reverts to a full 7-across fit at lg. */}
+      {/* Single 2D scroller: pans horizontally (day columns, ~2 fit a phone via
+          --dc + scroll-snap) AND scrolls vertically through the timed grid. The
+          day-headers/all-day head is sticky-top and the hour rail is sticky-left,
+          so both stay pinned to THIS scroller (the earlier split — a separate
+          vertical scroller for the timed grid — made the rail pin to the wrong
+          element and slide away on horizontal scroll). Reverts to a 7-across fit
+          at lg. */}
       <div
+        ref={scrollRef}
         role="presentation"
-        className="snap-x snap-mandatory overflow-x-auto scroll-pl-14 lg:snap-none"
+        className="snap-x snap-mandatory overflow-auto max-h-[70vh] scroll-pl-14 lg:snap-none"
       >
         <div
           role="rowgroup"
-          className="[--dc:calc((100vw_-_2rem_-_3.5rem)/2)] md:[--dc:calc((100vw_-_3rem_-_3.5rem)/3)] lg:min-w-0 lg:[--dc:minmax(0,1fr)]"
+          className="relative w-max [--dc:calc((100vw_-_2rem_-_3.5rem)/2)] md:[--dc:calc((100vw_-_3rem_-_3.5rem)/3)] lg:w-auto lg:min-w-0 lg:[--dc:minmax(0,1fr)]"
         >
+          {/* Pinned head — day headers + all-day stay at the top while the timed
+              grid scrolls under them; their left cells also pin left. */}
+          <div role="presentation" className="sticky top-0 z-[6] bg-cream">
           {/* Day headers */}
           <div
             role="row"
             className="grid grid-cols-[3.5rem_repeat(7,var(--dc))] border-b border-line-2"
           >
-            <div role="columnheader" className="sticky left-0 z-[5] bg-cream p-2">
+            <div role="columnheader" className="sticky left-0 z-[7] bg-cream p-2">
               <span className="sr-only">{t('calendar:timeColumnLabel')}</span>
             </div>
             {days.map((day) => {
@@ -211,7 +226,7 @@ export function WeekView({
               role="row"
               className="grid grid-cols-[3.5rem_repeat(7,var(--dc))] border-b border-line-2"
             >
-              <div role="rowheader" className="sticky left-0 z-[5] bg-cream p-1 text-right">
+              <div role="rowheader" className="sticky left-0 z-[7] bg-cream p-1 text-right">
                 <span className="mono">{t('calendar:allDay')}</span>
               </div>
               {days.map((day) => (
@@ -226,12 +241,11 @@ export function WeekView({
               ))}
             </div>
           )}
+          </div>
 
-          {/* Timed grid. overflow-x:clip (not auto) keeps this from becoming its
-              own horizontal scroll container, so the sticky hour rail below pins
-              to the OUTER scroller as the week pans sideways. */}
-          <div ref={scrollRef} className="max-h-[60vh] overflow-y-auto [overflow-x:clip]">
-            <div role="row" className="grid grid-cols-[3.5rem_repeat(7,var(--dc))]">
+          {/* Timed grid — scrolls vertically under the pinned head; the hour rail
+              pins left to the 2D scroller above. */}
+          <div ref={timedRef} role="row" className="grid grid-cols-[3.5rem_repeat(7,var(--dc))]">
               {/* Hour axis — pinned so the labels stay visible while days scroll. */}
               <div
                 role="rowheader"
@@ -293,7 +307,6 @@ export function WeekView({
                   </div>
                 );
               })}
-            </div>
           </div>
         </div>
       </div>

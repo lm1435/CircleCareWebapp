@@ -74,6 +74,26 @@ export interface LoginData {
   password: string;
 }
 
+export interface SignUpData {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  /** IANA timezone (e.g. America/New_York). Defaults backend-side when omitted. */
+  timezone?: string;
+  /** UI language for the verification email — 'en' | 'es'. */
+  language?: string;
+}
+
+/** /auth/signup creates the user + sends an OTP email — returns NO session. */
+export interface SignUpEnvelope {
+  success: boolean;
+  data: {
+    user: AuthUser;
+    message: string;
+  };
+}
+
 export interface OAuthSessionData {
   access_token: string;
   refresh_token: string;
@@ -99,6 +119,14 @@ export interface ResetPasswordData {
 }
 
 export const authApi = {
+  /**
+   * Create an email/password account. Sends a 6-digit OTP to the email and
+   * returns NO session — the caller routes to /verify-email to finish sign-up.
+   */
+  signup: async (data: SignUpData): Promise<SignUpEnvelope> => {
+    return (await apiClient.post('/auth/signup', data)) as unknown as SignUpEnvelope;
+  },
+
   /** Cookie mode: Set-Cookie cc_refresh (httpOnly); body has NO refresh_token. */
   login: async (data: LoginData): Promise<SessionEnvelope> => {
     return (await apiClient.post('/auth/login', data)) as unknown as SessionEnvelope;

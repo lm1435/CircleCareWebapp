@@ -1,10 +1,14 @@
-import { useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, EmptyState } from '@/components/ui';
 import { CalendarSkeleton } from '@/components/calendar/CalendarSkeleton';
 import { EventDetailModal } from '@/components/calendar/EventDetailModal';
+import { EventDetailActions } from '@/components/calendar/EventDetailActions';
+import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
+import { useCircle } from '@/hooks/useCircle';
 import { MonthView } from '@/components/calendar/MonthView';
 import { WeekView } from '@/components/calendar/WeekView';
 import {
@@ -19,11 +23,8 @@ import {
 import { EVENT_TYPE_DOT_CLASS } from '@/components/calendar/eventStyles';
 import type { EventType } from '@/api/calendarEvents';
 import { useCalendarEvents, useCareRecipientTimezone } from '@/hooks/useCalendarEvents';
-import {
-  getDateInTimezone,
-  getTimezoneAbbreviation,
-  getTimezoneLabel,
-} from '@/utils/timezone';
+import { Analytics } from '@/lib/analytics';
+import { getDateInTimezone, getTimezoneAbbreviation, getTimezoneLabel } from '@/utils/timezone';
 
 type CalendarView = 'week' | 'month';
 
@@ -48,6 +49,27 @@ function ChevronIcon({ direction }: { direction: 'left' | 'right' }): ReactEleme
 
 const LEGEND_TYPES: EventType[] = ['medication', 'appointment', 'task'];
 
+/** Calendar glyph for the empty-state tile (decorative). */
+function CalendarEmptyIcon(): ReactElement {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width={26}
+      height={26}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
 /**
  * Color key for the event-type palette (clay = meds, dusk = appointments,
  * moss = tasks). Surfaces the full color system even when the current view
@@ -62,7 +84,10 @@ function CalendarLegend(): ReactElement {
     >
       {LEGEND_TYPES.map((type) => (
         <li key={type} className="flex items-center gap-1.5 text-xs text-ink-3">
-          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${EVENT_TYPE_DOT_CLASS[type]}`} />
+          <span
+            aria-hidden="true"
+            className={`h-2.5 w-2.5 rounded-full ${EVENT_TYPE_DOT_CLASS[type]}`}
+          />
           {t(`eventTypes.${type}`)}
         </li>
       ))}
@@ -85,6 +110,18 @@ export default function CalendarPage(): ReactElement {
   // null = follow "today" in the care recipient's timezone; set on user nav.
   const [anchorOverride, setAnchorOverride] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  // Write-flow modal state (Task 1.6) — owned by the page so the edit/delete
+  // modals outlive the detail modal they were launched from.
+  const [showCreate, setShowCreate] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
+
+  const { canEdit } = useCircle(circleId);
+
+  // PHI-safe: only circle_id + the view enum. Fires on open and on view change.
+  useEffect(() => {
+    if (circleId) Analytics.calendarViewed(circleId, view);
+  }, [circleId, view]);
 
   const tzQuery = useCareRecipientTimezone(circleId);
   const timezone = tzQuery.timezone;
@@ -157,7 +194,7 @@ export default function CalendarPage(): ReactElement {
   };
 
   return (
-    <section className="mx-auto max-w-6xl p-4 md:p-6">
+    <section className="mx-auto max-w-5xl p-6 md:p-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="serif m-0 text-xl text-ink">{rangeLabel || t('common:nav.calendar')}</h1>
@@ -168,7 +205,11 @@ export default function CalendarPage(): ReactElement {
               })}
             </p>
           )}
-          {!isError && <div className="mt-2"><CalendarLegend /></div>}
+          {!isError && (
+            <div className="mt-2">
+              <CalendarLegend />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -204,9 +245,11 @@ export default function CalendarPage(): ReactElement {
           <div className="inline-flex items-center gap-1">
             <button
               type="button"
-              aria-label={view === 'week' ? t('calendar:previousWeek') : t('calendar:previousMonth')}
+              aria-label={
+                view === 'week' ? t('calendar:previousWeek') : t('calendar:previousMonth')
+              }
               onClick={handlePrev}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-bg-2"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-bg-2"
             >
               <ChevronIcon direction="left" />
             </button>
@@ -221,11 +264,15 @@ export default function CalendarPage(): ReactElement {
               type="button"
               aria-label={view === 'week' ? t('calendar:nextWeek') : t('calendar:nextMonth')}
               onClick={handleNext}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-bg-2"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-bg-2"
             >
               <ChevronIcon direction="right" />
             </button>
           </div>
+
+          {canEdit && (
+            <Button onClick={() => setShowCreate(true)}>{t('calendar:addEvent.addEvent')}</Button>
+          )}
         </div>
       </header>
 
@@ -243,15 +290,29 @@ export default function CalendarPage(): ReactElement {
         )}
 
         {!isLoading && !isError && range && timezone && todayStr && events.length === 0 && (
-          <Card className="text-center">
-            <p className="m-0 text-ink-2">
-              {view === 'week' ? t('calendar:noEventsWeek') : t('calendar:noEventsMonth')}
-            </p>
+          <Card className="p-10">
+            <EmptyState
+              tone="moss"
+              icon={<CalendarEmptyIcon />}
+              title={view === 'week' ? t('calendar:noEventsWeek') : t('calendar:noEventsMonth')}
+              description={canEdit ? t('calendar:empty.hint') : t('calendar:empty.hintReadOnly')}
+            >
+              {canEdit && (
+                <Button onClick={() => setShowCreate(true)}>
+                  {t('calendar:addEvent.addEvent')}
+                </Button>
+              )}
+            </EmptyState>
           </Card>
         )}
 
-        {!isLoading && !isError && range && timezone && todayStr && events.length > 0 && (
-          view === 'week' ? (
+        {!isLoading &&
+          !isError &&
+          range &&
+          timezone &&
+          todayStr &&
+          events.length > 0 &&
+          (view === 'week' ? (
             <WeekView
               days={getWeekDays(range.start)}
               eventsByDay={eventsByDay}
@@ -268,16 +329,48 @@ export default function CalendarPage(): ReactElement {
               todayStr={todayStr}
               onEventClick={setSelectedEvent}
             />
-          )
-        )}
+          ))}
       </div>
 
       {selectedEvent && timezone && (
         <EventDetailModal
           event={selectedEvent}
           careRecipientTimezone={timezone}
-          canEdit={false}
+          circleId={circleId}
+          canEdit={canEdit}
+          editActions={
+            <EventDetailActions
+              circleId={circleId}
+              event={selectedEvent}
+              onEdit={() => {
+                setEditingEvent(selectedEvent);
+                setSelectedEvent(null);
+              }}
+              onDelete={() => {
+                setDeletingEvent(selectedEvent);
+                setSelectedEvent(null);
+              }}
+            />
+          }
           onClose={() => setSelectedEvent(null)}
+        />
+      )}
+
+      {showCreate && <AddEventModal circleId={circleId} onClose={() => setShowCreate(false)} />}
+
+      {editingEvent && (
+        <AddEventModal
+          circleId={circleId}
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+        />
+      )}
+
+      {deletingEvent && (
+        <DeleteEventDialog
+          circleId={circleId}
+          event={deletingEvent}
+          onClose={() => setDeletingEvent(null)}
         />
       )}
     </section>

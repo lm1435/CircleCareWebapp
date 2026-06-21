@@ -1,0 +1,101 @@
+{
+  "title": "Help & FAQ",
+  "subtitle": "Find answers to common questions",
+  "sections": {
+    "gettingStarted": {
+      "title": "Getting Started",
+      "items": [
+        {
+          "question": "What is a Care Circle?",
+          "answer": "A Care Circle is a private group for coordinating care for one person (like a parent or grandparent). Family members join the circle to share updates, track medications, and stay connected."
+        },
+        {
+          "question": "How many circles can I create?",
+          "answer": "Subscribers can create up to 5 circles — perfect for extended families caring for multiple loved ones."
+        },
+        {
+          "question": "Do I need to pay to join someone's circle?",
+          "answer": "No! Being invited to someone else's circle is always free. Only circle owners need an active subscription to create circles and invite members."
+        }
+      ]
+    },
+    "roles": {
+      "title": "Circles & Roles",
+      "items": [
+        {
+          "question": "What's the difference between Owner, Caregiver, and Care Recipient?",
+          "answer": "The Owner creates the circle and can invite members, manage settings, and delete the circle. Caregivers are family members who help coordinate care — they can view and update information. The Care Recipient is the person being cared for — they receive medication reminders and can confirm when they've taken them."
+        },
+        {
+          "question": "Can I be in multiple circles?",
+          "answer": "Yes! You can be a member of multiple circles. For example, you might be an owner of your mom's circle and a caregiver in your dad's circle created by a sibling."
+        }
+      ]
+    },
+    "medications": {
+      "title": "Medication Tracking",
+      "items": [
+        {
+          "question": "How do medication reminders work?",
+          "answer": "When you add a medication, the care recipient receives a push notification at the scheduled time. They tap 'I took it' to confirm, and all family members in the circle are notified. If the dose isn't confirmed within 15 minutes, your loved one gets a gentle reminder. After 30 minutes, all caregivers in the circle are notified. After 1 hour, everyone is alerted and the dose is marked as not taken. The dose stays unresolved until someone marks it as taken or skipped."
+        },
+        {
+          "question": "What happens if a medication is not taken?",
+          "answer": "After 1 hour with no confirmation, the medication is marked as 'not taken' and all circle members are notified. You can view the medication history to see patterns over time, including adherence rates and which doses are most commonly missed."
+        },
+        {
+          "question": "Can I set up medications that aren't daily?",
+          "answer": "Yes! You can set medications for daily, every other day, weekly (specific days), or custom intervals. You can also mark medications as 'as needed' for PRN medications."
+        }
+      ]
+    },
+    "notifications": {
+      "title": "Notifications",
+      "items": [
+        {
+          "question": "Where do I receive notifications?",
+          "answer": "Reminders and alerts are delivered as push notifications through the CircleCare mobile app. You can manage your notification preferences here on the web, but to actually receive reminders, install the app on your phone and turn on notifications."
+        },
+        {
+          "question": "What notifications will I receive?",
+          "answer": "You'll receive notifications for medication reminders (if you're the care recipient), medication confirmations, not-taken alerts, appointment reminders, and when family members join your circle."
+        },
+        {
+          "question": "What are Quiet Hours?",
+          "answer": "Quiet Hours pause notifications during times you set (like overnight from 10 PM to 7 AM). Go to Profile > Settings to configure your quiet hours."
+        },
+        {
+          "question": "Can I turn off certain notifications?",
+          "answer": "Yes! Go to Profile > Notifications to customize which types of notifications you receive for each circle."
+        }
+      ]
+    },
+    "premium": {
+      "title": "Premium Features",
+      "items": [
+        {
+          "question": "What's included in Premium?",
+          "answer": "CircleCare Premium includes up to 5 care circles, unlimited family member invitations per circle, and priority support. Check the subscription page for current pricing on monthly and annual plans."
+        },
+        {
+          "question": "Can I try before I buy?",
+          "answer": "Yes! CircleCare is free to start with one care circle and two caregivers. When you're ready for more circles, unlimited caregivers, or premium features like AI, just upgrade."
+        },
+        {
+          "question": "How do I restore my purchases?",
+          "answer": "Go to Profile > Subscription > Restore Purchases. This is useful if you reinstall the app or switch devices."
+        }
+      ]
+    }
+  },
+  "contact": {
+    "title": "Still need help?",
+    "body": "Reach our support team and we will get back to you.",
+    "email": "support@circlecare.app",
+    "cta": "Email support"
+  },
+  "download": {
+    "title": "Get the full experience",
+    "body": "Download CircleCare on your phone for reminders, AI help, and more."
+  }
+}

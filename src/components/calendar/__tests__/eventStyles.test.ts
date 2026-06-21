@@ -1,5 +1,5 @@
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { getEventCardClass, getEventStatusCue, getMedicationStatus } from '../eventStyles';
+import { getEventCardClass, getMedicationStatus } from '../eventStyles';
 
 const TZ = 'America/Chicago';
 // 2026-06-12T15:30:00Z = 10:30 AM in Chicago (CDT, UTC-5)
@@ -91,24 +91,28 @@ describe('getEventCardClass', () => {
     expect(task).toContain('text-cream');
   });
 
-  it('keeps the block type-colored regardless of medication status', () => {
-    const taken = makeEvent({
-      confirmation: { status: 'taken', confirmed_at: '2026-06-12T13:05:00Z', confirmed_by: 'u1' },
-    });
-    // Background stays clay (medication) — status is NOT encoded in the block.
-    expect(getEventCardClass(taken)).toContain('bg-clay');
-
-    const missed = makeEvent({}); // past due, unconfirmed
-    expect(getEventCardClass(missed)).toContain('bg-clay');
+  it('keeps pending/missed blocks solid type-colored with white text', () => {
+    const med = makeEvent({ event_type: 'medication' });
+    expect(getEventCardClass(med, 'pending')).toContain('bg-clay');
+    expect(getEventCardClass(med, 'pending')).toContain('text-cream');
+    expect(getEventCardClass(med, 'missed')).toContain('bg-clay');
+    expect(getEventCardClass(med, 'missed')).toContain('text-cream');
   });
-});
 
-describe('getEventStatusCue', () => {
-  it('mutes confirmed (taken) and skipped meds, leaves pending/missed unchanged', () => {
-    expect(getEventStatusCue('taken')).toBe('opacity-70');
-    expect(getEventStatusCue('skipped')).toBe('opacity-70');
-    expect(getEventStatusCue('pending')).toBe('');
-    expect(getEventStatusCue('missed')).toBe('');
-    expect(getEventStatusCue(null)).toBe('');
+  it('uses the muted soft-tint + deep-text treatment for done (taken/skipped) — WCAG AA, no opacity', () => {
+    const med = makeEvent({ event_type: 'medication' });
+    // Done events recede via a soft surface with deep text, NOT opacity (which
+    // failed contrast). White cream text must NOT be used on the soft surface.
+    expect(getEventCardClass(med, 'taken')).toBe('bg-clay-soft text-clay-deep');
+    expect(getEventCardClass(med, 'skipped')).toBe('bg-clay-soft text-clay-deep');
+    expect(getEventCardClass(med, 'taken')).not.toContain('text-cream');
+    expect(getEventCardClass(med, 'taken')).not.toContain('opacity-70');
+
+    expect(getEventCardClass(makeEvent({ event_type: 'appointment' }), 'taken')).toBe(
+      'bg-dusk-soft text-dusk-deep'
+    );
+    expect(getEventCardClass(makeEvent({ event_type: 'task' }), 'skipped')).toBe(
+      'bg-moss-soft text-moss-deep'
+    );
   });
 });

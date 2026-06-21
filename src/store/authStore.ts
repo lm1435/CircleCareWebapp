@@ -4,6 +4,8 @@ import { tokenAccessor } from '@/lib/tokenAccessor';
 import { queryClient } from '@/lib/queryClient';
 import { authApi, type AuthSession, type AuthUser } from '@/api/auth';
 import { getCurrentUser } from '@/api/users';
+import { identifyUser, resetAnalytics } from '@/lib/posthog';
+import { Analytics } from '@/lib/analytics';
 
 // Web auth store (Task 9) — mirrors mobile/src/store/authStore.ts adapted to
 // the web threat model:
@@ -61,6 +63,9 @@ function clearLocalSession(): void {
   resetRefreshState();
   tokenAccessor.clear();
   queryClient.clear();
+  // Drop the analytics identity so the next user on a shared device starts
+  // fresh (no-op when PostHog isn't initialized).
+  resetAnalytics();
   useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
 }
 
@@ -93,6 +98,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Clear any stale refresh locks from a previous session (mirrors mobile).
     resetRefreshState();
     tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
+    identifyUser(user.id);
     set({ user, isAuthenticated: true, isBootstrapping: false });
   },
 
@@ -117,6 +123,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
 
         const user = await getCurrentUser();
+        identifyUser(user.id);
         set({
           user: {
             id: user.id,
@@ -140,6 +147,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     // Break any pending refresh deadlocks before tearing down state.
     resetRefreshState();
+
+    // Capture while the identity is still attached (clearLocalSession resets it).
+    Analytics.logout();
 
     // Best-effort server logout (clears httpOnly cookie, revokes session).
     // Idempotent on the backend; a network failure must not block local cleanup.

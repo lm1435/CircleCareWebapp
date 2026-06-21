@@ -1,0 +1,28 @@
+{
+  "hero": {
+    "eyebrow": "Inicio del cuidado",
+    "caringFor": "Cuidando a {{name}}",
+    "selfCareTitle": "Tu espacio de cuidado",
+    "subtitleSolo": "Todo lo de este círculo en un solo lugar. Invita a tu familia para compartir la carga.",
+    "subtitleTeam_one": "{{count}} persona ayudando a coordinar el cuidado.",
+    "subtitleTeam_other": "{{count}} personas ayudando a coordinar el cuidado."
+  },
+  "tasks": {
+    "title": "Tareas pendientes",
+    "empty": "No hay tareas pendientes por ahora.",
+    "more": "+{{count}} más",
+    "viewAll": "Ver todas las tareas"
+  },
+  "activity": {
+    "title": "Actividad reciente",
+    "empty": "La actividad de tu círculo aparecerá aquí.",
+    "viewAll": "Ver toda la actividad"
+  },
+  "team": {
+    "title": "Equipo de cuidado",
+    "count_one": "{{count}} miembro",
+    "count_other": "{{count}} miembros",
+    "manage": "Administrar miembros",
+    "invite": "Invitar miembro"
+  }
+}

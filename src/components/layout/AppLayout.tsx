@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { AppDownloadBanner } from './AppDownloadBanner';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
+import { AIChatModal } from '@/components/ai/AIChatModal';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -29,13 +31,15 @@ function CloseIcon(): ReactElement {
 
 /**
  * Authenticated layout shell (plan Task 13): download banner + header on top,
- * sidebar left, page content in <main>. Below lg the sidebar becomes a
+ * sidebar left, page content in <main>. Below xl the sidebar becomes a
  * focus-trapped hamburger drawer (Escape closes, body scroll locked).
  * No UI state is persisted to storage.
  */
 export function AppLayout(): ReactElement {
   const { t } = useTranslation('common');
+  const { circleId } = useParams<{ circleId: string }>();
   const [navOpen, setNavOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const location = useLocation();
 
@@ -110,16 +114,21 @@ export function AppLayout(): ReactElement {
           width, so a wide child like the calendar makes <main> balloon past the
           viewport and the whole page scrolls sideways. The 0-min column clamps
           <main> to the viewport so wide content scrolls inside its own card. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr]">
-        <Sidebar variant="desktop" />
+      <div className="grid grid-cols-1 xl:grid-cols-[16rem_1fr]">
+        <Sidebar variant="desktop" onOpenAssistant={() => setAiOpen(true)} />
         <main id="main" className="min-w-0">
           <NeedsCircleSelectionBanner />
-          <Outlet />
+          {/* Page-level boundary: a single page's render error shows the fallback
+              inside <main> while the header + sidebar stay usable. Keyed by path
+              so navigating to another route auto-clears a caught error. */}
+          <ErrorBoundary boundary="circle-page" key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 
       {navOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-40 xl:hidden">
           <div
             aria-hidden="true"
             onClick={() => setNavOpen(false)}
@@ -133,7 +142,16 @@ export function AppLayout(): ReactElement {
             aria-label={t('nav.label')}
             className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-bg shadow-xl animate-[drawer-in_280ms_cubic-bezier(0.2,0.7,0.2,1)]"
           >
-            <div className="flex justify-end p-2">
+            <div className="flex items-center justify-between p-2">
+              <Link
+                to={circleId ? `/circles/${circleId}` : '/circles'}
+                aria-label={t('appName')}
+                onClick={() => setNavOpen(false)}
+                className="flex min-h-11 min-w-0 items-center gap-2 px-1 no-underline"
+              >
+                <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
+                <span className="serif truncate text-lg text-ink">{t('appName')}</span>
+              </Link>
               <button
                 type="button"
                 onClick={() => setNavOpen(false)}
@@ -143,9 +161,20 @@ export function AppLayout(): ReactElement {
                 <CloseIcon />
               </button>
             </div>
-            <Sidebar variant="drawer" onNavigate={() => setNavOpen(false)} />
+            <Sidebar
+              variant="drawer"
+              onNavigate={() => setNavOpen(false)}
+              onOpenAssistant={() => {
+                setNavOpen(false);
+                setAiOpen(true);
+              }}
+            />
           </div>
         </div>
+      )}
+
+      {circleId && (
+        <AIChatModal circleId={circleId} isOpen={aiOpen} onClose={() => setAiOpen(false)} />
       )}
     </div>
   );

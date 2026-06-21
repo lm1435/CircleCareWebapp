@@ -29,6 +29,26 @@ export const EVENT_TYPE_BLOCK_CLASS: Record<EventType, string> = {
 };
 
 /**
+ * Muted "done" treatment per event type: a soft tinted surface with the deep
+ * type color for text. Replaces the old whole-block `opacity-70` cue, which
+ * dimmed white text toward the light page and failed WCAG AA contrast (~3:1).
+ * The tint still recedes (done events read as settled) while keeping the type
+ * identity and clearing AA — same pattern as the Today's Meds "done" tile.
+ */
+export const EVENT_TYPE_DONE_CLASS: Record<EventType, string> = {
+  medication: 'bg-clay-soft text-clay-deep',
+  appointment: 'bg-dusk-soft text-dusk-deep',
+  task: 'bg-moss-soft text-moss-deep',
+};
+
+/** Deep type text color used for the muted "done" treatment. */
+export const EVENT_TYPE_DEEP_TEXT: Record<EventType, string> = {
+  medication: 'text-clay-deep',
+  appointment: 'text-dusk-deep',
+  task: 'text-moss-deep',
+};
+
+/**
  * Resolve a medication event's display status. Mirrors mobile semantics:
  * - confirmation taken/taken_late → taken
  * - confirmation skipped → skipped
@@ -60,21 +80,36 @@ export function getMedicationStatus(
 }
 
 /**
- * Full class string for a SOLID timeline/chip block matching mobile:
- * type-colored background + white text. Like mobile, the background is always
- * the event-type color regardless of medication status. The status only
- * affects subtle compact cues (handled by the caller via `getEventTextClass`).
+ * Full class string (background + text color) for a timeline/chip block.
+ * Pending/missed events are SOLID type-colored with white text (mobile
+ * TimelineEventBlock). Done events (taken/skipped) use the muted soft-tint
+ * treatment so they recede while staying type-identifiable AND meeting WCAG AA
+ * — unlike the former `opacity-70`, which dimmed white text below 4.5:1.
+ *
+ * `status` is passed separately (not read off the event) so callers control it;
+ * omitting it yields the solid pending look.
  */
-export function getEventCardClass(event: CalendarEvent): string {
-  return `${EVENT_TYPE_BLOCK_CLASS[event.event_type]} text-cream`;
+export function getEventCardClass(
+  event: CalendarEvent,
+  status: MedicationStatus | null = null
+): string {
+  const isDone = status === 'taken' || status === 'skipped';
+  return isDone
+    ? EVENT_TYPE_DONE_CLASS[event.event_type]
+    : `${EVENT_TYPE_BLOCK_CLASS[event.event_type]} text-cream`;
 }
 
 /**
- * Compact status cue applied to the block's title row — mobile shows skipped
- * with a strikethrough and renders confirmed/skipped meds muted. Returns an
- * (optionally empty) class string for the block wrapper.
+ * Text color for the event block's title/time spans. Must be applied to the
+ * spans directly (not just the block) because the `.mono` utility hard-sets
+ * `color: ink-3`, which would otherwise win over an inherited block color and
+ * tank contrast on the solid surfaces. Pending/missed → white; done → deep type
+ * color (on the soft surface).
  */
-export function getEventStatusCue(status: MedicationStatus | null): string {
-  if (status === 'taken' || status === 'skipped') return 'opacity-70';
-  return '';
+export function getEventTextClass(
+  event: CalendarEvent,
+  status: MedicationStatus | null = null
+): string {
+  const isDone = status === 'taken' || status === 'skipped';
+  return isDone ? EVENT_TYPE_DEEP_TEXT[event.event_type] : 'text-cream';
 }

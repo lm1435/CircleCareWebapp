@@ -7,18 +7,40 @@
   "confirm": "Confirmar",
   "save": "Guardar",
   "close": "Cerrar",
+  "required": "(obligatorio)",
   "today": "Hoy",
+  "expandAll": "Expandir todo",
+  "collapseAll": "Contraer todo",
   "comingSoon": "Próximamente",
   "skipToContent": "Saltar al contenido",
+  "errorBoundary": {
+    "title": "Algo salió mal",
+    "message": "Esta parte de la página tuvo un error inesperado. Puedes intentarlo de nuevo o volver a tus círculos.",
+    "retry": "Intentar de nuevo",
+    "home": "Ir a mis círculos"
+  },
   "nav": {
     "label": "Navegación principal",
+    "back": "Atrás",
     "circles": "Mis círculos",
+    "home": "Inicio",
     "calendar": "Calendario",
+    "tasks": "Tareas",
     "activity": "Actividad",
     "health": "Salud",
     "emergency": "Información de emergencia",
     "documents": "Documentos",
-    "members": "Miembros"
+    "members": "Miembros",
+    "vitals": "Signos vitales",
+    "profile": "Perfil",
+    "settings": "Configuración del círculo",
+    "assistant": "Asistente",
+    "help": "Ayuda y preguntas frecuentes"
+  },
+  "errors": {
+    "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y desbloquear esto.",
+    "permissionDenied": "No tienes permiso para hacer este cambio."
   },
   "menu": {
     "toggle": "Menú de navegación",
@@ -53,5 +75,20 @@
     "imageAlt1": "Familia riendo junta alrededor de una mesa",
     "imageAlt2": "Familia multigeneracional compartiendo una comida al aire libre",
     "imageAlt3": "Familia mirando una tableta juntos en el sofá"
+  },
+  "gettingStarted": {
+    "title": "Empezar",
+    "subtitle": "Unos pasos rápidos para configurar este círculo para todos.",
+    "progress": "{{done}} de {{total}} listo",
+    "step1Label": "Agrega un medicamento o una cita",
+    "step1Desc": "Todos en la app reciben un recordatorio, para que no se pase ninguna dosis ni cita.",
+    "step2Label": "Invita a familiares y cuidadores",
+    "step2Desc": "Compartan la carga: ven el mismo calendario y las novedades.",
+    "step3Label": "Agrega información de emergencia",
+    "step3Desc": "Alergias, médicos y contactos listos justo cuando se necesitan.",
+    "action": "Agregar",
+    "statusDone": "(listo)",
+    "statusPending": "(pendiente)",
+    "dismiss": "Descartar la lista de pasos para empezar"
   }
 }

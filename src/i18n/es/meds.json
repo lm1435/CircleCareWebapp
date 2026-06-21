@@ -4,6 +4,8 @@
   "loadError": "No se pudieron cargar los medicamentos de hoy",
   "confirm": "Confirmar",
   "skip": "Omitir",
+  "showAll": "Ver todos ({{count}})",
+  "showLess": "Ver menos",
   "status": {
     "taken": "Tomado",
     "missed": "No tomado",

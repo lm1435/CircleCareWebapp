@@ -1,0 +1,19 @@
+{
+  "title": "Asistente de Cuidado",
+  "subtitle": "Pregunta sobre cuidado, medicamentos o salud",
+  "intro": "Pregúntame sobre cuidado, medicamentos o manejo de la salud. Puedo ayudarte con citas, medicamentos, adherencia y actividad reciente.",
+  "disclaimer": "Las respuestas de la IA son solo informativas. Siempre consulta a profesionales de salud. Para proteger la privacidad, no se envían datos personales de salud a la IA.",
+  "inputPlaceholder": "Haz una pregunta...",
+  "inputLabel": "Tu mensaje",
+  "send": "Enviar",
+  "sending": "Enviando...",
+  "thinking": "Pensando...",
+  "emptyTitle": "¿En qué puedo ayudarte?",
+  "remainingCount": "{{count}} restantes hoy",
+  "errors": {
+    "subscriptionRequired": "El Asistente de Cuidado es una función premium. Abre la app de CircleCare para mejorar tu plan.",
+    "rateLimited": "Has alcanzado tu límite diario de 50 preguntas. Por favor intenta de nuevo mañana.",
+    "unavailable": "El Asistente de Cuidado no está disponible en este momento. Por favor intenta más tarde.",
+    "sendFailed": "Lo siento, ocurrió un error. Por favor intenta de nuevo."
+  }
+}

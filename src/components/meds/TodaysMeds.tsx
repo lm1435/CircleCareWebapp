@@ -90,9 +90,15 @@ function MedTileIcon({ status }: { status: MedDisplayStatus }): ReactElement {
 
 export interface TodaysMedsProps {
   circleId?: string;
+  /**
+   * When set, only the first N meds show by default with a "Show all" toggle that
+   * expands the rest in place — keeps a long med day from dominating a dashboard
+   * card while keeping every confirm/skip action one click away.
+   */
+  limit?: number;
 }
 
-export function TodaysMeds({ circleId }: TodaysMedsProps): ReactElement | null {
+export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement | null {
   const { t } = useTranslation('meds');
   const { data: circles } = useCircles();
   const circle = circles?.find((c) => c.id === circleId);
@@ -101,6 +107,7 @@ export function TodaysMeds({ circleId }: TodaysMedsProps): ReactElement | null {
   const { timezone } = useCareRecipientTimezone(circleId ?? '');
   const medsQuery = useTodaysMeds(circleId, timezone ?? undefined);
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   if (!circleId) return null;
 
@@ -131,9 +138,13 @@ export function TodaysMeds({ circleId }: TodaysMedsProps): ReactElement | null {
   } else if (medsQuery.data.length === 0) {
     body = <p className="m-0 text-sm text-ink-3">{t('empty')}</p>;
   } else {
+    const allMeds = medsQuery.data;
+    const collapsed = limit != null && !expanded && allMeds.length > limit;
+    const visibleMeds = collapsed ? allMeds.slice(0, limit) : allMeds;
     body = (
+      <>
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {medsQuery.data.map((med) => {
+        {visibleMeds.map((med) => {
           const status = getMedDisplayStatus(med, timezone);
           const showActions = canEdit && !med.confirmation;
           const isDone = status === 'taken' || status === 'skipped';
@@ -186,13 +197,13 @@ export function TodaysMeds({ circleId }: TodaysMedsProps): ReactElement | null {
                   <Button
                     variant="ghost"
                     onClick={() => setDialog({ med, initialStatus: 'skipped' })}
-                    className="min-h-9 flex-1 px-3 text-xs"
+                    className="min-h-11 flex-1 px-3 text-xs"
                   >
                     {t('skip')}
                   </Button>
                   <Button
                     onClick={() => setDialog({ med, initialStatus: 'taken' })}
-                    className="min-h-9 flex-1 px-3 text-xs"
+                    className="min-h-11 flex-1 px-3 text-xs"
                   >
                     {t('confirm')}
                   </Button>
@@ -202,22 +213,32 @@ export function TodaysMeds({ circleId }: TodaysMedsProps): ReactElement | null {
           );
         })}
       </ul>
+      {limit != null && allMeds.length > limit && (
+        <Button
+          variant="ghost"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 min-h-9 w-full text-sm"
+        >
+          {expanded ? t('showLess') : t('showAll', { count: allMeds.length })}
+        </Button>
+      )}
+      </>
     );
   }
 
   return (
     <section aria-labelledby="todays-meds-heading" className="flex flex-col gap-2">
-      <h2 id="todays-meds-heading" className="eyebrow m-0 px-1">
+      <h2 id="todays-meds-heading" className="section-title m-0 px-1">
         {t('title')}
       </h2>
 
-      {circle && !canEdit && (
-        circle.view_only ? (
+      {circle &&
+        !canEdit &&
+        (circle.view_only ? (
           <ViewOnlyBanner />
         ) : circle.read_only ? (
           <ReadOnlyCircleBanner isOwner={circle.role === 'owner'} />
-        ) : null
-      )}
+        ) : null)}
 
       {body}
 

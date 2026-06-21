@@ -56,7 +56,7 @@ function renderPicker(): void {
       <MemoryRouter initialEntries={['/circles']}>
         <Routes>
           <Route path="/circles" element={<CirclePickerPage />} />
-          <Route path="/circles/:circleId/calendar" element={<div data-testid="calendar-page" />} />
+          <Route path="/circles/:circleId" element={<div data-testid="overview-page" />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -81,24 +81,22 @@ describe('CirclePickerPage', () => {
     ]);
     renderPicker();
 
-    const momCard = await screen.findByRole('link', { name: "Open Mom's Care" });
+    const momCard = await screen.findByRole('link', { name: /Open Mom's Care/ });
     expect(within(momCard).getByText("Mom's Care")).toBeInTheDocument();
     expect(within(momCard).getByText('Caring together with 4 people')).toBeInTheDocument();
     expect(within(momCard).getByText('Owner')).toBeInTheDocument();
-    expect(momCard).toHaveAttribute('href', '/circles/c1/calendar');
+    expect(momCard).toHaveAttribute('href', '/circles/c1');
 
-    const dadCard = screen.getByRole('link', { name: "Open Dad's Circle" });
+    const dadCard = screen.getByRole('link', { name: /Open Dad's Circle/ });
     expect(within(dadCard).getByText('Caregiver')).toBeInTheDocument();
     expect(within(dadCard).getByText('Caring together with 1 person')).toBeInTheDocument();
   });
 
   it('shows the Care Recipient role for is_care_recipient memberships', async () => {
-    mockGetCircles.mockResolvedValue([
-      makeCircle({ role: 'member', is_care_recipient: true }),
-    ]);
+    mockGetCircles.mockResolvedValue([makeCircle({ role: 'member', is_care_recipient: true })]);
     renderPicker();
 
-    const card = await screen.findByRole('link', { name: "Open Mom's Care" });
+    const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
     expect(within(card).getByText('Care Recipient')).toBeInTheDocument();
   });
 
@@ -106,7 +104,7 @@ describe('CirclePickerPage', () => {
     mockGetCircles.mockResolvedValue([makeCircle({ read_only: true, can_edit: false })]);
     renderPicker();
 
-    const card = await screen.findByRole('link', { name: "Open Mom's Care" });
+    const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
     expect(within(card).getByText('Read-only')).toBeInTheDocument();
     expect(within(card).getByText('Re-subscribe to manage this circle')).toBeInTheDocument();
   });
@@ -117,7 +115,7 @@ describe('CirclePickerPage', () => {
     ]);
     renderPicker();
 
-    const card = await screen.findByRole('link', { name: "Open Mom's Care" });
+    const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
     expect(within(card).getByText('Read-only')).toBeInTheDocument();
     expect(within(card).getByText('You can view but not edit this circle')).toBeInTheDocument();
   });
@@ -128,7 +126,7 @@ describe('CirclePickerPage', () => {
     ]);
     renderPicker();
 
-    const card = await screen.findByRole('link', { name: "Open Mom's Care" });
+    const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
     expect(within(card).getByText('View Only')).toBeInTheDocument();
     expect(
       within(card).getByText('View-only access. Contact owner for details.')
@@ -142,33 +140,32 @@ describe('CirclePickerPage', () => {
     ]);
     renderPicker();
 
-    const restricted = await screen.findByRole('link', { name: 'Open Restricted' });
+    const restricted = await screen.findByRole('link', { name: /Open Restricted/ });
     expect(restricted).toHaveAttribute('data-restricted', 'true');
-    expect(restricted).toHaveAttribute('href', '/circles/c1/calendar');
+    expect(restricted).toHaveAttribute('href', '/circles/c1');
 
-    const normal = screen.getByRole('link', { name: 'Open Normal' });
+    const normal = screen.getByRole('link', { name: /Open Normal/ });
     expect(normal).not.toHaveAttribute('data-restricted');
   });
 
-  it('navigates to the circle calendar on click', async () => {
+  it('navigates to the circle overview on click', async () => {
     const user = userEvent.setup();
     mockGetCircles.mockResolvedValue([makeCircle()]);
     renderPicker();
 
-    await user.click(await screen.findByRole('link', { name: "Open Mom's Care" }));
-    expect(screen.getByTestId('calendar-page')).toBeInTheDocument();
+    await user.click(await screen.findByRole('link', { name: /Open Mom's Care/ }));
+    expect(screen.getByTestId('overview-page')).toBeInTheDocument();
   });
 
   it('renders the empty state with download CTA when the user has no circles', async () => {
     mockGetCircles.mockResolvedValue([]);
     renderPicker();
 
+    expect(await screen.findByText("You're not part of any care circle yet.")).toBeInTheDocument();
     expect(
-      await screen.findByText("You're not part of any care circle yet.")
+      screen.getByText('Create a circle to get started, or ask someone to invite you.')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Download the app to create one or ask someone to invite you.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Prefer your phone? Get the companion app.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute(
       'href',
       'https://apps.apple.com/app/id6757629684'
@@ -195,6 +192,6 @@ describe('CirclePickerPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load circles');
 
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByRole('link', { name: "Open Mom's Care" })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: /Open Mom's Care/ })).toBeInTheDocument();
   });
 });

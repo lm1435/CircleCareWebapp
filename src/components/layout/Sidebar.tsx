@@ -1,13 +1,7 @@
-import type { ComponentType, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TodaysMeds } from '@/components/meds/TodaysMeds';
 import { StoreBadges } from '@/components/layout/StoreBadges';
-
-// TodaysMeds is owned by the meds agent (plan Task 22). Its final API takes a
-// circleId prop; the current stub takes no props, so this cast keeps both
-// versions type-compatible while still passing circleId from the route.
-const TodaysMedsSection = TodaysMeds as ComponentType<{ circleId?: string }>;
 
 interface IconProps {
   className?: string;
@@ -41,11 +35,29 @@ function iconBase(props: IconProps): {
   };
 }
 
+function HomeIcon(props: IconProps): ReactElement {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V21h14V9.5" />
+    </svg>
+  );
+}
+
 function CalendarIcon(props: IconProps): ReactElement {
   return (
     <svg {...iconBase(props)}>
       <rect x="3" y="4" width="18" height="17" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
+function TasksIcon(props: IconProps): ReactElement {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M9 11l2 2 4-4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
     </svg>
   );
 }
@@ -63,6 +75,23 @@ function EmergencyIcon(props: IconProps): ReactElement {
     <svg {...iconBase(props)}>
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8v8M8 12h8" />
+    </svg>
+  );
+}
+
+function VitalsIcon(props: IconProps): ReactElement {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M3 12h4l2 5 4-12 2 7h6" />
+    </svg>
+  );
+}
+
+function SettingsIcon(props: IconProps): ReactElement {
+  return (
+    <svg {...iconBase(props)}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
   );
 }
@@ -95,20 +124,36 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 
 export interface SidebarProps {
   /**
-   * desktop — static left column, hidden below lg (hamburger drawer takes over).
+   * desktop — static left column, hidden below xl (hamburger drawer takes over).
    * drawer — fills the mobile drawer panel rendered by AppLayout.
    */
   variant?: 'desktop' | 'drawer';
   /** Called when a nav link is activated (the drawer closes itself). */
   onNavigate?: () => void;
+  /** Opens the AI assistant modal (mounted by AppLayout). */
+  onOpenAssistant?: () => void;
+}
+
+function AssistantIcon(props: IconProps): ReactElement {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M12 8V4H8" />
+      <rect x="4" y="8" width="16" height="12" rx="2" />
+      <path d="M2 14h2M20 14h2M9 13v2M15 13v2" />
+    </svg>
+  );
 }
 
 const VARIANT_CLASS: Record<NonNullable<SidebarProps['variant']>, string> = {
-  desktop: 'hidden w-72 border-r border-line lg:flex',
+  desktop: 'hidden w-72 border-r border-line xl:flex',
   drawer: 'flex w-full flex-1',
 };
 
-export function Sidebar({ variant = 'desktop', onNavigate }: SidebarProps = {}): ReactElement {
+export function Sidebar({
+  variant = 'desktop',
+  onNavigate,
+  onOpenAssistant,
+}: SidebarProps = {}): ReactElement {
   const { t } = useTranslation('common');
   const { circleId } = useParams<{ circleId: string }>();
   const base = `/circles/${circleId}`;
@@ -118,9 +163,21 @@ export function Sidebar({ variant = 'desktop', onNavigate }: SidebarProps = {}):
       <nav aria-label={t('nav.label')}>
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           <li>
+            <NavLink to={base} end className={navLinkClass} onClick={onNavigate}>
+              <HomeIcon className="shrink-0" />
+              {t('nav.home')}
+            </NavLink>
+          </li>
+          <li>
             <NavLink to={`${base}/calendar`} className={navLinkClass} onClick={onNavigate}>
               <CalendarIcon className="shrink-0" />
               {t('nav.calendar')}
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to={`${base}/tasks`} className={navLinkClass} onClick={onNavigate}>
+              <TasksIcon className="shrink-0" />
+              {t('nav.tasks')}
             </NavLink>
           </li>
           <li>
@@ -129,6 +186,21 @@ export function Sidebar({ variant = 'desktop', onNavigate }: SidebarProps = {}):
               {t('nav.activity')}
             </NavLink>
           </li>
+          {onOpenAssistant && (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenAssistant();
+                  onNavigate?.();
+                }}
+                className={`${navLinkClass({ isActive: false })} w-full border-0 bg-transparent text-left`}
+              >
+                <AssistantIcon className="shrink-0" />
+                {t('nav.assistant')}
+              </button>
+            </li>
+          )}
           <li>
             <span className="eyebrow block px-4 pb-1 pt-4">{t('nav.health')}</span>
             <ul aria-label={t('nav.health')} className="m-0 flex list-none flex-col gap-1 p-0">
@@ -144,6 +216,12 @@ export function Sidebar({ variant = 'desktop', onNavigate }: SidebarProps = {}):
                   {t('nav.documents')}
                 </NavLink>
               </li>
+              <li>
+                <NavLink to={`${base}/vitals`} className={navLinkClass} onClick={onNavigate}>
+                  <VitalsIcon className="shrink-0" />
+                  {t('nav.vitals')}
+                </NavLink>
+              </li>
             </ul>
           </li>
           <li className="pt-3">
@@ -152,13 +230,22 @@ export function Sidebar({ variant = 'desktop', onNavigate }: SidebarProps = {}):
               {t('nav.members')}
             </NavLink>
           </li>
+          <li>
+            <NavLink to={`${base}/settings`} className={navLinkClass} onClick={onNavigate}>
+              <SettingsIcon className="shrink-0" />
+              {t('nav.settings')}
+            </NavLink>
+          </li>
         </ul>
       </nav>
 
-      <TodaysMedsSection circleId={circleId} />
-
+      {/* Promotional download card — styled like a heading but intentionally NOT
+          an <h*>: the sidebar (<aside>) precedes <main> in the DOM, so a heading
+          here would be the document's first heading (an h2 before the page's h1),
+          tripping WCAG 1.3.1 heading-order. It's chrome in a complementary
+          landmark, not a content section, so a styled <p> is the correct element. */}
       <div className="mt-auto rounded-2xl border border-line bg-cream p-4">
-        <h2 className="serif m-0 text-base text-ink">{t('downloadApp.title')}</h2>
+        <p className="serif m-0 text-base text-ink">{t('downloadApp.title')}</p>
         <p className="mb-3 mt-1 text-sm text-ink-3">{t('downloadApp.subtitle')}</p>
         <StoreBadges layout="stack" />
       </div>

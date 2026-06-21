@@ -45,7 +45,7 @@ export default function ActivityFeedPage(): ReactElement {
   }, [activities]);
 
   return (
-    <section className="mx-auto max-w-4xl p-6 md:p-8">
+    <section className="mx-auto max-w-5xl p-6 md:p-8">
       <header>
         <h1 className="serif m-0 text-xl text-ink">{t('activity:title')}</h1>
         <p className="m-0 mt-1 text-sm text-ink-3">{t('activity:subtitle')}</p>
@@ -97,7 +97,7 @@ export default function ActivityFeedPage(): ReactElement {
 
             {dayGroups.map((group) => (
               <div key={group.date}>
-                <h2 className="serif m-0 mt-6 border-b border-line pb-2 text-lg text-ink first:mt-0">
+                <h2 className="m-0 mt-6 border-b border-line pb-2 text-lg font-semibold text-ink first:mt-0">
                   {formatDayLabel(group.date, t, i18n.language)}
                 </h2>
                 <ul className="m-0 list-none p-0">

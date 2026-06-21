@@ -13,6 +13,7 @@ function setUserAgent(ua: string): void {
 describe('AppDownloadBanner', () => {
   beforeEach(() => {
     resetAppDownloadBannerDismissal();
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -46,17 +47,19 @@ describe('AppDownloadBanner', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('stays dismissed for the rest of the session (in-memory, not storage)', async () => {
+  it('stays dismissed across reloads via a persisted flag', async () => {
     const user = userEvent.setup();
     const { unmount } = render(<AppDownloadBanner />);
 
     await user.click(screen.getByRole('button', { name: 'Dismiss app download banner' }));
+    expect(window.localStorage.getItem('cc-download-banner-dismissed')).toBe('1');
     unmount();
 
+    // Simulate a full page reload: in-memory state is gone, but the persisted
+    // flag remains, so the banner stays dismissed.
+    resetAppDownloadBannerDismissal();
     render(<AppDownloadBanner />);
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
-    expect(window.localStorage.length).toBe(0);
-    expect(window.sessionStorage.length).toBe(0);
   });
 
   it('renders a single deep-linked store CTA on iOS', () => {

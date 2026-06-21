@@ -1,0 +1,105 @@
+{
+  "heading": "Perfil y ajustes",
+  "subheading": "Administra tu cuenta, notificaciones y preferencias.",
+  "sections": {
+    "account": "Cuenta",
+    "language": "Idioma",
+    "notifications": "Notificaciones",
+    "quietHours": "Horario sin interrupciones",
+    "units": "Unidades de medida",
+    "emailDigest": "Resumen semanal por correo",
+    "dangerZone": "Zona de peligro"
+  },
+  "account": {
+    "email": "Correo electrónico",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "timezone": "Zona horaria",
+    "edit": "Editar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "nameSuccess": "Nombre actualizado.",
+    "timezoneSuccess": "Zona horaria actualizada.",
+    "namePlaceholder": "Agrega tu nombre"
+  },
+  "timezones": {
+    "America/New_York": "Hora del Este (ET)",
+    "America/Chicago": "Hora Central (CT)",
+    "America/Denver": "Hora de la Montaña (MT)",
+    "America/Los_Angeles": "Hora del Pacífico (PT)",
+    "America/Phoenix": "Arizona (sin horario de verano)",
+    "America/Anchorage": "Hora de Alaska (AKT)",
+    "Pacific/Honolulu": "Hora de Hawái (HST)",
+    "Europe/London": "Londres (GMT/BST)",
+    "Europe/Paris": "Hora de Europa Central (CET)",
+    "Asia/Tokyo": "Japón (JST)",
+    "Australia/Sydney": "Sídney (AEST)"
+  },
+  "language": {
+    "description": "Elige el idioma que se usa en toda la aplicación.",
+    "success": "Idioma actualizado.",
+    "names": {
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "notifications": {
+    "description": "Elige qué alertas quieres recibir.",
+    "medicationConfirmations": "Confirmaciones de medicamentos",
+    "medicationConfirmationsDesc": "Cuando un cuidador confirma una dosis.",
+    "missedMedications": "Medicamentos omitidos",
+    "missedMedicationsDesc": "Cuando se omite una dosis programada.",
+    "taskAssignments": "Asignación de tareas",
+    "taskAssignmentsDesc": "Cuando se te asigna una tarea.",
+    "appointmentReminders": "Recordatorios de citas",
+    "appointmentRemindersDesc": "Antes de las próximas citas.",
+    "noteNudges": "Recordatorios de notas",
+    "noteNudgesDesc": "Recordatorios suaves para agregar una nota.",
+    "tipsAndSuggestions": "Consejos y sugerencias",
+    "tipsAndSuggestionsDesc": "Consejos útiles de cuidado y novedades.",
+    "success": "Preferencias de notificación actualizadas."
+  },
+  "quietHours": {
+    "description": "Pausa las notificaciones no urgentes durante estas horas.",
+    "enable": "Activar horario sin interrupciones",
+    "start": "Hora de inicio",
+    "end": "Hora de fin",
+    "success": "Horario sin interrupciones actualizado."
+  },
+  "units": {
+    "description": "Elige cómo se muestran los valores de peso y glucosa.",
+    "weight": "Peso",
+    "glucose": "Glucosa en sangre",
+    "lbs": "Libras (lbs)",
+    "kg": "Kilogramos (kg)",
+    "mgdl": "mg/dL",
+    "mmoll": "mmol/L",
+    "success": "Unidades actualizadas."
+  },
+  "emailDigest": {
+    "description": "Un resumen semanal de la actividad de cuidado enviado a tu correo.",
+    "enable": "Enviarme un resumen semanal",
+    "day": "Día de envío",
+    "premiumNote": "El resumen semanal es una función premium.",
+    "success": "Resumen por correo actualizado.",
+    "days": {
+      "0": "Domingo",
+      "1": "Lunes",
+      "2": "Martes",
+      "3": "Miércoles",
+      "4": "Jueves",
+      "5": "Viernes",
+      "6": "Sábado"
+    }
+  },
+  "delete": {
+    "title": "Eliminar cuenta",
+    "description": "Elimina tu cuenta de forma permanente y quita tu acceso a todos los círculos de cuidado. Esto no se puede deshacer.",
+    "cta": "Eliminar mi cuenta",
+    "confirmTitle": "¿Eliminar tu cuenta?",
+    "confirmBody": "Esto elimina tu cuenta de forma permanente y te quita de cada círculo de cuidado. Esta acción no se puede deshacer.",
+    "confirm": "Eliminar cuenta",
+    "keep": "Conservar mi cuenta",
+    "success": "Tu cuenta ha sido eliminada."
+  }
+}

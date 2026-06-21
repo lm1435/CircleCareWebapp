@@ -18,7 +18,8 @@
   "errorTitle": "No pudimos cargar los documentos.",
   "errorHint": "Revisa tu conexión e intenta de nuevo.",
   "noDocuments": "Sin documentos aún",
-  "noDocumentsHint": "Los documentos subidos en la app de CircleCare aparecerán aquí.",
+  "noDocumentsHint": "Guarda en un solo lugar los documentos importantes de tu ser querido: tarjetas del seguro, registros, directivas, para que todos los que ayudan los encuentren cuando hagan falta.",
+  "noDocumentsHintReadOnly": "Los documentos compartidos con este círculo aparecerán aquí para que todos los que ayudan los encuentren cuando hagan falta.",
   "noCategoryDocuments": "No hay documentos en esta categoría",
   "uploadedOn": "Subido el {{date}}",
   "preview": "Vista previa",
@@ -30,5 +31,54 @@
   "closePreview": "Cerrar vista previa",
   "previewFailed": "No pudimos cargar la vista previa.",
   "pdfFallbackHint": "¿No se muestra el PDF? Ábrelo en una pestaña nueva o descárgalo.",
-  "openInNewTab": "Abrir en pestaña nueva"
+  "openInNewTab": "Abrir en pestaña nueva",
+  "editAction": "Editar",
+  "editDocument": "Editar {{name}}",
+  "deleteAction": "Eliminar",
+  "deleteDocument": "Eliminar {{name}}",
+  "upload": {
+    "openButton": "Subir documento",
+    "title": "Subir un documento",
+    "submit": "Subir",
+    "uploading": "Subiendo...",
+    "success": "Documento subido.",
+    "fileLabel": "Archivo",
+    "fileHint": "JPG, PNG, HEIC o PDF. Hasta {{max}}.",
+    "storageRemaining": "{{remaining}} disponible",
+    "storageFull": "Este círculo alcanzó su límite de almacenamiento. Libera espacio o mejora tu plan en la app de CircleCare para agregar más.",
+    "labelLabel": "Nombre",
+    "categoryLabel": "Categoría",
+    "noteLabel": "Nota (opcional)",
+    "noteHint": "Agrega contexto para otros cuidadores.",
+    "errors": {
+      "fileRequired": "Elige un archivo para subir.",
+      "fileType": "Usa un archivo JPG, PNG, HEIC o PDF.",
+      "fileTooLarge": "Este archivo es demasiado grande. El límite es {{max}}.",
+      "storageFull": "Este archivo superaría el límite de almacenamiento del círculo.",
+      "labelRequired": "Ingresa un nombre para este documento.",
+      "noteTooLong": "Las notas pueden tener hasta 500 caracteres."
+    }
+  },
+  "edit": {
+    "title": "Editar documento",
+    "saving": "Guardando...",
+    "success": "Documento actualizado.",
+    "errors": {
+      "labelRequired": "Ingresa un nombre para este documento.",
+      "noteTooLong": "Las notas pueden tener hasta 500 caracteres."
+    }
+  },
+  "delete": {
+    "title": "¿Eliminar documento?",
+    "message": "¿Eliminar \"{{name}}\"? Esta acción no se puede deshacer.",
+    "confirm": "Eliminar",
+    "deleting": "Eliminando...",
+    "success": "Documento eliminado."
+  },
+  "errors": {
+    "storageFull": "Este círculo alcanzó su límite de almacenamiento. Libera espacio para agregar más documentos.",
+    "subscriptionRequired": "Alcanzaste el límite de almacenamiento gratuito. Abre la app de CircleCare para mejorar tu plan.",
+    "permissionDenied": "No tienes permiso para hacer eso.",
+    "saveFailed": "Algo salió mal. Intenta de nuevo."
+  }
 }

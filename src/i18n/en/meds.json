@@ -4,6 +4,8 @@
   "loadError": "Couldn't load today's medications",
   "confirm": "Confirm",
   "skip": "Skip",
+  "showAll": "Show all {{count}}",
+  "showLess": "Show less",
   "status": {
     "taken": "Taken",
     "missed": "Missed",

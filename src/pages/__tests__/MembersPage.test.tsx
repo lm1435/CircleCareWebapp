@@ -3,14 +3,25 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
+import { ToastProvider } from '@/components/ui';
 import MembersPage from '@/pages/MembersPage';
 import { getCircleDetail, type CircleDetail, type CircleMember } from '@/api/circleMembers';
+import { getCircles } from '@/api/circles';
 
-vi.mock('@/api/circleMembers', () => ({
-  getCircleDetail: vi.fn(),
+vi.mock('@/api/circleMembers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/circleMembers')>();
+  return { ...actual, getCircleDetail: vi.fn() };
+});
+
+// MembersPage now reads through useCircle, which also calls useCircles()
+// (GET /circles). Stub it so the page resolves; the read-only roster assertions
+// only depend on the circle detail.
+vi.mock('@/api/circles', () => ({
+  getCircles: vi.fn().mockResolvedValue([]),
 }));
 
 const mockGetCircleDetail = vi.mocked(getCircleDetail);
+void getCircles;
 
 function makeMember(overrides: Partial<CircleMember> = {}): CircleMember {
   return {
@@ -40,6 +51,7 @@ function makeDetail(members: CircleMember[]): CircleDetail {
     is_self_care: false,
     care_recipient_timezone: 'America/Chicago',
     members,
+    pending_invites: [],
     access_level: 'full',
     is_premium_circle: true,
     can_edit: true,
@@ -53,11 +65,13 @@ function renderMembers(): void {
   });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/circles/c1/members']}>
-        <Routes>
-          <Route path="/circles/:circleId/members" element={<MembersPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/circles/c1/members']}>
+          <Routes>
+            <Route path="/circles/:circleId/members" element={<MembersPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

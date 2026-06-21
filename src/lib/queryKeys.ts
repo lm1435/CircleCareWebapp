@@ -63,6 +63,19 @@ export const queryKeys = {
 
   // Tasks
   tasks: (circleId: string) => ['tasks', circleId] as const,
+  // Parameterized tasks list — mirrors mobile useTasks: only DEFINED params are
+  // appended (status, sort, limit), in that order, so the key stays a superset
+  // of `tasks(circleId)` and invalidating that prefix still matches every list.
+  tasksList: (
+    circleId: string,
+    params?: { status?: string; sort?: string; limit?: number }
+  ) => {
+    const key: (string | number)[] = ['tasks', circleId];
+    if (params?.status) key.push(params.status);
+    if (params?.sort) key.push(params.sort);
+    if (params?.limit) key.push(params.limit);
+    return key;
+  },
 
   // Vitals
   vitals: (circleId: string) => ['vitals', circleId] as const,

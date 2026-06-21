@@ -1,0 +1,105 @@
+{
+  "heading": "Profile & settings",
+  "subheading": "Manage your account, notifications, and preferences.",
+  "sections": {
+    "account": "Account",
+    "language": "Language",
+    "notifications": "Notifications",
+    "quietHours": "Quiet hours",
+    "units": "Measurement units",
+    "emailDigest": "Weekly email digest",
+    "dangerZone": "Danger zone"
+  },
+  "account": {
+    "email": "Email",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "timezone": "Time zone",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "nameSuccess": "Name updated.",
+    "timezoneSuccess": "Time zone updated.",
+    "namePlaceholder": "Add your name"
+  },
+  "timezones": {
+    "America/New_York": "Eastern Time (ET)",
+    "America/Chicago": "Central Time (CT)",
+    "America/Denver": "Mountain Time (MT)",
+    "America/Los_Angeles": "Pacific Time (PT)",
+    "America/Phoenix": "Arizona (no DST)",
+    "America/Anchorage": "Alaska Time (AKT)",
+    "Pacific/Honolulu": "Hawaii Time (HST)",
+    "Europe/London": "London (GMT/BST)",
+    "Europe/Paris": "Central European (CET)",
+    "Asia/Tokyo": "Japan (JST)",
+    "Australia/Sydney": "Sydney (AEST)"
+  },
+  "language": {
+    "description": "Choose the language used across the app.",
+    "success": "Language updated.",
+    "names": {
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "notifications": {
+    "description": "Choose which alerts you receive.",
+    "medicationConfirmations": "Medication confirmations",
+    "medicationConfirmationsDesc": "When a caregiver confirms a dose.",
+    "missedMedications": "Missed medications",
+    "missedMedicationsDesc": "When a scheduled dose is missed.",
+    "taskAssignments": "Task assignments",
+    "taskAssignmentsDesc": "When a task is assigned to you.",
+    "appointmentReminders": "Appointment reminders",
+    "appointmentRemindersDesc": "Before upcoming appointments.",
+    "noteNudges": "Note reminders",
+    "noteNudgesDesc": "Gentle reminders to add a note.",
+    "tipsAndSuggestions": "Tips & suggestions",
+    "tipsAndSuggestionsDesc": "Helpful care tips and product updates.",
+    "success": "Notification preferences updated."
+  },
+  "quietHours": {
+    "description": "Pause non-urgent notifications during these hours.",
+    "enable": "Enable quiet hours",
+    "start": "Start time",
+    "end": "End time",
+    "success": "Quiet hours updated."
+  },
+  "units": {
+    "description": "Choose how weight and glucose values are shown.",
+    "weight": "Weight",
+    "glucose": "Blood glucose",
+    "lbs": "Pounds (lbs)",
+    "kg": "Kilograms (kg)",
+    "mgdl": "mg/dL",
+    "mmoll": "mmol/L",
+    "success": "Units updated."
+  },
+  "emailDigest": {
+    "description": "A weekly summary of care activity sent to your email.",
+    "enable": "Send me a weekly digest",
+    "day": "Delivery day",
+    "premiumNote": "Weekly digest is a premium feature.",
+    "success": "Email digest updated.",
+    "days": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    }
+  },
+  "delete": {
+    "title": "Delete account",
+    "description": "Permanently delete your account and remove your access to all care circles. This cannot be undone.",
+    "cta": "Delete my account",
+    "confirmTitle": "Delete your account?",
+    "confirmBody": "This permanently deletes your account and removes you from every care circle. This action cannot be undone.",
+    "confirm": "Delete account",
+    "keep": "Keep my account",
+    "success": "Your account has been deleted."
+  }
+}

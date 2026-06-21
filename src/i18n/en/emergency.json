@@ -13,7 +13,7 @@
   "downloadToEdit": "Download the CircleCare app to add or edit this information.",
   "downloadCta": "Download the app",
   "emptyTitle": "No emergency information yet",
-  "emptyHint": "Add doctors, allergies, insurance, and emergency contacts in the CircleCare app, and they will appear here.",
+  "emptyHint": "Keep the details first responders need — allergies, doctors, insurance, and who to call — ready in one place for your loved one. Add them in the CircleCare app and they'll appear here.",
   "primary": "Primary",
   "callAria": "Call {{name}}",
   "atAGlance": {
@@ -64,10 +64,100 @@
     "details": "Advance Directives"
   },
   "empty": {
-    "medicalInfo": "No medical information added yet",
-    "doctors": "No doctors added yet",
-    "contacts": "No emergency contacts added yet",
-    "insurance": "No insurance information added yet",
-    "directives": "No code status on file"
+    "medicalInfo": "Add blood type, allergies, and conditions so first responders know your loved one in seconds.",
+    "doctors": "Add the doctors who care for your loved one so the circle can reach them fast.",
+    "contacts": "Add the people to call first in an emergency so no one is left guessing.",
+    "insurance": "Add insurance details so coverage is ready when care can't wait.",
+    "directives": "Record your loved one's code status so their wishes are clear in a crisis."
+  },
+  "edit": {
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "required": "Required",
+    "optional": "Optional",
+    "addDoctor": "Add doctor",
+    "addContact": "Add contact",
+    "addInsurance": "Add insurance",
+    "editDoctorAria": "Edit doctor {{name}}",
+    "deleteDoctorAria": "Delete doctor {{name}}",
+    "editContactAria": "Edit contact {{name}}",
+    "deleteContactAria": "Delete contact {{name}}",
+    "editInsuranceAria": "Edit insurance {{name}}",
+    "deleteInsuranceAria": "Delete insurance {{name}}",
+    "editMedicalInfo": "Edit medical information",
+    "editPrimaryDoctor": "Edit primary doctor",
+    "removePrimaryDoctor": "Remove primary doctor",
+    "doctor": {
+      "addTitle": "Add doctor",
+      "editTitle": "Edit doctor",
+      "primaryTitle": "Primary doctor",
+      "name": "Name",
+      "namePlaceholder": "Dr. Jane Smith",
+      "specialty": "Specialty",
+      "specialtyPlaceholder": "Cardiology",
+      "phone": "Phone",
+      "address": "Address",
+      "addressPlaceholder": "Street, city, state",
+      "nameRequired": "Please enter the doctor's name.",
+      "removeTitle": "Remove doctor",
+      "removeMessage": "This removes this doctor from the emergency sheet.",
+      "removePrimaryTitle": "Remove primary doctor",
+      "removePrimaryMessage": "This clears the primary doctor from the emergency sheet."
+    },
+    "contact": {
+      "addTitle": "Add emergency contact",
+      "editTitle": "Edit emergency contact",
+      "name": "Name",
+      "namePlaceholder": "Sarah Smith",
+      "relationship": "Relationship",
+      "relationshipPlaceholder": "Daughter",
+      "phone": "Phone",
+      "primary": "Primary contact",
+      "primaryHint": "Shown first to first responders. Only one contact can be primary.",
+      "requiredFields": "Name, relationship, and phone are required.",
+      "removeTitle": "Remove contact",
+      "removeMessage": "This removes this emergency contact from the sheet."
+    },
+    "insurance": {
+      "addTitle": "Add insurance",
+      "editTitle": "Edit insurance",
+      "label": "Label",
+      "labelPlaceholder": "Medical, Dental…",
+      "carrier": "Carrier",
+      "carrierPlaceholder": "Blue Cross",
+      "policyNumber": "Policy number",
+      "groupNumber": "Group number",
+      "phone": "Phone",
+      "primary": "Primary insurance",
+      "primaryHint": "Only one plan can be primary.",
+      "carrierRequired": "Please enter the insurance carrier.",
+      "removeTitle": "Remove insurance",
+      "removeMessage": "This removes this insurance plan from the sheet."
+    },
+    "medical": {
+      "title": "Medical information",
+      "bloodType": "Blood type",
+      "bloodTypePlaceholder": "O+",
+      "medicationAllergies": "Medication allergies",
+      "otherAllergies": "Other allergies",
+      "conditions": "Medical conditions",
+      "listHint": "Separate multiple entries with commas."
+    },
+    "directives": {
+      "title": "Code status",
+      "dnrLabel": "DNR (Do Not Resuscitate)",
+      "details": "Advance directives",
+      "detailsPlaceholder": "Notes about advance directives or wishes"
+    }
+  },
+  "errors": {
+    "subscriptionRequired": "Open the CircleCare app to upgrade and edit this information.",
+    "permissionDenied": "You don't have permission to edit this circle.",
+    "saveFailed": "We couldn't save your changes. Please try again."
   }
 }

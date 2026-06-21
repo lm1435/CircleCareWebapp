@@ -6,6 +6,10 @@
     "caregiver": "Cuidador",
     "care_recipient": "Receptor de Cuidado"
   },
+  "accept": "Aceptar invitación",
+  "accepting": "Uniéndote…",
+  "acceptSuccess": "Te uniste al círculo.",
+  "acceptFailed": "No pudimos aceptar esta invitación. Por favor intenta de nuevo.",
   "downloadPrompt": "Descarga la app para aceptar tu invitación",
   "appStore": "Descargar en el App Store",
   "googlePlay": "Disponible en Google Play",

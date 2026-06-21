@@ -20,7 +20,7 @@ export function FieldList({ fields }: FieldListProps): ReactElement {
       {fields.map((field) => (
         <div key={field.label}>
           <dt className="mono mb-0.5">{field.label}</dt>
-          <dd className="m-0 text-base leading-relaxed text-ink">{field.value}</dd>
+          <dd className="m-0 text-sm leading-relaxed text-ink">{field.value}</dd>
         </div>
       ))}
     </dl>

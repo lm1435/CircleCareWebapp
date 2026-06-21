@@ -13,6 +13,31 @@ const mockedGet = vi.mocked(apiClient.get);
 
 const CIRCLE_ID = 'circle-1';
 
+// The page derives upload/edit/delete affordances from useCircle (gating +
+// owner) and useAuthStore (current user). Default to read-only so the existing
+// read-side assertions are unchanged; individual tests override canEdit.
+const useCircleResult = {
+  circle: undefined as { owner_id: string } | undefined,
+  circleSummary: undefined,
+  timezone: 'America/New_York',
+  members: [],
+  canEdit: false,
+  accessLevel: undefined,
+  viewOnly: false,
+  readOnly: false,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+};
+vi.mock('@/hooks/useCircle', () => ({
+  useCircle: () => useCircleResult,
+}));
+
+vi.mock('@/store/authStore', () => ({
+  useAuthStore: (selector: (s: { user: { id: string } | null }) => unknown) =>
+    selector({ user: { id: 'user-1' } }),
+}));
+
 const imageDoc = {
   id: 'doc-1',
   circle_id: CIRCLE_ID,
@@ -81,6 +106,9 @@ function renderPage() {
 describe('DocumentsPage', () => {
   beforeEach(() => {
     mockedGet.mockReset();
+    vi.mocked(apiClient.delete).mockReset();
+    useCircleResult.canEdit = false;
+    useCircleResult.circle = undefined;
   });
 
   it('renders the document list with name, category, size, and count', async () => {
@@ -197,7 +225,9 @@ describe('DocumentsPage', () => {
 
     expect(await screen.findByText('No documents yet')).toBeInTheDocument();
     expect(
-      screen.getByText('Documents uploaded in the CircleCare app will appear here.')
+      screen.getByText(
+        'Documents shared with this circle will appear here so everyone helping can find them when it matters.'
+      )
     ).toBeInTheDocument();
   });
 
@@ -222,5 +252,78 @@ describe('DocumentsPage', () => {
     mockDocuments();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('Insurance Card')).toBeInTheDocument();
+  });
+
+  it('hides upload + edit/delete affordances when the user cannot edit', async () => {
+    mockDocuments();
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    expect(screen.queryByRole('button', { name: 'Upload document' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Edit Insurance Card' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Delete Insurance Card' })
+    ).not.toBeInTheDocument();
+    // The app-only upload CTA is shown instead.
+    expect(screen.getByText('Need to add a document?')).toBeInTheDocument();
+  });
+
+  it('shows upload + per-row edit/delete for the uploader when editable', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'someone-else' };
+    mockDocuments();
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    // current user (user-1) is the uploader of both docs → manage allowed
+    expect(screen.getByRole('button', { name: 'Upload document' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Insurance Card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Insurance Card' })).toBeInTheDocument();
+  });
+
+  it('hides edit/delete for documents uploaded by others when not the owner', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'someone-else' };
+    mockDocuments([{ ...imageDoc, uploaded_by: 'another-user' }]);
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    expect(
+      screen.queryByRole('button', { name: 'Edit Insurance Card' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows edit/delete for any document when the user is the circle owner', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' }; // current user owns the circle
+    mockDocuments([{ ...imageDoc, uploaded_by: 'another-user' }]);
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    expect(screen.getByRole('button', { name: 'Edit Insurance Card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Insurance Card' })).toBeInTheDocument();
+  });
+
+  it('confirms and deletes a document', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' };
+    mockDocuments();
+    vi.mocked(apiClient.delete).mockResolvedValue(undefined as never);
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Insurance Card' }));
+
+    // Confirm dialog appears.
+    const dialog = await screen.findByRole('dialog', { name: 'Delete document?' });
+    expect(within(dialog).getByText(/Insurance Card/)).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() =>
+      expect(apiClient.delete).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/documents/doc-1`)
+    );
   });
 });

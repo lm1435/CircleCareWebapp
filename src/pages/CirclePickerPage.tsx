@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCircles } from '@/hooks/useCircles';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,6 +6,7 @@ import { Button, Card } from '@/components/ui';
 import { CircleCard } from '@/components/circles/CircleCard';
 import { CircleCardSkeleton } from '@/components/circles/CircleCardSkeleton';
 import { EmptyCircles } from '@/components/circles/EmptyCircles';
+import { CreateCircleModal } from '@/components/circles/CreateCircleModal';
 
 /** Time-of-day greeting key (mirrors mobile's getGreeting). */
 function greetingKey(): 'morning' | 'afternoon' | 'evening' {
@@ -22,9 +23,10 @@ function greetingKey(): 'morning' | 'afternoon' | 'evening' {
  * the title carries real hierarchy instead of sitting flat above the cards.
  */
 export default function CirclePickerPage(): ReactElement {
-  const { t } = useTranslation('members');
+  const { t } = useTranslation(['members', 'circles']);
   const { user } = useAuth();
   const { data: circles, isPending, isError, refetch } = useCircles();
+  const [showCreate, setShowCreate] = useState(false);
 
   const firstName = user?.first_name?.trim();
   const circleCount = circles?.length ?? 0;
@@ -53,7 +55,13 @@ export default function CirclePickerPage(): ReactElement {
       </Card>
     );
   } else if (!circles || circles.length === 0) {
-    content = <EmptyCircles />;
+    content = (
+      <EmptyCircles
+        action={
+          <Button onClick={() => setShowCreate(true)}>{t('circles:create.create')}</Button>
+        }
+      />
+    );
   } else {
     content = (
       <ul className="m-0 mt-8 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
@@ -64,29 +72,43 @@ export default function CirclePickerPage(): ReactElement {
     );
   }
 
+  // The "Create circle" header action is shown once the list has loaded with at
+  // least one circle (the empty state has its own create CTA, and loading/error
+  // states have nothing to add alongside).
+  const showHeaderCreate = !isPending && !isError && circleCount > 0;
+
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-8">
-      <header>
-        {firstName ? (
-          <>
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-moss" />
-              {t(`picker.greeting.${greetingKey()}`)}
-            </p>
-            <h1 className="serif m-0 mt-2 text-4xl leading-[1.05] text-ink sm:text-5xl">
-              {firstName}
+    <section className="mx-auto w-full max-w-5xl p-6 md:p-8">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          {firstName ? (
+            <>
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">
+                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-moss" />
+                {t(`picker.greeting.${greetingKey()}`)}
+              </p>
+              <h1 className="serif m-0 mt-2 text-4xl leading-[1.05] text-ink sm:text-5xl">
+                {firstName}
+              </h1>
+            </>
+          ) : (
+            <h1 className="serif m-0 text-4xl leading-[1.05] text-ink sm:text-5xl">
+              {t('picker.heading')}
             </h1>
-          </>
-        ) : (
-          <h1 className="serif m-0 text-4xl leading-[1.05] text-ink sm:text-5xl">
-            {t('picker.heading')}
-          </h1>
-        )}
-        {!isPending && !isError && circleCount > 0 && (
-          <p className="mt-3 text-ink-3">{t('picker.careCircleCount', { count: circleCount })}</p>
+          )}
+          {showHeaderCreate && (
+            <p className="mt-3 text-ink-3">{t('picker.careCircleCount', { count: circleCount })}</p>
+          )}
+        </div>
+        {showHeaderCreate && (
+          <Button className="shrink-0" onClick={() => setShowCreate(true)}>
+            {t('circles:create.create')}
+          </Button>
         )}
       </header>
       {content}
+
+      {showCreate && <CreateCircleModal onClose={() => setShowCreate(false)} />}
     </section>
   );
 }

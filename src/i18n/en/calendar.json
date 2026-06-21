@@ -13,6 +13,10 @@
   "noEventsWeek": "No events this week",
   "noEventsMonth": "No events this month",
   "noEventsDay": "Nothing scheduled for this day",
+  "empty": {
+    "hint": "Add a medication or appointment to start tracking care here.",
+    "hintReadOnly": "When the care team adds medications or appointments, they'll show up here."
+  },
   "errorTitle": "Couldn't load the calendar",
   "errorHint": "Check your connection and try again.",
   "eventCount_one": "{{count}} event",
@@ -55,5 +59,111 @@
     "weeklyOn": "Weekly on {{days}}",
     "everyNDays_one": "Every day",
     "everyNDays_other": "Every {{count}} days"
+  },
+  "errors": {
+    "subscriptionRequired": "Open the CircleCare app to upgrade and unlock this.",
+    "permissionDenied": "You don't have permission to make changes in this circle.",
+    "saveFailed": "Couldn't save your changes. Please try again."
+  },
+  "addEvent": {
+    "addEvent": "Add event",
+    "newTitle": "New event",
+    "editTitle": "Edit event",
+    "close": "Close event form",
+    "create": "Create",
+    "saveChanges": "Save changes",
+    "creating": "Saving…",
+    "created": "Event created",
+    "updated": "Changes saved",
+    "viewOnly": "View only",
+    "types": {
+      "medication": "Medication",
+      "appointment": "Appointment",
+      "task": "Task"
+    },
+    "fields": {
+      "type": "Type",
+      "title": "Title",
+      "medicationName": "Medication name",
+      "dosage": "Dosage",
+      "date": "Date",
+      "time": "Time",
+      "endTime": "End time",
+      "location": "Location",
+      "notes": "Notes",
+      "repeat": "Repeat",
+      "daysOn": "Days on",
+      "daysOff": "Days off",
+      "endDate": "End date",
+      "assignedTo": "Assigned to"
+    },
+    "placeholders": {
+      "appointmentTitle": "e.g. Dr. Smith checkup",
+      "taskTitle": "e.g. Pick up prescription",
+      "medicationName": "e.g. Metformin",
+      "dosage": "e.g. 500 mg",
+      "location": "e.g. Main St. Clinic",
+      "notes": "Add any details…"
+    },
+    "hints": {
+      "timeOptional": "Leave blank for an all-day event.",
+      "endDate": "Leave blank to repeat indefinitely.",
+      "timesShownIn": "Times are saved in {{timezone}}."
+    },
+    "anyone": "Anyone",
+    "recurrence": {
+      "never": "Does not repeat",
+      "daily": "Daily",
+      "everyOtherDay": "Every other day",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "cycle": "Cycle (days on / off)"
+    },
+    "reminders": {
+      "section": "Reminders",
+      "enable": "Send reminders",
+      "enableHint": "Notify the circle before this is due.",
+      "additional": "Additional reminders",
+      "h24": "24 hours before",
+      "h1": "1 hour before",
+      "m30": "30 minutes before",
+      "m15": "15 minutes before"
+    },
+    "validation": {
+      "titleRequired": "Please enter a title.",
+      "medicationRequired": "Please enter a medication name.",
+      "dateRequired": "Please choose a date.",
+      "timeRequired": "Medications need a scheduled time.",
+      "endTimeRequired": "Please add an end time.",
+      "endTimeAfterStart": "End time must be after the start time."
+    }
+  },
+  "deleteEvent": {
+    "title": "Delete event",
+    "close": "Close delete dialog",
+    "confirmMessage": "Delete \"{{title}}\"? This can't be undone.",
+    "recurringMessage": "\"{{title}}\" repeats. What would you like to delete?",
+    "scopeSingle": "This event only",
+    "scopeFuture": "This and all future events",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleted": "Event deleted"
+  },
+  "notes": {
+    "title": "Notes",
+    "composerLabel": "Add a note",
+    "composerPlaceholder": "Add a note for the circle…",
+    "editLabel": "Edit note",
+    "add": "Add note",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete note",
+    "deleteConfirm": "Delete this note? This can't be undone.",
+    "empty": "No notes yet.",
+    "loadError": "Couldn't load notes.",
+    "errorSaving": "Couldn't save your note. Please try again."
   }
 }

@@ -1,0 +1,28 @@
+{
+  "hero": {
+    "eyebrow": "Care home",
+    "caringFor": "Caring for {{name}}",
+    "selfCareTitle": "Your care space",
+    "subtitleSolo": "Everything for this circle in one place. Invite family to share the load.",
+    "subtitleTeam_one": "{{count}} person helping coordinate care.",
+    "subtitleTeam_other": "{{count}} people helping coordinate care."
+  },
+  "tasks": {
+    "title": "Open tasks",
+    "empty": "No open tasks right now.",
+    "more": "+{{count}} more",
+    "viewAll": "View all tasks"
+  },
+  "activity": {
+    "title": "Recent activity",
+    "empty": "Activity from your circle will show up here.",
+    "viewAll": "View all activity"
+  },
+  "team": {
+    "title": "Care team",
+    "count_one": "{{count}} member",
+    "count_other": "{{count}} members",
+    "manage": "Manage members",
+    "invite": "Invite member"
+  }
+}

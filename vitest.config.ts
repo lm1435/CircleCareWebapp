@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -14,6 +14,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // The Playwright E2E specs under e2e/ are *.spec.ts too — keep them out of
+    // the vitest (jsdom) run; they only execute under `npm run test:e2e`.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     // Test-only env values so `src/lib/env.ts` Zod validation passes.
     // Real values live in `.env` (gitignored) — see `.env.example`.
     env: {

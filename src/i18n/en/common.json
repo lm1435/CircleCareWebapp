@@ -7,18 +7,40 @@
   "confirm": "Confirm",
   "save": "Save",
   "close": "Close",
+  "required": "(required)",
   "today": "Today",
+  "expandAll": "Expand all",
+  "collapseAll": "Collapse all",
   "comingSoon": "Coming soon",
   "skipToContent": "Skip to content",
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "This part of the page ran into an unexpected error. You can try again, or head back to your circles.",
+    "retry": "Try again",
+    "home": "Go to my circles"
+  },
   "nav": {
     "label": "Main navigation",
+    "back": "Back",
     "circles": "My Circles",
+    "home": "Home",
     "calendar": "Calendar",
+    "tasks": "Tasks",
     "activity": "Activity",
     "health": "Health",
     "emergency": "Emergency Info",
     "documents": "Documents",
-    "members": "Members"
+    "members": "Members",
+    "vitals": "Vitals",
+    "profile": "Profile",
+    "settings": "Circle Settings",
+    "assistant": "Assistant",
+    "help": "Help & FAQ"
+  },
+  "errors": {
+    "saveFailed": "Couldn't save your changes. Please try again.",
+    "subscriptionRequired": "Open the CircleCare app to upgrade and unlock this.",
+    "permissionDenied": "You don't have permission to make this change."
   },
   "menu": {
     "toggle": "Navigation menu",
@@ -53,5 +75,20 @@
     "imageAlt1": "Family laughing together around a table",
     "imageAlt2": "Multigenerational family sharing a meal outdoors",
     "imageAlt3": "Family looking at a tablet together on the couch"
+  },
+  "gettingStarted": {
+    "title": "Get started",
+    "subtitle": "A few quick steps to set up this circle for everyone.",
+    "progress": "{{done}} of {{total}} done",
+    "step1Label": "Add a medication or appointment",
+    "step1Desc": "Everyone on the app gets a reminder, so no dose or visit is missed.",
+    "step2Label": "Invite family & caregivers",
+    "step2Desc": "Share the load — they see the same schedule and updates.",
+    "step3Label": "Add emergency info",
+    "step3Desc": "Allergies, doctors, and contacts ready the moment they're needed.",
+    "action": "Add",
+    "statusDone": "(done)",
+    "statusPending": "(to do)",
+    "dismiss": "Dismiss the get started checklist"
   }
 }

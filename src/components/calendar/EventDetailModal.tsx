@@ -1,19 +1,12 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  type KeyboardEvent,
-  type MouseEvent,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
+import { type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Badge } from '@/components/ui';
+import { Modal } from '@/components/ui';
 import { formatEventTimeForDisplay } from '@/utils/timezone';
 import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
-import { EVENT_TYPE_BLOCK_CLASS, getMedicationStatus } from './eventStyles';
+import { EVENT_TYPE_BLOCK_CLASS, EVENT_TYPE_DEEP_TEXT, getMedicationStatus } from './eventStyles';
 import { formatRecurrenceLabel } from './recurrenceLabel';
+import { EventNotesPanel } from './EventNotesPanel';
 
 export interface EventDetailModalProps {
   event: CalendarEvent;
@@ -25,16 +18,14 @@ export interface EventDetailModalProps {
    */
   canEdit?: boolean;
   editActions?: ReactNode;
+  /**
+   * Circle the event belongs to. When provided, the event-notes panel (Task
+   * 1.8) is mounted in the body. Falls back to `event.circle_id` so callers
+   * that don't pass it still get notes.
+   */
+  circleId?: string;
 }
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-const TYPE_BADGE_VARIANT = {
-  medication: 'clay',
-  appointment: 'dusk',
-  task: 'moss',
-} as const;
 
 /**
  * Read-only event detail modal (plan Task 20): title, type badge, date + time
@@ -51,53 +42,10 @@ export function EventDetailModal({
   onClose,
   canEdit = false,
   editActions,
+  circleId,
 }: EventDetailModalProps): ReactElement {
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const locale = i18n.language;
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Focus management: focus the close button on open, restore on close.
-  useEffect(() => {
-    const previouslyFocused =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeButtonRef.current?.focus();
-    return () => {
-      previouslyFocused?.focus();
-    };
-  }, []);
-
-  const handleKeyDown = useCallback(
-    (keyEvent: KeyboardEvent<HTMLDivElement>) => {
-      if (keyEvent.key === 'Escape') {
-        keyEvent.stopPropagation();
-        onClose();
-        return;
-      }
-      if (keyEvent.key !== 'Tab') return;
-
-      const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-      if (!focusables || focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-
-      if (keyEvent.shiftKey && document.activeElement === first) {
-        keyEvent.preventDefault();
-        last.focus();
-      } else if (!keyEvent.shiftKey && document.activeElement === last) {
-        keyEvent.preventDefault();
-        first.focus();
-      }
-    },
-    [onClose]
-  );
-
-  const handleBackdropClick = useCallback(
-    (mouseEvent: MouseEvent<HTMLDivElement>) => {
-      if (mouseEvent.target === mouseEvent.currentTarget) onClose();
-    },
-    [onClose]
-  );
 
   const title = event.medication_name || event.title;
   const dosage = event.event_type === 'medication' ? event.medication_dosage : null;
@@ -157,68 +105,85 @@ export function EventDetailModal({
     rows.push({ key: 'notes', label: t('calendar:eventDetail.notes'), value: event.description });
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4"
-      onClick={handleBackdropClick}
-      onKeyDown={handleKeyDown}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="event-detail-title"
-        className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl border border-line bg-cream shadow-lg"
-      >
-        <div className="flex items-start gap-4 border-b border-line-2 p-5">
-          {/* Type-colored accent rail — mirrors mobile's color-forward type vocabulary */}
+  // Name-first header: the entity name is the primary serif display (inherits
+  // the Modal h2's serif/2xl), with the type as a refined eyebrow accent beneath
+  // — a small type-colored dot + uppercase mono label in the deep type color
+  // (WCAG AA on cream). The dosage trails as a quiet inline detail. The
+  // type-colored rail anchors the whole block to mobile's color-forward
+  // type vocabulary.
+  const titleContent = (
+    <span className="flex items-stretch gap-3.5">
+      <span
+        aria-hidden="true"
+        className={`w-1 shrink-0 self-stretch rounded-full ${EVENT_TYPE_BLOCK_CLASS[event.event_type]}`}
+      />
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="block break-words leading-tight">
+          {title}
+          {dosage ? (
+            <span className="ml-2 align-baseline font-sans text-base font-normal text-ink-3">
+              {dosage}
+            </span>
+          ) : null}
+        </span>
+        {/* Type eyebrow: type-colored dot + uppercase mono label in the deep
+            type color (WCAG AA on cream). We don't use the .eyebrow utility
+            here because it hard-sets color: ink-3, which would override the
+            type color at equal specificity. */}
+        <span
+          className={`flex items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] ${EVENT_TYPE_DEEP_TEXT[event.event_type]}`}
+        >
           <span
             aria-hidden="true"
-            className={`mt-1 h-10 w-1 shrink-0 rounded-full ${EVENT_TYPE_BLOCK_CLASS[event.event_type]}`}
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${EVENT_TYPE_BLOCK_CLASS[event.event_type]}`}
           />
-          <div className="min-w-0 flex-1">
-            <Badge variant={TYPE_BADGE_VARIANT[event.event_type]}>
-              {t(`calendar:eventTypes.${event.event_type}`)}
-            </Badge>
-            <h2 id="event-detail-title" className="serif m-0 mt-2 break-words text-lg text-ink">
-              {title}
-              {dosage ? <span className="text-ink-3"> &middot; {dosage}</span> : null}
-            </h2>
-          </div>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            aria-label={t('calendar:eventDetail.close')}
-            onClick={onClose}
-            className="shrink-0 rounded-full px-2 text-xl leading-none text-ink-3 hover:text-ink"
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
+          {t(`calendar:eventTypes.${event.event_type}`)}
+        </span>
+      </span>
+    </span>
+  );
 
-        <dl className="m-0 flex flex-col gap-4 p-5">
-          {rows.map((row) => (
-            <div key={row.key}>
-              <dt className="mono m-0">{row.label}</dt>
-              <dd className="m-0 mt-1 whitespace-pre-wrap break-words text-base text-ink">
-                {row.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-
-        {/* Footer actions slot — edit buttons slot in here when write features arrive. */}
-        <div className="border-t border-line-2 p-5">
-          {canEdit && editActions ? (
-            editActions
-          ) : (
-            <div className="rounded-xl bg-bg-2 p-4">
-              <p className="m-0 text-sm font-medium text-ink">{t('common:downloadApp.title')}</p>
-              <p className="m-0 mt-1 text-sm text-ink-3">{t('common:downloadApp.subtitle')}</p>
-            </div>
-          )}
-        </div>
+  // Footer actions slot — edit buttons slot in here when write features arrive.
+  const footer =
+    canEdit && editActions ? (
+      editActions
+    ) : (
+      <div className="rounded-xl bg-bg-2 p-4">
+        <p className="m-0 text-sm font-medium text-ink">{t('common:downloadApp.title')}</p>
+        <p className="m-0 mt-1 text-sm text-ink-3">{t('common:downloadApp.subtitle')}</p>
       </div>
-    </div>
+    );
+
+  return (
+    <Modal
+      title={titleContent}
+      onClose={onClose}
+      closeLabel={t('calendar:eventDetail.close')}
+      footer={footer}
+    >
+      <dl className="m-0 flex flex-col gap-4">
+        {rows.map((row) => (
+          <div key={row.key}>
+            <dt className="mono m-0">{row.label}</dt>
+            <dd className="m-0 mt-1 whitespace-pre-wrap break-words text-base text-ink">
+              {row.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {/* Event-notes panel (Task 1.8) — instance-scoped. For a recurring/virtual
+          instance we pass scheduled_date so the backend materializes the right
+          row; for a plain event the bare id is enough. */}
+      <div className="border-t border-line-2 pt-4">
+        <EventNotesPanel
+          circleId={circleId ?? event.circle_id}
+          eventId={event.id}
+          scheduledDate={
+            event.is_virtual || event.parent_event_id ? event.scheduled_date : undefined
+          }
+        />
+      </div>
+    </Modal>
   );
 }

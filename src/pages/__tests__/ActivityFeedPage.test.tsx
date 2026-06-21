@@ -103,16 +103,25 @@ describe('ActivityFeedPage', () => {
 
     const { container } = renderPage();
 
-    expect(await screen.findByText('Confirmed Medication: Aspirin 100mg (taken)')).toBeInTheDocument();
-    expect(screen.getByText('Added Appointment: Dentist checkup')).toBeInTheDocument();
+    // The latest entry (a1) is spotlighted in the hero AND repeated in its list
+    // row below, so its description/actor/time legitimately appear twice; scope
+    // the list-row assertions to listitems. a2 appears only in the list.
+    await screen.findByText('Added Appointment: Dentist checkup');
+    expect(
+      screen.getAllByText('Confirmed Medication: Aspirin 100mg (taken)').length
+    ).toBeGreaterThanOrEqual(1);
+
+    const items = screen.getAllByRole('listitem');
+    expect(within(items[0]!).getByText('Confirmed Medication: Aspirin 100mg (taken)')).toBeInTheDocument();
+    expect(within(items[1]!).getByText('Added Appointment: Dentist checkup')).toBeInTheDocument();
 
     // Actor names: full name, and email prefix fallback
-    expect(screen.getByText('Pat Rivera')).toBeInTheDocument();
-    expect(screen.getByText('sam')).toBeInTheDocument();
+    expect(within(items[0]!).getByText('Pat Rivera')).toBeInTheDocument();
+    expect(within(items[1]!).getByText('sam')).toBeInTheDocument();
 
     // Relative viewer-local timestamps
-    expect(screen.getByText('5m ago')).toBeInTheDocument();
-    expect(screen.getByText('2h ago')).toBeInTheDocument();
+    expect(within(items[0]!).getByText('5m ago')).toBeInTheDocument();
+    expect(within(items[1]!).getByText('2h ago')).toBeInTheDocument();
 
     // Type icons, decorative only
     const medIcon = container.querySelector('[data-activity-icon="medication"]');
@@ -124,11 +133,17 @@ describe('ActivityFeedPage', () => {
     // Items live in a semantic list
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
 
-    // "Latest / LIVE" hero spotlights the most recent entry when there is data.
+    // "Latest / LIVE" hero spotlights the most recent entry when there is data:
+    // it LEADS WITH WHAT HAPPENED (the same localized description the feed rows
+    // render), attributed to the actor with the relative time, plus LIVE state.
     const hero = screen.getByRole('region', { name: 'Latest' });
     expect(hero).toBeInTheDocument();
     expect(within(hero).getByText('LIVE')).toBeInTheDocument();
-    expect(within(hero).getByText('5m ago · Pat Rivera')).toBeInTheDocument();
+    expect(
+      within(hero).getByText('Confirmed Medication: Aspirin 100mg (taken)')
+    ).toBeInTheDocument();
+    expect(within(hero).getByText('Pat Rivera')).toBeInTheDocument();
+    expect(within(hero).getByText('5m ago')).toBeInTheDocument();
 
     expect(mockedGetActivityFeed).toHaveBeenCalledWith('circle-1', { limit: 30, offset: 0 });
   });
@@ -209,9 +224,12 @@ describe('ActivityFeedPage', () => {
       hasMore: false,
     });
 
-    // Next page appends — earlier items stay rendered
+    // Next page appends — earlier items stay rendered. a1 ("Aspirin") is the
+    // latest entry, so it appears in the hero AND its list row (2 matches).
     expect(await screen.findByText('Updated health information')).toBeInTheDocument();
-    expect(screen.getByText('Confirmed Medication: Aspirin (taken)')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Confirmed Medication: Aspirin (taken)').length
+    ).toBeGreaterThanOrEqual(1);
 
     // Offset = total items fetched so far
     expect(mockedGetActivityFeed).toHaveBeenLastCalledWith('circle-1', { limit: 30, offset: 2 });
@@ -252,7 +270,10 @@ describe('ActivityFeedPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('Confirmed Medication: Aspirin 100mg (taken)')).toBeInTheDocument();
+    // a1 is the only entry → it shows in the hero AND its list row (2 matches).
+    expect(
+      (await screen.findAllByText('Confirmed Medication: Aspirin 100mg (taken)')).length
+    ).toBeGreaterThanOrEqual(1);
     await waitFor(() =>
       expect(screen.queryByText("Couldn't load the activity feed")).not.toBeInTheDocument()
     );

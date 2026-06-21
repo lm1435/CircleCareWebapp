@@ -13,7 +13,7 @@
   "downloadToEdit": "Descarga la app de CircleCare para agregar o editar esta información.",
   "downloadCta": "Descargar la app",
   "emptyTitle": "Aún no hay información de emergencia",
-  "emptyHint": "Agrega doctores, alergias, seguro y contactos de emergencia en la app de CircleCare y aparecerán aquí.",
+  "emptyHint": "Ten lista en un solo lugar la información que los paramédicos necesitan para tu ser querido: alergias, doctores, seguro y a quién llamar. Agrégala en la app de CircleCare y aparecerá aquí.",
   "primary": "Principal",
   "callAria": "Llamar a {{name}}",
   "atAGlance": {
@@ -64,10 +64,100 @@
     "details": "Directivas Anticipadas"
   },
   "empty": {
-    "medicalInfo": "Aún no hay información médica agregada",
-    "doctors": "Aún no hay doctores agregados",
-    "contacts": "Aún no hay contactos de emergencia agregados",
-    "insurance": "Aún no hay información del seguro agregada",
-    "directives": "Sin estado de código registrado"
+    "medicalInfo": "Agrega tipo de sangre, alergias y condiciones para que los paramédicos conozcan a tu ser querido en segundos.",
+    "doctors": "Agrega a los doctores que atienden a tu ser querido para que el círculo pueda contactarlos rápido.",
+    "contacts": "Agrega a las personas a quienes llamar primero en una emergencia para que nadie quede en la duda.",
+    "insurance": "Agrega los datos del seguro para que la cobertura esté lista cuando el cuidado no pueda esperar.",
+    "directives": "Registra el estado de código de tu ser querido para que sus deseos queden claros en una crisis."
+  },
+  "edit": {
+    "add": "Agregar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "required": "Obligatorio",
+    "optional": "Opcional",
+    "addDoctor": "Agregar doctor",
+    "addContact": "Agregar contacto",
+    "addInsurance": "Agregar seguro",
+    "editDoctorAria": "Editar doctor {{name}}",
+    "deleteDoctorAria": "Eliminar doctor {{name}}",
+    "editContactAria": "Editar contacto {{name}}",
+    "deleteContactAria": "Eliminar contacto {{name}}",
+    "editInsuranceAria": "Editar seguro {{name}}",
+    "deleteInsuranceAria": "Eliminar seguro {{name}}",
+    "editMedicalInfo": "Editar información médica",
+    "editPrimaryDoctor": "Editar doctor principal",
+    "removePrimaryDoctor": "Quitar doctor principal",
+    "doctor": {
+      "addTitle": "Agregar doctor",
+      "editTitle": "Editar doctor",
+      "primaryTitle": "Doctor principal",
+      "name": "Nombre",
+      "namePlaceholder": "Dra. Juana Pérez",
+      "specialty": "Especialidad",
+      "specialtyPlaceholder": "Cardiología",
+      "phone": "Teléfono",
+      "address": "Dirección",
+      "addressPlaceholder": "Calle, ciudad, estado",
+      "nameRequired": "Ingresa el nombre del doctor.",
+      "removeTitle": "Quitar doctor",
+      "removeMessage": "Esto quita a este doctor de la hoja de emergencia.",
+      "removePrimaryTitle": "Quitar doctor principal",
+      "removePrimaryMessage": "Esto borra al doctor principal de la hoja de emergencia."
+    },
+    "contact": {
+      "addTitle": "Agregar contacto de emergencia",
+      "editTitle": "Editar contacto de emergencia",
+      "name": "Nombre",
+      "namePlaceholder": "Sara Pérez",
+      "relationship": "Parentesco",
+      "relationshipPlaceholder": "Hija",
+      "phone": "Teléfono",
+      "primary": "Contacto principal",
+      "primaryHint": "Se muestra primero a los paramédicos. Solo un contacto puede ser principal.",
+      "requiredFields": "El nombre, el parentesco y el teléfono son obligatorios.",
+      "removeTitle": "Quitar contacto",
+      "removeMessage": "Esto quita este contacto de emergencia de la hoja."
+    },
+    "insurance": {
+      "addTitle": "Agregar seguro",
+      "editTitle": "Editar seguro",
+      "label": "Etiqueta",
+      "labelPlaceholder": "Médico, Dental…",
+      "carrier": "Aseguradora",
+      "carrierPlaceholder": "Blue Cross",
+      "policyNumber": "Número de póliza",
+      "groupNumber": "Número de grupo",
+      "phone": "Teléfono",
+      "primary": "Seguro principal",
+      "primaryHint": "Solo un plan puede ser principal.",
+      "carrierRequired": "Ingresa la aseguradora.",
+      "removeTitle": "Quitar seguro",
+      "removeMessage": "Esto quita este plan de seguro de la hoja."
+    },
+    "medical": {
+      "title": "Información médica",
+      "bloodType": "Tipo de sangre",
+      "bloodTypePlaceholder": "O+",
+      "medicationAllergies": "Alergias a medicamentos",
+      "otherAllergies": "Otras alergias",
+      "conditions": "Condiciones médicas",
+      "listHint": "Separa varias entradas con comas."
+    },
+    "directives": {
+      "title": "Estado de código",
+      "dnrLabel": "DNR (No Reanimar)",
+      "details": "Directivas anticipadas",
+      "detailsPlaceholder": "Notas sobre directivas anticipadas o deseos"
+    }
+  },
+  "errors": {
+    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y editar esta información.",
+    "permissionDenied": "No tienes permiso para editar este círculo.",
+    "saveFailed": "No pudimos guardar tus cambios. Inténtalo de nuevo."
   }
 }
