@@ -15,6 +15,37 @@
     "success": "Circle created.",
     "limitReached": "You've reached the maximum of 5 circles."
   },
+  "join": {
+    "button": "Join a circle",
+    "invitedPrompt": "Invited by a family member?",
+    "withCode": "Join with an invite code",
+    "or": "or"
+  },
+  "joinModal": {
+    "title": "Join a circle",
+    "subtitle": "Enter the invite code you received from a family member.",
+    "codeLabel": "Invite code",
+    "placeholder": "XXXXXX",
+    "lookUpCode": "Look up code",
+    "lookingUp": "Looking up...",
+    "circle": "Circle",
+    "caringFor": "Caring for",
+    "invitedBy": "Invited by",
+    "joiningAsCaregiver": "Joining as Caregiver",
+    "joiningAsCareRecipient": "Joining as Care Recipient",
+    "joinCircle": "Join circle",
+    "joining": "Joining...",
+    "enterDifferentCode": "Enter a different code",
+    "cancel": "Cancel",
+    "close": "Close",
+    "welcome": "Welcome!",
+    "youveJoined": "You've joined {{circleName}}.",
+    "invalidCode": "We couldn't find that invite code. Double-check it and try again.",
+    "expired": "This invite has expired. Ask the person who invited you for a new one.",
+    "alreadyUsed": "This invite has already been used.",
+    "alreadyMember": "You're already a member of this circle.",
+    "joinFailed": "We couldn't join this circle. Please try again."
+  },
   "edit": {
     "title": "Circle settings",
     "subtitle": "Update who this circle is caring for.",

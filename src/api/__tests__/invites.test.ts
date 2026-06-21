@@ -4,6 +4,8 @@ import {
   cancelInvite,
   acceptInvite,
   getPendingInvites,
+  lookupInviteByCode,
+  acceptInviteByCode,
 } from '@/api/invites';
 import {
   removeMember,
@@ -74,6 +76,36 @@ describe('getPendingInvites', () => {
     const result = await getPendingInvites();
     expect(mockGet).toHaveBeenCalledWith('/invites/pending');
     expect(result).toEqual(invites);
+  });
+});
+
+describe('lookupInviteByCode', () => {
+  it('GETs /invites/code/:code (normalized) and unwraps data.invite', async () => {
+    const invite = {
+      id: INVITE_ID,
+      invite_code: 'ABC123',
+      member_type: 'caregiver',
+      circle: { id: CIRCLE_ID, name: "Rose's Circle", recipient_name: 'Rose' },
+      invited_by: { email: 'a@b.com', first_name: 'Ada', last_name: null },
+      expires_at: '2026-07-01T00:00:00Z',
+    };
+    mockGet.mockResolvedValue({ success: true, data: { invite } });
+
+    // Lowercase + surrounding whitespace must be normalized before the request.
+    const result = await lookupInviteByCode('  abc123  ');
+
+    expect(mockGet).toHaveBeenCalledWith('/invites/code/ABC123');
+    expect(result).toEqual(invite);
+  });
+});
+
+describe('acceptInviteByCode', () => {
+  it('POSTs /invites/code/:code/accept (normalized)', async () => {
+    mockPost.mockResolvedValue({ success: true, data: {} });
+
+    await acceptInviteByCode('abc123');
+
+    expect(mockPost).toHaveBeenCalledWith('/invites/code/ABC123/accept');
   });
 });
 

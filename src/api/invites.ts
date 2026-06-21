@@ -144,3 +144,62 @@ export async function getPendingInvites(): Promise<PendingInvite[]> {
   )) as unknown as PendingInvitesEnvelope;
   return response.data.invites;
 }
+
+// ===========================================================================
+// JOIN-BY-CODE functions — web parity with mobile's JoinCircleModal.
+// ---------------------------------------------------------------------------
+// Mirrors mobile/src/api/invites.ts (lookupInviteByCode + acceptInviteByCode).
+// Backend contracts verified against backend/src/routes/invites.ts:
+//   - GET  /invites/code/:code        (requireAuth) →
+//       { success, data: { invite: InviteByCode } }
+//       errors: 404 INVITE_NOT_FOUND, 400 INVITE_ALREADY_USED, 400 INVITE_EXPIRED.
+//   - POST /invites/code/:code/accept (requireAuth) → { success, data: {...} }
+//       errors: 404 INVITE_NOT_FOUND/USER_NOT_FOUND, 400 INVITE_ALREADY_USED,
+//               400 INVITE_EXPIRED, 400 ALREADY_MEMBER.
+// The backend uses a code-possession trust model (no email match), matching
+// mobile — so a logged-in user can join from any account.
+//
+// PRIVACY: never log or send the raw code to analytics/error reporting — the
+// code grants the ability to join the circle.
+// ===========================================================================
+
+/** Full invite details resolved from a code (authenticated lookup). */
+export interface InviteByCode {
+  id: string;
+  invite_code: string;
+  member_type: InviteMemberType;
+  circle: {
+    id: string;
+    name: string;
+    recipient_name: string;
+  };
+  invited_by: {
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+  };
+  expires_at: string;
+}
+
+interface InviteByCodeEnvelope {
+  success: boolean;
+  data: { invite: InviteByCode };
+}
+
+/** Normalize a code the way the backend does (uppercase + trim) before sending. */
+function normalizeCode(code: string): string {
+  return encodeURIComponent(code.trim().toUpperCase());
+}
+
+/** GET /invites/code/:code — look up an invite by code (authenticated). */
+export async function lookupInviteByCode(code: string): Promise<InviteByCode> {
+  const response = (await apiClient.get(
+    `/invites/code/${normalizeCode(code)}`
+  )) as unknown as InviteByCodeEnvelope;
+  return response.data.invite;
+}
+
+/** POST /invites/code/:code/accept — join a circle by code (authenticated). */
+export async function acceptInviteByCode(code: string): Promise<void> {
+  await apiClient.post(`/invites/code/${normalizeCode(code)}/accept`);
+}

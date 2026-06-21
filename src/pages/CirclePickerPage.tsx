@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircles } from '@/hooks/useCircles';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,6 +8,7 @@ import { CircleCard } from '@/components/circles/CircleCard';
 import { CircleCardSkeleton } from '@/components/circles/CircleCardSkeleton';
 import { EmptyCircles } from '@/components/circles/EmptyCircles';
 import { CreateCircleModal } from '@/components/circles/CreateCircleModal';
+import { JoinCircleModal } from '@/components/circles/JoinCircleModal';
 
 /** Time-of-day greeting key (mirrors mobile's getGreeting). */
 function greetingKey(): 'morning' | 'afternoon' | 'evening' {
@@ -25,8 +27,10 @@ function greetingKey(): 'morning' | 'afternoon' | 'evening' {
 export default function CirclePickerPage(): ReactElement {
   const { t } = useTranslation(['members', 'circles']);
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: circles, isPending, isError, refetch } = useCircles();
   const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
 
   const firstName = user?.first_name?.trim();
   const circleCount = circles?.length ?? 0;
@@ -59,6 +63,14 @@ export default function CirclePickerPage(): ReactElement {
       <EmptyCircles
         action={
           <Button onClick={() => setShowCreate(true)}>{t('circles:create.create')}</Button>
+        }
+        joinAction={
+          <div className="flex flex-col items-center gap-2">
+            <p className="m-0 text-sm text-ink-3">{t('circles:join.invitedPrompt')}</p>
+            <Button variant="ghost" onClick={() => setShowJoin(true)}>
+              {t('circles:join.withCode')}
+            </Button>
+          </div>
         }
       />
     );
@@ -101,14 +113,23 @@ export default function CirclePickerPage(): ReactElement {
           )}
         </div>
         {showHeaderCreate && (
-          <Button className="shrink-0" onClick={() => setShowCreate(true)}>
-            {t('circles:create.create')}
-          </Button>
+          <div className="flex shrink-0 flex-wrap gap-3">
+            <Button variant="ghost" onClick={() => setShowJoin(true)}>
+              {t('circles:join.button')}
+            </Button>
+            <Button onClick={() => setShowCreate(true)}>{t('circles:create.create')}</Button>
+          </div>
         )}
       </header>
       {content}
 
       {showCreate && <CreateCircleModal onClose={() => setShowCreate(false)} />}
+      {showJoin && (
+        <JoinCircleModal
+          onClose={() => setShowJoin(false)}
+          onJoined={(circleId) => navigate(`/circles/${circleId}`)}
+        />
+      )}
     </section>
   );
 }

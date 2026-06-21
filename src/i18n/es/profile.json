@@ -92,6 +92,13 @@
       "6": "Sábado"
     }
   },
+  "subscription": {
+    "title": "Suscripción",
+    "premium": "CircleCare Premium",
+    "premiumDescription": "Tienes acceso completo a todas las funciones de CircleCare.",
+    "freeTitle": "Plan gratuito",
+    "upgradeInApp": "Mejora a Premium en la app de CircleCare."
+  },
   "delete": {
     "title": "Eliminar cuenta",
     "description": "Elimina tu cuenta de forma permanente y quita tu acceso a todos los círculos de cuidado. Esto no se puede deshacer.",

@@ -8,6 +8,8 @@ import { StoreBadges } from '@/components/layout/StoreBadges';
 export interface EmptyCirclesProps {
   /** The create-circle CTA (web can create circles; this is the primary action). */
   action?: ReactNode;
+  /** Secondary "join with an invite code" CTA, for users invited by family. */
+  joinAction?: ReactNode;
 }
 
 /**
@@ -17,7 +19,7 @@ export interface EmptyCirclesProps {
  * with serif step numerals, the primary Create-circle CTA, and the mobile app
  * positioned as an optional companion below a hairline divider.
  */
-export function EmptyCircles({ action }: EmptyCirclesProps): ReactElement {
+export function EmptyCircles({ action, joinAction }: EmptyCirclesProps): ReactElement {
   const { t } = useTranslation('members');
   const steps = [
     t('picker.empty.step1'),
@@ -68,6 +70,9 @@ export function EmptyCircles({ action }: EmptyCirclesProps): ReactElement {
 
         {/* Primary action */}
         {action ? <div className="mt-8">{action}</div> : null}
+
+        {/* Secondary action — join an existing circle by invite code */}
+        {joinAction ? <div className="mt-4">{joinAction}</div> : null}
 
         {/* Companion app — secondary, below a hairline divider */}
         <div className="mt-8 w-full border-t border-line-2 pt-6">

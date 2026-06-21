@@ -18,6 +18,7 @@ import {
   useUpdateEmailDigest,
   useDeleteAccount,
 } from '@/hooks/useProfile';
+import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import {
   Button,
   Card,
@@ -283,6 +284,9 @@ export default function ProfilePage(): ReactElement {
     <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
       <h1 className="serif m-0 text-xl text-ink">{t('heading')}</h1>
       <p className="mt-2 text-ink-3">{t('subheading')}</p>
+
+      {/* ── Subscription ──────────────────────────────────────────────── */}
+      <SubscriptionSection />
 
       {/* ── Account ───────────────────────────────────────────────────── */}
       <SectionCard title={t('sections.account')}>

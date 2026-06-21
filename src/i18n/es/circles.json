@@ -15,6 +15,37 @@
     "success": "Círculo creado.",
     "limitReached": "Has alcanzado el máximo de 5 círculos."
   },
+  "join": {
+    "button": "Unirte a un círculo",
+    "invitedPrompt": "¿Te invitó un familiar?",
+    "withCode": "Unirte con un código de invitación",
+    "or": "o"
+  },
+  "joinModal": {
+    "title": "Unirte a un círculo",
+    "subtitle": "Ingresa el código de invitación que te envió un familiar.",
+    "codeLabel": "Código de invitación",
+    "placeholder": "XXXXXX",
+    "lookUpCode": "Buscar código",
+    "lookingUp": "Buscando...",
+    "circle": "Círculo",
+    "caringFor": "Cuidando a",
+    "invitedBy": "Invitado por",
+    "joiningAsCaregiver": "Te unes como Cuidador",
+    "joiningAsCareRecipient": "Te unes como Receptor de Cuidado",
+    "joinCircle": "Unirte al círculo",
+    "joining": "Uniéndote...",
+    "enterDifferentCode": "Ingresar otro código",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "welcome": "¡Bienvenido!",
+    "youveJoined": "Te uniste a {{circleName}}.",
+    "invalidCode": "No encontramos ese código de invitación. Verifícalo e intenta de nuevo.",
+    "expired": "Esta invitación venció. Pídele a quien te invitó una nueva.",
+    "alreadyUsed": "Esta invitación ya fue utilizada.",
+    "alreadyMember": "Ya eres miembro de este círculo.",
+    "joinFailed": "No pudimos unirte a este círculo. Por favor intenta de nuevo."
+  },
   "edit": {
     "title": "Configuración del círculo",
     "subtitle": "Actualiza a quién cuida este círculo.",

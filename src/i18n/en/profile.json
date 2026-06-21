@@ -92,6 +92,13 @@
       "6": "Saturday"
     }
   },
+  "subscription": {
+    "title": "Subscription",
+    "premium": "CircleCare Premium",
+    "premiumDescription": "You have full access to all CircleCare features.",
+    "freeTitle": "Free plan",
+    "upgradeInApp": "Upgrade to Premium in the CircleCare app."
+  },
   "delete": {
     "title": "Delete account",
     "description": "Permanently delete your account and remove your access to all care circles. This cannot be undone.",

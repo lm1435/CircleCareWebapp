@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Skeleton } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
+import { useAuth } from '@/hooks/useAuth';
+import { useAcceptInviteByCode } from '@/hooks/useJoinCircle';
 
 // ⚠️ NEXT STEPS to ship invite-link sharing:
 //   1. Re-enable the Share/Copy buttons in the mobile app — they're commented out
@@ -49,6 +51,10 @@ function DownloadButtons({ prompt }: { prompt: string }): ReactElement {
 export default function InviteLandingPage(): ReactElement {
   const { t, i18n } = useTranslation('invite');
   const { code = '' } = useParams<{ code: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated, isBootstrapping } = useAuth();
+  const accept = useAcceptInviteByCode();
+  const [acceptError, setAcceptError] = useState<string | null>(null);
   // Backend normalizes too; normalize here so the displayed fallback code
   // matches what the app expects users to type.
   const displayCode = code.trim().toUpperCase();
@@ -69,6 +75,31 @@ export default function InviteLandingPage(): ReactElement {
     },
     []
   );
+
+  // Accept the invite when the visitor is already signed in. The preview
+  // endpoint doesn't expose the circle id, so on success we land on the circle
+  // picker (now showing the just-joined circle). An already-member result is a
+  // success from the user's point of view — send them to the picker too.
+  const handleAccept = useCallback(() => {
+    setAcceptError(null);
+    accept.mutate(displayCode, {
+      onSuccess: () => navigate('/circles'),
+      onError: (err) => {
+        const errorCode = (err as { error?: { code?: string } } | null)?.error?.code;
+        if (errorCode === 'ALREADY_MEMBER') {
+          navigate('/circles');
+          return;
+        }
+        setAcceptError(t('acceptFailed'));
+      },
+    });
+  }, [accept, displayCode, navigate, t]);
+
+  // Not signed in: route to login, preserving this invite page as the return
+  // destination (LoginPage honors location.state.from.pathname).
+  const handleSignIn = useCallback(() => {
+    navigate('/login', { state: { from: { pathname: `/invite/${displayCode}` } } });
+  }, [navigate, displayCode]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -153,6 +184,29 @@ export default function InviteLandingPage(): ReactElement {
                 {t(`roles.${invite.member_type}`)}
               </Badge>
             </div>
+
+            {!isBootstrapping && (
+              <div className="flex flex-col items-center gap-3">
+                {isAuthenticated ? (
+                  <Button
+                    className="w-full max-w-xs"
+                    onClick={handleAccept}
+                    disabled={accept.isPending}
+                  >
+                    {accept.isPending ? t('accepting') : t('accept')}
+                  </Button>
+                ) : (
+                  <Button className="w-full max-w-xs" onClick={handleSignIn}>
+                    {t('signInToAccept')}
+                  </Button>
+                )}
+                {acceptError ? (
+                  <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">
+                    {acceptError}
+                  </p>
+                ) : null}
+              </div>
+            )}
 
             <DownloadButtons prompt={t('downloadPrompt')} />
 
