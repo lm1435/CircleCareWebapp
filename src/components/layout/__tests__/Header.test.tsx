@@ -36,6 +36,7 @@ function renderHeader(initialPath = '/circles/c1/calendar'): void {
       <LocationSpy />
       <Routes>
         <Route path="/circles/:circleId/:section" element={<Header />} />
+        <Route path="/circles/:circleId" element={<Header />} />
         <Route path="*" element={null} />
       </Routes>
     </MemoryRouter>
@@ -83,6 +84,25 @@ describe('Header', () => {
 
       await user.click(screen.getByRole('menuitem', { name: /Dad's Care/ }));
       expect(screen.getByTestId('location')).toHaveTextContent('/circles/c2/activity');
+    });
+
+    it('keeps the user on the overview when switching from the overview (no section)', async () => {
+      const user = userEvent.setup();
+      renderHeader('/circles/c1');
+
+      await user.click(screen.getByRole('button', { name: /Mom's Care/ }));
+      await user.click(screen.getByRole('menuitem', { name: /Dad's Care/ }));
+      expect(screen.getByTestId('location')).toHaveTextContent('/circles/c2');
+      expect(screen.getByTestId('location')).not.toHaveTextContent('/circles/c2/calendar');
+    });
+
+    it('preserves sections outside the legacy list (tasks) instead of forcing calendar', async () => {
+      const user = userEvent.setup();
+      renderHeader('/circles/c1/tasks');
+
+      await user.click(screen.getByRole('button', { name: /Mom's Care/ }));
+      await user.click(screen.getByRole('menuitem', { name: /Dad's Care/ }));
+      expect(screen.getByTestId('location')).toHaveTextContent('/circles/c2/tasks');
     });
 
     it('supports arrow-key navigation and Escape returns focus to the trigger', async () => {

@@ -7,14 +7,29 @@ import { useAuthStore, type AuthUser } from '@/store/authStore';
 import { useMenu } from './useMenu';
 
 /** Sections the circle switcher preserves when jumping between circles. */
-const SECTIONS = ['calendar', 'activity', 'emergency', 'documents', 'members'] as const;
+const SECTIONS = [
+  'calendar',
+  'tasks',
+  'activity',
+  'emergency',
+  'documents',
+  'vitals',
+  'members',
+  'settings',
+] as const;
 type Section = (typeof SECTIONS)[number];
 
-function currentSection(pathname: string): Section {
+/**
+ * The section segment of a circle URL, or '' for the overview (index) route.
+ * Switching circles keeps you on the same section. An unknown/empty segment
+ * means you're on the overview, so we return '' to keep you on the new circle's
+ * overview rather than silently dumping you onto calendar.
+ */
+function currentSection(pathname: string): Section | '' {
   // /circles/:circleId/:section/... → ['circles', circleId, section, ...]
   const segments = pathname.split('/').filter(Boolean);
   const candidate = segments[2] ?? '';
-  return (SECTIONS as readonly string[]).includes(candidate) ? (candidate as Section) : 'calendar';
+  return (SECTIONS as readonly string[]).includes(candidate) ? (candidate as Section) : '';
 }
 
 function displayName(user: AuthUser | null): string {
@@ -202,7 +217,7 @@ function CircleSwitcher(): ReactElement {
 
   const selectCircle = (id: string): void => {
     menu.close();
-    navigate(`/circles/${id}/${section}`);
+    navigate(section ? `/circles/${id}/${section}` : `/circles/${id}`);
   };
 
   return (
