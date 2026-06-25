@@ -122,6 +122,22 @@ describe('UpgradePage', () => {
       screen.getByText(/Online checkout isn't available/i)
     ).toBeInTheDocument();
   });
+
+  it('degrades to the in-app upgrade notice when the offering loads no plans', () => {
+    // Web billing configured, but the offering came back empty (bad key / CSP /
+    // RC outage) — show the unavailable panel, never a dead Subscribe button.
+    mockedPlans.mockReturnValue({ data: { monthly: null, annual: null }, isLoading: false });
+    renderPage();
+    expect(screen.getByText(/Online checkout isn't available/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Subscribe' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start free trial' })).not.toBeInTheDocument();
+  });
+
+  it('degrades to the in-app upgrade notice when the offering query errors', () => {
+    mockedPlans.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    renderPage();
+    expect(screen.getByText(/Online checkout isn't available/i)).toBeInTheDocument();
+  });
 });
 
 // Type guard so the file is treated as a module under isolatedModules.

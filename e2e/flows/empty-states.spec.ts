@@ -70,7 +70,9 @@ test.describe('empty states (list endpoints stubbed empty)', () => {
     await expect(page.getByText('Something went wrong')).toHaveCount(0);
 
     // The primary "first action" on an empty circle: start adding an event.
-    const addBtn = page.getByRole('button', { name: 'Add event' });
+    // "Add event" appears in both the header and the empty state, so scope to
+    // the first match to avoid a strict-mode (multiple-element) violation.
+    const addBtn = page.getByRole('button', { name: 'Add event' }).first();
     await expect(addBtn).toBeVisible({ timeout: 20_000 });
     await addBtn.click();
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 });

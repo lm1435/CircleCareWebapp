@@ -19,12 +19,16 @@ export default function UpgradePage(): ReactElement {
   const { showToast } = useToast();
 
   const { data: status } = useSubscriptionStatus();
-  const { data: plans, isLoading } = useWebPlans();
+  const { data: plans, isLoading, isError } = useWebPlans();
   const purchase = usePurchasePlan();
   const manage = useManageSubscription();
   const [purchased, setPurchased] = useState(false);
 
   const isPremium = status?.tier === 'premium';
+  // Web billing IS configured but the offering came back empty or errored (bad
+  // key, CSP block, RC outage). Degrade to the in-app upgrade path instead of
+  // rendering a dead, permanently-disabled Subscribe button.
+  const noPlans = isError || !plans || (!plans.monthly && !plans.annual);
 
   const handleManage = (): void => {
     manage.mutate(undefined, {
@@ -46,16 +50,20 @@ export default function UpgradePage(): ReactElement {
     });
   };
 
+  const unavailable = (
+    <Panel>
+      <p className="m-0 text-ink-2">{t('unavailable')}</p>
+      <div className="mt-5">
+        <StoreBadges layout="row" />
+      </div>
+      <BackLink onClick={() => navigate('/profile')}>{t('back')}</BackLink>
+    </Panel>
+  );
+
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-12 md:py-16">
       {!isWebBillingConfigured() ? (
-        <Panel>
-          <p className="m-0 text-ink-2">{t('unavailable')}</p>
-          <div className="mt-5">
-            <StoreBadges layout="row" />
-          </div>
-          <BackLink onClick={() => navigate('/profile')}>{t('back')}</BackLink>
-        </Panel>
+        unavailable
       ) : purchased ? (
         <Panel center>
           <PremiumMark />
@@ -84,6 +92,8 @@ export default function UpgradePage(): ReactElement {
         <div className="flex justify-center py-20">
           <Spinner size={32} />
         </div>
+      ) : noPlans ? (
+        unavailable
       ) : (
         <PlansView
           plans={plans}

@@ -23,6 +23,13 @@ import { test, expect } from '../fixtures';
 // localized error state. Pure read; any non-existent code is safe.
 const INVALID_CODE = 'ZZZZZZ';
 
+// Cookie-mode keeps the access token in JS memory (not the cookie jar), so a raw
+// APIRequestContext call carries no bearer and `requireAuth` 401s. Mint a fresh
+// token via the login API (mirrors auth.setup defaults) for the direct API calls.
+const DEMO_EMAIL = process.env.PW_DEMO_EMAIL ?? 'demo@circlecare.app';
+const DEMO_PASSWORD = process.env.PW_DEMO_PASSWORD ?? 'DemoPass123!';
+const APP_ORIGIN = process.env.PW_BASE_URL ?? 'http://localhost:5173';
+
 test.describe('invite landing page', () => {
   test('invalid / nonexistent code shows the localized error state (no mutation)', async ({
     page,
@@ -58,8 +65,22 @@ test.describe('invite landing page', () => {
     // `page` fixture has already established a cookie-mode session in `context`,
     // so context.request is authenticated. ---
     const email = `e2e-landing-${Date.now()}@example.com`;
+
+    // Mint a fresh access token for the direct API calls (cookies alone don't
+    // carry the in-memory bearer; /auth/login is Web-Origin gated).
+    const loginRes = await context.request.post('/api/auth/login', {
+      data: { email: DEMO_EMAIL, password: DEMO_PASSWORD },
+      headers: { Origin: APP_ORIGIN },
+    });
+    expect(loginRes.ok(), `api login failed: ${loginRes.status()}`).toBeTruthy();
+    const token = (
+      (await loginRes.json()) as { data: { session: { access_token: string } } }
+    ).data.session.access_token;
+    const authHeaders = { Authorization: `Bearer ${token}` };
+
     const createRes = await context.request.post(`/api/circles/${circleId}/invites`, {
       data: { email, member_type: 'caregiver' },
+      headers: authHeaders,
     });
     expect(createRes.ok(), `invite create failed: ${createRes.status()}`).toBeTruthy();
     const created = (await createRes.json()) as {
@@ -104,7 +125,9 @@ test.describe('invite landing page', () => {
       }
     } finally {
       // --- Cleanup → net-zero: cancel the invite we created (via the API). ---
-      const del = await context.request.delete(`/api/invites/${inviteId}`);
+      const del = await context.request.delete(`/api/invites/${inviteId}`, {
+        headers: authHeaders,
+      });
       expect(del.ok(), `invite cancel failed: ${del.status()}`).toBeTruthy();
     }
   });
