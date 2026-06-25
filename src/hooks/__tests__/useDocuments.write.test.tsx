@@ -23,6 +23,11 @@ vi.mock('@/components/ui', () => ({
   useToast: () => ({ showToast }),
 }));
 
+const promptUpgrade = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade }),
+}));
+
 import {
   uploadDocument,
   updateDocument,
@@ -135,7 +140,7 @@ describe('useUploadDocument', () => {
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).toHaveBeenCalled();
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 
@@ -153,7 +158,7 @@ describe('useUploadDocument', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.storageFull', 'error');
-    expect(showToast).not.toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).not.toHaveBeenCalled();
     // 413 is a hard cap — no "refetch circle flags" (nothing to upgrade to).
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(false);
   });

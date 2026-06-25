@@ -65,7 +65,6 @@
     "soloCta": "Invite your first caregiver"
   },
   "errors": {
-    "subscriptionRequired": "Free circles can have one caregiver. Open the CircleCare app to upgrade and add more.",
     "permissionDenied": "You don't have permission to do that.",
     "saveFailed": "Something went wrong. Please try again."
   },
@@ -84,7 +83,7 @@
     "send": "Send invite",
     "sending": "Sending…",
     "success": "Invitation sent to {{email}}.",
-    "capReached": "Free circles can have one caregiver. Open the CircleCare app to upgrade and add more.",
+    "capReached": "Free circles include up to two caregivers. Upgrade to Premium to add more.",
     "errors": {
       "emailInvalid": "Please enter a valid email address.",
       "roleRequired": "Please choose a role."

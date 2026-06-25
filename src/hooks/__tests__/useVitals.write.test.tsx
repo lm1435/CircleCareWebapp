@@ -23,6 +23,9 @@ vi.mock('@/components/ui', () => ({
   useToast: () => ({ showToast }),
 }));
 
+const promptUpgrade = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade }) }));
+
 import {
   createVital,
   updateVital,
@@ -128,7 +131,7 @@ describe('useCreateVital', () => {
     result.current.mutate(CREATE_BODY);
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).toHaveBeenCalled();
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 

@@ -65,7 +65,6 @@
     "soloCta": "Invita a tu primer cuidador"
   },
   "errors": {
-    "subscriptionRequired": "Los círculos gratuitos permiten un cuidador. Abre la app de CircleCare para mejorar tu plan y agregar más.",
     "permissionDenied": "No tienes permiso para hacer eso.",
     "saveFailed": "Algo salió mal. Por favor intenta de nuevo."
   },
@@ -84,7 +83,7 @@
     "send": "Enviar invitación",
     "sending": "Enviando…",
     "success": "Invitación enviada a {{email}}.",
-    "capReached": "Los círculos gratuitos permiten un cuidador. Abre la app de CircleCare para mejorar tu plan y agregar más.",
+    "capReached": "Los círculos gratuitos incluyen hasta dos cuidadores. Mejora a Premium para agregar más.",
     "errors": {
       "emailInvalid": "Por favor ingresa un correo electrónico válido.",
       "roleRequired": "Por favor elige un rol."

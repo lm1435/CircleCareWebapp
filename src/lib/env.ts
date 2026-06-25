@@ -11,6 +11,12 @@ const envSchema = z.object({
   VITE_API_URL: z.url(),
   // Optional — when unset, analytics silently degrades (never crashes).
   VITE_POSTHOG_KEY: z.string().min(1).optional(),
+  // Optional — RevenueCat Web Billing PUBLIC key (rcb_… prod / rcb_sb_… sandbox).
+  // When unset, the web purchase flow degrades silently: no Upgrade CTA, no
+  // /upgrade page (free users still see the in-app upgrade pointer). Public by
+  // design — it only opens RevenueCat's hosted checkout; the entitlement is
+  // granted server-side via the RC webhook.
+  VITE_REVENUECAT_WEB_BILLING_KEY: z.string().min(1).optional(),
 });
 
 const parsed = envSchema.safeParse({
@@ -19,6 +25,8 @@ const parsed = envSchema.safeParse({
   VITE_API_URL: import.meta.env.VITE_API_URL,
   // Treat empty string as unset so `.env` files can leave the key blank.
   VITE_POSTHOG_KEY: import.meta.env.VITE_POSTHOG_KEY || undefined,
+  VITE_REVENUECAT_WEB_BILLING_KEY:
+    import.meta.env.VITE_REVENUECAT_WEB_BILLING_KEY || undefined,
 });
 
 if (!parsed.success) {

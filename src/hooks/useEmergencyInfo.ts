@@ -18,6 +18,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 
 /**
  * React Query hook for `GET /circles/:circleId/emergency-info` (plan Task 30).
@@ -180,6 +181,7 @@ export function useUpdateEmergencyInfo(
 ): UseMutationResult<EmergencyInfo, unknown, UpdateEmergencyInfoRequest> {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { promptUpgrade } = usePremiumGate();
   const { t } = useTranslation('emergency');
 
   return useMutation({
@@ -191,7 +193,7 @@ export function useUpdateEmergencyInfo(
     onError: (error) => {
       if (isSubscriptionRequiredError(error)) {
         // Free-tier write block — web cannot transact, point at the app.
-        showToast(t('errors.subscriptionRequired'), 'error');
+        promptUpgrade();
         void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
       } else if (isPermissionDeniedError(error)) {
         showToast(t('errors.permissionDenied'), 'error');

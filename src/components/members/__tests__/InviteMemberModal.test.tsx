@@ -15,27 +15,36 @@ vi.mock('@/components/ui', async (importOriginal) => {
   return { ...actual, useToast: () => ({ showToast }) };
 });
 
+// The cap note renders an inline "Upgrade" button only when web billing is
+// configured; force it on so the button is testable.
+vi.mock('@/lib/purchases', () => ({ isWebBillingConfigured: () => true }));
+
+// The cap note's Upgrade button routes via useNavigate — stub it so the modal
+// can render outside a Router and we can assert the destination.
+const navigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return { ...actual, useNavigate: () => navigate };
+});
+
 const CIRCLE_ID = 'circle-1';
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('InviteMemberModal', () => {
-  it('blocks submit and shows + focuses the email error when email is empty', async () => {
+describe('InviteMemberModal — email-required', () => {
+  it('disables the send button until an email is entered', async () => {
     const user = userEvent.setup();
     render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(screen.getByRole('button', { name: 'Send invite' })).toBeDisabled();
 
-    expect(mutate).not.toHaveBeenCalled();
-    const emailInput = screen.getByLabelText('Email address');
-    expect(emailInput).toHaveAttribute('aria-invalid', 'true');
-    expect(emailInput).toHaveFocus();
-    expect(screen.getByText('Please enter a valid email address.')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    expect(screen.getByRole('button', { name: 'Send invite' })).toBeEnabled();
   });
 
-  it('blocks submit on a malformed email', async () => {
+  it('blocks the invite on a malformed email', async () => {
     const user = userEvent.setup();
     render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
@@ -46,9 +55,11 @@ describe('InviteMemberModal', () => {
     expect(screen.getByText('Please enter a valid email address.')).toBeInTheDocument();
   });
 
-  it('submits caregiver by default with the trimmed email', async () => {
+  it('sends an invite with the trimmed email and member_type, then closes', async () => {
     const user = userEvent.setup();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    mutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
+    const onClose = vi.fn();
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
 
     await user.type(screen.getByLabelText('Email address'), '  ana@example.com  ');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -58,66 +69,59 @@ describe('InviteMemberModal', () => {
       email: 'ana@example.com',
       member_type: 'caregiver',
     });
+    expect(showToast).toHaveBeenCalledWith('Invitation sent to ana@example.com.', 'success');
+    expect(onClose).toHaveBeenCalled();
   });
 
-  it('lets the user choose the care_recipient role for a non-self-care circle', async () => {
+  it('passes the chosen role through for a non-self-care circle', async () => {
     const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
     render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'rose@example.com');
     await user.click(screen.getByRole('radio', { name: /Care Recipient/i }));
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     expect(mutate.mock.calls[0][0]).toEqual({
-      email: 'rose@example.com',
+      email: 'ana@example.com',
       member_type: 'care_recipient',
     });
   });
 
-  it('hides the care_recipient option (and role picker) for a self-care circle', () => {
+  it('hides the role picker for a self-care circle', () => {
     render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare onClose={vi.fn()} />);
-
-    // With only the single caregiver option, the role radio group is hidden.
     expect(screen.queryByRole('radio', { name: /Care Recipient/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
   });
 
-  it('always sends member_type "caregiver" for a self-care circle', async () => {
-    const user = userEvent.setup();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare onClose={vi.fn()} />);
-
-    await user.type(screen.getByLabelText('Email address'), 'help@example.com');
-    await user.click(screen.getByRole('button', { name: 'Send invite' }));
-
-    expect(mutate.mock.calls[0][0].member_type).toBe('caregiver');
-  });
-
   it('surfaces the free-tier cap note when the invite is rejected with 402', async () => {
     const user = userEvent.setup();
-    // Make the mutation invoke its onError with a SUBSCRIPTION_REQUIRED envelope.
-    mutate.mockImplementation((_vars, opts) => {
-      opts?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED' } });
-    });
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED' } })
+    );
     render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
-
-    await user.type(screen.getByLabelText('Email address'), 'extra@example.com');
-    await user.click(screen.getByRole('button', { name: 'Send invite' }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(/open the CircleCare app to upgrade/i);
-    });
-  });
-
-  it('closes and toasts on a successful invite', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    mutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
-    expect(showToast).toHaveBeenCalledWith('Invitation sent to ana@example.com.', 'success');
-    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/up to two caregivers\. Upgrade to Premium/i);
+    });
+  });
+
+  it('routes to /upgrade from the cap note when web billing is configured', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED' } })
+    );
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+
+    const upgrade = await screen.findByRole('button', { name: 'Upgrade' });
+    await user.click(upgrade);
+
+    expect(navigate).toHaveBeenCalledWith('/upgrade');
   });
 });

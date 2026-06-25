@@ -15,6 +15,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 
 // Plan Stage 8, Task 8.2 — owner-only circle edit/delete mutations.
 //
@@ -43,11 +44,12 @@ function invalidateCircleQueries(
 function useCircleAdminOnError(): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { promptUpgrade } = usePremiumGate();
   const { t } = useTranslation('common');
 
   return (error: unknown) => {
     if (isSubscriptionRequiredError(error)) {
-      showToast(t('errors.subscriptionRequired'), 'error');
+      promptUpgrade();
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
@@ -87,6 +89,7 @@ function isCircleLimitReachedError(err: unknown): boolean {
 export function useCreateCircle(): UseMutationResult<Circle, unknown, CreateCircleRequest> {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { promptUpgrade } = usePremiumGate();
   const { t } = useTranslation(['common', 'circles']);
 
   return useMutation({
@@ -96,7 +99,7 @@ export function useCreateCircle(): UseMutationResult<Circle, unknown, CreateCirc
     },
     onError: (error: unknown) => {
       if (isSubscriptionRequiredError(error)) {
-        showToast(t('common:errors.subscriptionRequired'), 'error');
+        promptUpgrade();
       } else if (isCircleLimitReachedError(error)) {
         showToast(t('circles:create.limitReached'), 'error');
       } else if (isPermissionDeniedError(error)) {

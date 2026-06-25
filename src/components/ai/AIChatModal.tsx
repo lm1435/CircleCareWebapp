@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Modal, TextArea, Button, Spinner } from '@/components/ui';
 import { useAiChat } from '@/hooks/useAiChat';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 
 // Web port of mobile/src/components/ai/AIChatModal.tsx (the core chat exchange).
 // Mirrors mobile 1:1 for behavior; drops mobile-only affordances that have no
@@ -44,6 +45,7 @@ function nextMessageId(): string {
 export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): ReactElement | null {
   const { t } = useTranslation('ai');
   const { mutation, errorKey, resetConversation } = useAiChat(circleId);
+  const { promptUpgrade } = usePremiumGate();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -89,9 +91,14 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
           ...prev,
           { id: nextMessageId(), role: 'assistant', content: t(errorKey(error)) },
         ]);
+        // Premium-gated: also surface the shared upgrade affordance (toast with
+        // an "Upgrade" action → /upgrade), consistent with every other gate.
+        if (errorKey(error) === 'subscriptionRequired') {
+          promptUpgrade();
+        }
       },
     });
-  }, [input, mutation, errorKey, t]);
+  }, [input, mutation, errorKey, t, promptUpgrade]);
 
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {

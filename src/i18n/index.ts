@@ -21,6 +21,7 @@ import enCircles from './en/circles.json';
 import enAi from './en/ai.json';
 import enHelp from './en/help.json';
 import enFreemium from './en/freemium.json';
+import enUpgrade from './en/upgrade.json';
 
 import esCommon from './es/common.json';
 import esAuth from './es/auth.json';
@@ -39,6 +40,7 @@ import esCircles from './es/circles.json';
 import esAi from './es/ai.json';
 import esHelp from './es/help.json';
 import esFreemium from './es/freemium.json';
+import esUpgrade from './es/upgrade.json';
 
 export const supportedLanguages = {
   en: 'English',
@@ -65,6 +67,7 @@ export const namespaces = [
   'ai',
   'help',
   'freemium',
+  'upgrade',
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];
@@ -88,6 +91,7 @@ const resources = {
     ai: enAi,
     help: enHelp,
     freemium: enFreemium,
+    upgrade: enUpgrade,
   },
   es: {
     common: esCommon,
@@ -107,6 +111,7 @@ const resources = {
     ai: esAi,
     help: esHelp,
     freemium: esFreemium,
+    upgrade: esUpgrade,
   },
 };
 

@@ -15,14 +15,19 @@ RUN npm ci
 COPY . .
 
 # Public client config — passed as build args by the deploy platform.
+# NOTE: .env.* is excluded by .dockerignore, so EVERY VITE_* value the client
+# needs must be declared here; otherwise it bakes in as undefined. The RevenueCat
+# Web Billing key gates the /upgrade purchase flow — omit it and Subscribe is dead.
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 ARG VITE_API_URL
 ARG VITE_POSTHOG_KEY
+ARG VITE_REVENUECAT_WEB_BILLING_KEY
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
     VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY \
     VITE_API_URL=$VITE_API_URL \
-    VITE_POSTHOG_KEY=$VITE_POSTHOG_KEY
+    VITE_POSTHOG_KEY=$VITE_POSTHOG_KEY \
+    VITE_REVENUECAT_WEB_BILLING_KEY=$VITE_REVENUECAT_WEB_BILLING_KEY
 
 # build runs `tsc --noEmit && vite build`; sourcemaps are disabled in vite.config.
 RUN npm run build

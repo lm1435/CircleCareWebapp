@@ -1,0 +1,44 @@
+{
+  "eyebrow": "CircleCare Premium",
+  "title": "Cuiden juntos, en un solo lugar",
+  "subtitle": "Desbloquea todo lo que CircleCare ofrece para todo tu círculo de cuidado.",
+  "trialHook": "Comienza con una prueba gratis: hoy no pagas nada.",
+  "benefits": {
+    "members": "Coordina el cuidado con miembros ilimitados del círculo",
+    "tools": "Acceso completo al calendario, tareas, medicamentos, documentos y signos vitales",
+    "sync": "Todos se mantienen sincronizados, en cada dispositivo"
+  },
+  "plans": {
+    "monthly": "Mensual",
+    "annual": "Anual",
+    "perMonth": "al mes",
+    "perYear": "al año",
+    "bestValue": "Mejor valor",
+    "savePercent": "Ahorra {{percent}}%",
+    "perMonthBilled": "{{price}}/mes, facturado al año",
+    "billedMonthly": "Facturado al mes",
+    "trialIncluded": "Prueba gratis incluida",
+    "monthlyPerk": "Cancela cuando quieras, sin compromiso"
+  },
+  "choosePlan": "Elige un plan",
+  "subscribe": "Suscribirme",
+  "startTrial": "Iniciar prueba gratis",
+  "subscribing": "Abriendo el pago…",
+  "cancelAnytime": "Cancela cuando quieras.",
+  "securedByStripe": "Pago seguro con Stripe.",
+  "orUseApp": "¿Prefieres la app? También puedes mejorar en la app de CircleCare y pagar a través de tu tienda de aplicaciones.",
+  "unavailable": "El pago en línea no está disponible en este momento. También puedes mejorar en la app de CircleCare.",
+  "error": "Algo salió mal al iniciar el pago. Inténtalo de nuevo.",
+  "back": "Volver al perfil",
+  "alreadyPremium": {
+    "title": "Ya tienes Premium",
+    "body": "Tienes acceso completo a todas las funciones de CircleCare.",
+    "manage": "Administrar suscripción",
+    "manageInApp": "Administra tu suscripción en la app de CircleCare donde la compraste."
+  },
+  "success": {
+    "title": "¡Bienvenido a Premium!",
+    "body": "Tu suscripción está activa. Disfruta del acceso completo en tus círculos de cuidado.",
+    "cta": "Continuar"
+  }
+}

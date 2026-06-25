@@ -97,7 +97,12 @@
     "premium": "CircleCare Premium",
     "premiumDescription": "You have full access to all CircleCare features.",
     "freeTitle": "Free plan",
-    "upgradeInApp": "Upgrade to Premium in the CircleCare app."
+    "upgradeInApp": "Upgrade to Premium in the CircleCare app.",
+    "upgradeBenefit": "Unlock everything CircleCare offers for your whole care circle.",
+    "upgradeCta": "Upgrade to Premium",
+    "orInApp": "Or upgrade in the CircleCare app.",
+    "manageSubscription": "Manage subscription",
+    "manageInApp": "Manage your subscription in the CircleCare app where you purchased it."
   },
   "delete": {
     "title": "Delete account",

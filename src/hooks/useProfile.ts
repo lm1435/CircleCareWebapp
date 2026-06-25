@@ -22,6 +22,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 import i18n from '@/i18n';
 
 // Stage 7, Task 7.2 — profile & settings mutation hooks. Mirror the shipped
@@ -138,6 +139,7 @@ export function useUpdateEmailDigest(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { promptUpgrade } = usePremiumGate();
   const { t } = useTranslation('common');
 
   return useMutation({
@@ -147,7 +149,7 @@ export function useUpdateEmailDigest(): UseMutationResult<
     },
     onError: (error) => {
       if (isSubscriptionRequiredError(error)) {
-        showToast(t('errors.subscriptionRequired'), 'error');
+        promptUpgrade();
       } else {
         showToast(t('errors.saveFailed'), 'error');
       }

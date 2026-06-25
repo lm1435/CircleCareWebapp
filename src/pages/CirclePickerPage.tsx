@@ -9,6 +9,7 @@ import { CircleCardSkeleton } from '@/components/circles/CircleCardSkeleton';
 import { EmptyCircles } from '@/components/circles/EmptyCircles';
 import { CreateCircleModal } from '@/components/circles/CreateCircleModal';
 import { JoinCircleModal } from '@/components/circles/JoinCircleModal';
+import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
 
 /** Time-of-day greeting key (mirrors mobile's getGreeting). */
 function greetingKey(): 'morning' | 'afternoon' | 'evening' {
@@ -91,6 +92,7 @@ export default function CirclePickerPage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-5xl p-6 md:p-8">
+      <NeedsCircleSelectionBanner />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           {firstName ? (

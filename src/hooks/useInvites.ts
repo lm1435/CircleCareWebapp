@@ -18,6 +18,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
 
 // Plan Stage 5, Task 5.2 — invite mutations + pending-invites query.
@@ -37,11 +38,12 @@ import { Analytics } from '@/lib/analytics';
 function useInviteMutationOnError(): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { promptUpgrade } = usePremiumGate();
   const { t } = useTranslation('members');
 
   return (error: unknown) => {
     if (isSubscriptionRequiredError(error)) {
-      showToast(t('errors.subscriptionRequired'), 'error');
+      promptUpgrade();
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');

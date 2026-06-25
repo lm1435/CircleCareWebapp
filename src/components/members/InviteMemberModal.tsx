@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import type { InviteMemberType } from '@/api/invites';
 import { useCreateInvite } from '@/hooks/useInvites';
 import { Analytics } from '@/lib/analytics';
+import { isWebBillingConfigured } from '@/lib/purchases';
 import {
   Button,
   Modal,
@@ -16,42 +18,27 @@ import {
   type RadioOption,
 } from '@/components/ui';
 
-// Task 5.3 — owner-only "invite a member" form.
+// Owner-only "invite a member" form — EMAIL-required. The owner enters the
+// invitee's email and role; the backend emails them a link to join this care
+// circle.
 //
-// MIRRORS mobile/src/screens/circle/InviteMemberScreen.tsx:
-//   - email (required, validated) + member_type (caregiver default; the
-//     care_recipient option is HIDDEN for self-care circles, where the owner IS
-//     the recipient).
-//   - POST /circles/:cid/invites via useCreateInvite. The free-tier caregiver
-//     cap (≥2 caregivers) returns 402 SUBSCRIPTION_REQUIRED — the hook already
-//     classifies it and shows the "open the app to upgrade" toast (web cannot
-//     transact). We additionally surface a persistent in-modal note so the user
-//     understands why the invite did not send.
+// MIRRORS mobile/src/screens/circle/InviteMemberScreen.tsx. The free-tier
+// caregiver cap (≥2 caregivers) returns 402 SUBSCRIPTION_REQUIRED — the hook
+// already classifies it and toasts; we additionally surface a persistent in-modal
+// note so the user understands why the invite did not send.
 //
 // Build ONLY on Stage 0 primitives (Modal, TextField, RadioGroup, Button,
-// useZodForm/validateWithZod) + design tokens. No off-palette Tailwind.
+// validateWithZod) + design tokens. No off-palette Tailwind.
 
-/** Mirror the backend email constraint (z.string().email()). */
-const inviteFormSchema = z.object({
-  email: z.string().trim().min(1).email(),
-  member_type: z.enum(['caregiver', 'care_recipient']),
-});
+const emailSchema = z.string().trim().email();
 
 export interface InviteMemberModalProps {
   circleId: string;
   /** Hide the care_recipient option — the owner is already the recipient. */
   isSelfCare: boolean;
   onClose: () => void;
-  /** Called after a successful invite (parent typically closes + toasts). */
+  /** Called after a successful invite (parent typically refetches members). */
   onInvited?: () => void;
-}
-
-/** Build the field-error map keyed by field id (Zod path → message). */
-function toFieldErrors(t: (k: string) => string, errors: FieldErrors): FieldErrors {
-  const mapped: FieldErrors = {};
-  if (errors.email) mapped['invite-email'] = t('invite.errors.emailInvalid');
-  if (errors.member_type) mapped['invite-role'] = t('invite.errors.roleRequired');
-  return mapped;
 }
 
 export function InviteMemberModal({
@@ -61,6 +48,7 @@ export function InviteMemberModal({
   onInvited,
 }: InviteMemberModalProps): ReactElement {
   const { t } = useTranslation('members');
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const createInvite = useCreateInvite(circleId);
 
@@ -93,34 +81,32 @@ export function InviteMemberModal({
   const handleSubmit = (formEvent: FormEvent): void => {
     formEvent.preventDefault();
     setCapReached(false);
-    const result = validateWithZod(inviteFormSchema, {
-      email: email.trim(),
-      member_type: memberType,
-    });
+    const trimmed = email.trim();
+    const result = validateWithZod(emailSchema, trimmed);
     if (!result.success) {
-      const fieldErrors = toFieldErrors(t, result.errors);
+      const fieldErrors: FieldErrors = { 'invite-email': t('invite.errors.emailInvalid') };
       setErrors(fieldErrors);
-      focusFirstError(fieldErrors, ['invite-email', 'invite-role']);
+      focusFirstError(fieldErrors, ['invite-email']);
       return;
     }
     setErrors({});
 
-    createInvite.mutate(result.data, {
-      onSuccess: () => {
-        showToast(t('invite.success', { email: result.data.email }), 'success');
-        onInvited?.();
-        onClose();
-      },
-      onError: (error: unknown) => {
-        // The hook's shared onError already toasts (402 → upgrade, 403 →
-        // permission, else → generic). Surface a persistent in-modal note for
-        // the free-tier cap so the modal stays open and explains itself.
-        const code = (error as { error?: { code?: string } } | null)?.error?.code;
-        if (code === 'SUBSCRIPTION_REQUIRED' || code === 'PAYMENT_REQUIRED') {
-          setCapReached(true);
-        }
-      },
-    });
+    createInvite.mutate(
+      { email: result.data, member_type: memberType },
+      {
+        onSuccess: () => {
+          showToast(t('invite.success', { email: result.data }), 'success');
+          onInvited?.();
+          onClose();
+        },
+        onError: (error: unknown) => {
+          const code = (error as { error?: { code?: string } } | null)?.error?.code;
+          if (code === 'SUBSCRIPTION_REQUIRED' || code === 'PAYMENT_REQUIRED') {
+            setCapReached(true);
+          }
+        },
+      }
+    );
   };
 
   return (
@@ -133,19 +119,31 @@ export function InviteMemberModal({
           <Button variant="ghost" onClick={onClose} disabled={createInvite.isPending}>
             {t('common:cancel')}
           </Button>
-          <Button type="submit" form="invite-member-form" disabled={createInvite.isPending}>
+          <Button
+            type="submit"
+            form="invite-member-form"
+            disabled={createInvite.isPending || email.trim().length === 0}
+          >
             {createInvite.isPending ? t('invite.sending') : t('invite.send')}
           </Button>
         </div>
       }
     >
-      <form
-        id="invite-member-form"
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-4"
-        noValidate
-      >
+      <form id="invite-member-form" onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <p className="m-0 text-sm text-ink-2">{t('invite.subtitle')}</p>
+
+        {/* Self-care circles only ever have caregivers — hide the role picker
+            entirely when there is a single option to choose. */}
+        {roleOptions.length > 1 ? (
+          <RadioGroup
+            name="invite-role"
+            label={t('invite.roleLabel')}
+            options={roleOptions}
+            value={memberType}
+            onChange={(value) => setMemberType(value as InviteMemberType)}
+            error={errors['invite-role'] || undefined}
+          />
+        ) : null}
 
         <TextField
           id="invite-email"
@@ -161,26 +159,18 @@ export function InviteMemberModal({
           error={errors['invite-email'] || undefined}
         />
 
-        {/* Self-care circles only ever have caregivers — hide the role picker
-            entirely when there is a single option to choose. */}
-        {roleOptions.length > 1 ? (
-          <RadioGroup
-            name="invite-role"
-            label={t('invite.roleLabel')}
-            options={roleOptions}
-            value={memberType}
-            onChange={(value) => setMemberType(value as InviteMemberType)}
-            error={errors['invite-role'] || undefined}
-          />
-        ) : null}
-
         {capReached ? (
-          <p
+          <div
             role="alert"
-            className="m-0 rounded-xl border border-line bg-bg-2 px-4 py-3 text-sm text-ink-2"
+            className="m-0 flex flex-col items-start gap-3 rounded-xl border border-line bg-bg-2 px-4 py-3 text-sm text-ink-2"
           >
-            {t('invite.capReached')}
-          </p>
+            <p className="m-0">{t('invite.capReached')}</p>
+            {isWebBillingConfigured() ? (
+              <Button size="sm" onClick={() => navigate('/upgrade')}>
+                {t('common:upgradeGate.action')}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </form>
     </Modal>

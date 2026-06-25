@@ -26,6 +26,7 @@ import {
   isSubscriptionRequiredError,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
 
 // Mirrors mobile/src/hooks/useDocuments.ts: fetch the full (unfiltered) list
@@ -88,6 +89,7 @@ export function useDocuments(
 function useDocumentMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { promptUpgrade } = usePremiumGate();
   const { t } = useTranslation('documents');
 
   return (error: unknown) => {
@@ -96,7 +98,7 @@ function useDocumentMutationOnError(circleId: string): (error: unknown) => void 
       showToast(t('errors.storageFull'), 'error');
     } else if (isSubscriptionRequiredError(error)) {
       // Free-tier 200MB cap — web cannot transact, point at the app to upgrade.
-      showToast(t('errors.subscriptionRequired'), 'error');
+      promptUpgrade();
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');

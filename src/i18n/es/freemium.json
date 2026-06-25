@@ -8,6 +8,19 @@
     "memberBanner": "Puedes ver este círculo, pero no editarlo."
   },
   "circleSelection": {
-    "banner": "Abre la app de CircleCare para elegir qué círculo conservar."
+    "banner": "Tu suscripción terminó. Elige qué círculo conservar con acceso gratuito.",
+    "choose": "Elegir círculo",
+    "title": "Elige un círculo para conservar",
+    "subtitle": "Tu suscripción ha terminado. Elige qué círculo conservar con acceso gratuito. Tus otros círculos quedarán en solo lectura hasta que vuelvas a suscribirte.",
+    "memberCount": "{{count}} integrante",
+    "memberCount_plural": "{{count}} integrantes",
+    "confirmButton": "Confirmar selección",
+    "confirmTitle": "¿Estás seguro?",
+    "confirmMessage": "Esta elección es permanente. Tus otros círculos quedarán en solo lectura. Puedes volver a suscribirte cuando quieras para restaurar el acceso completo.",
+    "confirmKeep": "Conservar este círculo",
+    "cancel": "Cancelar",
+    "back": "Atrás",
+    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "close": "Cerrar"
   }
 }

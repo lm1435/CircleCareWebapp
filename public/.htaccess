@@ -34,7 +34,12 @@
   </Files>
 
   # --- Security headers (replicate nginx.conf; edit origins to match prod) ----
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self'; connect-src 'self' https://api.circlecare.app https://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com; frame-src 'self' blob: https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  # RevenueCat Web Billing: SDK fetches offerings from api.revenuecat.com
+  # (connect-src); the hosted checkout loads Stripe Elements — js.stripe.com
+  # (script-src + frame-src), api.stripe.com (connect-src), hooks.stripe.com
+  # (frame-src). Without these the offerings call / Subscribe checkout are
+  # CSP-blocked. Keep in sync with nginx.conf.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self'; connect-src 'self' https://api.circlecare.app https://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com https://api.revenuecat.com https://api.rc-backup.com https://api.stripe.com; frame-src 'self' blob: https://*.supabase.co https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
   Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"

@@ -15,6 +15,12 @@ import { updateEmergencyInfo, type EmergencyInfo } from '@/api/emergencyInfo';
 import { ToastProvider } from '@/components/ui';
 import { EditDoctorModal, EditMedicalInfoModal } from '@/components/emergency';
 
+// The write hook's premium gate routes through usePremiumGate (useNavigate);
+// stub it so these modals render without a Router.
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade: vi.fn() }),
+}));
+
 const CIRCLE_ID = 'circle-1';
 const mockUpdate = vi.mocked(updateEmergencyInfo);
 

@@ -16,3 +16,13 @@ export interface SubscriptionStatus {
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
   return (await apiClient.get('/subscription-status')) as unknown as SubscriptionStatus;
 }
+
+/**
+ * POST /api/subscription-status/select-downgrade-circle — a downgraded owner of
+ * 2+ circles picks the ONE circle to keep with free access; the rest become
+ * read-only. Returns `{ success: true }`; throws the backend envelope on a
+ * business-rule violation (e.g. already selected).
+ */
+export async function selectDowngradeCircle(circleId: string): Promise<void> {
+  await apiClient.post('/subscription-status/select-downgrade-circle', { circleId });
+}

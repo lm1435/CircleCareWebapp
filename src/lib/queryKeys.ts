@@ -18,6 +18,8 @@ export const queryKeys = {
   // User / app
   currentUser: ['currentUser'] as const,
   subscriptionStatus: ['subscription-status'] as const,
+  // Web Billing offering (RevenueCat purchases-js) — web-only, no mobile twin.
+  webOfferings: ['web-offerings'] as const,
   appConfig: ['app-config'] as const,
   unitPreferences: ['unitPreferences'] as const,
   pushTokens: ['pushTokens'] as const,

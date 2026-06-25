@@ -12,14 +12,21 @@ import { useTranslation } from 'react-i18next';
 
 export type ToastType = 'info' | 'success' | 'error';
 
+/** Optional inline action rendered as a button inside the toast (e.g. "Upgrade"). */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface Toast {
   id: number;
   message: string;
   type: ToastType;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  showToast: (message: string, type?: ToastType) => void;
+  showToast: (message: string, type?: ToastType, action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -42,9 +49,9 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
   }, []);
 
   const showToast = useCallback(
-    (message: string, type: ToastType = 'info') => {
+    (message: string, type: ToastType = 'info', action?: ToastAction) => {
       const id = nextId.current++;
-      setToasts((current) => [...current, { id, message, type }]);
+      setToasts((current) => [...current, { id, message, type, action }]);
       window.setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
     },
     [dismiss]
@@ -66,7 +73,21 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
             role="status"
             className={`pointer-events-auto flex items-start justify-between gap-3 rounded-2xl border p-4 text-sm shadow-lg ${typeClass[toast.type]}`}
           >
-            <p className="m-0">{toast.message}</p>
+            <div className="m-0 flex min-w-0 flex-col gap-2">
+              <p className="m-0">{toast.message}</p>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onClick();
+                    dismiss(toast.id);
+                  }}
+                  className="w-fit rounded-full bg-terracotta-deep px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
+                >
+                  {toast.action.label}
+                </button>
+              )}
+            </div>
             <button
               type="button"
               aria-label={t('close')}

@@ -2,6 +2,7 @@ import { useId, useMemo, useRef, useState, type ChangeEvent, type ReactElement }
 import { useTranslation } from 'react-i18next';
 import {
   DOCUMENT_CATEGORIES,
+  FREE_STORAGE_BYTES,
   MAX_DOCUMENT_FILE_BYTES,
   documentFormSchema,
   validateDocumentFile,
@@ -81,6 +82,10 @@ export function DocumentUploadModal({
   const remainingBytes = Math.max(0, storage.limit - storage.used);
   const storageFull = remainingBytes <= 0;
   const disabled = !canEdit || storageFull;
+  // The backend returns the circle's effective storage limit; the free floor
+  // (200MB) means upgrading to Premium raises the cap, while an already-premium
+  // circle (1GB) can only free up space — so the "full" copy differs by tier.
+  const isFreeTier = storage.limit <= FREE_STORAGE_BYTES;
 
   const categoryOptions = useMemo(
     () =>
@@ -198,7 +203,7 @@ export function DocumentUploadModal({
     >
       {storageFull && (
         <p role="alert" className="m-0 rounded-xl border border-line bg-bg-2 p-3 text-sm text-ink-2">
-          {t('documents:upload.storageFull')}
+          {t(isFreeTier ? 'documents:upload.storageFull' : 'documents:upload.storageFullPremium')}
         </p>
       )}
 

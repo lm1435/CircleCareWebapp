@@ -156,7 +156,6 @@
     }
   },
   "errors": {
-    "subscriptionRequired": "Open the CircleCare app to upgrade and edit this information.",
     "permissionDenied": "You don't have permission to edit this circle.",
     "saveFailed": "We couldn't save your changes. Please try again."
   }

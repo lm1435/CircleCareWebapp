@@ -22,6 +22,7 @@ import VitalsPage from '@/pages/VitalsPage';
 import EditCirclePage from '@/pages/EditCirclePage';
 import ProfilePage from '@/pages/ProfilePage';
 import HelpPage from '@/pages/HelpPage';
+import UpgradePage from '@/pages/UpgradePage';
 
 export const router = createBrowserRouter([
   // Public routes — no auth required
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
           { path: '/circles', element: <CirclePickerPage /> },
           { path: '/invites', element: <PendingInvitesPage /> },
           { path: '/profile', element: <ProfilePage /> },
+          { path: '/upgrade', element: <UpgradePage /> },
           { path: '/help', element: <HelpPage /> },
         ],
       },

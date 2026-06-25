@@ -61,7 +61,6 @@
     "everyNDays_other": "Cada {{count}} días"
   },
   "errors": {
-    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y desbloquear esto.",
     "permissionDenied": "No tienes permiso para hacer cambios en este círculo.",
     "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo."
   },

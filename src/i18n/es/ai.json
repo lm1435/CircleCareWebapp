@@ -11,7 +11,7 @@
   "emptyTitle": "¿En qué puedo ayudarte?",
   "remainingCount": "{{count}} restantes hoy",
   "errors": {
-    "subscriptionRequired": "El Asistente de Cuidado es una función premium. Abre la app de CircleCare para mejorar tu plan.",
+    "subscriptionRequired": "El Asistente de Cuidado es una función premium. Mejora a Premium para usarlo.",
     "rateLimited": "Has alcanzado tu límite diario de 50 preguntas. Por favor intenta de nuevo mañana.",
     "unavailable": "El Asistente de Cuidado no está disponible en este momento. Por favor intenta más tarde.",
     "sendFailed": "Lo siento, ocurrió un error. Por favor intenta de nuevo."

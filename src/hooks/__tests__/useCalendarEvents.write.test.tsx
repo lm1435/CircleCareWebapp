@@ -26,6 +26,9 @@ vi.mock('@/components/ui', () => ({
   useToast: () => ({ showToast }),
 }));
 
+const promptUpgrade = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade }) }));
+
 import {
   createEvent,
   updateEvent,
@@ -137,7 +140,7 @@ describe('useCreateEvent', () => {
     result.current.mutate({ event_type: 'task', title: 'x', scheduled_date: '2026-07-02' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).toHaveBeenCalled();
   });
 });
 

@@ -21,6 +21,11 @@ vi.mock('@/components/ui', () => ({
   useToast: () => ({ showToast }),
 }));
 
+const promptUpgrade = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade }),
+}));
+
 import {
   updateEmergencyInfo,
   type EmergencyContact,
@@ -189,7 +194,7 @@ describe('useUpdateEmergencyInfo', () => {
     result.current.mutate({ blood_type: 'O+' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).toHaveBeenCalled();
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 

@@ -7,6 +7,7 @@
   "cancel": "Cancelar",
   "confirm": "Confirmar",
   "save": "Guardar",
+  "done": "Listo",
   "close": "Cerrar",
   "required": "(obligatorio)",
   "today": "Hoy",
@@ -42,6 +43,10 @@
     "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
     "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y desbloquear esto.",
     "permissionDenied": "No tienes permiso para hacer este cambio."
+  },
+  "upgradeGate": {
+    "message": "Esta es una función Premium.",
+    "action": "Mejorar"
   },
   "menu": {
     "toggle": "Menú de navegación",

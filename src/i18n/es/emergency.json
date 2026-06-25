@@ -156,7 +156,6 @@
     }
   },
   "errors": {
-    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y editar esta información.",
     "permissionDenied": "No tienes permiso para editar este círculo.",
     "saveFailed": "No pudimos guardar tus cambios. Inténtalo de nuevo."
   }

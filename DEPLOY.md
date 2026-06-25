@@ -51,6 +51,11 @@ Container hosting (Railway/Render/Fly — keeps everything on one platform):
   - `VITE_SUPABASE_URL=https://<project>.supabase.co`
   - `VITE_SUPABASE_ANON_KEY=<anon key>` (public by design; RLS + backend auth are the boundary)
   - `VITE_POSTHOG_KEY=<key>` (optional; analytics silently disabled if unset)
+  - `VITE_REVENUECAT_WEB_BILLING_KEY=<rcb_… LIVE key>` (RevenueCat Web Billing
+    public SDK key for the **CircleCare** project; use the live `rcb_…` key, NOT
+    the sandbox `rcb_sb_…`. When unset the `/upgrade` page hides the Subscribe
+    flow; when set to the wrong/sandbox key the offering loads empty and Subscribe
+    stays disabled.)
 - Add the custom domain `my.circlecare.app` to the service, then Namecheap →
   **CNAME**: host `my`, value = the host's target.
 

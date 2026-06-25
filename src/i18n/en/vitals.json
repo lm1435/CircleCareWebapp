@@ -80,7 +80,6 @@
     "notesTooLong": "Notes must be 500 characters or fewer."
   },
   "errors": {
-    "subscriptionRequired": "Open the CircleCare app to upgrade and unlock this.",
     "permissionDenied": "You don't have permission to make this change.",
     "saveFailed": "Couldn't save your changes. Please try again."
   }

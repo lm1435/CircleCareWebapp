@@ -1,0 +1,44 @@
+{
+  "eyebrow": "CircleCare Premium",
+  "title": "Care for the whole circle",
+  "subtitle": "Unlock everything CircleCare offers for your whole care circle.",
+  "trialHook": "Start with a free trial — nothing due today.",
+  "benefits": {
+    "members": "Coordinate care across unlimited circle members",
+    "tools": "Full access to the calendar, tasks, medications, documents, and vitals",
+    "sync": "Everyone stays in sync, on every device"
+  },
+  "plans": {
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "perMonth": "per month",
+    "perYear": "per year",
+    "bestValue": "Best value",
+    "savePercent": "Save {{percent}}%",
+    "perMonthBilled": "{{price}}/mo, billed yearly",
+    "billedMonthly": "Billed monthly",
+    "trialIncluded": "Free trial included",
+    "monthlyPerk": "Cancel anytime, no commitment"
+  },
+  "choosePlan": "Choose a plan",
+  "subscribe": "Subscribe",
+  "startTrial": "Start free trial",
+  "subscribing": "Opening checkout…",
+  "cancelAnytime": "Cancel anytime.",
+  "securedByStripe": "Secure checkout by Stripe.",
+  "orUseApp": "Prefer the app? You can also upgrade in the CircleCare app and pay through your app store.",
+  "unavailable": "Online checkout isn't available right now. You can also upgrade in the CircleCare app.",
+  "error": "Something went wrong starting checkout. Please try again.",
+  "back": "Back to profile",
+  "alreadyPremium": {
+    "title": "You're already Premium",
+    "body": "You have full access to all CircleCare features.",
+    "manage": "Manage subscription",
+    "manageInApp": "Manage your subscription in the CircleCare app where you purchased it."
+  },
+  "success": {
+    "title": "Welcome to Premium!",
+    "body": "Your subscription is active. Enjoy full access across your care circles.",
+    "cta": "Continue"
+  }
+}

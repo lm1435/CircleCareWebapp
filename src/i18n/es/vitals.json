@@ -80,7 +80,6 @@
     "notesTooLong": "Las notas deben tener 500 caracteres o menos."
   },
   "errors": {
-    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y desbloquear esto.",
     "permissionDenied": "No tienes permiso para hacer este cambio.",
     "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo."
   }

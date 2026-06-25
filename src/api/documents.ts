@@ -129,6 +129,15 @@ export const DOCUMENT_FILE_EXTENSIONS: readonly DocumentFileExtension[] = [
 export const MAX_DOCUMENT_FILE_BYTES = 10 * 1024 * 1024;
 
 /**
+ * Free-tier per-circle storage floor (200MB), mirroring the backend's
+ * `FREE_STORAGE_BYTES`. Premium circles get 1GB. The documents list endpoint
+ * returns the circle's effective `storage.limit`; when it equals this value the
+ * circle is on the free tier (upgrading to Premium raises the cap), otherwise it
+ * is already premium (the only remedy is freeing space).
+ */
+export const FREE_STORAGE_BYTES = 209715200;
+
+/**
  * Multipart upload payload. Unlike mobile (which sends an RN `{ uri, type, name }`
  * descriptor) the web sends a real browser `File` from `<input type="file">`.
  */

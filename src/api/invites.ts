@@ -50,8 +50,9 @@ export async function previewInviteByCode(code: string): Promise<InvitePreview> 
 // backend/src/routes/invites.ts (mounted at /api/invites + /api/circles via the
 // shared router):
 //   - POST   /circles/:circleId/invites  (requireAuth + inviteRateLimit + owner)
-//       body { email, member_type } → 402 SUBSCRIPTION_REQUIRED when a free-tier
-//       circle already has ≥2 active+pending caregivers.
+//       body { member_type, email } — email REQUIRED. We email the invitee a
+//       link to join. 402 SUBSCRIPTION_REQUIRED when a free-tier circle already
+//       has ≥2 active+pending caregivers.
 //   - DELETE /invites/:inviteId          (requireAuth, inviter/owner = CANCEL).
 //       NOTE: there is NO "decline invite" endpoint for the invitee — mobile's
 //       Decline is a client-only dismiss. We deliberately do NOT add one here.

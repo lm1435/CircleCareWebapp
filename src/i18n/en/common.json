@@ -7,6 +7,7 @@
   "cancel": "Cancel",
   "confirm": "Confirm",
   "save": "Save",
+  "done": "Done",
   "close": "Close",
   "required": "(required)",
   "today": "Today",
@@ -42,6 +43,10 @@
     "saveFailed": "Couldn't save your changes. Please try again.",
     "subscriptionRequired": "Open the CircleCare app to upgrade and unlock this.",
     "permissionDenied": "You don't have permission to make this change."
+  },
+  "upgradeGate": {
+    "message": "This is a Premium feature.",
+    "action": "Upgrade"
   },
   "menu": {
     "toggle": "Navigation menu",

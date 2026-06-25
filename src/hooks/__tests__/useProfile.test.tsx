@@ -26,6 +26,11 @@ vi.mock('@/components/ui', () => ({
   useToast: () => ({ showToast }),
 }));
 
+const promptUpgrade = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade }),
+}));
+
 // Mock the CONFIGURED i18n instance so we can assert changeLanguage is called
 // without driving the real i18next runtime. `language` starts at 'en'.
 // `vi.hoisted` so the spy exists before the hoisted vi.mock factory runs.
@@ -215,7 +220,7 @@ describe('useUpdateEmailDigest', () => {
     result.current.mutate({ enabled: true });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).toHaveBeenCalled();
     expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
   });
 });

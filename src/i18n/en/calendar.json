@@ -61,7 +61,6 @@
     "everyNDays_other": "Every {{count}} days"
   },
   "errors": {
-    "subscriptionRequired": "Open the CircleCare app to upgrade and unlock this.",
     "permissionDenied": "You don't have permission to make changes in this circle.",
     "saveFailed": "Couldn't save your changes. Please try again."
   },

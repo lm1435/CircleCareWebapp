@@ -45,7 +45,8 @@
     "fileLabel": "Archivo",
     "fileHint": "JPG, PNG, HEIC o PDF. Hasta {{max}}.",
     "storageRemaining": "{{remaining}} disponible",
-    "storageFull": "Este círculo alcanzó su límite de almacenamiento. Libera espacio o mejora tu plan en la app de CircleCare para agregar más.",
+    "storageFull": "Este círculo alcanzó su límite de almacenamiento. Libera espacio o mejora a Premium para agregar más.",
+    "storageFullPremium": "Este círculo alcanzó su límite de almacenamiento de 1 GB. Libera espacio para agregar más.",
     "labelLabel": "Nombre",
     "categoryLabel": "Categoría",
     "noteLabel": "Nota (opcional)",
@@ -77,7 +78,6 @@
   },
   "errors": {
     "storageFull": "Este círculo alcanzó su límite de almacenamiento. Libera espacio para agregar más documentos.",
-    "subscriptionRequired": "Alcanzaste el límite de almacenamiento gratuito. Abre la app de CircleCare para mejorar tu plan.",
     "permissionDenied": "No tienes permiso para hacer eso.",
     "saveFailed": "Algo salió mal. Intenta de nuevo."
   }

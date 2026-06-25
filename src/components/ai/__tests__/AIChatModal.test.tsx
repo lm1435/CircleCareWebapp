@@ -3,6 +3,12 @@ import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { AIChatModal } from '../AIChatModal';
 
+// The modal's premium gate routes through usePremiumGate (which calls
+// useNavigate); stub it so the modal renders without a Router in these tests.
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade: vi.fn() }),
+}));
+
 // Drive the modal through a controllable useAiChat mock: mutate(text, opts)
 // invokes the right callback based on the queued outcome, and isPending is
 // flipped so we can assert the thinking state.
@@ -107,7 +113,7 @@ describe('AIChatModal', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     await waitFor(() =>
-      expect(screen.getByText(/Open the CircleCare app to upgrade/i)).toBeInTheDocument()
+      expect(screen.getByText(/premium feature\. Upgrade to Premium to use it/i)).toBeInTheDocument()
     );
   });
 

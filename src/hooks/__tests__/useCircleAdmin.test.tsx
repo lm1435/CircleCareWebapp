@@ -25,6 +25,11 @@ vi.mock('@/components/ui', () => ({
   useToast: () => ({ showToast }),
 }));
 
+const promptUpgrade = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade }),
+}));
+
 import { createCircle, updateCircle, deleteCircle, type Circle } from '@/api/circles';
 import { queryKeys } from '@/lib/queryKeys';
 import { useCreateCircle, useUpdateCircle, useDeleteCircle } from '@/hooks/useCircleAdmin';
@@ -107,7 +112,7 @@ describe('useCreateCircle', () => {
     result.current.mutate({ recipient_name: 'Rose' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('common:errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).toHaveBeenCalled();
   });
 
   it('surfaces a 403 CIRCLE_LIMIT_REACHED as the distinct max-circles toast', async () => {
@@ -120,7 +125,7 @@ describe('useCreateCircle', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('circles:create.limitReached', 'error');
     // It must NOT use the upgrade copy — the limit can't be lifted by upgrading.
-    expect(showToast).not.toHaveBeenCalledWith('common:errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).not.toHaveBeenCalled();
   });
 });
 
@@ -164,7 +169,7 @@ describe('useUpdateCircle', () => {
     result.current.mutate({ recipient_name: 'Rose' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+    expect(promptUpgrade).toHaveBeenCalled();
   });
 });
 

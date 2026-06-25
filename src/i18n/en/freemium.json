@@ -8,6 +8,19 @@
     "memberBanner": "You can view but not edit this circle."
   },
   "circleSelection": {
-    "banner": "Open the CircleCare app to choose which circle to keep."
+    "banner": "Your subscription ended. Choose which circle to keep with free access.",
+    "choose": "Choose circle",
+    "title": "Pick one circle to keep",
+    "subtitle": "Your subscription has ended. Choose which circle to keep with free access. Your other circles will become read-only until you re-subscribe.",
+    "memberCount": "{{count}} member",
+    "memberCount_plural": "{{count}} members",
+    "confirmButton": "Confirm selection",
+    "confirmTitle": "Are you sure?",
+    "confirmMessage": "This choice is permanent. Your other circles will become read-only. You can re-subscribe anytime to restore full access.",
+    "confirmKeep": "Keep this circle",
+    "cancel": "Cancel",
+    "back": "Back",
+    "error": "Something went wrong. Please try again.",
+    "close": "Close"
   }
 }
