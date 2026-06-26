@@ -51,10 +51,6 @@
     "title": "Delete this reading?",
     "message": "This reading will be permanently removed. This can't be undone."
   },
-  "synced": {
-    "badge": "Synced",
-    "readOnly": "Synced from a connected device — this reading can't be edited here."
-  },
   "empty": {
     "title": "No readings yet",
     "hint": "Track your loved one's vitals over time so the whole circle can spot trends and share them at the next appointment.",

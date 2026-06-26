@@ -245,7 +245,6 @@ export function buildCreateVitalRequest(values: VitalFormValues): CreateVitalReq
     value1: canonicalValue1,
     value2: vital_type === 'blood_pressure' ? value2 : undefined,
     unit: CANONICAL_UNITS[vital_type],
-    source: 'manual',
     recorded_at,
     notes: notes && notes.trim() ? notes.trim() : undefined,
   };

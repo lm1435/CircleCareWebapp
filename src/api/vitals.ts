@@ -6,10 +6,10 @@ import { apiClient } from '@/lib/api';
 //   GET    /api/circles/:circleId/vitals/latest
 //            → { success, data: { latest: LatestVitals } }
 //   POST   /api/circles/:circleId/vitals            (requireCircleEditAccess + rate limit)
-//            body: { vital_type, value1, value2?, unit, source?, recorded_at, notes? }
+//            body: { vital_type, value1, value2?, unit, recorded_at, notes? }
 //            → 201 { success, data: { vital } }
 //   PUT    /api/circles/:circleId/vitals/:id        (requireCircleEditAccess + rate limit)
-//            body: { value1?, value2?, unit?, recorded_at?, notes? }   (403 if source != 'manual')
+//            body: { value1?, value2?, unit?, recorded_at?, notes? }
 //            → { success, data: { vital } }
 //   DELETE /api/circles/:circleId/vitals/:id        (requireCircleEditAccess + rate limit)
 //            → 204
@@ -21,15 +21,12 @@ import { apiClient } from '@/lib/api';
 // no conversion (already canonical).
 //
 // recorded_at is a UTC ISO timestamp. The backend rejects values more than 5
-// minutes in the future. `source` is client-asserted; web only ever writes
-// 'manual' — synced (apple_health / google_health_connect) readings are
-// read-only (backend 403s edits/deletes implicitly via the non-manual lock).
+// minutes in the future. Every reading is manual and freely editable/deletable.
 //
 // NOTE: the web apiClient's response interceptor unwraps axios' response.data,
 // so the resolved value IS the `{ success, data }` envelope.
 
 export type VitalType = 'blood_pressure' | 'heart_rate' | 'glucose' | 'weight';
-export type VitalSource = 'manual' | 'apple_health' | 'google_health_connect';
 
 export interface HealthVital {
   id: string;
@@ -38,7 +35,6 @@ export interface HealthVital {
   value1: number;
   value2: number | null;
   unit: string;
-  source: VitalSource;
   recorded_at: string; // UTC ISO timestamp
   recorded_by: string | null;
   notes: string | null;
@@ -59,7 +55,6 @@ export interface CreateVitalRequest {
   value1: number;
   value2?: number;
   unit: string;
-  source?: VitalSource;
   recorded_at: string;
   notes?: string;
 }
@@ -91,16 +86,6 @@ interface LatestVitalsEnvelope {
 interface VitalEnvelope {
   success: boolean;
   data: { vital: HealthVital };
-}
-
-/**
- * True when a reading may NOT be edited/deleted from the UI — it came from a
- * connected device (Apple Health / Google Health Connect), so it is read-only
- * (the backend rejects PUT on non-manual readings with 403). The UI gates
- * edit/delete affordances on this; the backend enforces it regardless.
- */
-export function isManualVital(vital: Pick<HealthVital, 'source'>): boolean {
-  return vital.source === 'manual';
 }
 
 export async function getVitals(circleId: string, params: GetVitalsParams): Promise<HealthVital[]> {

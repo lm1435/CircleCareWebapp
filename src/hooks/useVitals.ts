@@ -28,12 +28,8 @@ import { Analytics } from '@/lib/analytics';
 //   → onError classifies the rejection (402 subscription / 403 permission) so the
 //     UI shows the right message; the backend enforces access regardless of UI.
 //
-// EDIT/DELETE GUARD: only `source: 'manual'` readings may be edited or deleted
-// (synced device readings are read-only — backend PUT returns 403 on non-manual).
-// `canEditVital` lets the UI hide edit/delete affordances; re-exported from the
-// api module so callers import one place.
-
-export { isManualVital as canEditVital } from '@/api/vitals';
+// Every reading is manual and freely editable/deletable — write affordances are
+// gated only on circle edit access (useCircle().canEdit), not on the reading.
 
 // Note: vitalsLatest(cid) = ['vitals', cid, 'latest'] is a prefix-subset of
 // vitals(cid) = ['vitals', cid], so invalidating vitals(cid) already matches it.
@@ -117,11 +113,7 @@ export interface UpdateVitalVariables {
   data: UpdateVitalRequest;
 }
 
-/**
- * PUT /circles/:circleId/vitals/:id — edit a MANUAL reading. Synced readings
- * (source !== 'manual') 403 server-side; gate the UI on `canEditVital` so the
- * edit affordance never appears for them.
- */
+/** PUT /circles/:circleId/vitals/:id — edit a reading. */
 export function useUpdateVital(
   circleId: string
 ): UseMutationResult<HealthVital, unknown, UpdateVitalVariables> {

@@ -51,10 +51,6 @@
     "title": "¿Eliminar esta lectura?",
     "message": "Esta lectura se eliminará de forma permanente. No se puede deshacer."
   },
-  "synced": {
-    "badge": "Sincronizada",
-    "readOnly": "Sincronizada desde un dispositivo conectado: esta lectura no se puede editar aquí."
-  },
   "empty": {
     "title": "Aún no hay lecturas",
     "hint": "Lleva el registro de los signos vitales de tu ser querido con el tiempo para que todo el círculo note las tendencias y las comparta en la próxima cita.",

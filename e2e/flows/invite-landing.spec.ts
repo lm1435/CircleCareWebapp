@@ -103,7 +103,11 @@ test.describe('invite landing page', () => {
       // --- LOGGED-OUT: a FRESH anonymous context (no fixture login) sees the
       // "Sign in to accept" CTA; clicking it routes to /login while preserving
       // the invite as the return destination. ---
-      const anonContext = await browser.newContext();
+      // Force a genuinely logged-out session: pass an explicit empty storageState
+      // so this context can never inherit the project's authenticated state.
+      const anonContext = await browser.newContext({
+        storageState: { cookies: [], origins: [] },
+      });
       const anonPage = await anonContext.newPage();
       try {
         await anonPage.goto(`/invite/${code}`, { waitUntil: 'domcontentloaded' });

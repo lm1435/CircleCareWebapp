@@ -5,8 +5,8 @@ import '@/i18n';
 import VitalsPage from '../VitalsPage';
 import type { HealthVital } from '@/api/vitals';
 
-// Task 6.7 — VitalsPage tests: manual-only edit/delete gating, !canEdit hides
-// all write affordances, synced readings render read-only.
+// Task 6.7 — VitalsPage tests: every reading is editable/deletable; !canEdit
+// hides all write affordances.
 //
 // TZ-independent: the page renders recorded_at in the (mocked) recipient TZ; we
 // only assert on values + affordances, not date strings, so the machine clock
@@ -69,7 +69,6 @@ function makeVital(overrides: Partial<HealthVital> = {}): HealthVital {
     value1: 72,
     value2: null,
     unit: 'bpm',
-    source: 'manual',
     recorded_at: '2026-06-15T16:00:00.000Z',
     recorded_by: 'u-1',
     notes: null,
@@ -104,7 +103,7 @@ beforeEach(() => {
   mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/New_York' });
   mockUseVitals.mockReturnValue(
     vitalsResult([
-      makeVital({ id: 'v-1', vital_type: 'heart_rate', value1: 72, source: 'manual' }),
+      makeVital({ id: 'v-1', vital_type: 'heart_rate', value1: 72 }),
     ])
   );
 });
@@ -115,24 +114,10 @@ describe('VitalsPage', () => {
     expect(screen.getByText('72 bpm')).toBeInTheDocument();
   });
 
-  it('shows edit + delete for manual readings when canEdit', () => {
+  it('shows edit + delete for readings when canEdit', () => {
     renderPage();
     expect(screen.getByRole('button', { name: /Edit reading/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Delete reading/ })).toBeInTheDocument();
-  });
-
-  it('hides edit/delete for SYNCED readings and shows a synced badge', () => {
-    mockUseVitals.mockReturnValue(
-      vitalsResult([
-        makeVital({ id: 'v-sync', source: 'apple_health', value1: 65 }),
-      ])
-    );
-    renderPage();
-
-    expect(screen.getByText('65 bpm')).toBeInTheDocument();
-    expect(screen.getByText('Synced')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Edit reading/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Delete reading/ })).not.toBeInTheDocument();
   });
 
   it('hides ALL write affordances when canEdit is false', () => {

@@ -3,8 +3,7 @@ import type { HealthVital } from '@/api/vitals';
 import { VitalFormModal } from './VitalFormModal';
 
 // Task 6.4 — edit-mode vitals modal. Thin wrapper over the shared VitalFormModal.
-// Only MANUAL readings reach here (the page hides the edit affordance for synced
-// readings via canEditVital); the backend 403s a PUT on non-manual anyway.
+// Every reading is manual and editable.
 
 export interface EditVitalModalProps {
   circleId: string;

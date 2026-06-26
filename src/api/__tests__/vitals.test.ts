@@ -4,7 +4,6 @@ import {
   deleteVital,
   getVitals,
   getLatestVitals,
-  isManualVital,
   updateVital,
   type CreateVitalRequest,
   type HealthVital,
@@ -54,7 +53,6 @@ function makeVital(overrides: Partial<HealthVital> = {}): HealthVital {
     value1: 72,
     value2: null,
     unit: 'bpm',
-    source: 'manual',
     recorded_at: NOW.toISOString(),
     recorded_by: 'user-1',
     notes: null,
@@ -113,7 +111,6 @@ describe('createVital', () => {
       vital_type: 'heart_rate',
       value1: 72,
       unit: 'bpm',
-      source: 'manual',
       recorded_at: RECORDED_AT,
     };
     const result = await createVital(CIRCLE_ID, body);
@@ -143,14 +140,6 @@ describe('deleteVital', () => {
     mockDelete.mockResolvedValue({ success: true } as never);
     await deleteVital(CIRCLE_ID, VITAL_ID);
     expect(mockDelete).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/vitals/${VITAL_ID}`);
-  });
-});
-
-describe('isManualVital (edit/delete guard)', () => {
-  it('is true only for source: manual', () => {
-    expect(isManualVital({ source: 'manual' })).toBe(true);
-    expect(isManualVital({ source: 'apple_health' })).toBe(false);
-    expect(isManualVital({ source: 'google_health_connect' })).toBe(false);
   });
 });
 
@@ -193,7 +182,6 @@ describe('buildCreateVitalRequest', () => {
     expect(req.value1).toBeCloseTo(68.0388555, 5);
     expect(req.unit).toBe('kg');
     expect(req.value2).toBeUndefined();
-    expect(req.source).toBe('manual');
   });
 
   it('converts glucose mg/dL → mmol/L and reports the canonical unit', () => {

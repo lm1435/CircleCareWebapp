@@ -2,7 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
-// Mock the api module's WRITE functions only (keep types/read fns + isManualVital intact).
+// Mock the api module's WRITE functions only (keep types/read fns intact).
 vi.mock('@/api/vitals', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/vitals')>();
   return {
@@ -35,7 +35,6 @@ import {
 } from '@/api/vitals';
 import { queryKeys } from '@/lib/queryKeys';
 import {
-  canEditVital,
   useCreateVital,
   useUpdateVital,
   useDeleteVital,
@@ -56,7 +55,6 @@ function makeVital(overrides: Partial<HealthVital> = {}): HealthVital {
     value1: 72,
     value2: null,
     unit: 'bpm',
-    source: 'manual',
     recorded_at: '2026-06-20T10:00:00.000Z',
     recorded_by: 'user-1',
     notes: null,
@@ -101,7 +99,6 @@ const CREATE_BODY: CreateVitalRequest = {
   vital_type: 'weight',
   value1: 68.0388555, // 150 lbs already converted to canonical kg by the form layer
   unit: 'kg',
-  source: 'manual',
   recorded_at: '2026-06-20T10:00:00.000Z',
 };
 
@@ -176,13 +173,5 @@ describe('useDeleteVital', () => {
     expect(mockDelete).toHaveBeenCalledWith(CIRCLE_ID, VITAL_ID);
     expect(invalidatedWith(invalidateSpy, queryKeys.vitals(CIRCLE_ID))).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.vitalsLatest(CIRCLE_ID))).toBe(true);
-  });
-});
-
-describe('canEditVital (manual-only edit/delete guard)', () => {
-  it('allows manual readings and blocks synced ones (UI gate; backend 403s too)', () => {
-    expect(canEditVital(makeVital({ source: 'manual' }))).toBe(true);
-    expect(canEditVital(makeVital({ source: 'apple_health' }))).toBe(false);
-    expect(canEditVital(makeVital({ source: 'google_health_connect' }))).toBe(false);
   });
 });

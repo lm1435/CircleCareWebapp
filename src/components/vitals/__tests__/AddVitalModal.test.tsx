@@ -108,7 +108,6 @@ describe('AddVitalModal', () => {
     expect(payload.value1).toBe(120);
     expect(payload.value2).toBe(80);
     expect(payload.unit).toBe('mmHg');
-    expect(payload.source).toBe('manual');
     // 09:00 in New York (EDT -4h) === 13:00 UTC.
     expect(payload.recorded_at).toBe('2026-06-15T13:00:00.000Z');
   });

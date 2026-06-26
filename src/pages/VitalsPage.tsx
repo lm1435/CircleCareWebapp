@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { AddVitalModal } from '@/components/vitals/AddVitalModal';
 import { EditVitalModal } from '@/components/vitals/EditVitalModal';
-import { useVitals, useDeleteVital, canEditVital } from '@/hooks/useVitals';
+import { useVitals, useDeleteVital } from '@/hooks/useVitals';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { useCircle } from '@/hooks/useCircle';
 import type { HealthVital, VitalType } from '@/api/vitals';
@@ -35,8 +35,7 @@ import { utcISOToRecipientWallTime } from '@/components/vitals/vitalDateTime';
 //
 // GATING:
 //   - all write affordances (Add / Edit / Delete) require useCircle().canEdit.
-//   - SYNCED readings (source !== 'manual') render READ-ONLY — no Edit/Delete
-//     (canEditVital); the backend 403s those mutations regardless.
+//     Every reading is manual and freely editable/deletable.
 //
 // TIMEZONE: recorded_at is a UTC ISO timestamp; we render its date/time in the
 // care recipient's timezone (utcISOToRecipientWallTime) — never device-local.
@@ -90,7 +89,6 @@ function VitalRow({
 }: VitalRowProps): ReactElement {
   const { t } = useTranslation('vitals');
 
-  const isManual = canEditVital(vital);
   const displayUnit = getDisplayUnit(vital.vital_type, weightUnit, glucoseUnit);
 
   const displayValue = useMemo(() => {
@@ -124,13 +122,7 @@ function VitalRow({
           </p>
         </div>
 
-        {!isManual && (
-          <span className="shrink-0 rounded-full border border-line-2 px-2 py-0.5 text-xs text-ink-3">
-            {t('synced.badge')}
-          </span>
-        )}
-
-        {canEdit && isManual && (
+        {canEdit && (
           <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
