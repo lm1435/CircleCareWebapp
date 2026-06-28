@@ -417,7 +417,7 @@ export function Header({ navOpen = false, onToggleNav }: HeaderProps = {}): Reac
           <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
           {/* Wordmark hides on the smallest screens so the header fits the circle
               switcher + account avatar without overflowing. */}
-          <span className="serif hidden truncate text-lg text-ink sm:inline">{t('appName')}</span>
+          <span className="hidden truncate text-xl font-normal tracking-tight text-ink sm:inline">{t('appName')}</span>
         </Link>
       </div>
 
