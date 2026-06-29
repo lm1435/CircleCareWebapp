@@ -4,7 +4,7 @@
     "details": [
       {
         "appID": "68Y4NLQ3VS.com.circlecare.circlecare",
-        "paths": ["/invite/*"]
+        "paths": ["/invite/*", "/open", "/open/*"]
       }
     ]
   }

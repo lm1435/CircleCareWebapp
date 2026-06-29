@@ -33,6 +33,10 @@ export const router = createBrowserRouter([
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/invite/:code', element: <InviteLandingPage /> },
+  // Deep-link target for the "Open CircleCare" email CTAs. On devices with the app installed,
+  // the OS intercepts https://my.circlecare.app/open via Universal/App Links and opens the app;
+  // on the web it falls back to home (AuthGuard sends signed-out users to login).
+  { path: '/open', element: <Navigate to="/" replace /> },
 
   // Authenticated routes
   {
