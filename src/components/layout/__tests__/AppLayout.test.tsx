@@ -19,6 +19,15 @@ vi.mock('@/components/meds/TodaysMeds', () => ({
   TodaysMeds: () => <div data-testid="todays-meds" />,
 }));
 
+// useCircle is React Query-backed; this layout test has no QueryClientProvider,
+// so stub it with the gating fields the global Create menu reads.
+vi.mock('@/hooks/useCircle', () => ({
+  useCircle: vi.fn(() => ({
+    circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
+    canEdit: true,
+  })),
+}));
+
 // Query-backed banner mounted in <main> (plan Task 39b) — mocked like
 // TodaysMeds above; its behavior is covered by NeedsCircleSelectionBanner.test.tsx.
 vi.mock('@/components/NeedsCircleSelectionBanner', () => ({

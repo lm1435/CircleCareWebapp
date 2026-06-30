@@ -48,6 +48,16 @@
     "message": "Esta es una función Premium.",
     "action": "Mejorar"
   },
+  "create": {
+    "button": "Crear",
+    "menuLabel": "Crear nuevo",
+    "appointment": "Cita",
+    "medication": "Medicamento",
+    "task": "Tarea",
+    "vitals": "Signos vitales",
+    "document": "Documento",
+    "invite": "Invitar miembro"
+  },
   "menu": {
     "toggle": "Menú de navegación",
     "close": "Cerrar el menú de navegación"

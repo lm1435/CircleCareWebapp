@@ -48,6 +48,16 @@
     "message": "This is a Premium feature.",
     "action": "Upgrade"
   },
+  "create": {
+    "button": "Create",
+    "menuLabel": "Create new",
+    "appointment": "Appointment",
+    "medication": "Medication",
+    "task": "Task",
+    "vitals": "Vitals",
+    "document": "Document",
+    "invite": "Invite member"
+  },
   "menu": {
     "toggle": "Navigation menu",
     "close": "Close navigation menu"

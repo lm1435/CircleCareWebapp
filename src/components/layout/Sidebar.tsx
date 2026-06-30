@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StoreBadges } from '@/components/layout/StoreBadges';
+import { CreateMenu, type CreateKind } from '@/components/layout/CreateMenu';
 
 interface IconProps {
   className?: string;
@@ -73,8 +74,8 @@ function ActivityIcon(props: IconProps): ReactElement {
 function EmergencyIcon(props: IconProps): ReactElement {
   return (
     <svg {...iconBase(props)}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8v8M8 12h8" />
+      <path d="M12 3l7 3v5c0 4.4-3 7.4-7 8.5-4-1.1-7-4.1-7-8.5V6l7-3z" />
+      <path d="M12 9.5v4M10 11.5h4" />
     </svg>
   );
 }
@@ -132,6 +133,12 @@ export interface SidebarProps {
   onNavigate?: () => void;
   /** Opens the AI assistant modal (mounted by AppLayout). */
   onOpenAssistant?: () => void;
+  /** Opens a create flow (modal mounted by AppLayout). When omitted, the Create menu is hidden. */
+  onCreate?: (kind: CreateKind) => void;
+  /** Requester can create calendar/vitals/document items (editable circle). */
+  canCreate?: boolean;
+  /** Requester can invite members (circle owner). */
+  canInvite?: boolean;
 }
 
 function AssistantIcon(props: IconProps): ReactElement {
@@ -153,6 +160,9 @@ export function Sidebar({
   variant = 'desktop',
   onNavigate,
   onOpenAssistant,
+  onCreate,
+  canCreate = false,
+  canInvite = false,
 }: SidebarProps = {}): ReactElement {
   const { t } = useTranslation('common');
   const { circleId } = useParams<{ circleId: string }>();
@@ -160,6 +170,7 @@ export function Sidebar({
 
   return (
     <aside className={`shrink-0 flex-col gap-6 bg-bg p-4 ${VARIANT_CLASS[variant]}`}>
+      {onCreate && <CreateMenu canCreate={canCreate} canInvite={canInvite} onSelect={onCreate} />}
       <nav aria-label={t('nav.label')}>
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           <li>

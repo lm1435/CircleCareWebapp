@@ -3,10 +3,18 @@ import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import type { CreateKind } from './CreateMenu';
 import { AppDownloadBanner } from './AppDownloadBanner';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
 import { AIChatModal } from '@/components/ai/AIChatModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { AddVitalModal } from '@/components/vitals/AddVitalModal';
+import { InviteMemberModal } from '@/components/members/InviteMemberModal';
+import { DocumentUploadModal } from '@/components/documents/DocumentUploadModal';
+import { useCircle } from '@/hooks/useCircle';
+import { useDocuments } from '@/hooks/useDocuments';
+import { useAuthStore } from '@/store/authStore';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -30,6 +38,33 @@ function CloseIcon(): ReactElement {
 }
 
 /**
+ * Document upload from the global Create menu. The upload modal needs the
+ * circle's storage usage, which only the documents query carries — so this thin
+ * wrapper fetches it and renders nothing until the query resolves (matching the
+ * Documents page, which never opens the modal before storage is known).
+ */
+function CreateDocumentModal({
+  circleId,
+  canEdit,
+  onClose,
+}: {
+  circleId: string;
+  canEdit: boolean;
+  onClose: () => void;
+}): ReactElement | null {
+  const { storage, isLoading } = useDocuments(circleId);
+  if (isLoading) return null;
+  return (
+    <DocumentUploadModal
+      circleId={circleId}
+      storage={storage}
+      canEdit={canEdit}
+      onClose={onClose}
+    />
+  );
+}
+
+/**
  * Authenticated layout shell (plan Task 13): download banner + header on top,
  * sidebar left, page content in <main>. Below xl the sidebar becomes a
  * focus-trapped hamburger drawer (Escape closes, body scroll locked).
@@ -40,8 +75,20 @@ export function AppLayout(): ReactElement {
   const { circleId } = useParams<{ circleId: string }>();
   const [navOpen, setNavOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [createKind, setCreateKind] = useState<CreateKind | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const location = useLocation();
+
+  // Gating for the global Create menu: write actions need an editable circle,
+  // inviting needs circle ownership. Resolved here so both the desktop sidebar
+  // and the mobile drawer share one source of truth.
+  const { circle, canEdit } = useCircle(circleId ?? '');
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const canInvite = !!circle && circle.owner_id === currentUserId;
+  const openCreate = (kind: CreateKind): void => {
+    setNavOpen(false);
+    setCreateKind(kind);
+  };
 
   // Close the drawer on any navigation.
   useEffect(() => {
@@ -115,7 +162,13 @@ export function AppLayout(): ReactElement {
           viewport and the whole page scrolls sideways. The 0-min column clamps
           <main> to the viewport so wide content scrolls inside its own card. */}
       <div className="grid grid-cols-1 xl:grid-cols-[16rem_1fr]">
-        <Sidebar variant="desktop" onOpenAssistant={() => setAiOpen(true)} />
+        <Sidebar
+          variant="desktop"
+          onOpenAssistant={() => setAiOpen(true)}
+          onCreate={circleId ? openCreate : undefined}
+          canCreate={canEdit}
+          canInvite={canInvite}
+        />
         <main id="main" className="min-w-0">
           <NeedsCircleSelectionBanner />
           {/* Page-level boundary: a single page's render error shows the fallback
@@ -168,6 +221,9 @@ export function AppLayout(): ReactElement {
                 setNavOpen(false);
                 setAiOpen(true);
               }}
+              onCreate={circleId ? openCreate : undefined}
+              canCreate={canEdit}
+              canInvite={canInvite}
             />
           </div>
         </div>
@@ -175,6 +231,43 @@ export function AppLayout(): ReactElement {
 
       {circleId && (
         <AIChatModal circleId={circleId} isOpen={aiOpen} onClose={() => setAiOpen(false)} />
+      )}
+
+      {circleId && createKind && (
+        <>
+          {(createKind === 'appointment' ||
+            createKind === 'medication' ||
+            createKind === 'task') && (
+            <AddEventModal
+              circleId={circleId}
+              initialType={createKind}
+              onClose={() => setCreateKind(null)}
+              onSaved={() => setCreateKind(null)}
+            />
+          )}
+          {createKind === 'vitals' && (
+            <AddVitalModal
+              circleId={circleId}
+              onClose={() => setCreateKind(null)}
+              onSaved={() => setCreateKind(null)}
+            />
+          )}
+          {createKind === 'invite' && circle && (
+            <InviteMemberModal
+              circleId={circleId}
+              isSelfCare={circle.is_self_care}
+              onClose={() => setCreateKind(null)}
+              onInvited={() => setCreateKind(null)}
+            />
+          )}
+          {createKind === 'document' && (
+            <CreateDocumentModal
+              circleId={circleId}
+              canEdit={canEdit}
+              onClose={() => setCreateKind(null)}
+            />
+          )}
+        </>
       )}
     </div>
   );
