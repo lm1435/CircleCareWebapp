@@ -151,6 +151,7 @@ export default function LoginPage(): ReactElement {
           label={t('login.emailLabel')}
           placeholder={t('login.emailPlaceholder')}
           autoComplete="email"
+          required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={fieldErrors.email}
@@ -165,6 +166,7 @@ export default function LoginPage(): ReactElement {
             label={t('login.passwordLabel')}
             placeholder={t('login.passwordPlaceholder')}
             autoComplete="current-password"
+            required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             error={fieldErrors.password}

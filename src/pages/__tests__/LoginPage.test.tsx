@@ -40,8 +40,10 @@ function renderLogin() {
 async function fillAndSubmit(email = 'pat@example.com', password = 'Secret#123') {
   const user = userEvent.setup();
   renderLogin();
-  await user.type(screen.getByLabelText('Email'), email);
-  await user.type(screen.getByLabelText('Password'), password);
+  // Labels carry a RequiredMarker (" * (required)") now that the fields pass
+  // `required`, so match the leading label text rather than the exact string.
+  await user.type(screen.getByLabelText(/^Email/), email);
+  await user.type(screen.getByLabelText(/^Password/), password);
   await user.click(screen.getByRole('button', { name: 'Sign In' }));
   return user;
 }

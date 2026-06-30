@@ -156,7 +156,7 @@ export default function ResetPasswordPage(): ReactElement {
             errorId="reset-otp-error"
           />
           {fieldErrors.otp ? (
-            <p id="reset-otp-error" className="m-0 text-sm text-terracotta-deep">
+            <p id="reset-otp-error" role="alert" className="m-0 text-sm text-terracotta-deep">
               {fieldErrors.otp}
             </p>
           ) : null}
@@ -170,6 +170,7 @@ export default function ResetPasswordPage(): ReactElement {
           label={t('resetPassword.newPasswordLabel')}
           placeholder={t('resetPassword.newPasswordPlaceholder')}
           autoComplete="new-password"
+          required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           error={fieldErrors.password}
@@ -185,6 +186,7 @@ export default function ResetPasswordPage(): ReactElement {
           label={t('resetPassword.confirmPasswordLabel')}
           placeholder={t('resetPassword.confirmPasswordPlaceholder')}
           autoComplete="new-password"
+          required
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           error={fieldErrors.confirmPassword}

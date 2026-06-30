@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { AuthGuard } from '@/components/AuthGuard';
+import { RouteTitle } from '@/components/RouteTitle';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
 import LoginPage from '@/pages/LoginPage';
@@ -25,6 +26,16 @@ import HelpPage from '@/pages/HelpPage';
 import UpgradePage from '@/pages/UpgradePage';
 
 export const router = createBrowserRouter([
+  // Root layout: keeps the per-route document <title> (RouteTitle) in sync for
+  // every path while leaving each page's own rendering untouched (WCAG 2.4.2).
+  {
+    element: (
+      <>
+        <RouteTitle />
+        <Outlet />
+      </>
+    ),
+    children: [
   // Public routes — no auth required
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <SignUpPage /> },
@@ -79,4 +90,6 @@ export const router = createBrowserRouter([
 
   // Fallback
   { path: '*', element: <Navigate to="/circles" replace /> },
+    ],
+  },
 ]);

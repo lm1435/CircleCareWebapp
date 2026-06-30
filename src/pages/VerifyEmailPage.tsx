@@ -179,6 +179,7 @@ export default function VerifyEmailPage(): ReactElement {
             label={t('verifyOtp.emailLabel')}
             placeholder={t('verifyOtp.emailPlaceholder')}
             autoComplete="email"
+            required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />

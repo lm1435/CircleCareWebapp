@@ -78,7 +78,9 @@ export default function AuthCallbackPage(): ReactElement {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg p-6">
       <Spinner size={32} />
-      <p className="m-0 text-sm text-ink-3">{t('callback.signingIn')}</p>
+      <p role="status" aria-live="polite" className="m-0 text-sm text-ink-3">
+        {t('callback.signingIn')}
+      </p>
     </main>
   );
 }

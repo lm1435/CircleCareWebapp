@@ -41,7 +41,7 @@ function CardHeader({ title, to, linkLabel }: { title: string; to?: string; link
  * default landing.
  */
 export default function OverviewPage(): ReactElement {
-  const { t } = useTranslation('overview');
+  const { t } = useTranslation(['overview', 'common']);
   const { circleId = '' } = useParams<{ circleId: string }>();
   const navigate = useNavigate();
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -101,6 +101,9 @@ export default function OverviewPage(): ReactElement {
           <CardHeader title={t('tasks.title')} to={`${base}/tasks`} linkLabel={t('tasks.viewAll')} />
           {tasksQuery.isLoading ? (
             <div className="mt-4 flex flex-col gap-2" aria-busy="true">
+              <span role="status" className="sr-only">
+                {t('common:loading')}
+              </span>
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
@@ -136,6 +139,9 @@ export default function OverviewPage(): ReactElement {
           />
           {activityQuery.isLoading ? (
             <div className="mt-4 flex flex-col gap-2" aria-busy="true">
+              <span role="status" className="sr-only">
+                {t('common:loading')}
+              </span>
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </div>

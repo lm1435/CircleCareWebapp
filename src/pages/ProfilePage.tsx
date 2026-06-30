@@ -300,6 +300,7 @@ export default function ProfilePage(): ReactElement {
             <TextField
               id="profile-first-name"
               label={t('account.firstName')}
+              autoComplete="given-name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               maxLength={50}
@@ -307,6 +308,7 @@ export default function ProfilePage(): ReactElement {
             <TextField
               id="profile-last-name"
               label={t('account.lastName')}
+              autoComplete="family-name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               maxLength={50}

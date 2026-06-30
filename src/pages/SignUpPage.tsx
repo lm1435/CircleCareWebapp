@@ -188,6 +188,7 @@ export default function SignUpPage(): ReactElement {
               label={t('signup.firstNameLabel')}
               placeholder={t('signup.firstNamePlaceholder')}
               autoComplete="given-name"
+              required
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               error={fieldErrors.first_name}
@@ -201,6 +202,7 @@ export default function SignUpPage(): ReactElement {
               label={t('signup.lastNameLabel')}
               placeholder={t('signup.lastNamePlaceholder')}
               autoComplete="family-name"
+              required
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               error={fieldErrors.last_name}
@@ -215,6 +217,7 @@ export default function SignUpPage(): ReactElement {
           label={t('signup.emailLabel')}
           placeholder={t('signup.emailPlaceholder')}
           autoComplete="email"
+          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={fieldErrors.email}
@@ -228,6 +231,7 @@ export default function SignUpPage(): ReactElement {
             label={t('signup.passwordLabel')}
             placeholder={t('signup.passwordPlaceholder')}
             autoComplete="new-password"
+            required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={fieldErrors.password}
@@ -250,6 +254,7 @@ export default function SignUpPage(): ReactElement {
           label={t('signup.confirmPasswordLabel')}
           placeholder={t('signup.confirmPasswordPlaceholder')}
           autoComplete="new-password"
+          required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           error={fieldErrors.confirmPassword}

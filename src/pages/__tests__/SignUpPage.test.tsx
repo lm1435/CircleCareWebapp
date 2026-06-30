@@ -38,11 +38,13 @@ async function fillValidForm(
   overrides: Partial<typeof VALID> & { confirmPassword?: string } = {}
 ) {
   const values = { ...VALID, confirmPassword: VALID.password, ...overrides };
-  await user.type(screen.getByLabelText('First Name'), values.firstName);
-  await user.type(screen.getByLabelText('Last Name'), values.lastName);
-  await user.type(screen.getByLabelText('Email'), values.email);
-  await user.type(screen.getByLabelText('Password'), values.password);
-  await user.type(screen.getByLabelText('Confirm Password'), values.confirmPassword);
+  // Labels carry a RequiredMarker (" * (required)") now that the fields pass
+  // `required`, so match the leading label text rather than the exact string.
+  await user.type(screen.getByLabelText(/^First Name/), values.firstName);
+  await user.type(screen.getByLabelText(/^Last Name/), values.lastName);
+  await user.type(screen.getByLabelText(/^Email/), values.email);
+  await user.type(screen.getByLabelText(/^Password/), values.password);
+  await user.type(screen.getByLabelText(/^Confirm Password/), values.confirmPassword);
 }
 
 describe('SignUpPage', () => {

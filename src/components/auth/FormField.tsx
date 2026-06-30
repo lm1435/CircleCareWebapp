@@ -25,7 +25,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function F
     [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
 
   const base =
-    'w-full rounded-xl border bg-cream px-4 py-3 text-base text-ink placeholder:text-ink-3/60 ' +
+    'w-full rounded-xl border bg-cream px-4 py-3 text-base text-ink placeholder:text-ink-3 ' +
     (error ? 'border-terracotta-deep' : 'border-line');
 
   return (

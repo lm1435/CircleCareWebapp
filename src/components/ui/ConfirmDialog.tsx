@@ -59,7 +59,7 @@ export function ConfirmDialog({
         </div>
       }
     >
-      <p className="m-0 text-base text-ink-2">{message}</p>
+      <div className="m-0 text-base text-ink-2">{message}</div>
     </Modal>
   );
 }

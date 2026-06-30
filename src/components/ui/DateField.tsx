@@ -1,4 +1,5 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { RequiredMarker } from './RequiredMarker';
 
 export interface DateFieldProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -14,7 +15,7 @@ export interface DateFieldProps
  * are responsible for timezone-correct formatting (Stage 0 formatters).
  */
 export const DateField = forwardRef<HTMLInputElement, DateFieldProps>(function DateField(
-  { id, label, error, hint, className, disabled, ...rest },
+  { id, label, error, hint, className, disabled, required, ...rest },
   ref
 ) {
   const errorId = `${id}-error`;
@@ -30,12 +31,15 @@ export const DateField = forwardRef<HTMLInputElement, DateFieldProps>(function D
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium text-ink-2">
         {label}
+        {required ? <RequiredMarker /> : null}
       </label>
       <input
         ref={ref}
         id={id}
         type="date"
         disabled={disabled}
+        required={required}
+        aria-required={required ? true : undefined}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={className ? `${base} ${className}` : base}

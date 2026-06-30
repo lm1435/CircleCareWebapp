@@ -106,6 +106,7 @@ export default function ForgotPasswordPage(): ReactElement {
           label={t('forgotPassword.emailLabel')}
           placeholder={t('forgotPassword.emailPlaceholder')}
           autoComplete="email"
+          required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={fieldError}

@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactElement,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, useToast } from '@/components/ui';
 import { useConfirmMedication } from '@/hooks/useMedConfirmation';
@@ -35,7 +41,19 @@ export function ConfirmMedDialog({
   const [note, setNote] = useState('');
   const [submitError, setSubmitError] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const takenRef = useRef<HTMLButtonElement | null>(null);
+  const skippedRef = useRef<HTMLButtonElement | null>(null);
   const mutation = useConfirmMedication(circleId);
+
+  // Roving-tabindex arrow-key navigation for the radio group (WAI-ARIA radio
+  // pattern). Only the checked radio is tabbable; arrows move + select.
+  const handleRadioKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>): void => {
+    if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].includes(event.key)) return;
+    event.preventDefault();
+    const next = status === 'taken' ? 'skipped' : 'taken';
+    setStatus(next);
+    (next === 'taken' ? takenRef : skippedRef).current?.focus();
+  };
 
   // Focus trap + Escape + body scroll lock; focus restored on close.
   useEffect(() => {
@@ -142,19 +160,25 @@ export function ConfirmMedDialog({
 
         <div role="radiogroup" aria-label={t('dialog.statusLabel')} className="flex gap-2">
           <button
+            ref={takenRef}
             type="button"
             role="radio"
             aria-checked={status === 'taken'}
+            tabIndex={status === 'taken' ? 0 : -1}
             onClick={() => setStatus('taken')}
+            onKeyDown={handleRadioKeyDown}
             className={statusOptionClass(status === 'taken')}
           >
             {t('dialog.taken')}
           </button>
           <button
+            ref={skippedRef}
             type="button"
             role="radio"
             aria-checked={status === 'skipped'}
+            tabIndex={status === 'skipped' ? 0 : -1}
             onClick={() => setStatus('skipped')}
+            onKeyDown={handleRadioKeyDown}
             className={statusOptionClass(status === 'skipped')}
           >
             {t('dialog.skipped')}

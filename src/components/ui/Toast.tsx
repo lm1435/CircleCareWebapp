@@ -63,14 +63,14 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
     <ToastContext.Provider value={value}>
       {children}
       <div
-        aria-live="polite"
         aria-atomic="false"
         className="pointer-events-none fixed bottom-6 right-6 z-50 flex w-80 max-w-[calc(100vw-3rem)] flex-col gap-2"
       >
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            role="status"
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
             className={`pointer-events-auto flex items-start justify-between gap-3 rounded-2xl border p-4 text-sm shadow-lg ${typeClass[toast.type]}`}
           >
             <div className="m-0 flex min-w-0 flex-col gap-2">
@@ -92,7 +92,7 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
               type="button"
               aria-label={t('close')}
               onClick={() => dismiss(toast.id)}
-              className="shrink-0 rounded-full px-1 leading-none text-ink-3 hover:text-ink"
+              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full leading-none text-ink-3 hover:text-ink"
             >
               <span aria-hidden="true">&times;</span>
             </button>

@@ -43,6 +43,19 @@ export default defineConfig({
   },
 
   projects: [
+    // 0) Backend-FREE accessibility crawl of the PUBLIC (logged-out) routes.
+    //    No `setup` dependency and no stored session, so it runs anywhere —
+    //    including CI without demo credentials or a reachable backend (the auth
+    //    pages render client-side; visitAndCheck tolerates the bootstrap 401).
+    //    Driven by `npm run test:a11y`. The AUTHENTICATED routes' a11y is
+    //    covered by smoke.spec.ts under the chromium/mobile-chrome projects
+    //    (i.e. `npm run test:e2e`), which does require the live backend.
+    {
+      name: 'a11y-public',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /public-smoke\.spec\.ts/,
+    },
+
     // 1) Log in once via the UI and persist the session (cookie-mode auth: the
     //    httpOnly refresh cookie is captured in storageState; the app
     //    re-bootstraps an access token from it on load).
