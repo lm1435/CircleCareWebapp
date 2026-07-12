@@ -66,7 +66,9 @@
   },
   "errors": {
     "permissionDenied": "You don't have permission to do that.",
-    "saveFailed": "Something went wrong. Please try again."
+    "saveFailed": "Something went wrong. Please try again.",
+    "alreadyMember": "This person is already a member of this circle.",
+    "pendingInvite": "This person already has a pending invitation."
   },
   "invite": {
     "cta": "Invite member",

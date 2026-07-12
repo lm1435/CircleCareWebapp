@@ -95,6 +95,14 @@ const PERMISSION_ENVELOPE = {
   success: false,
   error: { code: 'FORBIDDEN', message: 'owner only' },
 };
+const ALREADY_MEMBER_ENVELOPE = {
+  success: false,
+  error: { code: 'ALREADY_MEMBER', message: 'already a member' },
+};
+const PENDING_INVITE_ENVELOPE = {
+  success: false,
+  error: { code: 'PENDING_INVITE', message: 'invite already pending' },
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -139,6 +147,28 @@ describe('useCreateInvite', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+  });
+
+  it('surfaces an ALREADY_MEMBER error as the already-member toast', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(ALREADY_MEMBER_ENVELOPE);
+
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.alreadyMember', 'error');
+  });
+
+  it('surfaces a PENDING_INVITE error as the pending-invite toast', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(PENDING_INVITE_ENVELOPE);
+
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.pendingInvite', 'error');
   });
 });
 

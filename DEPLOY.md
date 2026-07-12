@@ -9,7 +9,7 @@ httpOnly refresh-token cookie is sent.
 
 | Host | What | Domain |
 |---|---|---|
-| Static SPA (this `web/` app) | the bundle nginx serves | `my.circlecare.app` |
+| Static SPA (this `webapp/` app) | the static bundle on Namecheap shared hosting | `my.circlecare.app` |
 | Express backend (existing, on Railway) | unchanged API | `api.circlecare.app` |
 | Marketing site (existing `CircleCareWeb`) | untouched | `circlecare.app` / `www` |
 
@@ -40,30 +40,36 @@ This is an **alias** — same Railway service, no redeploy, no code move.
    `COOKIE_DOMAIN=.circlecare.app` (makes the `cc_session` hint cookie readable
    by the SPA across the api/my subdomains — see the callout above).
 
-## 2. Deploy the SPA at my.circlecare.app
+## 2. Deploy the SPA at my.circlecare.app (Namecheap shared hosting)
 
-Container hosting (Railway/Render/Fly — keeps everything on one platform):
+Production is Namecheap shared hosting (LiteSpeed, Apache-compatible). The server
+config — SPA fallback rewrite, security headers/CSP, caching, and the AASA
+content-type — lives entirely in `public/.htaccess`, which Vite copies into
+`dist/` so it ships with every upload.
 
-- The `Dockerfile` builds the bundle and serves it via nginx on port 8080 with
-  the strict security headers in `nginx.conf`.
-- Pass these **build args / service variables** (baked in at build time):
-  - `VITE_API_URL=https://api.circlecare.app`
-  - `VITE_SUPABASE_URL=https://<project>.supabase.co`
-  - `VITE_SUPABASE_ANON_KEY=<anon key>` (public by design; RLS + backend auth are the boundary)
-  - `VITE_POSTHOG_KEY=<key>` (optional; analytics silently disabled if unset)
-  - `VITE_REVENUECAT_WEB_BILLING_KEY=<rcb_… LIVE key>` (RevenueCat Web Billing
-    public SDK key for the **CircleCare** project; use the live `rcb_…` key, NOT
-    the sandbox `rcb_sb_…`. When unset the `/upgrade` page hides the Subscribe
-    flow; when set to the wrong/sandbox key the offering loads empty and Subscribe
-    stays disabled.)
-- Add the custom domain `my.circlecare.app` to the service, then Namecheap →
-  **CNAME**: host `my`, value = the host's target.
+1. The `VITE_*` values live in the committed `.env.production` (all public
+   client config by design) and are **baked into the bundle at build time**,
+   not read at runtime:
+   - `VITE_API_URL=https://api.circlecare.app`
+   - `VITE_SUPABASE_URL=https://<project>.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY=<anon key>` (public by design; RLS + backend auth are the boundary)
+   - `VITE_POSTHOG_KEY=<key>` (optional; analytics silently disabled if unset)
+   - `VITE_REVENUECAT_WEB_BILLING_KEY=<rcb_… LIVE key>` (RevenueCat Web Billing
+     public SDK key for the **CircleCare** project; use the live `rcb_…` key, NOT
+     the sandbox `rcb_sb_…`. When unset the `/upgrade` page hides the Subscribe
+     flow; when set to the wrong/sandbox key the offering loads empty and Subscribe
+     stays disabled.)
+2. `npm run build`, then upload the contents of `dist/` (including the hidden
+   `.htaccess` and `.well-known/`) to the `my.circlecare.app` document root via
+   cPanel File Manager or FTP.
+3. DNS (already done): Namecheap → **CNAME**: host `my` → the hosting target.
 
-> Vercel/Netlify alternative: point it at `web/`, build command `npm run build`,
-> output `dist`, SPA rewrite all routes → `/index.html`, and replicate the
-> headers from `nginx.conf` (Vercel `vercel.json` `headers`, or Netlify `_headers`).
+> Moving to a different static host later (Vercel/Netlify/container): build
+> command `npm run build`, output `dist`, SPA rewrite all routes →
+> `/index.html`, and replicate the headers and AASA content-type from
+> `public/.htaccess` in the host's config format.
 
-### Before deploying — edit the CSP origins in `nginx.conf`
+### Before deploying — check the CSP origins in `public/.htaccess`
 
 The `connect-src` / `img-src` / `frame-src` directives currently use
 `api.circlecare.app`, `*.supabase.co`, and the PostHog US host. Swap in your real
@@ -76,7 +82,8 @@ origins if they differ (e.g. a different Supabase project URL or PostHog region)
 - `assetlinks.json` — **replace** `REPLACE_WITH_RELEASE_SIGNING_SHA256_FINGERPRINT`
   with the Android release signing cert SHA-256 (`keytool -list -v -keystore <release.keystore>`).
 
-Vite copies `public/` to `dist/`, and `nginx.conf` serves both as `application/json`.
+Vite copies `public/` to `dist/`; `public/.htaccess` (`ForceType`) serves the
+extensionless AASA file as `application/json`.
 
 ## 4. Apple Sign In on web (can ship after launch)
 

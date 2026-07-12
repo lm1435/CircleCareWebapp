@@ -42,12 +42,17 @@ function useInviteMutationOnError(): (error: unknown) => void {
   const { t } = useTranslation('members');
 
   return (error: unknown) => {
+    const code = (error as { error?: { code?: string } } | null)?.error?.code;
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+    } else if (code === 'ALREADY_MEMBER') {
+      showToast(t('errors.alreadyMember'), 'error');
+    } else if (code === 'PENDING_INVITE') {
+      showToast(t('errors.pendingInvite'), 'error');
     } else {
       showToast(t('errors.saveFailed'), 'error');
     }

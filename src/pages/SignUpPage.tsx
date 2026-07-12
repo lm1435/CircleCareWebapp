@@ -4,6 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { authApi, getApiError } from '@/api/auth';
 import { supabase } from '@/lib/supabase';
+import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { Analytics } from '@/lib/analytics';
 import { Button } from '@/components/ui';
 import { validateWithZod, focusFirstError, type FieldErrors } from '@/components/ui/useZodForm';
@@ -142,6 +143,10 @@ export default function SignUpPage(): ReactElement {
   const handleOAuth = async (provider: OAuthProvider): Promise<void> => {
     setFormError(null);
     Analytics.signupStarted(provider);
+    // Park the provider so /auth/callback can fire an accurate completion event
+    // with the right method after the full-page OAuth redirect (router state
+    // and this closure are both gone by then).
+    setPendingAuthMethod(provider);
     const failureMessage =
       provider === 'google' ? t('login.errors.googleFailed') : t('login.errors.appleFailed');
     try {

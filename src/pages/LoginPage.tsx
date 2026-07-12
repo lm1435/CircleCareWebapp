@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi, getApiError } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
+import { consumePendingInviteCode } from '@/lib/pendingInviteCode';
+import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { supabase } from '@/lib/supabase';
 import { Analytics } from '@/lib/analytics';
 import { Button } from '@/components/ui';
@@ -43,7 +45,7 @@ export default function LoginPage(): ReactElement {
 
   // AuthGuard preserved the intended location — return there after sign-in.
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-  const destination = from && from !== '/login' ? from : '/circles';
+  const stateDestination = from && from !== '/login' ? from : null;
 
   // Focus the inline error when it appears (auth failures are inline, not toasts).
   useEffect(() => {
@@ -80,7 +82,15 @@ export default function LoginPage(): ReactElement {
       const response = await authApi.login({ email: trimmedEmail, password });
       signIn(response.data.session, response.data.user);
       Analytics.loginCompleted('email');
-      navigate(destination, { replace: true });
+      // Router state wins when present (the invite landing page clears its
+      // pending code once authenticated). With no state — e.g. an invitee who
+      // bounced through /signup and came back — fall back to any invite code
+      // parked in sessionStorage by the invite landing page.
+      const pendingInvite = stateDestination ? null : consumePendingInviteCode();
+      navigate(
+        stateDestination ?? (pendingInvite ? `/invite/${pendingInvite}` : '/circles'),
+        { replace: true }
+      );
     } catch (err) {
       const apiError = getApiError(err);
       // PHI-safe: only the backend error CODE, never the email or full error.
@@ -106,6 +116,10 @@ export default function LoginPage(): ReactElement {
   const handleOAuth = async (provider: OAuthProvider): Promise<void> => {
     setFormError(null);
     Analytics.loginStarted(provider);
+    // Park the provider so /auth/callback can fire an accurate completion event
+    // with the right method after the full-page OAuth redirect (router state
+    // and this closure are both gone by then).
+    setPendingAuthMethod(provider);
     const failureMessage =
       provider === 'google' ? t('login.errors.googleFailed') : t('login.errors.appleFailed');
     try {

@@ -3,6 +3,9 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import { apiClient } from '@/lib/api';
+import { setPendingInviteCode } from '@/lib/pendingInviteCode';
+import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { Analytics } from '@/lib/analytics';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
 
@@ -79,6 +82,92 @@ describe('AuthCallbackPage', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
+  });
+
+  it('fires login_completed with the persisted provider exactly once on a successful exchange', async () => {
+    const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
+    setPendingAuthMethod('google');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
+    );
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(loginCompleted).toHaveBeenCalledTimes(1);
+    expect(loginCompleted).toHaveBeenCalledWith('google');
+    // Provider consumed — a later unrelated sign-in must not inherit it.
+    expect(sessionStorage.getItem('cc_pending_auth_method')).toBeNull();
+  });
+
+  it("falls back to the generic 'oauth' method when no provider was persisted", async () => {
+    const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
+    );
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(loginCompleted).toHaveBeenCalledTimes(1);
+    expect(loginCompleted).toHaveBeenCalledWith('oauth');
+  });
+
+  it('does NOT fire any completion event when the exchange fails', async () => {
+    const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
+    setPendingAuthMethod('apple');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
+    );
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginCompleted).not.toHaveBeenCalled();
+  });
+
+  it('resumes a pending invite handoff: consumes the parked code and lands on /invite/CODE', async () => {
+    setPendingInviteCode('ABC234');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
+    );
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/invite/ABC234', { replace: true })
+    );
+    // Consumed — the code must not redirect a later sign-in again.
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it('leaves the pending invite code parked when the exchange fails (retry via /login)', async () => {
+    setPendingInviteCode('ABC234');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
+    );
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    // Still parked — the "Back to Login" retry can complete the handoff.
+    expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
   });
 
   it('shows the error state (with a retry link to /login) when the provider returns an error', async () => {

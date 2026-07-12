@@ -1,6 +1,8 @@
-# Apache config for the CircleCare web companion (static SPA on shared hosting).
-# Vite copies public/ into dist/, so this ships inside the zip automatically.
-# Mirrors the intent of nginx.conf for Apache/cPanel (Namecheap) hosts.
+# Production web-server config for the CircleCare web companion.
+# my.circlecare.app is served by Namecheap shared hosting (LiteSpeed, Apache-
+# compatible) — this file IS the deployed server config, the single source of
+# truth for headers/rewrites. Vite copies public/ into dist/, so it ships
+# inside the upload automatically.
 
 # --- SPA fallback: send non-file routes to index.html so client routing works -
 <IfModule mod_rewrite.c>
@@ -33,12 +35,12 @@
     Header set Cache-Control "no-cache, no-store, must-revalidate"
   </Files>
 
-  # --- Security headers (replicate nginx.conf; edit origins to match prod) ----
+  # --- Security headers (edit origins if prod services change) ---------------
   # RevenueCat Web Billing: SDK fetches offerings from api.revenuecat.com
   # (connect-src); the hosted checkout loads Stripe Elements — js.stripe.com
   # (script-src + frame-src), api.stripe.com (connect-src), hooks.stripe.com
   # (frame-src). Without these the offerings call / Subscribe checkout are
-  # CSP-blocked. Keep in sync with nginx.conf.
+  # CSP-blocked.
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://js.stripe.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://da08ctfrofx1b.cloudfront.net; font-src 'self'; connect-src 'self' https://api.circlecare.app https://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com https://api.revenuecat.com https://api.rc-backup.com https://e.revenue.cat https://api.stripe.com; frame-src 'self' blob: https://*.supabase.co https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
   Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
   Header always set X-Content-Type-Options "nosniff"

@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { apiClient } from '@/lib/api';
+import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 import InviteLandingPage from '@/pages/InviteLandingPage';
 
 // Auth-aware accept flow added for web parity with mobile. Mocks useAuth +
@@ -58,6 +59,7 @@ function renderPage(code = 'abc123') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
   mockedPost.mockResolvedValue(validEnvelope);
   authState = { isAuthenticated: false, isBootstrapping: false };
 });
@@ -73,7 +75,20 @@ describe('InviteLandingPage — accept flow', () => {
     expect(navigate).toHaveBeenCalledWith('/login', {
       state: { from: { pathname: '/invite/ABC123' } },
     });
+    // The code is ALSO parked in sessionStorage — router state cannot survive
+    // the OAuth redirect or the signup → verify-email flow.
+    expect(consumePendingInviteCode()).toBe('ABC123');
     expect(acceptMutate).not.toHaveBeenCalled();
+  });
+
+  it('authenticated render clears any parked pending code (already at the destination)', async () => {
+    setPendingInviteCode('ABC123');
+    authState = { isAuthenticated: true, isBootstrapping: false };
+    renderPage('abc123');
+
+    await screen.findByRole('button', { name: 'Accept invitation' });
+
+    expect(consumePendingInviteCode()).toBeNull();
   });
 
   it('signed-in: accepts the invite and navigates to the circle picker', async () => {

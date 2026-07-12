@@ -8,6 +8,7 @@ import { StoreBadges } from '@/components/layout/StoreBadges';
 import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
 import { useAuth } from '@/hooks/useAuth';
 import { useAcceptInviteByCode } from '@/hooks/useJoinCircle';
+import { clearPendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 
 // ⚠️ NEXT STEPS to ship invite-link sharing:
 //   1. Re-enable the Share/Copy buttons in the mobile app — they're commented out
@@ -60,9 +61,9 @@ export default function InviteLandingPage(): ReactElement {
   const displayCode = code.trim().toUpperCase();
 
   const { data: invite, isPending, isError } = useQuery({
-    queryKey: ['invitePreview', code],
-    queryFn: () => previewInviteByCode(code),
-    enabled: code.length > 0,
+    queryKey: ['invitePreview', displayCode],
+    queryFn: () => previewInviteByCode(displayCode),
+    enabled: displayCode.length > 0,
     retry: false, // 404/400 are definitive; endpoint is rate-limited
     staleTime: Infinity,
   });
@@ -75,6 +76,13 @@ export default function InviteLandingPage(): ReactElement {
     },
     []
   );
+
+  // An authenticated visitor is already at the invite destination — drop any
+  // pending code parked by an earlier sign-in handoff so a stale code can't
+  // hijack a later post-auth landing.
+  useEffect(() => {
+    if (!isBootstrapping && isAuthenticated) clearPendingInviteCode();
+  }, [isBootstrapping, isAuthenticated]);
 
   // Accept the invite when the visitor is already signed in. The preview
   // endpoint doesn't expose the circle id, so on success we land on the circle
@@ -96,8 +104,12 @@ export default function InviteLandingPage(): ReactElement {
   }, [accept, displayCode, navigate, t]);
 
   // Not signed in: route to login, preserving this invite page as the return
-  // destination (LoginPage honors location.state.from.pathname).
+  // destination twice over — router state for the email/password path
+  // (LoginPage honors location.state.from.pathname) AND sessionStorage for the
+  // paths where router state cannot survive (OAuth full-page redirect,
+  // login → signup → verify-email).
   const handleSignIn = useCallback(() => {
+    setPendingInviteCode(displayCode);
     navigate('/login', { state: { from: { pathname: `/invite/${displayCode}` } } });
   }, [navigate, displayCode]);
 

@@ -56,12 +56,14 @@ describe('InviteLandingPage', () => {
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
   });
 
-  it('calls the public preview endpoint with an empty body', async () => {
+  it('calls the public preview endpoint with the NORMALIZED code and an empty body', async () => {
     mockedPost.mockResolvedValue(validEnvelope);
+    // Lowercase in the URL — the query must key/fetch on the normalized code
+    // so /invite/abc123 and /invite/ABC123 share one cache entry.
     renderPage('abc123');
 
     await waitFor(() => {
-      expect(mockedPost).toHaveBeenCalledWith('/invites/code/abc123/preview', {});
+      expect(mockedPost).toHaveBeenCalledWith('/invites/code/ABC123/preview', {});
     });
   });
 

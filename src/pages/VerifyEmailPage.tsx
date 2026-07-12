@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
+import { consumePendingInviteCode } from '@/lib/pendingInviteCode';
 import { Button } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { FormField } from '@/components/auth/FormField';
@@ -93,7 +94,10 @@ export default function VerifyEmailPage(): ReactElement {
           refresh_token: session.refresh_token,
         });
         signIn(exchanged.data.session, exchanged.data.user ?? user);
-        navigate('/circles', { replace: true });
+        // An invite handoff parks its code in sessionStorage (router state is
+        // lost across login → signup → verify-email) — resume it here.
+        const pendingInvite = consumePendingInviteCode();
+        navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
       } catch {
         // Verified, but the cookie session couldn't be established —
         // a normal login will work now.

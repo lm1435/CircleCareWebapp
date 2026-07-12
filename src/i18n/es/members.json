@@ -66,7 +66,9 @@
   },
   "errors": {
     "permissionDenied": "No tienes permiso para hacer eso.",
-    "saveFailed": "Algo salió mal. Por favor intenta de nuevo."
+    "saveFailed": "Algo salió mal. Por favor intenta de nuevo.",
+    "alreadyMember": "Esta persona ya es miembro de este círculo.",
+    "pendingInvite": "Esta persona ya tiene una invitación pendiente."
   },
   "invite": {
     "cta": "Invitar miembro",

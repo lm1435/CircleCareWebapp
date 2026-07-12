@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import LoginPage from '@/pages/LoginPage';
 import { apiClient } from '@/lib/api';
+import { setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { supabase } from '@/lib/supabase';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
@@ -29,17 +30,19 @@ const successEnvelope = {
   },
 };
 
-function renderLogin() {
+function renderLogin(state?: { from?: { pathname?: string } }) {
   return render(
-    <MemoryRouter initialEntries={['/login']}>
+    <MemoryRouter initialEntries={[{ pathname: '/login', state: state ?? null }]}>
       <LoginPage />
     </MemoryRouter>
   );
 }
 
-async function fillAndSubmit(email = 'pat@example.com', password = 'Secret#123') {
+async function fillAndSubmit(email = 'pat@example.com', password = 'Secret#123', state?: {
+  from?: { pathname?: string };
+}) {
   const user = userEvent.setup();
-  renderLogin();
+  renderLogin(state);
   // Labels carry a RequiredMarker (" * (required)") now that the fields pass
   // `required`, so match the leading label text rather than the exact string.
   await user.type(screen.getByLabelText(/^Email/), email);
@@ -53,6 +56,7 @@ describe('LoginPage', () => {
     mockNavigate.mockReset();
     mockedPost.mockReset();
     tokenAccessor.clear();
+    sessionStorage.clear();
     useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
   });
 
@@ -72,6 +76,36 @@ describe('LoginPage', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
+  });
+
+  it('falls back to a parked pending invite code when there is no router state', async () => {
+    // login → signup → back-to-login round trips lose state.from; the invite
+    // landing page parked the code in sessionStorage for exactly this case.
+    setPendingInviteCode('ABC234');
+    mockedPost.mockResolvedValueOnce(successEnvelope as never);
+
+    await fillAndSubmit();
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/invite/ABC234', { replace: true })
+    );
+    // Consumed — must not redirect a later sign-in again.
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it('prefers state.from over the parked code and leaves the code for the landing page to clear', async () => {
+    setPendingInviteCode('ABC234');
+    mockedPost.mockResolvedValueOnce(successEnvelope as never);
+
+    await fillAndSubmit('pat@example.com', 'Secret#123', {
+      from: { pathname: '/invite/ABC234' },
+    });
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/invite/ABC234', { replace: true })
+    );
+    // NOT consumed here — InviteLandingPage clears it on its authenticated render.
+    expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
   });
 
   it('routes EMAIL_NOT_VERIFIED to /verify-email with the email in router STATE (not query params)', async () => {
@@ -152,6 +186,9 @@ describe('LoginPage', () => {
     });
     // No backend call happens until the /auth/callback exchange
     expect(mockedPost).not.toHaveBeenCalled();
+    // Provider is parked so /auth/callback can attribute login_completed to it
+    // after the full-page redirect drops this closure's `provider`.
+    expect(sessionStorage.getItem('cc_pending_auth_method')).toBe('google');
   });
 
   it('shows an inline error when the OAuth broker fails', async () => {

@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
+import { consumePendingInviteCode } from '@/lib/pendingInviteCode';
+import { consumePendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { Analytics } from '@/lib/analytics';
 import { Spinner } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 
@@ -55,7 +58,21 @@ export default function AuthCallbackPage(): ReactElement {
           refresh_token: refreshToken,
         });
         signIn(response.data.session, response.data.user);
-        navigate('/circles', { replace: true });
+        // Fire the OAuth completion event exactly once, only on success. The
+        // provider was parked in sessionStorage before the redirect (this
+        // closure never saw it); fall back to the generic 'oauth' method when
+        // it's absent rather than guessing a provider.
+        //
+        // NOTE: we always emit login_completed, never signup_completed, for web
+        // OAuth. The backend /auth/oauth-session response (backend/src/routes/
+        // auth.ts) exposes no new-vs-returning-user flag, so distinguishing
+        // first-time sign-up from returning login would require a backend change
+        // that's out of scope here.
+        Analytics.loginCompleted(consumePendingAuthMethod() ?? 'oauth');
+        // An invite handoff parks its code in sessionStorage (router state
+        // cannot survive the OAuth full-page redirect) — resume it here.
+        const pendingInvite = consumePendingInviteCode();
+        navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
       } catch {
         setFailed(true);
       }

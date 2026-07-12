@@ -23,7 +23,12 @@ function capture(event: string, props?: Record<string, unknown>): void {
   posthog.capture(event, props);
 }
 
-type AuthMethod = 'email' | 'google' | 'apple';
+// 'oauth' is a web-only, provider-agnostic fallback: when an OAuth callback
+// fires a completion event but the specific provider couldn't be recovered
+// (e.g. the user deep-linked straight to /auth/callback, or Safari private-mode
+// blocked the sessionStorage handoff), we report the honest 'oauth' rather than
+// falsely attributing the sign-in to a guessed provider.
+type AuthMethod = 'email' | 'google' | 'apple' | 'oauth';
 type MedicationStatus = 'taken' | 'taken_late' | 'skipped';
 
 export const Analytics = {
