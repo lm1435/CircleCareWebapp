@@ -98,7 +98,7 @@ describe('AIChatModal', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     await waitFor(() =>
-      expect(screen.getByText(/reached your daily limit of 50 questions/i)).toBeInTheDocument()
+      expect(screen.getByText(/reached today's question limit/i)).toBeInTheDocument()
     );
   });
 

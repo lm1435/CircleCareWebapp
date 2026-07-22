@@ -1,7 +1,6 @@
 {
   "picker": {
     "heading": "My Circles",
-    "subheading": "Choose a circle to see its calendar and care details.",
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
@@ -22,13 +21,15 @@
     "errorTitle": "Unable to load circles",
     "errorBody": "Please check your connection and try again.",
     "empty": {
-      "title": "You're not part of any care circle yet.",
-      "body": "Create a circle to get started, or ask someone to invite you.",
+      "title": "Let's set up your care circle",
+      "body": "A circle is a private space where family and caregivers come together to care for someone you love — medications, appointments, and tasks, all in one place.",
       "howItWorksTitle": "How CircleCare works",
       "step1": "Create a circle for your loved one.",
-      "step2": "Invite family and caregivers to join.",
-      "step3": "Track medications and appointments together.",
+      "step2": "Invite family and caregivers to share the load.",
+      "step3": "Everyone sees the same calendar — medications, appointments, and tasks in one place.",
       "learnMore": "Learn more",
+      "invitedHintPrefix": "Already invited by email?",
+      "invitedHintLink": "Check your invitations",
       "companion": "Prefer your phone? Get the companion app."
     }
   },
@@ -41,18 +42,17 @@
   "roles": {
     "owner": "Owner",
     "caregiver": "Caregiver",
-    "careRecipient": "Care Recipient"
+    "careRecipient": "Care recipient"
   },
   "access": {
     "readOnly": "Read-only",
-    "viewOnly": "View Only",
-    "readOnlyOwnerSubtitle": "Re-subscribe to manage this circle",
+    "viewOnly": "View-only",
+    "readOnlyOwnerSubtitle": "Your subscription ended — view-only for now.",
     "readOnlyMemberSubtitle": "You can view but not edit this circle",
-    "viewOnlySubtitle": "View-only access. Contact owner for details."
+    "viewOnlySubtitle": "View-only — ask the circle owner if you need to make changes."
   },
   "list": {
     "heading": "Members",
-    "subheading": "Everyone in this care circle. Invite or remove members in the app.",
     "subheadingReadOnly": "Everyone helping coordinate care in this circle.",
     "joined": "Joined {{date}}",
     "you": "(you)",
@@ -65,7 +65,7 @@
     "soloCta": "Invite your first caregiver"
   },
   "errors": {
-    "permissionDenied": "You don't have permission to do that.",
+    "permissionDenied": "You don't have permission to make this change.",
     "saveFailed": "Something went wrong. Please try again.",
     "alreadyMember": "This person is already a member of this circle.",
     "pendingInvite": "This person already has a pending invitation."
@@ -98,12 +98,12 @@
     "removeConfirmTitle": "Remove member?",
     "removeConfirmBody": "{{name}} will lose access to this care circle. You can invite them again later.",
     "removeSuccess": "{{name}} was removed from this circle.",
-    "setMedResponsible": "Make med manager",
-    "clearMedResponsible": "Remove med manager",
+    "setMedResponsible": "Make medication manager",
+    "clearMedResponsible": "Remove medication manager",
     "medResponsibleSet": "{{name}} now manages medication reminders.",
     "medResponsibleCleared": "Medication manager cleared.",
     "pendingHeading": "Pending invites",
-    "cancelInvite": "Cancel",
+    "cancelInvite": "Cancel invite",
     "cancelInviteLabel": "Cancel invite for {{email}}",
     "cancelInviteSuccess": "Invitation canceled.",
     "cancelInviteConfirmTitle": "Cancel this invite?",
@@ -122,6 +122,8 @@
     "accept": "Accept",
     "accepting": "Joining…",
     "accepted": "You joined {{circle}}.",
+    "openCircle": "Open circle",
+    "ignoreHint": "Not ready to join? You can simply leave an invitation here — nothing happens until you accept.",
     "emptyTitle": "No pending invitations",
     "emptyBody": "When someone invites you to a care circle, it will appear here.",
     "errorTitle": "Unable to load invitations",

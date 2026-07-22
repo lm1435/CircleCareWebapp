@@ -1,12 +1,12 @@
 import type { ReactElement } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 /**
  * Banner shown when a circle is read-only (`read_only` from GET /circles —
  * owner on free tier with 2+ circles and this one not selected on downgrade).
- * Plan Task 38. Owner copy matches mobile's `readOnlyBannerTitle`; member copy
- * per plan ("You can view but not edit this circle."). No purchase flow on
- * web — re-subscribing happens in the app.
+ * Plan Task 38. Owners additionally get a "Re-subscribe" link to /upgrade so
+ * the banner offers a way out, not just a lock.
  */
 export interface ReadOnlyCircleBannerProps {
   /** True when the current user owns the circle (circle.role === 'owner'). */
@@ -43,6 +43,14 @@ export function ReadOnlyCircleBanner({ isOwner, className }: ReadOnlyCircleBanne
     <div role="status" className={className ? `${base} ${className}` : base}>
       <LockIcon />
       <p className="m-0">{isOwner ? t('readOnly.ownerBanner') : t('readOnly.memberBanner')}</p>
+      {isOwner ? (
+        <Link
+          to="/upgrade"
+          className="ml-auto shrink-0 font-medium text-terracotta-deep underline-offset-4 hover:underline"
+        >
+          {t('readOnly.ownerUpgradeCta')}
+        </Link>
+      ) : null}
     </div>
   );
 }

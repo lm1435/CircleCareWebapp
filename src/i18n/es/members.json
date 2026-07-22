@@ -1,7 +1,6 @@
 {
   "picker": {
-    "heading": "Mis Círculos",
-    "subheading": "Elige un círculo para ver su calendario y detalles de cuidado.",
+    "heading": "Mis círculos",
     "greeting": {
       "morning": "Buenos días",
       "afternoon": "Buenas tardes",
@@ -20,15 +19,17 @@
     "memberCount_one": "{{count}} miembro",
     "memberCount_other": "{{count}} miembros",
     "errorTitle": "No se pudieron cargar los círculos",
-    "errorBody": "Por favor revisa tu conexión e intenta de nuevo.",
+    "errorBody": "Revisa tu conexión e intenta de nuevo.",
     "empty": {
-      "title": "Aún no formas parte de ningún círculo de cuidado.",
-      "body": "Crea un círculo para empezar, o pide que alguien te invite.",
+      "title": "Configuremos tu círculo de cuidado",
+      "body": "Un círculo es un espacio privado donde la familia y los cuidadores se unen para cuidar a un ser querido: medicamentos, citas y tareas, todo en un solo lugar.",
       "howItWorksTitle": "Cómo funciona CircleCare",
       "step1": "Crea un círculo para tu ser querido.",
-      "step2": "Invita a familiares y cuidadores a unirse.",
-      "step3": "Lleva el control de medicamentos y citas en conjunto.",
+      "step2": "Invita a familiares y cuidadores para compartir la carga.",
+      "step3": "Todos ven el mismo calendario: medicamentos, citas y tareas en un solo lugar.",
       "learnMore": "Conoce más",
+      "invitedHintPrefix": "¿Ya te invitaron por correo?",
+      "invitedHintLink": "Revisa tus invitaciones",
       "companion": "¿Prefieres el teléfono? Descarga la app complementaria."
     }
   },
@@ -39,33 +40,32 @@
     "takenOverdue": "{{taken}}/{{total}} tomados · {{overdue}} atrasados"
   },
   "roles": {
-    "owner": "Dueño",
+    "owner": "Propietario",
     "caregiver": "Cuidador",
-    "careRecipient": "Receptor de Cuidado"
+    "careRecipient": "Receptor de cuidado"
   },
   "access": {
     "readOnly": "Solo lectura",
-    "viewOnly": "Solo Lectura",
-    "readOnlyOwnerSubtitle": "Vuelve a suscribirte para administrar este círculo",
+    "viewOnly": "Solo visualización",
+    "readOnlyOwnerSubtitle": "Tu suscripción terminó: solo lectura por ahora.",
     "readOnlyMemberSubtitle": "Puedes ver este círculo, pero no editarlo",
-    "viewOnlySubtitle": "Acceso de solo lectura. Contacta al dueño para más detalles."
+    "viewOnlySubtitle": "Solo visualización: habla con el propietario si necesitas hacer cambios."
   },
   "list": {
     "heading": "Miembros",
-    "subheading": "Todos en este círculo de cuidado. Invita o elimina miembros en la app.",
     "subheadingReadOnly": "Todos los que ayudan a coordinar el cuidado en este círculo.",
     "joined": "Se unió el {{date}}",
     "you": "(tú)",
     "medResponsible": "Administra los recordatorios de medicamentos",
     "errorTitle": "No se pudieron cargar los miembros",
-    "errorBody": "Por favor revisa tu conexión e intenta de nuevo.",
+    "errorBody": "Revisa tu conexión e intenta de nuevo.",
     "empty": "Aún no hay miembros en este círculo.",
     "soloTitle": "Cuidar es más fácil en equipo",
     "soloBody": "Invita a un familiar o cuidador a ayudar a coordinar el cuidado de tu ser querido: compartan tareas, citas y novedades para que nadie lo lleve solo.",
     "soloCta": "Invita a tu primer cuidador"
   },
   "errors": {
-    "permissionDenied": "No tienes permiso para hacer eso.",
+    "permissionDenied": "No tienes permiso para hacer este cambio.",
     "saveFailed": "Algo salió mal. Por favor intenta de nuevo.",
     "alreadyMember": "Esta persona ya es miembro de este círculo.",
     "pendingInvite": "Esta persona ya tiene una invitación pendiente."
@@ -96,14 +96,14 @@
     "remove": "Eliminar",
     "removeMemberLabel": "Eliminar a {{name}}",
     "removeConfirmTitle": "¿Eliminar miembro?",
-    "removeConfirmBody": "{{name}} perderá el acceso a este círculo de cuidado. Puedes volver a invitarlo más tarde.",
-    "removeSuccess": "{{name}} fue eliminado de este círculo.",
-    "setMedResponsible": "Asignar de medicamentos",
-    "clearMedResponsible": "Quitar de medicamentos",
+    "removeConfirmBody": "{{name}} perderá el acceso a este círculo de cuidado. Puedes enviarle otra invitación más tarde.",
+    "removeSuccess": "Se eliminó a {{name}} de este círculo.",
+    "setMedResponsible": "Asignar encargado de medicamentos",
+    "clearMedResponsible": "Quitar encargado de medicamentos",
     "medResponsibleSet": "{{name}} ahora administra los recordatorios de medicamentos.",
     "medResponsibleCleared": "Se quitó el encargado de medicamentos.",
     "pendingHeading": "Invitaciones pendientes",
-    "cancelInvite": "Cancelar",
+    "cancelInvite": "Cancelar invitación",
     "cancelInviteLabel": "Cancelar invitación para {{email}}",
     "cancelInviteSuccess": "Invitación cancelada.",
     "cancelInviteConfirmTitle": "¿Cancelar esta invitación?",
@@ -112,7 +112,7 @@
     "keepInvite": "Mantener invitación",
     "leave": "Salir del círculo",
     "leaveConfirmTitle": "¿Salir de este círculo?",
-    "leaveConfirmBody": "Perderás el acceso a este círculo de cuidado. El dueño puede volver a invitarte más tarde.",
+    "leaveConfirmBody": "Perderás el acceso a este círculo de cuidado. El propietario puede volver a invitarte más tarde.",
     "leaveSuccess": "Saliste del círculo."
   },
   "pending": {
@@ -122,9 +122,11 @@
     "accept": "Aceptar",
     "accepting": "Uniéndote…",
     "accepted": "Te uniste a {{circle}}.",
+    "openCircle": "Abrir círculo",
+    "ignoreHint": "¿No quieres unirte todavía? Puedes dejar la invitación aquí; no pasa nada hasta que aceptes.",
     "emptyTitle": "No hay invitaciones pendientes",
     "emptyBody": "Cuando alguien te invite a un círculo de cuidado, aparecerá aquí.",
     "errorTitle": "No se pudieron cargar las invitaciones",
-    "errorBody": "Por favor revisa tu conexión e intenta de nuevo."
+    "errorBody": "Revisa tu conexión e intenta de nuevo."
   }
 }

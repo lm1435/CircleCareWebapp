@@ -1,26 +1,27 @@
 {
   "viewOnly": {
-    "banner": "Acceso de solo lectura. Contacta a {{ownerName}} para más detalles.",
-    "bannerShort": "Acceso de solo lectura"
+    "banner": "Tienes acceso de solo visualización: los círculos gratuitos incluyen dos cuidadores con edición. Si necesitas hacer cambios, habla con {{ownerName}} sobre mejorar el plan.",
+    "bannerShort": "Solo visualización: puedes ver todo, pero no hacer cambios."
   },
   "readOnly": {
-    "ownerBanner": "Vuelve a suscribirte para administrar este círculo.",
-    "memberBanner": "Puedes ver este círculo, pero no editarlo."
+    "ownerBanner": "Tu suscripción terminó, así que este círculo está en solo lectura por ahora. Todo está guardado; vuelve a suscribirte para continuar donde lo dejaste.",
+    "ownerUpgradeCta": "Volver a suscribirse",
+    "memberBanner": "Este círculo está en solo lectura porque terminó la suscripción del propietario. Todo sigue aquí para consultarlo, y la edición volverá si el propietario se vuelve a suscribir."
   },
   "circleSelection": {
     "banner": "Tu suscripción terminó. Elige qué círculo conservar con acceso gratuito.",
     "choose": "Elegir círculo",
     "title": "Elige un círculo para conservar",
     "subtitle": "Tu suscripción ha terminado. Elige qué círculo conservar con acceso gratuito. Tus otros círculos quedarán en solo lectura hasta que vuelvas a suscribirte.",
-    "memberCount": "{{count}} integrante",
-    "memberCount_plural": "{{count}} integrantes",
+    "memberCount_one": "{{count}} miembro",
+    "memberCount_other": "{{count}} miembros",
     "confirmButton": "Confirmar selección",
-    "confirmTitle": "¿Estás seguro?",
-    "confirmMessage": "Esta elección es permanente. Tus otros círculos quedarán en solo lectura. Puedes volver a suscribirte cuando quieras para restaurar el acceso completo.",
+    "confirmTitle": "¿Conservar este círculo?",
+    "confirmMessage": "Esta elección solo se puede hacer una vez: no podrás cambiar qué círculo queda gratuito. No se elimina nada: tus otros círculos quedan seguros en solo lectura, y al volver a suscribirte recuperas el acceso completo a todos.",
     "confirmKeep": "Conservar este círculo",
     "cancel": "Cancelar",
     "back": "Atrás",
-    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "error": "Algo salió mal. Por favor intenta de nuevo.",
     "close": "Cerrar"
   }
 }

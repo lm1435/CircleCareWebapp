@@ -13,7 +13,6 @@
   "today": "Today",
   "expandAll": "Expand all",
   "collapseAll": "Collapse all",
-  "comingSoon": "Coming soon",
   "skipToContent": "Skip to content",
   "pageTitles": {
     "login": "Sign in",
@@ -34,7 +33,8 @@
     "documents": "Documents",
     "vitals": "Vitals",
     "members": "Members",
-    "settings": "Edit circle"
+    "settings": "Edit circle",
+    "notFound": "Page not found"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -62,12 +62,17 @@
   },
   "errors": {
     "saveFailed": "Couldn't save your changes. Please try again.",
-    "subscriptionRequired": "Open the CircleCare app to upgrade and unlock this.",
+    "subscriptionRequired": "That's a Premium feature. Open the CircleCare app to upgrade and unlock it.",
     "permissionDenied": "You don't have permission to make this change."
   },
   "upgradeGate": {
-    "message": "This is a Premium feature.",
+    "message": "That feature isn't included in the free plan. Upgrade to Premium to unlock it for your whole circle.",
     "action": "Upgrade"
+  },
+  "notFound": {
+    "title": "We couldn't find that page",
+    "body": "The link may be old or mistyped. Your circles are still right where you left them.",
+    "cta": "Go to my circles"
   },
   "create": {
     "button": "Create",
@@ -85,14 +90,13 @@
   },
   "header": {
     "switchCircle": "Switch circle",
-    "circlesError": "Couldn't load your circles",
+    "circlesError": "Couldn't load your circles.",
     "account": "Account",
     "logout": "Log out"
   },
   "downloadApp": {
     "title": "Get the full experience.",
     "subtitle": "Download CircleCare for iOS or Android.",
-    "cta": "Download the App",
     "appStore": "Download on the App Store",
     "googlePlay": "Get it on Google Play",
     "appStoreLead": "Download on the",
@@ -102,8 +106,7 @@
   },
   "downloadBanner": {
     "regionLabel": "Get the app",
-    "message": "Get the full CircleCare experience in the app.",
-    "mobileMessage": "CircleCare is better in the app.",
+    "message": "For reminders on the go, get the CircleCare app.",
     "getApp": "Get the app",
     "dismiss": "Dismiss app download banner"
   },
@@ -123,7 +126,8 @@
     "step2Desc": "Share the load — they see the same schedule and updates.",
     "step3Label": "Add emergency info",
     "step3Desc": "Allergies, doctors, and contacts ready the moment they're needed.",
-    "action": "Add",
+    "actionAdd": "Add",
+    "actionInvite": "Invite",
     "statusDone": "(done)",
     "statusPending": "(to do)",
     "dismiss": "Dismiss the get started checklist"

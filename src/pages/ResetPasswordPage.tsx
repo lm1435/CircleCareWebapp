@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { Button } from '@/components/ui';
@@ -124,7 +124,7 @@ export default function ResetPasswordPage(): ReactElement {
           className="w-full"
           onClick={() => navigate('/login', { replace: true })}
         >
-          {t('resetPassword.backToLogin')}
+          {t('resetPassword.signInNow')}
         </Button>
       </AuthShell>
     );
@@ -196,6 +196,17 @@ export default function ResetPasswordPage(): ReactElement {
           {isResetting ? t('resetPassword.resetting') : t('resetPassword.resetButton')}
         </Button>
       </form>
+
+      <p className="m-0 mt-6 text-center">
+        <Link to="/forgot-password" className="text-sm font-medium text-terracotta-deep">
+          {t('resetPassword.requestNewCode')}
+        </Link>
+      </p>
+      <p className="m-0 mt-4 text-center">
+        <Link to="/login" className="text-sm font-medium text-terracotta-deep">
+          {t('resetPassword.backToLogin')}
+        </Link>
+      </p>
     </AuthShell>
   );
 }

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { AuthGuard } from '@/components/AuthGuard';
+import { PageviewTracker } from '@/components/PageviewTracker';
 import { RouteTitle } from '@/components/RouteTitle';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
@@ -24,14 +25,17 @@ import EditCirclePage from '@/pages/EditCirclePage';
 import ProfilePage from '@/pages/ProfilePage';
 import HelpPage from '@/pages/HelpPage';
 import UpgradePage from '@/pages/UpgradePage';
+import NotFoundPage from '@/pages/NotFoundPage';
 
 export const router = createBrowserRouter([
-  // Root layout: keeps the per-route document <title> (RouteTitle) in sync for
-  // every path while leaving each page's own rendering untouched (WCAG 2.4.2).
+  // Root layout: keeps the per-route document <title> (RouteTitle) in sync and
+  // fires sanitized $pageview events (PageviewTracker) for every path while
+  // leaving each page's own rendering untouched (WCAG 2.4.2).
   {
     element: (
       <>
         <RouteTitle />
+        <PageviewTracker />
         <Outlet />
       </>
     ),
@@ -88,8 +92,9 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Fallback
-  { path: '*', element: <Navigate to="/circles" replace /> },
+  // Fallback — a real 404 instead of silently redirecting broken links home.
+  // Public: signed-out visitors see it too; its CTA goes through AuthGuard.
+  { path: '*', element: <NotFoundPage /> },
     ],
   },
 ]);

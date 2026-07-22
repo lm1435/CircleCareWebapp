@@ -52,7 +52,7 @@ export function EventDetailModal({
 
   // scheduled_date is a NAIVE date in the care recipient's timezone — format
   // via the UTC-noon pattern, never new Date(scheduled_date) device-local.
-  const dateLabel = formatDateForDisplay(event.scheduled_date, locale, {
+  const dateLabel = formatDateForDisplay(event.scheduled_date, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -63,7 +63,7 @@ export function EventDetailModal({
     ? formatEventTimeForDisplay(event.scheduled_time, careRecipientTimezone)
     : t('calendar:allDay');
 
-  const recurrenceLabel = formatRecurrenceLabel(event, t, locale);
+  const recurrenceLabel = formatRecurrenceLabel(event, t);
 
   const medStatus = getMedicationStatus(event, careRecipientTimezone);
   let statusLabel: string | null = null;

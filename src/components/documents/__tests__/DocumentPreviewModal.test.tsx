@@ -132,7 +132,7 @@ describe('DocumentPreviewModal', () => {
 
     render(<DocumentPreviewModal doc={baseDoc} circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
-    expect(await screen.findByText("We couldn't load the preview.")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load the preview.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('img', { name: 'Insurance Card' })).toBeInTheDocument();
@@ -143,7 +143,7 @@ describe('DocumentPreviewModal', () => {
     mockSignedUrl(baseDoc, null);
     render(<DocumentPreviewModal doc={baseDoc} circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
-    expect(await screen.findByText("We couldn't load the preview.")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load the preview.")).toBeInTheDocument();
   });
 
   it('downloads from the already-fetched signed URL via a temporary anchor', async () => {

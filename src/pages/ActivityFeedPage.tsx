@@ -1,5 +1,5 @@
 import { useMemo, type ReactElement } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ActivityFeedItem } from '@/api/activityFeed';
 import { ActivityItem } from '@/components/activity/ActivityItem';
@@ -8,6 +8,7 @@ import { formatDayLabel, getLocalDateKey } from '@/components/activity/activityF
 import { Button, Card, EmptyState, Skeleton } from '@/components/ui';
 import { ActivityIcon } from '@/components/ui/emptyStateIcons';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
+import { useCircle } from '@/hooks/useCircle';
 
 // Activity feed page (Task 25): read-only feed grouped by viewer-local day
 // (Today / Yesterday / date headings) with "Load more" pagination against
@@ -22,7 +23,9 @@ interface DayGroup {
 
 export default function ActivityFeedPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
-  const { t, i18n } = useTranslation(['activity', 'common']);
+  const { t } = useTranslation(['activity', 'common']);
+  // Gates the empty-state invite CTA — view-only members can't invite.
+  const { canEdit } = useCircle(circleId);
 
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useActivityFeed(circleId);
@@ -87,7 +90,13 @@ export default function ActivityFeedPage(): ReactElement {
               icon={<ActivityIcon />}
               title={t('activity:noActivity')}
               description={t('activity:noActivityHint')}
-            />
+            >
+              {canEdit ? (
+                <Link to={`/circles/${circleId}/members`} className="btn btn-ghost">
+                  {t('activity:inviteCta')}
+                </Link>
+              ) : null}
+            </EmptyState>
           </Card>
         )}
 
@@ -98,7 +107,7 @@ export default function ActivityFeedPage(): ReactElement {
             {dayGroups.map((group) => (
               <div key={group.date}>
                 <h2 className="m-0 mt-6 border-b border-line pb-2 text-lg font-semibold text-ink first:mt-0">
-                  {formatDayLabel(group.date, t, i18n.language)}
+                  {formatDayLabel(group.date, t)}
                 </h2>
                 <ul className="m-0 list-none p-0">
                   {group.activities.map((activity) => (

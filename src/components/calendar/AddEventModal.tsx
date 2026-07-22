@@ -127,6 +127,8 @@ export function AddEventModal({
   const isEditing = !!event;
   // Edits ALWAYS target the parent series (mobile has no "this event only" edit).
   const targetEventId = isEditing ? event.parent_event_id || event.id : undefined;
+  // Editing any instance of a recurring event rewrites the whole series — warn.
+  const isRecurringEdit = isEditing && (!!event.parent_event_id || !!event.recurrence_rule);
 
   const [eventType, setEventType] = useState<EventType>(
     event?.event_type ?? initialType ?? 'medication'
@@ -342,10 +344,10 @@ export function AddEventModal({
     try {
       if (isEditing && targetEventId) {
         await updateEvent.mutateAsync({ eventId: targetEventId, data: built.data });
-        showToast(t('addEvent.updated'), 'success');
+        showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
       } else {
         await createEvent.mutateAsync(built.data);
-        showToast(t('addEvent.created'), 'success');
+        showToast(t(createdToastKey(eventType)), 'success');
       }
       onSaved?.();
       onClose();
@@ -388,6 +390,16 @@ export function AddEventModal({
       }
     >
       <form id="add-event-form" onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        {/* Recurring edits rewrite the whole series — keep the warning visible. */}
+        {isRecurringEdit && (
+          <p
+            role="note"
+            className="m-0 rounded-xl border border-line-2 bg-bg-2 p-3 text-sm text-ink-2"
+          >
+            {t('addEvent.recurringEditNotice')}
+          </p>
+        )}
+
         {/* Type selector — locked in edit mode, like mobile. */}
         <Select
           id="event_type"
@@ -584,6 +596,20 @@ export function AddEventModal({
       </form>
     </Modal>
   );
+}
+
+/** Type-aware create-success toast key, falling back to the generic one. */
+function createdToastKey(eventType: EventType): string {
+  switch (eventType) {
+    case 'medication':
+      return 'addEvent.createdMedication';
+    case 'appointment':
+      return 'addEvent.createdAppointment';
+    case 'task':
+      return 'addEvent.createdTask';
+    default:
+      return 'addEvent.created';
+  }
 }
 
 /** Map a recurrence choice to its i18n key under addEvent.recurrence.*. */

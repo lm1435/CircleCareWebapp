@@ -133,12 +133,13 @@ describe('ActivityFeedPage', () => {
     // Items live in a semantic list
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
 
-    // "Latest / LIVE" hero spotlights the most recent entry when there is data:
+    // "Latest / New" hero spotlights the most recent entry when there is data:
     // it LEADS WITH WHAT HAPPENED (the same localized description the feed rows
-    // render), attributed to the actor with the relative time, plus LIVE state.
+    // render), attributed to the actor with the relative time, plus a "New"
+    // badge (never "LIVE" — the feed is fetched, not realtime).
     const hero = screen.getByRole('region', { name: 'Latest' });
     expect(hero).toBeInTheDocument();
-    expect(within(hero).getByText('LIVE')).toBeInTheDocument();
+    expect(within(hero).getByText('New')).toBeInTheDocument();
     expect(
       within(hero).getByText('Confirmed Medication: Aspirin 100mg (taken)')
     ).toBeInTheDocument();
@@ -246,14 +247,16 @@ describe('ActivityFeedPage', () => {
 
     expect(await screen.findByText('No Activity Yet')).toBeInTheDocument();
     expect(
-      screen.getByText('Activity will appear here as your care team takes actions.')
+      screen.getByText(
+        "Activity will appear here as your care team takes actions. Activity is better together — invite family and caregivers so everyone can see what's been handled."
+      )
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
     expect(screen.queryByText("You're all caught up.")).not.toBeInTheDocument();
 
-    // The "Latest / LIVE" hero must never render on the empty state.
+    // The "Latest / New" hero must never render on the empty state.
     expect(screen.queryByRole('region', { name: 'Latest' })).not.toBeInTheDocument();
-    expect(screen.queryByText('LIVE')).not.toBeInTheDocument();
+    expect(screen.queryByText('New')).not.toBeInTheDocument();
   });
 
   it('renders the error state and recovers on retry', async () => {

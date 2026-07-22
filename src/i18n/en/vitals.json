@@ -49,11 +49,11 @@
   },
   "delete": {
     "title": "Delete this reading?",
-    "message": "This reading will be permanently removed. This can't be undone."
+    "message": "Delete the {{type}} reading from {{date}}? This can't be undone."
   },
   "empty": {
     "title": "No readings yet",
-    "hint": "Track your loved one's vitals over time so the whole circle can spot trends and share them at the next appointment.",
+    "hint": "Track your loved one's vitals over time — blood pressure, weight, and more — so the whole circle can watch trends.",
     "hintReadOnly": "Readings logged for this circle will appear here so everyone can follow your loved one's health over time.",
     "cta": "Log a reading"
   },
@@ -67,7 +67,7 @@
     "valueRequired": "Please enter a value.",
     "dateRequired": "Please choose a date.",
     "timeRequired": "Please choose a time.",
-    "valueOutOfRange": "That value is outside the expected range.",
+    "valueOutOfRange": "That looks outside the expected range. Double-check the number.",
     "diastolicRequired": "Please enter the diastolic value.",
     "value2NotAllowed": "This reading takes a single value.",
     "invalidUnit": "That unit isn't valid for this reading.",

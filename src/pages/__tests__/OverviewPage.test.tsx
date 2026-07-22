@@ -120,7 +120,7 @@ describe('OverviewPage', () => {
   it('shows the empty task state and links into each section', () => {
     setHooks();
     renderOverview();
-    expect(screen.getByText('No open tasks right now.')).toBeInTheDocument();
+    expect(screen.getByText("You're all caught up — no open tasks.")).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View all tasks' })).toHaveAttribute(
       'href',
       '/circles/c1/tasks'

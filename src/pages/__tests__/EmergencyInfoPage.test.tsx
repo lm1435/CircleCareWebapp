@@ -318,9 +318,7 @@ describe('EmergencyInfoPage', () => {
     });
     renderPage();
 
-    expect(
-      await screen.findByText("We couldn't load the emergency information.")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load emergency info")).toBeInTheDocument();
 
     // Retry refetches and renders the data
     mockApi(fullInfo);

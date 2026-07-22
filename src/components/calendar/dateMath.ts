@@ -1,3 +1,5 @@
+import i18n from '@/i18n';
+
 // Date-only arithmetic on YYYY-MM-DD strings using UTC methods exclusively.
 // Mirrors backend/src/utils/recurrence.ts helpers. NEVER use device-local
 // getDay()/getDate()/setDate() for date iteration — local methods shift dates
@@ -78,8 +80,8 @@ export function isSameMonth(a: string, b: string): boolean {
  */
 export function formatDateForDisplay(
   dateStr: string,
-  locale: string,
-  options: Intl.DateTimeFormatOptions
+  options: Intl.DateTimeFormatOptions,
+  locale: string = i18n.language
 ): string {
   return new Intl.DateTimeFormat(locale, { timeZone: 'UTC', ...options }).format(
     new Date(`${dateStr}T12:00:00Z`)
@@ -93,8 +95,8 @@ export function formatDateForDisplay(
  */
 export function getWeekdayName(
   dayIndex: number,
-  locale: string,
-  width: 'narrow' | 'short' | 'long' = 'short'
+  width: 'narrow' | 'short' | 'long' = 'short',
+  locale: string = i18n.language
 ): string {
   const ref = new Date(Date.UTC(2024, 0, 7 + dayIndex, 12));
   return new Intl.DateTimeFormat(locale, { timeZone: 'UTC', weekday: width }).format(ref);

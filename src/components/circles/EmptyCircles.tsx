@@ -74,6 +74,17 @@ export function EmptyCircles({ action, joinAction }: EmptyCirclesProps): ReactEl
         {/* Secondary action — join an existing circle by invite code */}
         {joinAction ? <div className="mt-4">{joinAction}</div> : null}
 
+        {/* Already invited by email — point at the pending-invitations page */}
+        <p className="m-0 mt-4 text-sm text-ink-3">
+          {t('picker.empty.invitedHintPrefix')}{' '}
+          <Link
+            to="/invites"
+            className="font-medium text-terracotta-deep underline-offset-4 hover:underline"
+          >
+            {t('picker.empty.invitedHintLink')}
+          </Link>
+        </p>
+
         {/* Companion app — secondary, below a hairline divider */}
         <div className="mt-8 w-full border-t border-line-2 pt-6">
           <p className="m-0 text-sm text-ink-3">{t('picker.empty.companion')}</p>

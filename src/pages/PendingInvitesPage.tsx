@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, EmptyState, Skeleton, useToast } from '@/components/ui';
 import { usePendingInvites, useAcceptInvite } from '@/hooks/useInvites';
@@ -47,6 +48,9 @@ export default function PendingInvitesPage(): ReactElement {
   const { data: invites, isPending, isError, refetch } = usePendingInvites();
   const acceptInvite = useAcceptInvite();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  // The most recently joined circle — gives the user a forward path ("Open
+  // circle") instead of leaving them stranded on this page after accepting.
+  const [joined, setJoined] = useState<{ id: string; name: string } | null>(null);
 
   const handleAccept = (invite: PendingInvite): void => {
     setAcceptingId(invite.id);
@@ -58,6 +62,7 @@ export default function PendingInvitesPage(): ReactElement {
           // inviteId, so the capture lives at the call site).
           Analytics.inviteAccepted(invite.circle.id);
           showToast(t('pending.accepted', { circle: invite.circle.name }), 'success');
+          setJoined({ id: invite.circle.id, name: invite.circle.name });
           setAcceptingId(null);
         },
         onError: () => {
@@ -138,11 +143,30 @@ export default function PendingInvitesPage(): ReactElement {
     );
   }
 
+  const hasInvites = !isPending && !isError && invites != null && invites.length > 0;
+
   return (
     <section className="mx-auto w-full max-w-4xl p-8">
       <h1 className="serif m-0 text-xl text-ink">{t('pending.heading')}</h1>
       <p className="mt-2 text-ink-3">{t('pending.subheading')}</p>
+      {joined ? (
+        <Card
+          role="status"
+          className="mt-6 flex flex-wrap items-center justify-between gap-3 p-6"
+        >
+          <p className="m-0 font-medium text-ink">
+            {t('pending.accepted', { circle: joined.name })}
+          </p>
+          <Link
+            to={`/circles/${joined.id}`}
+            className="shrink-0 font-medium text-terracotta-deep underline-offset-4 hover:underline"
+          >
+            {t('pending.openCircle')}
+          </Link>
+        </Card>
+      ) : null}
       {content}
+      {hasInvites ? <p className="mt-6 text-sm text-ink-3">{t('pending.ignoreHint')}</p> : null}
     </section>
   );
 }

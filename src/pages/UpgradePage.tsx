@@ -198,6 +198,9 @@ function PlansView({ plans, pending, onSubscribe, onBack }: PlansViewProps): Rea
         </div>
       </fieldset>
 
+      {/* Free-plan baseline so "unlimited" claims have a reference point. */}
+      <p className="m-0 mt-3 text-xs text-ink-3">{t('freeBaseline')}</p>
+
       <Button
         variant="terracotta"
         size="lg"

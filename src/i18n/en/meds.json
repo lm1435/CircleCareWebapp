@@ -1,6 +1,6 @@
 {
-  "title": "Today's Meds",
-  "empty": "No medications today",
+  "title": "Today's medications",
+  "empty": "No medications scheduled today. Add them from the calendar so the whole circle knows what's needed and when.",
   "loadError": "Couldn't load today's medications",
   "confirm": "Confirm",
   "skip": "Skip",
@@ -10,7 +10,8 @@
     "taken": "Taken",
     "missed": "Missed",
     "pending": "Pending",
-    "skipped": "Skipped"
+    "skipped": "Skipped",
+    "unconfirmed": "Not confirmed"
   },
   "dialog": {
     "title": "Confirm medication",
@@ -21,7 +22,8 @@
     "notePlaceholder": "Add a note",
     "submit": "Save",
     "submitting": "Saving...",
-    "success": "Medication updated",
+    "successTaken": "Marked as taken",
+    "successSkipped": "Marked as skipped",
     "error": "Couldn't save. Please try again.",
     "cancel": "Cancel"
   },

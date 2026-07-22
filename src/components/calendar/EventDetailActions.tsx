@@ -35,7 +35,7 @@ export function EventDetailActions({
   async function handleComplete(): Promise<void> {
     try {
       await completeEvent.mutateAsync(event.id);
-      showToast(t('addEvent.updated'), 'success');
+      showToast(t('eventDetail.completedToast'), 'success');
     } catch {
       // useCompleteEvent surfaces its own toasts.
     }
@@ -49,7 +49,7 @@ export function EventDetailActions({
           disabled={completeEvent.isPending}
           onClick={() => void handleComplete()}
         >
-          {t('common:confirm')}
+          {t('eventDetail.markComplete')}
         </Button>
       )}
       <Button variant="ghost" onClick={onEdit}>

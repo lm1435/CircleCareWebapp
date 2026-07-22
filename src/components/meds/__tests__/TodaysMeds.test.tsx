@@ -11,6 +11,7 @@
 
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Mock } from 'vitest';
 import '@/i18n';
@@ -75,7 +76,7 @@ const DEFAULT_MEDS: TodaysMedication[] = [
     scheduled_time: '09:00:00',
     confirmation: { status: 'skipped', confirmed_at: '2026-06-12T13:00:00Z', confirmed_by: 'u1' },
   }),
-  // 10:00 ET is before the pinned 12:00 ET "now" → past due, unconfirmed → Missed
+  // 10:00 ET is before the pinned 12:00 ET "now" → past due, unconfirmed → Not confirmed
   makeMed({ id: 'med-3', medication_name: 'Atorvastatin', scheduled_time: '10:00:00' }),
   // 8:00 PM ET is after "now" → Pending
   makeMed({
@@ -112,11 +113,13 @@ function renderWidget(): { queryClient: QueryClient } {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <TodaysMeds circleId={CIRCLE_ID} />
-      </ToastProvider>
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <TodaysMeds circleId={CIRCLE_ID} />
+        </ToastProvider>
+      </QueryClientProvider>
+    </MemoryRouter>
   );
   return { queryClient };
 }
@@ -156,14 +159,14 @@ describe('TodaysMeds', () => {
     // Status badges per state
     expect(within(medRow('Lisinopril')).getByText('Taken')).toBeInTheDocument();
     expect(within(medRow('Metformin')).getByText('Skipped')).toBeInTheDocument();
-    expect(within(medRow('Atorvastatin')).getByText('Missed')).toBeInTheDocument();
+    expect(within(medRow('Atorvastatin')).getByText('Not confirmed')).toBeInTheDocument();
     expect(within(medRow('Levothyroxine')).getByText('Pending')).toBeInTheDocument();
 
     // Scheduled time shown (care recipient TZ, same as pinned device TZ)
     expect(within(medRow('Levothyroxine')).getByText('8:00 PM ET')).toBeInTheDocument();
     expect(screen.getByText('50 mcg')).toBeInTheDocument();
 
-    // Confirm/skip only on unconfirmed meds (missed + pending)
+    // Confirm/skip only on unconfirmed meds (not-confirmed + pending)
     expect(screen.getAllByRole('button', { name: 'Confirm' })).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Skip' })).toHaveLength(2);
     expect(within(medRow('Lisinopril')).queryByRole('button')).not.toBeInTheDocument();
@@ -173,7 +176,11 @@ describe('TodaysMeds', () => {
     mockApi({ events: [] });
     renderWidget();
 
-    expect(await screen.findByText('No medications today')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "No medications scheduled today. Add them from the calendar so the whole circle knows what's needed and when."
+      )
+    ).toBeInTheDocument();
   });
 
   it('shows an error with retry that refetches', async () => {
@@ -237,7 +244,7 @@ describe('TodaysMeds', () => {
     });
 
     // Success toast + dialog closed
-    expect(await screen.findByText('Medication updated')).toBeInTheDocument();
+    expect(await screen.findByText('Marked as taken')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Confirm medication' })).not.toBeInTheDocument();
   });
 
@@ -281,7 +288,9 @@ describe('TodaysMeds', () => {
     expect(await screen.findByText('Levothyroxine')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
-    expect(screen.getByText('View-only access')).toBeInTheDocument();
+    expect(
+      screen.getByText('View-only — you can see everything, but changes are off.')
+    ).toBeInTheDocument();
   });
 
   it('shows the owner read-only banner when the circle is read_only', async () => {
@@ -292,7 +301,11 @@ describe('TodaysMeds', () => {
 
     expect(await screen.findByText('Levothyroxine')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
-    expect(screen.getByText('Re-subscribe to manage this circle.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Your subscription ended, so this circle is view-only for now. Everything is saved — re-subscribe to pick up where you left off.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('shows the member read-only banner when a member views a read_only circle', async () => {
@@ -302,7 +315,11 @@ describe('TodaysMeds', () => {
     renderWidget();
 
     expect(await screen.findByText('Levothyroxine')).toBeInTheDocument();
-    expect(screen.getByText('You can view but not edit this circle.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This circle is view-only right now because the owner's subscription ended. Everything is still here to see, and editing comes back if the owner re-subscribes."
+      )
+    ).toBeInTheDocument();
   });
 
   it('shows a permission toast and refetches circles when the backend rejects with 402/403', async () => {

@@ -100,8 +100,9 @@ export default function VerifyEmailPage(): ReactElement {
         navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
       } catch {
         // Verified, but the cookie session couldn't be established —
-        // a normal login will work now.
-        navigate('/login', { replace: true });
+        // a normal login will work now. Tell LoginPage so it can say so
+        // instead of dropping the user on a silent sign-in form.
+        navigate('/login', { replace: true, state: { emailVerified: true } });
       }
     } catch {
       setError(t('verifyOtp.errors.invalidCode'));

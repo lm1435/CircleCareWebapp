@@ -12,7 +12,7 @@
   "remainingCount": "{{count}} left today",
   "errors": {
     "subscriptionRequired": "The Care Assistant is a premium feature. Upgrade to Premium to use it.",
-    "rateLimited": "You've reached your daily limit of 50 questions. Please try again tomorrow.",
+    "rateLimited": "You've reached today's question limit. The Care Assistant will be ready again tomorrow.",
     "unavailable": "The Care Assistant is unavailable right now. Please try again later.",
     "sendFailed": "Sorry, I encountered an error. Please try again."
   }

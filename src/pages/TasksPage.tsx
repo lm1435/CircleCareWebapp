@@ -160,22 +160,31 @@ function TaskRow({
                   ? t('row.undoLabel', { title: task.title })
                   : t('row.completeLabel', { title: task.title })
             }
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors disabled:cursor-default ${
-              isDone
-                ? 'border-moss-deep bg-moss-deep text-cream'
-                : 'border-line text-ink-3 hover:border-ink-3 hover:text-ink'
-            }`}
+            className="group flex h-11 w-11 shrink-0 items-center justify-center disabled:cursor-default"
           >
-            {isDone ? <CheckIcon /> : null}
+            {/* 44px button is the touch target; the drawn circle stays 24px. */}
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full border transition-colors ${
+                isDone
+                  ? 'border-moss-deep bg-moss-deep text-cream'
+                  : 'border-line text-ink-3 group-hover:border-ink-3 group-hover:text-ink'
+              }`}
+            >
+              {isDone ? <CheckIcon /> : null}
+            </span>
           </button>
         ) : (
           <span
             aria-hidden="true"
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border ${
-              isDone ? 'border-moss-deep bg-moss-deep text-cream' : 'border-line text-ink-3'
-            }`}
+            className="flex h-11 w-11 shrink-0 items-center justify-center"
           >
-            {isDone ? <CheckIcon /> : null}
+            <span
+              className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                isDone ? 'border-moss-deep bg-moss-deep text-cream' : 'border-line text-ink-3'
+              }`}
+            >
+              {isDone ? <CheckIcon /> : null}
+            </span>
           </span>
         )}
 
@@ -385,12 +394,14 @@ export default function TasksPage(): ReactElement {
         {SKELETON_ROWS.map((row) => (
           <li key={row} className="rounded-2xl border border-line bg-cream px-4 py-3">
             <div className="flex items-center gap-3">
-              <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+                <Skeleton className="h-6 w-6 rounded-full" />
+              </span>
               <div className="flex-1">
                 <Skeleton className="h-4 w-2/3 max-w-64" />
                 <Skeleton className="mt-2 h-3 w-1/3 max-w-40" />
               </div>
-              <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+              <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
             </div>
           </li>
         ))}

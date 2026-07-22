@@ -7,6 +7,7 @@ import {
   getUnitPreferences,
   updateEmailDigest,
   deleteAccount,
+  exportUserData,
   updateProfileSchema,
   updateEmailDigestSchema,
   updateUnitPreferencesSchema,
@@ -122,6 +123,47 @@ describe('deleteAccount', () => {
     await deleteAccount();
 
     expect(mockDelete).toHaveBeenCalledWith('/users/me');
+  });
+});
+
+describe('exportUserData', () => {
+  it('GETs /users/me/export as a blob and returns it', async () => {
+    const blob = new Blob(['{"user":{}}'], { type: 'application/json' });
+    mockGet.mockResolvedValue(blob as never);
+
+    const result = await exportUserData();
+
+    expect(result).toBe(blob);
+    expect(mockGet).toHaveBeenCalledWith('/users/me/export', { responseType: 'blob' });
+  });
+
+  it('re-hydrates a Blob rejection into the JSON error envelope (429 RATE_LIMIT)', async () => {
+    // With responseType 'blob', axios parses the 429 error BODY as a Blob, so
+    // the interceptor rejects with a Blob — exportUserData must restore the
+    // envelope so callers can classify via error.code.
+    const envelope = {
+      success: false,
+      error: { code: 'RATE_LIMIT', message: 'Too many requests, please try again later' },
+    };
+    mockGet.mockRejectedValue(new Blob([JSON.stringify(envelope)], {
+      type: 'application/json',
+    }) as never);
+
+    await expect(exportUserData()).rejects.toEqual(envelope);
+  });
+
+  it('passes non-Blob rejections through unchanged', async () => {
+    const envelope = { success: false, error: { code: 'SERVER_ERROR' } };
+    mockGet.mockRejectedValue(envelope as never);
+
+    await expect(exportUserData()).rejects.toEqual(envelope);
+  });
+
+  it('passes a non-JSON Blob rejection through as the original Blob', async () => {
+    const blob = new Blob(['<html>Bad Gateway</html>'], { type: 'text/html' });
+    mockGet.mockRejectedValue(blob as never);
+
+    await expect(exportUserData()).rejects.toBe(blob);
   });
 });
 

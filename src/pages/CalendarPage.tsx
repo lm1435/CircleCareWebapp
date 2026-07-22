@@ -104,7 +104,6 @@ function CalendarLegend(): ReactElement {
 export default function CalendarPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
   const { t, i18n } = useTranslation(['calendar', 'common']);
-  const locale = i18n.language;
 
   const [view, setView] = useState<CalendarView>('week');
   // null = follow "today" in the care recipient's timezone; set on user nav.
@@ -168,22 +167,22 @@ export default function CalendarPage(): ReactElement {
   const rangeLabel = useMemo(() => {
     if (!anchor || !range) return '';
     if (view === 'week') {
-      const startLabel = formatDateForDisplay(range.start, locale, {
+      const startLabel = formatDateForDisplay(range.start, {
         month: 'short',
         day: 'numeric',
       });
-      const endLabel = formatDateForDisplay(addDays(range.start, 6), locale, {
+      const endLabel = formatDateForDisplay(addDays(range.start, 6), {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
       });
       return `${startLabel} – ${endLabel}`;
     }
-    return formatDateForDisplay(startOfMonth(anchor), locale, {
+    return formatDateForDisplay(startOfMonth(anchor), {
       month: 'long',
       year: 'numeric',
     });
-  }, [anchor, range, view, locale]);
+  }, [anchor, range, view, i18n.language]);
 
   const isLoading = tzQuery.isLoading || (eventsQuery.isLoading && !!range);
   const isError = tzQuery.isError || eventsQuery.isError;

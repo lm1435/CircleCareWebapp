@@ -2,7 +2,7 @@
   "title": "Emergency Info",
   "subtitle": "Share with first responders or care providers.",
   "loadingLabel": "Loading emergency information",
-  "errorTitle": "We couldn't load the emergency information.",
+  "errorTitle": "Couldn't load emergency info",
   "retry": "Try again",
   "print": "Print",
   "printHeading": "CircleCare Emergency Information",

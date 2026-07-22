@@ -92,12 +92,12 @@ describe('CirclePickerPage', () => {
     expect(within(dadCard).getByText('Caring together with 1 person')).toBeInTheDocument();
   });
 
-  it('shows the Care Recipient role for is_care_recipient memberships', async () => {
+  it('shows the Care recipient role for is_care_recipient memberships', async () => {
     mockGetCircles.mockResolvedValue([makeCircle({ role: 'member', is_care_recipient: true })]);
     renderPicker();
 
     const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
-    expect(within(card).getByText('Care Recipient')).toBeInTheDocument();
+    expect(within(card).getByText('Care recipient')).toBeInTheDocument();
   });
 
   it('shows the Read-only badge with owner subtitle on read_only circles owned by the user', async () => {
@@ -106,7 +106,9 @@ describe('CirclePickerPage', () => {
 
     const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
     expect(within(card).getByText('Read-only')).toBeInTheDocument();
-    expect(within(card).getByText('Re-subscribe to manage this circle')).toBeInTheDocument();
+    expect(
+      within(card).getByText('Your subscription ended — view-only for now.')
+    ).toBeInTheDocument();
   });
 
   it('shows the member subtitle on read_only circles where the user is a member', async () => {
@@ -120,16 +122,16 @@ describe('CirclePickerPage', () => {
     expect(within(card).getByText('You can view but not edit this circle')).toBeInTheDocument();
   });
 
-  it('shows the View Only badge and subtitle on view_only circles', async () => {
+  it('shows the View-only badge and subtitle on view_only circles', async () => {
     mockGetCircles.mockResolvedValue([
       makeCircle({ role: 'member', view_only: true, can_edit: false }),
     ]);
     renderPicker();
 
     const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
-    expect(within(card).getByText('View Only')).toBeInTheDocument();
+    expect(within(card).getByText('View-only')).toBeInTheDocument();
     expect(
-      within(card).getByText('View-only access. Contact owner for details.')
+      within(card).getByText('View-only — ask the circle owner if you need to make changes.')
     ).toBeInTheDocument();
   });
 
@@ -161,9 +163,11 @@ describe('CirclePickerPage', () => {
     mockGetCircles.mockResolvedValue([]);
     renderPicker();
 
-    expect(await screen.findByText("You're not part of any care circle yet.")).toBeInTheDocument();
+    expect(await screen.findByText("Let's set up your care circle")).toBeInTheDocument();
     expect(
-      screen.getByText('Create a circle to get started, or ask someone to invite you.')
+      screen.getByText(
+        'A circle is a private space where family and caregivers come together to care for someone you love — medications, appointments, and tasks, all in one place.'
+      )
     ).toBeInTheDocument();
     expect(screen.getByText('Prefer your phone? Get the companion app.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute(

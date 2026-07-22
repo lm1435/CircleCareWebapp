@@ -83,6 +83,13 @@ export interface SignUpData {
   timezone?: string;
   /** UI language for the verification email — 'en' | 'es'. */
   language?: string;
+  /**
+   * Explicit ToS/Privacy consent from the required signup checkbox. The form
+   * cannot submit unchecked, so this is always `true` — typed as the literal
+   * so a `false` can never be sent (the backend 400s TERMS_NOT_ACCEPTED on
+   * present-but-false).
+   */
+  termsAccepted: true;
 }
 
 /** /auth/signup creates the user + sends an OTP email — returns NO session. */
@@ -97,6 +104,14 @@ export interface SignUpEnvelope {
 export interface OAuthSessionData {
   access_token: string;
   refresh_token: string;
+  /**
+   * Relayed signup consent for OAuth SIGNUPS only: SignUpPage gates its OAuth
+   * buttons on the consent checkbox and parks acceptance in sessionStorage
+   * across the provider redirect (lib/pendingTermsConsent.ts); the callback
+   * sends it here so the backend can record users.terms_accepted_at. Omitted
+   * for OAuth logins from LoginPage (returning users aren't signing up).
+   */
+  termsAccepted?: true;
 }
 
 export interface VerifyOtpData {

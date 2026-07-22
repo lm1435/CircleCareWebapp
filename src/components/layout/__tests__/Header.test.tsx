@@ -151,7 +151,7 @@ describe('Header', () => {
       const user = userEvent.setup();
       renderHeader();
 
-      expect(screen.getByText("Couldn't load your circles")).toBeInTheDocument();
+      expect(screen.getByText("Couldn't load your circles.")).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Retry' }));
       expect(refetch).toHaveBeenCalledTimes(1);
     });

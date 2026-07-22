@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { formatEventTimeCompact, getCurrentHoursInTimezone } from '@/utils/timezone';
 import { formatDateForDisplay } from './dateMath';
@@ -24,7 +25,7 @@ function parseTimeToHours(time: string): number {
   return Number.parseInt(h, 10) + Number.parseInt(m, 10) / 60;
 }
 
-function formatHourLabel(hour: number, locale: string): string {
+function formatHourLabel(hour: number, locale: string = i18n.language): string {
   // Hour-axis labels are pure clock labels — fixed UTC reference, no TZ math.
   return new Intl.DateTimeFormat(locale, {
     hour: 'numeric',
@@ -46,8 +47,7 @@ export function WeekView({
   todayStr,
   onEventClick,
 }: WeekViewProps): ReactElement {
-  const { t, i18n } = useTranslation(['calendar', 'common']);
-  const locale = i18n.language;
+  const { t } = useTranslation(['calendar', 'common']);
 
   // Re-render the current-time indicator every minute.
   const [now, setNow] = useState(() => new Date());
@@ -191,7 +191,7 @@ export function WeekView({
                 <div
                   key={day}
                   role="columnheader"
-                  aria-label={`${formatDateForDisplay(day, locale, {
+                  aria-label={`${formatDateForDisplay(day, {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
@@ -207,12 +207,12 @@ export function WeekView({
                     <span
                       className={`mono block uppercase ${isToday ? 'text-cream' : 'text-ink-3'}`}
                     >
-                      {formatDateForDisplay(day, locale, { weekday: 'short' })}
+                      {formatDateForDisplay(day, { weekday: 'short' })}
                     </span>
                     <span
                       className={`mt-0.5 text-sm font-medium ${isToday ? 'text-cream' : 'text-ink'}`}
                     >
-                      {formatDateForDisplay(day, locale, { day: 'numeric' })}
+                      {formatDateForDisplay(day, { day: 'numeric' })}
                     </span>
                   </div>
                 </div>
@@ -259,7 +259,7 @@ export function WeekView({
                     className="mono absolute right-1 -translate-y-1/2 normal-case"
                     style={{ top: hour * HOUR_HEIGHT }}
                   >
-                    {hour === 0 ? '' : formatHourLabel(hour, locale)}
+                    {hour === 0 ? '' : formatHourLabel(hour)}
                   </span>
                 ))}
               </div>
@@ -272,7 +272,7 @@ export function WeekView({
                     key={day}
                     role="gridcell"
                     data-date={day}
-                    aria-label={`${formatDateForDisplay(day, locale, {
+                    aria-label={`${formatDateForDisplay(day, {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',

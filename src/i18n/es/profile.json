@@ -7,8 +7,7 @@
     "notifications": "Notificaciones",
     "quietHours": "Horario sin interrupciones",
     "units": "Unidades de medida",
-    "emailDigest": "Resumen semanal por correo",
-    "dangerZone": "Zona de peligro"
+    "emailDigest": "Resumen semanal por correo"
   },
   "account": {
     "email": "Correo electrónico",
@@ -20,7 +19,8 @@
     "cancel": "Cancelar",
     "nameSuccess": "Nombre actualizado.",
     "timezoneSuccess": "Zona horaria actualizada.",
-    "namePlaceholder": "Agrega tu nombre"
+    "namePlaceholder": "Agrega tu nombre",
+    "changePasswordHint": "Para cambiar tu contraseña, cierra sesión y elige '¿Olvidaste tu contraseña?' en la página de inicio de sesión."
   },
   "timezones": {
     "America/New_York": "Hora del Este (ET)",
@@ -80,7 +80,7 @@
     "description": "Un resumen semanal de la actividad de cuidado enviado a tu correo.",
     "enable": "Enviarme un resumen semanal",
     "day": "Día de envío",
-    "premiumNote": "El resumen semanal es una función premium.",
+    "premiumNote": "Incluido con Premium.",
     "success": "Resumen por correo actualizado.",
     "days": {
       "0": "Domingo",
@@ -104,14 +104,24 @@
     "manageSubscription": "Administrar suscripción",
     "manageInApp": "Administra tu suscripción en la app de CircleCare donde la compraste."
   },
+  "dataExport": {
+    "title": "Tus datos",
+    "description": "Descarga una copia de la información que CircleCare guarda sobre ti en un archivo JSON.",
+    "cta": "Descargar mis datos",
+    "preparing": "Preparando tu exportación…",
+    "success": "Tu exportación de datos se ha descargado.",
+    "rateLimited": "Alcanzaste el límite de exportaciones de hoy. Inténtalo de nuevo mañana.",
+    "error": "No pudimos preparar tu exportación. Inténtalo de nuevo."
+  },
   "delete": {
     "title": "Eliminar cuenta",
-    "description": "Elimina tu cuenta de forma permanente y quita tu acceso a todos los círculos de cuidado. Esto no se puede deshacer.",
+    "description": "Elimina tu cuenta de forma permanente y quita tu acceso a todos los círculos de cuidado. Esto no se puede deshacer. ¿Quieres una copia de tu información primero? Usa 'Descargar mis datos' arriba.",
     "cta": "Eliminar mi cuenta",
     "confirmTitle": "¿Eliminar tu cuenta?",
-    "confirmBody": "Esto elimina tu cuenta de forma permanente y te quita de cada círculo de cuidado. Esta acción no se puede deshacer.",
+    "confirmBody": "Esto elimina tu cuenta de forma permanente y te quita de todos los círculos de cuidado. Los círculos que te pertenecen seguirán disponibles para sus miembros, pero se quedarán sin propietario que los administre. Esto no se puede deshacer.",
     "confirm": "Eliminar cuenta",
     "keep": "Conservar mi cuenta",
-    "success": "Tu cuenta ha sido eliminada."
+    "success": "Tu cuenta ha sido eliminada.",
+    "error": "No pudimos eliminar tu cuenta. Tu cuenta sigue igual: inténtalo de nuevo o escribe a support@circlecare.app."
   }
 }

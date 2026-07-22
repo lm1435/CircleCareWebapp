@@ -173,3 +173,35 @@ export async function updateEmailDigest(data: UpdateEmailDigestRequest): Promise
 export async function deleteAccount(): Promise<void> {
   await apiClient.delete('/users/me');
 }
+
+/**
+ * With `responseType: 'blob'` axios parses ERROR bodies as Blobs too, so the
+ * response interceptor's rejection (`error.response.data`) is a Blob instead of
+ * the usual `{ success, error: { code } }` envelope. Re-hydrate it so callers
+ * can classify the failure (e.g. `isRateLimitError`).
+ */
+async function normalizeBlobRejection(err: unknown): Promise<unknown> {
+  if (!(err instanceof Blob)) return err;
+  try {
+    return JSON.parse(await err.text()) as unknown;
+  } catch {
+    return err; // Not JSON — surface the original rejection.
+  }
+}
+
+/**
+ * GET /users/me/export — GDPR "download my data" export. The backend returns
+ * the full export as a JSON attachment, so this requests a BLOB; the response
+ * interceptor's envelope-unwrap (`response.data`) yields the Blob itself.
+ * Rate-limited server-side (5 exports/day) — a 429 rejects with the
+ * `RATE_LIMIT` envelope (see normalizeBlobRejection above).
+ */
+export async function exportUserData(): Promise<Blob> {
+  try {
+    return (await apiClient.get('/users/me/export', {
+      responseType: 'blob',
+    })) as unknown as Blob;
+  } catch (err) {
+    return Promise.reject(await normalizeBlobRejection(err));
+  }
+}

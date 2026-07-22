@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, Skeleton } from '@/components/ui';
+import { Badge, Button, Card, Skeleton, useToast } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,6 +55,7 @@ export default function InviteLandingPage(): ReactElement {
   const navigate = useNavigate();
   const { isAuthenticated, isBootstrapping } = useAuth();
   const accept = useAcceptInviteByCode();
+  const { showToast } = useToast();
   const [acceptError, setAcceptError] = useState<string | null>(null);
   // Backend normalizes too; normalize here so the displayed fallback code
   // matches what the app expects users to type.
@@ -69,6 +70,7 @@ export default function InviteLandingPage(): ReactElement {
   });
 
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -91,7 +93,11 @@ export default function InviteLandingPage(): ReactElement {
   const handleAccept = useCallback(() => {
     setAcceptError(null);
     accept.mutate(displayCode, {
-      onSuccess: () => navigate('/circles'),
+      onSuccess: () => {
+        // Confirm the join — the circle picker we land on gives no feedback.
+        showToast(t('acceptSuccess'), 'success');
+        navigate('/circles');
+      },
       onError: (err) => {
         const errorCode = (err as { error?: { code?: string } } | null)?.error?.code;
         if (errorCode === 'ALREADY_MEMBER') {
@@ -101,7 +107,7 @@ export default function InviteLandingPage(): ReactElement {
         setAcceptError(t('acceptFailed'));
       },
     });
-  }, [accept, displayCode, navigate, t]);
+  }, [accept, displayCode, navigate, showToast, t]);
 
   // Not signed in: route to login, preserving this invite page as the return
   // destination twice over — router state for the email/password path
@@ -116,12 +122,15 @@ export default function InviteLandingPage(): ReactElement {
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(displayCode);
+      setCopyFailed(false);
       setCopied(true);
       if (copyTimeout.current) clearTimeout(copyTimeout.current);
       copyTimeout.current = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
     } catch {
-      // Clipboard unavailable (permissions/insecure context) — the code is
-      // visible on screen, so the user can still copy it manually.
+      // Clipboard unavailable (permissions/insecure context) — point the user
+      // at the visible code instead of failing silently.
+      setCopied(false);
+      setCopyFailed(true);
     }
   }, [displayCode]);
 
@@ -174,7 +183,7 @@ export default function InviteLandingPage(): ReactElement {
               <h1 className="serif m-0 text-xl text-ink text-balance">{t('error.title')}</h1>
               <p className="m-0 text-sm text-ink-2 text-balance">{t('error.suggestion')}</p>
             </div>
-            <DownloadButtons prompt={t('downloadPrompt')} />
+            <DownloadButtons prompt={t('downloadPromptError')} />
             <p className="m-0 text-center text-sm text-ink-3 text-balance">{t('appDescription')}</p>
           </>
         )}
@@ -220,7 +229,7 @@ export default function InviteLandingPage(): ReactElement {
               </div>
             )}
 
-            <DownloadButtons prompt={t('downloadPrompt')} />
+            <DownloadButtons prompt={t('downloadPromptValid')} />
 
             <div className="flex flex-col items-center gap-2 border-t border-line-2 pt-4">
               <p className="m-0 text-sm text-ink-2">
@@ -229,6 +238,11 @@ export default function InviteLandingPage(): ReactElement {
               <Button variant="ghost" onClick={() => void handleCopy()}>
                 {copied ? t('copied') : t('copyCode')}
               </Button>
+              {copyFailed ? (
+                <p role="status" className="m-0 text-sm text-ink-3 text-balance">
+                  {t('copyFailed')}
+                </p>
+              ) : null}
               {/* Announce copy success to screen readers */}
               <span aria-live="polite" className="sr-only">
                 {copied ? t('codeCopied') : ''}

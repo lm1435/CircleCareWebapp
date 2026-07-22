@@ -61,15 +61,13 @@ function NoteRow({
   onDelete,
   savePending,
 }: NoteRowProps): ReactElement {
-  const { t, i18n } = useTranslation(['calendar', 'activity', 'common']);
+  const { t } = useTranslation(['calendar', 'activity', 'common']);
   const [draft, setDraft] = useState(note.body);
 
   const authorName = `${note.author.first_name} ${note.author.last_name ?? ''}`.trim();
   // created_at is a UTC ISO timestamp → relative time via the activity namespace.
-  const timestamp = formatRelativeTime(
-    note.created_at,
-    (key, opts) => t(`activity:${key}`, opts),
-    i18n.language
+  const timestamp = formatRelativeTime(note.created_at, (key, opts) =>
+    t(`activity:${key}`, opts)
   );
 
   if (editing) {

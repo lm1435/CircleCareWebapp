@@ -47,6 +47,13 @@ export default function LoginPage(): ReactElement {
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
   const stateDestination = from && from !== '/login' ? from : null;
 
+  // VerifyEmailPage lands here when the OTP verified but the auto sign-in
+  // session couldn't be established — acknowledge the verification instead of
+  // showing a silent login form.
+  const emailVerified = Boolean(
+    (location.state as { emailVerified?: boolean } | null)?.emailVerified
+  );
+
   // Focus the inline error when it appears (auth failures are inline, not toasts).
   useEffect(() => {
     if (formError) errorRef.current?.focus();
@@ -145,6 +152,14 @@ export default function LoginPage(): ReactElement {
 
   return (
     <AuthShell title={t('login.title')} subtitle={t('login.subtitle')}>
+      {emailVerified && !formError ? (
+        <div
+          role="status"
+          className="mb-4 rounded-xl border border-line bg-bg-2 p-3 text-sm text-ink-2"
+        >
+          {t('verifyOtp.verifiedSignInNotice')}
+        </div>
+      ) : null}
       {formError ? (
         <div
           ref={errorRef}

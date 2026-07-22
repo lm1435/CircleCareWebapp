@@ -164,12 +164,14 @@ export function useUpdateEmailDigest(): UseMutationResult<
  */
 export function useDeleteAccount(): UseMutationResult<void, unknown, void> {
   const { showToast } = useToast();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('profile');
 
   return useMutation({
     mutationFn: () => deleteAccount(),
     onError: () => {
-      showToast(t('errors.saveFailed'), 'error');
+      // Deletion failing is scarier than a settings save — say explicitly that
+      // the account is unchanged and where to get help.
+      showToast(t('delete.error'), 'error');
     },
   });
 }

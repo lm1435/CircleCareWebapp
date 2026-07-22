@@ -87,6 +87,24 @@ export function isAccessDeniedError(err: unknown): boolean {
 }
 
 /**
+ * 429 Too Many Requests codes — the express rate limiters
+ * (backend/src/middleware/rateLimit.ts) all reject with `RATE_LIMIT`; the
+ * alternates are kept defensively for per-route limiters. E.g. the GDPR data
+ * export allows 5 downloads/day — the caller shows "try again tomorrow"
+ * rather than a generic failure.
+ */
+export const RATE_LIMIT_ERROR_CODES = new Set(['RATE_LIMIT', 'RATE_LIMITED', 'TOO_MANY_REQUESTS']);
+
+/**
+ * True for a 429 rate-limit rejection — the user has exhausted a per-user or
+ * per-IP quota and should retry later (the UI says when, per endpoint).
+ */
+export function isRateLimitError(err: unknown): boolean {
+  const code = errorCode(err);
+  return code !== undefined && RATE_LIMIT_ERROR_CODES.has(code);
+}
+
+/**
  * True for a 413 `STORAGE_LIMIT_EXCEEDED` rejection — a PREMIUM circle has hit
  * its 1GB hard cap. Distinct from `isSubscriptionRequiredError` (the free-tier
  * 402 path): there is nothing to upgrade to, so the caller shows "storage full"

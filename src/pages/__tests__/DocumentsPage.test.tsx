@@ -247,7 +247,7 @@ describe('DocumentsPage', () => {
     );
     renderPage();
 
-    expect(await screen.findByText("We couldn't load the documents.")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load documents")).toBeInTheDocument();
 
     mockDocuments();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -267,7 +267,7 @@ describe('DocumentsPage', () => {
       screen.queryByRole('button', { name: 'Delete Insurance Card' })
     ).not.toBeInTheDocument();
     // The app-only upload CTA is shown instead.
-    expect(screen.getByText('Need to add a document?')).toBeInTheDocument();
+    expect(screen.getByText('Want to add a document?')).toBeInTheDocument();
   });
 
   it('shows upload + per-row edit/delete for the uploader when editable', async () => {

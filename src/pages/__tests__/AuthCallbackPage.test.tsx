@@ -5,6 +5,7 @@ import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import { apiClient } from '@/lib/api';
 import { setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { setPendingTermsConsent } from '@/lib/pendingTermsConsent';
 import { Analytics } from '@/lib/analytics';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
@@ -84,6 +85,28 @@ describe('AuthCallbackPage', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
+  it('scrubs the URL strictly BEFORE any analytics event fires', async () => {
+    const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
+    );
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() => expect(loginCompleted).toHaveBeenCalledTimes(1));
+
+    // The token fragment was gone from the URL before login_completed could be
+    // captured by analytics/session tooling.
+    expect(replaceStateSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      loginCompleted.mock.invocationCallOrder[0]
+    );
+    expect(window.location.hash).toBe('');
+  });
+
   it('fires login_completed with the persisted provider exactly once on a successful exchange', async () => {
     const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
     setPendingAuthMethod('google');
@@ -135,6 +158,46 @@ describe('AuthCallbackPage', () => {
     expect(loginCompleted).not.toHaveBeenCalled();
   });
 
+  it('relays parked signup consent as termsAccepted: true and consumes it', async () => {
+    // SignUpPage parks this before its OAuth redirect (checkbox state cannot
+    // survive the full-page navigation).
+    setPendingTermsConsent();
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
+    );
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
+      access_token: 'oauth-access',
+      refresh_token: 'oauth-refresh',
+      termsAccepted: true,
+    });
+    // Consumed — a later, unrelated OAuth login must not inherit the consent flag.
+    expect(sessionStorage.getItem('cc_pending_terms_consent')).toBeNull();
+  });
+
+  it('sends NO termsAccepted field when nothing was parked (LoginPage-initiated OAuth)', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
+    );
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
+      access_token: 'oauth-access',
+      refresh_token: 'oauth-refresh',
+    });
+  });
+
   it('resumes a pending invite handoff: consumes the parked code and lands on /invite/CODE', async () => {
     setPendingInviteCode('ABC234');
     window.history.replaceState(
@@ -166,18 +229,37 @@ describe('AuthCallbackPage', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
-    // Still parked — the "Back to Login" retry can complete the handoff.
+    // Still parked — the "Back to Sign In" retry can complete the handoff.
     expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
   });
 
   it('shows the error state (with a retry link to /login) when the provider returns an error', async () => {
-    window.history.replaceState(null, '', '/auth/callback#error_description=access_denied');
+    window.history.replaceState(null, '', '/auth/callback#error_description=server_error');
 
     renderCallback();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    const loginLink = screen.getByRole('link', { name: 'Back to Login' });
+    const loginLink = screen.getByRole('link', { name: 'Back to Sign In' });
     expect(loginLink).toHaveAttribute('href', '/login');
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('shows the gentle cancelled state (not an error) when the user denies OAuth consent', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#error=access_denied&error_description=The+user+denied+the+request'
+    );
+
+    renderCallback();
+
+    expect(
+      await screen.findByText("No problem — you can sign in whenever you're ready.")
+    ).toBeInTheDocument();
+    // Deliberate cancel is not announced as an error
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to Sign In' })).toHaveAttribute('href', '/login');
     expect(mockedPost).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });

@@ -61,13 +61,27 @@ const updateQuiet = vi.fn();
 const updateUnits = vi.fn();
 const updateDigest = vi.fn();
 const deleteAccount = vi.fn();
+const deleteReset = vi.fn();
+// Mutable so the delete-failure test can flip the mutation into its error state.
+let deleteAccountState: { isError: boolean } = { isError: false };
 vi.mock('@/hooks/useProfile', () => ({
   useUpdateProfile: () => ({ mutate: updateProfile, isPending: false }),
   useUpdateNotificationPrefs: () => ({ mutate: updateNotif, isPending: false }),
   useUpdateQuietHours: () => ({ mutate: updateQuiet, isPending: false }),
   useUpdateUnitPrefs: () => ({ mutate: updateUnits, isPending: false }),
   useUpdateEmailDigest: () => ({ mutate: updateDigest, isPending: false }),
-  useDeleteAccount: () => ({ mutate: deleteAccount, isPending: false }),
+  useDeleteAccount: () => ({
+    mutate: deleteAccount,
+    isPending: false,
+    isError: deleteAccountState.isError,
+    reset: deleteReset,
+  }),
+}));
+
+// Subscription tier read (drives the email-digest premium note visibility).
+let subscriptionTier: 'free' | 'premium' = 'free';
+vi.mock('@/hooks/useSubscriptionStatus', () => ({
+  useSubscriptionStatus: () => ({ data: { tier: subscriptionTier } }),
 }));
 
 const showToast = vi.fn();
@@ -98,6 +112,8 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  deleteAccountState = { isError: false };
+  subscriptionTier = 'free';
 });
 
 describe('ProfilePage', () => {
@@ -145,5 +161,45 @@ describe('ProfilePage', () => {
     expect(clearSpy).toHaveBeenCalled();
     expect(signOut).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login', { replace: true }));
+  });
+
+  it('keeps the confirm dialog open with the failure visible when deletion errors', async () => {
+    const user = userEvent.setup();
+    // The mutation is in its error state (a delete attempt failed). The mocked
+    // hook isn't reactive, so we seed the state before render. Also pin the
+    // mutate implementation to a no-op — clearAllMocks does not undo the
+    // previous test's onSuccess-invoking implementation.
+    deleteAccount.mockImplementation(() => {});
+    deleteAccountState = { isError: true };
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    // Confirming while the mutation errors must NOT close the dialog.
+    await user.click(screen.getByRole('button', { name: 'Delete account' }));
+
+    expect(screen.getByRole('button', { name: 'Delete account' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/couldn't delete your account/i);
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it('shows the email-digest premium note for free users and hides it for premium', async () => {
+    renderPage();
+    expect(await screen.findByText('Included with Premium.')).toBeInTheDocument();
+  });
+
+  it('hides the email-digest premium note for premium users', async () => {
+    subscriptionTier = 'premium';
+    renderPage();
+    await screen.findByRole('switch', { name: /weekly digest/i });
+    expect(screen.queryByText('Included with Premium.')).not.toBeInTheDocument();
+  });
+
+  it('points to the sign-in reset flow for password changes', async () => {
+    renderPage();
+    expect(
+      await screen.findByText(
+        "To change your password, sign out and choose 'Forgot password?' on the sign-in page."
+      )
+    ).toBeInTheDocument();
   });
 });

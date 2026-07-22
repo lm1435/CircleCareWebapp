@@ -101,6 +101,31 @@ describe('PendingInvitesPage', () => {
     expect(showToast).toHaveBeenCalledWith("You joined Mom's Care.", 'success');
   });
 
+  it('offers an Open circle link to the joined circle after a successful accept', async () => {
+    const user = userEvent.setup();
+    usePendingInvitesResult.data = [makeInvite()];
+    acceptMutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+
+    expect(screen.getByText("You joined Mom's Care.")).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open circle' })).toHaveAttribute(
+      'href',
+      '/circles/c1'
+    );
+  });
+
+  it('explains that invitations can simply be left pending', () => {
+    usePendingInvitesResult.data = [makeInvite()];
+    renderPage();
+    expect(
+      screen.getByText(
+        'Not ready to join? You can simply leave an invitation here — nothing happens until you accept.'
+      )
+    ).toBeInTheDocument();
+  });
+
   it('renders an error state with retry', async () => {
     const user = userEvent.setup();
     usePendingInvitesResult.isError = true;

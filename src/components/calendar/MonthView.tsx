@@ -40,8 +40,7 @@ export function MonthView({
   todayStr,
   onEventClick,
 }: MonthViewProps): ReactElement {
-  const { t, i18n } = useTranslation(['calendar', 'common']);
-  const locale = i18n.language;
+  const { t } = useTranslation(['calendar', 'common']);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const selectedEvents = selectedDay
@@ -61,11 +60,11 @@ export function MonthView({
             <div
               key={dayIndex}
               role="columnheader"
-              aria-label={getWeekdayName(dayIndex, locale, 'long')}
+              aria-label={getWeekdayName(dayIndex, 'long')}
               className="p-2 text-center"
             >
               <span aria-hidden="true" className="mono">
-                {getWeekdayName(dayIndex, locale, 'short')}
+                {getWeekdayName(dayIndex, 'short')}
               </span>
             </div>
           ))}
@@ -89,7 +88,7 @@ export function MonthView({
                   type="button"
                   data-date={day}
                   aria-pressed={isSelected}
-                  aria-label={`${formatDateForDisplay(day, locale, {
+                  aria-label={`${formatDateForDisplay(day, {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
@@ -109,7 +108,7 @@ export function MonthView({
                           : 'text-ink-3'
                     }`}
                   >
-                    {formatDateForDisplay(day, locale, { day: 'numeric' })}
+                    {formatDateForDisplay(day, { day: 'numeric' })}
                   </span>
                   {events.length > 0 && (
                     <span aria-hidden="true" className="flex items-center gap-1">
@@ -141,7 +140,7 @@ export function MonthView({
         {selectedDay ? (
           <>
             <h3 className="m-0 text-lg font-semibold text-ink">
-              {formatDateForDisplay(selectedDay, locale, {
+              {formatDateForDisplay(selectedDay, {
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',

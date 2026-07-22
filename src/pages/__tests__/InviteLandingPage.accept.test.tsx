@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { apiClient } from '@/lib/api';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
+import { ToastProvider } from '@/components/ui';
 import InviteLandingPage from '@/pages/InviteLandingPage';
 
 // Auth-aware accept flow added for web parity with mobile. Mocks useAuth +
@@ -47,11 +48,13 @@ function renderPage(code = 'abc123') {
   return render(
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[`/invite/${code}`]}>
-          <Routes>
-            <Route path="/invite/:code" element={<InviteLandingPage />} />
-          </Routes>
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter initialEntries={[`/invite/${code}`]}>
+            <Routes>
+              <Route path="/invite/:code" element={<InviteLandingPage />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
       </QueryClientProvider>
     </HelmetProvider>
   );
@@ -69,7 +72,9 @@ describe('InviteLandingPage — accept flow', () => {
     const user = userEvent.setup();
     renderPage('abc123');
 
-    const signIn = await screen.findByRole('button', { name: 'Sign in to accept' });
+    const signIn = await screen.findByRole('button', {
+      name: 'Sign in or create an account to accept',
+    });
     await user.click(signIn);
 
     expect(navigate).toHaveBeenCalledWith('/login', {
@@ -91,7 +96,7 @@ describe('InviteLandingPage — accept flow', () => {
     expect(consumePendingInviteCode()).toBeNull();
   });
 
-  it('signed-in: accepts the invite and navigates to the circle picker', async () => {
+  it('signed-in: accepts the invite, confirms with a toast, and navigates to the circle picker', async () => {
     authState = { isAuthenticated: true, isBootstrapping: false };
     acceptMutate.mockImplementation((_code, opts) => opts?.onSuccess?.());
     const user = userEvent.setup();
@@ -101,6 +106,8 @@ describe('InviteLandingPage — accept flow', () => {
     await user.click(acceptBtn);
 
     expect(acceptMutate).toHaveBeenCalledWith('ABC123', expect.anything());
+    // Success is confirmed via toast — the circle picker gives no feedback.
+    expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
   });
 
@@ -128,7 +135,7 @@ describe('InviteLandingPage — accept flow', () => {
     await user.click(await screen.findByRole('button', { name: 'Accept invitation' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      "We couldn't accept this invitation. Please try again."
+      "We couldn't add you to the circle just now. Try again — and if it keeps not working, ask for a fresh invite."
     );
     expect(navigate).not.toHaveBeenCalled();
   });

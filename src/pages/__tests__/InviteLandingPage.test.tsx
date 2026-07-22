@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { apiClient } from '@/lib/api';
+import { ToastProvider } from '@/components/ui';
 import InviteLandingPage from '@/pages/InviteLandingPage';
 
 // @/lib/api is mocked globally in src/test/setup.ts. The real apiClient's
@@ -33,11 +34,13 @@ function renderPage(code = 'ABC123') {
   return render(
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[`/invite/${code}`]}>
-          <Routes>
-            <Route path="/invite/:code" element={<InviteLandingPage />} />
-          </Routes>
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter initialEntries={[`/invite/${code}`]}>
+            <Routes>
+              <Route path="/invite/:code" element={<InviteLandingPage />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
       </QueryClientProvider>
     </HelmetProvider>
   );
@@ -95,7 +98,7 @@ describe('InviteLandingPage', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('Care Recipient')).toBeInTheDocument();
+    expect(await screen.findByText('Care recipient')).toBeInTheDocument();
   });
 
   it('shows the warm error state with download buttons for an invalid invite', async () => {
@@ -151,5 +154,42 @@ describe('InviteLandingPage', () => {
     // Button reflects the copied state and the aria-live region announces it
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
     expect(screen.getByText('Invite code copied to clipboard')).toBeInTheDocument();
+  });
+
+  it('shows an inline fallback message when the clipboard write fails', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+
+    mockedPost.mockResolvedValue(validEnvelope);
+    renderPage('abc123');
+
+    const copyButton = await screen.findByRole('button', { name: 'Copy invite code' });
+    fireEvent.click(copyButton);
+
+    expect(await screen.findByText("Couldn't copy — the code is shown above.")).toBeInTheDocument();
+    // The button never claims success
+    expect(screen.queryByRole('button', { name: 'Copied' })).not.toBeInTheDocument();
+  });
+
+  it('shows the valid-state download prompt for a valid invite', async () => {
+    mockedPost.mockResolvedValue(validEnvelope);
+    renderPage();
+    expect(
+      await screen.findByText('Get the CircleCare app for the full experience')
+    ).toBeInTheDocument();
+  });
+
+  it('shows the error-state download prompt on an invalid invite', async () => {
+    mockedPost.mockRejectedValue({
+      success: false,
+      error: { code: 'INVALID_CODE', message: 'Invalid invite code' },
+    });
+    renderPage();
+    expect(
+      await screen.findByText("Meanwhile, get the app so you're ready when a new invite arrives")
+    ).toBeInTheDocument();
   });
 });

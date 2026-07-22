@@ -5,6 +5,7 @@ import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { consumePendingInviteCode } from '@/lib/pendingInviteCode';
 import { consumePendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { consumePendingTermsConsent } from '@/lib/pendingTermsConsent';
 import { Analytics } from '@/lib/analytics';
 import { Spinner } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -19,7 +20,7 @@ export default function AuthCallbackPage(): ReactElement {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const signIn = useAuthStore((state) => state.signIn);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<'error' | 'cancelled' | null>(null);
   const ranRef = useRef(false);
 
   useEffect(() => {
@@ -28,13 +29,17 @@ export default function AuthCallbackPage(): ReactElement {
     if (ranRef.current) return;
     ranRef.current = true;
 
+    // Capture the raw fragment + query SYNCHRONOUSLY, then scrub tokens from
+    // the URL IMMEDIATELY — before any parsing, await, analytics call, or
+    // identify — so they never sit in history, referrers, session replay, or
+    // logs. Everything below reads ONLY from these captured strings; nothing
+    // may touch window.location.hash/search again.
     const rawHash = window.location.hash;
-    const hashParams = new URLSearchParams(rawHash.startsWith('#') ? rawHash.slice(1) : rawHash);
-    const queryParams = new URLSearchParams(window.location.search);
-
-    // Scrub tokens from the URL BEFORE any other work — they must never sit
-    // in history, referrers, or logs.
+    const rawSearch = window.location.search;
     window.history.replaceState(null, '', '/auth/callback');
+
+    const hashParams = new URLSearchParams(rawHash.startsWith('#') ? rawHash.slice(1) : rawHash);
+    const queryParams = new URLSearchParams(rawSearch);
 
     const oauthError =
       hashParams.get('error_description') ||
@@ -45,17 +50,30 @@ export default function AuthCallbackPage(): ReactElement {
     const refreshToken = hashParams.get('refresh_token');
 
     if (oauthError || !accessToken || !refreshToken) {
-      setFailed(true);
+      // access_denied means the user deliberately cancelled the provider's
+      // consent screen — that deserves a shrug, not a failure message.
+      const cancelled =
+        hashParams.get('error') === 'access_denied' ||
+        queryParams.get('error') === 'access_denied' ||
+        oauthError === 'access_denied';
+      setFailure(cancelled ? 'cancelled' : 'error');
       return;
     }
 
     void (async () => {
+      // SignUpPage parked the consent-checkbox acceptance before the OAuth
+      // redirect (the checkbox state itself cannot survive it) — relay it so
+      // the backend records users.terms_accepted_at for OAuth SIGNUPS. Absent
+      // for LoginPage-initiated OAuth (returning users); the backend only ever
+      // fills a NULL, never overwrites an existing consent timestamp.
+      const termsAccepted = consumePendingTermsConsent();
       try {
         // Backend validates the access token, moves the refresh token into the
         // httpOnly cookie, and returns a cookie-mode session (no refresh_token).
         const response = await authApi.oauthSession({
           access_token: accessToken,
           refresh_token: refreshToken,
+          ...(termsAccepted ? { termsAccepted: true as const } : {}),
         });
         signIn(response.data.session, response.data.user);
         // Fire the OAuth completion event exactly once, only on success. The
@@ -74,12 +92,25 @@ export default function AuthCallbackPage(): ReactElement {
         const pendingInvite = consumePendingInviteCode();
         navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
       } catch {
-        setFailed(true);
+        setFailure('error');
       }
     })();
   }, [navigate, signIn]);
 
-  if (failed) {
+  if (failure === 'cancelled') {
+    return (
+      <AuthShell title={t('callback.errorTitle')}>
+        <p role="status" className="m-0 mb-6 text-sm text-ink-2">
+          {t('callback.cancelled')}
+        </p>
+        <Link to="/login" className="btn btn-primary w-full">
+          {t('callback.backToLogin')}
+        </Link>
+      </AuthShell>
+    );
+  }
+
+  if (failure === 'error') {
     return (
       <AuthShell title={t('callback.errorTitle')}>
         <p role="alert" className="m-0 mb-6 text-sm text-ink-2">

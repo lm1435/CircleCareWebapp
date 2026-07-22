@@ -3,7 +3,7 @@
   "subtitle": "Lleva el registro de las lecturas de salud de tu círculo: presión arterial, frecuencia cardíaca, glucosa y peso.",
   "loading": "Cargando signos vitales",
   "errorTitle": "No se pudieron cargar los signos vitales",
-  "errorHint": "Revisa tu conexión e inténtalo de nuevo.",
+  "errorHint": "Revisa tu conexión e intenta de nuevo.",
   "types": {
     "blood_pressure": "Presión arterial",
     "heart_rate": "Frecuencia cardíaca",
@@ -49,11 +49,11 @@
   },
   "delete": {
     "title": "¿Eliminar esta lectura?",
-    "message": "Esta lectura se eliminará de forma permanente. No se puede deshacer."
+    "message": "¿Eliminar la lectura de {{type}} del {{date}}? Esta acción no se puede deshacer."
   },
   "empty": {
     "title": "Aún no hay lecturas",
-    "hint": "Lleva el registro de los signos vitales de tu ser querido con el tiempo para que todo el círculo note las tendencias y las comparta en la próxima cita.",
+    "hint": "Lleva el registro de los signos vitales de tu ser querido con el tiempo (presión arterial, peso y más) para que todo el círculo pueda seguir las tendencias.",
     "hintReadOnly": "Las lecturas registradas para este círculo aparecerán aquí para que todos sigan la salud de tu ser querido con el tiempo.",
     "cta": "Registrar una lectura"
   },
@@ -67,7 +67,7 @@
     "valueRequired": "Ingresa un valor.",
     "dateRequired": "Elige una fecha.",
     "timeRequired": "Elige una hora.",
-    "valueOutOfRange": "Ese valor está fuera del rango esperado.",
+    "valueOutOfRange": "Ese valor parece fuera del rango esperado. Verifica el número.",
     "diastolicRequired": "Ingresa el valor diastólico.",
     "value2NotAllowed": "Esta lectura admite un solo valor.",
     "invalidUnit": "Esa unidad no es válida para esta lectura.",

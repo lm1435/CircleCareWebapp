@@ -52,6 +52,11 @@ describe('StandalonePageLayout', () => {
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
   });
 
+  it('hides the back control on /circles (home — nowhere in-app to go back to)', () => {
+    renderLayout(['/circles']);
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+  });
+
   it('renders a home link to /circles with the brand wordmark', () => {
     renderLayout();
     const homeLink = screen.getByRole('link', { name: 'CircleCare' });

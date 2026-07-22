@@ -15,11 +15,10 @@ export interface ActivityItemProps {
 }
 
 export function ActivityItem({ activity }: ActivityItemProps): ReactElement {
-  const { t, i18n } = useTranslation('activity');
-  const locale = i18n.language;
+  const { t } = useTranslation('activity');
 
   const actorName = getActorName(activity.actor, t);
-  const timeText = formatRelativeTime(activity.created_at, t, locale);
+  const timeText = formatRelativeTime(activity.created_at, t);
 
   // "Scheduled for {date}" note when a med was confirmed on a different
   // viewer-local day than its scheduled date (mirrors mobile's late note).
@@ -39,7 +38,7 @@ export function ActivityItem({ activity }: ActivityItemProps): ReactElement {
         </p>
         {lateScheduledDate && (
           <p className="m-0 mt-0.5 text-xs italic text-ink-3">
-            {t('scheduledFor', { date: formatDateShort(lateScheduledDate, t, locale) })}
+            {t('scheduledFor', { date: formatDateShort(lateScheduledDate, t) })}
           </p>
         )}
         <p className="m-0 mt-1 flex items-center gap-1.5 text-xs text-ink-3">

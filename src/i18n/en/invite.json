@@ -4,22 +4,22 @@
   "appDescription": "CircleCare helps families coordinate medications, appointments, and everyday care together.",
   "roles": {
     "caregiver": "Caregiver",
-    "care_recipient": "Care Recipient"
+    "care_recipient": "Care recipient"
   },
   "accept": "Accept invitation",
   "accepting": "Joining…",
   "acceptSuccess": "You joined the circle.",
-  "acceptFailed": "We couldn't accept this invitation. Please try again.",
-  "alreadyMember": "You're already a member of this circle.",
-  "signInToAccept": "Sign in to accept",
-  "openCircle": "Open circle",
-  "downloadPrompt": "Download the app to accept your invite",
+  "acceptFailed": "We couldn't add you to the circle just now. Try again — and if it keeps not working, ask for a fresh invite.",
+  "signInToAccept": "Sign in or create an account to accept",
+  "downloadPromptValid": "Get the CircleCare app for the full experience",
+  "downloadPromptError": "Meanwhile, get the app so you're ready when a new invite arrives",
   "appStore": "Download on the App Store",
   "googlePlay": "Get it on Google Play",
   "codeLabel": "Your invite code:",
   "copyCode": "Copy invite code",
   "copied": "Copied",
   "codeCopied": "Invite code copied to clipboard",
+  "copyFailed": "Couldn't copy — the code is shown above.",
   "loading": "Loading your invitation",
   "error": {
     "title": "This invite has expired or is invalid",

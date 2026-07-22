@@ -7,8 +7,7 @@
     "notifications": "Notifications",
     "quietHours": "Quiet hours",
     "units": "Measurement units",
-    "emailDigest": "Weekly email digest",
-    "dangerZone": "Danger zone"
+    "emailDigest": "Weekly email digest"
   },
   "account": {
     "email": "Email",
@@ -20,7 +19,8 @@
     "cancel": "Cancel",
     "nameSuccess": "Name updated.",
     "timezoneSuccess": "Time zone updated.",
-    "namePlaceholder": "Add your name"
+    "namePlaceholder": "Add your name",
+    "changePasswordHint": "To change your password, sign out and choose 'Forgot password?' on the sign-in page."
   },
   "timezones": {
     "America/New_York": "Eastern Time (ET)",
@@ -80,7 +80,7 @@
     "description": "A weekly summary of care activity sent to your email.",
     "enable": "Send me a weekly digest",
     "day": "Delivery day",
-    "premiumNote": "Weekly digest is a premium feature.",
+    "premiumNote": "Included with Premium.",
     "success": "Email digest updated.",
     "days": {
       "0": "Sunday",
@@ -104,14 +104,24 @@
     "manageSubscription": "Manage subscription",
     "manageInApp": "Manage your subscription in the CircleCare app where you purchased it."
   },
+  "dataExport": {
+    "title": "Your data",
+    "description": "Download a copy of the information CircleCare stores about you as a JSON file.",
+    "cta": "Download my data",
+    "preparing": "Preparing your export…",
+    "success": "Your data export has been downloaded.",
+    "rateLimited": "You have reached today's export limit. Please try again tomorrow.",
+    "error": "We couldn't prepare your export. Please try again."
+  },
   "delete": {
     "title": "Delete account",
-    "description": "Permanently delete your account and remove your access to all care circles. This cannot be undone.",
+    "description": "Permanently delete your account and remove your access to all care circles. This cannot be undone. Want a copy of your information first? Use 'Download my data' above.",
     "cta": "Delete my account",
     "confirmTitle": "Delete your account?",
-    "confirmBody": "This permanently deletes your account and removes you from every care circle. This action cannot be undone.",
+    "confirmBody": "This permanently deletes your account and removes you from every care circle. Circles you own will stay available to their members, but will no longer have an owner to manage them. This cannot be undone.",
     "confirm": "Delete account",
     "keep": "Keep my account",
-    "success": "Your account has been deleted."
+    "success": "Your account has been deleted.",
+    "error": "We couldn't delete your account. Your account is unchanged — please try again, or email support@circlecare.app."
   }
 }

@@ -34,12 +34,15 @@ function BackIcon(): ReactElement {
  *    landmark-one-main / region) and which the skip-link still targets.
  *
  * Back goes to history (-1) and falls back to /circles when there's no history
- * to return to (e.g. the page was opened directly via a deep link).
+ * to return to (e.g. the page was opened directly via a deep link). On /circles
+ * itself — the app's home — no back button renders: there is nowhere in-app to
+ * go back to, and history(-1) would drop a fresh signup back into the auth flow.
  */
 export function StandalonePageLayout(): ReactElement {
   const { t } = useTranslation('common');
   const location = useLocation();
   const navigate = useNavigate();
+  const isHome = location.pathname === '/circles';
 
   const handleBack = (): void => {
     // No prior in-app history (direct deep link / fresh tab) → send home so the
@@ -62,14 +65,16 @@ export function StandalonePageLayout(): ReactElement {
 
       <header className="flex items-center justify-between gap-3 border-b border-line bg-cream px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
-          <button
-            type="button"
-            onClick={handleBack}
-            aria-label={t('nav.back')}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2"
-          >
-            <BackIcon />
-          </button>
+          {!isHome && (
+            <button
+              type="button"
+              onClick={handleBack}
+              aria-label={t('nav.back')}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2"
+            >
+              <BackIcon />
+            </button>
+          )}
           <Link
             to="/circles"
             aria-label={t('appName')}

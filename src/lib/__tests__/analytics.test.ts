@@ -63,6 +63,7 @@ describe('analytics wrapper — optional / no-op path', () => {
   it('identifyUser / resetAnalytics no-op when key is unset', async () => {
     const { identifyUser, resetAnalytics } = await loadWithKey(undefined);
     identifyUser('user-1');
+    identifyUser('user-1', 'pat@example.com');
     resetAnalytics();
     expect(identify).not.toHaveBeenCalled();
     expect(reset).not.toHaveBeenCalled();
@@ -149,11 +150,18 @@ describe('analytics wrapper — active path (key set)', () => {
 });
 
 describe('identify / reset (active path)', () => {
-  it('identifyUser calls posthog.identify with ONLY the user id (no traits)', async () => {
+  it('identifyUser without an email calls posthog.identify with ONLY the user id', async () => {
     const { identifyUser } = await loadWithKey('phc_test_key');
     identifyUser('user-42');
     expect(identify).toHaveBeenCalledTimes(1);
     expect(identify).toHaveBeenCalledWith('user-42');
+  });
+
+  it('identifyUser with an email attaches email as the ONLY person property', async () => {
+    const { identifyUser } = await loadWithKey('phc_test_key');
+    identifyUser('user-42', 'pat@example.com');
+    expect(identify).toHaveBeenCalledTimes(1);
+    expect(identify).toHaveBeenCalledWith('user-42', { email: 'pat@example.com' });
   });
 
   it('resetAnalytics calls posthog.reset', async () => {

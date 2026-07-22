@@ -1,39 +1,39 @@
 {
-  "title": "Ayuda y Preguntas Frecuentes",
+  "title": "Ayuda y preguntas frecuentes",
   "subtitle": "Encuentra respuestas a preguntas comunes",
   "sections": {
     "gettingStarted": {
-      "title": "Primeros Pasos",
+      "title": "Primeros pasos",
       "items": [
         {
-          "question": "¿Qué es un Círculo de Cuidado?",
-          "answer": "Un Círculo de Cuidado es un grupo privado para coordinar el cuidado de una persona (como un padre o abuelo). Los familiares se unen al círculo para compartir actualizaciones, dar seguimiento a medicamentos y mantenerse conectados."
+          "question": "¿Qué es un círculo de cuidado?",
+          "answer": "Un círculo de cuidado es un grupo privado para coordinar el cuidado de una persona (como un padre o abuelo). Los familiares se unen al círculo para compartir actualizaciones, dar seguimiento a medicamentos y mantenerse conectados."
         },
         {
           "question": "¿Cuántos círculos puedo crear?",
-          "answer": "Los suscriptores pueden crear hasta 5 círculos, ideal para familias que cuidan a varios seres queridos."
+          "answer": "Cualquiera puede crear un círculo de cuidado con el plan gratuito. Los suscriptores Premium pueden crear hasta 5 círculos, ideal para familias que cuidan a varios seres queridos."
         },
         {
           "question": "¿Necesito pagar para unirme al círculo de alguien?",
-          "answer": "¡No! Unirte al círculo de otra persona siempre es gratis. Solo los dueños de círculos necesitan una suscripción activa para crear círculos e invitar miembros."
+          "answer": "No: unirte al círculo de otra persona siempre es gratis, y cualquiera puede crear un círculo propio con el plan gratuito. La suscripción solo se necesita para más círculos, más cuidadores y funciones premium."
         }
       ]
     },
     "roles": {
-      "title": "Círculos y Roles",
+      "title": "Círculos y roles",
       "items": [
         {
-          "question": "¿Cuál es la diferencia entre Dueño, Cuidador y Receptor de Cuidado?",
-          "answer": "El Dueño crea el círculo y puede invitar miembros, administrar la configuración y eliminar el círculo. Los Cuidadores son familiares que ayudan a coordinar el cuidado: pueden ver y actualizar la información. El Receptor de Cuidado es la persona que recibe el cuidado: recibe recordatorios de medicamentos y puede confirmar cuando los ha tomado."
+          "question": "¿Cuál es la diferencia entre Propietario, Cuidador y Receptor de cuidado?",
+          "answer": "El Propietario crea el círculo y puede invitar miembros, administrar la configuración y eliminar el círculo. Los Cuidadores son familiares que ayudan a coordinar el cuidado: pueden ver y actualizar la información. El Receptor de cuidado es la persona que recibe el cuidado: recibe recordatorios de medicamentos y puede confirmar cuando los ha tomado."
         },
         {
           "question": "¿Puedo estar en varios círculos?",
-          "answer": "¡Sí! Puedes ser miembro de varios círculos. Por ejemplo, puedes ser dueño del círculo de tu mamá y cuidador en el círculo de tu papá creado por un hermano."
+          "answer": "¡Sí! Puedes ser miembro de varios círculos. Por ejemplo, puedes ser propietario del círculo de tu mamá y cuidador en el círculo de tu papá creado por un hermano."
         }
       ]
     },
     "medications": {
-      "title": "Seguimiento de Medicamentos",
+      "title": "Seguimiento de medicamentos",
       "items": [
         {
           "question": "¿Cómo funcionan los recordatorios de medicamentos?",
@@ -61,29 +61,29 @@
           "answer": "Recibirás notificaciones de recordatorios de medicamentos (si eres el receptor de cuidado), confirmaciones de medicamentos, medicamentos no tomados, recordatorios de citas y cuando familiares se unan a tu círculo."
         },
         {
-          "question": "¿Qué son las Horas de Silencio?",
-          "answer": "Las Horas de Silencio pausan las notificaciones durante los horarios que configures (por ejemplo, de 10 PM a 7 AM). Ve a Perfil > Configuración para configurar tus horas de silencio."
+          "question": "¿Qué es el horario sin interrupciones?",
+          "answer": "El horario sin interrupciones pausa las notificaciones durante las horas que configures (por ejemplo, de 10 PM a 7 AM). Ve a Perfil y ajustes para configurar tu horario sin interrupciones."
         },
         {
           "question": "¿Puedo desactivar ciertas notificaciones?",
-          "answer": "¡Sí! Ve a Perfil > Notificaciones para personalizar qué tipos de notificaciones recibes para cada círculo."
+          "answer": "Sí: ve a Perfil y ajustes y usa la sección Notificaciones para elegir qué tipos de notificaciones recibes."
         }
       ]
     },
     "premium": {
-      "title": "Funciones Premium",
+      "title": "Funciones premium",
       "items": [
         {
           "question": "¿Qué incluye Premium?",
-          "answer": "CircleCare Premium incluye hasta 5 círculos de cuidado, invitaciones ilimitadas por círculo y soporte prioritario. Consulta la página de suscripción para ver los precios actuales de los planes mensuales y anuales."
+          "answer": "CircleCare Premium incluye hasta 5 círculos de cuidado, cuidadores ilimitados por círculo, el Asistente de Cuidado y el resumen semanal por correo. Consulta la página de mejora para ver los precios actuales."
         },
         {
           "question": "¿Puedo probar antes de pagar?",
-          "answer": "¡Sí! CircleCare es gratis para empezar con un grupo de cuidado y dos cuidadores. Cuando necesites más grupos, cuidadores ilimitados o funciones premium como IA, solo mejora tu plan."
+          "answer": "¡Sí! CircleCare es gratis para empezar con un círculo de cuidado y dos cuidadores. Cuando necesites más círculos, cuidadores ilimitados o funciones premium como IA, solo mejora tu plan."
         },
         {
           "question": "¿Cómo restauro mis compras?",
-          "answer": "Ve a Perfil > Suscripción > Restaurar Compras. Esto es útil si reinstalas la app o cambias de dispositivo."
+          "answer": "En la app móvil de CircleCare, ve a Perfil > Suscripción > Restaurar compras. Es útil si reinstalas la app o cambias de teléfono. Si te suscribiste aquí en la web, tu suscripción se aplica automáticamente a tu cuenta."
         }
       ]
     }

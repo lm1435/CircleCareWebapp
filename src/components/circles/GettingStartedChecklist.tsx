@@ -135,7 +135,7 @@ export function GettingStartedChecklist({
         label: t('gettingStarted.step1Label'),
         desc: t('gettingStarted.step1Desc'),
         done: hasEvent,
-        actionLabel: t('gettingStarted.action'),
+        actionLabel: t('gettingStarted.actionAdd'),
         onAction: () => onAddEvent?.(),
       },
       {
@@ -143,7 +143,7 @@ export function GettingStartedChecklist({
         label: t('gettingStarted.step2Label'),
         desc: t('gettingStarted.step2Desc'),
         done: invited,
-        actionLabel: t('gettingStarted.action'),
+        actionLabel: t('gettingStarted.actionInvite'),
         onAction: () => navigate(`/circles/${circleId}/members`),
       },
       {
@@ -151,7 +151,7 @@ export function GettingStartedChecklist({
         label: t('gettingStarted.step3Label'),
         desc: t('gettingStarted.step3Desc'),
         done: hasEmergency,
-        actionLabel: t('gettingStarted.action'),
+        actionLabel: t('gettingStarted.actionAdd'),
         onAction: () => navigate(`/circles/${circleId}/emergency`),
       },
     ],

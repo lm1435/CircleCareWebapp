@@ -66,9 +66,10 @@ function CloseIcon(): ReactElement {
 }
 
 /**
- * Dismissible app-download banner (plan Task 14). Subtle strip on desktop;
- * prominent smart-banner style on mobile browsers. Dismissal animates the
- * banner height closed (grid-rows trick) so the layout never jumps.
+ * Dismissible app-download banner (plan Task 14). One banner with a single
+ * message at every breakpoint; only the store CTAs adapt to the platform.
+ * Dismissal animates the banner height closed (grid-rows trick) so the layout
+ * never jumps.
  */
 export function AppDownloadBanner(): ReactElement | null {
   const { t } = useTranslation('common');
@@ -110,9 +111,7 @@ export function AppDownloadBanner(): ReactElement | null {
           data-variant="prominent"
           className="flex items-center gap-3 bg-ink px-4 py-2 text-cream sm:px-6"
         >
-          <p className="m-0 min-w-0 flex-1 text-sm leading-snug">
-            {t('downloadBanner.mobileMessage')}
-          </p>
+          <p className="m-0 min-w-0 flex-1 text-sm leading-snug">{t('downloadBanner.message')}</p>
           {platform !== null ? (
             <a
               href={singleStoreUrl}

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { authApi, getApiError } from '@/api/auth';
 import { supabase } from '@/lib/supabase';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { setPendingTermsConsent } from '@/lib/pendingTermsConsent';
 import { Analytics } from '@/lib/analytics';
 import { Button } from '@/components/ui';
 import { validateWithZod, focusFirstError, type FieldErrors } from '@/components/ui/useZodForm';
@@ -53,6 +54,10 @@ export default function SignUpPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // REQUIRED consent checkbox — default UNCHECKED; gates both email/password
+  // submit and the OAuth buttons (this page is signup-only, so every path out
+  // of it creates an account).
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -107,6 +112,14 @@ export default function SignUpPage(): ReactElement {
       return;
     }
 
+    // Form-level consent guard. The submit button is disabled until the
+    // checkbox is ticked, so this only fires on programmatic/edge submissions —
+    // but the account must never be created without explicit consent.
+    if (!termsAccepted) {
+      setFormError(t('signup.errors.termsRequired'));
+      return;
+    }
+
     setFieldErrors({});
     setIsSubmitting(true);
     Analytics.signupStarted('email');
@@ -118,6 +131,7 @@ export default function SignUpPage(): ReactElement {
         last_name: result.data.last_name,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         language: i18n.language === 'es' ? 'es' : 'en',
+        termsAccepted: true,
       });
       Analytics.signupCompleted('email');
       // Email travels in router STATE, never in query params.
@@ -142,6 +156,17 @@ export default function SignUpPage(): ReactElement {
 
   const handleOAuth = async (provider: OAuthProvider): Promise<void> => {
     setFormError(null);
+    // OAuth signups require the same explicit consent as email/password — the
+    // buttons are disabled until the checkbox is ticked; this guard is the
+    // belt-and-braces equivalent of the form-level one above.
+    if (!termsAccepted) {
+      setFormError(t('signup.errors.termsRequired'));
+      return;
+    }
+    // Park the acceptance across the full-page provider redirect so
+    // /auth/callback can relay `termsAccepted: true` to the backend, which
+    // records users.terms_accepted_at for OAuth signups.
+    setPendingTermsConsent();
     Analytics.signupStarted(provider);
     // Park the provider so /auth/callback can fire an accurate completion event
     // with the right method after the full-page OAuth redirect (router state
@@ -265,35 +290,55 @@ export default function SignUpPage(): ReactElement {
           error={fieldErrors.confirmPassword}
         />
 
-        <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full">
+        {/* Explicit, REQUIRED consent — a real checkbox (not a passive notice):
+            default-unchecked, keyboard operable, label properly associated via
+            htmlFor. It gates the submit button below AND the OAuth buttons
+            (both create accounts from this page). */}
+        <div className="flex items-start gap-3">
+          <input
+            id="termsAccepted"
+            name="termsAccepted"
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            aria-required="true"
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-terracotta-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-deep"
+          />
+          <label htmlFor="termsAccepted" className="cursor-pointer text-sm leading-snug text-ink-2">
+            <Trans
+              i18nKey="signup.termsCheckbox"
+              ns="auth"
+              components={{
+                terms: (
+                  <a
+                    className="text-terracotta-deep underline"
+                    href={TERMS_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                ),
+                privacy: (
+                  <a
+                    className="text-terracotta-deep underline"
+                    href={PRIVACY_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                ),
+              }}
+            />
+          </label>
+        </div>
+
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={isSubmitting || !termsAccepted}
+          className="w-full"
+        >
           {isSubmitting ? t('signup.creatingAccount') : t('signup.createAccountButton')}
         </Button>
       </form>
-
-      <p className="m-0 mt-4 text-center text-xs text-ink-3">
-        <Trans
-          i18nKey="signup.terms"
-          ns="auth"
-          components={{
-            terms: (
-              <a
-                className="text-terracotta-deep underline"
-                href={TERMS_URL}
-                target="_blank"
-                rel="noreferrer"
-              />
-            ),
-            privacy: (
-              <a
-                className="text-terracotta-deep underline"
-                href={PRIVACY_URL}
-                target="_blank"
-                rel="noreferrer"
-              />
-            ),
-          }}
-        />
-      </p>
 
       <div className="my-6 flex items-center gap-3" aria-hidden="true">
         <span className="h-px flex-1 bg-line" />
@@ -301,8 +346,11 @@ export default function SignUpPage(): ReactElement {
         <span className="h-px flex-1 bg-line" />
       </div>
 
+      {/* OAuth from this page is a SIGNUP — gated on the same consent checkbox.
+          (LoginPage's OAuth buttons stay ungated: returning users aren't
+          signing up.) */}
       <OAuthButtons
-        disabled={isSubmitting}
+        disabled={isSubmitting || !termsAccepted}
         appleLabel={t('login.continueWithApple')}
         googleLabel={t('login.continueWithGoogle')}
         onApple={() => void handleOAuth('apple')}

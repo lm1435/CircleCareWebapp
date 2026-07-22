@@ -9,7 +9,7 @@
   },
   "tasks": {
     "title": "Open tasks",
-    "empty": "No open tasks right now.",
+    "empty": "You're all caught up — no open tasks.",
     "more": "+{{count}} more",
     "viewAll": "View all tasks"
   },

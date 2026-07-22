@@ -9,7 +9,7 @@
   },
   "tasks": {
     "title": "Tareas pendientes",
-    "empty": "No hay tareas pendientes por ahora.",
+    "empty": "Están al día: no hay tareas pendientes.",
     "more": "+{{count}} más",
     "viewAll": "Ver todas las tareas"
   },

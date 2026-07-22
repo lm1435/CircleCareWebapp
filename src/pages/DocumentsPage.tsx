@@ -140,7 +140,7 @@ export default function DocumentsPage(): ReactElement {
               >
                 {canEdit && (
                   <Button onClick={() => setUploadOpen(true)} disabled={storageFull}>
-                    {t('documents:upload.openButton')}
+                    {t('documents:upload.emptyButton')}
                   </Button>
                 )}
               </EmptyState>

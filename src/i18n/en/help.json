@@ -3,28 +3,28 @@
   "subtitle": "Find answers to common questions",
   "sections": {
     "gettingStarted": {
-      "title": "Getting Started",
+      "title": "Getting started",
       "items": [
         {
-          "question": "What is a Care Circle?",
-          "answer": "A Care Circle is a private group for coordinating care for one person (like a parent or grandparent). Family members join the circle to share updates, track medications, and stay connected."
+          "question": "What is a care circle?",
+          "answer": "A care circle is a private group for coordinating care for one person (like a parent or grandparent). Family members join the circle to share updates, track medications, and stay connected."
         },
         {
           "question": "How many circles can I create?",
-          "answer": "Subscribers can create up to 5 circles — perfect for extended families caring for multiple loved ones."
+          "answer": "Everyone can create one care circle on the free plan. Premium subscribers can create up to 5 circles — helpful for extended families caring for multiple loved ones."
         },
         {
           "question": "Do I need to pay to join someone's circle?",
-          "answer": "No! Being invited to someone else's circle is always free. Only circle owners need an active subscription to create circles and invite members."
+          "answer": "No — being invited to someone's circle is always free, and everyone can create one circle of their own on the free plan. A subscription is only needed for extra circles, more caregivers, and premium features."
         }
       ]
     },
     "roles": {
-      "title": "Circles & Roles",
+      "title": "Circles & roles",
       "items": [
         {
-          "question": "What's the difference between Owner, Caregiver, and Care Recipient?",
-          "answer": "The Owner creates the circle and can invite members, manage settings, and delete the circle. Caregivers are family members who help coordinate care — they can view and update information. The Care Recipient is the person being cared for — they receive medication reminders and can confirm when they've taken them."
+          "question": "What's the difference between Owner, Caregiver, and Care recipient?",
+          "answer": "The Owner creates the circle and can invite members, manage settings, and delete the circle. Caregivers are family members who help coordinate care — they can view and update information. The Care recipient is the person being cared for — they receive medication reminders and can confirm when they've taken them."
         },
         {
           "question": "Can I be in multiple circles?",
@@ -33,7 +33,7 @@
       ]
     },
     "medications": {
-      "title": "Medication Tracking",
+      "title": "Medication tracking",
       "items": [
         {
           "question": "How do medication reminders work?",
@@ -61,21 +61,21 @@
           "answer": "You'll receive notifications for medication reminders (if you're the care recipient), medication confirmations, not-taken alerts, appointment reminders, and when family members join your circle."
         },
         {
-          "question": "What are Quiet Hours?",
-          "answer": "Quiet Hours pause notifications during times you set (like overnight from 10 PM to 7 AM). Go to Profile > Settings to configure your quiet hours."
+          "question": "What are quiet hours?",
+          "answer": "Quiet hours pause notifications during times you set (like overnight from 10 PM to 7 AM). Go to Profile & settings to set up your quiet hours."
         },
         {
           "question": "Can I turn off certain notifications?",
-          "answer": "Yes! Go to Profile > Notifications to customize which types of notifications you receive for each circle."
+          "answer": "Yes — go to Profile & settings and use the Notifications section to choose which types of notifications you receive."
         }
       ]
     },
     "premium": {
-      "title": "Premium Features",
+      "title": "Premium features",
       "items": [
         {
           "question": "What's included in Premium?",
-          "answer": "CircleCare Premium includes up to 5 care circles, unlimited family member invitations per circle, and priority support. Check the subscription page for current pricing on monthly and annual plans."
+          "answer": "CircleCare Premium includes up to 5 care circles, unlimited caregivers per circle, the Care Assistant, and the weekly email digest. See the upgrade page for current pricing."
         },
         {
           "question": "Can I try before I buy?",
@@ -83,7 +83,7 @@
         },
         {
           "question": "How do I restore my purchases?",
-          "answer": "Go to Profile > Subscription > Restore Purchases. This is useful if you reinstall the app or switch devices."
+          "answer": "In the CircleCare mobile app, go to Profile > Subscription > Restore Purchases. This is useful if you reinstall the app or switch phones. If you subscribed here on the web, your subscription follows your account automatically."
         }
       ]
     }

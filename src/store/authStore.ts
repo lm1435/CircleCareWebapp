@@ -98,7 +98,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Clear any stale refresh locks from a previous session (mirrors mobile).
     resetRefreshState();
     tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
-    identifyUser(user.id);
+    identifyUser(user.id, user.email);
     set({ user, isAuthenticated: true, isBootstrapping: false });
   },
 
@@ -123,7 +123,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
 
         const user = await getCurrentUser();
-        identifyUser(user.id);
+        identifyUser(user.id, user.email);
         set({
           user: {
             id: user.id,

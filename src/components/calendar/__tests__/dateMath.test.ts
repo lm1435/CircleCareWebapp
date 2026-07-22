@@ -1,6 +1,7 @@
 // Pure date-string arithmetic — must be timezone-independent (dev machine is
 // America/Denver; everything below uses UTC methods on YYYY-MM-DD strings).
 
+import i18n from '@/i18n';
 import {
   addDays,
   addMonths,
@@ -83,21 +84,41 @@ describe('months', () => {
 
 describe('display formatting', () => {
   it('formats date-only strings without day rollover (UTC-noon pattern)', () => {
-    expect(formatDateForDisplay('2026-06-12', 'en', { weekday: 'long' })).toBe('Friday');
+    expect(formatDateForDisplay('2026-06-12', { weekday: 'long' }, 'en')).toBe('Friday');
     expect(
-      formatDateForDisplay('2026-06-12', 'en', { month: 'short', day: 'numeric', year: 'numeric' })
+      formatDateForDisplay('2026-06-12', { month: 'short', day: 'numeric', year: 'numeric' }, 'en')
     ).toBe('Jun 12, 2026');
   });
 
   it('getWeekdayName maps 0=Sun..6=Sat via Intl', () => {
-    expect(getWeekdayName(0, 'en')).toBe('Sun');
-    expect(getWeekdayName(3, 'en')).toBe('Wed');
-    expect(getWeekdayName(6, 'en')).toBe('Sat');
+    expect(getWeekdayName(0, 'short', 'en')).toBe('Sun');
+    expect(getWeekdayName(3, 'short', 'en')).toBe('Wed');
+    expect(getWeekdayName(6, 'short', 'en')).toBe('Sat');
   });
 
   it('formatTimestampInTimezone renders an ISO UTC instant in the target TZ', () => {
     expect(formatTimestampInTimezone('2026-06-12T13:05:00Z', 'America/Chicago', 'en')).toBe(
       '8:05 AM'
     );
+  });
+});
+
+describe('formatDateForDisplay default locale', () => {
+  // The `locale` param is now optional and trailing; when omitted it must
+  // resolve from the live i18next language (no more manual `i18n.language`
+  // threading at call sites). Isolate the global language change so it never
+  // bleeds into sibling tests.
+  const originalLanguage = i18n.language;
+
+  afterEach(async () => {
+    await i18n.changeLanguage(originalLanguage);
+  });
+
+  it('renders the localized short date from the active i18next language when no locale is passed', async () => {
+    await i18n.changeLanguage('es');
+    expect(formatDateForDisplay('2026-06-12', { month: 'short', day: 'numeric' })).toBe('12 jun');
+
+    await i18n.changeLanguage('en');
+    expect(formatDateForDisplay('2026-06-12', { month: 'short', day: 'numeric' })).toBe('Jun 12');
   });
 });

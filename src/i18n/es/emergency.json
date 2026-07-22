@@ -1,11 +1,11 @@
 {
-  "title": "Info de Emergencia",
+  "title": "Información de emergencia",
   "subtitle": "Comparte con paramédicos o proveedores de salud.",
   "loadingLabel": "Cargando información de emergencia",
-  "errorTitle": "No pudimos cargar la información de emergencia.",
+  "errorTitle": "No se pudo cargar la información de emergencia",
   "retry": "Reintentar",
   "print": "Imprimir",
-  "printHeading": "Información de Emergencia de CircleCare",
+  "printHeading": "Información de emergencia de CircleCare",
   "preparedFor": "Información de emergencia para {{name}}",
   "printedOn": "Generado el {{date}}",
   "onThisPage": "En esta página",
@@ -18,26 +18,26 @@
   "callAria": "Llamar a {{name}}",
   "atAGlance": {
     "title": "De un vistazo",
-    "bloodType": "Tipo de Sangre",
+    "bloodType": "Tipo de sangre",
     "allergies": "Alergias",
     "conditions": "Condiciones",
-    "primaryContact": "Contacto de Emergencia"
+    "primaryContact": "Contacto de emergencia"
   },
   "recipient": {
     "dob": "Fecha de nacimiento",
     "conditions": "Condiciones"
   },
   "sections": {
-    "medicalInfo": "Información Médica",
+    "medicalInfo": "Información médica",
     "doctors": "Doctores",
-    "contacts": "Contactos de Emergencia",
+    "contacts": "Contactos de emergencia",
     "insurance": "Seguro",
-    "directives": "Estado de Código"
+    "directives": "Estado de reanimación"
   },
   "medicalInfo": {
-    "bloodType": "Tipo de Sangre",
-    "medicationAllergies": "Alergias a Medicamentos",
-    "otherAllergies": "Otras Alergias",
+    "bloodType": "Tipo de sangre",
+    "medicationAllergies": "Alergias a medicamentos",
+    "otherAllergies": "Otras alergias",
     "conditions": "Condiciones"
   },
   "doctors": {
@@ -50,8 +50,8 @@
     "phone": "Teléfono"
   },
   "insurance": {
-    "policyNumber": "No. de Póliza",
-    "groupNumber": "No. de Grupo",
+    "policyNumber": "No. de póliza",
+    "groupNumber": "No. de grupo",
     "phone": "Teléfono",
     "rxBin": "Rx BIN",
     "rxPcn": "Rx PCN",
@@ -61,14 +61,14 @@
     "dnrStatus": "Estado DNR",
     "dnrYes": "Sí",
     "dnrNo": "No",
-    "details": "Directivas Anticipadas"
+    "details": "Directivas anticipadas"
   },
   "empty": {
     "medicalInfo": "Agrega tipo de sangre, alergias y condiciones para que los paramédicos conozcan a tu ser querido en segundos.",
     "doctors": "Agrega a los doctores que atienden a tu ser querido para que el círculo pueda contactarlos rápido.",
     "contacts": "Agrega a las personas a quienes llamar primero en una emergencia para que nadie quede en la duda.",
     "insurance": "Agrega los datos del seguro para que la cobertura esté lista cuando el cuidado no pueda esperar.",
-    "directives": "Registra el estado de código de tu ser querido para que sus deseos queden claros en una crisis."
+    "directives": "Registra el estado de reanimación de tu ser querido para que sus deseos queden claros en una crisis."
   },
   "edit": {
     "add": "Agregar",
@@ -149,8 +149,8 @@
       "listHint": "Separa varias entradas con comas."
     },
     "directives": {
-      "title": "Estado de código",
-      "dnrLabel": "DNR (No Reanimar)",
+      "title": "Estado de reanimación",
+      "dnrLabel": "DNR (no reanimar)",
       "details": "Directivas anticipadas",
       "detailsPlaceholder": "Notas sobre directivas anticipadas o deseos"
     }

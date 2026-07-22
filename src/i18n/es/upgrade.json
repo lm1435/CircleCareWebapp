@@ -21,6 +21,7 @@
     "monthlyPerk": "Cancela cuando quieras, sin compromiso"
   },
   "choosePlan": "Elige un plan",
+  "freeBaseline": "El plan gratuito incluye un círculo de cuidado y dos cuidadores.",
   "subscribe": "Suscribirme",
   "startTrial": "Iniciar prueba gratis",
   "subscribing": "Abriendo el pago…",
@@ -37,7 +38,7 @@
     "manageInApp": "Administra tu suscripción en la app de CircleCare donde la compraste."
   },
   "success": {
-    "title": "¡Bienvenido a Premium!",
+    "title": "¡Te damos la bienvenida a Premium!",
     "body": "Tu suscripción está activa. Disfruta del acceso completo en tus círculos de cuidado.",
     "cta": "Continuar"
   }

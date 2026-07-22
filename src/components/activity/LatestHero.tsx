@@ -6,7 +6,7 @@ import { getActivityAccent, getActivityIconPaths } from './ActivityIcon';
 import { translateActivityDescription } from './activityTranslation';
 import { formatRelativeTime, getActorName } from './activityFormat';
 
-// "Latest / LIVE" hero (mirrors mobile's LatestPill in
+// "Latest / New" hero (mirrors mobile's LatestPill in
 // mobile/src/screens/activity/ActivityFeedScreen.tsx). Spotlights the single
 // most recent activity at the top of the feed. Rendered ONLY when there is at
 // least one activity — never on empty / loading / error.
@@ -14,19 +14,19 @@ import { formatRelativeTime, getActorName } from './activityFormat';
 // The hero LEADS WITH WHAT HAPPENED — the same localized description the feed
 // rows render (translateActivityDescription) — attributed to the actor with a
 // quiet relative timestamp, rather than just "{time} · {name}". Its accent
-// (rail + icon medallion + LIVE dot) picks up the event-type color so the
-// freshest event reads as alive and informative at a glance.
+// (rail + icon medallion) picks up the event-type color so the freshest event
+// reads as informative at a glance. The badge says "New", not "LIVE" — the
+// feed is fetched, not realtime, so it must not promise live updates.
 
 export interface LatestHeroProps {
   activity: ActivityFeedItem;
 }
 
 export function LatestHero({ activity }: LatestHeroProps): ReactElement {
-  const { t, i18n } = useTranslation('activity');
-  const locale = i18n.language;
+  const { t } = useTranslation('activity');
 
   const actorName = getActorName(activity.actor, t);
-  const timeText = formatRelativeTime(activity.created_at, t, locale);
+  const timeText = formatRelativeTime(activity.created_at, t);
   const description = translateActivityDescription(activity.description, t);
   const accent = getActivityAccent(activity.action_type);
 
@@ -70,11 +70,7 @@ export function LatestHero({ activity }: LatestHeroProps): ReactElement {
               {t('latest')}
             </span>
 
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-cream">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-cream opacity-60 motion-safe:animate-ping" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-cream" />
-              </span>
+            <span className="inline-flex shrink-0 items-center rounded-full bg-ink px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-cream">
               {t('live')}
             </span>
           </div>

@@ -19,13 +19,14 @@ import { ConfirmMedDialog } from './ConfirmMedDialog';
 // (covers both view_only and read_only) and the matching banner renders.
 // Backend enforces access via requireCircleEditAccess regardless.
 
-type MedDisplayStatus = 'taken' | 'missed' | 'pending' | 'skipped';
+type MedDisplayStatus = 'taken' | 'missed' | 'pending' | 'skipped' | 'unconfirmed';
 
 const STATUS_BADGE_VARIANT: Record<MedDisplayStatus, BadgeVariant> = {
   taken: 'moss',
   missed: 'terracotta',
   pending: 'neutral',
   skipped: 'neutral',
+  unconfirmed: 'neutral',
 };
 
 function getMedDisplayStatus(
@@ -36,10 +37,12 @@ function getMedDisplayStatus(
   if (confirmation) {
     if (confirmation.status === 'taken' || confirmation.status === 'taken_late') return 'taken';
     if (confirmation.status === 'skipped') return 'skipped';
-    return 'missed'; // legacy auto-marked 'missed'
+    return 'missed'; // explicitly recorded 'missed' (incl. legacy auto-marked)
   }
+  // Past due with NO recorded confirmation — we don't know what happened, so
+  // show a neutral "Not confirmed" instead of asserting it was missed.
   return isEventPastDue(med.scheduled_date, med.scheduled_time ?? null, careRecipientTimezone)
-    ? 'missed'
+    ? 'unconfirmed'
     : 'pending';
 }
 
@@ -79,7 +82,7 @@ function MedTileIcon({ status }: { status: MedDisplayStatus }): ReactElement {
       </svg>
     );
   }
-  // pending / missed — pill glyph
+  // pending / unconfirmed / missed — pill glyph
   return (
     <svg {...common}>
       <rect x="3" y="8" width="18" height="8" rx="4" />
@@ -149,7 +152,8 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
           const showActions = canEdit && !med.confirmation;
           const isDone = status === 'taken' || status === 'skipped';
           // Leading icon tile mirrors mobile's MedRow: rounded tile, accent
-          // surface by default, neutral when done, terracotta-tinted when missed.
+          // surface by default (incl. past-due-unconfirmed), neutral when done,
+          // terracotta-tinted only for explicitly recorded misses.
           const tileClass = isDone
             ? 'bg-bg-2 text-ink-3'
             : status === 'missed'

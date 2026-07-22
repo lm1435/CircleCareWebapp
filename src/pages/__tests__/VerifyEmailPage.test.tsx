@@ -123,8 +123,14 @@ describe('VerifyEmailPage', () => {
     await enterOtp();
 
     // Verified but not signed in — a normal login will work now, and its
-    // pending-code fallback finishes the invite handoff.
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true }));
+    // pending-code fallback finishes the invite handoff. LoginPage shows the
+    // "email verified, sign in" notice off this router state.
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/login', {
+        replace: true,
+        state: { emailVerified: true },
+      })
+    );
     expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
   });
 

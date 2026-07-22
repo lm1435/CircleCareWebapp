@@ -96,8 +96,8 @@ const CIRCLE_PAGES: { path: string; heading: string | null }[] = [
   { path: '', heading: 'Equipo de cuidado' }, // overview (h1 is the recipient name)
   { path: '/calendar', heading: null }, // heading is the current month
   { path: '/tasks', heading: 'Tareas' },
-  { path: '/activity', heading: 'Historial de Actividad' },
-  { path: '/emergency', heading: 'Info de Emergencia' },
+  { path: '/activity', heading: 'Actividad' },
+  { path: '/emergency', heading: 'Información de emergencia' },
   { path: '/documents', heading: 'Documentos' },
   { path: '/vitals', heading: 'Signos vitales' },
   { path: '/members', heading: 'Miembros' },
@@ -125,7 +125,7 @@ for (const { path, heading } of CIRCLE_PAGES) {
 const TOP_PAGES: { route: string; text: string }[] = [
   { route: '/circles', text: 'Unirte a un círculo' },
   { route: '/profile', text: 'Perfil y ajustes' },
-  { route: '/help', text: 'Ayuda y Preguntas Frecuentes' },
+  { route: '/help', text: 'Ayuda y preguntas frecuentes' },
   { route: '/invites', text: 'Tus invitaciones' },
 ];
 
@@ -146,7 +146,7 @@ test('join-circle modal is fully translated', async ({ page }) => {
 
   // Modal chrome + the two-step entry copy, all Spanish.
   await expect(
-    page.getByText('Ingresa el código de invitación que te envió un familiar.')
+    page.getByText('Ingresa el código que viene en tu correo de invitación.')
   ).toBeVisible({ timeout: NAV_TIMEOUT });
   await expect(page.getByText('Código de invitación', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Buscar código' })).toBeVisible();

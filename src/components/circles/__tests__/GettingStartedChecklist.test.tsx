@@ -76,8 +76,9 @@ describe('GettingStartedChecklist', () => {
     expect(screen.getByText('Invite family & caregivers')).toBeInTheDocument();
     expect(screen.getByText('Add emergency info')).toBeInTheDocument();
 
-    // All three pending → three "Add" action buttons.
-    expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(3);
+    // All three pending → two "Add" actions (event, emergency) + one "Invite".
+    expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /Invite/ })).toBeInTheDocument();
     expect(screen.getByText('0 of 3 done')).toBeInTheDocument();
   });
 
@@ -102,7 +103,8 @@ describe('GettingStartedChecklist', () => {
     expect(label.className).toContain('line-through');
     expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
     // Only the two remaining pending steps still show an action.
-    expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Invite/ })).toBeInTheDocument();
   });
 
   it('marks step 2 done when the circle has more than one member', () => {
@@ -147,14 +149,14 @@ describe('GettingStartedChecklist', () => {
     const user = userEvent.setup();
     const { onAddEvent } = setup();
 
-    const actions = screen.getAllByRole('button', { name: /Add/ });
-    await user.click(actions[0]); // step 1
+    const addActions = screen.getAllByRole('button', { name: /Add/ });
+    await user.click(addActions[0]); // step 1
     expect(onAddEvent).toHaveBeenCalledTimes(1);
 
-    await user.click(actions[1]); // step 2 → members
+    await user.click(screen.getByRole('button', { name: /Invite/ })); // step 2 → members
     expect(navigate).toHaveBeenCalledWith('/circles/circle-1/members');
 
-    await user.click(actions[2]); // step 3 → emergency
+    await user.click(addActions[1]); // step 3 → emergency
     expect(navigate).toHaveBeenCalledWith('/circles/circle-1/emergency');
   });
 });

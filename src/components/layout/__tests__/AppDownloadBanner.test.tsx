@@ -26,7 +26,9 @@ describe('AppDownloadBanner', () => {
 
     const region = screen.getByRole('region', { name: 'Get the app' });
     expect(region).toHaveAttribute('data-variant', 'prominent');
-    expect(screen.getByText('CircleCare is better in the app.')).toBeInTheDocument();
+    expect(
+      screen.getByText('For reminders on the go, get the CircleCare app.')
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Download on the App Store' })).toHaveAttribute(
       'href',
       'https://apps.apple.com/app/id6757629684'

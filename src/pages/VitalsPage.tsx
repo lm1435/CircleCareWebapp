@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import {
   Accordion,
   Button,
@@ -48,6 +49,25 @@ const RANGE_CHOICES: RangeChoice[] = ['7d', '30d', '90d'];
 const RANGE_DAYS: Record<RangeChoice, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
 const SKELETON_ROWS = [0, 1, 2, 3];
+
+/**
+ * Localized "Jun 15, 2026" label for a reading's recorded day, in the CARE
+ * RECIPIENT's timezone (same date-only convention as VitalRow: format the
+ * wall date at UTC noon with timeZone: 'UTC' so the day never shifts).
+ */
+function formatRecordedDay(
+  recordedAtISO: string,
+  timezone: string,
+  locale: string = i18n.language
+): string {
+  const wall = utcISOToRecipientWallTime(recordedAtISO, timezone);
+  return new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${wall.date}T12:00:00Z`));
+}
 
 function VitalsEmptyIcon(): ReactElement {
   return (
@@ -358,7 +378,10 @@ export default function VitalsPage(): ReactElement {
       {deletingVital && (
         <ConfirmDialog
           title={t('delete.title')}
-          message={t('delete.message')}
+          message={t('delete.message', {
+            type: t(`types.${deletingVital.vital_type}`).toLocaleLowerCase(i18n.language),
+            date: formatRecordedDay(deletingVital.recorded_at, timezone),
+          })}
           confirmLabel={t('actions.delete')}
           cancelLabel={t('common:cancel')}
           destructive

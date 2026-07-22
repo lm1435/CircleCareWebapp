@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import type { ActivityActor } from '@/api/activityFeed';
 import { getDateInTimezone, getDeviceTimezone } from '@/utils/timezone';
 
@@ -33,7 +34,7 @@ export function getLocalDateKey(isoString: string, timezone: string = getDeviceT
 export function formatRelativeTime(
   isoString: string,
   t: TFn,
-  locale: string,
+  locale: string = i18n.language,
   now: Date = new Date()
 ): string {
   const date = new Date(isoString);
@@ -69,7 +70,7 @@ function formatDateOnlyKey(
 export function formatDayLabel(
   dateKey: string,
   t: TFn,
-  locale: string,
+  locale: string = i18n.language,
   timezone: string = getDeviceTimezone(),
   now: Date = new Date()
 ): string {
@@ -95,7 +96,7 @@ export function formatDayLabel(
 export function formatDateShort(
   dateKey: string,
   t: TFn,
-  locale: string,
+  locale: string = i18n.language,
   timezone: string = getDeviceTimezone(),
   now: Date = new Date()
 ): string {

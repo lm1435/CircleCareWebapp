@@ -105,7 +105,8 @@ export function useCreateCircle(): UseMutationResult<Circle, unknown, CreateCirc
       } else if (isPermissionDeniedError(error)) {
         showToast(t('common:errors.permissionDenied'), 'error');
       } else {
-        showToast(t('common:errors.saveFailed'), 'error');
+        // Create-specific reassurance copy — nothing was saved, safe to retry.
+        showToast(t('circles:create.failed'), 'error');
       }
     },
   });

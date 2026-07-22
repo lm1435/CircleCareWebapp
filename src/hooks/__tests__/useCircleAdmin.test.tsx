@@ -127,6 +127,17 @@ describe('useCreateCircle', () => {
     // It must NOT use the upgrade copy — the limit can't be lifted by upgrading.
     expect(promptUpgrade).not.toHaveBeenCalled();
   });
+
+  it('surfaces a generic failure as the create-specific reassurance toast', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(new Error('network'));
+
+    const { result } = renderHook(() => useCreateCircle(), { wrapper });
+    result.current.mutate({ recipient_name: 'Rose' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('circles:create.failed', 'error');
+  });
 });
 
 describe('useUpdateCircle', () => {

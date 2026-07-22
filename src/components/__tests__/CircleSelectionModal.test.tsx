@@ -57,7 +57,7 @@ describe('CircleSelectionModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm selection' }));
 
     // Confirmation step
-    expect(screen.getByRole('heading', { name: 'Are you sure?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Keep this circle?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Keep this circle' }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -68,7 +68,7 @@ describe('CircleSelectionModal', () => {
     renderModal();
     fireEvent.click(screen.getAllByRole('radio')[1]); // pick c2
     fireEvent.click(screen.getByRole('button', { name: 'Confirm selection' }));
-    expect(screen.getByRole('heading', { name: 'Are you sure?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Keep this circle?' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('heading', { name: 'Pick one circle to keep' })).toBeInTheDocument();

@@ -17,8 +17,11 @@ vi.mock('@/api/calendarEvents', async (importOriginal) => {
 });
 
 // Deterministic translations so error toasts assert on a stable key string.
+// `initReactI18next` is stubbed because the `@/i18n` singleton (now pulled in
+// transitively via the calendar dateMath formatters) registers it via i18n.use().
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
 const showToast = vi.fn();

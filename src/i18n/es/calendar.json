@@ -18,7 +18,7 @@
     "hintReadOnly": "Cuando el equipo de cuidado agregue medicamentos o citas, aparecerán aquí."
   },
   "errorTitle": "No se pudo cargar el calendario",
-  "errorHint": "Verifica tu conexión e intenta de nuevo.",
+  "errorHint": "Revisa tu conexión e intenta de nuevo.",
   "eventCount_one": "{{count}} evento",
   "eventCount_other": "{{count}} eventos",
   "moreEvents": "{{count}} más",
@@ -34,12 +34,12 @@
   },
   "status": {
     "taken": "Tomado",
-    "missed": "Perdido",
+    "missed": "No tomado",
     "skipped": "Omitido",
     "pending": "Pendiente"
   },
   "eventDetail": {
-    "title": "Detalles del Evento",
+    "title": "Detalles del evento",
     "date": "Fecha",
     "time": "Hora",
     "location": "Ubicación",
@@ -49,7 +49,9 @@
     "takenAt": "Tomado a las {{time}}",
     "takenLateAt": "Tomado tarde a las {{time}}",
     "skippedAt": "Omitido a las {{time}}",
-    "missed": "Perdido",
+    "missed": "No tomado",
+    "markComplete": "Marcar como completado",
+    "completedToast": "Marcado como completado",
     "close": "Cerrar detalles del evento"
   },
   "recurrence": {
@@ -73,7 +75,12 @@
     "saveChanges": "Guardar cambios",
     "creating": "Guardando…",
     "created": "Evento creado",
+    "createdMedication": "Medicamento agregado",
+    "createdAppointment": "Cita agregada",
+    "createdTask": "Tarea agregada",
     "updated": "Cambios guardados",
+    "updatedSeries": "Serie actualizada",
+    "recurringEditNotice": "Este evento se repite. Los cambios que guardes se aplicarán a toda la serie.",
     "viewOnly": "Solo lectura",
     "types": {
       "medication": "Medicamento",
@@ -142,7 +149,7 @@
     "title": "Eliminar evento",
     "close": "Cerrar el diálogo de eliminación",
     "confirmMessage": "¿Eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
-    "recurringMessage": "\"{{title}}\" se repite. ¿Qué deseas eliminar?",
+    "recurringMessage": "\"{{title}}\" se repite. Elige qué eliminar; esta acción no se puede deshacer.",
     "scopeSingle": "Solo este evento",
     "scopeFuture": "Este y todos los eventos futuros",
     "delete": "Eliminar",

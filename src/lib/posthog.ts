@@ -38,12 +38,18 @@ export function initAnalytics(): void {
 }
 
 /**
- * Associate subsequent events with a user id. NO PII traits are ever attached —
- * only the opaque user id. No-op when PostHog isn't initialized (optional key).
+ * Associate subsequent events with a user id, plus the user's email as the ONLY
+ * person property (disclosed in the privacy policy's PostHog row — needed so
+ * founders can correlate analytics with support requests). No other traits are
+ * ever attached. No-op when PostHog isn't initialized (optional key).
  */
-export function identifyUser(userId: string): void {
+export function identifyUser(userId: string, email?: string): void {
   if (!env.VITE_POSTHOG_KEY) return;
-  posthog.identify(userId);
+  if (email) {
+    posthog.identify(userId, { email });
+  } else {
+    posthog.identify(userId);
+  }
 }
 
 /**

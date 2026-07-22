@@ -30,7 +30,7 @@ const successEnvelope = {
   },
 };
 
-function renderLogin(state?: { from?: { pathname?: string } }) {
+function renderLogin(state?: { from?: { pathname?: string }; emailVerified?: boolean }) {
   return render(
     <MemoryRouter initialEntries={[{ pathname: '/login', state: state ?? null }]}>
       <LoginPage />
@@ -47,7 +47,7 @@ async function fillAndSubmit(email = 'pat@example.com', password = 'Secret#123',
   // `required`, so match the leading label text rather than the exact string.
   await user.type(screen.getByLabelText(/^Email/), email);
   await user.type(screen.getByLabelText(/^Password/), password);
-  await user.click(screen.getByRole('button', { name: 'Sign In' }));
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
   return user;
 }
 
@@ -150,9 +150,9 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderLogin();
 
-    await user.click(screen.getByRole('button', { name: 'Sign In' }));
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByText('Email is required')).toBeInTheDocument();
+    expect(await screen.findByText('Email is required.')).toBeInTheDocument();
     expect(mockedPost).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
@@ -203,6 +203,23 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Continue with Apple' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Apple sign-in failed');
+    expect(alert).toHaveTextContent(
+      "We couldn't sign you in with Apple. Please try again, or use your email and password."
+    );
+  });
+
+  it('shows the "email verified, sign in" notice when arriving from VerifyEmailPage', () => {
+    renderLogin({ emailVerified: true });
+
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveTextContent(
+      'Your email is verified. Sign in with your password to continue.'
+    );
+  });
+
+  it('does not show the verified notice on a plain visit', () => {
+    renderLogin();
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

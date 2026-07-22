@@ -1,22 +1,23 @@
 {
   "viewOnly": {
-    "banner": "View-only access. Contact {{ownerName}} for details.",
-    "bannerShort": "View-only access"
+    "banner": "You have view-only access — free circles include two editing caregivers. If you need to make changes, ask {{ownerName}} about upgrading.",
+    "bannerShort": "View-only — you can see everything, but changes are off."
   },
   "readOnly": {
-    "ownerBanner": "Re-subscribe to manage this circle.",
-    "memberBanner": "You can view but not edit this circle."
+    "ownerBanner": "Your subscription ended, so this circle is view-only for now. Everything is saved — re-subscribe to pick up where you left off.",
+    "ownerUpgradeCta": "Re-subscribe",
+    "memberBanner": "This circle is view-only right now because the owner's subscription ended. Everything is still here to see, and editing comes back if the owner re-subscribes."
   },
   "circleSelection": {
     "banner": "Your subscription ended. Choose which circle to keep with free access.",
     "choose": "Choose circle",
     "title": "Pick one circle to keep",
     "subtitle": "Your subscription has ended. Choose which circle to keep with free access. Your other circles will become read-only until you re-subscribe.",
-    "memberCount": "{{count}} member",
-    "memberCount_plural": "{{count}} members",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
     "confirmButton": "Confirm selection",
-    "confirmTitle": "Are you sure?",
-    "confirmMessage": "This choice is permanent. Your other circles will become read-only. You can re-subscribe anytime to restore full access.",
+    "confirmTitle": "Keep this circle?",
+    "confirmMessage": "You can only make this choice once — you won't be able to switch which circle stays free. Nothing is deleted: your other circles stay safe in read-only, and re-subscribing anytime restores full access to all of them.",
     "confirmKeep": "Keep this circle",
     "cancel": "Cancel",
     "back": "Back",

@@ -28,7 +28,7 @@
     "completing": "Completando…",
     "undo": "Deshacer",
     "undoAction": "Deshacer completar \"{{title}}\"",
-    "pendingAnnounce": "\"{{title}}\" se completará. Toca deshacer para cancelar."
+    "pendingAnnounce": "\"{{title}}\" se completará. Elige Deshacer para cancelar."
   },
   "due": {
     "today": "Hoy",
@@ -44,7 +44,7 @@
     "cta": "Agregar tarea"
   },
   "errorTitle": "No se pudieron cargar las tareas",
-  "errorHint": "Revisa tu conexión e inténtalo de nuevo.",
+  "errorHint": "Revisa tu conexión e intenta de nuevo.",
   "toast": {
     "completed": "Tarea completada",
     "reopened": "Tarea reabierta"

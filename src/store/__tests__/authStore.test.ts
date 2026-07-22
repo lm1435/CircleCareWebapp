@@ -3,6 +3,14 @@
 // test setup; modules are re-imported per test so module-level state
 // (BroadcastChannel, bootstrap single-flight) starts fresh.
 
+// Mock the identify/reset helpers so we can assert the store passes the user's
+// email to identifyUser (signIn + bootstrap). The real helpers would silently
+// no-op here anyway (no VITE_POSTHOG_KEY in the test env).
+vi.mock('@/lib/posthog', () => ({
+  identifyUser: vi.fn(),
+  resetAnalytics: vi.fn(),
+}));
+
 class MockBroadcastChannel {
   static instances: MockBroadcastChannel[] = [];
   name: string;
@@ -19,8 +27,9 @@ async function loadModules() {
   const api = await import('@/lib/api');
   const { tokenAccessor } = await import('@/lib/tokenAccessor');
   const { queryClient } = await import('@/lib/queryClient');
+  const posthogLib = await import('@/lib/posthog');
   const { useAuthStore } = await import('@/store/authStore');
-  return { api, tokenAccessor, queryClient, useAuthStore };
+  return { api, tokenAccessor, queryClient, posthogLib, useAuthStore };
 }
 
 const testUser = {
@@ -54,12 +63,14 @@ describe('authStore', () => {
   });
 
   it('signIn stores the access token in memory only and marks the user authenticated', async () => {
-    const { tokenAccessor, useAuthStore } = await loadModules();
+    const { tokenAccessor, posthogLib, useAuthStore } = await loadModules();
 
     useAuthStore.getState().signIn({ access_token: 'tok-123', expires_at: 1234567890 }, testUser);
 
     expect(tokenAccessor.getAuthToken()).toBe('tok-123');
     expect(tokenAccessor.getExpiresAt()).toBe(1234567890);
+    // Analytics identity carries the id + email (the only person property).
+    expect(posthogLib.identifyUser).toHaveBeenCalledWith('user-1', 'pat@example.com');
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().user).toEqual(testUser);
     expect(useAuthStore.getState().isBootstrapping).toBe(false);
@@ -116,7 +127,7 @@ describe('authStore', () => {
 
   it('bootstrap performs a silent cookie refresh and loads the current user', async () => {
     setSessionHint(true); // a returning user has the cc_session hint cookie
-    const { api, tokenAccessor, useAuthStore } = await loadModules();
+    const { api, tokenAccessor, posthogLib, useAuthStore } = await loadModules();
     vi.mocked(api.apiClient.post).mockResolvedValue({
       success: true,
       data: { session: { access_token: 'boot-token', expires_at: 999999 } },
@@ -131,6 +142,7 @@ describe('authStore', () => {
     expect(api.apiClient.post).toHaveBeenCalledWith('/auth/refresh', {});
     expect(api.apiClient.get).toHaveBeenCalledWith('/users/me');
     expect(tokenAccessor.getAuthToken()).toBe('boot-token');
+    expect(posthogLib.identifyUser).toHaveBeenCalledWith('user-1', 'pat@example.com');
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().user).toEqual(testUser);
     expect(useAuthStore.getState().isBootstrapping).toBe(false);

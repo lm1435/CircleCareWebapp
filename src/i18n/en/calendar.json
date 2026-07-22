@@ -50,6 +50,8 @@
     "takenLateAt": "Taken late at {{time}}",
     "skippedAt": "Skipped at {{time}}",
     "missed": "Missed",
+    "markComplete": "Mark complete",
+    "completedToast": "Marked complete",
     "close": "Close event details"
   },
   "recurrence": {
@@ -73,7 +75,12 @@
     "saveChanges": "Save changes",
     "creating": "Saving…",
     "created": "Event created",
+    "createdMedication": "Medication added",
+    "createdAppointment": "Appointment added",
+    "createdTask": "Task added",
     "updated": "Changes saved",
+    "updatedSeries": "Series updated",
+    "recurringEditNotice": "This event repeats. Changes you save here will apply to the whole series.",
     "viewOnly": "View only",
     "types": {
       "medication": "Medication",
@@ -142,7 +149,7 @@
     "title": "Delete event",
     "close": "Close delete dialog",
     "confirmMessage": "Delete \"{{title}}\"? This can't be undone.",
-    "recurringMessage": "\"{{title}}\" repeats. What would you like to delete?",
+    "recurringMessage": "\"{{title}}\" repeats. Choose what to delete — this can't be undone.",
     "scopeSingle": "This event only",
     "scopeFuture": "This and all future events",
     "delete": "Delete",

@@ -13,7 +13,6 @@
   "today": "Hoy",
   "expandAll": "Expandir todo",
   "collapseAll": "Contraer todo",
-  "comingSoon": "Próximamente",
   "skipToContent": "Saltar al contenido",
   "pageTitles": {
     "login": "Iniciar sesión",
@@ -34,7 +33,8 @@
     "documents": "Documentos",
     "vitals": "Signos vitales",
     "members": "Miembros",
-    "settings": "Editar círculo"
+    "settings": "Editar círculo",
+    "notFound": "Página no encontrada"
   },
   "errorBoundary": {
     "title": "Algo salió mal",
@@ -62,12 +62,17 @@
   },
   "errors": {
     "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
-    "subscriptionRequired": "Abre la app de CircleCare para mejorar tu plan y desbloquear esto.",
+    "subscriptionRequired": "Esa es una función Premium. Abre la app de CircleCare para mejorar tu plan y desbloquearla.",
     "permissionDenied": "No tienes permiso para hacer este cambio."
   },
   "upgradeGate": {
-    "message": "Esta es una función Premium.",
+    "message": "Esa función no está incluida en el plan gratuito. Mejora a Premium para desbloquearla para todo tu círculo.",
     "action": "Mejorar"
+  },
+  "notFound": {
+    "title": "No encontramos esa página",
+    "body": "Puede que el enlace sea antiguo o esté mal escrito. Tus círculos siguen justo donde los dejaste.",
+    "cta": "Ir a mis círculos"
   },
   "create": {
     "button": "Crear",
@@ -85,14 +90,13 @@
   },
   "header": {
     "switchCircle": "Cambiar de círculo",
-    "circlesError": "No se pudieron cargar tus círculos",
+    "circlesError": "No se pudieron cargar tus círculos.",
     "account": "Cuenta",
     "logout": "Cerrar sesión"
   },
   "downloadApp": {
     "title": "Obtén la experiencia completa.",
     "subtitle": "Descarga CircleCare para iOS o Android.",
-    "cta": "Descargar la app",
     "appStore": "Descargar en App Store",
     "googlePlay": "Disponible en Google Play",
     "appStoreLead": "Descárgalo en el",
@@ -102,8 +106,7 @@
   },
   "downloadBanner": {
     "regionLabel": "Obtener la app",
-    "message": "Obtén la experiencia completa de CircleCare en la app.",
-    "mobileMessage": "CircleCare es mejor en la app.",
+    "message": "Para recibir recordatorios donde estés, descarga la app de CircleCare.",
     "getApp": "Obtener la app",
     "dismiss": "Descartar el aviso de descarga"
   },
@@ -123,7 +126,8 @@
     "step2Desc": "Compartan la carga: ven el mismo calendario y las novedades.",
     "step3Label": "Agrega información de emergencia",
     "step3Desc": "Alergias, médicos y contactos listos justo cuando se necesitan.",
-    "action": "Agregar",
+    "actionAdd": "Agregar",
+    "actionInvite": "Invitar",
     "statusDone": "(listo)",
     "statusPending": "(pendiente)",
     "dismiss": "Descartar la lista de pasos para empezar"

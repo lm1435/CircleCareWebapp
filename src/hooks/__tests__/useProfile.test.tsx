@@ -237,7 +237,7 @@ describe('useDeleteAccount', () => {
     expect(mockDeleteAccount).toHaveBeenCalledTimes(1);
   });
 
-  it('surfaces a save-failed toast on error', async () => {
+  it('surfaces the dedicated delete-failure toast on error', async () => {
     const { wrapper } = setup();
     mockDeleteAccount.mockRejectedValue(new Error('boom'));
 
@@ -245,6 +245,6 @@ describe('useDeleteAccount', () => {
     result.current.mutate();
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(showToast).toHaveBeenCalledWith('delete.error', 'error');
   });
 });

@@ -4,22 +4,22 @@
   "appDescription": "CircleCare ayuda a las familias a coordinar juntas los medicamentos, las citas y el cuidado diario.",
   "roles": {
     "caregiver": "Cuidador",
-    "care_recipient": "Receptor de Cuidado"
+    "care_recipient": "Persona que recibe cuidado"
   },
   "accept": "Aceptar invitación",
   "accepting": "Uniéndote…",
   "acceptSuccess": "Te uniste al círculo.",
-  "acceptFailed": "No pudimos aceptar esta invitación. Por favor intenta de nuevo.",
-  "alreadyMember": "Ya eres miembro de este círculo.",
-  "signInToAccept": "Inicia sesión para aceptar",
-  "openCircle": "Abrir círculo",
-  "downloadPrompt": "Descarga la app para aceptar tu invitación",
+  "acceptFailed": "No pudimos agregarte al círculo en este momento. Intenta de nuevo y, si sigue sin funcionar, pide una nueva invitación.",
+  "signInToAccept": "Inicia sesión o crea una cuenta para aceptar",
+  "downloadPromptValid": "Descarga la app de CircleCare para la experiencia completa",
+  "downloadPromptError": "Mientras tanto, descarga la app para estar listo cuando llegue una nueva invitación",
   "appStore": "Descargar en el App Store",
   "googlePlay": "Disponible en Google Play",
   "codeLabel": "Tu código de invitación:",
   "copyCode": "Copiar código de invitación",
   "copied": "Copiado",
   "codeCopied": "Código de invitación copiado al portapapeles",
+  "copyFailed": "No se pudo copiar; el código está arriba.",
   "loading": "Cargando tu invitación",
   "error": {
     "title": "Esta invitación venció o no es válida",

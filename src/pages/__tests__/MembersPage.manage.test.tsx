@@ -203,7 +203,7 @@ describe('MembersPage — owner management', () => {
     ]);
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Make med manager' }));
+    await user.click(screen.getByRole('button', { name: 'Make medication manager' }));
     expect(setMedResponsible).toHaveBeenCalledWith('u1', expect.anything());
     expect(setMedResponsible.mock.calls[0][0]).toBe('u1');
   });
@@ -216,7 +216,7 @@ describe('MembersPage — owner management', () => {
     ]);
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Remove med manager' }));
+    await user.click(screen.getByRole('button', { name: 'Remove medication manager' }));
     expect(setMedResponsible.mock.calls[0][0]).toBeNull();
   });
 

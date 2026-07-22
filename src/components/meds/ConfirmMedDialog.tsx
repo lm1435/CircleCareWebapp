@@ -114,7 +114,10 @@ export function ConfirmMedDialog({
       },
       {
         onSuccess: () => {
-          showToast(t('dialog.success'), 'success');
+          showToast(
+            t(status === 'taken' ? 'dialog.successTaken' : 'dialog.successSkipped'),
+            'success'
+          );
           onClose();
         },
         onError: (error) => {

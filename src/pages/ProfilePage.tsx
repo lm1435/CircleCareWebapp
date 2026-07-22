@@ -19,6 +19,8 @@ import {
   useDeleteAccount,
 } from '@/hooks/useProfile';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
+import { DataExportSection } from '@/components/profile/DataExportSection';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import {
   Button,
   Card,
@@ -126,6 +128,9 @@ export default function ProfilePage(): ReactElement {
     queryFn: getUnitPreferences,
   });
   const user = userQuery.data;
+  // Same cached query SubscriptionSection reads — no extra request.
+  const { data: subscription } = useSubscriptionStatus();
+  const isPremium = subscription?.tier === 'premium';
 
   const updateProfile = useUpdateProfile();
   const updateNotif = useUpdateNotificationPrefs();
@@ -260,7 +265,8 @@ export default function ProfilePage(): ReactElement {
         queryClient.clear();
         void signOut().finally(() => navigate('/login', { replace: true }));
       },
-      onError: () => setShowDelete(false),
+      // On error the dialog stays OPEN with the failure shown inline (plus the
+      // hook's toast), so the failure is never silently swallowed.
     });
   };
 
@@ -352,6 +358,9 @@ export default function ProfilePage(): ReactElement {
           onChange={(e) => handleTimezone(e.target.value)}
           disabled={updateProfile.isPending}
         />
+
+        {/* Password changes happen through the sign-in reset flow — point there. */}
+        <p className="m-0 text-sm text-ink-3">{t('account.changePasswordHint')}</p>
       </SectionCard>
 
       {/* ── Language ──────────────────────────────────────────────────── */}
@@ -447,7 +456,8 @@ export default function ProfilePage(): ReactElement {
           onChange={handleDigestEnabled}
           disabled={updateDigest.isPending}
           label={t('emailDigest.enable')}
-          hint={t('emailDigest.premiumNote')}
+          // Premium users already have the digest — only free users need the note.
+          hint={isPremium ? undefined : t('emailDigest.premiumNote')}
         />
         {user.email_digest_enabled ? (
           <Select
@@ -463,6 +473,9 @@ export default function ProfilePage(): ReactElement {
         )}
       </SectionCard>
 
+      {/* ── Your data (GDPR export) ───────────────────────────────────── */}
+      <DataExportSection />
+
       {/* ── Danger zone ───────────────────────────────────────────────── */}
       <Card className="mt-6 border-terracotta-deep">
         <h2 className="m-0 text-lg font-semibold text-ink">{t('delete.title')}</h2>
@@ -470,7 +483,11 @@ export default function ProfilePage(): ReactElement {
         <Button
           variant="terracotta"
           className="mt-5"
-          onClick={() => setShowDelete(true)}
+          onClick={() => {
+            // Clear any stale error from a previous attempt before re-opening.
+            deleteAccount.reset();
+            setShowDelete(true);
+          }}
           disabled={deleteAccount.isPending}
         >
           {t('delete.cta')}
@@ -480,7 +497,16 @@ export default function ProfilePage(): ReactElement {
       {showDelete ? (
         <ConfirmDialog
           title={t('delete.confirmTitle')}
-          message={t('delete.confirmBody')}
+          message={
+            <>
+              <p className="m-0">{t('delete.confirmBody')}</p>
+              {deleteAccount.isError ? (
+                <p role="alert" className="m-0 mt-3 text-sm font-medium text-terracotta-deep">
+                  {t('delete.error')}
+                </p>
+              ) : null}
+            </>
+          }
           confirmLabel={t('delete.confirm')}
           cancelLabel={t('delete.keep')}
           destructive

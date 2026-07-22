@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { getWeekdayName } from './dateMath';
 
@@ -17,7 +18,7 @@ type TranslateFn = (key: string, opts?: Record<string, unknown>) => string;
 export function formatRecurrenceLabel(
   event: Pick<CalendarEvent, 'recurrence_rule' | 'recurrence_days'>,
   t: TranslateFn,
-  locale: string
+  locale: string = i18n.language
 ): string | null {
   const rule = event.recurrence_rule;
   if (!rule) return null;
@@ -31,7 +32,7 @@ export function formatRecurrenceLabel(
       const names = [...days]
         .filter((d) => d >= 0 && d <= 6)
         .sort((a, b) => a - b)
-        .map((d) => getWeekdayName(d, locale, 'short'))
+        .map((d) => getWeekdayName(d, 'short', locale))
         .join(', ');
       if (names) return t('calendar:recurrence.weeklyOn', { days: names });
     }

@@ -101,7 +101,7 @@ describe('MembersPage', () => {
     expect(screen.getByText('Ana Reyes')).toBeInTheDocument();
     expect(screen.getByText('Caregiver')).toBeInTheDocument();
     expect(screen.getByText('Rose Meza')).toBeInTheDocument();
-    expect(screen.getByText('Care Recipient')).toBeInTheDocument();
+    expect(screen.getByText('Care recipient')).toBeInTheDocument();
 
     expect(mockGetCircleDetail).toHaveBeenCalledWith('c1');
   });
@@ -142,7 +142,7 @@ describe('MembersPage', () => {
     renderMembers();
 
     await screen.findByText('Rose Meza');
-    expect(screen.getByRole('img', { name: 'Care Recipient' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Care recipient' })).toBeInTheDocument();
   });
 
   it('marks a bell overlay for the medication-responsible caregiver', async () => {
@@ -166,7 +166,7 @@ describe('MembersPage', () => {
     expect(await screen.findByText('ana@example.com')).toBeInTheDocument();
   });
 
-  it('shows a View Only indicator only on members flagged view_only', async () => {
+  it('shows a View-only indicator only on members flagged view_only', async () => {
     mockGetCircleDetail.mockResolvedValue(
       makeDetail([
         makeMember({ id: 'u2', first_name: 'Vista', last_name: 'Solo', view_only: true }),
@@ -177,8 +177,8 @@ describe('MembersPage', () => {
 
     const flagged = (await screen.findByText('Vista Solo')).closest('li')!;
     const unflagged = screen.getByText('Full Access').closest('li')!;
-    expect(within(flagged).getByText('View Only')).toBeInTheDocument();
-    expect(within(unflagged).queryByText('View Only')).not.toBeInTheDocument();
+    expect(within(flagged).getByText('View-only')).toBeInTheDocument();
+    expect(within(unflagged).queryByText('View-only')).not.toBeInTheDocument();
   });
 
   it('renders an empty state when the circle has no members', async () => {

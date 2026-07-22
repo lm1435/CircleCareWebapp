@@ -1,6 +1,6 @@
 {
   "title": "Medicamentos de hoy",
-  "empty": "No hay medicamentos hoy",
+  "empty": "No hay medicamentos programados para hoy. Agrégalos desde el calendario para que todo el círculo sepa qué se necesita y cuándo.",
   "loadError": "No se pudieron cargar los medicamentos de hoy",
   "confirm": "Confirmar",
   "skip": "Omitir",
@@ -10,7 +10,8 @@
     "taken": "Tomado",
     "missed": "No tomado",
     "pending": "Pendiente",
-    "skipped": "Omitido"
+    "skipped": "Omitido",
+    "unconfirmed": "Sin confirmar"
   },
   "dialog": {
     "title": "Confirmar medicamento",
@@ -21,7 +22,8 @@
     "notePlaceholder": "Agregar una nota",
     "submit": "Guardar",
     "submitting": "Guardando...",
-    "success": "Medicamento actualizado",
+    "successTaken": "Marcado como tomado",
+    "successSkipped": "Marcado como omitido",
     "error": "No se pudo guardar. Inténtalo de nuevo.",
     "cancel": "Cancelar"
   },
