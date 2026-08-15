@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatEventTimeCompact } from '@/utils/timezone';
 import { formatDateForDisplay, getWeekdayName, isSameMonth } from './dateMath';
 import {
@@ -41,6 +42,8 @@ export function MonthView({
   onEventClick,
 }: MonthViewProps): ReactElement {
   const { t } = useTranslation(['calendar', 'common']);
+  // Viewer's 12h/24h clock — every rendered time goes through it.
+  const hourCycle = useHourCycle();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const selectedEvents = selectedDay
@@ -154,7 +157,7 @@ export function MonthView({
                   const status = getMedicationStatus(event, careRecipientTimezone);
                   const title = event.medication_name || event.title;
                   const timeLabel = event.scheduled_time
-                    ? formatEventTimeCompact(event.scheduled_time, careRecipientTimezone)
+                    ? formatEventTimeCompact(event.scheduled_time, careRecipientTimezone, hourCycle)
                     : t('calendar:allDay');
                   return (
                     <li key={`${event.id}_${event.scheduled_date}`}>

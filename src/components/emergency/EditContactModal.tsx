@@ -6,7 +6,8 @@ import {
   upsertWithPrimaryExclusivity,
   useUpdateEmergencyInfo,
 } from '@/hooks/useEmergencyInfo';
-import { Button, Modal, TextField, Toggle } from '@/components/ui';
+import { RELATIONSHIP_KEYS } from '@/lib/quickPicks';
+import { Button, ChipSelect, Modal, TextField, Toggle } from '@/components/ui';
 
 export interface EditContactModalProps {
   circleId: string;
@@ -23,12 +24,14 @@ const EMPTY_CONTACT: EmergencyContact = { name: '', relationship: '', phone: '' 
  * single-primary exclusivity (setting one primary clears the flag on others).
  * Mirrors mobile EditContactScreen.
  */
-export function EditContactModal({
+type EditContactModalPropsLoaded = Omit<EditContactModalProps, 'info'> & { info: EmergencyInfo };
+
+function EditContactModalForm({
   circleId,
   info,
   index,
   onClose,
-}: EditContactModalProps): ReactElement {
+}: EditContactModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
 
@@ -101,6 +104,22 @@ export function EditContactModal({
             if (error) setError(undefined);
           }}
         />
+        {/* Quick-fill: chips fill the field above; the field stays the source
+            of truth (custom values like "Niece" remain possible). Selected =
+            field matches the chip case-insensitively (QP2). */}
+        <ChipSelect
+          id="contact-relationship-suggestions"
+          label={t('relationships.label')}
+          options={RELATIONSHIP_KEYS.map((key) => t(key))}
+          value={relationship}
+          // Quick-fill row (text field stays the source of truth) — re-tapping
+          // the selected chip must not clear a required field (WA7).
+          allowDeselect={false}
+          onChange={(next) => {
+            setRelationship(next ?? '');
+            if (next && error) setError(undefined);
+          }}
+        />
         <TextField
           id="contact-phone"
           type="tel"
@@ -122,4 +141,23 @@ export function EditContactModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Null guard. Self-defence, not redundancy: this form's save is a
+ * read-modify-write over `info`, so an unloaded record would write defaults
+ * over real data — the exact failure the mobile emergency editors shipped with
+ * (a one-element array replacing the saved list; blank allergies; DNR reset).
+ * Today EmergencyInfoPage gates on isLoading/isError so `info` is always
+ * present; this keeps that true if the modal is ever opened from somewhere else.
+ *
+ * It is a WRAPPER rather than an early return inside the form because the form
+ * seeds its `useState` from `info` at mount. Returning null in place would keep
+ * the component mounted with defaults already captured, so a late-arriving
+ * `info` would render a blank form over a real record — trading a bad save for
+ * a bad form. Mounting the form only once `info` exists avoids both.
+ */
+export function EditContactModal(props: EditContactModalProps): ReactElement | null {
+  if (!props.info) return null;
+  return <EditContactModalForm {...props} info={props.info} />;
 }

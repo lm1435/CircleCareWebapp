@@ -182,7 +182,7 @@ export const updateEmergencyInfoSchema = z.object({
   allergies: z.array(z.string().max(200)).max(100).optional(),
   medication_allergies: z.array(z.string().max(200)).max(100).optional(),
   medical_conditions: z.array(z.string().max(200)).max(100).optional(),
-  blood_type: z.string().max(10).optional(),
+  blood_type: z.string().max(10).nullable().optional(),
 
   emergency_contacts: z.array(emergencyContactSchema).max(50).optional(),
 

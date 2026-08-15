@@ -27,6 +27,10 @@ export interface User {
   phone_number?: string;
   timezone?: string;
   language?: string; // User's preferred language (en, es)
+  // Device 12/24-hour clock, synced by the user's PHONE (expo-localization).
+  // NULL/absent = never synced → resolveHourCycle() falls back to inference.
+  // The web can never set this: no browser API exposes the OS clock toggle.
+  uses_24h_clock?: boolean | null;
   notification_preferences: NotificationPreferences;
   quiet_hours_start?: string | null;
   quiet_hours_end?: string | null;
@@ -70,15 +74,23 @@ export type UpdateNotificationPreferencesRequest = z.infer<
 >;
 
 // updateQuietHoursSchema (backend lines ~81-84). Both values nullable to disable.
+//
+// quiet_hours_start/end are Postgres TIME columns, so the API serializes them
+// back as "22:00:00" (with seconds). Clients hydrate that value into local state
+// and send it back UNCHANGED for whichever field the user did not edit, so this
+// must accept HH:MM:SS as well as HH:MM — the old HH:MM-only regex is what made
+// "edit one time, keep the other" fail with a 400. Mirrors the backend's
+// `timeOfDay` (backend/src/routes/users.ts): the value is normalized back to
+// HH:MM so the canonical form is what travels, and the hour/minute/second ranges
+// are now enforced (the old \d{2}:\d{2} regex happily accepted "99:99").
+const timeOfDay = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Expected HH:MM or HH:MM:SS (24-hour)')
+  .transform((v) => v.slice(0, 5));
+
 export const updateQuietHoursSchema = z.object({
-  quiet_hours_start: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .nullable(),
-  quiet_hours_end: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .nullable(),
+  quiet_hours_start: timeOfDay.nullable(),
+  quiet_hours_end: timeOfDay.nullable(),
 });
 export type UpdateQuietHoursRequest = z.infer<typeof updateQuietHoursSchema>;
 

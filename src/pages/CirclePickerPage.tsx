@@ -1,12 +1,14 @@
-import { useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircles } from '@/hooks/useCircles';
+import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Card } from '@/components/ui';
 import { CircleCard } from '@/components/circles/CircleCard';
 import { CircleCardSkeleton } from '@/components/circles/CircleCardSkeleton';
 import { EmptyCircles } from '@/components/circles/EmptyCircles';
+import { PendingInvitesBanner } from '@/components/circles/PendingInvitesBanner';
 import { CreateCircleModal } from '@/components/circles/CreateCircleModal';
 import { JoinCircleModal } from '@/components/circles/JoinCircleModal';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
@@ -35,6 +37,14 @@ export default function CirclePickerPage(): ReactElement {
 
   const firstName = user?.first_name?.trim();
   const circleCount = circles?.length ?? 0;
+
+  // R4-5 onboarding funnel: this page is the post-auth landing, so a resolved
+  // circle list is the earliest reliable "zero circles → onboarding_started" /
+  // ">= 1 circle → onboarding_flow_completed('existing')" signal. The module
+  // guards (session/localStorage) make repeat renders and revisits no-ops.
+  useEffect(() => {
+    if (circles) trackCirclesLoaded(circles.length);
+  }, [circles]);
 
   let content: ReactElement;
   if (isPending) {
@@ -123,6 +133,9 @@ export default function CirclePickerPage(): ReactElement {
           </div>
         )}
       </header>
+      {/* Mirrors mobile's CircleListScreen invite banner — without it a web user
+          who already has a circle has no route to /invites at all. */}
+      <PendingInvitesBanner />
       {content}
 
       {showCreate && <CreateCircleModal onClose={() => setShowCreate(false)} />}

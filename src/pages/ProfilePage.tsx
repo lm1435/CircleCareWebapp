@@ -8,6 +8,7 @@ import {
   type NotificationPreferences,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
+import { normalizeTimeOfDay } from '@/utils/timezone';
 import { useAuthStore } from '@/store/authStore';
 import { supportedLanguages, type SupportedLanguage } from '@/i18n';
 import {
@@ -155,8 +156,12 @@ export default function ProfilePage(): ReactElement {
     if (!user) return;
     setFirstName(user.first_name ?? '');
     setLastName(user.last_name ?? '');
-    if (user.quiet_hours_start) setQuietStart(user.quiet_hours_start);
-    if (user.quiet_hours_end) setQuietEnd(user.quiet_hours_end);
+    // quiet_hours_* are Postgres TIME columns — the API hands them back WITH
+    // seconds ("22:00:00"). Normalize at this boundary so only canonical HH:MM
+    // ever reaches local state: `<input type="time">` wants HH:MM, and editing
+    // only ONE field ships the other straight back from this state.
+    if (user.quiet_hours_start) setQuietStart(normalizeTimeOfDay(user.quiet_hours_start));
+    if (user.quiet_hours_end) setQuietEnd(normalizeTimeOfDay(user.quiet_hours_end));
   }, [user]);
 
   if (userQuery.isLoading || !user) {

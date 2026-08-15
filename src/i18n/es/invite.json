@@ -10,7 +10,8 @@
   "accepting": "Uniéndote…",
   "acceptSuccess": "Te uniste al círculo.",
   "acceptFailed": "No pudimos agregarte al círculo en este momento. Intenta de nuevo y, si sigue sin funcionar, pide una nueva invitación.",
-  "signInToAccept": "Inicia sesión o crea una cuenta para aceptar",
+  "createAccountToAccept": "Crea una cuenta para unirte",
+  "signInInstead": "Ya tengo una cuenta",
   "downloadPromptValid": "Descarga la app de CircleCare para la experiencia completa",
   "downloadPromptError": "Mientras tanto, descarga la app para estar listo cuando llegue una nueva invitación",
   "appStore": "Descargar en el App Store",
@@ -28,5 +29,9 @@
   "og": {
     "title": "{{inviterName}} te invitó a CircleCare",
     "description": "Únete a {{circleName}} para ayudar a coordinar el cuidado de {{recipientName}}"
+  },
+  "errorUsed": {
+    "title": "Esta invitación ya fue usada",
+    "suggestion": "Si ya te uniste, inicia sesión y encontrarás el círculo de cuidado en tu lista de círculos. Si no, pídele a quien te invitó que envíe una nueva invitación."
   }
 }

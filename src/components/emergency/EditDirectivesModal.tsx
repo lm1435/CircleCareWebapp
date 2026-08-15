@@ -19,11 +19,13 @@ export interface EditDirectivesModalProps {
  * this modal is never opened by default. The component is complete and ready to
  * flip on when product decides to surface advance directives.
  */
-export function EditDirectivesModal({
+type EditDirectivesModalPropsLoaded = Omit<EditDirectivesModalProps, 'info'> & { info: EmergencyInfo };
+
+function EditDirectivesModalForm({
   circleId,
   info,
   onClose,
-}: EditDirectivesModalProps): ReactElement {
+}: EditDirectivesModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
 
@@ -68,4 +70,23 @@ export function EditDirectivesModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Null guard. Self-defence, not redundancy: this form's save is a
+ * read-modify-write over `info`, so an unloaded record would write defaults
+ * over real data — the exact failure the mobile emergency editors shipped with
+ * (a one-element array replacing the saved list; blank allergies; DNR reset).
+ * Today EmergencyInfoPage gates on isLoading/isError so `info` is always
+ * present; this keeps that true if the modal is ever opened from somewhere else.
+ *
+ * It is a WRAPPER rather than an early return inside the form because the form
+ * seeds its `useState` from `info` at mount. Returning null in place would keep
+ * the component mounted with defaults already captured, so a late-arriving
+ * `info` would render a blank form over a real record — trading a bad save for
+ * a bad form. Mounting the form only once `info` exists avoids both.
+ */
+export function EditDirectivesModal(props: EditDirectivesModalProps): ReactElement | null {
+  if (!props.info) return null;
+  return <EditDirectivesModalForm {...props} info={props.info} />;
 }

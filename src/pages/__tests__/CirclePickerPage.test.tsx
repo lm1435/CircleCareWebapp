@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -27,6 +27,14 @@ vi.mock('@/api/medicationConfirmations', () => ({
 }));
 
 const mockGetCircles = vi.mocked(getCircles);
+
+// R4-5 onboarding funnel — this page reports the resolved circle count so the
+// module can fire onboarding_started (0) / onboarding_flow_completed 'existing'
+// (>0). Guards live inside the mocked module; here we assert the wire-up.
+const trackCirclesLoaded = vi.fn();
+vi.mock('@/lib/onboardingAnalytics', () => ({
+  trackCirclesLoaded: (count: number) => trackCirclesLoaded(count),
+}));
 
 function makeCircle(overrides: Partial<Circle> = {}): Circle {
   return {
@@ -90,6 +98,20 @@ describe('CirclePickerPage', () => {
     const dadCard = screen.getByRole('link', { name: /Open Dad's Circle/ });
     expect(within(dadCard).getByText('Caregiver')).toBeInTheDocument();
     expect(within(dadCard).getByText('Caring together with 1 person')).toBeInTheDocument();
+  });
+
+  it('R4-5: reports the resolved circle count (>= 1) to the onboarding funnel', async () => {
+    mockGetCircles.mockResolvedValue([makeCircle(), makeCircle({ id: 'c2' })]);
+    renderPicker();
+
+    await waitFor(() => expect(trackCirclesLoaded).toHaveBeenCalledWith(2));
+  });
+
+  it('R4-5: reports zero circles to the onboarding funnel (started signal)', async () => {
+    mockGetCircles.mockResolvedValue([]);
+    renderPicker();
+
+    await waitFor(() => expect(trackCirclesLoaded).toHaveBeenCalledWith(0));
   });
 
   it('shows the Care recipient role for is_care_recipient memberships', async () => {

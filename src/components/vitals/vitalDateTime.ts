@@ -41,6 +41,13 @@ export function recipientWallTimeToUtcISO(
 /**
  * Convert a UTC ISO instant to the care recipient's naive local wall time
  * (YYYY-MM-DD date + HH:MM time) for prefilling the form's date/time fields.
+ *
+ * MACHINE FORMAT — NOT display. The `hour12: false` + `formatToParts` block
+ * below is numeric extraction feeding an `<input type="time">` (and the round
+ * trip back through recipientWallTimeToUtcISO); it must stay 24-hour regardless
+ * of the viewer's hour cycle. Do NOT route it through `formatTimeOfDay` — the
+ * DISPLAY of this value is formatted by the caller (see VitalsPage's
+ * recordedLabel, which applies the resolved cycle).
  */
 export function utcISOToRecipientWallTime(
   iso: string,

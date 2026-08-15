@@ -196,6 +196,57 @@ describe('web Zod schemas mirror the backend route constraints', () => {
     ).toBe(true);
   });
 
+  // quiet_hours_* are Postgres TIME columns — the API returns "22:00:00". A
+  // client that hydrates that and sends it back for the field the user did NOT
+  // edit must not be rejected (that bug made "edit only the end time" 400).
+  it('updateQuietHoursSchema accepts HH:MM:SS and normalizes it to HH:MM', () => {
+    const parsed = updateQuietHoursSchema.safeParse({
+      quiet_hours_start: '22:00:00',
+      quiet_hours_end: '07:00:00',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual({ quiet_hours_start: '22:00', quiet_hours_end: '07:00' });
+  });
+
+  it('updateQuietHoursSchema normalizes a mixed HH:MM:SS / HH:MM pair', () => {
+    // Exactly the "user edited only the end time" payload.
+    const parsed = updateQuietHoursSchema.safeParse({
+      quiet_hours_start: '22:00:00',
+      quiet_hours_end: '08:30',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual({ quiet_hours_start: '22:00', quiet_hours_end: '08:30' });
+  });
+
+  it('updateQuietHoursSchema keeps null/null (disable) working after the relax', () => {
+    const parsed = updateQuietHoursSchema.safeParse({
+      quiet_hours_start: null,
+      quiet_hours_end: null,
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual({ quiet_hours_start: null, quiet_hours_end: null });
+  });
+
+  it('updateQuietHoursSchema still rejects genuinely invalid times', () => {
+    // The old \d{2}:\d{2} regex accepted "99:99" — the ranged regex does not.
+    for (const bad of [
+      '99:99',
+      '24:00',
+      '22:60',
+      '22:00:60',
+      '9:00',
+      '22',
+      '22:0',
+      '10:00 PM',
+      '22:00:00.000', // seconds-with-fraction is not a wire format we accept
+      '',
+    ]) {
+      expect(
+        updateQuietHoursSchema.safeParse({ quiet_hours_start: bad, quiet_hours_end: null }).success
+      ).toBe(false);
+    }
+  });
+
   it('updateEmailDigestSchema requires enabled + clamps day 0-6', () => {
     expect(updateEmailDigestSchema.safeParse({}).success).toBe(false);
     expect(updateEmailDigestSchema.safeParse({ enabled: true, day: 7 }).success).toBe(false);

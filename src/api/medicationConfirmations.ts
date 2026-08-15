@@ -99,6 +99,8 @@ export interface MedicationTodaySummary {
   not_marked_total: number; // today + yesterday — the "urgent" count
   next_due: string | null; // HH:MM:SS in the care recipient's timezone
   next_due_medication: string | null;
+  /** Dosage of the next-due medication (optional — newer backends only). */
+  next_due_dosage?: string | null;
   timezone: string;
 }
 

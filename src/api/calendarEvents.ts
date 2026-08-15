@@ -40,6 +40,16 @@ export interface CalendarEvent {
   quantity_remaining?: number | null;
   pills_per_day?: number | null;
 
+  /**
+   * Discontinue / inactivate marker (medications only). `null`/undefined =
+   * active; a non-null ISO timestamp (UTC) = discontinued at that instant. The
+   * Calendar GET excludes discontinued meds by default, so this is only ever
+   * populated on a row fetched with `?includeDiscontinued=true` or returned by
+   * the medication-status write. NOT a naive care-recipient date — it's a true
+   * action instant.
+   */
+  discontinued_at?: string | null;
+
   // Scheduling — naive local values in the care recipient's timezone
   scheduled_date: string; // YYYY-MM-DD
   scheduled_time?: string | null; // HH:MM:SS (null/undefined = all-day)
@@ -73,12 +83,30 @@ export interface CalendarEvent {
   updated_at: string;
   created_by_user?: EventUser | null;
   assigned_to_user?: EventUser | null;
+
+  /**
+   * DETAIL-ONLY, and a SIGNED url when present.
+   *
+   * The events list deliberately omits this field, so it is undefined on any
+   * event that came from `getEvents`. It only arrives from the single-event
+   * endpoint, already signed — see `getMedicationPhotoUrl`, which is the only
+   * thing that should read it, precisely so the signed value never reaches the
+   * React Query cache.
+   */
+  medication_photo_url?: string;
 }
 
 export interface GetEventsParams {
   start_date?: string; // YYYY-MM-DD in care recipient's timezone
   end_date?: string; // YYYY-MM-DD in care recipient's timezone
   event_type?: EventType;
+  /**
+   * Medication roster only: include discontinued (inactive) meds in the
+   * response so the Medications page can split Active vs Inactive. The
+   * calendar page must NOT pass this so inactive meds stay hidden there.
+   * (Mirrors mobile/src/api/calendarEvents.ts GetEventsParams.)
+   */
+  includeDiscontinued?: boolean;
 }
 
 interface EventsEnvelope {
@@ -90,10 +118,21 @@ export async function getEvents(
   circleId: string,
   params?: GetEventsParams
 ): Promise<CalendarEvent[]> {
+  // Serialize explicitly: the backend checks `includeDiscontinued === 'true'`
+  // (string), so send the literal 'true' ONLY when the flag is set — never
+  // 'false'/undefined placeholders in the query string.
+  let requestParams: Record<string, string> | undefined;
+  if (params) {
+    requestParams = {};
+    if (params.start_date) requestParams.start_date = params.start_date;
+    if (params.end_date) requestParams.end_date = params.end_date;
+    if (params.event_type) requestParams.event_type = params.event_type;
+    if (params.includeDiscontinued) requestParams.includeDiscontinued = 'true';
+  }
   // apiClient's response interceptor unwraps axios' response.data, so the
   // resolved value IS the `{ success, data }` envelope.
   const response = (await apiClient.get(`/circles/${circleId}/events`, {
-    params,
+    params: requestParams,
   })) as unknown as EventsEnvelope;
   return response.data.events;
 }
@@ -212,6 +251,43 @@ interface SingleEventEnvelope {
 }
 
 /** POST /circles/:circleId/events — create a med/appointment/task event. */
+interface SingleEventEnvelope {
+  success: boolean;
+  data: { event: CalendarEvent };
+}
+
+/**
+ * Fetch the SIGNED medication photo URL for one event, on demand.
+ *
+ * Two things force this shape:
+ *
+ *  1. The events LIST endpoint deliberately omits `medication_photo_url` —
+ *     detail-only fields are fetched per event — so a photo can only come from
+ *     `GET /circles/:id/events/:eventId`, which signs it (backend
+ *     calendarEvents.ts, "Sign medication photo URL for detail view").
+ *  2. Signed Storage URLs must NEVER sit in the React Query cache or any
+ *     persistent store, the same rule `api/documents.ts` follows for
+ *     `file_url`. So this returns the URL directly rather than exposing the
+ *     whole cached event, and callers hold it in transient component state.
+ *
+ * Returns null when the medication has no photo, or when the fetch fails — a
+ * missing photo must never block the detail view from rendering.
+ */
+export async function getMedicationPhotoUrl(
+  circleId: string,
+  eventId: string,
+): Promise<string | null> {
+  try {
+    const response = (await apiClient.get(
+      `/circles/${circleId}/events/${eventId}`,
+    )) as unknown as SingleEventEnvelope;
+    return response.data.event.medication_photo_url ?? null;
+  } catch {
+    // Never log — the URL and its labels are PHI-adjacent.
+    return null;
+  }
+}
+
 export async function createEvent(
   circleId: string,
   data: CreateEventRequest
@@ -267,6 +343,53 @@ export async function completeEvent(
     `/circles/${circleId}/events/${eventId}/complete`
   )) as unknown as SingleEventEnvelope;
   return response.data.event;
+}
+
+// ---------------------------------------------------------------------------
+// Medication discontinue / reactivate (Stage 4 — Web).
+// Verified against backend/src/routes/calendarEvents.ts:
+//   PATCH /api/circles/:circleId/events/:eventId/medication-status
+//     body { discontinued: boolean }  (requireAuth + requireCircleEditAccess)
+//     → { success, data: { event: { id, parent_event_id, discontinued_at },
+//                          discontinued, affected_count } }
+// The backend resolves the series root (parent_event_id ?? id) and propagates
+// to every physical child, so passing ANY instance id (including a child) is
+// safe. `discontinued: true` inactivates (keeps the record, stops reminders +
+// materialization); `false` reactivates. Discontinued meds are excluded from
+// the Calendar GET by default — a discontinue therefore removes the med from
+// the calendar after query invalidation.
+// ---------------------------------------------------------------------------
+
+export interface MedicationStatusResult {
+  /** The updated series-root row (subset projection from the backend). */
+  event: Pick<CalendarEvent, 'id' | 'parent_event_id' | 'discontinued_at'>;
+  /** Echoes the requested state: true = discontinued, false = reactivated. */
+  discontinued: boolean;
+  /** How many rows (root + physical children) were updated. */
+  affected_count: number;
+}
+
+interface MedicationStatusEnvelope {
+  success: boolean;
+  data: MedicationStatusResult;
+}
+
+/**
+ * PATCH /circles/:circleId/events/:eventId/medication-status — discontinue
+ * (`discontinued: true`) or reactivate (`discontinued: false`) a medication.
+ * Targets the series root + all physical children server-side. Pass any
+ * instance id (parent or child).
+ */
+export async function setMedicationStatus(
+  circleId: string,
+  eventId: string,
+  discontinued: boolean
+): Promise<MedicationStatusResult> {
+  const response = (await apiClient.patch(
+    `/circles/${circleId}/events/${eventId}/medication-status`,
+    { discontinued }
+  )) as unknown as MedicationStatusEnvelope;
+  return response.data;
 }
 
 // ===========================================================================

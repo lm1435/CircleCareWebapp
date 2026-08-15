@@ -15,7 +15,9 @@ import CirclePickerPage from '@/pages/CirclePickerPage';
 import PendingInvitesPage from '@/pages/PendingInvitesPage';
 import OverviewPage from '@/pages/OverviewPage';
 import CalendarPage from '@/pages/CalendarPage';
+import MedicationsPage from '@/pages/MedicationsPage';
 import TasksPage from '@/pages/TasksPage';
+import NotesPage from '@/pages/NotesPage';
 import ActivityFeedPage from '@/pages/ActivityFeedPage';
 import EmergencyInfoPage from '@/pages/EmergencyInfoPage';
 import DocumentsPage from '@/pages/DocumentsPage';
@@ -80,7 +82,9 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <OverviewPage /> },
           { path: 'calendar', element: <CalendarPage /> },
+          { path: 'meds', element: <MedicationsPage /> },
           { path: 'tasks', element: <TasksPage /> },
+          { path: 'notes', element: <NotesPage /> },
           { path: 'activity', element: <ActivityFeedPage /> },
           { path: 'emergency', element: <EmergencyInfoPage /> },
           { path: 'documents', element: <DocumentsPage /> },

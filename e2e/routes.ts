@@ -15,7 +15,7 @@ export const PUBLIC_ROUTES: string[] = [
 ];
 
 /** Authenticated routes that don't need a circle context. */
-export const AUTH_ROUTES: string[] = ['/circles', '/invites', '/profile', '/help'];
+export const AUTH_ROUTES: string[] = ['/circles', '/invites', '/profile', '/help', '/upgrade'];
 
 /**
  * Circle-scoped routes (need a real :circleId). Returned as a builder so the
@@ -24,7 +24,9 @@ export const AUTH_ROUTES: string[] = ['/circles', '/invites', '/profile', '/help
 export function circleRoutes(circleId: string): string[] {
   return [
     `/circles/${circleId}/calendar`,
+    `/circles/${circleId}/meds`,
     `/circles/${circleId}/tasks`,
+    `/circles/${circleId}/notes`,
     `/circles/${circleId}/activity`,
     `/circles/${circleId}/emergency`,
     `/circles/${circleId}/documents`,

@@ -102,7 +102,8 @@
     "upgradeCta": "Upgrade to Premium",
     "orInApp": "Or upgrade in the CircleCare app.",
     "manageSubscription": "Manage subscription",
-    "manageInApp": "Manage your subscription in the CircleCare app where you purchased it."
+    "manageInApp": "You subscribed on your phone, so cancellation is handled by the app store. Open Settings > Subscriptions on iPhone, or Play Store > Payments & subscriptions on Android. You can also tap Manage in the CircleCare app.",
+    "manageExisting": "Already subscribed? Manage or cancel"
   },
   "dataExport": {
     "title": "Your data",

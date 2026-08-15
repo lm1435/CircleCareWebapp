@@ -127,6 +127,12 @@
     "emptyTitle": "No hay invitaciones pendientes",
     "emptyBody": "Cuando alguien te invite a un círculo de cuidado, aparecerá aquí.",
     "errorTitle": "No se pudieron cargar las invitaciones",
-    "errorBody": "Revisa tu conexión e intenta de nuevo."
+    "errorBody": "Revisa tu conexión e intenta de nuevo.",
+    "banner": {
+      "count_one": "Tienes 1 invitación pendiente",
+      "count_other": "Tienes {{count}} invitaciones pendientes",
+      "review": "Revisar invitación",
+      "reviewPlural": "Revisar invitaciones"
+    }
   }
 }

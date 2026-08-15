@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi, getApiError } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
-import { consumePendingInviteCode } from '@/lib/pendingInviteCode';
+import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { supabase } from '@/lib/supabase';
 import { Analytics } from '@/lib/analytics';
@@ -92,8 +92,9 @@ export default function LoginPage(): ReactElement {
       // Router state wins when present (the invite landing page clears its
       // pending code once authenticated). With no state — e.g. an invitee who
       // bounced through /signup and came back — fall back to any invite code
-      // parked in sessionStorage by the invite landing page.
-      const pendingInvite = stateDestination ? null : consumePendingInviteCode();
+      // parked in sessionStorage. Peek, don't consume: the invite landing
+      // page's auto-accept effect needs to find the code still parked.
+      const pendingInvite = stateDestination ? null : peekPendingInviteCode();
       navigate(
         stateDestination ?? (pendingInvite ? `/invite/${pendingInvite}` : '/circles'),
         { replace: true }

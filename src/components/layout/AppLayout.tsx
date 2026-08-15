@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -9,12 +9,13 @@ import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBan
 import { AIChatModal } from '@/components/ai/AIChatModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
-import { AddVitalModal } from '@/components/vitals/AddVitalModal';
 import { InviteMemberModal } from '@/components/members/InviteMemberModal';
 import { DocumentUploadModal } from '@/components/documents/DocumentUploadModal';
 import { useCircle } from '@/hooks/useCircle';
+import { useCircles } from '@/hooks/useCircles';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useAuthStore } from '@/store/authStore';
+import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -78,6 +79,7 @@ export function AppLayout(): ReactElement {
   const [createKind, setCreateKind] = useState<CreateKind | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Gating for the global Create menu: write actions need an editable circle,
   // inviting needs circle ownership. Resolved here so both the desktop sidebar
@@ -87,6 +89,12 @@ export function AppLayout(): ReactElement {
   const canInvite = !!circle && circle.owner_id === currentUserId;
   const openCreate = (kind: CreateKind): void => {
     setNavOpen(false);
+    // Notes have no create modal — the composer lives at the top of the Notes
+    // page (mirrors mobile's New-menu note entry).
+    if (kind === 'note') {
+      if (circleId) navigate(`/circles/${circleId}/notes`);
+      return;
+    }
     setCreateKind(kind);
   };
 
@@ -94,6 +102,15 @@ export function AppLayout(): ReactElement {
   useEffect(() => {
     setNavOpen(false);
   }, [location.pathname]);
+
+  // R4-5 onboarding funnel: users can deep-link straight into a circle without
+  // ever visiting /circles, so observe the circle list here too. Header's
+  // CircleSwitcher already runs this query (same React Query key) — this adds
+  // no extra fetch. Guards in the module make it once-per-browser.
+  const { data: allCircles } = useCircles();
+  useEffect(() => {
+    if (allCircles) trackCirclesLoaded(allCircles.length);
+  }, [allCircles]);
 
   // Drawer behavior: focus trap, Escape to close, body scroll lock,
   // focus restored to the trigger on close.
@@ -241,13 +258,6 @@ export function AppLayout(): ReactElement {
             <AddEventModal
               circleId={circleId}
               initialType={createKind}
-              onClose={() => setCreateKind(null)}
-              onSaved={() => setCreateKind(null)}
-            />
-          )}
-          {createKind === 'vitals' && (
-            <AddVitalModal
-              circleId={circleId}
               onClose={() => setCreateKind(null)}
               onSaved={() => setCreateKind(null)}
             />

@@ -28,7 +28,10 @@
     "completing": "Completando…",
     "undo": "Deshacer",
     "undoAction": "Deshacer completar \"{{title}}\"",
-    "pendingAnnounce": "\"{{title}}\" se completará. Elige Deshacer para cancelar."
+    "pendingAnnounce": "\"{{title}}\" se completará. Elige Deshacer para cancelar.",
+    "done": "Listo",
+    "statusDone": "(completada)",
+    "statusPending": "(pendiente)"
   },
   "due": {
     "today": "Hoy",

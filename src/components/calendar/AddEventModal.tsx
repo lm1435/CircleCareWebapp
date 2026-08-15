@@ -6,10 +6,23 @@ import {
   type CreateEventRequest,
   type EventType,
 } from '@/api/calendarEvents';
-import { useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
+import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
+import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
+import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
+import {
+  DEFAULT_DURATION_MINUTES,
+  DURATION_PRESETS,
+  addMinutesToTimeStr,
+  assignedToForSave,
+  matchingDurationIndex,
+  reminderFlagsForSave,
+  remindersApply,
+} from '@/lib/eventForm';
 import {
   Button,
+  ChipSelect,
+  ConfirmDialog,
   DateField,
   Modal,
   Select,
@@ -27,6 +40,7 @@ import {
   getDateInTimezone,
   getTimezoneAbbreviation,
   getTimezoneLabel,
+  isEventPastDue,
 } from '@/utils/timezone';
 
 // Task 1.4 — create/edit form modal for all three event types.
@@ -53,6 +67,11 @@ export interface AddEventModalProps {
   event?: CalendarEvent | null;
   /** Pre-select the event type in create mode (e.g. Tasks page → 'task'). */
   initialType?: EventType;
+  /**
+   * Prefill the title in create mode (R4-3 empty-state starter chips — e.g.
+   * Tasks page starter chip → open with that task title). Ignored when editing.
+   */
+  initialTitle?: string;
   onClose: () => void;
   /** Called after a successful create/update (parent typically closes + toasts). */
   onSaved?: () => void;
@@ -114,6 +133,7 @@ export function AddEventModal({
   circleId,
   event,
   initialType,
+  initialTitle,
   onClose,
   onSaved,
 }: AddEventModalProps): ReactElement | null {
@@ -133,7 +153,7 @@ export function AddEventModal({
   const [eventType, setEventType] = useState<EventType>(
     event?.event_type ?? initialType ?? 'medication'
   );
-  const [title, setTitle] = useState(event?.medication_name || event?.title || '');
+  const [title, setTitle] = useState(event?.medication_name || event?.title || initialTitle || '');
   const [dosage, setDosage] = useState(event?.medication_dosage ?? '');
   const [dateStr, setDateStr] = useState(event?.scheduled_date ?? getDateInTimezone(timezone));
   const [timeStr, setTimeStr] = useState(() => {
@@ -170,6 +190,10 @@ export function AddEventModal({
   const [reminder15m, setReminder15m] = useState(reminders.reminder_15m ?? true);
 
   const [errors, setErrors] = useState<FieldErrors>({});
+  // Payload held while the past-time notice is showing (mobile GAP #4 parity):
+  // a medication scheduled for TODAY at a time that already passed gets a
+  // lightweight confirm — no reminder fires for today's dose — then proceeds.
+  const [pendingPastTime, setPendingPastTime] = useState<CreateEventRequest | null>(null);
 
   // Keep the assignee selection valid as members load.
   useEffect(() => {
@@ -182,6 +206,21 @@ export function AddEventModal({
   const isPending = createEvent.isPending || updateEvent.isPending;
 
   const tzLabel = `${getTimezoneLabel(timezone)} (${getTimezoneAbbreviation(timezone)})`;
+
+  // History-based title quick-fill (QP6) — sourced from the circle's ALREADY
+  // CACHED calendar events (no new fetching); generics pad the list. The row
+  // hides when the title exactly matches a chip (it has done its job).
+  const cachedEvents = useCachedCircleEvents(circleId);
+  const titleSuggestions = useMemo(() => {
+    if (isMedication) return [];
+    const generics = (eventType === 'appointment' ? APPOINTMENT_TITLE_KEYS : TASK_TITLE_KEYS).map(
+      (key) => t(key)
+    );
+    return deriveTitleSuggestions(cachedEvents, eventType, Date.now(), generics);
+  }, [cachedEvents, eventType, isMedication, t]);
+  // Row stays visible when the title matches a chip so the selected chip can be
+  // tapped again to clear (accidental-tap undo).
+  const showTitleSuggestions = !isMedication && titleSuggestions.length > 0;
 
   // Assignee options — caregivers only (exclude the care recipient), like mobile.
   const assigneeOptions = useMemo(() => {
@@ -289,10 +328,19 @@ export function AddEventModal({
       duration_minutes: durationMinutes,
       location: location.trim() || undefined,
       notifications_enabled: notificationsEnabled,
-      reminder_24h: notificationsEnabled ? reminder24h : false,
-      reminder_1h: notificationsEnabled ? reminder1h : false,
-      reminder_30m: notificationsEnabled ? reminder30m : false,
-      reminder_15m: notificationsEnabled ? reminder15m : false,
+      // Zeroed without a scheduled time — reminder_15m defaults to true, and the
+      // cron filters `scheduled_time IS NOT NULL`, so a timeless task would
+      // otherwise persist a reminder the user never chose and that never fires.
+      ...reminderFlagsForSave(
+        {
+          reminder_24h: reminder24h,
+          reminder_1h: reminder1h,
+          reminder_30m: reminder30m,
+          reminder_15m: reminder15m,
+        },
+        notificationsEnabled,
+        remindersApply(eventType, timeStr)
+      ),
       recurrence_rule,
       recurrence_end_date:
         recurrence !== 'none' && recurrenceEndDate ? recurrenceEndDate : undefined,
@@ -302,8 +350,12 @@ export function AddEventModal({
       data.medication_name = trimmedTitle;
       data.medication_dosage = dosage.trim() || undefined;
     }
-    if ((eventType === 'task' || eventType === 'appointment') && assignedTo) {
-      data.assigned_to = assignedTo;
+    // Always sent for assignable types, null included — updates are partial
+    // patches server-side, so omitting the key left the old assignee in place
+    // and made "Anyone" impossible to go back to.
+    const assignedToValue = assignedToForSave(eventType, assignedTo);
+    if (assignedToValue !== undefined) {
+      data.assigned_to = assignedToValue;
     }
 
     // Final guard: validate against the shared web Zod schema (mirrors backend).
@@ -312,6 +364,22 @@ export function AddEventModal({
       return { ok: false, errors: result.errors };
     }
     return { ok: true, data };
+  }
+
+  async function persist(data: CreateEventRequest): Promise<void> {
+    try {
+      if (isEditing && targetEventId) {
+        await updateEvent.mutateAsync({ eventId: targetEventId, data });
+        showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
+      } else {
+        await createEvent.mutateAsync(data);
+        showToast(t(createdToastKey(eventType)), 'success');
+      }
+      onSaved?.();
+      onClose();
+    } catch {
+      // The mutation hooks surface their own permission/subscription/save toasts.
+    }
   }
 
   async function handleSubmit(formEvent: FormEvent): Promise<void> {
@@ -341,19 +409,20 @@ export function AddEventModal({
     }
     setErrors({});
 
-    try {
-      if (isEditing && targetEventId) {
-        await updateEvent.mutateAsync({ eventId: targetEventId, data: built.data });
-        showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
-      } else {
-        await createEvent.mutateAsync(built.data);
-        showToast(t(createdToastKey(eventType)), 'success');
-      }
-      onSaved?.();
-      onClose();
-    } catch {
-      // The mutation hooks surface their own permission/subscription/save toasts.
+    // Mobile parity (AddEventScreen GAP #4): saving a MEDICATION whose time
+    // already passed TODAY (care recipient's timezone — never device-local)
+    // gets a non-blocking notice first; confirming proceeds with the save.
+    if (
+      built.data.event_type === 'medication' &&
+      built.data.scheduled_time &&
+      built.data.scheduled_date === getDateInTimezone(timezone) &&
+      isEventPastDue(built.data.scheduled_date, built.data.scheduled_time, timezone)
+    ) {
+      setPendingPastTime(built.data);
+      return;
     }
+
+    await persist(built.data);
   }
 
   // Hidden entirely when the user can't edit — the read-only path keeps the
@@ -368,6 +437,7 @@ export function AddEventModal({
   const titleFieldId = isMedication ? 'medication_name' : 'title';
 
   return (
+    <>
     <Modal
       title={isEditing ? t('addEvent.editTitle') : t('addEvent.newTitle')}
       onClose={onClose}
@@ -434,6 +504,19 @@ export function AddEventModal({
           }}
         />
 
+        {showTitleSuggestions && (
+          <ChipSelect
+            id="title-suggestions"
+            label={t('addEvent.titleSuggestions.label')}
+            options={titleSuggestions}
+            value={title}
+            onChange={(next) => {
+              setTitle(next ?? '');
+              if (next) clearError(titleFieldId);
+            }}
+          />
+        )}
+
         {isMedication && (
           <TextField
             id="medication_dosage"
@@ -468,6 +551,43 @@ export function AddEventModal({
           }}
         />
 
+        {/* Medication SCHEDULE presets (R6-2) — the ONE med chip strip: every
+            chip sets a COMPLETE daily schedule (time + daily recurrence) in
+            one tap; tapping the selected chip again returns both to unset.
+            Selected state is an EXACT match of time + recurrence. Prefill
+            only — the save path below is untouched. (Web subset: the form has
+            a single time field, so only the single-time presets are offered —
+            see MED_SCHEDULE_PRESETS.) */}
+        {isMedication && (
+          <ChipSelect
+            id="schedule-presets"
+            label={t('addEvent.schedulePresets.label')}
+            options={MED_SCHEDULE_PRESETS.map((preset) => ({
+              value: preset.id,
+              label: t(preset.labelKey),
+            }))}
+            value={
+              MED_SCHEDULE_PRESETS.find(
+                (preset) => preset.time === timeStr && preset.recurrence === recurrence
+              )?.id ?? null
+            }
+            onChange={(next) => {
+              const preset = next
+                ? MED_SCHEDULE_PRESETS.find((candidate) => candidate.id === next)
+                : undefined;
+              if (preset) {
+                setTimeStr(preset.time);
+                setRecurrence(preset.recurrence);
+                clearError('scheduled_time');
+              } else {
+                // Untap — return the preset-controlled fields to unset.
+                setTimeStr('');
+                setRecurrence('none');
+              }
+            }}
+          />
+        )}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TimeField
             id="scheduled_time"
@@ -476,9 +596,18 @@ export function AddEventModal({
             error={errors.scheduled_time}
             hint={isMedication ? undefined : t('addEvent.hints.timeOptional')}
             onChange={(e) => {
-              setTimeStr(e.target.value);
+              const next = e.target.value;
+              setTimeStr(next);
               clearError('scheduled_time');
-              if (!e.target.value) setEndTimeStr('');
+              if (!next) {
+                setEndTimeStr('');
+              } else if (!isMedication && !endTimeStr) {
+                // An end time is required (the calendar renders these as
+                // blocks), so prefill the default rather than making the user
+                // supply a second value before they can save.
+                setEndTimeStr(addMinutesToTimeStr(next, DEFAULT_DURATION_MINUTES));
+                clearError('endTime');
+              }
             }}
           />
           {!isMedication && (
@@ -495,6 +624,30 @@ export function AddEventModal({
             />
           )}
         </div>
+
+        {/* Duration presets — the chips cover the common spans; the end-time
+            field above stays for anything else. */}
+        {!isMedication && timeStr && (
+          <ChipSelect
+            id="duration-presets"
+            label={t('addEvent.fields.duration')}
+            options={DURATION_PRESETS.map((mins) => ({
+              value: String(mins),
+              label: t(`addEvent.durations.${mins}`),
+            }))}
+            value={(() => {
+              const index = matchingDurationIndex(timeStr, endTimeStr);
+              return index === -1 ? null : String(DURATION_PRESETS[index]);
+            })()}
+            onChange={(next) => {
+              // Deselect is a no-op: the end time is required once a start
+              // time exists, so a chip can be changed but not cleared.
+              if (!next) return;
+              setEndTimeStr(addMinutesToTimeStr(timeStr, Number(next)));
+              clearError('endTime');
+            }}
+          />
+        )}
 
         {(eventType === 'task' || eventType === 'appointment') && (
           <Select
@@ -558,7 +711,8 @@ export function AddEventModal({
           />
         )}
 
-        {/* Reminders */}
+        {/* Reminders — only once there is a time to fire against. */}
+        {remindersApply(eventType, timeStr) && (
         <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
           <legend className="section-title p-0">{t('addEvent.reminders.section')}</legend>
           <Toggle
@@ -593,8 +747,28 @@ export function AddEventModal({
             </div>
           )}
         </fieldset>
+        )}
       </form>
     </Modal>
+
+    {/* Past-time notice — non-blocking: Continue saves anyway (parity with
+        mobile's lightweight confirm), Cancel returns to the form. */}
+    {pendingPastTime && (
+      <ConfirmDialog
+        title={t('addEvent.alerts.pastTimeTitle')}
+        message={t('addEvent.alerts.pastTimeMessage')}
+        confirmLabel={t('addEvent.alerts.continue')}
+        cancelLabel={t('common:cancel')}
+        closeLabel={t('addEvent.alerts.closePastTime')}
+        onConfirm={() => {
+          const data = pendingPastTime;
+          setPendingPastTime(null);
+          void persist(data);
+        }}
+        onCancel={() => setPendingPastTime(null)}
+      />
+    )}
+    </>
   );
 }
 

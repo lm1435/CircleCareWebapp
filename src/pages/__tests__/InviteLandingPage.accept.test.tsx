@@ -31,6 +31,13 @@ vi.mock('@/hooks/useJoinCircle', () => ({
   useAcceptInviteByCode: () => ({ mutate: acceptMutate, isPending: false }),
 }));
 
+// R4-5 onboarding funnel — a successful landing-page accept must report
+// completion (once-per-browser guard lives inside the mocked module).
+const trackOnboardingCompleted = vi.fn();
+vi.mock('@/lib/onboardingAnalytics', () => ({
+  trackOnboardingCompleted: (path: string) => trackOnboardingCompleted(path),
+}));
+
 const validEnvelope = {
   success: true,
   data: {
@@ -68,20 +75,41 @@ beforeEach(() => {
 });
 
 describe('InviteLandingPage — accept flow', () => {
-  it('signed-out: shows "Sign in to accept" and routes to login preserving the invite', async () => {
+  // An invitee is by definition likely to have no account yet, so create-account
+  // is the PRIMARY action. Routing them to /login first is what produced 17 web
+  // invite opens and 0 accepts through 2026-08-13.
+  it('signed-out: create-account is primary and routes to signup preserving the invite', async () => {
+    const user = userEvent.setup();
+    renderPage('abc123');
+
+    const createAccount = await screen.findByRole('button', {
+      name: 'Create an account to join',
+    });
+    await user.click(createAccount);
+
+    expect(navigate).toHaveBeenCalledWith('/signup', {
+      state: { from: { pathname: '/invite/ABC123' } },
+    });
+    // The code is ALSO parked in sessionStorage — router state cannot survive
+    // the OAuth redirect or the signup → verify-email flow. This is the ONLY
+    // thing that brings the invitee back: SignUpPage hands off to
+    // /verify-email, which has no router state to honor.
+    expect(consumePendingInviteCode()).toBe('ABC123');
+    expect(acceptMutate).not.toHaveBeenCalled();
+  });
+
+  it('signed-out: "I already have an account" still routes to login preserving the invite', async () => {
     const user = userEvent.setup();
     renderPage('abc123');
 
     const signIn = await screen.findByRole('button', {
-      name: 'Sign in or create an account to accept',
+      name: 'I already have an account',
     });
     await user.click(signIn);
 
     expect(navigate).toHaveBeenCalledWith('/login', {
       state: { from: { pathname: '/invite/ABC123' } },
     });
-    // The code is ALSO parked in sessionStorage — router state cannot survive
-    // the OAuth redirect or the signup → verify-email flow.
     expect(consumePendingInviteCode()).toBe('ABC123');
     expect(acceptMutate).not.toHaveBeenCalled();
   });
@@ -109,6 +137,23 @@ describe('InviteLandingPage — accept flow', () => {
     // Success is confirmed via toast — the circle picker gives no feedback.
     expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    // R4-5: successful accept reports onboarding completion via the join path.
+    expect(trackOnboardingCompleted).toHaveBeenCalledWith('joined');
+  });
+
+  it('signed-in: an already-member result does NOT report onboarding completion', async () => {
+    authState = { isAuthenticated: true, isBootstrapping: false };
+    acceptMutate.mockImplementation((_code, opts) =>
+      opts?.onError?.({ error: { code: 'ALREADY_MEMBER' } })
+    );
+    const user = userEvent.setup();
+    renderPage('abc123');
+
+    await user.click(await screen.findByRole('button', { name: 'Accept invitation' }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    // They already have circles — the picker will report 'existing' instead.
+    expect(trackOnboardingCompleted).not.toHaveBeenCalled();
   });
 
   it('signed-in: an already-member result still lands on the circle picker', async () => {

@@ -27,6 +27,8 @@
     "subtitle": "Enter the code from your invitation email.",
     "codeLabel": "Invite code",
     "placeholder": "XXXXXX",
+    "pasteCode": "Paste code",
+    "pasteNoCode": "We didn't find an invite code on your clipboard.",
     "lookUpCode": "Look up code",
     "lookingUp": "Looking up...",
     "circle": "Circle",

@@ -40,9 +40,19 @@ export function classifyAiError(err: unknown): AiChatErrorKind {
   return 'sendFailed';
 }
 
+/** Variables for one send. An object (not a bare string) so the suggestion-chip
+ *  origin rides along to analytics without a second, order-dependent argument. */
+export interface AiChatSendVariables {
+  /** Trimmed message text (1–2000 chars, enforced server-side). */
+  message: string;
+  /** True when the text came from a server-suggested question chip rather than
+   *  the composer. Mirrors mobile's `usedSuggestion: !!messageText`. */
+  usedSuggestion?: boolean;
+}
+
 export interface UseAiChatResult {
   /** RQ mutation: send the trimmed message text. Resolves to the AI response. */
-  mutation: UseMutationResult<AIChatResponse, unknown, string>;
+  mutation: UseMutationResult<AIChatResponse, unknown, AiChatSendVariables>;
   /** Map a caught error to an i18n key under the `ai` namespace. */
   errorKey: (err: unknown) => string;
   /** Reset the threaded conversation (and the mutation) for a new chat. */
@@ -62,11 +72,21 @@ export interface UseAiChatResult {
 export function useAiChat(circleId: string): UseAiChatResult {
   const { i18n } = useTranslation();
   const conversationIdRef = useRef<string | undefined>(undefined);
+  /** Questions asked in this conversation, for turn-index analytics. */
+  const turnIndexRef = useRef(0);
+  const startedAtRef = useRef(0);
 
-  const mutation = useMutation<AIChatResponse, unknown, string>({
-    mutationFn: (message: string) => {
-      // PHI-safe: ONLY circle_id — never the message text.
-      Analytics.aiChatMessageSent(circleId);
+  const mutation = useMutation<AIChatResponse, unknown, AiChatSendVariables>({
+    mutationFn: ({ message, usedSuggestion }: AiChatSendVariables) => {
+      // PHI-safe: circle_id and a LENGTH — never the message text.
+      const turnIndex = turnIndexRef.current;
+      turnIndexRef.current += 1;
+      startedAtRef.current = Date.now();
+      Analytics.aiChatMessageSent(circleId, {
+        turnIndex,
+        messageLength: message.length,
+        usedSuggestion: usedSuggestion ?? false,
+      });
       // The backend chatSchema accepts only 'en' | 'es'. `i18n.language` can be a
       // region-qualified tag (e.g. 'en-US', 'es-MX'), so normalize to the base
       // language — otherwise the request 400s and the modal shows "sendFailed".
@@ -79,6 +99,18 @@ export function useAiChat(circleId: string): UseAiChatResult {
     },
     onSuccess: (data) => {
       conversationIdRef.current = data.conversation_id;
+      Analytics.aiChatResponseReceived(circleId, {
+        intent: data.intent ?? 'unreported',
+        latencyMs: Date.now() - startedAtRef.current,
+        turnIndex: Math.max(0, turnIndexRef.current - 1),
+      });
+    },
+    onError: (err) => {
+      Analytics.aiChatFailed(circleId, {
+        reason: classifyAiError(err),
+        latencyMs: Date.now() - startedAtRef.current,
+        turnIndex: Math.max(0, turnIndexRef.current - 1),
+      });
     },
   });
 
@@ -87,6 +119,7 @@ export function useAiChat(circleId: string): UseAiChatResult {
     errorKey: (err: unknown) => `errors.${classifyAiError(err)}`,
     resetConversation: () => {
       conversationIdRef.current = undefined;
+      turnIndexRef.current = 0;
       mutation.reset();
     },
   };

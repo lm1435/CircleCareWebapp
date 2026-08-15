@@ -5,9 +5,33 @@ import { Card } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
 import { useEmergencyInfo } from '@/hooks/useEmergencyInfo';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useAuthStore } from '@/store/authStore';
 import { addDays } from '@/components/calendar/dateMath';
 import { getDateInTimezone } from '@/utils/timezone';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
+
+// Dismissal persists across reloads via localStorage, per circle — same key
+// shape mobile uses for AsyncStorage, so the two surfaces read as one product.
+// This is a non-sensitive UI preference, not a secret (auth tokens still never
+// touch storage). Reads and writes are both guarded: localStorage throws in
+// private-mode / quota-exceeded / storage-blocked browsers.
+const dismissKey = (circleId: string): string => `getting_started_dismissed_${circleId}`;
+
+function readDismissed(circleId: string): boolean {
+  try {
+    return window.localStorage.getItem(dismissKey(circleId)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writeDismissed(circleId: string): void {
+  try {
+    window.localStorage.setItem(dismissKey(circleId), 'true');
+  } catch {
+    // Storage unavailable — fall back to session-only dismissal.
+  }
+}
 
 export interface GettingStartedChecklistProps {
   circleId: string;
@@ -91,15 +115,24 @@ interface Step {
 }
 
 /**
- * First-run "Get started" checklist shown on the calendar landing for a brand-new
- * circle. Guides the owner through three setup steps and auto-completes each as
- * the underlying data appears (an event exists, the circle has more than one
- * member or a pending invite, any emergency info is present). It is NOT a
- * coach-mark tour — it's a single dismissible card.
+ * "Get started" checklist shown on the circle Overview. Guides the viewer through
+ * the setup steps they can actually perform and auto-completes each as the
+ * underlying data appears (an event exists, the circle has more than one member
+ * or a pending invite, any emergency info is present). It is NOT a coach-mark
+ * tour — it's a single dismissible card.
+ *
+ * Gating is by CAPABILITY, not ownership — matching mobile. Any member who can
+ * write (`canEdit`) gets guidance, because a non-owner caregiver can add
+ * medications/appointments and emergency info; hiding the card from them would
+ * leave an empty circle with no direction at all. Ownership only filters the
+ * `invite` step, which non-owners cannot perform. A view-only member can act on
+ * NO step, so they get the fallback instead. There is deliberately NO circle-age
+ * window: setup help that's still outstanding on day 30 is still worth giving,
+ * and dismissal is the single, permanently-honored escape hatch.
  *
  * Self-hides when loading, when every step is done (for good), or when the user
- * dismisses it (session-only, no storage). Premium treatment mirrors
- * EmptyCircles.tsx (serif title, moss accents, editorial rows).
+ * dismisses it — dismissal persists per circle in localStorage. Premium
+ * treatment mirrors EmptyCircles.tsx (serif title, moss accents, editorial rows).
  */
 export function GettingStartedChecklist({
   circleId,
@@ -108,10 +141,21 @@ export function GettingStartedChecklist({
 }: GettingStartedChecklistProps): ReactElement | null {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
-  const [dismissed, setDismissed] = useState(false);
+  const currentUserId = useAuthStore((s) => s.user?.id);
+
+  // Holds the circle the user just dismissed, so the card disappears instantly
+  // without a storage read; storage is the source of truth for every other
+  // circle (and for the next visit). Tracking the id — rather than a bare
+  // boolean — keeps dismissal per circle when the user switches circles without
+  // this component unmounting.
+  const [dismissedCircleId, setDismissedCircleId] = useState<string | null>(null);
+  const dismissed = useMemo(
+    () => dismissedCircleId === circleId || readDismissed(circleId),
+    [dismissedCircleId, circleId]
+  );
 
   const circleQuery = useCircle(circleId);
-  const { circle, members, timezone } = circleQuery;
+  const { circle, members, timezone, canEdit } = circleQuery;
 
   // Presence check over a WIDE window (~30 days back, ~180 days ahead) in the
   // care recipient's timezone, so a single med/appointment anywhere nearby
@@ -123,39 +167,51 @@ export function GettingStartedChecklist({
 
   const emergencyQuery = useEmergencyInfo(circleId);
 
+  // Still derived (same shape as OverviewPage/MembersPage) — but it now only
+  // decides whether the `invite` step is offered, not whether the card renders.
+  const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
+
   const invited =
     members.length > 1 || (circle?.pending_invites?.length ?? 0) > 0;
   const hasEvent = eventsQuery.events.length > 0;
   const hasEmergency = hasAnyEmergencyContent(emergencyQuery.data);
 
+  // Only steps the viewer can actually perform. `invite` is owner-only (the
+  // backend refuses invites from members), so non-owners get a 2-step list —
+  // and every count below derives from THIS filtered array, never the full one.
   const steps = useMemo<Step[]>(
-    () => [
-      {
-        key: 'event',
-        label: t('gettingStarted.step1Label'),
-        desc: t('gettingStarted.step1Desc'),
-        done: hasEvent,
-        actionLabel: t('gettingStarted.actionAdd'),
-        onAction: () => onAddEvent?.(),
-      },
-      {
-        key: 'invite',
-        label: t('gettingStarted.step2Label'),
-        desc: t('gettingStarted.step2Desc'),
-        done: invited,
-        actionLabel: t('gettingStarted.actionInvite'),
-        onAction: () => navigate(`/circles/${circleId}/members`),
-      },
-      {
-        key: 'emergency',
-        label: t('gettingStarted.step3Label'),
-        desc: t('gettingStarted.step3Desc'),
-        done: hasEmergency,
-        actionLabel: t('gettingStarted.actionAdd'),
-        onAction: () => navigate(`/circles/${circleId}/emergency`),
-      },
-    ],
-    [t, hasEvent, invited, hasEmergency, onAddEvent, navigate, circleId]
+    () =>
+      [
+        {
+          key: 'event',
+          label: t('gettingStarted.step1Label'),
+          desc: t('gettingStarted.step1Desc'),
+          done: hasEvent,
+          actionLabel: t('gettingStarted.actionAdd'),
+          onAction: () => onAddEvent?.(),
+        },
+        ...(isOwner
+          ? [
+              {
+                key: 'invite',
+                label: t('gettingStarted.step2Label'),
+                desc: t('gettingStarted.step2Desc'),
+                done: invited,
+                actionLabel: t('gettingStarted.actionInvite'),
+                onAction: () => navigate(`/circles/${circleId}/members`),
+              },
+            ]
+          : []),
+        {
+          key: 'emergency',
+          label: t('gettingStarted.step3Label'),
+          desc: t('gettingStarted.step3Desc'),
+          done: hasEmergency,
+          actionLabel: t('gettingStarted.actionAdd'),
+          onAction: () => navigate(`/circles/${circleId}/emergency`),
+        },
+      ] satisfies Step[],
+    [t, isOwner, hasEvent, invited, hasEmergency, onAddEvent, navigate, circleId]
   );
 
   // Loading: wait until the circle + both presence signals have settled so the
@@ -170,6 +226,11 @@ export function GettingStartedChecklist({
   // While the checklist's own signals settle, render nothing so the empty slot
   // never flashes the fallback before the checklist resolves.
   if (isLoading) return null;
+  // View-only (or otherwise write-blocked): there is no step this member could
+  // act on, so guidance would only nag. Ownership is NOT the gate — a non-owner
+  // caregiver who can write still gets the card. Circle age is deliberately not
+  // a gate either — see the docstring.
+  if (!canEdit) return <>{fallback ?? null}</>;
   // Complete or dismissed: hand the slot back to the host's empty state.
   if (dismissed || allDone) return <>{fallback ?? null}</>;
 
@@ -182,7 +243,10 @@ export function GettingStartedChecklist({
       {/* Dismiss */}
       <button
         type="button"
-        onClick={() => setDismissed(true)}
+        onClick={() => {
+          writeDismissed(circleId);
+          setDismissedCircleId(circleId);
+        }}
         aria-label={t('gettingStarted.dismiss')}
         className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-bg-2 hover:text-ink"
       >

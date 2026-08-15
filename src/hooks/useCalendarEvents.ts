@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   useMutation,
   useQuery,
@@ -13,15 +13,21 @@ import {
   deleteEvent,
   getCircleDetail,
   getEvents,
+  setMedicationStatus,
   updateEvent,
   type CalendarEvent,
   type CircleDetail,
   type CreateEventRequest,
   type DeleteEventOptions,
+  type MedicationStatusResult,
   type UpdateEventRequest,
 } from '@/api/calendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
-import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import {
+  isDoseAlreadyLoggedError,
+  isPermissionDeniedError,
+  isSubscriptionRequiredError,
+} from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { addDays, daysBetween } from '@/components/calendar/dateMath';
@@ -76,6 +82,58 @@ export function useCalendarEvents(
   }, [enabled, isSuccess, circleId, startDate, endDate, queryClient]);
 
   return { ...query, events: query.data ?? EMPTY_EVENTS };
+}
+
+/**
+ * Medication roster query — the ONLY web fetch that requests discontinued meds
+ * (`includeDiscontinued=true`) so the Medications page can split Active vs
+ * Inactive. Mirrors mobile's MedicationHistoryScreen roster fetch exactly: no
+ * date range, so the backend applies its default window (15 days back, 30 days
+ * forward — wide enough to capture every med parent/instance the roster needs).
+ * The calendar page keeps fetching WITHOUT the flag, so inactive meds stay
+ * hidden there.
+ *
+ * Key shape matches mobile's ['calendarEvents', circleId, params], so the
+ * shared `calendarEvents(circleId)` prefix invalidation in every write hook
+ * refreshes the roster too.
+ */
+export function useMedicationRoster(
+  circleId: string
+): UseQueryResult<CalendarEvent[]> & UseCalendarEventsResult {
+  const query = useQuery({
+    queryKey: [...queryKeys.calendarEvents(circleId), { includeDiscontinued: true }],
+    queryFn: () => getEvents(circleId, { includeDiscontinued: true }),
+    enabled: !!circleId,
+  });
+  return { ...query, events: query.data ?? EMPTY_EVENTS };
+}
+
+/**
+ * Snapshot of every calendar event ALREADY in the query cache for a circle —
+ * all fetched windows plus the medication roster, deduped by event id. Reads
+ * the cache only (no fetching, not reactive): used for history-based title
+ * suggestions (docs/plans/condition-tags.md QP6), where a point-in-time
+ * snapshot at form-open is exactly right.
+ */
+export function useCachedCircleEvents(circleId: string): CalendarEvent[] {
+  const queryClient = useQueryClient();
+  return useMemo(() => {
+    const cached = queryClient.getQueriesData<CalendarEvent[]>({
+      queryKey: queryKeys.calendarEvents(circleId),
+    });
+    const seen = new Set<string>();
+    const events: CalendarEvent[] = [];
+    for (const [, data] of cached) {
+      if (!Array.isArray(data)) continue;
+      for (const event of data) {
+        if (event?.id && !seen.has(event.id)) {
+          seen.add(event.id);
+          events.push(event);
+        }
+      }
+    }
+    return events;
+  }, [queryClient, circleId]);
 }
 
 export interface UseCareRecipientTimezoneResult {
@@ -156,6 +214,11 @@ function useEventMutationOnError(circleId: string): (error: unknown) => void {
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+    } else if (isDoseAlreadyLoggedError(error)) {
+      // 409 DOSE_ALREADY_LOGGED: the edit tried to move a confirmed dose's
+      // time. Not retryable — say exactly why, then refetch the real state.
+      showToast(t('errors.doseAlreadyLogged'), 'error');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
     } else {
       // Conflict / parallel-edit path: refetch current state.
       showToast(t('errors.saveFailed'), 'error');
@@ -227,6 +290,35 @@ export function useDeleteEvent(
     mutationFn: ({ eventId, deleteScope, scheduledDate }: DeleteEventVariables) =>
       deleteEvent(circleId, eventId, { deleteScope, scheduledDate }),
     onSuccess: (_void, variables) => {
+      invalidateEventQueries(queryClient, circleId, variables.eventId);
+    },
+    onError,
+  });
+}
+
+export interface MedicationStatusVariables {
+  /** Any instance id (parent or child) — backend resolves the series root. */
+  eventId: string;
+  /** true = discontinue/inactivate, false = reactivate. */
+  discontinued: boolean;
+}
+
+/**
+ * PATCH /circles/:circleId/events/:eventId/medication-status — discontinue or
+ * reactivate a medication. Invalidates the same query families a delete does
+ * (calendar/med/today-summary) because a discontinued med drops out of the
+ * default Calendar GET and a reactivated one reappears.
+ */
+export function useMedicationStatus(
+  circleId: string
+): UseMutationResult<MedicationStatusResult, unknown, MedicationStatusVariables> {
+  const queryClient = useQueryClient();
+  const onError = useEventMutationOnError(circleId);
+
+  return useMutation({
+    mutationFn: ({ eventId, discontinued }: MedicationStatusVariables) =>
+      setMedicationStatus(circleId, eventId, discontinued),
+    onSuccess: (_result, variables) => {
       invalidateEventQueries(queryClient, circleId, variables.eventId);
     },
     onError,

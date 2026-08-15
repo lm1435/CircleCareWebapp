@@ -6,7 +6,7 @@ export type CreateKind =
   | 'appointment'
   | 'medication'
   | 'task'
-  | 'vitals'
+  | 'note'
   | 'document'
   | 'invite';
 
@@ -77,10 +77,11 @@ function TaskIcon(props: IconProps): ReactElement {
   );
 }
 
-function VitalsIcon(props: IconProps): ReactElement {
+function NoteIcon(props: IconProps): ReactElement {
   return (
     <svg {...iconBase(props)}>
-      <path d="M3 12h4l2 5 4-12 2 7h6" />
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   );
 }
@@ -141,7 +142,7 @@ export function CreateMenu({ canCreate, canInvite, onSelect }: CreateMenuProps):
       { kind: 'appointment', labelKey: 'create.appointment', Icon: AppointmentIcon },
       { kind: 'medication', labelKey: 'create.medication', Icon: MedicationIcon },
       { kind: 'task', labelKey: 'create.task', Icon: TaskIcon },
-      { kind: 'vitals', labelKey: 'create.vitals', Icon: VitalsIcon },
+      { kind: 'note', labelKey: 'create.note', Icon: NoteIcon },
       { kind: 'document', labelKey: 'create.document', Icon: DocumentIcon }
     );
   }

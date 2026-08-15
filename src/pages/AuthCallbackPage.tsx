@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
-import { consumePendingInviteCode } from '@/lib/pendingInviteCode';
+import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { consumePendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { consumePendingTermsConsent } from '@/lib/pendingTermsConsent';
 import { Analytics } from '@/lib/analytics';
@@ -88,8 +88,11 @@ export default function AuthCallbackPage(): ReactElement {
         // that's out of scope here.
         Analytics.loginCompleted(consumePendingAuthMethod() ?? 'oauth');
         // An invite handoff parks its code in sessionStorage (router state
-        // cannot survive the OAuth full-page redirect) — resume it here.
-        const pendingInvite = consumePendingInviteCode();
+        // cannot survive the OAuth full-page redirect) — detour through the
+        // invite page. PEEK, don't consume: InviteLandingPage's own effect
+        // does the consume-and-auto-accept, so clearing it here would strand
+        // the visitor on a card they have to tap "Accept" on manually.
+        const pendingInvite = peekPendingInviteCode();
         navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
       } catch {
         setFailure('error');

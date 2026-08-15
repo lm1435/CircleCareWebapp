@@ -8,6 +8,7 @@ import { EventDetailModal } from '@/components/calendar/EventDetailModal';
 import { EventDetailActions } from '@/components/calendar/EventDetailActions';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
+import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog';
 import { useCircle } from '@/hooks/useCircle';
 import { MonthView } from '@/components/calendar/MonthView';
 import { WeekView } from '@/components/calendar/WeekView';
@@ -114,6 +115,7 @@ export default function CalendarPage(): ReactElement {
   const [showCreate, setShowCreate] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
+  const [discontinuingEvent, setDiscontinuingEvent] = useState<CalendarEvent | null>(null);
 
   const { canEdit } = useCircle(circleId);
 
@@ -349,6 +351,16 @@ export default function CalendarPage(): ReactElement {
                 setDeletingEvent(selectedEvent);
                 setSelectedEvent(null);
               }}
+              onDiscontinue={() => {
+                setDiscontinuingEvent(selectedEvent);
+                setSelectedEvent(null);
+              }}
+              onReactivated={() => {
+                // The modal renders from this snapshot — clear discontinued_at
+                // so the Inactive badge and the discontinue-toggle direction
+                // reflect the reactivation without a close/reopen.
+                setSelectedEvent((ev) => (ev ? { ...ev, discontinued_at: null } : ev));
+              }}
             />
           }
           onClose={() => setSelectedEvent(null)}
@@ -370,6 +382,18 @@ export default function CalendarPage(): ReactElement {
           circleId={circleId}
           event={deletingEvent}
           onClose={() => setDeletingEvent(null)}
+        />
+      )}
+
+      {discontinuingEvent && (
+        <DiscontinueMedDialog
+          circleId={circleId}
+          event={discontinuingEvent}
+          // Whole-medication semantics: resolve every series of this med (same
+          // name + dose) from the loaded window. Roots outside the window are
+          // covered by the Medications page, the primary discontinue surface.
+          events={events}
+          onClose={() => setDiscontinuingEvent(null)}
         />
       )}
     </section>

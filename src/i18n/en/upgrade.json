@@ -18,7 +18,8 @@
     "perMonthBilled": "{{price}}/mo, billed yearly",
     "billedMonthly": "Billed monthly",
     "trialIncluded": "Free trial included",
-    "monthlyPerk": "Cancel anytime, no commitment"
+    "monthlyPerk": "Cancel anytime, no commitment",
+    "trialWithDuration": "{{period}} free trial"
   },
   "choosePlan": "Choose a plan",
   "freeBaseline": "The free plan includes one care circle and two caregivers.",
@@ -41,5 +42,21 @@
     "title": "Welcome to Premium!",
     "body": "Your subscription is active. Enjoy full access across your care circles.",
     "cta": "Continue"
+  },
+  "autoRenewNotice": "Your subscription renews automatically at the price shown until you cancel. Cancel any time from your profile.",
+  "termsLink": "Terms of Service",
+  "privacyLink": "Privacy Policy",
+  "legalPrefix": "By subscribing you agree to our",
+  "legalJoin": "and",
+  "trialHookWithDuration": "Start with a {{period}} free trial — nothing due today.",
+  "trialPeriod": {
+    "day_one": "{{count}}-day",
+    "day_other": "{{count}}-day",
+    "week_one": "{{count}}-week",
+    "week_other": "{{count}}-week",
+    "month_one": "{{count}}-month",
+    "month_other": "{{count}}-month",
+    "year_one": "{{count}}-year",
+    "year_other": "{{count}}-year"
   }
 }

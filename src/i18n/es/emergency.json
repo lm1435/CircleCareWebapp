@@ -146,7 +146,10 @@
       "medicationAllergies": "Alergias a medicamentos",
       "otherAllergies": "Otras alergias",
       "conditions": "Condiciones médicas",
-      "listHint": "Separa varias entradas con comas."
+      "listHint": "Separa varias entradas con comas.",
+      "medicationAllergiesPlaceholder": "Busca o agrega una alergia a medicamento…",
+      "otherAllergiesPlaceholder": "Busca o agrega una alergia…",
+      "conditionsPlaceholder": "Busca o agrega una condición…"
     },
     "directives": {
       "title": "Estado de reanimación",
@@ -158,5 +161,95 @@
   "errors": {
     "permissionDenied": "No tienes permiso para editar este círculo.",
     "saveFailed": "No pudimos guardar tus cambios. Inténtalo de nuevo."
+  },
+  "relationships": {
+    "label": "Parentescos comunes",
+    "daughter": "Hija",
+    "son": "Hijo",
+    "spousePartner": "Cónyuge/Pareja",
+    "sibling": "Hermano/a",
+    "grandchild": "Nieto/a",
+    "friend": "Amistad",
+    "neighbor": "Vecino/a",
+    "professionalCaregiver": "Cuidador profesional"
+  },
+  "specialties": {
+    "label": "Especialidades comunes",
+    "primaryCare": "Atención primaria",
+    "cardiologist": "Cardiología",
+    "nephrologist": "Nefrología",
+    "neurologist": "Neurología",
+    "endocrinologist": "Endocrinología",
+    "oncologist": "Oncología",
+    "orthopedist": "Ortopedia",
+    "psychiatrist": "Psiquiatría",
+    "physicalTherapist": "Fisioterapia",
+    "ophthalmologist": "Oftalmología",
+    "podiatrist": "Podología",
+    "dentist": "Odontología"
+  },
+  "tagInput": {
+    "addCustom": "Agregar \"{{text}}\"",
+    "showMore": "Mostrar más ({{count}})",
+    "showLess": "Mostrar menos",
+    "limitReached": "Llegaste al límite — quita una entrada para agregar otra.",
+    "removeTag": "Quitar {{tag}}",
+    "clearInput": "Borrar búsqueda",
+    "addedAnnouncement": "Se agregó {{tag}}",
+    "removedAnnouncement": "Se quitó {{tag}}"
+  },
+  "medicalTags": {
+    "conditions": {
+      "hypertension": "Hipertensión",
+      "type2Diabetes": "Diabetes tipo 2",
+      "type1Diabetes": "Diabetes tipo 1",
+      "chronicKidneyDisease": "Enfermedad renal crónica",
+      "heartFailure": "Insuficiencia cardíaca",
+      "coronaryArteryDisease": "Enfermedad de las arterias coronarias",
+      "atrialFibrillation": "Fibrilación auricular",
+      "copd": "EPOC",
+      "asthma": "Asma",
+      "dementia": "Demencia",
+      "alzheimers": "Enfermedad de Alzheimer",
+      "parkinsons": "Enfermedad de Parkinson",
+      "stroke": "Derrame cerebral",
+      "arthritis": "Artritis",
+      "osteoporosis": "Osteoporosis",
+      "cancer": "Cáncer",
+      "depression": "Depresión",
+      "anxiety": "Ansiedad",
+      "highCholesterol": "Colesterol alto",
+      "thyroidDisease": "Enfermedad de la tiroides",
+      "chronicPain": "Dolor crónico",
+      "incontinence": "Incontinencia",
+      "sleepApnea": "Apnea del sueño",
+      "visionImpairment": "Discapacidad visual"
+    },
+    "medicationAllergies": {
+      "penicillin": "Penicilina",
+      "sulfaDrugs": "Sulfas",
+      "aspirin": "Aspirina",
+      "nsaids": "AINE (ibuprofeno)",
+      "codeineOpioids": "Codeína/opioides",
+      "statins": "Estatinas",
+      "contrastDye": "Medio de contraste",
+      "tetracycline": "Tetraciclina",
+      "cephalosporins": "Cefalosporinas",
+      "anticonvulsants": "Anticonvulsivos",
+      "insulin": "Insulina",
+      "localAnesthetics": "Anestésicos locales"
+    },
+    "otherAllergies": {
+      "latex": "Látex",
+      "peanuts": "Cacahuates",
+      "treeNuts": "Nueces de árbol",
+      "shellfish": "Mariscos",
+      "eggs": "Huevo",
+      "dairy": "Lácteos",
+      "soy": "Soya",
+      "beeStings": "Picaduras de abeja",
+      "pollenSeasonal": "Polen/estacional",
+      "petDander": "Caspa de mascotas"
+    }
   }
 }

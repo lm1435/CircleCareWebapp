@@ -1,0 +1,48 @@
+{
+  "title": "Notes",
+  "subtitle": "A shared journal of how each day went — visible to everyone in the circle.",
+  "loading": "Loading notes",
+  "errorTitle": "Couldn't load notes",
+  "errorHint": "Check your connection and try again.",
+  "empty": {
+    "title": "No notes yet",
+    "hint": "Jot down how the day went — everyone in the circle can see it."
+  },
+  "composer": {
+    "label": "Add a note",
+    "placeholder": "How was the day?",
+    "moodLabel": "Mood",
+    "categoriesLabel": "Categories",
+    "post": "Post",
+    "save": "Save",
+    "cancel": "Cancel",
+    "errorPosting": "Couldn't post your note. Your note is still here — try again.",
+    "errorSaving": "Couldn't save the note. Try again."
+  },
+  "moods": {
+    "great": "Great day",
+    "good": "Good day",
+    "okay": "Okay",
+    "tough": "Tough day"
+  },
+  "categories": {
+    "meal": "Meal",
+    "medication": "Medication",
+    "visit": "Visit",
+    "incident": "Incident"
+  },
+  "row": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "edited": "Edited",
+    "formerMember": "Former member"
+  },
+  "day": {
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "deleteTitle": "Delete note?",
+  "deleteConfirm": "This note will be removed for everyone in the circle.",
+  "loadOlder": "Show earlier notes",
+  "postRequirementHint": "Write a note or pick a mood to post"
+}

@@ -80,7 +80,15 @@ export function useManageSubscription(): UseMutationResult<string | null, Error,
     mutationFn: async (): Promise<string | null> => {
       if (!userId) throw new Error('Not authenticated');
       const url = await getManagementUrl(userId);
-      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      if (url) {
+        // This runs after an await, i.e. outside the click's user-gesture
+        // stack, so Safari and Chrome routinely block the popup. window.open
+        // then returns null and, before this check existed, the button
+        // silently did nothing — a cancellation dead-end. Fall back to
+        // same-tab navigation, which popup blockers never intercept.
+        const win = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!win) window.location.assign(url);
+      }
       return url;
     },
   });

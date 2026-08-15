@@ -8,7 +8,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button, useToast } from '@/components/ui';
 import { useConfirmMedication } from '@/hooks/useMedConfirmation';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import { isPermissionDeniedError, type TodaysMedication } from '@/api/medicationConfirmations';
+import { isMedicationDiscontinuedError } from '@/lib/apiErrors';
 import { formatEventTimeCompact } from '@/utils/timezone';
 
 // Plan Task 24 — modal with Taken/Skipped options, optional note, submit.
@@ -37,9 +39,13 @@ export function ConfirmMedDialog({
 }: ConfirmMedDialogProps): ReactElement {
   const { t } = useTranslation('meds');
   const { showToast } = useToast();
+  // Viewer's 12h/24h clock — every rendered time goes through it.
+  const hourCycle = useHourCycle();
   const [status, setStatus] = useState<'taken' | 'skipped'>(initialStatus);
   const [note, setNote] = useState('');
-  const [submitError, setSubmitError] = useState(false);
+  // 'discontinued' = 409 MEDICATION_DISCONTINUED (inactive med — retry can
+  // never succeed, so the message points at reactivation instead).
+  const [submitError, setSubmitError] = useState<'generic' | 'discontinued' | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const takenRef = useRef<HTMLButtonElement | null>(null);
   const skippedRef = useRef<HTMLButtonElement | null>(null);
@@ -102,7 +108,7 @@ export function ConfirmMedDialog({
 
   const handleSubmit = (): void => {
     if (!med.scheduled_time || mutation.isPending) return;
-    setSubmitError(false);
+    setSubmitError(null);
 
     const trimmedNote = note.trim();
     mutation.mutate(
@@ -125,8 +131,12 @@ export function ConfirmMedDialog({
             // The mutation hook already showed the permission toast and
             // refreshed circle access flags — just close.
             onClose();
+          } else if (isMedicationDiscontinuedError(error)) {
+            // 409: the med was discontinued (likely by another caregiver) —
+            // retrying can't succeed, so say what unblocks it.
+            setSubmitError('discontinued');
           } else {
-            setSubmitError(true);
+            setSubmitError('generic');
           }
         },
       }
@@ -157,7 +167,7 @@ export function ConfirmMedDialog({
         <p className="mb-4 mt-1 text-sm text-ink-3">
           {medName}
           {med.scheduled_time
-            ? ` — ${formatEventTimeCompact(med.scheduled_time, careRecipientTimezone)}`
+            ? ` — ${formatEventTimeCompact(med.scheduled_time, careRecipientTimezone, hourCycle)}`
             : ''}
         </p>
 
@@ -203,7 +213,7 @@ export function ConfirmMedDialog({
 
         {submitError && (
           <p role="alert" className="m-0 mt-2 text-sm text-terracotta-deep">
-            {t('dialog.error')}
+            {t(submitError === 'discontinued' ? 'dialog.errorDiscontinued' : 'dialog.error')}
           </p>
         )}
 

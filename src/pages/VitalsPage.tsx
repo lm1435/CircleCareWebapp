@@ -12,12 +12,14 @@ import {
   Skeleton,
   useAccordionGroup,
   useToast,
+  careCardSurface,
 } from '@/components/ui';
 import { AddVitalModal } from '@/components/vitals/AddVitalModal';
 import { EditVitalModal } from '@/components/vitals/EditVitalModal';
 import { useVitals, useDeleteVital } from '@/hooks/useVitals';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { useCircle } from '@/hooks/useCircle';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HealthVital, VitalType } from '@/api/vitals';
 import {
   DEFAULT_UNIT_PREFERENCES,
@@ -28,6 +30,7 @@ import {
   type WeightUnit,
 } from '@/lib/vitals';
 import { utcISOToRecipientWallTime } from '@/components/vitals/vitalDateTime';
+import { formatTimeOfDay } from '@/utils/timezone';
 
 // Task 6.4 — vitals page. Lists recent readings grouped by type, rendered in the
 // user's display units (formatVitalValue). MIRRORS
@@ -108,6 +111,7 @@ function VitalRow({
   onDelete,
 }: VitalRowProps): ReactElement {
   const { t } = useTranslation('vitals');
+  const hourCycle = useHourCycle();
 
   const displayUnit = getDisplayUnit(vital.vital_type, weightUnit, glucoseUnit);
 
@@ -126,13 +130,11 @@ function VitalRow({
       timeZone: 'UTC',
     }).format(new Date(`${wall.date}T12:00:00Z`));
     const [hh, mm] = wall.time.split(':').map(Number);
-    const period = hh >= 12 ? 'PM' : 'AM';
-    const hour12 = hh % 12 || 12;
-    return `${dayLabel} · ${hour12}:${String(mm).padStart(2, '0')} ${period}`;
-  }, [vital.recorded_at, timezone]);
+    return `${dayLabel} · ${formatTimeOfDay(hh, mm, hourCycle)}`;
+  }, [vital.recorded_at, timezone, hourCycle]);
 
   return (
-    <li className="rounded-2xl border border-line bg-cream">
+    <li className={careCardSurface}>
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
           <p className="m-0 text-sm font-medium text-ink">{displayValue}</p>
@@ -251,7 +253,7 @@ export default function VitalsPage(): ReactElement {
       <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-busy="true">
         <li className="sr-only">{t('loading')}</li>
         {SKELETON_ROWS.map((row) => (
-          <li key={row} className="rounded-2xl border border-line bg-cream px-4 py-3">
+          <li key={row} className={`${careCardSurface} px-4 py-3`}>
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <Skeleton className="h-4 w-1/3 max-w-40" />

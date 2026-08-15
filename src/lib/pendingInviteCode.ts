@@ -62,6 +62,27 @@ export function consumePendingInviteCode(): string | null {
   }
 }
 
+/**
+ * Read the pending invite code WITHOUT clearing it. For post-auth landing
+ * decisions (AuthCallbackPage, VerifyEmailPage) that only need to decide
+ * WHETHER to detour through `/invite/:code` on the way to `/circles` — they
+ * must NOT consume the code themselves, or InviteLandingPage's own
+ * consume-and-auto-accept effect (`:133-140`) finds nothing parked and the
+ * visitor lands on a card they have to tap "Accept" on a second time. The
+ * actual consume-and-clear happens exactly once, on InviteLandingPage.
+ * Returns null when nothing valid is stored.
+ */
+export function peekPendingInviteCode(): string | null {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (stored === null) return null;
+    const normalized = normalize(stored);
+    return isValid(normalized) ? normalized : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Drop the pending code without reading it (e.g. the user is already at the destination). */
 export function clearPendingInviteCode(): void {
   try {

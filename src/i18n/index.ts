@@ -9,6 +9,7 @@ import enAuth from './en/auth.json';
 import enOverview from './en/overview.json';
 import enCalendar from './en/calendar.json';
 import enTasks from './en/tasks.json';
+import enNotes from './en/notes.json';
 import enMeds from './en/meds.json';
 import enActivity from './en/activity.json';
 import enEmergency from './en/emergency.json';
@@ -28,6 +29,7 @@ import esAuth from './es/auth.json';
 import esOverview from './es/overview.json';
 import esCalendar from './es/calendar.json';
 import esTasks from './es/tasks.json';
+import esNotes from './es/notes.json';
 import esMeds from './es/meds.json';
 import esActivity from './es/activity.json';
 import esEmergency from './es/emergency.json';
@@ -55,6 +57,7 @@ export const namespaces = [
   'overview',
   'calendar',
   'tasks',
+  'notes',
   'meds',
   'activity',
   'emergency',
@@ -79,6 +82,7 @@ const resources = {
     overview: enOverview,
     calendar: enCalendar,
     tasks: enTasks,
+    notes: enNotes,
     meds: enMeds,
     activity: enActivity,
     emergency: enEmergency,
@@ -99,6 +103,7 @@ const resources = {
     overview: esOverview,
     calendar: esCalendar,
     tasks: esTasks,
+    notes: esNotes,
     meds: esMeds,
     activity: esActivity,
     emergency: esEmergency,

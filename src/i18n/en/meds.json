@@ -25,7 +25,45 @@
     "successTaken": "Marked as taken",
     "successSkipped": "Marked as skipped",
     "error": "Couldn't save. Please try again.",
+    "errorDiscontinued": "This medication is inactive — reactivate it to log doses.",
     "cancel": "Cancel"
   },
-  "permissionDenied": "You don't have permission to confirm medications in this circle."
+  "permissionDenied": "You don't have permission to confirm medications in this circle.",
+  "page": {
+    "title": "Medications",
+    "subtitle": "Every medication for this circle — current and past.",
+    "add": "Add medication",
+    "loading": "Loading medications…",
+    "errorTitle": "Couldn't load medications",
+    "errorHint": "Check your connection and try again.",
+    "active": "Active",
+    "inactive": "Inactive / Past medications",
+    "inactiveHint": "Kept for reference. Reminders are off.",
+    "noTime": "No scheduled time",
+    "empty": {
+      "title": "No medications yet",
+      "hint": "Add a medication so the whole circle knows what's needed and when.",
+      "hintReadOnly": "When the care team adds medications, they'll show up here.",
+      "cta": "Add medication"
+    },
+    "actions": {
+      "edit": "Edit",
+      "editLabel": "Edit {{name}}",
+      "discontinue": "Discontinue",
+      "discontinueLabel": "Discontinue {{name}}",
+      "reactivate": "Reactivate",
+      "reactivateLabel": "Reactivate {{name}}",
+      "delete": "Delete",
+      "deleteLabel": "Delete {{name}}"
+    },
+    "detail": {
+      "photoAlt": "Photo of {{name}}",
+      "dosage": "Dosage",
+      "schedule": "Schedule",
+      "notes": "Notes",
+      "remaining": "Remaining",
+      "status": "Status",
+      "viewLabel": "View details for {{name}}"
+    }
+  }
 }

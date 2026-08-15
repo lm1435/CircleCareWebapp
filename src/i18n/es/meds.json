@@ -25,7 +25,45 @@
     "successTaken": "Marcado como tomado",
     "successSkipped": "Marcado como omitido",
     "error": "No se pudo guardar. Inténtalo de nuevo.",
+    "errorDiscontinued": "Este medicamento está inactivo; reactívalo para registrar dosis.",
     "cancel": "Cancelar"
   },
-  "permissionDenied": "No tienes permiso para confirmar medicamentos en este círculo."
+  "permissionDenied": "No tienes permiso para confirmar medicamentos en este círculo.",
+  "page": {
+    "title": "Medicamentos",
+    "subtitle": "Todos los medicamentos de este círculo, actuales y anteriores.",
+    "add": "Agregar medicamento",
+    "loading": "Cargando medicamentos…",
+    "errorTitle": "No se pudieron cargar los medicamentos",
+    "errorHint": "Revisa tu conexión e intenta de nuevo.",
+    "active": "Activos",
+    "inactive": "Inactivos / Medicamentos anteriores",
+    "inactiveHint": "Se conservan como referencia. Los recordatorios están desactivados.",
+    "noTime": "Sin hora programada",
+    "empty": {
+      "title": "Aún no hay medicamentos",
+      "hint": "Agrega un medicamento para que todo el círculo sepa qué se necesita y cuándo.",
+      "hintReadOnly": "Cuando el equipo de cuidado agregue medicamentos, aparecerán aquí.",
+      "cta": "Agregar medicamento"
+    },
+    "actions": {
+      "edit": "Editar",
+      "editLabel": "Editar {{name}}",
+      "discontinue": "Suspender",
+      "discontinueLabel": "Suspender {{name}}",
+      "reactivate": "Reactivar",
+      "reactivateLabel": "Reactivar {{name}}",
+      "delete": "Eliminar",
+      "deleteLabel": "Eliminar {{name}}"
+    },
+    "detail": {
+      "photoAlt": "Foto de {{name}}",
+      "dosage": "Dosis",
+      "schedule": "Horario",
+      "notes": "Notas",
+      "remaining": "Restante",
+      "status": "Estado",
+      "viewLabel": "Ver detalles de {{name}}"
+    }
+  }
 }

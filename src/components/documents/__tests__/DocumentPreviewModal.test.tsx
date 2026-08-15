@@ -61,14 +61,21 @@ describe('DocumentPreviewModal', () => {
     });
   });
 
-  it('renders PDFs in a fully sandboxed iframe with fallbacks', async () => {
+  it('renders PDFs in an iframe with fallbacks and NO sandbox attribute', async () => {
     mockSignedUrl(pdfDoc);
     render(<DocumentPreviewModal doc={pdfDoc} circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
     const iframe = await screen.findByTitle('Power of Attorney');
     expect(iframe.tagName).toBe('IFRAME');
-    expect(iframe).toHaveAttribute('sandbox', '');
-    expect(iframe).toHaveAttribute('src', SIGNED_URL);
+    // Verified in Chrome: a `sandbox` attribute of ANY value — including one
+    // listing every allow-* token — makes Chrome refuse to run its built-in PDF
+    // viewer and render "This page has been blocked by Chrome". Re-adding the
+    // attribute here to "harden" the frame silently breaks every PDF preview.
+    expect(iframe).not.toHaveAttribute('sandbox');
+    // `navpanes=0` hides Chrome's thumbnail rail; the fragment is never sent to
+    // the server so it cannot affect the signature. Only the FRAME gets it —
+    // the new-tab link below stays the bare signed URL.
+    expect(iframe).toHaveAttribute('src', `${SIGNED_URL}#navpanes=0`);
 
     const newTabLink = screen.getByRole('link', { name: 'Open in new tab' });
     expect(newTabLink).toHaveAttribute('href', SIGNED_URL);

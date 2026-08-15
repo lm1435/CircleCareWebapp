@@ -18,7 +18,8 @@
     "perMonthBilled": "{{price}}/mes, facturado al año",
     "billedMonthly": "Facturado al mes",
     "trialIncluded": "Prueba gratis incluida",
-    "monthlyPerk": "Cancela cuando quieras, sin compromiso"
+    "monthlyPerk": "Cancela cuando quieras, sin compromiso",
+    "trialWithDuration": "Prueba gratis de {{period}}"
   },
   "choosePlan": "Elige un plan",
   "freeBaseline": "El plan gratuito incluye un círculo de cuidado y dos cuidadores.",
@@ -41,5 +42,21 @@
     "title": "¡Te damos la bienvenida a Premium!",
     "body": "Tu suscripción está activa. Disfruta del acceso completo en tus círculos de cuidado.",
     "cta": "Continuar"
+  },
+  "autoRenewNotice": "Tu suscripción se renueva automáticamente al precio mostrado hasta que la canceles. Puedes cancelar cuando quieras desde tu perfil.",
+  "termsLink": "Términos de Servicio",
+  "privacyLink": "Política de Privacidad",
+  "legalPrefix": "Al suscribirte aceptas nuestros",
+  "legalJoin": "y la",
+  "trialHookWithDuration": "Comienza con una prueba gratis de {{period}}: hoy no pagas nada.",
+  "trialPeriod": {
+    "day_one": "{{count}} día",
+    "day_other": "{{count}} días",
+    "week_one": "{{count}} semana",
+    "week_other": "{{count}} semanas",
+    "month_one": "{{count}} mes",
+    "month_other": "{{count}} meses",
+    "year_one": "{{count}} año",
+    "year_other": "{{count}} años"
   }
 }

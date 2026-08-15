@@ -21,7 +21,7 @@ describe('CreateMenu', () => {
     expect(screen.getByRole('menuitem', { name: 'Appointment' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Medication' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Task' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Vitals' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Note' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Document' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Invite member' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('menuitem')).toHaveLength(5);

@@ -24,21 +24,33 @@ import { formatFileSize } from './formatFileSize';
 // enforces 402 (free 200MB) / 413 (premium 1GB) regardless — the hook's onError
 // surfaces those distinctly.
 
-const ACCEPT = '.jpg,.jpeg,.png,.heic,.pdf';
+const ACCEPT = '.jpg,.jpeg,.png,.heic,.heif,.pdf';
+
+// HEIC and HEIF are the same container (ISO/IEC 23008-12) — which name you get
+// depends on the source device, not the file. A photo copied off an Android
+// phone commonly arrives as .heif / image/heif. Both fold onto the backend's
+// canonical 'heic' extension; the backend folds them too, for older clients.
+const HEIF_MIME_TYPES = [
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
+];
 
 /** Map a browser File's name/MIME to one of the backend's allowed extensions. */
-function deriveFileExtension(file: File): DocumentFileExtension | null {
+export function deriveFileExtension(file: File): DocumentFileExtension | null {
   const fromName = file.name.split('.').pop()?.toLowerCase();
   if (fromName === 'jpg' || fromName === 'jpeg') return fromName;
-  if (fromName === 'png' || fromName === 'heic' || fromName === 'pdf') return fromName;
+  if (fromName === 'png' || fromName === 'pdf') return fromName;
+  if (fromName === 'heic' || fromName === 'heif') return 'heic';
   // Fall back to MIME when the name lacks a usable extension.
-  switch (file.type) {
+  const mime = file.type?.toLowerCase().split(';')[0].trim();
+  if (mime && HEIF_MIME_TYPES.includes(mime)) return 'heic';
+  switch (mime) {
     case 'image/jpeg':
       return 'jpeg';
     case 'image/png':
       return 'png';
-    case 'image/heic':
-      return 'heic';
     case 'application/pdf':
       return 'pdf';
     default:

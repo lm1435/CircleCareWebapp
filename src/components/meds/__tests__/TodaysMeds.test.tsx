@@ -21,6 +21,14 @@ import { TodaysMeds } from '@/components/meds/TodaysMeds';
 import type { Circle } from '@/api/circles';
 import type { TodaysMedication } from '@/api/medicationConfirmations';
 
+// The viewer's 12h/24h clock. The real hook resolves off the shared currentUser
+// query (unmocked here) and would otherwise fall through to the runner's
+// navigator.language — pin it so the scheduled-time labels are deterministic.
+const mockUseHourCycle = vi.fn();
+vi.mock('@/hooks/useHourCycle', () => ({
+  useHourCycle: () => mockUseHourCycle(),
+}));
+
 const mockedGet = apiClient.get as unknown as Mock;
 const mockedPost = apiClient.post as unknown as Mock;
 
@@ -131,6 +139,7 @@ function medRow(name: string): HTMLElement {
 }
 
 beforeEach(() => {
+  mockUseHourCycle.mockReturnValue('12h');
   vi.useFakeTimers({ toFake: ['Date'], now: NOW });
   vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
     timeZone: 'America/New_York',

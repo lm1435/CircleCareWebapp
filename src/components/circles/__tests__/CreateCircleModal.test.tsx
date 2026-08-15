@@ -33,6 +33,13 @@ vi.mock('@/components/ui', async (importOriginal) => {
   return { ...actual, useToast: () => ({ showToast }) };
 });
 
+// R4-5 onboarding funnel — a successful create must report completion (the
+// once-per-browser guard lives inside the mocked module).
+const trackOnboardingCompleted = vi.fn();
+vi.mock('@/lib/onboardingAnalytics', () => ({
+  trackOnboardingCompleted: (path: string) => trackOnboardingCompleted(path),
+}));
+
 function renderModal(onClose = vi.fn()) {
   render(
     <MemoryRouter>
@@ -104,5 +111,21 @@ describe('CreateCircleModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(navigate).toHaveBeenCalledWith('/circles/circle-new');
     expect(showToast).toHaveBeenCalledWith('Circle created.', 'success');
+    // R4-5: successful create reports onboarding completion via 'created'.
+    expect(trackOnboardingCompleted).toHaveBeenCalledWith('created');
+  });
+
+  it('does NOT report onboarding completion when creation fails', async () => {
+    const user = userEvent.setup();
+    createMutate.mockImplementation((_data, opts) => {
+      opts?.onError?.({ error: { code: 'CIRCLE_LIMIT_REACHED' } });
+    });
+    renderModal();
+
+    await user.type(screen.getByLabelText(/Care recipient name/), 'Rose Meza');
+    await user.click(screen.getByRole('button', { name: 'Create circle' }));
+
+    await waitFor(() => expect(createMutate).toHaveBeenCalled());
+    expect(trackOnboardingCompleted).not.toHaveBeenCalled();
   });
 });

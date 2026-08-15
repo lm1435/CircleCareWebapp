@@ -8,7 +8,9 @@ import { StoreBadges } from '@/components/layout/StoreBadges';
 import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
 import { useAuth } from '@/hooks/useAuth';
 import { useAcceptInviteByCode } from '@/hooks/useJoinCircle';
-import { clearPendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
+import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
+import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
+import { Analytics } from '@/lib/analytics';
 
 // ⚠️ NEXT STEPS to ship invite-link sharing:
 //   1. Re-enable the Share/Copy buttons in the mobile app — they're commented out
@@ -61,13 +63,17 @@ export default function InviteLandingPage(): ReactElement {
   // matches what the app expects users to type.
   const displayCode = code.trim().toUpperCase();
 
-  const { data: invite, isPending, isError } = useQuery({
+  const { data: invite, isPending, isError, error } = useQuery({
     queryKey: ['invitePreview', displayCode],
     queryFn: () => previewInviteByCode(displayCode),
     enabled: displayCode.length > 0,
     retry: false, // 404/400 are definitive; endpoint is rate-limited
     staleTime: Infinity,
   });
+
+  // The api client unwraps errors — the code lives at err.error.code.
+  const isAlreadyUsed =
+    (error as { error?: { code?: string } } | null)?.error?.code === 'INVITE_ALREADY_USED';
 
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -79,13 +85,6 @@ export default function InviteLandingPage(): ReactElement {
     []
   );
 
-  // An authenticated visitor is already at the invite destination — drop any
-  // pending code parked by an earlier sign-in handoff so a stale code can't
-  // hijack a later post-auth landing.
-  useEffect(() => {
-    if (!isBootstrapping && isAuthenticated) clearPendingInviteCode();
-  }, [isBootstrapping, isAuthenticated]);
-
   // Accept the invite when the visitor is already signed in. The preview
   // endpoint doesn't expose the circle id, so on success we land on the circle
   // picker (now showing the just-joined circle). An already-member result is a
@@ -94,6 +93,15 @@ export default function InviteLandingPage(): ReactElement {
     setAcceptError(null);
     accept.mutate(displayCode, {
       onSuccess: () => {
+        // R4-5: joined their first circle here → onboarding complete. No-op
+        // when this browser already saw the user with circles ('existing'
+        // fired). ALREADY_MEMBER lands in onError, so it never fires 'joined'.
+        // Carries only the path enum — never the invite code.
+        trackOnboardingCompleted('joined');
+        // The accept funnel was previously unmeasured on BOTH platforms — 122
+        // invites sent since January produced zero invite_accepted events, so
+        // there was no way to tell a working join from a silently broken one.
+        Analytics.inviteAccepted(undefined, 'invite_link');
         // Confirm the join — the circle picker we land on gives no feedback.
         showToast(t('acceptSuccess'), 'success');
         navigate('/circles');
@@ -109,11 +117,48 @@ export default function InviteLandingPage(): ReactElement {
     });
   }, [accept, displayCode, navigate, showToast, t]);
 
-  // Not signed in: route to login, preserving this invite page as the return
-  // destination twice over — router state for the email/password path
-  // (LoginPage honors location.state.from.pathname) AND sessionStorage for the
-  // paths where router state cannot survive (OAuth full-page redirect,
-  // login → signup → verify-email).
+  // Returning from the sign-in handoff: finish the job the visitor started.
+  //
+  // A code parked in sessionStorage means they pressed "Sign in to accept" on
+  // THIS page — intent to join is already expressed, so accept on their behalf
+  // rather than re-rendering the same card with a second, differently labelled
+  // button they have to notice and press again. Every other authenticated
+  // arrival just drops the parked code so a stale one can't hijack this landing.
+  //
+  // `consumePendingInviteCode` is get-and-clear and the ref guards StrictMode's
+  // double-invoke, so accept fires at most once per handoff. Declared after
+  // handleAccept: naming it in the dep array before its initializer runs would
+  // throw (temporal dead zone) on every render of this page.
+  const autoAccepted = useRef(false);
+  useEffect(() => {
+    if (isBootstrapping || !isAuthenticated) return;
+    const parked = consumePendingInviteCode();
+    if (parked === displayCode && !autoAccepted.current) {
+      autoAccepted.current = true;
+      handleAccept();
+    }
+  }, [isBootstrapping, isAuthenticated, displayCode, handleAccept]);
+
+  // Not signed in: route to signup, preserving this invite page as the return
+  // destination. SignUpPage always hands off to /verify-email, which has no
+  // router state to honor — the sessionStorage code is what brings the invitee
+  // back here (VerifyEmailPage / AuthCallbackPage both peek it).
+  //
+  // Create-account is the PRIMARY action: an invitee is by definition someone
+  // who was just told about CircleCare, so the common case is no account yet.
+  // Sending them to /login first cost us every web invitee through 2026-08-13
+  // (17 invite opens, 0 accepts) — one of them typed credentials for an account
+  // that did not exist, got "Invalid email or password", and never came back.
+  const handleCreateAccount = useCallback(() => {
+    setPendingInviteCode(displayCode);
+    navigate('/signup', { state: { from: { pathname: `/invite/${displayCode}` } } });
+  }, [navigate, displayCode]);
+
+  // Secondary path for an invitee who already has an account (e.g. an existing
+  // mobile user). Preserves the return destination twice over — router state
+  // for the email/password path (LoginPage honors location.state.from.pathname)
+  // AND sessionStorage for the paths where router state cannot survive (OAuth
+  // full-page redirect, login → signup → verify-email).
   const handleSignIn = useCallback(() => {
     setPendingInviteCode(displayCode);
     navigate('/login', { state: { from: { pathname: `/invite/${displayCode}` } } });
@@ -180,8 +225,16 @@ export default function InviteLandingPage(): ReactElement {
         {isError && (
           <>
             <div className="flex flex-col items-center gap-3 text-center">
-              <h1 className="serif m-0 text-xl text-ink text-balance">{t('error.title')}</h1>
-              <p className="m-0 text-sm text-ink-2 text-balance">{t('error.suggestion')}</p>
+              {/* "Already used" is a distinct, common case — most often the person
+                  tapped the link twice, or joined on the app first. Telling them
+                  the invite expired or is invalid would be plainly wrong.
+                  Mirrors the mobile PendingInvitesScreen link banners. */}
+              <h1 className="serif m-0 text-xl text-ink text-balance">
+                {isAlreadyUsed ? t('errorUsed.title') : t('error.title')}
+              </h1>
+              <p className="m-0 text-sm text-ink-2 text-balance">
+                {isAlreadyUsed ? t('errorUsed.suggestion') : t('error.suggestion')}
+              </p>
             </div>
             <DownloadButtons prompt={t('downloadPromptError')} />
             <p className="m-0 text-center text-sm text-ink-3 text-balance">{t('appDescription')}</p>
@@ -217,9 +270,14 @@ export default function InviteLandingPage(): ReactElement {
                     {accept.isPending ? t('accepting') : t('accept')}
                   </Button>
                 ) : (
-                  <Button className="w-full max-w-xs" onClick={handleSignIn}>
-                    {t('signInToAccept')}
-                  </Button>
+                  <>
+                    <Button className="w-full max-w-xs" onClick={handleCreateAccount}>
+                      {t('createAccountToAccept')}
+                    </Button>
+                    <Button variant="ghost" className="w-full max-w-xs" onClick={handleSignIn}>
+                      {t('signInInstead')}
+                    </Button>
+                  </>
                 )}
                 {acceptError ? (
                   <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">

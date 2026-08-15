@@ -6,6 +6,7 @@ import { StoreBadges } from '@/components/layout/StoreBadges';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useWebPlans, usePurchasePlan, useManageSubscription } from '@/hooks/useWebBilling';
 import { isWebBillingConfigured, isUserCancelledError, type WebPlan } from '@/lib/purchases';
+import { legalUrl } from '@/lib/legalLinks';
 
 /**
  * Web purchase page (RevenueCat Web Billing). Free users land here from the
@@ -116,11 +117,20 @@ interface PlansViewProps {
 }
 
 function PlansView({ plans, pending, onSubscribe, onBack }: PlansViewProps): ReactElement {
-  const { t } = useTranslation('upgrade');
+  const { t, i18n } = useTranslation('upgrade');
 
   const monthly = plans?.monthly ?? null;
   const annual = plans?.annual ?? null;
   const anyTrial = Boolean(monthly?.hasFreeTrial || annual?.hasFreeTrial);
+  // Trial DURATION from the store's own offer, so the paywall never advertises
+  // a length the store isn't offering (and never omits the length it is).
+  const formatTrialPeriod = (p: { number: number; unit: string } | null): string | null => {
+    if (!p || p.number <= 0) return null;
+    const key = ['day', 'week', 'month', 'year'].includes(p.unit) ? p.unit : null;
+    return key ? t(`trialPeriod.${key}`, { count: p.number }) : null;
+  };
+  const trialPeriodLabel =
+    formatTrialPeriod(annual?.trialPeriod ?? null) ?? formatTrialPeriod(monthly?.trialPeriod ?? null);
 
   // Honest, data-driven savings + per-month equivalent from the raw amounts.
   const savePercent =
@@ -146,7 +156,7 @@ function PlansView({ plans, pending, onSubscribe, onBack }: PlansViewProps): Rea
       <p className="mt-3 max-w-xl text-base text-ink-3">{t('subtitle')}</p>
       {anyTrial && (
         <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-terracotta-soft px-4 py-1.5 text-sm font-medium text-terracotta-deep">
-          {t('trialHook')}
+          {trialPeriodLabel ? t('trialHookWithDuration', { period: trialPeriodLabel }) : t('trialHook')}
         </p>
       )}
 
@@ -175,7 +185,16 @@ function PlansView({ plans, pending, onSubscribe, onBack }: PlansViewProps): Rea
               period={t('plans.perYear')}
               badge={savePercent ? t('plans.savePercent', { percent: savePercent }) : t('plans.bestValue')}
               subline={perMonthEquivalent ? t('plans.perMonthBilled', { price: perMonthEquivalent }) : null}
-              feature={annual.hasFreeTrial ? { text: t('plans.trialIncluded'), tone: 'brand' } : null}
+              feature={
+                annual.hasFreeTrial
+                  ? {
+                      text: formatTrialPeriod(annual.trialPeriod)
+                        ? t('plans.trialWithDuration', { period: formatTrialPeriod(annual.trialPeriod) })
+                        : t('plans.trialIncluded'),
+                      tone: 'brand',
+                    }
+                  : null
+              }
             />
           )}
           {monthly && (
@@ -190,7 +209,12 @@ function PlansView({ plans, pending, onSubscribe, onBack }: PlansViewProps): Rea
               subline={t('plans.billedMonthly')}
               feature={
                 monthly.hasFreeTrial
-                  ? { text: t('plans.trialIncluded'), tone: 'brand' }
+                  ? {
+                      text: formatTrialPeriod(monthly.trialPeriod)
+                        ? t('plans.trialWithDuration', { period: formatTrialPeriod(monthly.trialPeriod) })
+                        : t('plans.trialIncluded'),
+                      tone: 'brand',
+                    }
                   : { text: t('plans.monthlyPerk'), tone: 'muted' }
               }
             />
@@ -213,6 +237,33 @@ function PlansView({ plans, pending, onSubscribe, onBack }: PlansViewProps): Rea
 
       <p className="mt-4 text-xs text-ink-3">
         {t('cancelAnytime')} {t('securedByStripe')}
+      </p>
+
+      {/* Auto-renewal disclosure and legal links must appear before payment
+          details are taken (FTC negative-option rule). This checkout entry
+          point previously carried neither. */}
+      <p className="mt-2 max-w-md text-xs text-ink-3">{t('autoRenewNotice')}</p>
+
+      <p className="mt-2 max-w-md text-xs text-ink-3">
+        {t('legalPrefix')}{' '}
+        <a
+          href={legalUrl('terms', i18n.language)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          {t('termsLink')}
+        </a>{' '}
+        {t('legalJoin')}{' '}
+        <a
+          href={legalUrl('privacy', i18n.language)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          {t('privacyLink')}
+        </a>
+        .
       </p>
 
       {/* The mobile path stays available alongside web checkout. */}

@@ -28,7 +28,10 @@
     "completing": "Completing…",
     "undo": "Undo",
     "undoAction": "Undo completing \"{{title}}\"",
-    "pendingAnnounce": "\"{{title}}\" will be completed. Choose Undo to cancel."
+    "pendingAnnounce": "\"{{title}}\" will be completed. Choose Undo to cancel.",
+    "done": "Done",
+    "statusDone": "(done)",
+    "statusPending": "(not done)"
   },
   "due": {
     "today": "Today",

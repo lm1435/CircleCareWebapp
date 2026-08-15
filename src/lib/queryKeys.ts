@@ -63,6 +63,12 @@ export const queryKeys = {
       ? (['eventNotes', circleId, eventId] as const)
       : (['eventNotes', circleId, eventId, scheduledDate] as const),
 
+  // Care notes (daily-care-notes plan) — date-window keys like calendar:
+  // the bare key is the invalidation prefix, the range key is per-window.
+  careNotes: (circleId: string) => ['careNotes', circleId] as const,
+  careNotesRange: (circleId: string, range: { from?: string; to?: string }) =>
+    ['careNotes', circleId, range] as const,
+
   // Tasks
   tasks: (circleId: string) => ['tasks', circleId] as const,
   // Parameterized tasks list — mirrors mobile useTasks: only DEFINED params are
@@ -82,6 +88,13 @@ export const queryKeys = {
   // Vitals
   vitals: (circleId: string) => ['vitals', circleId] as const,
   vitalsLatest: (circleId: string) => ['vitals', circleId, 'latest'] as const,
+
+  // AI Care Assistant — web-only key: mobile loads suggestions with a
+  // useEffect + local state (no React Query twin to mirror). `language` is part
+  // of the key on purpose so switching to Spanish refetches instead of
+  // rendering cached English chips.
+  aiSuggestions: (circleId: string, language: string) =>
+    ['aiSuggestions', circleId, language] as const,
 
   // Invites
   invitesPending: ['invites', 'pending'] as const,

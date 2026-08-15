@@ -38,19 +38,29 @@ test('create, complete, and delete a task', async ({ page, circleId }) => {
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
   // The new task appears in the (default: Open) list. The complete control is a
-  // role="checkbox" toggle labelled `Mark "<title>" complete`.
-  const completeBox = page.getByRole('checkbox', { name: `Mark "${title}" complete` });
+  // "Done" button labelled `Mark "<title>" complete` (1.1.9 redesign — was a
+  // role="checkbox" toggle).
+  const completeBox = page.getByRole('button', { name: `Mark "${title}" complete` });
   await expect(completeBox).toBeVisible({ timeout: 20_000 });
 
   // --- Complete (toggle the checkbox) ---
-  // Toggling starts a 5s undo grace period; once it elapses the completion
-  // commits and the completed task drops out of the default "Open" filter. We
-  // assert via the stable per-row edit control (`Edit "<title>"`) leaving the
-  // list — a reliable "it committed" signal that doesn't depend on the long,
-  // limited "All"/"Completed" lists.
   await completeBox.click();
+  // Toggling starts a 5s undo grace period, and swaps the row into its
+  // pending "Completing… Undo" state IMMEDIATELY — before any network call.
+  // The per-row Edit control disappears at that same instant, so asserting
+  // only "Edit is gone" (the old check here) passed even if the eventual
+  // commit request silently failed: it never proved the completion reached
+  // the server (WB9).
   const editBtn = page.getByRole('button', { name: `Edit "${title}"` });
-  await expect(editBtn).toHaveCount(0, { timeout: 25_000 });
+  await expect(editBtn).toHaveCount(0);
+  // Real proof of commit: switch to the Completed filter, a server-backed
+  // query. The task only appears here once the completion actually persisted
+  // — this is what would fail if the 5s-later commit request broke.
+  // NOTE: persisted-completed rows deliberately render as static text with no
+  // Edit affordance (TasksPage row gate on completed_at), so assert on the
+  // row's text — "<title> (done)" — not on an Edit button that no longer exists.
+  await page.locator('#tasks-status-filter').selectOption('completed');
+  await expect(page.getByText(title)).toBeVisible({ timeout: 25_000 });
 
   // --- Delete (cleanup) ---
   // The Tasks edit modal has no delete control; delete via the calendar's

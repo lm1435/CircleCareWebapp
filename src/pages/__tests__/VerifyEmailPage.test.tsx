@@ -98,7 +98,7 @@ describe('VerifyEmailPage', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
-  it('resumes a pending invite handoff: consumes the parked code and lands on /invite/CODE', async () => {
+  it('resumes a pending invite handoff: PEEKS the parked code (does not consume) and lands on /invite/CODE', async () => {
     setPendingInviteCode('ABC234');
     mockAuthEndpoints();
     renderVerify();
@@ -108,8 +108,12 @@ describe('VerifyEmailPage', () => {
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith('/invite/ABC234', { replace: true })
     );
-    // Consumed — the code must not redirect a later sign-in again.
-    expect(sessionStorage.length).toBe(0);
+    // WB1 regression: this page must NOT consume the code itself — it only
+    // decides where to detour. InviteLandingPage's own effect consumes it
+    // and auto-accepts; if this page cleared it first (the old bug), the
+    // landing page would find nothing parked and auto-accept would never
+    // arm, stranding the visitor on a card they have to tap manually.
+    expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
   });
 
   it('leaves the pending code parked when the cookie exchange fails (login completes the handoff)', async () => {

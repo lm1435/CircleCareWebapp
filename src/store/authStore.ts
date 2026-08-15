@@ -5,6 +5,7 @@ import { queryClient } from '@/lib/queryClient';
 import { authApi, type AuthSession, type AuthUser } from '@/api/auth';
 import { getCurrentUser } from '@/api/users';
 import { identifyUser, resetAnalytics } from '@/lib/posthog';
+import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
 
 // Web auth store (Task 9) — mirrors mobile/src/store/authStore.ts adapted to
@@ -63,6 +64,11 @@ function clearLocalSession(): void {
   resetRefreshState();
   tokenAccessor.clear();
   queryClient.clear();
+  // Drop any parked invite code: on a shared tab, user A's un-accepted invite
+  // must not silently auto-accept when user B signs in later (the login/
+  // callback pages PEEK the code and forward to /invite/:code, which consumes
+  // it on any authenticated arrival).
+  clearPendingInviteCode();
   // Drop the analytics identity so the next user on a shared device starts
   // fresh (no-op when PostHog isn't initialized).
   resetAnalytics();

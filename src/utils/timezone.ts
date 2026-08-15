@@ -1,5 +1,6 @@
 import { getCurrentUser, updateProfile } from '../api/users';
 import { devLog, devError } from '../constants/config';
+import type { HourCycle } from './hourCycle';
 
 // VERBATIM PORT of mobile/src/utils/timezone.ts (Intl-based — 20 timezone bugs
 // were fixed on mobile; web must not re-earn those scars).
@@ -157,19 +158,80 @@ export function convertTimeBetweenTimezones(
 }
 
 /**
- * Format a time for display with AM/PM
+ * Normalize a naive time-of-day to canonical `HH:MM`.
+ *
+ * Postgres `TIME` columns (e.g. `users.quiet_hours_start/end`) come back over
+ * the API WITH seconds — `"22:00:00"` — while everything the app writes is
+ * `HH:MM`. Round-tripping the server value unchanged is what broke saving quiet
+ * hours: editing only the END time sent the untouched START back as
+ * `"22:00:00"`, which stricter `HH:MM` validation rejected. It also feeds an
+ * `<input type="time">` (whose `step` implies minutes) a seconds-bearing value,
+ * which browsers handle inconsistently.
+ *
+ * Call this at the boundary where a server TIME enters local state, so only the
+ * canonical form ever exists in the app.
+ *
+ * Nullish/empty values pass through untouched — callers layer their own
+ * `|| '22:00'` defaults on top. Anything unrecognizable is returned as-is
+ * rather than thrown on: a normalizer must never be the thing that crashes a
+ * screen.
  */
-export function formatTimeDisplay(hours: number, minutes: number): string {
+export function normalizeTimeOfDay<T extends string | null | undefined>(value: T): T {
+  if (typeof value !== 'string' || value === '') return value;
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?$/.exec(value.trim());
+  if (!match) return value;
+  return `${match[1].padStart(2, '0')}:${match[2]}` as T;
+}
+
+/**
+ * THE one time-of-day renderer for this repo.
+ *
+ * Every user-facing time goes through here — no site may re-inline `% 12` or
+ * `substring(0, 5)`. `cycle` comes from `resolveHourCycle()` (see
+ * `utils/hourCycle.ts`), in a component via the `useHourCycle()` hook.
+ *
+ * `cycle` is REQUIRED on every display helper below — deliberately. It was
+ * briefly defaulted to '12h' "so an un-wired call site keeps today's
+ * behaviour", and the result was that every calendar and medication surface
+ * silently kept rendering 12-hour for 24-hour users while the feature looked
+ * shipped. A missing cycle must be a compile error, not a silent wrong answer.
+ * If you are adding a call site and have no cycle, call `useHourCycle()` in the
+ * nearest component and thread it down as a parameter.
+ *
+ * NOT for machine formats. Times SENT to the API go through `formatTimeForAPI`,
+ * which is timezone arithmetic, not display.
+ *
+ * @param hours - Hours (0-23)
+ * @param minutes - Minutes (0-59)
+ * @param cycle - '12h' → "2:05 PM", '24h' → "14:05" (zero-padded)
+ */
+export function formatTimeOfDay(hours: number, minutes: number, cycle: HourCycle): string {
+  const mm = minutes.toString().padStart(2, '0');
+  if (cycle === '24h') {
+    return `${hours.toString().padStart(2, '0')}:${mm}`;
+  }
   const period = hours >= 12 ? 'PM' : 'AM';
   const hour12 = hours % 12 || 12;
-  return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+  return `${hour12}:${mm} ${period}`;
+}
+
+/**
+ * Format a time for display (AM/PM, or HH:MM under a 24-hour cycle)
+ */
+export function formatTimeDisplay(hours: number, minutes: number, cycle: HourCycle): string {
+  return formatTimeOfDay(hours, minutes, cycle);
 }
 
 /**
  * Format time with timezone abbreviation (e.g., "8:40 PM MT")
  */
-export function formatTimeWithTimezone(hours: number, minutes: number, timezone: string): string {
-  return `${formatTimeDisplay(hours, minutes)} ${getTimezoneAbbreviation(timezone)}`;
+export function formatTimeWithTimezone(
+  hours: number,
+  minutes: number,
+  timezone: string,
+  cycle: HourCycle
+): string {
+  return `${formatTimeOfDay(hours, minutes, cycle)} ${getTimezoneAbbreviation(timezone)}`;
 }
 
 /**
@@ -180,11 +242,12 @@ export function formatDualTimezoneDisplay(
   hours: number,
   minutes: number,
   userTimezone: string,
-  careRecipientTimezone: string
+  careRecipientTimezone: string,
+  cycle: HourCycle
 ): string {
   // If same timezone, just show one time
   if (userTimezone === careRecipientTimezone) {
-    return formatTimeWithTimezone(hours, minutes, userTimezone);
+    return formatTimeWithTimezone(hours, minutes, userTimezone, cycle);
   }
 
   // Convert user's time to care recipient's time
@@ -195,11 +258,12 @@ export function formatDualTimezoneDisplay(
     careRecipientTimezone
   );
 
-  const userTime = formatTimeWithTimezone(hours, minutes, userTimezone);
+  const userTime = formatTimeWithTimezone(hours, minutes, userTimezone, cycle);
   const recipientTime = formatTimeWithTimezone(
     converted.hours,
     converted.minutes,
-    careRecipientTimezone
+    careRecipientTimezone,
+    cycle
   );
 
   return `${userTime} / ${recipientTime}`;
@@ -243,15 +307,22 @@ export function timezonesAreDifferent(tz1: string, tz2: string): boolean {
  *
  * @param timeString - Time from database (HH:MM or HH:MM:SS format) - already in care recipient's TZ
  * @param careRecipientTimezone - The care recipient's IANA timezone
- * @param showDualTimezone - Whether to show viewer's local time too (optional, auto-detects)
- * @param referenceDate - Optional date for DST calculations (defaults to today)
+ * @param showDualTimezone - Whether to show viewer's local time too (`undefined` auto-detects)
+ * @param referenceDate - Date for DST calculations (`undefined` = today)
+ * @param cycle - Viewer's hour cycle from resolveHourCycle() — REQUIRED
  * @returns Formatted time string with timezone(s)
+ *
+ * `showDualTimezone` and `referenceDate` take an explicit `undefined` rather
+ * than being optional: `cycle` is required and sits last, and TypeScript does
+ * not allow a required parameter to follow an optional one. Keeping the
+ * positions stable was worth the two `undefined`s at the one call site.
  */
 export function formatEventTimeForDisplay(
   timeString: string,
   careRecipientTimezone: string,
-  showDualTimezone?: boolean,
-  referenceDate?: Date
+  showDualTimezone: boolean | undefined,
+  referenceDate: Date | undefined,
+  cycle: HourCycle
 ): string {
   try {
     // Parse time string (HH:MM or HH:MM:SS) - this is already in care recipient's timezone
@@ -268,9 +339,7 @@ export function formatEventTimeForDisplay(
       showDualTimezone ?? timezonesAreDifferent(deviceTimezone, careRecipientTimezone);
 
     // Format care recipient's time directly (no conversion - it's already in their TZ)
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const hour12 = hours % 12 || 12;
-    const recipientTime = `${hour12}:${minutes.toString().padStart(2, '0')} ${period} ${getTimezoneAbbreviation(careRecipientTimezone)}`;
+    const recipientTime = `${formatTimeOfDay(hours, minutes, cycle)} ${getTimezoneAbbreviation(careRecipientTimezone)}`;
 
     if (!shouldShowDual) {
       return recipientTime;
@@ -296,9 +365,7 @@ export function formatEventTimeForDisplay(
 
     const viewerHours = Math.floor(viewerTotalMinutes / 60);
     const viewerMinutes = viewerTotalMinutes % 60;
-    const viewerPeriod = viewerHours >= 12 ? 'PM' : 'AM';
-    const viewerHour12 = viewerHours % 12 || 12;
-    const viewerTime = `${viewerHour12}:${viewerMinutes.toString().padStart(2, '0')} ${viewerPeriod} ${getTimezoneAbbreviation(deviceTimezone)}`;
+    const viewerTime = `${formatTimeOfDay(viewerHours, viewerMinutes, cycle)} ${getTimezoneAbbreviation(deviceTimezone)}`;
 
     return `${recipientTime} / ${viewerTime}`;
   } catch {
@@ -313,13 +380,15 @@ export function formatEventTimeForDisplay(
  *
  * @param timeString - Time from database (HH:MM or HH:MM:SS format) - already in care recipient's TZ
  * @param careRecipientTimezone - The care recipient's IANA timezone
- * @param referenceDate - Optional date for DST calculations (defaults to today)
+ * @param referenceDate - Date for DST calculations (`undefined` = today)
+ * @param cycle - Viewer's hour cycle from resolveHourCycle() — REQUIRED
  * @returns Object with primaryTime (recipient's TZ) and secondaryTime (viewer's TZ, null if same TZ)
  */
 export function getEventTimeParts(
   timeString: string,
   careRecipientTimezone: string,
-  referenceDate?: Date
+  referenceDate: Date | undefined,
+  cycle: HourCycle
 ): { primaryTime: string; secondaryTime: string | null } {
   try {
     const [hoursStr, minutesStr] = timeString.split(':');
@@ -334,9 +403,7 @@ export function getEventTimeParts(
     const tzAbbr = getTimezoneAbbreviation(careRecipientTimezone);
 
     // Format care recipient's time
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const hour12 = hours % 12 || 12;
-    const primaryTime = `${hour12}:${minutes.toString().padStart(2, '0')} ${period} ${tzAbbr}`;
+    const primaryTime = `${formatTimeOfDay(hours, minutes, cycle)} ${tzAbbr}`;
 
     // Check if we need viewer's time
     if (!timezonesAreDifferent(deviceTimezone, careRecipientTimezone)) {
@@ -359,10 +426,8 @@ export function getEventTimeParts(
 
     const viewerHours = Math.floor(viewerTotalMinutes / 60);
     const viewerMinutes = viewerTotalMinutes % 60;
-    const viewerPeriod = viewerHours >= 12 ? 'PM' : 'AM';
-    const viewerHour12 = viewerHours % 12 || 12;
     const viewerTzAbbr = getTimezoneAbbreviation(deviceTimezone);
-    const secondaryTime = `${viewerHour12}:${viewerMinutes.toString().padStart(2, '0')} ${viewerPeriod} ${viewerTzAbbr}`;
+    const secondaryTime = `${formatTimeOfDay(viewerHours, viewerMinutes, cycle)} ${viewerTzAbbr}`;
 
     return { primaryTime, secondaryTime };
   } catch {
@@ -376,11 +441,13 @@ export function getEventTimeParts(
  *
  * @param timeString - Time from database (HH:MM or HH:MM:SS format) - already in care recipient's TZ
  * @param careRecipientTimezone - The care recipient's IANA timezone
+ * @param cycle - Viewer's hour cycle from resolveHourCycle() — REQUIRED
  * @returns Formatted time string with timezone abbreviation
  */
 export function formatEventTimeCompact(
   timeString: string,
-  careRecipientTimezone: string
+  careRecipientTimezone: string,
+  cycle: HourCycle
 ): string {
   try {
     const [hoursStr, minutesStr] = timeString.split(':');
@@ -392,9 +459,7 @@ export function formatEventTimeCompact(
     }
 
     // Format directly - time is already in care recipient's timezone
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const hour12 = hours % 12 || 12;
-    return `${hour12}:${minutes.toString().padStart(2, '0')} ${period} ${getTimezoneAbbreviation(careRecipientTimezone)}`;
+    return `${formatTimeOfDay(hours, minutes, cycle)} ${getTimezoneAbbreviation(careRecipientTimezone)}`;
   } catch {
     return timeString;
   }

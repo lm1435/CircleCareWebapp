@@ -7,7 +7,8 @@ import {
   useUpdateEmergencyInfo,
   type UpdateEmergencyInfoRequest,
 } from '@/hooks/useEmergencyInfo';
-import { Button, Modal, TextArea, TextField } from '@/components/ui';
+import { SPECIALTY_KEYS } from '@/lib/quickPicks';
+import { Button, ChipSelect, Modal, TextArea, TextField } from '@/components/ui';
 
 export interface EditDoctorModalProps {
   circleId: string;
@@ -28,12 +29,14 @@ const EMPTY_DOCTOR: AdditionalDoctor = { name: '' };
  * (no array, no primary flag); ADDITIONAL doctors are a read-modify-write array.
  * Mirrors mobile EditDoctorScreen.
  */
-export function EditDoctorModal({
+type EditDoctorModalPropsLoaded = Omit<EditDoctorModalProps, 'info'> & { info: EmergencyInfo };
+
+function EditDoctorModalForm({
   circleId,
   info,
   target,
   onClose,
-}: EditDoctorModalProps): ReactElement {
+}: EditDoctorModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
 
@@ -135,6 +138,19 @@ export function EditDoctorModal({
           placeholder={t('edit.doctor.specialtyPlaceholder')}
           onChange={(e) => setSpecialty(e.target.value)}
         />
+        {/* Quick-fill: chips fill the specialty field above; the field stays
+            the source of truth (custom specialties remain possible). Selected
+            = field matches the chip case-insensitively (QP3). */}
+        <ChipSelect
+          id="doctor-specialty-suggestions"
+          label={t('specialties.label')}
+          options={SPECIALTY_KEYS.map((key) => t(key))}
+          value={specialty}
+          // Quick-fill row (text field stays the source of truth) — re-tapping
+          // the selected chip must not silently clear the field (WA7).
+          allowDeselect={false}
+          onChange={(next) => setSpecialty(next ?? '')}
+        />
         <TextField
           id="doctor-phone"
           type="tel"
@@ -155,4 +171,23 @@ export function EditDoctorModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Null guard. Self-defence, not redundancy: this form's save is a
+ * read-modify-write over `info`, so an unloaded record would write defaults
+ * over real data — the exact failure the mobile emergency editors shipped with
+ * (a one-element array replacing the saved list; blank allergies; DNR reset).
+ * Today EmergencyInfoPage gates on isLoading/isError so `info` is always
+ * present; this keeps that true if the modal is ever opened from somewhere else.
+ *
+ * It is a WRAPPER rather than an early return inside the form because the form
+ * seeds its `useState` from `info` at mount. Returning null in place would keep
+ * the component mounted with defaults already captured, so a late-arriving
+ * `info` would render a blank form over a real record — trading a bad save for
+ * a bad form. Mounting the form only once `info` exists avoids both.
+ */
+export function EditDoctorModal(props: EditDoctorModalProps): ReactElement | null {
+  if (!props.info) return null;
+  return <EditDoctorModalForm {...props} info={props.info} />;
 }

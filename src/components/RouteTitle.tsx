@@ -26,7 +26,9 @@ const STATIC_TITLES: Record<string, string> = {
 
 const CIRCLE_SUBTITLES: Record<string, string> = {
   calendar: 'pageTitles.calendar',
+  meds: 'pageTitles.meds',
   tasks: 'pageTitles.tasks',
+  notes: 'pageTitles.notes',
   activity: 'pageTitles.activity',
   emergency: 'pageTitles.emergency',
   documents: 'pageTitles.documents',

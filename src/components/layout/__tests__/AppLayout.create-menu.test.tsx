@@ -108,6 +108,7 @@ function renderLayout(): void {
       <Routes>
         <Route path="/circles/:circleId" element={<AppLayout />}>
           <Route path="calendar" element={<div>Calendar page stub</div>} />
+          <Route path="notes" element={<div data-testid="notes-page-stub">Notes page stub</div>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -167,14 +168,16 @@ describe('AppLayout global Create menu wiring', () => {
     expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-initial-type', 'task');
   });
 
-  it('mounts AddVitalModal when Vitals is picked', async () => {
+  it('navigates to the Notes page (no modal) when Note is picked', async () => {
     const user = userEvent.setup();
     renderLayout();
 
-    await pickCreateOption(user, 'Vitals');
+    await pickCreateOption(user, 'Note');
 
-    expect(screen.getByTestId('add-vital-modal')).toBeInTheDocument();
+    // Notes have no create modal — the composer lives on the Notes page.
     expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('add-vital-modal')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('notes-page-stub')).toBeInTheDocument();
   });
 
   it('mounts DocumentUploadModal with storage when Document is picked', async () => {

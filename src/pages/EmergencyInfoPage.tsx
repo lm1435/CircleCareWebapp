@@ -14,7 +14,6 @@ import {
   EmptySection,
   GlanceTiles,
   InsuranceCard,
-  MedicalInfoCard,
   RecipientHeader,
 } from '@/components/emergency';
 import {
@@ -48,18 +47,19 @@ const DIRECTIVES_EDIT_ENABLED = false;
 const SKELETON_SECTIONS = [0, 1, 2];
 
 // Section ids double as in-page nav anchors; order mirrors triage priority
-// (medical facts first — this page is read under stress).
+// (this page is read under stress). Medical facts (blood type, allergies,
+// conditions) live in the always-visible at-a-glance tiles, not a section
+// (Round 7 merge — docs/plans/condition-tags.md R7-4).
 const SECTIONS = [
-  { id: 'medical-info', key: 'medicalInfo' },
   { id: 'doctors', key: 'doctors' },
   { id: 'contacts', key: 'contacts' },
   { id: 'insurance', key: 'insurance' },
   { id: 'directives', key: 'directives' },
 ] as const;
 
-// The four sections that live inside collapsible accordions. Code Status
+// The three sections that live inside collapsible accordions. Code Status
 // ('directives') is intentionally excluded — it stays always-visible.
-const COLLAPSIBLE_SECTION_IDS = ['medical-info', 'doctors', 'contacts', 'insurance'];
+const COLLAPSIBLE_SECTION_IDS = ['doctors', 'contacts', 'insurance'];
 
 // Open-modal descriptor. `target` is the doctor target ('primary' | index |
 // undefined-for-add) or the array index for contacts/insurance.
@@ -76,13 +76,11 @@ type PendingDelete =
   | { kind: 'contact'; index: number }
   | { kind: 'insurance'; index: number };
 
-function hasMedicalInfo(info: EmergencyInfo): boolean {
-  return !!(
-    info.blood_type ||
-    (info.medication_allergies?.length ?? 0) > 0 ||
-    (info.allergies?.length ?? 0) > 0 ||
-    (info.medical_conditions?.length ?? 0) > 0
-  );
+// Conditions render only in the at-a-glance tiles (Round 7 merge), but they
+// still count toward "has any data" — a conditions-only circle must get the
+// full page, not the fully-empty CTA.
+function hasConditions(info: EmergencyInfo): boolean {
+  return (info.medical_conditions?.length ?? 0) > 0;
 }
 
 function hasDoctors(info: EmergencyInfo): boolean {
@@ -99,6 +97,32 @@ function hasInsurance(info: EmergencyInfo): boolean {
 
 function hasDirectives(info: EmergencyInfo): boolean {
   return info.has_dnr !== null && info.has_dnr !== undefined ? true : !!info.advance_directives;
+}
+
+/**
+ * A blank record for a circle whose emergency-info GET has SETTLED (not
+ * loading, not errored) but resolved `emergency_info: null` — i.e. no row
+ * exists yet (backend PGRST116). Passed to the edit modals instead of the raw
+ * `null` so their `if (!props.info) return null` self-defense guard (which
+ * exists to stop an unhydrated read-modify-write, see the mobile emergency
+ * editors' history) doesn't ALSO block the legitimate first-ever add: without
+ * this, `info` stays `null` forever for an empty circle, so "Add contact"
+ * opened a modal that immediately rendered nothing — a silent no-op with no
+ * error, no loading state, nothing to retry (WA1).
+ */
+function synthesizeEmptyEmergencyInfo(circleId: string): EmergencyInfo {
+  return {
+    id: '',
+    circle_id: circleId,
+    insurance_plans: [],
+    additional_doctors: [],
+    allergies: [],
+    medication_allergies: [],
+    medical_conditions: [],
+    emergency_contacts: [],
+    created_at: '',
+    updated_at: '',
+  };
 }
 
 /**
@@ -236,15 +260,19 @@ export default function EmergencyInfoPage(): ReactElement {
     );
   }
 
+  // Reached only once the GET has settled successfully (isLoading/isError both
+  // returned above), so `info` being null here means "settled, no row yet" —
+  // synthesize a blank record for the modals rather than passing null through.
+  const infoForModals = info ?? synthesizeEmptyEmergencyInfo(circleId);
+
   const sectionHasData: Record<(typeof SECTIONS)[number]['key'], boolean> = info
     ? {
-        medicalInfo: hasMedicalInfo(info),
         doctors: hasDoctors(info),
         contacts: hasContacts(info),
         insurance: hasInsurance(info),
         directives: hasDirectives(info),
       }
-    : { medicalInfo: false, doctors: false, contacts: false, insurance: false, directives: false };
+    : { doctors: false, contacts: false, insurance: false, directives: false };
 
   // Header counts for the accordion meta slot (e.g. number of doctors).
   const doctorCount =
@@ -252,7 +280,8 @@ export default function EmergencyInfoPage(): ReactElement {
   const contactCount = info?.emergency_contacts?.length ?? 0;
   const insuranceCount = info?.insurance_plans?.length ?? 0;
 
-  const isFullyEmpty = !info || SECTIONS.every((section) => !sectionHasData[section.key]);
+  const isFullyEmpty =
+    !info || (!hasConditions(info) && SECTIONS.every((section) => !sectionHasData[section.key]));
 
   // Fully-empty AND can't edit: one clear card with the download CTA. (When the
   // user CAN edit, fall through to the sectioned view so the Add buttons show.)
@@ -343,7 +372,22 @@ export default function EmergencyInfoPage(): ReactElement {
           />
         )}
 
-        {info && <GlanceTiles info={info} />}
+        {/* At-a-glance tiles absorb the former Medical Information section
+            (Round 7 merge). The canEdit-gated Edit affordance in the section's
+            header area keeps the Edit Medical Info modal reachable — including
+            the add path when nothing medical is recorded yet (tiles absent). */}
+        {canEdit ? (
+          <div className="flex flex-col gap-2">
+            <div className="no-print flex justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setOpenModal({ kind: 'medical' })}>
+                {t('edit.editMedicalInfo')}
+              </Button>
+            </div>
+            {info && <GlanceTiles info={info} />}
+          </div>
+        ) : (
+          info && <GlanceTiles info={info} />
+        )}
 
         {/* Expand/Collapse all — controls only the collapsible sections below.
             Hidden in print (everything prints regardless). */}
@@ -359,50 +403,6 @@ export default function EmergencyInfoPage(): ReactElement {
         </div>
 
         <div className="emergency-sections lg:columns-2 lg:gap-x-8 [&>section]:mb-10 [&>section]:break-inside-avoid lg:[&>section]:mt-0">
-          <Accordion
-            id="medical-info"
-            title={t('sections.medicalInfo')}
-            open={accordion.isOpen('medical-info')}
-            onToggle={accordion.toggle}
-          >
-            {sectionHasData.medicalInfo && info ? (
-              <>
-                <MedicalInfoCard
-                  bloodType={info.blood_type}
-                  medicationAllergies={info.medication_allergies ?? []}
-                  allergies={info.allergies ?? []}
-                  conditions={info.medical_conditions ?? []}
-                />
-                {canEdit && (
-                  <div className="no-print">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'medical' })}
-                    >
-                      {t('edit.editMedicalInfo')}
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <EmptySection
-                message={t('empty.medicalInfo')}
-                action={
-                  canEdit ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'medical' })}
-                    >
-                      {t('edit.editMedicalInfo')}
-                    </Button>
-                  ) : undefined
-                }
-              />
-            )}
-          </Accordion>
-
           <Accordion
             id="doctors"
             title={t('sections.doctors')}
@@ -588,14 +588,14 @@ export default function EmergencyInfoPage(): ReactElement {
       {openModal?.kind === 'medical' && (
         <EditMedicalInfoModal
           circleId={circleId}
-          info={info ?? null}
+          info={infoForModals}
           onClose={() => setOpenModal(null)}
         />
       )}
       {openModal?.kind === 'doctor' && (
         <EditDoctorModal
           circleId={circleId}
-          info={info ?? null}
+          info={infoForModals}
           target={openModal.target}
           onClose={() => setOpenModal(null)}
         />
@@ -603,7 +603,7 @@ export default function EmergencyInfoPage(): ReactElement {
       {openModal?.kind === 'contact' && (
         <EditContactModal
           circleId={circleId}
-          info={info ?? null}
+          info={infoForModals}
           index={openModal.index}
           onClose={() => setOpenModal(null)}
         />
@@ -611,7 +611,7 @@ export default function EmergencyInfoPage(): ReactElement {
       {openModal?.kind === 'insurance' && (
         <EditInsuranceModal
           circleId={circleId}
-          info={info ?? null}
+          info={infoForModals}
           index={openModal.index}
           onClose={() => setOpenModal(null)}
         />

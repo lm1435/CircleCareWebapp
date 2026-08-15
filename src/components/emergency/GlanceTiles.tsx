@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
+import { Badge } from '@/components/ui';
 
 // At-a-glance tiles: the highest-priority emergency facts surfaced in a
 // compact row near the top of the page, mirroring mobile's "At a glance"
@@ -59,7 +60,23 @@ interface Tile {
   key: string;
   icon: ReactElement;
   label: string;
-  value: string;
+  value: ReactNode;
+}
+
+/** Condition Tags pill treatment — terracotta-soft bg, ink text (~13:1). */
+function GlancePills({ items }: { items: string[] }): ReactElement {
+  return (
+    <span className="flex flex-wrap gap-1.5">
+      {items.map((item, index) => (
+        <Badge
+          key={`${item}-${index}`}
+          style={{ background: 'var(--terracotta-soft)', color: 'var(--ink)' }}
+        >
+          {item}
+        </Badge>
+      ))}
+    </span>
+  );
 }
 
 export interface GlanceTilesProps {
@@ -74,7 +91,8 @@ export interface GlanceTilesProps {
 export function GlanceTiles({ info }: GlanceTilesProps): ReactElement | null {
   const { t } = useTranslation('emergency');
 
-  const allergies = [...(info.medication_allergies ?? []), ...(info.allergies ?? [])];
+  const medAllergies = info.medication_allergies ?? [];
+  const otherAllergies = info.allergies ?? [];
   const conditions = info.medical_conditions ?? [];
   const primaryContact =
     info.emergency_contacts?.find((c) => c.is_primary) ?? info.emergency_contacts?.[0];
@@ -89,20 +107,30 @@ export function GlanceTiles({ info }: GlanceTilesProps): ReactElement | null {
       value: info.blood_type,
     });
   }
-  if (allergies.length > 0) {
+  if (medAllergies.length > 0) {
     tiles.push({
-      key: 'allergies',
+      key: 'medicationAllergies',
       icon: <AllergyGlyph />,
-      label: t('atAGlance.allergies'),
-      value: allergies.join(', '),
+      label: t('medicalInfo.medicationAllergies'),
+      value: <GlancePills items={medAllergies} />,
     });
   }
+  if (otherAllergies.length > 0) {
+    tiles.push({
+      key: 'otherAllergies',
+      icon: <AllergyGlyph />,
+      label: t('medicalInfo.otherAllergies'),
+      value: <GlancePills items={otherAllergies} />,
+    });
+  }
+  // Round 7 merge: conditions live here (the Medical Information section was
+  // removed) — same tiles-only-when-data pattern as everything else.
   if (conditions.length > 0) {
     tiles.push({
       key: 'conditions',
       icon: <ConditionGlyph />,
       label: t('atAGlance.conditions'),
-      value: conditions.join(', '),
+      value: <GlancePills items={conditions} />,
     });
   }
   if (primaryContact) {

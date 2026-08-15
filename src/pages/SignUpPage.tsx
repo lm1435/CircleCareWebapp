@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
+import { legalUrl } from '@/lib/legalLinks';
 import { z } from 'zod';
 import { authApi, getApiError } from '@/api/auth';
 import { supabase } from '@/lib/supabase';
@@ -21,8 +22,7 @@ import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 
 type OAuthProvider = 'google' | 'apple';
 
-const TERMS_URL = 'https://circlecare.app/terms';
-const PRIVACY_URL = 'https://circlecare.app/privacy';
+// Locale-aware: full Spanish versions exist at /es/terms and /es/privacy.
 
 // Web mirror of mobile's signUpSchema (backend signUpSchema parity).
 const signUpSchema = z
@@ -312,7 +312,7 @@ export default function SignUpPage(): ReactElement {
                 terms: (
                   <a
                     className="text-terracotta-deep underline"
-                    href={TERMS_URL}
+                    href={legalUrl('terms', i18n.language)}
                     target="_blank"
                     rel="noreferrer"
                   />
@@ -320,7 +320,7 @@ export default function SignUpPage(): ReactElement {
                 privacy: (
                   <a
                     className="text-terracotta-deep underline"
-                    href={PRIVACY_URL}
+                    href={legalUrl('privacy', i18n.language)}
                     target="_blank"
                     rel="noreferrer"
                   />

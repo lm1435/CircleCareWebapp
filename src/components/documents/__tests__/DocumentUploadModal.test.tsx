@@ -72,7 +72,10 @@ describe('DocumentUploadModal', () => {
     render(
       <DocumentUploadModal circleId={CIRCLE_ID} storage={FULL_STORAGE} canEdit onClose={vi.fn()} />
     );
-    expect(screen.getByLabelText('File')).toHaveAttribute('accept', '.jpg,.jpeg,.png,.heic,.pdf');
+    expect(screen.getByLabelText('File')).toHaveAttribute(
+      'accept',
+      '.jpg,.jpeg,.png,.heic,.heif,.pdf'
+    );
   });
 
   it('rejects an unsupported file type without calling the mutation', async () => {

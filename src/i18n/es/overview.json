@@ -10,6 +10,7 @@
   "tasks": {
     "title": "Tareas pendientes",
     "empty": "Están al día: no hay tareas pendientes.",
+    "emptyFirstRun": "Coordina los pendientes que mantienen el cuidado en marcha —mandados, resurtidos y seguimientos— y compártelos con quienes ayudan.",
     "more": "+{{count}} más",
     "viewAll": "Ver todas las tareas"
   },

@@ -105,6 +105,18 @@ describe('Header', () => {
       expect(screen.getByTestId('location')).toHaveTextContent('/circles/c2/tasks');
     });
 
+    // WA4 regression: 'notes' was missing from SECTIONS, so switching circles
+    // while on the Notes page silently dumped the user onto the new circle's
+    // overview (the unknown-segment fallback) instead of staying on Notes.
+    it('preserves the notes section across a circle switch', async () => {
+      const user = userEvent.setup();
+      renderHeader('/circles/c1/notes');
+
+      await user.click(screen.getByRole('button', { name: /Mom's Care/ }));
+      await user.click(screen.getByRole('menuitem', { name: /Dad's Care/ }));
+      expect(screen.getByTestId('location')).toHaveTextContent('/circles/c2/notes');
+    });
+
     it('supports arrow-key navigation and Escape returns focus to the trigger', async () => {
       const user = userEvent.setup();
       renderHeader();

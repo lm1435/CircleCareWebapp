@@ -1,35 +1,18 @@
 import { type ReactElement } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircle } from '@/hooks/useCircle';
-import { useTasks } from '@/hooks/useTasks';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useAuthStore } from '@/store/authStore';
-import { Avatar, Card, Skeleton } from '@/components/ui';
+import { Avatar, Card, Skeleton, SectionHeader } from '@/components/ui';
 import { TodaysMeds } from '@/components/meds/TodaysMeds';
+import { OpenTasksCard } from '@/components/tasks/OpenTasksCard';
 import { ActivityItem } from '@/components/activity/ActivityItem';
 import { GettingStartedChecklist } from '@/components/circles/GettingStartedChecklist';
 import type { CircleMember } from '@/api/circleMembers';
 
 function memberName(member: CircleMember): string {
   return [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
-}
-
-/** Small section heading + "view all" link, shared by the at-a-glance cards. */
-function CardHeader({ title, to, linkLabel }: { title: string; to?: string; linkLabel?: string }): ReactElement {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <h2 className="section-title m-0">{title}</h2>
-      {to && linkLabel ? (
-        <Link
-          to={to}
-          className="shrink-0 text-sm font-medium text-terracotta-deep underline-offset-4 hover:underline"
-        >
-          {linkLabel}
-        </Link>
-      ) : null}
-    </div>
-  );
 }
 
 /**
@@ -50,9 +33,6 @@ export default function OverviewPage(): ReactElement {
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
   const isSelfCare = circle?.is_self_care === true;
   const base = `/circles/${circleId}`;
-
-  const tasksQuery = useTasks(circleId, { status: 'open' });
-  const openTasks = tasksQuery.data?.tasks ?? [];
 
   const activityQuery = useActivityFeed(circleId, { pageSize: 5 });
   const activities = activityQuery.data?.pages.flatMap((page) => page.activities) ?? [];
@@ -81,8 +61,13 @@ export default function OverviewPage(): ReactElement {
         <p className="m-0 mt-2 text-ink-3">{heroSubtitle}</p>
       </header>
 
-      {/* Get-started checklist — self-hides once complete or dismissed. */}
-      <div className="mt-6">
+      {/* Get-started checklist — self-hides once complete, dismissed, or when
+          the viewer can't edit (view-only member); gating is by write
+          CAPABILITY, not ownership, and there is deliberately no circle-age
+          window (see GettingStartedChecklist's docstring). `empty:hidden`
+          drops this wrapper's margin in those cases, so a hidden checklist
+          leaves no stray gap above the card grid. */}
+      <div className="mt-6 empty:hidden">
         <GettingStartedChecklist
           circleId={circleId}
           onAddEvent={() => navigate(`${base}/calendar`)}
@@ -96,43 +81,16 @@ export default function OverviewPage(): ReactElement {
           <TodaysMeds circleId={circleId} limit={5} />
         </Card>
 
-        {/* Open tasks */}
+        {/* Open tasks — self-contained section (own heading + the shared
+            TaskRow, so a task can be completed/undone/edited straight from
+            here, exactly as on the Tasks page and on mobile's home screen). */}
         <Card className="p-6">
-          <CardHeader title={t('tasks.title')} to={`${base}/tasks`} linkLabel={t('tasks.viewAll')} />
-          {tasksQuery.isLoading ? (
-            <div className="mt-4 flex flex-col gap-2" aria-busy="true">
-              <span role="status" className="sr-only">
-                {t('common:loading')}
-              </span>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : openTasks.length === 0 ? (
-            <p className="m-0 mt-4 text-sm text-ink-3">{t('tasks.empty')}</p>
-          ) : (
-            <>
-              <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
-                {openTasks.slice(0, 3).map((task) => (
-                  <li
-                    key={task.id}
-                    className="truncate rounded-xl border border-line-2 bg-cream px-3 py-2.5 text-sm text-ink"
-                  >
-                    {task.title}
-                  </li>
-                ))}
-              </ul>
-              {openTasks.length > 3 ? (
-                <p className="m-0 mt-2 text-xs text-ink-3">
-                  {t('tasks.more', { count: openTasks.length - 3 })}
-                </p>
-              ) : null}
-            </>
-          )}
+          <OpenTasksCard circleId={circleId} limit={3} />
         </Card>
 
         {/* Recent activity */}
         <Card className="p-6">
-          <CardHeader
+          <SectionHeader
             title={t('activity.title')}
             to={`${base}/activity`}
             linkLabel={t('activity.viewAll')}
@@ -158,7 +116,7 @@ export default function OverviewPage(): ReactElement {
 
         {/* Care team */}
         <Card className="p-6">
-          <CardHeader
+          <SectionHeader
             title={t('team.title')}
             to={`${base}/members`}
             linkLabel={isOwner ? t('team.invite') : t('team.manage')}

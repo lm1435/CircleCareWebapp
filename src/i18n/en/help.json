@@ -84,6 +84,10 @@
         {
           "question": "How do I restore my purchases?",
           "answer": "In the CircleCare mobile app, go to Profile > Subscription > Restore Purchases. This is useful if you reinstall the app or switch phones. If you subscribed here on the web, your subscription follows your account automatically."
+        },
+        {
+          "question": "How do I cancel my subscription?",
+          "answer": "Open your Profile and choose Manage subscription — if you subscribed on this website, that takes you straight to your billing portal, where you can cancel in a couple of clicks. If you subscribed in the mobile app, cancel from your phone: Settings > Subscriptions on iPhone, or Play Store > Payments & subscriptions on Android. Either way you keep Premium until the end of the period you already paid for, and you never need to contact support to cancel."
         }
       ]
     }

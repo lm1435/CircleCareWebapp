@@ -27,13 +27,41 @@ const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
 
 /**
+ * Chrome PDF viewer open parameters, appended to the framed URL only.
+ *
+ * `navpanes=0` collapses the left-hand thumbnail rail, which otherwise eats
+ * roughly half the modal's width and pushes the document itself into a narrow
+ * column. The toolbar is deliberately KEPT (no `toolbar=0`) — it carries zoom,
+ * which people need on scanned documents.
+ *
+ * A fragment is never sent to the server, so this cannot affect the URL's
+ * signature. Any existing fragment is stripped first so the parameters can't be
+ * silently appended to one already there.
+ */
+function withViewerParams(signedUrl: string): string {
+  return `${signedUrl.split('#')[0]}#navpanes=0`;
+}
+
+/**
  * Preview modal for images and PDFs (plan Task 33).
  *
  * Security:
  * - Fetches a FRESH short-lived signed URL on open; it lives only in local
  *   component state (never the React Query cache, URL bar, or history).
- * - PDFs render inside a fully sandboxed iframe (`sandbox=""` — no scripts,
- *   no same-origin) with "open in new tab" + download fallbacks.
+ * - PDFs render in an UNSANDBOXED iframe with "open in new tab" + download
+ *   fallbacks. This is deliberate and was verified in Chrome: the browser
+ *   refuses to instantiate its built-in PDF viewer in a frame carrying a
+ *   `sandbox` attribute AT ALL, and paints "This page has been blocked by
+ *   Chrome" instead. The attribute's presence is the trigger, not its tokens —
+ *   even a sandbox listing every allow-* token is still blocked, so there is no
+ *   "minimal safe sandbox" available here; the only choice is sandbox-or-render.
+ *   What keeps that acceptable is upstream: the backend derives the stored
+ *   Content-Type server-side from a validated extension allowlist
+ *   (jpg/jpeg/png/heic/pdf — see ALLOWED_EXTENSIONS in backend/src/routes/
+ *   documents.ts), so the framed object is always image/* or application/pdf
+ *   and can never be served as HTML that would run script. Keep it that way: if
+ *   the upload allowlist ever widens to a scriptable type, this frame becomes a
+ *   script-execution vector on the Storage origin and needs rethinking.
  *
  * Accessibility: role="dialog" + aria-modal, focus moves to the close button
  * on open, Tab is trapped inside, Escape closes, and focus is restored to the
@@ -165,8 +193,7 @@ export function DocumentPreviewModal({
           {preview.status === 'ready' &&
             (isPdf ? (
               <iframe
-                sandbox=""
-                src={preview.signedUrl}
+                src={withViewerParams(preview.signedUrl)}
                 title={doc.label}
                 className="h-[70vh] w-full rounded-lg border border-line"
               />

@@ -10,7 +10,8 @@
   "accepting": "Joining…",
   "acceptSuccess": "You joined the circle.",
   "acceptFailed": "We couldn't add you to the circle just now. Try again — and if it keeps not working, ask for a fresh invite.",
-  "signInToAccept": "Sign in or create an account to accept",
+  "createAccountToAccept": "Create an account to join",
+  "signInInstead": "I already have an account",
   "downloadPromptValid": "Get the CircleCare app for the full experience",
   "downloadPromptError": "Meanwhile, get the app so you're ready when a new invite arrives",
   "appStore": "Download on the App Store",
@@ -28,5 +29,9 @@
   "og": {
     "title": "{{inviterName}} invited you to CircleCare",
     "description": "Join {{circleName}} to help coordinate care for {{recipientName}}"
+  },
+  "errorUsed": {
+    "title": "This invite has already been used",
+    "suggestion": "If you already joined, sign in and you'll find the care circle on your circles list. Otherwise, ask the person who invited you to send a new invite."
   }
 }

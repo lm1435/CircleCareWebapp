@@ -41,6 +41,9 @@ that URL must be running and reachable**, and the **demo account must be seeded*
 
 Each flow drives a real user path end-to-end against the live backend and cleans
 up after itself (unique `uniqueLabel()` names; the delete IS the cleanup).
+Exception: `medications.spec.ts` cleans up via a pure-API `afterEach` sweep
+(`ZZ_E2E_MED_%` series, `deleteScope=series` per root) — its roster cards group
+multiple series per card, so UI-click deletion races card re-grouping/remounts.
 
 | Flow | Covers |
 |------|--------|

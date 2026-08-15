@@ -89,8 +89,9 @@ describe('LoginPage', () => {
     await waitFor(() =>
       expect(mockNavigate).toHaveBeenCalledWith('/invite/ABC234', { replace: true })
     );
-    // Consumed — must not redirect a later sign-in again.
-    expect(sessionStorage.length).toBe(0);
+    // Peeked, NOT consumed — InviteLandingPage's auto-accept effect must still
+    // find the parked code when it mounts (it consumes and clears it there).
+    expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
   });
 
   it('prefers state.from over the parked code and leaves the code for the landing page to clear', async () => {

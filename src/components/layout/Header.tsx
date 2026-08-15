@@ -9,7 +9,9 @@ import { useMenu } from './useMenu';
 /** Sections the circle switcher preserves when jumping between circles. */
 const SECTIONS = [
   'calendar',
+  'meds',
   'tasks',
+  'notes',
   'activity',
   'emergency',
   'documents',

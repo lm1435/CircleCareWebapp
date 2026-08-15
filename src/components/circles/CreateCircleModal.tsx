@@ -5,6 +5,7 @@ import { createCircleSchema, type CreateCircleRequest } from '@/api/circles';
 import { useCreateCircle } from '@/hooks/useCircleAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { Analytics } from '@/lib/analytics';
+import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Button, DateField, Modal, TextField, Toggle, useToast, useZodForm } from '@/components/ui';
 
 // Plan Stage 8, Task 8.6c — circle create modal.
@@ -67,6 +68,9 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
       create.mutate(data, {
         onSuccess: (circle) => {
           Analytics.circleCreated(isSelfCare);
+          // R4-5: first circle created here → onboarding complete. No-op when
+          // this browser already saw the user with circles ('existing' fired).
+          trackOnboardingCompleted('created');
           showToast(t('create.success'), 'success');
           onClose();
           // Land on the new circle's overview — the get-started checklist + helpers

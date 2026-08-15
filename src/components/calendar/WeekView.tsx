@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
+import { useHourCycle } from '@/hooks/useHourCycle';
+import type { HourCycle } from '@/utils/hourCycle';
 import { formatEventTimeCompact, getCurrentHoursInTimezone } from '@/utils/timezone';
 import { formatDateForDisplay } from './dateMath';
 import { getEventCardClass, getEventTextClass, getMedicationStatus } from './eventStyles';
@@ -25,10 +27,19 @@ function parseTimeToHours(time: string): number {
   return Number.parseInt(h, 10) + Number.parseInt(m, 10) / 60;
 }
 
-function formatHourLabel(hour: number, locale: string = i18n.language): string {
+function formatHourLabel(
+  hour: number,
+  cycle: HourCycle,
+  locale: string = i18n.language
+): string {
   // Hour-axis labels are pure clock labels — fixed UTC reference, no TZ math.
+  // `hour12` follows the VIEWER's resolved cycle, not the locale's default:
+  // otherwise a 24h viewer reads "14:30" chips against a "2 PM" axis. This is
+  // a module-level helper, so the cycle is threaded in as a parameter rather
+  // than read from the hook here.
   return new Intl.DateTimeFormat(locale, {
     hour: 'numeric',
+    hour12: cycle === '12h',
     timeZone: 'UTC',
   }).format(new Date(Date.UTC(2024, 0, 7, hour)));
 }
@@ -48,6 +59,9 @@ export function WeekView({
   onEventClick,
 }: WeekViewProps): ReactElement {
   const { t } = useTranslation(['calendar', 'common']);
+  // Viewer's 12h/24h clock — every rendered time goes through it. (The hour-axis
+  // labels below are Intl-locale-formatted, a separate concern.)
+  const hourCycle = useHourCycle();
 
   // Re-render the current-time indicator every minute.
   const [now, setNow] = useState(() => new Date());
@@ -94,7 +108,7 @@ export function WeekView({
     const status = getMedicationStatus(event, careRecipientTimezone, now);
     const title = event.medication_name || event.title;
     const timeLabel = event.scheduled_time
-      ? formatEventTimeCompact(event.scheduled_time, careRecipientTimezone)
+      ? formatEventTimeCompact(event.scheduled_time, careRecipientTimezone, hourCycle)
       : t('calendar:allDay');
     const ariaLabel = [
       title,
@@ -259,7 +273,7 @@ export function WeekView({
                     className="mono absolute right-1 -translate-y-1/2 normal-case"
                     style={{ top: hour * HOUR_HEIGHT }}
                   >
-                    {hour === 0 ? '' : formatHourLabel(hour)}
+                    {hour === 0 ? '' : formatHourLabel(hour, hourCycle)}
                   </span>
                 ))}
               </div>
@@ -296,7 +310,10 @@ export function WeekView({
                         data-testid="current-time-indicator"
                         aria-hidden="true"
                         title={t('calendar:currentTimeLabel')}
-                        className="absolute inset-x-0 z-[2] h-0.5 bg-terracotta-deep"
+                        // pointer-events-none: purely decorative — it sits ABOVE
+                        // event chips (z-2 vs z-1) and must never swallow clicks
+                        // on an event scheduled at the current time.
+                        className="pointer-events-none absolute inset-x-0 z-[2] h-0.5 bg-terracotta-deep"
                         style={{ top: currentTimeTop }}
                       >
                         <span className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-terracotta-deep" />

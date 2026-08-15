@@ -146,7 +146,10 @@
       "medicationAllergies": "Medication allergies",
       "otherAllergies": "Other allergies",
       "conditions": "Medical conditions",
-      "listHint": "Separate multiple entries with commas."
+      "listHint": "Separate multiple entries with commas.",
+      "medicationAllergiesPlaceholder": "Search or add a medication allergy…",
+      "otherAllergiesPlaceholder": "Search or add an allergy…",
+      "conditionsPlaceholder": "Search or add a condition…"
     },
     "directives": {
       "title": "Code status",
@@ -158,5 +161,95 @@
   "errors": {
     "permissionDenied": "You don't have permission to edit this circle.",
     "saveFailed": "We couldn't save your changes. Please try again."
+  },
+  "relationships": {
+    "label": "Common relationships",
+    "daughter": "Daughter",
+    "son": "Son",
+    "spousePartner": "Spouse/Partner",
+    "sibling": "Sibling",
+    "grandchild": "Grandchild",
+    "friend": "Friend",
+    "neighbor": "Neighbor",
+    "professionalCaregiver": "Professional caregiver"
+  },
+  "specialties": {
+    "label": "Common specialties",
+    "primaryCare": "Primary care",
+    "cardiologist": "Cardiologist",
+    "nephrologist": "Nephrologist",
+    "neurologist": "Neurologist",
+    "endocrinologist": "Endocrinologist",
+    "oncologist": "Oncologist",
+    "orthopedist": "Orthopedist",
+    "psychiatrist": "Psychiatrist",
+    "physicalTherapist": "Physical therapist",
+    "ophthalmologist": "Ophthalmologist",
+    "podiatrist": "Podiatrist",
+    "dentist": "Dentist"
+  },
+  "tagInput": {
+    "addCustom": "Add \"{{text}}\"",
+    "showMore": "Show more ({{count}})",
+    "showLess": "Show less",
+    "limitReached": "Limit reached — remove an entry to add another.",
+    "removeTag": "Remove {{tag}}",
+    "clearInput": "Clear search",
+    "addedAnnouncement": "{{tag}} added",
+    "removedAnnouncement": "{{tag}} removed"
+  },
+  "medicalTags": {
+    "conditions": {
+      "hypertension": "Hypertension",
+      "type2Diabetes": "Type 2 diabetes",
+      "type1Diabetes": "Type 1 diabetes",
+      "chronicKidneyDisease": "Chronic kidney disease",
+      "heartFailure": "Heart failure",
+      "coronaryArteryDisease": "Coronary artery disease",
+      "atrialFibrillation": "Atrial fibrillation",
+      "copd": "COPD",
+      "asthma": "Asthma",
+      "dementia": "Dementia",
+      "alzheimers": "Alzheimer's disease",
+      "parkinsons": "Parkinson's disease",
+      "stroke": "Stroke",
+      "arthritis": "Arthritis",
+      "osteoporosis": "Osteoporosis",
+      "cancer": "Cancer",
+      "depression": "Depression",
+      "anxiety": "Anxiety",
+      "highCholesterol": "High cholesterol",
+      "thyroidDisease": "Thyroid disease",
+      "chronicPain": "Chronic pain",
+      "incontinence": "Incontinence",
+      "sleepApnea": "Sleep apnea",
+      "visionImpairment": "Vision impairment"
+    },
+    "medicationAllergies": {
+      "penicillin": "Penicillin",
+      "sulfaDrugs": "Sulfa drugs",
+      "aspirin": "Aspirin",
+      "nsaids": "NSAIDs (ibuprofen)",
+      "codeineOpioids": "Codeine/opioids",
+      "statins": "Statins",
+      "contrastDye": "Contrast dye",
+      "tetracycline": "Tetracycline",
+      "cephalosporins": "Cephalosporins",
+      "anticonvulsants": "Anticonvulsants",
+      "insulin": "Insulin",
+      "localAnesthetics": "Local anesthetics"
+    },
+    "otherAllergies": {
+      "latex": "Latex",
+      "peanuts": "Peanuts",
+      "treeNuts": "Tree nuts",
+      "shellfish": "Shellfish",
+      "eggs": "Eggs",
+      "dairy": "Dairy",
+      "soy": "Soy",
+      "beeStings": "Bee stings",
+      "pollenSeasonal": "Pollen/seasonal",
+      "petDander": "Pet dander"
+    }
   }
 }

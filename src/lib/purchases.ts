@@ -95,6 +95,10 @@ export interface WebPlan {
   currency: string;
   /** True when the product carries a free-trial intro phase. */
   hasFreeTrial: boolean;
+  /** Trial length from the store's own offer (e.g. {number: 7, unit: 'day'}),
+   *  or null when no trial. Surfaced so the paywall states the DURATION —
+   *  "free trial" with no length is the pattern FTC/Play enforcement targets. */
+  trialPeriod: { number: number; unit: string } | null;
 }
 
 /** Flatten a RevenueCat package into a {@link WebPlan} for rendering. */
@@ -107,6 +111,9 @@ export function toWebPlan(pkg: Package): WebPlan {
     priceMicros: product.price.amountMicros,
     currency: product.price.currency,
     hasFreeTrial: product.freeTrialPhase != null,
+    trialPeriod: product.freeTrialPhase?.period
+      ? { number: product.freeTrialPhase.period.number, unit: product.freeTrialPhase.period.unit }
+      : null,
   };
 }
 

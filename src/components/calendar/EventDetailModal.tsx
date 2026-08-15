@@ -1,7 +1,8 @@
 import { type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Modal } from '@/components/ui';
+import { Badge, Modal } from '@/components/ui';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatEventTimeForDisplay } from '@/utils/timezone';
 import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
 import { EVENT_TYPE_BLOCK_CLASS, EVENT_TYPE_DEEP_TEXT, getMedicationStatus } from './eventStyles';
@@ -46,9 +47,15 @@ export function EventDetailModal({
 }: EventDetailModalProps): ReactElement {
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const locale = i18n.language;
+  // Viewer's 12h/24h clock — every rendered time goes through it.
+  const hourCycle = useHourCycle();
 
   const title = event.medication_name || event.title;
   const dosage = event.event_type === 'medication' ? event.medication_dosage : null;
+  // A discontinued (inactivated) medication keeps its record but stops firing.
+  // Discontinued meds are excluded from the default Calendar GET, so this only
+  // shows when a discontinued row is surfaced explicitly — flag it clearly.
+  const isInactiveMed = event.event_type === 'medication' && !!event.discontinued_at;
 
   // scheduled_date is a NAIVE date in the care recipient's timezone — format
   // via the UTC-noon pattern, never new Date(scheduled_date) device-local.
@@ -60,7 +67,13 @@ export function EventDetailModal({
   });
 
   const timeLabel = event.scheduled_time
-    ? formatEventTimeForDisplay(event.scheduled_time, careRecipientTimezone)
+    ? formatEventTimeForDisplay(
+        event.scheduled_time,
+        careRecipientTimezone,
+        undefined,
+        undefined,
+        hourCycle
+      )
     : t('calendar:allDay');
 
   const recurrenceLabel = formatRecurrenceLabel(event, t);
@@ -139,6 +152,11 @@ export function EventDetailModal({
           />
           {t(`calendar:eventTypes.${event.event_type}`)}
         </span>
+        {isInactiveMed && (
+          <Badge variant="neutral" className="self-start">
+            {t('calendar:discontinueMed.inactiveBadge')}
+          </Badge>
+        )}
       </span>
     </span>
   );

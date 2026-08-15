@@ -10,6 +10,18 @@ vi.mock('../EventNotesPanel', () => ({
   EventNotesPanel: () => null,
 }));
 
+// The viewer's 12h/24h clock. The real hook reads the shared currentUser React
+// Query — pin it so these tests need no QueryClientProvider and never depend on
+// the runner's navigator.language.
+const mockUseHourCycle = vi.fn();
+vi.mock('@/hooks/useHourCycle', () => ({
+  useHourCycle: () => mockUseHourCycle(),
+}));
+
+beforeEach(() => {
+  mockUseHourCycle.mockReturnValue('12h');
+});
+
 // Pin the "device" timezone (only getDeviceTimezone reads resolvedOptions —
 // formatToParts/format are unaffected). Dev machine is America/Denver; tests
 // must never depend on it.

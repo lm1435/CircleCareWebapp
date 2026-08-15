@@ -6,10 +6,11 @@ import type { Page } from '@playwright/test';
 
 // Global "Create" menu flows. The authenticated shell (AppLayout + Sidebar) shows
 // a terracotta "Create" button that opens a role="menu" of role="menuitem"
-// options (Appointment, Medication, Task, Vitals, Document, Invite member —
+// options (Appointment, Medication, Task, Note, Document, Invite member —
 // gated by edit access / ownership; the demo account is the circle owner, so all
 // six show). Each option opens the matching modal (AddEventModal with the right
-// initialType, AddVitalModal, DocumentUploadModal, InviteMemberModal).
+// initialType, DocumentUploadModal, InviteMemberModal) — except Note, which
+// navigates to the Notes page where the composer lives.
 //
 // This suite exercises EVERY add path END-TO-END *through the menu*: open the
 // Create menu → click the option → fill + submit the modal → verify the item
@@ -40,10 +41,6 @@ function rx(value: string): RegExp {
   return new RegExp(escapeRegExp(value));
 }
 
-function randomHeartRate(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 // Smallest valid one-page PDF — PHI-free placeholder bytes (from documents.spec).
 const MINIMAL_PDF =
   '%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
@@ -61,6 +58,23 @@ async function openCreateOption(page: Page, name: string, exact = false): Promis
 }
 
 /**
+ * Open a calendar chip's EventDetailModal via KEYBOARD activation (focus +
+ * Enter), not a pointer click. Chips in the same time slot render stacked
+ * (absolutely positioned, fully overlapping), and a chip scrolled to the top
+ * edge of the grid sits under the sticky day-header row — either way a pointer
+ * click on the right chip gets intercepted by the element painted above it and
+ * Playwright retries until the test times out. Keyboard activation dispatches
+ * to the target button directly (no hit-testing) and is the same accessible
+ * path a keyboard user takes.
+ */
+async function openChipByTitle(page: Page, titleRe: RegExp): Promise<void> {
+  const chip = page.getByRole('button', { name: titleRe }).first();
+  await expect(chip).toBeVisible({ timeout: 20_000 });
+  await chip.press('Enter');
+  await expect(page.getByRole('dialog')).toBeVisible();
+}
+
+/**
  * Delete a calendar event by opening its chip → EventDetailModal → Delete →
  * confirm. Mirrors calendar.spec's cleanup path. Non-recurring → simple confirm.
  */
@@ -73,10 +87,7 @@ async function deleteCalendarEventByTitle(
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
 
   const chip = page.getByRole('button', { name: titleRe });
-  await expect(chip.first()).toBeVisible({ timeout: 20_000 });
-
-  await chip.first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await openChipByTitle(page, titleRe);
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
@@ -98,7 +109,7 @@ test('Create menu shows every option for the circle owner', async ({ page, circl
   await expect(page.getByRole('menuitem', { name: 'Appointment' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Medication' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Task', exact: true })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Vitals' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Note', exact: true })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Document' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Invite member' })).toBeVisible();
 });
@@ -159,8 +170,7 @@ test('create an appointment end-to-end via the global Create menu', async ({ pag
   await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Delete (cleanup) ---
-  await chip.first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await openChipByTitle(page, titleRe);
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
@@ -187,6 +197,18 @@ test('create a medication end-to-end via the global Create menu', async ({ page,
   await dialog.locator('#scheduled_date').fill(todayISO());
   await dialog.locator('#scheduled_time').fill('09:00');
   await dialog.getByRole('button', { name: 'Create' }).click();
+
+  // Medication lifecycle: saving a med whose time already passed TODAY (in the
+  // circle's timezone) interposes a non-blocking "Time already passed" notice —
+  // Continue proceeds with the save. Whether it appears depends on the wall
+  // clock at run time (09:00 fixed above), so continue through it when shown.
+  const pastNotice = page.getByRole('dialog', { name: 'Time already passed' });
+  const noticeShown = await pastNotice
+    .waitFor({ state: 'visible', timeout: 2_500 })
+    .then(() => true)
+    .catch(() => false);
+  if (noticeShown) await pastNotice.getByRole('button', { name: 'Continue' }).click();
+
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
   // --- Verify on the calendar ---
@@ -196,48 +218,46 @@ test('create a medication end-to-end via the global Create menu', async ({ page,
   await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Delete (cleanup) ---
-  await chip.first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await openChipByTitle(page, titleRe);
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
 });
 
-test('create a vital reading end-to-end via the global Create menu', async ({ page, circleId }) => {
-  const note = uniqueLabel('Vital');
-  const bpm = randomHeartRate(240, 290);
-  const valueText = `${bpm} bpm`;
+test('create a note end-to-end via the global Create menu', async ({ page, circleId }) => {
+  // Unlike the other options, 'Note' doesn't open a modal — it navigates to the
+  // Notes page, where the composer lives (mirrors mobile's New-menu note entry).
+  // Full note CRUD is covered by careNotes.spec.ts; this verifies the menu path
+  // lands on a ready-to-use composer and a posted note persists.
+  const body = uniqueLabel('MenuNote');
 
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-  // --- Create via the menu ---
-  await openCreateOption(page, 'Vitals');
+  // --- Navigate via the menu ---
+  await openCreateOption(page, 'Note', true);
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/notes$`), { timeout: 15_000 });
 
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible({ timeout: 15_000 });
-  await expect(dialog.getByRole('heading', { name: 'Add reading' })).toBeVisible();
+  // --- The composer is live: post a note ---
+  const composer = page.getByLabel(/^Add a note/);
+  await expect(composer).toBeVisible({ timeout: 20_000 });
+  await composer.fill(body);
+  const postBtn = page.getByRole('button', { name: 'Post', exact: true });
+  await expect(postBtn).toBeEnabled();
+  await postBtn.click();
+  await expect(page.getByText(rx(body)).first()).toBeVisible({ timeout: 20_000 });
 
-  await dialog.locator('#vital_type').selectOption('heart_rate');
-  await dialog.locator('#value1').fill(String(bpm));
-  await dialog.locator('#notes').fill(note);
-  await dialog.getByRole('button', { name: 'Save reading' }).click();
-  await expect(dialog).toBeHidden({ timeout: 20_000 });
-
-  // --- Verify on the Vitals page ---
-  await page.goto(`/circles/${circleId}/vitals`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('button', { name: 'Add reading' })).toBeVisible({ timeout: 15_000 });
-  const row = page.getByText(rx(valueText));
-  await expect(row.first()).toBeVisible({ timeout: 20_000 });
-
-  // --- Delete (cleanup) ---
-  await page
-    .getByRole('button', { name: new RegExp(`Delete reading .*${escapeRegExp(valueText)}`) })
-    .click();
+  // --- Delete (cleanup, same row-scoping as careNotes.spec.ts) ---
+  const row = page
+    .locator('li, article, div')
+    .filter({ hasText: rx(body) })
+    .filter({ has: page.getByRole('button', { name: 'Delete', exact: true }) })
+    .last();
+  await row.getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await expect(confirm).toBeVisible();
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(row).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.getByText(rx(body))).toHaveCount(0, { timeout: 20_000 });
 });
 
 test('send an invite end-to-end via the global Create menu then cancel', async ({

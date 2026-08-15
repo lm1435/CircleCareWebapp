@@ -5,8 +5,13 @@ import { test, expect } from '../fixtures';
 // app-download CTAs. Email recipients tap the link in their invitation email,
 // land here, and accept.
 //
-//   • Logged OUT + valid code → "Sign in or create an account to accept" CTA; clicking it routes to
-//     /login preserving `/invite/:code` as the return destination.
+//   • Logged OUT + valid code → PRIMARY "Create an account to join" CTA routing to
+//     /signup, plus a secondary "I already have an account" routing to /login —
+//     both preserving `/invite/:code` as the return destination.
+//     NOTE: this spec previously asserted the single old CTA landed the invitee on
+//     /login ("Welcome back") and passed happily while that flow converted 0 of 17
+//     real web invitees. Assert what the INVITEE needs (a way to join), not merely
+//     that the button goes where the implementation happens to send it.
 //   • Logged IN  + valid code → "Accept invitation" CTA (present + enabled). We
 //     STOP SHORT of clicking it: accepting joins the circle, which is not cleanly
 //     reversible from the web (there is no inviter-side "un-accept"), so we only
@@ -50,10 +55,11 @@ test.describe('invite landing page', () => {
     await expect(page.getByText('Ask the person who invited you', { exact: false })).toBeVisible();
     // No accept / sign-in CTA on an invalid code.
     await expect(page.getByRole('button', { name: 'Accept invitation' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Sign in or create an account to accept' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Create an account to join' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'I already have an account' })).toHaveCount(0);
   });
 
-  test('valid code: logged-out "Sign in or create an account to accept" redirect + logged-in "Accept invitation" CTA (created then canceled — net-zero, never accepted)', async ({
+  test('valid code: logged-out create-account + sign-in CTAs + logged-in "Accept invitation" CTA (created then canceled — net-zero, never accepted)', async ({
     page,
     context,
     circleId,
@@ -98,11 +104,13 @@ test.describe('invite landing page', () => {
       const acceptBtn = page.getByRole('button', { name: 'Accept invitation' });
       await expect(acceptBtn).toBeVisible({ timeout: 20_000 });
       await expect(acceptBtn).toBeEnabled();
-      await expect(page.getByRole('button', { name: 'Sign in or create an account to accept' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Create an account to join' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'I already have an account' })).toHaveCount(0);
 
-      // --- LOGGED-OUT: a FRESH anonymous context (no fixture login) sees the
-      // "Sign in or create an account to accept" CTA; clicking it routes to /login while preserving
-      // the invite as the return destination. ---
+      // --- LOGGED-OUT: a FRESH anonymous context (no fixture login) sees BOTH
+      // CTAs. The primary routes to /signup (an invitee usually has no account
+      // yet); the secondary routes to /login. Both preserve the invite as the
+      // return destination. ---
       // Force a genuinely logged-out session: pass an explicit empty storageState
       // so this context can never inherit the project's authenticated state.
       const anonContext = await browser.newContext({
@@ -113,15 +121,28 @@ test.describe('invite landing page', () => {
         await anonPage.goto(`/invite/${code}`, { waitUntil: 'domcontentloaded' });
         await anonPage.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
 
-        const signInCta = anonPage.getByRole('button', { name: 'Sign in or create an account to accept' });
+        const createCta = anonPage.getByRole('button', { name: 'Create an account to join' });
+        const signInCta = anonPage.getByRole('button', { name: 'I already have an account' });
+        await expect(createCta).toBeVisible({ timeout: 20_000 });
         await expect(signInCta).toBeVisible({ timeout: 20_000 });
         // Authenticated CTA must NOT show to a logged-out visitor.
         await expect(anonPage.getByRole('button', { name: 'Accept invitation' })).toHaveCount(0);
 
+        // Secondary path: an invitee who already has an account reaches /login.
         await signInCta.click();
-        // Routed to /login (return path preserved via router location.state).
         await expect(anonPage).toHaveURL(/\/login$/, { timeout: 20_000 });
         await expect(anonPage.getByRole('heading', { name: 'Welcome back' })).toBeVisible({
+          timeout: 20_000,
+        });
+
+        // Primary path: a brand-new invitee reaches the signup form. This is the
+        // assertion whose absence let 17 web invitees dead-end on a password
+        // prompt — a new invitee must be able to REACH account creation.
+        await anonPage.goto(`/invite/${code}`, { waitUntil: 'domcontentloaded' });
+        await anonPage.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
+        await createCta.click();
+        await expect(anonPage).toHaveURL(/\/signup$/, { timeout: 20_000 });
+        await expect(anonPage.getByRole('heading', { name: 'Create account' })).toBeVisible({
           timeout: 20_000,
         });
       } finally {

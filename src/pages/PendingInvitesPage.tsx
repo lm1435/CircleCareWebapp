@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyState, Skeleton, useToast } from '@/component
 import { usePendingInvites, useAcceptInvite } from '@/hooks/useInvites';
 import type { PendingInvite } from '@/api/invites';
 import { Analytics } from '@/lib/analytics';
+import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 
 // Task 5.5 — list the current user's pending invites with Accept.
 //
@@ -59,8 +60,13 @@ export default function PendingInvitesPage(): ReactElement {
       {
         onSuccess: () => {
           // PHI-safe: only the circle_id (available here; the hook takes only an
-          // inviteId, so the capture lives at the call site).
-          Analytics.inviteAccepted(invite.circle.id);
+          // inviteId, so the capture lives at the call site). WB4: explicit
+          // source distinguishes this list from the join-by-code modal and the
+          // public invite landing page.
+          Analytics.inviteAccepted(invite.circle.id, 'in_app');
+          // R4-5: joined their first circle here → onboarding complete. No-op
+          // when this browser already saw the user with circles.
+          trackOnboardingCompleted('joined');
           showToast(t('pending.accepted', { circle: invite.circle.name }), 'success');
           setJoined({ id: invite.circle.id, name: invite.circle.name });
           setAcceptingId(null);

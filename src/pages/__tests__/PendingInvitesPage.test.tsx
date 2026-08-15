@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import PendingInvitesPage from '@/pages/PendingInvitesPage';
+import { Analytics } from '@/lib/analytics';
 import type { PendingInvite } from '@/api/invites';
 
 // Stage 5 Task 5.5/5.7 — the current user's pending invites with Accept.
@@ -26,6 +27,13 @@ vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();
   return { ...actual, useToast: () => ({ showToast }) };
 });
+
+// R4-5 onboarding funnel — accepting an invite must report completion (the
+// once-per-browser guard lives inside the mocked module).
+const trackOnboardingCompleted = vi.fn();
+vi.mock('@/lib/onboardingAnalytics', () => ({
+  trackOnboardingCompleted: (path: string) => trackOnboardingCompleted(path),
+}));
 
 function makeInvite(overrides: Partial<PendingInvite> = {}): PendingInvite {
   return {
@@ -99,6 +107,32 @@ describe('PendingInvitesPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Accept' }));
     expect(showToast).toHaveBeenCalledWith("You joined Mom's Care.", 'success');
+    // R4-5: successful accept reports onboarding completion via the join path.
+    expect(trackOnboardingCompleted).toHaveBeenCalledWith('joined');
+  });
+
+  // WB4 — this list is a THIRD invite_accepted source (distinct from the
+  // invite-link landing page and the join-by-code modal); it must be explicit
+  // rather than an implicit "no source" event.
+  it('fires invite_accepted with an explicit source (WB4)', async () => {
+    const inviteAccepted = vi.spyOn(Analytics, 'inviteAccepted');
+    const user = userEvent.setup();
+    usePendingInvitesResult.data = [makeInvite()];
+    acceptMutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+    expect(inviteAccepted).toHaveBeenCalledWith('c1', 'in_app');
+  });
+
+  it('does NOT report onboarding completion when the accept fails', async () => {
+    const user = userEvent.setup();
+    usePendingInvitesResult.data = [makeInvite()];
+    acceptMutate.mockImplementation((_vars, opts) => opts?.onError?.(new Error('boom')));
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+    expect(trackOnboardingCompleted).not.toHaveBeenCalled();
   });
 
   it('offers an Open circle link to the joined circle after a successful accept', async () => {

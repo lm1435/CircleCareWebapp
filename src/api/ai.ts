@@ -1,8 +1,9 @@
 import { apiClient } from '@/lib/api';
 
-// Web port of mobile/src/api/ai.ts (the `sendAIMessage` half — web has no voice
-// input and does not surface the suggestions endpoint, so only the chat call is
-// mirrored). Backend: POST /circles/:circleId/ai/chat (backend/src/routes/ai.ts).
+// Web port of mobile/src/api/ai.ts (the `sendAIMessage` + `getAISuggestions`
+// halves — web has no voice input, so that is the one mobile affordance not
+// mirrored). Backend: POST /circles/:circleId/ai/chat and
+// GET /circles/:circleId/ai/suggestions (backend/src/routes/ai.ts).
 //
 // PHI-conservative: the server stores ONLY user messages (no PHI, no assistant
 // responses). The conversation is identified by `conversation_id`, which the
@@ -30,6 +31,9 @@ export interface AIChatResponse {
   message: string;
   conversation_id: string;
   remaining_requests: number;
+  /** Classifier label (e.g. GET_MEDICATION, UNKNOWN) for analytics only.
+   *  Optional: older backends do not send it. Never carries intent params. */
+  intent?: string;
 }
 
 /**
@@ -52,6 +56,43 @@ export async function sendAiMessage(
   })) as { data: AIChatResponse };
 
   return response.data;
+}
+
+/** Unwrapped `data` from the suggestions success envelope. */
+export interface AISuggestionsResponse {
+  /** Up to 6 server-authored questions. Optional so a malformed/older payload
+   *  degrades to "no suggestions" instead of throwing. */
+  suggestions?: string[];
+}
+
+/**
+ * Fetch the server's suggested questions for this circle (premium feature).
+ *
+ * CRITICAL — these strings must NEVER be hardcoded client-side. The backend's
+ * `BASE_SUGGESTIONS` list is the single source of truth AND is injected into the
+ * intent-classifier prompt as few-shot examples; a suggestion the classifier has
+ * never seen classifies as UNKNOWN, so a client-invented chip answers itself
+ * with "I didn't quite understand that". Mobile's catch-block fallback has
+ * exactly that bug — do not port it. When this call fails, show nothing.
+ *
+ * The apiClient response interceptor unwraps the `{ success, data }` envelope,
+ * so this returns the inner `data.suggestions`. Rejections (402
+ * SUBSCRIPTION_REQUIRED when the circle owner is on the free tier, 403 FORBIDDEN
+ * for a non-member, network, ...) propagate to the caller, which renders nothing.
+ * A missing or malformed `suggestions` field resolves to `[]` rather than throwing.
+ */
+export async function getAiSuggestions(circleId: string, language?: string): Promise<string[]> {
+  const query = language ? `?language=${encodeURIComponent(language)}` : '';
+  const response = (await apiClient.get(`/circles/${circleId}/ai/suggestions${query}`)) as {
+    data?: AISuggestionsResponse | null;
+  } | null;
+
+  const suggestions = response?.data?.suggestions;
+  if (!Array.isArray(suggestions)) return [];
+  return suggestions.filter(
+    (suggestion): suggestion is string =>
+      typeof suggestion === 'string' && suggestion.trim().length > 0
+  );
 }
 
 /**

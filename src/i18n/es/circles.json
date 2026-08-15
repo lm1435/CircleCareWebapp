@@ -27,6 +27,8 @@
     "subtitle": "Ingresa el código que viene en tu correo de invitación.",
     "codeLabel": "Código de invitación",
     "placeholder": "XXXXXX",
+    "pasteCode": "Pegar código",
+    "pasteNoCode": "No encontramos un código de invitación en tu portapapeles.",
     "lookUpCode": "Buscar código",
     "lookingUp": "Buscando...",
     "circle": "Círculo",

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -45,11 +45,15 @@ const USER: User = {
 };
 const UNITS: UnitPreferences = { weight_unit: 'lbs', glucose_unit: 'mg/dL' };
 
+// Mutable so the quiet-hours tests can seed a user whose Postgres TIME columns
+// come back WITH seconds. Reset to USER in beforeEach.
+let currentUser: User = USER;
+
 vi.mock('@/api/users', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/users')>();
   return {
     ...actual,
-    getCurrentUser: vi.fn(() => Promise.resolve(USER)),
+    getCurrentUser: vi.fn(() => Promise.resolve(currentUser)),
     getUnitPreferences: vi.fn(() => Promise.resolve(UNITS)),
   };
 });
@@ -114,6 +118,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   deleteAccountState = { isError: false };
   subscriptionTier = 'free';
+  currentUser = USER;
 });
 
 describe('ProfilePage', () => {
@@ -201,5 +206,86 @@ describe('ProfilePage', () => {
         "To change your password, sign out and choose 'Forgot password?' on the sign-in page."
       )
     ).toBeInTheDocument();
+  });
+});
+
+// ── Quiet hours: Postgres TIME round-trip ────────────────────────────────
+// quiet_hours_start/end are Postgres TIME columns, so the API hands them back
+// WITH seconds ("22:00:00"). Editing ONE time field ships the OTHER field
+// straight back out of local state, so hydrating the raw value meant the
+// untouched field went to the API as "22:00:00" — which HH:MM-only validation
+// rejected ("editing only the end time fails to save, editing both works").
+describe('ProfilePage quiet hours', () => {
+  const WITH_SECONDS: User = {
+    ...USER,
+    quiet_hours_start: '22:00:00',
+    quiet_hours_end: '07:00:00',
+  };
+
+  it('normalizes seconds-bearing TIME values before they reach the time inputs', async () => {
+    currentUser = WITH_SECONDS;
+    renderPage();
+
+    // `<input type="time">` expects HH:MM — a seconds-bearing value is handled
+    // inconsistently across browsers for a control whose step implies minutes.
+    expect(await screen.findByLabelText('Start time')).toHaveValue('22:00');
+    expect(screen.getByLabelText('End time')).toHaveValue('07:00');
+  });
+
+  it('sends canonical HH:MM for the UNTOUCHED start when only the end time is edited', async () => {
+    currentUser = WITH_SECONDS;
+    renderPage();
+
+    const end = await screen.findByLabelText('End time');
+    fireEvent.change(end, { target: { value: '08:30' } });
+
+    expect(updateQuiet).toHaveBeenCalledTimes(1);
+    // The regression: quiet_hours_start must NOT be "22:00:00" here.
+    expect(updateQuiet.mock.calls[0][0]).toEqual({
+      quiet_hours_start: '22:00',
+      quiet_hours_end: '08:30',
+    });
+  });
+
+  it('sends canonical HH:MM for the UNTOUCHED end when only the start time is edited', async () => {
+    currentUser = WITH_SECONDS;
+    renderPage();
+
+    const start = await screen.findByLabelText('Start time');
+    fireEvent.change(start, { target: { value: '21:15' } });
+
+    expect(updateQuiet).toHaveBeenCalledTimes(1);
+    expect(updateQuiet.mock.calls[0][0]).toEqual({
+      quiet_hours_start: '21:15',
+      quiet_hours_end: '07:00',
+    });
+  });
+
+  it('disables quiet hours with an explicit null/null payload', async () => {
+    const user = userEvent.setup();
+    currentUser = WITH_SECONDS;
+    renderPage();
+
+    await user.click(await screen.findByRole('switch', { name: /Enable quiet hours/i }));
+
+    expect(updateQuiet).toHaveBeenCalledTimes(1);
+    expect(updateQuiet.mock.calls[0][0]).toEqual({
+      quiet_hours_start: null,
+      quiet_hours_end: null,
+    });
+  });
+
+  it('re-enables quiet hours with the normalized HH:MM defaults', async () => {
+    // No quiet hours stored → toggle ON sends the local defaults, not seconds.
+    renderPage();
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('switch', { name: /Enable quiet hours/i }));
+
+    expect(updateQuiet).toHaveBeenCalledTimes(1);
+    expect(updateQuiet.mock.calls[0][0]).toEqual({
+      quiet_hours_start: '22:00',
+      quiet_hours_end: '07:00',
+    });
   });
 });

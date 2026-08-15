@@ -58,7 +58,7 @@ test('drawer Create menu opens with all six options', async ({ page, circleId })
   await expect(menu.getByRole('menuitem', { name: 'Appointment' })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Medication' })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Task', exact: true })).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: 'Vitals' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Note', exact: true })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Document' })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Invite member' })).toBeVisible();
 });

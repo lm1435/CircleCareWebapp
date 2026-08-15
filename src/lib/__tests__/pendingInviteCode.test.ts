@@ -1,6 +1,7 @@
 import {
   setPendingInviteCode,
   consumePendingInviteCode,
+  peekPendingInviteCode,
   clearPendingInviteCode,
 } from '@/lib/pendingInviteCode';
 
@@ -69,6 +70,30 @@ describe('pendingInviteCode', () => {
     clearPendingInviteCode();
 
     expect(consumePendingInviteCode()).toBeNull();
+  });
+
+  // WB1 — AuthCallbackPage/VerifyEmailPage must PEEK (not consume) so
+  // InviteLandingPage's own consume-and-auto-accept effect still finds the
+  // code when it lands.
+  it('peekPendingInviteCode reads the code without clearing it', () => {
+    setPendingInviteCode('ABC234');
+
+    expect(peekPendingInviteCode()).toBe('ABC234');
+    // Still there — a peek must never consume.
+    expect(peekPendingInviteCode()).toBe('ABC234');
+    expect(sessionStorage.getItem(STORAGE_KEY)).toBe('ABC234');
+    // A subsequent real consume still works normally.
+    expect(consumePendingInviteCode()).toBe('ABC234');
+    expect(peekPendingInviteCode()).toBeNull();
+  });
+
+  it('peekPendingInviteCode returns null for garbage or missing values without touching storage', () => {
+    expect(peekPendingInviteCode()).toBeNull();
+
+    sessionStorage.setItem(STORAGE_KEY, 'not a code / at all');
+    expect(peekPendingInviteCode()).toBeNull();
+    // Unlike consume, peek must not clear even a garbage value.
+    expect(sessionStorage.getItem(STORAGE_KEY)).toBe('not a code / at all');
   });
 
   it('degrades to a no-op when sessionStorage throws (Safari private mode)', () => {

@@ -40,6 +40,14 @@ vi.mock('@/components/ai/AIChatModal', () => ({
   AIChatModal: () => null,
 }));
 
+// R4-5 onboarding funnel — the layout reports the resolved circle count (the
+// mocked useCircles above resolves one circle) so deep links into a circle
+// still feed the funnel. Guards live inside the mocked module.
+const trackCirclesLoaded = vi.fn();
+vi.mock('@/lib/onboardingAnalytics', () => ({
+  trackCirclesLoaded: (count: number) => trackCirclesLoaded(count),
+}));
+
 const initialAuthState = useAuthStore.getState();
 
 function renderLayout(): void {
@@ -76,6 +84,12 @@ describe('AppLayout', () => {
     expect(firstLink).toHaveTextContent('Skip to content');
     expect(firstLink).toHaveAttribute('href', '#main');
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main');
+  });
+
+  it('R4-5: reports the resolved circle count to the onboarding funnel on deep links', () => {
+    renderLayout();
+
+    expect(trackCirclesLoaded).toHaveBeenCalledWith(1);
   });
 
   it('renders semantic landmarks: banner, navigation, main, and page content', () => {

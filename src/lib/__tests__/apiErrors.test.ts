@@ -2,9 +2,13 @@ import {
   isPermissionDeniedError,
   isSubscriptionRequiredError,
   isAccessDeniedError,
+  isMedicationConflictError,
+  isDoseAlreadyLoggedError,
+  isMedicationDiscontinuedError,
   PERMISSION_ERROR_CODES,
   SUBSCRIPTION_ERROR_CODES,
   ACCESS_ERROR_CODES,
+  CONFLICT_ERROR_CODES,
 } from '@/lib/apiErrors';
 
 // Shapes the apiClient interceptor rejects with: the backend envelope, never an
@@ -55,6 +59,37 @@ describe('apiErrors', () => {
       expect(isPermissionDeniedError(new Error('boom'))).toBe(false);
       expect(isPermissionDeniedError({ error: {} })).toBe(false);
       expect(isPermissionDeniedError({ error: { code: 42 } })).toBe(false);
+    });
+  });
+
+  describe('medication 409 conflicts', () => {
+    it('isDoseAlreadyLoggedError matches only DOSE_ALREADY_LOGGED', () => {
+      expect(isDoseAlreadyLoggedError(envelope('DOSE_ALREADY_LOGGED'))).toBe(true);
+      expect(isDoseAlreadyLoggedError(envelope('MEDICATION_DISCONTINUED'))).toBe(false);
+      expect(isDoseAlreadyLoggedError(envelope('SERVER_ERROR'))).toBe(false);
+      expect(isDoseAlreadyLoggedError(null)).toBe(false);
+    });
+
+    it('isMedicationDiscontinuedError matches only MEDICATION_DISCONTINUED', () => {
+      expect(isMedicationDiscontinuedError(envelope('MEDICATION_DISCONTINUED'))).toBe(true);
+      expect(isMedicationDiscontinuedError(envelope('DOSE_ALREADY_LOGGED'))).toBe(false);
+      expect(isMedicationDiscontinuedError(new Error('boom'))).toBe(false);
+      expect(isMedicationDiscontinuedError(undefined)).toBe(false);
+    });
+
+    it('isMedicationConflictError covers exactly the 409 code set', () => {
+      for (const code of CONFLICT_ERROR_CODES) {
+        expect(isMedicationConflictError(envelope(code))).toBe(true);
+      }
+      expect(isMedicationConflictError(envelope('VIEW_ONLY'))).toBe(false);
+      expect(isMedicationConflictError(envelope('SERVER_ERROR'))).toBe(false);
+      expect(isMedicationConflictError({ error: {} })).toBe(false);
+    });
+
+    it('409 codes never classify as permission errors', () => {
+      for (const code of CONFLICT_ERROR_CODES) {
+        expect(isPermissionDeniedError(envelope(code))).toBe(false);
+      }
     });
   });
 

@@ -127,6 +127,12 @@
     "emptyTitle": "No pending invitations",
     "emptyBody": "When someone invites you to a care circle, it will appear here.",
     "errorTitle": "Unable to load invitations",
-    "errorBody": "Please check your connection and try again."
+    "errorBody": "Please check your connection and try again.",
+    "banner": {
+      "count_one": "You have 1 pending invitation",
+      "count_other": "You have {{count}} pending invitations",
+      "review": "Review invitation",
+      "reviewPlural": "Review invitations"
+    }
   }
 }

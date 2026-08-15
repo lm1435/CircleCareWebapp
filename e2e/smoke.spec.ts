@@ -1,5 +1,5 @@
 import { test, expect, type Browser } from '@playwright/test';
-import { AUTH_ROUTES } from './routes';
+import { AUTH_ROUTES, circleRoutes } from './routes';
 import { visitAndCheck, expectNoRuntimeErrors, checkA11y } from './helpers';
 
 // Crawl smoke test: visit every authenticated route, prove it renders without
@@ -12,17 +12,15 @@ import { visitAndCheck, expectNoRuntimeErrors, checkA11y } from './helpers';
 
 const STORAGE = 'e2e/.auth/user.json';
 
-// Circle-scoped sub-paths under /circles/:circleId — keep in sync with router.tsx.
-const CIRCLE_SUBROUTES = [
-  'calendar',
-  'tasks',
-  'activity',
-  'emergency',
-  'documents',
-  'vitals',
-  'members',
-  'settings',
-];
+// Circle-scoped sub-paths under /circles/:circleId — derived from the shared
+// `circleRoutes()` list (routes.ts) instead of a second hardcoded copy (WA5),
+// so a route added there (e.g. /notes) automatically gets crawl + a11y
+// coverage here too. The placeholder id is discarded — only the trailing path
+// segment is kept — and the real circle id is substituted at test-run time
+// once `resolveCircleId` has resolved it (see the `route` build below).
+const CIRCLE_SUBROUTES = circleRoutes('PLACEHOLDER_CIRCLE_ID').map(
+  (route) => route.split('/').pop() as string
+);
 
 // Resolve a real circle id from the demo account's picker so circle-scoped
 // routes get a valid context. Done once in beforeAll and shared.

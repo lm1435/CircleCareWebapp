@@ -21,7 +21,7 @@ const ES = {
   appointment: 'Cita',
   medication: 'Medicamento',
   task: 'Tarea',
-  vitals: 'Signos vitales',
+  note: 'Nota',
   document: 'Documento',
   invite: 'Invitar miembro',
 } as const;
@@ -32,7 +32,7 @@ const EN = {
   appointment: 'Appointment',
   medication: 'Medication',
   task: 'Task',
-  vitals: 'Vitals',
+  note: 'Note',
   document: 'Document',
   invite: 'Invite member',
 } as const;
@@ -92,7 +92,7 @@ test('global Create menu is fully localized in Spanish', async ({ page, circleId
   await createButton.click();
 
   // Each menu option renders with its Spanish label.
-  for (const key of ['appointment', 'medication', 'task', 'vitals', 'document', 'invite'] as const) {
+  for (const key of ['appointment', 'medication', 'task', 'note', 'document', 'invite'] as const) {
     await expect(
       page.getByRole('menuitem', { name: ES[key], exact: true }),
       `Spanish create.${key} menu item "${ES[key]}" not found`
@@ -100,7 +100,7 @@ test('global Create menu is fully localized in Spanish', async ({ page, circleId
   }
 
   // No English option labels leaked into the menu.
-  for (const key of ['appointment', 'medication', 'task', 'vitals', 'document', 'invite'] as const) {
+  for (const key of ['appointment', 'medication', 'task', 'note', 'document', 'invite'] as const) {
     await expect(
       page.getByRole('menuitem', { name: EN[key], exact: true }),
       `English create.${key} menu item "${EN[key]}" leaked while in Spanish`

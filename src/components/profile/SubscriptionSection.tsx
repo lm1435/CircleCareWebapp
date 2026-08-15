@@ -52,17 +52,20 @@ export function SubscriptionSection(): ReactElement {
               {t('subscription.premium')}
             </span>
             <p className="m-0 text-sm text-ink-3">{t('subscription.premiumDescription')}</p>
-            {webBilling && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-1 w-fit"
-                disabled={manage.isPending}
-                onClick={handleManage}
-              >
-                {t('subscription.manageSubscription')}
-              </Button>
-            )}
+            {/* Always rendered. This used to be gated on web billing being
+                configured, which meant a premium subscriber could see their
+                plan with no cancellation affordance at all. If the sub was
+                bought in the app there is no portal URL, and handleManage
+                falls back to telling the user exactly where to cancel. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-1 w-fit"
+              disabled={manage.isPending}
+              onClick={handleManage}
+            >
+              {t('subscription.manageSubscription')}
+            </Button>
           </div>
         ) : webBilling ? (
           <div className="flex flex-col gap-4">
@@ -72,6 +75,21 @@ export function SubscriptionSection(): ReactElement {
             </div>
             <Button variant="terracotta" className="w-fit" onClick={() => navigate('/upgrade')}>
               {t('subscription.upgradeCta')}
+            </Button>
+            {/* A lapsed or billing-retry subscriber has isPremium === false while
+                the Stripe subscription still exists and is still charging. This
+                link is their only path to the billing portal — without it the
+                cancel control vanished exactly when they most needed it. For a
+                user who never subscribed, handleManage finds no portal URL and
+                shows the manage-in-app guidance instead. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-fit"
+              disabled={manage.isPending}
+              onClick={handleManage}
+            >
+              {t('subscription.manageExisting')}
             </Button>
             <div>
               <p className="m-0 mb-2 text-xs text-ink-3">{t('subscription.orInApp')}</p>

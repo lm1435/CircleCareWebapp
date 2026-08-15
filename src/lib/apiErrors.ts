@@ -87,6 +87,45 @@ export function isAccessDeniedError(err: unknown): boolean {
 }
 
 /**
+ * 409 Conflict codes from the medication write paths
+ * (backend/src/routes/calendarEvents.ts + medication confirm):
+ *   - `DOSE_ALREADY_LOGGED` — a PATCH tried to change the time of a confirmed
+ *     child dose; edit history is immutable, so the time can't move.
+ *   - `MEDICATION_DISCONTINUED` — a confirm targeted an inactive medication;
+ *     it must be reactivated before doses can be logged.
+ * Both are state conflicts, not failures — the caller shows a specific message
+ * instead of the generic "try again" retry copy.
+ */
+export const CONFLICT_ERROR_CODES = new Set(['DOSE_ALREADY_LOGGED', 'MEDICATION_DISCONTINUED']);
+
+/**
+ * True for any 409 medication-state conflict. Prefer the specific helpers when
+ * the UI needs to distinguish the two messages.
+ */
+export function isMedicationConflictError(err: unknown): boolean {
+  const code = errorCode(err);
+  return code !== undefined && CONFLICT_ERROR_CODES.has(code);
+}
+
+/**
+ * True for a 409 `DOSE_ALREADY_LOGGED` rejection — an edit tried to change the
+ * time of a dose that was already confirmed. The caller explains that a logged
+ * dose's time can't be changed (mobile parity).
+ */
+export function isDoseAlreadyLoggedError(err: unknown): boolean {
+  return errorCode(err) === 'DOSE_ALREADY_LOGGED';
+}
+
+/**
+ * True for a 409 `MEDICATION_DISCONTINUED` rejection — a confirm targeted an
+ * inactive (discontinued) medication. The caller points at reactivation instead
+ * of offering a retry that can never succeed.
+ */
+export function isMedicationDiscontinuedError(err: unknown): boolean {
+  return errorCode(err) === 'MEDICATION_DISCONTINUED';
+}
+
+/**
  * 429 Too Many Requests codes — the express rate limiters
  * (backend/src/middleware/rateLimit.ts) all reject with `RATE_LIMIT`; the
  * alternates are kept defensively for per-route limiters. E.g. the GDPR data

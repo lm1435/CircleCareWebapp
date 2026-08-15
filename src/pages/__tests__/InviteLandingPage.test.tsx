@@ -120,6 +120,27 @@ describe('InviteLandingPage', () => {
     expect(screen.getByRole('link', { name: 'Get it on Google Play' })).toBeInTheDocument();
   });
 
+  // An already-used code is the most common failure here — the person tapped
+  // the link twice, or joined in the app first. "Expired or invalid" would be
+  // plainly wrong and reads as "your invite never arrived".
+  it('distinguishes an already-used invite from an expired/invalid one', async () => {
+    mockedPost.mockRejectedValue({
+      success: false,
+      error: { code: 'INVITE_ALREADY_USED', message: 'This invite has already been used' },
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'This invite has already been used',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/find the care circle on your circles list/i)).toBeInTheDocument();
+    // Still a dead end without a route forward — keep the download CTAs.
+    expect(screen.getByRole('link', { name: 'Download on the App Store' })).toBeInTheDocument();
+  });
+
   it('shows the error state for an expired invite', async () => {
     mockedPost.mockRejectedValue({
       success: false,

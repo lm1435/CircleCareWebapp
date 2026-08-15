@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
-import { consumePendingInviteCode } from '@/lib/pendingInviteCode';
+import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Button } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { FormField } from '@/components/auth/FormField';
@@ -95,8 +95,11 @@ export default function VerifyEmailPage(): ReactElement {
         });
         signIn(exchanged.data.session, exchanged.data.user ?? user);
         // An invite handoff parks its code in sessionStorage (router state is
-        // lost across login → signup → verify-email) — resume it here.
-        const pendingInvite = consumePendingInviteCode();
+        // lost across login → signup → verify-email) — detour through the
+        // invite page. PEEK, don't consume: InviteLandingPage's own effect
+        // does the consume-and-auto-accept, so clearing it here would strand
+        // the visitor on a card they have to tap "Accept" on manually.
+        const pendingInvite = peekPendingInviteCode();
         navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
       } catch {
         // Verified, but the cookie session couldn't be established —

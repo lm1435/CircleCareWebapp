@@ -24,12 +24,14 @@ const EMPTY_PLAN: InsurancePlan = { carrier: '' };
  * existing OCR rx_* fields round-trip untouched. Mirrors mobile
  * EditInsuranceScreen.
  */
-export function EditInsuranceModal({
+type EditInsuranceModalPropsLoaded = Omit<EditInsuranceModalProps, 'info'> & { info: EmergencyInfo };
+
+function EditInsuranceModalForm({
   circleId,
   info,
   index,
   onClose,
-}: EditInsuranceModalProps): ReactElement {
+}: EditInsuranceModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
 
@@ -136,4 +138,23 @@ export function EditInsuranceModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Null guard. Self-defence, not redundancy: this form's save is a
+ * read-modify-write over `info`, so an unloaded record would write defaults
+ * over real data — the exact failure the mobile emergency editors shipped with
+ * (a one-element array replacing the saved list; blank allergies; DNR reset).
+ * Today EmergencyInfoPage gates on isLoading/isError so `info` is always
+ * present; this keeps that true if the modal is ever opened from somewhere else.
+ *
+ * It is a WRAPPER rather than an early return inside the form because the form
+ * seeds its `useState` from `info` at mount. Returning null in place would keep
+ * the component mounted with defaults already captured, so a late-arriving
+ * `info` would render a blank form over a real record — trading a bad save for
+ * a bad form. Mounting the form only once `info` exists avoids both.
+ */
+export function EditInsuranceModal(props: EditInsuranceModalProps): ReactElement | null {
+  if (!props.info) return null;
+  return <EditInsuranceModalForm {...props} info={props.info} />;
 }

@@ -64,7 +64,8 @@
   },
   "errors": {
     "permissionDenied": "You don't have permission to make changes in this circle.",
-    "saveFailed": "Couldn't save your changes. Please try again."
+    "saveFailed": "Couldn't save your changes. Please try again.",
+    "doseAlreadyLogged": "This dose was already logged — its time can't be changed."
   },
   "addEvent": {
     "addEvent": "Add event",
@@ -101,7 +102,8 @@
       "daysOn": "Days on",
       "daysOff": "Days off",
       "endDate": "End date",
-      "assignedTo": "Assigned to"
+      "assignedTo": "Assigned to",
+      "duration": "Duration"
     },
     "placeholders": {
       "appointmentTitle": "e.g. Dr. Smith checkup",
@@ -110,6 +112,36 @@
       "dosage": "e.g. 500 mg",
       "location": "e.g. Main St. Clinic",
       "notes": "Add any details…"
+    },
+    "timePresets": {
+      "label": "Common times",
+      "morning": "Morning (8:00 AM)",
+      "noon": "Noon (12:00 PM)",
+      "evening": "Evening (6:00 PM)",
+      "bedtime": "Bedtime (9:00 PM)"
+    },
+    "schedulePresets": {
+      "label": "Common schedules",
+      "onceDaily": "Once daily (8:00 AM)",
+      "everyMorning": "Every morning (8:00 AM)",
+      "everyEvening": "Every evening (8:00 PM)"
+    },
+    "titleSuggestions": {
+      "label": "Title suggestions",
+      "appointment": {
+        "doctorVisit": "Doctor visit",
+        "labWork": "Lab work",
+        "followUp": "Follow-up",
+        "dentist": "Dentist",
+        "eyeExam": "Eye exam"
+      },
+      "task": {
+        "pickUpPrescriptions": "Pick up prescriptions",
+        "groceryRun": "Grocery run",
+        "checkInCall": "Check-in call",
+        "driveToAppointment": "Drive to appointment",
+        "refillPillOrganizer": "Refill pill organizer"
+      }
     },
     "hints": {
       "timeOptional": "Leave blank for an all-day event.",
@@ -143,6 +175,17 @@
       "timeRequired": "Medications need a scheduled time.",
       "endTimeRequired": "Please add an end time.",
       "endTimeAfterStart": "End time must be after the start time."
+    },
+    "alerts": {
+      "pastTimeTitle": "Time already passed",
+      "pastTimeMessage": "This time has already passed today — no reminder will be sent for today's dose.",
+      "continue": "Continue",
+      "closePastTime": "Close past-time notice"
+    },
+    "durations": {
+      "30": "30 min",
+      "60": "1 hr",
+      "120": "2 hrs"
     }
   },
   "deleteEvent": {
@@ -155,6 +198,21 @@
     "delete": "Delete",
     "deleting": "Deleting…",
     "deleted": "Event deleted"
+  },
+  "discontinueMed": {
+    "title": "Discontinue medication",
+    "reactivateTitle": "Reactivate medication",
+    "close": "Close medication status dialog",
+    "confirmMessage": "Discontinue \"{{title}}\"? This stops the whole medication now — all upcoming doses leave the calendar and it moves to Inactive. Past history is kept. You can reactivate it anytime.",
+    "reactivateMessage": "Reactivate \"{{title}}\"? Reminders will resume.",
+    "discontinue": "Discontinue",
+    "reactivate": "Reactivate",
+    "working": "Saving…",
+    "discontinuedToast": "Medication discontinued",
+    "reactivatedToast": "Medication reactivated",
+    "inactiveBadge": "Inactive",
+    "editInactiveTitle": "Medication is inactive",
+    "editInactiveMessage": "This medication is inactive. Reactivate it to make changes."
   },
   "notes": {
     "title": "Notes",

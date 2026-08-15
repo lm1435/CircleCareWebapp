@@ -133,16 +133,13 @@ describe('EmergencyInfoPage', () => {
     mockedPut.mockReset();
   });
 
-  it('renders all five sections with data', async () => {
+  it('renders all four sections with data (Medical Information merged into glance tiles)', async () => {
     mockApi(fullInfo);
     renderPage();
 
     // Collapsible accordion headers carry a count in their meta slot, so the
     // h2 accessible name includes the number (e.g. "Doctors 2"). Match loosely.
-    expect(
-      await screen.findByRole('heading', { level: 2, name: 'Medical Information' })
-    ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: /Doctors/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: /Doctors/ })).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { level: 2, name: /Emergency Contacts/ })
     ).toBeInTheDocument();
@@ -150,11 +147,24 @@ describe('EmergencyInfoPage', () => {
     // Code Status stays always-visible (a plain section, not an accordion).
     expect(screen.getByRole('heading', { level: 2, name: 'Code Status' })).toBeInTheDocument();
 
-    // Section contents. Blood type and the primary contact name also appear in
-    // the at-a-glance tiles, so scope these to their sections to stay precise.
-    const medicalSection = screen.getByRole('region', { name: 'Medical Information' });
-    expect(within(medicalSection).getByText('O+')).toBeInTheDocument();
-    expect(within(medicalSection).getByText('Penicillin')).toBeInTheDocument();
+    // Round 7 merge: the Medical Information section is gone — its facts all
+    // live in the at-a-glance tiles now.
+    expect(
+      screen.queryByRole('heading', { level: 2, name: 'Medical Information' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Medical Information' })).not.toBeInTheDocument();
+    const glance = screen.getByRole('region', { name: 'At a glance' });
+    expect(within(glance).getByText('Hypertension')).toBeInTheDocument();
+
+    // Each fact appears exactly once on the page: blood type, allergies, AND
+    // conditions all in the glance tiles. (RecipientHeader renders its own
+    // conditions as one combined string, so the exact-match query for the pill
+    // text 'Hypertension' cannot collide with it.)
+    expect(screen.getAllByText('O+')).toHaveLength(1);
+    expect(screen.getAllByText('Penicillin')).toHaveLength(1);
+    expect(screen.getAllByText('Peanuts')).toHaveLength(1);
+    expect(screen.getAllByText('Hypertension')).toHaveLength(1);
+
     const contactsSection = screen.getByRole('region', { name: 'Emergency Contacts' });
     expect(within(contactsSection).getByText('Sarah')).toBeInTheDocument();
     expect(screen.getByText('Dr. Chen')).toBeInTheDocument();
@@ -207,14 +217,20 @@ describe('EmergencyInfoPage', () => {
 
     const glance = await screen.findByRole('region', { name: 'At a glance' });
     expect(glance).toBeInTheDocument();
-    // Blood type, allergies, conditions, and primary contact tiles all present.
+    // Blood type, allergies, and primary contact tiles all present.
     expect(within(glance).getByText('Blood Type')).toBeInTheDocument();
     expect(within(glance).getByText('O+')).toBeInTheDocument();
-    expect(within(glance).getByText('Allergies')).toBeInTheDocument();
-    // Medication + other allergies are merged in the allergies tile.
-    expect(within(glance).getByText('Penicillin, Peanuts')).toBeInTheDocument();
+    // Allergies split into two labeled tiles: medication vs other.
+    expect(within(glance).getByText('Medication Allergies')).toBeInTheDocument();
+    expect(within(glance).getByText('Other Allergies')).toBeInTheDocument();
+    expect(within(glance).getByText('Penicillin')).toBeInTheDocument();
+    expect(within(glance).getByText('Peanuts')).toBeInTheDocument();
     expect(within(glance).getByText('Emergency Contact')).toBeInTheDocument();
     expect(within(glance).getByText('Sarah')).toBeInTheDocument();
+    // Round 7: conditions returned to the glance tiles (Medical Info section
+    // removed).
+    expect(within(glance).getByText('Conditions')).toBeInTheDocument();
+    expect(within(glance).getByText('Hypertension')).toBeInTheDocument();
   });
 
   it('omits at-a-glance tiles whose data is absent', async () => {
@@ -233,6 +249,27 @@ describe('EmergencyInfoPage', () => {
     expect(within(glance).getByText('Emergency Contact')).toBeInTheDocument();
     expect(within(glance).queryByText('Blood Type')).not.toBeInTheDocument();
     expect(within(glance).queryByText('Allergies')).not.toBeInTheDocument();
+    expect(within(glance).queryByText('Conditions')).not.toBeInTheDocument();
+  });
+
+  it('renders no conditions tile when conditions are empty; the page stays intact', async () => {
+    // Blood type + allergies present but NO conditions: their tiles render,
+    // there is no conditions tile, and no Medical Information section exists
+    // anywhere (Round 7 merge).
+    mockApi({ ...fullInfo, medical_conditions: [] });
+    renderPage();
+
+    const glance = await screen.findByRole('region', { name: 'At a glance' });
+    expect(within(glance).getByText('O+')).toBeInTheDocument();
+    expect(within(glance).getByText('Penicillin')).toBeInTheDocument();
+    expect(within(glance).queryByText('Conditions')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { level: 2, name: 'Medical Information' })
+    ).not.toBeInTheDocument();
+
+    // The rest of the page is unaffected.
+    expect(screen.getByText('Dr. Chen')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Code Status' })).toBeInTheDocument();
   });
 
   it('shows per-section empty states when only some sections have data', async () => {
@@ -252,12 +289,7 @@ describe('EmergencyInfoPage', () => {
     // Doctors section still has data
     expect(await screen.findByText('Dr. Chen')).toBeInTheDocument();
 
-    // The other four sections show their (purpose-driven) empty states
-    expect(
-      screen.getByText(
-        'Add blood type, allergies, and conditions so first responders know your loved one in seconds.'
-      )
-    ).toBeInTheDocument();
+    // The other three sections show their (purpose-driven) empty states
     expect(
       screen.getByText('Add the people to call first in an emergency so no one is left guessing.')
     ).toBeInTheDocument();
@@ -301,14 +333,13 @@ describe('EmergencyInfoPage', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'On this page' });
     expect(nav).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Medical Information' })).toHaveAttribute(
-      'href',
-      '#medical-info'
-    );
+    expect(screen.getByRole('link', { name: 'Doctors' })).toHaveAttribute('href', '#doctors');
     expect(screen.getByRole('link', { name: 'Code Status' })).toHaveAttribute(
       'href',
       '#directives'
     );
+    // Round 7: no Medical Information section, so no nav anchor for it.
+    expect(screen.queryByRole('link', { name: 'Medical Information' })).not.toBeInTheDocument();
   });
 
   it('shows the error state with a retry button when the request fails', async () => {
@@ -336,6 +367,9 @@ describe('EmergencyInfoPage', () => {
     expect(screen.queryByRole('button', { name: 'Add doctor' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add contact' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add insurance' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Edit medical information' })
+    ).not.toBeInTheDocument();
     // Read-only notice present instead.
     expect(screen.getByText('This page is read-only.')).toBeInTheDocument();
   });
@@ -347,7 +381,42 @@ describe('EmergencyInfoPage', () => {
     expect(await screen.findByRole('button', { name: 'Add doctor' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add contact' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add insurance' })).toBeInTheDocument();
+    // Round 7: the medical edit affordance lives in the at-a-glance header area.
+    expect(screen.getByRole('button', { name: 'Edit medical information' })).toBeInTheDocument();
     expect(screen.queryByText('This page is read-only.')).not.toBeInTheDocument();
+  });
+
+  it('opens the Edit Medical Info modal from the at-a-glance edit control', async () => {
+    mockApi(fullInfo, true);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit medical information' }));
+
+    // The same { kind: 'medical' } modal the removed section used to open.
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Medical information')).toBeInTheDocument();
+    expect(within(dialog).getByText('Blood type')).toBeInTheDocument();
+  });
+
+  it('keeps the medical edit control reachable when conditions (and tiles) are empty', async () => {
+    // No glance data at all → GlanceTiles renders nothing, but the edit
+    // affordance must still exist as the add path for medical facts.
+    mockApi(
+      {
+        ...fullInfo,
+        blood_type: null,
+        allergies: null,
+        medication_allergies: null,
+        medical_conditions: [],
+        emergency_contacts: null,
+      },
+      true
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit medical information' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Medical information')).toBeInTheDocument();
   });
 
   it('adds a doctor via the modal, sending a partial additional_doctors PUT', async () => {
@@ -368,6 +437,62 @@ describe('EmergencyInfoPage', () => {
     // Existing Dr. Patel preserved, Dr. Lee appended.
     expect(body.additional_doctors).toHaveLength(2);
     expect(body.additional_doctors?.[1].name).toBe('Dr. Lee');
+  });
+
+  // WA1 regression test — this is the case that shipped broken: GET resolves
+  // `emergency_info: null` (no row for this circle yet, PGRST116), the page
+  // settles (not loading, not errored) and falls through to the sectioned
+  // view because canEdit is true. Before the fix, EmergencyInfoPage passed
+  // `info ?? null` straight to the modal, whose own `if (!props.info) return
+  // null` guard then rendered NOTHING — Add contact was a silent no-op with
+  // no visible dialog and no way to ever create the first record on web.
+  it('loaded-but-empty circle: Add contact opens the dialog and saves (WA1)', async () => {
+    mockApi(null, true);
+    mockedPut.mockResolvedValue({
+      success: true,
+      data: {
+        emergency_info: {
+          id: 'ei-new',
+          circle_id: CIRCLE_ID,
+          insurance_plans: [],
+          additional_doctors: [],
+          allergies: [],
+          medication_allergies: [],
+          medical_conditions: [],
+          emergency_contacts: [
+            { name: 'Jamie', relationship: 'Son', phone: '555-0199', is_primary: false },
+          ],
+          created_at: '2026-08-10T00:00:00.000Z',
+          updated_at: '2026-08-10T00:00:00.000Z',
+        },
+      },
+    });
+    renderPage();
+
+    // The empty-but-editable circle still renders the sectioned view (not the
+    // fully-empty CTA card) because canEdit is true.
+    const addContactButton = await screen.findByRole('button', { name: 'Add contact' });
+    fireEvent.click(addContactButton);
+
+    // The dialog must actually open — this is what failed before the fix.
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Add emergency contact')).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText(/^Name/), { target: { value: 'Jamie' } });
+    fireEvent.change(within(dialog).getByLabelText(/^Relationship/), {
+      target: { value: 'Son' },
+    });
+    fireEvent.change(within(dialog).getByLabelText(/^Phone/), {
+      target: { value: '555-0199' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockedPut).toHaveBeenCalledTimes(1));
+    expect(mockedPut.mock.calls[0][0]).toBe(`/circles/${CIRCLE_ID}/emergency-info`);
+    const body = lastPutBody();
+    expect(body.emergency_contacts).toEqual([
+      { name: 'Jamie', relationship: 'Son', phone: '555-0199', is_primary: false },
+    ]);
   });
 
   it('deletes an additional doctor via confirm, sending the filtered array', async () => {

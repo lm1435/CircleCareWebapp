@@ -34,6 +34,14 @@ vi.mock('@/hooks/useCircle', () => ({
   useCircle: (circleId: string) => mockUseCircle(circleId),
 }));
 
+// The recorded-at label renders in the VIEWER's hour cycle. Pin it here (the
+// real hook reads the shared currentUser query) so the assertions below never
+// depend on the runner's locale or the dev machine's clock.
+const mockUseHourCycle = vi.fn();
+vi.mock('@/hooks/useHourCycle', () => ({
+  useHourCycle: () => mockUseHourCycle(),
+}));
+
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();
@@ -100,6 +108,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUseHourCycle.mockReturnValue('12h');
   mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/New_York' });
   mockUseVitals.mockReturnValue(
     vitalsResult([
@@ -112,6 +121,19 @@ describe('VitalsPage', () => {
   it('renders a reading in the user display units', () => {
     renderPage();
     expect(screen.getByText('72 bpm')).toBeInTheDocument();
+  });
+
+  // recorded_at 2026-06-15T16:00:00Z is 12:00 in America/New_York (EDT).
+  it('renders the recorded time in the viewer 12-hour cycle', () => {
+    renderPage();
+    expect(screen.getByText(/12:00 PM/)).toBeInTheDocument();
+  });
+
+  it('renders the recorded time in the viewer 24-hour cycle', () => {
+    mockUseHourCycle.mockReturnValue('24h');
+    renderPage();
+    expect(screen.getByText(/12:00(?!\s*[AP]M)/)).toBeInTheDocument();
+    expect(screen.queryByText(/PM/)).not.toBeInTheDocument();
   });
 
   it('shows edit + delete for readings when canEdit', () => {

@@ -29,7 +29,11 @@ export function useLookupInviteByCode(): UseMutationResult<InviteByCode, unknown
 
 /**
  * POST /invites/code/:code/accept — join the circle. On success, invalidate the
- * circle list so the picker reflects the new membership right away.
+ * circle list so the picker reflects the new membership right away, AND the
+ * pending-invites list (WB5: matches useAcceptInvite's by-id invalidation) —
+ * accepting by code can resolve the SAME invite that shows up in
+ * `/invites/pending` (e.g. the visitor typed the code instead of tapping the
+ * emailed link), which would otherwise keep showing a now-stale "Accept" row.
  */
 export function useAcceptInviteByCode(): UseMutationResult<void, unknown, string> {
   const queryClient = useQueryClient();
@@ -37,6 +41,7 @@ export function useAcceptInviteByCode(): UseMutationResult<void, unknown, string
   return useMutation({
     mutationFn: (code: string) => acceptInviteByCode(code),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invitesPending });
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     },
   });

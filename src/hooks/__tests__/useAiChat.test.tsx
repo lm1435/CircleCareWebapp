@@ -45,7 +45,7 @@ describe('useAiChat — request body', () => {
     mockSend.mockResolvedValue(makeResponse());
 
     const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
-    act(() => result.current.mutation.mutate('first question'));
+    act(() => result.current.mutation.mutate({ message: 'first question' }));
 
     await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
     expect(mockSend).toHaveBeenCalledWith(CIRCLE_ID, {
@@ -64,7 +64,7 @@ describe('useAiChat — request body', () => {
     mockSend.mockResolvedValue(makeResponse());
 
     const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
-    act(() => result.current.mutation.mutate('q'));
+    act(() => result.current.mutation.mutate({ message: 'q' }));
 
     await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
     expect(mockSend.mock.calls[0][1].language).toBe('en');
@@ -76,7 +76,7 @@ describe('useAiChat — request body', () => {
     mockSend.mockResolvedValue(makeResponse());
 
     const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
-    act(() => result.current.mutation.mutate('q'));
+    act(() => result.current.mutation.mutate({ message: 'q' }));
 
     await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
     expect(mockSend.mock.calls[0][1].language).toBe('es');
@@ -88,11 +88,11 @@ describe('useAiChat — request body', () => {
 
     const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
 
-    act(() => result.current.mutation.mutate('q1'));
+    act(() => result.current.mutation.mutate({ message: 'q1' }));
     await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
 
     mockSend.mockResolvedValue(makeResponse({ conversation_id: 'conv-42' }));
-    act(() => result.current.mutation.mutate('q2'));
+    act(() => result.current.mutation.mutate({ message: 'q2' }));
     await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(2));
 
     expect(mockSend.mock.calls[1][1].conversation_id).toBe('conv-42');
@@ -104,13 +104,13 @@ describe('useAiChat — request body', () => {
 
     const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
 
-    act(() => result.current.mutation.mutate('q1'));
+    act(() => result.current.mutation.mutate({ message: 'q1' }));
     await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
 
     act(() => result.current.resetConversation());
 
     mockSend.mockResolvedValue(makeResponse());
-    act(() => result.current.mutation.mutate('q2'));
+    act(() => result.current.mutation.mutate({ message: 'q2' }));
     await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(2));
 
     expect(mockSend.mock.calls[1][1].conversation_id).toBeUndefined();

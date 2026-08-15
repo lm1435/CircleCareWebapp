@@ -42,6 +42,14 @@ vi.mock('@/api/emergencyInfo', () => ({
   getEmergencyInfo: vi.fn().mockResolvedValue(null),
 }));
 
+// The viewer's 12h/24h clock. Pin it here (the real hook reads the shared
+// currentUser query) so every time label below is deterministic instead of
+// depending on the runner's navigator.language.
+const mockUseHourCycle = vi.fn();
+vi.mock('@/hooks/useHourCycle', () => ({
+  useHourCycle: () => mockUseHourCycle(),
+}));
+
 import { getCircleDetail as getMembersCircleDetail } from '@/api/circleMembers';
 import { getCircles } from '@/api/circles';
 
@@ -177,6 +185,7 @@ const MEMBERS_DETAIL = {
 };
 
 beforeEach(() => {
+  mockUseHourCycle.mockReturnValue('12h');
   mockGetEvents.mockReset();
   mockGetCircleDetail.mockReset();
   mockGetMembersCircleDetail.mockReset();
@@ -383,5 +392,34 @@ describe('CalendarPage', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: /Metformin/ })).toBeInTheDocument();
     expect(within(dialog).getByText('Taken at 8:05 AM')).toBeInTheDocument();
+  });
+
+  // The point of the device-aware clock: a 24h viewer must see 24-hour times on
+  // EVERY calendar surface. This walks week chip → detail modal → month panel
+  // so an un-wired surface fails here rather than shipping silently in 12h.
+  it('renders the week chip, detail modal, and month panel in 24-hour time', async () => {
+    mockUseHourCycle.mockReturnValue('24h');
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    // WeekView chip → formatEventTimeCompact
+    const trigger = screen.getByRole('button', { name: /Vitamin D, Medication, 20:00 CT/ });
+    expect(screen.queryByRole('button', { name: /8:00 PM CT/ })).not.toBeInTheDocument();
+
+    // EventDetailModal → formatEventTimeForDisplay (dual: Chicago + New_York)
+    await user.click(trigger);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('20:00 CT / 21:00 ET')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    // MonthView side panel → formatEventTimeCompact
+    await user.click(screen.getByRole('button', { name: 'Month' }));
+    await screen.findByRole('grid', { name: 'Month view calendar' });
+    await user.click(screen.getByRole('button', { name: 'Friday, June 12, 4 events' }));
+    const panel = screen.getByRole('complementary', { name: 'Events for the selected day' });
+    expect(
+      within(panel).getByRole('button', { name: /Metformin, Medication, 08:00 CT/ })
+    ).toBeInTheDocument();
   });
 });

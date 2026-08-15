@@ -4,11 +4,23 @@ import { join } from 'node:path';
 import { test, expect, uniqueLabel } from '../fixtures';
 
 // Documents write flow: upload a document (unique Name + a real temp .pdf file)
-// → verify it appears in the list → rename it via the edit modal and verify →
-// delete it (cleanup) and verify it's gone. A run-unique Name keeps parallel/
-// repeat runs from colliding, and the delete is the cleanup. The uploaded
-// payload is a minimal PHI-free PDF (only jpg/jpeg/png/heic/pdf are accepted);
-// the temp file is removed in `finally`.
+// → verify it appears in the list → preview it → rename it via the edit modal
+// and verify → delete it (cleanup) and verify it's gone. A run-unique Name keeps
+// parallel/repeat runs from colliding, and the delete is the cleanup. The
+// uploaded payload is a minimal PHI-free PDF (only jpg/jpeg/png/heic/pdf are
+// accepted); the temp file is removed in `finally`.
+//
+// PREVIEW REGRESSION GUARD — see the preview step below. PDF previews shipped
+// broken in production: the frame carried a `sandbox` attribute, and Chrome
+// refuses to run its built-in PDF viewer in ANY sandboxed frame (the attribute's
+// presence is the trigger, not its tokens), so every user got "This page has
+// been blocked by Chrome" instead of their document. What that failure looks
+// like from the outside is an ordinary-looking <iframe> whose contents are a
+// Chrome error page — the DOM says nothing is wrong. So this step asserts the
+// frame's CONTRACT (no sandbox attribute; the viewer parameters we depend on),
+// which is exactly what regressed. Note the limitation: Playwright cannot see
+// inside Chrome's PDF viewer, so "pixels actually appeared" is not asserted here
+// and stays a manual check.
 
 // Smallest valid one-page PDF — PHI-free placeholder bytes.
 const MINIMAL_PDF =
@@ -51,6 +63,36 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
     await expect(uploadDialog).toBeHidden({ timeout: 30_000 });
     const row = page.getByText(rx(name), { exact: false });
     await expect(row.first()).toBeVisible({ timeout: 30_000 });
+
+    // --- Preview (regression guard, see header) ---
+    await page.getByRole('button', { name: rx(`Preview ${name}`) }).click();
+    const previewDialog = page.getByRole('dialog');
+    await expect(previewDialog).toBeVisible();
+
+    const frame = previewDialog.locator('iframe');
+    await expect(frame).toBeVisible({ timeout: 20_000 });
+
+    // A `sandbox` attribute of ANY value makes Chrome blank the PDF viewer.
+    // There is no "minimal safe sandbox" to allow here — assert its absence.
+    await expect(frame).not.toHaveAttribute('sandbox', /.*/);
+
+    // The frame points at the signed Storage URL and carries the viewer
+    // parameters that collapse Chrome's left-hand thumbnail rail.
+    const frameSrc = await frame.getAttribute('src');
+    expect(frameSrc, 'preview frame has no src').toBeTruthy();
+    expect(frameSrc).toContain('/storage/v1/object/sign/');
+    expect(frameSrc).toContain('#navpanes=0');
+
+    // The fragment is a VIEWER-only concern: the new-tab escape hatch must stay
+    // the bare signed URL so it opens the file, not a parameterised view.
+    const newTabHref = await previewDialog
+      .getByRole('link', { name: 'Open in new tab' })
+      .getAttribute('href');
+    expect(newTabHref).not.toContain('#');
+    expect(frameSrc).toBe(`${newTabHref}#navpanes=0`);
+
+    await previewDialog.getByRole('button', { name: 'Close preview' }).click();
+    await expect(previewDialog).toBeHidden({ timeout: 10_000 });
 
     // --- Rename ---
     await page.getByRole('button', { name: rx(`Edit ${name}`) }).click();

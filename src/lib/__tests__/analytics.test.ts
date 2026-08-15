@@ -14,14 +14,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const capture = vi.fn();
 const identify = vi.fn();
 const reset = vi.fn();
+const init = vi.fn();
+const register = vi.fn();
+const captureExceptionSpy = vi.fn();
 
 vi.mock('posthog-js', () => ({
   default: {
-    init: vi.fn(),
-    register: vi.fn(),
+    init,
+    register,
     capture,
     identify,
     reset,
+    captureException: captureExceptionSpy,
   },
 }));
 
@@ -38,13 +42,20 @@ async function loadWithKey(key: string | undefined) {
   }));
   const analytics = await import('@/lib/analytics');
   const posthog = await import('@/lib/posthog');
-  return { Analytics: analytics.Analytics, ...posthog };
+  return {
+    Analytics: analytics.Analytics,
+    sanitizeErrorText: analytics.sanitizeErrorText,
+    ...posthog,
+  };
 }
 
 beforeEach(() => {
   capture.mockClear();
   identify.mockClear();
   reset.mockClear();
+  init.mockClear();
+  register.mockClear();
+  captureExceptionSpy.mockClear();
 });
 
 afterEach(() => {
@@ -57,6 +68,8 @@ describe('analytics wrapper — optional / no-op path', () => {
     Analytics.circleCreated(true);
     Analytics.medicationConfirmed('c1', 'taken');
     Analytics.logout();
+    Analytics.onboardingStarted();
+    Analytics.onboardingFlowCompleted('created');
     expect(capture).not.toHaveBeenCalled();
   });
 
@@ -133,10 +146,77 @@ describe('analytics wrapper — active path (key set)', () => {
     });
   });
 
-  it('ai_chat_message_sent carries ONLY circle_id (never message text)', async () => {
+  it('ai_chat_message_sent carries no message text — only a length', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
-    Analytics.aiChatMessageSent('circle-123');
-    expect(capture).toHaveBeenCalledWith('ai_chat_message_sent', { circle_id: 'circle-123' });
+    Analytics.aiChatMessageSent('circle-123', { turnIndex: 0, messageLength: 27 });
+    expect(capture).toHaveBeenCalledWith('ai_chat_message_sent', {
+      circle_id: 'circle-123',
+      turn_index: 0,
+      message_length: 27,
+      used_suggestion: false,
+    });
+  });
+
+  it('ai_chat_message_sent flags a tapped suggestion chip (mobile parity)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.aiChatMessageSent('circle-123', {
+      turnIndex: 0,
+      messageLength: 27,
+      usedSuggestion: true,
+    });
+    expect(capture).toHaveBeenCalledWith(
+      'ai_chat_message_sent',
+      expect.objectContaining({ used_suggestion: true })
+    );
+  });
+
+  it('ai_chat_response_received carries the classified intent', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.aiChatResponseReceived('circle-123', {
+      intent: 'GET_ADHERENCE',
+      latencyMs: 640,
+      turnIndex: 1,
+    });
+    expect(capture).toHaveBeenCalledWith('ai_chat_response_received', {
+      circle_id: 'circle-123',
+      intent: 'GET_ADHERENCE',
+      latency_ms: 640,
+      turn_index: 1,
+    });
+  });
+
+  it('ai_chat_failed separates rate limits from other errors', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.aiChatFailed('circle-123', {
+      reason: 'rateLimited',
+      latencyMs: 90,
+      turnIndex: 0,
+    });
+    expect(capture).toHaveBeenCalledWith('ai_chat_failed', {
+      circle_id: 'circle-123',
+      reason: 'rateLimited',
+      latency_ms: 90,
+      turn_index: 0,
+    });
+  });
+
+  it('onboarding_started carries no properties (count-only funnel event)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.onboardingStarted();
+    expect(capture).toHaveBeenCalledWith('onboarding_started', undefined);
+  });
+
+  it('onboarding_flow_completed carries the path enum + $set_once onboarded_at ISO string', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.onboardingFlowCompleted('joined');
+    expect(capture).toHaveBeenCalledTimes(1);
+    const [event, props] = capture.mock.calls[0] as [string, Record<string, unknown>];
+    expect(event).toBe('onboarding_flow_completed');
+    expect(props.path).toBe('joined');
+    const setOnce = props.$set_once as { onboarded_at: string };
+    expect(setOnce.onboarded_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    // Sanity: parses back to a valid recent date.
+    expect(Number.isNaN(Date.parse(setOnce.onboarded_at))).toBe(false);
   });
 
   it('calendar_viewed carries circle_id + view enum', async () => {
@@ -146,6 +226,181 @@ describe('analytics wrapper — active path (key set)', () => {
       circle_id: 'circle-123',
       view: 'week',
     });
+  });
+});
+
+describe('initAnalytics — privacy super properties', () => {
+  it('registers $ip: null alongside platform/app_env so no IP or GeoIP is captured', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test_key');
+    initAnalytics();
+    expect(register).toHaveBeenCalledTimes(1);
+    const props = register.mock.calls[0][0] as Record<string, unknown>;
+    // `$ip: null` must be PRESENT and null — `undefined` or a missing key would
+    // let PostHog fall back to the request IP (and GeoIP-enrich from it).
+    expect(props).toHaveProperty('$ip', null);
+    expect(props.platform).toBe('web');
+    expect(props.app_env).toMatch(/^(development|production)$/);
+  });
+
+  it('does not init or register when VITE_POSTHOG_KEY is unset', async () => {
+    const { initAnalytics } = await loadWithKey(undefined);
+    initAnalytics();
+    expect(init).not.toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled();
+  });
+});
+
+describe('sanitizeErrorText', () => {
+  it('leaves stable backend error codes untouched', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    expect(sanitizeErrorText('SUBSCRIPTION_REQUIRED')).toBe('SUBSCRIPTION_REQUIRED');
+    expect(sanitizeErrorText('Invalid login credentials')).toBe('Invalid login credentials');
+  });
+
+  it('redacts email addresses', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    expect(sanitizeErrorText('Signup failed for pat.doe+care@example.co.uk')).toBe(
+      'Signup failed for [email]'
+    );
+  });
+
+  it('redacts JWT-shaped tokens', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    const jwt =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N';
+    const out = sanitizeErrorText(`Auth error: ${jwt} rejected`);
+    expect(out).toBe('Auth error: [token] rejected');
+    expect(out).not.toContain('eyJ');
+  });
+
+  it('redacts long opaque tokens but keeps UUID-length ids', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    const apiKey = 'sbp_0123456789abcdef0123456789abcdef01234567';
+    expect(sanitizeErrorText(`bad key ${apiKey}`)).toBe('bad key [token]');
+    // circle/event ids are already sent as event props — they must survive.
+    const uuid = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
+    expect(sanitizeErrorText(`circle ${uuid} missing`)).toBe(`circle ${uuid} missing`);
+  });
+
+  it('strips query strings and fragments from URL-looking substrings', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    const out = sanitizeErrorText(
+      'Failed to fetch https://my.circlecare.app/auth/callback?code=abc123&email=pat@example.com'
+    );
+    expect(out).toBe('Failed to fetch https://my.circlecare.app/auth/callback');
+    expect(out).not.toContain('pat@example.com');
+    expect(out).not.toContain('code=');
+  });
+
+  it('strips query strings from absolute paths but not from prose containing a slash', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    expect(sanitizeErrorText('404 on /invite/ABC123?email=pat@example.com')).toBe(
+      '404 on /invite/ABC123'
+    );
+    expect(sanitizeErrorText('retry and/or contact support?')).toBe(
+      'retry and/or contact support?'
+    );
+  });
+
+  it('collapses whitespace and trims', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    expect(sanitizeErrorText('  network \n\n  timeout \t after 30s  ')).toBe(
+      'network timeout after 30s'
+    );
+  });
+
+  it('truncates to 200 characters', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    const long = Array.from({ length: 80 }, (_, i) => `err${i}`).join(' ');
+    expect(long.length).toBeGreaterThan(200);
+    const out = sanitizeErrorText(long);
+    expect(out).toHaveLength(200);
+    expect(out.startsWith('err0 err1 err2')).toBe(true);
+  });
+
+  it('is null/undefined-safe and never throws on odd input', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    const odd = [undefined, null, 123, {}, [], true, NaN] as unknown as string[];
+    for (const value of odd) {
+      expect(() => sanitizeErrorText(value)).not.toThrow();
+      expect(sanitizeErrorText(value)).toBe('');
+    }
+    expect(sanitizeErrorText('')).toBe('');
+  });
+});
+
+describe('failure helpers sanitize their free-text error property', () => {
+  it('signup_failed / login_failed capture the SANITIZED string', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.signupFailed('email', 'duplicate for pat@example.com');
+    expect(capture).toHaveBeenCalledWith('signup_failed', {
+      method: 'email',
+      error: 'duplicate for [email]',
+    });
+
+    capture.mockClear();
+    Analytics.loginFailed('google', 'callback https://my.circlecare.app/cb?access_token=xyz');
+    expect(capture).toHaveBeenCalledWith('login_failed', {
+      method: 'google',
+      error: 'callback https://my.circlecare.app/cb',
+    });
+  });
+
+  it('circle_creation_failed / invite_failed also sanitize', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.circleCreationFailed('  BAD_REQUEST \n for pat@example.com ');
+    expect(capture).toHaveBeenCalledWith('circle_creation_failed', {
+      error: 'BAD_REQUEST for [email]',
+    });
+
+    capture.mockClear();
+    Analytics.inviteFailed('circle-123', 'already invited pat@example.com');
+    expect(capture).toHaveBeenCalledWith('invite_failed', {
+      circle_id: 'circle-123',
+      error: 'already invited [email]',
+    });
+  });
+});
+
+describe('captureException', () => {
+  it('no-ops when VITE_POSTHOG_KEY is unset', async () => {
+    const { captureException } = await loadWithKey(undefined);
+    captureException(new Error('boom'), 'app');
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
+  });
+
+  it('forwards the ORIGINAL error object when the message needs no redaction', async () => {
+    const { captureException } = await loadWithKey('phc_test_key');
+    const error = new Error('Cannot read properties of undefined');
+    captureException(error, 'app');
+    expect(captureExceptionSpy).toHaveBeenCalledWith(error, {
+      boundary: 'app',
+      platform: 'web',
+    });
+  });
+
+  it('sanitizes the message (and the stack header) without mutating the original', async () => {
+    const { captureException } = await loadWithKey('phc_test_key');
+    const error = new TypeError('Failed to fetch /api/invites?email=pat@example.com');
+    captureException(error, 'route');
+
+    const [sent, props] = captureExceptionSpy.mock.calls[0] as [Error, Record<string, unknown>];
+    expect(props).toEqual({ boundary: 'route', platform: 'web' });
+    expect(sent).not.toBe(error);
+    expect(sent.message).toBe('Failed to fetch /api/invites');
+    // Name is preserved so the admin digest can still identify the error.
+    expect(sent.name).toBe('TypeError');
+    expect(sent.stack).toBeDefined();
+    expect(sent.stack).not.toContain('pat@example.com');
+    // The caller's error is untouched (ErrorBoundary still logs it in DEV).
+    expect(error.message).toBe('Failed to fetch /api/invites?email=pat@example.com');
+  });
+
+  it('never throws on an exotic error-like value', async () => {
+    const { captureException } = await loadWithKey('phc_test_key');
+    const weird = { name: 'Weird' } as unknown as Error;
+    expect(() => captureException(weird, 'app')).not.toThrow();
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
   });
 });
 

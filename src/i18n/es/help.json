@@ -84,6 +84,10 @@
         {
           "question": "¿Cómo restauro mis compras?",
           "answer": "En la app móvil de CircleCare, ve a Perfil > Suscripción > Restaurar compras. Es útil si reinstalas la app o cambias de teléfono. Si te suscribiste aquí en la web, tu suscripción se aplica automáticamente a tu cuenta."
+        },
+        {
+          "question": "¿Cómo cancelo mi suscripción?",
+          "answer": "Abre tu Perfil y elige Administrar suscripción: si te suscribiste en este sitio web, eso te lleva directamente a tu portal de facturación, donde puedes cancelar en un par de clics. Si te suscribiste en la app móvil, cancela desde tu teléfono: Configuración > Suscripciones en iPhone, o Play Store > Pagos y suscripciones en Android. En ambos casos conservas Premium hasta el final del período que ya pagaste, y nunca necesitas contactar a soporte para cancelar."
         }
       ]
     }

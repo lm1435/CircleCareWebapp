@@ -22,6 +22,7 @@ import {
   getDeviceTimezone,
   getTimezoneAbbreviation,
   getTimezoneLabel,
+  formatTimeOfDay,
   formatTimeDisplay,
   formatTimeWithTimezone,
   formatDualTimezoneDisplay,
@@ -32,6 +33,7 @@ import {
   getTimezoneOffsetMinutes,
   convertDateToRecipientTimezone,
   syncDeviceTimezone,
+  normalizeTimeOfDay,
 } from '../../utils/timezone';
 
 // Pin the "device" timezone to America/New_York for deterministic tests
@@ -40,6 +42,54 @@ import {
 vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
   timeZone: 'America/New_York',
 } as Intl.ResolvedDateTimeFormatOptions);
+
+// ============================================================================
+// normalizeTimeOfDay
+// ============================================================================
+
+describe('normalizeTimeOfDay', () => {
+  it('strips seconds from Postgres TIME values', () => {
+    expect(normalizeTimeOfDay('22:00:00')).toBe('22:00');
+    expect(normalizeTimeOfDay('07:00:00')).toBe('07:00');
+    expect(normalizeTimeOfDay('23:59:59')).toBe('23:59');
+    expect(normalizeTimeOfDay('00:00:00')).toBe('00:00');
+  });
+
+  it('leaves already-canonical HH:MM untouched', () => {
+    expect(normalizeTimeOfDay('22:00')).toBe('22:00');
+    expect(normalizeTimeOfDay('07:30')).toBe('07:30');
+    expect(normalizeTimeOfDay('00:00')).toBe('00:00');
+  });
+
+  it('strips fractional seconds', () => {
+    expect(normalizeTimeOfDay('22:00:00.000')).toBe('22:00');
+    expect(normalizeTimeOfDay('08:15:30.123456')).toBe('08:15');
+  });
+
+  it('zero-pads a single-digit hour', () => {
+    expect(normalizeTimeOfDay('7:05:00')).toBe('07:05');
+    expect(normalizeTimeOfDay('9:30')).toBe('09:30');
+  });
+
+  it('tolerates surrounding whitespace', () => {
+    expect(normalizeTimeOfDay(' 22:00:00 ')).toBe('22:00');
+  });
+
+  it('passes nullish and empty values through untouched', () => {
+    expect(normalizeTimeOfDay(null)).toBeNull();
+    expect(normalizeTimeOfDay(undefined)).toBeUndefined();
+    expect(normalizeTimeOfDay('')).toBe('');
+  });
+
+  it('returns unrecognizable input as-is instead of throwing', () => {
+    expect(() => normalizeTimeOfDay('not a time')).not.toThrow();
+    expect(normalizeTimeOfDay('not a time')).toBe('not a time');
+    expect(normalizeTimeOfDay('22')).toBe('22');
+    expect(normalizeTimeOfDay('22:0')).toBe('22:0');
+    expect(normalizeTimeOfDay('10:00 PM')).toBe('10:00 PM');
+    expect(normalizeTimeOfDay('2026-08-09T22:00:00Z')).toBe('2026-08-09T22:00:00Z');
+  });
+});
 
 // ============================================================================
 // getDeviceTimezone
@@ -137,46 +187,81 @@ describe('getTimezoneLabel', () => {
 });
 
 // ============================================================================
+// formatTimeOfDay — THE renderer every display site delegates to.
+// The cycle is always passed EXPLICITLY here: these assertions must depend on
+// the argument, never on the test runner's locale or the dev machine's clock.
+// ============================================================================
+describe('formatTimeOfDay', () => {
+  it('renders the 12-hour cycle with AM/PM', () => {
+    expect(formatTimeOfDay(0, 0, '12h')).toBe('12:00 AM');
+    expect(formatTimeOfDay(9, 5, '12h')).toBe('9:05 AM');
+    expect(formatTimeOfDay(11, 59, '12h')).toBe('11:59 AM');
+    expect(formatTimeOfDay(12, 0, '12h')).toBe('12:00 PM');
+    expect(formatTimeOfDay(13, 0, '12h')).toBe('1:00 PM');
+    expect(formatTimeOfDay(23, 59, '12h')).toBe('11:59 PM');
+  });
+
+  it('renders the 24-hour cycle zero-padded, with no AM/PM', () => {
+    expect(formatTimeOfDay(0, 0, '24h')).toBe('00:00');
+    expect(formatTimeOfDay(9, 5, '24h')).toBe('09:05');
+    expect(formatTimeOfDay(12, 0, '24h')).toBe('12:00');
+    expect(formatTimeOfDay(13, 0, '24h')).toBe('13:00');
+    expect(formatTimeOfDay(23, 59, '24h')).toBe('23:59');
+    expect(formatTimeOfDay(14, 30, '24h')).not.toMatch(/[AP]M/);
+  });
+});
+
+// ============================================================================
 // formatTimeDisplay
 // ============================================================================
 describe('formatTimeDisplay', () => {
   // Positive tests
   it('should format midnight correctly', () => {
-    expect(formatTimeDisplay(0, 0)).toBe('12:00 AM');
+    expect(formatTimeDisplay(0, 0, '12h')).toBe('12:00 AM');
   });
 
   it('should format noon correctly', () => {
-    expect(formatTimeDisplay(12, 0)).toBe('12:00 PM');
+    expect(formatTimeDisplay(12, 0, '12h')).toBe('12:00 PM');
   });
 
   it('should format morning time correctly', () => {
-    expect(formatTimeDisplay(8, 30)).toBe('8:30 AM');
+    expect(formatTimeDisplay(8, 30, '12h')).toBe('8:30 AM');
   });
 
   it('should format evening time correctly', () => {
-    expect(formatTimeDisplay(20, 45)).toBe('8:45 PM');
+    expect(formatTimeDisplay(20, 45, '12h')).toBe('8:45 PM');
   });
 
   it('should format 1 PM correctly', () => {
-    expect(formatTimeDisplay(13, 0)).toBe('1:00 PM');
+    expect(formatTimeDisplay(13, 0, '12h')).toBe('1:00 PM');
   });
 
   it('should format 11 PM correctly', () => {
-    expect(formatTimeDisplay(23, 59)).toBe('11:59 PM');
+    expect(formatTimeDisplay(23, 59, '12h')).toBe('11:59 PM');
   });
 
   it('should pad single-digit minutes', () => {
-    expect(formatTimeDisplay(9, 5)).toBe('9:05 AM');
+    expect(formatTimeDisplay(9, 5, '12h')).toBe('9:05 AM');
   });
 
   // Edge cases
   it('should handle hour 0 as 12 AM', () => {
-    expect(formatTimeDisplay(0, 0)).toBe('12:00 AM');
+    expect(formatTimeDisplay(0, 0, '12h')).toBe('12:00 AM');
   });
 
   it('should handle 11:59 AM correctly', () => {
-    expect(formatTimeDisplay(11, 59)).toBe('11:59 AM');
+    expect(formatTimeDisplay(11, 59, '12h')).toBe('11:59 AM');
   });
+
+  it('renders HH:MM under a 24-hour cycle', () => {
+    expect(formatTimeDisplay(20, 45, '24h')).toBe('20:45');
+    expect(formatTimeDisplay(0, 0, '24h')).toBe('00:00');
+  });
+
+  // `cycle` is REQUIRED — there is deliberately no "defaults to 12h" test.
+  // The default was removed because it let every un-wired surface keep
+  // rendering 12-hour for 24-hour users while the feature looked shipped;
+  // `tsc` now rejects a call site that omits it (see utils/timezone.ts).
 });
 
 // ============================================================================
@@ -184,17 +269,22 @@ describe('formatTimeDisplay', () => {
 // ============================================================================
 describe('formatTimeWithTimezone', () => {
   it('should include timezone abbreviation', () => {
-    expect(formatTimeWithTimezone(14, 30, 'America/Denver')).toBe('2:30 PM MT');
+    expect(formatTimeWithTimezone(14, 30, 'America/Denver', '12h')).toBe('2:30 PM MT');
   });
 
   it('should format midnight with timezone', () => {
-    expect(formatTimeWithTimezone(0, 0, 'America/New_York')).toBe('12:00 AM ET');
+    expect(formatTimeWithTimezone(0, 0, 'America/New_York', '12h')).toBe('12:00 AM ET');
   });
 
   it('should handle unknown timezone gracefully', () => {
-    const result = formatTimeWithTimezone(8, 0, 'Europe/London');
+    const result = formatTimeWithTimezone(8, 0, 'Europe/London', '12h');
     expect(result).toBe('8:00 AM London');
   });
+
+  it('keeps the abbreviation under a 24-hour cycle', () => {
+    expect(formatTimeWithTimezone(14, 30, 'America/Denver', '24h')).toBe('14:30 MT');
+  });
+
 });
 
 // ============================================================================
@@ -202,13 +292,36 @@ describe('formatTimeWithTimezone', () => {
 // ============================================================================
 describe('formatDualTimezoneDisplay', () => {
   it('should show single time when timezones are the same', () => {
-    const result = formatDualTimezoneDisplay(14, 30, 'America/New_York', 'America/New_York');
+    const result = formatDualTimezoneDisplay(
+      14,
+      30,
+      'America/New_York',
+      'America/New_York',
+      '12h'
+    );
     expect(result).toBe('2:30 PM ET');
     expect(result).not.toContain('/');
   });
 
+  it('renders both halves in the 24-hour cycle', () => {
+    const result = formatDualTimezoneDisplay(
+      14,
+      30,
+      'America/New_York',
+      'America/New_York',
+      '24h'
+    );
+    expect(result).toBe('14:30 ET');
+  });
+
   it('should show dual times when timezones differ', () => {
-    const result = formatDualTimezoneDisplay(14, 30, 'America/New_York', 'America/Chicago');
+    const result = formatDualTimezoneDisplay(
+      14,
+      30,
+      'America/New_York',
+      'America/Chicago',
+      '12h'
+    );
     expect(result).toContain('/');
     expect(result).toContain('ET');
     expect(result).toContain('CT');
@@ -297,49 +410,87 @@ describe('getTimezoneOffsetMinutes', () => {
 describe('formatEventTimeForDisplay', () => {
   // Positive tests
   it('should format HH:MM time string correctly', () => {
-    const result = formatEventTimeForDisplay('14:30', 'America/New_York');
+    const result = formatEventTimeForDisplay('14:30', 'America/New_York', undefined, undefined, '12h');
     expect(result).toContain('2:30 PM');
     expect(result).toContain('ET');
   });
 
   it('should format HH:MM:SS time string correctly', () => {
-    const result = formatEventTimeForDisplay('08:00:00', 'America/Chicago');
+    const result = formatEventTimeForDisplay(
+      '08:00:00',
+      'America/Chicago',
+      undefined,
+      undefined,
+      '12h'
+    );
     expect(result).toContain('8:00 AM');
     expect(result).toContain('CT');
   });
 
+  it('formats both halves in the 24-hour cycle', () => {
+    const single = formatEventTimeForDisplay('14:30', 'America/New_York', false, undefined, '24h');
+    expect(single).toBe('14:30 ET');
+
+    const dual = formatEventTimeForDisplay('14:30', 'America/Chicago', true, undefined, '24h');
+    expect(dual).toContain('14:30 CT');
+    expect(dual).toContain('/');
+    expect(dual).not.toMatch(/[AP]M/);
+  });
+
   it('should show single timezone when viewer and recipient are in same timezone', () => {
     // Mock device timezone is America/New_York
-    const result = formatEventTimeForDisplay('14:30', 'America/New_York', false);
+    const result = formatEventTimeForDisplay(
+      '14:30',
+      'America/New_York',
+      false,
+      undefined,
+      '12h'
+    );
     expect(result).not.toContain('/');
   });
 
   it('should show dual timezone when forced', () => {
-    const result = formatEventTimeForDisplay('14:30', 'America/Chicago', true);
+    const result = formatEventTimeForDisplay('14:30', 'America/Chicago', true, undefined, '12h');
     expect(result).toContain('/');
   });
 
   // Negative tests
   it('should return original string for invalid time format', () => {
-    expect(formatEventTimeForDisplay('invalid', 'America/New_York')).toBe('invalid');
+    expect(
+      formatEventTimeForDisplay('invalid', 'America/New_York', undefined, undefined, '12h')
+    ).toBe('invalid');
   });
 
   it('should return original string for NaN hours', () => {
-    expect(formatEventTimeForDisplay('ab:cd', 'America/New_York')).toBe('ab:cd');
+    expect(
+      formatEventTimeForDisplay('ab:cd', 'America/New_York', undefined, undefined, '12h')
+    ).toBe('ab:cd');
   });
 
   it('should handle empty string gracefully', () => {
-    const result = formatEventTimeForDisplay('', 'America/New_York');
+    const result = formatEventTimeForDisplay('', 'America/New_York', undefined, undefined, '12h');
     expect(typeof result).toBe('string');
   });
 
   it('should handle midnight time', () => {
-    const result = formatEventTimeForDisplay('00:00', 'America/New_York');
+    const result = formatEventTimeForDisplay(
+      '00:00',
+      'America/New_York',
+      undefined,
+      undefined,
+      '12h'
+    );
     expect(result).toContain('12:00 AM');
   });
 
   it('should handle noon time', () => {
-    const result = formatEventTimeForDisplay('12:00', 'America/New_York');
+    const result = formatEventTimeForDisplay(
+      '12:00',
+      'America/New_York',
+      undefined,
+      undefined,
+      '12h'
+    );
     expect(result).toContain('12:00 PM');
   });
 });
@@ -350,24 +501,30 @@ describe('formatEventTimeForDisplay', () => {
 describe('formatEventTimeCompact', () => {
   // Positive tests
   it('should format time with timezone abbreviation', () => {
-    expect(formatEventTimeCompact('14:30', 'America/Denver')).toBe('2:30 PM MT');
+    expect(formatEventTimeCompact('14:30', 'America/Denver', '12h')).toBe('2:30 PM MT');
   });
 
   it('should format morning time', () => {
-    expect(formatEventTimeCompact('08:00', 'America/New_York')).toBe('8:00 AM ET');
+    expect(formatEventTimeCompact('08:00', 'America/New_York', '12h')).toBe('8:00 AM ET');
   });
 
   it('should format midnight', () => {
-    expect(formatEventTimeCompact('00:00', 'America/Chicago')).toBe('12:00 AM CT');
+    expect(formatEventTimeCompact('00:00', 'America/Chicago', '12h')).toBe('12:00 AM CT');
+  });
+
+  it('formats in the 24-hour cycle', () => {
+    expect(formatEventTimeCompact('14:30', 'America/Denver', '24h')).toBe('14:30 MT');
+    expect(formatEventTimeCompact('08:00', 'America/New_York', '24h')).toBe('08:00 ET');
+    expect(formatEventTimeCompact('00:00', 'America/Chicago', '24h')).toBe('00:00 CT');
   });
 
   // Negative tests
   it('should return original for invalid time', () => {
-    expect(formatEventTimeCompact('invalid', 'America/New_York')).toBe('invalid');
+    expect(formatEventTimeCompact('invalid', 'America/New_York', '12h')).toBe('invalid');
   });
 
   it('should return original for malformed time', () => {
-    expect(formatEventTimeCompact('xx:yy', 'America/New_York')).toBe('xx:yy');
+    expect(formatEventTimeCompact('xx:yy', 'America/New_York', '12h')).toBe('xx:yy');
   });
 });
 

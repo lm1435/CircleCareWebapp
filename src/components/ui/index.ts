@@ -9,6 +9,7 @@ export { Avatar, type AvatarProps, type AvatarSize } from './Avatar';
 export { EmptyState, type EmptyStateProps, type EmptyStateTone } from './EmptyState';
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Card, type CardProps } from './Card';
+export { SectionHeader, type SectionHeaderProps } from './SectionHeader';
 export { Badge, type BadgeProps, type BadgeVariant } from './Badge';
 export { Spinner, type SpinnerProps } from './Spinner';
 export { Skeleton, type SkeletonProps } from './Skeleton';
@@ -17,6 +18,8 @@ export { Modal, type ModalProps } from './Modal';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { TextField, type TextFieldProps } from './TextField';
 export { TextArea, type TextAreaProps } from './TextArea';
+export { TagInput, type TagInputProps } from './TagInput';
+export { ChipSelect, type ChipSelectProps, type ChipSelectOption } from './ChipSelect';
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { DateField, type DateFieldProps } from './DateField';
 export { TimeField, type TimeFieldProps } from './TimeField';
@@ -30,3 +33,14 @@ export {
   type FieldErrors,
   type UseZodFormResult,
 } from './useZodForm';
+export {
+  careCardSurface,
+  careCardSurfaceMuted,
+  careCardShell,
+  careCardNameRow,
+  careCardTitle,
+  careCardStatusPush,
+  careCardMeta,
+  careCardActions,
+  careCardListGap,
+} from './careCard';

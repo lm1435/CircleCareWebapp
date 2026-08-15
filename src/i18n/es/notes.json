@@ -1,0 +1,48 @@
+{
+  "title": "Notas",
+  "subtitle": "Un diario compartido de cómo estuvo cada día — visible para todos en el círculo.",
+  "loading": "Cargando notas",
+  "errorTitle": "No se pudieron cargar las notas",
+  "errorHint": "Revisa tu conexión e intenta de nuevo.",
+  "empty": {
+    "title": "Aún no hay notas",
+    "hint": "Anota cómo estuvo el día — todos en el círculo pueden verlo."
+  },
+  "composer": {
+    "label": "Agregar una nota",
+    "placeholder": "¿Cómo estuvo el día?",
+    "moodLabel": "Estado de ánimo",
+    "categoriesLabel": "Categorías",
+    "post": "Publicar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "errorPosting": "No se pudo publicar la nota. Tu texto sigue aquí — intenta de nuevo.",
+    "errorSaving": "No se pudo guardar la nota. Intenta de nuevo."
+  },
+  "moods": {
+    "great": "Excelente día",
+    "good": "Buen día",
+    "okay": "Regular",
+    "tough": "Día difícil"
+  },
+  "categories": {
+    "meal": "Comida",
+    "medication": "Medicamento",
+    "visit": "Visita",
+    "incident": "Incidente"
+  },
+  "row": {
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "edited": "Editada",
+    "formerMember": "Exmiembro"
+  },
+  "day": {
+    "today": "Hoy",
+    "yesterday": "Ayer"
+  },
+  "deleteTitle": "¿Eliminar nota?",
+  "deleteConfirm": "Esta nota se eliminará para todos en el círculo.",
+  "loadOlder": "Ver notas anteriores",
+  "postRequirementHint": "Escribe una nota o elige un estado de ánimo para publicar"
+}

@@ -64,7 +64,8 @@
   },
   "errors": {
     "permissionDenied": "No tienes permiso para hacer cambios en este círculo.",
-    "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo."
+    "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+    "doseAlreadyLogged": "Esta dosis ya fue registrada; su hora no se puede cambiar."
   },
   "addEvent": {
     "addEvent": "Agregar evento",
@@ -101,7 +102,8 @@
       "daysOn": "Días activos",
       "daysOff": "Días de descanso",
       "endDate": "Fecha de fin",
-      "assignedTo": "Asignado a"
+      "assignedTo": "Asignado a",
+      "duration": "Duración"
     },
     "placeholders": {
       "appointmentTitle": "ej. Chequeo con el Dr. Smith",
@@ -110,6 +112,36 @@
       "dosage": "ej. 500 mg",
       "location": "ej. Clínica de la calle Main",
       "notes": "Agrega cualquier detalle…"
+    },
+    "timePresets": {
+      "label": "Horarios comunes",
+      "morning": "Mañana (8:00 a.m.)",
+      "noon": "Mediodía (12:00 p.m.)",
+      "evening": "Tarde (6:00 p.m.)",
+      "bedtime": "Antes de dormir (9:00 p.m.)"
+    },
+    "schedulePresets": {
+      "label": "Frecuencias comunes",
+      "onceDaily": "Una vez al día (8:00 a.m.)",
+      "everyMorning": "Cada mañana (8:00 a.m.)",
+      "everyEvening": "Cada noche (8:00 p.m.)"
+    },
+    "titleSuggestions": {
+      "label": "Sugerencias de título",
+      "appointment": {
+        "doctorVisit": "Visita al doctor",
+        "labWork": "Análisis de laboratorio",
+        "followUp": "Consulta de seguimiento",
+        "dentist": "Dentista",
+        "eyeExam": "Examen de la vista"
+      },
+      "task": {
+        "pickUpPrescriptions": "Recoger las recetas",
+        "groceryRun": "Hacer las compras",
+        "checkInCall": "Llamada para ver cómo está",
+        "driveToAppointment": "Llevar a la cita",
+        "refillPillOrganizer": "Rellenar el pastillero"
+      }
     },
     "hints": {
       "timeOptional": "Déjalo en blanco para un evento de todo el día.",
@@ -143,6 +175,17 @@
       "timeRequired": "Los medicamentos necesitan una hora programada.",
       "endTimeRequired": "Agrega una hora de fin.",
       "endTimeAfterStart": "La hora de fin debe ser posterior a la de inicio."
+    },
+    "alerts": {
+      "pastTimeTitle": "La hora ya pasó",
+      "pastTimeMessage": "Esta hora ya pasó hoy; no se enviará ningún recordatorio para la dosis de hoy.",
+      "continue": "Continuar",
+      "closePastTime": "Cerrar el aviso de hora pasada"
+    },
+    "durations": {
+      "30": "30 min",
+      "60": "1 h",
+      "120": "2 h"
     }
   },
   "deleteEvent": {
@@ -155,6 +198,21 @@
     "delete": "Eliminar",
     "deleting": "Eliminando…",
     "deleted": "Evento eliminado"
+  },
+  "discontinueMed": {
+    "title": "Suspender medicamento",
+    "reactivateTitle": "Reactivar medicamento",
+    "close": "Cerrar el diálogo de estado del medicamento",
+    "confirmMessage": "¿Suspender \"{{title}}\"? Esto detiene todo el medicamento desde ahora: las dosis futuras salen del calendario y pasa a Inactivos. El historial se conserva. Puedes reactivarlo cuando quieras.",
+    "reactivateMessage": "¿Reactivar \"{{title}}\"? Los recordatorios se reanudarán.",
+    "discontinue": "Suspender",
+    "reactivate": "Reactivar",
+    "working": "Guardando…",
+    "discontinuedToast": "Medicamento suspendido",
+    "reactivatedToast": "Medicamento reactivado",
+    "inactiveBadge": "Inactivo",
+    "editInactiveTitle": "El medicamento está inactivo",
+    "editInactiveMessage": "Este medicamento está inactivo. Reactívalo para hacer cambios."
   },
   "notes": {
     "title": "Notas",

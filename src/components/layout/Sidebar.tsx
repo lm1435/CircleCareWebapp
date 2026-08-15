@@ -63,10 +63,28 @@ function TasksIcon(props: IconProps): ReactElement {
   );
 }
 
+function NotesIcon(props: IconProps): ReactElement {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
 function ActivityIcon(props: IconProps): ReactElement {
   return (
     <svg {...iconBase(props)}>
       <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  );
+}
+
+function MedsIcon(props: IconProps): ReactElement {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
+      <path d="m8.5 8.5 7 7" />
     </svg>
   );
 }
@@ -192,6 +210,12 @@ export function Sidebar({
             </NavLink>
           </li>
           <li>
+            <NavLink to={`${base}/notes`} className={navLinkClass} onClick={onNavigate}>
+              <NotesIcon className="shrink-0" />
+              {t('nav.notes')}
+            </NavLink>
+          </li>
+          <li>
             <NavLink to={`${base}/activity`} className={navLinkClass} onClick={onNavigate}>
               <ActivityIcon className="shrink-0" />
               {t('nav.activity')}
@@ -215,6 +239,12 @@ export function Sidebar({
           <li>
             <span className="eyebrow block px-4 pb-1 pt-4">{t('nav.health')}</span>
             <ul aria-label={t('nav.health')} className="m-0 flex list-none flex-col gap-1 p-0">
+              <li>
+                <NavLink to={`${base}/meds`} className={navLinkClass} onClick={onNavigate}>
+                  <MedsIcon className="shrink-0" />
+                  {t('nav.meds')}
+                </NavLink>
+              </li>
               <li>
                 <NavLink to={`${base}/emergency`} className={navLinkClass} onClick={onNavigate}>
                   <EmergencyIcon className="shrink-0" />
