@@ -6,6 +6,7 @@ import type { InviteMemberType } from '@/api/invites';
 import { useCreateInvite } from '@/hooks/useInvites';
 import { Analytics } from '@/lib/analytics';
 import { isWebBillingConfigured } from '@/lib/purchases';
+import { getPendingInviteSeat, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import {
   Button,
   Modal,
@@ -23,14 +24,24 @@ import {
 // circle.
 //
 // MIRRORS mobile/src/screens/circle/InviteMemberScreen.tsx. The free-tier
-// caregiver cap (≥2 caregivers) returns 402 SUBSCRIPTION_REQUIRED — the hook
-// already classifies it and toasts; we additionally surface a persistent in-modal
-// note so the user understands why the invite did not send.
+// caregiver cap returns 402 SUBSCRIPTION_REQUIRED — the hook already classifies
+// it and toasts; we additionally surface a persistent in-modal note so the user
+// understands why the invite did not send. The note reads the SAME
+// `error.details.reason` the hook does, so a recoverable `pending_invite_seat`
+// never leaves a paywall upsell sitting next to an "cancel that invite" toast.
 //
 // Build ONLY on Stage 0 primitives (Modal, TextField, RadioGroup, Button,
 // validateWithZod) + design tokens. No off-palette Tailwind.
 
 const emailSchema = z.string().trim().email();
+
+/**
+ * The persistent in-modal note shown after a 402. `cap` is the real paywall
+ * (every caregiver seat is held by a member); `pendingSeat` is the recoverable
+ * case where a still-pending invite to `email` is holding the last seat — the
+ * note must NOT read as an upsell there, or it would contradict the toast.
+ */
+type CapNotice = { kind: 'cap' } | { kind: 'pendingSeat'; email: string | null };
 
 export interface InviteMemberModalProps {
   circleId: string;
@@ -57,7 +68,7 @@ export function InviteMemberModal({
   const [errors, setErrors] = useState<FieldErrors>({});
   // A 402 is shown as a toast by the hook, but we also keep a persistent
   // in-modal note so the user understands the invite did not send.
-  const [capReached, setCapReached] = useState(false);
+  const [capNotice, setCapNotice] = useState<CapNotice | null>(null);
 
   // Opening the invite modal is the start of the invite funnel.
   useEffect(() => {
@@ -80,7 +91,7 @@ export function InviteMemberModal({
 
   const handleSubmit = (formEvent: FormEvent): void => {
     formEvent.preventDefault();
-    setCapReached(false);
+    setCapNotice(null);
     const trimmed = email.trim();
     const result = validateWithZod(emailSchema, trimmed);
     if (!result.success) {
@@ -100,9 +111,13 @@ export function InviteMemberModal({
           onClose();
         },
         onError: (error: unknown) => {
-          const code = (error as { error?: { code?: string } } | null)?.error?.code;
-          if (code === 'SUBSCRIPTION_REQUIRED' || code === 'PAYMENT_REQUIRED') {
-            setCapReached(true);
+          // Mirror the hook's classification EXACTLY: a pending-invite seat is
+          // not a cap, so it must not leave a generic upsell on screen.
+          const pendingSeat = getPendingInviteSeat(error);
+          if (pendingSeat !== null) {
+            setCapNotice({ kind: 'pendingSeat', email: pendingSeat.email });
+          } else if (isSubscriptionRequiredError(error)) {
+            setCapNotice({ kind: 'cap' });
           }
         },
       }
@@ -159,12 +174,18 @@ export function InviteMemberModal({
           error={errors['invite-email'] || undefined}
         />
 
-        {capReached ? (
+        {capNotice ? (
           <div
             role="alert"
             className="m-0 flex flex-col items-start gap-3 rounded-xl border border-line bg-bg-2 px-4 py-3 text-sm text-ink-2"
           >
-            <p className="m-0">{t('invite.capReached')}</p>
+            <p className="m-0">
+              {capNotice.kind === 'cap'
+                ? t('invite.capReached')
+                : capNotice.email
+                  ? t('invite.pendingSeat', { email: capNotice.email })
+                  : t('invite.pendingSeatUnknown')}
+            </p>
             {isWebBillingConfigured() ? (
               <Button size="sm" onClick={() => navigate('/upgrade')}>
                 {t('common:upgradeGate.action')}

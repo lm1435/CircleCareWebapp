@@ -42,11 +42,16 @@ export interface CalendarEvent {
 
   /**
    * Discontinue / inactivate marker (medications only). `null`/undefined =
-   * active; a non-null ISO timestamp (UTC) = discontinued at that instant. The
-   * Calendar GET excludes discontinued meds by default, so this is only ever
-   * populated on a row fetched with `?includeDiscontinued=true` or returned by
-   * the medication-status write. NOT a naive care-recipient date — it's a true
-   * action instant.
+   * active; a non-null ISO timestamp (UTC) = discontinued at that instant. NOT
+   * a naive care-recipient date — it's a true action instant.
+   *
+   * PRESENT ON CALENDAR ROWS. The Calendar GET keeps every occurrence that was
+   * DUE BEFORE the discontinue instant (history is not erased) and hides only
+   * the occurrences after it, so a plain windowed fetch — no
+   * `includeDiscontinued` flag — CAN return rows with this set. It also arrives
+   * on the medication roster (`?includeDiscontinued=true`) and on the
+   * medication-status write. Never filter these rows out client-side: they keep
+   * their confirmation state and render with an "Inactive" text marker.
    */
   discontinued_at?: string | null;
 
@@ -101,9 +106,12 @@ export interface GetEventsParams {
   end_date?: string; // YYYY-MM-DD in care recipient's timezone
   event_type?: EventType;
   /**
-   * Medication roster only: include discontinued (inactive) meds in the
-   * response so the Medications page can split Active vs Inactive. The
-   * calendar page must NOT pass this so inactive meds stay hidden there.
+   * Medication roster only: include the FULL set of discontinued (inactive)
+   * meds in the response so the Medications page can split Active vs Inactive.
+   * The calendar page must NOT pass this — without the flag the calendar still
+   * receives the historical occurrences that predate each discontinue instant
+   * (which is exactly what it should show), while the occurrences after it, and
+   * roster rows outside the window, stay out.
    * (Mirrors mobile/src/api/calendarEvents.ts GetEventsParams.)
    */
   includeDiscontinued?: boolean;
@@ -349,16 +357,36 @@ export async function completeEvent(
 // Medication discontinue / reactivate (Stage 4 — Web).
 // Verified against backend/src/routes/calendarEvents.ts:
 //   PATCH /api/circles/:circleId/events/:eventId/medication-status
-//     body { discontinued: boolean }  (requireAuth + requireCircleEditAccess)
+//     body { discontinued: boolean, scope?: 'series' | 'medication' }
+//     (requireAuth + requireCircleEditAccess)
 //     → { success, data: { event: { id, parent_event_id, discontinued_at },
-//                          discontinued, affected_count } }
+//                          discontinued, affected_count, series_count } }
 // The backend resolves the series root (parent_event_id ?? id) and propagates
 // to every physical child, so passing ANY instance id (including a child) is
 // safe. `discontinued: true` inactivates (keeps the record, stops reminders +
-// materialization); `false` reactivates. Discontinued meds are excluded from
-// the Calendar GET by default — a discontinue therefore removes the med from
-// the calendar after query invalidation.
+// materialization); `false` reactivates. After query invalidation a discontinue
+// removes only the occurrences DUE AFTER the discontinue instant from the
+// calendar; the earlier ones stay, now carrying `discontinued_at` so the UI can
+// mark them inactive.
 // ---------------------------------------------------------------------------
+
+/**
+ * How wide a medication-status change reaches.
+ *
+ *  - `series`     — the resolved series root + its physical children only.
+ *                   The backend default, and the historical (only) behavior.
+ *  - `medication` — EVERY series root in the circle sharing this medication's
+ *                   normalized name + dosage (backend `utils/medicationKey.ts`,
+ *                   a verbatim port of this repo's `getMedKey`). One drug dosed
+ *                   at 08:00 and 20:00 is two roots; whole-medication semantics
+ *                   require both to toggle together.
+ *
+ * Web always asks for `medication` on the user-facing discontinue/reactivate
+ * paths: resolving the sibling roots CLIENT-side could only ever see the loaded
+ * calendar window, so a medication whose other series fell outside that window
+ * came back half-reactivated under a success toast. The server has no window.
+ */
+export type MedicationStatusScope = 'series' | 'medication';
 
 export interface MedicationStatusResult {
   /** The updated series-root row (subset projection from the backend). */
@@ -367,6 +395,18 @@ export interface MedicationStatusResult {
   discontinued: boolean;
   /** How many rows (root + physical children) were updated. */
   affected_count: number;
+  /**
+   * How many SERIES ROOTS were actually mutated — 1 for `scope: 'series'`, and
+   * the full name+dosage match count for `scope: 'medication'`. This is the
+   * only trustworthy `series_count` for analytics: the client cannot count what
+   * its loaded window never held.
+   */
+  /**
+  * OPTIONAL: a backend predating this field omits it. Typed as required,
+  * TypeScript vouches for a value that is `undefined` at runtime and every
+  * analytics call ships `undefined`. Read as `?? 0`.
+  */
+  series_count?: number;
 }
 
 interface MedicationStatusEnvelope {
@@ -379,15 +419,20 @@ interface MedicationStatusEnvelope {
  * (`discontinued: true`) or reactivate (`discontinued: false`) a medication.
  * Targets the series root + all physical children server-side. Pass any
  * instance id (parent or child).
+ *
+ * `scope` widens that to the whole medication (every root sharing name +
+ * dosage). Omitted = the backend's `'series'` default, so the request body is
+ * byte-identical to what it was before the field existed.
  */
 export async function setMedicationStatus(
   circleId: string,
   eventId: string,
-  discontinued: boolean
+  discontinued: boolean,
+  scope?: MedicationStatusScope
 ): Promise<MedicationStatusResult> {
   const response = (await apiClient.patch(
     `/circles/${circleId}/events/${eventId}/medication-status`,
-    { discontinued }
+    scope ? { discontinued, scope } : { discontinued }
   )) as unknown as MedicationStatusEnvelope;
   return response.data;
 }
@@ -428,14 +473,19 @@ const recurrenceRuleSchema = z
     { message: 'invalidRecurrenceRule' }
   );
 
+// VALIDATION MESSAGES on the fields the AddEvent form actually renders are i18n
+// KEY NAMES, never prose — same contract as `src/lib/vitals.ts`. AddEventModal
+// maps them through `messageFor()` into `calendar:addEvent.validation.*`.
+// Fields the form cannot populate by hand keep Zod's defaults; the consumer's
+// `defaultValue` fallback catches those as a generic localized line.
 export const eventFormSchema = z.object({
   event_type: z.enum(['medication', 'appointment', 'task']),
-  title: z.string().min(1).max(150),
-  description: z.string().max(850).optional(),
+  title: z.string().min(1, { message: 'titleRequired' }).max(150, { message: 'titleTooLong' }),
+  description: z.string().max(850, { message: 'descriptionTooLong' }).optional(),
 
   // Medication-specific
-  medication_name: z.string().max(150).optional(),
-  medication_dosage: z.string().max(100).optional(),
+  medication_name: z.string().max(150, { message: 'medicationNameTooLong' }).optional(),
+  medication_dosage: z.string().max(100, { message: 'dosageTooLong' }).optional(),
 
   // Medication enhancements
   medication_photo_url: z.string().max(2048).optional(),
@@ -450,7 +500,7 @@ export const eventFormSchema = z.object({
   scheduled_date: z.string().max(10),
   scheduled_time: z.string().max(8).optional(),
   duration_minutes: z.number().optional(),
-  location: z.string().max(250).optional(),
+  location: z.string().max(250, { message: 'locationTooLong' }).optional(),
 
   // Recurrence
   recurrence_rule: recurrenceRuleSchema.optional(),

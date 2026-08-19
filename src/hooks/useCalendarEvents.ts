@@ -20,6 +20,7 @@ import {
   type CreateEventRequest,
   type DeleteEventOptions,
   type MedicationStatusResult,
+  type MedicationStatusScope,
   type UpdateEventRequest,
 } from '@/api/calendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
@@ -85,13 +86,14 @@ export function useCalendarEvents(
 }
 
 /**
- * Medication roster query — the ONLY web fetch that requests discontinued meds
- * (`includeDiscontinued=true`) so the Medications page can split Active vs
- * Inactive. Mirrors mobile's MedicationHistoryScreen roster fetch exactly: no
- * date range, so the backend applies its default window (15 days back, 30 days
- * forward — wide enough to capture every med parent/instance the roster needs).
- * The calendar page keeps fetching WITHOUT the flag, so inactive meds stay
- * hidden there.
+ * Medication roster query — the ONLY web fetch that requests the full set of
+ * discontinued meds (`includeDiscontinued=true`) so the Medications page can
+ * split Active vs Inactive. Mirrors mobile's MedicationHistoryScreen roster
+ * fetch exactly: no date range, so the backend applies its default window (15
+ * days back, 30 days forward — wide enough to capture every med parent/instance
+ * the roster needs). The calendar page keeps fetching WITHOUT the flag; it
+ * still receives the historical occurrences that predate each discontinue
+ * instant (rendered with an "Inactive" marker), just not the ones after it.
  *
  * Key shape matches mobile's ['calendarEvents', circleId, params], so the
  * shared `calendarEvents(circleId)` prefix invalidation in every write hook
@@ -301,13 +303,21 @@ export interface MedicationStatusVariables {
   eventId: string;
   /** true = discontinue/inactivate, false = reactivate. */
   discontinued: boolean;
+  /**
+   * `'medication'` widens the change to EVERY series root sharing this
+   * medication's name + dosage, resolved server-side. Omitted = the backend's
+   * `'series'` default (root + physical children only).
+   */
+  scope?: MedicationStatusScope;
 }
 
 /**
  * PATCH /circles/:circleId/events/:eventId/medication-status — discontinue or
  * reactivate a medication. Invalidates the same query families a delete does
- * (calendar/med/today-summary) because a discontinued med drops out of the
- * default Calendar GET and a reactivated one reappears.
+ * (calendar/med/today-summary) because a discontinue drops the med's FUTURE
+ * occurrences out of the Calendar GET (the earlier ones stay, refetched with
+ * `discontinued_at` set so they render as inactive), and a reactivate brings
+ * the full series back.
  */
 export function useMedicationStatus(
   circleId: string
@@ -316,8 +326,8 @@ export function useMedicationStatus(
   const onError = useEventMutationOnError(circleId);
 
   return useMutation({
-    mutationFn: ({ eventId, discontinued }: MedicationStatusVariables) =>
-      setMedicationStatus(circleId, eventId, discontinued),
+    mutationFn: ({ eventId, discontinued, scope }: MedicationStatusVariables) =>
+      setMedicationStatus(circleId, eventId, discontinued, scope),
     onSuccess: (_result, variables) => {
       invalidateEventQueries(queryClient, circleId, variables.eventId);
     },

@@ -49,6 +49,22 @@ export const EVENT_TYPE_DEEP_TEXT: Record<EventType, string> = {
 };
 
 /**
+ * True when the event is a medication that has been discontinued (inactivated).
+ *
+ * The Calendar GET returns every occurrence that was DUE BEFORE the discontinue
+ * instant, so a calendar row CAN carry `discontinued_at` — these are historical
+ * doses that keep their confirmation state (a dose logged taken still reads as
+ * taken, a missed one as missed) and must never be filtered out client-side.
+ * Occurrences after the discontinue instant are the ones the backend hides.
+ *
+ * Callers pair this with a VISIBLE "Inactive" label (never a color-only cue —
+ * WCAG 2.1 AA 1.4.1) and add it to the row's aria-label.
+ */
+export function isInactiveMedication(event: CalendarEvent): boolean {
+  return event.event_type === 'medication' && !!event.discontinued_at;
+}
+
+/**
  * Resolve a medication event's display status. Mirrors mobile semantics:
  * - confirmation taken/taken_late → taken
  * - confirmation skipped → skipped

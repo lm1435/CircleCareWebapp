@@ -15,7 +15,7 @@
 
 interface ApiErrorEnvelope {
   success?: boolean;
-  error?: { code?: string; message?: string };
+  error?: { code?: string; message?: string; details?: unknown };
 }
 
 /**
@@ -84,6 +84,87 @@ export function isSubscriptionRequiredError(err: unknown): boolean {
 export function isAccessDeniedError(err: unknown): boolean {
   const code = errorCode(err);
   return code !== undefined && ACCESS_ERROR_CODES.has(code);
+}
+
+// ---------------------------------------------------------------------------
+// Invite caregiver-cap detail (402 SUBSCRIPTION_REQUIRED on the invite paths)
+// ---------------------------------------------------------------------------
+// Both POST /circles/:circleId/invites and POST /invites/:inviteId/resend
+// reject a free-tier circle with 402 SUBSCRIPTION_REQUIRED, but the reason
+// splits in two and the UI must NOT treat them alike:
+//   - `members_full`         — every caregiver seat is taken by a real member.
+//                              Nothing to free; the only way forward is Premium.
+//   - `pending_invite_seat`  — a still-pending invite to somebody ELSE is
+//                              holding the last seat. Cancelling that invite
+//                              frees it, so a paywall is the wrong message.
+// `error.details` is ADDITIVE and OPTIONAL: a web build can reach a backend
+// that predates it, so a missing/unrecognized payload must fall back to the
+// original upgrade prompt.
+
+/** Why a free-tier invite/resend was refused. */
+export type InviteCapReason = 'pending_invite_seat' | 'members_full';
+
+/** The pending invite occupying the last free caregiver seat. */
+export interface BlockingInvite {
+  id: string;
+  invited_email: string;
+}
+
+export interface InviteCapDetails {
+  reason: InviteCapReason;
+  active_caregivers?: number;
+  caregiver_limit?: number;
+  /** null when `reason` is `members_full` — nothing is blocking, the seats are used. */
+  blocking_invite?: BlockingInvite | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Parse the optional `error.details` payload off a 402 invite rejection.
+ * Returns null when this is not a subscription rejection, when `details` is
+ * absent (older backend), or when `reason` is not one we understand — every one
+ * of those cases must behave exactly like the pre-`details` upgrade prompt.
+ */
+export function getInviteCapDetails(err: unknown): InviteCapDetails | null {
+  if (!isSubscriptionRequiredError(err)) return null;
+  const details = (err as ApiErrorEnvelope | null)?.error?.details;
+  if (!isRecord(details)) return null;
+  const reason = details.reason;
+  if (reason !== 'pending_invite_seat' && reason !== 'members_full') return null;
+
+  const blocking = isRecord(details.blocking_invite) ? details.blocking_invite : null;
+  return {
+    reason,
+    active_caregivers:
+      typeof details.active_caregivers === 'number' ? details.active_caregivers : undefined,
+    caregiver_limit:
+      typeof details.caregiver_limit === 'number' ? details.caregiver_limit : undefined,
+    blocking_invite:
+      blocking != null &&
+      typeof blocking.id === 'string' &&
+      typeof blocking.invited_email === 'string'
+        ? { id: blocking.id, invited_email: blocking.invited_email }
+        : null,
+  };
+}
+
+/**
+ * Non-null when the free caregiver seat is held by a PENDING invite the user
+ * can cancel (`reason === 'pending_invite_seat'`) — i.e. "you already used your
+ * invite", not "you hit the cap". `email` is null when the backend did not name
+ * the blocking invite, so callers still have a message to show.
+ *
+ * Every other 402 (including a `details`-less one from an older backend)
+ * returns null and stays on the upgrade path.
+ */
+export function getPendingInviteSeat(err: unknown): { email: string | null } | null {
+  const details = getInviteCapDetails(err);
+  if (details === null || details.reason !== 'pending_invite_seat') return null;
+  const email = details.blocking_invite?.invited_email;
+  return { email: typeof email === 'string' && email.trim().length > 0 ? email : null };
 }
 
 /**

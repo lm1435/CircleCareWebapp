@@ -11,9 +11,9 @@ import { useConfirmMedication } from '@/hooks/useMedConfirmation';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { isPermissionDeniedError, type TodaysMedication } from '@/api/medicationConfirmations';
 import { isMedicationDiscontinuedError } from '@/lib/apiErrors';
-import { formatEventTimeCompact } from '@/utils/timezone';
+import { isDoseConfirmable, formatEventTimeCompact } from '@/utils/timezone';
 
-// Plan Task 24 — modal with Taken/Skipped options, optional note, submit.
+// Plan Task 24 — modal with Taken/Skipped options and submit.
 // Focus-trapped, Escape closes, aria-modal (same pattern as AppLayout's
 // drawer). The mutation hook handles 402/403 (toast + circle refetch); this
 // dialog closes on permission errors and shows an inline error otherwise.
@@ -42,10 +42,9 @@ export function ConfirmMedDialog({
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
   const [status, setStatus] = useState<'taken' | 'skipped'>(initialStatus);
-  const [note, setNote] = useState('');
   // 'discontinued' = 409 MEDICATION_DISCONTINUED (inactive med — retry can
   // never succeed, so the message points at reactivation instead).
-  const [submitError, setSubmitError] = useState<'generic' | 'discontinued' | null>(null);
+  const [submitError, setSubmitError] = useState<'generic' | 'discontinued' | 'notDue' | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const takenRef = useRef<HTMLButtonElement | null>(null);
   const skippedRef = useRef<HTMLButtonElement | null>(null);
@@ -108,14 +107,25 @@ export function ConfirmMedDialog({
 
   const handleSubmit = (): void => {
     if (!med.scheduled_time || mutation.isPending) return;
+    // DEFENSE IN DEPTH, mirroring mobile (CalendarScreen.confirmEventWithStatus
+    // re-checks the same predicate before mutating, not just where the pair is
+    // rendered). Both web surfaces gate their Confirm/Skip on isDoseConfirmable,
+    // but a dialog left open across the boundary — or any future caller that
+    // forgets the gate — would otherwise POST a dose that was never due and
+    // falsify the adherence record the clinician report is built from. This is
+    // the single mutation entry point on web, so one check covers both surfaces.
+    // The backend does NOT enforce this today; until it does, this is the last
+    // line, not a redundant one.
+    if (!isDoseConfirmable(med.scheduled_date, med.scheduled_time, careRecipientTimezone)) {
+      setSubmitError('notDue');
+      return;
+    }
     setSubmitError(null);
 
-    const trimmedNote = note.trim();
     mutation.mutate(
       {
         event_id: med.id,
         status,
-        notes: trimmedNote ? trimmedNote : undefined,
         scheduled_time: med.scheduled_time,
       },
       {
@@ -159,9 +169,9 @@ export function ConfirmMedDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-med-title"
-        className="relative w-full max-w-sm rounded-2xl border border-line bg-cream p-5 shadow-xl"
+        className="relative w-full max-w-sm rounded-2xl border border-line bg-cream p-6 shadow-xl"
       >
-        <h2 id="confirm-med-title" className="serif m-0 text-lg text-ink">
+        <h2 id="confirm-med-title" className="serif m-0 text-2xl leading-tight text-ink">
           {t('dialog.title')}
         </h2>
         <p className="mb-4 mt-1 text-sm text-ink-3">
@@ -198,22 +208,15 @@ export function ConfirmMedDialog({
           </button>
         </div>
 
-        <label htmlFor="confirm-med-note" className="mb-1 mt-4 block text-sm text-ink-2">
-          {t('dialog.noteLabel')}
-        </label>
-        <textarea
-          id="confirm-med-note"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          placeholder={t('dialog.notePlaceholder')}
-          maxLength={1000}
-          rows={3}
-          className="w-full resize-none rounded-xl border border-line bg-bg p-3 text-sm text-ink placeholder:text-ink-3"
-        />
-
         {submitError && (
           <p role="alert" className="m-0 mt-2 text-sm text-terracotta-deep">
-            {t(submitError === 'discontinued' ? 'dialog.errorDiscontinued' : 'dialog.error')}
+            {t(
+              submitError === 'discontinued'
+                ? 'dialog.errorDiscontinued'
+                : submitError === 'notDue'
+                  ? 'dialog.errorNotDue'
+                  : 'dialog.error'
+            )}
           </p>
         )}
 

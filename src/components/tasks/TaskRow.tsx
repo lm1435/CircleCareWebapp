@@ -62,7 +62,7 @@ export function TaskRow({
   onEdit,
   isPendingComplete,
 }: TaskRowProps): ReactElement {
-  const { t } = useTranslation('tasks');
+  const { t, i18n } = useTranslation('tasks');
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
 
@@ -86,7 +86,9 @@ export function TaskRow({
     } else {
       // Render the naive YYYY-MM-DD in the recipient TZ. Anchor at noon UTC so
       // the date never slips across midnight in any timezone.
-      dayLabel = new Intl.DateTimeFormat(undefined, {
+      // DISPLAY locale is the APP language, not the browser's — a Spanish user
+      // on an en-US browser must not get English month names.
+      dayLabel = new Intl.DateTimeFormat(i18n.language, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -99,7 +101,7 @@ export function TaskRow({
     return `${dayLabel} · ${timeLabel}`;
     // hourCycle MUST be a dep — the label is memoized, and the hook's value
     // flips once the currentUser query resolves.
-  }, [task.scheduled_date, task.scheduled_time, timezone, t, hourCycle]);
+  }, [task.scheduled_date, task.scheduled_time, timezone, t, hourCycle, i18n.language]);
 
   return (
     <li className={careCardSurface}>

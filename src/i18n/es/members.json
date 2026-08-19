@@ -68,7 +68,9 @@
     "permissionDenied": "No tienes permiso para hacer este cambio.",
     "saveFailed": "Algo salió mal. Por favor intenta de nuevo.",
     "alreadyMember": "Esta persona ya es miembro de este círculo.",
-    "pendingInvite": "Esta persona ya tiene una invitación pendiente."
+    "pendingInvite": "Esta persona ya tiene una invitación pendiente.",
+    "pendingInviteSeat": "Ya usaste tu invitación: el lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
+    "pendingInviteSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores."
   },
   "invite": {
     "cta": "Invitar miembro",
@@ -86,6 +88,8 @@
     "sending": "Enviando…",
     "success": "Invitación enviada a {{email}}.",
     "capReached": "Los círculos gratuitos incluyen hasta dos cuidadores. Mejora a Premium para agregar más.",
+    "pendingSeat": "Ya usaste tu invitación: el lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancélala en Invitaciones pendientes para liberar el lugar o mejora a Premium para agregar más cuidadores.",
+    "pendingSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o mejora a Premium para agregar más cuidadores.",
     "errors": {
       "emailInvalid": "Por favor ingresa un correo electrónico válido.",
       "roleRequired": "Por favor elige un rol."
@@ -110,6 +114,15 @@
     "cancelInviteConfirmBody": "{{email}} ya no podrá unirse con esta invitación.",
     "cancelInviteConfirm": "Cancelar invitación",
     "keepInvite": "Mantener invitación",
+    "inviteExpired": "Vencida",
+    "inviteExpiresIn_one": "Vence en {{count}} día",
+    "inviteExpiresIn_other": "Vence en {{count}} días",
+    "inviteExpiresInLabel_one": "La invitación para {{email}} vence en {{count}} día",
+    "inviteExpiresInLabel_other": "La invitación para {{email}} vence en {{count}} días",
+    "resendInvite": "Reenviar",
+    "resendInviteLabel": "Reenviar invitación a {{email}}",
+    "resendInviteSuccess": "Se reenvió la invitación a {{email}}.",
+    "resendInviteFailed": "No pudimos reenviar esa invitación. Por favor intenta de nuevo.",
     "leave": "Salir del círculo",
     "leaveConfirmTitle": "¿Salir de este círculo?",
     "leaveConfirmBody": "Perderás el acceso a este círculo de cuidado. El propietario puede volver a invitarte más tarde.",

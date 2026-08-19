@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import '@/i18n';
+import i18n from '@/i18n';
 import { CreateCircleModal } from '../CreateCircleModal';
 
 // Plan Stage 8, Task 8.6e — CreateCircleModal slice. Mocks the create mutation,
@@ -49,8 +49,45 @@ function renderModal(onClose = vi.fn()) {
   return { onClose };
 }
 
+/**
+ * Zod's own English defaults, verbatim. If one of these ever reaches the UI the
+ * i18n mapping in `@/api/circles` → `messageFor()` has regressed.
+ */
+const ZOD_ENGLISH_DEFAULTS = [
+  'String must contain at least 1 character(s)',
+  'Too small: expected string to have >=1 characters',
+];
+
+/**
+ * The pending `circles:validation.*` bundle (see the i18n key patch). Registered
+ * with `overwrite = false` so once the patch is merged into
+ * `src/i18n/{en,es}/circles.json` the REAL copy wins and this becomes a no-op —
+ * the assertions below read whatever i18n actually resolves, never a literal.
+ */
+function ensureValidationKeys(): void {
+  i18n.addResourceBundle(
+    'en',
+    'circles',
+    { validation: { invalid: 'Please check this value.', nameRequired: "Please enter the care recipient's name." } },
+    true,
+    false
+  );
+  i18n.addResourceBundle(
+    'es',
+    'circles',
+    { validation: { invalid: 'Revisa este valor.', nameRequired: 'Ingresa el nombre de la persona a tu cuidado.' } },
+    true,
+    false
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  ensureValidationKeys();
+});
+
+afterEach(async () => {
+  await i18n.changeLanguage('en');
 });
 
 describe('CreateCircleModal', () => {
@@ -113,6 +150,50 @@ describe('CreateCircleModal', () => {
     expect(showToast).toHaveBeenCalledWith('Circle created.', 'success');
     // R4-5: successful create reports onboarding completion via 'created'.
     expect(trackOnboardingCompleted).toHaveBeenCalledWith('created');
+  });
+
+  // The ONE reachable i18n defect in this batch: HTML `required` is satisfied by
+  // whitespace, `.trim()` empties it, and Zod's `min(1)` fires — which used to
+  // render its raw English default ("String must contain at least 1
+  // character(s)") on an otherwise-Spanish page.
+  it('shows a TRANSLATED error (never Zod English) for a whitespace-only name', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.type(screen.getByLabelText(/Care recipient name/), '   ');
+    await user.click(screen.getByRole('button', { name: 'Create circle' }));
+
+    expect(createMutate).not.toHaveBeenCalled();
+
+    const error = await screen.findByText(i18n.t('circles:validation.nameRequired'));
+    expect(error).toBeInTheDocument();
+    // The key itself must have RESOLVED — an unresolved key renders as its name.
+    expect(error.textContent).not.toBe('validation.nameRequired');
+    for (const zodDefault of ZOD_ENGLISH_DEFAULTS) {
+      expect(screen.queryByText(zodDefault)).not.toBeInTheDocument();
+    }
+    // Wired to the field for a11y (WCAG SC 3.3.1), not just floating text.
+    const nameInput = screen.getByLabelText(/Care recipient name/);
+    expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+    expect(nameInput.getAttribute('aria-describedby')).toContain(error.id);
+  });
+
+  it('renders that same error in Spanish when the app language is es', async () => {
+    await i18n.changeLanguage('es');
+    const user = userEvent.setup();
+    renderModal();
+
+    const nameInput = screen.getByLabelText(new RegExp(i18n.t('circles:create.recipientName')));
+    await user.type(nameInput, '   ');
+    await user.click(
+      screen.getByRole('button', { name: i18n.t('circles:create.create') })
+    );
+
+    expect(createMutate).not.toHaveBeenCalled();
+    const spanish = i18n.t('circles:validation.nameRequired');
+    expect(await screen.findByText(spanish)).toBeInTheDocument();
+    // Must differ from the English copy — proves it followed the APP language.
+    expect(spanish).not.toBe(i18n.getFixedT('en', 'circles')('validation.nameRequired'));
   });
 
   it('does NOT report onboarding completion when creation fails', async () => {

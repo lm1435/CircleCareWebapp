@@ -19,11 +19,12 @@ import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog
 import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 import { useMedicationRoster, useMedicationStatus } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
-import { getMedKey, getSeriesRootsForMed } from '@/utils/medicationGrouping';
+import { getMedKey, getSeriesRoot } from '@/utils/medicationGrouping';
 import { MedicationDetailModal } from '@/components/meds/MedicationDetailModal';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
 import { formatEventTimeCompact } from '@/utils/timezone';
+import { Analytics } from '@/lib/analytics';
 
 // Medications page (Stage 17 — web parity with mobile's MedicationHistoryScreen
 // roster). ONE card per medication (normalized name + dosage — see
@@ -295,6 +296,26 @@ export default function MedicationsPage(): ReactElement {
 
   const { active, inactive } = useMemo(() => groupMedications(events), [events]);
 
+  /**
+   * Open a medication's detail modal — the per-card action control on this page.
+   *
+   * Reports the "action set opened" funnel step (deliberate click, never a
+   * render). CAVEAT for anyone reading a chart: unlike mobile, this page ALSO
+   * renders Edit / Discontinue / Delete inline on every card, so a web
+   * caregiver can discontinue WITHOUT ever opening this modal. The web
+   * denominator is therefore not comparable to mobile's — break down by
+   * `platform` before drawing a conclusion about discoverability.
+   */
+  function openMedDetail(group: MedGroup): void {
+    if (canEdit) {
+      Analytics.medicationActionsMenuOpened(circleId, {
+        surface: 'meds_tab',
+        isDiscontinued: group.inactive,
+      });
+    }
+    setDetailGroup(group);
+  }
+
   function handleEdit(group: MedGroup): void {
     if (group.inactive) {
       // Editing an inactive med is blocked — prompt to reactivate first.
@@ -307,13 +328,23 @@ export default function MedicationsPage(): ReactElement {
   async function handleReactivateForEdit(): Promise<void> {
     if (!inactiveEditGroup) return;
     try {
-      // Reactivate EVERY series of this medication (same name + dose).
-      const roots = getSeriesRootsForMed(events, inactiveEditGroup.event);
-      await Promise.all(
-        roots.map((rootId) =>
-          medicationStatus.mutateAsync({ eventId: rootId, discontinued: false })
-        )
-      );
+      // Reactivate EVERY series of this medication (same name + dose) in ONE
+      // request — the server resolves the matching roots, so this no longer
+      // depends on the roster it happens to have loaded.
+      const result = await medicationStatus.mutateAsync({
+        eventId: getSeriesRoot(inactiveEditGroup.event),
+        discontinued: false,
+        scope: 'medication',
+      });
+      // CONFIRMED SUCCESS only — the reactivate-to-edit path. Same mutation as
+      // the explicit Reactivate action, reached from a different intent, so it
+      // reports the same event. `series_count` is the server's count of roots
+      // actually mutated. `capture` is non-throwing, so it cannot divert into
+      // the catch below and report a success as a failure.
+      Analytics.medicationReactivated(circleId, {
+        surface: 'meds_tab',
+        seriesCount: result.series_count ?? 0,
+      });
       showToast(t('calendar:discontinueMed.reactivatedToast'), 'success');
     } catch {
       // useMedicationStatus surfaces its own permission/subscription/save toasts.
@@ -383,7 +414,7 @@ export default function MedicationsPage(): ReactElement {
                   onEdit={handleEdit}
                   onToggleStatus={setStatusGroup}
                   onDelete={(g) => setDeletingEvent(g.event)}
-                  onViewDetails={setDetailGroup}
+                  onViewDetails={openMedDetail}
                 />
               ))}
             </ul>
@@ -408,7 +439,7 @@ export default function MedicationsPage(): ReactElement {
                   onEdit={handleEdit}
                   onToggleStatus={setStatusGroup}
                   onDelete={(g) => setDeletingEvent(g.event)}
-                  onViewDetails={setDetailGroup}
+                  onViewDetails={openMedDetail}
                 />
               ))}
             </ul>
@@ -480,6 +511,7 @@ export default function MedicationsPage(): ReactElement {
         <DeleteEventDialog
           circleId={circleId}
           event={deletingEvent}
+          surface="meds_tab"
           onClose={() => setDeletingEvent(null)}
         />
       )}
@@ -494,6 +526,8 @@ export default function MedicationsPage(): ReactElement {
           // representative event's own discontinued_at, which can disagree
           // in a mixed-state group.
           groupInactive={statusGroup.inactive}
+          surface="meds_tab"
+          timezone={timezone}
           onClose={() => setStatusGroup(null)}
         />
       )}

@@ -18,15 +18,14 @@
     "statusLabel": "Estado del medicamento",
     "taken": "Tomado",
     "skipped": "Omitido",
-    "noteLabel": "Nota (opcional)",
-    "notePlaceholder": "Agregar una nota",
     "submit": "Guardar",
     "submitting": "Guardando...",
     "successTaken": "Marcado como tomado",
     "successSkipped": "Marcado como omitido",
     "error": "No se pudo guardar. Inténtalo de nuevo.",
-    "errorDiscontinued": "Este medicamento está inactivo; reactívalo para registrar dosis.",
-    "cancel": "Cancelar"
+    "errorDiscontinued": "Esta dosis no correspondía antes de que se suspendiera el medicamento, así que no se puede registrar. Reactiva el medicamento para volver a registrar dosis.",
+    "cancel": "Cancelar",
+    "errorNotDue": "Esta dosis aún no corresponde, así que no se puede registrar."
   },
   "permissionDenied": "No tienes permiso para confirmar medicamentos en este círculo.",
   "page": {

@@ -154,4 +154,24 @@ describe('EventDetailModal', () => {
     expect(trigger).toHaveFocus();
     trigger.remove();
   });
+  // The medication's state is still conveyed in TEXT — the badge AND the body
+  // note — because only the DOSE's actionability changed when inactive doses
+  // became confirmable again. Colour alone would fail WCAG 2.1 AA 1.4.1, and a
+  // note that told the user the dose was read-only would now be false.
+  it('an inactive medication keeps the Inactive badge and a note that does NOT claim the dose is read-only', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({ discontinued_at: '2026-06-12T18:00:00Z' })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
+    const note = screen.getByText(/This medication is inactive\./);
+    expect(note).toHaveTextContent('you can still mark one taken or skipped');
+    expect(note).toHaveTextContent(
+      'Reactivate the medication to change its details or resume reminders.'
+    );
+  });
 });

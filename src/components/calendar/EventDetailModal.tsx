@@ -1,11 +1,16 @@
 import { type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Badge, Modal } from '@/components/ui';
+import { Badge, Button, Modal } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatEventTimeForDisplay } from '@/utils/timezone';
 import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
-import { EVENT_TYPE_BLOCK_CLASS, EVENT_TYPE_DEEP_TEXT, getMedicationStatus } from './eventStyles';
+import {
+  EVENT_TYPE_BLOCK_CLASS,
+  EVENT_TYPE_DEEP_TEXT,
+  getMedicationStatus,
+  isInactiveMedication,
+} from './eventStyles';
 import { formatRecurrenceLabel } from './recurrenceLabel';
 import { EventNotesPanel } from './EventNotesPanel';
 
@@ -53,9 +58,12 @@ export function EventDetailModal({
   const title = event.medication_name || event.title;
   const dosage = event.event_type === 'medication' ? event.medication_dosage : null;
   // A discontinued (inactivated) medication keeps its record but stops firing.
-  // Discontinued meds are excluded from the default Calendar GET, so this only
-  // shows when a discontinued row is surfaced explicitly — flag it clearly.
-  const isInactiveMed = event.event_type === 'medication' && !!event.discontinued_at;
+  // This fires from BOTH surfaces now: the medication roster (which asks for
+  // discontinued rows explicitly) AND the calendar, whose GET returns every
+  // occurrence that was due BEFORE the discontinue instant. Those historical
+  // doses keep their confirmation status — the badge below (plus the note in
+  // the body) is a TEXT cue, never a color-only one.
+  const isInactiveMed = isInactiveMedication(event);
 
   // scheduled_date is a NAIVE date in the care recipient's timezone — format
   // via the UTC-noon pattern, never new Date(scheduled_date) device-local.
@@ -162,15 +170,26 @@ export function EventDetailModal({
   );
 
   // Footer actions slot — edit buttons slot in here when write features arrive.
-  const footer =
-    canEdit && editActions ? (
-      editActions
-    ) : (
-      <div className="rounded-xl bg-bg-2 p-4">
-        <p className="m-0 text-sm font-medium text-ink">{t('common:downloadApp.title')}</p>
-        <p className="m-0 mt-1 text-sm text-ink-3">{t('common:downloadApp.subtitle')}</p>
+  // Done sits on its own row below them in BOTH branches, so a read-only
+  // viewer gets a dismiss too. The header's close button is the other way out;
+  // this one is always in reach because the footer no longer scrolls.
+  const footer = (
+    <div className="flex flex-col gap-4">
+      {canEdit && editActions ? (
+        editActions
+      ) : (
+        <div className="rounded-xl bg-bg-2 p-4">
+          <p className="m-0 text-sm font-medium text-ink">{t('common:downloadApp.title')}</p>
+          <p className="m-0 mt-1 text-sm text-ink-3">{t('common:downloadApp.subtitle')}</p>
+        </div>
+      )}
+      <div className="flex justify-end">
+        <Button variant="primary" onClick={onClose}>
+          {t('common:done')}
+        </Button>
       </div>
-    );
+    </div>
+  );
 
   return (
     <Modal
@@ -189,6 +208,26 @@ export function EventDetailModal({
           </div>
         ))}
       </dl>
+
+      {/* Inactive medication: say in words what the header badge marks.
+          Historical doses stay on the calendar with their confirmation status
+          intact — that is what the note explains.
+
+          NOTE: the action set is NOT reduced. Edit, Discontinue/Reactivate,
+          Delete AND dose confirmation all still render (EventDetailActions) —
+          action parity holds with the Meds roster and with mobile. Edit is not
+          hidden; it redirects to the reactivate-first prompt, so the affordance
+          stays discoverable and the tap has a real outcome instead of a 409.
+          Mark taken / Skip dose stay live on an inactive dose on purpose: the
+          calendar only shows doses the backend found due, and a dose really
+          given must stay loggable or it is counted missed forever in the
+          adherence report. Only the medication's own state is inactive — that
+          is what the badge and this note say, in TEXT, never colour alone. */}
+      {isInactiveMed && (
+        <p className="m-0 mt-4 rounded-xl bg-bg-2 p-3 text-sm text-ink-2">
+          {t('calendar:discontinueMed.inactiveCalendarNote')}
+        </p>
+      )}
 
       {/* Event-notes panel (Task 1.8) — instance-scoped. For a recurring/virtual
           instance we pass scheduled_date so the backend materializes the right

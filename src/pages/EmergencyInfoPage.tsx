@@ -83,6 +83,21 @@ function hasConditions(info: EmergencyInfo): boolean {
   return (info.medical_conditions?.length ?? 0) > 0;
 }
 
+/**
+ * Everything the at-a-glance tiles can render: conditions, blood type and both
+ * allergy lists. This is the "is there anything medical here at all" test, and
+ * it must stay in step with GlanceTiles — a fact shown there but missing here
+ * is a fact a view-only member never sees.
+ */
+function hasCriticalInfo(info: EmergencyInfo): boolean {
+  return (
+    hasConditions(info) ||
+    !!info.blood_type ||
+    (info.medication_allergies?.length ?? 0) > 0 ||
+    (info.allergies?.length ?? 0) > 0
+  );
+}
+
 function hasDoctors(info: EmergencyInfo): boolean {
   return !!info.primary_doctor_name || (info.additional_doctors?.length ?? 0) > 0;
 }
@@ -280,8 +295,15 @@ export default function EmergencyInfoPage(): ReactElement {
   const contactCount = info?.emergency_contacts?.length ?? 0;
   const insuranceCount = info?.insurance_plans?.length ?? 0;
 
+  // BLOOD TYPE AND ALLERGIES COUNT AS DATA. They render in the at-a-glance tiles
+  // (GlanceTiles) rather than in SECTIONS, so neither `sectionHasData` nor
+  // `hasConditions` can see them. Leaving them out classified a circle that
+  // holds only an allergy list as "fully empty" — and the branch below then
+  // showed a VIEW-ONLY member the download CTA instead of "Penicillin". Editors
+  // never saw it, because `&& !canEdit` falls through for them.
   const isFullyEmpty =
-    !info || (!hasConditions(info) && SECTIONS.every((section) => !sectionHasData[section.key]));
+    !info ||
+    (!hasCriticalInfo(info) && SECTIONS.every((section) => !sectionHasData[section.key]));
 
   // Fully-empty AND can't edit: one clear card with the download CTA. (When the
   // user CAN edit, fall through to the sectioned view so the Add buttons show.)

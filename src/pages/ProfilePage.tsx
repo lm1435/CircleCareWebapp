@@ -162,7 +162,18 @@ export default function ProfilePage(): ReactElement {
     // only ONE field ships the other straight back from this state.
     if (user.quiet_hours_start) setQuietStart(normalizeTimeOfDay(user.quiet_hours_start));
     if (user.quiet_hours_end) setQuietEnd(normalizeTimeOfDay(user.quiet_hours_end));
-  }, [user]);
+    // Depend on the FIELDS read, never on `user` itself. This effect calls four
+    // setState functions, so an unstable `user` identity re-runs it on every
+    // render and the component never settles — an infinite render loop that
+    // hangs rather than errors. It is safe today only because React Query's
+    // structural sharing happens to return the same object when the fetched
+    // content is unchanged; a `select` transform, a manually-assembled user, or
+    // structural sharing being turned off would each be enough to break that,
+    // with no warning at the call site. Depending on the primitives makes the
+    // effect insensitive to identity, and it also re-runs LESS: only when a
+    // value this effect actually reads has changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.first_name, user?.last_name, user?.quiet_hours_start, user?.quiet_hours_end]);
 
   if (userQuery.isLoading || !user) {
     return (

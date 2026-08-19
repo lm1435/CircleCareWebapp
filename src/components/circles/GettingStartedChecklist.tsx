@@ -8,6 +8,7 @@ import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { useAuthStore } from '@/store/authStore';
 import { addDays } from '@/components/calendar/dateMath';
 import { getDateInTimezone } from '@/utils/timezone';
+import { isPendingInviteExpired } from '@/api/circleMembers';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
 
 // Dismissal persists across reloads via localStorage, per circle — same key
@@ -171,8 +172,16 @@ export function GettingStartedChecklist({
   // decides whether the `invite` step is offered, not whether the card renders.
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
 
-  const invited =
-    members.length > 1 || (circle?.pending_invites?.length ?? 0) > 0;
+  // An EXPIRED invite does NOT count as "you invited someone" — nobody can join
+  // through it, and resend/cancel exist precisely because it lapsed. Ticking the
+  // step green off a dead invite would permanently stop nudging a solo owner
+  // whose one attempt timed out. `isPendingInviteExpired` keeps the staged
+  // rollout safe: it prefers the server's `is_expired`, falls back to
+  // `expires_at`, and treats an unusable date as live.
+  const liveInviteCount = (circle?.pending_invites ?? []).filter(
+    (invite) => !isPendingInviteExpired(invite)
+  ).length;
+  const invited = members.length > 1 || liveInviteCount > 0;
   const hasEvent = eventsQuery.events.length > 0;
   const hasEmergency = hasAnyEmergencyContent(emergencyQuery.data);
 

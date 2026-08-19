@@ -454,6 +454,18 @@ function PremiumMark(): ReactElement {
   );
 }
 
+/**
+ * DELIBERATE: the locale is `undefined` (the browser/payment locale), NOT
+ * `i18n.language`.
+ *
+ * This helper only ever renders the DERIVED per-month equivalent, and it is
+ * shown directly beneath `plan.formattedPrice` — a string the RevenueCat Web
+ * SDK formats itself, in the browser locale, which we cannot re-format or
+ * re-locale. Pinning this one figure to the UI language would put two
+ * differently-formatted prices ("$59.99" and "5,00 US$") inside the same card.
+ * Currency notation is a payment-market convention, not a UI-language one, so
+ * matching the store's own formatting is the correct behaviour here.
+ */
 function formatMoney(amountMicros: number, currency: string): string {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(
     amountMicros / 1_000_000

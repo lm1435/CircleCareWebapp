@@ -56,6 +56,13 @@ export async function previewInviteByCode(code: string): Promise<InvitePreview> 
 //   - DELETE /invites/:inviteId          (requireAuth, inviter/owner = CANCEL).
 //       NOTE: there is NO "decline invite" endpoint for the invitee — mobile's
 //       Decline is a client-only dismiss. We deliberately do NOT add one here.
+//   - POST   /invites/:inviteId/resend   (requireAuth + inviteRateLimit,
+//       inviter/owner). Extends the SAME row by 7 days and re-sends the email;
+//       the invite_code is deliberately NOT rotated, so a link the recipient
+//       already has keeps working. 402 SUBSCRIPTION_REQUIRED when reviving an
+//       EXPIRED caregiver invite would exceed the free-tier cap (a still-live
+//       invite already holds its seat, so that case is never re-checked).
+//       Also 404 INVITE_NOT_FOUND, 403 FORBIDDEN, 400 INVITE_NOT_PENDING.
 //   - POST   /invites/:inviteId/accept   (requireAuth).
 //   - GET    /invites/pending            (requireAuth) → { invites: PendingInvite[] }.
 // The apiClient response interceptor unwraps axios' response.data, so each value
@@ -108,6 +115,40 @@ export async function createInvite(
  */
 export async function cancelInvite(inviteId: string): Promise<void> {
   await apiClient.delete(`/invites/${inviteId}`);
+}
+
+/** The refreshed invite returned by the resend endpoint. */
+export interface ResendInviteResult {
+  invite: {
+    id: string;
+    invited_email: string;
+    member_type: InviteMemberType;
+    expires_at: string;
+    /** Always false — the row was just extended by another 7 days. */
+    is_expired: boolean;
+  };
+  /** False when the email provider rejected the send; the invite is valid regardless. */
+  email_sent: boolean;
+}
+
+interface ResendInviteEnvelope {
+  success: boolean;
+  data: ResendInviteResult;
+}
+
+/**
+ * POST /invites/:inviteId/resend — extend a lapsed (or still-pending) invite by
+ * another 7 days and re-send the email (inviter/owner only).
+ *
+ * Rejects with a 402 `SUBSCRIPTION_REQUIRED` envelope when reviving an expired
+ * caregiver invite would push a free-tier circle past the cap — callers classify
+ * via `isSubscriptionRequiredError`, exactly like the create path.
+ */
+export async function resendInvite(inviteId: string): Promise<ResendInviteResult> {
+  const response = (await apiClient.post(
+    `/invites/${inviteId}/resend`
+  )) as unknown as ResendInviteEnvelope;
+  return response.data;
 }
 
 /** POST /invites/:inviteId/accept — accept an invite addressed to the user. */

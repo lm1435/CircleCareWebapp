@@ -109,6 +109,77 @@ describe('InviteMemberModal — email-required', () => {
     });
   });
 
+  // A `pending_invite_seat` 402 is recoverable (cancel the blocking invite), so
+  // the in-modal note must explain that instead of leaving a generic cap upsell
+  // that contradicts the hook's toast.
+  it('names the blocking invitee instead of the cap upsell on a pending_invite_seat 402', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onError?.({
+        error: {
+          code: 'SUBSCRIPTION_REQUIRED',
+          details: {
+            reason: 'pending_invite_seat',
+            active_caregivers: 1,
+            caregiver_limit: 2,
+            blocking_invite: { id: 'inv-2', invited_email: 'blocked@example.com' },
+          },
+        },
+      })
+    );
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+
+    // role="alert" — the note is announced, not just visible.
+    const note = await screen.findByRole('alert');
+    expect(note).toHaveTextContent('blocked@example.com');
+    expect(note).toHaveTextContent(/Cancel it under Pending invites/i);
+    expect(note).not.toHaveTextContent(/Free circles include up to two caregivers/i);
+  });
+
+  it('falls back to a nameless pending-seat note when blocking_invite is missing', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onError?.({
+        error: {
+          code: 'SUBSCRIPTION_REQUIRED',
+          details: { reason: 'pending_invite_seat', blocking_invite: null },
+        },
+      })
+    );
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+
+    const note = await screen.findByRole('alert');
+    expect(note).toHaveTextContent(/held by another pending invite/i);
+  });
+
+  it('keeps the cap upsell for a members_full 402', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onError?.({
+        error: {
+          code: 'SUBSCRIPTION_REQUIRED',
+          details: { reason: 'members_full', blocking_invite: null },
+        },
+      })
+    );
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /up to two caregivers\. Upgrade to Premium/i
+      );
+    });
+  });
+
   it('routes to /upgrade from the cap note when web billing is configured', async () => {
     const user = userEvent.setup();
     mutate.mockImplementation((_vars, opts) =>

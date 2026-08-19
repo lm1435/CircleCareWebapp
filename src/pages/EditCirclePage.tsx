@@ -87,6 +87,15 @@ export default function EditCirclePage(): ReactElement {
 
   const isOwner = !!circle && !!currentUserId && circle.owner_id === currentUserId;
 
+  /**
+   * Map a Zod issue KEY NAME (emitted by `updateCircleSchema`, never prose) to
+   * a translated message. Same helper shape as VitalFormModal.messageFor —
+   * unknown keys degrade to a generic localized line instead of leaking Zod's
+   * English default ("String must contain at least 1 character(s)").
+   */
+  const messageFor = (key: string | undefined): string | undefined =>
+    key ? t(`validation.${key}`, { defaultValue: t('validation.invalid') }) : undefined;
+
   // Seed the controlled inputs once the circle detail arrives (null = not yet
   // touched → fall back to the loaded value).
   const nameValue = recipientName ?? circle?.recipient_name ?? '';
@@ -182,7 +191,7 @@ export default function EditCirclePage(): ReactElement {
             value={nameValue}
             maxLength={100}
             required
-            error={form.errors.recipient_name}
+            error={messageFor(form.errors.recipient_name)}
             placeholder={t('edit.recipientNamePlaceholder')}
             onChange={(e) => {
               setRecipientName(e.target.value);
@@ -193,7 +202,7 @@ export default function EditCirclePage(): ReactElement {
             id="recipient_dob"
             label={t('edit.recipientDob')}
             value={dobValue}
-            error={form.errors.recipient_dob}
+            error={messageFor(form.errors.recipient_dob)}
             hint={t('edit.recipientDobHint')}
             onChange={(e) => {
               setRecipientDob(e.target.value);
@@ -206,7 +215,7 @@ export default function EditCirclePage(): ReactElement {
             value={conditionsValue}
             rows={2}
             hint={t('edit.conditionsHint')}
-            error={form.errors.recipient_conditions}
+            error={messageFor(form.errors.recipient_conditions)}
             onChange={(e) => {
               setConditionsText(e.target.value);
               form.clearError('recipient_conditions');

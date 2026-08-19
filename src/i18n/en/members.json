@@ -68,7 +68,9 @@
     "permissionDenied": "You don't have permission to make this change.",
     "saveFailed": "Something went wrong. Please try again.",
     "alreadyMember": "This person is already a member of this circle.",
-    "pendingInvite": "This person already has a pending invitation."
+    "pendingInvite": "This person already has a pending invitation.",
+    "pendingInviteSeat": "You've already used your invitation — the free spot is held by a pending invite to {{email}}. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers.",
+    "pendingInviteSeatUnknown": "You've already used your invitation — the free spot is held by another pending invite. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers."
   },
   "invite": {
     "cta": "Invite member",
@@ -86,6 +88,8 @@
     "sending": "Sending…",
     "success": "Invitation sent to {{email}}.",
     "capReached": "Free circles include up to two caregivers. Upgrade to Premium to add more.",
+    "pendingSeat": "You've already used your invitation — the free spot is held by a pending invite to {{email}}. Cancel it under Pending invites to free the spot, or upgrade to Premium to add more caregivers.",
+    "pendingSeatUnknown": "You've already used your invitation — the free spot is held by another pending invite. Cancel it under Pending invites to free the spot, or upgrade to Premium to add more caregivers.",
     "errors": {
       "emailInvalid": "Please enter a valid email address.",
       "roleRequired": "Please choose a role."
@@ -110,6 +114,15 @@
     "cancelInviteConfirmBody": "{{email}} will no longer be able to join with this invitation.",
     "cancelInviteConfirm": "Cancel invite",
     "keepInvite": "Keep invite",
+    "inviteExpired": "Expired",
+    "inviteExpiresIn_one": "Expires in {{count}} day",
+    "inviteExpiresIn_other": "Expires in {{count}} days",
+    "inviteExpiresInLabel_one": "Invitation for {{email}} expires in {{count}} day",
+    "inviteExpiresInLabel_other": "Invitation for {{email}} expires in {{count}} days",
+    "resendInvite": "Resend",
+    "resendInviteLabel": "Resend invite for {{email}}",
+    "resendInviteSuccess": "Invitation sent again to {{email}}.",
+    "resendInviteFailed": "We couldn't resend that invitation. Please try again.",
     "leave": "Leave circle",
     "leaveConfirmTitle": "Leave this circle?",
     "leaveConfirmBody": "You'll lose access to this care circle. The owner can invite you again later.",

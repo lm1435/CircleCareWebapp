@@ -20,7 +20,18 @@ import { env } from './env';
  */
 function capture(event: string, props?: Record<string, unknown>): void {
   if (!env.VITE_POSTHOG_KEY) return;
-  posthog.capture(event, props);
+  try {
+    posthog.capture(event, props);
+  } catch {
+    // Analytics is best-effort and OPTIONAL. Several call sites fire from
+    // INSIDE a mutation's success path (e.g. the medication lifecycle events
+    // below, captured right after the PATCH resolves and still inside the
+    // caller's `try`). If a capture ever threw there — a half-initialized
+    // posthog-js, a storage/quota failure inside its queue, an exotic property
+    // value — the caller's `catch` would run and the user would be told a
+    // mutation that actually SUCCEEDED had failed. Losing an event is fine;
+    // losing a medication change is not.
+  }
 }
 
 /** Max length of any free-text error property we forward to PostHog. */
@@ -53,6 +64,40 @@ function stripUrlQuery(token: string): string {
   const [, prefix, url] = match;
   const cut = url.search(/[?#]/);
   return cut === -1 ? token : prefix + url.slice(0, cut);
+}
+
+/**
+ * A live invite code sitting in a URL path or query string.
+ *
+ * `/invite/:code` is a bearer credential: backend accept-by-code does NO email
+ * match, so possession of the code is possession of access to that circle's PHI.
+ * Codes are 6 chars, or 8 after five generation collisions
+ * (backend/src/routes/invites.ts), so this deliberately matches any run of code
+ * characters rather than a fixed length.
+ */
+const INVITE_PATH_RE = /(\/invite\/)[A-Za-z0-9]+/gi;
+const INVITE_QUERY_RE = /([?&](?:code|invite|invite_code|inviteCode)=)[^&#\s]+/gi;
+
+/**
+ * Redact invite codes from any string that might become an event property.
+ *
+ * WHY THIS EXISTS: posthog-js attaches `$current_url`, `$pathname` and
+ * `$referrer` to EVERY capture, read from `location.href` — `capture_pageview:
+ * false` does not stop that. So any event fired while the user sits on
+ * `/invite/ABC123` published a still-redeemable invite code to PostHog, and
+ * `$referrer` carried it onto the next page too. Anyone with PostHog read access
+ * could redeem those invites.
+ *
+ * We still WANT the invite events themselves (sent / accepted counts drive the
+ * activation funnel) — only the credential is removed. Never throws.
+ */
+export function redactInviteCode(value: string): string {
+  try {
+    if (typeof value !== 'string' || value.length === 0) return value;
+    return value.replace(INVITE_PATH_RE, '$1[redacted]').replace(INVITE_QUERY_RE, '$1[redacted]');
+  } catch {
+    return value;
+  }
 }
 
 /**
@@ -95,6 +140,33 @@ export function sanitizeErrorText(raw: string): string {
 // falsely attributing the sign-in to a guessed provider.
 type AuthMethod = 'email' | 'google' | 'apple' | 'oauth';
 type MedicationStatus = 'taken' | 'taken_late' | 'skipped';
+
+/**
+ * The surfaces a medication LIFECYCLE action (open the action set / discontinue
+ * / reactivate / delete) can actually be triggered from on the web companion.
+ *
+ * SAME enum as mobile's `MedicationLifecycleSurface`
+ * (mobile/src/services/analytics.ts) so a single breakdown reads across both
+ * platforms:
+ *  - 'calendar'     — the calendar page's event detail modal.
+ *  - 'meds_tab'     — the Medications page (roster cards + their detail modal).
+ *  - 'care_profile' — mobile only today; kept in the union so the property's
+ *    value space is identical on both platforms.
+ *
+ * There is no 'med_detail' surface: the detail modal is not a destination of
+ * its own, it is opened BY the pages above, and the question is which page a
+ * caregiver reached for.
+ */
+export type MedicationLifecycleSurface = 'calendar' | 'meds_tab' | 'care_profile';
+
+/**
+ * Delete scope, matching exactly what DeleteEventDialog actually offers:
+ *  - 'single'  — the recurring dialog's "this event only".
+ *  - 'future'  — the recurring dialog's "this and future".
+ *  - 'series'  — the unscoped DELETE a NON-recurring medication gets (no scope
+ *                picker is shown; the whole record goes).
+ */
+export type MedicationDeleteScope = 'single' | 'future' | 'series';
 
 /**
  * How this browser first saw the user reach "onboarded" (has >= 1 circle):
@@ -163,6 +235,103 @@ export const Analytics = {
   // --- Medications ---
   medicationConfirmed: (circleId: string, status: MedicationStatus) =>
     capture('medication_confirmed', { circle_id: circleId, status }),
+
+  // --- Medication lifecycle (discontinue / reactivate / delete) ---
+  //
+  // Shipped in 1.1.9 on both platforms with ZERO instrumentation: "has anyone
+  // actually discontinued a medication?" could only be answered by a raw prod
+  // SQL query. Every helper below fires on CONFIRMED SUCCESS — after the
+  // mutation resolves, never on the confirm click; an event fired on intent
+  // makes the funnel lie about a mutation that then 500s.
+  //
+  // PHI-safe by construction: ids, counts, booleans, enums and a whole-day
+  // duration. NEVER a medication name, dosage, title, or note.
+
+  /**
+   * The per-medication ACTION SET was opened — the step BEFORE any action.
+   *
+   * Prod shows real adoption of discontinue is zero, and the action events
+   * alone cannot tell "nobody needed it" from "nobody could find it". Pairing
+   * this with the action events gives the funnel: opened -> action chosen, vs
+   * opened -> nothing. NOT an impression event — it fires only from a
+   * deliberate click that opens the actions, and only when `canEdit` means the
+   * actions are genuinely offered.
+   *
+   * `isDiscontinued` says WHICH menu was offered: an inactive medication gets
+   * Reactivate where an active one gets Discontinue, so the two are different
+   * funnels and must not be pooled.
+   */
+  medicationActionsMenuOpened: (
+    circleId: string,
+    opts: { surface: MedicationLifecycleSurface; isDiscontinued: boolean }
+  ) =>
+    capture('medication_actions_menu_opened', {
+      circle_id: circleId,
+      surface: opts.surface,
+      is_discontinued: opts.isDiscontinued,
+    }),
+
+  /**
+   * A medication was discontinued (inactivated).
+   *
+   * @param opts.seriesCount      how many series roots were mutated — discontinue
+   *                              acts on EVERY series sharing name + dosage
+   * @param opts.daysActive       whole days from the series start to today,
+   *                              computed in the care recipient's timezone
+   * @param opts.hadConfirmations whether this med had any logged dose — i.e.
+   *                              whether real history is being preserved by the
+   *                              keep-past-occurrences behaviour
+   */
+  medicationDiscontinued: (
+    circleId: string,
+    opts: {
+      surface: MedicationLifecycleSurface;
+      seriesCount: number;
+      daysActive: number;
+      hadConfirmations: boolean;
+    }
+  ) =>
+    capture('medication_discontinued', {
+      circle_id: circleId,
+      surface: opts.surface,
+      series_count: opts.seriesCount,
+      days_active: opts.daysActive,
+      had_confirmations: opts.hadConfirmations,
+    }),
+
+  /**
+   * A discontinued medication was brought back. Fires for BOTH reactivate
+   * paths: the explicit Reactivate action and the "editing an inactive med?
+   * reactivate first" prompt, which is the same mutation from a different
+   * intent. No `days_active` — how many series came back is the number that
+   * matters, and the discontinue event already dates the pause.
+   */
+  medicationReactivated: (
+    circleId: string,
+    opts: { surface: MedicationLifecycleSurface; seriesCount: number }
+  ) =>
+    capture('medication_reactivated', {
+      circle_id: circleId,
+      surface: opts.surface,
+      series_count: opts.seriesCount,
+    }),
+
+  /**
+   * A medication was DELETED — the counterpart to `medication_discontinued`.
+   * Delete destroys the record and its history; discontinue preserves it.
+   * Comparing the two is the only way to tell whether caregivers understand the
+   * difference 1.1.9 introduced. Medications only — task/appointment deletes
+   * are a separate question and stay uninstrumented.
+   */
+  medicationDeleted: (
+    circleId: string,
+    opts: { surface: MedicationLifecycleSurface; scope: MedicationDeleteScope }
+  ) =>
+    capture('medication_deleted', {
+      circle_id: circleId,
+      surface: opts.surface,
+      scope: opts.scope,
+    }),
 
   // --- Calendar & events ---
   eventCreated: (circleId: string, eventType: string, recurring: boolean) =>

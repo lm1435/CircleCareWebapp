@@ -245,13 +245,23 @@ export function AddEventModal({
     [t]
   );
 
-  function clearError(field: string): void {
+  function clearError(...fields: string[]): void {
     setErrors((prev) => {
-      if (!(field in prev)) return prev;
+      if (!fields.some((field) => field in prev)) return prev;
       const next = { ...prev };
-      delete next[field];
+      for (const field of fields) delete next[field];
       return next;
     });
+  }
+
+  /**
+   * Map a Zod issue KEY NAME (emitted by `eventFormSchema`, never prose) to a
+   * translated message. Same helper shape as VitalFormModal.messageFor —
+   * unknown keys degrade to a generic localized line instead of leaking Zod's
+   * English default ("String must contain at most 150 character(s)").
+   */
+  function messageFor(key: string): string {
+    return t(`addEvent.validation.${key}`, { defaultValue: t('addEvent.validation.invalid') });
   }
 
   function buildPayload():
@@ -361,7 +371,12 @@ export function AddEventModal({
     // Final guard: validate against the shared web Zod schema (mirrors backend).
     const result = validateWithZod(eventFormSchema, data);
     if (!result.success) {
-      return { ok: false, errors: result.errors };
+      // Zod emits KEY NAMES here — translate before they reach an `error=` prop.
+      const mapped: FieldErrors = {};
+      for (const [field, msg] of Object.entries(result.errors)) {
+        mapped[field] = messageFor(msg);
+      }
+      return { ok: false, errors: mapped };
     }
     return { ok: true, data };
   }
@@ -490,7 +505,10 @@ export function AddEventModal({
           label={t(isMedication ? 'addEvent.fields.medicationName' : 'addEvent.fields.title')}
           value={title}
           maxLength={150}
-          error={errors[titleFieldId]}
+          // For a medication the payload sets BOTH `medication_name` and
+          // `title` from this one input, so a schema error can land on either
+          // key — bind both so it can never fail silently.
+          error={errors[titleFieldId] ?? errors.title}
           placeholder={t(
             isMedication
               ? 'addEvent.placeholders.medicationName'
@@ -500,7 +518,7 @@ export function AddEventModal({
           )}
           onChange={(e) => {
             setTitle(e.target.value);
-            clearError(titleFieldId);
+            clearError(titleFieldId, 'title');
           }}
         />
 
@@ -512,7 +530,7 @@ export function AddEventModal({
             value={title}
             onChange={(next) => {
               setTitle(next ?? '');
-              if (next) clearError(titleFieldId);
+              if (next) clearError(titleFieldId, 'title');
             }}
           />
         )}
@@ -523,8 +541,12 @@ export function AddEventModal({
             label={t('addEvent.fields.dosage')}
             value={dosage}
             maxLength={100}
+            error={errors.medication_dosage}
             placeholder={t('addEvent.placeholders.dosage')}
-            onChange={(e) => setDosage(e.target.value)}
+            onChange={(e) => {
+              setDosage(e.target.value);
+              clearError('medication_dosage');
+            }}
           />
         )}
 
@@ -534,8 +556,12 @@ export function AddEventModal({
             label={t('addEvent.fields.location')}
             value={location}
             maxLength={250}
+            error={errors.location}
             placeholder={t('addEvent.placeholders.location')}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={(e) => {
+              setLocation(e.target.value);
+              clearError('location');
+            }}
           />
         )}
 
@@ -665,8 +691,12 @@ export function AddEventModal({
           value={description}
           rows={3}
           maxLength={850}
+          error={errors.description}
           placeholder={t('addEvent.placeholders.notes')}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            clearError('description');
+          }}
         />
 
         {/* Recurrence */}
@@ -675,7 +705,11 @@ export function AddEventModal({
           label={t('addEvent.fields.repeat')}
           options={recurrenceOptions}
           value={recurrence}
-          onChange={(e) => setRecurrence(e.target.value as RecurrenceChoice)}
+          error={errors.recurrence_rule}
+          onChange={(e) => {
+            setRecurrence(e.target.value as RecurrenceChoice);
+            clearError('recurrence_rule');
+          }}
         />
 
         {recurrence === 'cycle' && (
@@ -707,7 +741,11 @@ export function AddEventModal({
             label={t('addEvent.fields.endDate')}
             value={recurrenceEndDate}
             hint={t('addEvent.hints.endDate')}
-            onChange={(e) => setRecurrenceEndDate(e.target.value)}
+            error={errors.recurrence_end_date}
+            onChange={(e) => {
+              setRecurrenceEndDate(e.target.value);
+              clearError('recurrence_end_date');
+            }}
           />
         )}
 

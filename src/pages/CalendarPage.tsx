@@ -9,6 +9,7 @@ import { EventDetailActions } from '@/components/calendar/EventDetailActions';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
 import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog';
+import { ConfirmMedDialog } from '@/components/meds/ConfirmMedDialog';
 import { useCircle } from '@/hooks/useCircle';
 import { MonthView } from '@/components/calendar/MonthView';
 import { WeekView } from '@/components/calendar/WeekView';
@@ -116,6 +117,14 @@ export default function CalendarPage(): ReactElement {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [discontinuingEvent, setDiscontinuingEvent] = useState<CalendarEvent | null>(null);
+  // Dose confirmation launched from the detail modal. Held HERE, like every
+  // other write dialog on this page, so ConfirmMedDialog outlives the detail
+  // modal it came from and never renders as a modal inside a modal (two focus
+  // traps fighting over Tab and Escape).
+  const [confirmingDose, setConfirmingDose] = useState<{
+    event: CalendarEvent;
+    initialStatus: 'taken' | 'skipped';
+  } | null>(null);
 
   const { canEdit } = useCircle(circleId);
 
@@ -123,6 +132,26 @@ export default function CalendarPage(): ReactElement {
   useEffect(() => {
     if (circleId) Analytics.calendarViewed(circleId, view);
   }, [circleId, view]);
+
+  /**
+   * Open an event's detail modal from the grid.
+   *
+   * For MEDICATIONS that modal renders <EventDetailActions> — the
+   * Edit / Discontinue|Reactivate / Delete set — so a deliberate click on a
+   * medication is the "action set opened" step of the adoption funnel. Tasks
+   * and appointments get a different action set and are deliberately not
+   * counted. Gated on `canEdit`: a view-only member's modal shows no actions at
+   * all and must not dilute the denominator. Never fires on render or scroll.
+   */
+  function handleEventClick(event: CalendarEvent): void {
+    if (event.event_type === 'medication' && canEdit) {
+      Analytics.medicationActionsMenuOpened(circleId, {
+        surface: 'calendar',
+        isDiscontinued: !!event.discontinued_at,
+      });
+    }
+    setSelectedEvent(event);
+  }
 
   const tzQuery = useCareRecipientTimezone(circleId);
   const timezone = tzQuery.timezone;
@@ -319,7 +348,7 @@ export default function CalendarPage(): ReactElement {
               eventsByDay={eventsByDay}
               careRecipientTimezone={timezone}
               todayStr={todayStr}
-              onEventClick={setSelectedEvent}
+              onEventClick={handleEventClick}
             />
           ) : (
             <MonthView
@@ -328,7 +357,7 @@ export default function CalendarPage(): ReactElement {
               eventsByDay={eventsByDay}
               careRecipientTimezone={timezone}
               todayStr={todayStr}
-              onEventClick={setSelectedEvent}
+              onEventClick={handleEventClick}
             />
           ))}
       </div>
@@ -343,6 +372,7 @@ export default function CalendarPage(): ReactElement {
             <EventDetailActions
               circleId={circleId}
               event={selectedEvent}
+              careRecipientTimezone={timezone}
               onEdit={() => {
                 setEditingEvent(selectedEvent);
                 setSelectedEvent(null);
@@ -353,6 +383,10 @@ export default function CalendarPage(): ReactElement {
               }}
               onDiscontinue={() => {
                 setDiscontinuingEvent(selectedEvent);
+                setSelectedEvent(null);
+              }}
+              onConfirmDose={(initialStatus) => {
+                setConfirmingDose({ event: selectedEvent, initialStatus });
                 setSelectedEvent(null);
               }}
               onReactivated={() => {
@@ -381,7 +415,24 @@ export default function CalendarPage(): ReactElement {
         <DeleteEventDialog
           circleId={circleId}
           event={deletingEvent}
+          surface="calendar"
           onClose={() => setDeletingEvent(null)}
+        />
+      )}
+
+      {/* Dose confirmation for a medication opened from the grid. The calendar
+          fetches WITHOUT `includeDiscontinued`, so every dose it shows is one
+          the backend already found due — an INACTIVE medication's historical
+          dose included. That is the whole point: a dose really given but not
+          yet logged when the medication was stopped has to remain loggable, or
+          it is counted missed in the adherence report forever. */}
+      {confirmingDose && timezone && (
+        <ConfirmMedDialog
+          circleId={circleId}
+          med={confirmingDose.event}
+          careRecipientTimezone={timezone}
+          initialStatus={confirmingDose.initialStatus}
+          onClose={() => setConfirmingDose(null)}
         />
       )}
 
@@ -393,6 +444,8 @@ export default function CalendarPage(): ReactElement {
           // name + dose) from the loaded window. Roots outside the window are
           // covered by the Medications page, the primary discontinue surface.
           events={events}
+          surface="calendar"
+          timezone={timezone ?? undefined}
           onClose={() => setDiscontinuingEvent(null)}
         />
       )}

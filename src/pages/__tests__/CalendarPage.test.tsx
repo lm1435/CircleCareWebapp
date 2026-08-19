@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import CalendarPage from '../CalendarPage';
+import { ToastProvider } from '@/components/ui';
 import { getCircleDetail, getEvents, type CalendarEvent } from '@/api/calendarEvents';
 
 // Task 47 — CalendarPage: week/month toggle, date navigation changes the
@@ -151,6 +152,28 @@ function renderPage() {
           <Route path="/circles/:circleId/calendar" element={<CalendarPage />} />
         </Routes>
       </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+/**
+ * Same page with edit access + a ToastProvider, for the write flows that mount
+ * EventDetailActions / ConfirmMedDialog (both call useToast). The caller must
+ * also give `mockGetMembersCircleDetail` a `can_edit: true` detail.
+ */
+function renderEditablePage() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/circles/circle-1/calendar']}>
+          <Routes>
+            <Route path="/circles/:circleId/calendar" element={<CalendarPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -420,6 +443,55 @@ describe('CalendarPage', () => {
     const panel = screen.getByRole('complementary', { name: 'Events for the selected day' });
     expect(
       within(panel).getByRole('button', { name: /Metformin, Medication, 08:00 CT/ })
+    ).toBeInTheDocument();
+  });
+
+  // ==========================================================================
+  // A dose of an INACTIVE medication is still loggable from the calendar
+  // --------------------------------------------------------------------------
+  // The calendar fetches WITHOUT `includeDiscontinued`, and the backend keeps
+  // only the occurrences that were DUE before the stop instant — so everything
+  // the grid shows is confirmable. Suppressing the control here (the earlier
+  // behaviour) meant a dose really given but not yet logged when the medication
+  // was stopped could never be logged, and stayed scheduled-and-missed in the
+  // adherence report a clinician reads.
+  // ==========================================================================
+  it('logs a dose of an INACTIVE medication from the calendar detail modal', async () => {
+    const user = userEvent.setup();
+    mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
+    mockGetEvents.mockResolvedValue([
+      makeEvent({
+        id: 'ev-inactive',
+        title: 'Warfarin',
+        medication_name: 'Warfarin',
+        medication_dosage: '5mg',
+        // Yesterday in the recipient timezone, before the stop instant below —
+        // exactly the dose the backend still returns and still accepts.
+        scheduled_date: '2026-06-11',
+        scheduled_time: '08:00:00',
+        discontinued_at: '2026-06-11T18:00:00Z',
+        confirmation: null,
+      }),
+    ]);
+
+    renderEditablePage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    // The chip says "Inactive" in TEXT, in its accessible name — never colour
+    // alone (WCAG 2.1 AA 1.4.1). That does not change here.
+    const chip = await screen.findByRole('button', { name: /Warfarin.*Inactive/ });
+    await user.click(chip);
+
+    const detail = await screen.findByRole('dialog');
+    expect(within(detail).getByText('Inactive')).toBeInTheDocument();
+
+    // ...and the dose can still be answered.
+    await user.click(within(detail).getByRole('button', { name: 'Mark taken' }));
+
+    // The detail modal steps aside so the confirm dialog is never a modal
+    // inside a modal (two focus traps fighting over Tab/Escape).
+    expect(
+      await screen.findByRole('dialog', { name: 'Confirm medication' })
     ).toBeInTheDocument();
   });
 });

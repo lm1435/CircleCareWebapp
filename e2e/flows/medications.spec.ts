@@ -8,9 +8,31 @@ import { checkA11y } from '../helpers';
 // backend:
 //   1. Roster round-trip: create a recurring daily med via the calendar add
 //      flow → appears under Active on the Meds page → discontinue → moves to
-//      "Inactive / Past medications" and drops off the calendar → reactivate →
+//      "Inactive / Past medications", its FUTURE occurrences drop off the
+//      calendar while its PAST ones stay (flagged Inactive) → reactivate →
 //      back under Active and back on the calendar. Axe scans the page in both
 //      states (active-only and with the inactive section rendered).
+//
+//      DISCONTINUE IS A STOP INSTANT, NOT A HIDE FLAG. `discontinued_at` is
+//      stamped on the series root and every physical child so the pg_cron
+//      functions treat the series as inert — it does NOT mean "this medication
+//      never existed". Doses that came due BEFORE that instant really happened,
+//      keep their confirmation state, and stay on the calendar (the adherence
+//      report has always counted them); only occurrences after it are hidden.
+//      This suite used to assert the opposite — that the med vanished from the
+//      calendar entirely — which is what let a bug that erased a medication's
+//      whole history ship.
+//
+//      AND THOSE HISTORICAL DOSES ARE STILL LOGGABLE. The first fix left them
+//      visible but inert, which was worse in one specific way: a dose actually
+//      given but not yet logged when the medication was stopped could never be
+//      logged, so it counts as scheduled-and-missed in the clinician-facing
+//      adherence report forever. The calendar fetches without
+//      `includeDiscontinued` and the backend returns only due-before-stop
+//      occurrences, so anything the grid shows is confirmable — the detail
+//      modal keeps Mark taken / Skip dose on an inactive dose. (The Meds roster
+//      does pass the flag, can hold not-due occurrences, and therefore has no
+//      dose-confirmation control at all.)
 //   2. Inactive-edit guard: Edit on an inactive med prompts to reactivate
 //      first — the edit modal must NOT open.
 //   3. Whole-medication semantics: two series of the same name + dose (08:00
@@ -52,7 +74,21 @@ function uniqueMedName(tag: string): string {
 
 function todayISO(): string {
   // Local date as YYYY-MM-DD; the created series starts in the current views.
+  return daysAgoISO(0);
+}
+
+/**
+ * Local date N days ago as YYYY-MM-DD.
+ *
+ * Used to start a series in the PAST so the discontinue assertions have real
+ * history to check. `daysAgoISO(7)` is deliberate: with Sunday-start weeks,
+ * today-7 ALWAYS falls in the previous week no matter which weekday the suite
+ * runs on (previous week spans today-dow-7 … today-dow-1, and 0 ≤ dow ≤ 6), so
+ * "click Previous week and find an occurrence" is deterministic every day.
+ */
+function daysAgoISO(days: number): string {
   const d = new Date();
+  d.setDate(d.getDate() - days);
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${mm}-${dd}`;
@@ -75,13 +111,19 @@ async function submitEventForm(page: Page, dialog: Locator): Promise<void> {
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 }
 
-/** Create a DAILY recurring medication via the calendar's Add event flow. */
+/**
+ * Create a DAILY recurring medication via the calendar's Add event flow.
+ * `startDate` defaults to today; pass a past date to give the series real
+ * history (the form imposes no minimum date, and the "Time already passed"
+ * notice only appears for TODAY, so a past start simply saves).
+ */
 async function createDailyMed(
   page: Page,
   circleId: string,
   name: string,
   dosage: string,
-  time: string
+  time: string,
+  startDate: string = todayISO()
 ): Promise<void> {
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
@@ -93,7 +135,7 @@ async function createDailyMed(
   await dialog.locator('#event_type').selectOption('medication');
   await dialog.locator('#medication_name').fill(name);
   await dialog.locator('#medication_dosage').fill(dosage);
-  await dialog.locator('#scheduled_date').fill(todayISO());
+  await dialog.locator('#scheduled_date').fill(startDate);
   await dialog.locator('#scheduled_time').fill(time);
   await dialog.locator('#recurrence_rule').selectOption('daily');
   await submitEventForm(page, dialog);
@@ -102,6 +144,24 @@ async function createDailyMed(
 /** The calendar grid, settled enough that an absence assertion is meaningful. */
 async function gotoCalendarSettled(page: Page, circleId: string): Promise<void> {
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
+}
+
+/**
+ * Step the (default) week view forward/back N weeks and settle.
+ *
+ * Discontinue assertions must be scoped to a week that is entirely in the past
+ * or entirely in the future — the CURRENT week straddles the stop instant, so
+ * whether today's own dose is still shown depends on the wall clock (a med
+ * stopped at 2pm keeps its 8am dose and loses its 8pm one). Stepping one week
+ * either side removes the clock from the assertion completely.
+ */
+async function stepWeeks(page: Page, weeks: number): Promise<void> {
+  const label = weeks < 0 ? 'Previous week' : 'Next week';
+  for (let i = 0; i < Math.abs(weeks); i++) {
+    await page.getByRole('button', { name: label }).click();
+  }
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
 }
@@ -188,7 +248,9 @@ test.describe('medication lifecycle', () => {
     const dosage = '5 mg';
     const chip = page.getByRole('button', { name: new RegExp(name) });
 
-    await createDailyMed(page, circleId, name, dosage, '08:00');
+    // Start the series a WEEK AGO so it has real history to check after the
+    // discontinue — "the past stays" is only assertable if a past dose exists.
+    await createDailyMed(page, circleId, name, dosage, '08:00', daysAgoISO(7));
     // The new series renders on the calendar (recurring → at least one chip).
     await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
@@ -216,9 +278,51 @@ test.describe('medication lifecycle', () => {
     await expect(activeRegion.locator('li').filter({ hasText: name })).toHaveCount(0);
     await checkA11y(page, `/circles/:id/meds (inactive present)`, testInfo);
 
-    // --- Gone from the calendar (default GET excludes discontinued meds) ---
+    // --- Calendar: the FUTURE stops, the PAST stays -------------------------
+    // `discontinued_at` is a STOP INSTANT. The default GET no longer excludes
+    // discontinued rows wholesale (that erased the medication's entire history);
+    // it keeps every occurrence that came due at or before the stop instant and
+    // hides the ones that never came due.
     await gotoCalendarSettled(page, circleId);
+
+    // NEXT week is entirely after the stop instant → not a single occurrence.
+    await stepWeeks(page, 1);
     await expect(chip).toHaveCount(0, { timeout: 20_000 });
+
+    // PREVIOUS week is entirely before today, and the series started 7 days ago,
+    // so it always contains at least one occurrence (see daysAgoISO). Those
+    // doses really happened: they stay on the calendar, labelled "Inactive" in
+    // TEXT (never colour alone — WCAG 2.1 AA 1.4.1) in the chip's accessible
+    // name. Under the old behaviour this count was 0 — the bug this asserts.
+    await stepWeeks(page, -2);
+    await expect(chip.first()).toBeVisible({ timeout: 20_000 });
+    const inactiveChip = page
+      .getByRole('button', { name: new RegExp(`${name}.*Inactive`) })
+      .first();
+    await expect(inactiveChip).toBeVisible({ timeout: 20_000 });
+
+    // ...and that historical dose is still ANSWERABLE. Only the medication is
+    // inactive; the dose is one the backend already found due, so the detail
+    // modal keeps its confirm controls. Without them, a dose really given but
+    // never logged is stuck as "missed" in the adherence report with no remedy.
+    // The Inactive marker stays — in TEXT, alongside the controls.
+    //
+    // TIMING NOTE: this chip is from a PAST week (see stepWeeks above), and a
+    // dose whose day has passed is always confirmable. Do NOT retarget this
+    // assertion at a dose later today — Take/Skip only open
+    // DOSE_EARLY_CONFIRM_WINDOW_MINUTES (2h) before the scheduled moment
+    // (utils/timezone.ts `isDoseConfirmable`), so a dose further out than that
+    // renders no controls at all and this would fail for the wrong reason.
+    await inactiveChip.click();
+    const doseDetail = page.getByRole('dialog').filter({ hasText: name });
+    await expect(doseDetail).toBeVisible({ timeout: 20_000 });
+    await expect(doseDetail.getByText('Inactive').first()).toBeVisible();
+    await expect(doseDetail.getByRole('button', { name: 'Mark taken' })).toBeVisible();
+    await expect(doseDetail.getByRole('button', { name: 'Skip dose' })).toBeVisible();
+    // Leave the dose unlogged — the reactivate assertions below expect the
+    // series untouched.
+    await page.keyboard.press('Escape');
+    await expect(doseDetail).toBeHidden({ timeout: 20_000 });
 
     // --- Reactivate from the inactive card ---
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
@@ -308,8 +412,13 @@ test.describe('medication lifecycle', () => {
     });
     await expect(activeRegion.locator('li').filter({ hasText: name })).toHaveCount(0);
 
-    // Neither series renders on the calendar anymore.
+    // Neither series has any FUTURE occurrence left. Both were created starting
+    // TODAY, so the current week straddles the stop instant (whether today's own
+    // 08:00 dose is still shown depends on the wall clock — `discontinued_at` is
+    // a stop instant, resolved by dose time, not a hide flag). Next week is
+    // unambiguously after it, so this is the deterministic form of "gone".
     await gotoCalendarSettled(page, circleId);
+    await stepWeeks(page, 1);
     await expect(chip).toHaveCount(0, { timeout: 20_000 });
     // Cleanup: afterEach API sweep (both series roots).
   });

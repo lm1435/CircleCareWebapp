@@ -18,6 +18,7 @@ vi.mock('@/lib/purchases', () => ({
 
 import { useWebPlans, usePurchasePlan, useManageSubscription } from '@/hooks/useWebBilling';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import * as purchases from '@/lib/purchases';
 import UpgradePage from '@/pages/UpgradePage';
 
 const mockedPlans = useWebPlans as unknown as ReturnType<typeof vi.fn>;
@@ -40,6 +41,12 @@ function renderPage(): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // clearAllMocks() drops call records but KEEPS implementations. The
+  // "billing not configured" test sets this to false, and without restoring it
+  // every later test rendered the unconfigured state instead of the plans — so
+  // the radios and prices were simply absent under a shuffled order.
+  (purchases.isWebBillingConfigured as unknown as ReturnType<typeof vi.fn>).mockReturnValue(true);
+  (purchases.isUserCancelledError as unknown as ReturnType<typeof vi.fn>).mockReturnValue(false);
   mockedStatus.mockReturnValue({ data: { tier: 'free' } });
   mockedPlans.mockReturnValue({
     data: {

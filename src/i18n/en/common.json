@@ -135,5 +135,14 @@
     "statusDone": "(done)",
     "statusPending": "(to do)",
     "dismiss": "Dismiss the get started checklist"
+  },
+  "timezoneLabels": {
+    "America/New_York": "Eastern Time",
+    "America/Chicago": "Central Time",
+    "America/Denver": "Mountain Time",
+    "America/Los_Angeles": "Pacific Time",
+    "America/Phoenix": "Arizona Time",
+    "America/Anchorage": "Alaska Time",
+    "Pacific/Honolulu": "Hawaii Time"
   }
 }

@@ -157,6 +157,67 @@ describe('GettingStartedChecklist', () => {
     expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
   });
 
+  // An EXPIRED invite is still returned in `pending_invites`, but nobody can
+  // join through it — ticking the step off one would leave a solo owner whose
+  // single attempt lapsed permanently un-nudged. Resend/cancel exist for
+  // exactly this row.
+  describe('step 2 vs expired invites', () => {
+    it('leaves step 2 pending when the only invite has expired', () => {
+      setup({
+        pendingInvites: [
+          { id: 'inv-1', expires_at: '2020-01-01T00:00:00Z', is_expired: true },
+        ],
+      });
+      expect(screen.getByText('Invite family & caregivers').className).not.toContain(
+        'line-through'
+      );
+      expect(screen.getByRole('button', { name: /Invite/ })).toBeInTheDocument();
+      expect(screen.getByText('0 of 3 done')).toBeInTheDocument();
+    });
+
+    it('falls back to expires_at when the backend omits is_expired', () => {
+      setup({ pendingInvites: [{ id: 'inv-1', expires_at: '2020-01-01T00:00:00Z' }] });
+      expect(screen.getByText('Invite family & caregivers').className).not.toContain(
+        'line-through'
+      );
+    });
+
+    it('trusts is_expired over the local clock when they disagree', () => {
+      // expires_at reads as lapsed locally, but the server says it is live.
+      setup({
+        pendingInvites: [
+          { id: 'inv-1', expires_at: '2020-01-01T00:00:00Z', is_expired: false },
+        ],
+      });
+      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+    });
+
+    it('treats an unusable expires_at as live rather than nagging', () => {
+      setup({ pendingInvites: [{ id: 'inv-1', expires_at: 'not-a-date' }] });
+      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+    });
+
+    it('still counts a live invite alongside an expired one', () => {
+      setup({
+        pendingInvites: [
+          { id: 'inv-1', expires_at: '2020-01-01T00:00:00Z', is_expired: true },
+          { id: 'inv-2', expires_at: '2099-01-01T00:00:00Z', is_expired: false },
+        ],
+      });
+      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+    });
+
+    it('keeps step 2 done off a real member even when every invite lapsed', () => {
+      setup({
+        members: [{ id: CURRENT_USER_ID }, { id: 'caregiver' }],
+        pendingInvites: [
+          { id: 'inv-1', expires_at: '2020-01-01T00:00:00Z', is_expired: true },
+        ],
+      });
+      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+    });
+  });
+
   it('marks step 3 done when any emergency content is present', () => {
     setup({ emergency: { blood_type: 'O+' } });
     expect(screen.getByText('Add emergency info').className).toContain('line-through');

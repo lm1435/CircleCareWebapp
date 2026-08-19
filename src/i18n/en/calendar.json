@@ -10,6 +10,8 @@
   "nextMonth": "Next month",
   "timesShownIn": "Times shown in {{timezone}}",
   "allDay": "All day",
+  "upcoming": "Upcoming",
+  "dueSoon": "Due soon",
   "noEventsWeek": "No events this week",
   "noEventsMonth": "No events this month",
   "noEventsDay": "Nothing scheduled for this day",
@@ -51,6 +53,8 @@
     "skippedAt": "Skipped at {{time}}",
     "missed": "Missed",
     "markComplete": "Mark complete",
+    "markTaken": "Mark taken",
+    "skipDose": "Skip dose",
     "completedToast": "Marked complete",
     "close": "Close event details"
   },
@@ -174,7 +178,14 @@
       "dateRequired": "Please choose a date.",
       "timeRequired": "Medications need a scheduled time.",
       "endTimeRequired": "Please add an end time.",
-      "endTimeAfterStart": "End time must be after the start time."
+      "endTimeAfterStart": "End time must be after the start time.",
+      "invalid": "Please check this value.",
+      "titleTooLong": "Title must be 150 characters or fewer.",
+      "medicationNameTooLong": "Medication name must be 150 characters or fewer.",
+      "dosageTooLong": "Dosage must be 100 characters or fewer.",
+      "locationTooLong": "Location must be 250 characters or fewer.",
+      "descriptionTooLong": "Notes must be 850 characters or fewer.",
+      "invalidRecurrenceRule": "That repeat option isn't valid."
     },
     "alerts": {
       "pastTimeTitle": "Time already passed",
@@ -211,6 +222,7 @@
     "discontinuedToast": "Medication discontinued",
     "reactivatedToast": "Medication reactivated",
     "inactiveBadge": "Inactive",
+    "inactiveCalendarNote": "This medication is inactive. Doses from before it was discontinued stay on the calendar, and you can still mark one taken or skipped — a dose that was really given should be recorded. Reactivate the medication to change its details or resume reminders.",
     "editInactiveTitle": "Medication is inactive",
     "editInactiveMessage": "This medication is inactive. Reactivate it to make changes."
   },

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { useDeleteEvent } from '@/hooks/useCalendarEvents';
 import { Button, ConfirmDialog, Modal, RadioGroup, useToast } from '@/components/ui';
+import { Analytics, type MedicationLifecycleSurface } from '@/lib/analytics';
 
 // Task 1.5 — delete an event. MIRRORS mobile's scoped-delete semantics:
 //   - Non-recurring → a simple confirm, DELETE with no scope params.
@@ -14,6 +15,13 @@ import { Button, ConfirmDialog, Modal, RadioGroup, useToast } from '@/components
 export interface DeleteEventDialogProps {
   circleId: string;
   event: CalendarEvent;
+  /**
+   * Which page raised this dialog. Analytics only — the breakdown key on
+   * `medication_deleted`. This dialog also deletes tasks/appointments, which
+   * stay uninstrumented (a separate question), so the event is emitted only for
+   * `event_type === 'medication'`.
+   */
+  surface: MedicationLifecycleSurface;
   onClose: () => void;
   /** Called after a successful delete (parent typically closes the detail modal). */
   onDeleted?: () => void;
@@ -24,6 +32,7 @@ type DeleteScopeChoice = 'single' | 'future';
 export function DeleteEventDialog({
   circleId,
   event,
+  surface,
   onClose,
   onDeleted,
 }: DeleteEventDialogProps): ReactElement {
@@ -41,6 +50,16 @@ export function DeleteEventDialog({
   async function runDelete(options: Parameters<typeof deleteEvent.mutateAsync>[0]): Promise<void> {
     try {
       await deleteEvent.mutateAsync(options);
+      // CONFIRMED SUCCESS only, and MEDICATIONS only. No `deleteScope` means no
+      // scope picker was shown (non-recurring), so the single record IS the
+      // whole series. `capture` is non-throwing, so this cannot divert into the
+      // catch below and report a successful delete as a failure.
+      if (event.event_type === 'medication') {
+        Analytics.medicationDeleted(circleId, {
+          surface,
+          scope: options.deleteScope ?? 'series',
+        });
+      }
       showToast(t('deleteEvent.deleted'), 'success');
       onDeleted?.();
       onClose();

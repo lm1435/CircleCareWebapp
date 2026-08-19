@@ -41,6 +41,15 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
   const [recipientDob, setRecipientDob] = useState('');
   const [isSelfCare, setIsSelfCare] = useState(false);
 
+  /**
+   * Map a Zod issue KEY NAME (emitted by `createCircleSchema`, never prose) to
+   * a translated message. Same helper shape as VitalFormModal.messageFor —
+   * unknown keys degrade to a generic localized line instead of leaking Zod's
+   * English default ("String must contain at least 1 character(s)").
+   */
+  const messageFor = (key: string | undefined): string | undefined =>
+    key ? t(`validation.${key}`, { defaultValue: t('validation.invalid') }) : undefined;
+
   // Opening the create modal is the start of the creation funnel.
   useEffect(() => {
     Analytics.circleCreationStarted();
@@ -108,7 +117,7 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
               maxLength={100}
               required
               autoFocus
-              error={form.errors.recipient_name}
+              error={messageFor(form.errors.recipient_name)}
               placeholder={t('create.recipientNamePlaceholder')}
               onChange={(e) => {
                 setRecipientName(e.target.value);
@@ -119,7 +128,7 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
               id="recipient_dob"
               label={t('create.recipientDob')}
               value={recipientDob}
-              error={form.errors.recipient_dob}
+              error={messageFor(form.errors.recipient_dob)}
               hint={t('create.recipientDobHint')}
               onChange={(e) => {
                 setRecipientDob(e.target.value);

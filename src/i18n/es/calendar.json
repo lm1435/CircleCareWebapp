@@ -10,6 +10,8 @@
   "nextMonth": "Próximo mes",
   "timesShownIn": "Las horas se muestran en {{timezone}}",
   "allDay": "Todo el día",
+  "upcoming": "Próximo",
+  "dueSoon": "Pronto",
   "noEventsWeek": "Sin eventos esta semana",
   "noEventsMonth": "Sin eventos este mes",
   "noEventsDay": "Nada programado para este día",
@@ -51,6 +53,8 @@
     "skippedAt": "Omitido a las {{time}}",
     "missed": "No tomado",
     "markComplete": "Marcar como completado",
+    "markTaken": "Marcar como tomada",
+    "skipDose": "Omitir dosis",
     "completedToast": "Marcado como completado",
     "close": "Cerrar detalles del evento"
   },
@@ -174,7 +178,14 @@
       "dateRequired": "Elige una fecha.",
       "timeRequired": "Los medicamentos necesitan una hora programada.",
       "endTimeRequired": "Agrega una hora de fin.",
-      "endTimeAfterStart": "La hora de fin debe ser posterior a la de inicio."
+      "endTimeAfterStart": "La hora de fin debe ser posterior a la de inicio.",
+      "invalid": "Revisa este valor.",
+      "titleTooLong": "El título debe tener 150 caracteres o menos.",
+      "medicationNameTooLong": "El nombre del medicamento debe tener 150 caracteres o menos.",
+      "dosageTooLong": "La dosis debe tener 100 caracteres o menos.",
+      "locationTooLong": "El lugar debe tener 250 caracteres o menos.",
+      "descriptionTooLong": "Las notas deben tener 850 caracteres o menos.",
+      "invalidRecurrenceRule": "Esa opción de repetición no es válida."
     },
     "alerts": {
       "pastTimeTitle": "La hora ya pasó",
@@ -211,6 +222,7 @@
     "discontinuedToast": "Medicamento suspendido",
     "reactivatedToast": "Medicamento reactivado",
     "inactiveBadge": "Inactivo",
+    "inactiveCalendarNote": "Este medicamento está inactivo. Las dosis anteriores a la suspensión se conservan en el calendario y todavía puedes marcarlas como tomadas u omitidas: una dosis que sí se dio debe quedar registrada. Reactiva el medicamento para cambiar sus datos o reanudar los recordatorios.",
     "editInactiveTitle": "El medicamento está inactivo",
     "editInactiveMessage": "Este medicamento está inactivo. Reactívalo para hacer cambios."
   },

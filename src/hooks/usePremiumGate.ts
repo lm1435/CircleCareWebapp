@@ -15,21 +15,31 @@ import { isWebBillingConfigured } from '@/lib/purchases';
  * Replaces the scattered `showToast(t('errors.subscriptionRequired'), 'error')`
  * calls so every premium gate offers the same online + in-app upgrade path.
  */
-export function usePremiumGate(): { promptUpgrade: () => void } {
+export function usePremiumGate(): { promptUpgrade: (message?: string) => void } {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
   const { showToast } = useToast();
 
-  const promptUpgrade = useCallback(() => {
-    if (isWebBillingConfigured()) {
-      showToast(t('upgradeGate.message'), 'info', {
-        label: t('upgradeGate.action'),
-        onClick: () => navigate('/upgrade'),
-      });
-    } else {
-      showToast(t('errors.subscriptionRequired'), 'error');
-    }
-  }, [navigate, showToast, t]);
+  /**
+   * @param message Optional replacement for the generic gate copy, for callers
+   *   that can say something more useful about WHY the gate fired (e.g. "your
+   *   one invitation is currently held by X"). The Upgrade action is kept
+   *   either way -- a more specific explanation must not cost the user their
+   *   route to actually buying more, since more seats genuinely do cost money.
+   */
+  const promptUpgrade = useCallback(
+    (message?: string) => {
+      if (isWebBillingConfigured()) {
+        showToast(message ?? t('upgradeGate.message'), 'info', {
+          label: t('upgradeGate.action'),
+          onClick: () => navigate('/upgrade'),
+        });
+      } else {
+        showToast(message ?? t('errors.subscriptionRequired'), 'error');
+      }
+    },
+    [navigate, showToast, t]
+  );
 
   return { promptUpgrade };
 }

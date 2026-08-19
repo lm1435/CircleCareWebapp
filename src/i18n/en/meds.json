@@ -18,15 +18,14 @@
     "statusLabel": "Medication status",
     "taken": "Taken",
     "skipped": "Skipped",
-    "noteLabel": "Note (optional)",
-    "notePlaceholder": "Add a note",
     "submit": "Save",
     "submitting": "Saving...",
     "successTaken": "Marked as taken",
     "successSkipped": "Marked as skipped",
     "error": "Couldn't save. Please try again.",
-    "errorDiscontinued": "This medication is inactive — reactivate it to log doses.",
-    "cancel": "Cancel"
+    "errorDiscontinued": "This dose wasn't due before the medication was stopped, so it can't be logged. Reactivate the medication to log doses again.",
+    "cancel": "Cancel",
+    "errorNotDue": "This dose isn't due yet, so it can't be recorded."
   },
   "permissionDenied": "You don't have permission to confirm medications in this circle.",
   "page": {

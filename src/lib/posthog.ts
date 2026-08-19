@@ -1,5 +1,5 @@
 import posthog from 'posthog-js';
-import { sanitizeErrorText } from './analytics';
+import { redactInviteCode, sanitizeErrorText } from './analytics';
 import { env } from './env';
 
 /**
@@ -23,7 +23,36 @@ import { env } from './env';
  *   ever needed, add an explicit coarse property rather than re-enabling $ip.
  * - Free-text error strings are scrubbed via `sanitizeErrorText` before capture
  *   (see lib/analytics.ts) — including `$exception` messages below.
+ * - `sanitize_properties` strips invite codes from EVERY event. posthog-js reads
+ *   `$current_url` / `$pathname` / `$referrer` from `location.href` on every
+ *   capture (`capture_pageview: false` does NOT prevent this), so an event fired
+ *   on `/invite/ABC123` published a still-redeemable invite code — and
+ *   `$referrer` carried it onto the next page. Accept-by-code does no email
+ *   match, so that code IS access to the circle's PHI. Doing this at init covers
+ *   every current and future call site, plus posthog's own auto-properties;
+ *   fixing one page would not.
  */
+/**
+ * Depth-limited recursive redaction of every string in a property tree.
+ *
+ * Cycles are impossible in the JSON posthog serialises, but the depth cap makes
+ * that a guarantee rather than an assumption. Non-string leaves are returned
+ * untouched, so numbers, booleans and nulls keep their types.
+ */
+function redactDeep(value: unknown, depth = 0): unknown {
+  if (depth > 8) return value;
+  if (typeof value === 'string') return redactInviteCode(value);
+  if (Array.isArray(value)) return value.map((item) => redactDeep(item, depth + 1));
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = redactDeep(inner, depth + 1);
+    }
+    return out;
+  }
+  return value;
+}
+
 export function initAnalytics(): void {
   if (!env.VITE_POSTHOG_KEY) return;
 
@@ -37,6 +66,28 @@ export function initAnalytics(): void {
     persistence: 'memory',
     session_recording: {
       maskAllInputs: true,
+    },
+    // Runs on every event, including posthog's own auto-properties. Only string
+    // values are touched, and only the invite credential inside them is removed
+    // -- the invite EVENTS themselves (sent/accepted counts) are untouched,
+    // since those drive the activation funnel.
+    //
+    // `before_send`, not `sanitize_properties`: the latter is deprecated, and it
+    // only ever saw TOP-LEVEL properties. `$current_url` / `$pathname` are
+    // top-level so the invite code was caught there, but nested payloads were
+    // not -- most importantly `$exception_list`, an array of objects whose
+    // `value` and `stacktrace` frames can carry the URL the crash happened on,
+    // i.e. `/invite/<code>` verbatim. This walks the whole property tree.
+    before_send: (event) => {
+      if (!event) return event;
+      try {
+        return { ...event, properties: redactDeep(event.properties) as typeof event.properties };
+      } catch {
+        // Analytics must never break the app. Dropping the EVENT is safer than
+        // sending one that skipped redaction, since the thing being redacted is
+        // a live credential.
+        return null;
+      }
     },
   });
 

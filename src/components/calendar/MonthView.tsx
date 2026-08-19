@@ -9,6 +9,7 @@ import {
   getEventCardClass,
   getEventTextClass,
   getMedicationStatus,
+  isInactiveMedication,
 } from './eventStyles';
 
 export interface MonthViewProps {
@@ -159,6 +160,12 @@ export function MonthView({
                   const timeLabel = event.scheduled_time
                     ? formatEventTimeCompact(event.scheduled_time, careRecipientTimezone, hourCycle)
                     : t('calendar:allDay');
+                  // Historical doses of a discontinued medication stay on the
+                  // calendar with their confirmation status intact; they are
+                  // marked "Inactive" in TEXT (never color alone — WCAG 1.4.1)
+                  // and the same word joins the row's accessible name.
+                  const inactive = isInactiveMedication(event);
+                  const inactiveLabel = t('calendar:discontinueMed.inactiveBadge');
                   return (
                     <li key={`${event.id}_${event.scheduled_date}`}>
                       <button
@@ -170,6 +177,7 @@ export function MonthView({
                           t(`calendar:eventTypes.${event.event_type}`),
                           timeLabel,
                           status ? t(`calendar:status.${status}`) : null,
+                          inactive ? inactiveLabel : null,
                         ]
                           .filter(Boolean)
                           .join(', ')}
@@ -184,6 +192,13 @@ export function MonthView({
                           >
                             {title}
                           </span>
+                          {inactive && (
+                            <span
+                              className={`mono shrink-0 text-[11px] leading-tight ${getEventTextClass(event, status)}`}
+                            >
+                              {inactiveLabel}
+                            </span>
+                          )}
                           <span
                             className={`mono shrink-0 text-[11px] leading-tight ${getEventTextClass(event, status)}`}
                           >

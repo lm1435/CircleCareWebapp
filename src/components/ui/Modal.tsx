@@ -124,9 +124,9 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`flex max-h-[90vh] w-full ${SIZE_CLASS[size]} flex-col overflow-y-auto rounded-2xl border border-line bg-cream shadow-lg animate-[modal-in_240ms_cubic-bezier(0.2,0.7,0.2,1)]`}
+        className={`flex max-h-[90vh] w-full ${SIZE_CLASS[size]} flex-col overflow-hidden rounded-2xl border border-line bg-cream shadow-lg animate-[modal-in_240ms_cubic-bezier(0.2,0.7,0.2,1)]`}
       >
-        <div className="flex items-start gap-4 border-b border-line-2 px-6 pb-4 pt-6">
+        <div className="flex shrink-0 items-start gap-4 border-b border-line-2 px-6 pb-4 pt-6">
           <h2
             id={titleId}
             className="serif m-0 min-w-0 flex-1 break-words text-2xl leading-tight text-ink"
@@ -144,9 +144,9 @@ export function Modal({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4 p-6">{children}</div>
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">{children}</div>
 
-        {footer ? <div className="border-t border-line-2 p-6">{footer}</div> : null}
+        {footer ? <div className="shrink-0 border-t border-line-2 p-6">{footer}</div> : null}
       </div>
     </div>
   );

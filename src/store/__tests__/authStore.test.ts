@@ -11,6 +11,12 @@ vi.mock('@/lib/posthog', () => ({
   resetAnalytics: vi.fn(),
 }));
 
+// The store resolves the session-established language off the live i18n
+// instance; stub it so tests can drive the tag (including region-qualified
+// ones) without booting i18next.
+const mockI18n = { language: 'en' };
+vi.mock('@/i18n', () => ({ default: mockI18n }));
+
 class MockBroadcastChannel {
   static instances: MockBroadcastChannel[] = [];
   name: string;
@@ -48,6 +54,7 @@ function setSessionHint(present: boolean): void {
 
 describe('authStore', () => {
   beforeEach(() => {
+    mockI18n.language = 'en';
     setSessionHint(false); // no session by default — tests opt in explicitly
     vi.resetModules();
     // The `@/lib/api` mock factory result is cached by vitest across
@@ -77,6 +84,42 @@ describe('authStore', () => {
     // Web threat model: nothing auth-related may touch JS-readable storage.
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
+  });
+
+  it('signIn reports session-established with the active language', async () => {
+    const { api, useAuthStore } = await loadModules();
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+
+    expect(api.apiClient.post).toHaveBeenCalledWith('/auth/session-established', {
+      language: 'en',
+    });
+  });
+
+  it('signIn narrows a region-qualified language tag to the base language', async () => {
+    mockI18n.language = 'es-MX'; // browser locale, es-419 / es-MX all count as Spanish
+    const { api, useAuthStore } = await loadModules();
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+
+    expect(api.apiClient.post).toHaveBeenCalledWith('/auth/session-established', {
+      language: 'es',
+    });
+  });
+
+  it('a failing session-established never breaks the sign-in', async () => {
+    const { api, tokenAccessor, useAuthStore } = await loadModules();
+    vi.mocked(api.apiClient.post).mockRejectedValue(new Error('network down'));
+
+    expect(() =>
+      useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser)
+    ).not.toThrow();
+    // Let the rejected fire-and-forget settle — the user stays signed in.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(tokenAccessor.getAuthToken()).toBe('tok-123');
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
 
   it('signOut posts /auth/logout, clears token + query cache + state, and broadcasts to other tabs', async () => {
@@ -121,8 +164,10 @@ describe('authStore', () => {
     expect(tokenAccessor.getAuthToken()).toBeNull();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(channel.postMessage).not.toHaveBeenCalled();
-    // No network logout for a remote-initiated teardown
-    expect(api.apiClient.post).not.toHaveBeenCalled();
+    // No network logout for a remote-initiated teardown. (signIn above fires its
+    // own /auth/session-established post, so this asserts the logout call
+    // specifically rather than "no posts at all".)
+    expect(api.apiClient.post).not.toHaveBeenCalledWith('/auth/logout', {});
   });
 
   it('bootstrap performs a silent cookie refresh and loads the current user', async () => {
@@ -146,6 +191,26 @@ describe('authStore', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().user).toEqual(testUser);
     expect(useAuthStore.getState().isBootstrapping).toBe(false);
+  });
+
+  it('bootstrap reports session-established once the session is restored', async () => {
+    setSessionHint(true);
+    mockI18n.language = 'es';
+    const { api, useAuthStore } = await loadModules();
+    vi.mocked(api.apiClient.post).mockResolvedValue({
+      success: true,
+      data: { session: { access_token: 'boot-token' } },
+    } as never);
+    vi.mocked(api.apiClient.get).mockResolvedValue({
+      success: true,
+      data: { user: { ...testUser, notification_preferences: {}, created_at: '', updated_at: '' } },
+    } as never);
+
+    await useAuthStore.getState().bootstrap();
+
+    expect(api.apiClient.post).toHaveBeenCalledWith('/auth/session-established', {
+      language: 'es',
+    });
   });
 
   it('bootstrap SKIPS the refresh call entirely when there is no session hint (first visit)', async () => {

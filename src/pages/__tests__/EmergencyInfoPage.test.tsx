@@ -133,6 +133,61 @@ describe('EmergencyInfoPage', () => {
     mockedPut.mockReset();
   });
 
+  // A circle can hold nothing but an allergy list or a blood type. Those render
+  // in the at-a-glance tiles, not in SECTIONS, so the "is this page empty" test
+  // has to look at them too — otherwise a VIEW-ONLY member (the hired-caregiver
+  // role) gets the download CTA and never sees "Penicillin".
+  it('shows allergies to a view-only member when they are the ONLY data present', async () => {
+    const allergiesOnly = {
+      ...fullInfo,
+      insurance_plans: [],
+      primary_doctor_name: null,
+      primary_doctor_specialty: null,
+      primary_doctor_phone: null,
+      primary_doctor_country_code: null,
+      primary_doctor_address: null,
+      additional_doctors: [],
+      emergency_contacts: [],
+      advance_directives: null,
+      // has_dnr must be NULL, not false: hasDirectives() treats any non-null value
+      // (false included) as "the directives section has data".
+      has_dnr: null,
+      medical_conditions: [],
+      blood_type: null,
+    } as EmergencyInfo;
+    mockApi(allergiesOnly, false);
+    renderPage();
+
+    expect(await screen.findByText('Penicillin')).toBeInTheDocument();
+    expect(screen.getByText('Peanuts')).toBeInTheDocument();
+  });
+
+  it('shows a blood type to a view-only member when it is the ONLY data present', async () => {
+    const bloodOnly = {
+      ...fullInfo,
+      insurance_plans: [],
+      primary_doctor_name: null,
+      primary_doctor_specialty: null,
+      primary_doctor_phone: null,
+      primary_doctor_country_code: null,
+      primary_doctor_address: null,
+      additional_doctors: [],
+      emergency_contacts: [],
+      advance_directives: null,
+      // has_dnr must be NULL, not false: hasDirectives() treats any non-null value
+      // (false included) as "the directives section has data".
+      has_dnr: null,
+      medical_conditions: [],
+      allergies: [],
+      medication_allergies: [],
+      blood_type: 'O+',
+    } as EmergencyInfo;
+    mockApi(bloodOnly, false);
+    renderPage();
+
+    expect(await screen.findByText('O+')).toBeInTheDocument();
+  });
+
   it('renders all four sections with data (Medical Information merged into glance tiles)', async () => {
     mockApi(fullInfo);
     renderPage();

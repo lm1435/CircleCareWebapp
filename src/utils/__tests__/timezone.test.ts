@@ -141,13 +141,32 @@ describe('getTimezoneAbbreviation', () => {
     expect(getTimezoneAbbreviation('America/Detroit')).toBe('ET');
   });
 
-  // Negative tests
-  it('should fall back to last segment for unknown timezone', () => {
-    expect(getTimezoneAbbreviation('Europe/London')).toBe('London');
+  // Unmapped zones: Intl's short name, NOT the city.
+  // This used to be `timezone.split('/').pop()`, which appended a CITY to every
+  // rendered time — a Mexico City circle read "8:00 PM Mexico_City". An
+  // abbreviation may never contain a '/' or a '_'.
+  it('should return a real abbreviation, not the city, for an unmapped zone', () => {
+    const abbr = getTimezoneAbbreviation('America/Mexico_City');
+    expect(abbr).not.toBe('Mexico_City');
+    expect(abbr).not.toContain('_');
+    expect(abbr).not.toContain('/');
+    // Mexico abolished DST in 2022, so this one is stable year-round.
+    expect(abbr).toBe('CST');
   });
 
-  it('should fall back to last segment for Asia timezone', () => {
-    expect(getTimezoneAbbreviation('Asia/Tokyo')).toBe('Tokyo');
+  it('should return a real abbreviation for an unmapped Asia zone', () => {
+    // Japan has no DST either, so 'GMT+9' does not drift with the season.
+    const abbr = getTimezoneAbbreviation('Asia/Tokyo');
+    expect(abbr).not.toBe('Tokyo');
+    expect(abbr).toBe('GMT+9');
+  });
+
+  it('should not leak a city for a DST-observing unmapped zone', () => {
+    // Europe/London alternates GMT / GMT+1 across the year, so assert the
+    // SHAPE rather than a value that would break every spring.
+    const abbr = getTimezoneAbbreviation('Europe/London');
+    expect(abbr).not.toBe('London');
+    expect(abbr).toMatch(/^(?:GMT(?:[+-]\d{1,2}(?::\d{2})?)?|[A-Z]{2,5})$/);
   });
 
   it('should return the full string if no slash present', () => {
@@ -157,12 +176,23 @@ describe('getTimezoneAbbreviation', () => {
   it('should handle empty string gracefully', () => {
     expect(getTimezoneAbbreviation('')).toBe('');
   });
+
+  it('should fall back to the last segment when Intl rejects the zone', () => {
+    // A malformed id makes Intl throw; the old split('/') behaviour is kept as
+    // the last resort so this never returns empty.
+    expect(getTimezoneAbbreviation('Not/AZone')).toBe('AZone');
+  });
 });
 
 // ============================================================================
 // getTimezoneLabel
 // ============================================================================
 describe('getTimezoneLabel', () => {
+  // i18next is NOT initialized in this file, so `t` is unavailable and every
+  // curated label degrades to its English default — which is exactly the
+  // pre-existing behaviour these assertions lock in. The LOCALIZED path lives
+  // in ./timezone.i18n.test.ts, which boots a real i18next.
+
   // Positive tests
   it('should return "Eastern Time" for America/New_York', () => {
     expect(getTimezoneLabel('America/New_York')).toBe('Eastern Time');
@@ -176,9 +206,27 @@ describe('getTimezoneLabel', () => {
     expect(getTimezoneLabel('Pacific/Honolulu')).toBe('Hawaii Time');
   });
 
-  // Negative tests
-  it('should return IANA timezone as-is for unknown timezone', () => {
-    expect(getTimezoneLabel('Europe/London')).toBe('Europe/London');
+  // Unmapped zones. The old code returned the RAW IANA id, which landed inside
+  // a translated sentence: "Times are saved in America/Mexico_City." Intl's
+  // long name replaces it, so ANY zone reads as prose.
+  it('should return a readable name, not the IANA id, for an unmapped zone', () => {
+    const label = getTimezoneLabel('America/Mexico_City', 'en');
+    expect(label).not.toBe('America/Mexico_City');
+    expect(label).not.toContain('/');
+    expect(label).not.toContain('_');
+    expect(label).toBe('Central Standard Time');
+  });
+
+  it('should return a readable name for an unmapped European zone', () => {
+    // London flips between GMT and BST, so assert the shape, not the season.
+    const label = getTimezoneLabel('Europe/London', 'en');
+    expect(label).not.toBe('Europe/London');
+    expect(label).not.toContain('/');
+    expect(label.length).toBeGreaterThan(3);
+  });
+
+  it('should fall back to the IANA id only when Intl rejects the zone', () => {
+    expect(getTimezoneLabel('Not/AZone', 'en')).toBe('Not/AZone');
   });
 
   it('should return empty string for empty input', () => {
@@ -208,6 +256,63 @@ describe('formatTimeOfDay', () => {
     expect(formatTimeOfDay(13, 0, '24h')).toBe('13:00');
     expect(formatTimeOfDay(23, 59, '24h')).toBe('23:59');
     expect(formatTimeOfDay(14, 30, '24h')).not.toMatch(/[AP]M/);
+  });
+
+  // --------------------------------------------------------------------------
+  // Language axis. Orthogonal to the cycle axis above: `cycle` picks the
+  // DIGITS, `language` picks only the period marker.
+  //
+  // Spanish uses the RAE form `a. m.` / `p. m.` — lowercase, a period after
+  // EACH letter, a space between the groups. The assertions are exact strings
+  // so `a.m.`, `am` and `A. M.` all fail.
+  // --------------------------------------------------------------------------
+  describe('language', () => {
+    it('renders the RAE meridiem in Spanish', () => {
+      expect(formatTimeOfDay(0, 0, '12h', 'es')).toBe('12:00 a. m.');
+      expect(formatTimeOfDay(9, 5, '12h', 'es')).toBe('9:05 a. m.');
+      expect(formatTimeOfDay(11, 59, '12h', 'es')).toBe('11:59 a. m.');
+      expect(formatTimeOfDay(12, 0, '12h', 'es')).toBe('12:00 p. m.');
+      expect(formatTimeOfDay(13, 0, '12h', 'es')).toBe('1:00 p. m.');
+      expect(formatTimeOfDay(20, 45, '12h', 'es')).toBe('8:45 p. m.');
+      expect(formatTimeOfDay(23, 59, '12h', 'es')).toBe('11:59 p. m.');
+    });
+
+    it('renders ENGLISH byte-identically to before this change', () => {
+      // Regression lock: an English user's screens must not have moved.
+      // Explicit 'en' and the omitted-argument default must agree.
+      const cases = [
+        [0, 0, '12:00 AM'],
+        [9, 5, '9:05 AM'],
+        [11, 59, '11:59 AM'],
+        [12, 0, '12:00 PM'],
+        [13, 0, '1:00 PM'],
+        [23, 59, '11:59 PM'],
+      ] as const;
+      for (const [h, m, expected] of cases) {
+        expect(formatTimeOfDay(h, m, '12h', 'en')).toBe(expected);
+        expect(formatTimeOfDay(h, m, '12h')).toBe(expected);
+      }
+    });
+
+    it('leaves the 24h cycle byte-identical in both languages', () => {
+      // There is no period marker under 24h, so that branch must not merely be
+      // "similar" across languages — it must be the same bytes.
+      for (let h = 0; h < 24; h++) {
+        const en = formatTimeOfDay(h, 30, '24h', 'en');
+        expect(formatTimeOfDay(h, 30, '24h', 'es')).toBe(en);
+        expect(formatTimeOfDay(h, 30, '24h')).toBe(en);
+        expect(formatTimeOfDay(h, 30, '24h', 'es')).toMatch(/^\d{2}:30$/);
+      }
+    });
+
+    it('rejects the near-miss Spanish forms the RAE does not use', () => {
+      const pm = formatTimeOfDay(14, 30, '12h', 'es');
+      expect(pm).not.toBe('2:30 PM');
+      expect(pm).not.toBe('2:30 pm');
+      expect(pm).not.toBe('2:30 p.m.');
+      expect(pm).not.toBe('2:30 P. M.');
+      expect(pm).toBe('2:30 p. m.');
+    });
   });
 });
 
@@ -277,8 +382,11 @@ describe('formatTimeWithTimezone', () => {
   });
 
   it('should handle unknown timezone gracefully', () => {
-    const result = formatTimeWithTimezone(8, 0, 'Europe/London', '12h');
-    expect(result).toBe('8:00 AM London');
+    // Was '8:00 AM London' — the old split('/').pop() appended the CITY.
+    // Mexico City has no DST, so 'CST' is stable year-round.
+    const result = formatTimeWithTimezone(8, 0, 'America/Mexico_City', '12h');
+    expect(result).toBe('8:00 AM CST');
+    expect(result).not.toContain('Mexico_City');
   });
 
   it('keeps the abbreviation under a 24-hour cycle', () => {
@@ -1131,5 +1239,156 @@ describe('formatDateTimeForAPI', () => {
     const result = formatDateTimeForAPI(instant, 'America/Denver');
     expect(result.scheduled_date).toBe('2026-06-15');
     expect(result.scheduled_time).toBe('23:30');
+  });
+});
+
+// ============================================================================
+// isEventInFuture / isDoseConfirmable
+// ============================================================================
+// VERBATIM PORT of the matching blocks in
+// mobile/src/__tests__/utils/timezone.test.ts. Both predicates and both suites
+// must be changed together with mobile's — web and mobile disagreeing about
+// WHEN a dose may be confirmed means one of them writes a falsified row into
+// the clinician-facing adherence report.
+import {
+  isEventInFuture,
+  isDoseConfirmable,
+  DOSE_EARLY_CONFIRM_WINDOW_MINUTES,
+} from '../../utils/timezone';
+
+describe('isEventInFuture', () => {
+  // 2026-08-05 05:30 UTC — 23:30 on 08-04 in Denver, 01:30 on 08-05 in NY.
+  const acrossMidnight = new Date('2026-08-05T05:30:00Z');
+
+  it('reads "today" in the CARE RECIPIENT timezone, not the device', () => {
+    // Same instant: 08-05 is still tomorrow in Denver, already today in NY.
+    expect(isEventInFuture('2026-08-05', 'America/Denver', acrossMidnight)).toBe(true);
+    expect(isEventInFuture('2026-08-05', 'America/New_York', acrossMidnight)).toBe(false);
+  });
+
+  it('is false for today and for past days', () => {
+    expect(isEventInFuture('2026-08-04', 'America/Denver', acrossMidnight)).toBe(false);
+    expect(isEventInFuture('2026-01-01', 'America/Denver', acrossMidnight)).toBe(false);
+  });
+
+  it('is false for a missing date rather than throwing', () => {
+    expect(isEventInFuture('', 'America/Denver', acrossMidnight)).toBe(false);
+  });
+});
+
+// THE gate for the Skip/Take pair on every surface. Day-granularity used to be
+// enough, but at 4 PM it put a live "Take" on a 9 PM dose — a question nobody
+// can answer yet — while the same card said "Upcoming". The rule is now a fixed
+// EARLY WINDOW around the scheduled moment, still resolved entirely in the care
+// recipient's timezone (scheduled_date/_time are naive local values in it).
+describe('isDoseConfirmable', () => {
+  // 2026-08-05 22:07 UTC = 16:07 (4:07 PM) in Denver, same calendar day.
+  const fourOhSevenPmDenver = new Date('2026-08-05T22:07:00Z');
+  const TZ = 'America/Denver';
+
+  it('exports a single tunable early window of 120 minutes', () => {
+    expect(DOSE_EARLY_CONFIRM_WINDOW_MINUTES).toBe(120);
+  });
+
+  it('does NOT offer a dose five hours out (4:07 PM, dose at 21:00)', () => {
+    expect(isDoseConfirmable('2026-08-05', '21:00:00', TZ, fourOhSevenPmDenver)).toBe(false);
+  });
+
+  it('DOES offer the same dose 30 minutes out (4:07 PM, dose at 16:30)', () => {
+    expect(isDoseConfirmable('2026-08-05', '16:30:00', TZ, fourOhSevenPmDenver)).toBe(true);
+  });
+
+  it('opens exactly at scheduled_time − window and not a minute earlier', () => {
+    // Window boundary for 4:07 PM is an 18:07 dose.
+    expect(isDoseConfirmable('2026-08-05', '18:07:00', TZ, fourOhSevenPmDenver)).toBe(true);
+    expect(isDoseConfirmable('2026-08-05', '18:08:00', TZ, fourOhSevenPmDenver)).toBe(false);
+  });
+
+  it('stays open for an overdue dose earlier today', () => {
+    expect(isDoseConfirmable('2026-08-05', '08:00:00', TZ, fourOhSevenPmDenver)).toBe(true);
+  });
+
+  it('stays open for an unanswered dose from a previous day', () => {
+    expect(isDoseConfirmable('2026-08-04', '08:00:00', TZ, fourOhSevenPmDenver)).toBe(true);
+  });
+
+  it('is closed for a dose on a later day', () => {
+    expect(isDoseConfirmable('2026-08-06', '08:00:00', TZ, fourOhSevenPmDenver)).toBe(false);
+  });
+
+  it('honours a caller-supplied window', () => {
+    // 5h out, with a 6h window → confirmable.
+    expect(isDoseConfirmable('2026-08-05', '21:00:00', TZ, fourOhSevenPmDenver, 360)).toBe(true);
+  });
+
+  // A timeless dose has no due moment to open a window around — it behaves
+  // exactly as it did before the window existed: confirmable on its own day.
+  describe('timeless doses', () => {
+    it('is confirmable all day on its scheduled date', () => {
+      expect(isDoseConfirmable('2026-08-05', null, TZ, fourOhSevenPmDenver)).toBe(true);
+    });
+
+    it('is confirmable on a past date', () => {
+      expect(isDoseConfirmable('2026-08-01', null, TZ, fourOhSevenPmDenver)).toBe(true);
+    });
+
+    it('is NOT confirmable on a later date', () => {
+      expect(isDoseConfirmable('2026-08-06', null, TZ, fourOhSevenPmDenver)).toBe(false);
+    });
+
+    it('treats an unparseable time as timeless rather than throwing', () => {
+      expect(isDoseConfirmable('2026-08-05', 'not-a-time', TZ, fourOhSevenPmDenver)).toBe(true);
+    });
+  });
+
+  // The window is measured in the CARE RECIPIENT's timezone — never the
+  // device's. Same instant, two recipients, two answers.
+  describe('timezone discipline', () => {
+    // 2026-08-05 05:30 UTC — 23:30 on 08-04 in Denver, 01:30 on 08-05 in NY.
+    const acrossMidnight = new Date('2026-08-05T05:30:00Z');
+
+    it('reads "today" per the care recipient timezone', () => {
+      // 08-05 01:00 dose: already overdue in New York, still tomorrow in Denver.
+      expect(isDoseConfirmable('2026-08-05', '01:00:00', 'America/New_York', acrossMidnight)).toBe(
+        true
+      );
+      // In Denver it is 23:30 on 08-04 — a 01:00 dose tomorrow is 1.5h away, so
+      // the early window reaches it.
+      expect(isDoseConfirmable('2026-08-05', '01:00:00', TZ, acrossMidnight)).toBe(true);
+    });
+
+    it('reaches across midnight only as far as the window allows', () => {
+      // 23:30 Denver on 08-04 → a 03:00 dose tomorrow is 3.5h away: too early.
+      expect(isDoseConfirmable('2026-08-05', '03:00:00', TZ, acrossMidnight)).toBe(false);
+    });
+
+    it('never reaches two days ahead', () => {
+      expect(isDoseConfirmable('2026-08-06', '00:05:00', TZ, acrossMidnight)).toBe(false);
+    });
+
+    // The dev machine is America/Denver: the SAME dose, the SAME instant, must
+    // answer differently for a New York recipient than for a Denver one, and
+    // neither answer may come from the runner's local clock.
+    it('gives two different answers for two recipients at one instant', () => {
+      // 2026-08-05 01:30 UTC = 19:30 on 08-04 in Denver, 21:30 on 08-04 in NY.
+      const instant = new Date('2026-08-05T01:30:00Z');
+      // A 22:00 dose on 08-04 is 30 minutes away in NY (open) and 2.5h away in
+      // Denver (closed) — the recipient timezone decides, not the device.
+      expect(isDoseConfirmable('2026-08-04', '22:00:00', 'America/New_York', instant)).toBe(true);
+      expect(isDoseConfirmable('2026-08-04', '22:00:00', 'America/Denver', instant)).toBe(false);
+    });
+  });
+
+  it('is false for a missing date rather than throwing', () => {
+    expect(isDoseConfirmable('', '08:00:00', TZ, fourOhSevenPmDenver)).toBe(false);
+  });
+
+  it('degrades to day-granularity when the timezone is unusable', () => {
+    // Intl throws on a bogus zone — a caregiver must still be able to confirm
+    // today's and past doses, and must still be blocked on later days.
+    expect(isDoseConfirmable('2026-08-04', '21:00:00', 'Not/AZone', fourOhSevenPmDenver)).toBe(true);
+    expect(isDoseConfirmable('2030-01-01', '21:00:00', 'Not/AZone', fourOhSevenPmDenver)).toBe(
+      false
+    );
   });
 });

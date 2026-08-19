@@ -59,10 +59,17 @@ export async function getCircles(): Promise<Circle[]> {
  *   - recipient_dob: YYYY-MM-DD format + a valid calendar date
  *   - recipient_conditions: array of strings
  * All fields optional (partial update); `.strict()` rejects unknown keys.
+ *
+ * VALIDATION MESSAGES are i18n KEY NAMES, never prose — same contract as
+ * `src/lib/vitals.ts` (`'valueOutOfRange'`, `'notesTooLong'`). Consumers map
+ * them through a `messageFor()` helper into `circles:validation.*` (see
+ * CreateCircleModal / EditCirclePage, mirroring VitalFormModal). Emitting prose
+ * here would surface untranslated developer jargon (column names, Zod's own
+ * English defaults) directly in the field-error UI.
  */
 const recipientDobSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'recipient_dob must be in YYYY-MM-DD format')
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'dobFormat')
   .refine((value) => {
     const [year, month, day] = value.split('-').map(Number);
     const date = new Date(Date.UTC(year, month - 1, day));
@@ -71,11 +78,15 @@ const recipientDobSchema = z
       date.getUTCMonth() === month - 1 &&
       date.getUTCDate() === day
     );
-  }, 'recipient_dob is not a valid calendar date');
+  }, 'dobInvalidDate');
 
 export const updateCircleSchema = z
   .object({
-    recipient_name: z.string().min(1).max(100).optional(),
+    recipient_name: z
+      .string()
+      .min(1, { message: 'nameRequired' })
+      .max(100, { message: 'nameTooLong' })
+      .optional(),
     recipient_dob: recipientDobSchema.optional(),
     recipient_conditions: z.array(z.string()).optional(),
   })
@@ -119,10 +130,14 @@ export async function deleteCircle(circleId: string): Promise<void> {
  *   - recipient_conditions: array of strings
  *   - is_self_care: boolean
  * `.strict()` rejects unknown keys.
+ *
+ * Validation messages are i18n KEY NAMES (see `recipientDobSchema` above).
  */
 export const createCircleSchema = z
   .object({
-    recipient_name: z.string().min(1).max(100),
+    recipient_name: z.string().min(1, { message: 'nameRequired' }).max(100, {
+      message: 'nameTooLong',
+    }),
     recipient_dob: recipientDobSchema.optional(),
     recipient_conditions: z.array(z.string()).optional(),
     is_self_care: z.boolean().optional(),

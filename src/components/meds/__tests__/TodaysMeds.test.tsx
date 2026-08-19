@@ -86,12 +86,15 @@ const DEFAULT_MEDS: TodaysMedication[] = [
   }),
   // 10:00 ET is before the pinned 12:00 ET "now" → past due, unconfirmed → Not confirmed
   makeMed({ id: 'med-3', medication_name: 'Atorvastatin', scheduled_time: '10:00:00' }),
-  // 8:00 PM ET is after "now" → Pending
+  // 1:00 PM ET is one hour after the pinned 12:00 ET "now" — not yet due, but
+  // INSIDE the 2h early-confirm window, so it is answerable and reads
+  // "Due soon". (It used to be a 20:00 dose: eight hours out, and web offered
+  // Confirm on it. That is the falsified-adherence bug this file now pins.)
   makeMed({
     id: 'med-4',
     medication_name: 'Levothyroxine',
     medication_dosage: '50 mcg',
-    scheduled_time: '20:00:00',
+    scheduled_time: '13:00:00',
   }),
 ];
 
@@ -169,16 +172,190 @@ describe('TodaysMeds', () => {
     expect(within(medRow('Lisinopril')).getByText('Taken')).toBeInTheDocument();
     expect(within(medRow('Metformin')).getByText('Skipped')).toBeInTheDocument();
     expect(within(medRow('Atorvastatin')).getByText('Not confirmed')).toBeInTheDocument();
-    expect(within(medRow('Levothyroxine')).getByText('Pending')).toBeInTheDocument();
+    expect(within(medRow('Levothyroxine')).getByText('Due soon')).toBeInTheDocument();
 
     // Scheduled time shown (care recipient TZ, same as pinned device TZ)
-    expect(within(medRow('Levothyroxine')).getByText('8:00 PM ET')).toBeInTheDocument();
+    expect(within(medRow('Levothyroxine')).getByText('1:00 PM ET')).toBeInTheDocument();
     expect(screen.getByText('50 mcg')).toBeInTheDocument();
 
     // Confirm/skip only on unconfirmed meds (not-confirmed + pending)
     expect(screen.getAllByRole('button', { name: 'Confirm' })).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Skip' })).toHaveLength(2);
     expect(within(medRow('Lisinopril')).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  // A dose of a medication that was stopped LATER THE SAME DAY. This widget
+  // fetches through the calendar events endpoint with no `includeDiscontinued`,
+  // so the backend only sends it because the dose was genuinely DUE — it stays
+  // answerable. Suppressing the buttons here is what left a dose really given
+  // but not yet logged permanently unloggable, and permanently counted missed
+  // in the clinician-facing adherence report.
+  it('keeps Confirm/Skip on a dose of an INACTIVE medication, and marks it Inactive in text', async () => {
+    mockApi({
+      events: [
+        makeMed({
+          id: 'med-inactive',
+          medication_name: 'Warfarin',
+          scheduled_time: '10:00:00',
+          discontinued_at: '2026-06-12T15:00:00Z',
+        }),
+      ],
+    });
+    renderWidget();
+
+    expect(await screen.findByText('Warfarin')).toBeInTheDocument();
+    const row = medRow('Warfarin');
+    // The state is still conveyed in TEXT (WCAG 2.1 AA 1.4.1) — only the
+    // actionability changed.
+    expect(within(row).getByText('Inactive')).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+  });
+
+  // ==========================================================================
+  // CONFIRM WINDOW — `isDoseConfirmable`, the predicate ported from mobile.
+  // This widget used to offer Confirm on ANY unanswered dose of the current
+  // day, so at noon a web user could mark the 8 PM dose taken and write a
+  // falsified row into the clinician-facing adherence report. The pair now
+  // opens DOSE_EARLY_CONFIRM_WINDOW_MINUTES (2h) before the scheduled moment.
+  // ==========================================================================
+  describe('an auto-missed dose still asks', () => {
+    // The reminder cron writes `missed` when nobody answered in time — that is
+    // the SYSTEM recording silence, not a caregiver saying the dose was skipped.
+    // The dose may really have been given, so this widget must still offer the
+    // pair. It used to gate on a bare `!confirmation`, so the only way to correct
+    // an auto-missed dose was to hunt it down on the calendar.
+    it('offers Confirm/Skip on a dose the cron marked missed', async () => {
+      mockApi({
+        events: [
+          makeMed({
+            id: 'auto-missed',
+            medication_name: 'Levothyroxine',
+            scheduled_time: '11:00:00', // already past at the pinned 12:00 ET now
+            confirmation: {
+              status: 'missed',
+              confirmed_at: '2026-06-12T15:30:00Z',
+              confirmed_by: 'cron',
+            },
+          }),
+        ],
+      });
+      renderWidget();
+
+      await screen.findByText('Levothyroxine');
+      const row = medRow('Levothyroxine');
+      expect(within(row).getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+      expect(within(row).getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+    });
+
+    it('does NOT ask again once a human answered', async () => {
+      mockApi({
+        events: [
+          makeMed({
+            id: 'human-answered',
+            medication_name: 'Levothyroxine',
+            scheduled_time: '11:00:00',
+            confirmation: {
+              status: 'taken',
+              confirmed_at: '2026-06-12T15:30:00Z',
+              confirmed_by: 'u1',
+            },
+          }),
+        ],
+      });
+      renderWidget();
+
+      await screen.findByText('Levothyroxine');
+      const row = medRow('Levothyroxine');
+      expect(within(row).queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+      expect(within(row).queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('confirm window', () => {
+    it('hides Confirm/Skip on a dose more than 2h out and calls it Upcoming', async () => {
+      mockApi({
+        events: [
+          makeMed({ id: 'far', medication_name: 'Levothyroxine', scheduled_time: '20:00:00' }),
+        ],
+      });
+      renderWidget();
+
+      await screen.findByText('Levothyroxine');
+      const row = medRow('Levothyroxine');
+      expect(within(row).getByText('Upcoming')).toBeInTheDocument();
+      expect(within(row).queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+      expect(within(row).queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
+    });
+
+    it('shows the pair exactly at scheduled_time − 2h, and not a minute earlier', async () => {
+      // "Now" is 12:00 PM ET, so the boundary dose is 14:00 and 14:01 is out.
+      mockApi({
+        events: [
+          makeMed({ id: 'edge-in', medication_name: 'Boundary', scheduled_time: '14:00:00' }),
+          makeMed({ id: 'edge-out', medication_name: 'JustOutside', scheduled_time: '14:01:00' }),
+        ],
+      });
+      renderWidget();
+
+      await screen.findByText('Boundary');
+      const inWindow = medRow('Boundary');
+      expect(within(inWindow).getByText('Due soon')).toBeInTheDocument();
+      expect(within(inWindow).getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+
+      const outside = medRow('JustOutside');
+      expect(within(outside).getByText('Upcoming')).toBeInTheDocument();
+      expect(within(outside).queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+    });
+
+    it('keeps the pair on an overdue dose earlier today', async () => {
+      mockApi({
+        events: [makeMed({ id: 'late', medication_name: 'Atorvastatin', scheduled_time: '08:00:00' })],
+      });
+      renderWidget();
+
+      await screen.findByText('Atorvastatin');
+      const row = medRow('Atorvastatin');
+      expect(within(row).getByText('Not confirmed')).toBeInTheDocument();
+      expect(within(row).getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+    });
+
+    // The window is measured in the CARE RECIPIENT's timezone, never the
+    // viewer's device (the dev machine is America/Denver). Same instant, same
+    // dose, opposite answers — so this widget is re-rendered against a circle
+    // whose recipient lives in Denver while everything else is unchanged.
+    it('measures the window in the care recipient timezone, not the device', async () => {
+      // 12:00 PM in New York is 10:00 AM in Denver: a 13:00 dose is 1h away for
+      // a New York recipient (open) and 3h away for a Denver one (closed).
+      mockedGet.mockImplementation((url: string) => {
+        if (url === '/circles') {
+          return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+        }
+        if (url === `/circles/${CIRCLE_ID}`) {
+          return Promise.resolve({
+            success: true,
+            data: { circle: { id: CIRCLE_ID, care_recipient_timezone: 'America/Denver' } },
+          });
+        }
+        if (url === `/circles/${CIRCLE_ID}/events`) {
+          return Promise.resolve({
+            success: true,
+            data: {
+              events: [
+                makeMed({ id: 'tz', medication_name: 'Lisinopril', scheduled_time: '13:00:00' }),
+              ],
+            },
+          });
+        }
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+      renderWidget();
+
+      await screen.findByText('Lisinopril');
+      const row = medRow('Lisinopril');
+      expect(within(row).getByText('Upcoming')).toBeInTheDocument();
+      expect(within(row).queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+    });
   });
 
   it('renders the empty state when there are no medications today', async () => {
@@ -247,8 +424,7 @@ describe('TodaysMeds', () => {
       expect(mockedPost).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/medications/confirm`, {
         event_id: 'med-4',
         status: 'taken',
-        notes: undefined,
-        scheduled_time: '20:00:00',
+        scheduled_time: '13:00:00',
       });
     });
 
@@ -257,7 +433,7 @@ describe('TodaysMeds', () => {
     expect(screen.queryByRole('dialog', { name: 'Confirm medication' })).not.toBeInTheDocument();
   });
 
-  it('skips a medication with an optional note', async () => {
+  it('skips a medication', async () => {
     mockApi();
     mockedPost.mockResolvedValue({
       success: true,
@@ -275,15 +451,13 @@ describe('TodaysMeds', () => {
       'true'
     );
 
-    await user.type(within(dialog).getByLabelText('Note (optional)'), 'Felt nauseous');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(mockedPost).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/medications/confirm`, {
         event_id: 'med-4',
         status: 'skipped',
-        notes: 'Felt nauseous',
-        scheduled_time: '20:00:00',
+        scheduled_time: '13:00:00',
       });
     });
   });

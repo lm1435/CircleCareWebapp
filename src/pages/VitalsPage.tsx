@@ -123,7 +123,9 @@ function VitalRow({
 
   const recordedLabel = useMemo(() => {
     const wall = utcISOToRecipientWallTime(vital.recorded_at, timezone);
-    const dayLabel = new Intl.DateTimeFormat(undefined, {
+    // DISPLAY locale is the APP language, not the browser's — matches the
+    // sibling formatRecordedDay helper above.
+    const dayLabel = new Intl.DateTimeFormat(i18n.language, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -131,7 +133,7 @@ function VitalRow({
     }).format(new Date(`${wall.date}T12:00:00Z`));
     const [hh, mm] = wall.time.split(':').map(Number);
     return `${dayLabel} · ${formatTimeOfDay(hh, mm, hourCycle)}`;
-  }, [vital.recorded_at, timezone, hourCycle]);
+  }, [vital.recorded_at, timezone, hourCycle, i18n.language]);
 
   return (
     <li className={careCardSurface}>

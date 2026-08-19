@@ -135,5 +135,14 @@
     "statusDone": "(listo)",
     "statusPending": "(pendiente)",
     "dismiss": "Descartar la lista de pasos para empezar"
+  },
+  "timezoneLabels": {
+    "America/New_York": "Hora del Este",
+    "America/Chicago": "Hora Central",
+    "America/Denver": "Hora de la Montaña",
+    "America/Los_Angeles": "Hora del Pacífico",
+    "America/Phoenix": "Hora de Arizona",
+    "America/Anchorage": "Hora de Alaska",
+    "Pacific/Honolulu": "Hora de Hawái"
   }
 }

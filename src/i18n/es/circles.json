@@ -77,5 +77,12 @@
     "deleteConfirmPrompt": "Escribe {{keyword}} para confirmar",
     "deleteConfirmKeyword": "ELIMINAR",
     "deletedToast": "Círculo eliminado."
+  },
+  "validation": {
+    "invalid": "Revisa este valor.",
+    "nameRequired": "Ingresa el nombre de la persona a tu cuidado.",
+    "nameTooLong": "El nombre debe tener 100 caracteres o menos.",
+    "dobFormat": "Elige una fecha de nacimiento válida.",
+    "dobInvalidDate": "Esa fecha de nacimiento no existe en el calendario."
   }
 }

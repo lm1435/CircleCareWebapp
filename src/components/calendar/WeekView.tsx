@@ -6,7 +6,13 @@ import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
 import { formatEventTimeCompact, getCurrentHoursInTimezone } from '@/utils/timezone';
 import { formatDateForDisplay } from './dateMath';
-import { getEventCardClass, getEventTextClass, getMedicationStatus } from './eventStyles';
+import {
+  getEventCardClass,
+  getEventTextClass,
+  getMedicationStatus,
+  isInactiveMedication,
+} from './eventStyles';
+import { overlapKey, resolveOverlaps, type OverlapInfo } from './overlap';
 
 export interface WeekViewProps {
   /** 7 YYYY-MM-DD strings (Sunday-first) in the care recipient's timezone. */
@@ -18,9 +24,18 @@ export interface WeekViewProps {
   onEventClick: (event: CalendarEvent) => void;
 }
 
-const HOUR_HEIGHT = 56; // px per hour — closer to mobile's roomier timeline feel
+// px per hour — matches mobile's WeekTimelineView HOUR_HEIGHT exactly. Also
+// the fit budget for chip text: at 80 a 30-minute event is 40px tall, which
+// clears two lines of chip text, so even the shortest event stacks its title
+// on a full-width line instead of sharing one with the time label.
+const HOUR_HEIGHT = 80;
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const MIN_EVENT_MINUTES = 30;
+// Chip text metrics — both spans render at leading-[14px], and the chip's p-1
+// eats 4px top + bottom. Used to work out how many lines actually fit before
+// choosing the stacked vs inline layout, so nothing is ever clipped mid-line.
+const CHIP_LINE_HEIGHT = 14;
+const CHIP_PADDING_Y = 8;
 
 function parseTimeToHours(time: string): number {
   const [h = '0', m = '0'] = time.split(':');
@@ -104,30 +119,71 @@ export function WeekView({
     el.scrollTop = base + Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
   }, [earliestHour, careRecipientTimezone, days]);
 
-  const renderEventButton = (event: CalendarEvent, positioned: boolean): ReactElement => {
+  const renderEventButton = (
+    event: CalendarEvent,
+    positioned: boolean,
+    overlap?: OverlapInfo
+  ): ReactElement => {
     const status = getMedicationStatus(event, careRecipientTimezone, now);
     const title = event.medication_name || event.title;
     const timeLabel = event.scheduled_time
       ? formatEventTimeCompact(event.scheduled_time, careRecipientTimezone, hourCycle)
       : t('calendar:allDay');
+    // A discontinued medication still shows every dose that was due BEFORE the
+    // discontinue instant — historical rows keep their confirmation status and
+    // are labelled "Inactive" in TEXT (never color alone: WCAG 2.1 AA 1.4.1),
+    // both visibly in the chip and in the accessible name.
+    const inactive = isInactiveMedication(event);
+    const inactiveLabel = t('calendar:discontinueMed.inactiveBadge');
     const ariaLabel = [
       title,
       t(`calendar:eventTypes.${event.event_type}`),
       timeLabel,
       status ? t(`calendar:status.${status}`) : null,
+      inactive ? inactiveLabel : null,
     ]
       .filter(Boolean)
       .join(', ');
 
+    const chipHeight = positioned
+      ? Math.max(
+          ((event.duration_minutes ?? MIN_EVENT_MINUTES) / 60) * HOUR_HEIGHT,
+          (MIN_EVENT_MINUTES / 60) * HOUR_HEIGHT
+        )
+      : null;
+
+    // Collision lanes. Events sharing a slot split the column between them
+    // (mobile parity) — without this they stack and only the top one is seen.
+    const totalColumns = overlap?.totalColumns ?? 1;
+    const column = overlap?.column ?? 0;
+    const columnPct = 100 / totalColumns;
+
     const style = positioned
       ? {
           top: parseTimeToHours(event.scheduled_time as string) * HOUR_HEIGHT,
-          height: Math.max(
-            ((event.duration_minutes ?? MIN_EVENT_MINUTES) / 60) * HOUR_HEIGHT,
-            (MIN_EVENT_MINUTES / 60) * HOUR_HEIGHT
-          ),
+          height: chipHeight as number,
+          // Same 2% gutter split mobile's TimelineEventBlock uses.
+          left: `${column * columnPct + 1}%`,
+          width: `${columnPct - 2}%`,
         }
       : undefined;
+
+    // How many text lines the chip can show. All-day chips are min-h-[44px]
+    // and free to grow, so they always get the roomy treatment.
+    const fitLines =
+      chipHeight === null
+        ? 3
+        : Math.floor((chipHeight - CHIP_PADDING_Y) / CHIP_LINE_HEIGHT);
+    // Stacking gives the title the chip's FULL width instead of whatever the
+    // time label leaves it — the single biggest win against truncation. Only
+    // done when a second line is genuinely available; a 30-minute chip (20px
+    // of content) still shares one baseline row, as before.
+    const stacked = fitLines >= 2;
+    // At 3+ lanes a chip is too narrow for both; the title is what identifies it,
+    // and the time is still in the aria-label and the hour axis.
+    const showTime = !!event.scheduled_time && totalColumns < 3;
+    // Two title lines only when the time label still has a line of its own.
+    const titleClamp = fitLines >= 3 ? 'line-clamp-2' : 'truncate';
 
     return (
       <button
@@ -144,20 +200,33 @@ export function WeekView({
           // event's duration — forcing min-h there would distort short events
           // and overlap neighbours, so it keeps its computed height (known
           // limitation; a min-height on timed chips would break the grid).
-          positioned ? 'absolute inset-x-0.5 z-[1]' : 'relative min-h-[44px] w-full'
+          positioned ? 'absolute z-[1]' : 'relative min-h-[44px] w-full'
         } block overflow-hidden rounded p-1 text-left ${getEventCardClass(event, status)}`}
       >
-        <span className="flex items-baseline gap-1">
+        <span className={stacked ? 'flex flex-col' : 'flex items-baseline gap-1'}>
           <span
-            className={`mono min-w-0 flex-1 truncate text-[11px] leading-[14px] ${getEventTextClass(event, status)} ${
+            className={`mono min-w-0 ${stacked ? 'w-full' : 'flex-1'} ${titleClamp} break-words text-[11px] leading-[14px] ${getEventTextClass(event, status)} ${
               status === 'skipped' ? 'line-through' : ''
             }`}
           >
             {title}
           </span>
-          {event.scheduled_time && (
-            <span className={`mono shrink-0 text-[10px] leading-[14px] ${getEventTextClass(event, status)}`}>
-              {timeLabel}
+          {(showTime || inactive) && (
+            <span className="flex shrink-0 items-baseline gap-1">
+              {showTime && (
+                <span
+                  className={`mono shrink-0 text-[10px] leading-[14px] ${getEventTextClass(event, status)}`}
+                >
+                  {timeLabel}
+                </span>
+              )}
+              {inactive && (
+                <span
+                  className={`mono shrink-0 text-[10px] leading-[14px] ${getEventTextClass(event, status)}`}
+                >
+                  {inactiveLabel}
+                </span>
+              )}
             </span>
           )}
         </span>
@@ -320,7 +389,12 @@ export function WeekView({
                       </div>
                     )}
 
-                    {events.map((event) => renderEventButton(event, true))}
+                    {(() => {
+                      const lanes = resolveOverlaps(events);
+                      return events.map((event) =>
+                        renderEventButton(event, true, lanes.get(overlapKey(event)))
+                      );
+                    })()}
                   </div>
                 );
               })}

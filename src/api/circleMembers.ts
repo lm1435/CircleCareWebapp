@@ -37,6 +37,73 @@ export interface PendingCircleInvite {
   invited_email: string;
   created_at: string;
   expires_at: string;
+  /**
+   * Server-computed expiry flag (backend/src/routes/circles.ts GET /:circleId).
+   * Expired invites are INCLUDED in `pending_invites`, so this is the only way
+   * to tell them apart. OPTIONAL for staged-rollout safety: a web build can
+   * reach a backend that predates the field, so consumers must fall back to
+   * `isPendingInviteExpired()` rather than treating `undefined` as "live".
+   */
+  is_expired?: boolean;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** How close to `expires_at` an invite has to be before we warn the owner. */
+export const INVITE_EXPIRING_SOON_MS = 3 * DAY_MS;
+
+/**
+ * Lifecycle of a pending invite from the owner's point of view.
+ *  - `expired` — lapsed; nobody can join through it any more.
+ *  - `soon`    — still usable, but lapses in under 3 days.
+ *  - `live`    — comfortably in date (or the deadline is unknown).
+ */
+export type InviteExpiryState = 'expired' | 'soon' | 'live';
+
+export interface InviteExpiry {
+  state: InviteExpiryState;
+  /**
+   * Whole days remaining, floor 1 (an invite with 4 hours left reads as
+   * "1 day", never "0 days"). `null` when there is nothing honest to show:
+   * the invite has already expired, `expires_at` is missing/unparseable, or
+   * the server says the invite is live while the local clock says otherwise.
+   */
+  daysLeft: number | null;
+}
+
+/**
+ * The ONE place the pending-invite expiry rule lives. Prefers the
+ * server-computed `is_expired` (the two clocks can disagree); falls back to
+ * comparing `expires_at` against the browser clock when the backend has not
+ * shipped the field yet. An absent or unparseable `expires_at` is treated as
+ * live — a formatting problem must never make a usable invite look dead.
+ *
+ * `daysLeft` is a DURATION (plain ms arithmetic), not a calendar date, so it
+ * deliberately does not go through any date/timezone helper.
+ */
+export function getInviteExpiryState(invite: PendingCircleInvite): InviteExpiry {
+  const expiresAtMs = new Date(invite.expires_at).getTime();
+  // NaN for a missing/garbage `expires_at`; every comparison below is false,
+  // which lands on `live` with an unknown countdown.
+  const msUntilExpiry = expiresAtMs - Date.now();
+
+  const expired =
+    typeof invite.is_expired === 'boolean' ? invite.is_expired : msUntilExpiry <= 0;
+  if (expired) return { state: 'expired', daysLeft: null };
+
+  const daysLeft = msUntilExpiry > 0 ? Math.max(1, Math.ceil(msUntilExpiry / DAY_MS)) : null;
+  if (msUntilExpiry > 0 && msUntilExpiry < INVITE_EXPIRING_SOON_MS) {
+    return { state: 'soon', daysLeft };
+  }
+  return { state: 'live', daysLeft };
+}
+
+/**
+ * True when a pending invite has lapsed. Thin wrapper over
+ * `getInviteExpiryState` so the rule is never duplicated.
+ */
+export function isPendingInviteExpired(invite: PendingCircleInvite): boolean {
+  return getInviteExpiryState(invite).state === 'expired';
 }
 
 export interface CircleDetail {

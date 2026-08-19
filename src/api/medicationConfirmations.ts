@@ -61,6 +61,14 @@ export interface TodaysMedication {
   scheduled_date: string; // YYYY-MM-DD in care recipient's timezone
   scheduled_time?: string | null; // HH:MM:SS in care recipient's timezone
   is_virtual?: boolean;
+  /**
+   * Discontinue marker (ISO instant) when this dose belongs to a medication
+   * that has since been stopped. This fetch passes NO `includeDiscontinued`, so
+   * anything that arrives with it set is a dose the backend found DUE before
+   * the stop instant — history, and still confirmable. It changes how the row
+   * is LABELLED ("Inactive", in text), never whether it can be answered.
+   */
+  discontinued_at?: string | null;
   confirmation?: {
     status: ConfirmationStatus;
     confirmed_at: string;

@@ -1,4 +1,8 @@
-import { getMedKey, getSeriesRoot, getSeriesRootsForMed } from '@/utils/medicationGrouping';
+import {
+  getMedKey,
+  getMedSeriesAnalyticsFacts,
+  getSeriesRoot,
+} from '@/utils/medicationGrouping';
 import type { CalendarEvent } from '@/api/calendarEvents';
 
 // MIRRORS mobile/src/__tests__/utils/medicationGrouping.test.ts so web and
@@ -63,50 +67,92 @@ describe('getSeriesRoot', () => {
   });
 });
 
-describe('getSeriesRootsForMed', () => {
-  it('collects distinct roots for every matching med (whitespace-insensitive)', () => {
-    const target = med({ id: 'morning', medication_name: 'Metformin', medication_dosage: '500mg' });
-    const all: CalendarEvent[] = [
-      target,
-      med({ id: 'evening', medication_name: 'Metformin', medication_dosage: '500 mg' }),
-      med({ id: 'other', medication_name: 'Lisinopril', medication_dosage: '10mg' }),
-    ];
-    const roots = getSeriesRootsForMed(all, target).sort();
-    expect(roots).toEqual(['evening', 'morning']);
+describe('getMedSeriesAnalyticsFacts', () => {
+  // Fixed "now" so days_active is deterministic. 2026-08-17T03:30:00Z is still
+  // 2026-08-16 in America/Denver — the case that catches anyone reaching for
+  // browser-local time or `toISOString().split('T')[0]`.
+  const NOW = new Date('2026-08-17T03:30:00Z');
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
   });
 
-  it('dedups multiple children of the SAME series to one root, and falls back to the tapped root when allEvents is missing', () => {
-    // Two materialized instances of the same parent must yield ONE root —
-    // otherwise discontinue would fire duplicate mutations per series.
-    const target = med({
-      id: 'inst-1',
-      parent_event_id: 'p1',
-      medication_name: 'Metformin',
-      medication_dosage: '500mg',
-    });
-    const sibling = med({
-      id: 'inst-2',
-      parent_event_id: 'p1',
-      medication_name: 'Metformin',
-      medication_dosage: '500mg',
-    });
-    expect(getSeriesRootsForMed([target, sibling], target)).toEqual(['p1']);
-    // No allEvents (e.g. calendar window not loaded) → the tapped event's own
-    // root must still be acted on, so single-series discontinue keeps working.
-    expect(getSeriesRootsForMed(undefined, target)).toEqual(['p1']);
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('ignores NON-medication events even when the name key would collide', () => {
-    // A task titled the same as a med (both with no dosage) produces the same
-    // composite key — the event_type guard must keep it out of the root set, or
-    // discontinuing the med would PATCH medication-status against a task.
-    const target = med({ id: 'm1', medication_name: 'Walk', medication_dosage: null });
-    const task = med({
-      id: 't1',
-      event_type: 'task',
-      medication_name: null,
-      title: 'Walk',
+  const dosed = (over: Partial<CalendarEvent>): CalendarEvent =>
+    med({
+      medication_name: 'Lisinopril',
+      medication_dosage: '10mg',
+      scheduled_date: '2026-08-01',
+      ...over,
+    });
+
+  // NOTE — these facts deliberately carry NO series count. Whole-medication
+  // discontinue/reactivate is one `scope: 'medication'` request and the count
+  // of roots mutated comes back on the response, where it is not limited to
+  // whatever pool the page had loaded.
+
+  it('measures days_active in the CARE RECIPIENT timezone, not the browser', () => {
+    // 03:30Z on the 17th is still the 16th in Denver → 15 days, not 16.
+    const target = dosed({ id: 'am', scheduled_date: '2026-08-01' });
+    expect(getMedSeriesAnalyticsFacts([target], target, 'America/Denver').daysActive).toBe(15);
+    // Same instant in Europe/Madrid is already the 17th → 16 days.
+    expect(getMedSeriesAnalyticsFacts([target], target, 'Europe/Madrid').daysActive).toBe(16);
+  });
+
+  it('uses the EARLIEST known occurrence, so a clicked child does not shorten it', () => {
+    const root = dosed({ id: 'root', scheduled_date: '2026-06-01' });
+    const child = dosed({ id: 'child', parent_event_id: 'root', scheduled_date: '2026-08-10' });
+    expect(getMedSeriesAnalyticsFacts([root, child], child, 'America/Denver').daysActive).toBe(76);
+  });
+
+  it('never returns a negative duration for a future-dated series', () => {
+    const future = dosed({ id: 'f', scheduled_date: '2027-01-01' });
+    expect(getMedSeriesAnalyticsFacts([future], future, 'America/Denver').daysActive).toBe(0);
+  });
+
+  it('reports had_confirmations from any loaded occurrence of the same med', () => {
+    const plain = dosed({ id: 'am' });
+    expect(getMedSeriesAnalyticsFacts([plain], plain, 'America/Denver').hadConfirmations).toBe(
+      false
+    );
+    const answered = dosed({
+      id: 'pm',
+      confirmation: {
+        status: 'taken',
+        confirmed_at: '2026-08-02T15:00:00Z',
+        confirmed_by: 'u1',
+      },
     } as Partial<CalendarEvent>);
-    expect(getSeriesRootsForMed([target, task], target)).toEqual(['m1']);
+    expect(
+      getMedSeriesAnalyticsFacts([plain, answered], plain, 'America/Denver').hadConfirmations
+    ).toBe(true);
+  });
+
+  it('ignores a confirmation on a DIFFERENT medication', () => {
+    const target = dosed({ id: 'am' });
+    const otherMed = dosed({
+      id: 'other',
+      medication_dosage: '20mg',
+      confirmation: {
+        status: 'taken',
+        confirmed_at: '2026-08-02T15:00:00Z',
+        confirmed_by: 'u1',
+      },
+    } as Partial<CalendarEvent>);
+    expect(
+      getMedSeriesAnalyticsFacts([target, otherMed], target, 'America/Denver').hadConfirmations
+    ).toBe(false);
+  });
+
+  it('degrades to safe zeros rather than throwing on a malformed date', () => {
+    const bad = dosed({ id: 'bad', scheduled_date: 'not-a-date' });
+    expect(getMedSeriesAnalyticsFacts([bad], bad, 'America/Denver')).toEqual({
+      daysActive: 0,
+      hadConfirmations: false,
+    });
   });
 });

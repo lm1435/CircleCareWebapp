@@ -41,7 +41,14 @@ describe('DeleteEventDialog', () => {
   it('non-recurring: simple confirm → delete with NO scope params', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    render(<DeleteEventDialog circleId={CIRCLE_ID} event={makeEvent()} onClose={onClose} />);
+    render(
+      <DeleteEventDialog
+        circleId={CIRCLE_ID}
+        event={makeEvent()}
+        surface="calendar"
+        onClose={onClose}
+      />
+    );
 
     // No 3-way scope choice for a one-off event.
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
@@ -64,6 +71,7 @@ describe('DeleteEventDialog', () => {
           recurrence_rule: 'daily',
           scheduled_date: '2026-06-20',
         })}
+        surface="calendar"
         onClose={vi.fn()}
       />
     );
@@ -92,6 +100,7 @@ describe('DeleteEventDialog', () => {
           recurrence_rule: 'weekly',
           scheduled_date: '2026-06-20',
         })}
+        surface="calendar"
         onClose={vi.fn()}
       />
     );

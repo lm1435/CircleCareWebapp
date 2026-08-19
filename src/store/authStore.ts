@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/api/users';
 import { identifyUser, resetAnalytics } from '@/lib/posthog';
 import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
+import i18n from '@/i18n';
 
 // Web auth store (Task 9) — mirrors mobile/src/store/authStore.ts adapted to
 // the web threat model:
@@ -90,6 +91,29 @@ function getAuthChannel(): BroadcastChannel | null {
   return channel;
 }
 
+/**
+ * Report the browser locale at the first authenticated moment the backend owns
+ * — a fresh sign-in and a restored cookie session alike — so a brand-new
+ * account's welcome email goes out in the right language (mirrors mobile
+ * authStore, which calls it from both signIn and initialize).
+ *
+ * FIRE AND FORGET: never awaited, never surfaced. The endpoint short-circuits
+ * on every later sign-in, and a failure must not touch the sign-in flow.
+ */
+function reportSessionEstablished(): void {
+  try {
+    // i18n.language can be region-qualified ('es-MX'); the backend takes the
+    // base 'en' | 'es' only.
+    const language = i18n.language?.toLowerCase().startsWith('es') ? 'es' : 'en';
+    void authApi.sessionEstablished(language).catch(() => {
+      // ignore — sign-in must never depend on this
+    });
+  } catch {
+    // ignore — bootstrap calls this inside its own try, so a throw here would
+    // otherwise be read as a failed session restore.
+  }
+}
+
 interface RefreshEnvelope {
   success?: boolean;
   data?: { session?: { access_token?: string; expires_at?: number } };
@@ -106,6 +130,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
     identifyUser(user.id, user.email);
     set({ user, isAuthenticated: true, isBootstrapping: false });
+    reportSessionEstablished();
   },
 
   bootstrap: () => {
@@ -140,6 +165,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           isAuthenticated: true,
           isBootstrapping: false,
         });
+        reportSessionEstablished();
       } catch {
         // No cookie / expired session — a normal first visit. Stay logged out
         // quietly; never toast or log here.

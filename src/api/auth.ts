@@ -46,6 +46,20 @@ export interface MessageEnvelope {
   data: { message: string };
 }
 
+/**
+ * /auth/session-established response. `skipped` is the common case: the
+ * endpoint short-circuits once the account's language is determined and the
+ * welcome email has gone, so only the very first call reports the rest.
+ */
+export interface SessionEstablishedEnvelope {
+  success: boolean;
+  data: {
+    skipped: boolean;
+    language?: 'en' | 'es';
+    welcomeSent?: boolean;
+  };
+}
+
 /** Error envelope shape rejected by the apiClient response interceptor. */
 export interface ApiErrorEnvelope {
   success: false;
@@ -153,6 +167,21 @@ export const authApi = {
    */
   oauthSession: async (data: OAuthSessionData): Promise<SessionEnvelope> => {
     return (await apiClient.post('/auth/oauth-session', data)) as unknown as SessionEnvelope;
+  },
+
+  /**
+   * Report the browser locale at the first authenticated moment the backend
+   * owns, so a brand-new account's welcome email is sent in that language
+   * (OAuth signups carry no locale claim, so the backend cannot infer it).
+   * Requires a session — call it only once the access token is in place.
+   *
+   * Safe to call on every sign-in: the endpoint short-circuits once the
+   * language is determined and the welcome email has gone.
+   */
+  sessionEstablished: async (language: 'en' | 'es'): Promise<SessionEstablishedEnvelope> => {
+    return (await apiClient.post('/auth/session-established', {
+      language,
+    })) as unknown as SessionEstablishedEnvelope;
   },
 
   /** Clears the httpOnly cookie. Idempotent — always 200, safe unauthenticated. */

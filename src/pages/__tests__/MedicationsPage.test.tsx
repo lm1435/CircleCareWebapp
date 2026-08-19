@@ -121,7 +121,7 @@ beforeEach(() => {
   mockUseHourCycle.mockReturnValue('12h');
   mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/New_York' });
   mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, inactiveMed]));
-  mockStatusMutateAsync.mockResolvedValue({});
+  mockStatusMutateAsync.mockResolvedValue({ discontinued: false, affected_count: 1, series_count: 1 });
 });
 
 describe('MedicationsPage', () => {
@@ -134,6 +134,31 @@ describe('MedicationsPage', () => {
     const inactiveSection = screen.getByRole('region', { name: 'Inactive / Past medications' });
     expect(within(inactiveSection).getByText('Lisinopril')).toBeInTheDocument();
     expect(within(inactiveSection).getByText('Inactive')).toBeInTheDocument();
+  });
+
+  // THE ROSTER/CALENDAR DISTINCTION. This page is the one web surface that
+  // fetches with `includeDiscontinued=true`, so it can hold occurrences that
+  // were never DUE — a confirm on one of those is exactly the 409 the backend
+  // still returns. It therefore carries NO dose-confirmation control, on either
+  // section, while calendar surfaces (which fetch due-only) do. If a "Mark
+  // taken" ever appears here, that predicate has been broken.
+  it('offers no dose-confirmation control on either section — this roster is not a calendar surface', () => {
+    renderPage();
+
+    for (const label of ['Mark taken', 'Skip dose', 'Confirm', 'Skip']) {
+      expect(screen.queryByRole('button', { name: label })).toBeNull();
+    }
+    // ...while the medication-level action set is intact on the inactive card.
+    const inactiveSection = screen.getByRole('region', { name: 'Inactive / Past medications' });
+    expect(
+      within(inactiveSection).getByRole('button', { name: 'Edit Lisinopril' })
+    ).toBeInTheDocument();
+    expect(
+      within(inactiveSection).getByRole('button', { name: 'Reactivate Lisinopril' })
+    ).toBeInTheDocument();
+    expect(
+      within(inactiveSection).getByRole('button', { name: 'Delete Lisinopril' })
+    ).toBeInTheDocument();
   });
 
   it('omits the Inactive section entirely when every med is active', () => {
@@ -175,11 +200,12 @@ describe('MedicationsPage', () => {
       screen.getByText('This medication is inactive. Reactivate it to make changes.')
     ).toBeInTheDocument();
 
-    // Confirming reactivates the med's series root(s).
+    // Confirming reactivates the WHOLE medication in one server-scoped call.
     await user.click(screen.getByRole('button', { name: 'Reactivate' }));
     expect(mockStatusMutateAsync).toHaveBeenCalledWith({
       eventId: 'inactive-1',
       discontinued: false,
+      scope: 'medication',
     });
   });
 
