@@ -68,3 +68,49 @@ export function utcISOToRecipientWallTime(
 
   return { date: dateStr, time: `${hour}:${minute}` };
 }
+
+/**
+ * ── VIEWER-FRAME PAIR ─────────────────────────────────────────────────────
+ *
+ * The two functions above express a `recorded_at` instant in the CARE
+ * RECIPIENT's wall clock. That is right for DISPLAY — VitalsPage renders a
+ * reading in the recipient's zone, and mobile does the same
+ * (`formatInstantInTimezone(recordedAt, careRecipientTimezone)`).
+ *
+ * It is WRONG for INPUT. A caregiver types the time they are reading off their
+ * own clock; mobile builds `recorded_at` from a device-local picker and stores
+ * `recordedAt.toISOString()`, and the founder's ruling on the calendar says the
+ * same thing in as many words: the typed value is the viewer's wall clock.
+ * Web's vitals form was converting the typed digits as if they were the
+ * RECIPIENT's, so the same action on the two platforms stored instants that
+ * differed by the offset between the two people.
+ *
+ * These are the input pair. They take NO timezone argument — that is the whole
+ * point, and adding one is how this drifts back.
+ */
+
+/** A viewer-frame `YYYY-MM-DD` + `HH:MM` as the UTC instant it names. */
+export function viewerWallTimeToUtcISO(dateStr: string, timeStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [hh, mm] = timeStr.split(':').map(Number);
+  // Device-local construction, exactly as mobile's picker produces.
+  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0).toISOString();
+}
+
+/**
+ * The EXACT INVERSE: an instant back into the viewer's wall clock.
+ *
+ * Must always change together with {@link viewerWallTimeToUtcISO}. Flipping
+ * only the save recreates the hydrate-is-not-the-inverse bug that this whole
+ * timezone effort started from — an untouched re-save would move a real
+ * reading.
+ */
+export function utcISOToViewerWallTime(iso: string): { date: string; time: string } {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return { date: '', time: '' };
+  const p = (n: number): string => String(n).padStart(2, '0');
+  return {
+    date: `${at.getFullYear()}-${p(at.getMonth() + 1)}-${p(at.getDate())}`,
+    time: `${p(at.getHours())}:${p(at.getMinutes())}`,
+  };
+}

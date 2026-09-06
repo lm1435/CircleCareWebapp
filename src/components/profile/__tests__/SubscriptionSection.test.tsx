@@ -13,11 +13,14 @@ import { ToastProvider } from '@/components/ui';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 
 vi.mock('@/lib/purchases', () => ({
-  isWebBillingConfigured: vi.fn(() => false),
   getManagementUrl: vi.fn(),
 }));
 
-import { isWebBillingConfigured } from '@/lib/purchases';
+vi.mock('@/lib/webBillingConfig', () => ({
+  isWebBillingConfigured: vi.fn(() => false),
+}));
+
+import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 
 const mockedGet = apiClient.get as unknown as Mock;
 const mockedConfigured = isWebBillingConfigured as unknown as Mock;

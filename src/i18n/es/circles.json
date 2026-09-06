@@ -12,6 +12,7 @@
     "create": "Crear círculo",
     "creating": "Creando...",
     "cancel": "Cancelar",
+    "close": "Cerrar",
     "success": "Círculo creado.",
     "failed": "No pudimos crear tu círculo en este momento. No se perdió nada; por favor intenta de nuevo.",
     "limitReached": "Has alcanzado el máximo de 5 círculos."
@@ -24,12 +25,11 @@
   },
   "joinModal": {
     "title": "Unirte a un círculo",
-    "subtitle": "Ingresa el código que viene en tu correo de invitación.",
+    "subtitle": "Ingresa el código de 6 caracteres de tu invitación.",
     "codeLabel": "Código de invitación",
-    "placeholder": "XXXXXX",
     "pasteCode": "Pegar código",
     "pasteNoCode": "No encontramos un código de invitación en tu portapapeles.",
-    "lookUpCode": "Buscar código",
+    "lookUpCode": "Buscar círculo",
     "lookingUp": "Buscando...",
     "circle": "Círculo",
     "caringFor": "Cuidando a",
@@ -47,7 +47,9 @@
     "expired": "Esta invitación venció. Pídele a quien te invitó una nueva.",
     "alreadyUsed": "Esta invitación ya fue utilizada. Pídele a quien te invitó que te envíe una nueva.",
     "alreadyMember": "Ya eres miembro de este círculo.",
-    "joinFailed": "No pudimos unirte a este círculo. Por favor intenta de nuevo."
+    "joinFailed": "No pudimos unirte a este círculo. Por favor intenta de nuevo.",
+    "circleArchived": "Este círculo ya no está activo. Pídele a quien te invitó que consulte con el dueño del círculo.",
+    "careRecipientExists": "Este círculo ya tiene un receptor de cuidado. Pídele a quien te invitó que te envíe una invitación de cuidador."
   },
   "edit": {
     "title": "Configuración del círculo",
@@ -61,8 +63,6 @@
     "recipientNamePlaceholder": "Nombre completo",
     "recipientDob": "Fecha de nacimiento",
     "recipientDobHint": "Opcional. Aparece en su información de emergencia para que los médicos confirmen su identidad.",
-    "conditions": "Condiciones de salud",
-    "conditionsHint": "Separa cada condición con una coma.",
     "save": "Guardar cambios",
     "saving": "Guardando...",
     "savedToast": "Círculo actualizado.",
@@ -72,7 +72,7 @@
     "deleteCircle": "Eliminar círculo",
     "deleting": "Eliminando...",
     "deleteConfirmTitle": "¿Eliminar este círculo?",
-    "deleteConfirmMessage": "Esto eliminará permanentemente el círculo de {{name}} y quitará el acceso a todos los miembros.",
+    "deleteConfirmMessage": "Esto quita el círculo de {{name}} para ti y para todas las demás personas que están en él, junto con los medicamentos, las citas, las tareas, las notas, los signos vitales, los documentos y la información de emergencia que contiene. Los recordatorios se detienen de inmediato y los demás miembros no reciben aviso, así que quizá quieras avisarles antes.",
     "deleteConfirmWarning": "Esta acción no se puede deshacer.",
     "deleteConfirmPrompt": "Escribe {{keyword}} para confirmar",
     "deleteConfirmKeyword": "ELIMINAR",
@@ -84,5 +84,55 @@
     "nameTooLong": "El nombre debe tener 100 caracteres o menos.",
     "dobFormat": "Elige una fecha de nacimiento válida.",
     "dobInvalidDate": "Esa fecha de nacimiento no existe en el calendario."
+  },
+  "quickWin": {
+    "title": "Círculo creado",
+    "subtitle": "El círculo de cuidado de {{name}} está listo. ¿Qué te gustaría hacer primero?",
+    "recommended": "Recomendado",
+    "skipForNow": "Omitir por ahora",
+    "tip": "Siempre puedes hacer esto después desde la página del círculo.",
+    "medication": {
+      "title": "Agregar un medicamento",
+      "description": "Configura recordatorios para sus medicamentos diarios"
+    },
+    "appointment": {
+      "title": "Agregar una cita",
+      "description": "Lleva control de las próximas citas"
+    },
+    "invite": {
+      "title": "Invitar a un familiar",
+      "description": "Involucra a hermanos u otros cuidadores"
+    },
+    "emergency": {
+      "title": "Agregar info de salud",
+      "description": "Guarda detalles médicos importantes"
+    }
+  },
+  "firstRun": {
+    "steps": {
+      "choose": "Inicio",
+      "what": "Nombre",
+      "when": "Hora",
+      "repeat": "Repetir"
+    },
+    "progressLabel": "Paso {{current}} de {{total}}",
+    "whatTitle": "¿Qué toma {{name}}?",
+    "dosageLabel": "Dosis (opcional)",
+    "dosagePlaceholder": "ej. 500mg",
+    "whenTitle": "¿Cuándo lo toma {{name}}?",
+    "customTimeLabel": "Hora personalizada",
+    "customTimeHint": "Elegir una hora aquí reemplaza el horario de arriba.",
+    "repeatTitle": "¿Repetir?",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "save": "Agregar medicamento",
+    "saving": "Agregando...",
+    "close": "Cerrar configuración",
+    "fullDetails": "Agregar todos los detalles",
+    "savedToast": "Medicamento agregado.",
+    "discardTitle": "¿Descartar este medicamento?",
+    "discardMessage": "No se guardará nada.",
+    "discardConfirm": "Descartar",
+    "discardClose": "Cerrar el aviso de descartar"
   }
 }

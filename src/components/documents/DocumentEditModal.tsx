@@ -101,14 +101,14 @@ export function DocumentEditModal({ circleId, doc, onClose }: DocumentEditModalP
       closeLabel={t('common:close')}
       size="md"
       footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose}>
+        <>
+          <Button variant="secondary" onClick={onClose}>
             {t('common:cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={update.isPending}>
-            {update.isPending ? t('documents:edit.saving') : t('common:save')}
+          <Button variant="primary" loading={update.isPending} onClick={handleSubmit}>
+            {t('common:save')}
           </Button>
-        </div>
+        </>
       }
     >
       <TextField

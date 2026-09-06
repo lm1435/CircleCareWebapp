@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { ConfirmMedDialog } from '../ConfirmMedDialog';
@@ -59,6 +59,7 @@ beforeEach(() => {
 function renderDialog() {
   return render(
     <ConfirmMedDialog
+      source="care_profile"
       circleId="circle-1"
       med={med}
       careRecipientTimezone="America/New_York"
@@ -86,6 +87,7 @@ describe('ConfirmMedDialog — not-due guard (defense in depth)', () => {
     const user = userEvent.setup();
     render(
       <ConfirmMedDialog
+      source="care_profile"
         circleId="circle-1"
         med={farFutureMed}
         careRecipientTimezone="America/New_York"
@@ -132,6 +134,7 @@ describe('ConfirmMedDialog — 409 MEDICATION_DISCONTINUED', () => {
     const user = userEvent.setup();
     render(
       <ConfirmMedDialog
+      source="care_profile"
         circleId="circle-1"
         med={{ ...med, discontinued_at: '2026-07-29T18:00:00Z' }}
         careRecipientTimezone="America/New_York"
@@ -160,5 +163,95 @@ describe('ConfirmMedDialog — 409 MEDICATION_DISCONTINUED', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent("Couldn't save. Please try again.");
+  });
+});
+
+describe('ConfirmMedDialog — status options', () => {
+  // The two hand-rolled `role="radio"` buttons (with their own roving-tabindex
+  // arrow handling and their own selected/unselected class pair) are now the
+  // shared `RadioGroup`: real `<input type="radio">` elements, so keyboard
+  // support and the selection language both come from one place instead of
+  // being re-implemented per dialog. `accent-ink` is that language.
+  it('renders the two statuses as a real radio group, taken preselected', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    const takenOption = screen.getByRole('radio', { name: 'Taken' });
+    const skippedOption = screen.getByRole('radio', { name: 'Skipped' });
+
+    expect(takenOption).toHaveAttribute('type', 'radio');
+    expect(takenOption.className).toContain('accent-ink');
+    // initialStatus defaults to 'taken'.
+    expect(takenOption).toBeChecked();
+    expect(skippedOption).not.toBeChecked();
+
+    await user.click(skippedOption);
+
+    expect(skippedOption).toBeChecked();
+    expect(takenOption).not.toBeChecked();
+  });
+
+  // The dialog owns no focus trap, backdrop, scroll lock or footer layout of
+  // its own any more — it is a `Modal` (spec §4.5). A dialog role with the
+  // shared close control is the observable half of that.
+  it('is rendered by the shared Modal shell', () => {
+    renderDialog();
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(within(dialog).getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+});
+
+describe('which DAY this confirmation is for', () => {
+  /**
+   * "Needs Attention" routes YESTERDAY's unanswered doses through this same
+   * dialog, so without a day the two rows of a daily medication open dialogs
+   * that read identically — and picking the wrong one files adherence against
+   * the wrong calendar day.
+   */
+  function renderFor(scheduledDate: string) {
+    return render(
+      <ConfirmMedDialog
+        source="care_profile"
+        circleId="circle-1"
+        med={{ ...med, scheduled_date: scheduledDate } as TodaysMedication}
+        careRecipientTimezone="America/New_York"
+        onClose={vi.fn()}
+      />
+    );
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('names the day when the dose is YESTERDAY in the recipient frame', () => {
+    // 2026-07-29T16:00Z = 12:00 in New York, so NY "today" is 2026-07-29.
+    vi.setSystemTime(new Date('2026-07-29T16:00:00.000Z'));
+    renderFor('2026-07-28');
+    expect(screen.getByText(/Yesterday/)).toBeInTheDocument();
+  });
+
+  it('stays quiet for an ordinary same-day dose', () => {
+    vi.setSystemTime(new Date('2026-07-29T16:00:00.000Z'));
+    renderFor('2026-07-29');
+    expect(screen.queryByText(/Yesterday/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Today/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to a date for anything older', () => {
+    vi.setSystemTime(new Date('2026-07-29T16:00:00.000Z'));
+    renderFor('2026-07-20');
+    expect(screen.getByText(/Jul 20/)).toBeInTheDocument();
+  });
+
+  it('resolves the day in the RECIPIENT frame, not the viewer one', () => {
+    // 2026-07-30T03:00Z is still 2026-07-29 (23:00) in New York. A dose dated
+    // 2026-07-29 is therefore TODAY for the recipient and must stay unlabelled,
+    // even though the UTC/viewer calendar has already rolled over.
+    vi.setSystemTime(new Date('2026-07-30T03:00:00.000Z'));
+    renderFor('2026-07-29');
+    expect(screen.queryByText(/Yesterday/)).not.toBeInTheDocument();
   });
 });

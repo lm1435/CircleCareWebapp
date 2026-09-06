@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Button, Card, EmptyState } from '@/components/ui';
+import { Button, Card, CircleButton, EmptyState, Icon, SegmentedControl } from '@/components/ui';
+import { PageMasthead } from '@/components/layout/PageMasthead';
+import { CareTabs } from '@/components/layout/CareTabs';
 import { CalendarSkeleton } from '@/components/calendar/CalendarSkeleton';
 import { EventDetailModal } from '@/components/calendar/EventDetailModal';
 import { EventDetailActions } from '@/components/calendar/EventDetailActions';
@@ -26,51 +28,11 @@ import { EVENT_TYPE_DOT_CLASS } from '@/components/calendar/eventStyles';
 import type { EventType } from '@/api/calendarEvents';
 import { useCalendarEvents, useCareRecipientTimezone } from '@/hooks/useCalendarEvents';
 import { Analytics } from '@/lib/analytics';
-import { getDateInTimezone, getTimezoneAbbreviation, getTimezoneLabel } from '@/utils/timezone';
+import { getDateInTimezone, getTimezoneLabel } from '@/utils/timezone';
 
 type CalendarView = 'week' | 'month';
 
-function ChevronIcon({ direction }: { direction: 'left' | 'right' }): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {direction === 'left' ? <path d="m15 18-6-6 6-6" /> : <path d="m9 18 6-6-6-6" />}
-    </svg>
-  );
-}
-
 const LEGEND_TYPES: EventType[] = ['medication', 'appointment', 'task'];
-
-/** Calendar glyph for the empty-state tile (decorative). */
-function CalendarEmptyIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={26}
-      height={26}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
 
 /**
  * Color key for the event-type palette (clay = meds, dusk = appointments,
@@ -98,10 +60,11 @@ function CalendarLegend(): ReactElement {
 }
 
 /**
- * Calendar page (plan Task 17): week/month toggle, prev/next/today navigation,
- * current range label, and the "Times shown in [timezone]" caption. The whole
- * calendar renders in the CARE RECIPIENT's timezone (same as mobile) — "today"
- * and the anchor date are computed with getDateInTimezone, never device-local.
+ * Calendar page (plan Task 17; chrome mirrors mobile's `DateNavHeader` — plan
+ * Task 15): week/month toggle, prev/next/today navigation, current range
+ * label, and the "Times shown in [timezone]" caption. The whole calendar
+ * renders in the CARE RECIPIENT's timezone (same as mobile) — "today" and the
+ * anchor date are computed with getDateInTimezone, never device-local.
  */
 export default function CalendarPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
@@ -126,7 +89,11 @@ export default function CalendarPage(): ReactElement {
     initialStatus: 'taken' | 'skipped';
   } | null>(null);
 
-  const { canEdit } = useCircle(circleId);
+  // `members` is read here (not just `canEdit`) so the detail modal can
+  // attribute a completed task's "Completed by" row: the calendar's own GET
+  // does not embed the completing user (only the tasks endpoint does), so the
+  // circle roster is the only fallback available to this surface.
+  const { canEdit, members } = useCircle(circleId);
 
   // PHI-safe: only circle_id + the view enum. Fires on open and on view change.
   useEffect(() => {
@@ -224,142 +191,163 @@ export default function CalendarPage(): ReactElement {
   };
 
   return (
-    <section className="mx-auto max-w-5xl p-6 md:p-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="serif m-0 text-xl text-ink">{rangeLabel || t('common:nav.calendar')}</h1>
-          {timezone && (
-            <p className="m-0 mt-0.5 text-sm text-ink-3">
-              {t('calendar:timesShownIn', {
-                timezone: `${getTimezoneLabel(timezone)} (${getTimezoneAbbreviation(timezone)})`,
-              })}
-            </p>
-          )}
-          {!isError && (
-            <div className="mt-2">
-              <CalendarLegend />
-            </div>
-          )}
-        </div>
+    <div className="mx-auto w-full max-w-5xl">
+      <PageMasthead
+        section={t('common:nav.calendar')}
+        tone="dusk"
+        title={t('calendar:title')}
+        subtitle={t('calendar:subtitle')}
+        rightAction={
+          canEdit
+            ? { name: 'add-outline', label: t('calendar:addEvent.addEvent'), onClick: () => setShowCreate(true) }
+            : undefined
+        }
+      >
+        <CareTabs />
+      </PageMasthead>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Week/Month segmented control */}
-          <div
-            role="group"
-            aria-label={t('calendar:viewLabel')}
-            className="inline-flex rounded-full border border-line bg-bg-2 p-0.5"
-          >
-            <button
-              type="button"
-              aria-pressed={view === 'week'}
-              onClick={() => setView('week')}
-              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
-                view === 'week' ? 'bg-ink font-medium text-cream' : 'text-ink-2 hover:text-ink'
-              }`}
-            >
-              {t('calendar:week')}
-            </button>
-            <button
-              type="button"
-              aria-pressed={view === 'month'}
-              onClick={() => setView('month')}
-              className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
-                view === 'month' ? 'bg-ink font-medium text-cream' : 'text-ink-2 hover:text-ink'
-              }`}
-            >
-              {t('calendar:month')}
-            </button>
-          </div>
+      <div className="px-5 pb-8 md:px-8">
+        {/* Date nav row (mobile `DateNavHeader` parity): Today pill · prev/range/next
+            cluster · Week/Month segmented control.
 
-          {/* Prev / Today / Next */}
-          <div className="inline-flex items-center gap-1">
-            <button
-              type="button"
-              aria-label={
-                view === 'week' ? t('calendar:previousWeek') : t('calendar:previousMonth')
-              }
-              onClick={handlePrev}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-bg-2"
-            >
-              <ChevronIcon direction="left" />
-            </button>
+            Structural fix (review 2026-09-05, supersedes the earlier
+            `flex-wrap` attempt): `flex-wrap` alone never actually broke this
+            onto two lines. The cluster group's `min-w-0` told the flex-wrap
+            algorithm its CONTENT-based minimum was 0, so the two items'
+            hypothetical main sizes (0 + the toggle's 100%) fit on ONE line
+            by the browser's own arithmetic — no wrap ever triggered, and the
+            cluster's real (non-zero) content then rendered on top of the
+            toggle's rectangle instead of pushed below it (measured: arrows at
+            y≈330 h44 and the tablist at y≈325–379, same rectangle,
+            "element intercepts pointer events" on Next week). `flex-col`
+            below 480px removes the ambiguity: below that width the two
+            children ALWAYS stack as separate blocks, full width, regardless
+            of any min-width override. */}
+        <div className="flex flex-wrap items-center gap-y-2 min-h-[44px] py-1.5 max-[480px]:flex-col max-[480px]:items-stretch">
+          <div className="flex min-w-0 flex-1 items-center gap-2 max-[480px]:w-full">
+            {/* Today: the mobile pill is visually 32px, but its tap target
+                must still clear the 44px minimum (WCAG 2.5.5) — the button
+                itself carries the 44px hit area; the pill is drawn on an
+                inner span so the VISIBLE size stays mobile-parity 32px. */}
             <button
               type="button"
               onClick={handleToday}
-              className="rounded-full border border-line px-4 py-1.5 text-sm text-ink transition-colors hover:bg-bg-2"
+              // Compare the RESOLVED anchor, not the override itself — an
+              // explicit override that happens to equal today (e.g. forward
+              // then back) must still disable Today, not just a null override.
+              disabled={anchor === todayStr}
+              aria-label={t('common:today')}
+              className="flex min-h-[44px] shrink-0 items-center justify-center disabled:pointer-events-none disabled:opacity-50"
             >
-              {t('common:today')}
+              <span className="min-h-[32px] rounded-[6px] border border-line px-3 py-[5px] text-xs font-semibold text-ink">
+                {t('common:today')}
+              </span>
             </button>
-            <button
-              type="button"
-              aria-label={view === 'week' ? t('calendar:nextWeek') : t('calendar:nextMonth')}
-              onClick={handleNext}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-bg-2"
-            >
-              <ChevronIcon direction="right" />
-            </button>
+
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-3">
+              <CircleButton
+                name="chevron-back"
+                label={view === 'week' ? t('calendar:previousWeek') : t('calendar:previousMonth')}
+                onClick={handlePrev}
+                shadow={false}
+              />
+              <h2 className="m-0 min-w-0 flex-shrink truncate text-center text-sm font-medium tracking-[0.3px] text-ink">
+                {rangeLabel || t('calendar:title')}
+              </h2>
+              <CircleButton
+                name="chevron-forward"
+                label={view === 'week' ? t('calendar:nextWeek') : t('calendar:nextMonth')}
+                onClick={handleNext}
+                shadow={false}
+              />
+            </div>
           </div>
 
-          {canEdit && (
-            <Button onClick={() => setShowCreate(true)}>{t('calendar:addEvent.addEvent')}</Button>
-          )}
+          <div
+            data-testid="calendar-view-toggle-wrap"
+            className="w-40 shrink-0 max-[480px]:order-last max-[480px]:w-full"
+          >
+            <SegmentedControl
+              label={t('calendar:viewLabel')}
+              value={view}
+              onChange={(next) => setView(next as CalendarView)}
+              options={[
+                { value: 'week', label: t('calendar:week') },
+                { value: 'month', label: t('calendar:month') },
+              ]}
+            />
+          </div>
         </div>
-      </header>
 
-      <div className="mt-4">
-        {isLoading && <CalendarSkeleton view={view} />}
+        {/* Timezone caption + legend */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+          {timezone && (
+            <p className="m-0 text-sm text-ink-3">
+              {/* One name, not a name plus its own abbreviation in brackets:
+                  this used to render "Mountain Time (MT)", and for anything
+                  outside the seven curated US zones "Central European Standard
+                  Time (GMT+1)". A zone is named by its city. */}
+              {t('calendar:timesShownIn', { timezone: getTimezoneLabel(timezone) })}
+            </p>
+          )}
+          {!isError && <CalendarLegend />}
+        </div>
 
-        {!isLoading && isError && (
-          <Card className="text-center">
-            <p className="m-0 font-medium text-ink">{t('calendar:errorTitle')}</p>
-            <p className="m-0 mt-1 text-sm text-ink-3">{t('calendar:errorHint')}</p>
-            <Button variant="ghost" className="mt-4" onClick={handleRetry}>
-              {t('common:retry')}
-            </Button>
-          </Card>
-        )}
+        <div>
+          {isLoading && <CalendarSkeleton view={view} />}
 
-        {!isLoading && !isError && range && timezone && todayStr && events.length === 0 && (
-          <Card className="p-10">
-            <EmptyState
-              tone="moss"
-              icon={<CalendarEmptyIcon />}
-              title={view === 'week' ? t('calendar:noEventsWeek') : t('calendar:noEventsMonth')}
-              description={canEdit ? t('calendar:empty.hint') : t('calendar:empty.hintReadOnly')}
-            >
-              {canEdit && (
-                <Button onClick={() => setShowCreate(true)}>
-                  {t('calendar:addEvent.addEvent')}
-                </Button>
-              )}
-            </EmptyState>
-          </Card>
-        )}
+          {!isLoading && isError && (
+            <Card variant="outlined" className="text-center">
+              <p className="m-0 font-medium text-ink">{t('calendar:errorTitle')}</p>
+              <p className="m-0 mt-1 text-sm text-ink-3">{t('calendar:errorHint')}</p>
+              <Button variant="ghost" className="mt-4" onClick={handleRetry}>
+                {t('common:retry')}
+              </Button>
+            </Card>
+          )}
 
-        {!isLoading &&
-          !isError &&
-          range &&
-          timezone &&
-          todayStr &&
-          events.length > 0 &&
-          (view === 'week' ? (
-            <WeekView
-              days={getWeekDays(range.start)}
-              eventsByDay={eventsByDay}
-              careRecipientTimezone={timezone}
-              todayStr={todayStr}
-              onEventClick={handleEventClick}
-            />
-          ) : (
-            <MonthView
-              gridDays={getMonthGridDays(anchor as string)}
-              monthStart={startOfMonth(anchor as string)}
-              eventsByDay={eventsByDay}
-              careRecipientTimezone={timezone}
-              todayStr={todayStr}
-              onEventClick={handleEventClick}
-            />
-          ))}
+          {!isLoading && !isError && range && timezone && todayStr && events.length === 0 && (
+            <Card variant="outlined" padding="lg">
+              <EmptyState
+                tone="moss"
+                icon={<Icon name="calendar-outline" size={26} />}
+                title={view === 'week' ? t('calendar:noEventsWeek') : t('calendar:noEventsMonth')}
+                description={canEdit ? t('calendar:empty.hint') : t('calendar:empty.hintReadOnly')}
+              >
+                {canEdit && (
+                  <Button onClick={() => setShowCreate(true)}>
+                    {t('calendar:addEvent.addEvent')}
+                  </Button>
+                )}
+              </EmptyState>
+            </Card>
+          )}
+
+          {!isLoading &&
+            !isError &&
+            range &&
+            timezone &&
+            todayStr &&
+            events.length > 0 &&
+            (view === 'week' ? (
+              <WeekView
+                days={getWeekDays(range.start)}
+                eventsByDay={eventsByDay}
+                careRecipientTimezone={timezone}
+                todayStr={todayStr}
+                onEventClick={handleEventClick}
+              />
+            ) : (
+              <MonthView
+                gridDays={getMonthGridDays(anchor as string)}
+                monthStart={startOfMonth(anchor as string)}
+                eventsByDay={eventsByDay}
+                careRecipientTimezone={timezone}
+                todayStr={todayStr}
+                onEventClick={handleEventClick}
+              />
+            ))}
+        </div>
       </div>
 
       {selectedEvent && timezone && (
@@ -368,6 +356,7 @@ export default function CalendarPage(): ReactElement {
           careRecipientTimezone={timezone}
           circleId={circleId}
           canEdit={canEdit}
+          members={members}
           editActions={
             <EventDetailActions
               circleId={circleId}
@@ -428,6 +417,7 @@ export default function CalendarPage(): ReactElement {
           it is counted missed in the adherence report forever. */}
       {confirmingDose && timezone && (
         <ConfirmMedDialog
+          source="calendar"
           circleId={circleId}
           med={confirmingDose.event}
           careRecipientTimezone={timezone}
@@ -449,6 +439,6 @@ export default function CalendarPage(): ReactElement {
           onClose={() => setDiscontinuingEvent(null)}
         />
       )}
-    </section>
+    </div>
   );
 }

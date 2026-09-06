@@ -1,4 +1,4 @@
-import { useEffect, type ReactElement } from 'react';
+import { Suspense, useEffect, type ReactElement } from 'react';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { RouterProvider } from 'react-router-dom';
@@ -6,10 +6,33 @@ import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { getCurrentUser } from '@/api/users';
 import { ToastProvider } from '@/components/ui/Toast';
+import { Spinner } from '@/components/ui/Spinner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAuthStore } from '@/store/authStore';
 import { router } from '@/router';
 import i18n from '@/i18n';
+
+/**
+ * Fallback for the single app-wide <Suspense> boundary below. It covers two
+ * unrelated-but-compatible suspensions: (1) `src/router.tsx`'s authenticated
+ * pages are `React.lazy` — their chunk needs a moment on first visit; (2)
+ * `src/i18n/index.ts` loads the `es` locale on demand, so a component calling
+ * `useTranslation` before that namespace resolves also suspends here (English
+ * never does — it's bundled eagerly). Mirrors AuthGuard's bootstrapping
+ * spinner so neither state reads as a different loading style.
+ *
+ * MUST NOT itself suspend: `Spinner` calls `useSuspense: false` for exactly
+ * this reason (see its doc comment) — a `fallback` that suspends leaves
+ * React with nothing to paint, i.e. a blank screen for the entire time the
+ * `es` chunk (or a lazy page chunk) is in flight.
+ */
+function FullPageSpinner(): ReactElement {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-bg">
+      <Spinner size={32} />
+    </main>
+  );
+}
 
 /**
  * Applies the signed-in user's saved language preference to i18n. The detector
@@ -68,12 +91,33 @@ export default function App(): ReactElement {
     // errors; this only fires if one of those (or a provider) fails.
     <ErrorBoundary boundary="root">
       <HelmetProvider>
-        <QueryClientProvider client={queryClient}>
-          <LanguageSync />
-          <ToastProvider>
-            <RouterProvider router={router} />
-          </ToastProvider>
-        </QueryClientProvider>
+        {/*
+          <Suspense> is the OUTERMOST child of HelmetProvider — ABOVE
+          QueryClientProvider/LanguageSync/ToastProvider, not just around
+          <RouterProvider>. LanguageSync doesn't suspend itself, but
+          ToastProvider (and anything else in this subtree) can call
+          `useTranslation('common')`; if the es locale chunk (or a lazy page
+          chunk) isn't ready yet and any of them sits ABOVE the boundary,
+          React has nothing below it to keep painted and the WHOLE tree
+          (including this boundary) unmounts to nothing — a blank page, not a
+          spinner. Keeping everything that can suspend inside this single
+          boundary is what makes the fallback actually show.
+        */}
+        <Suspense fallback={<FullPageSpinner />}>
+          <QueryClientProvider client={queryClient}>
+            <LanguageSync />
+            <ToastProvider>
+              {/*
+                v7_startTransition: navigating to a not-yet-loaded lazy page
+                marks the transition low-priority, so React keeps the CURRENT
+                page's content painted (instead of dropping to this
+                <Suspense>'s fallback and replacing the whole shell) until the
+                next page's chunk arrives.
+              */}
+              <RouterProvider router={router} future={{ v7_startTransition: true }} />
+            </ToastProvider>
+          </QueryClientProvider>
+        </Suspense>
       </HelmetProvider>
     </ErrorBoundary>
   );

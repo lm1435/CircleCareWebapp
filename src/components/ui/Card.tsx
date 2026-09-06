@@ -1,43 +1,85 @@
-import type { HTMLAttributes, ReactElement } from 'react';
+import { createElement, type ElementType, type HTMLAttributes, type ReactElement } from 'react';
 
-export type CardVariant = 'elevated' | 'outlined' | 'flat';
+export type CardVariant = 'elevated' | 'outlined' | 'filled' | 'accent' | 'flat';
+export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
 
-export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /**
-   * Surface treatment. Default `'outlined'` reproduces TODAY's look exactly
-   * (`rounded-2xl border border-line bg-cream p-6`) so no consumer shifts.
-   * `elevated` opts into a raised card matching mobile (soft ink-token shadow
-   * + slightly tighter ~20px radius). `flat` drops the border for nested use.
-   */
-  variant?: CardVariant;
-}
-
-// Built from the ink token (--ink = #1a1916 → rgb 26 25 22), reusing the exact
-// rgba values already present in globals.css (0.08 / 0.15 alpha). Layered soft
-// shadow mirrors mobile's raised cards without introducing new tokens.
-const ELEVATED_SHADOW =
-  'shadow-[0_1px_2px_rgba(26,25,22,0.08),0_8px_24px_-6px_rgba(26,25,22,0.15)]';
-
-const variantClass: Record<CardVariant, string> = {
-  // Default — byte-identical to the prior component output.
-  outlined: 'rounded-2xl border border-line bg-cream p-6',
-  // Raised: tighter 20px radius + soft ink shadow, opt-in.
-  elevated: `rounded-[20px] border border-line-2 bg-cream p-6 ${ELEVATED_SHADOW}`,
-  // Borderless surface for nesting inside other cards.
-  flat: 'rounded-2xl bg-cream p-6',
+/** Spec §4.5. Card radius is 20 (`rounded-xl`) everywhere mobile's card is 20. */
+const VARIANT: Record<CardVariant, string> = {
+  elevated: 'bg-cream shadow-md',
+  outlined: 'bg-cream border border-line-2',
+  filled: 'bg-bg-2',
+  accent: 'bg-clay-soft border border-clay-sand shadow-warm',
+  flat: 'bg-bg',
 };
 
-/** Cream surface card on the paper background, per design system. */
+/** Default 20 (`spacing[5]`), per spec §4.5. */
+const PADDING: Record<CardPadding, string> = {
+  none: '',
+  sm: 'p-4',
+  md: 'p-5',
+  lg: 'p-6',
+};
+
+const PRESSABLE =
+  'text-left w-full transition-transform duration-fast ease-spring active:scale-[0.98] hover:opacity-95 cursor-pointer';
+
+/**
+ * A caller-supplied `p-*` in `className` REPLACES the padding class rather than
+ * racing it. Class order in the attribute decides nothing — stylesheet order
+ * does — and Tailwind emits `p-4` BEFORE `p-5`, so `<Card className="p-4">`
+ * would silently keep 20px. (Measured against this project's compiled CSS:
+ * p-4 @6873 · p-5 @6925 · p-6 @6977.) Directional padding (`px-*`, `pt-*`) is
+ * additive on purpose and does not suppress the default.
+ */
+const OVERRIDES_PADDING = /\bp-\d/;
+// Same trap as padding: Tailwind emits `.rounded-2xl` BEFORE `.rounded-xl`, so a
+// caller's `rounded-2xl` would silently lose to the variant's radius if both
+// were present. Skip ours when the caller supplies any radius utility.
+const OVERRIDES_RADIUS = /\brounded-(?!full\b)/;
+const RADIUS: Record<CardVariant, string> = {
+  elevated: 'rounded-xl',
+  outlined: 'rounded-xl',
+  filled: 'rounded-xl',
+  accent: 'rounded-xl',
+  flat: 'rounded-lg',
+};
+
+export interface CardProps extends HTMLAttributes<HTMLElement> {
+  variant?: CardVariant;
+  padding?: CardPadding;
+  /** Makes the whole surface a control: renders a `<button type="button">`. */
+  onPress?: () => void;
+  /**
+   * Semantic wrapper (`li`, `section`, `article`). When combined with
+   * `onPress` the press affordances land on THIS element, so only pass an
+   * interactive tag — otherwise the click has no keyboard equivalent.
+   */
+  as?: ElementType;
+}
+
+/** The one card surface (spec §4.5). */
 export function Card({
-  variant = 'outlined',
+  variant = 'elevated',
+  padding = 'md',
+  onPress,
+  as,
   className,
   children,
   ...rest
 }: CardProps): ReactElement {
-  const base = variantClass[variant];
-  return (
-    <div className={className ? `${base} ${className}` : base} {...rest}>
-      {children}
-    </div>
+  const pad = className && OVERRIDES_PADDING.test(className) ? '' : PADDING[padding];
+  const radius = className && OVERRIDES_RADIUS.test(className) ? '' : RADIUS[variant];
+  const tag: ElementType = as ?? (onPress ? 'button' : 'div');
+  const cls = [VARIANT[variant], radius, pad, onPress ? PRESSABLE : '', className].filter(Boolean).join(' ');
+
+  return createElement(
+    tag,
+    {
+      className: cls,
+      ...(onPress ? { onClick: onPress } : null),
+      ...(tag === 'button' ? { type: 'button' } : null),
+      ...rest,
+    },
+    children
   );
 }

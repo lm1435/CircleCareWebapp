@@ -63,7 +63,8 @@ function useInviteMutationOnError(
 ): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // A seat cap — a hard limit that money lifts. Mobile calls this CAPACITY.
+  const { promptUpgrade } = usePremiumGate('capacity');
   const { t } = useTranslation('members');
 
   return (error: unknown) => {
@@ -91,6 +92,16 @@ function useInviteMutationOnError(
       showToast(t('errors.alreadyMember'), 'error');
     } else if (code === 'PENDING_INVITE') {
       showToast(t('errors.pendingInvite'), 'error');
+    } else if (code === 'CIRCLE_ARCHIVED') {
+      // The circle was deleted — by another member, on another device, or in
+      // another tab — and this list is stale. Every invite path now refuses
+      // (create, resend, both accepts); "something went wrong, try again" is a
+      // retry prompt for something that can never succeed.
+      showToast(t('errors.circleArchived'), 'error');
+    } else if (code === 'CARE_RECIPIENT_EXISTS') {
+      // A second care-recipient invite into a circle that already has one,
+      // backstopped by a partial unique index.
+      showToast(t('errors.careRecipientExists'), 'error');
     } else {
       showToast(t(fallbackMessageKey), 'error');
     }

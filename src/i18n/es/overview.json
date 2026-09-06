@@ -1,29 +1,63 @@
 {
   "hero": {
-    "eyebrow": "Inicio del cuidado",
-    "caringFor": "Cuidando a {{name}}",
-    "selfCareTitle": "Tu espacio de cuidado",
-    "subtitleSolo": "Todo lo de este círculo en un solo lugar. Invita a tu familia para compartir la carga.",
-    "subtitleTeam_one": "{{count}} persona ayudando a coordinar el cuidado.",
-    "subtitleTeam_other": "{{count}} personas ayudando a coordinar el cuidado."
+    "bornAge": "Nació {{date}} · edad {{age}}",
+    "caredForBy": "Cuidado por",
+    "andMore_one": "+{{count}} más",
+    "andMore_other": "+{{count}} más"
+  },
+  "adherence": {
+    "eyebrow": "Últimos 7 días",
+    "label": "Medicamentos al día",
+    "chartSummary": "Cumplimiento diario de los últimos 7 días: {{values}}"
+  },
+  "quickAccess": {
+    "title": "Acceso rápido",
+    "notes": "Notas",
+    "calendar": "Calendario",
+    "medications": "Medicinas",
+    "tasks": "Tareas",
+    "tasksNote_one": "{{count}} pendiente",
+    "tasksNote_other": "{{count}} pendientes",
+    "vitals": "Signos vitales",
+    "activityFeed": "Actividad",
+    "careInfo": "Info de cuidado"
+  },
+  "appointments": {
+    "title": "Próximas citas",
+    "today": "Hoy",
+    "tomorrow": "Mañana",
+    "viewAll": "Ver todo"
   },
   "tasks": {
     "title": "Tareas pendientes",
     "empty": "Están al día: no hay tareas pendientes.",
     "emptyFirstRun": "Coordina los pendientes que mantienen el cuidado en marcha —mandados, resurtidos y seguimientos— y compártelos con quienes ayudan.",
-    "more": "+{{count}} más",
+    "showAll": "Ver las {{count}}",
     "viewAll": "Ver todas las tareas"
-  },
-  "activity": {
-    "title": "Actividad reciente",
-    "empty": "La actividad de tu círculo aparecerá aquí.",
-    "viewAll": "Ver toda la actividad"
   },
   "team": {
     "title": "Equipo de cuidado",
+    "myTitle": "Mi equipo de cuidado",
     "count_one": "{{count}} miembro",
     "count_other": "{{count}} miembros",
-    "manage": "Administrar miembros",
-    "invite": "Invitar miembro"
+    "invite": "Invitar miembro",
+    "careRecipient": "Receptor de cuidado",
+    "circleAdmin": "Admin del círculo",
+    "familyMember": "Familiar",
+    "you": "(Tú)",
+    "recipientBadge": "Receptor de cuidado",
+    "medManagerBadge": "Administra los recordatorios de medicamentos"
+  },
+  "solo": {
+    "title": "Cuidar es más fácil en equipo",
+    "body": "Invita a un familiar o cuidador a ayudar a coordinar el cuidado de {{name}}: compartan tareas, citas y novedades para que nadie lo lleve solo.",
+    "bodySelfCare": "Invita a un familiar o cuidador a ayudarte: compartan tareas, citas y novedades para que no lleves todo por tu cuenta.",
+    "cta": "Invita a tu primer cuidador"
+  },
+  "settings": {
+    "title": "Administrar",
+    "editCircle": "Editar círculo",
+    "members": "Miembros",
+    "deleteCircle": "Eliminar círculo"
   }
 }

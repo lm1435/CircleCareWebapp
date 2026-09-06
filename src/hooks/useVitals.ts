@@ -73,7 +73,8 @@ export function useVitals(
 function useVitalsMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // Premium-only surface — FEATURE.
+  const { promptUpgrade } = usePremiumGate('feature');
   const { t } = useTranslation('vitals');
 
   return (error: unknown) => {
@@ -122,7 +123,10 @@ export function useUpdateVital(
 
   return useMutation({
     mutationFn: ({ id, data }: UpdateVitalVariables) => updateVital(circleId, id, data),
-    onSuccess: () => invalidateVitals(queryClient, circleId),
+    onSuccess: () => {
+      Analytics.vitalUpdated(circleId);
+      invalidateVitals(queryClient, circleId);
+    },
     onError,
   });
 }
@@ -134,7 +138,10 @@ export function useDeleteVital(circleId: string): UseMutationResult<void, unknow
 
   return useMutation({
     mutationFn: (id: string) => deleteVital(circleId, id),
-    onSuccess: () => invalidateVitals(queryClient, circleId),
+    onSuccess: () => {
+      Analytics.vitalDeleted(circleId);
+      invalidateVitals(queryClient, circleId);
+    },
     onError,
   });
 }

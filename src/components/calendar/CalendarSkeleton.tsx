@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Skeleton } from '@/components/ui';
+import { Card, Skeleton } from '@/components/ui';
 
 const WEEK_COLUMNS = [0, 1, 2, 3, 4, 5, 6];
 const MONTH_CELLS = Array.from({ length: 42 }, (_, i) => i);
@@ -10,7 +10,7 @@ export function CalendarSkeleton({ view }: { view: 'week' | 'month' }): ReactEle
   const { t } = useTranslation('common');
 
   return (
-    <div role="status" aria-live="polite" className="rounded-2xl border border-line bg-cream">
+    <Card variant="outlined" padding="none" role="status" aria-live="polite">
       <span className="sr-only">{t('loading')}</span>
       {view === 'week' ? (
         <>
@@ -46,6 +46,6 @@ export function CalendarSkeleton({ view }: { view: 'week' | 'month' }): ReactEle
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -133,7 +133,7 @@ describe('MembersPage', () => {
     expect(within(row).getByText('ana@example.com')).toBeInTheDocument();
   });
 
-  it('marks a heart overlay for the care recipient', async () => {
+  it('marks a decorative heart overlay for the care recipient (the role Badge already announces it)', async () => {
     mockGetCircleDetail.mockResolvedValue(
       makeDetail([
         makeMember({ id: 'u3', first_name: 'Rose', last_name: 'Meza', is_care_recipient: true }),
@@ -141,8 +141,11 @@ describe('MembersPage', () => {
     );
     renderMembers();
 
-    await screen.findByText('Rose Meza');
-    expect(screen.getByRole('img', { name: 'Care recipient' })).toBeInTheDocument();
+    const row = (await screen.findByText('Rose Meza')).closest('li')!;
+    // Not exposed as its own accessible object — an aria-label here would
+    // repeat the visible "Care recipient" Badge right next to the name.
+    expect(within(row).queryByRole('img', { name: 'Care recipient' })).not.toBeInTheDocument();
+    expect(row.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
   });
 
   it('marks a bell overlay for the medication-responsible caregiver', async () => {

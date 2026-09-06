@@ -1,10 +1,19 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useNavigationType,
+  useParams,
+  type NavigationType,
+} from 'react-router-dom';
+import type { ReactElement } from 'react';
 import '@/i18n';
 import CirclePickerPage from '@/pages/CirclePickerPage';
 import { getCircles, type Circle } from '@/api/circles';
+import { useAuthStore } from '@/store/authStore';
 
 vi.mock('@/api/circles', () => ({
   getCircles: vi.fn(),
@@ -71,11 +80,65 @@ function renderPicker(): void {
   );
 }
 
+/** Reports which circle it landed on and whether the router got there via a
+ *  REPLACE (auto-skip) or a PUSH (an ordinary link click). */
+function OverviewNavigationProbe(): ReactElement {
+  const { circleId } = useParams<{ circleId: string }>();
+  const navType: NavigationType = useNavigationType();
+  return <div data-testid="overview-page">{`${circleId}:${navType}`}</div>;
+}
+
+function renderPickerAt(entry: { pathname: string; state?: unknown }): void {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/circles" element={<CirclePickerPage />} />
+          <Route path="/circles/:circleId" element={<OverviewNavigationProbe />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
 describe('CirclePickerPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    // A couple of tests set a first-name user to exercise the greeting eyebrow;
+    // restore the store's default so it never leaks into an unrelated test.
+    useAuthStore.setState({ user: null, isAuthenticated: false });
+  });
+
+  // The greeting used to be an uppercase-tracked eyebrow with a leading dot
+  // (spec §6.2 removes both) — it is now a plain small label paragraph, and
+  // the name renders in the shared `editorialTitle` type variant.
+  it('renders the greeting as a plain label, not an eyebrow, above the editorial name', async () => {
+    useAuthStore.setState({
+      user: { id: 'user-1', email: 'u@example.com', first_name: 'Rose' } as never,
+      isAuthenticated: true,
+    });
+    mockGetCircles.mockResolvedValue([
+      makeCircle(),
+      makeCircle({ id: 'c2', name: "Dad's Circle", recipient_name: 'Hector', role: 'member' }),
+    ]);
+    renderPicker();
+
+    await screen.findByRole('link', { name: /Open Mom's Care/ });
+
+    const greeting = screen.getByText(/^(Good morning|Good afternoon|Good evening)$/);
+    expect(greeting.className).not.toContain('eyebrow');
+    expect(greeting.className).not.toContain('uppercase');
+    expect(greeting.className).toContain('text-ink-3');
+
+    const name = screen.getByRole('heading', { name: 'Rose' });
+    expect(name.className).toContain('text-[42px]');
+  });
+
+  // Two circles never auto-skip — the grid is the landing state.
   it('renders circle cards with name, care-together subtitle, and role', async () => {
     mockGetCircles.mockResolvedValue([
       makeCircle(),
@@ -114,8 +177,15 @@ describe('CirclePickerPage', () => {
     await waitFor(() => expect(trackCirclesLoaded).toHaveBeenCalledWith(0));
   });
 
+  // These fixtures always include a SECOND circle: a single circle now
+  // auto-skips straight to its overview (see the auto-skip suite below), so a
+  // one-circle fixture would navigate away before these card-content
+  // assertions ever ran.
   it('shows the Care recipient role for is_care_recipient memberships', async () => {
-    mockGetCircles.mockResolvedValue([makeCircle({ role: 'member', is_care_recipient: true })]);
+    mockGetCircles.mockResolvedValue([
+      makeCircle({ role: 'member', is_care_recipient: true }),
+      makeCircle({ id: 'c2', name: 'Other Circle' }),
+    ]);
     renderPicker();
 
     const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
@@ -123,7 +193,10 @@ describe('CirclePickerPage', () => {
   });
 
   it('shows the Read-only badge with owner subtitle on read_only circles owned by the user', async () => {
-    mockGetCircles.mockResolvedValue([makeCircle({ read_only: true, can_edit: false })]);
+    mockGetCircles.mockResolvedValue([
+      makeCircle({ read_only: true, can_edit: false }),
+      makeCircle({ id: 'c2', name: 'Other Circle' }),
+    ]);
     renderPicker();
 
     const card = await screen.findByRole('link', { name: /Open Mom's Care/ });
@@ -136,6 +209,7 @@ describe('CirclePickerPage', () => {
   it('shows the member subtitle on read_only circles where the user is a member', async () => {
     mockGetCircles.mockResolvedValue([
       makeCircle({ role: 'member', read_only: true, can_edit: false }),
+      makeCircle({ id: 'c2', name: 'Other Circle' }),
     ]);
     renderPicker();
 
@@ -147,6 +221,7 @@ describe('CirclePickerPage', () => {
   it('shows the View-only badge and subtitle on view_only circles', async () => {
     mockGetCircles.mockResolvedValue([
       makeCircle({ role: 'member', view_only: true, can_edit: false }),
+      makeCircle({ id: 'c2', name: 'Other Circle' }),
     ]);
     renderPicker();
 
@@ -174,7 +249,7 @@ describe('CirclePickerPage', () => {
 
   it('navigates to the circle overview on click', async () => {
     const user = userEvent.setup();
-    mockGetCircles.mockResolvedValue([makeCircle()]);
+    mockGetCircles.mockResolvedValue([makeCircle(), makeCircle({ id: 'c2', name: 'Other Circle' })]);
     renderPicker();
 
     await user.click(await screen.findByRole('link', { name: /Open Mom's Care/ }));
@@ -212,12 +287,46 @@ describe('CirclePickerPage', () => {
   it('shows an error state and retries on demand', async () => {
     const user = userEvent.setup();
     mockGetCircles.mockRejectedValueOnce(new Error('network'));
-    mockGetCircles.mockResolvedValueOnce([makeCircle()]);
+    mockGetCircles.mockResolvedValueOnce([
+      makeCircle(),
+      makeCircle({ id: 'c2', name: 'Other Circle' }),
+    ]);
     renderPicker();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load circles');
 
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('link', { name: /Open Mom's Care/ })).toBeInTheDocument();
+  });
+});
+
+// Spec §6.2 / mobile CircleListScreen: with exactly one circle, the picker is
+// a wasted extra tap — skip straight to it. The header's "All circles"
+// switcher item is the one deliberate way back in, and it marks its own
+// navigation with `state: { fromSwitcher: true }` (Header.tsx) so this effect
+// knows not to immediately bounce that visit back out.
+describe('CirclePickerPage — auto-skip to a single circle', () => {
+  it('navigates straight into the only circle, replacing the history entry', async () => {
+    mockGetCircles.mockResolvedValue([makeCircle()]);
+    renderPickerAt({ pathname: '/circles' });
+
+    expect(await screen.findByTestId('overview-page')).toHaveTextContent('c1:REPLACE');
+  });
+
+  it('does NOT auto-skip when the visit came from the "All circles" switcher item', async () => {
+    mockGetCircles.mockResolvedValue([makeCircle()]);
+    renderPickerAt({ pathname: '/circles', state: { fromSwitcher: true } });
+
+    await screen.findByRole('link', { name: /Open Mom's Care/ });
+    expect(screen.queryByTestId('overview-page')).not.toBeInTheDocument();
+  });
+
+  it('never auto-skips with two or more circles', async () => {
+    mockGetCircles.mockResolvedValue([makeCircle(), makeCircle({ id: 'c2', name: "Dad's Circle" })]);
+    renderPickerAt({ pathname: '/circles' });
+
+    await screen.findByRole('link', { name: /Open Mom's Care/ });
+    expect(screen.getByRole('link', { name: /Open Dad's Circle/ })).toBeInTheDocument();
+    expect(screen.queryByTestId('overview-page')).not.toBeInTheDocument();
   });
 });

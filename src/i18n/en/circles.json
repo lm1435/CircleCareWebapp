@@ -12,6 +12,7 @@
     "create": "Create circle",
     "creating": "Creating...",
     "cancel": "Cancel",
+    "close": "Close",
     "success": "Circle created.",
     "failed": "We couldn't create your circle just now. Nothing was lost — please try again.",
     "limitReached": "You've reached the maximum of 5 circles."
@@ -24,12 +25,11 @@
   },
   "joinModal": {
     "title": "Join a circle",
-    "subtitle": "Enter the code from your invitation email.",
+    "subtitle": "Enter the 6-character code from your invite.",
     "codeLabel": "Invite code",
-    "placeholder": "XXXXXX",
     "pasteCode": "Paste code",
     "pasteNoCode": "We didn't find an invite code on your clipboard.",
-    "lookUpCode": "Look up code",
+    "lookUpCode": "Find circle",
     "lookingUp": "Looking up...",
     "circle": "Circle",
     "caringFor": "Caring for",
@@ -47,7 +47,9 @@
     "expired": "This invite has expired. Ask the person who invited you for a new one.",
     "alreadyUsed": "This invite has already been used. Ask the person who invited you to send you a new one.",
     "alreadyMember": "You're already a member of this circle.",
-    "joinFailed": "We couldn't join this circle. Please try again."
+    "joinFailed": "We couldn't join this circle. Please try again.",
+    "circleArchived": "This circle is no longer active. Ask the person who invited you to check with the circle owner.",
+    "careRecipientExists": "This circle already has a care recipient. Ask the person who invited you to send a caregiver invite instead."
   },
   "edit": {
     "title": "Circle settings",
@@ -61,8 +63,6 @@
     "recipientNamePlaceholder": "Full name",
     "recipientDob": "Date of birth",
     "recipientDobHint": "Optional. Shown on their emergency info so doctors can confirm who they are.",
-    "conditions": "Health conditions",
-    "conditionsHint": "Separate each condition with a comma.",
     "save": "Save changes",
     "saving": "Saving...",
     "savedToast": "Circle updated.",
@@ -72,7 +72,7 @@
     "deleteCircle": "Delete circle",
     "deleting": "Deleting...",
     "deleteConfirmTitle": "Delete this circle?",
-    "deleteConfirmMessage": "This will permanently delete the circle for {{name}} and remove access for all members.",
+    "deleteConfirmMessage": "This removes {{name}}'s circle for you and everyone else in it — the medications, appointments, tasks, notes, vitals, documents and emergency information it holds. Reminders stop right away, and the other members aren't notified, so you may want to tell them first.",
     "deleteConfirmWarning": "This action can't be undone.",
     "deleteConfirmPrompt": "Type {{keyword}} to confirm",
     "deleteConfirmKeyword": "DELETE",
@@ -84,5 +84,55 @@
     "nameTooLong": "Name must be 100 characters or fewer.",
     "dobFormat": "Please choose a valid date of birth.",
     "dobInvalidDate": "That date of birth isn't a real calendar date."
+  },
+  "quickWin": {
+    "title": "Circle created",
+    "subtitle": "{{name}}'s care circle is ready. What would you like to do first?",
+    "recommended": "Recommended",
+    "skipForNow": "Skip for now",
+    "tip": "You can always do these later from the circle page.",
+    "medication": {
+      "title": "Add a medication",
+      "description": "Set up reminders for their daily meds"
+    },
+    "appointment": {
+      "title": "Add an appointment",
+      "description": "Keep track of upcoming appointments"
+    },
+    "invite": {
+      "title": "Invite a family member",
+      "description": "Get siblings or caregivers involved"
+    },
+    "emergency": {
+      "title": "Add health info",
+      "description": "Store important medical details"
+    }
+  },
+  "firstRun": {
+    "steps": {
+      "choose": "Start",
+      "what": "Name",
+      "when": "Time",
+      "repeat": "Repeat"
+    },
+    "progressLabel": "Step {{current}} of {{total}}",
+    "whatTitle": "What does {{name}} take?",
+    "dosageLabel": "Dosage (optional)",
+    "dosagePlaceholder": "e.g. 500mg",
+    "whenTitle": "When does {{name}} take it?",
+    "customTimeLabel": "Custom time",
+    "customTimeHint": "Choosing a time here replaces the schedule above.",
+    "repeatTitle": "Repeat?",
+    "back": "Back",
+    "continue": "Continue",
+    "save": "Add medication",
+    "saving": "Adding...",
+    "close": "Close setup",
+    "fullDetails": "Add full details instead",
+    "savedToast": "Medication added.",
+    "discardTitle": "Discard this medication?",
+    "discardMessage": "Nothing will be saved.",
+    "discardConfirm": "Discard",
+    "discardClose": "Close discard prompt"
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +8,10 @@ import {
   type NotificationPreferences,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
+import { getAnalyticsConsent, setAnalyticsConsent } from '@/lib/analyticsConsent';
+import { syncAnalyticsConsent } from '@/lib/analyticsConsentSync';
+import { disableAnalytics, identifyUser, initAnalytics } from '@/lib/posthog';
+import { Analytics } from '@/lib/analytics';
 import { normalizeTimeOfDay } from '@/utils/timezone';
 import { useAuthStore } from '@/store/authStore';
 import { supportedLanguages, type SupportedLanguage } from '@/i18n';
@@ -26,15 +30,20 @@ import {
   Button,
   Card,
   ConfirmDialog,
+  Eyebrow,
   RadioGroup,
   Select,
+  Sheet,
+  SheetRow,
   Skeleton,
+  Text,
   TextField,
   TimeField,
   Toggle,
   useToast,
   type SelectOption,
 } from '@/components/ui';
+import pkg from '../../package.json';
 
 // Stage 7, Task 7.3 — Profile & settings page. Built only on Stage 0 primitives
 // + the Stage 7 data layer (src/hooks/useProfile.ts + src/api/users.ts). Mirrors
@@ -98,21 +107,55 @@ const NOTIFICATION_KEYS: {
   },
 ];
 
-function SectionCard({
+/** Card-shaped section (spec §6.7): editable, form-like settings. */
+function SettingsCard({
   title,
   description,
   children,
 }: {
   title: string;
   description?: string;
-  children: ReactElement | ReactElement[];
+  children: ReactNode;
 }): ReactElement {
   return (
-    <Card className="mt-6">
-      <h2 className="m-0 text-lg font-semibold text-ink">{title}</h2>
-      {description ? <p className="mt-1 text-sm text-ink-3">{description}</p> : null}
+    <Card padding="lg" className="mt-6">
+      <Text variant="h3" as="h2">
+        {title}
+      </Text>
+      {description ? (
+        <Text variant="caption" className="mt-1">
+          {description}
+        </Text>
+      ) : null}
       <div className="mt-5 flex flex-col gap-5">{children}</div>
     </Card>
+  );
+}
+
+/** Sheet-shaped section (spec §6.7): grouped toggle/select rows. */
+function SettingsSheetSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <div className="mt-6">
+      <Text variant="h3" as="h2">
+        {title}
+      </Text>
+      {description ? (
+        <Text variant="caption" className="mt-1">
+          {description}
+        </Text>
+      ) : null}
+      <Sheet padding="none" className="mt-3">
+        {children}
+      </Sheet>
+    </div>
   );
 }
 
@@ -122,6 +165,10 @@ export default function ProfilePage(): ReactElement {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const signOut = useAuthStore((s) => s.signOut);
+  // Fallback for the analytics-consent sync below: userQuery may not have
+  // resolved yet at the instant the toggle is flipped, but the auth store's
+  // in-memory user is populated the moment a session exists.
+  const authUserId = useAuthStore((s) => s.user?.id);
 
   const userQuery = useQuery({ queryKey: queryKeys.currentUser, queryFn: getCurrentUser });
   const unitsQuery = useQuery({
@@ -175,11 +222,18 @@ export default function ProfilePage(): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.first_name, user?.last_name, user?.quiet_hours_start, user?.quiet_hours_end]);
 
+  // MUST sit above the loading early-return below: a hook declared after a
+  // conditional return runs on some renders and not others, which React
+  // rejects outright ("Rendered more hooks than during the previous render").
+  const [analyticsEnabled, setAnalyticsEnabledState] = useState<boolean>(() =>
+    getAnalyticsConsent(),
+  );
+
   if (userQuery.isLoading || !user) {
     return (
       <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
-        <Skeleton className="h-8 w-56" />
-        <Card className="mt-6">
+        <Skeleton className="h-10 w-64" />
+        <Card padding="lg" className="mt-6">
           <Skeleton className="h-6 w-40" />
           <Skeleton className="mt-4 h-11 w-full" />
           <Skeleton className="mt-3 h-11 w-full" />
@@ -204,14 +258,24 @@ export default function ProfilePage(): ReactElement {
   const handleTimezone = (tz: string): void => {
     updateProfile.mutate(
       { timezone: tz },
-      { onSuccess: () => showToast(t('account.timezoneSuccess'), 'success') }
+      {
+        onSuccess: () => {
+          Analytics.timezoneChanged(tz);
+          showToast(t('account.timezoneSuccess'), 'success');
+        },
+      }
     );
   };
 
   const handleLanguage = (lang: string): void => {
     updateProfile.mutate(
       { language: lang as SupportedLanguage },
-      { onSuccess: () => showToast(t('language.success'), 'success') }
+      {
+        onSuccess: () => {
+          Analytics.languageChanged(lang);
+          showToast(t('language.success'), 'success');
+        },
+      }
     );
   };
 
@@ -220,6 +284,37 @@ export default function ProfilePage(): ReactElement {
       { [key]: next },
       { onSuccess: () => showToast(t('notifications.success'), 'success') }
     );
+  };
+
+  const handleAnalyticsToggle = (next: boolean): void => {
+    // Tear down BEFORE persisting: PostHog batches, and the queue built up
+    // before someone opts out is the worst possible one to transmit.
+    if (!next) disableAnalytics();
+    setAnalyticsConsent(next);
+    setAnalyticsEnabledState(next);
+    // Tell the SERVER half of this decision too. Stopping local collection is
+    // only half of honouring a withdrawal — the privacy policy promises that
+    // turning analytics off "deletes the usage data previously collected from
+    // you", and only the backend can do that (it stamps
+    // `analytics_consent_withdrawn_at`, which also suppresses every
+    // server-side capture, and deletes the PostHog person + events).
+    // Fire-and-forget: the toggle above already reflects the choice, and
+    // `syncAnalyticsConsent` persists a retry marker if this fails.
+    const userId = userQuery.data?.id ?? authUserId;
+    if (userId) void syncAnalyticsConsent(next, userId);
+    // Opting IN mid-session has to start the client that the gate skipped at
+    // boot, or the toggle reads as on while nothing is collected.
+    if (next) {
+      initAnalytics();
+      // …and re-identify. `identifyUser` runs from the auth store on sign-in,
+      // which for a visitor who had analytics OFF was a no-op against a client
+      // that did not exist yet. Without this, everything captured after the
+      // toggle is attributed to a fresh anonymous id — and `disableAnalytics`
+      // deliberately resets the distinct id, so this is also what re-attaches
+      // identity after an off/on cycle within one session.
+      const current = userQuery.data;
+      if (current?.id) identifyUser(current.id, current.email);
+    }
   };
 
   const handleQuietEnabledToggle = (next: boolean): void => {
@@ -276,6 +371,10 @@ export default function ProfilePage(): ReactElement {
   const handleDeleteAccount = (): void => {
     deleteAccount.mutate(undefined, {
       onSuccess: () => {
+        // Best-effort: posthog-js batches captures, and signOut() below resets
+        // analytics (clears the distinct id) — fire this FIRST so it has a
+        // chance to be queued/flushed before that reset.
+        Analytics.accountDeleted();
         showToast(t('delete.success'), 'success');
         setShowDelete(false);
         queryClient.clear();
@@ -304,14 +403,14 @@ export default function ProfilePage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
-      <h1 className="serif m-0 text-xl text-ink">{t('heading')}</h1>
-      <p className="mt-2 text-ink-3">{t('subheading')}</p>
+      <Text variant="editorialTitle">{t('heading')}</Text>
+      <p className="mt-3.5 text-md font-medium text-ink">{t('subheading')}</p>
 
       {/* ── Subscription ──────────────────────────────────────────────── */}
       <SubscriptionSection />
 
       {/* ── Account ───────────────────────────────────────────────────── */}
-      <SectionCard title={t('sections.account')}>
+      <SettingsCard title={t('sections.account')}>
         <div>
           <p className="m-0 text-sm font-medium text-ink-2">{t('account.email')}</p>
           <p className="m-0 mt-1 text-base text-ink">{user.email}</p>
@@ -376,11 +475,11 @@ export default function ProfilePage(): ReactElement {
         />
 
         {/* Password changes happen through the sign-in reset flow — point there. */}
-        <p className="m-0 text-sm text-ink-3">{t('account.changePasswordHint')}</p>
-      </SectionCard>
+        <Text variant="caption">{t('account.changePasswordHint')}</Text>
+      </SettingsCard>
 
       {/* ── Language ──────────────────────────────────────────────────── */}
-      <SectionCard title={t('sections.language')} description={t('language.description')}>
+      <SettingsCard title={t('sections.language')} description={t('language.description')}>
         <RadioGroup
           label={t('sections.language')}
           value={(user.language as SupportedLanguage) ?? 'en'}
@@ -391,58 +490,71 @@ export default function ProfilePage(): ReactElement {
             label: t(`language.names.${code}`),
           }))}
         />
-      </SectionCard>
+      </SettingsCard>
 
       {/* ── Notifications ─────────────────────────────────────────────── */}
-      <SectionCard title={t('sections.notifications')} description={t('notifications.description')}>
+      <SettingsSheetSection
+        title={t('sections.notifications')}
+        description={t('notifications.description')}
+      >
         {NOTIFICATION_KEYS.map(({ key, label, desc, defaultOn }) => {
           const raw = user.notification_preferences?.[key];
           const checked = defaultOn ? raw !== false : raw === true;
           return (
-            <Toggle
-              key={key}
-              checked={checked}
-              onChange={(next) => handleNotif(key, next)}
-              disabled={updateNotif.isPending}
-              label={t(label)}
-              hint={t(desc)}
-            />
+            <SheetRow key={key}>
+              <div className="w-full">
+                <Toggle
+                  checked={checked}
+                  onChange={(next) => handleNotif(key, next)}
+                  disabled={updateNotif.isPending}
+                  label={t(label)}
+                  hint={t(desc)}
+                />
+              </div>
+            </SheetRow>
           );
         })}
-      </SectionCard>
+      </SettingsSheetSection>
 
       {/* ── Quiet hours ───────────────────────────────────────────────── */}
-      <SectionCard title={t('sections.quietHours')} description={t('quietHours.description')}>
-        <Toggle
-          checked={quietEnabled}
-          onChange={handleQuietEnabledToggle}
-          disabled={updateQuiet.isPending}
-          label={t('quietHours.enable')}
-        />
-        {quietEnabled ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <TimeField
-              id="profile-quiet-start"
-              label={t('quietHours.start')}
-              value={quietStart}
-              onChange={(e) => handleQuietTime(e.target.value, quietEnd)}
+      <SettingsSheetSection
+        title={t('sections.quietHours')}
+        description={t('quietHours.description')}
+      >
+        <SheetRow>
+          <div className="w-full">
+            <Toggle
+              checked={quietEnabled}
+              onChange={handleQuietEnabledToggle}
               disabled={updateQuiet.isPending}
-            />
-            <TimeField
-              id="profile-quiet-end"
-              label={t('quietHours.end')}
-              value={quietEnd}
-              onChange={(e) => handleQuietTime(quietStart, e.target.value)}
-              disabled={updateQuiet.isPending}
+              label={t('quietHours.enable')}
             />
           </div>
-        ) : (
-          <></>
-        )}
-      </SectionCard>
+        </SheetRow>
+        {quietEnabled ? (
+          <SheetRow>
+            <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+              <TimeField
+                id="profile-quiet-start"
+                label={t('quietHours.start')}
+                value={quietStart}
+                onChange={(e) => handleQuietTime(e.target.value, quietEnd)}
+                disabled={updateQuiet.isPending}
+              />
+              <TimeField
+                id="profile-quiet-end"
+                label={t('quietHours.end')}
+                value={quietEnd}
+                onChange={(e) => handleQuietTime(quietStart, e.target.value)}
+                disabled={updateQuiet.isPending}
+              />
+            </div>
+          </SheetRow>
+        ) : null}
+      </SettingsSheetSection>
 
       {/* ── Units ─────────────────────────────────────────────────────── */}
-      <SectionCard title={t('sections.units')} description={t('units.description')}>
+      <SettingsCard title={t('sections.units')} description={t('units.description')}>
         <RadioGroup
           label={t('units.weight')}
           value={weightUnit}
@@ -463,41 +575,74 @@ export default function ProfilePage(): ReactElement {
             { value: 'mmol/L', label: t('units.mmoll') },
           ]}
         />
-      </SectionCard>
+      </SettingsCard>
+
+      {/* ── Privacy ───────────────────────────────────────────────────── */}
+      {/*
+        The opt-in the privacy policy has always described. Defaults OFF here —
+        unlike mobile, this app has no local marker that can tell a returning
+        user from a first-time visitor (authStore persists nothing by design),
+        so there is nobody it could safely grandfather. See lib/analyticsConsent.
+      */}
+      <SettingsSheetSection title={t('sections.privacy')} description={t('analytics.description')}>
+        <SheetRow>
+          <div className="w-full">
+            <Toggle
+              checked={analyticsEnabled}
+              onChange={handleAnalyticsToggle}
+              label={t('analytics.enable')}
+              hint={t('analytics.hint')}
+            />
+          </div>
+        </SheetRow>
+      </SettingsSheetSection>
 
       {/* ── Email digest ──────────────────────────────────────────────── */}
-      <SectionCard title={t('sections.emailDigest')} description={t('emailDigest.description')}>
-        <Toggle
-          checked={Boolean(user.email_digest_enabled)}
-          onChange={handleDigestEnabled}
-          disabled={updateDigest.isPending}
-          label={t('emailDigest.enable')}
-          // Premium users already have the digest — only free users need the note.
-          hint={isPremium ? undefined : t('emailDigest.premiumNote')}
-        />
+      <SettingsSheetSection
+        title={t('sections.emailDigest')}
+        description={t('emailDigest.description')}
+      >
+        <SheetRow>
+          <div className="w-full">
+            <Toggle
+              checked={Boolean(user.email_digest_enabled)}
+              onChange={handleDigestEnabled}
+              disabled={updateDigest.isPending}
+              label={t('emailDigest.enable')}
+              // Premium users already have the digest — only free users need the note.
+              hint={isPremium ? undefined : t('emailDigest.premiumNote')}
+            />
+          </div>
+        </SheetRow>
         {user.email_digest_enabled ? (
-          <Select
-            id="profile-digest-day"
-            label={t('emailDigest.day')}
-            options={dayOptions}
-            value={String(user.email_digest_day ?? 0)}
-            onChange={(e) => handleDigestDay(Number(e.target.value))}
-            disabled={updateDigest.isPending}
-          />
-        ) : (
-          <></>
-        )}
-      </SectionCard>
+          <SheetRow>
+            <div className="w-full">
+              <Select
+                id="profile-digest-day"
+                label={t('emailDigest.day')}
+                options={dayOptions}
+                value={String(user.email_digest_day ?? 0)}
+                onChange={(e) => handleDigestDay(Number(e.target.value))}
+                disabled={updateDigest.isPending}
+              />
+            </div>
+          </SheetRow>
+        ) : null}
+      </SettingsSheetSection>
 
       {/* ── Your data (GDPR export) ───────────────────────────────────── */}
       <DataExportSection />
 
       {/* ── Danger zone ───────────────────────────────────────────────── */}
-      <Card className="mt-6 border-terracotta-deep">
-        <h2 className="m-0 text-lg font-semibold text-ink">{t('delete.title')}</h2>
-        <p className="mt-1 text-sm text-ink-3">{t('delete.description')}</p>
+      <Card variant="outlined" padding="lg" className="mt-6 border-terracotta-deep/30">
+        <Text variant="h3" as="h2">
+          {t('delete.title')}
+        </Text>
+        <Text variant="caption" className="mt-1">
+          {t('delete.description')}
+        </Text>
         <Button
-          variant="terracotta"
+          variant="danger"
           className="mt-5"
           onClick={() => {
             // Clear any stale error from a previous attempt before re-opening.
@@ -531,6 +676,10 @@ export default function ProfilePage(): ReactElement {
           onCancel={() => setShowDelete(false)}
         />
       ) : null}
+
+      <Eyebrow as="p" className="mt-8 text-center">
+        {t('footer.version', { version: pkg.version })}
+      </Eyebrow>
     </section>
   );
 }

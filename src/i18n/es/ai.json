@@ -11,6 +11,7 @@
   "emptyTitle": "¿En qué puedo ayudarte?",
   "suggestedQuestions": "Preguntas sugeridas",
   "remainingCount": "{{count}} restantes hoy",
+  "newChat": "Nuevo chat",
   "errors": {
     "subscriptionRequired": "El Asistente de Cuidado es una función premium. Mejora a Premium para usarlo.",
     "rateLimited": "Alcanzaste el límite de preguntas de hoy. El Asistente de Cuidado estará disponible de nuevo mañana.",

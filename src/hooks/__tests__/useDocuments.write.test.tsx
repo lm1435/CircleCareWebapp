@@ -28,6 +28,17 @@ vi.mock('@/hooks/usePremiumGate', () => ({
   usePremiumGate: () => ({ promptUpgrade }),
 }));
 
+const mockDocumentUpdated = vi.fn();
+const mockDocumentDeleted = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    documentUploaded: vi.fn(),
+    documentUpdated: (...args: unknown[]) => mockDocumentUpdated(...args),
+    documentDeleted: (...args: unknown[]) => mockDocumentDeleted(...args),
+    errorOccurred: vi.fn(),
+  },
+}));
+
 import {
   uploadDocument,
   updateDocument,
@@ -192,6 +203,17 @@ describe('useUpdateDocument', () => {
     expect(mockUpdate).toHaveBeenCalledWith(CIRCLE_ID, DOC_ID, { label: 'Renamed' });
     expect(invalidatedWith(invalidateSpy, queryKeys.documents(CIRCLE_ID))).toBe(true);
   });
+
+  it('fires Analytics.documentUpdated(circleId) on success', async () => {
+    const { wrapper } = setup();
+    mockUpdate.mockResolvedValue(makeDoc({ label: 'Renamed' }));
+
+    const { result } = renderHook(() => useUpdateDocument(CIRCLE_ID), { wrapper });
+    result.current.mutate({ documentId: DOC_ID, data: { label: 'Renamed' } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockDocumentUpdated).toHaveBeenCalledWith(CIRCLE_ID);
+  });
 });
 
 describe('useDeleteDocument', () => {
@@ -205,5 +227,16 @@ describe('useDeleteDocument', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockDelete).toHaveBeenCalledWith(CIRCLE_ID, DOC_ID);
     expect(invalidatedWith(invalidateSpy, queryKeys.documents(CIRCLE_ID))).toBe(true);
+  });
+
+  it('fires Analytics.documentDeleted(circleId) on success', async () => {
+    const { wrapper } = setup();
+    mockDelete.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useDeleteDocument(CIRCLE_ID), { wrapper });
+    result.current.mutate(DOC_ID);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockDocumentDeleted).toHaveBeenCalledWith(CIRCLE_ID);
   });
 });

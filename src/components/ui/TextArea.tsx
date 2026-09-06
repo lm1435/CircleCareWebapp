@@ -1,5 +1,14 @@
 import { forwardRef, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { Icon } from './Icon';
 import { RequiredMarker } from './RequiredMarker';
+import { Text } from './Text';
+import {
+  INPUT_ERROR,
+  INPUT_HINT,
+  INPUT_LABEL,
+  INPUT_TEXT,
+  fieldShell,
+} from './inputStyles';
 
 export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   id: string;
@@ -9,7 +18,9 @@ export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
 }
 
 /**
- * Accessible controlled multi-line text input. Same a11y contract as TextField.
+ * Multi-line field. Same shell and a11y contract as `TextField`; mobile's
+ * `containerMultiline` top-aligns the text and `textMultiline` floors the box
+ * at 72 (spec §4.5).
  */
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
   { id, label, error, hint, className, rows = 4, disabled, required, ...rest },
@@ -20,36 +31,41 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
   const describedBy =
     [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
 
-  const base =
-    'w-full rounded-xl border bg-cream px-4 py-3 text-base text-ink placeholder:text-ink-3 disabled:cursor-not-allowed disabled:opacity-60 ' +
-    (error ? 'border-terracotta-deep' : 'border-line');
+  const shell = fieldShell({ error: Boolean(error), disabled, multiline: true });
+
+  const control = `${INPUT_TEXT} min-h-[72px] resize-y`;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-ink-2">
-        {label}
-        {required ? <RequiredMarker /> : null}
+    <div>
+      <label htmlFor={id} className={INPUT_LABEL}>
+        <Text variant="label" as="span">
+          {label}
+          {required ? <RequiredMarker /> : null}
+        </Text>
       </label>
-      <textarea
-        ref={ref}
-        id={id}
-        rows={rows}
-        disabled={disabled}
-        required={required}
-        aria-required={required ? true : undefined}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        className={className ? `${base} ${className}` : base}
-        {...rest}
-      />
-      {error ? (
-        <p id={errorId} className="m-0 text-sm text-terracotta-deep">
-          {error}
-        </p>
-      ) : null}
+      <div className={shell}>
+        <textarea
+          ref={ref}
+          id={id}
+          rows={rows}
+          disabled={disabled}
+          required={required}
+          aria-required={required ? true : undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={className ? `${control} ${className}` : control}
+          {...rest}
+        />
+      </div>
       {hint ? (
-        <p id={hintId} className="m-0 text-sm text-ink-3">
+        <Text variant="caption" id={hintId} className={INPUT_HINT}>
           {hint}
+        </Text>
+      ) : null}
+      {error ? (
+        <p id={errorId} className={INPUT_ERROR}>
+          <Icon name="alert-circle-outline" size="inline" />
+          {error}
         </p>
       ) : null}
     </div>

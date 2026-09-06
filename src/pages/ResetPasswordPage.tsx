@@ -2,10 +2,14 @@ import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
-import { Button } from '@/components/ui';
+import { Analytics } from '@/lib/analytics';
+import { utf8ByteLength } from '@/lib/utf8ByteLength';
+import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
-import { FormField } from '@/components/auth/FormField';
-import { OtpInput } from '@/components/auth/OtpInput';
+import { AuthTopBar } from '@/components/auth/AuthTopBar';
+import { AuthHeader } from '@/components/auth/AuthHeader';
+import { TerminalState } from '@/components/auth/TerminalState';
+import { OtpInput, type OtpInputHandle } from '@/components/auth/OtpInput';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 
 // Task 8d (part 2) — reset password with the emailed 6-digit recovery OTP.
@@ -38,16 +42,24 @@ export default function ResetPasswordPage(): ReactElement {
   const [isResetting, setIsResetting] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
 
+  const otpRef = useRef<OtpInputHandle>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
 
-  // Matches backend's Zod password policy (backend/src/routes/auth.ts).
+  // Matches backend's Zod password policy (backend/src/routes/auth.ts), plus
+  // the 72-UTF-8-byte max GoTrue/bcrypt actually enforces (see
+  // mobile/src/screens/auth/authValidation.ts's `passwordSchema`: bcrypt
+  // counts BYTES, not JS characters, so a 72-character accented password can
+  // already be over the server's limit — hence the byte check below in
+  // addition to the plain-length fast path).
   const validatePassword = (value: string): string | undefined => {
     if (value.length < 8) return t('validation.passwordMinLength');
+    if (value.length > 72) return t('validation.passwordMaxLength');
     if (!/[A-Z]/.test(value)) return t('validation.passwordUppercase');
     if (!/[a-z]/.test(value)) return t('validation.passwordLowercase');
     if (!/[0-9]/.test(value)) return t('validation.passwordNumber');
     if (!/[^A-Za-z0-9]/.test(value)) return t('validation.passwordSpecial');
+    if (utf8ByteLength(value) > 72) return t('validation.passwordMaxLength');
     return undefined;
   };
 
@@ -71,6 +83,7 @@ export default function ResetPasswordPage(): ReactElement {
     }
     setFieldErrors(errors);
     if (errors.otp) {
+      otpRef.current?.focus();
       return;
     }
     if (errors.password) {
@@ -86,9 +99,11 @@ export default function ResetPasswordPage(): ReactElement {
     try {
       await authApi.resetPassword({ email, otp, new_password: password });
       setSucceeded(true);
+      Analytics.passwordResetCompleted();
     } catch {
       // INVALID_CODE / RESET_FAILED — same calm guidance either way.
       setFormError(t('resetPassword.errors.resetFailed'));
+      Analytics.passwordResetFailed();
     } finally {
       setIsResetting(false);
     }
@@ -98,56 +113,75 @@ export default function ResetPasswordPage(): ReactElement {
   // mobile: explain and send them back to request a new code.
   if (!email) {
     return (
-      <AuthShell title={t('resetPassword.errorTitle')}>
-        <p className="m-0 mb-6 text-sm text-ink-2">{t('resetPassword.errorMessage')}</p>
-        <Button
-          type="button"
-          variant="primary"
-          className="w-full"
-          onClick={() => navigate('/forgot-password')}
+      <AuthShell>
+        <AuthTopBar onBack={() => navigate('/forgot-password')} />
+        <TerminalState
+          icon="alert-circle-outline"
+          title={t('resetPassword.errorTitle')}
+          body={t('resetPassword.errorMessage')}
         >
-          {t('resetPassword.requestNewCode')}
-        </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => navigate('/forgot-password')}
+          >
+            {t('resetPassword.requestNewCode')}
+          </Button>
+        </TerminalState>
       </AuthShell>
     );
   }
 
   if (succeeded) {
     return (
-      <AuthShell title={t('resetPassword.successTitle')}>
-        <p role="status" className="m-0 mb-6 text-sm text-ink-2">
-          {t('resetPassword.success')}
-        </p>
-        <Button
-          type="button"
-          variant="primary"
-          className="w-full"
-          onClick={() => navigate('/login', { replace: true })}
+      <AuthShell>
+        <AuthTopBar />
+        <TerminalState
+          icon="checkmark"
+          title={t('resetPassword.successTitle')}
+          body={<span role="status">{t('resetPassword.success')}</span>}
         >
-          {t('resetPassword.signInNow')}
-        </Button>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => navigate('/login', { replace: true })}
+          >
+            {t('resetPassword.signInNow')}
+          </Button>
+        </TerminalState>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell
-      title={t('resetPassword.title')}
-      subtitle={t('resetPassword.codeSubtitle', { email })}
-    >
+    <AuthShell>
+      <AuthTopBar onBack={() => navigate('/forgot-password')} />
+      <AuthHeader
+        title={t('resetPassword.title')}
+        subtitle={t('resetPassword.codeSubtitle', { email })}
+      />
+
       {formError ? (
-        <div
-          role="alert"
-          className="mb-4 rounded-xl border border-terracotta-deep/40 bg-bg-2 p-3 text-sm text-terracotta-deep"
-        >
-          {formError}
+        <div role="alert" className="mb-4">
+          <Card variant="filled" padding="sm">
+            <Text variant="caption" className="text-terracotta-deep!">
+              {formError}
+            </Text>
+          </Card>
         </div>
       ) : null}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-ink-2">{t('resetPassword.resetCode')}</span>
+          <Text variant="label" as="span">
+            {t('resetPassword.resetCode')}
+          </Text>
           <OtpInput
+            ref={otpRef}
             length={OTP_LENGTH}
             value={otp}
             onChange={setOtp}
@@ -162,11 +196,13 @@ export default function ResetPasswordPage(): ReactElement {
           ) : null}
         </div>
 
-        <FormField
+        <TextField
           ref={passwordRef}
           id="reset-password"
           name="newPassword"
           type="password"
+          showToggle
+          toggleLabels={{ show: t('login.showPassword'), hide: t('login.hidePassword') }}
           label={t('resetPassword.newPasswordLabel')}
           placeholder={t('resetPassword.newPasswordPlaceholder')}
           autoComplete="new-password"
@@ -178,11 +214,13 @@ export default function ResetPasswordPage(): ReactElement {
 
         <PasswordRequirements value={password} />
 
-        <FormField
+        <TextField
           ref={confirmPasswordRef}
           id="reset-confirm-password"
           name="confirmPassword"
           type="password"
+          showToggle
+          toggleLabels={{ show: t('login.showPassword'), hide: t('login.hidePassword') }}
           label={t('resetPassword.confirmPasswordLabel')}
           placeholder={t('resetPassword.confirmPasswordPlaceholder')}
           autoComplete="new-password"
@@ -192,18 +230,21 @@ export default function ResetPasswordPage(): ReactElement {
           error={fieldErrors.confirmPassword}
         />
 
-        <Button type="submit" variant="primary" disabled={isResetting} className="w-full">
+        <Button type="submit" variant="primary" size="lg" fullWidth loading={isResetting}>
           {isResetting ? t('resetPassword.resetting') : t('resetPassword.resetButton')}
         </Button>
       </form>
 
       <p className="m-0 mt-6 text-center">
-        <Link to="/forgot-password" className="text-sm font-medium text-terracotta-deep">
+        <Link
+          to="/forgot-password"
+          className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss"
+        >
           {t('resetPassword.requestNewCode')}
         </Link>
       </p>
       <p className="m-0 mt-4 text-center">
-        <Link to="/login" className="text-sm font-medium text-terracotta-deep">
+        <Link to="/login" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss">
           {t('resetPassword.backToLogin')}
         </Link>
       </p>

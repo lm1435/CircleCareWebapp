@@ -20,6 +20,17 @@
       "90d": "Últimos 90 días"
     }
   },
+  "detail": {
+    "latest": "Último registro",
+    "average": "Promedio",
+    "min": "Más bajo",
+    "max": "Más alto",
+    "trendStable": "Estable",
+    "trendUp": "Subió {{pct}}% vs período anterior",
+    "trendDown": "Bajó {{pct}}% vs período anterior",
+    "chartTitle": "Tendencia",
+    "chartSummary": "Gráfica de tendencia. Más bajo {{min}}, más alto {{max}}, último {{latest}}."
+  },
   "fields": {
     "systolic": "Sistólica",
     "diastolic": "Diastólica",
@@ -28,14 +39,17 @@
     "time": "Hora",
     "timesShownIn": "Horas mostradas en {{timezone}}",
     "notes": "Notas",
-    "notesPlaceholder": "Agrega una nota (opcional)"
+    "notesPlaceholder": "Agrega una nota (opcional)",
+    "dualTimezoneHint": "Tu hora / Hora de {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "Tu hora / Su hora ({{timezone}})",
+    "dayOffsetNext": "+1 día",
+    "dayOffsetPrevious": "-1 día"
   },
   "add": {
     "cta": "Agregar lectura",
     "title": "Agregar lectura",
     "typeLabel": "Tipo de lectura",
-    "save": "Guardar lectura",
-    "saving": "Guardando…"
+    "save": "Guardar lectura"
   },
   "edit": {
     "title": "Editar lectura",
@@ -44,8 +58,7 @@
   "actions": {
     "edit": "Editar",
     "delete": "Eliminar",
-    "editLabel": "Editar lectura {{value}}",
-    "deleteLabel": "Eliminar lectura {{value}}"
+    "menuLabel": "Acciones para la lectura {{value}}"
   },
   "delete": {
     "title": "¿Eliminar esta lectura?",

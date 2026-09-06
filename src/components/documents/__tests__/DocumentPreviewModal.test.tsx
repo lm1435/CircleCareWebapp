@@ -83,6 +83,26 @@ describe('DocumentPreviewModal', () => {
     expect(screen.getByRole('button', { name: 'Download Power of Attorney' })).toBeInTheDocument();
   });
 
+  it('shows the PDF fallback hint under the iframe', async () => {
+    mockSignedUrl(pdfDoc);
+    render(<DocumentPreviewModal doc={pdfDoc} circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+    await screen.findByTitle('Power of Attorney');
+    expect(
+      screen.getByText('PDF not displaying? Open it in a new tab or download it.')
+    ).toBeInTheDocument();
+  });
+
+  it('does not show the PDF fallback hint for image previews', async () => {
+    mockSignedUrl(baseDoc);
+    render(<DocumentPreviewModal doc={baseDoc} circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+    await screen.findByRole('img', { name: 'Insurance Card' });
+    expect(
+      screen.queryByText('PDF not displaying? Open it in a new tab or download it.')
+    ).not.toBeInTheDocument();
+  });
+
   it('moves focus to the close button on open and restores it on close', async () => {
     const outsideButton = document.createElement('button');
     outsideButton.textContent = 'outside';

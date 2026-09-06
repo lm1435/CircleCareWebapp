@@ -21,6 +21,7 @@ import {
 } from '@/api/documents';
 import { queryKeys } from '@/lib/queryKeys';
 import {
+  classifyFailureCode,
   isPermissionDeniedError,
   isStorageFullError,
   isSubscriptionRequiredError,
@@ -40,6 +41,8 @@ const DEFAULT_STORAGE: StorageUsage = { used: 0, limit: 209715200 }; // 200MB fr
 export interface UseDocumentsResult {
   /** Filtered by `category` (when given) and sorted newest first. */
   documents: CircleDocument[];
+  /** Every document in the circle, regardless of `category` — for first-run and chip gating. */
+  allDocuments: CircleDocument[];
   storage: StorageUsage;
 }
 
@@ -64,6 +67,7 @@ export function useDocuments(
   return {
     ...query,
     documents,
+    allDocuments: allDocs,
     storage: query.data?.storage ?? DEFAULT_STORAGE,
   };
 }
@@ -89,10 +93,17 @@ export function useDocuments(
 function useDocumentMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // A premium-only surface, not a count the user ran out of — FEATURE.
+  const { promptUpgrade } = usePremiumGate('feature');
   const { t } = useTranslation('documents');
 
   return (error: unknown) => {
+    // `error_occurred` for the admin digest (mobile parity). ids/enums only:
+    // `code` is the closed-set `classifyFailureCode` value, never toast copy.
+    Analytics.errorOccurred('documents', 'documents_mutation_error', {
+      circle_id: circleId,
+      code: classifyFailureCode(error),
+    });
     if (isStorageFullError(error)) {
       // Premium 1GB cap — no upgrade path. Distinct from the 402 free-tier path.
       showToast(t('errors.storageFull'), 'error');
@@ -148,6 +159,7 @@ export function useUpdateDocument(
     mutationFn: ({ documentId, data }: UpdateDocumentVariables) =>
       updateDocument(circleId, documentId, data),
     onSuccess: () => {
+      Analytics.documentUpdated(circleId);
       void queryClient.invalidateQueries({ queryKey: queryKeys.documents(circleId) });
     },
     onError,
@@ -162,6 +174,7 @@ export function useDeleteDocument(circleId: string): UseMutationResult<void, unk
   return useMutation({
     mutationFn: (documentId: string) => deleteDocument(circleId, documentId),
     onSuccess: () => {
+      Analytics.documentDeleted(circleId);
       void queryClient.invalidateQueries({ queryKey: queryKeys.documents(circleId) });
     },
     onError,

@@ -50,6 +50,30 @@ describe('CircleSelectionModal', () => {
     expect(screen.getByRole('button', { name: 'Confirm selection' })).toBeDisabled();
   });
 
+  // Modal footer convention (M4): a ghost Cancel before the filled primary,
+  // and the RadioGroup carries its own accessible name so the dialog has one
+  // heading (the Modal's own h2) rather than reusing that heading's text.
+  it('puts the ghost Cancel before the filled Confirm selection on step 1', () => {
+    renderModal();
+
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels.indexOf('Cancel')).toBeGreaterThan(-1);
+    expect(labels.indexOf('Cancel')).toBeLessThan(labels.indexOf('Confirm selection'));
+  });
+
+  it('closes on Cancel without selecting a circle', () => {
+    renderModal();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('labels the radio group distinctly from the dialog heading', () => {
+    renderModal();
+
+    expect(screen.getByRole('heading', { name: 'Pick one circle to keep' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Choose a circle to keep' })).toBeInTheDocument();
+  });
+
   it('select → confirm → keep calls mutate with the chosen circle id', () => {
     renderModal();
 

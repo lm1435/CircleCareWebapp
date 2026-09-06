@@ -99,21 +99,32 @@ export const ALLOWED_INPUT_UNITS: Record<VitalType, readonly string[]> = {
 
 /**
  * Format a vital value for display — mirrors mobile formatVitalValue:
- * BP shows "sys/dia", HR rounds, weight/glucose get 1 decimal.
+ * BP shows "sys/dia", HR rounds, weight/glucose get 1 decimal. A BP reading
+ * with no diastolic (value2 == null) renders systolic-only, rounded — never
+ * "140/0", which would claim a diastolic reading that doesn't exist.
+ *
+ * Pass `{ unit: false }` for the bare numeric string with no unit suffix
+ * (e.g. a hero tile that renders the unit separately, once, alongside it).
  */
 export function formatVitalValue(
   type: VitalType,
   value1: number,
   value2: number | null | undefined,
-  unit: string
+  unit: string,
+  options: { unit?: boolean } = {}
 ): string {
-  if (type === 'blood_pressure' && value2 != null) {
-    return `${Math.round(value1)}/${Math.round(value2)} ${unit}`;
+  const showUnit = options.unit ?? true;
+  const suffix = showUnit ? ` ${unit}` : '';
+  if (type === 'blood_pressure') {
+    if (value2 != null) {
+      return `${Math.round(value1)}/${Math.round(value2)}${suffix}`;
+    }
+    return `${Math.round(value1)}${suffix}`;
   }
   if (type === 'heart_rate') {
-    return `${Math.round(value1)} ${unit}`;
+    return `${Math.round(value1)}${suffix}`;
   }
-  return `${Number(value1.toFixed(1))} ${unit}`;
+  return `${Number(value1.toFixed(1))}${suffix}`;
 }
 
 // ── Display-unit validation ranges (mirror mobile VitalFormScreen RANGES) ──────

@@ -16,6 +16,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { Analytics } from '@/lib/analytics';
 
 // Plan Stage 8, Task 8.2 — owner-only circle edit/delete mutations.
 //
@@ -44,7 +45,9 @@ function invalidateCircleQueries(
 function useCircleAdminOnError(): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // Circle/seat quota rejections — CAPACITY, the bucket mobile uses for a hard
+  // limit that an upgrade actually lifts.
+  const { promptUpgrade } = usePremiumGate('capacity');
   const { t } = useTranslation('common');
 
   return (error: unknown) => {
@@ -89,7 +92,8 @@ function isCircleLimitReachedError(err: unknown): boolean {
 export function useCreateCircle(): UseMutationResult<Circle, unknown, CreateCircleRequest> {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // The free-tier circle limit on create — CAPACITY.
+  const { promptUpgrade } = usePremiumGate('capacity');
   const { t } = useTranslation(['common', 'circles']);
 
   return useMutation({
@@ -121,7 +125,10 @@ export function useUpdateCircle(
 
   return useMutation({
     mutationFn: (data: UpdateCircleRequest) => updateCircle(circleId, data),
-    onSuccess: () => invalidateCircleQueries(queryClient, circleId),
+    onSuccess: () => {
+      Analytics.circleUpdated(circleId);
+      invalidateCircleQueries(queryClient, circleId);
+    },
     onError,
   });
 }
@@ -140,6 +147,7 @@ export function useDeleteCircle(
   return useMutation({
     mutationFn: () => deleteCircle(circleId),
     onSuccess: () => {
+      Analytics.circleDeleted(circleId);
       // The circle no longer exists — drop its detail and refresh the list so
       // the picker reflects the deletion immediately.
       void queryClient.invalidateQueries({ queryKey: queryKeys.circleDetail(circleId) });

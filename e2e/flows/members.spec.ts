@@ -24,7 +24,7 @@ test('members list renders, invite-email validation shows inline error, then can
   await expect(memberRows.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Open the invite modal (owner-only CTA) ---
-  await page.getByRole('button', { name: 'Invite member' }).click();
+  await page.getByRole('button', { name: 'Invite member' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await expect(dialog.getByRole('heading', { name: 'Invite a member' })).toBeVisible();
@@ -62,27 +62,39 @@ test('send an email invite (real) then cancel the pending invite', async ({ page
   const email = `e2e-invite-${Date.now()}@example.com`;
 
   // --- Send a real email invite (member_type defaults to caregiver). ---
-  await page.getByRole('button', { name: 'Invite member' }).click();
+  await page.getByRole('button', { name: 'Invite member' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await dialog.locator('#invite-email').fill(email);
   await dialog.getByRole('button', { name: 'Send invite' }).click();
 
-  // Modal closes on success.
+  // The modal no longer auto-closes on success (InviteMemberModal.tsx): it
+  // shows the "Invitation sent" share screen (copy/share the link) instead of
+  // relying on email alone. Close it explicitly via the × once it appears.
+  await expect(dialog.getByText('Invitation sent')).toBeVisible({ timeout: 20_000 });
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
   // --- The pending invite now appears in the roster ---
-  const cancelBtn = page.getByRole('button', { name: `Cancel invite for ${email}` });
-  await expect(cancelBtn).toBeVisible({ timeout: 20_000 });
+  // Resend/Cancel live behind one MoreMenu trigger per invite row now
+  // (MembersPage.tsx), named "Actions for invite to <email>" — not a direct
+  // "Cancel invite for <email>" button.
+  const inviteActions = page.getByRole('button', { name: `Actions for invite to ${email}` });
+  await expect(inviteActions).toBeVisible({ timeout: 20_000 });
 
   // --- Cancel the newly-added invite (cleanup → net-zero). ---
-  await cancelBtn.click();
+  await inviteActions.click();
+  const inviteMenu = page.getByRole('menu');
+  await expect(inviteMenu).toBeVisible();
+  await inviteMenu.getByRole('menuitem', { name: 'Cancel invite', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await expect(confirm).toBeVisible({ timeout: 10_000 });
-  await confirm.getByRole('button', { name: 'Cancel invite' }).click();
+  await confirm.getByRole('button', { name: 'Cancel invite', exact: true }).click();
 
   // --- Back to baseline: the row is gone. ---
-  await expect(page.getByRole('button', { name: `Cancel invite for ${email}` })).toHaveCount(0, {
+  await expect(
+    page.getByRole('button', { name: `Actions for invite to ${email}` })
+  ).toHaveCount(0, {
     timeout: 20_000,
   });
 });

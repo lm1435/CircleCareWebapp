@@ -1,29 +1,63 @@
 {
   "hero": {
-    "eyebrow": "Care home",
-    "caringFor": "Caring for {{name}}",
-    "selfCareTitle": "Your care space",
-    "subtitleSolo": "Everything for this circle in one place. Invite family to share the load.",
-    "subtitleTeam_one": "{{count}} person helping coordinate care.",
-    "subtitleTeam_other": "{{count}} people helping coordinate care."
+    "bornAge": "Born {{date}} · age {{age}}",
+    "caredForBy": "Cared for by",
+    "andMore_one": "+{{count}} more",
+    "andMore_other": "+{{count}} more"
+  },
+  "adherence": {
+    "eyebrow": "Past 7 days",
+    "label": "Medications on schedule",
+    "chartSummary": "Daily adherence for the past 7 days: {{values}}"
+  },
+  "quickAccess": {
+    "title": "Quick access",
+    "notes": "Notes",
+    "calendar": "Calendar",
+    "medications": "Meds",
+    "tasks": "Tasks",
+    "tasksNote_one": "{{count}} open",
+    "tasksNote_other": "{{count}} open",
+    "vitals": "Vitals",
+    "activityFeed": "Activity feed",
+    "careInfo": "Care info"
+  },
+  "appointments": {
+    "title": "Upcoming appointments",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "viewAll": "View all"
   },
   "tasks": {
     "title": "Open tasks",
     "empty": "You're all caught up — no open tasks.",
     "emptyFirstRun": "Coordinate the to-dos that keep care on track — errands, refills, follow-ups — and share them with everyone helping.",
-    "more": "+{{count}} more",
+    "showAll": "Show all {{count}}",
     "viewAll": "View all tasks"
-  },
-  "activity": {
-    "title": "Recent activity",
-    "empty": "Activity from your circle will show up here.",
-    "viewAll": "View all activity"
   },
   "team": {
     "title": "Care team",
+    "myTitle": "My care team",
     "count_one": "{{count}} member",
     "count_other": "{{count}} members",
-    "manage": "Manage members",
-    "invite": "Invite member"
+    "invite": "Invite member",
+    "careRecipient": "Care recipient",
+    "circleAdmin": "Circle admin",
+    "familyMember": "Family member",
+    "you": "(You)",
+    "recipientBadge": "Care recipient",
+    "medManagerBadge": "Manages medication reminders"
+  },
+  "solo": {
+    "title": "Care is easier together",
+    "body": "Invite a family member or caregiver to help coordinate {{name}}'s care: share tasks, appointments, and updates so no one carries it alone.",
+    "bodySelfCare": "Invite a family member or caregiver to help: share tasks, appointments, and updates so you don't carry it alone.",
+    "cta": "Invite your first caregiver"
+  },
+  "settings": {
+    "title": "Manage",
+    "editCircle": "Edit circle",
+    "members": "Members",
+    "deleteCircle": "Delete circle"
   }
 }

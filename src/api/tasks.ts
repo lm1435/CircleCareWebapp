@@ -33,6 +33,12 @@ export interface GetTasksResponse {
   tasks: Task[];
   today: string; // YYYY-MM-DD in the care recipient's timezone
   timezone: string; // resolved IANA timezone
+  /**
+   * Count of tasks matching the filter BEFORE `limit` trims the page — absent
+   * on an older backend, so callers wanting a total count still fall back to
+   * `tasks.length` (only correct when the caller didn't pass `limit`).
+   */
+  total?: number;
 }
 
 interface GetTasksEnvelope {

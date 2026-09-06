@@ -23,11 +23,14 @@
   }
 
   /* Hide all app chrome: top header, sidebar nav, and anything opted out
-     (in-page nav, print button, download-the-app CTAs, banners). */
+     (in-page nav, print button, download-the-app CTAs, banners). Masthead
+     action buttons, the Emergency/Documents tabs, and per-card MoreMenus are
+     also marked `data-print-hide` directly (spec §6.6). */
   body.emergency-print-scope header,
   body.emergency-print-scope aside,
   body.emergency-print-scope nav,
-  body.emergency-print-scope .no-print {
+  body.emergency-print-scope .no-print,
+  body.emergency-print-scope [data-print-hide] {
     display: none !important;
   }
 
@@ -60,10 +63,16 @@
   }
 
   /* Collapse the desktop two-column section masonry back to one column on
-     paper (the screen layout uses CSS columns at lg+). */
+     paper. `display: block` alone does not reset `column-count` — Tailwind's
+     `lg:columns-2` utility (a bare min-width query, not restricted to
+     `screen`) still matches at typical print/preview widths, and it lives in
+     Tailwind's layered `utilities` cascade layer, so only an UNLAYERED
+     declaration for the same property (this stylesheet is never `@layer`'d)
+     is guaranteed to win regardless of specificity. Hence the explicit
+     `column-count: auto` reset alongside `display: block`. */
   body.emergency-print-scope .emergency-sections {
-    columns: 1 !important;
-    column-count: 1 !important;
+    display: block;
+    column-count: auto;
   }
 
   body.emergency-print-scope .emergency-content section {
@@ -71,16 +80,25 @@
   }
 
   /* Never split a card (a doctor, a contact, an insurance plan) across
-     pages — each stays whole. */
+     pages — each stays whole, and always spans the full print width. */
   body.emergency-print-scope .print-card {
     break-inside: avoid;
     page-break-inside: avoid;
+    width: 100%;
     border: 1pt solid #000 !important;
     border-radius: 0 !important;
     background: #fff !important;
     box-shadow: none !important;
     padding: 8pt 10pt !important;
-    margin-bottom: 8pt;
+    margin: 0 0 12pt;
+  }
+
+  /* At-a-glance tiles: fixed 2-up grid regardless of the screen breakpoint
+     that produced them (spec §6.6). */
+  body.emergency-print-scope .glance-tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8pt;
   }
 
   body.emergency-print-scope h1,

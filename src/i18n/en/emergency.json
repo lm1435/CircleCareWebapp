@@ -72,7 +72,6 @@
   },
   "edit": {
     "add": "Add",
-    "edit": "Edit",
     "delete": "Delete",
     "save": "Save",
     "saving": "Saving…",
@@ -92,6 +91,7 @@
     "editMedicalInfo": "Edit medical information",
     "editPrimaryDoctor": "Edit primary doctor",
     "removePrimaryDoctor": "Remove primary doctor",
+    "itemActionsAria": "Actions for {{name}}",
     "doctor": {
       "addTitle": "Add doctor",
       "editTitle": "Edit doctor",

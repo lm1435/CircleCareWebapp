@@ -4,6 +4,8 @@
   "loadError": "Couldn't load today's medications",
   "confirm": "Confirm",
   "skip": "Skip",
+  "confirmLabel": "Confirm {{name}}",
+  "skipLabel": "Skip {{name}}",
   "showAll": "Show all {{count}}",
   "showLess": "Show less",
   "status": {
@@ -25,12 +27,14 @@
     "error": "Couldn't save. Please try again.",
     "errorDiscontinued": "This dose wasn't due before the medication was stopped, so it can't be logged. Reactivate the medication to log doses again.",
     "cancel": "Cancel",
-    "errorNotDue": "This dose isn't due yet, so it can't be recorded."
+    "errorNotDue": "This dose isn't due yet, so it can't be recorded.",
+    "dayToday": "Today",
+    "dayYesterday": "Yesterday",
+    "dayOn": "{{date}}"
   },
   "permissionDenied": "You don't have permission to confirm medications in this circle.",
   "page": {
     "title": "Medications",
-    "subtitle": "Every medication for this circle — current and past.",
     "add": "Add medication",
     "loading": "Loading medications…",
     "errorTitle": "Couldn't load medications",
@@ -39,6 +43,11 @@
     "inactive": "Inactive / Past medications",
     "inactiveHint": "Kept for reference. Reminders are off.",
     "noTime": "No scheduled time",
+    "stock": {
+      "lowStock": "Low stock",
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left"
+    },
     "empty": {
       "title": "No medications yet",
       "hint": "Add a medication so the whole circle knows what's needed and when.",
@@ -47,13 +56,10 @@
     },
     "actions": {
       "edit": "Edit",
-      "editLabel": "Edit {{name}}",
       "discontinue": "Discontinue",
-      "discontinueLabel": "Discontinue {{name}}",
       "reactivate": "Reactivate",
-      "reactivateLabel": "Reactivate {{name}}",
       "delete": "Delete",
-      "deleteLabel": "Delete {{name}}"
+      "more": "More actions for {{name}}"
     },
     "detail": {
       "photoAlt": "Photo of {{name}}",
@@ -62,7 +68,45 @@
       "notes": "Notes",
       "remaining": "Remaining",
       "status": "Status",
-      "viewLabel": "View details for {{name}}"
+      "viewLabel": "View details for {{name}}",
+      "repeat": "Repeat"
     }
-  }
+  },
+  "needsAttention": "Needs attention",
+  "needsAttentionHint": "Doses from yesterday nobody answered",
+  "undo": "Undo",
+  "tabs": {
+    "medications": "Medications",
+    "history": "History"
+  },
+  "history": {
+    "title": "Medication history",
+    "subtitle": "Track adherence and review what was taken when.",
+    "loading": "Loading history…",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "someone": "Someone",
+    "scheduledLabel": "Scheduled",
+    "takenAtLabel": "Taken at",
+    "confirmedByLabel": "Confirmed by",
+    "notTaken": "—",
+    "statusTaken": "Taken",
+    "statusMissed": "Missed",
+    "statusSkipped": "Skipped",
+    "emptyTitle": "No medication history",
+    "emptyHint": "Medication confirmations will appear here once recorded",
+    "errorTitle": "Couldn't load medication history",
+    "filterAll": "All medications",
+    "filterByLabel": "Filter by: {{label}}",
+    "loadMore": "Load more"
+  },
+  "adherence": {
+    "eyebrow": "Adherence · 30 days",
+    "loading": "Loading adherence…",
+    "vsLastMonth": "{{sign}}{{pct}}% vs last month",
+    "sameAsLastMonth": "Same as last month",
+    "ringLabel": "30d",
+    "ringSummary": "{{rate}}% of scheduled doses confirmed over the last 30 days"
+  },
+  "allDone": "All medications answered for today"
 }

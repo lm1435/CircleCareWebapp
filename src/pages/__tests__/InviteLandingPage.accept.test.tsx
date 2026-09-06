@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import '@/i18n';
+import i18n from '@/i18n';
 import { apiClient } from '@/lib/api';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { ToastProvider } from '@/components/ui';
@@ -183,5 +183,96 @@ describe('InviteLandingPage — accept flow', () => {
       "We couldn't add you to the circle just now. Try again — and if it keeps not working, ask for a fresh invite."
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+  // ── CIRCLE_ARCHIVED / CARE_RECIPIENT_EXISTS (mobile parity) ───────────────
+  //
+  // Both are 400s the backend now raises on the accept paths. Unmapped, they
+  // read as "Try again — and if it keeps not working, ask for a fresh invite",
+  // which is a retry prompt for something that can never succeed.
+  describe('accept error codes', () => {
+    // i18n is a module singleton — hand it back in English.
+    afterEach(async () => {
+      await i18n.changeLanguage('en');
+    });
+
+    async function failAcceptWith(code: string, acceptLabel = 'Accept invitation') {
+      authState = { isAuthenticated: true, isBootstrapping: false };
+      acceptMutate.mockImplementation((_code, opts) => opts?.onError?.({ error: { code } }));
+      const user = userEvent.setup();
+      renderPage('abc123');
+      await user.click(await screen.findByRole('button', { name: acceptLabel }));
+      // The message keeps its role="alert" so it is announced, not just shown.
+      return screen.findByRole('alert');
+    }
+
+    it('explains CIRCLE_ARCHIVED instead of offering a retry', async () => {
+      const alert = await failAcceptWith('CIRCLE_ARCHIVED');
+
+      expect(alert).toHaveTextContent(
+        "This circle is no longer active, so the invitation can't be used. Ask the person who invited you to check with the circle owner."
+      );
+      expect(alert).not.toHaveTextContent('Try again');
+      // A dead end, not a navigation.
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('explains CARE_RECIPIENT_EXISTS', async () => {
+      const alert = await failAcceptWith('CARE_RECIPIENT_EXISTS');
+
+      expect(alert).toHaveTextContent(
+        "This circle already has a care recipient, so this invitation can't be used. Ask the person who invited you to send a caregiver invite instead."
+      );
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The three codes the API documents for accept that this page used to fall
+     * through to `acceptFailed` ("something went wrong, try again"). Retrying
+     * cannot help with any of them, and the visitor needs to know to ask for a
+     * new link — JoinCircleModal has said so since it shipped.
+     */
+    it('explains INVITE_EXPIRED instead of offering a retry', async () => {
+      const alert = await failAcceptWith('INVITE_EXPIRED');
+
+      expect(alert).toHaveTextContent(
+        'This invitation has expired. Ask whoever invited you to send a new one.'
+      );
+      expect(alert).not.toHaveTextContent('Try again');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('explains INVITE_ALREADY_USED', async () => {
+      const alert = await failAcceptWith('INVITE_ALREADY_USED');
+      expect(alert).toHaveTextContent('This invitation has already been used.');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('sends ALREADY_MEMBER to the circles list rather than showing an error', async () => {
+      // Being in the circle already IS the outcome the visitor wanted, so this
+      // one is intercepted before `acceptErrorMessage` and navigates.
+      await failAcceptWith('ALREADY_MEMBER').catch(() => undefined);
+      await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    });
+
+    it('renders the archived accept copy in Spanish', async () => {
+      await i18n.changeLanguage('es');
+
+      const alert = await failAcceptWith('CIRCLE_ARCHIVED', 'Aceptar invitación');
+
+      expect(alert).toHaveTextContent(
+        'Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con el dueño del círculo.'
+      );
+    });
+
+    // The generic fallback the two new cases were carved out of is unchanged —
+    // covered above by the SERVER_ERROR case, asserted here as a pair so a
+    // broken mapping cannot pass by collapsing everything onto one message.
+    it('leaves an unmapped code on the generic retry copy', async () => {
+      const alert = await failAcceptWith('USER_NOT_FOUND');
+
+      expect(alert).toHaveTextContent(
+        "We couldn't add you to the circle just now. Try again — and if it keeps not working, ask for a fresh invite."
+      );
+    });
   });
 });

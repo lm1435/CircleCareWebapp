@@ -1,10 +1,12 @@
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Skeleton } from '@/components/ui';
+import { Avatar, ConfirmDialog, Icon, Skeleton } from '@/components/ui';
+import type { IconName } from '@/components/ui';
 import { useCircles } from '@/hooks/useCircles';
 import { useAuthStore, type AuthUser } from '@/store/authStore';
-import { useMenu } from './useMenu';
+import { useMenu } from '@/hooks/useMenu';
+import { Wordmark } from './Wordmark';
 
 /** Sections the circle switcher preserves when jumping between circles. */
 const SECTIONS = [
@@ -40,138 +42,38 @@ function displayName(user: AuthUser | null): string {
   return name || user.email;
 }
 
-function initialsOf(user: AuthUser | null): string {
-  if (!user) return '?';
-  const first = user.first_name?.trim().charAt(0) ?? '';
-  const last = user.last_name?.trim().charAt(0) ?? '';
-  const initials = `${first}${last}`.toUpperCase();
-  return initials || user.email.charAt(0).toUpperCase() || '?';
-}
-
-function ChevronDownIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-function MenuIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={22}
-      height={22}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-    >
-      <path d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
-
-function CheckIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="shrink-0 text-terracotta-deep"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function LogoutIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path d="m16 17 5-5-5-5" />
-      <path d="M21 12H9" />
-    </svg>
-  );
-}
-
-function ProfileIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function HelpIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-      <path d="M12 17h.01" />
-    </svg>
-  );
-}
-
+// Spec §5.1 — the two dropdown panels are the same shell: white r16, 1px
+// line-2 hairline, shadow-lg, 8px padding, `modal-in` entrance (skipped under
+// reduced motion), items at the 44 touch minimum with r12.
+// Declared as module constants rather than inline `className="…"` literals so
+// the shell lives in ONE place.
 const MENU_PANEL_CLASS =
-  'absolute right-0 top-full z-30 mt-2 flex w-64 flex-col gap-1 rounded-2xl border border-line bg-cream p-2 shadow-lg';
+  'absolute right-0 top-full z-30 mt-2 flex w-64 flex-col gap-1 rounded-lg border border-line-2 bg-cream p-2 shadow-lg animate-[modal-in_200ms_var(--ease-spring)] motion-reduce:animate-none';
 
 const MENU_ITEM_CLASS =
-  'flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm text-ink transition-colors hover:bg-bg-2';
+  'flex min-h-[44px] w-full items-center gap-2 rounded-md px-3 text-left text-md text-ink transition-colors hover:bg-bg-2';
+
+/** Spec §5.1: 44 min-height, r-full, 1px line, bg fill, spring press. */
+const SWITCHER_TRIGGER_CLASS =
+  'flex min-h-[44px] min-w-0 items-center gap-2 rounded-full border border-line bg-bg px-4 text-md text-ink transition-[background-color,transform] duration-fast ease-spring hover:bg-bg-2 active:scale-[0.97]';
+
+/** Same shell as the trigger, for the no-circles-yet fallback link. */
+const SWITCHER_LINK_CLASS = `${SWITCHER_TRIGGER_CLASS} no-underline`;
+
+/**
+ * Spec §5.3: Vitals, Members and Circle settings leave the sidebar at the
+ * narrow breakpoints, so the switcher menu carries them there (mirroring
+ * mobile, where they are reached from Home and the circle menu). Where the
+ * sidebar is present it already lists them, so these rows hide (`xl:hidden`)
+ * rather than offer a second door to the same page in the same viewport.
+ */
+type CircleSectionItem = Extract<Section, 'vitals' | 'members' | 'settings'>;
+
+const CIRCLE_SECTIONS: ReadonlyArray<{ section: CircleSectionItem; icon: IconName }> = [
+  { section: 'vitals', icon: 'heart-outline' },
+  { section: 'members', icon: 'people-outline' },
+  { section: 'settings', icon: 'settings-outline' },
+];
 
 function CircleSwitcher(): ReactElement {
   const { t } = useTranslation('common');
@@ -194,7 +96,7 @@ function CircleSwitcher(): ReactElement {
           onClick={() => {
             void refetch();
           }}
-          className="min-h-11 rounded-full px-3 text-sm font-medium text-terracotta-deep underline transition-colors hover:text-ink"
+          className="min-h-[44px] rounded-full px-3 text-sm font-medium text-coral-deep underline transition-colors hover:text-ink"
         >
           {t('retry')}
         </button>
@@ -205,17 +107,21 @@ function CircleSwitcher(): ReactElement {
   if (!circles || circles.length === 0) {
     // No circles yet — the /circles page owns the empty state.
     return (
-      <Link
-        to="/circles"
-        className="flex min-h-11 items-center rounded-full border border-line bg-bg px-4 text-sm text-ink no-underline transition-colors hover:bg-bg-2"
-      >
-        {t('nav.circles')}
+      <Link to="/circles" className={SWITCHER_LINK_CLASS}>
+        {t('nav.allCircles')}
       </Link>
     );
   }
 
   const current = circles.find((circle) => circle.id === circleId);
   const section = currentSection(location.pathname);
+  // Literal `t('nav.…')` calls, not `t(key)` — a variable key is invisible to
+  // the static translation-key audit.
+  const sectionLabel: Record<CircleSectionItem, string> = {
+    vitals: t('nav.vitals'),
+    members: t('nav.members'),
+    settings: t('nav.settings'),
+  };
 
   const selectCircle = (id: string): void => {
     menu.close();
@@ -234,12 +140,12 @@ function CircleSwitcher(): ReactElement {
         aria-label={
           current ? `${t('header.switchCircle')}: ${current.name}` : t('header.switchCircle')
         }
-        className="flex min-h-11 min-w-0 items-center gap-2 rounded-full border border-line bg-bg px-3 text-sm text-ink transition-colors hover:bg-bg-2 sm:px-4"
+        className={SWITCHER_TRIGGER_CLASS}
       >
         <span className="max-w-[7rem] truncate sm:max-w-40">
           {current?.name ?? t('header.switchCircle')}
         </span>
-        <ChevronDownIcon />
+        <Icon name="chevron-down" size="inline" />
       </button>
 
       {menu.open && (
@@ -259,7 +165,9 @@ function CircleSwitcher(): ReactElement {
               className={`${MENU_ITEM_CLASS} justify-between`}
             >
               <span className="min-w-0 truncate">{circle.name}</span>
-              {circle.id === circleId && <CheckIcon />}
+              {circle.id === circleId && (
+                <Icon name="checkmark" size="inline" className="text-ink" />
+              )}
             </button>
           ))}
           <div role="presentation" className="mx-2 my-1 border-t border-line-2" />
@@ -268,12 +176,31 @@ function CircleSwitcher(): ReactElement {
             role="menuitem"
             onClick={() => {
               menu.close();
-              navigate('/circles');
+              // `fromSwitcher` tells /circles this arrival was deliberate, so it
+              // skips the single-circle auto-redirect that would otherwise bounce
+              // the user straight back into the circle they just left (Task 13).
+              navigate('/circles', { state: { fromSwitcher: true } });
             }}
             className={MENU_ITEM_CLASS}
           >
-            {t('nav.circles')}
+            {t('nav.allCircles')}
           </button>
+          {circleId &&
+            CIRCLE_SECTIONS.map(({ section: target, icon }) => (
+              <button
+                key={target}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  menu.close();
+                  navigate(`/circles/${circleId}/${target}`);
+                }}
+                className={`${MENU_ITEM_CLASS} xl:hidden`}
+              >
+                <Icon name={icon} size="row" />
+                {sectionLabel[target]}
+              </button>
+            ))}
         </div>
       )}
     </div>
@@ -285,9 +212,10 @@ export function UserMenu(): ReactElement {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const menu = useMenu();
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   const handleLogout = async (): Promise<void> => {
-    menu.close();
+    setConfirmingLogout(false);
     // Defensive: the auth agent adds signOut() to the store in parallel.
     // Until it lands, fall back to clear() so logout still resets local state.
     const state: { signOut?: () => void | Promise<void>; clear?: () => void } =
@@ -313,18 +241,15 @@ export function UserMenu(): ReactElement {
         aria-haspopup="menu"
         aria-expanded={menu.open}
         aria-label={t('header.account')}
-        className="flex min-h-11 items-center gap-2 rounded-full px-1.5 transition-colors hover:bg-bg-2 sm:px-2"
+        className="flex min-h-[44px] items-center gap-2 rounded-full px-1.5 transition-colors hover:bg-bg-2 sm:px-2"
       >
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-terracotta-deep text-xs font-medium text-cream"
-        >
-          {initialsOf(user)}
-        </span>
-        <span className="hidden max-w-32 truncate text-sm text-ink md:block">
+        {/* Spec §5.1 puts the account avatar at 32; `xs` is 28, so the size is
+            forced here (the established convention at this call site). */}
+        <Avatar size="xs" className="h-8! w-8!" name={displayName(user)} />
+        <span className="hidden max-w-32 truncate text-md text-ink md:block">
           {displayName(user)}
         </span>
-        <ChevronDownIcon />
+        <Icon name="chevron-down" size="inline" />
       </button>
 
       {menu.open && (
@@ -350,7 +275,7 @@ export function UserMenu(): ReactElement {
             }}
             className={MENU_ITEM_CLASS}
           >
-            <ProfileIcon />
+            <Icon name="person-outline" size="row" />
             {t('nav.profile')}
           </button>
           <button
@@ -362,66 +287,74 @@ export function UserMenu(): ReactElement {
             }}
             className={MENU_ITEM_CLASS}
           >
-            <HelpIcon />
+            <Icon name="help-circle-outline" size="row" />
             {t('nav.help')}
           </button>
           <button
             type="button"
             role="menuitem"
             onClick={() => {
-              void handleLogout();
+              // Spec §5.6: signing out is one click from every page, so it asks
+              // first. The menu closes; the dialog owns the decision.
+              //
+              // close(TRUE) — the refocus is load-bearing, not a nicety. It runs
+              // synchronously, so the trigger holds focus by the time the dialog
+              // mounts and captures `document.activeElement` as the element to
+              // restore to on close. Without it the menu item unmounts in the
+              // same commit, focus falls to <body>, and cancelling strands a
+              // keyboard user at the top of the document.
+              menu.close(true);
+              setConfirmingLogout(true);
             }}
             className={MENU_ITEM_CLASS}
           >
-            <LogoutIcon />
+            <Icon name="log-out-outline" size="row" />
             {t('header.logout')}
           </button>
         </div>
+      )}
+
+      {confirmingLogout && (
+        <ConfirmDialog
+          variant="confirm"
+          icon="log-out-outline"
+          title={t('header.logoutConfirmTitle')}
+          message={t('header.logoutConfirmBody')}
+          confirmLabel={t('header.logout')}
+          cancelLabel={t('cancel')}
+          // Without this the × inherits "Cancel" and the dialog has two
+          // controls with the same accessible name.
+          closeLabel={t('close')}
+          onConfirm={() => {
+            void handleLogout();
+          }}
+          onCancel={() => setConfirmingLogout(false)}
+        />
       )}
     </div>
   );
 }
 
 export interface HeaderProps {
-  /** Whether the mobile nav drawer is open (controls aria-expanded). */
+  /**
+   * @deprecated Unused. The hamburger is gone (spec §5.1) — `FloatingNavBar`
+   * replaces the drawer below the sidebar breakpoint. Kept only so `AppLayout`
+   * still type-checks until Task 11 rewrites it; remove both props then.
+   */
   navOpen?: boolean;
-  /** Renders the hamburger trigger when provided (mobile breakpoints). */
+  /** @deprecated Unused — see `navOpen`. */
   onToggleNav?: () => void;
 }
 
-export function Header({ navOpen = false, onToggleNav }: HeaderProps = {}): ReactElement {
-  const { t } = useTranslation('common');
+export function Header(_props: HeaderProps = {}): ReactElement {
   const { circleId } = useParams<{ circleId: string }>();
   // Inside a circle the brand returns to that circle's overview (mirrors mobile's
   // home tab); elsewhere it goes to the circle picker.
   const brandTo = circleId ? `/circles/${circleId}` : '/circles';
 
   return (
-    <header className="flex items-center justify-between gap-3 border-b border-line bg-cream px-4 py-3 sm:px-6">
-      <div className="flex min-w-0 items-center gap-1 sm:gap-2">
-        {onToggleNav && (
-          <button
-            type="button"
-            onClick={onToggleNav}
-            aria-expanded={navOpen}
-            aria-controls="mobile-nav"
-            aria-label={t('menu.toggle')}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2 xl:hidden"
-          >
-            <MenuIcon />
-          </button>
-        )}
-        <Link
-          to={brandTo}
-          aria-label={t('appName')}
-          className="flex min-h-11 min-w-0 items-center gap-2 px-1 no-underline"
-        >
-          <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
-          {/* Wordmark hides on the smallest screens so the header fits the circle
-              switcher + account avatar without overflowing. */}
-          <span className="hidden truncate text-xl font-normal tracking-tight text-ink sm:inline">{t('appName')}</span>
-        </Link>
-      </div>
+    <header className="sticky top-0 z-20 flex h-[60px] items-center justify-between gap-3 border-b border-line bg-cream px-4 sm:px-6">
+      <Wordmark to={brandTo} />
 
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <CircleSwitcher />

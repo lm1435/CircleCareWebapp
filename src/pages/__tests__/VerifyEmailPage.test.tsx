@@ -138,6 +138,21 @@ describe('VerifyEmailPage', () => {
     expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
   });
 
+  // WCAG 3.3.1: an incomplete-OTP error must move focus. Typing a full code
+  // auto-submits, so this drives it through the manual Verify button with a
+  // short code instead.
+  it('focuses the first OTP box when submitted with an incomplete code', async () => {
+    const user = userEvent.setup();
+    renderVerify();
+
+    await user.click(screen.getByLabelText('Digit 1 of 6'));
+    await user.paste('123');
+    await user.click(screen.getByRole('button', { name: 'Verify email' }));
+
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Digit 1 of 6')).toHaveFocus();
+  });
+
   it('shows an inline error for an invalid code and does not navigate', async () => {
     mockedPost.mockRejectedValue({
       success: false,

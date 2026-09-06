@@ -7,7 +7,8 @@
     "notifications": "Notifications",
     "quietHours": "Quiet hours",
     "units": "Measurement units",
-    "emailDigest": "Weekly email digest"
+    "emailDigest": "Weekly email digest",
+    "privacy": "Privacy"
   },
   "account": {
     "email": "Email",
@@ -98,7 +99,7 @@
     "premiumDescription": "You have full access to all CircleCare features.",
     "freeTitle": "Free plan",
     "upgradeInApp": "Upgrade to Premium in the CircleCare app.",
-    "upgradeBenefit": "Unlock everything CircleCare offers for your whole care circle.",
+    "upgradeBenefit": "Everything your family needs to coordinate care, for every circle you're part of.",
     "upgradeCta": "Upgrade to Premium",
     "orInApp": "Or upgrade in the CircleCare app.",
     "manageSubscription": "Manage subscription",
@@ -116,13 +117,21 @@
   },
   "delete": {
     "title": "Delete account",
-    "description": "Permanently delete your account and remove your access to all care circles. This cannot be undone. Want a copy of your information first? Use 'Download my data' above.",
+    "description": "Permanently delete your account and every care circle you own. This cannot be undone. Want a copy of your information first? Use 'Download my data' above.",
     "cta": "Delete my account",
     "confirmTitle": "Delete your account?",
-    "confirmBody": "This permanently deletes your account and removes you from every care circle. Circles you own will stay available to their members, but will no longer have an owner to manage them. This cannot be undone.",
+    "confirmBody": "This permanently deletes your account and every care circle you own — including all medications, appointments, tasks, notes, vitals, documents and emergency information in them. Everyone else in those circles loses access, and they will be notified. Circles you belong to but do not own are not deleted; you are simply removed from them. This cannot be undone.",
     "confirm": "Delete account",
     "keep": "Keep my account",
     "success": "Your account has been deleted.",
     "error": "We couldn't delete your account. Your account is unchanged — please try again, or email support@circlecare.app."
+  },
+  "analytics": {
+    "description": "Control what usage data you share with us.",
+    "enable": "Share usage data",
+    "hint": "Linked to your account, including your email address. Helps us improve CircleCare — never includes your readings, medication names, or message content."
+  },
+  "footer": {
+    "version": "WEB · v{{version}}"
   }
 }

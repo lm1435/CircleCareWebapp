@@ -13,6 +13,7 @@ vi.mock('@/api/calendarEvents', async (importOriginal) => {
     updateEvent: vi.fn(),
     deleteEvent: vi.fn(),
     completeEvent: vi.fn(),
+    setMedicationStatus: vi.fn(),
   };
 });
 
@@ -37,14 +38,18 @@ import {
   updateEvent,
   deleteEvent,
   completeEvent,
+  setMedicationStatus,
   type CalendarEvent,
+  type MedicationStatusResult,
 } from '@/api/calendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
+import { Analytics } from '@/lib/analytics';
 import {
   useCreateEvent,
   useUpdateEvent,
   useDeleteEvent,
   useCompleteEvent,
+  useMedicationStatus,
 } from '@/hooks/useCalendarEvents';
 
 const CIRCLE_ID = 'circle-1';
@@ -54,6 +59,7 @@ const mockCreate = vi.mocked(createEvent);
 const mockUpdate = vi.mocked(updateEvent);
 const mockDelete = vi.mocked(deleteEvent);
 const mockComplete = vi.mocked(completeEvent);
+const mockSetStatus = vi.mocked(setMedicationStatus);
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
@@ -145,6 +151,32 @@ describe('useCreateEvent', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(promptUpgrade).toHaveBeenCalled();
   });
+
+  // Error visibility (mobile parity): every failed event write is counted as
+  // `error_occurred` with a CLOSED-SET `code` — never the toast copy, never the
+  // rejection's message — on every branch of the shared onError.
+  it.each([
+    ['permission', PERMISSION_ENVELOPE, 'VIEW_ONLY'],
+    ['subscription', SUBSCRIPTION_ENVELOPE, 'SUBSCRIPTION_REQUIRED'],
+    ['generic', { success: false, error: { code: 'CONFLICT', message: 'pat@example.com' } }, 'CONFLICT'],
+    ['message-only', { message: 'saving for pat@example.com failed' }, 'unknown_error'],
+  ])('reports error_occurred with a bounded code on the %s branch', async (_label, rejection, code) => {
+    const errorOccurred = vi.spyOn(Analytics, 'errorOccurred').mockImplementation(() => {});
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(rejection);
+
+    const { result } = renderHook(() => useCreateEvent(CIRCLE_ID), { wrapper });
+    result.current.mutate({ event_type: 'task', title: 'x', scheduled_date: '2026-07-02' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(errorOccurred).toHaveBeenCalledTimes(1);
+    expect(errorOccurred).toHaveBeenCalledWith('calendar_events', 'calendar_events_mutation_error', {
+      circle_id: CIRCLE_ID,
+      code,
+    });
+    expect(JSON.stringify(errorOccurred.mock.calls[0])).not.toContain('@');
+    errorOccurred.mockRestore();
+  });
 });
 
 describe('useUpdateEvent', () => {
@@ -226,5 +258,150 @@ describe('useCompleteEvent', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
     expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
+  });
+});
+
+describe('useMedicationStatus', () => {
+  // A discontinue/reactivate cannot be patched into the cache — which
+  // occurrences it adds or removes is decided server-side and the response
+  // carries counts, not rows. So the caller WAITS for the calendar refetch
+  // before announcing success, and that wait is capped.
+
+  const STATUS_RESULT: MedicationStatusResult = {
+    event: { id: EVENT_ID, parent_event_id: null, discontinued_at: null },
+    discontinued: false,
+    affected_count: 3,
+    series_count: 1,
+  };
+
+  /**
+   * Make the calendar-events invalidation controllable; every other family
+   * resolves immediately, exactly as fire-and-forget invalidation behaves.
+   */
+  function deferCalendarInvalidation(invalidateSpy: ReturnType<typeof setup>['invalidateSpy']) {
+    let release!: () => void;
+    const calendarRefetched = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    invalidateSpy.mockImplementation((filters?: InvalidateArg) =>
+      JSON.stringify(filters?.queryKey) === JSON.stringify(queryKeys.calendarEvents(CIRCLE_ID))
+        ? calendarRefetched
+        : Promise.resolve()
+    );
+    return { release };
+  }
+
+  const VARIABLES = { eventId: EVENT_ID, discontinued: false, scope: 'medication' as const };
+
+  it('holds mutateAsync open until the calendar refetch lands', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockSetStatus.mockResolvedValue(STATUS_RESULT);
+    const { release } = deferCalendarInvalidation(invalidateSpy);
+
+    const { result } = renderHook(() => useMedicationStatus(CIRCLE_ID), { wrapper });
+    let settled = false;
+    const pending = result.current.mutateAsync(VARIABLES).then(() => {
+      settled = true;
+    });
+
+    await waitFor(() => expect(mockSetStatus).toHaveBeenCalledWith(CIRCLE_ID, EVENT_ID, false, 'medication'));
+    // The PATCH has returned, but the caller must NOT be told yet: the toast
+    // would land over a roster still showing the med in its old section.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+
+    release();
+    await pending;
+    expect(settled).toBe(true);
+  });
+
+  it('gives up waiting at the cap when the refetch never settles (paused while offline)', async () => {
+    vi.useFakeTimers();
+    try {
+      const { invalidateSpy, wrapper } = setup();
+      mockSetStatus.mockResolvedValue(STATUS_RESULT);
+      // Never released — `networkMode: 'online'` PAUSES a refetch attempted
+      // offline, and a paused refetch's promise does not settle until
+      // connectivity returns. Without the cap the confirmation is swallowed
+      // entirely and the caregiver re-runs an action that already worked.
+      deferCalendarInvalidation(invalidateSpy);
+
+      const { result } = renderHook(() => useMedicationStatus(CIRCLE_ID), { wrapper });
+      let settled = false;
+      const pending = result.current.mutateAsync(VARIABLES).then(() => {
+        settled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(2500);
+      await pending;
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears the cap timer when the refetch wins the race', async () => {
+    // Capture the id the CAP timer was given, so the assertion below names it.
+    //
+    // `expect(clearTimeoutSpy).toHaveBeenCalled()` alone could not fail:
+    // `waitFor` unconditionally clears its OWN overall-timeout timer, so the
+    // spy always had a call. Deleting the `.finally(() => clearTimeout(...))`
+    // under test left this green.
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+    try {
+      const { invalidateSpy, wrapper } = setup();
+      mockSetStatus.mockResolvedValue(STATUS_RESULT);
+      const { release } = deferCalendarInvalidation(invalidateSpy);
+
+      const { result } = renderHook(() => useMedicationStatus(CIRCLE_ID), { wrapper });
+      const pending = result.current.mutateAsync(VARIABLES);
+      await waitFor(() => expect(mockSetStatus).toHaveBeenCalled());
+      release();
+      await pending;
+
+      // A stray 2.5s timer per mutation keeps the event loop awake for nothing
+      // (and holds the test process open).
+      //
+      // The CAP timer is the 2500ms one; find the id it was assigned and assert
+      // THAT id was cleared. Any other timer the test framework happens to
+      // create is irrelevant.
+      const capCall = setTimeoutSpy.mock.results.find(
+        (_r, i) => setTimeoutSpy.mock.calls[i]?.[1] === 2500
+      );
+      expect(capCall, 'no 2500ms cap timer was scheduled').toBeDefined();
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(capCall!.value);
+    } finally {
+      clearTimeoutSpy.mockRestore();
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
+  it('still invalidates the other families, fire-and-forget', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockSetStatus.mockResolvedValue(STATUS_RESULT);
+
+    const { result } = renderHook(() => useMedicationStatus(CIRCLE_ID), { wrapper });
+    await result.current.mutateAsync(VARIABLES);
+
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvent(CIRCLE_ID, EVENT_ID))).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.medicationTodaySummary(CIRCLE_ID))).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.activityFeed(CIRCLE_ID))).toBe(true);
+  });
+
+  it('surfaces a 403 through the shared event onError (no wait involved)', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockSetStatus.mockRejectedValue(PERMISSION_ENVELOPE);
+
+    const { result } = renderHook(() => useMedicationStatus(CIRCLE_ID), { wrapper });
+    result.current.mutate(VARIABLES);
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
+    expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 });

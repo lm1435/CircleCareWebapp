@@ -30,6 +30,15 @@ vi.mock('@/hooks/usePremiumGate', () => ({
   usePremiumGate: () => ({ promptUpgrade }),
 }));
 
+const mockCircleUpdated = vi.fn();
+const mockCircleDeleted = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    circleUpdated: (...args: unknown[]) => mockCircleUpdated(...args),
+    circleDeleted: (...args: unknown[]) => mockCircleDeleted(...args),
+  },
+}));
+
 import { createCircle, updateCircle, deleteCircle, type Circle } from '@/api/circles';
 import { queryKeys } from '@/lib/queryKeys';
 import { useCreateCircle, useUpdateCircle, useDeleteCircle } from '@/hooks/useCircleAdmin';
@@ -161,6 +170,17 @@ describe('useUpdateCircle', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 
+  it('fires Analytics.circleUpdated(circleId) on success', async () => {
+    const { wrapper } = setup();
+    mockUpdate.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useUpdateCircle(CIRCLE_ID), { wrapper });
+    result.current.mutate({ recipient_name: 'Rose' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockCircleUpdated).toHaveBeenCalledWith(CIRCLE_ID);
+  });
+
   it('surfaces a 403 as the permission toast', async () => {
     const { wrapper } = setup();
     mockUpdate.mockRejectedValue(FORBIDDEN_ENVELOPE);
@@ -196,6 +216,17 @@ describe('useDeleteCircle', () => {
     expect(mockDelete).toHaveBeenCalledWith(CIRCLE_ID);
     expect(invalidatedWith(invalidateSpy, queryKeys.circleDetail(CIRCLE_ID))).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+  });
+
+  it('fires Analytics.circleDeleted(circleId) on success', async () => {
+    const { wrapper } = setup();
+    mockDelete.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useDeleteCircle(CIRCLE_ID), { wrapper });
+    result.current.mutate();
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockCircleDeleted).toHaveBeenCalledWith(CIRCLE_ID);
   });
 
   it('surfaces a 403 as the permission toast', async () => {

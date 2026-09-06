@@ -96,6 +96,20 @@ function tasksResult(tasks: CalendarEvent[], overrides: Record<string, unknown> 
 }
 
 /**
+ * An open row's accessible name.
+ *
+ * It carries the DUE LABEL and the status marker as well as the title:
+ * `aria-label` on a <button> REPLACES its contents as the accessible name, so
+ * without them nothing inside the row body is announced at all (WCAG 1.3.1).
+ * The assignee is deliberately NOT in here — it lives in an sr-only sibling
+ * OUTSIDE the button and is already read on its own.
+ *
+ * Every fixture here is due 2026-03-15 with no time, hence the one due label.
+ */
+const openRowName = (title: string): string =>
+  `Edit "${title}", Mar 15, 2026 · All day, (not done)`;
+
+/**
  * The card issues TWO useTasks calls: the open-tasks list and a `status: 'all'`
  * presence probe that decides between first-run and all-caught-up copy. Answer
  * each on its own terms.
@@ -146,7 +160,7 @@ describe('OpenTasksCard', () => {
     expect(screen.queryByText("You're all caught up — no open tasks.")).not.toBeInTheDocument();
   });
 
-  it('lists up to `limit` open tasks with a "+N more" note', () => {
+  it('lists up to `limit` open tasks with a "Show all N" row into the Tasks page', () => {
     setTasks({
       open: [
         makeTask({ id: 't1', title: 'Refill prescription' }),
@@ -156,10 +170,17 @@ describe('OpenTasksCard', () => {
       ],
     });
     renderCard();
-    expect(screen.getByRole('button', { name: 'Edit "Refill prescription"' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit "Buy groceries"' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit "Schedule ride"' })).toBeNull();
-    expect(screen.getByText('+1 more')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: openRowName('Refill prescription') })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: openRowName('Buy groceries') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: openRowName('Schedule ride') })).toBeNull();
+    // Mobile's `showAllRow` states the TOTAL, not the remainder, and is a
+    // 44-tall destination rather than an inert caption (spec §6.3.6).
+    expect(screen.getByRole('link', { name: 'Show all 4' })).toHaveAttribute(
+      'href',
+      '/circles/circle-1/tasks'
+    );
   });
 
   it('shows first-run task copy when the circle has never had a task', () => {
@@ -191,18 +212,31 @@ describe('OpenTasksCard', () => {
   });
 
   // PARITY — the card used to render bare text with no way to finish a task.
+  /**
+   * TaskRow renders each action TWICE — once inline at normal card widths and
+   * once in the stacked fallback a container query reveals below 360px (spec
+   * §4.6, TaskRow's own module comment). jsdom evaluates no container queries,
+   * so BOTH copies sit in the tree while exactly one is ever visible in a
+   * browser. Positive lookups therefore take the first (inline) copy;
+   * ABSENCE assertions still use `queryByRole`, which correctly finds none.
+   */
+  const action = (name: string | RegExp): HTMLElement =>
+    screen.getAllByRole('button', { name })[0]!;
+
   // It now carries the same labelled Done button as the Tasks page.
   it('offers the labelled Done action and does not commit inside the undo window', () => {
     vi.useFakeTimers();
     try {
       renderCard();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mark "Pick up groceries" complete' }));
+      fireEvent.click(action('Mark "Pick up groceries" complete'));
 
       expect(mockMutate).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole('button', { name: 'Undo completing "Pick up groceries"' })
-      ).toBeInTheDocument();
+      // Matched loosely: TaskRow composes this control's accessible name from
+      // `row.undo` + the task title (`UndoBadge`'s `itemLabel`), so the exact
+      // wording belongs to TaskRow, not to this surface. What Overview owes is
+      // that an Undo naming THIS task is reachable inside the window.
+      expect(action(/Undo.*Pick up groceries/)).toBeInTheDocument();
 
       act(() => {
         vi.advanceTimersByTime(5000);
@@ -220,17 +254,15 @@ describe('OpenTasksCard', () => {
     try {
       renderCard();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mark "Pick up groceries" complete' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Undo completing "Pick up groceries"' }));
+      fireEvent.click(action('Mark "Pick up groceries" complete'));
+      fireEvent.click(action(/Undo.*Pick up groceries/));
 
       act(() => {
         vi.advanceTimersByTime(6000);
       });
 
       expect(mockMutate).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole('button', { name: 'Mark "Pick up groceries" complete' })
-      ).toBeInTheDocument();
+      expect(action('Mark "Pick up groceries" complete')).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
@@ -242,16 +274,14 @@ describe('OpenTasksCard', () => {
     try {
       renderCard();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mark "Pick up groceries" complete' }));
+      fireEvent.click(action('Mark "Pick up groceries" complete'));
       act(() => {
         window.dispatchEvent(new Event('pagehide'));
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
       // ...and the dead Undo affordance does not linger past the flush (WB2).
-      expect(
-        screen.queryByRole('button', { name: 'Undo completing "Pick up groceries"' })
-      ).toBeNull();
+      expect(screen.queryByRole('button', { name: /Undo.*Pick up groceries/ })).toBeNull();
     } finally {
       vi.useRealTimers();
     }
@@ -262,7 +292,7 @@ describe('OpenTasksCard', () => {
     const user = userEvent.setup();
     renderCard();
 
-    await user.click(screen.getByRole('button', { name: 'Edit "Pick up groceries"' }));
+    await user.click(screen.getByRole('button', { name: openRowName('Pick up groceries') }));
 
     const dialog = screen.getByRole('dialog', { name: 'add-event-modal' });
     expect(dialog).toHaveTextContent('edit-mode');
@@ -273,7 +303,7 @@ describe('OpenTasksCard', () => {
     renderCard();
 
     expect(screen.queryByRole('button', { name: 'Mark "Pick up groceries" complete' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Edit "Pick up groceries"' })).toBeNull();
+    expect(screen.queryByRole('button', { name: openRowName('Pick up groceries') })).toBeNull();
     // Read view still renders the task.
     expect(screen.getByText(/Pick up groceries/)).toBeInTheDocument();
   });

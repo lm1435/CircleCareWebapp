@@ -70,11 +70,11 @@ function EditContactModalForm({
       closeLabel={t('edit.close')}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={update.isPending}>
+          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
             {t('edit.cancel')}
           </Button>
-          <Button type="submit" form="edit-contact-form" disabled={update.isPending}>
-            {update.isPending ? t('edit.saving') : t('edit.save')}
+          <Button type="submit" form="edit-contact-form" variant="primary" loading={update.isPending}>
+            {t('edit.save')}
           </Button>
         </div>
       }
@@ -82,7 +82,8 @@ function EditContactModalForm({
       <form id="edit-contact-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <TextField
           id="contact-name"
-          label={`${t('edit.contact.name')} *`}
+          label={t('edit.contact.name')}
+          required
           value={name}
           maxLength={100}
           error={error && !name.trim() ? error : undefined}
@@ -94,7 +95,8 @@ function EditContactModalForm({
         />
         <TextField
           id="contact-relationship"
-          label={`${t('edit.contact.relationship')} *`}
+          label={t('edit.contact.relationship')}
+          required
           value={relationship}
           maxLength={100}
           error={error && !relationship.trim() ? error : undefined}
@@ -123,7 +125,8 @@ function EditContactModalForm({
         <TextField
           id="contact-phone"
           type="tel"
-          label={`${t('edit.contact.phone')} *`}
+          label={t('edit.contact.phone')}
+          required
           value={phone}
           maxLength={20}
           error={error && !phone.trim() ? error : undefined}

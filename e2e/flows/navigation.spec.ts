@@ -87,14 +87,14 @@ test('header menus navigate', async ({ page, circleId }) => {
   });
   await expectNoErrorBoundary(page);
 
-  // --- Circle switcher menu → My Circles ---
+  // --- Circle switcher menu → All circles ---
   await page.goto(`${base}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: NAV_TIMEOUT });
 
   // The switcher button's aria-label is "Switch circle" (possibly suffixed with
   // ": <circle name>"), so match by prefix.
   await page.getByRole('button', { name: /^Switch circle/ }).click();
-  await page.getByRole('menuitem', { name: 'My Circles' }).click();
+  await page.getByRole('menuitem', { name: 'All circles' }).click();
   await expect(page).toHaveURL(/\/circles(?:[/?#]|$)/, { timeout: NAV_TIMEOUT });
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({
     timeout: NAV_TIMEOUT,

@@ -1,7 +1,8 @@
 import { useState, type ReactElement } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Skeleton, SectionHeader } from '@/components/ui';
+import { Skeleton, SectionHeader, careCardListGap } from '@/components/ui';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useCircle } from '@/hooks/useCircle';
@@ -57,7 +58,7 @@ export function OpenTasksCard({
   let body: ReactElement;
   if (tasksLoading) {
     body = (
-      <div className="mt-4 flex flex-col gap-2" aria-busy="true">
+      <div className="flex flex-col gap-2" aria-busy="true">
         <span role="status" className="sr-only">
           {t('common:loading')}
         </span>
@@ -67,14 +68,14 @@ export function OpenTasksCard({
     );
   } else if (openTasks.length === 0) {
     body = (
-      <p className="m-0 mt-4 text-sm text-ink-3">
+      <p className="m-0 text-sm text-ink-2">
         {hasEverHadTask ? t('tasks.empty') : t('tasks.emptyFirstRun')}
       </p>
     );
   } else {
     body = (
       <>
-        <ul className="m-0 mt-4 flex list-none flex-col gap-3 p-0">
+        <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
           {visibleTasks.map((task) => (
             <TaskRow
               key={task.id}
@@ -89,8 +90,20 @@ export function OpenTasksCard({
             />
           ))}
         </ul>
+        {/* The remainder is a DESTINATION, not a caption. This stated the count
+            in inert grey text directly under the list, so the one place a
+            caregiver looks when the list runs short was the one place that did
+            not respond — the route was only in the header, above the rows.
+            Mobile's matching line is tappable; this now is too. Spec §6.3.6:
+            the row is a full-width, centred 44-tall dusk line ("Show all N"),
+            matching mobile's `showAllRow` rather than an underlined link. */}
         {overflowCount > 0 ? (
-          <p className="m-0 mt-2 text-xs text-ink-3">{t('tasks.more', { count: overflowCount })}</p>
+          <Link
+            to={`/circles/${circleId}/tasks`}
+            className="flex w-full min-h-[44px] items-center justify-center gap-1 py-3 text-md font-medium text-dusk"
+          >
+            {t('tasks.showAll', { count: openTasks.length })}
+          </Link>
         ) : null}
       </>
     );
@@ -101,6 +114,7 @@ export function OpenTasksCard({
       <SectionHeader
         id="open-tasks-heading"
         title={t('tasks.title')}
+        tone="moss"
         to={`/circles/${circleId}/tasks`}
         linkLabel={t('tasks.viewAll')}
       />

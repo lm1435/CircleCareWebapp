@@ -47,11 +47,11 @@ function EditDirectivesModalForm({
       closeLabel={t('edit.close')}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={update.isPending}>
+          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
             {t('edit.cancel')}
           </Button>
-          <Button type="submit" form="edit-directives-form" disabled={update.isPending}>
-            {update.isPending ? t('edit.saving') : t('edit.save')}
+          <Button type="submit" form="edit-directives-form" variant="primary" loading={update.isPending}>
+            {t('edit.save')}
           </Button>
         </div>
       }

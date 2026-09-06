@@ -16,9 +16,14 @@ import {
   type UpdateEmergencyInfoRequest,
 } from '@/api/emergencyInfo';
 import { queryKeys } from '@/lib/queryKeys';
-import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import {
+  classifyFailureCode,
+  isPermissionDeniedError,
+  isSubscriptionRequiredError,
+} from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { Analytics } from '@/lib/analytics';
 
 /**
  * React Query hook for `GET /circles/:circleId/emergency-info` (plan Task 30).
@@ -181,16 +186,25 @@ export function useUpdateEmergencyInfo(
 ): UseMutationResult<EmergencyInfo, unknown, UpdateEmergencyInfoRequest> {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // Premium-gated write — FEATURE.
+  const { promptUpgrade } = usePremiumGate('feature');
   const { t } = useTranslation('emergency');
 
   return useMutation({
     mutationFn: (partial: UpdateEmergencyInfoRequest) => updateEmergencyInfo(circleId, partial),
-    onSuccess: () => {
+    onSuccess: (_info, partial) => {
+      // Field NAMES only — never the values, which can carry PHI.
+      Analytics.emergencyInfoUpdated(circleId, Object.keys(partial));
       void queryClient.invalidateQueries({ queryKey: queryKeys.emergencyInfo(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
     },
     onError: (error) => {
+      // `error_occurred` for the admin digest (mobile parity). ids/enums only
+      // — never the field values (PHI) and never the toast copy.
+      Analytics.errorOccurred('emergency_info', 'emergency_info_mutation_error', {
+        circle_id: circleId,
+        code: classifyFailureCode(error),
+      });
       if (isSubscriptionRequiredError(error)) {
         // Free-tier write block — web cannot transact, point at the app.
         promptUpgrade();

@@ -6,16 +6,30 @@ import {
   Accordion,
   Button,
   Card,
+  ChipSelect,
   ConfirmDialog,
   EmptyState,
-  Select,
+  Eyebrow,
+  Icon,
+  IconTile,
+  MoreMenu,
+  Sheet,
   Skeleton,
+  Text,
   useAccordionGroup,
   useToast,
-  careCardSurface,
+  careCardListGap,
+  careCardMeta,
+  careCardShell,
+  careCardTitle,
+  careCardTopRow,
+  type IconName,
+  type IconTileTone,
 } from '@/components/ui';
+import { PageMasthead } from '@/components/layout/PageMasthead';
 import { AddVitalModal } from '@/components/vitals/AddVitalModal';
 import { EditVitalModal } from '@/components/vitals/EditVitalModal';
+import { VitalsChart, type VitalsChartSeries } from '@/components/vitals/VitalsChart';
 import { useVitals, useDeleteVital } from '@/hooks/useVitals';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { useCircle } from '@/hooks/useCircle';
@@ -32,10 +46,10 @@ import {
 import { utcISOToRecipientWallTime } from '@/components/vitals/vitalDateTime';
 import { formatTimeOfDay } from '@/utils/timezone';
 
-// Task 6.4 — vitals page. Lists recent readings grouped by type, rendered in the
-// user's display units (formatVitalValue). MIRRORS
-// mobile/src/screens/vitals/VitalsDetailScreen.tsx for the type filter + range,
-// and VitalFormScreen for the add/edit/delete affordances.
+// Task 21 (mobile parity) — vitals page. MIRRORS
+// mobile/src/screens/vitals/VitalsDetailScreen.tsx: masthead (moss), type
+// chips, range pill, latest-reading hero, inline SVG trend chart, and the
+// readings list; VitalFormScreen supplies the add/edit/delete affordances.
 //
 // GATING:
 //   - all write affordances (Add / Edit / Delete) require useCircle().canEdit.
@@ -47,11 +61,34 @@ import { formatTimeOfDay } from '@/utils/timezone';
 const VITAL_TYPES: VitalType[] = ['blood_pressure', 'heart_rate', 'glucose', 'weight'];
 const TYPE_FILTERS: Array<VitalType | 'all'> = ['all', ...VITAL_TYPES];
 
+/**
+ * Per-type glyph + tint, copied from mobile `TYPE_CONFIG` (VitalsDetailScreen
+ * ~74-97): blood pressure clay, heart rate terracotta, glucose dusk, weight
+ * moss.
+ */
+const TYPE_CONFIG: Record<VitalType, { icon: IconName; tone: IconTileTone }> = {
+  blood_pressure: { icon: 'heart-outline', tone: 'clay' },
+  heart_rate: { icon: 'pulse-outline', tone: 'terracotta' },
+  glucose: { icon: 'water-outline', tone: 'dusk' },
+  weight: { icon: 'scale-outline', tone: 'moss' },
+};
+
+/**
+ * Blood pressure plots two lines. Systolic takes the BP type colour (warm
+ * clay); diastolic takes the cool dusk token — the same colour the Glucose
+ * type uses, which is safe because the two are never on screen together
+ * (mobile `DIASTOLIC_COLOR`).
+ */
+const DIASTOLIC_COLOR = 'dusk' as const;
+
 type RangeChoice = '7d' | '30d' | '90d';
 const RANGE_CHOICES: RangeChoice[] = ['7d', '30d', '90d'];
 const RANGE_DAYS: Record<RangeChoice, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
 const SKELETON_ROWS = [0, 1, 2, 3];
+
+/** A curve needs two points; below that the chart section stays closed. */
+const MIN_CHART_POINTS = 2;
 
 /**
  * Localized "Jun 15, 2026" label for a reading's recorded day, in the CARE
@@ -72,24 +109,113 @@ function formatRecordedDay(
   }).format(new Date(`${wall.date}T12:00:00Z`));
 }
 
-function VitalsEmptyIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={26}
-      height={26}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12h4l2 5 4-12 2 7h6" />
-    </svg>
-  );
+/** "Jun 15" — the compact form the chart's x axis carries. */
+function formatShortDay(recordedAtISO: string, timezone: string): string {
+  const wall = utcISOToRecipientWallTime(recordedAtISO, timezone);
+  return new Intl.DateTimeFormat(i18n.language, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${wall.date}T12:00:00Z`));
 }
+
+/** "Jun 15, 2026 · 12:00 PM", recipient zone + viewer hour cycle. */
+function formatRecordedStamp(
+  recordedAtISO: string,
+  timezone: string,
+  hourCycle: '12h' | '24h'
+): string {
+  const wall = utcISOToRecipientWallTime(recordedAtISO, timezone);
+  const dayLabel = new Intl.DateTimeFormat(i18n.language, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${wall.date}T12:00:00Z`));
+  const [hh, mm] = wall.time.split(':').map(Number);
+  return `${dayLabel} · ${formatTimeOfDay(hh ?? 0, mm ?? 0, hourCycle)}`;
+}
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+
+interface VitalStats {
+  avg: number;
+  min: number;
+  max: number;
+  count: number;
+  /** Diastolic side — blood pressure only, `null` for every other type. */
+  avg2: number | null;
+  min2: number | null;
+  max2: number | null;
+}
+
+/**
+ * PORT of mobile `computeStats` (VitalsDetailScreen ~119-176).
+ *
+ * Min/max identify a READING, not an independently-reduced field: reducing
+ * value1 and value2 as separate arrays pairs the lowest systolic ever recorded
+ * with the lowest diastolic ever recorded, so 150/70 and 100/95 report a "Min"
+ * of 100/70 — a blood pressure nobody ever took. The AVERAGE stays a per-field
+ * mean, because an average is synthetic by definition and there is no single
+ * real reading to pair it with. Readings with no diastolic are excluded from
+ * that mean rather than counted as zero.
+ */
+function computeStats(
+  vitals: HealthVital[],
+  type: VitalType,
+  weightUnit: WeightUnit,
+  glucoseUnit: GlucoseUnit
+): VitalStats | null {
+  if (vitals.length === 0) return null;
+
+  const values = vitals.map((v) => fromCanonicalValue(type, v.value1, weightUnit, glucoseUnit));
+
+  let minIndex = 0;
+  let maxIndex = 0;
+  values.forEach((v, i) => {
+    if (v < values[minIndex]!) minIndex = i;
+    if (v > values[maxIndex]!) maxIndex = i;
+  });
+
+  let avg2: number | null = null;
+  let min2: number | null = null;
+  let max2: number | null = null;
+  if (type === 'blood_pressure') {
+    const values2 = vitals
+      .filter((v) => v.value2 != null)
+      .map((v) => fromCanonicalValue(type, v.value2 as number, weightUnit, glucoseUnit));
+    if (values2.length > 0) {
+      avg2 = values2.reduce((a, b) => a + b, 0) / values2.length;
+    }
+    const minVital = vitals[minIndex]!;
+    const maxVital = vitals[maxIndex]!;
+    min2 =
+      minVital.value2 != null
+        ? fromCanonicalValue(type, minVital.value2, weightUnit, glucoseUnit)
+        : null;
+    max2 =
+      maxVital.value2 != null
+        ? fromCanonicalValue(type, maxVital.value2, weightUnit, glucoseUnit)
+        : null;
+  }
+
+  return {
+    avg: values.reduce((a, b) => a + b, 0) / values.length,
+    min: values[minIndex]!,
+    max: values[maxIndex]!,
+    count: values.length,
+    avg2,
+    min2,
+    max2,
+  };
+}
+
+interface VitalTrend {
+  text: string;
+  icon: IconName;
+}
+
+// ── Reading row ──────────────────────────────────────────────────────────────
 
 interface VitalRowProps {
   vital: HealthVital;
@@ -114,6 +240,7 @@ function VitalRow({
   const hourCycle = useHourCycle();
 
   const displayUnit = getDisplayUnit(vital.vital_type, weightUnit, glucoseUnit);
+  const config = TYPE_CONFIG[vital.vital_type];
 
   const displayValue = useMemo(() => {
     const v1 = fromCanonicalValue(vital.vital_type, vital.value1, weightUnit, glucoseUnit);
@@ -121,55 +248,155 @@ function VitalRow({
     return formatVitalValue(vital.vital_type, v1, vital.value2, displayUnit);
   }, [vital, weightUnit, glucoseUnit, displayUnit]);
 
-  const recordedLabel = useMemo(() => {
-    const wall = utcISOToRecipientWallTime(vital.recorded_at, timezone);
-    // DISPLAY locale is the APP language, not the browser's — matches the
-    // sibling formatRecordedDay helper above.
-    const dayLabel = new Intl.DateTimeFormat(i18n.language, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(`${wall.date}T12:00:00Z`));
-    const [hh, mm] = wall.time.split(':').map(Number);
-    return `${dayLabel} · ${formatTimeOfDay(hh, mm, hourCycle)}`;
-  }, [vital.recorded_at, timezone, hourCycle, i18n.language]);
+  const recordedLabel = useMemo(
+    // DISPLAY locale is the APP language, not the browser's.
+    () => formatRecordedStamp(vital.recorded_at, timezone, hourCycle),
+    [vital.recorded_at, timezone, hourCycle]
+  );
 
   return (
-    <li className={careCardSurface}>
-      <div className="flex items-center gap-3 px-4 py-3">
+    <li className={careCardShell}>
+      <div className={careCardTopRow}>
+        <IconTile size={36} tone={config.tone} name={config.icon} />
+
         <div className="min-w-0 flex-1">
-          <p className="m-0 text-sm font-medium text-ink">{displayValue}</p>
-          <p className="m-0 mt-0.5 truncate text-xs text-ink-3">
-            {recordedLabel}
-            {vital.notes ? ` · ${vital.notes}` : ''}
-          </p>
+          <p className={careCardTitle}>{displayValue}</p>
+          <div className={careCardMeta}>
+            <span>{recordedLabel}</span>
+            {vital.notes && <span>· {vital.notes}</span>}
+          </div>
         </div>
 
         {canEdit && (
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={() => onEdit(vital)}
-              aria-label={t('actions.editLabel', { value: displayValue })}
-            >
-              {t('actions.edit')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="md"
-              onClick={() => onDelete(vital)}
-              aria-label={t('actions.deleteLabel', { value: displayValue })}
-            >
-              {t('actions.delete')}
-            </Button>
+          <div className="-mr-2 shrink-0">
+            <MoreMenu
+              label={t('actions.menuLabel', { value: displayValue })}
+              items={[
+                {
+                  id: 'edit',
+                  label: t('actions.edit'),
+                  icon: 'create-outline',
+                  onSelect: () => onEdit(vital),
+                },
+                {
+                  id: 'delete',
+                  label: t('actions.delete'),
+                  icon: 'trash-outline',
+                  danger: true,
+                  onSelect: () => onDelete(vital),
+                },
+              ]}
+            />
           </div>
         )}
       </div>
     </li>
   );
 }
+
+// ── Latest-reading hero ──────────────────────────────────────────────────────
+
+interface LatestVitalHeroProps {
+  type: VitalType;
+  /** Readings of ONE type, newest-first. Never empty (caller gates on length). */
+  items: HealthVital[];
+  stats: VitalStats;
+  trend: VitalTrend | null;
+  timezone: string;
+  weightUnit: WeightUnit;
+  glucoseUnit: GlucoseUnit;
+}
+
+/**
+ * Latest-reading hero shown above the list when a single vital type is
+ * selected: the most recent value, plus average / lowest / highest across the
+ * currently-loaded readings (the active range + type filter), then the trend
+ * sentence versus the previous period.
+ *
+ * Mirrors mobile's `heroSheet` (padding 20, value 34/600/38, unit 16 inkSoft,
+ * hairline, stats row, trend row).
+ */
+function LatestVitalHero({
+  type,
+  items,
+  stats,
+  trend,
+  timezone,
+  weightUnit,
+  glucoseUnit,
+}: LatestVitalHeroProps): ReactElement {
+  const { t } = useTranslation('vitals');
+  const hourCycle = useHourCycle();
+
+  const latest = items[0]!;
+  const unit = getDisplayUnit(type, weightUnit, glucoseUnit);
+  const latestValue1 = fromCanonicalValue(type, latest.value1, weightUnit, glucoseUnit);
+
+  const recordedLabel = useMemo(
+    () => formatRecordedStamp(latest.recorded_at, timezone, hourCycle),
+    [latest.recorded_at, timezone, hourCycle]
+  );
+
+  const formatStat = (v1: number, v2: number | null): string =>
+    formatVitalValue(type, v1, v2, unit, { unit: false });
+
+  return (
+    <Sheet padding="md">
+      {/* "Latest", as on mobile — NOT the type name. The chip row above and the
+          chart title already say which vital is on screen; what the eyebrow has
+          to add is that this one number is the most recent reading, not a
+          summary of the period like the three stats under the hairline. */}
+      <Eyebrow>{t('detail.latest')}</Eyebrow>
+      <p className="m-0 mt-2">
+        <span className="text-xl font-semibold leading-[38px] text-ink">
+          {formatVitalValue(type, latestValue1, latest.value2, unit, { unit: false })}
+        </span>
+        <span className="ml-1 text-md text-ink-2">{unit}</span>
+      </p>
+      <Text variant="caption" className="mt-1">
+        {recordedLabel}
+      </Text>
+
+      {/* Average/Lowest/Highest across ONE reading are all identical to the
+          headline above them — the same number repeated three times, not new
+          information. Only summarize once there is something to summarize. */}
+      {items.length > 1 && (
+        <>
+          <hr className="my-4 border-line-2" />
+          <div className="flex">
+            <div className="flex-1">
+              <Eyebrow>{t('detail.average')}</Eyebrow>
+              <span className="mt-0.5 block text-md text-ink">
+                {formatStat(stats.avg, stats.avg2)}
+              </span>
+            </div>
+            <div className="flex-1">
+              <Eyebrow>{t('detail.min')}</Eyebrow>
+              <span className="mt-0.5 block text-md text-ink">
+                {formatStat(stats.min, stats.min2)}
+              </span>
+            </div>
+            <div className="flex-1">
+              <Eyebrow>{t('detail.max')}</Eyebrow>
+              <span className="mt-0.5 block text-md text-ink">
+                {formatStat(stats.max, stats.max2)}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {trend && (
+        <div className="mt-4 flex items-center gap-1">
+          <Icon name={trend.icon} size="meta" className="text-ink-2" />
+          <Text variant="caption">{trend.text}</Text>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function VitalsPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
@@ -187,17 +414,35 @@ export default function VitalsPage(): ReactElement {
   const [editingVital, setEditingVital] = useState<HealthVital | null>(null);
   const [deletingVital, setDeletingVital] = useState<HealthVital | null>(null);
 
-  const { from, to } = useMemo(() => {
+  // The active window, plus the window of the SAME LENGTH immediately before it
+  // — the trend sentence compares the two periods' averages (mobile
+  // `getPreviousDateRange`).
+  const { from, to, prevFrom, prevTo } = useMemo(() => {
+    const days = RANGE_DAYS[range];
     const now = new Date();
     const fromDate = new Date(now);
-    fromDate.setDate(fromDate.getDate() - RANGE_DAYS[range]);
-    return { from: fromDate.toISOString(), to: now.toISOString() };
+    fromDate.setDate(fromDate.getDate() - days);
+    const prevFromDate = new Date(fromDate);
+    prevFromDate.setDate(prevFromDate.getDate() - days);
+    return {
+      from: fromDate.toISOString(),
+      to: now.toISOString(),
+      prevFrom: prevFromDate.toISOString(),
+      prevTo: fromDate.toISOString(),
+    };
   }, [range]);
 
   const vitalsQuery = useVitals(circleId, {
     type: typeFilter === 'all' ? undefined : typeFilter,
     from,
     to,
+  });
+  // Previous period — read only for the trend sentence, and only meaningful
+  // when a single type is selected (the hero is the only consumer).
+  const previousQuery = useVitals(typeFilter === 'all' ? undefined : circleId, {
+    type: typeFilter === 'all' ? undefined : typeFilter,
+    from: prevFrom,
+    to: prevTo,
   });
   const deleteMutation = useDeleteVital(circleId);
 
@@ -219,10 +464,40 @@ export default function VitalsPage(): ReactElement {
     }));
   }, [vitals]);
 
-  // One accordion per vital-type group. The group key set is the types present;
-  // useAccordionGroup recomputes allOpen/anyOpen when the set changes.
-  const groupIds = useMemo(() => groups.map((g) => `vitals-group-${g.type}`), [groups]);
-  const accordion = useAccordionGroup(groupIds, { defaultOpen: true });
+  // Readings backing the latest-reading hero + chart — only when a single type
+  // is selected, and only when that type actually has readings in range.
+  const heroItems =
+    typeFilter === 'all' ? [] : (groups.find((g) => g.type === typeFilter)?.items ?? []);
+  const selectedType = typeFilter === 'all' ? null : typeFilter;
+
+  const heroStats = useMemo(
+    () =>
+      selectedType ? computeStats(heroItems, selectedType, weightUnit, glucoseUnit) : null,
+    [heroItems, selectedType, weightUnit, glucoseUnit]
+  );
+  const previousStats = useMemo(
+    () =>
+      selectedType
+        ? computeStats(previousQuery.data ?? [], selectedType, weightUnit, glucoseUnit)
+        : null,
+    [previousQuery.data, selectedType, weightUnit, glucoseUnit]
+  );
+
+  /**
+   * PORT of mobile's trend (VitalsDetailScreen ~376-386): a plain
+   * period-over-period comparison of the MEAN, with a ±1% dead band called
+   * "Stable". It is deliberately NOT type-aware — mobile does not claim a
+   * falling blood pressure is an improvement, and neither does this.
+   */
+  const trend = useMemo<VitalTrend | null>(() => {
+    if (!heroStats || !previousStats || previousStats.avg === 0) return null;
+    const diff = heroStats.avg - previousStats.avg;
+    const pct = Math.abs((diff / previousStats.avg) * 100);
+    if (pct < 1) return { text: t('detail.trendStable'), icon: 'remove' };
+    return diff > 0
+      ? { text: t('detail.trendUp', { pct: pct.toFixed(1) }), icon: 'trending-up' }
+      : { text: t('detail.trendDown', { pct: pct.toFixed(1) }), icon: 'trending-down' };
+  }, [heroStats, previousStats, t]);
 
   const typeOptions = useMemo(
     () =>
@@ -236,6 +511,68 @@ export default function VitalsPage(): ReactElement {
     () => RANGE_CHOICES.map((value) => ({ value, label: t(`filter.range.${value}`) })),
     [t]
   );
+  const rangeLabel = rangeOptions.find((option) => option.value === range)?.label ?? '';
+
+  // ── Chart series (the selected type's readings, oldest → newest) ──────────
+  const chart = useMemo(() => {
+    if (!selectedType || heroItems.length < MIN_CHART_POINTS || !heroStats) return null;
+
+    const sorted = [...heroItems].sort(
+      (a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
+    );
+    const conv = (value: number): number =>
+      fromCanonicalValue(selectedType, value, weightUnit, glucoseUnit);
+
+    const primary: VitalsChartSeries = {
+      points: sorted.map((v) => ({ x: new Date(v.recorded_at).getTime(), y: conv(v.value1) })),
+      color: TYPE_CONFIG[selectedType].tone as VitalsChartSeries['color'],
+      area: true,
+    };
+
+    // Diastolic line — readings WITHOUT a diastolic are omitted from it. Mobile
+    // substitutes the systolic value there, which draws a diastolic reading
+    // that was never taken; this app already refuses that elsewhere
+    // (formatVitalValue never renders "140/0", the hero's mean skips nulls).
+    const diastolic =
+      selectedType === 'blood_pressure'
+        ? sorted
+            .filter((v) => v.value2 != null)
+            .map((v) => ({ x: new Date(v.recorded_at).getTime(), y: conv(v.value2 as number) }))
+        : [];
+
+    const series: VitalsChartSeries[] =
+      diastolic.length > 0
+        ? [primary, { points: diastolic, color: DIASTOLIC_COLOR }]
+        : [primary];
+
+    const unit = getDisplayUnit(selectedType, weightUnit, glucoseUnit);
+    const fmt = (v1: number, v2: number | null): string =>
+      formatVitalValue(selectedType, v1, v2, unit, { unit: false });
+
+    return {
+      series,
+      xLabels: [
+        formatShortDay(sorted[0]!.recorded_at, timezone),
+        formatShortDay(sorted[sorted.length - 1]!.recorded_at, timezone),
+      ],
+      yFormatter: (value: number): string =>
+        formatVitalValue(selectedType, value, null, unit, { unit: false }),
+      label: t('detail.chartSummary', {
+        min: `${fmt(heroStats.min, heroStats.min2)} ${unit}`,
+        max: `${fmt(heroStats.max, heroStats.max2)} ${unit}`,
+        latest: `${fmt(
+          fromCanonicalValue(selectedType, heroItems[0]!.value1, weightUnit, glucoseUnit),
+          heroItems[0]!.value2
+        )} ${unit}`,
+      }),
+      isBloodPressure: selectedType === 'blood_pressure' && diastolic.length > 0,
+    };
+  }, [selectedType, heroItems, heroStats, weightUnit, glucoseUnit, timezone, t]);
+
+  // One accordion per vital-type group. The group key set is the types present;
+  // useAccordionGroup recomputes allOpen/anyOpen when the set changes.
+  const groupIds = useMemo(() => groups.map((g) => `vitals-group-${g.type}`), [groups]);
+  const accordion = useAccordionGroup(groupIds, { defaultOpen: true });
 
   async function handleDeleteConfirmed(): Promise<void> {
     if (!deletingVital) return;
@@ -249,15 +586,31 @@ export default function VitalsPage(): ReactElement {
     }
   }
 
+  function renderRow(vital: HealthVital): ReactElement {
+    return (
+      <VitalRow
+        key={vital.id}
+        vital={vital}
+        timezone={timezone}
+        weightUnit={weightUnit}
+        glucoseUnit={glucoseUnit}
+        canEdit={canEdit}
+        onEdit={setEditingVital}
+        onDelete={setDeletingVital}
+      />
+    );
+  }
+
   let body: ReactElement;
   if (vitalsQuery.isLoading) {
     body = (
-      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-busy="true">
+      <ul className={`${careCardListGap} m-0 list-none p-0`} aria-busy="true">
         <li className="sr-only">{t('loading')}</li>
         {SKELETON_ROWS.map((row) => (
-          <li key={row} className={`${careCardSurface} px-4 py-3`}>
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
+          <li key={row} className={careCardShell}>
+            <div className={careCardTopRow}>
+              <Skeleton className="h-9 w-9 rounded-[10px]" />
+              <div className="min-w-0 flex-1">
                 <Skeleton className="h-4 w-1/3 max-w-40" />
                 <Skeleton className="mt-2 h-3 w-1/2 max-w-56" />
               </div>
@@ -269,8 +622,12 @@ export default function VitalsPage(): ReactElement {
   } else if (vitalsQuery.isError) {
     body = (
       <Card className="text-center">
-        <p className="m-0 font-medium text-ink">{t('errorTitle')}</p>
-        <p className="m-0 mt-1 text-sm text-ink-3">{t('errorHint')}</p>
+        <Text variant="bodyDense" className="font-medium">
+          {t('errorTitle')}
+        </Text>
+        <Text variant="caption" className="mt-1">
+          {t('errorHint')}
+        </Text>
         <Button variant="ghost" className="mt-4" onClick={() => void vitalsQuery.refetch()}>
           {t('common:retry')}
         </Button>
@@ -278,16 +635,22 @@ export default function VitalsPage(): ReactElement {
     );
   } else if (groups.length === 0) {
     body = (
-      <Card className="p-8">
+      <Card padding="none">
         <EmptyState
           tone="moss"
-          icon={<VitalsEmptyIcon />}
+          icon="heart-outline"
           title={t('empty.title')}
           description={canEdit ? t('empty.hint') : t('empty.hintReadOnly')}
-        >
-          {canEdit && <Button onClick={() => setShowAdd(true)}>{t('empty.cta')}</Button>}
-        </EmptyState>
+          actions={canEdit ? <Button onClick={() => setShowAdd(true)}>{t('empty.cta')}</Button> : undefined}
+        />
       </Card>
+    );
+  } else if (selectedType) {
+    // One type selected — the group header would only repeat the chip above it.
+    body = (
+      <ul className={`${careCardListGap} m-0 list-none p-0`}>
+        {(groups.find((g) => g.type === selectedType)?.items ?? []).map(renderRow)}
+      </ul>
     );
   } else {
     body = (
@@ -313,19 +676,8 @@ export default function VitalsPage(): ReactElement {
               open={accordion.isOpen(groupId)}
               onToggle={accordion.toggle}
             >
-              <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {group.items.map((vital) => (
-                  <VitalRow
-                    key={vital.id}
-                    vital={vital}
-                    timezone={timezone}
-                    weightUnit={weightUnit}
-                    glucoseUnit={glucoseUnit}
-                    canEdit={canEdit}
-                    onEdit={setEditingVital}
-                    onDelete={setDeletingVital}
-                  />
-                ))}
+              <ul className={`${careCardListGap} m-0 list-none p-0`}>
+                {group.items.map(renderRow)}
               </ul>
             </Accordion>
           );
@@ -335,33 +687,102 @@ export default function VitalsPage(): ReactElement {
   }
 
   return (
-    <section className="mx-auto max-w-5xl p-6 md:p-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="serif m-0 text-xl text-ink">{t('title')}</h1>
-          <p className="m-0 mt-1 text-sm text-ink-3">{t('subtitle')}</p>
-        </div>
-        {canEdit && <Button onClick={() => setShowAdd(true)}>{t('add.cta')}</Button>}
-      </header>
+    <section className="mx-auto w-full max-w-5xl pb-10">
+      <PageMasthead
+        section={t('common:nav.vitals')}
+        tone="moss"
+        title={t('title')}
+        subtitle={t('subtitle')}
+        backTo={`/circles/${circleId}`}
+        {...(canEdit
+          ? {
+              rightAction: {
+                name: 'add-outline' as const,
+                label: t('add.cta'),
+                onClick: () => setShowAdd(true),
+              },
+            }
+          : {})}
+      />
 
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Select
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5">
+        <ChipSelect
           id="vitals-type-filter"
           label={t('filter.typeLabel')}
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as VitalType | 'all')}
           options={typeOptions}
+          value={typeFilter}
+          onChange={(next) => setTypeFilter((next as VitalType | 'all') ?? 'all')}
+          allowDeselect={false}
         />
-        <Select
-          id="vitals-range-filter"
-          label={t('filter.rangeLabel')}
-          value={range}
-          onChange={(e) => setRange(e.target.value as RangeChoice)}
-          options={rangeOptions}
+        <MoreMenu
+          items={rangeOptions.map((option) => ({
+            id: option.value,
+            label: option.label,
+            onSelect: () => setRange(option.value),
+          }))}
+          renderTrigger={(props) => (
+            // card-shell-ok: the range pill is a control, not a card surface.
+            <button
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-line bg-cream px-4 text-sm text-ink"
+              type="button"
+              // The visible text is only the VALUE ("Last 30 days"), which says
+              // nothing about what it selects. The name adds the field it
+              // belongs to and still CONTAINS the visible text verbatim, so
+              // speech control matches what the user reads (WCAG 2.5.3). An
+              // sr-only prefix span cannot do this: the accessible-name
+              // algorithm trims each text node, so it renders as
+              // "Time range:Last 30 days".
+              aria-label={`${t('filter.rangeLabel')}: ${rangeLabel}`}
+              {...props}
+            >
+              {rangeLabel}
+              <Icon name="chevron-down" size="inline" />
+            </button>
+          )}
         />
       </div>
 
-      <div className="mt-6">{body}</div>
+      {selectedType && heroItems.length > 0 && heroStats && (
+        <div className="mt-4 px-5">
+          <LatestVitalHero
+            type={selectedType}
+            items={heroItems}
+            stats={heroStats}
+            trend={trend}
+            timezone={timezone}
+            weightUnit={weightUnit}
+            glucoseUnit={glucoseUnit}
+          />
+        </div>
+      )}
+
+      {chart && (
+        <div className="mt-4 px-5">
+          <Card padding="sm">
+            <Eyebrow>{t('detail.chartTitle')}</Eyebrow>
+            <VitalsChart
+              className="mt-2"
+              series={chart.series}
+              yFormatter={chart.yFormatter}
+              xLabels={chart.xLabels}
+              label={chart.label}
+            />
+            {chart.isBloodPressure && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-clay" />
+                <Text variant="caption">{t('fields.systolic')}</Text>
+                <span
+                  aria-hidden="true"
+                  className="ml-3 inline-block h-2 w-2 rounded-full bg-dusk"
+                />
+                <Text variant="caption">{t('fields.diastolic')}</Text>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      <div className="mt-6 px-5">{body}</div>
 
       {showAdd && (
         <AddVitalModal
@@ -389,7 +810,7 @@ export default function VitalsPage(): ReactElement {
           confirmLabel={t('actions.delete')}
           cancelLabel={t('common:cancel')}
           destructive
-          confirmDisabled={deleteMutation.isPending}
+          loading={deleteMutation.isPending}
           onConfirm={() => void handleDeleteConfirmed()}
           onCancel={() => setDeletingVital(null)}
         />

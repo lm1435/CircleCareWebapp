@@ -1,14 +1,17 @@
 {
   "appName": "CircleCare",
   "otpDigit": "Digit {{index}} of {{length}}",
+  "otpCharacter": "Character {{index}} of {{length}}",
+  "dobClearUnsupported": "Clearing the date of birth isn't supported yet. Restore it or pick a different date.",
   "loading": "Loading...",
   "error": "Error",
   "retry": "Retry",
   "cancel": "Cancel",
   "confirm": "Confirm",
   "save": "Save",
-  "done": "Done",
   "close": "Close",
+  "more": "More",
+  "moreActions": "More actions",
   "required": "(required)",
   "today": "Today",
   "expandAll": "Expand all",
@@ -47,13 +50,11 @@
   "nav": {
     "label": "Main navigation",
     "back": "Back",
-    "circles": "My Circles",
     "home": "Home",
     "calendar": "Calendar",
     "tasks": "Tasks",
     "notes": "Notes",
     "activity": "Activity",
-    "health": "Health",
     "meds": "Medications",
     "emergency": "Emergency Info",
     "documents": "Documents",
@@ -62,7 +63,12 @@
     "profile": "Profile",
     "settings": "Circle Settings",
     "assistant": "Assistant",
-    "help": "Help & FAQ"
+    "help": "Help & FAQ",
+    "new": "New",
+    "allCircles": "All circles",
+    "careShort": "Care",
+    "healthShort": "Health",
+    "aiShort": "AI"
   },
   "errors": {
     "saveFailed": "Couldn't save your changes. Please try again.",
@@ -78,25 +84,13 @@
     "body": "The link may be old or mistyped. Your circles are still right where you left them.",
     "cta": "Go to my circles"
   },
-  "create": {
-    "button": "Create",
-    "menuLabel": "Create new",
-    "appointment": "Appointment",
-    "medication": "Medication",
-    "task": "Task",
-    "document": "Document",
-    "invite": "Invite member",
-    "note": "Note"
-  },
-  "menu": {
-    "toggle": "Navigation menu",
-    "close": "Close navigation menu"
-  },
   "header": {
     "switchCircle": "Switch circle",
     "circlesError": "Couldn't load your circles.",
     "account": "Account",
-    "logout": "Log out"
+    "logout": "Sign out",
+    "logoutConfirmTitle": "Sign out",
+    "logoutConfirmBody": "Are you sure you want to sign out?"
   },
   "downloadApp": {
     "title": "Get the full experience.",
@@ -108,14 +102,14 @@
     "playLead": "Get it on",
     "playName": "Google Play"
   },
-  "downloadBanner": {
-    "regionLabel": "Get the app",
-    "message": "For reminders on the go, get the CircleCare app.",
-    "getApp": "Get the app",
-    "dismiss": "Dismiss app download banner"
-  },
   "authHero": {
-    "tagline": "Keep your whole family coordinated — medications, appointments, and who's doing what.",
+    "headline": "Care for them together.",
+    "tagline": "One shared place for medications, appointments, and who's doing what, so no one carries it alone.",
+    "valueProps": {
+      "meds": "Medication reminders everyone can confirm",
+      "calendar": "A care calendar the whole family sees",
+      "accountability": "Know who's covering what, without the group chat"
+    },
     "imageAlt1": "Family laughing together around a table",
     "imageAlt2": "Multigenerational family sharing a meal outdoors",
     "imageAlt3": "Family looking at a tablet together on the couch"
@@ -124,8 +118,8 @@
     "title": "Get started",
     "subtitle": "A few quick steps to set up this circle for everyone.",
     "progress": "{{done}} of {{total}} done",
-    "step1Label": "Add a medication or appointment",
-    "step1Desc": "Everyone on the app gets a reminder, so no dose or visit is missed.",
+    "step1Label": "Add a medication",
+    "step1Desc": "Everyone gets the reminder, so no one has to be the one who remembers.",
     "step2Label": "Invite family & caregivers",
     "step2Desc": "Share the load — they see the same schedule and updates.",
     "step3Label": "Add emergency info",
@@ -136,13 +130,14 @@
     "statusPending": "(to do)",
     "dismiss": "Dismiss the get started checklist"
   },
-  "timezoneLabels": {
-    "America/New_York": "Eastern Time",
-    "America/Chicago": "Central Time",
-    "America/Denver": "Mountain Time",
-    "America/Los_Angeles": "Pacific Time",
-    "America/Phoenix": "Arizona Time",
-    "America/Anchorage": "Alaska Time",
-    "Pacific/Honolulu": "Hawaii Time"
+  "addMenu": {
+    "medication": "Medication",
+    "appointment": "Appointment",
+    "task": "Task",
+    "note": "Note",
+    "medicationShort": "Med",
+    "appointmentShort": "Appt",
+    "taskShort": "Task",
+    "noteShort": "Note"
   }
 }

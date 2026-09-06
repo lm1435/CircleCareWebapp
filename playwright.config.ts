@@ -43,16 +43,37 @@ export default defineConfig({
   },
 
   projects: [
-    // 0) Backend-FREE accessibility crawl of the PUBLIC (logged-out) routes.
-    //    No `setup` dependency and no stored session, so it runs anywhere —
-    //    including CI without demo credentials or a reachable backend (the auth
-    //    pages render client-side; visitAndCheck tolerates the bootstrap 401).
-    //    Driven by `npm run test:a11y`. The AUTHENTICATED routes' a11y is
-    //    covered by smoke.spec.ts under the chromium/mobile-chrome projects
-    //    (i.e. `npm run test:e2e`), which does require the live backend.
+    // 0) Backend-FREE accessibility crawl of the PUBLIC (logged-out) routes, at
+    //    desktop width. No `setup` dependency and no stored session, so it runs
+    //    anywhere — including CI without demo credentials or a reachable
+    //    backend (the auth pages render client-side; visitAndCheck tolerates
+    //    the bootstrap 401). Driven by `npm run test:a11y`, together with
+    //    `a11y-tablet` and `a11y-mobile` below (same spec, three viewports,
+    //    all equally backend-free). The AUTHENTICATED routes' a11y is covered
+    //    by smoke.spec.ts under the chromium/tablet/mobile-chrome projects
+    //    (i.e. `npm run test:e2e`), which DOES require the live backend —
+    //    `tablet`/`mobile-chrome` depend on `setup` and carry storageState,
+    //    so they must stay out of the backend-free `test:a11y` run.
     {
       name: 'a11y-public',
       use: { ...devices['Desktop Chrome'] },
+      testMatch: /public-smoke\.spec\.ts/,
+    },
+
+    // 0b/0c) Same backend-free public crawl at the tablet and mobile
+    //    viewports — modelled on `a11y-public` (no `setup` dependency, no
+    //    storageState), NOT on `tablet`/`mobile-chrome` below, which need a
+    //    live backend + demo creds to log in. These exist purely so
+    //    `npm run test:a11y` exercises all three breakpoints without ever
+    //    requiring a backend.
+    {
+      name: 'a11y-tablet',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1024, height: 768 } },
+      testMatch: /public-smoke\.spec\.ts/,
+    },
+    {
+      name: 'a11y-mobile',
+      use: { ...devices['Pixel 5'] },
       testMatch: /public-smoke\.spec\.ts/,
     },
 
@@ -62,7 +83,8 @@ export default defineConfig({
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
 
     // 2) Desktop — runs every spec EXCEPT the mobile-only ones (which assume the
-    //    hamburger-drawer chrome).
+    //    FloatingNavBar pill chrome below the `xl` (1024px) breakpoint; at this
+    //    project's width the sidebar owns navigation instead).
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/user.json' },
@@ -70,10 +92,29 @@ export default defineConfig({
       testIgnore: /e2e\/mobile\//,
     },
 
-    // 3) Mobile (Pixel 5 viewport) — runs the route crawl (render + a11y at
-    //    mobile width, catching drawer/overflow/responsive regressions the
-    //    desktop run can't) plus the mobile-only specs in e2e/mobile/ (hamburger
-    //    nav). The CRUD flows stay desktop-only — their chrome differs on mobile.
+    // 3) Tablet — 1024×768, exactly the `xl` breakpoint where the sidebar
+    //    replaces the FloatingNavBar pill (spec §5.3). Runs the same
+    //    AUTHENTICATED route + a11y crawl as `chromium`/`mobile-chrome` (not
+    //    the CRUD flows) so axe exercises the shell right at that boundary —
+    //    a width neither the 1280 desktop nor the ~390 mobile viewport ever
+    //    lands on. Requires the live backend (see `a11y-tablet` above for the
+    //    backend-free public-only equivalent).
+    {
+      name: 'tablet',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1024, height: 768 },
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+      testMatch: [/smoke\.spec\.ts/, /public-smoke\.spec\.ts/],
+    },
+
+    // 4) Mobile (Pixel 5 viewport) — runs the route crawl (render + a11y at
+    //    mobile width, catching overflow/responsive regressions the desktop
+    //    run can't) plus the mobile-only specs in e2e/mobile/ (the
+    //    FloatingNavBar pill + its AddMenu — there is no drawer). The CRUD
+    //    flows stay desktop-only — their chrome differs on mobile.
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'], storageState: 'e2e/.auth/user.json' },

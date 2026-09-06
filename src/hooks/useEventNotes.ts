@@ -14,7 +14,8 @@ import {
   type EventNote,
 } from '@/api/eventNotes';
 import { queryKeys } from '@/lib/queryKeys';
-import { isPermissionDeniedError } from '@/lib/apiErrors';
+import { classifyFailureCode, isPermissionDeniedError } from '@/lib/apiErrors';
+import { Analytics } from '@/lib/analytics';
 
 // PORT of mobile/src/hooks/useEventNotes.ts. Notes are INSTANCE-scoped: every
 // hook splits the (possibly composite `parentUUID_YYYY-MM-DD`) eventId so the
@@ -92,8 +93,15 @@ function invalidateNotes(
  */
 function refreshFlagsOnPermissionError(
   queryClient: ReturnType<typeof useQueryClient>,
+  circleId: string,
   error: unknown
 ): void {
+  // Counted first (`error_occurred`, mobile parity): ids/enums only — `code`
+  // from the closed-set `classifyFailureCode`, never the note body.
+  Analytics.errorOccurred('event_notes', 'event_notes_mutation_error', {
+    circle_id: circleId,
+    code: classifyFailureCode(error),
+  });
   if (isPermissionDeniedError(error)) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
   }
@@ -108,7 +116,8 @@ export function useCreateNote(): UseMutationResult<EventNote, unknown, CreateNot
     onSuccess: (_note, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId, variables.scheduledDate);
     },
-    onError: (error) => refreshFlagsOnPermissionError(queryClient, error),
+    onError: (error, variables) =>
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
   });
 }
 
@@ -121,7 +130,8 @@ export function useUpdateNote(): UseMutationResult<EventNote, unknown, UpdateNot
     onSuccess: (_note, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId);
     },
-    onError: (error) => refreshFlagsOnPermissionError(queryClient, error),
+    onError: (error, variables) =>
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
   });
 }
 
@@ -134,6 +144,7 @@ export function useDeleteNote(): UseMutationResult<void, unknown, DeleteNoteVari
     onSuccess: (_void, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId);
     },
-    onError: (error) => refreshFlagsOnPermissionError(queryClient, error),
+    onError: (error, variables) =>
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
   });
 }

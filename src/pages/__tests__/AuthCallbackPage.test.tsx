@@ -263,6 +263,10 @@ describe('AuthCallbackPage', () => {
     ).toBeInTheDocument();
     // Deliberate cancel is not announced as an error
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // ...but it is still announced politely, same as any other status update.
+    expect(screen.getByRole('status')).toHaveTextContent(
+      "No problem — you can sign in whenever you're ready."
+    );
     expect(screen.getByRole('link', { name: 'Back to Sign In' })).toHaveAttribute('href', '/login');
     expect(mockedPost).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -293,5 +297,90 @@ describe('AuthCallbackPage', () => {
     expect(tokenAccessor.getAuthToken()).toBeNull();
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
+  });
+
+  // ── Failure funnel ────────────────────────────────────────────────────────
+  // Every terminal OAuth outcome used to report NOTHING here: login_started
+  // fired at the button, the browser left for the provider, and a broken
+  // return leg produced no event at all — so web OAuth failures were invisible
+  // in the funnel. The codes are stable and mirror mobile's OAuthErrorCode
+  // members; provider prose (`error_description`) must never be one of them.
+
+  it('reports OAUTH_PROVIDER_ERROR with the parked provider, never the provider prose', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    setPendingAuthMethod('google');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#error=server_error&error_description=Account+pat@example.com+is+blocked'
+    );
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('google', 'OAUTH_PROVIDER_ERROR');
+    // The free-text description never reaches analytics in any form.
+    const [, reason] = loginFailed.mock.calls[0];
+    expect(reason).not.toContain('pat@example.com');
+    expect(reason).not.toContain('blocked');
+    // Read-and-clear: the parked provider cannot be attributed to a later sign-in.
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it("reports OAUTH_NO_TOKENS under the generic 'oauth' method when the fragment is empty", async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_NO_TOKENS');
+  });
+
+  it('reports NO failure event when the user cancels, but still clears the parked provider', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    setPendingAuthMethod('apple');
+    window.history.replaceState(null, '', '/auth/callback#error=access_denied');
+
+    renderCallback();
+
+    expect(
+      await screen.findByText("No problem — you can sign in whenever you're ready.")
+    ).toBeInTheDocument();
+    // A deliberate cancel is not a failure — mirrors mobile, which skips
+    // analytics on CANCELLED.
+    expect(loginFailed).not.toHaveBeenCalled();
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it("reports the backend's own error code when the token exchange is rejected", async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    setPendingAuthMethod('apple');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
+    );
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('apple', 'INVALID_TOKEN');
+  });
+
+  it('falls back to OAUTH_SESSION_FAILED when the exchange never reached the backend', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
+    );
+    // A raw network rejection: no envelope, so no `err.error.code` to report.
+    mockedPost.mockRejectedValueOnce({ code: 'ERR_NETWORK', isAxiosError: true });
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_SESSION_FAILED');
   });
 });

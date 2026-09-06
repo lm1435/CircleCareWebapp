@@ -1,6 +1,6 @@
-import type { FormEvent, ReactElement } from 'react';
+import { useEffect, useRef, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ChipSelect, TextArea } from '@/components/ui';
+import { Button, ChipSelect, TextArea, chipClass } from '@/components/ui';
 import {
   CARE_NOTE_CATEGORIES,
   CARE_NOTE_MOODS,
@@ -38,13 +38,20 @@ export interface NoteComposerProps {
   /** When present, renders a ghost Cancel button (inline edit mode). */
   onCancel?: () => void;
   cancelLabel?: string;
+  /**
+   * Focus the body textarea on mount — WCAG 2.4.3 (focus order). `NoteRow`
+   * passes this for its inline EDIT instance: choosing "Edit" from the row's
+   * MoreMenu unmounts the trigger that had focus, and the generic
+   * `MoreMenu.close()` refocus (which runs synchronously, before the
+   * editing-mode re-render commits) ends up focusing a node that is removed a
+   * moment later — focus then falls back to `<body>`. Moving focus into the
+   * field the user is about to type in is the correct destination anyway, and
+   * doing it here (mount-only effect on the freshly-mounted instance) means
+   * it never depends on the generic menu-refocus timing. The CREATE composer
+   * at the top of the page does not pass this — nothing removed its focus.
+   */
+  autoFocus?: boolean;
 }
-
-// Chip classes — identical recipe to ChipSelect (Round 7 slimmed 36px chips;
-// the global *:focus-visible ring provides focus styling, never suppressed).
-const CHIP_SELECTED = 'min-h-9 rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-cream';
-const CHIP_UNSELECTED =
-  'min-h-9 rounded-full border border-line bg-transparent px-4 py-1.5 text-sm text-ink hover:bg-bg-2';
 
 export function NoteComposer({
   idPrefix,
@@ -55,8 +62,18 @@ export function NoteComposer({
   submitting = false,
   onCancel,
   cancelLabel,
+  autoFocus = false,
 }: NoteComposerProps): ReactElement {
   const { t } = useTranslation('notes');
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  // Mount-only: this component instance is created fresh each time NoteRow
+  // enters edit mode (its editing branch renders a new NoteComposer), so a
+  // plain empty-deps effect fires exactly once, right when that happens.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (autoFocus) bodyRef.current?.focus();
+  }, []);
 
   const canSubmit = draft.body.trim().length > 0 || draft.mood !== null;
 
@@ -79,6 +96,7 @@ export function NoteComposer({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <TextArea
+        ref={bodyRef}
         id={`${idPrefix}-body`}
         label={t('composer.label')}
         placeholder={t('composer.placeholder')}
@@ -125,7 +143,7 @@ export function NoteComposer({
                 type="button"
                 aria-pressed={selected}
                 onClick={() => toggleCategory(category)}
-                className={selected ? CHIP_SELECTED : CHIP_UNSELECTED}
+                className={chipClass(selected)}
               >
                 {t(`categories.${category}`)}
               </button>
@@ -145,7 +163,7 @@ export function NoteComposer({
           {t('notes:postRequirementHint')}
         </p>
       ) : null}
-        <Button type="submit" disabled={!canSubmit || submitting}>
+        <Button type="submit" size="sm" disabled={!canSubmit || submitting}>
           {submitLabel}
         </Button>
       </div>

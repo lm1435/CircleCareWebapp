@@ -1,6 +1,7 @@
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Card, Icon, IconTile, Text } from '@/components/ui';
 import { usePendingInvites } from '@/hooks/useInvites';
 
 /**
@@ -16,6 +17,13 @@ import { usePendingInvites } from '@/hooks/useInvites';
  *
  * Renders nothing while loading, on error, or with no invites — it is an
  * additive nudge, never a blocker.
+ *
+ * `bg-coral-soft!` (the `!` important suffix, the same idiom `Eyebrow.tsx`
+ * uses): `Card`'s `elevated` variant bakes in `bg-cream`, and Tailwind's
+ * compiled utility order puts `bg-coral-soft` BEFORE `bg-cream` (color tokens
+ * are ordered by name — "coral" < "cream"), so a plain `className="bg-coral-soft"`
+ * would silently lose the cascade and the banner would render cream, not
+ * coral. The `!` forces the override deterministically.
  */
 export function PendingInvitesBanner(): ReactElement | null {
   const { t } = useTranslation('members');
@@ -27,23 +35,20 @@ export function PendingInvitesBanner(): ReactElement | null {
   return (
     <Link
       to="/invites"
-      className="mt-6 flex items-center gap-4 rounded-2xl border border-line bg-cream p-4 no-underline transition-colors hover:bg-bg-2"
+      className="mt-6 block rounded-xl transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-deep"
     >
-      <span
-        aria-hidden="true"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moss-soft text-moss-deep"
-      >
-        <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
-          <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      </span>
-      <span className="flex min-w-0 flex-col">
-        <span className="font-semibold text-ink">{t('pending.banner.count', { count })}</span>
-        <span className="text-sm text-ink-2">
-          {count === 1 ? t('pending.banner.review') : t('pending.banner.reviewPlural')}
+      <Card variant="elevated" padding="sm" className="flex items-center gap-4 bg-coral-soft!">
+        <IconTile tone="coral" name="mail-outline" size={40} />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-md font-semibold text-coral-deep">
+            {t('pending.banner.count', { count })}
+          </span>
+          <Text variant="caption" className="text-coral-deep!">
+            {count === 1 ? t('pending.banner.review') : t('pending.banner.reviewPlural')}
+          </Text>
         </span>
-      </span>
+        <Icon name="chevron-forward" size="inline" className="shrink-0 text-coral" />
+      </Card>
     </Link>
   );
 }

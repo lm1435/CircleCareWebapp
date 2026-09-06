@@ -53,11 +53,16 @@ vi.mock('@/store/authStore', () => ({
 
 const mockCareNotesViewed = vi.fn();
 const mockCareNoteAdded = vi.fn();
+const mockCareNoteUpdated = vi.fn();
+const mockCareNoteDeleted = vi.fn();
 
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     careNotesViewed: (...args: unknown[]) => mockCareNotesViewed(...args),
     careNoteAdded: (...args: unknown[]) => mockCareNoteAdded(...args),
+    careNoteUpdated: (...args: unknown[]) => mockCareNoteUpdated(...args),
+    careNoteDeleted: (...args: unknown[]) => mockCareNoteDeleted(...args),
+    errorOccurred: vi.fn(),
   },
 }));
 
@@ -130,6 +135,8 @@ beforeEach(() => {
   mockDelete.mockReset();
   mockCareNotesViewed.mockReset();
   mockCareNoteAdded.mockReset();
+  mockCareNoteUpdated.mockReset();
+  mockCareNoteDeleted.mockReset();
   mockUseHourCycle.mockReturnValue('12h');
   circleState = { circle: { owner_id: 'owner-1' }, canEdit: true };
   currentUserId = 'user-1';
@@ -153,12 +160,12 @@ describe('NotesPage — composer gate', () => {
     expect(post).toBeDisabled();
 
     // Mood alone enables.
-    const moodGroup = screen.getByRole('group', { name: 'Mood' });
-    await user.click(within(moodGroup).getByRole('button', { name: 'Great day' }));
+    const moodGroup = screen.getByRole('radiogroup', { name: 'Mood' });
+    await user.click(within(moodGroup).getByRole('radio', { name: 'Great day' }));
     expect(post).toBeEnabled();
 
     // Toggling the mood off disables again.
-    await user.click(within(moodGroup).getByRole('button', { name: 'Great day' }));
+    await user.click(within(moodGroup).getByRole('radio', { name: 'Great day' }));
     expect(post).toBeDisabled();
   });
 
@@ -174,27 +181,28 @@ describe('NotesPage — composer gate', () => {
 });
 
 describe('NotesPage — mood and category chips', () => {
-  it('mood is single-select with toggle-to-clear (aria-pressed)', async () => {
+  it('mood is single-select with toggle-to-clear (radiogroup/radio)', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const moodGroup = screen.getByRole('group', { name: 'Mood' });
-    const great = within(moodGroup).getByRole('button', { name: 'Great day' });
-    const tough = within(moodGroup).getByRole('button', { name: 'Tough day' });
+    const moodGroup = screen.getByRole('radiogroup', { name: 'Mood' });
+    const great = within(moodGroup).getByRole('radio', { name: 'Great day' });
+    const tough = within(moodGroup).getByRole('radio', { name: 'Tough day' });
 
-    expect(great).toHaveAttribute('aria-pressed', 'false');
+    expect(great).not.toBeChecked();
 
     await user.click(great);
-    expect(great).toHaveAttribute('aria-pressed', 'true');
+    expect(great).toBeChecked();
 
     // Picking another mood moves the selection (single-select).
     await user.click(tough);
-    expect(tough).toHaveAttribute('aria-pressed', 'true');
-    expect(great).toHaveAttribute('aria-pressed', 'false');
+    expect(tough).toBeChecked();
+    expect(great).not.toBeChecked();
 
-    // Tapping the selected chip clears it (universal toggle rule).
+    // Tapping the selected chip clears it (universal toggle rule — a
+    // deliberate escape from strict radio semantics; see ChipSelect).
     await user.click(tough);
-    expect(tough).toHaveAttribute('aria-pressed', 'false');
+    expect(tough).not.toBeChecked();
   });
 
   it('categories multi-toggle independently (aria-pressed in a labeled group)', async () => {
@@ -227,7 +235,7 @@ describe('NotesPage — posting', () => {
 
     await user.type(screen.getByLabelText(/^Add a note/), '  Ate all of lunch  ');
     await user.click(
-      within(screen.getByRole('group', { name: 'Mood' })).getByRole('button', {
+      within(screen.getByRole('radiogroup', { name: 'Mood' })).getByRole('radio', {
         name: 'Good day',
       })
     );
@@ -267,7 +275,7 @@ describe('NotesPage — posting', () => {
 
     await user.type(screen.getByLabelText(/^Add a note/), 'Rough evening');
     await user.click(
-      within(screen.getByRole('group', { name: 'Mood' })).getByRole('button', {
+      within(screen.getByRole('radiogroup', { name: 'Mood' })).getByRole('radio', {
         name: 'Tough day',
       })
     );
@@ -276,10 +284,10 @@ describe('NotesPage — posting', () => {
     // Input restored — nothing lost.
     expect(screen.getByLabelText(/^Add a note/)).toHaveValue('Rough evening');
     expect(
-      within(screen.getByRole('group', { name: 'Mood' })).getByRole('button', {
+      within(screen.getByRole('radiogroup', { name: 'Mood' })).getByRole('radio', {
         name: 'Tough day',
       })
-    ).toHaveAttribute('aria-pressed', 'true');
+    ).toBeChecked();
 
     expect(
       await screen.findByText("Couldn't post your note. Your note is still here — try again.")
@@ -354,9 +362,12 @@ describe('NotesPage — empty state', () => {
     // Composer remains the call to action.
     expect(screen.getByLabelText(/^Add a note/)).toBeInTheDocument();
 
-    // Calm: only the composer's two labeled chip groups exist — no starter
-    // chips or extra CTA groups in the empty state.
-    expect(screen.getAllByRole('group')).toHaveLength(2);
+    // Calm: only the composer's two labeled chip rows exist — no starter
+    // chips or extra CTA groups in the empty state. Mood is a `radiogroup`
+    // (ChipSelect, single-select); Categories stays a plain `group` of
+    // `aria-pressed` multi-toggle buttons.
+    expect(screen.getAllByRole('radiogroup')).toHaveLength(1);
+    expect(screen.getAllByRole('group')).toHaveLength(1);
   });
 });
 
@@ -379,7 +390,18 @@ describe('NotesPage — view-only', () => {
 });
 
 describe('NotesPage — own-note affordances', () => {
-  it('offers Edit + Delete on own notes only (non-owner sees neither on others)', () => {
+  // Edit/Delete now live behind a MoreMenu (ellipsis trigger, named
+  // "Actions for note by <author>" — per-note, not the generic "More") —
+  // open it before looking for the item. MoreMenu's own items are
+  // `role="menuitem"`, not `role="button"`.
+  const MENU_TRIGGER_NAME = /^Actions for note by /;
+
+  async function openRowMenu(row: HTMLElement, user: ReturnType<typeof userEvent.setup>) {
+    await user.click(within(row).getByRole('button', { name: MENU_TRIGGER_NAME }));
+  }
+
+  it('offers Edit + Delete on own notes only (non-owner sees neither on others)', async () => {
+    const user = userEvent.setup();
     mockUseCareNotes.mockReturnValue(
       notesResult([
         makeNote({ id: 'mine', body: 'My note', author_id: 'user-1' }),
@@ -394,16 +416,19 @@ describe('NotesPage — own-note affordances', () => {
     renderPage();
 
     const mine = rowContaining('My note');
-    expect(within(mine).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
-    expect(within(mine).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    await openRowMenu(mine, user);
+    expect(within(mine).getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    expect(within(mine).getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
 
+    // Own note has no delete affordance shown twice, and the OTHER row (not
+    // own, not owner) gets no menu trigger at all — nothing to open.
     const theirs = rowContaining('Their note');
-    expect(within(theirs).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(within(theirs).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(within(theirs).queryByRole('button', { name: MENU_TRIGGER_NAME })).not.toBeInTheDocument();
   });
 
-  it('lets the circle owner delete (but not edit) any note', () => {
+  it('lets the circle owner delete (but not edit) any note', async () => {
     currentUserId = 'owner-1';
+    const user = userEvent.setup();
     mockUseCareNotes.mockReturnValue(
       notesResult([
         makeNote({
@@ -417,18 +442,23 @@ describe('NotesPage — own-note affordances', () => {
     renderPage();
 
     const theirs = rowContaining('Their note');
-    expect(within(theirs).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(within(theirs).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    await openRowMenu(theirs, user);
+    expect(within(theirs).queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(within(theirs).getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
 
   it('edits an own note inline and saves via useUpdateCareNote (explicit values, null clears)', async () => {
+    mockUpdate.mockImplementation((_variables, opts?: { onSuccess?: () => void }) => {
+      opts?.onSuccess?.();
+    });
     mockUseCareNotes.mockReturnValue(
       notesResult([makeNote({ id: 'mine', body: 'Original text', mood: 'okay' })])
     );
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await openRowMenu(rowContaining('Original text'), user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
 
     // One editing surface at a time: the create composer hides during the edit,
     // so the only note field on the page is the inline editor.
@@ -447,13 +477,19 @@ describe('NotesPage — own-note affordances', () => {
       noteId: 'mine',
       input: { body: 'Corrected text', mood: 'okay', categories: [] },
     });
+    // Mirrors careNoteAdded: category COUNT only, never mood/body.
+    expect(mockCareNoteUpdated).toHaveBeenCalledWith(CIRCLE_ID, { categoryCount: 0 });
   });
 
   it('deletes an own note through the confirm dialog', async () => {
+    mockDelete.mockImplementation((_variables, opts?: { onSuccess?: () => void }) => {
+      opts?.onSuccess?.();
+    });
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await openRowMenu(rowContaining('Quiet morning, good appetite.'), user);
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
     const dialog = screen.getByRole('dialog');
     expect(
@@ -464,5 +500,6 @@ describe('NotesPage — own-note affordances', () => {
 
     expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(mockDelete.mock.calls[0][0]).toEqual({ circleId: CIRCLE_ID, noteId: 'note-1' });
+    expect(mockCareNoteDeleted).toHaveBeenCalledWith(CIRCLE_ID);
   });
 });

@@ -1,4 +1,5 @@
 import { test, expect, uniqueLabel } from '../fixtures';
+import { expandAllDayOverflow } from '../helpers';
 
 // Tasks write flow: create a task on the Tasks page → verify it appears in the
 // list → mark it complete (the control is a role="checkbox" toggle with a 5s
@@ -59,7 +60,12 @@ test('create, complete, and delete a task', async ({ page, circleId }) => {
   // NOTE: persisted-completed rows deliberately render as static text with no
   // Edit affordance (TasksPage row gate on completed_at), so assert on the
   // row's text — "<title> (done)" — not on an Edit button that no longer exists.
-  await page.locator('#tasks-status-filter').selectOption('completed');
+  // The status filter is a MoreMenu pill now (spec §6.4), not a <select>: a
+  // "Status: <current>" trigger that opens a menu of menuitems.
+  await page.getByRole('button', { name: /^Status:/ }).click();
+  const statusMenu = page.getByRole('menu');
+  await expect(statusMenu).toBeVisible({ timeout: 10_000 });
+  await statusMenu.getByRole('menuitem', { name: 'Completed', exact: true }).click();
   await expect(page.getByText(title)).toBeVisible({ timeout: 25_000 });
 
   // --- Delete (cleanup) ---
@@ -67,6 +73,9 @@ test('create, complete, and delete a task', async ({ page, circleId }) => {
   // EventDetailModal, which the calendar chip opens.
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+  // Task chips are all-day; heavy re-run traffic can push ours past the week
+  // view's per-day overflow cap (WeekView.tsx MAX_ALL_DAY_VISIBLE).
+  await expandAllDayOverflow(page);
 
   const chip = page.getByRole('button', { name: titleRe });
   await expect(chip.first()).toBeVisible({ timeout: 20_000 });

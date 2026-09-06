@@ -1,5 +1,8 @@
 import { useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from './Icon';
+import { Text } from './Text';
+import { chipClass, INPUT_SHELL, INPUT_TEXT, INPUT_TRAILING } from './inputStyles';
 
 export interface TagInputProps {
   /** Base id for the input element (label is wired via htmlFor). */
@@ -118,18 +121,20 @@ export function TagInput({
     }
   };
 
-  // Round 7 chip slimming: pills/chips are min-h-9 (36px) — still comfortably
-  // above the 24px SC 2.5.8 minimum. Non-chip controls (input, show-more,
-  // clear) keep their 44px targets.
-  const pillClass =
-    'inline-flex min-h-9 items-center gap-2 rounded-full bg-ink px-4 py-1.5 text-left text-sm font-medium text-cream';
-  const chipClass =
-    'min-h-9 rounded-full border border-line bg-transparent px-4 py-1.5 text-left text-sm text-ink hover:bg-bg-2';
+  // One chip language app-wide (spec §4.5) — the selected pill and the
+  // suggestion chip are the same control in two states, and both are 44 tall.
+  const pillClass = `${chipClass(true)} text-left`;
+  const suggestionClass = `${chipClass(false)} text-left`;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={inputId} className="text-sm font-medium text-ink-2">
-        {label}
+    // The 8px column gap IS `INPUT_LABEL`'s `mb-2` — this control stacks four
+    // rows (pills, input, chips, footnote), so the rhythm lives on the column
+    // and the label keeps only the 4px inset.
+    <div className="flex flex-col gap-2">
+      <label htmlFor={inputId} className="block ml-1">
+        <Text variant="label" as="span">
+          {label}
+        </Text>
       </label>
 
       {/* Screen-reader announcements for add/remove (silence otherwise). */}
@@ -148,17 +153,17 @@ export function TagInput({
               className={pillClass}
             >
               <span>{tag}</span>
-              <span aria-hidden="true">✕</span>
+              <Icon name="close-outline" size="inline" />
             </button>
           ))}
         </div>
       ) : null}
 
       {atCap ? (
-        <p className="m-0 text-sm text-ink-3">{t('tagInput.limitReached')}</p>
+        <Text variant="caption">{t('tagInput.limitReached')}</Text>
       ) : (
         <>
-          <div className="relative">
+          <div className={INPUT_SHELL}>
             <input
               id={inputId}
               type="text"
@@ -168,23 +173,23 @@ export function TagInput({
               autoComplete="off"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="min-h-[44px] w-full rounded-xl border border-line bg-cream px-4 py-3 pr-12 text-base text-ink placeholder:text-ink-3"
+              className={INPUT_TEXT}
             />
             {input.length > 0 ? (
               <button
                 type="button"
                 aria-label={t('tagInput.clearInput')}
                 onClick={() => setInput('')}
-                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-sm text-ink-3 hover:text-ink"
+                className={`${INPUT_TRAILING} hover:text-ink`}
               >
-                <span aria-hidden="true">✕</span>
+                <Icon name="close-outline" size="row" />
               </button>
             ) : null}
           </div>
 
           <div role="group" aria-label={label} className="flex flex-wrap gap-2">
             {showAddCustom ? (
-              <button type="button" onClick={() => add(candidate)} className={chipClass}>
+              <button type="button" onClick={() => add(candidate)} className={suggestionClass}>
                 {t('tagInput.addCustom', { text: candidate })}
               </button>
             ) : null}
@@ -194,7 +199,7 @@ export function TagInput({
                 type="button"
                 aria-pressed={false}
                 onClick={() => add(suggestion)}
-                className={chipClass}
+                className={suggestionClass}
               >
                 {suggestion}
               </button>

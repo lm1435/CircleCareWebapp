@@ -1,12 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import '@/i18n';
+import i18n from '@/i18n';
 import { JoinCircleModal } from '../JoinCircleModal';
 
 // Web port parity test for mobile's JoinCircleModal. Mocks the lookup/accept
 // mutations + toast so the test focuses on the two-step flow:
-//   - look up a code → preview the circle (name / caring for / role)
+//   - look up a code (six-box alphanumeric OtpInput) → preview the circle
+//     (name / caring for / role)
 //   - a bad code surfaces a localized error
 //   - accept → toast + close + onJoined(circleId)
 //   - "enter a different code" returns to the code entry step
@@ -57,18 +58,53 @@ function renderModal(overrides: Partial<Parameters<typeof JoinCircleModal>[0]> =
   return { onClose, onJoined };
 }
 
+// The invite code is now a six-box alphanumeric OtpInput (no single labeled
+// text field). `codeGroup` finds the accessible group; `codeBoxes` its six
+// textboxes; `pasteCode` focuses box 0 and pastes — OtpInput's alphanumeric
+// mode uppercases and strips stray punctuation/whitespace itself.
+function codeGroup(label = 'Invite code') {
+  return screen.getByRole('group', { name: label });
+}
+
+function codeBoxes(label = 'Invite code') {
+  return within(codeGroup(label)).getAllByRole('textbox');
+}
+
+function codeValue(label = 'Invite code') {
+  return codeBoxes(label)
+    .map((box) => (box as HTMLInputElement).value)
+    .join('');
+}
+
+async function pasteCode(
+  user: ReturnType<typeof userEvent.setup>,
+  code: string,
+  label = 'Invite code'
+) {
+  const [first] = codeBoxes(label);
+  await user.click(first);
+  await user.paste(code);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe('JoinCircleModal', () => {
+  // WCAG 2.4.3: Modal always used to grab initial focus for its own close
+  // button, which made OtpInput's own `autoFocus` dead on arrival.
+  it('focuses the first invite-code box on open, not the close button', () => {
+    renderModal();
+    expect(codeBoxes()[0]).toHaveFocus();
+  });
+
   it('looks up a code (normalized) and previews the circle', async () => {
     const user = userEvent.setup();
     lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
     renderModal();
 
-    await user.type(screen.getByLabelText('Invite code'), 'abc123');
-    await user.click(screen.getByRole('button', { name: 'Look up code' }));
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
 
     expect(lookupMutate).toHaveBeenCalledWith('ABC123', expect.anything());
     await waitFor(() => expect(screen.getByText("Rose's Circle")).toBeInTheDocument());
@@ -78,14 +114,67 @@ describe('JoinCircleModal', () => {
     expect(screen.getByText('Caregiver')).toBeInTheDocument();
   });
 
+  it('shows the care-recipient role badge in coral, not terracotta', async () => {
+    const user = userEvent.setup();
+    const careRecipientInvite = { ...INVITE, member_type: 'care_recipient' as const };
+    lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(careRecipientInvite));
+    renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+
+    const badge = await screen.findByText('Care recipient');
+    // Coral is warmth/identity, not the terracotta danger tint — this badge
+    // is a role label, not an error state.
+    expect(badge).toHaveClass('bg-coral-soft', 'text-coral-deep');
+  });
+
+  it('shows the caregiver role badge in the neutral default variant, not coral', async () => {
+    const user = userEvent.setup();
+    // INVITE.member_type is 'caregiver' — distinct branch from the
+    // care-recipient test above; guards a mutation that collapses the
+    // ternary to always return the same variant.
+    lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
+    renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+
+    const badge = await screen.findByText('Caregiver');
+    expect(badge).toHaveClass('bg-line-2', 'text-ink-2');
+  });
+
+  it('puts the filled action LAST in DOM order on both steps (ghost before filled)', async () => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
+    renderModal();
+
+    // Step 1: code entry — ghost "Cancel" before the filled "Find circle".
+    let labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels.indexOf('Find circle')).toBeGreaterThan(-1);
+    expect(labels.indexOf('Cancel')).toBeLessThan(labels.indexOf('Find circle'));
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByText("Rose's Circle");
+
+    // Step 2: preview — ghost "Enter a different code" before the filled "Join circle".
+    labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels.indexOf('Join circle')).toBeGreaterThan(-1);
+    expect(labels.indexOf('Enter a different code')).toBeLessThan(labels.indexOf('Join circle'));
+  });
+
   it('collapses the duplicate circle row when the circle is named after the recipient', async () => {
     const user = userEvent.setup();
-    const sameName = { ...INVITE, circle: { ...INVITE.circle, name: 'Grandma', recipient_name: 'Grandma' } };
+    const sameName = {
+      ...INVITE,
+      circle: { ...INVITE.circle, name: 'Grandma', recipient_name: 'Grandma' },
+    };
     lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(sameName));
     renderModal();
 
-    await user.type(screen.getByLabelText('Invite code'), 'abc123');
-    await user.click(screen.getByRole('button', { name: 'Look up code' }));
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
 
     // "Caring for" still shows the name; the redundant "Circle" label is gone.
     await waitFor(() => expect(screen.getByText('Caring for')).toBeInTheDocument());
@@ -101,8 +190,8 @@ describe('JoinCircleModal', () => {
     renderModal();
 
     // 6 chars — submit only enables at exactly the normalized code length (R4-2).
-    await user.type(screen.getByLabelText('Invite code'), 'BADCOD');
-    await user.click(screen.getByRole('button', { name: 'Look up code' }));
+    await pasteCode(user, 'BADCOD');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
 
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(
@@ -110,7 +199,7 @@ describe('JoinCircleModal', () => {
       )
     );
     // Still on the code-entry step.
-    expect(screen.getByRole('button', { name: 'Look up code' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Find circle' })).toBeInTheDocument();
   });
 
   it('accepts the invite → toast, close, and onJoined with the circle id', async () => {
@@ -119,8 +208,8 @@ describe('JoinCircleModal', () => {
     acceptMutate.mockImplementation((_code, opts) => opts?.onSuccess?.());
     const { onClose, onJoined } = renderModal();
 
-    await user.type(screen.getByLabelText('Invite code'), 'abc123');
-    await user.click(screen.getByRole('button', { name: 'Look up code' }));
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
     await screen.findByText("Rose's Circle");
     await user.click(screen.getByRole('button', { name: 'Join circle' }));
 
@@ -143,8 +232,8 @@ describe('JoinCircleModal', () => {
     );
     renderModal();
 
-    await user.type(screen.getByLabelText('Invite code'), 'abc123');
-    await user.click(screen.getByRole('button', { name: 'Look up code' }));
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
     await screen.findByText("Rose's Circle");
     await user.click(screen.getByRole('button', { name: 'Join circle' }));
 
@@ -157,41 +246,39 @@ describe('JoinCircleModal', () => {
     lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
     renderModal();
 
-    await user.type(screen.getByLabelText('Invite code'), 'abc123');
-    await user.click(screen.getByRole('button', { name: 'Look up code' }));
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
     await screen.findByText("Rose's Circle");
 
     await user.click(screen.getByRole('button', { name: 'Enter a different code' }));
 
-    expect(screen.getByLabelText('Invite code')).toBeInTheDocument();
+    expect(codeGroup()).toBeInTheDocument();
     expect(screen.queryByText("Rose's Circle")).not.toBeInTheDocument();
   });
 
   // ── Round 4 (R4-2): code normalization + submit gating ────────────────────
   describe('code entry polish (R4-2)', () => {
-    it('normalizes typing: uppercase, spaces and dashes stripped', async () => {
+    it('normalizes pasted text: uppercase, spaces and dashes stripped', async () => {
       const user = userEvent.setup();
       renderModal();
 
-      await user.type(screen.getByLabelText('Invite code'), 'ab-c 123');
+      await pasteCode(user, 'ab-c 123');
 
-      expect(screen.getByLabelText('Invite code')).toHaveValue('ABC123');
+      expect(codeValue()).toBe('ABC123');
     });
 
-    it('enables submit only at exactly 6 normalized characters', async () => {
+    it('enables submit only once all 6 boxes hold a normalized character', async () => {
       const user = userEvent.setup();
       renderModal();
 
-      const input = screen.getByLabelText('Invite code');
-      const submit = screen.getByRole('button', { name: 'Look up code' });
+      const submit = screen.getByRole('button', { name: 'Find circle' });
 
       expect(submit).toBeDisabled();
-      await user.type(input, 'ABC12');
+      await pasteCode(user, 'ABC12');
       expect(submit).toBeDisabled();
-      await user.type(input, '3');
+      // The paste above left focus on the last (6th, still-empty) box.
+      await user.paste('3');
       expect(submit).toBeEnabled();
-      await user.type(input, '4');
-      expect(submit).toBeDisabled();
     });
 
     it('looks up with the normalized code', async () => {
@@ -199,8 +286,8 @@ describe('JoinCircleModal', () => {
       lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
       renderModal();
 
-      await user.type(screen.getByLabelText('Invite code'), 'a b-c1 2-3');
-      await user.click(screen.getByRole('button', { name: 'Look up code' }));
+      await pasteCode(user, 'a b-c1 2-3');
+      await user.click(screen.getByRole('button', { name: 'Find circle' }));
 
       expect(lookupMutate).toHaveBeenCalledWith('ABC123', expect.anything());
     });
@@ -236,11 +323,9 @@ describe('JoinCircleModal', () => {
       expect(readText).not.toHaveBeenCalled();
       fireEvent.click(screen.getByRole('button', { name: 'Paste code' }));
 
-      await waitFor(() =>
-        expect(screen.getByLabelText('Invite code')).toHaveValue('ABC123')
-      );
+      await waitFor(() => expect(codeValue()).toBe('ABC123'));
       expect(readText).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('button', { name: 'Look up code' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Find circle' })).toBeEnabled();
     });
 
     it('shows the inline no-code hint when the clipboard has no 6-char code', async () => {
@@ -255,7 +340,7 @@ describe('JoinCircleModal', () => {
         ).toBeInTheDocument()
       );
       // Field untouched, no error alert — just the quiet hint.
-      expect(screen.getByLabelText('Invite code')).toHaveValue('');
+      expect(codeValue()).toBe('');
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
@@ -270,7 +355,7 @@ describe('JoinCircleModal', () => {
         screen.queryByText("We didn't find an invite code on your clipboard.")
       ).not.toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      expect(screen.getByLabelText('Invite code')).toHaveValue('');
+      expect(codeValue()).toBe('');
     });
 
     it('hides the paste button when clipboard read is unavailable', () => {
@@ -282,7 +367,114 @@ describe('JoinCircleModal', () => {
 
       expect(screen.queryByRole('button', { name: 'Paste code' })).not.toBeInTheDocument();
       // The rest of the form is unaffected.
-      expect(screen.getByLabelText('Invite code')).toBeInTheDocument();
+      expect(codeGroup()).toBeInTheDocument();
+    });
+  });
+  // ── CIRCLE_ARCHIVED / CARE_RECIPIENT_EXISTS (mobile parity) ───────────────
+  //
+  // The backend now refuses both invite paths for a circle its owner deleted
+  // (400 CIRCLE_ARCHIVED) and a second care-recipient accept
+  // (400 CARE_RECIPIENT_EXISTS). Neither was mapped here, so both fell through
+  // to "We couldn't find that invite code. Double-check it and try again." —
+  // which sends the invitee hunting for a typo that does not exist.
+  describe('archived circle / existing care recipient', () => {
+    // The i18n instance is a module singleton; hand it back in English or every
+    // later assertion in this file drifts.
+    afterEach(async () => {
+      await i18n.changeLanguage('en');
+    });
+
+    // The control labels are themselves translated, so the ES case drives the
+    // same flow through the Spanish ones.
+    const EN = { codeLabel: 'Invite code', lookUp: 'Find circle', join: 'Join circle' };
+    const ES = {
+      codeLabel: 'Código de invitación',
+      lookUp: 'Buscar círculo',
+      join: 'Unirte al círculo',
+    };
+    type Labels = typeof EN;
+
+    async function failLookupWith(code: string, L: Labels = EN) {
+      const user = userEvent.setup();
+      lookupMutate.mockImplementation((_c, opts) => opts?.onError?.({ error: { code } }));
+      renderModal();
+      await pasteCode(user, 'ABC123', L.codeLabel);
+      await user.click(screen.getByRole('button', { name: L.lookUp }));
+      return screen.findByRole('alert');
+    }
+
+    async function failAcceptWith(code: string, L: Labels = EN) {
+      const user = userEvent.setup();
+      lookupMutate.mockImplementation((_c, opts) => opts?.onSuccess?.(INVITE));
+      acceptMutate.mockImplementation((_c, opts) => opts?.onError?.({ error: { code } }));
+      renderModal();
+      await pasteCode(user, 'ABC123', L.codeLabel);
+      await user.click(screen.getByRole('button', { name: L.lookUp }));
+      await screen.findByText("Rose's Circle");
+      await user.click(screen.getByRole('button', { name: L.join }));
+      return screen.findByRole('alert');
+    }
+
+    it('explains CIRCLE_ARCHIVED on look-up instead of blaming the code', async () => {
+      const alert = await failLookupWith('CIRCLE_ARCHIVED');
+
+      expect(alert).toHaveTextContent(
+        'This circle is no longer active. Ask the person who invited you to check with the circle owner.'
+      );
+      // The specific reason REPLACES the generic "double-check it" copy.
+      expect(alert).not.toHaveTextContent('Double-check it');
+    });
+
+    it('explains CIRCLE_ARCHIVED on accept', async () => {
+      const alert = await failAcceptWith('CIRCLE_ARCHIVED');
+
+      expect(alert).toHaveTextContent(
+        'This circle is no longer active. Ask the person who invited you to check with the circle owner.'
+      );
+      expect(alert).not.toHaveTextContent("We couldn't join this circle");
+    });
+
+    it('explains CARE_RECIPIENT_EXISTS on accept', async () => {
+      const alert = await failAcceptWith('CARE_RECIPIENT_EXISTS');
+
+      expect(alert).toHaveTextContent(
+        'This circle already has a care recipient. Ask the person who invited you to send a caregiver invite instead.'
+      );
+      expect(alert).not.toHaveTextContent("We couldn't join this circle");
+    });
+
+    // The key-parity audit proves a Spanish key EXISTS; only reading it proves
+    // it is the right sentence.
+    it('renders both new codes in Spanish', async () => {
+      await i18n.changeLanguage('es');
+
+      const archived = await failLookupWith('CIRCLE_ARCHIVED', ES);
+      expect(archived).toHaveTextContent(
+        'Este círculo ya no está activo. Pídele a quien te invitó que consulte con el dueño del círculo.'
+      );
+
+      cleanup();
+      vi.clearAllMocks();
+
+      const recipient = await failAcceptWith('CARE_RECIPIENT_EXISTS', ES);
+      expect(recipient).toHaveTextContent(
+        'Este círculo ya tiene un receptor de cuidado. Pídele a quien te invitó que te envíe una invitación de cuidador.'
+      );
+    });
+
+    // Guards the fallback the two new cases were carved out of: an UNMAPPED
+    // code must still read as the generic message, on both steps.
+    it('leaves an unmapped code on the generic fallback', async () => {
+      const lookupAlert = await failLookupWith('SERVER_ERROR');
+      expect(lookupAlert).toHaveTextContent(
+        "We couldn't find that invite code. Double-check it and try again."
+      );
+
+      cleanup();
+      vi.clearAllMocks();
+
+      const acceptAlert = await failAcceptWith('SERVER_ERROR');
+      expect(acceptAlert).toHaveTextContent("We couldn't join this circle. Please try again.");
     });
   });
 });

@@ -1,27 +1,31 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { test, expect, uniqueLabel } from '../fixtures';
 import type { Page } from '@playwright/test';
+import { expandAllDayOverflow } from '../helpers';
 
-// Global "Create" menu flows. The authenticated shell (AppLayout + Sidebar) shows
-// a terracotta "Create" button that opens a role="menu" of role="menuitem"
-// options (Appointment, Medication, Task, Note, Document, Invite member —
-// gated by edit access / ownership; the demo account is the circle owner, so all
-// six show). Each option opens the matching modal (AddEventModal with the right
-// initialType, DocumentUploadModal, InviteMemberModal) — except Note, which
-// navigates to the Notes page where the composer lives.
+// Global create flows. The authenticated shell (AppLayout + Sidebar) shows a
+// moss "New" button that opens the `AddMenu` — a role="menu" of four
+// role="menuitem" options (Medication, Appointment, Task, Note), gated by edit
+// access. Each opens `AddEventModal` with the matching initialType, except Note,
+// which navigates to the Notes page where the composer lives (spec §4.5, §5.2).
 //
-// This suite exercises EVERY add path END-TO-END *through the menu*: open the
-// Create menu → click the option → fill + submit the modal → verify the item
+// The options are addressed by their VISIBLE short label ("Med", "Appt",
+// "Task", "Note"), which is also their accessible name — a full-word aria-label
+// over a short visible label fails WCAG 2.5.3. The full word is the `title`.
+//
+// Document upload and Invite member are NO LONGER create-menu options. Those
+// flows now live on the pages that own their context and are covered there:
+//   - document upload  -> e2e/flows/documents.spec.ts (Documents page Upload)
+//   - invite a member  -> e2e/flows/members.spec.ts (Members page Invite)
+//
+// This suite exercises every remaining add path END-TO-END *through the menu*:
+// open New → click the option → fill + submit the modal → verify the item
 // persisted on its page → delete/cancel it (self-clean → net-zero). Each type is
 // its own test() so a single failure is isolated and names the type.
 //
-// Conventions copied from calendar.spec.ts / vitals.spec.ts / documents.spec.ts /
-// members.spec.ts: run-unique titles + emails, getByRole queries, dialog-scoped
-// lookups, generous backend-wait timeouts, and a self-cleaning delete. The
-// desktop sidebar only renders at the xl breakpoint, so we widen the viewport to
-// be safely above it.
+// Conventions copied from calendar.spec.ts / vitals.spec.ts / careNotes.spec.ts:
+// run-unique titles, getByRole queries, dialog-scoped lookups, generous
+// backend-wait timeouts, and a self-cleaning delete. The desktop sidebar only
+// renders at the xl breakpoint, so we widen the viewport safely above it.
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -41,18 +45,47 @@ function rx(value: string): RegExp {
   return new RegExp(escapeRegExp(value));
 }
 
-// Smallest valid one-page PDF — PHI-free placeholder bytes (from documents.spec).
-const MINIMAL_PDF =
-  '%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
-  '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
-  '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 100 100]>>endobj\n' +
-  'trailer<</Root 1 0 R>>\n%%EOF\n';
+/**
+ * A dose time still ahead of "now" in the circle's timezone (America/Denver —
+ * every seeded circle uses it, per medications.spec.ts), rounded UP to the
+ * next quarter hour, so creating a medication with today's date doesn't trip
+ * the "time already passed" path. Returns null when even a 2-hour cushion
+ * would land at/after 23:00 — the caller falls back to a fixed time and
+ * handles the "Starts with the next dose" branch explicitly instead.
+ */
+function futureDoseTimeToday(): string | null {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver',
+    hour: 'numeric',
+    minute: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
 
-/** Open the global Create menu and click one of its options. */
+  // +2 hours, then round up to the next quarter hour.
+  const rounded = Math.ceil((hour * 60 + minute + 120) / 15) * 15;
+  if (rounded >= 23 * 60) return null;
+
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * The sidebar's create trigger. Scoped to `<aside>` because the FloatingNavBar
+ * carries a "New" button too — CSS-hidden at this width, but scoping keeps the
+ * query unambiguous regardless.
+ */
+function newTrigger(page: Page) {
+  return page.locator('aside').getByRole('button', { name: 'New', exact: true });
+}
+
+/** Open the global create menu and click one of its options. */
 async function openCreateOption(page: Page, name: string, exact = false): Promise<void> {
-  const createBtn = page.getByRole('button', { name: 'Create', exact: true });
-  await expect(createBtn).toBeVisible({ timeout: 15_000 });
-  await createBtn.click();
+  const trigger = newTrigger(page);
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await trigger.click();
   await expect(page.getByRole('menu')).toBeVisible();
   await page.getByRole('menuitem', { name, exact }).click();
 }
@@ -68,6 +101,11 @@ async function openCreateOption(page: Page, name: string, exact = false): Promis
  * path a keyboard user takes.
  */
 async function openChipByTitle(page: Page, titleRe: RegExp): Promise<void> {
+  // Heavy re-run traffic pushes many synthetic all-day Task/Appointment
+  // events onto "today", which can push this run's chip past the week
+  // view's per-day overflow cap (WeekView.tsx MAX_ALL_DAY_VISIBLE) — expand
+  // any collapsed day before searching so the chip is actually queryable.
+  await expandAllDayOverflow(page);
   const chip = page.getByRole('button', { name: titleRe }).first();
   await expect(chip).toBeVisible({ timeout: 20_000 });
   await chip.press('Enter');
@@ -88,33 +126,42 @@ async function deleteCalendarEventByTitle(
 
   const chip = page.getByRole('button', { name: titleRe });
   await openChipByTitle(page, titleRe);
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
+  // (EventDetailActions.tsx spec §M2) whenever 2+ secondary actions apply —
+  // true for every fresh (non-completed) event this suite creates.
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  const actionsMenu = page.getByRole('menu');
+  await expect(actionsMenu).toBeVisible();
+  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
 
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
 }
 
-test('Create menu shows every option for the circle owner', async ({ page, circleId }) => {
+test('the create menu shows exactly the four create options', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-  const createBtn = page.getByRole('button', { name: 'Create', exact: true });
-  await expect(createBtn).toBeVisible({ timeout: 15_000 });
-  await createBtn.click();
+  const trigger = newTrigger(page);
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await trigger.click();
 
   const menu = page.getByRole('menu');
   await expect(menu).toBeVisible();
 
-  // All six options are present (owner sees create + invite).
-  await expect(page.getByRole('menuitem', { name: 'Appointment' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Medication' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Task', exact: true })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Note', exact: true })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Document' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Invite member' })).toBeVisible();
+  // Mobile's four, in mobile's order, named by their visible short label.
+  await expect(menu.getByRole('menuitem', { name: 'Med', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Appt', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Task', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Note', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem')).toHaveCount(4);
+
+  // Removed in Task 11 (spec §5.2) — see the file header for where each moved.
+  await expect(menu.getByRole('menuitem', { name: 'Document' })).toHaveCount(0);
+  await expect(menu.getByRole('menuitem', { name: 'Invite member' })).toHaveCount(0);
 });
 
-test('create a task end-to-end via the global Create menu', async ({ page, circleId }) => {
+test('create a task end-to-end via the global create menu', async ({ page, circleId }) => {
   const title = uniqueLabel('Task');
   const titleRe = rx(title);
 
@@ -145,14 +192,14 @@ test('create a task end-to-end via the global Create menu', async ({ page, circl
   await deleteCalendarEventByTitle(page, circleId, titleRe);
 });
 
-test('create an appointment end-to-end via the global Create menu', async ({ page, circleId }) => {
+test('create an appointment end-to-end via the global create menu', async ({ page, circleId }) => {
   const title = uniqueLabel('Appt');
   const titleRe = rx(title);
 
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
   // --- Create via the menu ---
-  await openCreateOption(page, 'Appointment');
+  await openCreateOption(page, 'Appt', true);
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
@@ -166,43 +213,57 @@ test('create an appointment end-to-end via the global Create menu', async ({ pag
   // --- Verify on the calendar ---
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+  await expandAllDayOverflow(page);
   const chip = page.getByRole('button', { name: titleRe });
   await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Delete (cleanup) ---
   await openChipByTitle(page, titleRe);
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
+  // (EventDetailActions.tsx spec §M2).
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  const actionsMenu = page.getByRole('menu');
+  await expect(actionsMenu).toBeVisible();
+  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
 });
 
-test('create a medication end-to-end via the global Create menu', async ({ page, circleId }) => {
+test('create a medication end-to-end via the global create menu', async ({ page, circleId }) => {
   const title = uniqueLabel('Med');
   const titleRe = rx(title);
 
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
   // --- Create via the menu ---
-  await openCreateOption(page, 'Medication');
+  await openCreateOption(page, 'Med', true);
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('#event_type')).toHaveValue('medication');
 
   // Medication requires name + date + time (time is mandatory for meds, unlike
-  // tasks). Dosage is optional but we fill it for realism.
+  // tasks). Dosage is optional but we fill it for realism. A fixed time can be
+  // ALREADY PAST by the time this runs, and saving a past time makes the
+  // medication start with its NEXT dose (tomorrow) instead of today — on a
+  // Saturday, tomorrow falls in the NEXT calendar week, so the chip lookup
+  // below would search the wrong week entirely. Pick a time still ahead today
+  // when the wall clock allows it; only fall back to a fixed time in the rare
+  // near-midnight window `futureDoseTimeToday` refuses to touch.
+  const doseTime = futureDoseTimeToday();
   await dialog.locator('#medication_name').fill(title);
   await dialog.locator('#medication_dosage').fill('1 tablet');
   await dialog.locator('#scheduled_date').fill(todayISO());
-  await dialog.locator('#scheduled_time').fill('09:00');
+  await dialog.locator('#scheduled_time').fill(doseTime ?? '09:00');
   await dialog.getByRole('button', { name: 'Create' }).click();
 
-  // Medication lifecycle: saving a med whose time already passed TODAY (in the
-  // circle's timezone) interposes a non-blocking "Time already passed" notice —
-  // Continue proceeds with the save. Whether it appears depends on the wall
-  // clock at run time (09:00 fixed above), so continue through it when shown.
-  const pastNotice = page.getByRole('dialog', { name: 'Time already passed' });
+  // Saving a med whose time already passed TODAY (in the circle's timezone)
+  // interposes a non-blocking "Starts with the next dose" (create) or "Time
+  // already passed" (edit) notice — Continue proceeds with the save. With a
+  // future `doseTime` this should never fire; it's only expected in the
+  // `doseTime === null` fallback.
+  const pastNotice = page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ });
   const noticeShown = await pastNotice
     .waitFor({ state: 'visible', timeout: 2_500 })
     .then(() => true)
@@ -214,18 +275,35 @@ test('create a medication end-to-end via the global Create menu', async ({ page,
   // --- Verify on the calendar ---
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+  await expandAllDayOverflow(page);
   const chip = page.getByRole('button', { name: titleRe });
+  if (noticeShown) {
+    // The dose now starts tomorrow, not today. Tomorrow is usually still in
+    // THIS week's grid, but not when today is the week's last day — try the
+    // current week first, then advance once rather than assuming either way.
+    const visibleThisWeek = await chip.first().isVisible().catch(() => false);
+    if (!visibleThisWeek) {
+      await page.getByRole('button', { name: 'Next week' }).click();
+      await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+      await expandAllDayOverflow(page);
+    }
+  }
   await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Delete (cleanup) ---
   await openChipByTitle(page, titleRe);
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
+  // (EventDetailActions.tsx spec §M2).
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  const actionsMenu = page.getByRole('menu');
+  await expect(actionsMenu).toBeVisible();
+  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
 });
 
-test('create a note end-to-end via the global Create menu', async ({ page, circleId }) => {
+test('create a note end-to-end via the global create menu', async ({ page, circleId }) => {
   // Unlike the other options, 'Note' doesn't open a modal — it navigates to the
   // Notes page, where the composer lives (mirrors mobile's New-menu note entry).
   // Full note CRUD is covered by careNotes.spec.ts; this verifies the menu path
@@ -247,97 +325,35 @@ test('create a note end-to-end via the global Create menu', async ({ page, circl
   await postBtn.click();
   await expect(page.getByText(rx(body)).first()).toBeVisible({ timeout: 20_000 });
 
-  // --- Delete (cleanup, same row-scoping as careNotes.spec.ts) ---
+  // Reload before touching row actions: the post is optimistic-then-confirmed
+  // (NoteComposer posts, then the list refetches and swaps the optimistic row
+  // for the server-confirmed one), so clicking the row's MoreMenu right after
+  // `postBtn.click()` can race that swap — the trigger you resolved detaches
+  // mid-click as the confirmed row remounts. A reload guarantees we're
+  // interacting with the settled, server-confirmed row (careNotes.spec.ts
+  // uses the same reload-before-row-actions pattern for its edit/delete).
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByText(rx(body)).first()).toBeVisible({ timeout: 20_000 });
+
+  // --- Delete (cleanup, same row-scoping + MoreMenu as careNotes.spec.ts) ---
+  // Scoped to `li` ONLY: NoteRow.tsx's root is always `<Card as="li">`, and
+  // including ancestor divs let the outer feed container win a `.last()`
+  // tie-break, resolving to every row's trigger instead of one.
+  // NoteRow.tsx's MoreMenu trigger is named per-author ("Actions for note by
+  // <author>", notes.json row.actionsFor) — not the plain "More" every other
+  // MoreMenu instance defaults to — so match that instead of an exact "More".
+  const rowActions = /^Actions for note by /;
   const row = page
-    .locator('li, article, div')
+    .locator('li')
     .filter({ hasText: rx(body) })
-    .filter({ has: page.getByRole('button', { name: 'Delete', exact: true }) })
+    .filter({ has: page.getByRole('button', { name: rowActions }) })
     .last();
-  await row.getByRole('button', { name: 'Delete', exact: true }).click();
+  await row.getByRole('button', { name: rowActions }).click();
+  const rowMenu = page.getByRole('menu');
+  await expect(rowMenu).toBeVisible();
+  await rowMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await expect(confirm).toBeVisible();
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByText(rx(body))).toHaveCount(0, { timeout: 20_000 });
-});
-
-test('send an invite end-to-end via the global Create menu then cancel', async ({
-  page,
-  circleId,
-}) => {
-  // A unique throwaway address so the new pending row is uniquely targetable.
-  const email = `e2e-menu-invite-${Date.now()}@example.com`;
-
-  await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-
-  // --- Send a real email invite via the menu (member_type defaults to caregiver) ---
-  await openCreateOption(page, 'Invite member');
-
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible({ timeout: 20_000 });
-  await expect(dialog.getByRole('heading', { name: 'Invite a member' })).toBeVisible();
-  await dialog.locator('#invite-email').fill(email);
-  await dialog.getByRole('button', { name: 'Send invite' }).click();
-
-  // Modal closes on success.
-  await expect(dialog).toBeHidden({ timeout: 20_000 });
-
-  // --- The pending invite now appears in the roster (Members page) ---
-  await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
-  const cancelBtn = page.getByRole('button', { name: `Cancel invite for ${email}` });
-  await expect(cancelBtn).toBeVisible({ timeout: 20_000 });
-
-  // --- Cancel the newly-added invite (cleanup → net-zero) ---
-  await cancelBtn.click();
-  const confirm = page.getByRole('dialog');
-  await expect(confirm).toBeVisible({ timeout: 10_000 });
-  await confirm.getByRole('button', { name: 'Cancel invite' }).click();
-  await expect(page.getByRole('button', { name: `Cancel invite for ${email}` })).toHaveCount(0, {
-    timeout: 20_000,
-  });
-});
-
-test('upload a document end-to-end via the global Create menu', async ({ page, circleId }) => {
-  const name = uniqueLabel('Doc');
-
-  // A tiny real file for the <input type=file>. Only jpg/jpeg/png/heic/pdf are
-  // accepted, so write a minimal valid PDF. PHI-free filler only.
-  const dir = mkdtempSync(join(tmpdir(), 'e2e-menu-doc-'));
-  const filePath = join(dir, `e2e-menu-doc-${Date.now()}.pdf`);
-  writeFileSync(filePath, MINIMAL_PDF);
-
-  try {
-    await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-
-    // --- Upload via the menu ---
-    await openCreateOption(page, 'Document');
-
-    const uploadDialog = page.getByRole('dialog');
-    await expect(uploadDialog).toBeVisible({ timeout: 15_000 });
-
-    await uploadDialog.locator('input[type="file"]').setInputFiles(filePath);
-    // setInputFiles pre-fills the Name from the file name; overwrite with ours.
-    await uploadDialog.locator('#document-upload-label').fill(name);
-    await uploadDialog.locator('#document-upload-category').selectOption('medical_records');
-    await uploadDialog.getByRole('button', { name: 'Upload', exact: true }).click();
-
-    // Uploads route through a live dev tunnel — be generous.
-    await expect(uploadDialog).toBeHidden({ timeout: 30_000 });
-
-    // --- Verify on the Documents page ---
-    await page.goto(`/circles/${circleId}/documents`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(rx(name), { exact: false }).first()).toBeVisible({
-      timeout: 30_000,
-    });
-
-    // --- Delete (cleanup) ---
-    await page.getByRole('button', { name: rx(`Delete ${name}`) }).click();
-    const confirm = page.getByRole('dialog');
-    await expect(confirm).toBeVisible();
-    await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
-    await expect(page.getByText(rx(name), { exact: false })).toHaveCount(0, { timeout: 20_000 });
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
 });

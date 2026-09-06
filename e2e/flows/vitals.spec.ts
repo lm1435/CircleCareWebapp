@@ -26,10 +26,11 @@ test('log, edit, and delete a manual vital reading', async ({ page, circleId }) 
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   await page.goto(`/circles/${circleId}/vitals`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('button', { name: 'Add reading' })).toBeVisible({ timeout: 15_000 });
+  const addBtn = page.getByRole('button', { name: 'Add reading' }).first();
+  await expect(addBtn).toBeVisible({ timeout: 15_000 });
 
   // --- Log (create) ---
-  await page.getByRole('button', { name: 'Add reading' }).click();
+  await addBtn.click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
 
@@ -43,8 +44,15 @@ test('log, edit, and delete a manual vital reading', async ({ page, circleId }) 
   await expect(row.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Edit ---
-  // Edit the reading we just created (matched by our unique note in its subtext).
-  await page.getByRole('button', { name: new RegExp(`Edit reading .*${esc(valueText)}`) }).click();
+  // Row actions are a MoreMenu now: a single "Actions for reading <value>"
+  // trigger opens a menu of Edit/Delete menuitems (vitals:actions.menuLabel).
+  await page
+    .getByRole('button', { name: new RegExp(`Actions for reading .*${esc(valueText)}`) })
+    .click();
+  const rowMenu = page.getByRole('menu');
+  await expect(rowMenu).toBeVisible();
+  await rowMenu.getByRole('menuitem', { name: 'Edit', exact: true }).click();
+
   const editDialog = page.getByRole('dialog');
   await expect(editDialog).toBeVisible();
   await editDialog.locator('#value1').fill(String(editedBpm));
@@ -56,8 +64,12 @@ test('log, edit, and delete a manual vital reading', async ({ page, circleId }) 
 
   // --- Delete (cleanup) ---
   await page
-    .getByRole('button', { name: new RegExp(`Delete reading .*${esc(editedValueText)}`) })
+    .getByRole('button', { name: new RegExp(`Actions for reading .*${esc(editedValueText)}`) })
     .click();
+  const deleteMenu = page.getByRole('menu');
+  await expect(deleteMenu).toBeVisible();
+  await deleteMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+
   const confirm = page.getByRole('dialog');
   await expect(confirm).toBeVisible();
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import '@/i18n';
+import i18n from '@/i18n';
 import PendingInvitesPage from '@/pages/PendingInvitesPage';
 import { Analytics } from '@/lib/analytics';
 import type { PendingInvite } from '@/api/invites';
@@ -77,6 +77,16 @@ describe('PendingInvitesPage', () => {
       screen.getByText('Luis Meza invited you to help care for Rose')
     ).toBeInTheDocument();
     expect(screen.getByText("Mom's Care")).toBeInTheDocument();
+  });
+
+  // Care-recipient identity is coral, never terracotta (terracotta reads as danger).
+  it('gives the care-recipient role badge the coral variant, not terracotta', () => {
+    usePendingInvitesResult.data = [makeInvite({ member_type: 'care_recipient' })];
+    renderPage();
+
+    const badge = screen.getByText('Care recipient');
+    expect(badge.className).toContain('bg-coral-soft');
+    expect(badge.className).not.toContain('terracotta');
   });
 
   it('falls back to the inviter email when there is no name', () => {
@@ -167,5 +177,41 @@ describe('PendingInvitesPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Unable to load invitations');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(usePendingInvitesResult.refetch).toHaveBeenCalled();
+  });
+  // ── Expiry deadline (mobile parity) ──────────────────────────────────────
+  //
+  // `expires_at` was already on every pending invite; this list showed nothing,
+  // so an invitee had no way to tell how long they had to accept.
+  describe('expiry deadline', () => {
+    // i18n is a module singleton — hand it back in English.
+    afterEach(async () => {
+      await i18n.changeLanguage('en');
+    });
+
+    it('shows the deadline from expires_at', () => {
+      usePendingInvitesResult.data = [makeInvite()];
+      renderPage();
+
+      expect(screen.getByText('Expires')).toBeInTheDocument();
+      // 2026-06-08T00:00:00Z in the test env locale (en-US).
+      expect(screen.getByText(/Ju(ne|ly) \d+/)).toBeInTheDocument();
+    });
+
+    it('labels the deadline in Spanish', async () => {
+      await i18n.changeLanguage('es');
+      usePendingInvitesResult.data = [makeInvite()];
+      renderPage();
+
+      expect(screen.getByText('Vence')).toBeInTheDocument();
+    });
+
+    // A formatting problem must never make a usable invite look broken.
+    it('omits the deadline when expires_at is unparseable', () => {
+      usePendingInvitesResult.data = [makeInvite({ expires_at: 'not-a-date' })];
+      renderPage();
+
+      expect(screen.queryByText('Expires')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+    });
   });
 });

@@ -31,7 +31,6 @@ import i18n from 'i18next';
 import {
   formatTimeOfDay,
   getTimezoneLabel,
-  getTimezoneAbbreviation,
   getTimezoneOffsetMinutes,
   getDateInTimezone,
   convertTimeBetweenTimezones,
@@ -41,29 +40,14 @@ import {
 } from '../timezone';
 
 /**
- * The `common:timezoneLabels.*` bundle this change adds to the locale files.
- * Mirrors the key patch exactly — if the two drift, this suite is lying.
+ * i18next is booted with an EMPTY `common` namespace on purpose.
+ *
+ * The zone label used to be read from `common:timezoneLabels.<IANA>`, and this
+ * file seeded both language bundles to feed it. That key is gone — the label is
+ * derived from the IANA id itself — so anything these tests assert about
+ * Spanish now has to come from `utils/timezone.ts`, not from a fixture written
+ * beside the assertion. Seeding nothing is what makes that provable.
  */
-const EN_TIMEZONE_LABELS = {
-  'America/New_York': 'Eastern Time',
-  'America/Chicago': 'Central Time',
-  'America/Denver': 'Mountain Time',
-  'America/Los_Angeles': 'Pacific Time',
-  'America/Phoenix': 'Arizona Time',
-  'America/Anchorage': 'Alaska Time',
-  'Pacific/Honolulu': 'Hawaii Time',
-};
-
-const ES_TIMEZONE_LABELS = {
-  'America/New_York': 'Hora del Este',
-  'America/Chicago': 'Hora Central',
-  'America/Denver': 'Hora de la Montaña',
-  'America/Los_Angeles': 'Hora del Pacífico',
-  'America/Phoenix': 'Hora de Arizona',
-  'America/Anchorage': 'Hora de Alaska',
-  'Pacific/Honolulu': 'Hora de Hawái',
-};
-
 beforeAll(async () => {
   await i18n.init({
     lng: 'en',
@@ -74,8 +58,8 @@ beforeAll(async () => {
     nonExplicitSupportedLngs: true, // es-MX / es-419 → es, as the app does
     interpolation: { escapeValue: false },
     resources: {
-      en: { common: { timezoneLabels: EN_TIMEZONE_LABELS } },
-      es: { common: { timezoneLabels: ES_TIMEZONE_LABELS } },
+      en: { common: {} },
+      es: { common: {} },
     },
   });
 });
@@ -136,40 +120,54 @@ describe('formatTimeOfDay default language', () => {
 // ============================================================================
 // getTimezoneLabel — localized
 // ============================================================================
+// The label no longer comes from a locale KEY. It is the CITY inside the IANA
+// id, respelled for Spanish by a table in `utils/timezone.ts` — so there is no
+// `common:timezoneLabels.*` bundle left to keep in sync, and nothing here has
+// to seed one. What i18next still decides is WHICH language to spell in, which
+// is what this block pins.
 describe('getTimezoneLabel localization', () => {
-  it('returns the English label in English', () => {
-    expect(getTimezoneLabel('America/Denver')).toBe('Mountain Time');
-    expect(getTimezoneLabel('America/New_York')).toBe('Eastern Time');
+  it('spells the city in English in English', () => {
+    expect(getTimezoneLabel('America/Denver')).toBe('Denver');
+    expect(getTimezoneLabel('America/New_York')).toBe('New York');
+    expect(getTimezoneLabel('Europe/London')).toBe('London');
   });
 
-  it('returns the Spanish label in Spanish', async () => {
-    // The bug: "Las horas se guardan en Mountain Time (MT)." — an English
-    // fragment welded into a Spanish sentence.
+  it('spells the city in Spanish once i18next is on Spanish', async () => {
+    // The bug this replaced: "Las horas se guardan en Mountain Time (MT)." — an
+    // English fragment welded into a Spanish sentence.
     await i18n.changeLanguage('es');
-    expect(getTimezoneLabel('America/Denver')).toBe('Hora de la Montaña');
-    expect(getTimezoneLabel('America/New_York')).toBe('Hora del Este');
-    expect(getTimezoneLabel('Pacific/Honolulu')).toBe('Hora de Hawái');
+    expect(getTimezoneLabel('America/New_York')).toBe('Nueva York');
+    expect(getTimezoneLabel('Europe/London')).toBe('Londres');
+    expect(getTimezoneLabel('America/Mexico_City')).toBe('Ciudad de México');
+  });
+
+  it('follows a REGIONAL Spanish tag, as the browser detector reports one', async () => {
+    // The detector routinely yields es-MX or es-419, never bare es.
+    await i18n.changeLanguage('es-MX');
+    expect(getTimezoneLabel('Europe/London')).toBe('Londres');
+    await i18n.changeLanguage('es-419');
+    expect(getTimezoneLabel('Europe/London')).toBe('Londres');
   });
 
   it('honours an explicit language over the active one', async () => {
     await i18n.changeLanguage('en');
-    expect(getTimezoneLabel('America/Denver', 'es')).toBe('Hora de la Montaña');
+    expect(getTimezoneLabel('Europe/Berlin', 'es')).toBe('Berlín');
     await i18n.changeLanguage('es');
-    expect(getTimezoneLabel('America/Denver', 'en')).toBe('Mountain Time');
+    expect(getTimezoneLabel('Europe/Berlin', 'en')).toBe('Berlin');
   });
 
-  it('degrades to the English label when the key is missing, never to a raw key', async () => {
-    // The locale JSON is merged centrally and could lag this code. A key name
-    // must never reach a sentence a customer reads.
+  it('needs no resource bundle at all', async () => {
+    // The old label degraded to English when `common` was missing. There is no
+    // key to miss any more — pulling the whole bundle changes nothing.
     const removed = i18n.getResourceBundle('es', 'common');
     i18n.removeResourceBundle('es', 'common');
     try {
       await i18n.changeLanguage('es');
       const label = getTimezoneLabel('America/Denver');
-      expect(label).toBe('Mountain Time');
+      expect(label).toBe('Denver');
       expect(label).not.toContain('timezoneLabels');
     } finally {
-      i18n.addResourceBundle('es', 'common', removed, true, true);
+      if (removed) i18n.addResourceBundle('es', 'common', removed, true, true);
     }
   });
 });
@@ -178,8 +176,11 @@ describe('getTimezoneLabel localization', () => {
 // The Mexico City customer — the live bug
 // ============================================================================
 // "Las horas se guardan en America/Mexico_City (Mexico_City)." Unmapped zones
-// fell through to the raw IANA id, which is unreadable in EVERY language.
-describe('unmapped timezones read as prose in every language', () => {
+// fell through to the raw IANA id, which is unreadable in EVERY language. The
+// curated-label fix that followed only moved the problem: it read "Central
+// Standard Time" in English and, once Intl was asked in Spanish, prose that
+// varied by ICU build.
+describe('every zone reads as a place name, in every language', () => {
   const UNMAPPED = 'America/Mexico_City';
 
   it('never returns the raw IANA identifier in English', () => {
@@ -187,7 +188,7 @@ describe('unmapped timezones read as prose in every language', () => {
     expect(label).not.toBe(UNMAPPED);
     expect(label).not.toContain('/');
     expect(label).not.toContain('_');
-    expect(label).toBe('Central Standard Time');
+    expect(label).toBe('Mexico City');
   });
 
   it('never returns the raw IANA identifier in Spanish', async () => {
@@ -196,25 +197,24 @@ describe('unmapped timezones read as prose in every language', () => {
     expect(label).not.toBe(UNMAPPED);
     expect(label).not.toContain('/');
     expect(label).not.toContain('_');
-    // Intl's own Spanish name. Asserted case-insensitively on the distinctive
-    // word rather than in full: ICU wording varies across Node/browser builds,
-    // and the contract here is "readable Spanish", not one exact string.
-    expect(label.toLowerCase()).toContain('hora');
+    expect(label).toBe('Ciudad de México');
   });
 
-  it('actually differs between the two languages', async () => {
-    const en = getTimezoneLabel(UNMAPPED, 'en');
-    const es = getTimezoneLabel(UNMAPPED, 'es');
-    expect(es).not.toBe(en);
+  it('actually differs between the two languages', () => {
+    expect(getTimezoneLabel(UNMAPPED, 'es')).not.toBe(getTimezoneLabel(UNMAPPED, 'en'));
   });
 
   it('renders the full sentence fragment the modals build', async () => {
     // Exactly what AddEventModal / VitalFormModal / CalendarPage interpolate.
+    // The abbreviation in brackets is gone with the table that invented it —
+    // CalendarPage rendered "Mountain Time (MT)" and, outside the seven curated
+    // US zones, "Central European Standard Time (GMT+1)".
     await i18n.changeLanguage('es');
-    const fragment = `${getTimezoneLabel(UNMAPPED)} (${getTimezoneAbbreviation(UNMAPPED)})`;
+    const fragment = getTimezoneLabel(UNMAPPED);
     expect(fragment).not.toContain('America/Mexico_City');
     expect(fragment).not.toContain('Mexico_City');
-    expect(fragment).toContain('(CST)');
+    expect(fragment).not.toContain('GMT');
+    expect(fragment).toBe('Ciudad de México');
   });
 });
 

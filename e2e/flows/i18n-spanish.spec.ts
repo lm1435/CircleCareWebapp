@@ -78,7 +78,11 @@ async function expectSpanishNav(page: Page): Promise<void> {
   const nav = page.getByRole('navigation', { name: 'Navegación principal' });
   await expect(nav).toBeVisible({ timeout: NAV_TIMEOUT });
   for (const label of ES_NAV) {
-    await expect(nav.getByText(label, { exact: true })).toBeVisible();
+    // .first(): the "Home" group's Eyebrow label and its single NavLink render
+    // the SAME text ("Inicio") inside the nav (Sidebar.tsx groups a single-item
+    // section under an eyebrow named after that item) — either match proves
+    // the label is translated.
+    await expect(nav.getByText(label, { exact: true }).first()).toBeVisible();
   }
   // No English chrome leaked. exact:true so "Calendar" doesn't match "Calendario".
   for (const en of EN_NAV) {
@@ -144,15 +148,16 @@ test('join-circle modal is fully translated', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Unirte a un círculo' }).click();
 
-  // Modal chrome + the two-step entry copy, all Spanish.
+  // Modal chrome + the two-step entry copy, all Spanish (source of truth:
+  // src/i18n/es/circles.json -> "joinModal").
   await expect(
-    page.getByText('Ingresa el código que viene en tu correo de invitación.')
+    page.getByText('Ingresa el código de 6 caracteres de tu invitación.')
   ).toBeVisible({ timeout: NAV_TIMEOUT });
   await expect(page.getByText('Código de invitación', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Buscar código' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Buscar círculo' })).toBeVisible();
   // No English fallbacks bled into the modal.
   await expect(page.getByText('Invite code', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Look up code' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Find circle' })).toHaveCount(0);
 });
 
 test('profile language selector is in Spanish and reflects the active language', async ({

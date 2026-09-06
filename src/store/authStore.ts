@@ -5,6 +5,7 @@ import { queryClient } from '@/lib/queryClient';
 import { authApi, type AuthSession, type AuthUser } from '@/api/auth';
 import { getCurrentUser } from '@/api/users';
 import { identifyUser, resetAnalytics } from '@/lib/posthog';
+import { flushAnalyticsConsentSync } from '@/lib/analyticsConsentSync';
 import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
 import i18n from '@/i18n';
@@ -40,6 +41,8 @@ interface AuthState {
 }
 
 const AUTH_CHANNEL_NAME = 'cc-auth';
+/** Mirrors SESSION_HINT_COOKIE_NAME in backend/src/middleware/webSession.ts. */
+const SESSION_HINT_COOKIE_NAME = 'cc_session';
 let channel: BroadcastChannel | null = null;
 let bootstrapPromise: Promise<void> | null = null;
 
@@ -55,8 +58,54 @@ function hasSessionHint(): boolean {
   if (typeof document === 'undefined') return false;
   return document.cookie.split('; ').some((entry) => {
     const [name, value] = entry.split('=');
-    return name === 'cc_session' && value === '1';
+    return name === SESSION_HINT_COOKIE_NAME && value === '1';
   });
+}
+
+/**
+ * Expire the readable `cc_session` hint cookie from the client.
+ *
+ * WHY THIS EXISTS. Sign-out's server call is best-effort by design — a network
+ * failure must not block local cleanup. But until this, local cleanup could not
+ * touch the cookies AT ALL: only the backend's Set-Cookie cleared them. So a
+ * logout whose request never landed (offline, or the API edge 502ing) tore down
+ * in-memory state, sent the user to /login, and left BOTH cookies intact — and
+ * the next page load read the surviving hint, called /auth/refresh with the
+ * still-valid 90-day refresh cookie, and signed the user back in. Sign-out
+ * appeared to work and silently undid itself. Mobile has no such hole: deleting
+ * the SecureStore blob is local and cannot fail this way.
+ *
+ * `cc_refresh` CANNOT be cleared here — it is httpOnly, which is the whole
+ * point of it. So this is mitigation, not revocation: the refresh cookie stays
+ * a dormant credential until the server clears it or it expires. Killing the
+ * hint is enough to stop the automatic re-login, because bootstrap short-
+ * circuits without it.
+ *
+ * Deleting a cookie only lands when Domain and Path match the ones it was set
+ * with. The backend sets Path=/ and Domain=COOKIE_DOMAIN (`.circlecare.app` in
+ * production, UNSET in local dev where page and API share a host) — and the
+ * client has no env var naming it. So walk the hostname's parent chain and
+ * expire each candidate, plus the host-only form for dev. A miss is a silent
+ * no-op, never an error, which is exactly why we do not guess a single domain.
+ */
+function clearSessionHintCookie(): void {
+  if (typeof document === 'undefined' || typeof location === 'undefined') return;
+  const expired = `${SESSION_HINT_COOKIE_NAME}=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/`;
+
+  // Host-only form (local dev: the backend attaches no Domain there).
+  document.cookie = expired;
+
+  const host = location.hostname;
+  // An IP literal or bare `localhost` has no parent domain to walk.
+  if (host === 'localhost' || /^[\d.]+$/.test(host) || host.includes(':')) return;
+
+  const parts = host.split('.');
+  // Stop before the public suffix: `my.circlecare.app` yields
+  // `.my.circlecare.app` then `.circlecare.app` (the one that matches), and
+  // never the unsettable `.app`.
+  for (let i = 0; i < parts.length - 1; i++) {
+    document.cookie = `${expired}; Domain=.${parts.slice(i).join('.')}`;
+  }
 }
 
 /** Local-only teardown (no network, no broadcast) — shared by signOut and the
@@ -65,6 +114,9 @@ function clearLocalSession(): void {
   resetRefreshState();
   tokenAccessor.clear();
   queryClient.clear();
+  // Before anything else that could throw: a surviving hint cookie is what
+  // silently restores the session on the next load (see clearSessionHintCookie).
+  clearSessionHintCookie();
   // Drop any parked invite code: on a shared tab, user A's un-accepted invite
   // must not silently auto-accept when user B signs in later (the login/
   // callback pages PEEK the code and forward to /invite/:code, which consumes
@@ -129,6 +181,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     resetRefreshState();
     tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
     identifyUser(user.id, user.email);
+    // Deliver a consent decision that failed to reach the server last time.
+    void flushAnalyticsConsentSync(user.id);
     set({ user, isAuthenticated: true, isBootstrapping: false });
     reportSessionEstablished();
   },
@@ -155,6 +209,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
         const user = await getCurrentUser();
         identifyUser(user.id, user.email);
+        // Deliver a consent decision that failed to reach the server last time.
+        void flushAnalyticsConsentSync(user.id);
         set({
           user: {
             id: user.id,
@@ -182,6 +238,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     // Capture while the identity is still attached (clearLocalSession resets it).
     Analytics.logout();
+    const signingOutUserId = useAuthStore.getState().user?.id ?? null;
 
     // Best-effort server logout (clears httpOnly cookie, revokes session).
     // Idempotent on the backend; a network failure must not block local cleanup.
@@ -189,6 +246,22 @@ export const useAuthStore = create<AuthState>((set) => ({
       await authApi.logout();
     } catch {
       // ignore — local cleanup still runs
+    }
+
+    // One more delivery attempt for this user's own undelivered consent
+    // decision, BEFORE tokenAccessor/state get wiped below — this is the last
+    // moment the signing-out user's token is still live. Without this, a
+    // decision that failed earlier just sits there until this same account
+    // signs back in, and on a shared browser a DIFFERENT account signing in
+    // next must never be the one to flush (or delete) it — see
+    // flushAnalyticsConsentSync's userId check. Best-effort: any failure here
+    // just leaves the marker for that later retry.
+    if (signingOutUserId) {
+      try {
+        await flushAnalyticsConsentSync(signingOutUserId);
+      } catch {
+        // ignore — sign-out must never depend on this
+      }
     }
 
     clearLocalSession();

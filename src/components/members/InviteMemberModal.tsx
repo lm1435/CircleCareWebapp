@@ -5,15 +5,18 @@ import { z } from 'zod';
 import type { InviteMemberType } from '@/api/invites';
 import { useCreateInvite } from '@/hooks/useInvites';
 import { Analytics } from '@/lib/analytics';
-import { isWebBillingConfigured } from '@/lib/purchases';
+import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { getPendingInviteSeat, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import {
   Button,
+  Card,
+  Icon,
+  IconTile,
   Modal,
   RadioGroup,
   TextField,
-  useToast,
   validateWithZod,
+  fieldShell,
   focusFirstError,
   type FieldErrors,
   type RadioOption,
@@ -50,6 +53,9 @@ export interface InviteMemberModalProps {
   onClose: () => void;
   /** Called after a successful invite (parent typically refetches members). */
   onInvited?: () => void;
+  /** Names for the share message. Optional — the message degrades gracefully. */
+  circleName?: string;
+  recipientName?: string;
 }
 
 export function InviteMemberModal({
@@ -57,10 +63,11 @@ export function InviteMemberModal({
   isSelfCare,
   onClose,
   onInvited,
+  circleName,
+  recipientName,
 }: InviteMemberModalProps): ReactElement {
   const { t } = useTranslation('members');
   const navigate = useNavigate();
-  const { showToast } = useToast();
   const createInvite = useCreateInvite(circleId);
 
   const [email, setEmail] = useState('');
@@ -89,6 +96,85 @@ export function InviteMemberModal({
     return options;
   }, [isSelfCare, t]);
 
+  // The role the invite was actually sent as, named for the confirmation line.
+  // Reuses the same `roles.*` strings the picker renders, so the two can never
+  // describe the same invite differently.
+  const roleLabel =
+    memberType === 'care_recipient' ? t('roles.careRecipient') : t('roles.caregiver');
+
+  const [sentInvite, setSentInvite] = useState<{ email: string; url: string | null } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  /**
+   * The Web Share API opens the real OS share sheet — but only where it exists,
+   * which in practice is iOS Safari and Android Chrome. That is exactly where
+   * this matters (forwarding to Messages or WhatsApp), and exactly where the
+   * desktop has no equivalent. So unlike mobile, COPY is the primary action here
+   * and share is the enhancement.
+   */
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  /**
+   * THE CIRCLE NAME IS NOT A GROUP NAME. Circles are commonly named after the
+   * person being cared for ("Dad"), so the old template rendered "Join Dad on
+   * CircleCare to help coordinate care for Dad." — it reads as though Dad is
+   * the thing you join, and says his name twice. The sender is the one doing
+   * the inviting, so the message speaks as them.
+   *
+   * Three variants, because "help coordinate care for X" is wrong in two cases:
+   * a self-care circle (X is the sender), and an invite addressed to the care
+   * recipient themselves (X is the reader). Kept in lockstep with
+   * InviteMemberScreen on mobile — same three keys, same selection order.
+   */
+  const shareMessage = (inviteUrl: string): string =>
+    memberType === 'care_recipient'
+      ? t('invite.shareMessageRecipient', { inviteUrl })
+      : isSelfCare
+        ? t('invite.shareMessageSelfCare', { inviteUrl })
+        : t('invite.shareMessage', {
+            recipientName: recipientName ?? circleName ?? t('invite.shareTitle'),
+            inviteUrl,
+          });
+
+  const handleShare = async (): Promise<void> => {
+    if (!sentInvite?.url) return;
+    try {
+      // Message only, exactly as mobile's `Share.share({ message })`. Safari
+      // and Android both PREPEND `title` to the shared text, so the old
+      // `{ title, text }` landed in Messages as two lines — "Join our care
+      // circle" stacked over the real sentence — instead of the one sentence
+      // the recipient gets from the app.
+      await navigator.share({ text: shareMessage(sentInvite.url) });
+      // navigator.share resolves on completion and REJECTS on cancel, so this
+      // counts an actual share rather than an intent — unlike the mobile SDK,
+      // which resolves either way.
+      Analytics.inviteLinkShared(circleId, memberType);
+    } catch {
+      // User dismissed the sheet, or the browser refused to present it.
+      // Nothing to recover from and nothing worth interrupting them over.
+    }
+  };
+
+  const handleCopy = async (): Promise<void> => {
+    if (!sentInvite?.url) return;
+    try {
+      await navigator.clipboard.writeText(sentInvite.url);
+      Analytics.inviteLinkCopied(circleId, memberType);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be denied outright (permissions policy, insecure
+      // context). The link is on screen either way, so the user can select it.
+    }
+  };
+
+  const handleSendAnother = (): void => {
+    setSentInvite(null);
+    setCopied(false);
+    setEmail('');
+    setErrors({});
+  };
+
   const handleSubmit = (formEvent: FormEvent): void => {
     formEvent.preventDefault();
     setCapNotice(null);
@@ -105,10 +191,22 @@ export function InviteMemberModal({
     createInvite.mutate(
       { email: result.data, member_type: memberType },
       {
-        onSuccess: () => {
-          showToast(t('invite.success', { email: result.data }), 'success');
+        onSuccess: (created) => {
+          // The modal no longer closes here. Closing on success is what made
+          // email the ONLY way an invite could reach anyone: the inviter never
+          // saw the link, so they could not text it. Measured acceptance was
+          // 13% (71 sent / 9 accepted).
+          //
+          // A backend older than the release that added `invite_url` sends
+          // nothing, so fall back to building it from the code. Same origin as
+          // this app by construction — the link points at our own landing page
+          // — which also keeps staging correct without a second env var.
+          const code = created?.invite?.invite_code;
+          const url =
+            created?.invite?.invite_url ??
+            (code ? `${window.location.origin}/invite/${encodeURIComponent(code)}` : null);
+          setSentInvite({ email: result.data, url });
           onInvited?.();
-          onClose();
         },
         onError: (error: unknown) => {
           // Mirror the hook's classification EXACTLY: a pending-invite seat is
@@ -130,20 +228,88 @@ export function InviteMemberModal({
       onClose={onClose}
       closeLabel={t('common:close')}
       footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={createInvite.isPending}>
-            {t('common:cancel')}
-          </Button>
-          <Button
-            type="submit"
-            form="invite-member-form"
-            disabled={createInvite.isPending || email.trim().length === 0}
-          >
-            {createInvite.isPending ? t('invite.sending') : t('invite.send')}
-          </Button>
-        </div>
+        sentInvite ? (
+          // No Done — the Modal's × already closes it and there is no
+          // unsaved state left to protect once the invite has sent. Send
+          // another is the only footer action, ghost (not filled).
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={handleSendAnother}>
+              {t('invite.sendAnother')}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={onClose} disabled={createInvite.isPending}>
+              {t('common:cancel')}
+            </Button>
+            <Button
+              type="submit"
+              form="invite-member-form"
+              loading={createInvite.isPending}
+              disabled={createInvite.isPending || email.trim().length === 0}
+            >
+              {createInvite.isPending ? t('invite.sending') : t('invite.send')}
+            </Button>
+          </div>
+        )
       }
     >
+      {sentInvite ? (
+        <div className="flex flex-col gap-5">
+          {/* The confirmation reads as a moment, not a status line: a moss
+              check tile beside the headline, the same treatment the rest of
+              the app gives a completed step. */}
+          <div className="flex items-start gap-3">
+            <IconTile tone="moss" size={44} name="checkmark-circle" />
+            <div className="min-w-0">
+              <p className="m-0 text-base font-semibold text-ink">{t('invite.sentTitle')}</p>
+              <p className="m-0 mt-1 text-sm text-ink-2">
+                {sentInvite.url ? t('invite.success') : t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
+              </p>
+            </div>
+          </div>
+
+          {sentInvite.url ? (
+            <>
+              {/* The link is rendered as selectable text as well as being
+                  copyable: clipboard access can be denied outright (permissions
+                  policy, insecure context) and the user still needs a way to
+                  get the link out. It sits in a field shell, with Copy as the
+                  one filled action — the thing to do next — and Share as the
+                  quiet alternative where the browser offers it. */}
+              <div className="flex flex-col gap-3">
+                <p className={`${fieldShell()} m-0 break-all px-4 py-3 font-mono text-sm text-ink`}>
+                  {sentInvite.url}
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    onClick={handleCopy}
+                    leftIcon={copied ? <Icon name="checkmark" size="row" /> : undefined}
+                  >
+                    {copied ? t('invite.linkCopied') : t('invite.copyLink')}
+                  </Button>
+                  {canShare ? (
+                    <Button
+                      variant="ghost"
+                      onClick={handleShare}
+                      leftIcon={<Icon name="share-outline" size="row" />}
+                    >
+                      {t('invite.shareLink')}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+              {/* The email is the RECEIPT, not the headline. Under the buttons
+                  so the link stays the primary action, but it still names the
+                  address and role — the sender's only confirmation they typed
+                  the right thing. */}
+              <p className="m-0 text-sm text-ink-2">
+                {t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
+              </p>
+            </>
+          ) : null}
+        </div>
+      ) : (
       <form id="invite-member-form" onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <p className="m-0 text-sm text-ink-2">{t('invite.subtitle')}</p>
 
@@ -175,25 +341,36 @@ export function InviteMemberModal({
         />
 
         {capNotice ? (
-          <div
-            role="alert"
-            className="m-0 flex flex-col items-start gap-3 rounded-xl border border-line bg-bg-2 px-4 py-3 text-sm text-ink-2"
-          >
-            <p className="m-0">
-              {capNotice.kind === 'cap'
-                ? t('invite.capReached')
-                : capNotice.email
-                  ? t('invite.pendingSeat', { email: capNotice.email })
-                  : t('invite.pendingSeatUnknown')}
-            </p>
+          <Card variant="filled" role="alert" className="flex flex-col items-start gap-3 text-sm">
+            <div className="flex items-start gap-2">
+              <Icon
+                name="alert-circle-outline"
+                size="inline"
+                className="mt-0.5 shrink-0 text-terracotta"
+              />
+              <p className="m-0 text-ink-2">
+                {capNotice.kind === 'cap'
+                  ? t('invite.capReached')
+                  : capNotice.email
+                    ? t('invite.pendingSeat', { email: capNotice.email })
+                    : t('invite.pendingSeatUnknown')}
+              </p>
+            </div>
+            {/* The seat cap is the CAPACITY context — see lib/paywallContext.ts.
+                Without the state, this entry point's conversions pool into
+                'general' and the seat-cap paywall becomes unmeasurable. */}
             {isWebBillingConfigured() ? (
-              <Button size="sm" onClick={() => navigate('/upgrade')}>
+              <Button
+                size="sm"
+                onClick={() => navigate('/upgrade', { state: { paywallContext: 'capacity' } })}
+              >
                 {t('common:upgradeGate.action')}
               </Button>
             ) : null}
-          </div>
+          </Card>
         ) : null}
       </form>
+      )}
     </Modal>
   );
 }

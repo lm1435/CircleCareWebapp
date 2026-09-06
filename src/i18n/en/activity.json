@@ -12,7 +12,7 @@
   "endOfFeed": "You're all caught up.",
   "system": "System",
   "latest": "Latest",
-  "live": "New",
+  "new": "New",
   "latestEntry": "{{time}} · {{name}}",
   "today": "Today",
   "yesterday": "Yesterday",
@@ -22,6 +22,19 @@
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago"
+  },
+  "entries": {
+    "medicationRescheduled": "Rescheduled Medication: {{title}} to {{time}}",
+    "medicationNotTaken": "Skipped: {{title}} on {{date}}",
+    "recurrenceStopped": "Stopped recurrence for {{title}} from {{date}}",
+    "memberInvited": {
+      "careRecipient": "Invited {{email}} to join as Care Recipient",
+      "caregiver": "Invited {{email}} to join as Caregiver"
+    },
+    "memberJoined": {
+      "careRecipient": "{{name}} joined the circle as Care Recipient",
+      "caregiver": "{{name}} joined the circle as Caregiver"
+    }
   },
   "phrases": {
     "confirmedMedication": "Confirmed Medication:",

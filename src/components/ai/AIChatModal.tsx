@@ -8,7 +8,18 @@ import {
   type ReactElement,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, TextArea, Button, Spinner } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  Icon,
+  IconTile,
+  INPUT_TEXT,
+  Modal,
+  Sheet,
+  Spinner,
+  Text,
+} from '@/components/ui';
 import { useAiChat } from '@/hooks/useAiChat';
 import { useAiSuggestions } from '@/hooks/useAiSuggestions';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -16,7 +27,8 @@ import { usePremiumGate } from '@/hooks/usePremiumGate';
 // Web port of mobile/src/components/ai/AIChatModal.tsx (the core chat exchange
 // plus the server suggestions list). Mirrors mobile 1:1 for behavior; drops
 // mobile-only affordances that have no web analog (voice input, bottom-sheet
-// drag) and mobile's decorative icon circles (editorial typography instead).
+// drag). Spec §6.7: 40×40 r20 coral header tile, single-column staggered
+// suggestion chips, ink/bg-2 message bubbles, a pinned 44 coral send circle.
 //
 // PHI-conservative: the disclaimer mirrors mobile's `aiAssistant.disclaimer`
 // plus the "no personal health details are sent to the AI" note that matches
@@ -50,7 +62,9 @@ function nextMessageId(): string {
 export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): ReactElement | null {
   const { t } = useTranslation('ai');
   const { mutation, errorKey, resetConversation } = useAiChat(circleId);
-  const { promptUpgrade } = usePremiumGate();
+  // The AI assistant is a premium-only surface — FEATURE (mobile sends the
+  // same value from its own AI gate).
+  const { promptUpgrade } = usePremiumGate('feature');
   // Server-owned suggestion chips — fetched only while the modal is open. Any
   // failure (402 free tier, 403 non-member, network) leaves `data` undefined and
   // the block simply does not render: no error text, no fallback strings.
@@ -62,16 +76,20 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
 
   const listEndRef = useRef<HTMLDivElement>(null);
 
+  // Clears the in-memory conversation without closing the modal — both the
+  // "New chat" header button and the reset-on-open effect below share it.
+  const resetChat = useCallback(() => {
+    setMessages([]);
+    setInput('');
+    setRemaining(null);
+    resetConversation();
+  }, [resetConversation]);
+
   // Reset the in-memory conversation each time the modal is opened so a new
   // session never inherits a stale thread (mirrors mobile's reset-on-open).
   useEffect(() => {
-    if (isOpen) {
-      setMessages([]);
-      setInput('');
-      setRemaining(null);
-      resetConversation();
-    }
-    // resetConversation is stable for the modal's lifetime; intentionally not a dep.
+    if (isOpen) resetChat();
+    // resetChat is stable for the modal's lifetime; intentionally not a dep.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -154,31 +172,71 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
   // the endpoint returns 0–6 items, so any placeholder row count would be a
   // guess, and on the terminal 402/403 path a skeleton would flash and vanish.
   const suggestions = suggestionsQuery.data ?? [];
+  const lowRemaining = remaining !== null && remaining <= 10;
 
   return (
-    <Modal title={t('title')} onClose={onClose} closeLabel={t('common:close')} size="lg">
-      <p className="m-0 text-sm text-ink-3">{t('subtitle')}</p>
+    <Modal
+      // `title` still names the dialog for aria-labelledby (via the sr-only
+      // h2 `hideTitle` renders); the rich header (tile + subtitle + badge +
+      // New chat) rides in the shell's title row beside the × through the
+      // `header` slot, so the close control is not stranded on a row of its own.
+      title={t('title')}
+      hideTitle
+      header={
+        <div className="flex items-start gap-3">
+          <IconTile tone="coral" filled size={40} name="sparkles" />
+          <div className="min-w-0 flex-1">
+            {/* NOT a heading: Modal's own `hideTitle` h2 (sr-only, same text)
+                already supplies the dialog's accessible name. A second real
+                heading with the identical text would make every
+                `getByRole('heading', { name: title })` query ambiguous, and
+                would read as a duplicated heading to a screen-reader user
+                navigating by headings. */}
+            <Text variant="h3" as="p">
+              {t('title')}
+            </Text>
+            <Text variant="caption">{t('subtitle')}</Text>
+          </div>
+          {lowRemaining ? (
+            <Badge variant="coral" size="sm">
+              {t('remainingCount', { count: remaining })}
+            </Badge>
+          ) : null}
+          {messages.length > 0 ? (
+            <Button variant="ghost" size="sm" onClick={resetChat}>
+              {t('newChat')}
+            </Button>
+          ) : null}
+        </div>
+      }
+      onClose={onClose}
+      closeLabel={t('common:close')}
+      size="lg"
+    >
 
-      {remaining !== null && remaining <= 10 ? (
-        <p className="m-0 text-xs font-medium text-terracotta-deep" role="status">
-          {t('remainingCount', { count: remaining })}
-        </p>
-      ) : null}
-
-      {/* Message list */}
+      {/* card-shell-ok: scrollable transcript region (role="log"), not a card */}
       <div
-        className="flex max-h-[50vh] min-h-[12rem] flex-col gap-3 overflow-y-auto rounded-xl border border-line-2 bg-cream p-3"
+        className="flex max-h-[50vh] min-h-[12rem] flex-col gap-3 overflow-y-auto rounded-xl border border-line-2 bg-bg p-3"
         role="log"
         aria-live="polite"
         aria-label={t('title')}
       >
         {messages.length === 0 ? (
           <div className="m-auto flex w-full max-w-2xl flex-col gap-3">
+            {/* Hero mark: a warm coral tile with a cream sparkle, sitting above
+                the greeting so the empty state welcomes rather than just
+                labels itself. */}
+            <div
+              aria-hidden="true"
+              className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-xl bg-coral shadow-warm"
+            >
+              <Icon name="sparkles" size="chrome" className="text-cream" />
+            </div>
             {/* The intro spans the full width rather than a narrow measure: at
                 ~384px the Spanish copy wrapped to 3 lines, and the extra line
                 (plus a roomier gap) was pushing the modal into a scroll. */}
             <div className="text-center">
-              <p className="serif m-0 text-lg text-ink">{t('emptyTitle')}</p>
+              <Text variant="h2">{t('emptyTitle')}</Text>
               {/* `intro` restates the subtitle rendered directly above the log
                   and lists the capabilities the chips already demonstrate, so
                   it only earns its wrapped lines when there are NO chips — i.e.
@@ -186,7 +244,9 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
                   go on. Dropping it when chips exist is what keeps the modal
                   under Modal's max-h-[90vh] without an inner scrollbar. */}
               {suggestions.length === 0 ? (
-                <p className="m-0 mt-2 text-sm text-ink-3">{t('intro')}</p>
+                <Text variant="caption" className="mt-2">
+                  {t('intro')}
+                </Text>
               ) : null}
             </div>
 
@@ -197,42 +257,29 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
                 quite understand that". */}
             {suggestions.length > 0 ? (
               <div className="flex flex-col gap-2">
-                <p
-                  id={SUGGESTIONS_LABEL_ID}
-                  className="m-0 text-xs font-medium uppercase tracking-wide text-ink-3"
-                >
+                <Text variant="label" as="p" id={SUGGESTIONS_LABEL_ID}>
                   {t('suggestedQuestions')}
-                </p>
-                {/* Two columns from `sm` up so six chips occupy three rows
-                    instead of six — the empty state then fits the log's
-                    max-h-[50vh] without scrolling. Stays single-column on
-                    phone widths, where half-width chips would be too narrow
-                    to read. DOM order is the reading order, so keyboard tab
-                    order still runs left-to-right, top-to-bottom. */}
+                </Text>
+                {/* Single column, 40ms-staggered fade-in per spec §6.7. Full
+                    text always readable — no truncation/clamping. */}
                 <ul
                   aria-labelledby={SUGGESTIONS_LABEL_ID}
-                  className="m-0 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2"
+                  className="m-0 flex list-none flex-col gap-2 p-0"
                 >
-                  {suggestions.map((suggestion) => (
-                    /* `flex` on the cell: a stretched grid item has an `auto`
-                       computed height, so the button's `h-full` is only
-                       reliable when its parent is a flex container that
-                       stretches it. Belt and braces for equal-height rows. */
-                    <li key={suggestion} className="flex">
-                      <button
-                        type="button"
-                        onClick={() => handleSend(suggestion)}
-                        disabled={mutation.isPending}
-                        /* h-full: grid cells stretch, so a chip whose text wraps
-                           to 2-3 lines (Spanish runs 15-30% longer) sets the row
-                           height and its neighbour matches it. Text is never
-                           truncated — the full question stays readable. */
-                        /* py-2 (not py-2.5) trims ~4px per row; `min-h-11`
-                           still guarantees the 44px target on one-line chips. */
-                        className="flex h-full min-h-11 w-full items-center rounded-xl border border-line bg-bg px-4 py-2 text-left text-sm text-ink transition-colors hover:border-terracotta-deep hover:bg-terracotta-soft disabled:cursor-not-allowed disabled:opacity-60"
+                  {suggestions.map((suggestion, index) => (
+                    <li key={suggestion}>
+                      <Card
+                        variant="outlined"
+                        padding="sm"
+                        onPress={() => handleSend(suggestion)}
+                        // `rounded-lg!`: Card's own `rounded-xl` is emitted
+                        // LATER in the compiled stylesheet (verified against
+                        // dist/assets/*.css), so a plain override loses.
+                        className="min-h-[44px] w-full rounded-lg! text-sm text-ink animate-[fade-in_200ms_ease-out] [animation-fill-mode:both] motion-reduce:animate-none"
+                        style={{ animationDelay: `${index * 40}ms` }}
                       >
                         {suggestion}
-                      </button>
+                      </Card>
                     </li>
                   ))}
                 </ul>
@@ -242,24 +289,29 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
         ) : (
           messages.map((message) =>
             message.role === 'user' ? (
-              <div key={message.id} className="flex justify-end">
-                <p className="m-0 max-w-[80%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-ink px-4 py-2.5 text-sm text-cream">
-                  {message.content}
-                </p>
-              </div>
+              <p
+                key={message.id}
+                className="max-w-[85%] self-end whitespace-pre-wrap break-words rounded-xl rounded-br-sm bg-ink px-4 py-2.5 text-sm text-cream"
+              >
+                {message.content}
+              </p>
             ) : (
-              <div key={message.id} className="flex justify-start">
-                <p className="m-0 max-w-[80%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm border border-line-2 bg-terracotta-soft px-4 py-2.5 text-sm text-ink">
-                  {message.content}
-                </p>
-              </div>
+              <p
+                key={message.id}
+                className="max-w-[85%] whitespace-pre-wrap break-words rounded-xl rounded-bl-sm bg-bg-2 px-4 py-2.5 text-sm text-ink"
+              >
+                {message.content}
+              </p>
             )
           )
         )}
 
         {mutation.isPending ? (
-          <div className="flex items-center gap-2 text-sm text-ink-3" role="status">
-            <Spinner size={16} label={t('thinking')} />
+          <div
+            className="flex max-w-[85%] items-center gap-2 rounded-xl rounded-bl-sm bg-bg-2 px-4 py-2.5 text-sm text-ink"
+            role="status"
+          >
+            <Spinner decorative size={16} />
             <span>{t('thinking')}</span>
           </div>
         ) : null}
@@ -267,27 +319,35 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
         <div ref={listEndRef} />
       </div>
 
-      {/* Composer */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <TextArea
-          id="ai-chat-input"
-          label={t('inputLabel')}
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={t('inputPlaceholder')}
-          maxLength={MESSAGE_MAX}
-          rows={2}
-          disabled={mutation.isPending}
-        />
-        <div className="flex justify-end">
-          <Button type="submit" disabled={!canSend}>
-            {mutation.isPending ? t('sending') : t('send')}
-          </Button>
-        </div>
+      {/* Composer. `Sheet` (not a hand-rolled div) supplies the white/r20/
+          hairline/shadow-sm wrapper so this file draws no card shell by hand. */}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        <Sheet padding="none" className="flex items-end gap-1 pl-2 pr-1 py-1">
+          <textarea
+            aria-label={t('inputLabel')}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t('inputPlaceholder')}
+            maxLength={MESSAGE_MAX}
+            rows={1}
+            disabled={mutation.isPending}
+            className={`${INPUT_TEXT} max-h-40 resize-none py-2`}
+          />
+          <button
+            type="submit"
+            aria-label={mutation.isPending ? t('sending') : t('send')}
+            disabled={!canSend}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-coral text-cream disabled:bg-line"
+          >
+            <Icon name="send" size="row" />
+          </button>
+        </Sheet>
       </form>
 
-      <p className="m-0 text-xs text-ink-3">{t('disclaimer')}</p>
+      <Text variant="caption" className="text-center mt-2">
+        {t('disclaimer')}
+      </Text>
     </Modal>
   );
 }

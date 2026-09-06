@@ -11,6 +11,7 @@
   "emptyTitle": "How can I help?",
   "suggestedQuestions": "Suggested questions",
   "remainingCount": "{{count}} left today",
+  "newChat": "New chat",
   "errors": {
     "subscriptionRequired": "The Care Assistant is a premium feature. Upgrade to Premium to use it.",
     "rateLimited": "You've reached today's question limit. The Care Assistant will be ready again tomorrow.",

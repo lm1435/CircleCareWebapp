@@ -1,11 +1,20 @@
-import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createCircleSchema, type CreateCircleRequest } from '@/api/circles';
 import { useCreateCircle } from '@/hooks/useCircleAdmin';
+import { useCircles } from '@/hooks/useCircles';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useAuth } from '@/hooks/useAuth';
 import { Analytics } from '@/lib/analytics';
+import { classifyFailureCode } from '@/lib/apiErrors';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
+import {
+  deferFirstRun,
+  firstRunNavigationState,
+  markOnboardingPaywallSeen,
+  shouldShowOnboardingPaywall,
+} from '@/lib/onboardingPaywall';
 import { Button, DateField, Modal, TextField, Toggle, useToast, useZodForm } from '@/components/ui';
 
 // Plan Stage 8, Task 8.6c — circle create modal.
@@ -37,9 +46,28 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
   const create = useCreateCircle();
   const form = useZodForm(createCircleSchema, ['recipient_name', 'recipient_dob']);
 
+  // ONBOARDING PAYWALL GATE INPUTS. Both are read from caches this page has
+  // already warmed (the picker renders the circle list and the
+  // needs-selection banner), so neither adds a request.
+  //
+  // `circles` is READ AT SUBMIT TIME, from the closure the submit handler
+  // captured, and that is the point: `useCreateCircle` invalidates
+  // `queryKeys.circles` in its own onSuccess, so by the time this component's
+  // onSuccess runs the list is refetching and "did the user have zero circles"
+  // is no longer answerable from it.
+  const { data: circles } = useCircles();
+  const { data: subscription } = useSubscriptionStatus();
+
   const [recipientName, setRecipientName] = useState('');
   const [recipientDob, setRecipientDob] = useState('');
   const [isSelfCare, setIsSelfCare] = useState(false);
+
+  // A plain `autoFocus` on the name field below would be dead the moment it
+  // renders inside Modal — the shell always claims initial focus for its
+  // close button. `initialFocusRef` (passed to Modal, further down) is how
+  // the field wins that race instead; self-care hides the field entirely, so
+  // Modal falls back to its own close-button focus in that case.
+  const nameFieldRef = useRef<HTMLInputElement>(null);
 
   /**
    * Map a Zod issue KEY NAME (emitted by `createCircleSchema`, never prose) to
@@ -64,6 +92,8 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
 
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
+    // Snapshotted BEFORE the mutation — see the `useCircles` comment above.
+    const isFirstCircle = (circles?.length ?? 0) === 0;
     const payload: CreateCircleRequest = {
       recipient_name: resolveName(),
       is_self_care: isSelfCare,
@@ -82,23 +112,74 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
           trackOnboardingCompleted('created');
           showToast(t('create.success'), 'success');
           onClose();
+
+          // THE ONBOARDING PAYWALL FIRES HERE, mirroring mobile's
+          // `doCreate` (CreateCircleScreen.tsx:254-262) exactly: first circle,
+          // free tier, never asked before. Read the long comment block above
+          // that branch on mobile, and lib/onboardingPaywall.ts here, before
+          // moving it — the placement has been removed and restored twice and
+          // the release-cohort data is unambiguous.
+          //
+          // The wizard is DEFERRED, not cancelled. Mobile parks it in a ref and
+          // fires it when CreateCircleScreen regains focus; on web `/upgrade`
+          // is a real route, so it is parked in sessionStorage and every exit
+          // from the paywall delivers it (UpgradePage), with the circle picker
+          // catching a browser-Back exit. Declining leads to the wizard, never
+          // to a dead end.
+          if (shouldShowOnboardingPaywall({ isFirstCircle, tier: subscription?.tier })) {
+            markOnboardingPaywallSeen();
+            deferFirstRun({ circleId: circle.id, recipientName: data.recipient_name });
+            navigate('/upgrade', { state: { paywallContext: 'onboarding' } });
+            return;
+          }
+
           // Land on the new circle's overview — the get-started checklist + helpers
           // live here, so a brand-new owner sees how to set things up.
-          navigate(`/circles/${circle.id}`);
+          //
+          // FIRST RUN. Landing here alone drops the owner on an EMPTY circle,
+          // which is the moment the four-step wizard exists to fix (only 46% of
+          // users who start adding a medication through the full form finish).
+          // The flag rides in `location.state` rather than a query param so it
+          // is not shareable, not bookmarkable, and vanishes on reload — this is
+          // a one-time consequence of THIS create, not a property of the URL.
+          // `recipientName` travels with it because the wizard's copy asks about
+          // the person by name and the circle detail query has not landed yet.
+          navigate(`/circles/${circle.id}`, {
+            state: firstRunNavigationState(data.recipient_name),
+          });
         },
         onError: (error: unknown) => {
-          // PHI-safe: only the backend error CODE (or a generic fallback). The
-          // hook itself surfaces the user-facing toast.
-          const code = (error as { error?: { code?: string } } | null)?.error?.code;
-          Analytics.circleCreationFailed(code ?? 'CIRCLE_CREATE_FAILED');
+          // PHI-safe and BOUNDED: the backend error CODE when there is one,
+          // otherwise a named transport category (`timeout`, `network_error`,
+          // `http_502`, ...) — never a message. The old `CIRCLE_CREATE_FAILED`
+          // fallback named the ACTION rather than the failure and collapsed a
+          // timeout, an offline browser and an edge 502 into one row. Mirrored
+          // on mobile (mobile/src/utils/apiError.ts) so the admin digest groups
+          // this event across platforms. The hook itself surfaces the toast.
+          Analytics.circleCreationFailed(classifyFailureCode(error));
         },
       });
     });
   };
 
   return (
-    <Modal title={t('create.title')} onClose={onClose} closeLabel={t('create.cancel')}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      title={t('create.title')}
+      onClose={onClose}
+      closeLabel={t('create.close')}
+      initialFocusRef={isSelfCare ? undefined : nameFieldRef}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {t('create.cancel')}
+          </Button>
+          <Button type="submit" form="create-circle-form" loading={create.isPending}>
+            {create.isPending ? t('create.creating') : t('create.create')}
+          </Button>
+        </>
+      }
+    >
+      <form id="create-circle-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="m-0 text-sm text-ink-3">{t('create.subtitle')}</p>
 
         <Toggle
@@ -111,12 +192,12 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
         {!isSelfCare && (
           <>
             <TextField
+              ref={nameFieldRef}
               id="recipient_name"
               label={t('create.recipientName')}
               value={recipientName}
               maxLength={100}
               required
-              autoFocus
               error={messageFor(form.errors.recipient_name)}
               placeholder={t('create.recipientNamePlaceholder')}
               onChange={(e) => {
@@ -137,15 +218,6 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
             />
           </>
         )}
-
-        <div className="mt-2 flex justify-end gap-3">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {t('create.cancel')}
-          </Button>
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? t('create.creating') : t('create.create')}
-          </Button>
-        </div>
       </form>
     </Modal>
   );

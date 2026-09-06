@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Avatar, Card } from '@/components/ui';
+import { Avatar, Card, Text } from '@/components/ui';
 
 // Care recipient header card shown at the top of Emergency, mirroring mobile
 // (mobile/src/screens/emergency/EmergencyInfoScreen.tsx "Care recipient"
@@ -64,14 +64,18 @@ export function RecipientHeader({
   const conditionsText = formatConditions(conditions);
 
   return (
-    <Card className="print-card flex flex-col gap-4">
+    <Card padding="lg" className="print-card flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <Avatar name={name} photoUrl={photoUrl} size="lg" />
         <div className="min-w-0">
-          <h2 className="serif m-0 text-2xl text-ink">{name}</h2>
+          <Text variant="h2" as="h2">
+            {name}
+          </Text>
           {dobLabel && (
             <p className="m-0 mt-1">
-              <span className="mono">{t('recipient.dob')}</span>{' '}
+              <Text variant="mono" as="span">
+                {t('recipient.dob')}
+              </Text>{' '}
               <span className="text-ink-2">{dobLabel}</span>
             </p>
           )}
@@ -80,8 +84,10 @@ export function RecipientHeader({
       {conditionsText && (
         <div className="border-t border-line pt-4">
           <dl className="m-0">
-            <dt className="mono mb-1">{t('recipient.conditions')}</dt>
-            <dd className="m-0 text-base leading-relaxed text-ink">{conditionsText}</dd>
+            <Text variant="mono" as="dt" className="mb-1">
+              {t('recipient.conditions')}
+            </Text>
+            <dd className="m-0 text-md font-medium leading-relaxed text-ink">{conditionsText}</dd>
           </dl>
         </div>
       )}

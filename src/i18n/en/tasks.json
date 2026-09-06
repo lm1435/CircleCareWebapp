@@ -4,13 +4,13 @@
   "addTask": "Add task",
   "loading": "Loading tasks",
   "filter": {
-    "statusLabel": "Status",
+    "statusPillLabel": "Status: {{value}}",
     "status": {
       "open": "Open",
       "completed": "Completed",
       "all": "All"
     },
-    "sortLabel": "Sort by",
+    "sortPillLabel": "Sort: {{value}}",
     "sort": {
       "due_date": "Due date",
       "assignee": "Assignee",
@@ -27,11 +27,11 @@
     "completedOn": "Completed {{date}}",
     "completing": "Completing…",
     "undo": "Undo",
-    "undoAction": "Undo completing \"{{title}}\"",
-    "pendingAnnounce": "\"{{title}}\" will be completed. Choose Undo to cancel.",
     "done": "Done",
     "statusDone": "(done)",
-    "statusPending": "(not done)"
+    "statusPending": "(not done)",
+    "viewDetailsLabel": "View details for \"{{title}}\"",
+    "overdue": "Overdue"
   },
   "due": {
     "today": "Today",

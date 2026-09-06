@@ -27,6 +27,21 @@ describe('translateActivityDescription', () => {
 
   it('rewrites the "Not taken" pattern with a formatted date (no raw ISO)', () => {
     // Dates far enough in the past render as a localized short date, not ISO.
+    //
+    // REVERSED 2026-09-01, and the 2026-08-20 note this replaces was reasoning
+    // from a premise that has since changed. That change aligned the display
+    // DOWN to the stored wording, on the view that the backend's "Not taken:"
+    // was canonical. It is not: the stored `description` is an internal token in
+    // a legacy format, matched by /^Not taken: (.+) on …/ and deliberately left
+    // alone so old rows keep rendering. `activity.phrases.skippedEvent` is the
+    // DISPLAY label, and the app now says "Skipped" for `status = 'skipped'`
+    // everywhere — list, detail modal, undo toast, adherence PDF, and the feed —
+    // because the button that produces it says "Skip".
+    //
+    // So relabelling English to English here is the POINT, not drift: the input
+    // is a token, the output is copy. All three surfaces (mobile, webapp,
+    // backend) now resolve this key to "Skipped:" / "Omitido:". If you are about
+    // to change these strings, change all three or none.
     expect(translateActivityDescription('Not taken: Aspirin on 2026-06-10', tEs, 'es')).toBe(
       'Omitido: Aspirin el 10 jun'
     );

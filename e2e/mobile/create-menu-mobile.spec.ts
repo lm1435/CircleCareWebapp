@@ -1,29 +1,32 @@
 import { test, expect, uniqueLabel } from '../fixtures';
+import { expandAllDayOverflow } from '../helpers';
 
-// Mobile-only global "Create" menu. On desktop (xl+) the sidebar is always
-// visible and its terracotta "Create" button opens a role="menu" flying right.
-// Below xl the sidebar collapses into a hamburger drawer (AppLayout renders
-// <Sidebar variant="drawer"> inside a focus-trapped role="dialog" opened by the
-// header "Navigation menu" button). The Create menu lives in the drawer too, but
-// its flyout positioning differs (it drops below the button). This suite proves
-// the Create menu works END-TO-END *from inside the mobile drawer*.
+// Mobile-only create flow. From xl up the create surface is the sidebar's "New"
+// button; below it, it is the NEW cell in the FloatingNavBar pill, which raises
+// the same `AddMenu` from the bottom of the screen (spec §5.3). This suite
+// proves that path END-TO-END from the pill.
 //
-// Runs under the `mobile-chrome` (Pixel 5) Playwright project. Conventions mirror
-// e2e/mobile/nav.spec.ts (open the drawer via the "Navigation menu" hamburger)
-// and e2e/flows/create-menu.spec.ts + tasks.spec.ts (task create + cleanup via
-// the calendar EventDetailModal). Self-cleaning, run-unique, generous backend
+// Runs under the `mobile-chrome` (Pixel 5) Playwright project. Conventions
+// mirror e2e/mobile/nav.spec.ts (scope every pill lookup to the testid) and
+// e2e/flows/create-menu.spec.ts + tasks.spec.ts (task create + cleanup via the
+// calendar EventDetailModal). Self-cleaning, run-unique, generous backend
 // timeouts.
 //
 // Gotchas accounted for:
-//  - The desktop sidebar is still in the DOM at mobile width (CSS-hidden), and
-//    its "Create" trigger shares the name with the drawer one. We scope every
-//    Create lookup to the drawer dialog to avoid ambiguity.
-//  - The sidebar "Create" trigger and the modal submit button both read
-//    "Create": exact:true for the trigger, dialog-scoped for the submit.
-//  - The "Task" menuitem needs exact:true (collides with "Tasks").
-//  - Selecting an option closes the drawer (AppLayout's openCreate calls
-//    setNavOpen(false)) AND opens the modal — so the only remaining role="dialog"
-//    after selecting is the modal.
+//  - The desktop sidebar is still in the DOM at mobile width (CSS-hidden) and
+//    has a "New" button of its own — hence the testid scope on the pill.
+//  - The sidebar/pill "New" trigger and the modal submit button read
+//    differently ("New" vs "Create"), but the modal submit is still queried
+//    dialog-scoped so it can never collide.
+//  - Menu options are named by their VISIBLE short label ("Med", "Appt",
+//    "Task", "Note") — that label IS the accessible name, because a full-word
+//    aria-label over a short visible label fails WCAG 2.5.3. The full word is
+//    the `title`. Every lookup is exact:true so "Task" cannot also match
+//    "Tasks"-shaped names.
+//  - Document upload and Invite member are NOT in this menu any more (spec
+//    §5.2). Those flows are covered by e2e/flows/documents.spec.ts and
+//    e2e/flows/members.spec.ts, which drive the page-level controls that
+//    replaced them.
 
 function todayISO(): string {
   // Local date as YYYY-MM-DD; the created item lands in the current views.
@@ -37,50 +40,45 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-test('drawer Create menu opens with all six options', async ({ page, circleId }) => {
+function pill(page: import('@playwright/test').Page) {
+  return page.getByTestId('floating-nav');
+}
+
+test('the pill AddMenu offers exactly the four create options', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-  // Open the hamburger drawer (same control nav.spec uses).
-  await page.getByRole('button', { name: 'Navigation menu' }).click();
-  const drawer = page.getByRole('dialog');
-  await expect(drawer).toBeVisible({ timeout: 10_000 });
+  const newCell = pill(page).getByRole('button', { name: 'New' });
+  await expect(newCell).toBeVisible({ timeout: 15_000 });
+  await newCell.click();
 
-  // Open the Create menu from inside the drawer (scoped: the hidden desktop
-  // sidebar also has a "Create" button; exact:true avoids the modal submit).
-  const createBtn = drawer.getByRole('button', { name: 'Create', exact: true });
-  await expect(createBtn).toBeVisible({ timeout: 15_000 });
-  await createBtn.click();
-
-  const menu = drawer.getByRole('menu');
+  const menu = page.getByRole('menu');
   await expect(menu).toBeVisible();
 
-  // All six options are present (the demo account is the circle owner).
-  await expect(menu.getByRole('menuitem', { name: 'Appointment' })).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: 'Medication' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Med', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Appt', exact: true })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Task', exact: true })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Note', exact: true })).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: 'Document' })).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: 'Invite member' })).toBeVisible();
+  await expect(menu.getByRole('menuitem')).toHaveCount(4);
+
+  // The two options that used to live here now belong to their own pages.
+  await expect(menu.getByRole('menuitem', { name: 'Document' })).toHaveCount(0);
+  await expect(menu.getByRole('menuitem', { name: 'Invite member' })).toHaveCount(0);
 });
 
-test('create a task end-to-end via the drawer Create menu', async ({ page, circleId }) => {
+test('create a task end-to-end from the pill NEW cell', async ({ page, circleId }) => {
   const title = uniqueLabel('MobileTask');
   const titleRe = new RegExp(escapeRegExp(title));
 
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-  // --- Open drawer → Create → Task ---
-  await page.getByRole('button', { name: 'Navigation menu' }).click();
-  const drawer = page.getByRole('dialog');
-  await expect(drawer).toBeVisible({ timeout: 10_000 });
+  // --- NEW → Task ---
+  const newCell = pill(page).getByRole('button', { name: 'New' });
+  await expect(newCell).toBeVisible({ timeout: 15_000 });
+  await newCell.click();
+  await expect(page.getByRole('menu')).toBeVisible();
+  await page.getByRole('menuitem', { name: 'Task', exact: true }).click();
 
-  const createBtn = drawer.getByRole('button', { name: 'Create', exact: true });
-  await expect(createBtn).toBeVisible({ timeout: 15_000 });
-  await createBtn.click();
-  await expect(drawer.getByRole('menu')).toBeVisible();
-  await drawer.getByRole('menuitem', { name: 'Task', exact: true }).click();
-
-  // Selecting closes the drawer and opens the AddEventModal — the only dialog now.
+  // Selecting closes the menu and opens the AddEventModal — the only dialog now.
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   // The menu pre-selects 'task' as the event type.
@@ -88,7 +86,7 @@ test('create a task end-to-end via the drawer Create menu', async ({ page, circl
 
   await dialog.locator('#title').fill(title);
   await dialog.locator('#scheduled_date').fill(todayISO());
-  // The modal's own Create button (dialog-scoped, not the sidebar trigger).
+  // The modal's own Create button (dialog-scoped, never the nav trigger).
   await dialog.getByRole('button', { name: 'Create' }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
@@ -102,15 +100,39 @@ test('create a task end-to-end via the drawer Create menu', async ({ page, circl
   // --- Delete (cleanup) via the calendar's EventDetailModal ---
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+  // Task chips are all-day; at the 390px Pixel 5 width the week view collapses
+  // today's all-day chips behind a "+N more" toggle well before the desktop
+  // cap (WeekView.tsx MAX_ALL_DAY_VISIBLE) — expand it before searching by title.
+  await expandAllDayOverflow(page);
 
   const chip = page.getByRole('button', { name: titleRe });
   await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
   await chip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
+  // (EventDetailActions.tsx spec §M2) whenever 2+ secondary actions apply —
+  // true for this fresh (non-completed) task.
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  const actionsMenu = page.getByRole('menu');
+  await expect(actionsMenu).toBeVisible();
+  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
 
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
+});
+
+test('a note from the pill navigates to the Notes composer', async ({ page, circleId }) => {
+  // Note is the one option with no modal — it lands on the Notes page, where
+  // the composer lives (mirrors mobile's New-menu note entry).
+  await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+
+  const newCell = pill(page).getByRole('button', { name: 'New' });
+  await expect(newCell).toBeVisible({ timeout: 15_000 });
+  await newCell.click();
+  await page.getByRole('menuitem', { name: 'Note', exact: true }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/notes$`), { timeout: 20_000 });
+  await expect(page.getByLabel(/^Add a note/)).toBeVisible({ timeout: 20_000 });
 });

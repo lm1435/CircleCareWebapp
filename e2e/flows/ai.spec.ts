@@ -27,10 +27,15 @@ test('open the AI assistant, send a message, and see the transcript update', asy
   await page.getByRole('button', { name: 'Assistant' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 10_000 });
-  await expect(dialog.getByText('Care Assistant')).toBeVisible();
+  // The title text appears twice (an sr-only <h2> supplies aria-labelledby,
+  // and a visible header paragraph repeats it) — either proves the modal is
+  // titled correctly.
+  await expect(dialog.getByText('Care Assistant').first()).toBeVisible();
 
   // --- Compose & send ---
-  const input = dialog.locator('#ai-chat-input');
+  // The composer textarea has no id any more — it's named by aria-label
+  // (ai:inputLabel = "Your message"), not `#ai-chat-input`.
+  const input = dialog.getByLabel('Your message', { exact: true });
   await expect(input).toBeVisible();
   await input.fill(question);
   await dialog.getByRole('button', { name: 'Send', exact: true }).click();

@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui';
+import { Button, Card } from '@/components/ui';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { CircleSelectionModal } from '@/components/CircleSelectionModal';
 
@@ -20,15 +20,17 @@ export function NeedsCircleSelectionBanner(): ReactElement | null {
 
   return (
     <>
-      <div
+      <Card
+        variant="filled"
+        padding="sm"
         role="status"
-        className="flex flex-wrap items-center justify-between gap-3 border-b border-terracotta/40 bg-terracotta/10 px-4 py-3 text-sm text-terracotta-deep"
+        className="bg-coral-soft! flex flex-wrap items-center justify-between gap-3 text-coral-deep"
       >
-        <span>{t('circleSelection.banner')}</span>
-        <Button variant="terracotta" size="sm" onClick={() => setOpen(true)}>
+        <span className="text-sm">{t('circleSelection.banner')}</span>
+        <Button variant="primary" size="sm" onClick={() => setOpen(true)}>
           {t('circleSelection.choose')}
         </Button>
-      </div>
+      </Card>
       {open && <CircleSelectionModal onClose={() => setOpen(false)} />}
     </>
   );

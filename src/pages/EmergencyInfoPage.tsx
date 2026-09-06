@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { EmergencyInfo } from '@/api/emergencyInfo';
+import type { AdditionalDoctor, EmergencyContact, EmergencyInfo, InsurancePlan } from '@/api/emergencyInfo';
 import {
   ContactCard,
   DirectivesCard,
@@ -16,6 +16,8 @@ import {
   InsuranceCard,
   RecipientHeader,
 } from '@/components/emergency';
+// Not (yet) re-exported from the barrel above — see EmergencySection.tsx.
+import { EmergencyAccordionSection } from '@/components/emergency/EmergencySection';
 import {
   filterOutIndex,
   toRequestContacts,
@@ -23,19 +25,22 @@ import {
   useUpdateEmergencyInfo,
 } from '@/hooks/useEmergencyInfo';
 import {
-  Accordion,
   Button,
+  CHIP_BASE,
+  CHIP_UNSELECTED,
   Card,
   ConfirmDialog,
   EmptyState,
   Skeleton,
   useAccordionGroup,
 } from '@/components/ui';
-import { EmergencyIcon } from '@/components/ui/emptyStateIcons';
+import { PageMasthead, type MastheadAction } from '@/components/layout/PageMasthead';
+import { HealthTabs } from '@/components/layout/HealthTabs';
 import { useCircle } from '@/hooks/useCircle';
 import { useCircleMembers } from '@/hooks/useCircleMembers';
 import { useCircles } from '@/hooks/useCircles';
 import { useEmergencyInfo } from '@/hooks/useEmergencyInfo';
+import { Analytics } from '@/lib/analytics';
 import '@/styles/print.css';
 
 // PHI page: never log the payload, never attach any of it to analytics.
@@ -61,6 +66,13 @@ const SECTIONS = [
 // ('directives') is intentionally excluded — it stays always-visible.
 const COLLAPSIBLE_SECTION_IDS = ['doctors', 'contacts', 'insurance'];
 
+// Print break-avoidance for one section inside the `.emergency-sections`
+// masonry (spec §6.6). Applied on a plain wrapper div rather than
+// `Accordion`'s own `<section>` (it has no `className` prop) — see
+// `EmergencySection`'s own `className` prop for the one section this page
+// owns directly.
+const SECTION_WRAP_CLASS = 'mb-10 break-inside-avoid lg:mt-0';
+
 // Open-modal descriptor. `target` is the doctor target ('primary' | index |
 // undefined-for-add) or the array index for contacts/insurance.
 type OpenModal =
@@ -75,6 +87,22 @@ type PendingDelete =
   | { kind: 'doctor'; index: number }
   | { kind: 'contact'; index: number }
   | { kind: 'insurance'; index: number };
+
+// One row of the doctors accordion: the primary doctor (flat fields on
+// `EmergencyInfo`, at most one) or an entry from `additional_doctors` (needs
+// its array index for edit/delete). Unified so both can share one
+// `EmergencyAccordionSection<DoctorRow>` instead of a special-cased primary
+// slot outside the generic list.
+type DoctorRow =
+  | ({ kind: 'primary' } & Pick<
+      EmergencyInfo,
+      | 'primary_doctor_name'
+      | 'primary_doctor_specialty'
+      | 'primary_doctor_phone'
+      | 'primary_doctor_country_code'
+      | 'primary_doctor_address'
+    >)
+  | { kind: 'additional'; index: number; doctor: AdditionalDoctor };
 
 // Conditions render only in the at-a-glance tiles (Round 7 merge), but they
 // still count toward "has any data" — a conditions-only circle must get the
@@ -141,11 +169,44 @@ function synthesizeEmptyEmergencyInfo(circleId: string): EmergencyInfo {
 }
 
 /**
+ * Shared masthead (spec §6.6): terracotta section eyebrow, the page title +
+ * subtitle, `HealthTabs` (Emergency · Documents, below xl), and — only when
+ * the requester can edit AND there is somewhere for the affordance to go
+ * (the modals only mount past the loading/error states) — the "Edit medical
+ * info" right action.
+ */
+function EmergencyMasthead({
+  title,
+  subtitle,
+  rightAction,
+  secondaryAction,
+}: {
+  title: string;
+  subtitle: string;
+  rightAction?: MastheadAction;
+  secondaryAction?: MastheadAction;
+}): ReactElement {
+  const { t } = useTranslation('common');
+  return (
+    <PageMasthead
+      section={t('nav.emergency')}
+      tone="terracotta"
+      title={title}
+      subtitle={subtitle}
+      rightAction={rightAction}
+      secondaryAction={secondaryAction}
+    >
+      <HealthTabs />
+    </PageMasthead>
+  );
+}
+
+/**
  * Emergency Info page (plan Stage 4): sectioned layout with in-page nav, Print
  * button, per-section empty states. When the requester can edit, per-section
- * Add buttons + per-item Edit/Delete affordances drive the section edit modals
- * (all backed by the single partial-merge PUT). When the requester cannot edit,
- * the read-only view + download-app CTA is preserved.
+ * Add buttons + per-item MoreMenu (Edit/Delete) affordances drive the section
+ * edit modals (all backed by the single partial-merge PUT). When the
+ * requester cannot edit, the read-only view + download-app CTA is preserved.
  */
 export default function EmergencyInfoPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
@@ -178,6 +239,25 @@ export default function EmergencyInfoPage(): ReactElement {
       document.body.classList.remove('emergency-print-scope');
     };
   }, []);
+
+  // Instrumented from day one (the vitals lesson) — ids only, never content.
+  useEffect(() => {
+    if (circleId) Analytics.emergencyInfoViewed(circleId);
+  }, [circleId]);
+
+  const openEditMedical = (): void => setOpenModal({ kind: 'medical' });
+
+  const editMedicalAction: MastheadAction = {
+    name: 'create-outline',
+    label: t('edit.editMedicalInfo'),
+    onClick: openEditMedical,
+  };
+
+  const printAction: MastheadAction = {
+    name: 'print-outline',
+    label: t('print'),
+    onClick: () => window.print(),
+  };
 
   const confirmDelete = (): void => {
     if (!pendingDelete) return;
@@ -243,13 +323,13 @@ export default function EmergencyInfoPage(): ReactElement {
 
   if (isLoading) {
     return (
-      <section className="mx-auto max-w-5xl p-6 md:p-8">
-        <h1 className="serif m-0 text-xl text-ink">{t('title')}</h1>
-        <div role="status" aria-live="polite" className="mt-6">
+      <section className="mx-auto max-w-5xl pb-10">
+        <EmergencyMasthead title={t('title')} subtitle={t('subtitle')} />
+        <div role="status" aria-live="polite" className="mt-6 px-5">
           <span className="sr-only">{t('loadingLabel')}</span>
           <div className="grid gap-4">
             {SKELETON_SECTIONS.map((section) => (
-              <Card key={section}>
+              <Card key={section} padding="lg">
                 <Skeleton className="h-5 w-1/3 max-w-48" />
                 <Skeleton className="mt-3 h-4 w-2/3 max-w-80" />
                 <Skeleton className="mt-2 h-4 w-1/2 max-w-64" />
@@ -263,14 +343,16 @@ export default function EmergencyInfoPage(): ReactElement {
 
   if (isError) {
     return (
-      <section className="mx-auto max-w-5xl p-6 md:p-8">
-        <h1 className="serif m-0 text-xl text-ink">{t('title')}</h1>
-        <Card className="mt-6 text-center">
-          <p className="m-0 font-medium text-ink">{t('errorTitle')}</p>
-          <Button variant="ghost" className="mt-4" onClick={() => void refetch()}>
-            {t('retry')}
-          </Button>
-        </Card>
+      <section className="mx-auto max-w-5xl pb-10">
+        <EmergencyMasthead title={t('title')} subtitle={t('subtitle')} />
+        <div className="px-5">
+          <Card padding="lg" className="mt-6 text-center">
+            <p className="m-0 font-medium text-ink">{t('errorTitle')}</p>
+            <Button variant="ghost" className="mt-4" onClick={() => void refetch()}>
+              {t('retry')}
+            </Button>
+          </Card>
+        </div>
       </section>
     );
   }
@@ -295,6 +377,72 @@ export default function EmergencyInfoPage(): ReactElement {
   const contactCount = info?.emergency_contacts?.length ?? 0;
   const insuranceCount = info?.insurance_plans?.length ?? 0;
 
+  // Items + renderItem for the three collapsible sections' shared
+  // `EmergencyAccordionSection`. The primary doctor is prepended as its own
+  // `DoctorRow` so it renders through the same list as `additional_doctors`.
+  const doctorItems: DoctorRow[] = [
+    ...(info?.primary_doctor_name
+      ? [
+          {
+            kind: 'primary' as const,
+            primary_doctor_name: info.primary_doctor_name,
+            primary_doctor_specialty: info.primary_doctor_specialty,
+            primary_doctor_phone: info.primary_doctor_phone,
+            primary_doctor_country_code: info.primary_doctor_country_code,
+            primary_doctor_address: info.primary_doctor_address,
+          },
+        ]
+      : []),
+    ...(info?.additional_doctors ?? []).map(
+      (doctor, index): DoctorRow => ({ kind: 'additional', index, doctor })
+    ),
+  ];
+  const renderDoctorRow = (row: DoctorRow): ReactNode =>
+    row.kind === 'primary' ? (
+      <DoctorCard
+        name={row.primary_doctor_name as string}
+        specialty={row.primary_doctor_specialty}
+        phone={row.primary_doctor_phone}
+        countryCode={row.primary_doctor_country_code}
+        address={row.primary_doctor_address}
+        isPrimary
+        onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: 'primary' }) : undefined}
+        onDelete={canEdit ? () => setPendingDelete({ kind: 'doctor-primary' }) : undefined}
+      />
+    ) : (
+      <DoctorCard
+        name={row.doctor.name}
+        specialty={row.doctor.specialty}
+        phone={row.doctor.phone}
+        countryCode={row.doctor.country_code}
+        address={row.doctor.address}
+        onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: row.index }) : undefined}
+        onDelete={canEdit ? () => setPendingDelete({ kind: 'doctor', index: row.index }) : undefined}
+      />
+    );
+
+  const contactItems: EmergencyContact[] = info?.emergency_contacts ?? [];
+  const renderContactRow = (contact: EmergencyContact, index: number): ReactNode => (
+    <ContactCard
+      name={contact.name}
+      relationship={contact.relationship}
+      phone={contact.phone}
+      countryCode={contact.country_code}
+      isPrimary={contact.is_primary}
+      onEdit={canEdit ? () => setOpenModal({ kind: 'contact', index }) : undefined}
+      onDelete={canEdit ? () => setPendingDelete({ kind: 'contact', index }) : undefined}
+    />
+  );
+
+  const insuranceItems: InsurancePlan[] = info?.insurance_plans ?? [];
+  const renderInsuranceRow = (plan: InsurancePlan, index: number): ReactNode => (
+    <InsuranceCard
+      plan={plan}
+      onEdit={canEdit ? () => setOpenModal({ kind: 'insurance', index }) : undefined}
+      onDelete={canEdit ? () => setPendingDelete({ kind: 'insurance', index }) : undefined}
+    />
+  );
+
   // BLOOD TYPE AND ALLERGIES COUNT AS DATA. They render in the at-a-glance tiles
   // (GlanceTiles) rather than in SECTIONS, so neither `sectionHasData` nor
   // `hasConditions` can see them. Leaving them out classified a circle that
@@ -309,23 +457,25 @@ export default function EmergencyInfoPage(): ReactElement {
   // user CAN edit, fall through to the sectioned view so the Add buttons show.)
   if (isFullyEmpty && !canEdit) {
     return (
-      <section className="mx-auto max-w-5xl p-6 md:p-8">
-        <h1 className="serif m-0 text-xl text-ink">{t('title')}</h1>
-        <Card className="mt-6 border-dashed p-8">
-          <EmptyState
-            tone="terracotta"
-            icon={<EmergencyIcon />}
-            title={t('emptyTitle')}
-            description={t('emptyHint')}
-          >
-            <a
-              href="https://circlecare.app"
-              className="font-medium text-terracotta-deep underline underline-offset-2 hover:text-ink"
+      <section className="mx-auto max-w-5xl pb-10">
+        <EmergencyMasthead title={t('title')} subtitle={t('subtitle')} />
+        <div className="px-5">
+          <Card padding="lg" className="mt-6 border-dashed">
+            <EmptyState
+              tone="terracotta"
+              icon="medical-outline"
+              title={t('emptyTitle')}
+              description={t('emptyHint')}
             >
-              {t('downloadCta')}
-            </a>
-          </EmptyState>
-        </Card>
+              <a
+                href="https://circlecare.app"
+                className="font-medium text-terracotta-deep underline underline-offset-2 hover:text-ink"
+              >
+                {t('downloadCta')}
+              </a>
+            </EmptyState>
+          </Card>
+        </div>
       </section>
     );
   }
@@ -335,7 +485,7 @@ export default function EmergencyInfoPage(): ReactElement {
   );
 
   return (
-    <section className="mx-auto max-w-5xl p-6 md:p-8">
+    <section className="mx-auto max-w-5xl pb-10">
       {/* Print-only header: whose info this is + when the sheet was generated. */}
       <div className="print-only print-header">
         <p className="text-lg font-semibold">{t('printHeading')}</p>
@@ -343,266 +493,144 @@ export default function EmergencyInfoPage(): ReactElement {
         <p>{t('printedOn', { date: generatedDate })}</p>
       </div>
 
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="serif m-0 text-xl text-ink">{t('title')}</h1>
-          <p className="m-0 mt-1 text-sm text-ink-3">{t('subtitle')}</p>
-        </div>
-        <Button variant="ghost" className="no-print" onClick={() => window.print()}>
-          {t('print')}
-        </Button>
-      </header>
+      <EmergencyMasthead
+        title={t('title')}
+        subtitle={t('subtitle')}
+        rightAction={canEdit ? editMedicalAction : printAction}
+        // Print rides beside Edit in the masthead's own action row (it was a
+        // stranded row of its own under the title). Without edit rights Print
+        // IS the right action, so nothing doubles up. The masthead marks both
+        // slots `data-print-hide` (spec §6.6).
+        secondaryAction={canEdit ? printAction : undefined}
+      />
 
-      <nav aria-label={t('onThisPage')} className="no-print mt-6">
-        <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-2 p-0">
-          {SECTIONS.map((section) => (
-            <li key={section.id}>
+      <div className="px-5">
+        {/* Section jump links as pills — the same hairline chip the filter rows
+            use, not secondary buttons, so the row reads as navigation rather
+            than five commands. */}
+        <nav aria-label={t('onThisPage')} className="no-print mt-4">
+          <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+            {SECTIONS.map((section) => (
+              <li key={section.id}>
+                <a
+                  href={`#${section.id}`}
+                  className={`${CHIP_BASE} ${CHIP_UNSELECTED} no-underline`}
+                >
+                  {t(`sections.${section.key}`)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Read-only notice only when the requester can't edit. */}
+        {!canEdit && (
+          <Card
+            padding="lg"
+            className="no-print mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 bg-bg-2"
+          >
+            <p className="m-0 text-sm font-medium text-ink">{t('readOnlyNotice')}</p>
+            <p className="m-0 text-sm text-ink-3">
+              {t('downloadToEdit')}{' '}
               <a
-                href={`#${section.id}`}
-                className="text-sm font-medium text-ink-2 underline underline-offset-4 hover:text-ink"
+                href="https://circlecare.app"
+                className="font-medium text-terracotta-deep underline underline-offset-2 hover:text-ink"
               >
-                {t(`sections.${section.key}`)}
+                {t('downloadCta')}
               </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+            </p>
+          </Card>
+        )}
 
-      {/* Read-only notice only when the requester can't edit. */}
-      {!canEdit && (
-        <Card className="no-print mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 bg-bg-2 p-4">
-          <p className="m-0 text-sm font-medium text-ink">{t('readOnlyNotice')}</p>
-          <p className="m-0 text-sm text-ink-3">
-            {t('downloadToEdit')}{' '}
-            <a
-              href="https://circlecare.app"
-              className="font-medium text-terracotta-deep underline underline-offset-2 hover:text-ink"
+        <div className="emergency-content mt-8 flex flex-col gap-10">
+          {circleDetail && (
+            <RecipientHeader
+              name={recipientName}
+              photoUrl={circleDetail.recipient_photo_url}
+              dob={circleDetail.recipient_dob}
+            />
+          )}
+
+          {/* At-a-glance tiles absorb the former Medical Information section
+              (Round 7 merge). The Edit affordance now lives in the masthead's
+              right action, which keeps the add path reachable even when
+              nothing medical is recorded yet (tiles absent). */}
+          {info && <GlanceTiles info={info} />}
+
+          {/* Expand/Collapse all — controls only the collapsible sections below.
+              Hidden in print (everything prints regardless). */}
+          <div className="no-print -mb-4 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={accordion.allOpen}
+              onClick={() => (accordion.allOpen ? accordion.collapseAll() : accordion.expandAll())}
             >
-              {t('downloadCta')}
-            </a>
-          </p>
-        </Card>
-      )}
-
-      <div className="emergency-content mt-8 flex flex-col gap-10">
-        {circleDetail && (
-          <RecipientHeader
-            name={recipientName}
-            photoUrl={circleDetail.recipient_photo_url}
-            dob={circleDetail.recipient_dob}
-            conditions={circleDetail.recipient_conditions}
-          />
-        )}
-
-        {/* At-a-glance tiles absorb the former Medical Information section
-            (Round 7 merge). The canEdit-gated Edit affordance in the section's
-            header area keeps the Edit Medical Info modal reachable — including
-            the add path when nothing medical is recorded yet (tiles absent). */}
-        {canEdit ? (
-          <div className="flex flex-col gap-2">
-            <div className="no-print flex justify-end">
-              <Button variant="ghost" size="sm" onClick={() => setOpenModal({ kind: 'medical' })}>
-                {t('edit.editMedicalInfo')}
-              </Button>
-            </div>
-            {info && <GlanceTiles info={info} />}
+              {accordion.allOpen ? t('common:collapseAll') : t('common:expandAll')}
+            </Button>
           </div>
-        ) : (
-          info && <GlanceTiles info={info} />
-        )}
 
-        {/* Expand/Collapse all — controls only the collapsible sections below.
-            Hidden in print (everything prints regardless). */}
-        <div className="no-print -mb-4 flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-expanded={accordion.allOpen}
-            onClick={() => (accordion.allOpen ? accordion.collapseAll() : accordion.expandAll())}
-          >
-            {accordion.allOpen ? t('common:collapseAll') : t('common:expandAll')}
-          </Button>
-        </div>
-
-        <div className="emergency-sections lg:columns-2 lg:gap-x-8 [&>section]:mb-10 [&>section]:break-inside-avoid lg:[&>section]:mt-0">
-          <Accordion
-            id="doctors"
-            title={t('sections.doctors')}
-            open={accordion.isOpen('doctors')}
-            onToggle={accordion.toggle}
-            meta={doctorCount > 0 ? doctorCount : undefined}
-          >
-            {sectionHasData.doctors && info ? (
-              <>
-                {info.primary_doctor_name && (
-                  <DoctorCard
-                    name={info.primary_doctor_name}
-                    specialty={info.primary_doctor_specialty}
-                    phone={info.primary_doctor_phone}
-                    countryCode={info.primary_doctor_country_code}
-                    address={info.primary_doctor_address}
-                    isPrimary
-                    onEdit={
-                      canEdit ? () => setOpenModal({ kind: 'doctor', target: 'primary' }) : undefined
-                    }
-                    onDelete={canEdit ? () => setPendingDelete({ kind: 'doctor-primary' }) : undefined}
-                  />
-                )}
-                {(info.additional_doctors ?? []).map((doctor, index) => (
-                  <DoctorCard
-                    key={`${doctor.name}-${index}`}
-                    name={doctor.name}
-                    specialty={doctor.specialty}
-                    phone={doctor.phone}
-                    countryCode={doctor.country_code}
-                    address={doctor.address}
-                    onEdit={
-                      canEdit ? () => setOpenModal({ kind: 'doctor', target: index }) : undefined
-                    }
-                    onDelete={canEdit ? () => setPendingDelete({ kind: 'doctor', index }) : undefined}
-                  />
-                ))}
-                {canEdit && (
-                  <div className="no-print">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'doctor', target: undefined })}
-                    >
-                      {t('edit.addDoctor')}
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <EmptySection
-                message={t('empty.doctors')}
-                action={
-                  canEdit ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'doctor', target: undefined })}
-                    >
-                      {t('edit.addDoctor')}
-                    </Button>
-                  ) : undefined
-                }
+          <div className="emergency-sections lg:columns-2 lg:gap-x-8">
+            <div className={SECTION_WRAP_CLASS}>
+              <EmergencyAccordionSection
+                id="doctors"
+                title={t('sections.doctors')}
+                open={accordion.isOpen('doctors')}
+                onToggle={accordion.toggle}
+                count={doctorCount}
+                items={doctorItems}
+                renderItem={renderDoctorRow}
+                canEdit={canEdit}
+                onAdd={() => setOpenModal({ kind: 'doctor', target: undefined })}
+                addLabel={t('edit.addDoctor')}
+                emptyMessage={t('empty.doctors')}
               />
-            )}
-          </Accordion>
+            </div>
 
-          <Accordion
-            id="contacts"
-            title={t('sections.contacts')}
-            open={accordion.isOpen('contacts')}
-            onToggle={accordion.toggle}
-            meta={contactCount > 0 ? contactCount : undefined}
-          >
-            {sectionHasData.contacts && info ? (
-              <>
-                {(info.emergency_contacts ?? []).map((contact, index) => (
-                  <ContactCard
-                    key={`${contact.name}-${index}`}
-                    name={contact.name}
-                    relationship={contact.relationship}
-                    phone={contact.phone}
-                    countryCode={contact.country_code}
-                    isPrimary={contact.is_primary}
-                    onEdit={
-                      canEdit ? () => setOpenModal({ kind: 'contact', index }) : undefined
-                    }
-                    onDelete={canEdit ? () => setPendingDelete({ kind: 'contact', index }) : undefined}
-                  />
-                ))}
-                {canEdit && (
-                  <div className="no-print">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'contact' })}
-                    >
-                      {t('edit.addContact')}
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <EmptySection
-                message={t('empty.contacts')}
-                action={
-                  canEdit ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'contact' })}
-                    >
-                      {t('edit.addContact')}
-                    </Button>
-                  ) : undefined
-                }
+            <div className={SECTION_WRAP_CLASS}>
+              <EmergencyAccordionSection
+                id="contacts"
+                title={t('sections.contacts')}
+                open={accordion.isOpen('contacts')}
+                onToggle={accordion.toggle}
+                count={contactCount}
+                items={contactItems}
+                renderItem={renderContactRow}
+                canEdit={canEdit}
+                onAdd={() => setOpenModal({ kind: 'contact' })}
+                addLabel={t('edit.addContact')}
+                emptyMessage={t('empty.contacts')}
               />
-            )}
-          </Accordion>
+            </div>
 
-          <Accordion
-            id="insurance"
-            title={t('sections.insurance')}
-            open={accordion.isOpen('insurance')}
-            onToggle={accordion.toggle}
-            meta={insuranceCount > 0 ? insuranceCount : undefined}
-          >
-            {sectionHasData.insurance && info ? (
-              <>
-                {(info.insurance_plans ?? []).map((plan, index) => (
-                  <InsuranceCard
-                    key={`${plan.carrier}-${index}`}
-                    plan={plan}
-                    onEdit={
-                      canEdit ? () => setOpenModal({ kind: 'insurance', index }) : undefined
-                    }
-                    onDelete={
-                      canEdit ? () => setPendingDelete({ kind: 'insurance', index }) : undefined
-                    }
-                  />
-                ))}
-                {canEdit && (
-                  <div className="no-print">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'insurance' })}
-                    >
-                      {t('edit.addInsurance')}
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <EmptySection
-                message={t('empty.insurance')}
-                action={
-                  canEdit ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOpenModal({ kind: 'insurance' })}
-                    >
-                      {t('edit.addInsurance')}
-                    </Button>
-                  ) : undefined
-                }
+            <div className={SECTION_WRAP_CLASS}>
+              <EmergencyAccordionSection
+                id="insurance"
+                title={t('sections.insurance')}
+                open={accordion.isOpen('insurance')}
+                onToggle={accordion.toggle}
+                count={insuranceCount}
+                items={insuranceItems}
+                renderItem={renderInsuranceRow}
+                canEdit={canEdit}
+                onAdd={() => setOpenModal({ kind: 'insurance' })}
+                addLabel={t('edit.addInsurance')}
+                emptyMessage={t('empty.insurance')}
               />
-            )}
-          </Accordion>
+            </div>
 
-          <EmergencySection id="directives" title={t('sections.directives')}>
-            {sectionHasData.directives && info ? (
-              <DirectivesCard hasDnr={!!info.has_dnr} directives={info.advance_directives} />
-            ) : (
-              <EmptySection message={t('empty.directives')} />
-            )}
-          </EmergencySection>
+            <EmergencySection
+              id="directives"
+              title={t('sections.directives')}
+              className={SECTION_WRAP_CLASS}
+            >
+              {sectionHasData.directives && info ? (
+                <DirectivesCard hasDnr={!!info.has_dnr} directives={info.advance_directives} />
+              ) : (
+                <EmptySection message={t('empty.directives')} />
+              )}
+            </EmergencySection>
+          </div>
         </div>
       </div>
 

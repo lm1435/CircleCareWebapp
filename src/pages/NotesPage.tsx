@@ -6,9 +6,14 @@ import {
   Card,
   ConfirmDialog,
   EmptyState,
+  Sheet,
   Skeleton,
+  careCardListGap,
+  careCardShell,
   useToast,
 } from '@/components/ui';
+import { PageMasthead } from '@/components/layout/PageMasthead';
+import { CareTabs } from '@/components/layout/CareTabs';
 import { ViewOnlyBanner } from '@/components/ViewOnlyBanner';
 import { NoteComposer, EMPTY_NOTE_DRAFT, type NoteDraft } from '@/components/notes/NoteComposer';
 import { NoteRow } from '@/components/notes/NoteRow';
@@ -23,13 +28,13 @@ import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
 import type { CareNote, CareNoteInput } from '@/api/careNotes';
 
-// Daily Care Notes page (docs/plans/daily-care-notes.md, Web Task 16) — the
-// web twin of mobile's NotesTab. A shared per-circle day journal: composer at
-// the top (today only — note_date is stamped SERVER-side in the recipient TZ,
-// never computed here), then entries grouped by day, reverse-chron, with
-// recipient-TZ day labels. Own entries get visible edit/delete affordances;
-// the circle owner can delete any entry. View-only members see the thread but
-// no composer (ViewOnlyBanner, tasks idiom). Posting is OPTIMISTIC: the hook
+// Daily Care Notes page (Wave 3, Task 16 — mobile-parity pass) — the web twin
+// of mobile's NotesTab. A shared per-circle day journal: composer at the top
+// (today only — note_date is stamped SERVER-side in the recipient TZ, never
+// computed here), then entries grouped by day, reverse-chron, with
+// recipient-TZ day labels. Own entries get an edit/delete MoreMenu; the circle
+// owner can delete any entry. View-only members see the thread but no
+// composer (ViewOnlyBanner, tasks idiom). Posting is OPTIMISTIC: the hook
 // prepends the note, the composer clears immediately, and on failure the hook
 // rolls back while we restore the draft (input preserved) + show a toast.
 
@@ -49,27 +54,6 @@ function shiftDateString(dateString: string, days: number): string {
   const date = new Date(`${dateString}T12:00:00Z`);
   date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
   return date.toISOString().slice(0, 10);
-}
-
-/** Journal glyph for the empty state tile (decorative). */
-function NotesEmptyIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={26}
-      height={26}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20.3c1-1.2 1.9.9 2.9 0s1.9.9 2.9 0 1.7.8 2.7-.2" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
 }
 
 interface DayGroup {
@@ -202,7 +186,11 @@ export default function NotesPage(): ReactElement {
         input: { body: body || null, mood: edited.mood, categories: edited.categories },
       },
       {
-        onSuccess: () => setEditingNoteId(null),
+        onSuccess: () => {
+          // Mirrors careNoteAdded: category COUNT only, never mood/body/names.
+          Analytics.careNoteUpdated(circleId, { categoryCount: edited.categories.length });
+          setEditingNoteId(null);
+        },
         onError: () => showToast(t('notes:composer.errorSaving'), 'error'),
       }
     );
@@ -214,7 +202,10 @@ export default function NotesPage(): ReactElement {
     deleteMutation.mutate(
       { circleId, noteId: deletingNoteId },
       {
-        onSuccess: () => setDeletingNoteId(null),
+        onSuccess: () => {
+          Analytics.careNoteDeleted(circleId);
+          setDeletingNoteId(null);
+        },
         onError: () => {
           setDeletingNoteId(null);
           showToast(t('notes:composer.errorSaving'), 'error');
@@ -240,12 +231,12 @@ export default function NotesPage(): ReactElement {
   let body: ReactElement;
   if (notesQuery.isLoading) {
     body = (
-      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-busy="true">
+      <ul className={`${careCardListGap} m-0 list-none p-0 px-5`} aria-busy="true">
         <li className="sr-only">{t('notes:loading')}</li>
         {SKELETON_ROWS.map((row) => (
-          <li key={row} className="rounded-xl border border-line bg-cream p-4">
+          <li key={row} className={careCardShell}>
             <div className="flex items-center gap-2.5">
-              <Skeleton className="h-7 w-7 rounded-full" />
+              <Skeleton className="h-9 w-9 rounded-full" />
               <Skeleton className="h-4 w-32" />
             </div>
             <Skeleton className="mt-3 h-4 w-2/3 max-w-64" />
@@ -255,7 +246,7 @@ export default function NotesPage(): ReactElement {
     );
   } else if (notesQuery.isError) {
     body = (
-      <Card className="text-center">
+      <Card className="mx-5 text-center">
         <p className="m-0 font-medium text-ink">{t('notes:errorTitle')}</p>
         <p className="m-0 mt-1 text-sm text-ink-3">{t('notes:errorHint')}</p>
         <Button variant="ghost" className="mt-4" onClick={() => void notesQuery.refetch()}>
@@ -267,22 +258,22 @@ export default function NotesPage(): ReactElement {
     // Calm empty state — no starter chips (empty-states-stay-calm lesson);
     // the composer above is the call to action.
     body = (
-      <Card className="p-8">
+      <div className="px-5">
         <EmptyState
           tone="dusk"
-          icon={<NotesEmptyIcon />}
+          icon="document-text-outline"
           title={t('notes:empty.title')}
           description={t('notes:empty.hint')}
         />
-      </Card>
+      </div>
     );
   } else {
     body = (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 px-5">
         {groups.map((group) => (
           <section key={group.date} aria-label={dayLabel(group.date)}>
-            <h2 className="serif m-0 text-base text-ink">{dayLabel(group.date)}</h2>
-            <ul className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
+            <h2 className="m-0 text-base font-semibold text-ink">{dayLabel(group.date)}</h2>
+            <ul className={`${careCardListGap} m-0 mt-3 list-none p-0`}>
               {group.notes.map((note) => {
                 const isOwn = note.author_id === currentUserId;
                 return (
@@ -318,30 +309,31 @@ export default function NotesPage(): ReactElement {
   const deletingNote = notes.find((n) => n.id === deletingNoteId) ?? null;
 
   return (
-    <section className="mx-auto max-w-3xl p-6 md:p-8">
-      <header>
-        <h1 className="serif m-0 text-xl text-ink">{t('notes:title')}</h1>
-        <p className="m-0 mt-1 text-sm text-ink-3">{t('notes:subtitle')}</p>
-      </header>
+    <section className="mx-auto w-full max-w-5xl pb-8">
+      <PageMasthead section={t('common:nav.notes')} tone="dusk" title={t('notes:title')} subtitle={t('notes:subtitle')}>
+        <CareTabs />
+      </PageMasthead>
 
-      {!!circle && !canEdit && <ViewOnlyBanner className="mt-6" />}
+      {!!circle && !canEdit && <ViewOnlyBanner className="mx-5 mt-4" />}
 
       {/* One editing surface at a time: the create composer hides while an
           inline edit is active (mirrors mobile). */}
       {canEdit && editingNoteId === null && (
-        <Card className="mt-6">
-          <NoteComposer
-            idPrefix="care-note"
-            draft={draft}
-            onChange={setDraft}
-            onSubmit={handlePost}
-            submitLabel={t('notes:composer.post')}
-            submitting={createMutation.isPending}
-          />
-        </Card>
+        <div className="px-5 pb-4 pt-4">
+          <Sheet padding="sm">
+            <NoteComposer
+              idPrefix="care-note"
+              draft={draft}
+              onChange={setDraft}
+              onSubmit={handlePost}
+              submitLabel={t('notes:composer.post')}
+              submitting={createMutation.isPending}
+            />
+          </Sheet>
+        </div>
       )}
 
-      <div className="mt-6">{body}</div>
+      <div className="mt-2">{body}</div>
 
       {deletingNote && (
         <ConfirmDialog

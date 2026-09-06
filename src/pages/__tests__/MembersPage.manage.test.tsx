@@ -8,6 +8,11 @@ import type { CircleDetail, CircleMember, PendingCircleInvite } from '@/api/circ
 // Stage 5 Task 5.4/5.7 — owner-only member management wiring. The read-only
 // roster behavior is covered by MembersPage.test.tsx; this suite focuses on the
 // owner/non-owner gating and that confirm dialogs fire the right hook.
+//
+// Mobile-parity Task 22: per-member and per-invite actions moved behind a
+// `MoreMenu` (spec §6.7), so every action here is a two-step interaction —
+// open the row's menu (its trigger is uniquely labelled per row/email so
+// several rows' triggers never collide), then activate the menuitem.
 
 const navigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -129,6 +134,16 @@ function renderPage(): void {
   );
 }
 
+/** Opens a member row's `MoreMenu` (uniquely labelled "Actions for {{name}}"). */
+async function openMemberMenu(user: ReturnType<typeof userEvent.setup>, name: string): Promise<void> {
+  await user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+}
+
+/** Opens a pending-invite row's `MoreMenu` (uniquely labelled by email). */
+async function openInviteMenu(user: ReturnType<typeof userEvent.setup>, email: string): Promise<void> {
+  await user.click(screen.getByRole('button', { name: `Actions for invite to ${email}` }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   currentUserId = 'u-owner';
@@ -140,7 +155,9 @@ describe('MembersPage — owner management', () => {
   it('shows the Invite member button for the owner', () => {
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })]);
     renderPage();
-    expect(screen.getByRole('button', { name: 'Invite member' })).toBeInTheDocument();
+    // PageMasthead renders the action twice (icon-only below xl, labelled at
+    // xl) — both share the accessible name.
+    expect(screen.getAllByRole('button', { name: 'Invite member' }).length).toBeGreaterThan(0);
   });
 
   it('hides the Invite member button and shows Leave for a non-owner', () => {
@@ -176,7 +193,7 @@ describe('MembersPage — owner management', () => {
     const user = userEvent.setup();
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })]);
     renderPage();
-    await user.click(screen.getByRole('button', { name: 'Invite member' }));
+    await user.click(screen.getAllByRole('button', { name: 'Invite member' })[0]!);
     expect(screen.getByRole('dialog')).toHaveTextContent('Invite a member');
   });
 
@@ -188,7 +205,8 @@ describe('MembersPage — owner management', () => {
     ]);
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Remove Ana Reyes' }));
+    await openMemberMenu(user, 'Ana Reyes');
+    await user.click(screen.getByRole('menuitem', { name: 'Remove' }));
     const dialog = screen.getByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
 
@@ -202,7 +220,7 @@ describe('MembersPage — owner management', () => {
       makeMember({ id: 'u3', first_name: 'Rose', is_care_recipient: true }),
     ]);
     renderPage();
-    expect(screen.queryByRole('button', { name: /Remove Rose/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Actions for Rose/ })).not.toBeInTheDocument();
   });
 
   it('toggling the medication manager fires useSetMedicationResponsible with the user id', async () => {
@@ -213,7 +231,8 @@ describe('MembersPage — owner management', () => {
     ]);
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Make medication manager' }));
+    await openMemberMenu(user, 'Ana Reyes');
+    await user.click(screen.getByRole('menuitem', { name: 'Make medication manager' }));
     expect(setMedResponsible).toHaveBeenCalledWith('u1', expect.anything());
     expect(setMedResponsible.mock.calls[0][0]).toBe('u1');
   });
@@ -226,7 +245,8 @@ describe('MembersPage — owner management', () => {
     ]);
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Remove medication manager' }));
+    await openMemberMenu(user, 'Ana Reyes');
+    await user.click(screen.getByRole('menuitem', { name: 'Remove medication manager' }));
     expect(setMedResponsible.mock.calls[0][0]).toBeNull();
   });
 
@@ -262,7 +282,8 @@ describe('MembersPage — owner management', () => {
     renderPage();
 
     expect(screen.getByText('pending@example.com')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Cancel invite for pending@example.com' }));
+    await openInviteMenu(user, 'pending@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Cancel invite' }));
     const dialog = screen.getByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Cancel invite' }));
 
@@ -287,19 +308,20 @@ describe('MembersPage — expired invites', () => {
     };
   }
 
-  it('badges an expired invite and offers Resend', () => {
+  it('badges an expired invite and offers Resend', async () => {
+    const user = userEvent.setup();
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })], {
       pending_invites: [makeInvite({ is_expired: true })],
     });
     renderPage();
 
     expect(screen.getByText('Expired')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Resend invite for lapsed@example.com' })
-    ).toBeInTheDocument();
+    await openInviteMenu(user, 'lapsed@example.com');
+    expect(screen.getByRole('menuitem', { name: 'Resend' })).toBeInTheDocument();
   });
 
-  it('shows no badge and no Resend for a live invite', () => {
+  it('shows no badge and no Resend for a live invite', async () => {
+    const user = userEvent.setup();
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })], {
       pending_invites: [
         makeInvite({ is_expired: false, expires_at: '2099-01-01T00:00:00Z' }),
@@ -308,14 +330,14 @@ describe('MembersPage — expired invites', () => {
     renderPage();
 
     expect(screen.queryByText('Expired')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Resend invite for/ })).not.toBeInTheDocument();
-    // Cancel is still available on a live invite.
-    expect(
-      screen.getByRole('button', { name: 'Cancel invite for lapsed@example.com' })
-    ).toBeInTheDocument();
+    // Cancel is still available on a live invite; Resend is not.
+    await openInviteMenu(user, 'lapsed@example.com');
+    expect(screen.queryByRole('menuitem', { name: 'Resend' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Cancel invite' })).toBeInTheDocument();
   });
 
-  it('falls back to expires_at when the backend omits is_expired', () => {
+  it('falls back to expires_at when the backend omits is_expired', async () => {
+    const user = userEvent.setup();
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })], {
       // No `is_expired` key at all — an older backend. expires_at is in the past.
       pending_invites: [makeInvite({ expires_at: '2020-01-01T00:00:00Z' })],
@@ -323,9 +345,8 @@ describe('MembersPage — expired invites', () => {
     renderPage();
 
     expect(screen.getByText('Expired')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Resend invite for lapsed@example.com' })
-    ).toBeInTheDocument();
+    await openInviteMenu(user, 'lapsed@example.com');
+    expect(screen.getByRole('menuitem', { name: 'Resend' })).toBeInTheDocument();
   });
 
   it('trusts is_expired over the local clock when they disagree', () => {
@@ -346,9 +367,8 @@ describe('MembersPage — expired invites', () => {
     });
     renderPage();
 
-    await user.click(
-      screen.getByRole('button', { name: 'Resend invite for lapsed@example.com' })
-    );
+    await openInviteMenu(user, 'lapsed@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Resend' }));
 
     expect(resendInvite).toHaveBeenCalledTimes(1);
     expect(resendInvite.mock.calls[0][0]).toEqual({ inviteId: 'inv-1' });
@@ -368,8 +388,12 @@ describe('MembersPage — expired invites', () => {
     renderPage();
 
     expect(screen.getAllByText('Expired')).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Resend invite for a@example.com' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Resend invite for b@example.com' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Actions for invite to a@example.com' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Actions for invite to b@example.com' })
+    ).toBeInTheDocument();
   });
 
   // An expired invite is not "someone you invited" — it can't be accepted. The
@@ -382,9 +406,9 @@ describe('MembersPage — expired invites', () => {
     renderPage();
 
     expect(screen.getByText('Care is easier together')).toBeInTheDocument();
-    // The lapsed invite is still listed, with the way out.
+    // The lapsed invite is still listed, with the way out (Resend, via its menu).
     expect(
-      screen.getByRole('button', { name: 'Resend invite for lapsed@example.com' })
+      screen.getByRole('button', { name: 'Actions for invite to lapsed@example.com' })
     ).toBeInTheDocument();
   });
 
@@ -422,23 +446,26 @@ describe('MembersPage — expired invites', () => {
     });
     renderPage();
 
-    const button = screen.getByRole('button', {
-      name: 'Resend invite for lapsed@example.com',
-    });
-    await user.click(button);
+    await openInviteMenu(user, 'lapsed@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Resend' }));
 
     expect(resendInvite).toHaveBeenCalledTimes(1);
     // No success toast, and no page-level failure toast competing with the
     // hook's explanation.
     expect(showToast).not.toHaveBeenCalled();
-    expect(button).toBeEnabled();
+
+    // The row re-enables: reopening the menu shows Resend as active again.
+    await openInviteMenu(user, 'lapsed@example.com');
+    const resendItem = screen.getByRole('menuitem', { name: 'Resend' });
+    expect(resendItem).not.toHaveAttribute('aria-disabled', 'true');
 
     // The seat can be freed by cancelling — so a retry must still be possible.
-    await user.click(button);
+    await user.click(resendItem);
     expect(resendInvite).toHaveBeenCalledTimes(2);
   });
 
-  it('shows a muted countdown but no Resend for a comfortably live invite', () => {
+  it('shows a muted countdown but no Resend for a comfortably live invite', async () => {
+    const user = userEvent.setup();
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })], {
       pending_invites: [makeInvite({ is_expired: false, expires_at: inDays(6) })],
     });
@@ -449,7 +476,8 @@ describe('MembersPage — expired invites', () => {
     // Muted/secondary tone — a live invite is not a problem to solve.
     expect(line.parentElement?.className).toContain('text-ink-3');
     expect(line.parentElement?.className).not.toContain('text-clay-deep');
-    expect(screen.queryByRole('button', { name: /^Resend invite for/ })).not.toBeInTheDocument();
+    await openInviteMenu(user, 'lapsed@example.com');
+    expect(screen.queryByRole('menuitem', { name: 'Resend' })).not.toBeInTheDocument();
   });
 
   it('does not fire a second resend while one is in flight', async () => {
@@ -461,9 +489,13 @@ describe('MembersPage — expired invites', () => {
     });
     renderPage();
 
-    const button = screen.getByRole('button', { name: 'Resend invite for lapsed@example.com' });
-    await user.click(button);
-    await user.click(button);
+    await openInviteMenu(user, 'lapsed@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Resend' }));
+    // Reopen the row's menu and click Resend again — the item is now
+    // aria-disabled (invitePendingResend still holds this row), so the guard
+    // suppresses a second call.
+    await openInviteMenu(user, 'lapsed@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Resend' }));
 
     expect(resendInvite).toHaveBeenCalledTimes(1);
   });
@@ -483,7 +515,8 @@ describe('MembersPage — invites expiring soon', () => {
     };
   }
 
-  it('warns with an emphasized countdown but offers NO Resend', () => {
+  it('warns with an emphasized countdown but offers NO Resend', async () => {
+    const user = userEvent.setup();
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })], {
       pending_invites: [makeInvite({ is_expired: false })],
     });
@@ -497,14 +530,11 @@ describe('MembersPage — invites expiring soon', () => {
     // Not dead yet: no Expired badge.
     expect(screen.queryByText('Expired')).not.toBeInTheDocument();
     // Resend is expired-only by design: the recipient still holds a working
-    // link, so "Resend" would imply a failure that has not happened.
-    expect(
-      screen.queryByRole('button', { name: 'Resend invite for soon@example.com' })
-    ).not.toBeInTheDocument();
-    // Cancel stays available in every state.
-    expect(
-      screen.getByRole('button', { name: 'Cancel invite for soon@example.com' })
-    ).toBeInTheDocument();
+    // link, so "Resend" would imply a failure that has not happened. Cancel
+    // stays available in every state.
+    await openInviteMenu(user, 'soon@example.com');
+    expect(screen.queryByRole('menuitem', { name: 'Resend' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Cancel invite' })).toBeInTheDocument();
   });
 
   it('singularizes the countdown on the last day', () => {
@@ -525,9 +555,8 @@ describe('MembersPage — invites expiring soon', () => {
     });
     renderPage();
 
-    await user.click(
-      screen.getByRole('button', { name: 'Resend invite for soon@example.com' })
-    );
+    await openInviteMenu(user, 'soon@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Resend' }));
 
     expect(resendInvite.mock.calls[0][0]).toEqual({ inviteId: 'inv-9' });
     expect(showToast).toHaveBeenCalledWith(
@@ -555,7 +584,8 @@ describe('MembersPage — invites expiring soon', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows no countdown at all when expires_at is unusable', () => {
+  it('shows no countdown at all when expires_at is unusable', async () => {
+    const user = userEvent.setup();
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })], {
       pending_invites: [makeInvite({ expires_at: 'not-a-date' })],
     });
@@ -564,7 +594,8 @@ describe('MembersPage — invites expiring soon', () => {
     // Treated as live: no invented countdown, no Expired badge, no Resend.
     expect(screen.queryByText(/^Expires in/)).not.toBeInTheDocument();
     expect(screen.queryByText('Expired')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Resend invite for/ })).not.toBeInTheDocument();
+    await openInviteMenu(user, 'soon@example.com');
+    expect(screen.queryByRole('menuitem', { name: 'Resend' })).not.toBeInTheDocument();
   });
 
   it('keeps a soon-to-lapse invite suppressing the solo-owner nudge', () => {

@@ -3,68 +3,116 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import OverviewPage from '@/pages/OverviewPage';
 import { useCircle } from '@/hooks/useCircle';
-import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useAuthStore } from '@/store/authStore';
 
-// Mock the data hooks — OverviewPage is a composition layer; we assert it wires
-// each hook's data into the right card, not the hooks' own fetching.
+// OverviewPage is a COMPOSITION layer (spec §6.3): its job is the hero, the
+// two-column grid, the section order and the first-run hand-off. Every block's
+// own behavior is covered in src/components/overview/__tests__ (and in
+// OpenTasksCard / GettingStartedChecklist / FirstRunWizardModal's own tests),
+// so the children are stubbed here.
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
-vi.mock('@/hooks/useActivityFeed', () => ({ useActivityFeed: vi.fn() }));
 
-// Heavy children render their own data; stub them to keep this test focused.
-// OpenTasksCard owns the open-tasks queries, the shared TaskRow, and the undo
-// window now — its behavior is covered by
-// src/components/tasks/__tests__/OpenTasksCard.test.tsx, so here we only assert
-// OverviewPage mounts it with the right props.
 vi.mock('@/components/meds/TodaysMeds', () => ({
-  TodaysMeds: () => <div data-testid="todays-meds" />,
+  TodaysMeds: ({ circleId, limit }: { circleId?: string; limit?: number }) => (
+    <div data-testid="todays-meds" data-circle-id={circleId} data-limit={String(limit)} />
+  ),
 }));
 vi.mock('@/components/tasks/OpenTasksCard', () => ({
   OpenTasksCard: ({ circleId, limit }: { circleId: string; limit?: number }) => (
     <div data-testid="open-tasks-card" data-circle-id={circleId} data-limit={String(limit)} />
   ),
 }));
-vi.mock('@/components/activity/ActivityItem', () => ({
-  ActivityItem: ({ activity }: { activity: { action_type: string } }) => (
-    <li>{activity.action_type}</li>
+vi.mock('@/components/circles/GettingStartedChecklist', () => ({
+  GettingStartedChecklist: ({ circleId }: { circleId: string }) => (
+    <div data-testid="getting-started" data-circle-id={circleId} />
   ),
 }));
-vi.mock('@/components/circles/GettingStartedChecklist', () => ({
-  GettingStartedChecklist: () => <div data-testid="getting-started" />,
+vi.mock('@/components/overview/AdherenceCard', () => ({
+  AdherenceCard: ({ circleId }: { circleId: string }) => (
+    <div data-testid="adherence-card" data-circle-id={circleId} />
+  ),
+}));
+vi.mock('@/components/overview/QuickAccess', () => ({
+  QuickAccess: ({ circleId }: { circleId: string }) => (
+    <div data-testid="quick-access" data-circle-id={circleId} />
+  ),
+}));
+vi.mock('@/components/overview/CareTeam', () => ({
+  CareTeam: ({ circleId, isOwner }: { circleId: string; isOwner: boolean }) => (
+    <div data-testid="care-team" data-circle-id={circleId} data-owner={String(isOwner)} />
+  ),
+}));
+vi.mock('@/components/overview/SettingsRows', () => ({
+  SettingsRows: ({ circleId, isOwner }: { circleId: string; isOwner: boolean }) => (
+    <div data-testid="settings-rows" data-circle-id={circleId} data-owner={String(isOwner)} />
+  ),
+}));
+vi.mock('@/components/overview/UpcomingAppointments', () => ({
+  UpcomingAppointments: ({ circleId, timezone }: { circleId: string; timezone: string }) => (
+    <div data-testid="upcoming-appointments" data-circle-id={circleId} data-timezone={timezone} />
+  ),
+}));
+vi.mock('@/components/circles/firstRun/FirstRunWizardModal', () => ({
+  FirstRunWizardModal: ({ circleName }: { circleName: string }) => (
+    <div data-testid="first-run-wizard" data-circle-name={circleName} />
+  ),
 }));
 
 const mockUseCircle = vi.mocked(useCircle);
-const mockUseActivityFeed = vi.mocked(useActivityFeed);
 
-function setHooks(opts?: {
-  isSelfCare?: boolean;
-  members?: Array<{ id: string; first_name: string | null; last_name: string | null; email: string; is_care_recipient: boolean; role: string }>;
-  activities?: Array<{ id: string; action_type: string }>;
-}): void {
-  const members = opts?.members ?? [
-    { id: 'u1', first_name: 'Pat', last_name: 'Lee', email: 'pat@example.com', is_care_recipient: false, role: 'owner' },
-    { id: 'u2', first_name: 'Sam', last_name: 'Ng', email: 'sam@example.com', is_care_recipient: false, role: 'member' },
-  ];
-  mockUseCircle.mockReturnValue({
-    circle: {
-      id: 'c1',
-      owner_id: 'u1',
-      recipient_name: 'Rose',
-      is_self_care: opts?.isSelfCare ?? false,
-    },
-    members,
-    timezone: 'America/New_York',
-    isLoading: false,
-  } as unknown as ReturnType<typeof useCircle>);
-  mockUseActivityFeed.mockReturnValue({
-    data: { pages: [{ activities: opts?.activities ?? [], hasMore: false }] },
-    isLoading: false,
-  } as unknown as ReturnType<typeof useActivityFeed>);
+interface Options {
+  ownerId?: string;
+  recipientName?: string;
+  recipientDob?: string | null;
+  isLoading?: boolean;
+  /** Pass `null` to model "the circle detail has not arrived yet". */
+  circle?: null;
 }
 
-function renderOverview(): void {
+function setCircle(opts: Options = {}): void {
+  mockUseCircle.mockReturnValue({
+    circle:
+      opts.circle === null
+        ? undefined
+        : {
+            id: 'c1',
+            owner_id: opts.ownerId ?? 'u1',
+            recipient_name: opts.recipientName ?? 'Rose',
+            recipient_photo_url: null,
+            recipient_dob: opts.recipientDob ?? null,
+            is_self_care: false,
+          },
+    members:
+      opts.circle === null
+        ? []
+        : [
+            {
+              id: 'u1',
+              first_name: 'Pat',
+              last_name: 'Lee',
+              email: 'pat@example.com',
+              is_care_recipient: false,
+              is_medication_responsible: false,
+              role: 'owner',
+            },
+            {
+              id: 'u2',
+              first_name: 'Sam',
+              last_name: 'Ng',
+              email: 'sam@example.com',
+              is_care_recipient: false,
+              is_medication_responsible: false,
+              role: 'member',
+            },
+          ],
+    timezone: 'America/New_York',
+    isLoading: opts.isLoading ?? false,
+  } as unknown as ReturnType<typeof useCircle>);
+}
+
+function renderOverview(state?: unknown): void {
   render(
-    <MemoryRouter initialEntries={['/circles/c1']}>
+    <MemoryRouter initialEntries={[{ pathname: '/circles/c1', state }]}>
       <Routes>
         <Route path="/circles/:circleId" element={<OverviewPage />} />
       </Routes>
@@ -81,55 +129,135 @@ describe('OverviewPage', () => {
     });
   });
 
-  it('shows a "Caring for {name}" hero and the helper count', () => {
-    setHooks();
+  it('leads with the recipient hero, not a "Caring for" title', () => {
+    setCircle();
     renderOverview();
-    expect(screen.getByRole('heading', { name: 'Caring for Rose' })).toBeInTheDocument();
-    // One helper besides the current user (Sam).
-    expect(screen.getByText('1 person helping coordinate care.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Rose' })).toBeInTheDocument();
+    expect(screen.getByText('Cared for by')).toBeInTheDocument();
   });
 
-  it('uses the self-care hero title', () => {
-    setHooks({ isSelfCare: true });
+  it('mounts every Home block for this circle', () => {
+    setCircle();
     renderOverview();
-    expect(screen.getByRole('heading', { name: 'Your care space' })).toBeInTheDocument();
+    for (const id of [
+      'adherence-card',
+      'quick-access',
+      'care-team',
+      'settings-rows',
+      'todays-meds',
+      'upcoming-appointments',
+      'open-tasks-card',
+      'getting-started',
+    ]) {
+      expect(screen.getByTestId(id)).toHaveAttribute('data-circle-id', 'c1');
+    }
   });
 
-  it('renders the get-started checklist and today\'s meds blocks', () => {
-    setHooks();
+  it('caps the two right-column lists the way mobile does', () => {
+    setCircle();
+    renderOverview();
+    expect(screen.getByTestId('todays-meds')).toHaveAttribute('data-limit', '5');
+    expect(screen.getByTestId('open-tasks-card')).toHaveAttribute('data-limit', '3');
+  });
+
+  it('hands the resolved care-recipient timezone to the appointments card', () => {
+    setCircle();
+    renderOverview();
+    expect(screen.getByTestId('upcoming-appointments')).toHaveAttribute(
+      'data-timezone',
+      'America/New_York'
+    );
+  });
+
+  it('orders the sections as mobile does: left column, then right column', () => {
+    setCircle();
+    renderOverview();
+    const ids = Array.from(document.querySelectorAll('[data-testid]'))
+      .map((el) => el.getAttribute('data-testid'))
+      .filter((id): id is string => id !== null && id !== 'first-run-wizard');
+    expect(ids).toEqual([
+      'getting-started',
+      'adherence-card',
+      'quick-access',
+      'care-team',
+      'settings-rows',
+      'todays-meds',
+      'upcoming-appointments',
+      'open-tasks-card',
+    ]);
+  });
+
+  it('lays the blocks out in two columns from 1024px up, hero spanning both', () => {
+    setCircle();
+    const { container } = render(
+      <MemoryRouter initialEntries={['/circles/c1']}>
+        <Routes>
+          <Route path="/circles/:circleId" element={<OverviewPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const grid = container.querySelector('.grid');
+    expect(grid).toHaveClass('grid-cols-1');
+    expect(grid).toHaveClass('xl:grid-cols-2');
+    // The hero is OUTSIDE the grid, so it spans the full width at every size.
+    expect(grid?.querySelector('header')).toBeNull();
+  });
+
+  it('tells the owner blocks who the owner is', () => {
+    setCircle({ ownerId: 'u1' });
+    renderOverview();
+    expect(screen.getByTestId('settings-rows')).toHaveAttribute('data-owner', 'true');
+    expect(screen.getByTestId('care-team')).toHaveAttribute('data-owner', 'true');
+  });
+
+  it('does not call a non-owner the owner', () => {
+    setCircle({ ownerId: 'someone-else' });
+    renderOverview();
+    expect(screen.getByTestId('settings-rows')).toHaveAttribute('data-owner', 'false');
+  });
+
+  // The activity feed is one Quick Access ROW on mobile's home, never a card —
+  // the old web card duplicated the feed's own page on the same screen.
+  it('carries no recent-activity card', () => {
+    setCircle();
+    renderOverview();
+    expect(screen.queryByText('Recent activity')).not.toBeInTheDocument();
+  });
+
+  it('keeps the get-started checklist mounted (it owns its own gating)', () => {
+    setCircle();
     renderOverview();
     expect(screen.getByTestId('getting-started')).toBeInTheDocument();
-    expect(screen.getByTestId('todays-meds')).toBeInTheDocument();
   });
 
-  // The open-tasks card is the shared, actionable one now (same TaskRow + undo
-  // window as the Tasks page). OverviewPage's job is to mount it for this circle
-  // capped at 3 rows; the rows themselves are covered in OpenTasksCard.test.
-  it('mounts the shared open-tasks card for this circle, capped at 3', () => {
-    setHooks();
-    renderOverview();
-    const card = screen.getByTestId('open-tasks-card');
-    expect(card).toHaveAttribute('data-circle-id', 'c1');
-    expect(card).toHaveAttribute('data-limit', '3');
+  describe('first run', () => {
+    it('opens the wizard from the creation navigation state', () => {
+      setCircle();
+      renderOverview({ firstRun: true, firstRunRecipientName: 'Rose' });
+      expect(screen.getByTestId('first-run-wizard')).toHaveAttribute('data-circle-name', 'Rose');
+    });
+
+    it('stays shut on a plain visit', () => {
+      setCircle();
+      renderOverview();
+      expect(screen.queryByTestId('first-run-wizard')).not.toBeInTheDocument();
+    });
+
+    // The circle detail's own name wins once it lands; the navigation-carried
+    // name only covers the seconds before it does.
+    it('prefers the loaded recipient name over the one carried on the navigation', () => {
+      setCircle({ recipientName: 'Rose Meza' });
+      renderOverview({ firstRun: true, firstRunRecipientName: 'Rose' });
+      expect(screen.getByTestId('first-run-wizard')).toHaveAttribute(
+        'data-circle-name',
+        'Rose Meza'
+      );
+    });
   });
 
-  it('links into each section', () => {
-    setHooks();
+  it('shows a hero placeholder rather than an empty name while the circle loads', () => {
+    setCircle({ circle: null, isLoading: true });
     renderOverview();
-    expect(screen.getByRole('link', { name: 'View all activity' })).toHaveAttribute(
-      'href',
-      '/circles/c1/activity'
-    );
-    // Owner sees the invite link into members.
-    expect(screen.getByRole('link', { name: 'Invite member' })).toHaveAttribute(
-      'href',
-      '/circles/c1/members'
-    );
-  });
-
-  it('renders recent activity entries', () => {
-    setHooks({ activities: [{ id: 'a1', action_type: 'med_taken' }] });
-    renderOverview();
-    expect(screen.getByText('med_taken')).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 });

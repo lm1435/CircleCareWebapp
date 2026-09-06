@@ -2,6 +2,10 @@ import type { ReactElement } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { AuthTopBar } from '@/components/auth/AuthTopBar';
+import { TerminalState } from '@/components/auth/TerminalState';
 
 /**
  * 404 page for unknown URLs (old links, typos). Replaces the silent wildcard
@@ -17,20 +21,21 @@ export default function NotFoundPage(): ReactElement {
   const { t } = useTranslation('common');
 
   return (
-    <main
-      id="main"
-      className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-6 py-12 text-center"
-    >
+    <AuthShell>
       <Helmet>
         <title>{`${t('pageTitles.notFound')} · CircleCare`}</title>
       </Helmet>
 
-      <img src="/icon.png" alt="" className="h-12 w-12 rounded-xl" />
-      <h1 className="serif m-0 text-2xl text-ink">{t('notFound.title')}</h1>
-      <p className="m-0 max-w-md text-ink-3">{t('notFound.body')}</p>
-      <Link to="/circles" className="btn btn-primary mt-2">
-        {t('notFound.cta')}
-      </Link>
-    </main>
+      <AuthTopBar />
+      <TerminalState
+        icon="help-circle-outline"
+        title={t('notFound.title')}
+        body={t('notFound.body')}
+      >
+        <Button as={Link} to="/circles" variant="primary" size="lg" fullWidth>
+          {t('notFound.cta')}
+        </Button>
+      </TerminalState>
+    </AuthShell>
   );
 }

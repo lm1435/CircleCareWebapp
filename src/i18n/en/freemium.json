@@ -12,6 +12,7 @@
     "banner": "Your subscription ended. Choose which circle to keep with free access.",
     "choose": "Choose circle",
     "title": "Pick one circle to keep",
+    "pickLabel": "Choose a circle to keep",
     "subtitle": "Your subscription has ended. Choose which circle to keep with free access. Your other circles will become read-only until you re-subscribe.",
     "memberCount_one": "{{count}} member",
     "memberCount_other": "{{count}} members",

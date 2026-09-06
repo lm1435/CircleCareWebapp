@@ -1,11 +1,11 @@
 import type { ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Skeleton, useToast } from '@/components/ui';
+import { Badge, Button, Card, Skeleton, Text, useToast } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useManageSubscription } from '@/hooks/useWebBilling';
-import { isWebBillingConfigured } from '@/lib/purchases';
+import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 
 /**
  * Subscription card on the profile page.
@@ -41,17 +41,19 @@ export function SubscriptionSection(): ReactElement {
   };
 
   return (
-    <Card className="mt-6">
-      <h2 className="m-0 text-lg font-semibold text-ink">{t('subscription.title')}</h2>
+    <Card padding="lg" className="mt-6">
+      <Text variant="h3" as="h2">
+        {t('subscription.title')}
+      </Text>
       <div className="mt-5 flex flex-col gap-5">
         {isLoading ? (
           <Skeleton className="h-7 w-44 rounded-full" />
         ) : isPremium ? (
           <div className="flex flex-col gap-2">
-            <span className="inline-flex w-fit items-center rounded-full bg-terracotta-deep px-3 py-1 text-sm font-semibold text-white">
+            <Badge variant="coral" className="w-fit">
               {t('subscription.premium')}
-            </span>
-            <p className="m-0 text-sm text-ink-3">{t('subscription.premiumDescription')}</p>
+            </Badge>
+            <Text variant="caption">{t('subscription.premiumDescription')}</Text>
             {/* Always rendered. This used to be gated on web billing being
                 configured, which meant a premium subscriber could see their
                 plan with no cancellation affordance at all. If the sub was
@@ -70,10 +72,17 @@ export function SubscriptionSection(): ReactElement {
         ) : webBilling ? (
           <div className="flex flex-col gap-4">
             <div>
-              <p className="m-0 font-medium text-ink">{t('subscription.freeTitle')}</p>
-              <p className="mt-1 text-sm text-ink-3">{t('subscription.upgradeBenefit')}</p>
+              <Text variant="bodyMedium">{t('subscription.freeTitle')}</Text>
+              <Text variant="caption" className="mt-1">
+                {t('subscription.upgradeBenefit')}
+              </Text>
             </div>
-            <Button variant="terracotta" className="w-fit" onClick={() => navigate('/upgrade')}>
+            {/* Profile → Upgrade: the user came looking — GENERAL. */}
+            <Button
+              variant="primary"
+              className="w-fit"
+              onClick={() => navigate('/upgrade', { state: { paywallContext: 'general' } })}
+            >
               {t('subscription.upgradeCta')}
             </Button>
             {/* A lapsed or billing-retry subscriber has isPremium === false while
@@ -92,15 +101,19 @@ export function SubscriptionSection(): ReactElement {
               {t('subscription.manageExisting')}
             </Button>
             <div>
-              <p className="m-0 mb-2 text-xs text-ink-3">{t('subscription.orInApp')}</p>
+              <Text variant="caption" className="mb-2">
+                {t('subscription.orInApp')}
+              </Text>
               <StoreBadges layout="row" />
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             <div>
-              <p className="m-0 font-medium text-ink">{t('subscription.freeTitle')}</p>
-              <p className="mt-1 text-sm text-ink-3">{t('subscription.upgradeInApp')}</p>
+              <Text variant="bodyMedium">{t('subscription.freeTitle')}</Text>
+              <Text variant="caption" className="mt-1">
+                {t('subscription.upgradeInApp')}
+              </Text>
             </div>
             <StoreBadges layout="row" />
           </div>

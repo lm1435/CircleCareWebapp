@@ -1,4 +1,6 @@
 {
+  "title": "Calendar",
+  "subtitle": "Medications, appointments, and tasks in one place.",
   "week": "Week",
   "month": "Month",
   "viewLabel": "Calendar view",
@@ -10,6 +12,10 @@
   "nextMonth": "Next month",
   "timesShownIn": "Times shown in {{timezone}}",
   "allDay": "All day",
+  "allDayMoreLabel_one": "{{count}} more all-day event on {{day}}",
+  "allDayMoreLabel_other": "{{count}} more all-day events on {{day}}",
+  "allDayShowFewer": "Show fewer",
+  "allDayShowFewerLabel": "Show fewer all-day events on {{day}}",
   "upcoming": "Upcoming",
   "dueSoon": "Due soon",
   "noEventsWeek": "No events this week",
@@ -45,8 +51,10 @@
     "date": "Date",
     "time": "Time",
     "location": "Location",
-    "notes": "Notes",
+    "instructions": "Instructions",
+    "details": "Details",
     "repeats": "Repeats",
+    "assignedTo": "Assigned to",
     "status": "Status",
     "takenAt": "Taken at {{time}}",
     "takenLateAt": "Taken late at {{time}}",
@@ -56,7 +64,10 @@
     "markTaken": "Mark taken",
     "skipDose": "Skip dose",
     "completedToast": "Marked complete",
-    "close": "Close event details"
+    "close": "Close event details",
+    "completedByLabel": "Completed by",
+    "completedByValue": "{{name}} · {{when}}",
+    "completedLabel": "Completed on"
   },
   "recurrence": {
     "daily": "Daily",
@@ -101,7 +112,8 @@
       "time": "Time",
       "endTime": "End time",
       "location": "Location",
-      "notes": "Notes",
+      "details": "Details",
+      "instructions": "Instructions",
       "repeat": "Repeat",
       "daysOn": "Days on",
       "daysOff": "Days off",
@@ -115,7 +127,8 @@
       "medicationName": "e.g. Metformin",
       "dosage": "e.g. 500 mg",
       "location": "e.g. Main St. Clinic",
-      "notes": "Add any details…"
+      "details": "Add any details…",
+      "instructions": "e.g. take with food"
     },
     "timePresets": {
       "label": "Common times",
@@ -128,7 +141,9 @@
       "label": "Common schedules",
       "onceDaily": "Once daily (8:00 AM)",
       "everyMorning": "Every morning (8:00 AM)",
-      "everyEvening": "Every evening (8:00 PM)"
+      "everyEvening": "Every evening (8:00 PM)",
+      "twiceDaily": "Twice daily (8:00 AM, 8:00 PM)",
+      "threeTimesDaily": "Three times daily (8:00 AM, 2:00 PM, 8:00 PM)"
     },
     "titleSuggestions": {
       "label": "Title suggestions",
@@ -165,12 +180,20 @@
     "reminders": {
       "section": "Reminders",
       "enable": "Send reminders",
-      "enableHint": "Notify the circle before this is due.",
-      "additional": "Additional reminders",
+      "enableHint": "Controls every notification for this entry.",
+      "atTime": "At the scheduled time",
+      "atTimeHint": "The main alert, sent when it's due.",
+      "atTimeOff": "Nothing will be sent at the scheduled time — only the earlier reminders you pick below.",
+      "additional": "Earlier reminders",
+      "escalation": "If a dose isn't confirmed, we follow up: the care recipient after 15 minutes, caregivers after 30, the whole circle after an hour.",
+      "offMedication": "No one will be notified when this dose is due, and no one will be alerted if it's missed.",
+      "offGeneric": "No one will be reminded about this — not you, and not anyone else in the circle.",
+      "noneSelected": "Select at least one time, or no reminder will be sent.",
       "h24": "24 hours before",
       "h1": "1 hour before",
       "m30": "30 minutes before",
-      "m15": "15 minutes before"
+      "m15": "15 minutes before",
+      "webDelivery": "Reminders are delivered to the CircleCare mobile app. The web app cannot send them."
     },
     "validation": {
       "titleRequired": "Please enter a title.",
@@ -184,19 +207,35 @@
       "medicationNameTooLong": "Medication name must be 150 characters or fewer.",
       "dosageTooLong": "Dosage must be 100 characters or fewer.",
       "locationTooLong": "Location must be 250 characters or fewer.",
-      "descriptionTooLong": "Notes must be 850 characters or fewer.",
+      "descriptionTooLong": "Details must be 850 characters or fewer.",
       "invalidRecurrenceRule": "That repeat option isn't valid."
     },
     "alerts": {
-      "pastTimeTitle": "Time already passed",
-      "pastTimeMessage": "This time has already passed today — no reminder will be sent for today's dose.",
+      "pastTimeTitle": "Starts with the next dose",
+      "pastTimeMessage": "This time has already passed today, so nothing will be recorded for today. This medication will start with its next scheduled dose.",
+      "pastTimeEditTitle": "Time already passed",
+      "pastTimeEditMessage": "This time has already passed today — no reminder will be sent for today's dose.",
       "continue": "Continue",
-      "closePastTime": "Close past-time notice"
+      "closePastTime": "Close past-time notice",
+      "someDoseTimesFailed_one": "Saved, but {{count}} dose time could not be added ({{times}}). Open the medication and add it again.",
+      "someDoseTimesFailed_other": "Saved, but {{count}} dose times could not be added ({{times}}). Open the medication and add them again."
     },
     "durations": {
       "30": "30 min",
       "60": "1 hr",
       "120": "2 hrs"
+    },
+    "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
+    "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
+    "dayOffsetNext": "+1 day",
+    "dayOffsetPrevious": "-1 day",
+    "timezoneUnresolvedNotice": "Still loading this circle's time zone. Saving is paused so dates aren't stored in the wrong one.",
+    "drugSearch": {
+      "searching": "Searching medications",
+      "clear": "Clear name",
+      "suggestionsLabel": "Medication suggestions",
+      "resultCount_one": "{{count}} suggestion",
+      "resultCount_other": "{{count}} suggestions"
     }
   },
   "deleteEvent": {
@@ -204,6 +243,7 @@
     "close": "Close delete dialog",
     "confirmMessage": "Delete \"{{title}}\"? This can't be undone.",
     "recurringMessage": "\"{{title}}\" repeats. Choose what to delete — this can't be undone.",
+    "scopeLabel": "What should be deleted?",
     "scopeSingle": "This event only",
     "scopeFuture": "This and all future events",
     "delete": "Delete",

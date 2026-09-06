@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  setAnalyticsConsent,
+  __resetAnalyticsConsentCache,
+} from '@/lib/analyticsConsent';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { type ReactElement } from 'react';
@@ -29,7 +33,15 @@ vi.mock('@/lib/env', () => ({
   },
 }));
 
+import posthogJs from 'posthog-js';
+import { __primePosthogForTests } from '@/lib/posthogLoader';
 import { PageviewTracker } from '@/components/PageviewTracker';
+
+// lib/pageview.ts now loads posthog-js lazily via lib/posthogLoader.ts (see
+// posthogLoader.test.ts for the real queue/lazy-load behavior). Priming here
+// makes trackPageview's capture call resolve SYNCHRONOUSLY, exactly as it did
+// before pageview.ts started loading posthog-js lazily.
+__primePosthogForTests(posthogJs);
 
 const CIRCLE_ID = '0bc0bd9e-1234-4abc-9def-1234567890ab';
 
@@ -52,6 +64,9 @@ function renderAt(initialEntry: string): void {
 }
 
 beforeEach(() => {
+  // Pageviews are gated on consent as well as on the key.
+  __resetAnalyticsConsentCache();
+  setAnalyticsConsent(true);
   capture.mockClear();
 });
 

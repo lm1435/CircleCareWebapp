@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   isPermissionDeniedError,
   isSubscriptionRequiredError,
@@ -9,6 +11,7 @@ import {
   SUBSCRIPTION_ERROR_CODES,
   ACCESS_ERROR_CODES,
   CONFLICT_ERROR_CODES,
+  FAILURE_FALLBACK_CODES,
 } from '@/lib/apiErrors';
 
 // Shapes the apiClient interceptor rejects with: the backend envelope, never an
@@ -113,3 +116,83 @@ describe('medicationConfirmations re-export (public API stable)', () => {
     expect(mod.PERMISSION_ERROR_CODES.has('SUBSCRIPTION_REQUIRED')).toBe(true);
   });
 });
+
+/**
+ * CROSS-TREE DRIFT GUARD.
+ *
+ * `FAILURE_FALLBACK_CODES` mirrors `mobile/src/utils/apiError.ts`'s export of
+ * the same name — the admin daily digest groups `circle_creation_failed` by
+ * this vocabulary across BOTH platforms, so a one-sided edit silently splits
+ * one failure into two buckets there.
+ *
+ * Mobile's suite (`mobile/src/__tests__/utils/failureCodeIsBounded.test.ts`,
+ * describe 8 "the vocabulary is identical to the webapp") already pins this
+ * list against a hardcoded literal — but only in that direction, so a
+ * mobile-only edit was caught by nothing on this side. This closes the other
+ * direction by reading mobile's actual export (not a copy of it), so drift in
+ * either tree fails on the tree that changed.
+ *
+ * The two projects are separate npm workspaces that cannot import each
+ * other via a package specifier, but `mobile/src/utils/apiError.ts` has NO
+ * imports of its own (no react-native/expo dependency) — verified by
+ * inspection — so a plain relative dynamic `import()` resolves it under
+ * vitest same as any other TS module. `skipIf` guards the case where the
+ * mobile checkout is absent (e.g. a webapp-only clone).
+ */
+// Resolved from the webapp repo root (vitest's process.cwd()), not from
+// import.meta.url — under the vite/vitest SSR module loader import.meta.url
+// for a test file is not always a plain file:// URL, so fileURLToPath on it
+// is unreliable here.
+const MOBILE_API_ERROR_PATH = resolve(process.cwd(), '../mobile/src/utils/apiError.ts');
+const mobileApiErrorAvailable = existsSync(MOBILE_API_ERROR_PATH);
+
+describe.skipIf(!mobileApiErrorAvailable)('FAILURE_FALLBACK_CODES vocabulary contract', () => {
+  it('pins the literal web vocabulary, in order', () => {
+    expect([...FAILURE_FALLBACK_CODES]).toEqual([
+      'timeout',
+      'network_error',
+      'api_error_no_code',
+      'non_json_response',
+      'client_error',
+      'unknown_error',
+    ]);
+  });
+
+  it('matches mobile/src/utils/apiError.ts FAILURE_FALLBACK_CODES exactly, both directions', async () => {
+    // A relative specifier (not the absolute MOBILE_API_ERROR_PATH above, and
+    // no @vite-ignore) so vitest's vite-node loader statically resolves and
+    // transforms this plain-TS file through its normal pipeline — an absolute
+    // path or a `file://` URL bypasses that transform and Node cannot execute
+    // a raw .ts file on its own. Built from a variable (not an inline string
+    // literal) because tsc's `--noEmit` type-check statically resolves a
+    // literal `import('...ts')` specifier and rejects the `.ts` extension
+    // (TS5097) even though vite-node handles it fine at test-run time.
+    // @ts-expect-error TS5097 — a `.ts` extension needs
+    // `allowImportingTsExtensions`, which this project does not otherwise
+    // need; vite-node (this test's real runtime) resolves and transforms the
+    // specifier correctly regardless of tsc's stricter static check.
+    const mobileModule = (await import('../../../../mobile/src/utils/apiError.ts')) as {
+      FAILURE_FALLBACK_CODES: readonly string[];
+    };
+    const mobileList = [...mobileModule.FAILURE_FALLBACK_CODES];
+    const webList = [...FAILURE_FALLBACK_CODES];
+
+    // Both directions: nothing on mobile is missing from web, and nothing on
+    // web is missing from mobile (a Set-equality check, not just subset).
+    for (const code of mobileList) {
+      expect(webList).toContain(code);
+    }
+    for (const code of webList) {
+      expect(mobileList).toContain(code);
+    }
+    expect(webList).toHaveLength(mobileList.length);
+  });
+});
+
+if (!mobileApiErrorAvailable) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[apiErrors.test.ts] mobile checkout not found at ${MOBILE_API_ERROR_PATH} — ` +
+      'FAILURE_FALLBACK_CODES vocabulary contract tests skipped.'
+  );
+}

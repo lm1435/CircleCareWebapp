@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setAnalyticsConsent, __resetAnalyticsConsentCache } from '../analyticsConsent';
+import { FAILURE_FALLBACK_CODES, classifyFailureCode } from '../apiErrors';
 
 // Unit tests for the web analytics wrapper (lib/analytics.ts) + the identify /
 // reset helpers (lib/posthog.ts). We mock `posthog-js` and toggle the optional
@@ -16,6 +18,8 @@ const identify = vi.fn();
 const reset = vi.fn();
 const init = vi.fn();
 const register = vi.fn();
+const optOut = vi.fn();
+const optIn = vi.fn();
 const captureExceptionSpy = vi.fn();
 
 vi.mock('posthog-js', () => ({
@@ -25,6 +29,8 @@ vi.mock('posthog-js', () => ({
     capture,
     identify,
     reset,
+    opt_out_capturing: optOut,
+    opt_in_capturing: optIn,
     captureException: captureExceptionSpy,
   },
 }));
@@ -40,6 +46,15 @@ async function loadWithKey(key: string | undefined) {
       VITE_POSTHOG_KEY: key,
     },
   }));
+  // Prime the shared lazy-loader as if posthog-js were already loaded AND
+  // configured, so every call below (Analytics.*, initAnalytics,
+  // identifyUser, etc.) resolves SYNCHRONOUSLY — exactly as it did before
+  // lib/posthog.ts / lib/analytics.ts started loading posthog-js lazily. Real
+  // queue/lazy-load behavior is covered separately in posthogLoader.test.ts.
+  const posthogModule = await import('posthog-js');
+  const loader = await import('@/lib/posthogLoader');
+  loader.__primePosthogForTests(posthogModule.default);
+
   const analytics = await import('@/lib/analytics');
   const posthog = await import('@/lib/posthog');
   return {
@@ -56,6 +71,11 @@ beforeEach(() => {
   init.mockClear();
   register.mockClear();
   captureExceptionSpy.mockClear();
+  // `capture` is now gated on CONSENT as well as on the key, so that an opt-out
+  // takes effect immediately rather than at the next page load. These cases are
+  // about what a captured event CONTAINS, so they need a consenting visitor.
+  __resetAnalyticsConsentCache();
+  setAnalyticsConsent(true);
 });
 
 afterEach(() => {
@@ -66,7 +86,7 @@ describe('analytics wrapper — optional / no-op path', () => {
   it('does NOT call posthog.capture when VITE_POSTHOG_KEY is unset', async () => {
     const { Analytics } = await loadWithKey(undefined);
     Analytics.circleCreated(true);
-    Analytics.medicationConfirmed('c1', 'taken');
+    Analytics.medicationConfirmed('c1', 'taken', 'care_profile');
     Analytics.logout();
     Analytics.onboardingStarted();
     Analytics.onboardingFlowCompleted('created');
@@ -90,12 +110,16 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(capture).toHaveBeenCalledWith('circle_created', { is_self_care: true });
   });
 
-  it('medication_confirmed carries circle_id + status enum only', async () => {
+  it('medication_confirmed carries circle_id + status + source, and no PHI', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
-    Analytics.medicationConfirmed('circle-123', 'taken_late');
+    Analytics.medicationConfirmed('circle-123', 'taken_late', 'care_profile');
     expect(capture).toHaveBeenCalledWith('medication_confirmed', {
       circle_id: 'circle-123',
       status: 'taken_late',
+      // Same enum mobile emits, so both platforms land in ONE series and $lib
+      // tells them apart. Web used to send no source at all, which parked every
+      // web confirm in the same bucket as pre-instrumentation mobile builds.
+      source: 'care_profile',
     });
   });
 
@@ -143,6 +167,131 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(capture).toHaveBeenCalledWith('vital_logged', {
       circle_id: 'circle-123',
       vital_type: 'blood_pressure',
+    });
+  });
+
+  it('vital_updated carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.vitalUpdated('circle-123');
+    expect(capture).toHaveBeenCalledWith('vital_updated', { circle_id: 'circle-123' });
+  });
+
+  it('vital_deleted carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.vitalDeleted('circle-123');
+    expect(capture).toHaveBeenCalledWith('vital_deleted', { circle_id: 'circle-123' });
+  });
+
+  it('document_updated carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.documentUpdated('circle-123');
+    expect(capture).toHaveBeenCalledWith('document_updated', { circle_id: 'circle-123' });
+  });
+
+  it('document_deleted carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.documentDeleted('circle-123');
+    expect(capture).toHaveBeenCalledWith('document_deleted', { circle_id: 'circle-123' });
+  });
+
+  it('emergency_info_viewed carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.emergencyInfoViewed('circle-123');
+    expect(capture).toHaveBeenCalledWith('emergency_info_viewed', { circle_id: 'circle-123' });
+  });
+
+  it('emergency_info_updated carries circle_id + fields_updated (field NAMES only)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.emergencyInfoUpdated('circle-123', ['blood_type', 'allergies']);
+    expect(capture).toHaveBeenCalledWith('emergency_info_updated', {
+      circle_id: 'circle-123',
+      fields_updated: ['blood_type', 'allergies'],
+    });
+  });
+
+  it('circle_updated / circle_deleted carry only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.circleUpdated('circle-123');
+    expect(capture).toHaveBeenCalledWith('circle_updated', { circle_id: 'circle-123' });
+    capture.mockClear();
+    Analytics.circleDeleted('circle-123');
+    expect(capture).toHaveBeenCalledWith('circle_deleted', { circle_id: 'circle-123' });
+  });
+
+  it('member_removed carries circle_id and NO user id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.memberRemoved('circle-123');
+    expect(capture).toHaveBeenCalledWith('member_removed', { circle_id: 'circle-123' });
+  });
+
+  it('circle_left carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.circleLeft('circle-123');
+    expect(capture).toHaveBeenCalledWith('circle_left', { circle_id: 'circle-123' });
+  });
+
+  it('care_note_updated carries circle_id + category_count (never mood/body)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.careNoteUpdated('circle-123', { categoryCount: 2 });
+    expect(capture).toHaveBeenCalledWith('care_note_updated', {
+      circle_id: 'circle-123',
+      category_count: 2,
+    });
+  });
+
+  it('care_note_deleted carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.careNoteDeleted('circle-123');
+    expect(capture).toHaveBeenCalledWith('care_note_deleted', { circle_id: 'circle-123' });
+  });
+
+  it('activity_feed_viewed carries only circle_id', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.activityFeedViewed('circle-123');
+    expect(capture).toHaveBeenCalledWith('activity_feed_viewed', { circle_id: 'circle-123' });
+  });
+
+  it('language_changed / timezone_changed carry the raw setting value', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.languageChanged('es');
+    expect(capture).toHaveBeenCalledWith('language_changed', { language: 'es' });
+    capture.mockClear();
+    Analytics.timezoneChanged('America/Denver');
+    expect(capture).toHaveBeenCalledWith('timezone_changed', { timezone: 'America/Denver' });
+  });
+
+  it('account_deleted carries no properties', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.accountDeleted();
+    expect(capture).toHaveBeenCalledWith('account_deleted', undefined);
+  });
+
+  it('password reset / OTP recovery events carry no properties', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.passwordResetRequested();
+    expect(capture).toHaveBeenCalledWith('password_reset_requested', undefined);
+    capture.mockClear();
+    Analytics.passwordResetCompleted();
+    expect(capture).toHaveBeenCalledWith('password_reset_completed', undefined);
+    capture.mockClear();
+    Analytics.passwordResetFailed();
+    expect(capture).toHaveBeenCalledWith('password_reset_failed', undefined);
+    capture.mockClear();
+    Analytics.otpVerified();
+    expect(capture).toHaveBeenCalledWith('otp_verified', undefined);
+    capture.mockClear();
+    Analytics.otpFailed();
+    expect(capture).toHaveBeenCalledWith('otp_failed', undefined);
+    capture.mockClear();
+    Analytics.otpResent();
+    expect(capture).toHaveBeenCalledWith('otp_resent', undefined);
+  });
+
+  it('help_item_expanded carries the stable item key, never the question/answer text', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.helpItemExpanded('gettingStarted.0');
+    expect(capture).toHaveBeenCalledWith('help_item_expanded', {
+      item_key: 'gettingStarted.0',
     });
   });
 
@@ -229,8 +378,102 @@ describe('analytics wrapper — active path (key set)', () => {
   });
 });
 
+/**
+ * PAYWALL EVENTS — the exact names and properties mobile sends.
+ *
+ * These are literal-string assertions on purpose. `paywall_context` is the
+ * property the whole onboarding-paywall ABA is computed from (1.1.3–1.1.5 no
+ * paywall: 34 signups → 1 conversion; 1.1.6–1.1.10 with it: 113 → 25), and a
+ * value that does not match mobile's spelling does not fall into the wrong
+ * cohort — it silently invents a third one and every rate is wrong by an
+ * unknown amount. Comparing against a constant imported from the source would
+ * make a rename invisible here, which is precisely the failure to prevent.
+ */
+describe('paywall events mirror mobile exactly', () => {
+  it('plan_selection_viewed carries paywall_context', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionViewed('onboarding');
+    expect(capture).toHaveBeenCalledWith('plan_selection_viewed', {
+      paywall_context: 'onboarding',
+    });
+  });
+
+  it('plan_selection_free_selected carries paywall_context', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionFreeSelected('onboarding');
+    expect(capture).toHaveBeenCalledWith('plan_selection_free_selected', {
+      paywall_context: 'onboarding',
+    });
+  });
+
+  it('plan_selection_subscribed carries plan + paywall_context', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionSubscribed('annual', 'capacity');
+    expect(capture).toHaveBeenCalledWith('plan_selection_subscribed', {
+      plan: 'annual',
+      paywall_context: 'capacity',
+    });
+  });
+
+  it('plan_selection_trial_started carries plan + paywall_context', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionTrialStarted('monthly', 'feature');
+    expect(capture).toHaveBeenCalledWith('plan_selection_trial_started', {
+      plan: 'monthly',
+      paywall_context: 'feature',
+    });
+  });
+
+  it('plan_selection_purchase_cancelled carries plan + paywall_context', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionPurchaseCancelled('annual', 'onboarding');
+    expect(capture).toHaveBeenCalledWith('plan_selection_purchase_cancelled', {
+      plan: 'annual',
+      paywall_context: 'onboarding',
+    });
+  });
+
+  it('paywall_dismissed carries BOTH trigger (mobile\'s shipped name) and paywall_context', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.paywallDismissed('onboarding');
+    // Mobile's `paywallDismissed(trigger)` is called with the context
+    // (PlanSelectionScreen.tsx:446), so the shipped mobile property is
+    // `trigger`. Dropping either key breaks one half of the analysis: without
+    // `trigger` this event stops matching mobile's history, without
+    // `paywall_context` it is the one paywall event that cannot be broken down
+    // alongside the other four.
+    expect(capture).toHaveBeenCalledWith('paywall_dismissed', {
+      trigger: 'onboarding',
+      paywall_context: 'onboarding',
+    });
+  });
+
+  it('defaults an omitted context to general, exactly as mobile does', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.planSelectionViewed();
+    Analytics.paywallDismissed();
+    expect(capture).toHaveBeenCalledWith('plan_selection_viewed', {
+      paywall_context: 'general',
+    });
+    expect(capture).toHaveBeenCalledWith('paywall_dismissed', {
+      trigger: 'general',
+      paywall_context: 'general',
+    });
+  });
+
+  it('sends no paywall event at all when PostHog is unconfigured', async () => {
+    const { Analytics } = await loadWithKey(undefined);
+    Analytics.planSelectionViewed('onboarding');
+    Analytics.planSelectionSubscribed('annual', 'onboarding');
+    Analytics.paywallDismissed('onboarding');
+    expect(capture).not.toHaveBeenCalled();
+  });
+});
+
 describe('initAnalytics — privacy super properties', () => {
   it('registers $ip: null alongside platform/app_env so no IP or GeoIP is captured', async () => {
+    // initAnalytics is now consent-gated: a key alone no longer starts it.
+    setAnalyticsConsent(true);
     const { initAnalytics } = await loadWithKey('phc_test_key');
     initAnalytics();
     expect(register).toHaveBeenCalledTimes(1);
@@ -329,6 +572,74 @@ describe('sanitizeErrorText', () => {
   });
 });
 
+/**
+ * THE FAILURE VOCABULARY MUST SURVIVE THIS SANITIZER UNCHANGED.
+ *
+ * `sanitizeErrorText` is NOT the same function on mobile and web:
+ *   mobile (services/analytics.ts) redacts runs of 20+ chars containing BOTH
+ *                                  a letter and a digit
+ *   web    (lib/analytics.ts)      redacts runs of 40+ chars, ANY composition
+ *          (MAX_ERROR_TEXT_LENGTH / OPAQUE_TOKEN_RE above, ~line 53-66)
+ *
+ * That is a deliberate, documented divergence (mobile pins the invariant in
+ * `__tests__/utils/failureCodeIsBounded.test.ts`, describes 7 and 9) — the
+ * handoff says nothing `classifyFailureCode` can emit today crosses either
+ * threshold, so the digest never splits one failure into two rows. This is
+ * the web-side half of that same invariant: every code `circle_creation_failed`
+ * (and any other failure event) can actually emit must pass through THIS
+ * sanitizer byte-for-byte.
+ */
+describe('sanitizeErrorText leaves the failure-code vocabulary intact', () => {
+  it.each([
+    ...FAILURE_FALLBACK_CODES,
+    'http_502',
+    'http_100',
+    'http_599',
+    'SUBSCRIPTION_REQUIRED',
+    'VALIDATION_ERROR',
+    'SERVER_ERROR',
+    'CARE_RECIPIENT_INVITE_PENDING',
+    'CHUNK_PAGING_UNTERMINATED',
+    'CIRCLE_ARCHIVED',
+  ])('%s passes through unchanged', async (value) => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    expect(sanitizeErrorText(value)).toBe(value);
+  });
+
+  it('classifyFailureCode outputs for representative rejection shapes all survive unchanged', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    const cases: Array<[unknown, string]> = [
+      [{ success: false, error: { code: 'SUBSCRIPTION_REQUIRED' } }, 'SUBSCRIPTION_REQUIRED'],
+      [{ response: { status: 502 } }, 'http_502'],
+      [new Error('timeout of 30000ms exceeded'), 'timeout'],
+      [new Error('Network Error'), 'network_error'],
+      [{ success: false, error: {} }, 'api_error_no_code'],
+      ['<html><title>502 Bad Gateway</title></html>', 'non_json_response'],
+      [new Error('AsyncStorage write failed'), 'client_error'],
+      [Object.create(null), 'unknown_error'],
+    ];
+    for (const [input, expected] of cases) {
+      const code = classifyFailureCode(input);
+      expect(code).toBe(expected);
+      expect(sanitizeErrorText(code)).toBe(code);
+    }
+  });
+
+  it('documents the two thresholds this invariant depends on (20+letter+digit vs 40+ any)', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test_key');
+    // Below web's 40-char threshold: untouched here (mobile would redact this
+    // one — 24 chars, contains a digit — which is the documented divergence
+    // band; nothing CURRENTLY emitted lands there, which is exactly what the
+    // it.each above pins).
+    const divergent = 'SOME_CODE_V2_WITH_DIGITS';
+    expect(divergent).toHaveLength(24);
+    expect(sanitizeErrorText(divergent)).toBe(divergent);
+    // At/over web's 40-char threshold: web redacts regardless of composition.
+    const overWebThreshold = 'A'.repeat(40);
+    expect(sanitizeErrorText(overWebThreshold)).toBe('[token]');
+  });
+});
+
 describe('failure helpers sanitize their free-text error property', () => {
   it('signup_failed / login_failed capture the SANITIZED string', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
@@ -362,11 +673,77 @@ describe('failure helpers sanitize their free-text error property', () => {
   });
 });
 
+describe('error_occurred (mobile parity: Analytics.errorOccurred)', () => {
+  it('uses the SAME event name and shape as mobile: screen, sanitized error, spread context', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.errorOccurred('medication_confirm', 'medication_confirm_error', {
+      circle_id: 'circle-123',
+      status: 'taken',
+      source: 'care_profile',
+      code: 'MEDICATION_DISCONTINUED',
+    });
+    expect(capture).toHaveBeenCalledWith('error_occurred', {
+      screen: 'medication_confirm',
+      error: 'medication_confirm_error',
+      circle_id: 'circle-123',
+      status: 'taken',
+      source: 'care_profile',
+      code: 'MEDICATION_DISCONTINUED',
+    });
+  });
+
+  it('sanitizes an email and a JWT out of `error` (callers should still pass constants)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.errorOccurred(
+      'profile',
+      'save failed for pat@example.com with eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig'
+    );
+    expect(capture).toHaveBeenCalledWith('error_occurred', {
+      screen: 'profile',
+      error: 'save failed for [email] with [token]',
+    });
+    const props = capture.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(String(props.error)).not.toMatch(/@|eyJ/);
+  });
+
+  it('context is optional', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.errorOccurred('documents', 'documents_mutation_error');
+    expect(capture).toHaveBeenCalledWith('error_occurred', {
+      screen: 'documents',
+      error: 'documents_mutation_error',
+    });
+  });
+
+  it('no-ops when VITE_POSTHOG_KEY is unset', async () => {
+    const { Analytics } = await loadWithKey(undefined);
+    Analytics.errorOccurred('profile', 'profile_mutation_error', { code: 'timeout' });
+    expect(capture).not.toHaveBeenCalled();
+  });
+});
+
 describe('captureException', () => {
   it('no-ops when VITE_POSTHOG_KEY is unset', async () => {
     const { captureException } = await loadWithKey(undefined);
     captureException(new Error('boom'), 'app');
     expect(captureExceptionSpy).not.toHaveBeenCalled();
+  });
+
+  it('merges `extra` crash-record fields but never lets them override boundary/platform', async () => {
+    const { captureException } = await loadWithKey('phc_test_key');
+    const error = new Error('render crash');
+    captureException(error, 'root', {
+      fatal: true,
+      component_stack: 'at Thrower at Wrap1',
+      boundary: 'spoofed',
+      platform: 'ios',
+    });
+    expect(captureExceptionSpy).toHaveBeenCalledWith(error, {
+      fatal: true,
+      component_stack: 'at Thrower at Wrap1',
+      boundary: 'root',
+      platform: 'web',
+    });
   });
 
   it('forwards the ORIGINAL error object when the message needs no redaction', async () => {
@@ -423,5 +800,360 @@ describe('identify / reset (active path)', () => {
     const { resetAnalytics } = await loadWithKey('phc_test_key');
     resetAnalytics();
     expect(reset).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * The gate itself. The web companion emits to the same PostHog project as
+ * mobile and used to initialise on nothing but the presence of an API key —
+ * while the marketing site has required an explicit "accepted" since launch.
+ */
+describe('initAnalytics — consent gate', () => {
+  beforeEach(() => {
+    // Scoped to this describe: the posthog-js doubles are module-level, so
+    // without a reset an assertion here can pass on a call made by the
+    // previous test rather than by the code under test.
+    vi.clearAllMocks();
+    localStorage.clear();
+    __resetAnalyticsConsentCache();
+  });
+
+  it('does NOT initialise without consent, even with a key configured', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test_key');
+    initAnalytics();
+    expect(init).not.toHaveBeenCalled();
+  });
+
+  it('initialises once consent is given', async () => {
+    setAnalyticsConsent(true);
+    const { initAnalytics } = await loadWithKey('phc_test_key');
+    initAnalytics();
+    expect(init).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * The privacy policy states "We do not use session recording in the apps".
+   * Without `disable_session_recording: true`, that claim was only true
+   * because the PostHog PROJECT setting has recording off — a setting anyone
+   * with dashboard access could flip with no code change on our side. This
+   * makes the promise code-enforced instead of config-enforced.
+   */
+  it('disables session recording at the SDK, not just via masked inputs', async () => {
+    setAnalyticsConsent(true);
+    const { initAnalytics } = await loadWithKey('phc_test_key');
+    initAnalytics();
+
+    expect(init).toHaveBeenCalledTimes(1);
+    const options = init.mock.calls[0][1] as Record<string, unknown>;
+    expect(options.disable_session_recording).toBe(true);
+    // Belt-and-braces: still masked if recording is ever re-enabled.
+    expect(options.session_recording).toEqual({ maskAllInputs: true });
+  });
+
+  /**
+   * `opt_out_capturing()` is REMEMBERED by posthog-js. A visitor who turned
+   * analytics off and later back on would otherwise get a toggle reading "on"
+   * over a client that captures nothing — the worst kind of broken, because
+   * the user and the data both think everything is fine.
+   */
+  it('opts back IN on init, so re-enabling actually re-enables', async () => {
+    setAnalyticsConsent(true);
+    const { initAnalytics } = await loadWithKey('phc_test_key');
+    initAnalytics();
+    expect(optIn).toHaveBeenCalled();
+  });
+
+  it('does not opt in when there is no consent', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test_key');
+    initAnalytics();
+    expect(optIn).not.toHaveBeenCalled();
+  });
+
+  /**
+   * opt_out alone stops FUTURE events; reset drops the queue and the distinct
+   * id, so the batch built up before someone opted out is never transmitted.
+   */
+  it('opts out AND resets when consent is withdrawn', async () => {
+    setAnalyticsConsent(true);
+    const { disableAnalytics } = await loadWithKey('phc_test_key');
+    disableAnalytics();
+    expect(optOut).toHaveBeenCalled();
+    expect(reset).toHaveBeenCalled();
+  });
+});
+
+describe('withdrawing consent actually stops collection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    __resetAnalyticsConsentCache();
+  });
+
+  /**
+   * posthog-js's `reset()` calls `consent.reset()`, which DELETES the
+   * `__ph_opt_in_out_<token>` key. Opting out and THEN resetting therefore
+   * throws the opt-out away and leaves the SDK opted back in — so the order
+   * here is the fix, not a style choice.
+   */
+  it('resets BEFORE opting out, so the opt-out is what survives', async () => {
+    const { disableAnalytics } = await loadWithKey('phc_test');
+    disableAnalytics();
+
+    expect(reset).toHaveBeenCalled();
+    expect(optOut).toHaveBeenCalled();
+    const resetOrder = reset.mock.invocationCallOrder[0];
+    const optOutOrder = optOut.mock.invocationCallOrder[0];
+    expect(
+      resetOrder,
+      'reset() must run first — it clears the opt-out key posthog-js stores'
+    ).toBeLessThan(optOutOrder);
+  });
+
+  /**
+   * The boot gate covers a visitor who never opted in. It says nothing about
+   * one who opts OUT mid-session: posthog-js stays constructed, so without an
+   * emit-path check every event kept transmitting until the next page load.
+   */
+  it('suppresses captures immediately after an opt-out, without a reload', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    // `loadWithKey` calls vi.resetModules(), so the consent module the freshly
+    // imported analytics sees is a DIFFERENT instance (with its own cache) than
+    // the one imported at the top of this file. Drive the one it actually uses.
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    Analytics.circleCreated(true);
+    expect(capture).toHaveBeenCalledTimes(1);
+
+    capture.mockClear();
+    consent.setAnalyticsConsent(false);
+    Analytics.circleCreated(true);
+    expect(capture).not.toHaveBeenCalled();
+  });
+
+  it('resumes when consent is granted again', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+    Analytics.circleCreated(true);
+    expect(capture).not.toHaveBeenCalled();
+
+    consent.setAnalyticsConsent(true);
+    Analytics.circleCreated(true);
+    expect(capture).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('IP suppression covers the opt-in event too', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    __resetAnalyticsConsentCache();
+  });
+
+  /**
+   * `$ip: null` is registered as a SUPER PROPERTY so it applies to every event.
+   * That is only true if it is registered before anything can be captured —
+   * and `opt_in_capturing()` captures an event of its own. Opting in first sent
+   * exactly one IP-bearing, GeoIP-enriched event per consenting boot.
+   */
+  it('registers $ip: null BEFORE opting in', async () => {
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    const { initAnalytics } = await loadWithKey('phc_test');
+    initAnalytics();
+
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({ $ip: null }));
+    expect(optIn).toHaveBeenCalled();
+    expect(
+      register.mock.invocationCallOrder[0],
+      '$ip: null must be registered before opt_in_capturing can emit $opt_in'
+    ).toBeLessThan(optIn.mock.invocationCallOrder[0]);
+  });
+
+  it('suppresses the $opt_in event itself', async () => {
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    const { initAnalytics } = await loadWithKey('phc_test');
+    initAnalytics();
+
+    expect(optIn).toHaveBeenCalledWith(expect.objectContaining({ captureEventName: null }));
+  });
+});
+
+describe('identify requires PERMISSION, not just a key', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    __resetAnalyticsConsentCache();
+  });
+
+  /**
+   * This was gated on VITE_POSTHOG_KEY alone, so signing in transmitted
+   * `$identify` carrying the EMAIL for a visitor who had declined analytics —
+   * the most identifying thing this client sends, sent to the one group who
+   * said no.
+   */
+  it('does NOT identify a user who declined', async () => {
+    const { identifyUser } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+
+    identifyUser('user-1', 'pat@example.com');
+    expect(identify).not.toHaveBeenCalled();
+  });
+
+  it('identifies a user who consented', async () => {
+    const { identifyUser } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+
+    identifyUser('user-1', 'pat@example.com');
+    expect(identify).toHaveBeenCalledWith('user-1', { email: 'pat@example.com' });
+  });
+
+  it('stops identifying the moment consent is withdrawn mid-session', async () => {
+    const { identifyUser } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    identifyUser('user-1', 'pat@example.com');
+    expect(identify).toHaveBeenCalledTimes(1);
+
+    identify.mockClear();
+    consent.setAnalyticsConsent(false);
+    identifyUser('user-1', 'pat@example.com');
+    expect(identify).not.toHaveBeenCalled();
+  });
+
+  it('does not send crash reports for a visitor who declined', async () => {
+    const { captureException } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+
+    captureException(new Error('boom'), 'AppBoundary');
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
+  });
+
+  /**
+   * THE CONTROL, deliberately co-located with the assertion above.
+   *
+   * `not.toHaveBeenCalled()` on its own is satisfied by a captureException that
+   * NEVER works — a wrong early return, a broken import, a renamed export all
+   * pass it. Pairing the two means the negative can only be green for the right
+   * reason.
+   *
+   * mobile-63 hit the sharper version of this: their "disabled" state is the
+   * ABSENCE of a posthog instance, so there was no installed mock to observe
+   * and the negative assertion was structurally vacuous — it passed their
+   * equivalent mutation. Ours observes the spy installed in the `posthog-js`
+   * module mock at the top of this file, and M4 (removing the gate) turns the
+   * assertion above red, so the shape is sound. This control keeps it that way
+   * if either half is ever edited alone.
+   */
+  it('DOES send crash reports once consent is granted', async () => {
+    const { captureException } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+
+    const error = new Error('boom');
+    captureException(error, 'AppBoundary');
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+    expect(captureExceptionSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'boom' }),
+      expect.objectContaining({ boundary: 'AppBoundary', platform: 'web' })
+    );
+  });
+
+  it('stops sending crash reports the moment consent is withdrawn', async () => {
+    const { captureException } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    captureException(new Error('first'), 'AppBoundary');
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+
+    captureExceptionSpy.mockClear();
+    consent.setAnalyticsConsent(false);
+    captureException(new Error('second'), 'AppBoundary');
+    expect(captureExceptionSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('logout does not resurrect analytics for someone who opted out', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    __resetAnalyticsConsentCache();
+  });
+
+  /**
+   * `posthog.reset()` deletes the opt-out key posthog-js persists, so a bare
+   * reset on logout silently re-enables collection: opt out -> log out -> next
+   * session is opted back IN with the Privacy toggle still reading off.
+   * `disableAnalytics` already ordered around this; the LOGOUT path did not.
+   */
+  it('re-asserts the opt-out after resetting, when consent is withheld', async () => {
+    const { resetAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+
+    resetAnalytics();
+
+    expect(reset).toHaveBeenCalled();
+    expect(optOut).toHaveBeenCalled();
+    expect(
+      reset.mock.invocationCallOrder[0],
+      'the opt-out must be re-asserted AFTER the reset that cleared it'
+    ).toBeLessThan(optOut.mock.invocationCallOrder[0]);
+  });
+
+  it('does NOT opt out a consenting user just because they logged out', async () => {
+    // The control: logging out is not a privacy decision.
+    const { resetAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+
+    resetAnalytics();
+
+    expect(reset).toHaveBeenCalled();
+    expect(optOut).not.toHaveBeenCalled();
+  });
+});
+
+describe('auth credentials never reach PostHog', () => {
+  /**
+   * The vector: posthog-js registers `$initial_person_info` on the FIRST
+   * capture, and `router.tsx` renders `<PageviewTracker />` before `<Outlet />`
+   * — so on an OAuth return that capture happens while `location.href` is still
+   * `/auth/callback#access_token=…`, before AuthCallbackPage scrubs it.
+   *
+   * `mask_personal_data_properties: true` closes it at the SDK. This redaction
+   * is the second layer, for any other string that carries a token.
+   */
+  it('strips every Supabase auth param by name', async () => {
+    const { sanitizeErrorText } = await loadWithKey('phc_test');
+    const mod = await import('@/lib/analytics');
+    const url =
+      'https://app/auth/callback#access_token=eyJhbGciOi.J9.sig&refresh_token=v1.MRq&expires_in=3600';
+    const out = mod.redactAuthTokens(url);
+
+    expect(out).not.toContain('eyJhbGciOi');
+    expect(out).not.toContain('v1.MRq');
+    expect(out).toContain('access_token=[redacted]');
+    expect(out).toContain('refresh_token=[redacted]');
+    // Non-credential params survive — this is redaction, not truncation.
+    expect(out).toContain('expires_in=3600');
+    expect(typeof sanitizeErrorText).toBe('function');
+  });
+
+  it('strips provider and id tokens too', async () => {
+    const mod = await import('@/lib/analytics');
+    const out = mod.redactAuthTokens(
+      '#provider_token=abc&provider_refresh_token=def&id_token=ghi'
+    );
+    expect(out).not.toMatch(/abc|def|ghi/);
+  });
+
+  it('leaves ordinary strings untouched', async () => {
+    const mod = await import('@/lib/analytics');
+    expect(mod.redactAuthTokens('/circles/123/calendar')).toBe('/circles/123/calendar');
   });
 });

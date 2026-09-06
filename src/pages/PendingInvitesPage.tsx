@@ -1,15 +1,16 @@
-import { useState, type ReactElement } from 'react';
+import { type ReactElement, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, EmptyState, Skeleton, useToast } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, Eyebrow, Skeleton, Text, useToast } from '@/components/ui';
 import { usePendingInvites, useAcceptInvite } from '@/hooks/useInvites';
 import type { PendingInvite } from '@/api/invites';
+import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
 import { Analytics } from '@/lib/analytics';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 
 // Task 5.5 — list the current user's pending invites with Accept.
 //
-// MIRRORS mobile/src/screens/circle/PendingInvitesScreen.tsx. NOTE: there is NO
+// MIRRORS mobile/src/screens/invite/PendingInvitesScreen.tsx. NOTE: there is NO
 // decline endpoint (mobile's "Decline" is a client-only dismiss), so this page
 // offers Accept only — no decline UI.
 //
@@ -17,34 +18,29 @@ import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 // design tokens. Owner gating is not relevant here — these are invites
 // addressed TO the current user.
 
-/** Decorative envelope glyph for the empty state tile. */
-function MailIcon(): ReactElement {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
-      <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function inviterName(invite: PendingInvite): string {
   const { first_name, last_name, email } = invite.invited_by;
-  const name = [first_name, last_name].filter(Boolean).join(' ');
+  // TRIM BEFORE `filter(Boolean)` — ' ' is truthy, so an untrimmed filter keeps
+  // it and joins to a blank (or space-padded) name that renders as no name.
+  const name = [first_name, last_name]
+    .map((part) => part?.trim() ?? '')
+    .filter(Boolean)
+    .join(' ');
   return name || email;
 }
 
 function InviteRowSkeleton(): ReactElement {
   return (
-    <li className="flex flex-col gap-3 rounded-2xl border border-line bg-cream p-6">
+    <Card as="li" variant="outlined" padding="lg" className="flex flex-col gap-3">
       <Skeleton className="h-5 w-48" />
       <Skeleton className="h-4 w-32" />
       <Skeleton className="h-11 w-28 rounded-full" />
-    </li>
+    </Card>
   );
 }
 
 export default function PendingInvitesPage(): ReactElement {
-  const { t } = useTranslation('members');
+  const { t, i18n } = useTranslation('members');
   const { showToast } = useToast();
   const { data: invites, isPending, isError, refetch } = usePendingInvites();
   const acceptInvite = useAcceptInvite();
@@ -94,7 +90,9 @@ export default function PendingInvitesPage(): ReactElement {
   } else if (isError) {
     content = (
       <Card role="alert" className="mt-6 max-w-lg p-8 text-center">
-        <h2 className="serif m-0 text-lg text-ink">{t('pending.errorTitle')}</h2>
+        <Text variant="h2" as="h2">
+          {t('pending.errorTitle')}
+        </Text>
         <p className="mt-2 text-ink-2">{t('pending.errorBody')}</p>
         <Button className="mt-6" onClick={() => void refetch()}>
           {t('common:retry')}
@@ -105,7 +103,7 @@ export default function PendingInvitesPage(): ReactElement {
     content = (
       <div className="mt-6">
         <EmptyState
-          icon={<MailIcon />}
+          icon="mail-outline"
           title={t('pending.emptyTitle')}
           description={t('pending.emptyBody')}
         />
@@ -114,37 +112,46 @@ export default function PendingInvitesPage(): ReactElement {
   } else {
     content = (
       <ul className="m-0 mt-6 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
-        {invites.map((invite) => (
-          <li
-            key={invite.id}
-            className="flex flex-col gap-3 rounded-2xl border border-line bg-cream p-6"
-          >
-            <div className="flex flex-col gap-1">
-              <p className="m-0 font-medium text-ink">
-                {t('pending.invitedYou', {
-                  inviter: inviterName(invite),
-                  recipient: invite.circle.recipient_name,
-                })}
-              </p>
-              <p className="m-0 text-sm text-ink-3">
-                <span className="eyebrow">{t('invite.circleLabel')}</span> {invite.circle.name}
-              </p>
-              <Badge variant={invite.member_type === 'caregiver' ? 'moss' : 'terracotta'}>
-                {t(`roles.${invite.member_type === 'caregiver' ? 'caregiver' : 'careRecipient'}`)}
-              </Badge>
-            </div>
-            <div>
-              <Button
-                onClick={() => handleAccept(invite)}
-                disabled={acceptInvite.isPending && acceptingId === invite.id}
-              >
-                {acceptInvite.isPending && acceptingId === invite.id
-                  ? t('pending.accepting')
-                  : t('pending.accept')}
-              </Button>
-            </div>
-          </li>
-        ))}
+        {invites.map((invite) => {
+          const expiresOn = formatInviteExpiryDate(invite.expires_at, i18n.language);
+          return (
+            <Card as="li" key={invite.id} variant="outlined" padding="lg" className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <p className="m-0 font-medium text-ink">
+                  {t('pending.invitedYou', {
+                    inviter: inviterName(invite),
+                    recipient: invite.circle.recipient_name,
+                  })}
+                </p>
+                <p className="m-0 text-sm text-ink-3">
+                  <Eyebrow>{t('invite.circleLabel')}</Eyebrow> {invite.circle.name}
+                </p>
+                <Badge variant={invite.member_type === 'caregiver' ? 'primary' : 'coral'}>
+                  {t(`roles.${invite.member_type === 'caregiver' ? 'caregiver' : 'careRecipient'}`)}
+                </Badge>
+                {/* Deadline — parity with mobile's invite preview. `expires_at`
+                    is a real instant, so the reader's own locale is the right
+                    formatter. Omitted entirely when it is missing or
+                    unparseable, never rendered as "Invalid Date". */}
+                {expiresOn ? (
+                  <p className="m-0 text-sm text-ink-3">
+                    <Eyebrow>{t('pending.expiresLabel')}</Eyebrow> {expiresOn}
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <Button
+                  onClick={() => handleAccept(invite)}
+                  disabled={acceptInvite.isPending && acceptingId === invite.id}
+                >
+                  {acceptInvite.isPending && acceptingId === invite.id
+                    ? t('pending.accepting')
+                    : t('pending.accept')}
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
       </ul>
     );
   }
@@ -153,7 +160,9 @@ export default function PendingInvitesPage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-4xl p-8">
-      <h1 className="serif m-0 text-xl text-ink">{t('pending.heading')}</h1>
+      <Text variant="h1">
+        {t('pending.heading')}
+      </Text>
       <p className="mt-2 text-ink-3">{t('pending.subheading')}</p>
       {joined ? (
         <Card
@@ -165,7 +174,7 @@ export default function PendingInvitesPage(): ReactElement {
           </p>
           <Link
             to={`/circles/${joined.id}`}
-            className="shrink-0 font-medium text-terracotta-deep underline-offset-4 hover:underline"
+            className="shrink-0 font-medium text-coral-deep underline-offset-4 hover:underline"
           >
             {t('pending.openCircle')}
           </Link>

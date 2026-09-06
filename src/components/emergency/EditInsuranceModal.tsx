@@ -77,11 +77,11 @@ function EditInsuranceModalForm({
       closeLabel={t('edit.close')}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={update.isPending}>
+          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
             {t('edit.cancel')}
           </Button>
-          <Button type="submit" form="edit-insurance-form" disabled={update.isPending}>
-            {update.isPending ? t('edit.saving') : t('edit.save')}
+          <Button type="submit" form="edit-insurance-form" variant="primary" loading={update.isPending}>
+            {t('edit.save')}
           </Button>
         </div>
       }
@@ -89,7 +89,8 @@ function EditInsuranceModalForm({
       <form id="edit-insurance-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <TextField
           id="insurance-carrier"
-          label={`${t('edit.insurance.carrier')} *`}
+          label={t('edit.insurance.carrier')}
+          required
           value={carrier}
           maxLength={100}
           error={error}

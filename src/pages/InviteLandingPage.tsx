@@ -3,41 +3,112 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, Skeleton, useToast } from '@/components/ui';
+import { Badge, Button, Eyebrow, Skeleton, Text, useToast } from '@/components/ui';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { AuthTopBar } from '@/components/auth/AuthTopBar';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
+import { getApiError } from '@/api/auth';
+import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
 import { useAuth } from '@/hooks/useAuth';
 import { useAcceptInviteByCode } from '@/hooks/useJoinCircle';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 
-// ⚠️ NEXT STEPS to ship invite-link sharing:
-//   1. Re-enable the Share/Copy buttons in the mobile app — they're commented out
-//      in mobile/src/screens/circle/InviteMemberScreen.tsx (search "Share / Copy buttons").
-//   2. (nice-to-have) Wire deferred deep-linking so a fresh installer auto-joins the
-//      circle instead of having to type the invite code.
+// Invite-link sharing is SHIPPED: the mobile app's InviteMemberScreen shows
+// Share/Copy actions on the inline success panel after an invite is created,
+// and POST /circles/:id/invites returns `invite_url` pointing here. (An earlier
+// version of this comment said those buttons were "commented out" in
+// InviteMemberScreen.tsx — they had actually been deleted, and are now back.)
+//
+// ⚠️ STILL OPEN: deferred deep-linking, so a visitor who installs from this page
+// auto-joins the circle instead of typing the code shown below. Until then the
+// displayed code is the fallback for a fresh install.
 // Store listing URLs are live (see src/lib/storeLinks.ts).
 
 const COPIED_FEEDBACK_MS = 2000;
 
-const roleBadgeVariant: Record<InviteMemberType, 'moss' | 'terracotta'> = {
-  caregiver: 'moss',
-  care_recipient: 'terracotta',
+const roleBadgeVariant: Record<InviteMemberType, 'primary' | 'coral'> = {
+  caregiver: 'primary',
+  care_recipient: 'coral',
 };
-
-/** CircleCare wordmark — brand mark only, NOT a heading (single h1 per state). */
-function Wordmark(): ReactElement {
-  return <p className="serif m-0 text-center text-lg text-ink">CircleCare</p>;
-}
 
 function DownloadButtons({ prompt }: { prompt: string }): ReactElement {
   return (
     <div className="flex flex-col items-center gap-3">
-      <p className="eyebrow m-0 text-center">{prompt}</p>
+      <Eyebrow as="p" className="text-center">
+        {prompt}
+      </Eyebrow>
       <StoreBadges layout="stack" className="w-full max-w-xs" />
     </div>
   );
+}
+
+/** Heading + body for the dead-end state, chosen by the preview's error CODE. */
+interface PreviewErrorCopy {
+  title: string;
+  suggestion: string;
+}
+
+/**
+ * Backend error code → landing-page dead-end copy.
+ *
+ * Mirrors the code table mobile keys off (JoinCircleModal /
+ * authErrorMessages.ts). Every key is a LITERAL — a `t(\`${section}.title\`)`
+ * template would be a dynamic key, which the static translation-key audit
+ * cannot resolve (and whose skipped-key count it asserts).
+ *
+ * Unrecognised codes — INVALID_CODE, INVITE_EXPIRED, SERVER_ERROR, a network
+ * failure — keep the original "expired or invalid" state untouched.
+ */
+function previewErrorCopy(t: (key: string) => string, code: string | undefined): PreviewErrorCopy {
+  switch (code) {
+    // The most common failure: the person tapped the link twice, or joined in
+    // the app first. "Expired or invalid" would be plainly wrong.
+    case 'INVITE_ALREADY_USED':
+      return { title: t('errorUsed.title'), suggestion: t('errorUsed.suggestion') };
+    // The owner deleted the circle after sending the invite. The code is
+    // perfectly valid, so telling them to double-check it sends them hunting
+    // for a typo that does not exist.
+    case 'CIRCLE_ARCHIVED':
+      return { title: t('errorArchived.title'), suggestion: t('errorArchived.suggestion') };
+    // A second care-recipient invite into a circle that already has one.
+    case 'CARE_RECIPIENT_EXISTS':
+      return {
+        title: t('errorRecipientExists.title'),
+        suggestion: t('errorRecipientExists.suggestion'),
+      };
+    default:
+      return { title: t('error.title'), suggestion: t('error.suggestion') };
+  }
+}
+
+/**
+ * Backend error code → copy for a failed ACCEPT (the visitor was signed in and
+ * pressed "Accept invitation"). Same codes as the preview, different shape: a
+ * single inline line under the button rather than a whole dead-end card.
+ */
+function acceptErrorMessage(t: (key: string) => string, code: string | undefined): string {
+  switch (code) {
+    // Two of the codes the API documents for accept that this switch used to
+    // drop on the floor. (ALREADY_MEMBER is deliberately NOT here: it is
+    // intercepted in `onError` above and navigates to /circles, because being
+    // already in the circle is a success from the visitor's point of view.) `acceptFailed` is "something went wrong, try again", which is
+    // actively misleading for an expired or spent invite: retrying cannot help,
+    // and the visitor needs to know to ask for a new link. JoinCircleModal has
+    // handled all three since it shipped — this path had simply drifted.
+    case 'INVITE_EXPIRED':
+      return t('acceptExpired');
+    case 'INVITE_ALREADY_USED':
+      return t('acceptAlreadyUsed');
+    case 'CIRCLE_ARCHIVED':
+      return t('acceptArchived');
+    case 'CARE_RECIPIENT_EXISTS':
+      return t('acceptRecipientExists');
+    default:
+      return t('acceptFailed');
+  }
 }
 
 /**
@@ -71,9 +142,9 @@ export default function InviteLandingPage(): ReactElement {
     staleTime: Infinity,
   });
 
-  // The api client unwraps errors — the code lives at err.error.code.
-  const isAlreadyUsed =
-    (error as { error?: { code?: string } } | null)?.error?.code === 'INVITE_ALREADY_USED';
+  // The api client unwraps errors — the code lives at err.error.code, which is
+  // exactly what `getApiError` reads (never err.response.data.error.code).
+  const errorCopy = previewErrorCopy(t, getApiError(error)?.code);
 
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -107,12 +178,12 @@ export default function InviteLandingPage(): ReactElement {
         navigate('/circles');
       },
       onError: (err) => {
-        const errorCode = (err as { error?: { code?: string } } | null)?.error?.code;
+        const errorCode = getApiError(err)?.code;
         if (errorCode === 'ALREADY_MEMBER') {
           navigate('/circles');
           return;
         }
-        setAcceptError(t('acceptFailed'));
+        setAcceptError(acceptErrorMessage(t, errorCode));
       },
     });
   }, [accept, displayCode, navigate, showToast, t]);
@@ -184,9 +255,26 @@ export default function InviteLandingPage(): ReactElement {
   // config must add a prerender rule for /invite/* so per-invite OG tags are
   // served to crawlers (deployment task). index.html carries the static
   // defaults for every other route.
-  const ogTitle = invite
-    ? t('og.title', { inviterName: invite.invited_by_name })
-    : 'CircleCare';
+  // THE INVITER'S NAME MAY BE ABSENT, AND THE FALLBACK IS OURS TO RENDER.
+  //
+  // `invited_by_name` is `string | null`. The backend sends null whenever the
+  // inviter has no first_name — which is EVERY Apple/Google OAuth signup, so
+  // this is a common path, not an edge case. It deliberately does not
+  // substitute anything itself: the preview endpoint is unauthenticated and
+  // carries no Accept-Language, so it can emit neither an English word (copy
+  // shipped as data) nor the inviter's email local-part (personal data, and
+  // this component would put it in a public, crawler-cached og:title).
+  //
+  // Rendering the fallback HERE is what keeps it translated — i18n also
+  // silently coerces a null interpolation to '', which would otherwise leave
+  // "  invited you to CircleCare".
+  const inviterName = invite?.invited_by_name ?? t('inviterFallback');
+
+  // `expires_at` is a real instant, so the reader's own locale/zone is the right
+  // formatter — same call mobile's invite preview makes on the same field.
+  const expiresOn = formatInviteExpiryDate(invite?.expires_at, i18n.language);
+
+  const ogTitle = invite ? t('og.title', { inviterName }) : 'CircleCare';
   const ogDescription = invite
     ? t('og.description', {
         circleName: invite.circle.name,
@@ -195,7 +283,7 @@ export default function InviteLandingPage(): ReactElement {
     : t('appDescription');
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-bg px-4 py-10">
+    <AuthShell>
       <Helmet>
         <html lang={i18n.language} />
         <title>{ogTitle}</title>
@@ -204,10 +292,8 @@ export default function InviteLandingPage(): ReactElement {
         <meta name="description" content={ogDescription} />
       </Helmet>
 
-      <Card className="flex w-full max-w-[480px] flex-col gap-6">
-        <header>
-          <Wordmark />
-        </header>
+      <div className="flex flex-col gap-6">
+        <AuthTopBar />
 
         {isPending && (
           <div aria-busy="true" className="flex flex-col gap-4">
@@ -225,16 +311,15 @@ export default function InviteLandingPage(): ReactElement {
         {isError && (
           <>
             <div className="flex flex-col items-center gap-3 text-center">
-              {/* "Already used" is a distinct, common case — most often the person
-                  tapped the link twice, or joined on the app first. Telling them
-                  the invite expired or is invalid would be plainly wrong.
-                  Mirrors the mobile PendingInvitesScreen link banners. */}
-              <h1 className="serif m-0 text-xl text-ink text-balance">
-                {isAlreadyUsed ? t('errorUsed.title') : t('error.title')}
-              </h1>
-              <p className="m-0 text-sm text-ink-2 text-balance">
-                {isAlreadyUsed ? t('errorUsed.suggestion') : t('error.suggestion')}
-              </p>
+              {/* Each known failure gets its own words — "already used" (the
+                  person tapped the link twice, or joined on the app first) and
+                  "circle deleted" are both plainly NOT "expired or invalid",
+                  and saying so sends the invitee hunting for a typo that does
+                  not exist. See `previewErrorCopy`. */}
+              <Text variant="h2" as="h1" className="text-balance">
+                {errorCopy.title}
+              </Text>
+              <p className="m-0 text-sm text-ink-2 text-balance">{errorCopy.suggestion}</p>
             </div>
             <DownloadButtons prompt={t('downloadPromptError')} />
             <p className="m-0 text-center text-sm text-ink-3 text-balance">{t('appDescription')}</p>
@@ -244,19 +329,28 @@ export default function InviteLandingPage(): ReactElement {
         {invite && (
           <>
             <div className="flex flex-col items-center gap-3 text-center">
-              <h1 className="serif m-0 text-xl text-ink text-balance">
+              <Text variant="h2" as="h1" className="text-balance">
                 {t('title', {
-                  inviterName: invite.invited_by_name,
+                  inviterName,
                   recipientName: invite.circle.recipient_name,
                 })}
-              </h1>
+              </Text>
               <p className="m-0 text-sm text-ink-2">
-                <span className="eyebrow">{t('circleLabel')}</span>{' '}
+                <Eyebrow as="span">{t('circleLabel')}</Eyebrow>{' '}
                 <span className="block text-base text-ink">{invite.circle.name}</span>
               </p>
-              <Badge variant={roleBadgeVariant[invite.member_type] ?? 'neutral'}>
+              <Badge variant={roleBadgeVariant[invite.member_type] ?? 'default'}>
                 {t(`roles.${invite.member_type}`)}
               </Badge>
+              {/* Deadline — parity with mobile's invite preview, which has shown
+                  it since launch. Omitted entirely when the date is missing or
+                  unparseable rather than rendering "Invalid Date" on an invite
+                  that still works. */}
+              {expiresOn ? (
+                <p className="m-0 text-sm text-ink-3">
+                  <Eyebrow as="span">{t('expiresLabel')}</Eyebrow> {expiresOn}
+                </p>
+              ) : null}
             </div>
 
             {!isBootstrapping && (
@@ -310,7 +404,7 @@ export default function InviteLandingPage(): ReactElement {
             <p className="m-0 text-center text-sm text-ink-3 text-balance">{t('appDescription')}</p>
           </>
         )}
-      </Card>
-    </main>
+      </div>
+    </AuthShell>
   );
 }

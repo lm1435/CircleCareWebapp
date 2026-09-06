@@ -1,4 +1,6 @@
 import i18n from '@/i18n';
+import { formatTimeOfDay, getTimezoneSuffix } from '@/utils/timezone';
+import type { HourCycle } from '@/utils/hourCycle';
 
 // Date-only arithmetic on YYYY-MM-DD strings using UTC methods exclusively.
 // Mirrors backend/src/utils/recurrence.ts helpers. NEVER use device-local
@@ -104,20 +106,58 @@ export function getWeekdayName(
 
 /**
  * Format an ISO UTC timestamp (e.g. confirmation.confirmed_at) as a time in a
- * specific timezone.
+ * specific timezone, LABELLED with that timezone.
+ *
+ * The label is not decoration. "Taken at 8:05 PM" is rendered to caregivers who
+ * are frequently NOT in the care recipient's zone, and this string is the
+ * evidence a dose was actually taken — read in the wrong frame it is evidence
+ * of something that did not happen.
+ *
+ * SHOWN ONLY WHEN THE VIEWER IS ELSEWHERE, though. The label used to be
+ * unconditional, so a caregiver in the recipient's own zone read "8:05 PM CT"
+ * on every confirmation — a label answers "whose clock is this?", and in a
+ * single-zone circle nobody is asking. {@link getTimezoneSuffix} owns that rule
+ * for every time surface in the app.
  */
 export function formatTimestampInTimezone(
   isoString: string,
   timezone: string,
-  locale: string
+  locale: string,
+  cycle?: HourCycle
 ): string {
   try {
-    return new Intl.DateTimeFormat(locale, {
+    const at = new Date(isoString);
+    // Extract the wall clock NUMERICALLY, then render it through the app's one
+    // time renderer.
+    //
+    // Formatting straight off the locale ignored the viewer's resolved 12h/24h
+    // preference and made the output locale-dependent in a way nothing else in
+    // the app is: `es-MX` produced "8:05 p.m." while a bare `es` produced
+    // "20:05" for the same instant and the same user. `formatTimeOfDay` is what
+    // every other time surface uses, including the RAE meridiem rules.
+    const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
-      hour: 'numeric',
-      minute: 'numeric',
-    }).format(new Date(isoString));
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(at);
+    const hours = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10) % 24;
+    const minutes = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+
+    const time = cycle
+      ? formatTimeOfDay(hours, minutes, cycle)
+      : new Intl.DateTimeFormat(locale, {
+          timeZone: timezone,
+          hour: 'numeric',
+          minute: 'numeric',
+        }).format(at);
+
+    // Judged AT the instant. The city itself does not move with the season, but
+    // whether it is worth naming does: Phoenix and Denver are the same clock in
+    // January and an hour apart in July.
+    return `${time}${getTimezoneSuffix(timezone, at)}`;
   } catch {
     return '';
   }
 }
+

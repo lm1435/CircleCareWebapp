@@ -1,6 +1,14 @@
 import { useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ConfirmDialog, Spinner, TextArea, useToast } from '@/components/ui';
+import {
+  Button,
+  ConfirmDialog,
+  Spinner,
+  Text,
+  TextArea,
+  careCardShell,
+  useToast,
+} from '@/components/ui';
 import { formatRelativeTime } from '@/components/activity/activityFormat';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
@@ -72,7 +80,7 @@ function NoteRow({
 
   if (editing) {
     return (
-      <li className="rounded-xl border border-line bg-cream p-4">
+      <li className={careCardShell}>
         <TextArea
           id={`note-edit-${note.id}`}
           label={t('calendar:notes.editLabel')}
@@ -99,10 +107,12 @@ function NoteRow({
   }
 
   return (
-    <li className="rounded-xl border border-line bg-cream p-4">
+    <li className={careCardShell}>
       <div className="flex items-baseline justify-between gap-3">
         <span className="min-w-0 truncate text-sm font-medium text-ink">{authorName}</span>
-        <span className="mono shrink-0">{timestamp}</span>
+        <Text variant="mono" as="span" className="shrink-0">
+          {timestamp}
+        </Text>
       </div>
       <p className="m-0 mt-1.5 whitespace-pre-wrap break-words text-base text-ink-2">{note.body}</p>
       {(canEditOwn || canDelete) && (
@@ -240,9 +250,9 @@ export function EventNotesPanel({
 
   return (
     <section aria-labelledby="event-notes-heading" className="flex flex-col gap-3">
-      <h3 id="event-notes-heading" className="section-title m-0">
+      <Text variant="sectionTitle" as="h3" id="event-notes-heading">
         {t('calendar:notes.title')}
-      </h3>
+      </Text>
 
       {list}
 
@@ -258,7 +268,7 @@ export function EventNotesPanel({
             rows={3}
           />
           <div className="flex justify-end">
-            <Button type="submit" size="md" disabled={!composer.trim() || createNote.isPending}>
+            <Button type="submit" size="sm" disabled={!composer.trim() || createNote.isPending}>
               {t('calendar:notes.add')}
             </Button>
           </div>
