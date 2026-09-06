@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StoreBadges } from '@/components/layout/StoreBadges';
@@ -147,14 +147,18 @@ export function Sidebar({
   const { t } = useTranslation('common');
   const { circleId } = useParams<{ circleId: string }>();
   const [addOpen, setAddOpen] = useState(false);
+  /** The New button's box — the AddMenu pill is fixed off its measured rect. */
+  const addAnchorRef = useRef<HTMLDivElement>(null);
   const base = `/circles/${circleId}`;
 
   return (
     <aside className={DESKTOP_CLASS}>
       {onCreate && (
-        // `relative` is the AddMenu's `sidebar` anchor: the pill positions
-        // itself off this box's right edge (`left-full`), not the viewport.
-        <div className="relative">
+        // The AddMenu's `sidebar` anchor: the pill is portalled to <body> and
+        // fixed off this box's right edge. It cannot live inside the rail —
+        // the rail's `overflow-y-auto` clips it and its `sticky` stacking
+        // context puts the scrim under the header (see AddMenu).
+        <div ref={addAnchorRef}>
           <Button
             variant="primary"
             fullWidth
@@ -169,6 +173,7 @@ export function Sidebar({
           </Button>
           <AddMenu
             anchor="sidebar"
+            anchorRef={addAnchorRef}
             open={addOpen}
             canCreate={canCreate}
             onClose={() => setAddOpen(false)}

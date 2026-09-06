@@ -146,8 +146,11 @@ describe('Sidebar', () => {
 
     expect(button).toHaveAttribute('aria-expanded', 'true');
     const menu = screen.getByRole('menu', { name: 'New' });
-    // Anchored to the sidebar trigger, not the viewport bottom.
-    expect(menu.className).toContain('absolute left-full');
+    // Anchored to the sidebar trigger (portalled + fixed off its rect), not
+    // the viewport bottom.
+    expect(menu.className).toContain('fixed');
+    expect(menu.className).not.toContain('left-1/2');
+    expect(menu.closest('[role="region"]')?.parentElement).toBe(document.body);
     expect(screen.getAllByRole('menuitem')).toHaveLength(4);
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Note' }));

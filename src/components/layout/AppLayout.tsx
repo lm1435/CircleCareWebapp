@@ -145,8 +145,9 @@ export function AppLayout(): ReactElement {
           />
           {/* Mounted here, not inside the pill: the sidebar's New button opens
               the same menu from its own anchor, and only one create flow may be
-              in flight at a time. Deliberately outside any landmark (axe
-              `region`) — it's a transient overlay, not page content. */}
+              in flight at a time. It portals itself to <body> and wraps the
+              pill in its own named landmark (axe `region`), so where it is
+              mounted here does not matter for layout or a11y. */}
           <AddMenu
             anchor="bottom"
             open={addOpen}

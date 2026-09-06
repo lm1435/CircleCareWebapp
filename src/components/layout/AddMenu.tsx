@@ -1,4 +1,13 @@
-import { useEffect, useRef, type ReactElement } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactElement,
+  type RefObject,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '@/components/ui';
 import { useMenu } from '@/hooks/useMenu';
@@ -47,21 +56,70 @@ const OPTIONS: readonly AddMenuOption[] = [
 
 /**
  * `bottom` — the floating pill above the mobile nav bar (mobile's placement).
- * `sidebar` — anchored to the right of the desktop "New" button; the caller
- * wraps that trigger in a `relative` box for this to resolve against.
+ * `sidebar` — to the right of the desktop "New" button, whose box the caller
+ * hands over as `anchorRef`; the pill is `fixed` at that box's measured rect.
+ *
+ * Both are `fixed`, and the whole menu (scrim + pill) renders through a portal
+ * on <body>. It used to sit inline next to the trigger as `absolute left-full`,
+ * which broke two ways inside the desktop rail: the rail is `overflow-y-auto`
+ * (a non-visible overflow on one axis forces the other to `auto`, so the rail
+ * is a scroll container that clips at its right edge — the pill was cut off at
+ * 272px), and the rail is `sticky` (a stacking context with no z-index, so its
+ * `fixed inset-0` scrim painted BENEATH the z-20 sticky header). Escaping the
+ * rail's subtree fixes both.
  */
 export type AddMenuAnchor = 'bottom' | 'sidebar';
 
 const PILL_ANCHOR: Record<AddMenuAnchor, string> = {
-  bottom: 'fixed bottom-[calc(var(--nav-h,64px)+var(--nav-inset,0px)+16px)] left-1/2 -translate-x-1/2 max-w-[calc(100vw-40px)]',
-  sidebar: 'absolute left-full top-0 ml-2',
+  bottom:
+    'fixed bottom-[calc(var(--nav-h,64px)+var(--nav-inset,0px)+16px)] left-1/2 -translate-x-1/2 max-w-[calc(100vw-40px)]',
+  sidebar: 'fixed',
 };
+
+/** Gap between the sidebar trigger's right edge and the pill (the old `ml-2`). */
+const SIDEBAR_GAP_PX = 8;
+
+/**
+ * Where a `sidebar`-anchored pill sits: the trigger's top edge, just past its
+ * right edge. Re-measured on resize and on any scroll (capture phase — the
+ * rail scrolls INSIDE itself, and `scroll` does not bubble), so the pill
+ * tracks the button if the rail moves under it while open.
+ */
+function useSidebarPosition(
+  active: boolean,
+  anchorRef: RefObject<HTMLElement | null> | undefined
+): CSSProperties | undefined {
+  const [position, setPosition] = useState<CSSProperties | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    if (!active) {
+      setPosition(undefined);
+      return;
+    }
+    const measure = (): void => {
+      const rect = anchorRef?.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPosition({ top: rect.top, left: rect.right + SIDEBAR_GAP_PX });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [active, anchorRef]);
+
+  return position;
+}
 
 export interface AddMenuProps {
   open: boolean;
   onClose: () => void;
   onSelect: (type: AddMenuType) => void;
   anchor?: AddMenuAnchor;
+  /** The `sidebar` trigger's box; the pill is fixed off its measured rect. Ignored for `bottom`. */
+  anchorRef?: RefObject<HTMLElement | null>;
   /** Read-only members cannot create anything, so the menu does not exist for them. */
   canCreate?: boolean;
 }
@@ -81,6 +139,7 @@ export function AddMenu({
   onClose,
   onSelect,
   anchor = 'bottom',
+  anchorRef,
   canCreate = false,
 }: AddMenuProps): ReactElement | null {
   const { t } = useTranslation('common');
@@ -89,6 +148,7 @@ export function AddMenu({
   const wasOpen = useRef(false);
 
   const shown = open && canCreate;
+  const sidebarPosition = useSidebarPosition(shown && anchor === 'sidebar', anchorRef);
 
   // The roving arrow/Home/End focus, the Escape-closes-and-restores-focus
   // path, and Tab-closes-the-menu all come from the shared `useMenu` (the
@@ -148,7 +208,7 @@ export function AddMenu({
     onClose();
   };
 
-  return (
+  return createPortal(
     <>
       <div
         aria-hidden="true"
@@ -156,43 +216,52 @@ export function AddMenu({
         onClick={onClose}
         className="fixed inset-0 z-40 bg-overlay animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
       />
-      <div
-        ref={menu.menuRef}
-        role="menu"
-        aria-orientation="horizontal"
-        aria-label={t('nav.new')}
-        data-testid="add-menu-pill"
-        onKeyDown={menu.onMenuKeyDown}
-        className={`${PILL_ANCHOR[anchor]} z-50 flex gap-5 rounded-full bg-ink px-5 py-3 shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none`}
-      >
-        {OPTIONS.map((option, index) => (
-          <button
-            key={option.type}
-            type="button"
-            role="menuitem"
-            // NO `aria-label` HERE, DELIBERATELY. The pill shows mobile's short
-            // label ("Med", "Appt") because four options have to fit one row.
-            // Naming the button "Appointment" over a visible "Appt" fails WCAG
-            // 2.5.3 Label in Name (AA): the accessible name must CONTAIN the
-            // visible text, and "Appointment" does not contain "Appt" — which
-            // breaks speech input ("click Appt" would match nothing). So the
-            // visible short label IS the name, and the full word rides along as
-            // `title`: a hover tooltip for sighted users and the accessible
-            // DESCRIPTION for everyone else ("Appt, menu item, Appointment").
-            title={t(`addMenu.${option.type}`)}
-            onClick={() => select(option.type)}
-            style={{ animationDelay: `${80 + index * 40}ms` }}
-            className="flex min-w-[48px] min-h-[48px] flex-col items-center justify-center gap-1 active:opacity-70 animate-[zoom-in_200ms_var(--ease-spring)] [animation-fill-mode:both] motion-reduce:animate-none"
-          >
-            <span className={option.circle}>
-              <Icon name={option.icon} size="chrome" className="text-cream" />
-            </span>
-            <span className="text-2xs tracking-[0.8px] uppercase text-cream/80">
-              {t(`addMenu.${option.type}Short`)}
-            </span>
-          </button>
-        ))}
+      {/* A named landmark, because the pill is portalled to <body> and so no
+          longer inside the rail's <aside> (or any landmark): axe's `region`
+          rule flags every visible node outside a landmark, live region, or
+          dialog. `display: contents` keeps it out of layout so the pill's own
+          `fixed` box is what positions. */}
+      <div role="region" aria-label={t('nav.new')} className="contents">
+        <div
+          ref={menu.menuRef}
+          role="menu"
+          aria-orientation="horizontal"
+          aria-label={t('nav.new')}
+          data-testid="add-menu-pill"
+          onKeyDown={menu.onMenuKeyDown}
+          style={anchor === 'sidebar' ? sidebarPosition : undefined}
+          className={`${PILL_ANCHOR[anchor]} z-50 flex gap-5 rounded-full bg-ink px-5 py-3 shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none`}
+        >
+          {OPTIONS.map((option, index) => (
+            <button
+              key={option.type}
+              type="button"
+              role="menuitem"
+              // NO `aria-label` HERE, DELIBERATELY. The pill shows mobile's short
+              // label ("Med", "Appt") because four options have to fit one row.
+              // Naming the button "Appointment" over a visible "Appt" fails WCAG
+              // 2.5.3 Label in Name (AA): the accessible name must CONTAIN the
+              // visible text, and "Appointment" does not contain "Appt" — which
+              // breaks speech input ("click Appt" would match nothing). So the
+              // visible short label IS the name, and the full word rides along as
+              // `title`: a hover tooltip for sighted users and the accessible
+              // DESCRIPTION for everyone else ("Appt, menu item, Appointment").
+              title={t(`addMenu.${option.type}`)}
+              onClick={() => select(option.type)}
+              style={{ animationDelay: `${80 + index * 40}ms` }}
+              className="flex min-w-[48px] min-h-[48px] flex-col items-center justify-center gap-1 active:opacity-70 animate-[zoom-in_200ms_var(--ease-spring)] [animation-fill-mode:both] motion-reduce:animate-none"
+            >
+              <span className={option.circle}>
+                <Icon name={option.icon} size="chrome" className="text-cream" />
+              </span>
+              <span className="text-2xs tracking-[0.8px] uppercase text-cream/80">
+                {t(`addMenu.${option.type}Short`)}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }

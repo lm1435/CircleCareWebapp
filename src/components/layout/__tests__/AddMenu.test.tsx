@@ -97,12 +97,42 @@ describe('AddMenu', () => {
     expect(menu.className).toContain('bg-ink');
   });
 
-  it('anchor="sidebar" positions the pill off the trigger, not the viewport', () => {
-    setup({ anchor: 'sidebar' });
+  // The sidebar rail is `overflow-y-auto` (which forces `overflow-x` to auto
+  // too) and `sticky` (a stacking context under the z-20 header), so a pill
+  // rendered INSIDE it was clipped at the rail's right edge and its backdrop
+  // painted beneath the header. Both render through a portal on <body> and
+  // the sidebar pill is fixed off the trigger's measured rect instead.
+  it('anchor="sidebar" fixes the pill to the right of the measured trigger', () => {
+    const trigger = document.createElement('div');
+    document.body.appendChild(trigger);
+    trigger.getBoundingClientRect = () =>
+      ({ top: 76, right: 272, left: 16, bottom: 120, width: 256, height: 44 }) as DOMRect;
+
+    setup({ anchor: 'sidebar', anchorRef: { current: trigger } });
 
     const menu = screen.getByRole('menu', { name: 'New' });
-    expect(menu.className).toContain('absolute left-full top-0 ml-2');
-    expect(menu.className).not.toContain('fixed');
+    expect(menu.className).toContain('fixed');
+    expect(menu.className).not.toContain('absolute');
+    expect(menu.style.top).toBe('76px');
+    expect(menu.style.left).toBe('280px');
+    trigger.remove();
+  });
+
+  it('renders the backdrop and pill on <body>, outside the caller subtree', () => {
+    const onClose = vi.fn();
+    const { container } = render(
+      <div data-testid="caller">
+        <AddMenu open onClose={onClose} onSelect={vi.fn()} canCreate anchor="sidebar" />
+      </div>
+    );
+
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+    expect(container.querySelector('[data-testid="add-menu-backdrop"]')).toBeNull();
+    expect(screen.getByTestId('add-menu-backdrop').parentElement).toBe(document.body);
+    // Outside every page landmark now, so it carries its own (axe `region`).
+    const region = screen.getByRole('region', { name: 'New' });
+    expect(region.parentElement).toBe(document.body);
+    expect(region).toContainElement(screen.getByRole('menu'));
   });
 
   it('selecting an option calls onSelect then onClose', () => {
