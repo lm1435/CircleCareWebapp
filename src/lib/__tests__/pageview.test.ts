@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setAnalyticsConsent, __resetAnalyticsConsentCache } from '../analyticsConsent';
 
 // Unit tests for lib/pageview.ts — sanitizePath masking rules and the
 // trackPageview capture (optional-key no-op + hash/search never captured).
@@ -26,10 +27,21 @@ async function loadWithKey(key: string | undefined) {
       VITE_POSTHOG_KEY: key,
     },
   }));
+  // Prime the shared lazy-loader as if posthog-js were already loaded AND
+  // configured, so trackPageview's capture below resolves SYNCHRONOUSLY,
+  // matching this suite's assertions. Real queue/lazy-load behavior is
+  // covered separately in posthogLoader.test.ts.
+  const posthogModule = await import('posthog-js');
+  const loader = await import('@/lib/posthogLoader');
+  loader.__primePosthogForTests(posthogModule.default);
+
   return import('@/lib/pageview');
 }
 
 beforeEach(() => {
+  // trackPageview is gated on consent as well as on the key.
+  __resetAnalyticsConsentCache();
+  setAnalyticsConsent(true);
   capture.mockClear();
 });
 

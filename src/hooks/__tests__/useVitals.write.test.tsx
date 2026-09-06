@@ -26,6 +26,16 @@ vi.mock('@/components/ui', () => ({
 const promptUpgrade = vi.fn();
 vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade }) }));
 
+const mockVitalUpdated = vi.fn();
+const mockVitalDeleted = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    vitalLogged: vi.fn(),
+    vitalUpdated: (...args: unknown[]) => mockVitalUpdated(...args),
+    vitalDeleted: (...args: unknown[]) => mockVitalDeleted(...args),
+  },
+}));
+
 import {
   createVital,
   updateVital,
@@ -159,6 +169,20 @@ describe('useUpdateVital', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.vitals(CIRCLE_ID))).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.vitalsLatest(CIRCLE_ID))).toBe(true);
   });
+
+  it('fires Analytics.vitalUpdated(circleId) on success', async () => {
+    const { wrapper } = setup();
+    mockUpdate.mockResolvedValue(makeVital({ value1: 80 }));
+
+    const { result } = renderHook(() => useUpdateVital(CIRCLE_ID), { wrapper });
+    result.current.mutate({
+      id: VITAL_ID,
+      data: { value1: 80, unit: 'bpm', recorded_at: '2026-06-20T10:00:00.000Z', notes: null },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockVitalUpdated).toHaveBeenCalledWith(CIRCLE_ID);
+  });
 });
 
 describe('useDeleteVital', () => {
@@ -173,5 +197,16 @@ describe('useDeleteVital', () => {
     expect(mockDelete).toHaveBeenCalledWith(CIRCLE_ID, VITAL_ID);
     expect(invalidatedWith(invalidateSpy, queryKeys.vitals(CIRCLE_ID))).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.vitalsLatest(CIRCLE_ID))).toBe(true);
+  });
+
+  it('fires Analytics.vitalDeleted(circleId) on success', async () => {
+    const { wrapper } = setup();
+    mockDelete.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useDeleteVital(CIRCLE_ID), { wrapper });
+    result.current.mutate(VITAL_ID);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockVitalDeleted).toHaveBeenCalledWith(CIRCLE_ID);
   });
 });

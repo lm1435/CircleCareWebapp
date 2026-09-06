@@ -1,27 +1,10 @@
 import type { ReactElement } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { CircleButton } from '@/components/ui';
 import { UserMenu } from './Header';
-
-function BackIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
+import { Wordmark } from './Wordmark';
 
 /**
  * Layout for the authenticated routes that render WITHOUT AppLayout (the circle
@@ -58,39 +41,37 @@ export function StandalonePageLayout(): ReactElement {
     <div className="min-h-screen bg-bg">
       <a
         href="#main"
+        // See AppLayout's identical skip link: `href="#main"` alone does not
+        // reliably move DOM focus, so this focuses the (now-focusable, see
+        // `tabIndex={-1}` below) landmark directly.
+        onClick={() => document.getElementById('main')?.focus()}
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
       >
         {t('skipToContent')}
       </a>
 
-      <header className="flex items-center justify-between gap-3 border-b border-line bg-cream px-4 py-3 sm:px-6">
+      <header className="flex h-[60px] items-center justify-between gap-3 border-b border-line bg-cream px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           {!isHome && (
-            <button
-              type="button"
+            <CircleButton
+              name="arrow-back"
+              label={t('nav.back')}
+              shadow={false}
               onClick={handleBack}
-              aria-label={t('nav.back')}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2"
-            >
-              <BackIcon />
-            </button>
+            />
           )}
-          <Link
-            to="/circles"
-            aria-label={t('appName')}
-            className="flex min-h-11 min-w-0 items-center gap-2 px-1 no-underline"
-          >
-            <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
-            <span className="serif hidden truncate text-lg text-ink sm:inline">
-              {t('appName')}
-            </span>
-          </Link>
+          <Wordmark to="/circles" />
         </div>
 
         <UserMenu />
       </header>
 
-      <main id="main" className="min-w-0">
+      {/* `tabIndex={-1}`: the skip link's target — focusable programmatically,
+          never in the Tab order. `<main>` itself is not remounted on
+          navigation (only `<Outlet />`'s subtree, inside the keyed
+          ErrorBoundary below, is), so a route change can't steal focus back
+          off of it once landed. */}
+      <main id="main" tabIndex={-1} className="min-w-0">
         {/* Page-level boundary so one page's error doesn't blank the app; keyed by
             path so navigation auto-clears a caught error. */}
         <ErrorBoundary boundary="standalone-page" key={location.pathname}>

@@ -1,5 +1,11 @@
-import type { ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Card, Eyebrow, Icon } from '@/components/ui';
+
+/** How long to wait for typing to pause before announcing the met count — long
+ * enough that a screen reader isn't re-reading it on every keystroke, short
+ * enough that it still reads as "live" feedback once typing stops. */
+const ANNOUNCE_DEBOUNCE_MS = 500;
 
 export interface PasswordRequirementsProps {
   /** The current password value. */
@@ -15,74 +21,62 @@ export const passwordRules = [
   { key: 'special', test: (v: string): boolean => /[^A-Za-z0-9]/.test(v) },
 ] as const;
 
-function CheckIcon(): ReactElement {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <circle cx="8" cy="8" r="8" className="fill-moss" />
-      <path
-        d="M4.5 8.2l2.2 2.2 4.8-4.8"
-        stroke="white"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function EmptyCircleIcon(): ReactElement {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <circle cx="8" cy="8" r="7.25" className="stroke-line" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
 /**
  * Live password-requirement checklist mirroring mobile's PasswordRequirement
- * card: each rule shows an empty circle → filled moss checkmark as the typed
- * password satisfies it. The list is wrapped in a polite live region so screen
- * readers announce rules being met, and each item conveys met/unmet state via
- * its accessible label (not color alone).
+ * card: each rule shows an empty ring → filled moss checkmark as the typed
+ * password satisfies it, and each item conveys met/unmet state via its
+ * accessible label (not color alone).
+ *
+ * The count of rules met is announced through a single sr-only live region,
+ * DEBOUNCED to `ANNOUNCE_DEBOUNCE_MS` after typing pauses — not
+ * `aria-live="polite"` on the visible list itself. Five list items sharing one
+ * live region means every keystroke re-announces all five (met AND unmet),
+ * which is what the list used to do; a screen reader user typing a full
+ * password heard the whole checklist repeated per character.
  */
 export function PasswordRequirements({ value }: PasswordRequirementsProps): ReactElement {
   const { t } = useTranslation('auth');
+  const metCount = passwordRules.filter((rule) => rule.test(value)).length;
+  const [announcedCount, setAnnouncedCount] = useState(metCount);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setAnnouncedCount(metCount), ANNOUNCE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [metCount]);
 
   return (
-    <div className="rounded-xl bg-bg-2 p-3">
-      <p className="m-0 mb-2 text-sm font-medium text-ink-2">
+    <Card variant="filled" padding="sm">
+      <Eyebrow as="p" className="mb-2">
         {t('resetPassword.requirements.title')}
+      </Eyebrow>
+      <p role="status" aria-live="polite" className="sr-only">
+        {t('resetPassword.requirements.metCount', {
+          count: announcedCount,
+          total: passwordRules.length,
+        })}
       </p>
-      <ul className="m-0 flex list-none flex-col gap-1.5 p-0" aria-live="polite">
+      <ul className="m-0 grid grid-cols-2 gap-2 p-0">
         {passwordRules.map((rule) => {
           const met = rule.test(value);
           const label = t(`resetPassword.requirements.${rule.key}`);
           return (
             <li
               key={rule.key}
-              className={`flex items-center gap-2 text-sm ${met ? 'text-moss-deep' : 'text-ink-3'}`}
+              className={`flex items-center gap-2 text-sm ${met ? 'text-moss' : 'text-ink-3'}`}
             >
-              {met ? <CheckIcon /> : <EmptyCircleIcon />}
+              {met ? (
+                <Icon name="checkmark-circle" size="inline" className="text-moss" />
+              ) : (
+                <Icon name="ellipse-outline" size="inline" className="text-ink-3" />
+              )}
               <span>{label}</span>
-              <span className="sr-only">{met ? t('resetPassword.requirements.met') : t('resetPassword.requirements.unmet')}</span>
+              <span className="sr-only">
+                {met ? t('resetPassword.requirements.met') : t('resetPassword.requirements.unmet')}
+              </span>
             </li>
           );
         })}
       </ul>
-    </div>
+    </Card>
   );
 }

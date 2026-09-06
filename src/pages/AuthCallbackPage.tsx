@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { authApi } from '@/api/auth';
+import { authApi, getApiError } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { consumePendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { consumePendingTermsConsent } from '@/lib/pendingTermsConsent';
 import { Analytics } from '@/lib/analytics';
-import { Spinner } from '@/components/ui';
+import { Button, Spinner } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
+import { AuthTopBar } from '@/components/auth/AuthTopBar';
+import { TerminalState } from '@/components/auth/TerminalState';
 
 // Task 8b — OAuth redirect callback.
 // Supabase's implicit flow returns tokens in the URL FRAGMENT. They are read
@@ -56,6 +58,22 @@ export default function AuthCallbackPage(): ReactElement {
         hashParams.get('error') === 'access_denied' ||
         queryParams.get('error') === 'access_denied' ||
         oauthError === 'access_denied';
+      // Consumed on EVERY exit path, not just the happy one: the module's
+      // contract is read-and-clear so a stale provider can never be attributed
+      // to a later, unrelated sign-in.
+      const method = consumePendingAuthMethod() ?? 'oauth';
+      if (!cancelled) {
+        // Until now this branch reported NOTHING, so a broken web OAuth login
+        // was invisible in the funnel: login_started fired at the button, the
+        // browser left for the provider, and no terminal event ever landed.
+        //
+        // A STABLE CODE, never `oauthError`: that string is provider prose
+        // (`error_description` is free text and can name the account), which is
+        // both a user-text leak and an unbounded analytics dimension. The two
+        // codes mirror mobile's OAuthErrorCode members so a `login_failed`
+        // breakdown reads across platforms.
+        Analytics.loginFailed(method, oauthError ? 'OAUTH_PROVIDER_ERROR' : 'OAUTH_NO_TOKENS');
+      }
       setFailure(cancelled ? 'cancelled' : 'error');
       return;
     }
@@ -94,7 +112,16 @@ export default function AuthCallbackPage(): ReactElement {
         // the visitor on a card they have to tap "Accept" on manually.
         const pendingInvite = peekPendingInviteCode();
         navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
-      } catch {
+      } catch (err) {
+        // The token exchange itself failed (backend rejected the tokens, or the
+        // request never landed). Report the backend's own error CODE when there
+        // is one — `getApiError` reads `err.error.code` and returns nothing for
+        // a raw network rejection, which falls back to the mobile-matching
+        // SESSION_FAILED shape. Never the message: it is server prose.
+        Analytics.loginFailed(
+          consumePendingAuthMethod() ?? 'oauth',
+          getApiError(err)?.code ?? 'OAUTH_SESSION_FAILED'
+        );
         setFailure('error');
       }
     })();
@@ -102,26 +129,34 @@ export default function AuthCallbackPage(): ReactElement {
 
   if (failure === 'cancelled') {
     return (
-      <AuthShell title={t('callback.errorTitle')}>
-        <p role="status" className="m-0 mb-6 text-sm text-ink-2">
-          {t('callback.cancelled')}
-        </p>
-        <Link to="/login" className="btn btn-primary w-full">
-          {t('callback.backToLogin')}
-        </Link>
+      <AuthShell>
+        <AuthTopBar />
+        <TerminalState
+          icon="alert-circle-outline"
+          title={t('callback.errorTitle')}
+          body={<span role="status">{t('callback.cancelled')}</span>}
+        >
+          <Button as={Link} to="/login" variant="primary" size="lg" fullWidth>
+            {t('callback.backToLogin')}
+          </Button>
+        </TerminalState>
       </AuthShell>
     );
   }
 
   if (failure === 'error') {
     return (
-      <AuthShell title={t('callback.errorTitle')}>
-        <p role="alert" className="m-0 mb-6 text-sm text-ink-2">
-          {t('callback.error')}
-        </p>
-        <Link to="/login" className="btn btn-primary w-full">
-          {t('callback.backToLogin')}
-        </Link>
+      <AuthShell>
+        <AuthTopBar />
+        <TerminalState
+          icon="alert-circle-outline"
+          title={t('callback.errorTitle')}
+          body={<span role="alert">{t('callback.error')}</span>}
+        >
+          <Button as={Link} to="/login" variant="primary" size="lg" fullWidth>
+            {t('callback.backToLogin')}
+          </Button>
+        </TerminalState>
       </AuthShell>
     );
   }

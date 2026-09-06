@@ -1,5 +1,6 @@
-import { useAuthStore } from '@/store/authStore';
 import { Analytics, type OnboardingPath } from './analytics';
+// WB7 per-user key namespacing — see lib/storageScope.ts.
+import { scopedKey } from './storageScope';
 
 // R4-5 (docs/plans/condition-tags.md): onboarding funnel instrumentation for
 // the web companion. Web has no onboarding questionnaire, so it mirrors only
@@ -27,19 +28,6 @@ import { Analytics, type OnboardingPath } from './analytics';
 export const ONBOARDING_COMPLETED_KEY = 'cc:onboardingCompleted';
 /** sessionStorage — per-tab-session "started already fired". */
 export const ONBOARDING_STARTED_KEY = 'cc:onboardingStarted';
-
-/**
- * WB7: both guards above used to be a single un-namespaced key per browser.
- * On a shared device, the SECOND account to sign in inherited the FIRST
- * account's "already onboarded" flag and its funnel silently never fired —
- * indistinguishable from a real completion. Namespace by the signed-in user
- * id (falling back to a shared 'anon' bucket pre-auth, which matches prior
- * behavior for that edge case).
- */
-function scopedKey(base: string): string {
-  const userId = useAuthStore.getState().user?.id ?? 'anon';
-  return `${base}:${userId}`;
-}
 
 function safeRead(storage: 'local' | 'session', key: string): string | null {
   try {

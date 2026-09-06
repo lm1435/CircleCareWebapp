@@ -11,6 +11,13 @@ vi.mock('@/lib/posthog', () => ({
   resetAnalytics: vi.fn(),
 }));
 
+// Consent-sync flush is fire-and-forget from signIn/bootstrap; mock it so we
+// can assert it's called with the right user id without touching real storage
+// or the network.
+vi.mock('@/lib/analyticsConsentSync', () => ({
+  flushAnalyticsConsentSync: vi.fn(() => Promise.resolve()),
+}));
+
 // The store resolves the session-established language off the live i18n
 // instance; stub it so tests can drive the tag (including region-qualified
 // ones) without booting i18next.
@@ -34,8 +41,9 @@ async function loadModules() {
   const { tokenAccessor } = await import('@/lib/tokenAccessor');
   const { queryClient } = await import('@/lib/queryClient');
   const posthogLib = await import('@/lib/posthog');
+  const consentSyncLib = await import('@/lib/analyticsConsentSync');
   const { useAuthStore } = await import('@/store/authStore');
-  return { api, tokenAccessor, queryClient, posthogLib, useAuthStore };
+  return { api, tokenAccessor, queryClient, posthogLib, consentSyncLib, useAuthStore };
 }
 
 const testUser = {
@@ -84,6 +92,14 @@ describe('authStore', () => {
     // Web threat model: nothing auth-related may touch JS-readable storage.
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
+  });
+
+  it('signIn flushes any pending analytics-consent decision for the signed-in user', async () => {
+    const { consentSyncLib, useAuthStore } = await loadModules();
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+
+    expect(consentSyncLib.flushAnalyticsConsentSync).toHaveBeenCalledWith('user-1');
   });
 
   it('signIn reports session-established with the active language', async () => {
@@ -142,6 +158,41 @@ describe('authStore', () => {
     expect(channel.postMessage).toHaveBeenCalledWith({ type: 'logout' });
   });
 
+  it('signOut flushes the signing-out user\'s pending analytics consent BEFORE clearing local state', async () => {
+    // C2: on a shared browser, the flush must run while THIS account's token
+    // is still live — one more delivery attempt before tokenAccessor/state get
+    // wiped — otherwise an undelivered decision just sits there (or worse,
+    // risks being touched by whichever account signs in next).
+    const { api, tokenAccessor, consentSyncLib, useAuthStore } = await loadModules();
+    vi.mocked(api.apiClient.post).mockResolvedValue({ success: true } as never);
+
+    const callOrder: string[] = [];
+    vi.mocked(consentSyncLib.flushAnalyticsConsentSync).mockImplementation(async () => {
+      // Token must still be set when the flush fires.
+      callOrder.push(tokenAccessor.getAuthToken() ? 'flush-with-token' : 'flush-without-token');
+    });
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+    vi.mocked(consentSyncLib.flushAnalyticsConsentSync).mockClear(); // drop the signIn call
+    callOrder.length = 0; // mockClear() resets call history, not this closure array
+    await useAuthStore.getState().signOut();
+
+    expect(consentSyncLib.flushAnalyticsConsentSync).toHaveBeenCalledWith('user-1');
+    expect(callOrder).toEqual(['flush-with-token']);
+    // Local teardown still completes after the flush.
+    expect(tokenAccessor.getAuthToken()).toBeNull();
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('signOut never flushes analytics consent when no user was signed in', async () => {
+    const { api, consentSyncLib, useAuthStore } = await loadModules();
+    vi.mocked(api.apiClient.post).mockResolvedValue({ success: true } as never);
+
+    await useAuthStore.getState().signOut();
+
+    expect(consentSyncLib.flushAnalyticsConsentSync).not.toHaveBeenCalled();
+  });
+
   it('signOut still clears local state when the server logout fails', async () => {
     const { api, tokenAccessor, useAuthStore } = await loadModules();
     vi.mocked(api.apiClient.post).mockRejectedValue(new Error('network down'));
@@ -152,6 +203,42 @@ describe('authStore', () => {
     expect(tokenAccessor.getAuthToken()).toBeNull();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(MockBroadcastChannel.instances[0].postMessage).toHaveBeenCalledWith({ type: 'logout' });
+  });
+
+  // The assertion above is not enough on its own: it only proves IN-MEMORY
+  // state was torn down. The hint cookie is what survives a page reload, and
+  // while the client never touched it, a logout whose request never landed
+  // left it behind — so the next load refreshed the still-valid httpOnly
+  // cookie and signed the user straight back in.
+  it('signOut expires the session hint cookie even when the server logout fails', async () => {
+    const { api, useAuthStore } = await loadModules();
+    setSessionHint(true);
+    vi.mocked(api.apiClient.post).mockRejectedValue(new Error('network down'));
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+    await useAuthStore.getState().signOut();
+
+    expect(document.cookie).not.toContain('cc_session=1');
+  });
+
+  it('a failed signOut does not leave a session that silently restores on the next load', async () => {
+    const { api, useAuthStore } = await loadModules();
+    setSessionHint(true);
+    vi.mocked(api.apiClient.post).mockRejectedValue(new Error('network down'));
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+    await useAuthStore.getState().signOut();
+
+    // Simulate the next page load: a fresh module instance re-reads the cookie.
+    vi.resetModules();
+    vi.clearAllMocks();
+    const { useAuthStore: reloaded, api: reloadedApi } = await loadModules();
+    await reloaded.getState().bootstrap();
+
+    // No hint left → bootstrap must not even attempt the refresh that would
+    // resurrect the session from the untouched httpOnly cookie.
+    expect(reloadedApi.apiClient.post).not.toHaveBeenCalledWith('/auth/refresh', {});
+    expect(reloaded.getState().isAuthenticated).toBe(false);
   });
 
   it('a logout broadcast from another tab clears local state WITHOUT re-broadcasting', async () => {

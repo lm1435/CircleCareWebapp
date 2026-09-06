@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Button, ConfirmDialog, useToast } from '@/components/ui';
+import { Button, ConfirmDialog, MoreMenu, useToast, type MoreMenuItem } from '@/components/ui';
 import { useCompleteEvent, useMedicationStatus } from '@/hooks/useCalendarEvents';
 import { getSeriesRoot } from '@/utils/medicationGrouping';
 import { isDoseConfirmable } from '@/utils/timezone';
@@ -53,6 +53,18 @@ import { Analytics } from '@/lib/analytics';
 //   - Reactivate → the medication toggle, labelled by `isDiscontinued`.
 //   - `canComplete` stays scoped to task/appointment: "complete" is the task
 //     verb, and a dose is answered through the confirm dialog, not completed.
+//
+// FOOTER CONVENTION (M2): one filled button, last in DOM order; Edit /
+// Discontinue-Reactivate / Delete are SECONDARY actions and live inside a
+// `MoreMenu` (Delete always `danger`) rather than as a row of ghost buttons —
+// Delete in particular must never render filled at rest. When only ONE of
+// those secondary actions would exist (a completed task: Edit is hidden by
+// the guard above, leaving only Delete), a one-item menu is pointless — that
+// single action renders inline instead, far-left, as a `ghost` button with the
+// terracotta-deep warning colour when it is Delete, or a plain `ghost`
+// otherwise. Every handler, confirm dialog, and analytics
+// call below is unchanged; only where the buttons for Edit/Discontinue/Delete
+// render moved.
 
 export interface EventDetailActionsProps {
   circleId: string;
@@ -195,8 +207,64 @@ export function EventDetailActions({
     }
   }
 
+  function handleEditClick(): void {
+    // Inactive meds prompt to reactivate instead of opening the editor.
+    if (isMedication && isDiscontinued) {
+      setShowInactiveEditPrompt(true);
+    } else {
+      onEdit();
+    }
+  }
+
+  // Secondary actions — Edit, Discontinue/Reactivate (medications only), and
+  // Delete (always, always `danger`) — in this fixed order. Built as data so
+  // the "only one left" case below can render it inline without duplicating
+  // any handler.
+  const overflowItems: MoreMenuItem[] = [];
+  if (!isCompletedTask) {
+    overflowItems.push({ id: 'edit', label: t('addEvent.editTitle'), onSelect: handleEditClick });
+  }
+  if (isMedication) {
+    overflowItems.push({
+      id: 'discontinue',
+      label: isDiscontinued ? t('discontinueMed.reactivate') : t('discontinueMed.discontinue'),
+      onSelect: onDiscontinue,
+    });
+  }
+  overflowItems.push({
+    id: 'delete',
+    label: t('deleteEvent.delete'),
+    onSelect: onDelete,
+    danger: true,
+  });
+
+  // A one-item menu is pointless — render that single action inline instead
+  // of behind a click. It goes far-left (`mr-auto` in a `justify-end` row),
+  // matching the destructive-far-left placement the convention uses when
+  // there's no menu to put it in.
+  const soloOverflowItem = overflowItems.length === 1 ? overflowItems[0] : null;
+  const useOverflowMenu = overflowItems.length >= 2;
+
   return (
-    <div className="flex flex-wrap justify-end gap-3">
+    <div className="flex flex-wrap items-center justify-end gap-3">
+      {soloOverflowItem && (
+        <Button
+          variant="ghost"
+          onClick={soloOverflowItem.onSelect}
+          className={
+            soloOverflowItem.danger
+              ? 'mr-auto text-terracotta-deep hover:bg-terracotta-soft'
+              : 'mr-auto'
+          }
+        >
+          {soloOverflowItem.label}
+        </Button>
+      )}
+      {canConfirmDose && (
+        <Button variant="secondary" onClick={() => onConfirmDose('skipped')}>
+          {t('eventDetail.skipDose')}
+        </Button>
+      )}
       {canComplete && (
         <Button
           variant="primary"
@@ -207,43 +275,16 @@ export function EventDetailActions({
         </Button>
       )}
       {canConfirmDose && (
-        <>
-          <Button variant="ghost" onClick={() => onConfirmDose('skipped')}>
-            {t('eventDetail.skipDose')}
-          </Button>
-          <Button variant="primary" onClick={() => onConfirmDose('taken')}>
-            {t('eventDetail.markTaken')}
-          </Button>
-        </>
-      )}
-      {!isCompletedTask && (
-        <Button
-          variant="ghost"
-          onClick={() => {
-            // Inactive meds prompt to reactivate instead of opening the editor.
-            if (isMedication && isDiscontinued) {
-              setShowInactiveEditPrompt(true);
-            } else {
-              onEdit();
-            }
-          }}
-        >
-          {t('addEvent.editTitle')}
+        <Button variant="primary" onClick={() => onConfirmDose('taken')}>
+          {t('eventDetail.markTaken')}
         </Button>
       )}
-      {isMedication && (
-        <Button variant="ghost" onClick={onDiscontinue}>
-          {isDiscontinued
-            ? t('discontinueMed.reactivate')
-            : t('discontinueMed.discontinue')}
-        </Button>
-      )}
-      <Button variant="terracotta" onClick={onDelete}>
-        {t('deleteEvent.delete')}
-      </Button>
+      {useOverflowMenu && <MoreMenu items={overflowItems} />}
 
       {showInactiveEditPrompt && (
         <ConfirmDialog
+          icon="repeat-outline"
+          iconTone="moss"
           title={t('discontinueMed.editInactiveTitle')}
           message={t('discontinueMed.editInactiveMessage')}
           confirmLabel={

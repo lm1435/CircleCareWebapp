@@ -108,6 +108,44 @@ describe('emergency modals — null info guard', () => {
   });
 });
 
+// Modal footer convention (M4): required fields must go through TextField's
+// `required` prop (which renders the shared RequiredMarker: a visible
+// aria-hidden asterisk plus an sr-only "(required)") rather than baking
+// `${label} *` into the label string by hand — the hand-rolled version never
+// announced "required" to a screen reader at all, only the asterisk glyph.
+// Querying by an accessible name that INCLUDES "required" only succeeds when
+// the marker actually rendered through the component, not a literal string.
+describe('required-field labels render via the shared RequiredMarker', () => {
+  it('EditContactModal: Name, Relationship and Phone announce as required', () => {
+    render(
+      wrap(<EditContactModal circleId={CIRCLE_ID} info={baseInfo} index={undefined} onClose={vi.fn()} />)
+    );
+
+    expect(screen.getByLabelText(/^Name.*\(required\)/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Relationship.*\(required\)/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Phone.*\(required\)/)).toBeInTheDocument();
+  });
+
+  it('EditDoctorModal: Name announces as required, Specialty does not', () => {
+    render(
+      wrap(<EditDoctorModal circleId={CIRCLE_ID} info={baseInfo} target={undefined} onClose={vi.fn()} />)
+    );
+
+    expect(screen.getByLabelText(/^Name.*\(required\)/)).toBeInTheDocument();
+    // Specialty is optional — no RequiredMarker, and the label carries no
+    // stray literal asterisk either.
+    expect(screen.getByLabelText('Specialty')).toBeInTheDocument();
+  });
+
+  it('EditInsuranceModal: Carrier announces as required', () => {
+    render(
+      wrap(<EditInsuranceModal circleId={CIRCLE_ID} info={baseInfo} index={undefined} onClose={vi.fn()} />)
+    );
+
+    expect(screen.getByLabelText(/^Carrier.*\(required\)/)).toBeInTheDocument();
+  });
+});
+
 describe('EditDoctorModal — add a doctor', () => {
   it('appends the new doctor to additional_doctors and sends a partial PUT', async () => {
     const onClose = vi.fn();
@@ -122,7 +160,7 @@ describe('EditDoctorModal — add a doctor', () => {
       )
     );
 
-    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: 'Dr. Lee' } });
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dr. Lee' } });
     fireEvent.change(screen.getByLabelText('Specialty'), { target: { value: 'Oncology' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -141,7 +179,13 @@ describe('EditDoctorModal — add a doctor', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
-  it('blocks submit and shows an error when the name is empty', () => {
+  // Name now carries the real HTML `required` attribute (via TextField's
+  // `required` prop, M4), so an empty submit is blocked by the browser's own
+  // validation before the component's `onSubmit` ever runs — same contract as
+  // CreateCircleModal's "blocks submit ... " test. The component's own
+  // `nameRequired` message is still reachable, but only for the case HTML
+  // `required` cannot catch: whitespace-only input (see the test below).
+  it('blocks submit natively when the name is empty', () => {
     const onClose = vi.fn();
     render(
       wrap(
@@ -149,6 +193,22 @@ describe('EditDoctorModal — add a doctor', () => {
       )
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+    const nameInput = screen.getByLabelText(/^Name.*\(required\)/) as HTMLInputElement;
+    expect(nameInput.validity.valid).toBe(false);
+  });
+
+  it('shows the custom error for a whitespace-only name, which HTML `required` cannot catch', () => {
+    const onClose = vi.fn();
+    render(
+      wrap(
+        <EditDoctorModal circleId={CIRCLE_ID} info={baseInfo} target={undefined} onClose={onClose} />
+      )
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Name.*\(required\)/), { target: { value: '   ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(mockUpdate).not.toHaveBeenCalled();
@@ -163,7 +223,7 @@ describe('EditDoctorModal — add a doctor', () => {
       )
     );
 
-    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: 'Dr. Chen' } });
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dr. Chen' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
@@ -183,8 +243,8 @@ describe('EditContactModal — relationship quick-fill chips vs manual entry', (
   };
 
   const fillNameAndPhone = (): void => {
-    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: 'Sarah Smith' } });
-    fireEvent.change(screen.getByLabelText('Phone *'), { target: { value: '555-0101' } });
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Sarah Smith' } });
+    fireEvent.change(screen.getByLabelText(/^Phone.*required/i), { target: { value: '555-0101' } });
   };
 
   it('clicking a chip fills the relationship field and the saved payload contains it', async () => {
@@ -192,14 +252,11 @@ describe('EditContactModal — relationship quick-fill chips vs manual entry', (
     renderAddContact(onClose);
     fillNameAndPhone();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Daughter' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Daughter' }));
 
     // Chip FILLS the field — the text input stays the source of truth.
-    expect(screen.getByLabelText('Relationship *')).toHaveValue('Daughter');
-    expect(screen.getByRole('button', { name: 'Daughter' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(screen.getByLabelText(/^Relationship.*required/i)).toHaveValue('Daughter');
+    expect(screen.getByRole('radio', { name: 'Daughter' })).toBeChecked();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
@@ -217,11 +274,11 @@ describe('EditContactModal — relationship quick-fill chips vs manual entry', (
     renderAddContact();
     fillNameAndPhone();
 
-    fireEvent.change(screen.getByLabelText('Relationship *'), { target: { value: 'Niece' } });
+    fireEvent.change(screen.getByLabelText(/^Relationship.*required/i), { target: { value: 'Niece' } });
 
-    const group = screen.getByRole('group', { name: 'Common relationships' });
-    for (const chipButton of within(group).getAllByRole('button')) {
-      expect(chipButton).toHaveAttribute('aria-pressed', 'false');
+    const group = screen.getByRole('radiogroup', { name: 'Common relationships' });
+    for (const chip of within(group).getAllByRole('radio')) {
+      expect(chip).not.toBeChecked();
     }
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -234,14 +291,11 @@ describe('EditContactModal — relationship quick-fill chips vs manual entry', (
   it("typing a chip's label in a different case marks that chip pressed", () => {
     renderAddContact();
 
-    fireEvent.change(screen.getByLabelText('Relationship *'), { target: { value: 'dAUGHTER' } });
+    fireEvent.change(screen.getByLabelText(/^Relationship.*required/i), { target: { value: 'dAUGHTER' } });
 
-    expect(screen.getByRole('button', { name: 'Daughter' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(screen.getByRole('radio', { name: 'Daughter' })).toBeChecked();
     // Only the matching chip lights up.
-    expect(screen.getByRole('button', { name: 'Son' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('radio', { name: 'Son' })).not.toBeChecked();
   });
 
   // WA7: relationship is a REQUIRED field and this is a quick-fill chip row
@@ -253,12 +307,12 @@ describe('EditContactModal — relationship quick-fill chips vs manual entry', (
     renderAddContact();
     fillNameAndPhone();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Friend' }));
-    expect(screen.getByLabelText('Relationship *')).toHaveValue('Friend');
+    fireEvent.click(screen.getByRole('radio', { name: 'Friend' }));
+    expect(screen.getByLabelText(/^Relationship.*required/i)).toHaveValue('Friend');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Friend' }));
-    expect(screen.getByLabelText('Relationship *')).toHaveValue('Friend');
-    expect(screen.getByRole('button', { name: 'Friend' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('radio', { name: 'Friend' }));
+    expect(screen.getByLabelText(/^Relationship.*required/i)).toHaveValue('Friend');
+    expect(screen.getByRole('radio', { name: 'Friend' })).toBeChecked();
 
     // The field is still populated, so save proceeds normally.
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -281,16 +335,13 @@ describe('EditDoctorModal — specialty quick-fill chips vs manual entry', () =>
   it('clicking a chip fills the specialty field and the saved payload contains it', async () => {
     const onClose = vi.fn();
     renderAddDoctor(onClose);
-    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: 'Dr. Lee' } });
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dr. Lee' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cardiologist' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Cardiologist' }));
 
     // Chip FILLS the field — the text input stays the source of truth.
     expect(screen.getByLabelText('Specialty')).toHaveValue('Cardiologist');
-    expect(screen.getByRole('button', { name: 'Cardiologist' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(screen.getByRole('radio', { name: 'Cardiologist' })).toBeChecked();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
@@ -304,15 +355,15 @@ describe('EditDoctorModal — specialty quick-fill chips vs manual entry', () =>
 
   it('typing a custom specialty leaves every chip unpressed and saves the typed value', async () => {
     renderAddDoctor();
-    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: 'Dr. Lee' } });
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dr. Lee' } });
 
     fireEvent.change(screen.getByLabelText('Specialty'), {
       target: { value: 'Sports Medicine' },
     });
 
-    const group = screen.getByRole('group', { name: 'Common specialties' });
-    for (const chipButton of within(group).getAllByRole('button')) {
-      expect(chipButton).toHaveAttribute('aria-pressed', 'false');
+    const group = screen.getByRole('radiogroup', { name: 'Common specialties' });
+    for (const chip of within(group).getAllByRole('radio')) {
+      expect(chip).not.toBeChecked();
     }
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -327,15 +378,9 @@ describe('EditDoctorModal — specialty quick-fill chips vs manual entry', () =>
 
     fireEvent.change(screen.getByLabelText('Specialty'), { target: { value: 'CARDIOLOGIST' } });
 
-    expect(screen.getByRole('button', { name: 'Cardiologist' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(screen.getByRole('radio', { name: 'Cardiologist' })).toBeChecked();
     // Only the matching chip lights up.
-    expect(screen.getByRole('button', { name: 'Dentist' })).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
+    expect(screen.getByRole('radio', { name: 'Dentist' })).not.toBeChecked();
   });
 
   // WA7: this is a quick-fill chip row (text field stays the source of
@@ -344,17 +389,14 @@ describe('EditDoctorModal — specialty quick-fill chips vs manual entry', () =>
   // an optional field.
   it('re-tapping the selected chip does NOT clear the field (allowDeselect=false)', async () => {
     renderAddDoctor();
-    fireEvent.change(screen.getByLabelText('Name *'), { target: { value: 'Dr. Lee' } });
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dr. Lee' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Oncologist' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Oncologist' }));
     expect(screen.getByLabelText('Specialty')).toHaveValue('Oncologist');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Oncologist' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Oncologist' }));
     expect(screen.getByLabelText('Specialty')).toHaveValue('Oncologist');
-    expect(screen.getByRole('button', { name: 'Oncologist' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(screen.getByRole('radio', { name: 'Oncologist' })).toBeChecked();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
@@ -403,15 +445,15 @@ describe('EditMedicalInfoModal — tag arrays via TagInput', () => {
   it('blood type chips: selecting a new type and deselecting send value then null', async () => {
     render(wrap(<EditMedicalInfoModal circleId={CIRCLE_ID} info={baseInfo} onClose={vi.fn()} />));
 
-    // Seeded 'O+' is pressed; switch to AB-.
-    expect(screen.getByRole('button', { name: 'O+' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: 'AB-' }));
+    // Seeded 'O+' is checked; switch to AB-.
+    expect(screen.getByRole('radio', { name: 'O+' })).toBeChecked();
+    fireEvent.click(screen.getByRole('radio', { name: 'AB-' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
     expect(mockUpdate.mock.calls[0][1].blood_type).toBe('AB-');
 
     // Deselect: clicking the now-selected chip clears it → null persists the clear.
-    fireEvent.click(screen.getByRole('button', { name: 'AB-' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'AB-' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(2));
     expect(mockUpdate.mock.calls[1][1].blood_type).toBeNull();

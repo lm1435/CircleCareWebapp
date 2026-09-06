@@ -4,10 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
-import { Button } from '@/components/ui';
+import { Analytics } from '@/lib/analytics';
+import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
-import { FormField } from '@/components/auth/FormField';
-import { OtpInput } from '@/components/auth/OtpInput';
+import { AuthTopBar } from '@/components/auth/AuthTopBar';
+import { AuthHeader } from '@/components/auth/AuthHeader';
+import { OtpInput, type OtpInputHandle } from '@/components/auth/OtpInput';
+import { useAuthBack } from '@/components/auth/useAuthBack';
 
 // Task 8c — email verification with a 6-digit OTP.
 // Six-box code input (auto-advance, paste-aware, autocomplete="one-time-code")
@@ -30,6 +33,10 @@ export default function VerifyEmailPage(): ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const signIn = useAuthStore((state) => state.signIn);
+  // /login is always a sensible fallback here, so the back button always
+  // renders — history(-1) when there's somewhere to go back to, '/login'
+  // when this is history entry 0.
+  const { goBack } = useAuthBack('/login');
 
   const routerState = (location.state as VerifyEmailState | null) ?? undefined;
   const stateEmail = routerState?.email?.trim() ?? '';
@@ -46,6 +53,7 @@ export default function VerifyEmailPage(): ReactElement {
   const [cooldown, setCooldown] = useState(0);
 
   const emailRef = useRef<HTMLInputElement>(null);
+  const otpRef = useRef<OtpInputHandle>(null);
   const submittedRef = useRef(false);
   const otpErrorId = 'verify-otp-error';
 
@@ -78,6 +86,7 @@ export default function VerifyEmailPage(): ReactElement {
     }
     if (code.length !== OTP_LENGTH) {
       setError(t('verifyOtp.errors.incompleteCode'));
+      otpRef.current?.focus();
       return;
     }
 
@@ -86,6 +95,7 @@ export default function VerifyEmailPage(): ReactElement {
     try {
       const response = await authApi.verifyOtp({ email: email.trim(), otp: code });
       const { session, user } = response.data;
+      Analytics.otpVerified();
       try {
         // verify-otp responds in body mode — exchange for a cookie session and
         // discard the refresh token (never stored client-side).
@@ -109,6 +119,7 @@ export default function VerifyEmailPage(): ReactElement {
       }
     } catch {
       setError(t('verifyOtp.errors.invalidCode'));
+      Analytics.otpFailed();
       submittedRef.current = false;
     } finally {
       setIsVerifying(false);
@@ -146,6 +157,7 @@ export default function VerifyEmailPage(): ReactElement {
       await authApi.resendOtp({ email: email.trim() });
       setNotice(t('verifyOtp.codeSentMessage'));
       setCooldown(RESEND_COOLDOWN_SECONDS);
+      Analytics.otpResent();
     } catch {
       setError(t('verifyOtp.errors.resendFailed'));
     } finally {
@@ -154,32 +166,39 @@ export default function VerifyEmailPage(): ReactElement {
   };
 
   return (
-    <AuthShell
-      title={t('verifyOtp.title')}
-      subtitle={
-        hasStateEmail
-          ? t('verifyOtp.subtitle', { email: stateEmail })
-          : t('verifyOtp.subtitleNoEmail')
-      }
-    >
+    <AuthShell>
+      <AuthTopBar onBack={goBack} />
+      <AuthHeader
+        title={t('verifyOtp.title')}
+        subtitle={
+          hasStateEmail
+            ? t('verifyOtp.subtitle', { email: stateEmail })
+            : t('verifyOtp.subtitleNoEmail')
+        }
+      />
+
       {notice ? (
-        <div role="status" className="mb-4 rounded-xl border border-line bg-bg-2 p-3 text-sm text-ink-2">
-          {notice}
+        <div role="status" className="mb-4">
+          <Card variant="filled" padding="sm">
+            <Text variant="caption" className="text-ink-2">
+              {notice}
+            </Text>
+          </Card>
         </div>
       ) : null}
       {error ? (
-        <div
-          id="verify-otp-error"
-          role="alert"
-          className="mb-4 rounded-xl border border-terracotta-deep/40 bg-bg-2 p-3 text-sm text-terracotta-deep"
-        >
-          {error}
+        <div id="verify-otp-error" role="alert" className="mb-4">
+          <Card variant="filled" padding="sm">
+            <Text variant="caption" className="text-terracotta-deep!">
+              {error}
+            </Text>
+          </Card>
         </div>
       ) : null}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         {!hasStateEmail ? (
-          <FormField
+          <TextField
             ref={emailRef}
             id="verify-email"
             name="email"
@@ -194,10 +213,11 @@ export default function VerifyEmailPage(): ReactElement {
         ) : null}
 
         <div className="flex flex-col gap-1.5">
-          <span id="verify-otp-label" className="text-sm font-medium text-ink-2">
+          <Text variant="label" as="span" id="verify-otp-label">
             {t('verifyOtp.codeLabel')}
-          </span>
+          </Text>
           <OtpInput
+            ref={otpRef}
             length={OTP_LENGTH}
             value={otp}
             onChange={handleOtpChange}
@@ -209,7 +229,7 @@ export default function VerifyEmailPage(): ReactElement {
           />
         </div>
 
-        <Button type="submit" variant="primary" disabled={isVerifying} className="w-full">
+        <Button type="submit" variant="primary" size="lg" fullWidth loading={isVerifying}>
           {isVerifying ? t('verifyOtp.verifying') : t('verifyOtp.verifyButton')}
         </Button>
       </form>
@@ -220,7 +240,7 @@ export default function VerifyEmailPage(): ReactElement {
           type="button"
           onClick={() => void handleResend()}
           disabled={cooldown > 0 || isResending}
-          className="cursor-pointer border-0 bg-transparent p-0 text-sm font-medium text-terracotta-deep underline disabled:cursor-not-allowed disabled:text-ink-3"
+          className="inline-flex min-h-[44px] cursor-pointer items-center border-0 bg-transparent p-0 text-sm font-semibold text-moss disabled:cursor-not-allowed disabled:text-ink-3"
         >
           {cooldown > 0
             ? t('verifyOtp.resendIn', { seconds: cooldown })

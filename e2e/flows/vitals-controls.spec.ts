@@ -1,17 +1,29 @@
 import { test, expect } from '../fixtures';
 
-// Vitals filter controls — NON-DESTRUCTIVE. We only drive the read-only filter
-// Selects (type + range) and assert the page keeps rendering without tripping the
-// ErrorBoundary. We never log, edit, or delete a vital. The vitals list re-fetches
-// on every filter change, so each selectOption exercises a fresh query.
+// Vitals filter controls — NON-DESTRUCTIVE. Type is a ChipSelect
+// (`#vitals-type-filter`, a role="radiogroup" of role="radio" chips with
+// aria-checked — a11y-audit fix from a role="group" of aria-pressed buttons,
+// since only one type is ever selected); range is a MoreMenu pill (a button
+// whose accessible name is "Time range: <current selection>", opening a menu
+// of range choices). We only drive these read-only filters and assert the
+// page keeps rendering without tripping the ErrorBoundary. We never log,
+// edit, or delete a vital. The vitals list re-fetches on every filter
+// change, so each click exercises a fresh query.
 
 const PAGE_HEADING = 'Vitals';
 const ERROR_FALLBACK = 'Something went wrong';
 
-// Type filter <select> values (matches TYPE_FILTERS in VitalsPage.tsx).
-const TYPE_VALUES = ['all', 'blood_pressure', 'heart_rate', 'glucose', 'weight', 'all'];
-// Range filter <select> values (matches RANGE_CHOICES in VitalsPage.tsx).
-const RANGE_VALUES = ['7d', '30d', '90d', '30d'];
+// Chip labels (matches TYPE_FILTERS + vitals:types.* / filter.allTypes in VitalsPage.tsx).
+const TYPE_LABELS = [
+  'All types',
+  'Blood pressure',
+  'Heart rate',
+  'Glucose',
+  'Weight',
+  'All types',
+];
+// Range menu item labels (matches RANGE_CHOICES + vitals:filter.range.* in VitalsPage.tsx).
+const RANGE_LABELS = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last 30 days'];
 
 // The body is one of: a grouped list (<ul>) of readings, or the empty-state copy
 // ("No readings yet"). Either proves the page rendered a non-error result.
@@ -39,9 +51,10 @@ test('type filter cycles through options without error', async ({ page, circleId
   await expect(typeFilter).toBeVisible({ timeout: 20_000 });
   await expectHealthyBody(page);
 
-  for (const value of TYPE_VALUES) {
-    await typeFilter.selectOption(value);
-    await expect(typeFilter).toHaveValue(value, { timeout: 15_000 });
+  for (const label of TYPE_LABELS) {
+    const chip = typeFilter.getByRole('radio', { name: label, exact: true });
+    await chip.click();
+    await expect(chip).toBeChecked();
     await expectHealthyBody(page);
   }
 });
@@ -49,13 +62,22 @@ test('type filter cycles through options without error', async ({ page, circleId
 test('range filter cycles through options without error', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}/vitals`, { waitUntil: 'domcontentloaded' });
 
-  const rangeFilter = page.locator('#vitals-range-filter');
-  await expect(rangeFilter).toBeVisible({ timeout: 20_000 });
+  // The range pill's accessible name is "Time range: <current selection>" —
+  // dynamic, so the initial lookup matches by prefix.
+  const rangeTrigger = page.getByRole('button', { name: /^Time range:/ });
+  await expect(rangeTrigger).toBeVisible({ timeout: 20_000 });
   await expectHealthyBody(page);
 
-  for (const value of RANGE_VALUES) {
-    await rangeFilter.selectOption(value);
-    await expect(rangeFilter).toHaveValue(value, { timeout: 15_000 });
+  for (const label of RANGE_LABELS) {
+    await page.getByRole('button', { name: /^Time range:/ }).click();
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible({ timeout: 10_000 });
+    await menu.getByRole('menuitem', { name: label, exact: true }).click();
+    await expect(menu).toHaveCount(0, { timeout: 10_000 });
+    // The trigger's name updates to reflect the new selection.
+    await expect(
+      page.getByRole('button', { name: new RegExp(`^Time range: ${label}$`) })
+    ).toBeVisible({ timeout: 10_000 });
     await expectHealthyBody(page);
   }
 });

@@ -234,3 +234,185 @@ export function isStorageFullError(err: unknown): boolean {
   const code = errorCode(err);
   return code !== undefined && STORAGE_FULL_ERROR_CODES.has(code);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAILURE CODE CLASSIFICATION (for analytics `error` properties)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// MIRRORED ON MOBILE. An identical implementation lives at
+// `mobile/src/utils/apiError.ts` (`classifyFailureCode`, same vocabulary, same
+// ordering, same `ANALYTICS_CODE_SHAPE`). The two trees are separate npm
+// projects with no shared package, so the copy is deliberate — change BOTH or
+// the admin daily digest, which groups `circle_creation_failed` by
+// `properties.error` across platforms (backend/src/services/adminDigestService.ts),
+// splits one bucket in two.
+
+/**
+ * The CLOSED fallback vocabulary — every value `classifyFailureCode` can return
+ * that is NOT a backend error code and NOT `http_<status>`.
+ *
+ * Derived from what `src/lib/api.ts` can actually reject with. Its interceptor
+ * rejects `error.response?.data || error`, exactly as mobile's does, so the
+ * shapes — and therefore this list — are the same on both platforms:
+ *
+ *  - 'timeout'           — axios `ECONNABORTED` / `ETIMEDOUT` (the `API_TIMEOUT`
+ *                          fired), or a fetch-adapter `AbortError`. No response,
+ *                          so there is no status to report.
+ *  - 'network_error'     — axios `ERR_NETWORK`: offline, DNS failure, TLS
+ *                          refused, or a CORS rejection (the browser reports
+ *                          those as a network failure with no status readable
+ *                          from script).
+ *  - 'api_error_no_code' — the backend envelope arrived but named no usable
+ *                          code, or `error.code` was prose rather than a
+ *                          constant. Our API failed in a way we did not name.
+ *  - 'non_json_response' — the rejection is a bare STRING: the interceptor
+ *                          rejects `response.data` whenever it is truthy, so an
+ *                          edge error page (LiteSpeed/Cloudflare HTML, a
+ *                          text/plain 502) arrives as its body with the status
+ *                          discarded. An infrastructure signal.
+ *  - 'client_error'      — an `Error` thrown by our own code, no response and no
+ *                          envelope (a storage failure, a TypeError in the
+ *                          success path).
+ *  - 'unknown_error'     — the residual: `null`, `undefined`, a number, an
+ *                          object with nothing readable.
+ *
+ * 'unknown_error' matches the value MOBILE has been sending for this event since
+ * it shipped, so the digest's existing series continues rather than restarting.
+ * Web previously sent `'CIRCLE_CREATE_FAILED'` as its own codeless fallback
+ * (CreateCircleModal.tsx); that value is retired — it named the ACTION, not the
+ * failure, and could not be compared with anything mobile sent.
+ */
+export const FAILURE_FALLBACK_CODES = [
+  'timeout',
+  'network_error',
+  'api_error_no_code',
+  'non_json_response',
+  'client_error',
+  'unknown_error',
+] as const;
+
+export type FailureFallbackCode = (typeof FAILURE_FALLBACK_CODES)[number];
+
+/**
+ * What `classifyFailureCode` returns: a backend error code, `http_<status>`, or
+ * a fallback category. Typed as `string` because the backend's code space is
+ * open — but the VALUE is always bounded.
+ */
+export type FailureCode = FailureFallbackCode | string;
+
+/**
+ * A CODE IS A SHOUTED CONSTANT — anything else is prose wearing a code's field
+ * name. `error.code` is not a field we control; a proxy, an SDK or a future
+ * backend handler can put anything in it, and an analytics grouping dimension
+ * has to be a closed set. Kept identical to mobile's copy (and to
+ * `CODE_SHAPE` in `mobile/src/lib/oauth.ts`, where an unbounded version once
+ * sent a user's email address to PostHog as a property).
+ *
+ * WHAT THIS BOUNDS IS THE SHAPE, NOT THE CONTENT. Free text and any multi-token
+ * identifier become unforwardable — no whitespace, no `@`, no `.`, no `://`,
+ * nothing over 64 characters — which is the class the leak above belonged to.
+ * It does not inspect meaning: a lone token like `Lisinopril` or `Margaret`
+ * matches and passes through verbatim (pinned in
+ * `__tests__/failureCodeIsBounded.test.ts`, describe 6b). The remaining space is
+ * safe because of the backend, not this regex: every `code` in the envelope is
+ * an app-authored SHOUTED literal, never interpolated from request input.
+ */
+const ANALYTICS_CODE_SHAPE = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+
+function asBoundedCode(value: unknown): string | undefined {
+  return typeof value === 'string' && ANALYTICS_CODE_SHAPE.test(value) ? value : undefined;
+}
+
+/** A real HTTP status off either rejection shape, or undefined. */
+function httpStatusOf(err: object): number | undefined {
+  const candidate = err as { status?: unknown; response?: { status?: unknown } | null };
+  const status =
+    typeof candidate.response?.status === 'number'
+      ? candidate.response.status
+      : typeof candidate.status === 'number'
+        ? candidate.status
+        : undefined;
+  // Bounded on purpose: `http_${status}` is a grouping value, so it must never
+  // become `http_NaN` or an arbitrary number off a foreign object.
+  if (status === undefined || !Number.isInteger(status) || status < 100 || status > 599) {
+    return undefined;
+  }
+  return status;
+}
+
+/** True when the value looks like the backend's `{ success, error: {...} }` body. */
+function hasErrorEnvelope(err: object): boolean {
+  const candidate = err as { success?: unknown; error?: unknown };
+  return (
+    candidate.success === false || (typeof candidate.error === 'object' && candidate.error !== null)
+  );
+}
+
+/**
+ * Turn a caught API failure into a BOUNDED analytics value.
+ *
+ * Resolution order, and why:
+ *   1. The backend CODE, from the unwrapped envelope or (defensively) from a
+ *      raw AxiosError that bypassed the interceptor. Already an app-authored
+ *      literal and the most useful signal, so it wins over everything.
+ *   2. Explicit transport codes — only an AxiosError carries these, and only
+ *      when there was no response at all.
+ *   3. `http_<status>`, when a response exists but named no code — a 502 with an
+ *      empty body is an EDGE failure and must not read as an app bug.
+ *   4. Message heuristics for adapters that report a timeout/network failure
+ *      without a code. Deliberately AFTER the status check so a status-bearing
+ *      error is never reclassified by a word in its message.
+ *   5. Envelope-but-no-code, then our own thrown Error, then the residual.
+ *
+ * NEVER returns free text, and never throws — it is called from `onError`
+ * handlers, so it must not become the reason a failure handler fails.
+ */
+export function classifyFailureCode(err: unknown): FailureCode {
+  try {
+    // A bare string is `response.data` from a non-JSON error body. It is NOT
+    // returned — only its existence is.
+    if (typeof err === 'string') {
+      return err.trim().length > 0 ? 'non_json_response' : 'unknown_error';
+    }
+    if (err === null || typeof err !== 'object') return 'unknown_error';
+
+    const candidate = err as {
+      code?: unknown;
+      name?: unknown;
+      message?: unknown;
+      response?: { data?: unknown } | null;
+    };
+
+    // 1. The backend's own code.
+    const envelopeCode =
+      asBoundedCode((err as ApiErrorEnvelope).error?.code) ??
+      asBoundedCode((candidate.response?.data as ApiErrorEnvelope | undefined)?.error?.code);
+    if (envelopeCode) return envelopeCode;
+
+    // 2. Transport codes axios sets on the error itself, never in a body.
+    const transportCode = typeof candidate.code === 'string' ? candidate.code : '';
+    if (transportCode === 'ECONNABORTED' || transportCode === 'ETIMEDOUT') return 'timeout';
+    if (transportCode === 'ERR_NETWORK') return 'network_error';
+    const name = typeof candidate.name === 'string' ? candidate.name : '';
+    if (name === 'AbortError' || name === 'TimeoutError') return 'timeout';
+
+    // 3. A response reached us but named no code.
+    const status = httpStatusOf(err);
+    if (status !== undefined) return `http_${status}`;
+
+    // 4. Codeless transport failures, by message.
+    const message = typeof candidate.message === 'string' ? candidate.message.toLowerCase() : '';
+    if (message.includes('timeout') || message.includes('timed out')) return 'timeout';
+    if (message === 'network error' || message.includes('network request failed')) {
+      return 'network_error';
+    }
+
+    // 5. An envelope with no usable code, then our own throw, then the residual.
+    if (hasErrorEnvelope(err)) return 'api_error_no_code';
+    if (err instanceof Error) return 'client_error';
+
+    return 'unknown_error';
+  } catch {
+    return 'unknown_error';
+  }
+}

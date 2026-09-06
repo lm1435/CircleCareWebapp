@@ -70,7 +70,9 @@
     "alreadyMember": "Esta persona ya es miembro de este círculo.",
     "pendingInvite": "Esta persona ya tiene una invitación pendiente.",
     "pendingInviteSeat": "Ya usaste tu invitación: el lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
-    "pendingInviteSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores."
+    "pendingInviteSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
+    "circleArchived": "Este círculo de cuidado ya no está activo, así que no se pueden enviar ni aceptar invitaciones.",
+    "careRecipientExists": "Este círculo ya tiene un receptor de cuidado."
   },
   "invite": {
     "cta": "Invitar miembro",
@@ -86,19 +88,31 @@
     "circleLabel": "Círculo de cuidado",
     "send": "Enviar invitación",
     "sending": "Enviando…",
-    "success": "Invitación enviada a {{email}}.",
+    "success": "Comparte el enlace para que puedan unirse de inmediato.",
     "capReached": "Los círculos gratuitos incluyen hasta dos cuidadores. Mejora a Premium para agregar más.",
     "pendingSeat": "Ya usaste tu invitación: el lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancélala en Invitaciones pendientes para liberar el lugar o mejora a Premium para agregar más cuidadores.",
     "pendingSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o mejora a Premium para agregar más cuidadores.",
     "errors": {
       "emailInvalid": "Por favor ingresa un correo electrónico válido.",
       "roleRequired": "Por favor elige un rol."
-    }
+    },
+    "shareLink": "Compartir enlace de invitación",
+    "copyLink": "Copiar enlace",
+    "linkCopied": "Enlace copiado",
+    "shareMessage": "Te invito a CircleCare para coordinar juntos el cuidado de {{recipientName}}. {{inviteUrl}}",
+  "shareMessageSelfCare": "Te invito a CircleCare para que me ayudes a organizar mi cuidado. {{inviteUrl}}",
+  "shareMessageRecipient": "Configuré CircleCare para ayudarte a llevar el control de tus medicamentos y citas. Únete aquí: {{inviteUrl}}",
+    "shareTitle": "Únete a nuestro círculo de cuidado",
+    "sentTitle": "Invitación enviada",
+    "emailNote": "También enviamos a {{email}} las instrucciones para unirse como {{role}}.",
+    "sendAnother": "Invitar a alguien más"
   },
   "manage": {
     "subheading": "Todos en este círculo de cuidado. Invita, elimina o administra miembros abajo.",
     "remove": "Eliminar",
     "removeMemberLabel": "Eliminar a {{name}}",
+    "memberActionsLabel": "Acciones para {{name}}",
+    "inviteActionsLabel": "Acciones para la invitación a {{email}}",
     "removeConfirmTitle": "¿Eliminar miembro?",
     "removeConfirmBody": "{{name}} perderá el acceso a este círculo de cuidado. Puedes enviarle otra invitación más tarde.",
     "removeSuccess": "Se eliminó a {{name}} de este círculo.",
@@ -108,7 +122,6 @@
     "medResponsibleCleared": "Se quitó el encargado de medicamentos.",
     "pendingHeading": "Invitaciones pendientes",
     "cancelInvite": "Cancelar invitación",
-    "cancelInviteLabel": "Cancelar invitación para {{email}}",
     "cancelInviteSuccess": "Invitación cancelada.",
     "cancelInviteConfirmTitle": "¿Cancelar esta invitación?",
     "cancelInviteConfirmBody": "{{email}} ya no podrá unirse con esta invitación.",
@@ -120,7 +133,6 @@
     "inviteExpiresInLabel_one": "La invitación para {{email}} vence en {{count}} día",
     "inviteExpiresInLabel_other": "La invitación para {{email}} vence en {{count}} días",
     "resendInvite": "Reenviar",
-    "resendInviteLabel": "Reenviar invitación a {{email}}",
     "resendInviteSuccess": "Se reenvió la invitación a {{email}}.",
     "resendInviteFailed": "No pudimos reenviar esa invitación. Por favor intenta de nuevo.",
     "leave": "Salir del círculo",
@@ -146,6 +158,7 @@
       "count_other": "Tienes {{count}} invitaciones pendientes",
       "review": "Revisar invitación",
       "reviewPlural": "Revisar invitaciones"
-    }
+    },
+    "expiresLabel": "Vence"
   }
 }

@@ -4,6 +4,8 @@
   "loadError": "No se pudieron cargar los medicamentos de hoy",
   "confirm": "Confirmar",
   "skip": "Omitir",
+  "confirmLabel": "Confirmar {{name}}",
+  "skipLabel": "Omitir {{name}}",
   "showAll": "Ver todos ({{count}})",
   "showLess": "Ver menos",
   "status": {
@@ -25,12 +27,14 @@
     "error": "No se pudo guardar. Inténtalo de nuevo.",
     "errorDiscontinued": "Esta dosis no correspondía antes de que se suspendiera el medicamento, así que no se puede registrar. Reactiva el medicamento para volver a registrar dosis.",
     "cancel": "Cancelar",
-    "errorNotDue": "Esta dosis aún no corresponde, así que no se puede registrar."
+    "errorNotDue": "Esta dosis aún no corresponde, así que no se puede registrar.",
+    "dayToday": "Hoy",
+    "dayYesterday": "Ayer",
+    "dayOn": "{{date}}"
   },
   "permissionDenied": "No tienes permiso para confirmar medicamentos en este círculo.",
   "page": {
     "title": "Medicamentos",
-    "subtitle": "Todos los medicamentos de este círculo, actuales y anteriores.",
     "add": "Agregar medicamento",
     "loading": "Cargando medicamentos…",
     "errorTitle": "No se pudieron cargar los medicamentos",
@@ -39,6 +43,11 @@
     "inactive": "Inactivos / Medicamentos anteriores",
     "inactiveHint": "Se conservan como referencia. Los recordatorios están desactivados.",
     "noTime": "Sin hora programada",
+    "stock": {
+      "lowStock": "Stock bajo",
+      "daysLeft_one": "queda {{count}} día",
+      "daysLeft_other": "quedan {{count}} días"
+    },
     "empty": {
       "title": "Aún no hay medicamentos",
       "hint": "Agrega un medicamento para que todo el círculo sepa qué se necesita y cuándo.",
@@ -47,13 +56,10 @@
     },
     "actions": {
       "edit": "Editar",
-      "editLabel": "Editar {{name}}",
       "discontinue": "Suspender",
-      "discontinueLabel": "Suspender {{name}}",
       "reactivate": "Reactivar",
-      "reactivateLabel": "Reactivar {{name}}",
       "delete": "Eliminar",
-      "deleteLabel": "Eliminar {{name}}"
+      "more": "Más acciones para {{name}}"
     },
     "detail": {
       "photoAlt": "Foto de {{name}}",
@@ -62,7 +68,45 @@
       "notes": "Notas",
       "remaining": "Restante",
       "status": "Estado",
-      "viewLabel": "Ver detalles de {{name}}"
+      "viewLabel": "Ver detalles de {{name}}",
+      "repeat": "Repetir"
     }
-  }
+  },
+  "needsAttention": "Requiere atención",
+  "needsAttentionHint": "Dosis de ayer que nadie registró",
+  "undo": "Deshacer",
+  "tabs": {
+    "medications": "Medicamentos",
+    "history": "Historial"
+  },
+  "history": {
+    "title": "Historial de medicamentos",
+    "subtitle": "Rastrea la adherencia y revisa qué se tomó y cuándo.",
+    "loading": "Cargando historial…",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "someone": "Alguien",
+    "scheduledLabel": "Programado",
+    "takenAtLabel": "Tomado a las",
+    "confirmedByLabel": "Confirmado por",
+    "notTaken": "—",
+    "statusTaken": "Tomado",
+    "statusMissed": "No tomado",
+    "statusSkipped": "Omitido",
+    "emptyTitle": "Sin historial de medicamentos",
+    "emptyHint": "Las confirmaciones de medicamentos aparecerán aquí una vez registradas",
+    "errorTitle": "No se pudo cargar el historial de medicamentos",
+    "filterAll": "Todos los medicamentos",
+    "filterByLabel": "Filtrar por: {{label}}",
+    "loadMore": "Cargar más"
+  },
+  "adherence": {
+    "eyebrow": "Adherencia · 30 días",
+    "loading": "Cargando adherencia…",
+    "vsLastMonth": "{{sign}}{{pct}}% vs el mes pasado",
+    "sameAsLastMonth": "Igual que el mes pasado",
+    "ringLabel": "30d",
+    "ringSummary": "{{rate}} % de las dosis programadas confirmadas en los últimos 30 días"
+  },
+  "allDone": "Todos los medicamentos registrados hoy"
 }

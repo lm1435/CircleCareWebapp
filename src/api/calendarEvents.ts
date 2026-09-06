@@ -73,6 +73,48 @@ export interface CalendarEvent {
   // Task-specific
   assigned_to?: string | null;
   completed_at?: string | null;
+  /**
+   * Who marked the task done. A user id; the embedded row is `completed_by_user`.
+   *
+   * ONLY the tasks endpoint embeds the user (see backend/src/routes/tasks.ts —
+   * `completed_by_user:users!calendar_events_completed_by_fkey(...)`). The
+   * calendar GET does not, so a task opened from the calendar has
+   * `completed_at` without a name. Every reader must fall back (circle members,
+   * then an unattributed label) rather than assume the embed is present.
+   */
+  completed_by?: string | null;
+  completed_by_user?: EventUser | null;
+
+  /**
+   * The five reminder flags plus their master mute — ON THE LIST RESPONSE, not
+   * detail-only. Verified in backend/src/routes/calendarEvents.ts: `listSelect`
+   * names `notifications_enabled, reminder_24h, reminder_1h, reminder_30m,
+   * reminder_15m, reminder_at_due`, GET /tasks selects `*`, and the virtual
+   * recurring instances are built by copying these off the parent.
+   *
+   * DECLARED HERE BECAUSE AN EDIT REWRITES THEM ALL. AddEventModal hydrates the
+   * six switches from the event it is handed and `reminderFlagsForSave` now
+   * persists the selection VERBATIM, so every save writes all five back — and
+   * the backend forwards each one it receives to the series parent. If the list
+   * ever stopped returning them, hydration would fall through to its defaults
+   * and a user who edited only the TITLE of a recurring task would silently
+   * rewrite the whole series' reminder settings.
+   *
+   * Untyped, that regression is invisible: it produced no compile error and no
+   * test failure, because the modal read them through a local `as` cast and the
+   * test helper spread them onto a cast literal. Typed, dropping a column from
+   * `listSelect` is a `tsc` failure at the read site instead.
+   *
+   * Optional, because they are absent from a payload built before the column
+   * existed; each read site states its own fallback (`?? true` for the anchor
+   * and the mute, both `NOT NULL DEFAULT TRUE`).
+   */
+  notifications_enabled?: boolean;
+  reminder_at_due?: boolean;
+  reminder_24h?: boolean;
+  reminder_1h?: boolean;
+  reminder_30m?: boolean;
+  reminder_15m?: boolean;
 
   // UI customization
   color_hex?: string | null;
@@ -206,6 +248,16 @@ export interface CreateEventRequest {
   quantity_in_bottle?: number; // Initial quantity
   quantity_remaining?: number; // Current remaining
   pills_per_day?: number; // Pills taken per day
+  /**
+   * The dose-time row that owns this medication's BOTTLE; null/absent means
+   * this row owns it. Several dose times of one medication ("twice daily") are
+   * separate series roots, so without this link the bottle — one physical
+   * container — had no owning row and each dose drained its own counter at half
+   * the real rate. The backend resolves `COALESCE(refill_group_id, id)` before
+   * it decrements. Nullable AND optional, and they differ: absent leaves the
+   * stored value alone, an explicit null detaches the row onto its own bottle.
+   */
+  refill_group_id?: string | null;
   alert_days_before?: number; // Days before to alert
 
   // OCR scanning fields (extracted from prescription label)
@@ -237,6 +289,12 @@ export interface CreateEventRequest {
 
   // Notifications
   notifications_enabled?: boolean;
+  /**
+   * The alert AT the scheduled time — the anchor, on by default (the column is
+   * `BOOLEAN NOT NULL DEFAULT TRUE`). The four `reminder_*` flags below are the
+   * opt-IN "earlier reminders"; this one is the opt-OUT primary alert.
+   */
+  reminder_at_due?: boolean;
   reminder_24h?: boolean;
   reminder_1h?: boolean;
   reminder_30m?: boolean;
@@ -253,12 +311,16 @@ export interface DeleteEventOptions {
   scheduledDate?: string; // YYYY-MM-DD (required for scoped deletes)
 }
 
-interface SingleEventEnvelope {
-  success: boolean;
-  data: { event: CalendarEvent };
-}
-
-/** POST /circles/:circleId/events — create a med/appointment/task event. */
+/**
+ * Shared by all four single-event writes below (create / update / complete /
+ * medication-photo detail).
+ *
+ * Declared ONCE. It was declared twice, identically — legal, because TypeScript
+ * MERGES interfaces of the same name and identical members, so the duplicate
+ * cost nothing and reported nothing. The danger is the day the two copies stop
+ * being identical: merging keeps both member sets, so an edit to one of them
+ * would silently widen the type at every cast site rather than fail.
+ */
 interface SingleEventEnvelope {
   success: boolean;
   data: { event: CalendarEvent };
@@ -494,6 +556,10 @@ export const eventFormSchema = z.object({
   quantity_in_bottle: z.number().int().min(1).optional(),
   quantity_remaining: z.number().int().min(0).optional(),
   pills_per_day: z.number().int().min(1).optional(),
+  // Mirrors the backend's `refill_group_id: z.string().uuid().nullable().optional()`.
+  // Sibling dose rows created by the first-run wizard carry the primary row's
+  // id here so every dose time decrements ONE bottle.
+  refill_group_id: z.string().uuid().nullable().optional(),
   alert_days_before: z.number().int().min(1).max(90).optional(),
 
   // Scheduling — naive local values in the care recipient's timezone
@@ -518,6 +584,7 @@ export const eventFormSchema = z.object({
 
   // Notifications
   notifications_enabled: z.boolean().optional(),
+  reminder_at_due: z.boolean().optional(),
   reminder_24h: z.boolean().optional(),
   reminder_1h: z.boolean().optional(),
   reminder_30m: z.boolean().optional(),

@@ -37,11 +37,11 @@
       "items": [
         {
           "question": "How do medication reminders work?",
-          "answer": "When you add a medication, the care recipient receives a push notification at the scheduled time. They tap 'I took it' to confirm, and all family members in the circle are notified. If the dose isn't confirmed within 15 minutes, your loved one gets a gentle reminder. After 30 minutes, all caregivers in the circle are notified. After 1 hour, everyone is alerted and the dose is marked as not taken. The dose stays unresolved until someone marks it as taken or skipped."
+          "answer": "When you add a medication, the care recipient receives a push notification at the scheduled time. They tap 'I took it' to confirm, and all family members in the circle are notified. If the dose isn't confirmed within 15 minutes, your loved one gets a gentle reminder. After 30 minutes, all caregivers in the circle are notified. After 1 hour, everyone in the circle is alerted. The dose stays unresolved until someone marks it as taken or skipped."
         },
         {
           "question": "What happens if a medication is not taken?",
-          "answer": "After 1 hour with no confirmation, the medication is marked as 'not taken' and all circle members are notified. You can view the medication history to see patterns over time, including adherence rates and which doses are most commonly missed."
+          "answer": "After 1 hour with no confirmation, all circle members are notified. The dose stays unresolved until someone marks it as taken or skipped. You can view the medication history to see patterns over time, including adherence rates and which doses are most commonly missed."
         },
         {
           "question": "Can I set up medications that aren't daily?",

@@ -11,7 +11,7 @@ import {
   type StorageUsage,
 } from '@/api/documents';
 import { useUploadDocument } from '@/hooks/useDocuments';
-import { Button, Modal, Select, TextArea, TextField, useToast } from '@/components/ui';
+import { Button, Card, Modal, Select, TextArea, TextField, useToast } from '@/components/ui';
 import { formatFileSize } from './formatFileSize';
 
 // Plan Task 3.4 — multipart document upload form built on Stage 0 primitives.
@@ -64,6 +64,10 @@ export interface DocumentUploadModalProps {
   /** Requester may write to this circle (false → form is disabled). */
   canEdit: boolean;
   onClose: () => void;
+  /** Starter-kit entry: the row's category, preselected. */
+  initialCategory?: DocumentCategory;
+  /** Starter-kit entry: the row's title as the label, so a file pick does not overwrite it. */
+  initialLabel?: string;
 }
 
 interface FieldErrors {
@@ -78,6 +82,8 @@ export function DocumentUploadModal({
   storage,
   canEdit,
   onClose,
+  initialCategory,
+  initialLabel,
 }: DocumentUploadModalProps): ReactElement {
   const { t } = useTranslation(['documents', 'common']);
   const { showToast } = useToast();
@@ -86,8 +92,8 @@ export function DocumentUploadModal({
   const upload = useUploadDocument(circleId);
 
   const [file, setFile] = useState<File | null>(null);
-  const [label, setLabel] = useState('');
-  const [category, setCategory] = useState<DocumentCategory>('medical_records');
+  const [label, setLabel] = useState(initialLabel ?? '');
+  const [category, setCategory] = useState<DocumentCategory>(initialCategory ?? 'medical_records');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -203,27 +209,50 @@ export function DocumentUploadModal({
       closeLabel={t('common:close')}
       size="md"
       footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose}>
+        <>
+          <Button variant="secondary" onClick={onClose}>
             {t('common:cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={disabled || upload.isPending}>
-            {upload.isPending ? t('documents:upload.uploading') : t('documents:upload.submit')}
+          <Button
+            variant="primary"
+            loading={upload.isPending}
+            disabled={disabled}
+            onClick={handleSubmit}
+          >
+            {t('documents:upload.submit')}
           </Button>
-        </div>
+        </>
       }
     >
       {storageFull && (
-        <p role="alert" className="m-0 rounded-xl border border-line bg-bg-2 p-3 text-sm text-ink-2">
+        <Card role="alert" variant="filled" padding="sm" className="text-sm text-ink-2">
           {t(isFreeTier ? 'documents:upload.storageFull' : 'documents:upload.storageFullPremium')}
-        </p>
+        </Card>
       )}
 
-      {/* File picker */}
+      {/* File picker. The native <input type="file"> stays in the DOM (labelled,
+          focusable, the thing user-event/browsers actually interact with) but is
+          visually hidden — the visible "choose file" affordance is a `secondary`
+          Button that forwards its click to the hidden input, per spec §6.6 (the
+          old file:… pseudo-element styling isn't a `Button`/ui-vocabulary shape). */}
       <div className="flex flex-col gap-1.5">
         <label htmlFor={fileInputId} className="text-sm font-medium text-ink-2">
           {t('documents:upload.fileLabel')}
         </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={disabled}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {t('documents:upload.chooseFile')}
+          </Button>
+          <span aria-live="polite" className="min-w-0 flex-1 truncate text-sm text-ink-2">
+            {file ? file.name : t('documents:upload.noFileChosen')}
+          </span>
+        </div>
         <input
           ref={fileInputRef}
           id={fileInputId}
@@ -237,7 +266,7 @@ export function DocumentUploadModal({
               .filter(Boolean)
               .join(' ') || undefined
           }
-          className="min-h-[44px] w-full rounded-xl border border-line bg-cream px-4 py-2.5 text-base text-ink file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:text-cream disabled:cursor-not-allowed disabled:opacity-60"
+          className="sr-only"
         />
         {errors.file ? (
           <p id={`${fileInputId}-error`} className="m-0 text-sm text-terracotta-deep">

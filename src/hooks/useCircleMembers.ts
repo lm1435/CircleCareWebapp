@@ -19,6 +19,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { Analytics } from '@/lib/analytics';
 
 const EMPTY_MEMBERS: CircleMember[] = [];
 
@@ -85,7 +86,8 @@ function invalidateCircleQueries(
 function useMemberMutationOnError(): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // Seat cap on the member write path — CAPACITY, same as invites.
+  const { promptUpgrade } = usePremiumGate('capacity');
   const { t } = useTranslation('members');
 
   return (error: unknown) => {
@@ -114,7 +116,11 @@ export function useRemoveMember(
 
   return useMutation({
     mutationFn: ({ userId }: RemoveMemberVariables) => removeMember(circleId, userId),
-    onSuccess: () => invalidateCircleQueries(queryClient, circleId),
+    onSuccess: () => {
+      // Deliberately no removed-user id — see Analytics.memberRemoved's doc comment.
+      Analytics.memberRemoved(circleId);
+      invalidateCircleQueries(queryClient, circleId);
+    },
     onError,
   });
 }
@@ -127,6 +133,7 @@ export function useLeaveCircle(circleId: string): UseMutationResult<void, unknow
   return useMutation({
     mutationFn: () => leaveCircle(circleId),
     onSuccess: () => {
+      Analytics.circleLeft(circleId);
       // The user is no longer in this circle — drop its detail and refresh the list.
       void queryClient.invalidateQueries({ queryKey: queryKeys.circleDetail(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });

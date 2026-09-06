@@ -107,6 +107,24 @@ describe('AIChatModal', () => {
     expect(mutate).not.toHaveBeenCalled();
   });
 
+  it('disables the send button on empty/whitespace input and enables it once there is text', async () => {
+    const user = userEvent.setup();
+    render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
+
+    const sendButton = screen.getByRole('button', { name: 'Send' });
+    const input = screen.getByLabelText('Your message');
+    expect(sendButton).toBeDisabled();
+
+    await user.type(input, '   ');
+    expect(sendButton).toBeDisabled();
+
+    await user.type(input, 'How is adherence?');
+    expect(sendButton).toBeEnabled();
+
+    await user.clear(input);
+    expect(sendButton).toBeDisabled();
+  });
+
   it('renders the rate-limit error inline on 429', async () => {
     const user = userEvent.setup();
     mutate.mockImplementation((_text: string, opts: { onError: (e: unknown) => void }) => {
@@ -177,6 +195,20 @@ describe('AIChatModal — suggested questions', () => {
     expect(useAiSuggestions).toHaveBeenLastCalledWith(CIRCLE_ID, true);
   });
 
+  // The header used to be a hand-rolled `uppercase tracking-wide` label; it
+  // now renders through the shared `Text variant="label"` treatment (sentence
+  // case, no forced uppercase) so it matches every other sub-section header
+  // in the app.
+  it('renders the suggestions header with the shared Text label variant, not raw uppercase tracking', () => {
+    suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
+    render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
+
+    const header = screen.getByText('Suggested questions');
+    expect(header.className).toContain('text-sm');
+    expect(header.className).toContain('font-semibold');
+    expect(header.className).not.toContain('uppercase');
+  });
+
   it('renders each suggestion as a real button under a labelled list', () => {
     suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
@@ -190,33 +222,30 @@ describe('AIChatModal — suggested questions', () => {
     }
   });
 
-  // Layout contract (verified in a real browser at 1512x771 and at a Pixel 5
-  // 393x851 viewport): two columns from `sm` up so six chips occupy three rows,
-  // one column on phone widths where half-width chips would be too narrow.
-  // Equal-height rows come from grid stretch — `li.flex` + `button.h-full` — so
-  // a chip whose Spanish text wraps to 2-3 lines sets the row height and its
-  // neighbour matches. Text is never truncated or clamped.
-  it('lays the chips out as a responsive two-column grid with equal-height cells', () => {
+  // Layout contract (spec §6.7): single column, each chip a `Card` with a
+  // 40ms-staggered fade-in (index * 40ms) so six chips cascade in rather than
+  // popping in all at once. Full text always readable — no truncation/clamping.
+  it('lays the chips out as a single column with a 40ms-staggered fade-in', () => {
     suggestionsState = { data: SERVER_SUGGESTIONS, isLoading: false, isError: false };
     render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
 
     const list = screen.getByRole('list', { name: 'Suggested questions' });
-    expect(list.className).toContain('grid');
-    expect(list.className).toContain('grid-cols-1');
-    expect(list.className).toContain('sm:grid-cols-2');
+    expect(list.className).toContain('flex');
+    expect(list.className).toContain('flex-col');
+    expect(list.className).not.toContain('grid');
 
-    for (const suggestion of SERVER_SUGGESTIONS) {
+    SERVER_SUGGESTIONS.forEach((suggestion, index) => {
       const button = screen.getByRole('button', { name: suggestion });
-      expect(button.parentElement?.className).toContain('flex');
-      expect(button.className).toContain('h-full');
-      expect(button.className).toContain('w-full');
       // 44px minimum touch target survives the tighter padding.
-      expect(button.className).toContain('min-h-11');
+      expect(button.className).toContain('min-h-[44px]');
+      expect(button.className).toContain('w-full');
       // No truncation/clamping — the whole question must stay readable.
       expect(button.className).not.toContain('truncate');
       expect(button.className).not.toContain('line-clamp');
       expect(button.className).not.toContain('overflow-hidden');
-    }
+      // Each successive chip's fade-in is delayed by another 40ms.
+      expect(button.style.animationDelay).toBe(`${index * 40}ms`);
+    });
   });
 
   it('sends the suggestion through the normal send path, flagged for analytics', async () => {
@@ -323,5 +352,64 @@ describe('AIChatModal — suggested questions', () => {
     } finally {
       await i18n.changeLanguage('en');
     }
+  });
+});
+
+describe('AIChatModal — header badge and New chat', () => {
+  it('shows no remaining-count badge and no New chat button before any message is sent', () => {
+    render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
+
+    expect(screen.queryByText(/left today/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New chat' })).not.toBeInTheDocument();
+  });
+
+  it('shows the remaining-count badge once the reply reports 10 or fewer left, and reveals New chat', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars: unknown, opts: { onSuccess: (d: unknown) => void }) => {
+      opts.onSuccess({ message: 'ok', conversation_id: 'c1', remaining_requests: 3 });
+    });
+
+    render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText('Your message'), 'hi');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText('3 left today')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeInTheDocument();
+  });
+
+  it('does not show the badge when the reply reports more than 10 left', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars: unknown, opts: { onSuccess: (d: unknown) => void }) => {
+      opts.onSuccess({ message: 'ok', conversation_id: 'c1', remaining_requests: 40 });
+    });
+
+    render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText('Your message'), 'hi');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await screen.findByText('ok');
+    expect(screen.queryByText(/left today/)).not.toBeInTheDocument();
+  });
+
+  it('New chat clears the conversation and calls resetConversation', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars: unknown, opts: { onSuccess: (d: unknown) => void }) => {
+      opts.onSuccess({ message: 'Two doses left.', conversation_id: 'c1', remaining_requests: 5 });
+    });
+
+    render(<AIChatModal circleId={CIRCLE_ID} isOpen onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText('Your message'), 'How is adherence?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    await screen.findByText('Two doses left.');
+    resetConversation.mockClear();
+
+    await user.click(screen.getByRole('button', { name: 'New chat' }));
+
+    expect(resetConversation).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Two doses left.')).not.toBeInTheDocument();
+    expect(screen.queryByText('How is adherence?')).not.toBeInTheDocument();
+    // Back to the empty state with no badge and no New chat button.
+    expect(screen.getByText('How can I help?')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New chat' })).not.toBeInTheDocument();
   });
 });

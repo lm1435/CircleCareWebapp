@@ -158,6 +158,25 @@ describe('LoginPage', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  // Login is deliberately UNCAPPED: signup/reset bound new passwords to 72
+  // UTF-8 bytes (GoTrue/bcrypt's real limit), but an EXISTING account may
+  // already carry a password that predates that rule, or one accepted by a
+  // different client. Capping login would lock such a user out entirely, with
+  // no way to fix it (mirrors mobile: login uses `requiredString`, not
+  // `passwordSchema`).
+  it('does not cap password length — an existing long password is still submittable', async () => {
+    const longPassword = 'x'.repeat(200);
+    await fillAndSubmit('pat@example.com', longPassword);
+
+    await waitFor(() =>
+      expect(mockedPost).toHaveBeenCalledWith('/auth/login', {
+        email: 'pat@example.com',
+        password: longPassword,
+      })
+    );
+    expect(screen.queryByText(/72 characters/)).not.toBeInTheDocument();
+  });
+
   it('renders both provider buttons with a brand glyph and an accessible name', () => {
     renderLogin();
     const apple = screen.getByRole('button', { name: 'Continue with Apple' });
@@ -222,5 +241,19 @@ describe('LoginPage', () => {
     renderLogin();
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('renders the AuthShell hero headline (Task W5 copy alignment with the mobile hero)', () => {
+    renderLogin();
+
+    // A <p>, not a heading — the page's actual heading is the form card's
+    // <h1> ("Welcome back"), and an <h2> here would render before it in the
+    // DOM and break heading order.
+    expect(screen.getByText('Care for them together.')).toBeInTheDocument();
+  });
+
+  it('never renders a back button (login is the root of the signed-out flow)', () => {
+    renderLogin();
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
   });
 });

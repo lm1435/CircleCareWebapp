@@ -13,9 +13,9 @@ import {
   purchasePackage,
   getManagementUrl,
   toWebPlan,
-  isWebBillingConfigured,
   type WebPlan,
 } from '@/lib/purchases';
+import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 
 /**
  * Hooks for the RevenueCat Web Billing purchase flow.

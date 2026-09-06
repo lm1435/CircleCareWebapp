@@ -1,8 +1,8 @@
 {
   "title": "Documents",
+  "subtitle": "Insurance cards, records, and directives, in one place.",
   "count_one": "{{count}} document",
   "count_other": "{{count}} documents",
-  "storageUsed": "{{used}} of {{limit}} used",
   "filterLabel": "Filter by category",
   "categories": {
     "all": "All",
@@ -19,12 +19,36 @@
   "noDocuments": "No documents yet",
   "noDocumentsHint": "Keep your loved one's important documents in one place — insurance cards, records, directives — so everyone helping can find them when it matters.",
   "noDocumentsHintReadOnly": "Documents shared with this circle will appear here so everyone helping can find them when it matters.",
-  "noCategoryDocuments": "No documents in this category",
-  "uploadedOn": "Uploaded {{date}}",
+  "emptyCategory": {
+    "title": "Nothing in {{category}} yet.",
+    "action": "Show all documents"
+  },
+  "starter": {
+    "eyebrow": "Start here",
+    "title": "Start with these four",
+    "lede": "Whoever's helping can pull them up in seconds, at the pharmacy, at the ER, on the phone with a nurse.",
+    "items": {
+      "insurance": {
+        "title": "Insurance card",
+        "hint": "Add the front, then the back"
+      },
+      "directive": {
+        "title": "Advance directive",
+        "hint": "DNR, power of attorney, living will"
+      },
+      "medications": {
+        "title": "Medication list",
+        "hint": "The printout from the pharmacy"
+      },
+      "labs": {
+        "title": "Recent lab results",
+        "hint": "Bloodwork, imaging, discharge notes"
+      }
+    },
+    "other": "Upload something else"
+  },
   "preview": "Preview",
-  "previewDocument": "Preview {{name}}",
   "download": "Download",
-  "downloading": "Downloading...",
   "downloadDocument": "Download {{name}}",
   "downloadFailed": "Download failed. Please try again.",
   "closePreview": "Close preview",
@@ -32,17 +56,25 @@
   "pdfFallbackHint": "PDF not displaying? Open it in a new tab or download it.",
   "openInNewTab": "Open in new tab",
   "editAction": "Edit",
-  "editDocument": "Edit {{name}}",
   "deleteAction": "Delete",
-  "deleteDocument": "Delete {{name}}",
+  "actionsFor": "Options for {{name}}",
+  "storage": {
+    "footnote": "{{used}} of {{limit}} used",
+    "used": "{{used}} used",
+    "remaining": "{{remaining}} remaining",
+    "full": "Storage full. Upgrade for more space.",
+    "upgrade": "Upgrade",
+    "trackLabel": "Storage used"
+  },
   "upload": {
     "openButton": "Upload document",
     "emptyButton": "Upload your first document",
     "title": "Upload a document",
     "submit": "Upload",
-    "uploading": "Uploading...",
     "success": "Document uploaded.",
     "fileLabel": "File",
+    "chooseFile": "Choose file",
+    "noFileChosen": "No file chosen",
     "fileHint": "JPG, PNG, HEIC, or PDF. Up to {{max}}.",
     "storageRemaining": "{{remaining}} remaining",
     "storageFull": "This circle has reached its storage limit. Free up space or upgrade to Premium to add more.",
@@ -62,7 +94,6 @@
   },
   "edit": {
     "title": "Edit document",
-    "saving": "Saving...",
     "success": "Document updated.",
     "errors": {
       "labelRequired": "Enter a name for this document.",

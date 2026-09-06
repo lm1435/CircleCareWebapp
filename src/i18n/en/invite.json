@@ -1,5 +1,6 @@
 {
   "title": "{{inviterName}} invited you to help care for {{recipientName}}",
+  "inviterFallback": "Someone",
   "circleLabel": "Care circle",
   "appDescription": "CircleCare helps families coordinate medications, appointments, and everyday care together.",
   "roles": {
@@ -33,5 +34,18 @@
   "errorUsed": {
     "title": "This invite has already been used",
     "suggestion": "If you already joined, sign in and you'll find the care circle on your circles list. Otherwise, ask the person who invited you to send a new invite."
-  }
+  },
+  "expiresLabel": "Expires",
+  "acceptArchived": "This circle is no longer active, so the invitation can't be used. Ask the person who invited you to check with the circle owner.",
+  "acceptRecipientExists": "This circle already has a care recipient, so this invitation can't be used. Ask the person who invited you to send a caregiver invite instead.",
+  "errorArchived": {
+    "title": "This care circle is no longer active",
+    "suggestion": "The circle was deleted after your invitation was sent, so this invite can't be used. There's nothing wrong with your code — ask the person who invited you to check with the circle owner."
+  },
+  "errorRecipientExists": {
+    "title": "This circle already has a care recipient",
+    "suggestion": "Only one person can be the care recipient in a circle, so this invite can't be used. Ask the person who invited you to send a caregiver invite instead."
+  },
+  "acceptExpired": "This invitation has expired. Ask whoever invited you to send a new one.",
+  "acceptAlreadyUsed": "This invitation has already been used."
 }

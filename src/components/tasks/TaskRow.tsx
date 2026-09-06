@@ -2,42 +2,58 @@ import { useMemo, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
-import { Avatar, Button, careCardSurface, careCardActions } from '@/components/ui';
-import { useHourCycle } from '@/hooks/useHourCycle';
+import {
+  Icon,
+  UndoBadge,
+  careCardActionPrimary,
+  careCardActionsInline,
+  careCardActionsRow,
+  careCardLeading,
+  careCardShell,
+  careCardTitle,
+  careCardTopRow,
+  STATUS_PILL,
+} from '@/components/ui';
 import { UNDO_DELAY_MS } from '@/hooks/useTaskCompletion';
-import { formatEventTimeCompact, getRelativeDateLabel } from '@/utils/timezone';
+import { useHourCycle } from '@/hooks/useHourCycle';
+import {
+  formatEventTimeCompact,
+  getRelativeDateLabel,
+  zoneReferenceInstant,
+} from '@/utils/timezone';
 
-// The ONE task row. Rendered by the full Tasks page and by the Overview
-// "Open tasks" card, the same way mobile shares mobile/src/components/tasks/
-// TaskRow.tsx between its Tasks tab and its home-screen OpenTasks card (and the
-// same way MedicationRow is shared across every medication surface here).
+// The ONE task row (Wave 3, Task 16 — mobile parity pass). Rendered by the
+// full Tasks page and by the Overview "Open tasks" card, the same way mobile
+// shares mobile/src/components/tasks/TaskRow.tsx between its Tasks tab and its
+// home-screen OpenTasks card (and the same way MedicationRow is shared across
+// every medication surface here).
+//
+// SHELL: careCardShell (mobile parity — 14px pad, 1.5px border, r20). The
+// Done action renders in BOTH careCardActionsInline (trailing, inline at
+// normal card widths) and careCardActionsRow (stacked, shown only once the
+// card's own content-box narrows below 360px) — a container query on
+// careCardShell's `[container-type:inline-size]` picks exactly one at a time
+// in a real browser. Both exist in the DOM simultaneously (this is the same
+// pattern PageMasthead's right action already uses for its round/labelled
+// pair), so a test asserting presence must expect two matches.
 //
 // TIMEZONE: due-date labels use the care recipient's timezone (never
 // device-local). scheduled_date/scheduled_time are naive local values in that
 // timezone — formatted with getRelativeDateLabel / formatEventTimeCompact.
+//
+// PRESS INTENT: an OPEN row presses into the edit form (`onEdit`); a COMPLETED
+// row presses into the read-only detail (`onViewDetails`). The press target is
+// the TITLE only — the meta row (assignee, due date, overdue pill) is a plain
+// sibling underneath so it is never swallowed into the button's accessible
+// name and is announced on its own. Both title buttons also carry
+// `aria-describedby` pointing at the meta row's id, so a keyboard/screen-
+// reader user tabbing to the button still hears the assignee/due-date/overdue
+// text as its DESCRIPTION — additive, so it never changes the accessible
+// NAME (OpenTasksCard's pinned aria-label stays byte-identical).
 
 function memberDisplayName(member: CircleMember): string {
   const name = [member.first_name, member.last_name].filter(Boolean).join(' ');
   return name || member.email;
-}
-
-function CheckIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={3}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
 }
 
 export interface TaskRowProps {
@@ -48,8 +64,26 @@ export interface TaskRowProps {
   onComplete: (task: CalendarEvent) => void;
   onUndo: (taskId: string) => void;
   onEdit: (task: CalendarEvent) => void;
+  /**
+   * Open the READ-ONLY detail for a task whose completion has persisted.
+   * Deliberately a separate prop from `onEdit`: the completed row's intent is
+   * VIEW, never EDIT, and the two must never be reachable from the same
+   * affordance (see the completed-row comment below).
+   *
+   * Optional. A surface that can only ever render OPEN tasks (the Overview
+   * "Open tasks" card queries `status: 'open'`) passes nothing, and a completed
+   * row there stays static text exactly as before.
+   */
+  onViewDetails?: (task: CalendarEvent) => void;
   /** True while this row is in the 5s undo window (committed but not yet sent). */
   isPendingComplete: boolean;
+  /**
+   * The care-recipient "today" (YYYY-MM-DD), for the overdue pill. Optional —
+   * a caller that doesn't have it (the Overview "Open tasks" card doesn't
+   * fetch it today) simply never shows the pill rather than computing it
+   * wrong from the viewer's device clock.
+   */
+  today?: string;
 }
 
 export function TaskRow({
@@ -60,7 +94,9 @@ export function TaskRow({
   onComplete,
   onUndo,
   onEdit,
+  onViewDetails,
   isPendingComplete,
+  today,
 }: TaskRowProps): ReactElement {
   const { t, i18n } = useTranslation('tasks');
   // Viewer's 12h/24h clock — every rendered time goes through it.
@@ -68,11 +104,19 @@ export function TaskRow({
 
   // Persisted completion (from the server) OR an in-flight optimistic one.
   const isDone = Boolean(task.completed_at) || isPendingComplete;
+  const hasDueDate = Boolean(task.scheduled_date);
 
   const assignee = useMemo(
     () => (task.assigned_to ? members.find((m) => m.id === task.assigned_to) : undefined),
     [members, task.assigned_to]
   );
+
+  const isOverdue =
+    !!today &&
+    !task.completed_at &&
+    !isPendingComplete &&
+    hasDueDate &&
+    task.scheduled_date < today;
 
   // Due-date label — TZ-correct. relative (Today/Yesterday) when applicable,
   // otherwise a short month/day; append the time (or "All day").
@@ -96,145 +140,157 @@ export function TaskRow({
       }).format(new Date(`${task.scheduled_date}T12:00:00Z`));
     }
     const timeLabel = task.scheduled_time
-      ? formatEventTimeCompact(task.scheduled_time, timezone, hourCycle)
+      ? formatEventTimeCompact(
+          task.scheduled_time,
+          timezone,
+          hourCycle,
+          // The task's OWN day, not today: Phoenix and Denver are one clock in
+          // January and two in July, so whether this time needs naming depends
+          // on when it falls, never on when it is read.
+          zoneReferenceInstant(task.scheduled_date)
+        )
       : t('row.allDay');
     return `${dayLabel} · ${timeLabel}`;
     // hourCycle MUST be a dep — the label is memoized, and the hook's value
     // flips once the currentUser query resolves.
   }, [task.scheduled_date, task.scheduled_time, timezone, t, hourCycle, i18n.language]);
 
-  return (
-    <li className={careCardSurface}>
-      <div className="flex items-center gap-3 px-4 py-3">
-        {/* Complete checkbox — gated on canEdit. While pending, the same control
-            is the undo target (mirrors mobile's TaskRow.handleCheckboxPress). A
-            persisted completion (already on the server) is not re-toggleable. */}
-        {/* Status indicator, NOT a control. The action is the labelled Done
-            button below — a task is finished the same way a dose is taken and a
-            calendar item is completed. Hiding the only completion affordance
-            inside a 24px circle made it the one care action in the app you had
-            to discover. */}
-        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center">
-          <span
-            className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-              isDone ? 'border-moss-deep bg-moss-deep text-cream' : 'border-line text-ink-3'
-            }`}
-          >
-            {isDone ? <CheckIcon /> : null}
-          </span>
-        </span>
+  const titleClass = `${careCardTitle} font-semibold leading-[21px] ${
+    isDone ? 'line-through text-ink-3' : ''
+  }`;
 
-        {/* Title + due-date. While the undo window is open we cannot nest the
-            real Undo button inside the edit button, so the body becomes static
-            text and shows the "Completing… Undo" affordance instead of the
-            edit affordance (mirrors mobile's TaskRow swapping the meta row for
-            an UndoBadge).
+  // Title text + its sr-only completion status — identical across the three
+  // press-intent branches below so they cannot drift.
+  const titleContent = (
+    <>
+      {task.title}
+      <span className="sr-only"> {isDone ? t('row.statusDone') : t('row.statusPending')}</span>
+    </>
+  );
 
-            COMPLETED TASKS ARE LOCKED (founder directive): once a completion
-            has persisted (task.completed_at), the row body renders as static
-            text — no edit affordance — same as the !canEdit branch. The gate
-            keys on completed_at alone, so a task that were ever re-opened
-            (completed_at cleared) becomes editable again. */}
-        {/* WB3: completion was conveyed to sighted users only via
-            strikethrough — add matching sr-only status text (mirrors
-            GettingStartedChecklist's statusDone/statusPending pattern). */}
-        {canEdit && isPendingComplete ? (
-          <div className="min-w-0 flex-1">
-            <p className="m-0 truncate text-sm font-medium text-ink-3 line-through">{task.title}</p>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="text-xs font-medium text-moss-deep">{t('row.completing')}</span>
-              <button
-                type="button"
-                onClick={() => onUndo(task.id)}
-                aria-label={t('row.undoAction', { title: task.title })}
-                className="rounded-full px-2 py-0.5 text-xs font-semibold text-moss underline underline-offset-2 transition-colors hover:text-moss-deep"
-              >
-                {t('row.undo')}
-              </button>
-            </div>
-            {/* Draining countdown bar — decorative; commit timer runs in JS. */}
-            <div
-              aria-hidden="true"
-              className="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-moss-soft"
-            >
-              <div
-                className="h-full origin-left bg-moss"
-                style={{ animation: `cc-countdown ${UNDO_DELAY_MS}ms linear forwards` }}
-              />
-            </div>
-            {/* Politely announce the pending completion for screen readers. */}
-            <span className="sr-only" role="status" aria-live="polite">
-              {t('row.pendingAnnounce', { title: task.title })}
-            </span>
-          </div>
-        ) : canEdit && !task.completed_at ? (
-          <button
-            type="button"
-            onClick={() => onEdit(task)}
-            aria-label={t('row.editLabel', { title: task.title })}
-            className="min-w-0 flex-1 text-left"
-          >
-            <p
-              className={`m-0 truncate text-sm font-medium ${
-                isDone ? 'text-ink-3 line-through' : 'text-ink'
-              }`}
-            >
-              {task.title}
-              <span className="sr-only">
-                {' '}
-                {isDone ? t('row.statusDone') : t('row.statusPending')}
-              </span>
-            </p>
-            <p className="m-0 mt-0.5 truncate text-xs text-ink-3">{dueLabel}</p>
-          </button>
-        ) : (
-          <div className="min-w-0 flex-1">
-            <p
-              className={`m-0 truncate text-sm font-medium ${
-                isDone ? 'text-ink-3 line-through' : 'text-ink'
-              }`}
-            >
-              {task.title}
-              <span className="sr-only">
-                {' '}
-                {isDone ? t('row.statusDone') : t('row.statusPending')}
-              </span>
-            </p>
-            <p className="m-0 mt-0.5 truncate text-xs text-ink-3">{dueLabel}</p>
-          </div>
-        )}
+  // Meta row's own id — referenced by BOTH title buttons' `aria-describedby`
+  // below, so a Tab/screen-reader user hears the assignee/due-date/overdue
+  // text as the button's DESCRIPTION without it becoming part of the
+  // accessible NAME (aria-describedby is additive; it never touches the name
+  // computation). This is what keeps OpenTasksCard's pinned aria-label
+  // constant identical while still surfacing this content to keyboard users.
+  const metaRowId = `task-meta-${task.id}`;
 
-        {/* Assignee avatar */}
-        <span
-          className="shrink-0"
-          title={assignee ? memberDisplayName(assignee) : t('row.unassigned')}
+  // Meta row — assignee, a separator dot, the due date (or "No due date"),
+  // and the overdue pill. A plain SIBLING of the title (never inside a
+  // button): the title alone carries the edit/view-details press so this
+  // row's text is always independently announced rather than being folded
+  // into (and duplicating) the button's aria-label.
+  const metaRow = (
+    <div id={metaRowId} className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-2">
+      {assignee ? (
+        <span>{memberDisplayName(assignee)}</span>
+      ) : (
+        <span className="italic text-ink-3">{t('row.unassigned')}</span>
+      )}
+      <span aria-hidden="true" className="h-[3px] w-[3px] rounded-full bg-line" />
+      {hasDueDate ? (
+        <span>{dueLabel}</span>
+      ) : (
+        <span className="italic text-ink-3">{t('row.noDueDate')}</span>
+      )}
+      {isOverdue && <span className={STATUS_PILL.overdue}>{t('row.overdue')}</span>}
+    </div>
+  );
+
+  // The Done / Undo action — identical markup rendered in both action slots
+  // (see the module doc comment above). A PERSISTED completion renders
+  // nothing here (mirrors mobile/src/components/tasks/TaskRow.tsx: its action
+  // slot is `isPendingComplete ? <UndoBadge/> : !isCompleted ? <Done/> :
+  // null`) — the completed row's "who did this" answer lives in the meta row
+  // as a NAME, never an avatar; mobile's own meta row is name-only, no avatar.
+  function renderAction(key: string): ReactElement | null {
+    if (isPendingComplete) {
+      return (
+        <UndoBadge
+          key={key}
+          kind="done"
+          label={t('row.completing')}
+          undoLabel={t('row.undo')}
+          itemLabel={task.title}
+          onUndo={() => onUndo(task.id)}
+          durationMs={UNDO_DELAY_MS}
+        />
+      );
+    }
+    if (task.completed_at) {
+      return null;
+    }
+    if (canEdit) {
+      return (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onComplete(task)}
+          aria-label={t('row.completeLabel', { title: task.title })}
+          className={`${careCardActionPrimary} min-w-[66px] px-4`}
         >
-          {assignee ? (
-            <>
-              <Avatar size="sm" name={memberDisplayName(assignee)} />
-              <span className="sr-only">{memberDisplayName(assignee)}</span>
-            </>
-          ) : (
-            <span className="sr-only">{t('row.unassigned')}</span>
-          )}
+          {t('row.done')}
+        </button>
+      );
+    }
+    return null;
+  }
+
+  return (
+    <li className={careCardShell}>
+      <div className={careCardTopRow}>
+        {/* Status indicator, NOT a control — the Done button is the action, so
+            a task is completed the same way a dose is taken. */}
+        <span
+          aria-hidden="true"
+          className={`${careCardLeading} border-moss ${isDone ? 'bg-moss-deep' : ''} ${
+            isDone ? 'opacity-55' : ''
+          }`}
+        >
+          {isDone && <Icon name="checkmark" size={12} className="text-cream" />}
         </span>
+
+        <div className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">
+          {/* Title — the ONLY pressable part of the row. Press intent:
+              open → edit; completed → the read-only detail. A COMPLETED TASK
+              IS NOT EDITABLE (founder directive): the gate keys on
+              `completed_at` alone, so a task that were ever re-opened becomes
+              editable again. */}
+          {canEdit && !task.completed_at && !isPendingComplete ? (
+            <button
+              type="button"
+              onClick={() => onEdit(task)}
+              aria-label={`${t('row.editLabel', { title: task.title })}, ${dueLabel}, ${t(
+                'row.statusPending'
+              )}`}
+              aria-describedby={metaRowId}
+              className={`${titleClass} min-h-11 w-full text-left`}
+            >
+              {titleContent}
+            </button>
+          ) : task.completed_at && onViewDetails ? (
+            <button
+              type="button"
+              onClick={() => onViewDetails(task)}
+              aria-label={`${t('row.viewDetailsLabel', { title: task.title })}, ${dueLabel}, ${t(
+                'row.statusDone'
+              )}`}
+              aria-describedby={metaRowId}
+              className={`${titleClass} min-h-11 w-full text-left`}
+            >
+              {titleContent}
+            </button>
+          ) : (
+            <span className={titleClass}>{titleContent}</span>
+          )}
+          {metaRow}
+        </div>
+
+        <div className={careCardActionsInline}>{renderAction('inline')}</div>
       </div>
 
-      {/* Action area — the same position and shell as the medication card's
-          Skip/Take and the calendar card's Done. Hidden once the task is
-          actually completed, and replaced by the undo affordance above while
-          the grace period is open. */}
-      {canEdit && !isPendingComplete && !task.completed_at && (
-        <div className={`${careCardActions} px-4 pb-3`}>
-          <Button
-            onClick={() => onComplete(task)}
-            aria-label={t('row.completeLabel', { title: task.title })}
-            className="min-h-11 px-4 text-xs"
-          >
-            {t('row.done')}
-          </Button>
-        </div>
-      )}
+      <div className={careCardActionsRow}>{renderAction('row')}</div>
     </li>
   );
 }

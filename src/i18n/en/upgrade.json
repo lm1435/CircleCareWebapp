@@ -1,7 +1,7 @@
 {
   "eyebrow": "CircleCare Premium",
-  "title": "Care for the whole circle",
-  "subtitle": "Unlock everything CircleCare offers for your whole care circle.",
+  "title": "Care for them together",
+  "subtitle": "Everything your family needs to coordinate care, for every circle you're part of.",
   "trialHook": "Start with a free trial — nothing due today.",
   "benefits": {
     "members": "Coordinate care across unlimited circle members",
@@ -58,5 +58,12 @@
     "month_other": "{{count}}-month",
     "year_one": "{{count}}-year",
     "year_other": "{{count}}-year"
+  },
+  "onboarding": {
+    "title": "Better care, together.",
+    "subtitle": "Everything your family needs to coordinate care for the people who matter most.",
+    "continueFree": "Continue with Free plan",
+    "continueFreeSub": "1 circle, 2 caregivers — upgrade anytime",
+    "notNow": "Not now"
   }
 }

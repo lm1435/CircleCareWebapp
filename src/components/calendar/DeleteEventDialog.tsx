@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { useDeleteEvent } from '@/hooks/useCalendarEvents';
-import { Button, ConfirmDialog, Modal, RadioGroup, useToast } from '@/components/ui';
+import { ConfirmDialog, RadioGroup, useToast } from '@/components/ui';
 import { Analytics, type MedicationLifecycleSurface } from '@/lib/analytics';
 
 // Task 1.5 — delete an event. MIRRORS mobile's scoped-delete semantics:
@@ -11,6 +11,15 @@ import { Analytics, type MedicationLifecycleSurface } from '@/lib/analytics';
 //     DELETE .../events/:eventId?deleteScope=single|future&scheduledDate=.
 // The scoped DELETE always targets the PARENT series id (parent_event_id || id)
 // and passes the INSTANCE's scheduled_date so the backend can split the series.
+//
+// M2: both paths now render through the SAME `ConfirmDialog` footer shape
+// (one filled destructive button, one ghost cancel) instead of the recurring
+// path hand-rolling its own `Modal` + footer. The scope picker is the
+// `RadioGroup` `EditCirclePage` already uses — passed as the ReactNode
+// `message` — with its OWN label (`deleteEvent.scopeLabel`, "What should be
+// deleted?") rather than reusing the dialog title ("Delete event") a second
+// time as the group's accessible name: reusing it gave the dialog two
+// headings that said the same thing.
 
 export interface DeleteEventDialogProps {
   circleId: string;
@@ -20,8 +29,14 @@ export interface DeleteEventDialogProps {
    * `medication_deleted`. This dialog also deletes tasks/appointments, which
    * stay uninstrumented (a separate question), so the event is emitted only for
    * `event_type === 'medication'`.
+   *
+   * `null` for a surface that can only ever delete a non-medication (the Tasks
+   * page). That is deliberately not a made-up member of
+   * `MedicationLifecycleSurface` — the enum mirrors mobile's and must keep
+   * meaning "a surface where medications live", so a value there would corrupt
+   * the breakdown the moment someone did emit from it.
    */
-  surface: MedicationLifecycleSurface;
+  surface: MedicationLifecycleSurface | null;
   onClose: () => void;
   /** Called after a successful delete (parent typically closes the detail modal). */
   onDeleted?: () => void;
@@ -54,7 +69,7 @@ export function DeleteEventDialog({
       // scope picker was shown (non-recurring), so the single record IS the
       // whole series. `capture` is non-throwing, so this cannot divert into the
       // catch below and report a successful delete as a failure.
-      if (event.event_type === 'medication') {
+      if (event.event_type === 'medication' && surface) {
         Analytics.medicationDeleted(circleId, {
           surface,
           scope: options.deleteScope ?? 'series',
@@ -73,55 +88,53 @@ export function DeleteEventDialog({
       <ConfirmDialog
         title={t('deleteEvent.title')}
         message={t('deleteEvent.confirmMessage', { title })}
-        confirmLabel={deleteEvent.isPending ? t('deleteEvent.deleting') : t('deleteEvent.delete')}
+        confirmLabel={t('deleteEvent.delete')}
         cancelLabel={t('common:cancel')}
         closeLabel={t('deleteEvent.close')}
         destructive
-        confirmDisabled={deleteEvent.isPending}
+        loading={deleteEvent.isPending}
+        loadingLabel={t('deleteEvent.deleting')}
         onConfirm={() => void runDelete({ eventId: event.id })}
         onCancel={onClose}
       />
     );
   }
 
+  // Recurring: the same ConfirmDialog shape, with the intro sentence + scope
+  // RadioGroup passed as the (ReactNode) message. A ReactNode message renders
+  // full-width/left-aligned rather than the centered short-copy treatment, so
+  // the picker isn't squeezed.
   return (
-    <Modal
+    <ConfirmDialog
       title={t('deleteEvent.title')}
-      onClose={onClose}
-      closeLabel={t('deleteEvent.close')}
-      size="sm"
-      closeOnBackdropClick={false}
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={deleteEvent.isPending}>
-            {t('common:cancel')}
-          </Button>
-          <Button
-            variant="terracotta"
-            disabled={deleteEvent.isPending}
-            onClick={() =>
-              void runDelete({
-                eventId: targetEventId,
-                deleteScope: scope,
-                scheduledDate: event.scheduled_date,
-              })
-            }
-          >
-            {deleteEvent.isPending ? t('deleteEvent.deleting') : t('deleteEvent.delete')}
-          </Button>
+      message={
+        <div className="flex flex-col gap-4">
+          <p className="m-0 text-base text-ink-2">{t('deleteEvent.recurringMessage', { title })}</p>
+          <RadioGroup
+            label={t('deleteEvent.scopeLabel')}
+            value={scope}
+            onChange={(value) => setScope(value as DeleteScopeChoice)}
+            options={[
+              { value: 'single', label: t('deleteEvent.scopeSingle') },
+              { value: 'future', label: t('deleteEvent.scopeFuture') },
+            ]}
+          />
         </div>
       }
-    >
-      <p className="m-0 text-base text-ink-2">{t('deleteEvent.recurringMessage', { title })}</p>
-      <RadioGroup
-        label={t('deleteEvent.title')}
-        value={scope}
-        onChange={(value) => setScope(value as DeleteScopeChoice)}
-        options={[
-          { value: 'single', label: t('deleteEvent.scopeSingle') },
-          { value: 'future', label: t('deleteEvent.scopeFuture') },
-        ]}
-      />
-    </Modal>
+      confirmLabel={t('deleteEvent.delete')}
+      cancelLabel={t('common:cancel')}
+      closeLabel={t('deleteEvent.close')}
+      destructive
+      loading={deleteEvent.isPending}
+      loadingLabel={t('deleteEvent.deleting')}
+      onConfirm={() =>
+        void runDelete({
+          eventId: targetEventId,
+          deleteScope: scope,
+          scheduledDate: event.scheduled_date,
+        })
+      }
+      onCancel={onClose}
+    />
   );
 }

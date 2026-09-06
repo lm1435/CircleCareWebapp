@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import '@/i18n';
 import ProfilePage from '@/pages/ProfilePage';
 import type { User, UnitPreferences } from '@/api/users';
+import { setAnalyticsConsent, __resetAnalyticsConsentCache } from '@/lib/analyticsConsent';
 
 // Stage 7 Task 7.6 — ProfilePage tests. The Stage 7 hooks are unit-tested in
 // useProfile.test.tsx; here we assert the PAGE wires them correctly: a toggle
@@ -96,8 +97,28 @@ vi.mock('@/components/ui', async (importOriginal) => {
 
 const signOut = vi.fn(() => Promise.resolve());
 vi.mock('@/store/authStore', () => ({
-  useAuthStore: (selector: (s: { signOut: () => Promise<void> }) => unknown) =>
-    selector({ signOut }),
+  useAuthStore: (
+    selector: (s: { signOut: () => Promise<void>; user: { id: string } | null }) => unknown
+  ) => selector({ signOut, user: { id: 'u1' } }),
+}));
+
+// Analytics-consent server sync: assert the page calls it with the right
+// (enabled, userId) pair without exercising the real network call.
+const syncAnalyticsConsent = vi.fn((_enabled: boolean, _userId: string) => Promise.resolve());
+vi.mock('@/lib/analyticsConsentSync', () => ({
+  syncAnalyticsConsent: (enabled: boolean, userId: string) => syncAnalyticsConsent(enabled, userId),
+}));
+
+const mockLanguageChanged = vi.fn();
+const mockTimezoneChanged = vi.fn();
+const mockAccountDeleted = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    languageChanged: (...args: unknown[]) => mockLanguageChanged(...args),
+    timezoneChanged: (...args: unknown[]) => mockTimezoneChanged(...args),
+    accountDeleted: (...args: unknown[]) => mockAccountDeleted(...args),
+    errorOccurred: vi.fn(),
+  },
 }));
 
 function renderPage() {
@@ -119,6 +140,8 @@ beforeEach(() => {
   deleteAccountState = { isError: false };
   subscriptionTier = 'free';
   currentUser = USER;
+  localStorage.clear();
+  __resetAnalyticsConsentCache();
 });
 
 describe('ProfilePage', () => {
@@ -146,6 +169,32 @@ describe('ProfilePage', () => {
     expect(updateProfile.mock.calls[0][0]).toEqual({ language: 'es' });
   });
 
+  it('fires Analytics.languageChanged on a successful language update', async () => {
+    updateProfile.mockImplementation((_vars, opts?: { onSuccess?: () => void }) => {
+      opts?.onSuccess?.();
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    const spanish = await screen.findByRole('radio', { name: 'Español' });
+    await user.click(spanish);
+
+    expect(mockLanguageChanged).toHaveBeenCalledWith('es');
+  });
+
+  it('fires Analytics.timezoneChanged on a successful timezone update', async () => {
+    updateProfile.mockImplementation((_vars, opts?: { onSuccess?: () => void }) => {
+      opts?.onSuccess?.();
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    const timezoneSelect = await screen.findByLabelText('Time zone');
+    await user.selectOptions(timezoneSelect, 'America/Chicago');
+
+    expect(mockTimezoneChanged).toHaveBeenCalledWith('America/Chicago');
+  });
+
   it('delete-account confirm runs useDeleteAccount, clears cache, signs out, and redirects', async () => {
     const user = userEvent.setup();
     // Make the hook invoke its onSuccess so the cache-clear + signOut path runs.
@@ -166,6 +215,12 @@ describe('ProfilePage', () => {
     expect(clearSpy).toHaveBeenCalled();
     expect(signOut).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login', { replace: true }));
+
+    // account_deleted must be queued BEFORE signOut() resets analytics.
+    expect(mockAccountDeleted).toHaveBeenCalledTimes(1);
+    expect(
+      mockAccountDeleted.mock.invocationCallOrder[0]
+    ).toBeLessThan(signOut.mock.invocationCallOrder[0]);
   });
 
   it('keeps the confirm dialog open with the failure visible when deletion errors', async () => {
@@ -199,6 +254,28 @@ describe('ProfilePage', () => {
     expect(screen.queryByText('Included with Premium.')).not.toBeInTheDocument();
   });
 
+  it('toggling analytics OFF calls syncAnalyticsConsent(false, <userId>)', async () => {
+    setAnalyticsConsent(true); // start ON so the click turns it off
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
+    await user.click(toggle);
+
+    expect(syncAnalyticsConsent).toHaveBeenCalledWith(false, 'u1');
+  });
+
+  it('toggling analytics ON calls syncAnalyticsConsent(true, <userId>)', async () => {
+    // Defaults OFF — click turns it on.
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
+    await user.click(toggle);
+
+    expect(syncAnalyticsConsent).toHaveBeenCalledWith(true, 'u1');
+  });
+
   it('points to the sign-in reset flow for password changes', async () => {
     renderPage();
     expect(
@@ -206,6 +283,12 @@ describe('ProfilePage', () => {
         "To change your password, sign out and choose 'Forgot password?' on the sign-in page."
       )
     ).toBeInTheDocument();
+  });
+
+  it('shows the WEB build version footer from package.json', async () => {
+    renderPage();
+    const pkg = (await import('../../../package.json')).default;
+    expect(await screen.findByText(`WEB · v${pkg.version}`)).toBeInTheDocument();
   });
 });
 
@@ -229,14 +312,14 @@ describe('ProfilePage quiet hours', () => {
     // `<input type="time">` expects HH:MM — a seconds-bearing value is handled
     // inconsistently across browsers for a control whose step implies minutes.
     expect(await screen.findByLabelText('Start time')).toHaveValue('22:00');
-    expect(screen.getByLabelText('End time')).toHaveValue('07:00');
+    expect(screen.getByLabelText(/^End time/)).toHaveValue('07:00');
   });
 
   it('sends canonical HH:MM for the UNTOUCHED start when only the end time is edited', async () => {
     currentUser = WITH_SECONDS;
     renderPage();
 
-    const end = await screen.findByLabelText('End time');
+    const end = await screen.findByLabelText(/^End time/);
     fireEvent.change(end, { target: { value: '08:30' } });
 
     expect(updateQuiet).toHaveBeenCalledTimes(1);

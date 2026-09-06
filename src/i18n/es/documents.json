@@ -1,9 +1,9 @@
 {
   "title": "Documentos",
+  "subtitle": "Tarjetas de seguro, registros y directivas, en un solo lugar.",
   "count_one": "{{count}} documento",
   "count_many": "{{count}} documentos",
   "count_other": "{{count}} documentos",
-  "storageUsed": "{{used}} de {{limit}} usado",
   "filterLabel": "Filtrar por categoría",
   "categories": {
     "all": "Todos",
@@ -20,12 +20,36 @@
   "noDocuments": "Sin documentos aún",
   "noDocumentsHint": "Guarda en un solo lugar los documentos importantes de tu ser querido: tarjetas del seguro, registros, directivas, para que todos los que ayudan los encuentren cuando hagan falta.",
   "noDocumentsHintReadOnly": "Los documentos compartidos con este círculo aparecerán aquí para que todos los que ayudan los encuentren cuando hagan falta.",
-  "noCategoryDocuments": "No hay documentos en esta categoría",
-  "uploadedOn": "Subido el {{date}}",
+  "emptyCategory": {
+    "title": "Todavía no hay nada en {{category}}.",
+    "action": "Ver todos los documentos"
+  },
+  "starter": {
+    "eyebrow": "Empieza aquí",
+    "title": "Empieza con estos cuatro",
+    "lede": "Quien esté ayudando puede abrirlos en segundos: en la farmacia, en emergencias o hablando con enfermería.",
+    "items": {
+      "insurance": {
+        "title": "Tarjeta del seguro",
+        "hint": "Agrega el frente y luego el reverso"
+      },
+      "directive": {
+        "title": "Voluntades anticipadas",
+        "hint": "No reanimar, poder notarial, testamento vital"
+      },
+      "medications": {
+        "title": "Lista de medicamentos",
+        "hint": "El listado impreso de la farmacia"
+      },
+      "labs": {
+        "title": "Resultados de laboratorio",
+        "hint": "Análisis, imágenes, notas de alta"
+      }
+    },
+    "other": "Subir otro documento"
+  },
   "preview": "Vista previa",
-  "previewDocument": "Vista previa de {{name}}",
   "download": "Descargar",
-  "downloading": "Descargando...",
   "downloadDocument": "Descargar {{name}}",
   "downloadFailed": "Error al descargar. Intenta de nuevo.",
   "closePreview": "Cerrar vista previa",
@@ -33,17 +57,25 @@
   "pdfFallbackHint": "¿No se muestra el PDF? Ábrelo en una pestaña nueva o descárgalo.",
   "openInNewTab": "Abrir en pestaña nueva",
   "editAction": "Editar",
-  "editDocument": "Editar {{name}}",
   "deleteAction": "Eliminar",
-  "deleteDocument": "Eliminar {{name}}",
+  "actionsFor": "Opciones para {{name}}",
+  "storage": {
+    "footnote": "{{used}} de {{limit}} usado",
+    "used": "{{used}} usado",
+    "remaining": "{{remaining}} disponible",
+    "full": "Almacenamiento lleno. Mejora tu plan para más espacio.",
+    "upgrade": "Mejorar plan",
+    "trackLabel": "Almacenamiento usado"
+  },
   "upload": {
     "openButton": "Subir documento",
     "emptyButton": "Sube tu primer documento",
     "title": "Subir un documento",
     "submit": "Subir",
-    "uploading": "Subiendo...",
     "success": "Documento subido.",
     "fileLabel": "Archivo",
+    "chooseFile": "Elegir archivo",
+    "noFileChosen": "Ningún archivo elegido",
     "fileHint": "JPG, PNG, HEIC o PDF. Hasta {{max}}.",
     "storageRemaining": "{{remaining}} disponible",
     "storageFull": "Este círculo alcanzó su límite de almacenamiento. Libera espacio o mejora a Premium para agregar más.",
@@ -63,7 +95,6 @@
   },
   "edit": {
     "title": "Editar documento",
-    "saving": "Guardando...",
     "success": "Documento actualizado.",
     "errors": {
       "labelRequired": "Ingresa un nombre para este documento.",

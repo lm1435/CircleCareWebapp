@@ -32,6 +32,17 @@ export interface ActivityFeedItem {
   subject_type?: string | null;
   subject_id?: string | null;
   description: string;
+  /**
+   * Stable key for what this row says, e.g. 'entries.memberJoined.caregiver'.
+   * Stored WITHOUT a namespace prefix, so it resolves verbatim inside the
+   * `activity` i18n namespace. Null on rows written before parameterization
+   * shipped and on write sites not yet parameterized. Render via
+   * `renderActivityDescription`, never by passing the key straight to t().
+   */
+  description_key?: string | null;
+  /** RAW interpolation values: 'HH:MM:SS' times, 'YYYY-MM-DD' dates, titles,
+   *  emails/names. Never pre-formatted, never an English token. */
+  description_params?: Record<string, unknown> | null;
   metadata?: ActivityMetadata | null;
   created_at: string; // UTC ISO timestamp
   /** Populated actor information (null/absent for system entries). */

@@ -20,6 +20,17 @@
       "90d": "Last 90 days"
     }
   },
+  "detail": {
+    "latest": "Latest",
+    "average": "Average",
+    "min": "Lowest",
+    "max": "Highest",
+    "trendStable": "Stable",
+    "trendUp": "Up {{pct}}% vs previous period",
+    "trendDown": "Down {{pct}}% vs previous period",
+    "chartTitle": "Trend",
+    "chartSummary": "Trend chart. Lowest {{min}}, highest {{max}}, latest {{latest}}."
+  },
   "fields": {
     "systolic": "Systolic",
     "diastolic": "Diastolic",
@@ -28,14 +39,17 @@
     "time": "Time",
     "timesShownIn": "Times shown in {{timezone}}",
     "notes": "Notes",
-    "notesPlaceholder": "Add a note (optional)"
+    "notesPlaceholder": "Add a note (optional)",
+    "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
+    "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
+    "dayOffsetNext": "+1 day",
+    "dayOffsetPrevious": "-1 day"
   },
   "add": {
     "cta": "Add reading",
     "title": "Add reading",
     "typeLabel": "Reading type",
-    "save": "Save reading",
-    "saving": "Saving…"
+    "save": "Save reading"
   },
   "edit": {
     "title": "Edit reading",
@@ -44,8 +58,7 @@
   "actions": {
     "edit": "Edit",
     "delete": "Delete",
-    "editLabel": "Edit reading {{value}}",
-    "deleteLabel": "Delete reading {{value}}"
+    "menuLabel": "Actions for reading {{value}}"
   },
   "delete": {
     "title": "Delete this reading?",

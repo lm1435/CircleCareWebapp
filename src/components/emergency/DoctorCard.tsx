@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Card } from '@/components/ui';
+import { Badge, Card, Text } from '@/components/ui';
 import { CardActions } from './CardActions';
 import { FieldList, type Field } from './FieldList';
 import { PhoneLink } from './PhoneLink';
@@ -52,20 +52,25 @@ export function DoctorCard({
   }
 
   return (
-    <Card className="print-card">
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <h3 className="m-0 text-base font-semibold text-ink">{name}</h3>
-        {isPrimary && <Badge variant="terracotta">{t('primary')}</Badge>}
+    <Card padding="lg" className="print-card">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Text variant="h3" as="h3">
+            {name}
+          </Text>
+          {isPrimary && <Badge variant="error">{t('primary')}</Badge>}
+        </div>
+        {onEdit && onDelete && (
+          <CardActions
+            onEdit={onEdit}
+            onDelete={onDelete}
+            name={name}
+            editLabel={t('edit.editDoctorAria', { name })}
+            deleteLabel={t('edit.deleteDoctorAria', { name })}
+          />
+        )}
       </div>
       {fields.length > 0 && <FieldList fields={fields} />}
-      {onEdit && onDelete && (
-        <CardActions
-          onEdit={onEdit}
-          onDelete={onDelete}
-          editLabel={t('edit.editDoctorAria', { name })}
-          deleteLabel={t('edit.deleteDoctorAria', { name })}
-        />
-      )}
     </Card>
   );
 }

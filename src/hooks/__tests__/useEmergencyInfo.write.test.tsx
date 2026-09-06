@@ -26,6 +26,15 @@ vi.mock('@/hooks/usePremiumGate', () => ({
   usePremiumGate: () => ({ promptUpgrade }),
 }));
 
+const mockEmergencyInfoUpdated = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    emergencyInfoViewed: vi.fn(),
+    emergencyInfoUpdated: (...args: unknown[]) => mockEmergencyInfoUpdated(...args),
+    errorOccurred: vi.fn(),
+  },
+}));
+
 import {
   updateEmergencyInfo,
   type EmergencyContact,
@@ -184,6 +193,23 @@ describe('useUpdateEmergencyInfo', () => {
     expect(mockUpdate).toHaveBeenCalledWith(CIRCLE_ID, partial);
     expect(invalidatedWith(invalidateSpy, queryKeys.emergencyInfo(CIRCLE_ID))).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.activityFeed(CIRCLE_ID))).toBe(true);
+  });
+
+  it('fires Analytics.emergencyInfoUpdated with the FIELD NAMES only', async () => {
+    const { wrapper } = setup();
+    mockUpdate.mockResolvedValue({ id: 'ei-1', circle_id: CIRCLE_ID } as never);
+
+    const { result } = renderHook(() => useUpdateEmergencyInfo(CIRCLE_ID), { wrapper });
+    const partial = { blood_type: 'O+', allergies: ['Penicillin'] };
+    result.current.mutate(partial);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockEmergencyInfoUpdated).toHaveBeenCalledWith(CIRCLE_ID, [
+      'blood_type',
+      'allergies',
+    ]);
+    // Never the VALUES — only which fields changed.
+    expect(mockEmergencyInfoUpdated.mock.calls[0][1]).not.toContain('O+');
   });
 
   it('surfaces a 402 → subscriptionRequired toast + refetch circles', async () => {

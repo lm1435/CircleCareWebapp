@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Button } from '@/components/ui';
+import { Card, Modal, Button, MoreMenu, Text, type MoreMenuItem } from '@/components/ui';
 import { getMedicationPhotoUrl, type CalendarEvent } from '@/api/calendarEvents';
 
 export interface MedicationDetailModalProps {
@@ -11,6 +11,13 @@ export interface MedicationDetailModalProps {
   dosage: string | null;
   /** Pre-formatted schedule line ("8:00 AM · 8:00 PM · Daily"). */
   schedule: string;
+  /**
+   * Pre-formatted recurrence on its own ("Daily"), or null for a one-off.
+   * Formatted by the caller: `formatRecurrenceLabel` reaches `@/i18n` through
+   * the calendar module, and this modal stays free of that import so it can be
+   * rendered in isolation.
+   */
+  repeat?: string | null;
   inactive: boolean;
   canEdit: boolean;
   onClose: () => void;
@@ -22,7 +29,7 @@ export interface MedicationDetailModalProps {
 /**
  * Read view for a medication — the thing web has never had.
  *
- * The medications page could only ever EDIT a medication: the card exposes
+ * The medications page could only ever EDIT a medication: the card exposed
  * Edit / Discontinue / Delete and nothing else, so details a caregiver might
  * want to check (what the pill looks like, the full schedule) were only visible
  * inside a form, mixed in with inputs. Mobile's rule, arrived at the same way:
@@ -33,13 +40,31 @@ export interface MedicationDetailModalProps {
  * endpoint — and a signed Storage URL must never reach the React Query cache
  * (same rule `api/documents.ts` follows). So it is fetched on open and held in
  * component state that dies with the modal.
+ *
+ * NO "ASSIGNED TO" ROW. `assigned_to` exists on `CalendarEvent`, but it is a
+ * TASK field: neither medication form ever writes it and mobile's medication
+ * surfaces never read it, so the row would be permanently blank.
  */
+
+/** One labelled fact: `mono` label above a 16/500 value (spec §4.5). */
+function InfoRow({ label, children }: { label: string; children: ReactNode }): ReactElement {
+  return (
+    <div>
+      <Text variant="mono" as="dt">
+        {label}
+      </Text>
+      <dd className="m-0 mt-0.5 text-md font-medium text-ink">{children}</dd>
+    </div>
+  );
+}
+
 export function MedicationDetailModal({
   circleId,
   event,
   name,
   dosage,
   schedule,
+  repeat,
   inactive,
   canEdit,
   onClose,
@@ -64,6 +89,18 @@ export function MedicationDetailModal({
 
   const notes = event.description?.trim();
 
+  // Two-or-more secondary actions (Discontinue/Reactivate + Delete) live
+  // inside the MoreMenu overflow, Delete last as the danger item; Edit is the
+  // named button and stays last in DOM order.
+  const menuItems: MoreMenuItem[] = [
+    {
+      id: 'toggle-status',
+      label: t(inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue'),
+      onSelect: onToggleStatus,
+    },
+    { id: 'delete', label: t('meds:page.actions.delete'), onSelect: onDelete, danger: true },
+  ];
+
   return (
     <Modal
       title={name}
@@ -72,79 +109,54 @@ export function MedicationDetailModal({
       size="sm"
       footer={
         canEdit ? (
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" onClick={onDelete}>
-              {t('meds:page.actions.delete')}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <MoreMenu items={menuItems} />
+            <Button variant="secondary" onClick={onEdit}>
+              {t('meds:page.actions.edit')}
             </Button>
-            <Button variant="ghost" onClick={onToggleStatus}>
-              {t(
-                inactive
-                  ? 'meds:page.actions.reactivate'
-                  : 'meds:page.actions.discontinue',
-              )}
-            </Button>
-            <Button onClick={onEdit}>{t('meds:page.actions.edit')}</Button>
           </div>
         ) : undefined
       }
     >
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         {/* Photo first — it is the fastest way to confirm you have the right
             bottle in your hand, which is the whole reason it gets uploaded. */}
         {photoUrl && (
           <img
             src={photoUrl}
             alt={t('meds:page.detail.photoAlt', { name })}
-            className="max-h-56 w-full rounded-xl border border-line object-cover"
+            className="max-h-56 w-full rounded-xl object-cover"
           />
         )}
 
-        <dl className="m-0 space-y-3">
-          {dosage && (
-            <div>
-              <dt className="m-0 text-xs uppercase tracking-wide text-ink-3">
-                {t('meds:page.detail.dosage')}
-              </dt>
-              <dd className="m-0 text-sm text-ink">{dosage}</dd>
-            </div>
-          )}
-
-          <div>
-            <dt className="m-0 text-xs uppercase tracking-wide text-ink-3">
-              {t('meds:page.detail.schedule')}
-            </dt>
-            <dd className="m-0 text-sm text-ink">{schedule}</dd>
-          </div>
-
-          {notes && (
-            <div>
-              <dt className="m-0 text-xs uppercase tracking-wide text-ink-3">
-                {t('meds:page.detail.notes')}
-              </dt>
-              <dd className="m-0 whitespace-pre-wrap text-sm text-ink">{notes}</dd>
-            </div>
-          )}
-
-          {typeof event.quantity_remaining === 'number' && (
-            <div>
-              <dt className="m-0 text-xs uppercase tracking-wide text-ink-3">
-                {t('meds:page.detail.remaining')}
-              </dt>
-              <dd className="m-0 text-sm text-ink">{event.quantity_remaining}</dd>
-            </div>
-          )}
-
-          {inactive && (
-            <div>
-              <dt className="m-0 text-xs uppercase tracking-wide text-ink-3">
-                {t('meds:page.detail.status')}
-              </dt>
-              <dd className="m-0 text-sm text-ink">
+        <Card variant="filled" padding="sm">
+          <dl className="m-0 flex flex-col gap-3">
+            {dosage && <InfoRow label={t('meds:page.detail.dosage')}>{dosage}</InfoRow>}
+            <InfoRow label={t('meds:page.detail.schedule')}>{schedule}</InfoRow>
+            {/* The recurrence on its own line. `schedule` already ends with it,
+                but "REPEAT · Daily" is what a caregiver checking whether a
+                medication is still a daily one actually scans for. */}
+            {repeat && <InfoRow label={t('meds:page.detail.repeat')}>{repeat}</InfoRow>}
+            {typeof event.quantity_remaining === 'number' && (
+              <InfoRow label={t('meds:page.detail.remaining')}>{event.quantity_remaining}</InfoRow>
+            )}
+            {inactive && (
+              <InfoRow label={t('meds:page.detail.status')}>
                 {t('calendar:discontinueMed.inactiveBadge')}
-              </dd>
-            </div>
-          )}
-        </dl>
+              </InfoRow>
+            )}
+          </dl>
+        </Card>
+
+        {notes && (
+          <Card variant="filled" padding="sm">
+            <dl className="m-0">
+              <InfoRow label={t('meds:page.detail.notes')}>
+                <span className="whitespace-pre-wrap font-normal">{notes}</span>
+              </InfoRow>
+            </dl>
+          </Card>
+        )}
       </div>
     </Modal>
   );

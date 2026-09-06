@@ -102,6 +102,12 @@ export function getMedicationStatus(
  * treatment so they recede while staying type-identifiable AND meeting WCAG AA
  * — unlike the former `opacity-70`, which dimmed white text below 4.5:1.
  *
+ * Review 2026-09-05 (Task 15): confirmed against mobile's own
+ * `TimelineEventBlock.tsx:44-47` (`EVENT_TYPE_COLORS`) — mobile renders SOLID
+ * per-type chips (clay/dusk/moss, white text), never a soft/deep tint for a
+ * pending block. This file's solid-for-pending, soft-for-done split is
+ * therefore correct as written; do not "fix" it toward soft/deep for pending.
+ *
  * `status` is passed separately (not read off the event) so callers control it;
  * omitting it yields the solid pending look.
  */
@@ -117,10 +123,12 @@ export function getEventCardClass(
 
 /**
  * Text color for the event block's title/time spans. Must be applied to the
- * spans directly (not just the block) because the `.mono` utility hard-sets
- * `color: ink-3`, which would otherwise win over an inherited block color and
- * tank contrast on the solid surfaces. Pending/missed → white; done → deep type
- * color (on the soft surface).
+ * spans directly (not just the block): MonthView/WeekView inline the mono
+ * type scale (no color of their own, precisely so this is the only color
+ * utility on the element) rather than using `<Text variant="mono">`, since its
+ * `text-ink-3` and this color would be same-layer utilities whose override
+ * order in the compiled stylesheet is not guaranteed. Pending/missed → white;
+ * done → deep type color (on the soft surface).
  */
 export function getEventTextClass(
   event: CalendarEvent,

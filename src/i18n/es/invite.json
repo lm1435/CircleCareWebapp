@@ -1,5 +1,6 @@
 {
   "title": "{{inviterName}} te invitó a ayudar a cuidar a {{recipientName}}",
+  "inviterFallback": "Alguien",
   "circleLabel": "Círculo de cuidado",
   "appDescription": "CircleCare ayuda a las familias a coordinar juntas los medicamentos, las citas y el cuidado diario.",
   "roles": {
@@ -33,5 +34,18 @@
   "errorUsed": {
     "title": "Esta invitación ya fue usada",
     "suggestion": "Si ya te uniste, inicia sesión y encontrarás el círculo de cuidado en tu lista de círculos. Si no, pídele a quien te invitó que envíe una nueva invitación."
-  }
+  },
+  "expiresLabel": "Vence",
+  "acceptArchived": "Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con el dueño del círculo.",
+  "acceptRecipientExists": "Este círculo ya tiene un receptor de cuidado, así que esta invitación no se puede usar. Pídele a quien te invitó que te envíe una invitación de cuidador.",
+  "errorArchived": {
+    "title": "Este círculo de cuidado ya no está activo",
+    "suggestion": "El círculo se eliminó después de que se envió tu invitación, así que no se puede usar. Tu código no tiene ningún error; pídele a quien te invitó que consulte con el dueño del círculo."
+  },
+  "errorRecipientExists": {
+    "title": "Este círculo ya tiene un receptor de cuidado",
+    "suggestion": "Solo una persona puede ser el receptor de cuidado en un círculo, así que esta invitación no se puede usar. Pídele a quien te invitó que te envíe una invitación de cuidador."
+  },
+  "acceptExpired": "Esta invitación expiró. Pide a quien te invitó que envíe una nueva.",
+  "acceptAlreadyUsed": "Esta invitación ya se usó."
 }

@@ -70,7 +70,9 @@
     "alreadyMember": "This person is already a member of this circle.",
     "pendingInvite": "This person already has a pending invitation.",
     "pendingInviteSeat": "You've already used your invitation — the free spot is held by a pending invite to {{email}}. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers.",
-    "pendingInviteSeatUnknown": "You've already used your invitation — the free spot is held by another pending invite. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers."
+    "pendingInviteSeatUnknown": "You've already used your invitation — the free spot is held by another pending invite. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers.",
+    "circleArchived": "This care circle is no longer active, so invitations can't be sent or accepted.",
+    "careRecipientExists": "This circle already has a care recipient."
   },
   "invite": {
     "cta": "Invite member",
@@ -86,19 +88,31 @@
     "circleLabel": "Care circle",
     "send": "Send invite",
     "sending": "Sending…",
-    "success": "Invitation sent to {{email}}.",
+    "success": "Share the link so they can join right away.",
     "capReached": "Free circles include up to two caregivers. Upgrade to Premium to add more.",
     "pendingSeat": "You've already used your invitation — the free spot is held by a pending invite to {{email}}. Cancel it under Pending invites to free the spot, or upgrade to Premium to add more caregivers.",
     "pendingSeatUnknown": "You've already used your invitation — the free spot is held by another pending invite. Cancel it under Pending invites to free the spot, or upgrade to Premium to add more caregivers.",
     "errors": {
       "emailInvalid": "Please enter a valid email address.",
       "roleRequired": "Please choose a role."
-    }
+    },
+    "shareLink": "Share invite link",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "shareMessage": "Join me on CircleCare to help coordinate care for {{recipientName}}. {{inviteUrl}}",
+  "shareMessageSelfCare": "Join me on CircleCare to help keep track of my care. {{inviteUrl}}",
+  "shareMessageRecipient": "I set up CircleCare to help keep track of your medications and appointments. Join me here: {{inviteUrl}}",
+    "shareTitle": "Join our care circle",
+    "sentTitle": "Invitation sent",
+    "emailNote": "We also emailed {{email}} instructions to join as a {{role}}.",
+    "sendAnother": "Invite someone else"
   },
   "manage": {
     "subheading": "Everyone in this care circle. Invite, remove, or manage members below.",
     "remove": "Remove",
     "removeMemberLabel": "Remove {{name}}",
+    "memberActionsLabel": "Actions for {{name}}",
+    "inviteActionsLabel": "Actions for invite to {{email}}",
     "removeConfirmTitle": "Remove member?",
     "removeConfirmBody": "{{name}} will lose access to this care circle. You can invite them again later.",
     "removeSuccess": "{{name}} was removed from this circle.",
@@ -108,7 +122,6 @@
     "medResponsibleCleared": "Medication manager cleared.",
     "pendingHeading": "Pending invites",
     "cancelInvite": "Cancel invite",
-    "cancelInviteLabel": "Cancel invite for {{email}}",
     "cancelInviteSuccess": "Invitation canceled.",
     "cancelInviteConfirmTitle": "Cancel this invite?",
     "cancelInviteConfirmBody": "{{email}} will no longer be able to join with this invitation.",
@@ -120,7 +133,6 @@
     "inviteExpiresInLabel_one": "Invitation for {{email}} expires in {{count}} day",
     "inviteExpiresInLabel_other": "Invitation for {{email}} expires in {{count}} days",
     "resendInvite": "Resend",
-    "resendInviteLabel": "Resend invite for {{email}}",
     "resendInviteSuccess": "Invitation sent again to {{email}}.",
     "resendInviteFailed": "We couldn't resend that invitation. Please try again.",
     "leave": "Leave circle",
@@ -146,6 +158,7 @@
       "count_other": "You have {{count}} pending invitations",
       "review": "Review invitation",
       "reviewPlural": "Review invitations"
-    }
+    },
+    "expiresLabel": "Expires"
   }
 }

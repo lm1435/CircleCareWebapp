@@ -35,18 +35,32 @@ test('an expired invite shows the Expired badge and can be resent', async ({ pag
   await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
 
   // --- Create a real invite ---
-  await page.getByRole('button', { name: 'Invite member' }).click();
+  await page.getByRole('button', { name: 'Invite member' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await dialog.locator('#invite-email').fill(email);
   await dialog.getByRole('button', { name: 'Send invite' }).click();
+
+  // The modal no longer auto-closes on success (InviteMemberModal.tsx): it
+  // shows the "Invitation sent" share screen (copy/share the link) instead of
+  // relying on email alone. Close it explicitly via the × once it appears.
+  await expect(dialog.getByText('Invitation sent')).toBeVisible({ timeout: 20_000 });
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
-  const cancelBtn = page.getByRole('button', { name: `Cancel invite for ${email}` });
-  await expect(cancelBtn).toBeVisible({ timeout: 20_000 });
+  // Resend/Cancel live behind one MoreMenu trigger per invite row now
+  // (MembersPage.tsx), named "Actions for invite to <email>".
+  const inviteActions = page.getByRole('button', { name: `Actions for invite to ${email}` });
+  await expect(inviteActions).toBeVisible({ timeout: 20_000 });
 
-  // While live, the row carries neither the badge nor a Resend control.
-  await expect(page.getByRole('button', { name: `Resend invite for ${email}` })).toHaveCount(0);
+  // While live, the row carries neither the badge nor a Resend menu item —
+  // Resend is added to the menu only when the invite is expired.
+  await inviteActions.click();
+  const liveMenu = page.getByRole('menu');
+  await expect(liveMenu).toBeVisible();
+  await expect(liveMenu.getByRole('menuitem', { name: 'Resend', exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(liveMenu).toBeHidden();
 
   // Flipped off in cleanup so the real (unexpired) row comes back.
   let ageingEnabled = true;
@@ -97,8 +111,11 @@ test('an expired invite shows the Expired badge and can be resent', async ({ pag
     const row = page.locator('li', { hasText: email });
     await expect(row.getByText('Expired', { exact: true })).toBeVisible({ timeout: 20_000 });
 
-    const resendBtn = page.getByRole('button', { name: `Resend invite for ${email}` });
-    await expect(resendBtn).toBeVisible();
+    await inviteActions.click();
+    const expiredMenu = page.getByRole('menu');
+    await expect(expiredMenu).toBeVisible();
+    const resendItem = expiredMenu.getByRole('menuitem', { name: 'Resend', exact: true });
+    await expect(resendItem).toBeVisible();
 
     // The page must still be clean for a screen reader with the new controls on it.
     await checkA11y(page, 'members-expired-invite', test.info());
@@ -108,7 +125,7 @@ test('an expired invite shows the Expired badge and can be resent', async ({ pag
       (res) => /\/api\/invites\/[^/]+\/resend$/.test(res.url()) && res.request().method() === 'POST',
       { timeout: 20_000 }
     );
-    await resendBtn.click();
+    await resendItem.click();
     const res = await resendResponse;
     expect(res.status()).toBe(200);
 
@@ -121,13 +138,18 @@ test('an expired invite shows the Expired badge and can be resent', async ({ pag
     ageingEnabled = false;
     await page.reload({ waitUntil: 'domcontentloaded' });
 
-    const cleanupBtn = page.getByRole('button', { name: `Cancel invite for ${email}` });
+    const cleanupBtn = page.getByRole('button', { name: `Actions for invite to ${email}` });
     await expect(cleanupBtn).toBeVisible({ timeout: 20_000 });
     await cleanupBtn.click();
+    const cleanupMenu = page.getByRole('menu');
+    await expect(cleanupMenu).toBeVisible();
+    await cleanupMenu.getByRole('menuitem', { name: 'Cancel invite', exact: true }).click();
     const confirm = page.getByRole('dialog');
     await expect(confirm).toBeVisible({ timeout: 10_000 });
-    await confirm.getByRole('button', { name: 'Cancel invite' }).click();
-    await expect(page.getByRole('button', { name: `Cancel invite for ${email}` })).toHaveCount(0, {
+    await confirm.getByRole('button', { name: 'Cancel invite', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: `Actions for invite to ${email}` })
+    ).toHaveCount(0, {
       timeout: 20_000,
     });
   }

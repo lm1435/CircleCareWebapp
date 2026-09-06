@@ -155,6 +155,41 @@ describe('DocumentUploadModal', () => {
     expect(screen.getByLabelText('Name')).toBeDisabled();
   });
 
+  // spec §6.6: the visible "Choose file" Button is a stand-in for the native
+  // (visually hidden) <input type="file"> — clicking it must forward the
+  // click to the real input, since that's the only element a browser will
+  // actually open a file picker for.
+  it('forwards a click on the visible "Choose file" button to the hidden file input', async () => {
+    const user = userEvent.setup();
+    render(
+      <DocumentUploadModal circleId={CIRCLE_ID} storage={FULL_STORAGE} canEdit onClose={vi.fn()} />
+    );
+
+    const input = screen.getByLabelText('File') as HTMLInputElement;
+    const onInputClick = vi.fn();
+    input.addEventListener('click', onInputClick);
+
+    await user.click(screen.getByRole('button', { name: 'Choose file' }));
+
+    expect(onInputClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('announces the chosen file name via a polite live region', async () => {
+    const user = userEvent.setup();
+    render(
+      <DocumentUploadModal circleId={CIRCLE_ID} storage={FULL_STORAGE} canEdit onClose={vi.fn()} />
+    );
+
+    const noFileText = screen.getByText('No file chosen');
+    expect(noFileText).toHaveAttribute('aria-live', 'polite');
+
+    const file = makeFile('Lab Results.pdf', 1024 * 1024, 'application/pdf');
+    await user.upload(screen.getByLabelText('File'), file);
+
+    const fileNameText = screen.getByText('Lab Results.pdf');
+    expect(fileNameText).toHaveAttribute('aria-live', 'polite');
+  });
+
   it('requires a file before submitting', async () => {
     const user = userEvent.setup();
     render(

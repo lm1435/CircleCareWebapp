@@ -1,4 +1,5 @@
 import { test, expect, uniqueLabel } from '../fixtures';
+import { expandAllDayOverflow } from '../helpers';
 
 // Calendar write flow: create a task event → verify it appears → edit its title
 // → delete it. Uses a run-unique title so parallel/repeat runs never collide and
@@ -30,27 +31,36 @@ test('create, edit, and delete a calendar task', async ({ page, circleId }) => {
   await dialog.getByRole('button', { name: 'Create' }).click();
 
   await expect(dialog).toBeHidden({ timeout: 20_000 });
+  // Task chips are all-day; heavy re-run traffic can push ours past the week
+  // view's per-day overflow cap (WeekView.tsx MAX_ALL_DAY_VISIBLE).
+  await expandAllDayOverflow(page);
   const chip = page.getByRole('button', { name: new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
   await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Edit ---
+  // Edit lives behind the footer's overflow menu (Edit + Delete, per the M2
+  // modal-footer convention) alongside the primary "Mark complete" button.
   await chip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Edit event' }).click();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Edit event' }).click();
   const editDialog = page.getByRole('dialog');
   await editDialog.locator('#title').fill(editedTitle);
   await editDialog.getByRole('button', { name: 'Save changes' }).click();
   await expect(editDialog).toBeHidden({ timeout: 20_000 });
 
+  await expandAllDayOverflow(page);
   const editedChip = page.getByRole('button', {
     name: new RegExp(editedTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
   });
   await expect(editedChip.first()).toBeVisible({ timeout: 20_000 });
 
   // --- Delete (cleanup) ---
+  // Delete is the sole danger item in the same overflow menu.
   await editedChip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   // Non-recurring → simple confirm dialog with a Delete button.
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();

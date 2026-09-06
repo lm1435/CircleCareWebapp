@@ -22,7 +22,10 @@ vi.mock('@/hooks/useCalendarEvents', () => ({
 
 const medicationReactivated = vi.fn();
 vi.mock('@/lib/analytics', () => ({
-  Analytics: { medicationReactivated: (...args: unknown[]) => medicationReactivated(...args) },
+  Analytics: {
+    medicationReactivated: (...args: unknown[]) => medicationReactivated(...args),
+    errorOccurred: vi.fn(),
+  },
 }));
 
 const showToast = vi.fn();
@@ -65,6 +68,16 @@ afterEach(async () => {
   if (i18n.language !== 'en') await i18n.changeLanguage('en');
 });
 
+// M2 — a medication's secondary actions (Edit, Discontinue/Reactivate,
+// Delete) always overflow into the `MoreMenu` (3 items, never 1), so every
+// test that reaches one of those clicks it as a `menuitem` after opening the
+// trigger. A task/appointment overflows into the menu too UNLESS Edit is
+// hidden (a completed task, leaving only Delete) — the single-item case that
+// renders inline instead, exercised separately below.
+async function openMore(user: ReturnType<typeof userEvent.setup>, name = 'More'): Promise<void> {
+  await user.click(screen.getByRole('button', { name }));
+}
+
 describe('EventDetailActions', () => {
   it('an inactive medication prompts to reactivate instead of opening the editor', async () => {
     const user = userEvent.setup();
@@ -83,7 +96,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     expect(onEdit).not.toHaveBeenCalled();
     expect(
       screen.getByText('This medication is inactive. Reactivate it to make changes.')
@@ -107,9 +121,11 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     // The confirm dialog's own "Reactivate" button, disambiguated from the
-    // toggle button below (which ALSO reads "Reactivate" while inactive).
+    // toggle item in the overflow menu (which ALSO reads "Reactivate" while
+    // inactive).
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() =>
@@ -125,7 +141,8 @@ describe('EventDetailActions', () => {
     expect(
       screen.queryByText('This medication is inactive. Reactivate it to make changes.')
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
@@ -145,14 +162,16 @@ describe('EventDetailActions', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
+    await openMore(user);
+    expect(screen.getByRole('menuitem', { name: 'Reactivate' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() => expect(statusMutateAsync).toHaveBeenCalledTimes(1));
-    expect(await screen.findByRole('button', { name: 'Discontinue' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Reactivate' })).not.toBeInTheDocument();
+    await openMore(user);
+    expect(await screen.findByRole('menuitem', { name: 'Discontinue' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Reactivate' })).not.toBeInTheDocument();
   });
 
   it('WA6: calls the optional onReactivated callback so a parent can refresh its own stale snapshot', async () => {
@@ -173,7 +192,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() => expect(onReactivated).toHaveBeenCalledTimes(1));
@@ -215,7 +235,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() => expect(statusMutateAsync).toHaveBeenCalledTimes(1));
@@ -253,7 +274,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() => expect(statusMutateAsync).toHaveBeenCalledTimes(1));
@@ -290,7 +312,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() => expect(statusMutateAsync).toHaveBeenCalledTimes(1));
@@ -321,7 +344,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Editar evento' }));
+    await openMore(user, 'Más');
+    await user.click(screen.getByRole('menuitem', { name: 'Editar evento' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivar' }));
 
     await waitFor(() =>
@@ -346,7 +370,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reactivate' }));
 
     await waitFor(() => expect(statusMutateAsync).toHaveBeenCalledTimes(1));
@@ -379,12 +404,16 @@ describe('EventDetailActions', () => {
       />
     );
 
+    // Edit is the only OTHER secondary action a task has, and it's hidden —
+    // so Delete is the sole overflow item and renders inline, with no
+    // one-item menu to hide it behind.
+    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit event' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
-  it('an open task keeps Edit and Mark complete', async () => {
+  it('an open task keeps Edit (in the overflow menu) and Mark complete', async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
     const openTask = makeMed({
@@ -409,11 +438,14 @@ describe('EventDetailActions', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Mark complete' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    // Two overflow items (Edit, Delete) → a real menu, not the inline solo case.
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
-  it('a completed appointment still offers Edit — the lock is scoped to tasks', () => {
+  it('a completed appointment still offers Edit (in the overflow menu) — the lock is scoped to tasks', async () => {
+    const user = userEvent.setup();
     const completedAppt = makeMed({
       id: 'a-1',
       event_type: 'appointment',
@@ -435,7 +467,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Edit event' })).toBeInTheDocument();
+    await openMore(user);
+    expect(screen.getByRole('menuitem', { name: 'Edit event' })).toBeInTheDocument();
   });
 
   it('an active medication opens the editor directly (no guard)', async () => {
@@ -455,7 +488,8 @@ describe('EventDetailActions', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edit event' }));
+    await openMore(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
   // ==========================================================================
@@ -529,11 +563,13 @@ describe('EventDetailActions', () => {
       );
 
       // Only ACTIONABILITY of the dose changed — the medication is still
-      // inactive, and every other action behaves exactly as before.
+      // inactive, and every other action behaves exactly as before (now
+      // behind the overflow menu, alongside Mark taken/Skip dose inline).
       expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Edit event' }));
+      await openMore(user);
+      expect(screen.getByRole('menuitem', { name: 'Reactivate' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+      await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
       expect(onEdit).not.toHaveBeenCalled();
       expect(
         screen.getByText('This medication is inactive. Reactivate it to make changes.')
@@ -778,6 +814,144 @@ describe('EventDetailActions', () => {
 
       expect(screen.getByRole('button', { name: 'Marcar como tomada' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Omitir dosis' })).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // FOOTER CONVENTION (M2) — one filled button, last in DOM order; Delete
+  // never renders filled at rest, whether it's inline (the solo-overflow
+  // case) or inside the MoreMenu.
+  // ==========================================================================
+  describe('footer convention', () => {
+    // Exact token match, not a substring regex: `bg-moss` and `bg-terracotta-soft`
+    // are the two "filled" background utilities, but a ghost (destructive or
+    // not) button's `hover:bg-moss-soft` class ALSO satisfies a naive
+    // `/\bbg-moss\b/` (the word boundary sits right before the trailing
+    // `-soft`), which would misclassify every ghost button as filled.
+    const FILLED_CLASSES = new Set(['bg-moss', 'bg-terracotta-soft']);
+    function isFilled(button: HTMLElement): boolean {
+      return button.className.split(/\s+/).some((cls) => FILLED_CLASSES.has(cls));
+    }
+    function filledButtons(): HTMLElement[] {
+      return screen.getAllByRole('button').filter(isFilled);
+    }
+
+    // RULING: the filled button is last among inline ACTION buttons (Skip
+    // dose, Mark taken/complete) — the More trigger is not an action, it sits
+    // at the right edge AFTER it, so `[Skip] [Mark taken ●] [More ▾]` is
+    // correct as-is.
+    //
+    // The filled button must therefore be the LAST inline button: either the
+    // very last button in the footer (no overflow menu), or the button
+    // immediately before the More trigger (which must then itself be last of
+    // all). Checking only "nothing after it reads More" would pass even if
+    // the trigger were moved BEFORE the filled button, since there'd be
+    // nothing left to fail on — this checks adjacency instead.
+    function expectFilledIsLastAction(filled: HTMLElement): void {
+      const buttons = screen.getAllByRole('button');
+      const moreIndex = buttons.findIndex((b) => b.getAttribute('aria-haspopup') === 'menu');
+      if (moreIndex === -1) {
+        expect(buttons[buttons.length - 1]).toBe(filled);
+      } else {
+        expect(moreIndex).toBe(buttons.length - 1);
+        expect(buttons[moreIndex - 1]).toBe(filled);
+      }
+    }
+
+    it('a medication dose in its confirm window renders exactly one filled button (Mark taken), last before the More trigger', () => {
+      const activeDose = makeMed({ scheduled_date: '2020-01-02', scheduled_time: '08:00:00' });
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={activeDose}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      const filled = filledButtons();
+      expect(filled).toHaveLength(1);
+      expect(filled[0]).toHaveTextContent('Mark taken');
+      expectFilledIsLastAction(filled[0]);
+    });
+
+    it('an open task renders exactly one filled button (Mark complete), last before the More trigger', () => {
+      const openTask = makeMed({
+        id: 't-open',
+        event_type: 'task',
+        title: 'Pick up prescription',
+        medication_name: null,
+        medication_dosage: null,
+        completed_at: null,
+      });
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={openTask}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      const filled = filledButtons();
+      expect(filled).toHaveLength(1);
+      expect(filled[0]).toHaveTextContent('Mark complete');
+      expectFilledIsLastAction(filled[0]);
+    });
+
+    it('a completed task has NO filled button, and its solo Delete renders as a destructive ghost, never filled', () => {
+      const completedTask = makeMed({
+        id: 't-done',
+        event_type: 'task',
+        title: 'Pick up prescription',
+        medication_name: null,
+        medication_dosage: null,
+        completed_at: '2026-07-29T15:00:00Z',
+      });
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={completedTask}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      expect(filledButtons()).toHaveLength(0);
+      const deleteButton = screen.getByRole('button', { name: 'Delete' });
+      expect(deleteButton.className).toContain('text-terracotta-deep');
+      expect(isFilled(deleteButton)).toBe(false);
+    });
+
+    it('for a medication, Delete lives inside the overflow menu and never renders filled', async () => {
+      const user = userEvent.setup();
+      const active = makeMed();
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={active}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      // Never rendered as a direct footer button — only inside the menu.
+      expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+      await openMore(user);
+      const deleteItem = screen.getByRole('menuitem', { name: 'Delete' });
+      expect(deleteItem.className).toContain('text-terracotta-deep');
     });
   });
 });

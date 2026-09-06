@@ -1,4 +1,6 @@
 import { useId, type ReactNode } from 'react';
+import { Text } from './Text';
+import { INPUT_SHELL_DISABLED } from './inputStyles';
 
 export interface ToggleProps {
   /** Controlled on/off state. */
@@ -17,6 +19,10 @@ export interface ToggleProps {
  * Accessible switch — `role="switch"` + `aria-checked`, toggled by click or
  * Space/Enter, ≥44px touch target, labelled by a clickable label, disabled
  * state. No copy is hardcoded.
+ *
+ * The track carries no focus classes of its own: the global `*:focus-visible`
+ * ring lands on the button (spec §4.1), and a second, hand-rolled ring on the
+ * inner span was drawing a different focus language from the rest of the app.
  */
 export function Toggle({
   checked,
@@ -37,14 +43,16 @@ export function Toggle({
         <label
           id={labelId}
           htmlFor={switchId}
-          className={`block text-sm font-medium text-ink-2 ${disabled ? 'opacity-60' : ''}`}
+          className={disabled ? `block ${INPUT_SHELL_DISABLED}` : 'block'}
         >
-          {label}
+          <Text variant="label" as="span">
+            {label}
+          </Text>
         </label>
         {hint ? (
-          <p id={hintId} className="m-0 mt-0.5 text-sm text-ink-3">
+          <Text variant="caption" id={hintId} className="mt-0.5">
             {hint}
-          </p>
+          </Text>
         ) : null}
       </div>
       <button
@@ -56,18 +64,20 @@ export function Toggle({
         aria-describedby={hint ? hintId : undefined}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className="group inline-flex shrink-0 items-center rounded-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
+        className={`group inline-flex shrink-0 items-center rounded-full py-2.5 disabled:cursor-not-allowed ${
+          disabled ? INPUT_SHELL_DISABLED : ''
+        }`}
       >
         {/* Transparent py-2.5 keeps a ≥44px touch target; the VISIBLE track is a
             slim h-6 switch (not a fat lozenge). */}
         <span
           aria-hidden="true"
-          className={`relative block h-6 w-11 rounded-full transition-colors group-focus-visible:ring-2 group-focus-visible:ring-terracotta-deep group-focus-visible:ring-offset-2 ${
-            checked ? 'bg-terracotta-deep' : 'bg-ink/20'
+          className={`relative block h-6 w-11 rounded-full transition-colors duration-fast ${
+            checked ? 'bg-moss' : 'bg-line'
           }`}
         >
           <span
-            className={`absolute left-0.5 top-0.5 block h-5 w-5 rounded-full bg-cream shadow-sm transition-transform ${
+            className={`absolute left-0.5 top-0.5 block h-5 w-5 rounded-full bg-cream shadow-btn transition-transform duration-fast ease-spring ${
               checked ? 'translate-x-5' : 'translate-x-0'
             }`}
           />

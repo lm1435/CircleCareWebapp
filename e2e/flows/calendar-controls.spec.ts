@@ -26,8 +26,10 @@ test('week navigation: prev / next / today', async ({ page, circleId }) => {
   await waitForCalendarBody(page);
   await expectNoErrorFallback(page);
 
-  // The range heading is the page's <h1> (e.g. "Jun 7 – Jun 13, 2026").
-  const heading = page.getByRole('heading', { level: 1 });
+  // The page's <h1> is the static masthead title ("Calendar") — it never
+  // changes with navigation. The range label ("Jun 7 – Jun 13, 2026") is the
+  // date-nav row's <h2> instead (CalendarPage.tsx's DateNavHeader-parity row).
+  const heading = page.getByRole('heading', { level: 2 });
   await expect(heading).toBeVisible({ timeout: 15_000 });
   const original = (await heading.textContent())?.trim() ?? '';
   expect(original.length).toBeGreaterThan(0);
@@ -62,17 +64,21 @@ test('week ↔ month toggle', async ({ page, circleId }) => {
   await waitForCalendarBody(page);
   await expectNoErrorFallback(page);
 
-  const viewGroup = page.getByRole('group', { name: 'Calendar view' });
-  const weekBtn = viewGroup.getByRole('button', { name: 'Week' });
-  const monthBtn = viewGroup.getByRole('button', { name: 'Month' });
+  // The Week/Month toggle is a SegmentedControl now (WAI-ARIA tabs pattern,
+  // components/ui/SegmentedControl.tsx spec §4.5): role="tablist" of
+  // role="tab" segments with aria-selected, not a role="group" of
+  // aria-pressed buttons.
+  const viewTabs = page.getByRole('tablist', { name: 'Calendar view' });
+  const weekTab = viewTabs.getByRole('tab', { name: 'Week' });
+  const monthTab = viewTabs.getByRole('tab', { name: 'Month' });
 
   // Default view is Week.
-  await expect(weekBtn).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
+  await expect(weekTab).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
 
   // --- Switch to Month ---
-  await monthBtn.click();
-  await expect(monthBtn).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
-  await expect(weekBtn).toHaveAttribute('aria-pressed', 'false');
+  await monthTab.click();
+  await expect(monthTab).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
+  await expect(weekTab).toHaveAttribute('aria-selected', 'false');
   await waitForCalendarBody(page);
   await expectNoErrorFallback(page);
   // Month view either shows the month grid or the month empty-state copy.
@@ -81,9 +87,9 @@ test('week ↔ month toggle', async ({ page, circleId }) => {
   await expect(monthGrid.or(monthEmpty).first()).toBeVisible({ timeout: 20_000 });
 
   // --- Switch back to Week ---
-  await weekBtn.click();
-  await expect(weekBtn).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
-  await expect(monthBtn).toHaveAttribute('aria-pressed', 'false');
+  await weekTab.click();
+  await expect(weekTab).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
+  await expect(monthTab).toHaveAttribute('aria-selected', 'false');
   await waitForCalendarBody(page);
   await expectNoErrorFallback(page);
   const weekGrid = page.getByRole('grid', { name: 'Week view calendar' });

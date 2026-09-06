@@ -4,22 +4,36 @@ import { useTranslation } from 'react-i18next';
 import { useCircle } from '@/hooks/useCircle';
 import { useRemoveMember, useLeaveCircle, useSetMedicationResponsible } from '@/hooks/useCircleMembers';
 import { useCancelInvite, useResendInvite } from '@/hooks/useInvites';
-import { Badge, Button, Card, ConfirmDialog, Skeleton, useToast } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  IconTile,
+  MoreMenu,
+  SectionHeader,
+  Sheet,
+  SheetRow,
+  Skeleton,
+  useToast,
+  type MoreMenuEntry,
+} from '@/components/ui';
+import { PageMasthead } from '@/components/layout/PageMasthead';
 import { MemberRow } from '@/components/members/MemberRow';
 import { InviteMemberModal } from '@/components/members/InviteMemberModal';
-import { ClockIcon } from '@/components/circles/icons';
 import { useAuthStore } from '@/store/authStore';
 import { getInviteExpiryState, isPendingInviteExpired } from '@/api/circleMembers';
 import type { CircleMember, PendingCircleInvite } from '@/api/circleMembers';
 
 function MemberRowSkeleton(): ReactElement {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-cream px-6 py-4">
-      <div>
-        <Skeleton className="h-5 w-36" />
-        <Skeleton className="mt-2 h-4 w-28" />
+    <li className="flex items-center gap-3 border-t border-line-2 px-[18px] py-3.5 first:border-t-0">
+      <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+      <div className="flex-1">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="mt-2 h-3 w-24" />
       </div>
-      <Skeleton className="h-6 w-24 rounded-full" />
     </li>
   );
 }
@@ -30,7 +44,7 @@ function memberName(member: CircleMember): string {
 }
 
 /**
- * Members page (plan Tasks 35-36 + Stage 5 Task 5.4).
+ * Members page (plan Tasks 35-36 + Stage 5 Task 5.4; mobile-parity Task 22).
  *
  * Read-only roster for everyone, plus owner-only management: invite a member,
  * remove a member, set/clear the medication-responsible caregiver, and cancel
@@ -155,79 +169,85 @@ export default function MembersPage(): ReactElement {
   let content: ReactElement;
   if (isLoading) {
     content = (
-      <ul
+      <Sheet
+        as="ul"
+        padding="none"
+        className="mx-5 overflow-hidden"
         aria-busy="true"
         aria-label={t('common:loading')}
-        className="m-0 mt-6 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2"
       >
         <MemberRowSkeleton />
         <MemberRowSkeleton />
         <MemberRowSkeleton />
-      </ul>
+      </Sheet>
     );
   } else if (isError) {
     content = (
-      <Card role="alert" className="mt-6 max-w-lg p-8 text-center">
-        <h2 className="serif m-0 text-lg text-ink">{t('list.errorTitle')}</h2>
-        <p className="mt-2 text-ink-2">{t('list.errorBody')}</p>
-        <Button className="mt-6" onClick={() => void refetch()}>
+      <Card role="alert" className="mx-5 text-center">
+        <p className="m-0 font-medium text-ink">{t('list.errorTitle')}</p>
+        <p className="m-0 mt-1 text-sm text-ink-2">{t('list.errorBody')}</p>
+        <Button variant="ghost" className="mt-4" onClick={() => void refetch()}>
           {t('common:retry')}
         </Button>
       </Card>
     );
   } else if (members.length === 0) {
     content = (
-      <Card className="mt-6 max-w-lg p-8 text-center">
-        <p className="m-0 text-ink-2">{t('list.empty')}</p>
-      </Card>
+      <EmptyState tone="moss" icon="people-outline" title={t('list.empty')} className="mx-5" />
     );
   } else {
     content = (
-      <ul className="m-0 mt-6 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
+      <Sheet as="ul" padding="none" className="mx-5 overflow-hidden">
         {members.map((member) => {
           const isSelf = member.id === currentUserId;
-          // Owners can manage caregivers, but never the care recipient or themselves.
-          const canManage = isOwner && !member.is_care_recipient && !isSelf;
-          const actions =
-            canManage && member.role !== 'owner' ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleToggleMedResponsible(member)}
-                  disabled={setMedResponsible.isPending}
-                >
-                  {member.is_medication_responsible
+          // Owners can manage caregivers, but never the care recipient, the
+          // owner row, or themselves.
+          const canManage =
+            isOwner && !member.is_care_recipient && !isSelf && member.role !== 'owner';
+          const actions = canManage ? (
+            <MoreMenu
+              label={t('manage.memberActionsLabel', { name: memberName(member) })}
+              items={[
+                {
+                  id: 'toggle-med',
+                  label: member.is_medication_responsible
                     ? t('manage.clearMedResponsible')
-                    : t('manage.setMedResponsible')}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMemberToRemove(member)}
-                  aria-label={t('manage.removeMemberLabel', { name: memberName(member) })}
-                >
-                  {t('manage.remove')}
-                </Button>
-              </>
-            ) : undefined;
+                    : t('manage.setMedResponsible'),
+                  icon: 'notifications-outline',
+                  onSelect: () => handleToggleMedResponsible(member),
+                  disabled: setMedResponsible.isPending,
+                },
+                { divider: true, id: 'divider' },
+                {
+                  id: 'remove',
+                  label: t('manage.remove'),
+                  icon: 'trash-outline',
+                  danger: true,
+                  onSelect: () => setMemberToRemove(member),
+                },
+              ]}
+            />
+          ) : undefined;
           return <MemberRow key={member.id} member={member} actions={actions} />;
         })}
-      </ul>
+      </Sheet>
     );
   }
 
   return (
-    <section className="mx-auto w-full max-w-5xl p-6 md:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="serif m-0 text-xl text-ink">{t('list.heading')}</h1>
-          <p className="mt-2 text-ink-3">
-            {isOwner ? t('manage.subheading') : t('list.subheadingReadOnly')}
-          </p>
-        </div>
-        {isOwner ? <Button onClick={() => setShowInvite(true)}>{t('invite.cta')}</Button> : null}
-      </div>
+    <section className="mx-auto w-full max-w-5xl pb-8">
+      <PageMasthead
+        section={t('common:nav.members')}
+        tone="moss"
+        title={t('list.heading')}
+        subtitle={isOwner ? t('manage.subheading') : t('list.subheadingReadOnly')}
+        backTo={`/circles/${circleId}`}
+        rightAction={
+          isOwner
+            ? { name: 'share-outline', label: t('invite.cta'), onClick: () => setShowInvite(true) }
+            : undefined
+        }
+      />
 
       {content}
 
@@ -236,9 +256,9 @@ export default function MembersPage(): ReactElement {
           invite — an expired one has stopped being an invitation, so it no
           longer counts. Non-destructive, reuses the Invite trigger. */}
       {isOwner && members.length === 1 && liveInvites.length === 0 ? (
-        <Card className="mt-6 p-8 text-center">
-          <h2 className="serif m-0 text-lg text-ink">{t('list.soloTitle')}</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink-3">{t('list.soloBody')}</p>
+        <Card padding="lg" className="mx-5 mt-6 text-center">
+          <h2 className="m-0 text-lg font-semibold text-ink">{t('list.soloTitle')}</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{t('list.soloBody')}</p>
           <Button className="mt-6" onClick={() => setShowInvite(true)}>
             {t('list.soloCta')}
           </Button>
@@ -251,8 +271,8 @@ export default function MembersPage(): ReactElement {
           and resend is the only way out other than cancel-and-retype. */}
       {isOwner && pendingInvites.length > 0 ? (
         <div className="mt-10">
-          <h2 className="m-0 text-lg font-semibold text-ink">{t('manage.pendingHeading')}</h2>
-          <ul className="m-0 mt-4 flex list-none flex-col gap-3 p-0">
+          <SectionHeader title={t('manage.pendingHeading')} className="mx-5" />
+          <Sheet as="ul" padding="none" className="mx-5 overflow-hidden">
             {pendingInvites.map((invite) => {
               const expiry = getInviteExpiryState(invite);
               const isExpired = expiry.state === 'expired';
@@ -260,7 +280,7 @@ export default function MembersPage(): ReactElement {
               // extends a live invite by 7 days and re-sends the email, and it
               // consumes no extra seat (that invite already holds one), so the
               // owner can rescue an invitation BEFORE it dies rather than only
-              // after. Cancel stays available in every state.
+              // after.
               // Resend is EXPIRED-ONLY. The backend also permits resending a
               // live invite, but offering it here misreads the situation:
               // "Resend" implies the first one failed to arrive, and on a live
@@ -268,17 +288,34 @@ export default function MembersPage(): ReactElement {
               // would just re-email them to reset a clock they cannot see. The
               // countdown informs; the button appears when it is actually needed.
               const canResend = isExpired;
+              const menuItems: MoreMenuEntry[] = [];
+              if (canResend) {
+                menuItems.push({
+                  id: 'resend',
+                  label: t('manage.resendInvite'),
+                  icon: 'mail-outline',
+                  onSelect: () => handleResendInvite(invite),
+                  disabled: invitePendingResend === invite.id,
+                });
+              }
+              menuItems.push({
+                id: 'cancel',
+                label: t('manage.cancelInvite'),
+                icon: 'trash-outline',
+                danger: true,
+                onSelect: () => setInviteToCancel(invite),
+              });
+
               return (
-                <li
-                  key={invite.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-cream px-6 py-4"
-                >
-                  <div className="flex min-w-0 flex-col gap-1">
+                <SheetRow as="li" key={invite.id} className="gap-3 px-[18px] py-3.5">
+                  <IconTile size={36} tone="coral" name="mail-outline" />
+                  <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <p className="m-0 min-w-0 truncate text-ink">{invite.invited_email}</p>
+                      <p className="m-0 min-w-0 truncate text-md text-ink">
+                        {invite.invited_email}
+                      </p>
                       {isExpired ? (
-                        <Badge variant="clay">
-                          <ClockIcon size={12} />
+                        <Badge variant="warning" size="sm">
                           {t('manage.inviteExpired')}
                         </Badge>
                       ) : null}
@@ -291,7 +328,7 @@ export default function MembersPage(): ReactElement {
                         we never invent a countdown.
                         The visible text repeats verbatim across rows, so the
                         announced copy carries the email — same per-row
-                        disambiguation as the buttons' aria-labels. An
+                        disambiguation as the menu trigger's aria-label. An
                         aria-label on a <p> would be a prohibited-attr
                         violation, hence the sr-only/aria-hidden pair. */}
                     {!isExpired && expiry.daysLeft != null ? (
@@ -312,39 +349,20 @@ export default function MembersPage(): ReactElement {
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {canResend ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleResendInvite(invite)}
-                        disabled={invitePendingResend === invite.id}
-                        aria-label={t('manage.resendInviteLabel', {
-                          email: invite.invited_email,
-                        })}
-                      >
-                        {t('manage.resendInvite')}
-                      </Button>
-                    ) : null}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setInviteToCancel(invite)}
-                      aria-label={t('manage.cancelInviteLabel', { email: invite.invited_email })}
-                    >
-                      {t('manage.cancelInvite')}
-                    </Button>
-                  </div>
-                </li>
+                  <MoreMenu
+                    label={t('manage.inviteActionsLabel', { email: invite.invited_email })}
+                    items={menuItems}
+                  />
+                </SheetRow>
               );
             })}
-          </ul>
+          </Sheet>
         </div>
       ) : null}
 
       {/* Non-owner: leave circle. */}
       {circle != null && !isOwner ? (
-        <div className="mt-10 border-t border-line-2 pt-6">
+        <div className="mx-5 mt-10 border-t border-line-2 pt-6">
           <Button variant="ghost" onClick={() => setShowLeave(true)}>
             {t('manage.leave')}
           </Button>
@@ -355,12 +373,15 @@ export default function MembersPage(): ReactElement {
         <InviteMemberModal
           circleId={circleId}
           isSelfCare={circle.is_self_care}
+          circleName={circle.name}
+          recipientName={circle.recipient_name}
           onClose={() => setShowInvite(false)}
         />
       ) : null}
 
       {memberToRemove ? (
         <ConfirmDialog
+          icon="person-outline"
           title={t('manage.removeConfirmTitle')}
           message={t('manage.removeConfirmBody', { name: memberName(memberToRemove) })}
           confirmLabel={t('manage.remove')}
@@ -374,6 +395,7 @@ export default function MembersPage(): ReactElement {
 
       {inviteToCancel ? (
         <ConfirmDialog
+          icon="mail-outline"
           title={t('manage.cancelInviteConfirmTitle')}
           message={t('manage.cancelInviteConfirmBody', { email: inviteToCancel.invited_email })}
           confirmLabel={t('manage.cancelInviteConfirm')}
@@ -387,6 +409,7 @@ export default function MembersPage(): ReactElement {
 
       {showLeave ? (
         <ConfirmDialog
+          icon="log-out-outline"
           title={t('manage.leaveConfirmTitle')}
           message={t('manage.leaveConfirmBody')}
           confirmLabel={t('manage.leave')}

@@ -39,11 +39,17 @@ vi.mock('@/hooks/useUnitPreferences', () => ({
 }));
 
 const useCircleResult = {
+  circle: undefined as { recipient_name?: string } | undefined,
   timezone: RECIPIENT_TZ,
   canEdit: true,
 };
 vi.mock('@/hooks/useCircle', () => ({
   useCircle: () => useCircleResult,
+}));
+
+// The dual-timezone hint renders a real clock now.
+vi.mock('@/hooks/useHourCycle', () => ({
+  useHourCycle: () => '12h',
 }));
 
 const showToast = vi.fn();
@@ -56,6 +62,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(NOW);
+  useCircleResult.timezone = RECIPIENT_TZ;
   useCircleResult.canEdit = true;
   unitPrefs.weight_unit = 'lbs';
   unitPrefs.glucose_unit = 'mg/dL';
@@ -67,10 +74,10 @@ afterEach(() => {
 });
 
 async function setRecordedTo(user: ReturnType<typeof userEvent.setup>, date: string, time: string) {
-  const dateInput = screen.getByLabelText('Date') as HTMLInputElement;
+  const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
   await user.clear(dateInput);
   await user.type(dateInput, date);
-  const timeInput = screen.getByLabelText('Time') as HTMLInputElement;
+  const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
   await user.clear(timeInput);
   await user.type(timeInput, time);
 }
@@ -108,8 +115,78 @@ describe('AddVitalModal', () => {
     expect(payload.value1).toBe(120);
     expect(payload.value2).toBe(80);
     expect(payload.unit).toBe('mmHg');
-    // 09:00 in New York (EDT -4h) === 13:00 UTC.
-    expect(payload.recorded_at).toBe('2026-06-15T13:00:00.000Z');
+    // 09:00 on the CAREGIVER's clock (Denver, MDT -6h) === 15:00 UTC.
+    expect(payload.recorded_at).toBe('2026-06-15T15:00:00.000Z');
+  });
+
+  // ── THE LOAD RACE ─────────────────────────────────────────────────────────
+  //
+  // `useCircle` reports its 'America/New_York' fallback until the circle detail
+  // query lands. The prefilled wall clock is a useMemo keyed on that zone, but
+  // the useState calls that seed the date/time fields read it ONCE — and hooks
+  // run even on the renders where the modal returns null for !canEdit.
+  //
+  // This half is the dangerous one: the SAVE converts those digits back with
+  // the RESOLVED zone. Prefill in one frame + save in another files a real
+  // reading at a time it was never taken, silently, with nothing on screen to
+  // suggest it.
+  describe('the circle query resolving AFTER mount', () => {
+    it('prefills the VIEWER clock, unaffected by which recipient zone resolves', async () => {
+      // The stronger property that replaced the old resync test.
+      //
+      // The prefill used to be computed in the RECIPIENT's zone, so a modal
+      // mounted while the circle query was in flight prefilled through the
+      // 'America/New_York' fallback and then saved with the resolved zone — a
+      // mixed-frame round trip that filed a real reading at a time it was never
+      // taken. Now the prefill is the viewer's own clock and does not consult
+      // the recipient zone at all, so that failure mode cannot occur.
+      //
+      // NOW is 2026-06-15T16:00Z = 10:00 in Denver, the pinned device zone.
+      // Mounted mid-flight: the fallback zone is in play and the modal renders
+      // null because canEdit defaults false. The hooks still run, which is what
+      // used to bake the wrong frame in.
+      useCircleResult.timezone = 'America/New_York';
+      useCircleResult.canEdit = false;
+      const { rerender } = render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      // A wildly different recipient zone resolves.
+      useCircleResult.timezone = 'Pacific/Kiritimati';
+      useCircleResult.canEdit = true;
+      rerender(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      // Still the viewer's own clock, in both cases — neither the fallback nor
+      // the resolved recipient zone can move it.
+      await waitFor(() => {
+        expect((screen.getByLabelText(/^Time/) as HTMLInputElement).value).toBe('10:00');
+      });
+
+      useCircleResult.timezone = 'Asia/Tokyo';
+      rerender(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+      expect((screen.getByLabelText(/^Time/) as HTMLInputElement).value).toBe('10:00');
+    });
+
+    it('saves the SAME instant it prefilled (no mixed-frame round trip)', async () => {
+      const user = userEvent.setup();
+      useCircleResult.timezone = 'America/New_York';
+      useCircleResult.canEdit = false;
+      const { rerender } = render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      useCircleResult.timezone = 'America/Los_Angeles';
+      useCircleResult.canEdit = true;
+      rerender(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      await user.type(await screen.findByLabelText('Systolic'), '120');
+      await user.type(screen.getByLabelText('Diastolic'), '80');
+      await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+      // The reading was taken NOW, so it must be filed at NOW — not at NOW
+      // shifted by the gap between the fallback zone and the real one. Without
+      // the resync the fields still hold New York's 12:00, which the save
+      // reinterprets as 12:00 LOS ANGELES = 19:00Z: three hours in the future,
+      // for a reading being taken as the user watches.
+      expect(mutateCreate.mock.calls[0][0].recorded_at).toBe(NOW.toISOString());
+    });
   });
 
   it('converts weight from lbs to canonical kg in the payload', async () => {

@@ -88,6 +88,30 @@ export function expectNoRuntimeErrors(result: CrawlResult): void {
  * at moderate+ impact. Attaches the full violation list to the test report.
  */
 export async function checkA11y(page: Page, route: string, testInfo: TestInfo): Promise<void> {
+  // Let entrance animations (e.g. `rise-in`) finish before scanning: mid-animation
+  // opacity/transform blends a token's true color against the page behind it,
+  // and axe reads that transient blended color as a color-contrast violation
+  // that never exists once the element settles. Routes visited with
+  // `waitUntil: 'domcontentloaded'` can still be mid-animation when `analyze()`
+  // would otherwise run immediately. Infinite-iteration animations (the
+  // `.cc-shimmer` skeleton pulse, Spinner's `animate-spin`) never fire
+  // `finished` at all, so they're excluded up front, and the rest still race
+  // a 3s cap — a page with something ELSE perpetually animating must not hang
+  // the whole test to the 30s timeout.
+  await page
+    .evaluate(() => {
+      const finite = document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity);
+      const settled = Promise.all(finite.map((a) => a.finished.catch(() => {})));
+      const capped = new Promise((resolve) => setTimeout(resolve, 3_000));
+      return Promise.race([settled, capped]);
+    })
+    .catch(() => {});
+  // networkidle can hang on apps with polling, so cap it and fall through
+  // (same as visitAndCheck above).
+  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
+
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
     .analyze();
@@ -105,4 +129,27 @@ export async function checkA11y(page: Page, route: string, testInfo: TestInfo): 
     .join('\n');
 
   expect(failing, `a11y violations on ${route}:\n${summary}`).toEqual([]);
+}
+
+/**
+ * Expand every "+N more all-day events" toggle currently collapsed in the
+ * calendar's week view (WeekView.tsx caps each day's all-day row at
+ * `MAX_ALL_DAY_VISIBLE` and hides the rest behind a per-day overflow button,
+ * `aria-label` "N more all-day events on <day>"). Months of repeated e2e runs
+ * pile many synthetic all-day Task/Appointment events onto "today", so a
+ * freshly-created chip can land past that cap — call this before searching
+ * for a specific chip by title so it's actually in the accessibility tree.
+ *
+ * Re-queries `.first()` after every click rather than snapshotting a count
+ * up front: each click flips that day's button to a "show fewer" toggle
+ * (different accessible name), so the matching set shrinks as we go and a
+ * cached index would skip entries. A no-op when nothing is collapsed.
+ */
+export async function expandAllDayOverflow(page: Page): Promise<void> {
+  const moreButton = page.getByRole('button', { name: /more all-day events/i });
+  // Bounded so a naming regression here fails fast instead of hanging the test.
+  for (let guard = 0; guard < 10; guard++) {
+    if ((await moreButton.count()) === 0) return;
+    await moreButton.first().click();
+  }
 }

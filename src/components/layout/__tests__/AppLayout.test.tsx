@@ -1,9 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { resetAppDownloadBannerDismissal } from '@/components/layout/AppDownloadBanner';
 import { useAuthStore } from '@/store/authStore';
 
 vi.mock('@/hooks/useCircles', () => ({
@@ -20,7 +19,7 @@ vi.mock('@/components/meds/TodaysMeds', () => ({
 }));
 
 // useCircle is React Query-backed; this layout test has no QueryClientProvider,
-// so stub it with the gating fields the global Create menu reads.
+// so stub it with the gating field the create surfaces read.
 vi.mock('@/hooks/useCircle', () => ({
   useCircle: vi.fn(() => ({
     circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
@@ -28,16 +27,21 @@ vi.mock('@/hooks/useCircle', () => ({
   })),
 }));
 
-// Query-backed banner mounted in <main> (plan Task 39b) — mocked like
-// TodaysMeds above; its behavior is covered by NeedsCircleSelectionBanner.test.tsx.
 vi.mock('@/components/NeedsCircleSelectionBanner', () => ({
   NeedsCircleSelectionBanner: () => null,
 }));
 
-// AppLayout mounts the AI assistant modal (uses React Query); stub it so the
-// layout test stays focused on chrome/drawer behavior.
+// The assistant modal is React Query-backed; this stub only reports whether the
+// layout opened it, which is all the shell owns.
 vi.mock('@/components/ai/AIChatModal', () => ({
-  AIChatModal: () => null,
+  AIChatModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="ai-chat-modal" /> : null,
+}));
+
+vi.mock('@/components/calendar/AddEventModal', () => ({
+  AddEventModal: ({ initialType }: { initialType: string }) => (
+    <div data-testid="add-event-modal" data-initial-type={initialType} />
+  ),
 }));
 
 // R4-5 onboarding funnel — the layout reports the resolved circle count (the
@@ -50,22 +54,30 @@ vi.mock('@/lib/onboardingAnalytics', () => ({
 
 const initialAuthState = useAuthStore.getState();
 
-function renderLayout(): void {
-  render(
-    <MemoryRouter initialEntries={['/circles/c1/calendar']}>
+function renderLayout(path = '/circles/c1/calendar'): ReturnType<typeof render> {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/circles/:circleId" element={<AppLayout />}>
+          <Route index element={<div>Overview page stub</div>} />
           <Route path="calendar" element={<div>Calendar page stub</div>} />
-          <Route path="activity" element={<div>Activity page stub</div>} />
+          <Route path="meds" element={<div>Meds page stub</div>} />
+          <Route path="emergency" element={<div>Emergency page stub</div>} />
+          <Route path="tasks" element={<div>Tasks page stub</div>} />
+          <Route path="notes" element={<div data-testid="notes-page-stub">Notes page stub</div>} />
         </Route>
       </Routes>
     </MemoryRouter>
   );
 }
 
+/** The bottom pill. Labelled `nav.label` like the sidebar's nav, hence the id. */
+function pill(): HTMLElement {
+  return screen.getByTestId('floating-nav');
+}
+
 describe('AppLayout', () => {
   beforeEach(() => {
-    resetAppDownloadBannerDismissal();
     useAuthStore.setState({
       user: { id: 'u1', email: 'pat@example.com', first_name: 'Pat', last_name: 'Lee' },
       isAuthenticated: true,
@@ -74,7 +86,7 @@ describe('AppLayout', () => {
 
   afterEach(() => {
     useAuthStore.setState(initialAuthState, true);
-    document.body.style.overflow = '';
+    document.documentElement.style.removeProperty('--nav-h');
   });
 
   it('renders a skip link as the first link, targeting the main landmark', () => {
@@ -96,76 +108,135 @@ describe('AppLayout', () => {
     renderLayout();
 
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
+    // Two navigation landmarks exist in the DOM — the sidebar's (visible from
+    // xl) and the pill's (visible below it). CSS hides one at every width; jsdom
+    // applies none, so both are present here.
+    expect(screen.getAllByRole('navigation', { name: 'Main navigation' })).toHaveLength(2);
     expect(within(screen.getByRole('main')).getByText('Calendar page stub')).toBeInTheDocument();
   });
 
-  it('opens the drawer from the hamburger, locks scroll, and focuses inside it', async () => {
-    const user = userEvent.setup();
+  it('no longer renders the install banner, the hamburger, or the drawer', () => {
     renderLayout();
 
-    const trigger = screen.getByRole('button', { name: 'Navigation menu' });
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'Navigation menu' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-
-    await user.click(trigger);
-
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    const dialog = screen.getByRole('dialog', { name: 'Main navigation' });
-    expect(dialog).toBeInTheDocument();
-    expect(document.body.style.overflow).toBe('hidden');
-
-    // Focus moves into the drawer onto its first focusable. (That's now the brand
-    // link, not the close button — assert focus is inside the drawer so the test
-    // stays robust to the drawer header's chrome.)
-    expect(within(dialog).getByRole('button', { name: 'Close navigation menu' })).toBeInTheDocument();
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Close navigation menu' })).not.toBeInTheDocument();
   });
 
-  it('closes the drawer on Escape, restores scroll, and returns focus to the trigger', async () => {
-    const user = userEvent.setup();
+  it('renders the desktop sidebar column (hidden below xl by CSS, not by unmounting)', () => {
     renderLayout();
 
-    const trigger = screen.getByRole('button', { name: 'Navigation menu' });
-    await user.click(trigger);
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-
-    fireEvent.keyDown(document, { key: 'Escape' });
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(document.body.style.overflow).toBe('');
-    expect(trigger).toHaveFocus();
+    const sidebar = document.querySelector('aside');
+    expect(sidebar).not.toBeNull();
+    expect(sidebar).toHaveClass('hidden', 'xl:flex', 'w-[272px]');
   });
 
-  it('traps Tab focus within the open drawer (wraps both directions)', async () => {
-    const user = userEvent.setup();
+  it('reserves the pill height under <main> and drops it at xl', () => {
     renderLayout();
 
-    await user.click(screen.getByRole('button', { name: 'Navigation menu' }));
-    const dialog = screen.getByRole('dialog');
-    const focusables = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button'));
-    const first = focusables[0]!;
-    const last = focusables[focusables.length - 1]!;
-
-    last.focus();
-    fireEvent.keyDown(document, { key: 'Tab' });
-    expect(first).toHaveFocus();
-
-    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
-    expect(last).toHaveFocus();
+    expect(screen.getByRole('main')).toHaveClass('pb-[calc(var(--nav-h,0px)+var(--nav-inset,0px)+24px)]', 'xl:pb-0');
   });
 
-  it('closes the drawer when a nav link is activated', async () => {
+  it('mounts the FloatingNavBar with five cells in order', () => {
+    renderLayout();
+
+    expect(Array.from(pill().children).map((cell) => cell.textContent)).toEqual([
+      'Home',
+      'Care',
+      'New',
+      'Health',
+      'AI',
+    ]);
+  });
+
+  it('re-keys the page fade wrapper on navigation, but never <main> itself', async () => {
     const user = userEvent.setup();
     renderLayout();
 
-    await user.click(screen.getByRole('button', { name: 'Navigation menu' }));
-    const dialog = screen.getByRole('dialog');
+    const main = screen.getByRole('main');
+    const before = main.firstElementChild;
+    expect(before).toHaveClass('animate-[fade-in_200ms_ease-out]');
 
-    await user.click(within(dialog).getByRole('link', { name: 'Activity' }));
+    await user.click(within(pill()).getByRole('link', { name: 'Health' }));
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(within(screen.getByRole('main')).getByText('Activity page stub')).toBeInTheDocument();
+    const after = screen.getByRole('main').firstElementChild;
+    expect(after).toHaveClass('animate-[fade-in_200ms_ease-out]');
+    // A new node, not the same one re-rendered: the key changed with the path.
+    expect(after).not.toBe(before);
+    expect(within(screen.getByRole('main')).getByText('Emergency page stub')).toBeInTheDocument();
+    // 2.4.1: <main> itself carries no key, so a route change never remounts
+    // it — anything focused on the landmark (e.g. the skip link's target)
+    // survives navigation instead of being yanked back to <body>.
+    expect(screen.getByRole('main')).toBe(main);
+  });
+
+  // 2.4.1 (SERIOUS, live-repro'd): `<main>` used to have no way to receive
+  // focus at all, so activating `href="#main"` moved the URL hash but left
+  // focus on <body> — the very next Tab re-entered the nav instead of
+  // reaching page content.
+  it('the skip link moves focus to the main landmark', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    const skipLink = document.body.querySelector('a') as HTMLAnchorElement;
+    expect(skipLink).toHaveAttribute('href', '#main');
+    const main = screen.getByRole('main');
+    expect(main).toHaveAttribute('tabindex', '-1');
+    expect(main).not.toHaveFocus();
+
+    await user.click(skipLink);
+
+    expect(main).toHaveFocus();
+  });
+
+  it('opens the AddMenu from the pill NEW cell and mounts AddEventModal for a task', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    const newCell = within(pill()).getByRole('button', { name: 'New' });
+    expect(newCell).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(newCell);
+    expect(newCell).toHaveAttribute('aria-expanded', 'true');
+
+    await user.click(screen.getByRole('menuitem', { name: 'Task' }));
+
+    expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-initial-type', 'task');
+    expect(newCell).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('navigates to Notes (no modal) when Note is picked from the pill', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    await user.click(within(pill()).getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Note' }));
+
+    expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('notes-page-stub')).toBeInTheDocument();
+  });
+
+  it('opens the assistant modal from the pill AI cell', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
+
+    await user.click(within(pill()).getByRole('button', { name: 'AI' }));
+
+    expect(screen.getByTestId('ai-chat-modal')).toBeInTheDocument();
+  });
+
+  it('scrolls the window to the top on a forward route change, not on first load', async () => {
+    const scrollTo = vi.fn();
+    Object.defineProperty(window, 'scrollTo', { configurable: true, writable: true, value: scrollTo });
+    const user = userEvent.setup();
+    renderLayout('/circles/c1/calendar');
+    // The initial entry is a POP: the browser owns that scroll position.
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    await user.click(within(pill()).getByRole('link', { name: 'Health' }));
+    expect(await screen.findByText('Emergency page stub')).toBeInTheDocument();
+    expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ top: 0 }));
   });
 });

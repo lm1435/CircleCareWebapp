@@ -72,7 +72,6 @@
   },
   "edit": {
     "add": "Agregar",
-    "edit": "Editar",
     "delete": "Eliminar",
     "save": "Guardar",
     "saving": "Guardando…",
@@ -92,6 +91,7 @@
     "editMedicalInfo": "Editar información médica",
     "editPrimaryDoctor": "Editar doctor principal",
     "removePrimaryDoctor": "Quitar doctor principal",
+    "itemActionsAria": "Acciones para {{name}}",
     "doctor": {
       "addTitle": "Agregar doctor",
       "editTitle": "Editar doctor",

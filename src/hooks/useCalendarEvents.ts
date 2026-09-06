@@ -25,6 +25,7 @@ import {
 } from '@/api/calendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
 import {
+  classifyFailureCode,
   isDoseAlreadyLoggedError,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
@@ -180,13 +181,21 @@ export function useCareRecipientTimezone(
 /**
  * Invalidate every query family a successful event write affects. Mirrors
  * mobile/src/hooks/useCalendarEvents.ts invalidation set.
+ *
+ * RETURNS the calendar-events refetch so a caller that must not announce
+ * success before the calendar has caught up can await it (see
+ * `useMedicationStatus`). Every other family is fire-and-forget, as before —
+ * nothing on screen at that moment is waiting on them. Callers that do not
+ * need the wait `void` the result.
  */
 function invalidateEventQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   circleId: string,
   eventId?: string
-): void {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+): Promise<void> {
+  const calendarRefreshed = queryClient.invalidateQueries({
+    queryKey: queryKeys.calendarEvents(circleId),
+  });
   if (eventId) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvent(circleId, eventId) });
   }
@@ -194,6 +203,39 @@ function invalidateEventQueries(
   void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.medicationTodaySummary(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.circle(circleId) });
+  return calendarRefreshed;
+}
+
+/**
+ * How long a caller may be held waiting for the post-mutation calendar refetch
+ * before it announces success anyway.
+ *
+ * The wait must be bounded: this app runs React Query in `networkMode:
+ * 'online'` (lib/queryClient.ts), where a refetch attempted while offline is
+ * PAUSED rather than failed, and a paused refetch's promise does not settle
+ * until connectivity returns. A connection that drops between the PATCH
+ * succeeding and the refetch starting would otherwise swallow the confirmation
+ * entirely — the caregiver sees no toast at all and re-runs an action that
+ * already worked. Past the cap the toast shows and the refetch finishes in the
+ * background; the data still lands, just after the toast.
+ */
+const CALENDAR_REFRESH_WAIT_MS = 2500;
+
+/**
+ * Resolve when the calendar refetch lands, or at the cap — whichever is first.
+ *
+ * The timer is ALWAYS cleared, including when the refetch wins the race: a
+ * stray 2.5s timer per mutation keeps the event loop awake for nothing (and
+ * holds Vitest's process open in tests). Losing the race does NOT cancel the
+ * refetch — it keeps running and still updates the cache, the caller simply
+ * stops waiting on it.
+ */
+function withCalendarRefreshCap(refreshed: Promise<void>): Promise<unknown> {
+  let capTimer: ReturnType<typeof setTimeout>;
+  const capped = new Promise((resolve) => {
+    capTimer = setTimeout(resolve, CALENDAR_REFRESH_WAIT_MS);
+  });
+  return Promise.race([refreshed, capped]).finally(() => clearTimeout(capTimer));
 }
 
 /**
@@ -205,10 +247,18 @@ function invalidateEventQueries(
 function useEventMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // Premium-gated write on a free-tier read-only circle — FEATURE.
+  const { promptUpgrade } = usePremiumGate('feature');
   const { t } = useTranslation('calendar');
 
   return (error: unknown) => {
+    // Counted before it is classified for the UI — every failed event write
+    // reaches the admin digest as `error_occurred`. ids/enums only: `code` is
+    // the closed-set `classifyFailureCode` value, never the toast copy.
+    Analytics.errorOccurred('calendar_events', 'calendar_events_mutation_error', {
+      circle_id: circleId,
+      code: classifyFailureCode(error),
+    });
     if (isSubscriptionRequiredError(error)) {
       // Web cannot transact — point the user at the app to upgrade.
       promptUpgrade();
@@ -241,7 +291,7 @@ export function useCreateEvent(
     onSuccess: (event) => {
       // PHI-safe: only circle_id, the event_type enum, and a recurring boolean.
       Analytics.eventCreated(circleId, event.event_type, !!event.recurrence_rule);
-      invalidateEventQueries(queryClient, circleId, event?.id);
+      void invalidateEventQueries(queryClient, circleId, event?.id);
     },
     onError,
   });
@@ -267,7 +317,7 @@ export function useUpdateEvent(
   return useMutation({
     mutationFn: ({ eventId, data }: UpdateEventVariables) => updateEvent(circleId, eventId, data),
     onSuccess: (_event, variables) => {
-      invalidateEventQueries(queryClient, circleId, variables.eventId);
+      void invalidateEventQueries(queryClient, circleId, variables.eventId);
     },
     onError,
   });
@@ -292,7 +342,7 @@ export function useDeleteEvent(
     mutationFn: ({ eventId, deleteScope, scheduledDate }: DeleteEventVariables) =>
       deleteEvent(circleId, eventId, { deleteScope, scheduledDate }),
     onSuccess: (_void, variables) => {
-      invalidateEventQueries(queryClient, circleId, variables.eventId);
+      void invalidateEventQueries(queryClient, circleId, variables.eventId);
     },
     onError,
   });
@@ -318,6 +368,24 @@ export interface MedicationStatusVariables {
  * occurrences out of the Calendar GET (the earlier ones stay, refetched with
  * `discontinued_at` set so they render as inactive), and a reactivate brings
  * the full series back.
+ *
+ * DISCONTINUE / REACTIVATE CANNOT BE PATCHED INTO THE CACHE, SO THE CALLER
+ * WAITS FOR THE REFETCH INSTEAD.
+ *
+ * Which occurrences a stop or a reinstatement adds or removes is decided
+ * entirely server-side — the response carries counts, not rows. There is no
+ * correct client-side edit to apply, so the calendar and the medication roster
+ * can only become right again by refetching.
+ *
+ * That refetch is therefore AWAITED (returned from `onSuccess`, so
+ * `mutateAsync` resolves after it), because every caller announces success the
+ * instant it resolves — `MedicationsPage.handleReactivateForEdit`,
+ * `DiscontinueMedDialog` and `EventDetailActions` all raise a toast. Without
+ * the wait the toast lands over a roster that still shows the med in its old
+ * section, and it only moves a round trip later — read as a lag or a stale
+ * cache. The wait is the same length either way; this spends it before the
+ * confirmation rather than after, while the action is still disabled by
+ * `isPending`. Bounded by `CALENDAR_REFRESH_WAIT_MS` — see the note there.
  */
 export function useMedicationStatus(
   circleId: string
@@ -328,9 +396,8 @@ export function useMedicationStatus(
   return useMutation({
     mutationFn: ({ eventId, discontinued, scope }: MedicationStatusVariables) =>
       setMedicationStatus(circleId, eventId, discontinued, scope),
-    onSuccess: (_result, variables) => {
-      invalidateEventQueries(queryClient, circleId, variables.eventId);
-    },
+    onSuccess: (_result, variables) =>
+      withCalendarRefreshCap(invalidateEventQueries(queryClient, circleId, variables.eventId)),
     onError,
   });
 }
@@ -352,7 +419,7 @@ export function useCompleteEvent(
       } else {
         Analytics.taskCompleted(circleId);
       }
-      invalidateEventQueries(queryClient, circleId, eventId);
+      void invalidateEventQueries(queryClient, circleId, eventId);
     },
     onError,
   });

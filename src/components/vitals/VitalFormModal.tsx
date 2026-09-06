@@ -1,10 +1,11 @@
-import { useMemo, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
   DateField,
   Modal,
   Select,
+  Text,
   TextArea,
   TextField,
   TimeField,
@@ -28,10 +29,17 @@ import {
   type VitalFormValues,
   type WeightUnit,
 } from '@/lib/vitals';
-import { getTimezoneAbbreviation, getTimezoneLabel } from '@/utils/timezone';
 import {
-  recipientWallTimeToUtcISO,
-  utcISOToRecipientWallTime,
+  formatTimeOfDay,
+  getDeviceTimezone,
+  getTimezoneLabel,
+  timezonesAreDifferent,
+} from '@/utils/timezone';
+import { clockInZone, dayInZone, viewerInstant } from '@/utils/recipientEventDate';
+import { useHourCycle } from '@/hooks/useHourCycle';
+import {
+  utcISOToViewerWallTime,
+  viewerWallTimeToUtcISO,
 } from './vitalDateTime';
 
 // Task 6.4 — shared create/edit form modal for vitals, used by AddVitalModal
@@ -43,12 +51,22 @@ import {
 //     via lib/vitals helpers; backend converts the submitted display unit on write)
 //   - recorded-at date + time (recipient-TZ aware) + notes
 //
-// TIMEZONE (CRITICAL): recorded_at is a single UTC ISO timestamp. The DateField +
-// TimeField the user edits hold the recipient's NAIVE LOCAL wall time. We convert
-// recipient-local wall time → a UTC instant on write (recipientWallTimeToUtcISO,
-// DST-correct) and convert the stored UTC instant → recipient-local wall time for
-// prefill (utcISOToRecipientWallTime). NEVER new Date(`${d}T${t}`)/.getHours()/
-// device-local .toISOString() from a wall-time string.
+// TIMEZONE (CRITICAL): recorded_at is a single UTC ISO timestamp, and the
+// DateField + TimeField hold the VIEWER's wall clock — the caregiver types the
+// time they are reading off their own clock. Write converts viewer wall time →
+// instant (viewerWallTimeToUtcISO); prefill converts back
+// (utcISOToViewerWallTime). The two must always change together.
+//
+// This form used to read the typed digits as the CARE RECIPIENT's wall clock,
+// which disagreed with mobile — whose picker is device-local and stores
+// `recordedAt.toISOString()` — so the same action on the two platforms filed a
+// reading at instants an offset apart. It also disagreed with this app's own
+// calendar form after that moved to the viewer frame.
+//
+// DISPLAY is a separate question and is NOT changing: VitalsPage renders a
+// stored reading in the RECIPIENT's zone, and mobile does the same
+// (formatInstantInTimezone). Where the reading is shown, the recipient's clock
+// is the useful frame; where it is typed, the viewer's is.
 
 const VITAL_TYPES: VitalType[] = ['blood_pressure', 'heart_rate', 'glucose', 'weight'];
 
@@ -80,7 +98,7 @@ export function VitalFormModal({
 }: VitalFormModalProps): ReactElement | null {
   const { t } = useTranslation(['vitals', 'common']);
   const { showToast } = useToast();
-  const { timezone, canEdit } = useCircle(circleId);
+  const { circle, timezone, canEdit } = useCircle(circleId);
   const { data: unitPrefs } = useUnitPreferences();
 
   const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? DEFAULT_UNIT_PREFERENCES.weight_unit;
@@ -116,9 +134,13 @@ export function VitalFormModal({
   const initialWall = useMemo(
     () =>
       vital
-        ? utcISOToRecipientWallTime(vital.recorded_at, timezone)
-        : utcISOToRecipientWallTime(new Date().toISOString(), timezone),
-    [vital, timezone]
+        ? utcISOToViewerWallTime(vital.recorded_at)
+        : utcISOToViewerWallTime(new Date().toISOString()),
+    // No `timezone` dep: the viewer-frame prefill does not consult it. That is
+    // not an oversight — it is the point. The old recipient-frame prefill DID,
+    // which is what made a mid-flight circle query able to prefill in one frame
+    // and save in another. That whole failure mode is gone by construction.
+    [vital]
   );
 
   // ── Form state ──
@@ -136,9 +158,85 @@ export function VitalFormModal({
   const [notes, setNotes] = useState(vital?.notes ?? '');
   const [errors, setErrors] = useState<FieldErrors>({});
 
+  /**
+   * Resync the prefill when the EVENT being edited changes identity.
+   *
+   * No longer a timezone concern. `initialWall` is now viewer-frame and does
+   * not consult `timezone` at all, so the failure this guard was originally
+   * written for — prefilling through the 'America/New_York' fallback while a
+   * mid-flight circle query resolved, then saving with the real zone and
+   * filing a reading at a time it was never taken — is gone by construction
+   * rather than by vigilance.
+   *
+   * What remains is ordinary: a refetch can hand this component a new `vital`
+   * object, and the untouched fields should follow it.
+   *
+   * Untouched fields only: a user who edited the date/time owns it.
+   */
+  const wallTouched = useRef(false);
+  useEffect(() => {
+    if (wallTouched.current) return;
+    setDateStr(initialWall.date);
+    setTimeStr(initialWall.time);
+  }, [initialWall]);
+
   const isBloodPressure = vitalType === 'blood_pressure';
   const displayUnit = getDisplayUnit(vitalType, weightUnit, glucoseUnit);
-  const tzLabel = `${getTimezoneLabel(timezone)} (${getTimezoneAbbreviation(timezone)})`;
+  // ── Dual-timezone disclosure (same shape as AddEventModal) ────────────────
+  //
+  // The fields hold the VIEWER's clock, so the old
+  // "Times shown in <recipient zone>" hint is now simply false. Replaced with
+  // the live conversion, gated on the OFFSET rather than the zone names so an
+  // ICU alias (Asia/Kolkata -> Asia/Calcutta) is not mistaken for a second zone.
+  const deviceTimezone = getDeviceTimezone();
+  const hourCycle = useHourCycle();
+  const showDualTimezone = useMemo(
+    () =>
+      timezonesAreDifferent(
+        deviceTimezone,
+        timezone,
+        dateStr && timeStr ? viewerInstant(dateStr, timeStr) : undefined
+      ),
+    [deviceTimezone, timezone, dateStr, timeStr]
+  );
+  // The recipient's zone by NAME — its city, localised for the reader. Bare
+  // rather than parenthesised: the hint copy brings its own brackets and the
+  // conversion line ends in a parenthetical day indicator.
+  const recipientZone = getTimezoneLabel(timezone);
+  const recipientName = circle?.recipient_name;
+
+  /** "8:00 PM Denver = 9:00 PM Chicago (+1 day)", live as the user types. */
+  const conversionText = useMemo(() => {
+    if (!showDualTimezone || !dateStr || !timeStr) return null;
+    try {
+      const instant = viewerInstant(dateStr, timeStr);
+      const render = (clock: string): string => {
+        const [hh, mm] = clock.split(':').map(Number);
+        return formatTimeOfDay(hh, mm, hourCycle);
+      };
+      const viewerTime = render(clockInZone(instant, deviceTimezone));
+      const recipientTime = render(clockInZone(instant, timezone));
+      const viewerDay = dayInZone(instant, deviceTimezone);
+      const recipientDay = dayInZone(instant, timezone);
+      const dayIndicator =
+        viewerDay === recipientDay
+          ? ''
+          : ` (${t(recipientDay > viewerDay ? 'fields.dayOffsetNext' : 'fields.dayOffsetPrevious')})`;
+      // A zone with no city in it yields no name, and a dangling space is worse
+      // than no label.
+      const withZone = (time: string, zone: string): string => (zone ? `${time} ${zone}` : time);
+      return `${withZone(viewerTime, getTimezoneLabel(deviceTimezone))} = ${withZone(
+        recipientTime,
+        recipientZone
+      )}${dayIndicator}`;
+    } catch {
+      return null;
+    }
+  }, [showDualTimezone, dateStr, timeStr, deviceTimezone, timezone, hourCycle, recipientZone, t]);
+
+  const dualTimezoneLabel = recipientName
+    ? t('fields.dualTimezoneHint', { name: recipientName, timezone: recipientZone })
+    : t('fields.dualTimezoneHintGeneric', { timezone: recipientZone });
 
   function clearError(field: string): void {
     setErrors((prev) => {
@@ -167,13 +265,13 @@ export function VitalFormModal({
     | { ok: false; errors: FieldErrors } {
     const fieldErrors: FieldErrors = {};
 
-    // recorded_at: combine recipient-local wall time into a UTC ISO instant.
+    // recorded_at: combine the VIEWER's wall time into a UTC ISO instant.
     if (!dateStr) fieldErrors.recorded_at = messageFor('dateRequired');
     if (!timeStr) fieldErrors.recorded_at = messageFor('timeRequired');
 
     let recordedAtISO = '';
     if (dateStr && timeStr) {
-      recordedAtISO = recipientWallTimeToUtcISO(dateStr, timeStr, timezone);
+      recordedAtISO = viewerWallTimeToUtcISO(dateStr, timeStr);
     }
 
     const numericValue1 = isBloodPressure ? parseNumber(systolic) : parseNumber(value1);
@@ -277,11 +375,13 @@ export function VitalFormModal({
       closeOnBackdropClick={false}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={isPending}>
+          <Button variant="secondary" onClick={onClose} disabled={isPending}>
             {t('common:cancel')}
           </Button>
-          <Button type="submit" form="vital-form" disabled={isPending}>
-            {isPending ? t('add.saving') : isEditing ? t('edit.save') : t('add.save')}
+          {/* `loading` swaps the label for a Spinner and sets aria-busy, so the
+              old "Saving…" label (and its i18n key) is gone. */}
+          <Button type="submit" form="vital-form" loading={isPending}>
+            {isEditing ? t('edit.save') : t('add.save')}
           </Button>
         </div>
       }
@@ -290,8 +390,8 @@ export function VitalFormModal({
         {/* Type selector — create only; locked (its own type) when editing. */}
         {isEditing ? (
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-ink-2">{t('add.typeLabel')}</span>
-            <p className="m-0 text-base text-ink">{t(`types.${vitalType}`)}</p>
+            <Text variant="label">{t('add.typeLabel')}</Text>
+            <Text variant="bodyDense">{t(`types.${vitalType}`)}</Text>
           </div>
         ) : (
           <Select
@@ -359,8 +459,9 @@ export function VitalFormModal({
             label={t('fields.date')}
             value={dateStr}
             error={errors.recorded_at}
-            hint={t('fields.timesShownIn', { timezone: tzLabel })}
+            hint={showDualTimezone ? dualTimezoneLabel : undefined}
             onChange={(e) => {
+              wallTouched.current = true;
               setDateStr(e.target.value);
               clearError('recorded_at');
             }}
@@ -369,7 +470,10 @@ export function VitalFormModal({
             id="recorded_time"
             label={t('fields.time')}
             value={timeStr}
+            // The live conversion sits on the TIME field, where the digits are.
+            hint={conversionText ?? undefined}
             onChange={(e) => {
+              wallTouched.current = true;
               setTimeStr(e.target.value);
               clearError('recorded_at');
             }}

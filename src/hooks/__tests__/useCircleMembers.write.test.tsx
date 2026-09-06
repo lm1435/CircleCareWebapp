@@ -28,6 +28,15 @@ vi.mock('@/hooks/usePremiumGate', () => ({
   usePremiumGate: () => ({ promptUpgrade }),
 }));
 
+const mockMemberRemoved = vi.fn();
+const mockCircleLeft = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    memberRemoved: (...args: unknown[]) => mockMemberRemoved(...args),
+    circleLeft: (...args: unknown[]) => mockCircleLeft(...args),
+  },
+}));
+
 import {
   removeMember,
   leaveCircle,
@@ -93,6 +102,18 @@ describe('useRemoveMember', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 
+  it('fires Analytics.memberRemoved(circleId) — deliberately NO removed-user id', async () => {
+    const { wrapper } = setup();
+    mockRemove.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useRemoveMember(CIRCLE_ID), { wrapper });
+    result.current.mutate({ userId: USER_ID });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockMemberRemoved).toHaveBeenCalledWith(CIRCLE_ID);
+    expect(mockMemberRemoved).not.toHaveBeenCalledWith(CIRCLE_ID, USER_ID);
+  });
+
   it('surfaces a 403 as the permission toast', async () => {
     const { wrapper } = setup();
     mockRemove.mockRejectedValue(PERMISSION_ENVELOPE);
@@ -117,6 +138,17 @@ describe('useLeaveCircle', () => {
     expect(mockLeave).toHaveBeenCalledWith(CIRCLE_ID);
     expect(invalidatedWith(invalidateSpy, queryKeys.circleDetail(CIRCLE_ID))).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+  });
+
+  it('fires Analytics.circleLeft(circleId) on success', async () => {
+    const { wrapper } = setup();
+    mockLeave.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useLeaveCircle(CIRCLE_ID), { wrapper });
+    result.current.mutate();
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockCircleLeft).toHaveBeenCalledWith(CIRCLE_ID);
   });
 });
 

@@ -37,6 +37,24 @@ export interface MedicationConfirmation {
   status: ConfirmationStatus;
   notes?: string;
   scheduled_time: string;
+
+  // Populated joins (backend/src/routes/medicationConfirmations.ts:1502-1519,
+  // GET /circles/:circleId/medications/confirmations only — mirrors mobile's
+  // src/api/medicationConfirmations.ts:16-29).
+  confirmed_by_user?: {
+    email?: string;
+    first_name?: string | null;
+    last_name?: string | null;
+  } | null;
+  event?: {
+    id?: string;
+    title?: string;
+    medication_name?: string | null;
+    medication_dosage?: string | null;
+    medication_photo_url?: string | null;
+    scheduled_date?: string; // YYYY-MM-DD in the care recipient's timezone
+    parent_event_id?: string | null;
+  } | null;
 }
 
 export interface ConfirmMedicationRequest {
@@ -146,7 +164,141 @@ export async function getTodaysMedications(
     params: { start_date: dateStr, end_date: dateStr, event_type: 'medication' },
   })) as unknown as EventsEnvelope;
 
+  // The backend returns this already ordered (backend/src/utils/eventOrder.ts:
+  // date -> time -> name -> series -> id). Re-sorted here as the client's own
+  // guarantee against whatever backend is deployed, and tie-broken on id so the
+  // order is TOTAL: the Today's Meds card SLICES this list, so doses sharing a
+  // time — the five-dose 8:00 AM morning — would otherwise have their visibility
+  // decided by response order.
   return (response.data.events ?? [])
     .filter((event) => event.event_type === 'medication' && !!event.scheduled_time)
-    .sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''));
+    .sort((a, b) => {
+      const at = a.scheduled_time ?? '';
+      const bt = b.scheduled_time ?? '';
+      if (at !== bt) return at < bt ? -1 : 1;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Adherence + history (Wave 3 parity with mobile's Medication History screen).
+// PORT of mobile/src/api/medicationConfirmations.ts:61-202. Param names are the
+// BACKEND's (backend/src/routes/medicationConfirmations.ts:115-121, 146-148);
+// both schemas are `.passthrough()`, so a misspelled param is silently ignored
+// and the endpoint returns unfiltered/default data — hence the tests assert the
+// exact URL and params.
+// ---------------------------------------------------------------------------
+
+export interface MedicationConfirmationsPage {
+  confirmations: MedicationConfirmation[];
+  hasMore: boolean;
+}
+
+export interface MedicationConfirmationsParams {
+  event_id?: string;
+  /** YYYY-MM-DD in the circle's timezone. */
+  start_date?: string;
+  /** YYYY-MM-DD in the circle's timezone. */
+  end_date?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function getMedicationConfirmations(
+  circleId: string,
+  params?: MedicationConfirmationsParams
+): Promise<MedicationConfirmationsPage> {
+  const response = await apiClient.get<{
+    confirmations: MedicationConfirmation[];
+    hasMore?: boolean;
+  }>(`/circles/${circleId}/medications/confirmations`, { params });
+  return {
+    confirmations: response.data.confirmations,
+    hasMore: response.data.hasMore ?? false,
+  };
+}
+
+export interface WeeklyAdherenceDaily {
+  date: string;
+  taken: number;
+  scheduled: number;
+  adherence_rate: number;
+}
+
+export interface WeeklyAdherence {
+  taken: number;
+  scheduled: number;
+  adherence_rate: number;
+  start_date: string;
+  end_date: string;
+  daily_breakdown: WeeklyAdherenceDaily[];
+}
+
+export async function getWeeklyAdherence(circleId: string): Promise<WeeklyAdherence> {
+  const response = await apiClient.get<WeeklyAdherence>(
+    `/circles/${circleId}/medications/weekly-adherence`
+  );
+  return response.data;
+}
+
+export type AdherencePeriod = '7d' | '14d' | '30d' | '60d' | '90d' | 'all';
+
+export interface AdherenceReportSummary {
+  total_scheduled: number;
+  taken: number;
+  taken_late: number;
+  not_marked: number;
+  skipped: number;
+  adherence_rate: number;
+  trend: 'improving' | 'declining' | 'stable';
+  trend_change: number;
+}
+
+export interface AdherenceReportDaily {
+  date: string;
+  taken: number;
+  not_marked: number;
+  skipped: number;
+  total: number;
+  adherence_rate: number;
+}
+
+export interface AdherenceReportByMedication {
+  id: string;
+  name: string;
+  dosage: string | null;
+  taken: number;
+  not_marked: number;
+  skipped: number;
+  total: number;
+  adherence_rate: number;
+}
+
+export interface AdherenceReportTimeBreakdown {
+  time: string;
+  taken: number;
+  not_marked: number;
+  total: number;
+  adherence_rate: number;
+}
+
+export interface AdherenceReport {
+  period_days: number;
+  start_date: string;
+  end_date: string;
+  summary: AdherenceReportSummary;
+  daily_breakdown: AdherenceReportDaily[];
+  by_medication: AdherenceReportByMedication[];
+  time_breakdown: AdherenceReportTimeBreakdown[];
+}
+
+export async function getAdherenceReport(
+  circleId: string,
+  period: AdherencePeriod = '30d'
+): Promise<AdherenceReport> {
+  const response = await apiClient.get<{ report: AdherenceReport }>(
+    `/circles/${circleId}/medications/adherence-report`,
+    { params: { period } }
+  );
+  return response.data.report;
 }

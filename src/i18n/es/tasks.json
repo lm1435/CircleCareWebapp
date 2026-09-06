@@ -4,13 +4,13 @@
   "addTask": "Agregar tarea",
   "loading": "Cargando tareas",
   "filter": {
-    "statusLabel": "Estado",
+    "statusPillLabel": "Estado: {{value}}",
     "status": {
       "open": "Pendientes",
       "completed": "Completadas",
       "all": "Todas"
     },
-    "sortLabel": "Ordenar por",
+    "sortPillLabel": "Ordenar por: {{value}}",
     "sort": {
       "due_date": "Fecha límite",
       "assignee": "Responsable",
@@ -27,11 +27,11 @@
     "completedOn": "Completada el {{date}}",
     "completing": "Completando…",
     "undo": "Deshacer",
-    "undoAction": "Deshacer completar \"{{title}}\"",
-    "pendingAnnounce": "\"{{title}}\" se completará. Elige Deshacer para cancelar.",
     "done": "Listo",
     "statusDone": "(completada)",
-    "statusPending": "(pendiente)"
+    "statusPending": "(pendiente)",
+    "viewDetailsLabel": "Ver detalles de \"{{title}}\"",
+    "overdue": "Atrasada"
   },
   "due": {
     "today": "Hoy",

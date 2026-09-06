@@ -20,7 +20,8 @@ import {
   type User,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
-import { isSubscriptionRequiredError } from '@/lib/apiErrors';
+import { classifyFailureCode, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import { Analytics } from '@/lib/analytics';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import i18n from '@/i18n';
@@ -33,6 +34,18 @@ import i18n from '@/i18n';
 // src/api/users.ts. These are USER-scoped (PATCH/PUT/DELETE /users/me/*), so the
 // only invalidation needed is queryKeys.currentUser (and unitPreferences for the
 // units PUT, which returns the bare prefs payload rather than a full user).
+
+/**
+ * Every profile/settings mutation's onError counts the failure for the admin
+ * digest as `error_occurred` (mobile parity). USER-scoped, so there is no
+ * circle_id; `code` is the closed-set `classifyFailureCode` value — never the
+ * submitted values (name, timezone) and never the toast copy.
+ */
+function reportProfileError(error: unknown): void {
+  Analytics.errorOccurred('profile', 'profile_mutation_error', {
+    code: classifyFailureCode(error),
+  });
+}
 
 /**
  * PATCH /users/me — name / timezone / language. When `language` changes, also
@@ -53,7 +66,8 @@ export function useUpdateProfile(): UseMutationResult<User, unknown, UpdateProfi
       }
       void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     },
-    onError: () => {
+    onError: (error) => {
+      reportProfileError(error);
       showToast(t('errors.saveFailed'), 'error');
     },
   });
@@ -74,7 +88,8 @@ export function useUpdateNotificationPrefs(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     },
-    onError: () => {
+    onError: (error) => {
+      reportProfileError(error);
       showToast(t('errors.saveFailed'), 'error');
     },
   });
@@ -95,7 +110,8 @@ export function useUpdateQuietHours(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     },
-    onError: () => {
+    onError: (error) => {
+      reportProfileError(error);
       showToast(t('errors.saveFailed'), 'error');
     },
   });
@@ -121,7 +137,8 @@ export function useUpdateUnitPrefs(): UseMutationResult<
       queryClient.setQueryData(queryKeys.unitPreferences, prefs);
       void queryClient.invalidateQueries({ queryKey: queryKeys.unitPreferences });
     },
-    onError: () => {
+    onError: (error) => {
+      reportProfileError(error);
       showToast(t('errors.saveFailed'), 'error');
     },
   });
@@ -139,7 +156,8 @@ export function useUpdateEmailDigest(): UseMutationResult<
 > {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { promptUpgrade } = usePremiumGate();
+  // Email digest is a premium feature, not a quota — FEATURE.
+  const { promptUpgrade } = usePremiumGate('feature');
   const { t } = useTranslation('common');
 
   return useMutation({
@@ -148,6 +166,7 @@ export function useUpdateEmailDigest(): UseMutationResult<
       void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     },
     onError: (error) => {
+      reportProfileError(error);
       if (isSubscriptionRequiredError(error)) {
         promptUpgrade();
       } else {
@@ -168,7 +187,8 @@ export function useDeleteAccount(): UseMutationResult<void, unknown, void> {
 
   return useMutation({
     mutationFn: () => deleteAccount(),
-    onError: () => {
+    onError: (error) => {
+      reportProfileError(error);
       // Deletion failing is scarier than a settings save — say explicitly that
       // the account is unchanged and where to get help.
       showToast(t('delete.error'), 'error');

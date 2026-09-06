@@ -1,10 +1,12 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Card, Icon } from '@/components/ui';
 
 /**
  * Banner shown when the current user's membership is view-only for a circle
- * (freemium caregiver cap — `view_only` from GET /circles). Plan Task 37.
- * Copy matches mobile's ViewOnlyBanner (`viewOnly.banner` / `bannerShort`).
+ * (freemium caregiver cap — `view_only` from GET /circles). Plan Task 37;
+ * mobile-parity Task 22 (spec §6.7). Copy matches mobile's ViewOnlyBanner
+ * (`viewOnly.banner` / `bannerShort`).
  *
  * GET /circles does not return the owner's name, so callers without it get
  * the short copy (same as mobile's ViewOnlyBanner, which uses bannerShort).
@@ -15,37 +17,20 @@ export interface ViewOnlyBannerProps {
   className?: string;
 }
 
-function EyeIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="shrink-0"
-    >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
 export function ViewOnlyBanner({ ownerName, className }: ViewOnlyBannerProps): ReactElement {
   const { t } = useTranslation('freemium');
-  const base = 'flex items-center gap-2 rounded-xl border border-line bg-bg-2 px-3 py-2 text-sm text-ink-2';
 
   return (
-    <div role="status" className={className ? `${base} ${className}` : base}>
-      <EyeIcon />
-      <p className="m-0">
+    <Card
+      variant="filled"
+      padding="sm"
+      role="status"
+      className={['flex items-center gap-2', className].filter(Boolean).join(' ')}
+    >
+      <Icon name="eye-outline" size="inline" className="shrink-0 text-ink-2" />
+      <p className="m-0 text-sm text-ink-2">
         {ownerName ? t('viewOnly.banner', { ownerName }) : t('viewOnly.bannerShort')}
       </p>
-    </div>
+    </Card>
   );
 }

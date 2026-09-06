@@ -19,7 +19,23 @@ export interface InvitePreview {
     name: string;
     recipient_name: string;
   };
-  invited_by_name: string;
+  /**
+   * The inviter's FIRST NAME, or `null` when they have none.
+   *
+   * NULLABLE ON PURPOSE — do not "simplify" this to `string`.
+   * The backend deliberately sends `null` rather than a fallback here.
+   * This endpoint is UNAUTHENTICATED (invite code only) and carries no
+   * Accept-Language, so it can emit neither:
+   *   - an English word like "Someone" — untranslatable copy shipped as data,
+   *     with no way to know the reader's language; nor
+   *   - the inviter's email local-part — that is personal data, and
+   *     `users.first_name` is NULL for every Apple/Google OAuth signup, so the
+   *     fallback would fire routinely and land in publicly cached link-preview
+   *     cards (this page feeds the name straight into `og:title`).
+   * Absence is neither. The CLIENT renders the localized fallback —
+   * see `inviterFallback` in src/i18n/{en,es}/invite.json.
+   */
+  invited_by_name: string | null;
   expires_at: string;
 }
 
@@ -79,6 +95,15 @@ export interface CreatedInvite {
   invited_email: string;
   member_type: InviteMemberType;
   invite_code: string;
+  /**
+   * Shareable link to the web landing page for this code, so the inviter can
+   * send it by text or WhatsApp instead of relying on our email arriving.
+   *
+   * OPTIONAL on purpose: a backend older than the release that added it returns
+   * nothing, and the UI must then fall back to building the URL from
+   * `invite_code` rather than offering a link to `undefined`.
+   */
+  invite_url?: string;
   expires_at: string;
 }
 

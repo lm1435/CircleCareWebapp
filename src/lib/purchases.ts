@@ -1,12 +1,5 @@
-import {
-  Purchases,
-  PurchasesError,
-  ErrorCode,
-  type Offering,
-  type Package,
-  type PurchaseResult,
-} from '@revenuecat/purchases-js';
 import { env } from './env';
+import { isWebBillingConfigured } from './webBillingConfig';
 
 /**
  * RevenueCat Web Billing (purchases-js) wrapper.
@@ -21,7 +14,18 @@ import { env } from './env';
  * Configured from a PUBLIC billing key: the SANDBOX key (`rcb_sb_…`) runs
  * checkout in Stripe Test Mode (no real charge); the production build uses the
  * live key (`rcb_…`). When the key is unset the whole flow degrades silently.
+ *
+ * BUNDLE NOTE: `@revenuecat/purchases-js` is ~177 KB gzip and is only needed on
+ * the /upgrade page and the profile "Manage subscription" action. This module
+ * therefore never STATICALLY imports it — every function below that touches
+ * the SDK loads it with `await import(...)`, so it lands in its own chunk and
+ * is fetched only when a purchase flow is actually reached. The pure env
+ * predicate that used to live here (`isWebBillingConfigured`) moved to
+ * `./webBillingConfig` — re-exported below for existing callers — because it
+ * has nothing to do with the SDK and four non-purchase modules only ever
+ * needed the boolean.
  */
+export { isWebBillingConfigured };
 
 /** Entitlement identifier shared across platforms — must match the RevenueCat
  *  dashboard exactly. Activating it is what flips `plan_tier` to premium. */
@@ -34,10 +38,40 @@ export const PREMIUM_ENTITLEMENT = 'CircleCare Premium';
  */
 export const WEB_OFFERING_ID = 'web';
 
-/** True when the web billing key is configured. When false the Upgrade CTA and
- *  /upgrade page are hidden (free users still see the in-app upgrade pointer). */
-export function isWebBillingConfigured(): boolean {
-  return Boolean(env.VITE_REVENUECAT_WEB_BILLING_KEY);
+// Type-only references into the SDK's public surface. `import('pkg').Type`
+// used as a TYPE POSITION is erased entirely at compile time — it emits no
+// runtime `import`/`require` of '@revenuecat/purchases-js' — which is what
+// keeps this file free of any static dependency on the SDK.
+type PurchasesModule = typeof import('@revenuecat/purchases-js');
+type PurchasesInstance = import('@revenuecat/purchases-js').Purchases;
+type Offering = import('@revenuecat/purchases-js').Offering;
+type Package = import('@revenuecat/purchases-js').Package;
+type PurchaseResult = import('@revenuecat/purchases-js').PurchaseResult;
+
+// Cached dynamic-import promise so repeated calls share one fetch, plus a
+// synchronous snapshot of the resolved module for `isUserCancelledError`
+// (which must stay synchronous — see its doc comment).
+let sdkPromise: Promise<PurchasesModule> | null = null;
+let loadedSdk: PurchasesModule | null = null;
+
+function loadSdk(): Promise<PurchasesModule> {
+  if (!sdkPromise) {
+    sdkPromise = import('@revenuecat/purchases-js')
+      .then((mod) => {
+        loadedSdk = mod;
+        return mod;
+      })
+      .catch((err: unknown) => {
+        // A REJECTED import (chunk 404 after a redeploy, offline, a flaky
+        // CDN) must not be cached forever — without clearing `sdkPromise` on
+        // failure, every future purchase attempt in this tab would replay the
+        // SAME rejection until a full page reload, permanently bricking
+        // checkout for the rest of the session.
+        sdkPromise = null;
+        throw err;
+      });
+  }
+  return sdkPromise;
 }
 
 // The SDK forbids more than one configured instance, so we keep the singleton
@@ -46,14 +80,21 @@ let configuredUserId: string | null = null;
 
 /**
  * Returns the singleton Purchases instance configured for `userId`
- * (the Supabase user id). Configures on first use; switches identity if a
- * different user logs in within the same tab.
+ * (the Supabase user id). Loads the SDK (once, shared across calls) and
+ * configures on first use; switches identity if a different user logs in
+ * within the same tab.
+ *
+ * Async (unlike the old synchronous version) because loading the SDK is
+ * itself async — every exported caller here (`getWebOffering`,
+ * `purchasePackage`, `getManagementUrl`) already awaits it, so nothing outside
+ * this module observes a behavior change beyond the added microtask.
  */
-export function getPurchases(userId: string): Purchases {
+export async function getPurchases(userId: string): Promise<PurchasesInstance> {
   const apiKey = env.VITE_REVENUECAT_WEB_BILLING_KEY;
   if (!apiKey) {
     throw new Error('Web billing is not configured');
   }
+  const { Purchases } = await loadSdk();
   if (!Purchases.isConfigured()) {
     configuredUserId = userId;
     return Purchases.configure({ apiKey, appUserId: userId });
@@ -64,21 +105,6 @@ export function getPurchases(userId: string): Purchases {
     void instance.changeUser(userId);
   }
   return instance;
-}
-
-/** Test seam — reset the cached identity so unit tests start clean. */
-export function resetConfiguredUser(): void {
-  configuredUserId = null;
-}
-
-/** Resolve the `web` offering (fallback to current) for this user. */
-export async function getWebOffering(userId: string): Promise<Offering> {
-  const offerings = await getPurchases(userId).getOfferings();
-  const offering = offerings.all[WEB_OFFERING_ID] ?? offerings.current;
-  if (!offering) {
-    throw new Error('No web offering available');
-  }
-  return offering;
 }
 
 /** A purchasable plan, flattened for the UI. */
@@ -99,6 +125,17 @@ export interface WebPlan {
    *  or null when no trial. Surfaced so the paywall states the DURATION —
    *  "free trial" with no length is the pattern FTC/Play enforcement targets. */
   trialPeriod: { number: number; unit: string } | null;
+}
+
+/** Resolve the `web` offering (fallback to current) for this user. */
+export async function getWebOffering(userId: string): Promise<Offering> {
+  const purchases = await getPurchases(userId);
+  const offerings = await purchases.getOfferings();
+  const offering = offerings.all[WEB_OFFERING_ID] ?? offerings.current;
+  if (!offering) {
+    throw new Error('No web offering available');
+  }
+  return offering;
 }
 
 /** Flatten a RevenueCat package into a {@link WebPlan} for rendering. */
@@ -124,16 +161,30 @@ export async function purchasePackage(
   pkg: Package,
   customerEmail?: string
 ): Promise<PurchaseResult> {
-  return getPurchases(userId).purchase({ rcPackage: pkg, customerEmail });
+  const purchases = await getPurchases(userId);
+  return purchases.purchase({ rcPackage: pkg, customerEmail });
 }
 
 /** Stripe/RevenueCat subscription-management URL for the user, if any. */
 export async function getManagementUrl(userId: string): Promise<string | null> {
-  const info = await getPurchases(userId).getCustomerInfo();
+  const purchases = await getPurchases(userId);
+  const info = await purchases.getCustomerInfo();
   return info.managementURL;
 }
 
-/** True when the error is the user dismissing the checkout (not a real failure). */
+/**
+ * True when the error is the user dismissing the checkout (not a real
+ * failure). Kept SYNCHRONOUS by design — the two call sites (UpgradePage's
+ * purchase `onError`) need an immediate boolean, and by the time a real
+ * RevenueCat error can reach either of them `purchasePackage` has already
+ * awaited `loadSdk()`, so `loadedSdk` is guaranteed populated. If the SDK
+ * somehow never loaded, this safely reports "not a cancel" rather than
+ * throwing.
+ */
 export function isUserCancelledError(error: unknown): boolean {
-  return error instanceof PurchasesError && error.errorCode === ErrorCode.UserCancelledError;
+  if (!loadedSdk) return false;
+  return (
+    error instanceof loadedSdk.PurchasesError &&
+    error.errorCode === loadedSdk.ErrorCode.UserCancelledError
+  );
 }

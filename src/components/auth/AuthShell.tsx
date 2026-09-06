@@ -1,10 +1,8 @@
 import { useMemo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui';
+import { Text } from '@/components/ui';
 
 export interface AuthShellProps {
-  title: string;
-  subtitle?: string;
   children: ReactNode;
 }
 
@@ -16,12 +14,22 @@ const HERO_IMAGES = [
   { src: '/family-3.webp', altKey: 'authHero.imageAlt3' },
 ] as const;
 
+// Order mirrors the table in the W5 task — meds, calendar, accountability.
+const VALUE_PROP_KEYS = [
+  'authHero.valueProps.meds',
+  'authHero.valueProps.calendar',
+  'authHero.valueProps.accountability',
+] as const;
+
 /**
- * Split layout shared by all auth pages. On large screens a full-height family
- * hero (mirrors the mobile WelcomeScreen imagery) sits beside the form card; on
- * smaller widths it collapses to the centered single-card layout.
+ * Split layout shared by every signed-out screen. On large screens (≥1024px) a
+ * full-height family hero (mirrors the mobile WelcomeScreen imagery) sits
+ * beside the form column; below that it collapses to the form filling the
+ * page on plain paper. Unlike the old version, this component owns ONLY the
+ * split — the top bar, heading and body are composed by each page from
+ * `AuthTopBar` / `AuthHeader`, exactly like mobile's per-screen composition.
  */
-export function AuthShell({ title, subtitle, children }: AuthShellProps): ReactElement {
+export function AuthShell({ children }: AuthShellProps): ReactElement {
   const { t } = useTranslation('common');
 
   // Pick one hero photo at random per mount (matches mobile WelcomeScreen).
@@ -29,40 +37,48 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps): ReactE
 
   return (
     <main className="flex min-h-screen bg-bg">
-      {/* Hero panel — desktop only. Image lives in /public (copied from mobile). */}
-      <aside className="relative hidden w-1/2 overflow-hidden lg:block">
+      {/* Hero panel — ≥1024px only. Image lives in /public (copied from mobile). */}
+      <aside className="relative hidden w-1/2 overflow-hidden xl:block">
         <img
           src={hero.src}
           alt={t(hero.altKey)}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        {/* Gradient overlay — mirrors mobile WelcomeScreen: bottom ~40% ramps to
-            0.95 opacity so the cream tagline/logo keep AA contrast on any photo. */}
+        {/* Gradient overlay — mirrors mobile WelcomeScreen: ramps from 0.95
+            opacity at the bottom 10% to 0.55 at 55% (the stops below), so the
+            cream headline/tagline/value-prop list keep AA contrast on any
+            photo. */}
         <div className="absolute inset-0 bg-gradient-to-t from-ink/95 from-10% via-ink/55 via-55% to-ink/25" />
         <div className="absolute inset-x-0 bottom-0 p-10">
-          <div className="flex items-center gap-3">
-            <img src="/icon.png" alt="" className="h-14 w-14 rounded-[14px]" />
-            <p className="serif m-0 text-4xl text-cream">{t('appName')}</p>
-          </div>
-          <p className="m-0 mt-3 max-w-md text-base leading-snug text-cream/90">
-            {t('authHero.tagline')}
+          {/* The wordmark only — the editorial face stops here (spec §6.1). */}
+          <p className="m-0 text-xl text-cream" style={{ fontFamily: 'var(--font-serif)' }}>
+            {t('appName')}
           </p>
+          {/* A <p>, not <h2> — the form column's <h1> (the actual page
+              heading) renders after this in the DOM, so an <h2> here would
+              put an h2 before the page's h1 and break heading order. Sans
+              type scale (`editorialTitle`), not the serif face. */}
+          <Text variant="editorialTitle" as="p" className="mt-6 max-w-md text-cream!">
+            {t('authHero.headline')}
+          </Text>
+          <Text variant="caption" className="m-0 mt-3 max-w-md text-cream/90!">
+            {t('authHero.tagline')}
+          </Text>
+          <ul role="list" className="m-0 mt-5 flex max-w-md list-none flex-col gap-2 p-0">
+            {VALUE_PROP_KEYS.map((key) => (
+              <li key={key} className="flex items-start gap-2">
+                <Text variant="caption" className="text-cream/90!">
+                  {t(key)}
+                </Text>
+              </li>
+            ))}
+          </ul>
         </div>
       </aside>
 
-      {/* Form column — centered card. */}
-      <div className="flex flex-1 flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <div className="mb-6 flex items-center justify-center gap-2.5 lg:hidden">
-            <img src="/icon.png" alt="" className="h-9 w-9 rounded-[10px]" />
-            <p className="serif m-0 text-lg text-ink">{t('appName')}</p>
-          </div>
-          <Card>
-            <h1 className="serif m-0 mb-2 text-xl leading-tight text-ink">{title}</h1>
-            {subtitle ? <p className="m-0 mb-6 text-sm text-ink-3">{subtitle}</p> : null}
-            {children}
-          </Card>
-        </div>
+      {/* Form column — sits directly on paper, no card border. */}
+      <div className="mx-auto flex w-full max-w-[448px] flex-1 flex-col justify-center px-6 py-10">
+        {children}
       </div>
     </main>
   );

@@ -47,7 +47,10 @@ export function CircleSelectionModal({ onClose }: { onClose: () => void }): Reac
       closeOnBackdropClick={false}
       footer={
         step === 'select' ? (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={onClose}>
+              {t('circleSelection.cancel')}
+            </Button>
             <Button disabled={!selectedId} onClick={() => setStep('confirm')}>
               {t('circleSelection.confirmButton')}
             </Button>
@@ -57,7 +60,7 @@ export function CircleSelectionModal({ onClose }: { onClose: () => void }): Reac
             <Button variant="ghost" disabled={select.isPending} onClick={() => setStep('select')}>
               {t('circleSelection.back')}
             </Button>
-            <Button variant="terracotta" disabled={select.isPending} onClick={handleKeep}>
+            <Button variant="primary" disabled={select.isPending} onClick={handleKeep}>
               {t('circleSelection.confirmKeep')}
             </Button>
           </div>
@@ -72,7 +75,7 @@ export function CircleSelectionModal({ onClose }: { onClose: () => void }): Reac
         <div className="flex flex-col gap-4">
           <p className="m-0 text-sm text-ink-3">{t('circleSelection.subtitle')}</p>
           <RadioGroup
-            label={t('circleSelection.title')}
+            label={t('circleSelection.pickLabel')}
             options={options}
             value={selectedId}
             onChange={setSelectedId}

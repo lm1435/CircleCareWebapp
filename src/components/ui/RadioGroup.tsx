@@ -1,4 +1,7 @@
 import { useId, type ReactNode } from 'react';
+import { Icon } from './Icon';
+import { Text } from './Text';
+import { INPUT_ERROR, INPUT_HINT, INPUT_LABEL, optionRow } from './inputStyles';
 
 export interface RadioOption {
   value: string;
@@ -25,8 +28,8 @@ export interface RadioGroupProps {
 
 /**
  * Accessible radio group — `role="radiogroup"` labelled by its heading, native
- * radio inputs (full keyboard support), ≥44px row targets, error wiring. All
- * copy comes from props.
+ * radio inputs (full keyboard support, `accent-ink`), 44px option rows in the
+ * §4.5 field language, error wiring. All copy comes from props.
  */
 export function RadioGroup({
   label,
@@ -47,56 +50,60 @@ export function RadioGroup({
     [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
 
   return (
+    // No spacing class on the wrapper: `INPUT_LABEL`'s mb-2 and the hint/error
+    // rows' mt-1 carry the rhythm, exactly as they do on every other §4.5 field.
     <div
       role="radiogroup"
       aria-labelledby={labelId}
       aria-invalid={error ? true : undefined}
       aria-describedby={describedBy}
-      className="flex flex-col gap-1.5"
     >
-      <span id={labelId} className="text-sm font-medium text-ink-2">
-        {label}
+      <span id={labelId} className={INPUT_LABEL}>
+        <Text variant="label" as="span">
+          {label}
+        </Text>
       </span>
       <div className="flex flex-col gap-1">
         {options.map((option) => {
           const optionId = `${groupName}-${option.value}`;
           const optionDisabled = disabled || option.disabled;
+          const selected = value === option.value;
+          const row = optionRow(selected, optionDisabled);
           return (
-            <label
-              key={option.value}
-              htmlFor={optionId}
-              className={`flex min-h-[44px] items-start gap-3 rounded-xl border px-4 py-3 ${
-                value === option.value ? 'border-terracotta-deep bg-bg-2' : 'border-line'
-              } ${optionDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-            >
+            <label key={option.value} htmlFor={optionId} className={row}>
               <input
                 id={optionId}
                 type="radio"
                 name={groupName}
                 value={option.value}
-                checked={value === option.value}
+                checked={selected}
                 disabled={optionDisabled}
                 onChange={() => onChange(option.value)}
-                className="mt-0.5 h-5 w-5 shrink-0 accent-terracotta-deep"
+                className="h-5 w-5 shrink-0 accent-ink"
               />
               <span className="min-w-0">
-                <span className="block text-base text-ink">{option.label}</span>
+                <Text variant="bodyDense" as="span" className="block">
+                  {option.label}
+                </Text>
                 {option.hint ? (
-                  <span className="mt-0.5 block text-sm text-ink-3">{option.hint}</span>
+                  <Text variant="caption" as="span" className="mt-0.5 block">
+                    {option.hint}
+                  </Text>
                 ) : null}
               </span>
             </label>
           );
         })}
       </div>
-      {error ? (
-        <p id={errorId} className="m-0 text-sm text-terracotta-deep">
-          {error}
-        </p>
-      ) : null}
       {hint ? (
-        <p id={hintId} className="m-0 text-sm text-ink-3">
+        <Text variant="caption" id={hintId} className={INPUT_HINT}>
           {hint}
+        </Text>
+      ) : null}
+      {error ? (
+        <p id={errorId} className={INPUT_ERROR}>
+          <Icon name="alert-circle-outline" size="inline" />
+          {error}
         </p>
       ) : null}
     </div>

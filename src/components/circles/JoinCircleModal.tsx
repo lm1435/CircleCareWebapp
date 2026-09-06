@@ -1,15 +1,18 @@
-import { useState, type FormEvent, type ReactElement } from 'react';
+import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, Modal, TextField, useToast } from '@/components/ui';
+import { Badge, Button, Card, Modal, Text, useToast } from '@/components/ui';
+import { OtpInput, type OtpInputHandle } from '@/components/auth/OtpInput';
+import { getApiError } from '@/api/auth';
 import { useLookupInviteByCode, useAcceptInviteByCode } from '@/hooks/useJoinCircle';
-import { extractJoinCode, isCompleteJoinCode, normalizeJoinCode } from '@/lib/joinCode';
+import { extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
 import type { InviteByCode } from '@/api/invites';
 
 // Web port of mobile/src/components/JoinCircleModal.tsx — the two-step
 // join-by-code flow for an already-authenticated user:
-//   1. Enter an invite code → look it up (GET /invites/code/:code)
+//   1. Enter an invite code (six-box OtpInput, alphanumeric) → look it up
+//      (GET /invites/code/:code)
 //   2. Preview the circle (name / caring for / invited by + joining-as role)
 //      → confirm (POST /invites/code/:code/accept)
 // On success the circle list is invalidated (by useAcceptInviteByCode) and the
@@ -19,12 +22,12 @@ import type { InviteByCode } from '@/api/invites';
 // never logged or sent to analytics from here.
 //
 // R4-2 (docs/plans/condition-tags.md Round 4): the code field auto-uppercases
-// and strips spaces/dashes on type AND paste (normalizeJoinCode), submit
-// enables at exactly 6 normalized chars, and — when the browser exposes
-// navigator.clipboard.readText — a "Paste code" button reads the clipboard ON
-// CLICK ONLY (never automatically) and fills the field when the clipboard
-// holds exactly a 6-char alphanumeric code. Clipboard permission denials are
-// swallowed silently (no toast, no error state).
+// and strips spaces/dashes on type AND paste (OtpInput's alphanumeric mode),
+// submit enables at exactly 6 normalized chars, and — when the browser
+// exposes navigator.clipboard.readText — a "Paste code" button reads the
+// clipboard ON CLICK ONLY (never automatically) and fills the field when the
+// clipboard holds exactly a 6-char alphanumeric code. Clipboard permission
+// denials are swallowed silently (no toast, no error state).
 
 export interface JoinCircleModalProps {
   onClose: () => void;
@@ -35,7 +38,10 @@ export interface JoinCircleModalProps {
 /** Display name for the inviter — full name when known, else the email. */
 function inviterName(invite: InviteByCode): string {
   const { first_name, last_name, email } = invite.invited_by;
-  if (first_name) return `${first_name} ${last_name ?? ''}`.trim();
+  // TRIM BEFORE THE TRUTHINESS TEST — ' ' is truthy, takes the name branch,
+  // then `.trim()`s to '' and renders a blank inviter.
+  const firstName = first_name?.trim();
+  if (firstName) return `${firstName} ${last_name?.trim() ?? ''}`.trim();
   return email;
 }
 
@@ -50,9 +56,44 @@ function circleNameIsDistinct(invite: InviteByCode): boolean {
   return name.length > 0 && name !== recipient;
 }
 
-/** Pull the backend error CODE out of the `{ error: { code } }` envelope. */
-function errorCodeOf(error: unknown): string | undefined {
-  return (error as { error?: { code?: string } } | null)?.error?.code;
+/**
+ * Backend error code → invite-modal copy.
+ *
+ * ONE switch for both steps (look-up and accept), mirroring
+ * mobile/src/components/JoinCircleModal.tsx: a code that only one endpoint
+ * raises today costs nothing here, and every code missing from it silently
+ * becomes "we couldn't find that invite code" — a lie for the archived and
+ * care-recipient cases, which sends the invitee hunting for a typo that does
+ * not exist. Unrecognised codes fall through to the caller's own `fallback`.
+ *
+ * Every key is a LITERAL so the static translation-key audit
+ * (src/i18n/__tests__) can resolve it; a `KEYS[code]` table would make all of
+ * them unverifiable at once.
+ */
+function joinErrorMessage(
+  t: (key: string) => string,
+  code: string | undefined,
+  fallback: string
+): string {
+  switch (code) {
+    case 'INVITE_EXPIRED':
+      return t('joinModal.expired');
+    case 'INVITE_ALREADY_USED':
+      return t('joinModal.alreadyUsed');
+    case 'ALREADY_MEMBER':
+      return t('joinModal.alreadyMember');
+    // The circle was archived (deleted by its owner) AFTER the invite was sent.
+    // Raised by the look-up, the preview and both accepts — the code is
+    // perfectly valid, so "double-check it" is the wrong thing to say.
+    case 'CIRCLE_ARCHIVED':
+      return t('joinModal.circleArchived');
+    // A second care-recipient invite into a circle that already has one. A
+    // partial unique index backstops it, so it arrives as a 400 from accept.
+    case 'CARE_RECIPIENT_EXISTS':
+      return t('joinModal.careRecipientExists');
+    default:
+      return fallback;
+  }
 }
 
 export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): ReactElement {
@@ -64,6 +105,11 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
   const [error, setError] = useState<string | null>(null);
   // "We didn't find a code" hint after a Paste-code click with non-code content.
   const [pasteMiss, setPasteMiss] = useState(false);
+
+  // OtpInput's own `autoFocus` (below) is dead inside Modal — the shell always
+  // claims initial focus for its close button. `initialFocusRef` on the Modal
+  // (further down) is how the first code box wins that race instead.
+  const codeFieldRef = useRef<OtpInputHandle>(null);
 
   const lookup = useLookupInviteByCode();
   const accept = useAcceptInviteByCode();
@@ -97,14 +143,7 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
     lookup.mutate(code, {
       onSuccess: (found) => setInvite(found),
       onError: (err) => {
-        const c = errorCodeOf(err);
-        setError(
-          c === 'INVITE_EXPIRED'
-            ? t('joinModal.expired')
-            : c === 'INVITE_ALREADY_USED'
-              ? t('joinModal.alreadyUsed')
-              : t('joinModal.invalidCode')
-        );
+        setError(joinErrorMessage(t, getApiError(err)?.code, t('joinModal.invalidCode')));
       },
     });
   };
@@ -126,16 +165,7 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
         onJoined(invite.circle.id);
       },
       onError: (err) => {
-        const c = errorCodeOf(err);
-        setError(
-          c === 'ALREADY_MEMBER'
-            ? t('joinModal.alreadyMember')
-            : c === 'INVITE_EXPIRED'
-              ? t('joinModal.expired')
-              : c === 'INVITE_ALREADY_USED'
-                ? t('joinModal.alreadyUsed')
-                : t('joinModal.joinFailed')
-        );
+        setError(joinErrorMessage(t, getApiError(err)?.code, t('joinModal.joinFailed')));
       },
     });
   };
@@ -146,94 +176,133 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
   };
 
   return (
-    <Modal title={t('joinModal.title')} onClose={onClose} closeLabel={t('joinModal.close')}>
-      <p className="m-0 text-sm text-ink-3">{t('joinModal.subtitle')}</p>
-
-      {error ? (
-        <p
-          role="alert"
-          className="m-0 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta-deep"
-        >
-          {error}
-        </p>
-      ) : null}
-
-      {!invite ? (
-        <form onSubmit={handleLookup} className="flex flex-col gap-4">
-          <TextField
-            id="invite-code"
-            label={t('joinModal.codeLabel')}
-            value={code}
-            onChange={(e) => {
-              // Normalizes typing AND paste-into-field (paste fires onChange).
-              setCode(normalizeJoinCode(e.target.value));
-              setError(null);
-              setPasteMiss(false);
-            }}
-            placeholder={t('joinModal.placeholder')}
-            autoFocus
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            className="text-center text-lg font-semibold tracking-[0.35em]"
-          />
-          {clipboardAvailable && (
-            <div className="flex flex-col items-start gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => void handlePasteFromClipboard()}
-              >
-                {t('joinModal.pasteCode')}
-              </Button>
-              {/* Polite inline miss hint — never a toast, never an error state. */}
-              <p role="status" aria-live="polite" className="m-0 text-sm text-ink-3">
-                {pasteMiss ? t('joinModal.pasteNoCode') : ''}
-              </p>
-            </div>
-          )}
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={onClose}>
+    <Modal
+      title={t('joinModal.title')}
+      onClose={onClose}
+      closeLabel={t('joinModal.close')}
+      initialFocusRef={codeFieldRef}
+      size="sm"
+      footer={
+        !invite ? (
+          <div className="flex flex-col gap-2">
+            <Button type="button" variant="secondary" size="lg" className="w-full" onClick={onClose}>
               {t('joinModal.cancel')}
             </Button>
-            <Button type="submit" disabled={!isCompleteJoinCode(code) || lookup.isPending}>
+            <Button
+              type="submit"
+              form="join-circle-code-form"
+              size="lg"
+              className="w-full"
+              loading={lookup.isPending}
+              disabled={!isCompleteJoinCode(code)}
+            >
               {lookup.isPending ? t('joinModal.lookingUp') : t('joinModal.lookUpCode')}
             </Button>
           </div>
-        </form>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              onClick={handleReset}
+              disabled={accept.isPending}
+            >
+              {t('joinModal.enterDifferentCode')}
+            </Button>
+            <Button size="lg" className="w-full" loading={accept.isPending} onClick={handleAccept}>
+              {accept.isPending ? t('joinModal.joining') : t('joinModal.joinCircle')}
+            </Button>
+          </div>
+        )
+      }
+    >
+      {!invite ? (
+        <>
+          <Text variant="label" as="p">{t('joinModal.codeLabel')}</Text>
+          <p className="m-0 text-sm text-ink-3">{t('joinModal.subtitle')}</p>
+
+          {error ? (
+            <p
+              role="alert"
+              className="m-0 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta-deep"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <form
+            id="join-circle-code-form"
+            onSubmit={handleLookup}
+            className="flex flex-col gap-4"
+          >
+            <OtpInput
+              ref={codeFieldRef}
+              alphanumeric
+              value={code}
+              onChange={(next) => {
+                setCode(next);
+                setError(null);
+                setPasteMiss(false);
+              }}
+              label={t('joinModal.codeLabel')}
+            />
+            {clipboardAvailable && (
+              <div className="flex flex-col items-start gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => void handlePasteFromClipboard()}
+                >
+                  {t('joinModal.pasteCode')}
+                </Button>
+                {/* Polite inline miss hint — never a toast, never an error state. */}
+                <p role="status" aria-live="polite" className="m-0 text-sm text-ink-3">
+                  {pasteMiss ? t('joinModal.pasteNoCode') : ''}
+                </p>
+              </div>
+            )}
+          </form>
+        </>
       ) : (
         <div className="flex flex-col gap-4">
-          <Card className="flex flex-col gap-3 p-4">
+          {error ? (
+            <p
+              role="alert"
+              className="m-0 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta-deep"
+            >
+              {error}
+            </p>
+          ) : null}
+          <Card variant="filled" className="flex flex-col gap-3 p-4">
             {circleNameIsDistinct(invite) ? (
               <div>
-                <p className="eyebrow m-0">{t('joinModal.circle')}</p>
-                <p className="serif m-0 text-lg text-ink">{invite.circle.name}</p>
+                <Text variant="label" as="p">{t('joinModal.circle')}</Text>
+                <Text variant="h2" as="p">
+                  {invite.circle.name}
+                </Text>
               </div>
             ) : null}
-            <div className={circleNameIsDistinct(invite) ? 'border-t border-line-2 pt-3' : undefined}>
-              <p className="eyebrow m-0">{t('joinModal.caringFor')}</p>
+            <div
+              className={circleNameIsDistinct(invite) ? 'border-t border-line-2 pt-3' : undefined}
+            >
+              <Text variant="label" as="p">{t('joinModal.caringFor')}</Text>
               <p className="m-0 font-medium text-ink">{invite.circle.recipient_name}</p>
             </div>
             <div className="border-t border-line-2 pt-3">
-              <p className="eyebrow m-0">{t('joinModal.invitedBy')}</p>
+              <Text variant="label" as="p">{t('joinModal.invitedBy')}</Text>
               <p className="m-0 font-medium text-ink">{inviterName(invite)}</p>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-line-2 pt-3">
-              <p className="eyebrow m-0">{t('joinModal.yourRole')}</p>
-              <Badge variant={invite.member_type === 'care_recipient' ? 'terracotta' : 'moss'}>
+              <Text variant="label" as="p">{t('joinModal.yourRole')}</Text>
+              <Badge variant={invite.member_type === 'care_recipient' ? 'coral' : 'default'}>
                 {invite.member_type === 'care_recipient'
                   ? t('joinModal.roleCareRecipient')
                   : t('joinModal.roleCaregiver')}
               </Badge>
             </div>
           </Card>
-
-          <Button onClick={handleAccept} disabled={accept.isPending} className="w-full">
-            {accept.isPending ? t('joinModal.joining') : t('joinModal.joinCircle')}
-          </Button>
-          <Button type="button" variant="ghost" onClick={handleReset} disabled={accept.isPending}>
-            {t('joinModal.enterDifferentCode')}
-          </Button>
         </div>
       )}
     </Modal>

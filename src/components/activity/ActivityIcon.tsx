@@ -1,9 +1,18 @@
-import type { ReactElement } from 'react';
+import type { EyebrowColor, IconName, IconTileTone } from '@/components/ui';
 
-// Activity-type icon (Task 26). Mirrors the action_type → icon mapping in
-// mobile/src/screens/activity/ActivityFeedScreen.tsx (getEditorialConfig)
-// with inline SVGs (no icon dependency) and web design-system token colors.
-// Decorative only — always aria-hidden; the action text carries the meaning.
+// Activity-type → visual accent mapping (Task 17, web mobile-parity wave).
+// Mirrors mobile's action_type → icon/color mapping (`getEditorialConfig` in
+// mobile/src/components/activity/ActivityRow.tsx), expressed through this
+// project's design-system tokens (IconTile tones, Icon names, Eyebrow
+// colors) instead of mobile's raw hex + Ionicons name.
+//
+// `note` is NOT a mobile category — mobile's `getEditorialConfig` has no case
+// for `care_note_added` / `note_added` and both fall through to its default
+// (dusk + ellipse-outline), which is the SAME bucket mobile uses for truly
+// unknown types. This web build gives notes their own dusk-tinted
+// `document-text-outline` glyph and keeps `generic` as the neutral fallback
+// for anything else — a deliberate, more legible split for a mouse-driven
+// reader rather than a divergence from a considered mobile choice.
 
 export type ActivityIconName =
   | 'medication'
@@ -11,6 +20,7 @@ export type ActivityIconName =
   | 'task'
   | 'emergency'
   | 'circle'
+  | 'note'
   | 'generic';
 
 export function getActivityIconName(actionType: string): ActivityIconName {
@@ -18,6 +28,15 @@ export function getActivityIconName(actionType: string): ActivityIconName {
     case 'medication_confirmed':
     case 'medication_taken':
     case 'medication_completed':
+    // The calendar route writes `${event_type}_created|updated|deleted` for
+    // every type, and the confirmation route writes skipped / not_taken —
+    // none of which either platform's switch listed, so "Added Medication"
+    // fell through to the grey placeholder dot.
+    case 'medication_created':
+    case 'medication_updated':
+    case 'medication_deleted':
+    case 'medication_skipped':
+    case 'medication_not_taken':
       return 'medication';
     case 'appointment_completed':
     case 'appointment_created':
@@ -38,125 +57,128 @@ export function getActivityIconName(actionType: string): ActivityIconName {
       return 'emergency';
     case 'circle_joined':
     case 'member_joined':
+    case 'member_invited':
+    case 'member_left':
+    case 'member_removed':
     case 'circle_created':
     case 'circle_updated':
       return 'circle';
+    case 'care_note_added':
+    case 'note_added':
+      return 'note';
+    default:
+      return fromPrefix(actionType);
+  }
+}
+
+/**
+ * Last resort before the placeholder dot: the backend names every activity
+ * `<subject>_<verb>`, so an unlisted verb on a known subject still gets that
+ * subject's glyph. Only a genuinely unknown subject reads as `generic`.
+ */
+function fromPrefix(actionType: string): ActivityIconName {
+  const subject = actionType.split('_')[0];
+  switch (subject) {
+    case 'medication':
+      return 'medication';
+    case 'appointment':
+      return 'appointment';
+    case 'task':
+    case 'event':
+      return 'task';
+    case 'emergency':
+      return 'emergency';
+    case 'member':
+    case 'circle':
+      return 'circle';
+    case 'note':
+      return 'note';
     default:
       return 'generic';
   }
 }
 
-// Section tints mirror mobile's activity icon editorial config:
-// medication → clay, appointment → dusk, task → moss, emergency → terracotta,
-// circle (people/profile) → moss, generic → neutral.
-const TILE_CLASS: Record<ActivityIconName, string> = {
-  medication: 'bg-clay/15 text-clay-deep',
-  appointment: 'bg-dusk/15 text-dusk-deep',
-  task: 'bg-moss/15 text-moss-deep',
-  emergency: 'bg-terracotta/15 text-terracotta-deep',
-  circle: 'bg-moss/10 text-moss-deep',
-  generic: 'bg-bg-3 text-ink-3',
+/** `<IconTile>` glyph per type (spec §6.5: medkit / calendar / checkbox / alert / people / document). */
+const ICON_NAME: Record<ActivityIconName, IconName> = {
+  medication: 'medkit-outline',
+  appointment: 'calendar-outline',
+  task: 'checkbox-outline',
+  emergency: 'alert-circle-outline',
+  circle: 'people-outline',
+  note: 'document-text-outline',
+  generic: 'ellipse-outline',
+};
+
+/** `<IconTile tone>` per type — drives the 44px hero medallion. */
+const TONE: Record<ActivityIconName, IconTileTone> = {
+  medication: 'clay',
+  appointment: 'dusk',
+  task: 'moss',
+  emergency: 'terracotta',
+  circle: 'moss',
+  note: 'dusk',
+  generic: 'neutral',
 };
 
 /**
- * Per-icon accent token family, so the LatestHero's hero treatment (accent
- * rail, solid icon medallion, LIVE pill) can pick up the SAME event-type color
- * as the small feed icon — keeping one source of truth for the tint mapping.
- * `tile` = soft surface + deep text (matches TILE_CLASS at hero scale);
- * `solid` = full-strength tint behind cream glyphs; `rail` = the left accent;
- * `text` = deep variant for the action text reading AA on the soft card.
+ * Row icon tile classes (spec §6.5): "28×28 r8 icon tile (2px border in the
+ * type color, type-soft fill, icon 14 type-deep)". `generic` is the one
+ * literal exception, spelled out verbatim in the spec rather than derived
+ * from a tone: `border-line bg-bg-2 text-ink-2`.
  */
-export interface ActivityAccent {
-  tile: string;
-  solid: string;
-  rail: string;
-  text: string;
-}
-
-const ACCENT: Record<ActivityIconName, ActivityAccent> = {
-  medication: { tile: 'bg-clay-soft', solid: 'bg-clay', rail: 'bg-clay', text: 'text-clay-deep' },
-  appointment: { tile: 'bg-dusk-soft', solid: 'bg-dusk', rail: 'bg-dusk', text: 'text-dusk-deep' },
-  task: { tile: 'bg-moss-soft', solid: 'bg-moss', rail: 'bg-moss', text: 'text-moss-deep' },
-  emergency: {
-    tile: 'bg-terracotta-soft',
-    solid: 'bg-terracotta',
-    rail: 'bg-terracotta',
-    text: 'text-terracotta-deep',
-  },
-  circle: { tile: 'bg-moss-soft', solid: 'bg-moss', rail: 'bg-moss', text: 'text-moss-deep' },
-  generic: { tile: 'bg-bg-3', solid: 'bg-ink-2', rail: 'bg-ink-3', text: 'text-ink-2' },
+const TILE_CLASS: Record<ActivityIconName, string> = {
+  medication: 'border-clay bg-clay-soft text-clay-deep',
+  appointment: 'border-dusk bg-dusk-soft text-dusk-deep',
+  task: 'border-moss bg-moss-soft text-moss-deep',
+  emergency: 'border-terracotta bg-terracotta-soft text-terracotta-deep',
+  circle: 'border-moss bg-moss-soft text-moss-deep',
+  note: 'border-dusk bg-dusk-soft text-dusk-deep',
+  generic: 'border-line bg-bg-2 text-ink-2',
 };
 
-/** Accent token family for an action type (used by the LatestHero). */
-export function getActivityAccent(actionType: string): ActivityAccent {
-  return ACCENT[getActivityIconName(actionType)];
-}
-
-/** Raw SVG path(s) for an action type — lets the hero render a larger glyph. */
-export function getActivityIconPaths(actionType: string): ReactElement {
-  return ICON_PATHS[getActivityIconName(actionType)];
-}
-
-const ICON_PATHS: Record<ActivityIconName, ReactElement> = {
-  // Medkit (mobile: medkit-outline)
-  medication: (
-    <>
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-      <path d="M12 10.5v6" />
-      <path d="M9 13.5h6" />
-    </>
-  ),
-  // Calendar (mobile: calendar-outline)
-  appointment: (
-    <>
-      <rect x="3" y="4" width="18" height="17" rx="2" />
-      <path d="M3 9h18" />
-      <path d="M8 2v4" />
-      <path d="M16 2v4" />
-    </>
-  ),
-  // Checkmark (mobile: checkmark-outline)
-  task: <path d="M5 13l4 4L19 7" />,
-  // Shield (mobile: shield-outline)
-  emergency: <path d="M12 3l7 3v5.5c0 4.4-2.9 7.8-7 9.5-4.1-1.7-7-5.1-7-9.5V6l7-3z" />,
-  // People (mobile: people-outline)
-  circle: (
-    <>
-      <circle cx="9" cy="7" r="4" />
-      <path d="M1 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    </>
-  ),
-  // Dot (mobile: ellipse-outline)
-  generic: <circle cx="12" cy="12" r="4" />,
+/** Hero's 4px leading rail — full-strength tone background per type. */
+const RAIL_CLASS: Record<ActivityIconName, string> = {
+  medication: 'bg-clay',
+  appointment: 'bg-dusk',
+  task: 'bg-moss',
+  emergency: 'bg-terracotta',
+  circle: 'bg-moss',
+  note: 'bg-dusk',
+  generic: 'bg-ink-2',
 };
 
-export interface ActivityIconProps {
-  actionType: string;
+/**
+ * Hero "LATEST" eyebrow color (spec §6.5: "eyebrow in the type deep color") —
+ * paired with `Eyebrow`'s `deep` prop, which resolves each of these to its
+ * `-deep` shade. `generic` has no `-deep` token, so it maps to `ink-2`
+ * (the neutral "deep" ink) and `deep` is then a no-op for it, same as before.
+ */
+const EYEBROW_COLOR: Record<ActivityIconName, EyebrowColor> = {
+  medication: 'clay',
+  appointment: 'dusk',
+  task: 'moss',
+  emergency: 'terracotta',
+  circle: 'moss',
+  note: 'dusk',
+  generic: 'ink-2',
+};
+
+export function getActivityIcon(actionType: string): IconName {
+  return ICON_NAME[getActivityIconName(actionType)];
 }
 
-export function ActivityIcon({ actionType }: ActivityIconProps): ReactElement {
-  const name = getActivityIconName(actionType);
-  return (
-    <span
-      aria-hidden="true"
-      data-activity-icon={name}
-      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${TILE_CLASS[name]}`}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        focusable="false"
-      >
-        {ICON_PATHS[name]}
-      </svg>
-    </span>
-  );
+export function getActivityTone(actionType: string): IconTileTone {
+  return TONE[getActivityIconName(actionType)];
+}
+
+export function getActivityTileClass(actionType: string): string {
+  return TILE_CLASS[getActivityIconName(actionType)];
+}
+
+export function getActivityRailClass(actionType: string): string {
+  return RAIL_CLASS[getActivityIconName(actionType)];
+}
+
+export function getActivityEyebrowColor(actionType: string): EyebrowColor {
+  return EYEBROW_COLOR[getActivityIconName(actionType)];
 }

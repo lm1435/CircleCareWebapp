@@ -1,9 +1,14 @@
+import { lazy } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { AuthGuard } from '@/components/AuthGuard';
 import { PageviewTracker } from '@/components/PageviewTracker';
 import { RouteTitle } from '@/components/RouteTitle';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
+// Public / pre-auth routes stay EAGER: a signed-out visitor's very first paint
+// is one of these, so lazy-loading them would trade entry-chunk size for a
+// network round trip on the critical path. NotFoundPage is unauthenticated
+// too (see the route table below) so it stays eager alongside them.
 import LoginPage from '@/pages/LoginPage';
 import SignUpPage from '@/pages/SignUpPage';
 import VerifyEmailPage from '@/pages/VerifyEmailPage';
@@ -11,23 +16,27 @@ import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import InviteLandingPage from '@/pages/InviteLandingPage';
-import CirclePickerPage from '@/pages/CirclePickerPage';
-import PendingInvitesPage from '@/pages/PendingInvitesPage';
-import OverviewPage from '@/pages/OverviewPage';
-import CalendarPage from '@/pages/CalendarPage';
-import MedicationsPage from '@/pages/MedicationsPage';
-import TasksPage from '@/pages/TasksPage';
-import NotesPage from '@/pages/NotesPage';
-import ActivityFeedPage from '@/pages/ActivityFeedPage';
-import EmergencyInfoPage from '@/pages/EmergencyInfoPage';
-import DocumentsPage from '@/pages/DocumentsPage';
-import MembersPage from '@/pages/MembersPage';
-import VitalsPage from '@/pages/VitalsPage';
-import EditCirclePage from '@/pages/EditCirclePage';
-import ProfilePage from '@/pages/ProfilePage';
-import HelpPage from '@/pages/HelpPage';
-import UpgradePage from '@/pages/UpgradePage';
 import NotFoundPage from '@/pages/NotFoundPage';
+// Authenticated routes are `React.lazy`: none of this code is reachable (or
+// needed) until AuthGuard has confirmed a session, so it ships as separate
+// chunks instead of bloating the entry bundle every visitor pays for. Caught
+// by the single <Suspense> boundary in src/App.tsx.
+const CirclePickerPage = lazy(() => import('@/pages/CirclePickerPage'));
+const PendingInvitesPage = lazy(() => import('@/pages/PendingInvitesPage'));
+const OverviewPage = lazy(() => import('@/pages/OverviewPage'));
+const CalendarPage = lazy(() => import('@/pages/CalendarPage'));
+const MedicationsPage = lazy(() => import('@/pages/MedicationsPage'));
+const TasksPage = lazy(() => import('@/pages/TasksPage'));
+const NotesPage = lazy(() => import('@/pages/NotesPage'));
+const ActivityFeedPage = lazy(() => import('@/pages/ActivityFeedPage'));
+const EmergencyInfoPage = lazy(() => import('@/pages/EmergencyInfoPage'));
+const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
+const MembersPage = lazy(() => import('@/pages/MembersPage'));
+const VitalsPage = lazy(() => import('@/pages/VitalsPage'));
+const EditCirclePage = lazy(() => import('@/pages/EditCirclePage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const HelpPage = lazy(() => import('@/pages/HelpPage'));
+const UpgradePage = lazy(() => import('@/pages/UpgradePage'));
 
 export const router = createBrowserRouter([
   // Root layout: keeps the per-route document <title> (RouteTitle) in sync and

@@ -35,7 +35,8 @@
     "edit": "Editar",
     "delete": "Eliminar",
     "edited": "Editada",
-    "formerMember": "Exmiembro"
+    "formerMember": "Exmiembro",
+    "actionsFor": "Acciones para la nota de {{author}}"
   },
   "day": {
     "today": "Hoy",

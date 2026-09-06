@@ -17,7 +17,8 @@ import {
   type GetCareNotesResponse,
 } from '@/api/careNotes';
 import { queryKeys } from '@/lib/queryKeys';
-import { isPermissionDeniedError } from '@/lib/apiErrors';
+import { classifyFailureCode, isPermissionDeniedError } from '@/lib/apiErrors';
+import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 
 // Daily Care Notes hooks (docs/plans/daily-care-notes.md, Web Task 15).
@@ -72,10 +73,21 @@ function invalidateCareNotes(
   void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
 }
 
+/**
+ * Shared onError: count the failure for the admin digest (`error_occurred`,
+ * mobile parity — ids/enums only, `code` from the closed-set
+ * `classifyFailureCode`, never the note body or a message), then on a 402/403
+ * refetch the stale circle access flags.
+ */
 function refreshFlagsOnPermissionError(
   queryClient: ReturnType<typeof useQueryClient>,
+  circleId: string,
   error: unknown
 ): void {
+  Analytics.errorOccurred('care_notes', 'care_notes_mutation_error', {
+    circle_id: circleId,
+    code: classifyFailureCode(error),
+  });
   if (isPermissionDeniedError(error)) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
   }
@@ -134,11 +146,11 @@ export function useCreateCareNote(): UseMutationResult<
 
       return { previous } satisfies CreateCareNoteContext;
     },
-    onError: (error, _variables, context) => {
+    onError: (error, variables, context) => {
       context?.previous.forEach(([key, data]) => {
         queryClient.setQueryData(key, data);
       });
-      refreshFlagsOnPermissionError(queryClient, error);
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error);
     },
     onSettled: (_note, _error, variables) => {
       invalidateCareNotes(queryClient, variables.circleId);
@@ -159,7 +171,8 @@ export function useUpdateCareNote(): UseMutationResult<
     onSuccess: (_note, variables) => {
       invalidateCareNotes(queryClient, variables.circleId);
     },
-    onError: (error) => refreshFlagsOnPermissionError(queryClient, error),
+    onError: (error, variables) =>
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
   });
 }
 
@@ -176,6 +189,7 @@ export function useDeleteCareNote(): UseMutationResult<
     onSuccess: (_void, variables) => {
       invalidateCareNotes(queryClient, variables.circleId);
     },
-    onError: (error) => refreshFlagsOnPermissionError(queryClient, error),
+    onError: (error, variables) =>
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
   });
 }

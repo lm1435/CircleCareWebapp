@@ -53,7 +53,11 @@ test.describe('empty states (list endpoints stubbed empty)', () => {
     );
     const path = `/circles/${circleId}/documents`;
     await page.goto(path, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('No documents yet')).toBeVisible({ timeout: 20_000 });
+    // An editor gets the starter kit (mobile 1.1.11 parity); a viewer, or a
+    // full store, keeps the generic empty state.
+    await expect(
+      page.getByRole('heading', { name: /Start with these four|No documents yet/ })
+    ).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Something went wrong')).toHaveCount(0);
     await checkA11y(page, path, testInfo);
   });

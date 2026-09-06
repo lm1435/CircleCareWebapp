@@ -17,6 +17,7 @@ const STATIC_TITLES: Record<string, string> = {
   '/verify-email': 'pageTitles.verifyEmail',
   '/forgot-password': 'pageTitles.forgotPassword',
   '/reset-password': 'pageTitles.resetPassword',
+  '/auth/callback': 'auth:callbackTitle',
   '/circles': 'pageTitles.circlePicker',
   '/invites': 'pageTitles.invites',
   '/profile': 'pageTitles.profile',

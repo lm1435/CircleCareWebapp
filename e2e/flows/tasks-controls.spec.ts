@@ -2,16 +2,19 @@ import { test, expect } from '../fixtures';
 
 // Tasks page filter + sort controls — NON-DESTRUCTIVE.
 //
-// Exercises the status filter (#tasks-status-filter: open | completed | all)
-// and the sort control (#tasks-sort: due_date | assignee | created_at). Both
-// drive useTasks(circleId, { status, sort }). We only flip the controls and
-// assert the list region re-renders cleanly — no tasks are created, completed,
-// edited, or deleted. After each change we assert the page heading survives,
-// the list OR an empty-state is shown, and the ErrorBoundary fallback
-// ("Something went wrong") is absent.
+// Both are MoreMenu pills now (spec §6.4), not native <select>s: a button
+// whose accessible name is "Status: <current>" / "Sort: <current>" (dynamic —
+// TasksPage.tsx filter.statusPillLabel / filter.sortPillLabel), opening a menu
+// of menuitems. We only flip the controls and assert the list region
+// re-renders cleanly — no tasks are created, completed, edited, or deleted.
+// After each change we assert the page heading survives, the list OR an
+// empty-state is shown, and the ErrorBoundary fallback ("Something went
+// wrong") is absent.
 
-const STATUS_OPTIONS = ['open', 'completed', 'all'] as const;
-const SORT_OPTIONS = ['due_date', 'assignee', 'created_at'] as const;
+// Status menuitem labels (matches STATUS_OPTIONS + tasks:filter.status.* in TasksPage.tsx).
+const STATUS_LABELS = ['Open', 'Completed', 'All'] as const;
+// Sort menuitem labels (matches SORT_OPTIONS + tasks:filter.sort.* in TasksPage.tsx).
+const SORT_LABELS = ['Due date', 'Assignee', 'Recently added'] as const;
 
 /**
  * After a control change, assert the page is healthy: heading visible, no error
@@ -40,13 +43,19 @@ async function assertHealthy(page: import('@playwright/test').Page): Promise<voi
 test('status filter cycles through every option without error', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
 
-  const statusFilter = page.locator('#tasks-status-filter');
-  await expect(statusFilter).toBeVisible({ timeout: 15_000 });
+  const statusTrigger = page.getByRole('button', { name: /^Status:/ });
+  await expect(statusTrigger).toBeVisible({ timeout: 15_000 });
   await assertHealthy(page);
 
-  for (const status of STATUS_OPTIONS) {
-    await statusFilter.selectOption(status);
-    await expect(statusFilter).toHaveValue(status);
+  for (const label of STATUS_LABELS) {
+    await page.getByRole('button', { name: /^Status:/ }).click();
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible({ timeout: 10_000 });
+    await menu.getByRole('menuitem', { name: label, exact: true }).click();
+    await expect(menu).toHaveCount(0, { timeout: 10_000 });
+    await expect(
+      page.getByRole('button', { name: new RegExp(`^Status: ${label}$`) })
+    ).toBeVisible({ timeout: 10_000 });
     await assertHealthy(page);
   }
 });
@@ -54,13 +63,19 @@ test('status filter cycles through every option without error', async ({ page, c
 test('sort control cycles through every option without error', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
 
-  const sortControl = page.locator('#tasks-sort');
-  await expect(sortControl).toBeVisible({ timeout: 15_000 });
+  const sortTrigger = page.getByRole('button', { name: /^Sort:/ });
+  await expect(sortTrigger).toBeVisible({ timeout: 15_000 });
   await assertHealthy(page);
 
-  for (const sort of SORT_OPTIONS) {
-    await sortControl.selectOption(sort);
-    await expect(sortControl).toHaveValue(sort);
+  for (const label of SORT_LABELS) {
+    await page.getByRole('button', { name: /^Sort:/ }).click();
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible({ timeout: 10_000 });
+    await menu.getByRole('menuitem', { name: label, exact: true }).click();
+    await expect(menu).toHaveCount(0, { timeout: 10_000 });
+    await expect(
+      page.getByRole('button', { name: new RegExp(`^Sort: ${label}$`) })
+    ).toBeVisible({ timeout: 10_000 });
     await assertHealthy(page);
   }
 });

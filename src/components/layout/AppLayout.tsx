@@ -1,94 +1,57 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState, type ReactElement } from 'react';
+import { Outlet, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import type { CreateKind } from './CreateMenu';
-import { AppDownloadBanner } from './AppDownloadBanner';
+import { AddMenu, type AddMenuType } from './AddMenu';
+import { FloatingNavBar } from './FloatingNavBar';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
 import { AIChatModal } from '@/components/ai/AIChatModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
-import { InviteMemberModal } from '@/components/members/InviteMemberModal';
-import { DocumentUploadModal } from '@/components/documents/DocumentUploadModal';
 import { useCircle } from '@/hooks/useCircle';
 import { useCircles } from '@/hooks/useCircles';
-import { useDocuments } from '@/hooks/useDocuments';
-import { useAuthStore } from '@/store/authStore';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-function CloseIcon(): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-    >
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-
 /**
- * Document upload from the global Create menu. The upload modal needs the
- * circle's storage usage, which only the documents query carries — so this thin
- * wrapper fetches it and renders nothing until the query resolves (matching the
- * Documents page, which never opens the modal before storage is known).
- */
-function CreateDocumentModal({
-  circleId,
-  canEdit,
-  onClose,
-}: {
-  circleId: string;
-  canEdit: boolean;
-  onClose: () => void;
-}): ReactElement | null {
-  const { storage, isLoading } = useDocuments(circleId);
-  if (isLoading) return null;
-  return (
-    <DocumentUploadModal
-      circleId={circleId}
-      storage={storage}
-      canEdit={canEdit}
-      onClose={onClose}
-    />
-  );
-}
-
-/**
- * Authenticated layout shell (plan Task 13): download banner + header on top,
- * sidebar left, page content in <main>. Below xl the sidebar becomes a
- * focus-trapped hamburger drawer (Escape closes, body scroll locked).
+ * Authenticated layout shell (spec §5).
+ *
+ * Header on top; from 1024px up a 272px `Sidebar` column carries navigation,
+ * and below it the `FloatingNavBar` pill does — there is no drawer, no focus
+ * trap and no install banner any more (spec §5.3, §5.5).
+ *
+ * The create surface is the four-option `AddMenu`, opened either from the
+ * sidebar's New button or from the pill's NEW cell. Document upload and Invite
+ * member are deliberately NOT here: they live on the Documents and Members
+ * pages, which each own the context that action needs (spec §5.2).
+ *
  * No UI state is persisted to storage.
  */
 export function AppLayout(): ReactElement {
   const { t } = useTranslation('common');
   const { circleId } = useParams<{ circleId: string }>();
-  const [navOpen, setNavOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  const [createKind, setCreateKind] = useState<CreateKind | null>(null);
-  const drawerRef = useRef<HTMLDivElement | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [createKind, setCreateKind] = useState<AddMenuType | null>(null);
   const location = useLocation();
+  const navigationType = useNavigationType();
+
+  // A new page starts at its top. The window keeps its scroll offset across
+  // client-side route changes, so with a sticky rail a click on "Activity"
+  // from the foot of the overview used to land mid-feed. PUSH/REPLACE only:
+  // Back and Forward (POP) keep the browser's own restoration, and a hash
+  // navigation is a jump to a section, which the page itself handles.
+  useEffect(() => {
+    if (navigationType === 'POP' || location.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+  }, [location.pathname, location.hash, navigationType]);
   const navigate = useNavigate();
 
-  // Gating for the global Create menu: write actions need an editable circle,
-  // inviting needs circle ownership. Resolved here so both the desktop sidebar
-  // and the mobile drawer share one source of truth.
-  const { circle, canEdit } = useCircle(circleId ?? '');
-  const currentUserId = useAuthStore((state) => state.user?.id);
-  const canInvite = !!circle && circle.owner_id === currentUserId;
-  const openCreate = (kind: CreateKind): void => {
-    setNavOpen(false);
+  // Write actions need an editable circle. Resolved once here so the sidebar's
+  // New button and the pill's NEW cell share one source of truth.
+  const { canEdit } = useCircle(circleId ?? '');
+
+  const openCreate = (kind: AddMenuType): void => {
     // Notes have no create modal — the composer lives at the top of the Notes
     // page (mirrors mobile's New-menu note entry).
     if (kind === 'note') {
@@ -97,11 +60,6 @@ export function AppLayout(): ReactElement {
     }
     setCreateKind(kind);
   };
-
-  // Close the drawer on any navigation.
-  useEffect(() => {
-    setNavOpen(false);
-  }, [location.pathname]);
 
   // R4-5 onboarding funnel: users can deep-link straight into a circle without
   // ever visiting /circles, so observe the circle list here too. Header's
@@ -112,172 +70,107 @@ export function AppLayout(): ReactElement {
     if (allCircles) trackCirclesLoaded(allCircles.length);
   }, [allCircles]);
 
-  // Drawer behavior: focus trap, Escape to close, body scroll lock,
-  // focus restored to the trigger on close.
-  useEffect(() => {
-    if (!navOpen) return;
-
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    const drawer = drawerRef.current;
-    const getFocusables = (): HTMLElement[] =>
-      Array.from(drawer?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []);
-
-    getFocusables()[0]?.focus();
-
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setNavOpen(false);
-        return;
-      }
-      if (event.key !== 'Tab') return;
-
-      const focusables = getFocusables();
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey) {
-        if (active === first || !drawer?.contains(active)) {
-          event.preventDefault();
-          last?.focus();
-        }
-      } else if (active === last || !drawer?.contains(active)) {
-        event.preventDefault();
-        first?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
-    };
-  }, [navOpen]);
-
+  // `overflow-x-clip`, not `-hidden`: hidden makes this wrapper a scroll
+  // container, and `position: sticky` only sticks against the nearest scroll
+  // container — so the sticky header and sidebar rail would scroll away with
+  // the page. clip trims sideways overflow without becoming one.
   return (
-    <div className="grid min-h-screen grid-rows-[auto_auto_1fr] overflow-x-hidden bg-bg">
+    <div className="grid min-h-screen grid-rows-[auto_1fr] overflow-x-clip bg-bg">
       <a
         href="#main"
+        // `href="#main"` alone moves the URL hash but not necessarily DOM
+        // focus — not every browser focuses a fragment's target element, and
+        // even where it does, an element needs to BE focusable first (see the
+        // `tabIndex={-1}` below). Without this, activating the link left
+        // focus on <body> and the very next Tab re-entered the nav instead of
+        // reaching page content.
+        onClick={() => document.getElementById('main')?.focus()}
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
       >
         {t('skipToContent')}
       </a>
 
-      <AppDownloadBanner />
-
-      <Header navOpen={navOpen} onToggleNav={() => setNavOpen((open) => !open)} />
+      <Header />
 
       {/* grid-cols-1 (minmax(0,1fr)) is required on mobile: without an explicit
           column the implicit `auto` track grows to the content's max-content
           width, so a wide child like the calendar makes <main> balloon past the
           viewport and the whole page scrolls sideways. The 0-min column clamps
-          <main> to the viewport so wide content scrolls inside its own card. */}
-      <div className="grid grid-cols-1 xl:grid-cols-[16rem_1fr]">
+          <main> to the viewport so wide content scrolls inside its own card.
+          17rem = 272px, the Sidebar's own width — 16rem left a 16px overrun. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[17rem_1fr]">
         <Sidebar
           variant="desktop"
           onOpenAssistant={() => setAiOpen(true)}
           onCreate={circleId ? openCreate : undefined}
           canCreate={canEdit}
-          canInvite={canInvite}
         />
-        <main id="main" className="min-w-0">
+        {/* Below xl the pill floats over the page, so the scroll content has to
+            reserve its height + 24 (spec §4.5). `--nav-h` is published by
+            FloatingNavBar itself; the 0 fallback covers the moment before it
+            mounts and every route that has no pill. */}
+        {/* `tabIndex={-1}`: not in the Tab order, but programmatically
+            focusable — the skip link's target. The inner div below (keyed by
+            path) remounts on every navigation; `<main>` itself never does, so
+            a route change can't steal focus back off of it once landed. */}
+        <main
+          id="main"
+          tabIndex={-1}
+          className="min-w-0 pb-[calc(var(--nav-h,0px)+var(--nav-inset,0px)+24px)] xl:pb-0"
+        >
           <NeedsCircleSelectionBanner />
           {/* Page-level boundary: a single page's render error shows the fallback
               inside <main> while the header + sidebar stay usable. Keyed by path
               so navigating to another route auto-clears a caught error. */}
           <ErrorBoundary boundary="circle-page" key={location.pathname}>
-            <Outlet />
+            <div
+              key={location.pathname}
+              className="animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
+            >
+              <Outlet />
+            </div>
           </ErrorBoundary>
         </main>
       </div>
 
-      {navOpen && (
-        <div className="fixed inset-0 z-40 xl:hidden">
-          <div
-            aria-hidden="true"
-            onClick={() => setNavOpen(false)}
-            className="absolute inset-0 bg-ink/40 animate-[fade-in_240ms_ease-out]"
+      {circleId && (
+        <>
+          <FloatingNavBar
+            circleId={circleId}
+            canCreate={canEdit}
+            addOpen={addOpen}
+            onToggleAdd={() => setAddOpen((open) => !open)}
+            assistantOpen={aiOpen}
+            onOpenAssistant={() => setAiOpen(true)}
           />
-          <div
-            ref={drawerRef}
-            id="mobile-nav"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('nav.label')}
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-bg shadow-xl animate-[drawer-in_280ms_cubic-bezier(0.2,0.7,0.2,1)]"
-          >
-            <div className="flex items-center justify-between p-2">
-              <Link
-                to={circleId ? `/circles/${circleId}` : '/circles'}
-                aria-label={t('appName')}
-                onClick={() => setNavOpen(false)}
-                className="flex min-h-11 min-w-0 items-center gap-2 px-1 no-underline"
-              >
-                <img src="/icon.png" alt="" className="h-7 w-7 shrink-0 rounded-lg" />
-                <span className="serif truncate text-lg text-ink">{t('appName')}</span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => setNavOpen(false)}
-                aria-label={t('menu.close')}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink transition-colors hover:bg-bg-2"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-            <Sidebar
-              variant="drawer"
-              onNavigate={() => setNavOpen(false)}
-              onOpenAssistant={() => {
-                setNavOpen(false);
-                setAiOpen(true);
-              }}
-              onCreate={circleId ? openCreate : undefined}
-              canCreate={canEdit}
-              canInvite={canInvite}
-            />
-          </div>
-        </div>
+          {/* Mounted here, not inside the pill: the sidebar's New button opens
+              the same menu from its own anchor, and only one create flow may be
+              in flight at a time. Deliberately outside any landmark (axe
+              `region`) — it's a transient overlay, not page content. */}
+          <AddMenu
+            anchor="bottom"
+            open={addOpen}
+            canCreate={canEdit}
+            onClose={() => setAddOpen(false)}
+            onSelect={(kind) => {
+              setAddOpen(false);
+              openCreate(kind);
+            }}
+          />
+        </>
       )}
 
       {circleId && (
         <AIChatModal circleId={circleId} isOpen={aiOpen} onClose={() => setAiOpen(false)} />
       )}
 
-      {circleId && createKind && (
-        <>
-          {(createKind === 'appointment' ||
-            createKind === 'medication' ||
-            createKind === 'task') && (
-            <AddEventModal
-              circleId={circleId}
-              initialType={createKind}
-              onClose={() => setCreateKind(null)}
-              onSaved={() => setCreateKind(null)}
-            />
-          )}
-          {createKind === 'invite' && circle && (
-            <InviteMemberModal
-              circleId={circleId}
-              isSelfCare={circle.is_self_care}
-              onClose={() => setCreateKind(null)}
-              onInvited={() => setCreateKind(null)}
-            />
-          )}
-          {createKind === 'document' && (
-            <CreateDocumentModal
-              circleId={circleId}
-              canEdit={canEdit}
-              onClose={() => setCreateKind(null)}
-            />
-          )}
-        </>
+      {circleId && createKind && createKind !== 'note' && (
+        <AddEventModal
+          circleId={circleId}
+          initialType={createKind}
+          onClose={() => setCreateKind(null)}
+          onSaved={() => setCreateKind(null)}
+        />
       )}
     </div>
   );

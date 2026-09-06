@@ -9,15 +9,18 @@ const NAV_TIMEOUT = 20_000;
 test('circle root lands on the overview with at-a-glance cards', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-  // Hero — the eyebrow renders regardless of setup/loading state.
-  await expect(page.getByText('Care home')).toBeVisible({ timeout: NAV_TIMEOUT });
+  // Hero — the recipient name renders as the page's <h1> (components/overview/Hero.tsx).
+  // The DOB eyebrow above it is conditional on the recipient having a DOB on
+  // file, so it isn't a reliable "the hero rendered" signal on its own.
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({
     timeout: NAV_TIMEOUT,
   });
 
-  // At-a-glance cards.
+  // At-a-glance cards. There is no "Recent activity" card any more — mobile's
+  // home has no activity list, and the feed is one Quick Access row instead
+  // (components/overview/QuickAccess.tsx).
+  await expect(page.getByRole('heading', { name: 'Quick access' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Open tasks' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Recent activity' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Care team' })).toBeVisible();
 
   // No ErrorBoundary fallback.

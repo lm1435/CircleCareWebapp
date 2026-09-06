@@ -68,20 +68,26 @@ const pdfDoc = {
   file_url: 'https://storage.example.com/sign/2.pdf?token=pdf-token',
 };
 
-function envelope(documents: unknown[]) {
+function envelope(documents: unknown[], storage: { used: number; limit: number }) {
   return {
     success: true,
-    data: { documents, storage: { used: 2621440, limit: 209715200 } },
+    data: { documents, storage },
   };
 }
 
-function mockDocuments(documents: unknown[] = [imageDoc, pdfDoc]): void {
-  mockedGet.mockImplementation(async (_url: string, config?: { params?: { category?: string } }) => {
-    const category = config?.params?.category;
+function mockDocuments(
+  documents: unknown[] = [imageDoc, pdfDoc],
+  storage: { used: number; limit: number } = { used: 2621440, limit: 209715200 }
+): void {
+  // axios 1.20+ types `params` as a generic (`unknown` by default), so accept
+  // the wide shape and narrow here.
+  mockedGet.mockImplementation(async (_url: string, config?: { params?: unknown }) => {
+    const category = (config?.params as { category?: string } | undefined)?.category;
     return envelope(
       category
         ? documents.filter((doc) => (doc as { category: string }).category === category)
-        : documents
+        : documents,
+      storage
     );
   });
 }
@@ -101,6 +107,11 @@ function renderPage() {
       </ToastProvider>
     </QueryClientProvider>
   );
+}
+
+/** Opens the per-row `MoreMenu` for the document with this label. */
+function openRowMenu(label: string): void {
+  fireEvent.click(screen.getByRole('button', { name: `Options for ${label}` }));
 }
 
 describe('DocumentsPage', () => {
@@ -127,9 +138,20 @@ describe('DocumentsPage', () => {
     expect(screen.getByText('512 KB')).toBeInTheDocument();
     expect(screen.getByText('2.0 MB')).toBeInTheDocument();
 
-    // Count + storage summary
+    // Count + storage footnote (below the 80% threshold — StorageBar renders
+    // only the footnote).
     expect(screen.getByText(/2 documents/)).toBeInTheDocument();
     expect(screen.getByText(/2\.5 MB of 200\.0 MB used/)).toBeInTheDocument();
+  });
+
+  it('renders the subtitle under the page title', async () => {
+    mockDocuments();
+    renderPage();
+
+    expect(await screen.findByText('Insurance Card')).toBeInTheDocument();
+    expect(
+      screen.getByText('Insurance cards, records, and directives, in one place.')
+    ).toBeInTheDocument();
   });
 
   it('filters by category client-side without refetching', async () => {
@@ -139,17 +161,17 @@ describe('DocumentsPage', () => {
     await screen.findByText('Insurance Card');
     const callsBefore = mockedGet.mock.calls.length;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Legal' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Legal' }));
 
     expect(screen.getByText('Power of Attorney')).toBeInTheDocument();
     expect(screen.queryByText('Insurance Card')).not.toBeInTheDocument();
-    // Chip reflects pressed state
-    expect(screen.getByRole('button', { name: 'Legal' })).toHaveAttribute('aria-pressed', 'true');
+    // Chip reflects checked state
+    expect(screen.getByRole('radio', { name: 'Legal' })).toBeChecked();
     // No extra network call — the hook filters the cached list
     expect(mockedGet.mock.calls.length).toBe(callsBefore);
 
     // Switching back restores the full list
-    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'All' }));
     expect(screen.getByText('Insurance Card')).toBeInTheDocument();
   });
 
@@ -166,7 +188,8 @@ describe('DocumentsPage', () => {
     await screen.findByText('Insurance Card');
     const callsBefore = mockedGet.mock.calls.length;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Download Insurance Card' }));
+    openRowMenu('Insurance Card');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download' }));
 
     await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
     // A FRESH signed URL was requested at click time (narrowed by category)
@@ -189,21 +212,22 @@ describe('DocumentsPage', () => {
     mockedGet.mockRejectedValue(
       { success: false, error: { code: 'SERVER_ERROR', message: 'Internal server error' } }
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Download Insurance Card' }));
+    openRowMenu('Insurance Card');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download' }));
 
     expect(await screen.findByText('Download failed. Please try again.')).toBeInTheDocument();
   });
 
-  it('opens the preview modal and moves focus to the close button', async () => {
+  it('opens the preview modal and renders the image from the actions menu', async () => {
     mockDocuments();
     renderPage();
     await screen.findByText('Insurance Card');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Preview Insurance Card' }));
+    openRowMenu('Insurance Card');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Preview' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Insurance Card' });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Close preview' })).toHaveFocus();
 
     // The image renders from the freshly fetched signed URL
     const image = await screen.findByRole('img', { name: 'Insurance Card' });
@@ -215,8 +239,9 @@ describe('DocumentsPage', () => {
     renderPage();
 
     await screen.findByText('HEIC Photo');
-    expect(screen.queryByRole('button', { name: 'Preview HEIC Photo' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Download HEIC Photo' })).toBeInTheDocument();
+    openRowMenu('HEIC Photo');
+    expect(screen.queryByRole('menuitem', { name: 'Preview' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Download' })).toBeInTheDocument();
   });
 
   it('shows the empty state when there are no documents', async () => {
@@ -232,13 +257,71 @@ describe('DocumentsPage', () => {
   });
 
   it('shows the per-category empty state', async () => {
+    // Two categories, so the chip row is on screen to filter with.
+    mockDocuments([imageDoc, pdfDoc]);
+    renderPage();
+
+    await screen.findByText('Power of Attorney');
+    fireEvent.click(screen.getByRole('radio', { name: 'Prescriptions' }));
+
+    expect(screen.getByText('Nothing in Prescriptions yet.')).toBeInTheDocument();
+    // The way out: back to every document, not a dead end.
+    fireEvent.click(screen.getByRole('button', { name: 'Show all documents' }));
+    expect(screen.getByText('Power of Attorney')).toBeInTheDocument();
+  });
+
+  it('hides the category chips while every document sits in one category', async () => {
     mockDocuments([pdfDoc]);
     renderPage();
 
     await screen.findByText('Power of Attorney');
-    fireEvent.click(screen.getByRole('button', { name: 'Insurance' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Filter by category' })).toBeNull();
+  });
 
-    expect(screen.getByText('No documents in this category')).toBeInTheDocument();
+  it('shows the category chips once a second category exists', async () => {
+    mockDocuments([imageDoc, pdfDoc]);
+    renderPage();
+
+    await screen.findByText('Power of Attorney');
+    expect(screen.getByRole('radiogroup', { name: 'Filter by category' })).toBeInTheDocument();
+  });
+
+  it('shows the starter kit instead of the generic empty state when an editor has no documents', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' };
+    mockDocuments([]);
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Start with these four' })).toBeInTheDocument();
+    expect(screen.queryByText('No documents yet')).toBeNull();
+    // No filter row and no 0% storage meter over nothing.
+    expect(screen.queryByRole('radiogroup', { name: 'Filter by category' })).toBeNull();
+  });
+
+  it('opens the upload form preset from a starter row', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' };
+    mockDocuments([]);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Insurance card\./ }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText(/^Name/)).toHaveValue('Insurance card');
+    expect(within(dialog).getByLabelText(/^Category/)).toHaveValue('insurance');
+  });
+
+  it('renders the empty-state icon as a real icon, not a literal icon-name string', async () => {
+    // EmptyState's `icon` prop accepts IconName | ReactNode, so a stale/unknown
+    // icon name silently falls through to the ReactNode branch and renders as
+    // literal text with no type error — this guards against that regression.
+    mockDocuments([]);
+    const { container } = renderPage();
+
+    await screen.findByText('No documents yet');
+    expect(container.querySelector('svg')).toBeInTheDocument();
+    expect(screen.queryByText('folder-outline')).not.toBeInTheDocument();
+    expect(screen.queryByText('document-text-outline')).not.toBeInTheDocument();
   });
 
   it('shows the error state with retry when loading fails', async () => {
@@ -260,12 +343,9 @@ describe('DocumentsPage', () => {
 
     await screen.findByText('Insurance Card');
     expect(screen.queryByRole('button', { name: 'Upload document' })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Edit Insurance Card' })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Delete Insurance Card' })
-    ).not.toBeInTheDocument();
+    openRowMenu('Insurance Card');
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
     // The app-only upload CTA is shown instead.
     expect(screen.getByText('Want to add a document?')).toBeInTheDocument();
   });
@@ -277,10 +357,47 @@ describe('DocumentsPage', () => {
     renderPage();
 
     await screen.findByText('Insurance Card');
-    // current user (user-1) is the uploader of both docs → manage allowed
-    expect(screen.getByRole('button', { name: 'Upload document' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit Insurance Card' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete Insurance Card' })).toBeInTheDocument();
+    // current user (user-1) is the uploader of both docs → manage allowed.
+    // The masthead's rightAction renders twice (icon-only below xl, labelled
+    // button at xl) — both carry this accessible name, hence getAllByRole.
+    expect(screen.getAllByRole('button', { name: 'Upload document' }).length).toBeGreaterThan(0);
+    openRowMenu('Insurance Card');
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+  });
+
+  it('disables the masthead upload action with a tooltip when storage is full', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' };
+    mockDocuments([imageDoc, pdfDoc], { used: 209715200, limit: 209715200 });
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    const uploadButtons = screen.getAllByRole('button', { name: 'Upload document' });
+    expect(uploadButtons.length).toBeGreaterThan(0);
+    for (const button of uploadButtons) {
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute(
+        'title',
+        'This circle has reached its storage limit. Free up space or upgrade to Premium to add more.'
+      );
+    }
+  });
+
+  it('disables the empty-state upload button with the storage-full caption when storage is full', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' };
+    mockDocuments([], { used: 209715200, limit: 209715200 });
+    renderPage();
+
+    await screen.findByText('No documents yet');
+    const uploadButton = screen.getByRole('button', { name: "Upload your first document" });
+    expect(uploadButton).toBeDisabled();
+    expect(
+      screen.getByText(
+        'This circle has reached its storage limit. Free up space or upgrade to Premium to add more.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('hides edit/delete for documents uploaded by others when not the owner', async () => {
@@ -290,9 +407,8 @@ describe('DocumentsPage', () => {
     renderPage();
 
     await screen.findByText('Insurance Card');
-    expect(
-      screen.queryByRole('button', { name: 'Edit Insurance Card' })
-    ).not.toBeInTheDocument();
+    openRowMenu('Insurance Card');
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
   });
 
   it('shows edit/delete for any document when the user is the circle owner', async () => {
@@ -302,8 +418,9 @@ describe('DocumentsPage', () => {
     renderPage();
 
     await screen.findByText('Insurance Card');
-    expect(screen.getByRole('button', { name: 'Edit Insurance Card' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete Insurance Card' })).toBeInTheDocument();
+    openRowMenu('Insurance Card');
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
 
   it('confirms and deletes a document', async () => {
@@ -314,7 +431,8 @@ describe('DocumentsPage', () => {
     renderPage();
 
     await screen.findByText('Insurance Card');
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Insurance Card' }));
+    openRowMenu('Insurance Card');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 
     // Confirm dialog appears.
     const dialog = await screen.findByRole('dialog', { name: 'Delete document?' });

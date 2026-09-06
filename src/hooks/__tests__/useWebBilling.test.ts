@@ -8,6 +8,9 @@ vi.mock('@/lib/purchases', () => ({
   purchasePackage: vi.fn(),
   getManagementUrl: vi.fn(),
   toWebPlan: vi.fn((pkg: unknown) => pkg),
+}));
+
+vi.mock('@/lib/webBillingConfig', () => ({
   isWebBillingConfigured: vi.fn(() => true),
 }));
 

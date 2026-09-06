@@ -1,4 +1,6 @@
 {
+  "title": "Calendario",
+  "subtitle": "Medicamentos, citas y tareas en un solo lugar.",
   "week": "Semana",
   "month": "Mes",
   "viewLabel": "Vista del calendario",
@@ -10,6 +12,10 @@
   "nextMonth": "Próximo mes",
   "timesShownIn": "Las horas se muestran en {{timezone}}",
   "allDay": "Todo el día",
+  "allDayMoreLabel_one": "{{count}} evento más de todo el día el {{day}}",
+  "allDayMoreLabel_other": "{{count}} eventos más de todo el día el {{day}}",
+  "allDayShowFewer": "Mostrar menos",
+  "allDayShowFewerLabel": "Mostrar menos eventos de todo el día el {{day}}",
   "upcoming": "Próximo",
   "dueSoon": "Pronto",
   "noEventsWeek": "Sin eventos esta semana",
@@ -45,8 +51,10 @@
     "date": "Fecha",
     "time": "Hora",
     "location": "Ubicación",
-    "notes": "Notas",
+    "instructions": "Instrucciones",
+    "details": "Detalles",
     "repeats": "Se repite",
+    "assignedTo": "Asignado a",
     "status": "Estado",
     "takenAt": "Tomado a las {{time}}",
     "takenLateAt": "Tomado tarde a las {{time}}",
@@ -56,7 +64,10 @@
     "markTaken": "Marcar como tomada",
     "skipDose": "Omitir dosis",
     "completedToast": "Marcado como completado",
-    "close": "Cerrar detalles del evento"
+    "close": "Cerrar detalles del evento",
+    "completedByLabel": "Completada por",
+    "completedByValue": "{{name}} · {{when}}",
+    "completedLabel": "Completada el"
   },
   "recurrence": {
     "daily": "Diario",
@@ -101,7 +112,8 @@
       "time": "Hora",
       "endTime": "Hora de fin",
       "location": "Ubicación",
-      "notes": "Notas",
+      "details": "Detalles",
+      "instructions": "Instrucciones",
       "repeat": "Repetir",
       "daysOn": "Días activos",
       "daysOff": "Días de descanso",
@@ -115,7 +127,8 @@
       "medicationName": "ej. Metformina",
       "dosage": "ej. 500 mg",
       "location": "ej. Clínica de la calle Main",
-      "notes": "Agrega cualquier detalle…"
+      "details": "Agrega cualquier detalle…",
+      "instructions": "ej., tomar con comida"
     },
     "timePresets": {
       "label": "Horarios comunes",
@@ -128,7 +141,9 @@
       "label": "Frecuencias comunes",
       "onceDaily": "Una vez al día (8:00 a.m.)",
       "everyMorning": "Cada mañana (8:00 a.m.)",
-      "everyEvening": "Cada noche (8:00 p.m.)"
+      "everyEvening": "Cada noche (8:00 p.m.)",
+      "twiceDaily": "Dos veces al día (8:00 a. m., 8:00 p. m.)",
+      "threeTimesDaily": "Tres veces al día (8:00 a. m., 2:00 p. m., 8:00 p. m.)"
     },
     "titleSuggestions": {
       "label": "Sugerencias de título",
@@ -165,12 +180,20 @@
     "reminders": {
       "section": "Recordatorios",
       "enable": "Enviar recordatorios",
-      "enableHint": "Avisa al círculo antes de la hora programada.",
-      "additional": "Recordatorios adicionales",
+      "enableHint": "Controla todas las notificaciones de esta entrada.",
+      "atTime": "A la hora programada",
+      "atTimeHint": "La alerta principal, se envía a la hora indicada.",
+      "atTimeOff": "No se enviará nada a la hora programada, solo los recordatorios anticipados que elijas abajo.",
+      "additional": "Recordatorios anticipados",
+      "escalation": "Si no se confirma una dosis, hacemos seguimiento: la persona a su cuidado a los 15 minutos, los cuidadores a los 30 y todo el círculo a la hora.",
+      "offMedication": "Nadie recibirá aviso cuando toque esta dosis, ni alerta si no se confirma.",
+      "offGeneric": "Nadie recibirá un recordatorio de esto: ni tú, ni nadie más del círculo.",
+      "noneSelected": "Selecciona al menos una opción o no se enviará ningún recordatorio.",
       "h24": "24 horas antes",
       "h1": "1 hora antes",
       "m30": "30 minutos antes",
-      "m15": "15 minutos antes"
+      "m15": "15 minutos antes",
+      "webDelivery": "Los recordatorios se envían a la app móvil de CircleCare. La versión web no puede enviarlos."
     },
     "validation": {
       "titleRequired": "Ingresa un título.",
@@ -184,19 +207,35 @@
       "medicationNameTooLong": "El nombre del medicamento debe tener 150 caracteres o menos.",
       "dosageTooLong": "La dosis debe tener 100 caracteres o menos.",
       "locationTooLong": "El lugar debe tener 250 caracteres o menos.",
-      "descriptionTooLong": "Las notas deben tener 850 caracteres o menos.",
+      "descriptionTooLong": "Los detalles deben tener 850 caracteres o menos.",
       "invalidRecurrenceRule": "Esa opción de repetición no es válida."
     },
     "alerts": {
-      "pastTimeTitle": "La hora ya pasó",
-      "pastTimeMessage": "Esta hora ya pasó hoy; no se enviará ningún recordatorio para la dosis de hoy.",
+      "pastTimeTitle": "Comienza con la próxima dosis",
+      "pastTimeMessage": "Esta hora ya pasó hoy, así que no se registrará nada para hoy. Este medicamento comenzará con su próxima dosis programada.",
+      "pastTimeEditTitle": "La hora ya pasó",
+      "pastTimeEditMessage": "Esta hora ya pasó hoy; no se enviará ningún recordatorio para la dosis de hoy.",
       "continue": "Continuar",
-      "closePastTime": "Cerrar el aviso de hora pasada"
+      "closePastTime": "Cerrar el aviso de hora pasada",
+      "someDoseTimesFailed_one": "Se guardó, pero no se pudo agregar {{count}} horario de dosis ({{times}}). Abre el medicamento y agrégalo de nuevo.",
+      "someDoseTimesFailed_other": "Se guardó, pero no se pudieron agregar {{count}} horarios de dosis ({{times}}). Abre el medicamento y agrégalos de nuevo."
     },
     "durations": {
       "30": "30 min",
       "60": "1 h",
       "120": "2 h"
+    },
+    "dualTimezoneHint": "Tu hora / Hora de {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "Tu hora / Su hora ({{timezone}})",
+    "dayOffsetNext": "+1 día",
+    "dayOffsetPrevious": "-1 día",
+    "timezoneUnresolvedNotice": "Aún se está cargando la zona horaria de este círculo. Se pausó el guardado para no registrar fechas en la zona equivocada.",
+    "drugSearch": {
+      "searching": "Buscando medicamentos",
+      "clear": "Borrar nombre",
+      "suggestionsLabel": "Sugerencias de medicamentos",
+      "resultCount_one": "{{count}} sugerencia",
+      "resultCount_other": "{{count}} sugerencias"
     }
   },
   "deleteEvent": {
@@ -204,6 +243,7 @@
     "close": "Cerrar el diálogo de eliminación",
     "confirmMessage": "¿Eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
     "recurringMessage": "\"{{title}}\" se repite. Elige qué eliminar; esta acción no se puede deshacer.",
+    "scopeLabel": "¿Qué quieres eliminar?",
     "scopeSingle": "Solo este evento",
     "scopeFuture": "Este y todos los eventos futuros",
     "delete": "Eliminar",

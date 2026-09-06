@@ -2,7 +2,8 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '@/components/ui';
-import { isWebBillingConfigured } from '@/lib/purchases';
+import { isWebBillingConfigured } from '@/lib/webBillingConfig';
+import { DEFAULT_PAYWALL_CONTEXT, type PaywallContext } from '@/lib/paywallContext';
 
 /**
  * Shared affordance for a premium gate (a 402 SUBSCRIPTION_REQUIRED write).
@@ -14,8 +15,18 @@ import { isWebBillingConfigured } from '@/lib/purchases';
  *
  * Replaces the scattered `showToast(t('errors.subscriptionRequired'), 'error')`
  * calls so every premium gate offers the same online + in-app upgrade path.
+ *
+ * @param context WHY the paywall is being offered, carried to `/upgrade` and
+ *   from there onto every `plan_selection_*` / `paywall_dismissed` event as
+ *   `paywall_context`. Mobile splits its whole paywall funnel on this property
+ *   (mobile/src/services/analytics.ts:1211-1227), so a gate that leaves it at
+ *   the default silently pools with the "user went looking for it" bucket and
+ *   makes limit-moment conversion unreadable. Pick 'capacity' for a hard limit
+ *   (seats, circles) and 'feature' for a premium-only surface.
  */
-export function usePremiumGate(): { promptUpgrade: (message?: string) => void } {
+export function usePremiumGate(context: PaywallContext = DEFAULT_PAYWALL_CONTEXT): {
+  promptUpgrade: (message?: string) => void;
+} {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
   const { showToast } = useToast();
@@ -32,13 +43,13 @@ export function usePremiumGate(): { promptUpgrade: (message?: string) => void } 
       if (isWebBillingConfigured()) {
         showToast(message ?? t('upgradeGate.message'), 'info', {
           label: t('upgradeGate.action'),
-          onClick: () => navigate('/upgrade'),
+          onClick: () => navigate('/upgrade', { state: { paywallContext: context } }),
         });
       } else {
         showToast(message ?? t('errors.subscriptionRequired'), 'error');
       }
     },
-    [navigate, showToast, t]
+    [navigate, showToast, t, context]
   );
 
   return { promptUpgrade };

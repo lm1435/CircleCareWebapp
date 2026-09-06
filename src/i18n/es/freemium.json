@@ -12,6 +12,7 @@
     "banner": "Tu suscripción terminó. Elige qué círculo conservar con acceso gratuito.",
     "choose": "Elegir círculo",
     "title": "Elige un círculo para conservar",
+    "pickLabel": "Selecciona el círculo que quieres conservar",
     "subtitle": "Tu suscripción ha terminado. Elige qué círculo conservar con acceso gratuito. Tus otros círculos quedarán en solo lectura hasta que vuelvas a suscribirte.",
     "memberCount_one": "{{count}} miembro",
     "memberCount_other": "{{count}} miembros",

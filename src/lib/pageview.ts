@@ -1,5 +1,6 @@
-import posthog from 'posthog-js';
 import { env } from './env';
+import { analyticsCollectionAllowed } from './analyticsMode';
+import { withPosthog } from './posthogLoader';
 
 /**
  * Privacy-safe pageview tracking (auto-capture stays OFF in lib/posthog.ts —
@@ -52,9 +53,16 @@ export function sanitizePath(pathname: string): string {
  */
 export function trackPageview(pathname: string): void {
   if (!env.VITE_POSTHOG_KEY) return;
+  // Same emit-path consent gate as `analytics.capture` — a route change after
+  // an opt-out must not be the one thing that still reports.
+  if (!analyticsCollectionAllowed()) return;
   const sanitized = sanitizePath(pathname);
-  posthog.capture('$pageview', {
-    $current_url: window.location.origin + sanitized,
-    $pathname: sanitized,
+  // See lib/posthogLoader.ts — runs synchronously once posthog-js is loaded
+  // and configured, otherwise queues and replays after `initAnalytics` finishes.
+  withPosthog((posthog) => {
+    posthog.capture('$pageview', {
+      $current_url: window.location.origin + sanitized,
+      $pathname: sanitized,
+    });
   });
 }

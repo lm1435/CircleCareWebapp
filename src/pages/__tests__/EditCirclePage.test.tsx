@@ -83,6 +83,22 @@ function renderPage() {
   );
 }
 
+/**
+ * Same page, but the initial entry carries a URL hash — this is how the real
+ * `useLocation()` sees Home's settings-row deep link
+ * (`/circles/:id/settings#danger`) without needing to mock the hook itself
+ * (which would also have to fake `Routes`' own path matching).
+ */
+function renderPageAtHash(hash: string) {
+  return render(
+    <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/edit${hash}`]}>
+      <Routes>
+        <Route path="/circles/:circleId/edit" element={<EditCirclePage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -99,22 +115,123 @@ describe('EditCirclePage', () => {
     expect(screen.queryByRole('button', { name: 'Delete circle' })).not.toBeInTheDocument();
   });
 
-  it('renders the form for the owner and saves conditions as a string array', async () => {
+  it('renders the form for the owner and saves name + DOB', async () => {
     const user = userEvent.setup();
     mockCircleResult(makeCircle());
     renderPage();
 
-    const conditions = screen.getByLabelText('Health conditions');
-    await user.clear(conditions);
-    await user.type(conditions, 'Diabetes, Hypertension ,');
+    const name = screen.getByLabelText(/Care recipient name/);
+    await user.clear(name);
+    await user.type(name, 'Rosa Meza');
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => expect(updateMutate).toHaveBeenCalled());
     const payload = updateMutate.mock.calls[0][0];
-    expect(payload.recipient_name).toBe('Rose Meza');
+    expect(payload.recipient_name).toBe('Rosa Meza');
     expect(payload.recipient_dob).toBe('1948-05-02');
-    expect(payload.recipient_conditions).toEqual(['Diabetes', 'Hypertension']);
+  });
+
+  it('does not edit conditions — Edit Medical Info is the single input', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle());
+    renderPage();
+
+    // No second conditions field on this form, and saving never sends the
+    // legacy circle-level list (it drifted from emergency_info.medical_conditions).
+    expect(screen.queryByLabelText('Health conditions')).not.toBeInTheDocument();
+
+    // Save starts disabled (nothing changed yet) — see the dirty-gating tests
+    // below — so make an edit before saving.
+    await user.type(screen.getByLabelText(/Care recipient name/), ' Jr.');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(updateMutate).toHaveBeenCalled());
+    expect(updateMutate.mock.calls[0][0]).not.toHaveProperty('recipient_conditions');
+  });
+
+  it('disables Save until the name or DOB actually changes', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle());
+    renderPage();
+
+    const save = screen.getByRole('button', { name: 'Save changes' });
+    expect(save).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/Care recipient name/), ' Jr.');
+    expect(save).toBeEnabled();
+  });
+
+  it('keeps Save disabled on load even if the API returns a DOB timestamp instead of a bare date', () => {
+    // The seed and the dirty-check both slice to the date-only portion, so a
+    // `T00:00:00.000Z` suffix from the API can't make the untouched form look
+    // dirty on load.
+    mockCircleResult(makeCircle({ recipient_dob: '1948-05-02T00:00:00.000Z' }));
+    renderPage();
+
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+  });
+
+  it('keeps Save disabled and shows an inline hint when clearing DOB is the only change (unsupported by the backend)', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle());
+    renderPage();
+
+    const save = screen.getByRole('button', { name: 'Save changes' });
+    await user.clear(screen.getByLabelText('Date of birth'));
+    // A bare clear can't actually be sent (updateCircleSchema's recipient_dob
+    // is optional, not nullable — handleSubmit omits it when empty), so
+    // treating this as "dirty" would enable a Save that silently no-ops.
+    expect(save).toBeDisabled();
+    expect(
+      screen.getByText("Clearing the date of birth isn't supported yet. Restore it or pick a different date.")
+    ).toBeInTheDocument();
+  });
+
+  it('keeps Save disabled and the hint visible when clearing DOB even while editing the name', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle());
+    renderPage();
+
+    const save = screen.getByRole('button', { name: 'Save changes' });
+    await user.clear(screen.getByLabelText('Date of birth'));
+    // Editing the name alongside the DOB clear must NOT enable Save — the
+    // payload would still omit recipient_dob and the toast would misleadingly
+    // say "Saved" while the field renders blank.
+    await user.type(screen.getByLabelText(/Care recipient name/), ' Jr.');
+    expect(save).toBeDisabled();
+    expect(
+      screen.getByText("Clearing the date of birth isn't supported yet. Restore it or pick a different date.")
+    ).toBeInTheDocument();
+  });
+
+  it('navigates back when Cancel is clicked', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle());
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(navigate).toHaveBeenCalledWith(-1);
+  });
+
+  it('falls back to the circle overview when Cancel has no history to go back to', async () => {
+    const user = userEvent.setup();
+    mockCircleResult(makeCircle());
+    const originalState = window.history.state as unknown;
+    Object.defineProperty(window.history, 'state', {
+      value: { idx: 0 },
+      configurable: true,
+    });
+    try {
+      renderPage();
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(navigate).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}`);
+    } finally {
+      Object.defineProperty(window.history, 'state', {
+        value: originalState,
+        configurable: true,
+      });
+    }
   });
 
   it('requires type-to-confirm before deleting, then deletes and navigates', async () => {
@@ -138,5 +255,44 @@ describe('EditCirclePage', () => {
     const opts = deleteMutate.mock.calls[0][1];
     opts.onSuccess();
     expect(navigate).toHaveBeenCalledWith('/circles');
+  });
+
+  // Home's settings row links to `/circles/:id/settings#danger` (a plain
+  // in-app deep link, not this page's own navigation) — the page must land
+  // the user ON the danger-zone row without taking the destructive action
+  // for them.
+  describe('#danger hash deep link', () => {
+    it('scrolls the danger card into view and focuses its row, without opening the confirm dialog', async () => {
+      mockCircleResult(makeCircle());
+      const scrollIntoView = vi.fn();
+      // jsdom does not implement scrollIntoView at all.
+      const original = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = scrollIntoView;
+
+      try {
+        renderPageAtHash('#danger');
+
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' }));
+        expect(screen.getByRole('button', { name: 'Delete circle' })).toHaveFocus();
+        // The hash gets the user TO the row — it must not act for them.
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      } finally {
+        Element.prototype.scrollIntoView = original;
+      }
+    });
+
+    it('does not scroll or move focus without the #danger hash', () => {
+      mockCircleResult(makeCircle());
+      const scrollIntoView = vi.fn();
+      const original = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = scrollIntoView;
+
+      try {
+        renderPage();
+        expect(scrollIntoView).not.toHaveBeenCalled();
+      } finally {
+        Element.prototype.scrollIntoView = original;
+      }
+    });
   });
 });

@@ -102,7 +102,7 @@ function daysAgoISO(days: number): string {
  */
 async function submitEventForm(page: Page, dialog: Locator): Promise<void> {
   await dialog.getByRole('button', { name: 'Create' }).click();
-  const notice = page.getByRole('dialog', { name: 'Time already passed' });
+  const notice = page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ });
   const shown = await notice
     .waitFor({ state: 'visible', timeout: 2_500 })
     .then(() => true)
@@ -264,7 +264,12 @@ test.describe('medication lifecycle', () => {
     await checkA11y(page, `/circles/:id/meds (active)`, testInfo);
 
     // --- Discontinue (confirm dialog) ---
-    await activeCard.getByRole('button', { name: `Discontinue ${name}` }).click();
+    // The three row actions (Edit / Discontinue / Delete) live behind one
+    // MoreMenu trigger now (spec §6.4), not separate inline buttons.
+    await activeCard.getByRole('button', { name: `More actions for ${name}` }).click();
+    const activeMenu = page.getByRole('menu');
+    await expect(activeMenu).toBeVisible();
+    await activeMenu.getByRole('menuitem', { name: 'Discontinue', exact: true }).click();
     const discontinueDialog = page.getByRole('dialog', { name: 'Discontinue medication' });
     await expect(discontinueDialog).toBeVisible();
     await discontinueDialog.getByRole('button', { name: 'Discontinue', exact: true }).click();
@@ -327,7 +332,10 @@ test.describe('medication lifecycle', () => {
     // --- Reactivate from the inactive card ---
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
     await expect(inactiveCard).toBeVisible({ timeout: 20_000 });
-    await inactiveCard.getByRole('button', { name: `Reactivate ${name}` }).click();
+    await inactiveCard.getByRole('button', { name: `More actions for ${name}` }).click();
+    const inactiveMenu = page.getByRole('menu');
+    await expect(inactiveMenu).toBeVisible();
+    await inactiveMenu.getByRole('menuitem', { name: 'Reactivate', exact: true }).click();
     const reactivateDialog = page.getByRole('dialog', { name: 'Reactivate medication' });
     await expect(reactivateDialog).toBeVisible();
     await reactivateDialog.getByRole('button', { name: 'Reactivate', exact: true }).click();
@@ -354,7 +362,10 @@ test.describe('medication lifecycle', () => {
 
     // Discontinue it first.
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: `Discontinue ${name}` }).click();
+    await page.getByRole('button', { name: `More actions for ${name}` }).click();
+    const rowMenu = page.getByRole('menu');
+    await expect(rowMenu).toBeVisible();
+    await rowMenu.getByRole('menuitem', { name: 'Discontinue', exact: true }).click();
     const discontinueDialog = page.getByRole('dialog', { name: 'Discontinue medication' });
     await discontinueDialog.getByRole('button', { name: 'Discontinue', exact: true }).click();
     await expect(discontinueDialog).toBeHidden({ timeout: 20_000 });
@@ -365,7 +376,10 @@ test.describe('medication lifecycle', () => {
     });
 
     // Edit on the inactive card → the reactivate-first prompt, NOT the editor.
-    await page.getByRole('button', { name: `Edit ${name}` }).click();
+    await page.getByRole('button', { name: `More actions for ${name}` }).click();
+    const editMenu = page.getByRole('menu');
+    await expect(editMenu).toBeVisible();
+    await editMenu.getByRole('menuitem', { name: 'Edit', exact: true }).click();
     const guard = page.getByRole('dialog', { name: 'Medication is inactive' });
     await expect(guard).toBeVisible();
     await expect(guard).toContainText('Reactivate it to make changes');
@@ -388,8 +402,19 @@ test.describe('medication lifecycle', () => {
     const chip = page.getByRole('button', { name: new RegExp(name) });
 
     // Two series of the SAME name + dose at different times (morning/evening).
+    // The times are asserted verbatim below ("8:00 AM"/"8:00 PM" on the roster
+    // card), so they stay fixed rather than computed — but if BOTH have
+    // already passed today (only reachable late on a Saturday, in the
+    // circle's America/Denver timezone), each series starts with its NEXT
+    // dose (tomorrow), which lands in the FOLLOWING calendar week. Try the
+    // current week first, then advance once rather than assuming either way.
     await createDailyMed(page, circleId, name, dosage, '08:00');
     await createDailyMed(page, circleId, name, dosage, '20:00');
+    const visibleThisWeek = await chip.first().isVisible().catch(() => false);
+    if (!visibleThisWeek) {
+      await page.getByRole('button', { name: 'Next week' }).click();
+      await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+    }
     await expect(chip.first()).toBeVisible({ timeout: 20_000 });
 
     // ONE grouped card listing both times.
@@ -401,7 +426,10 @@ test.describe('medication lifecycle', () => {
     await expect(activeCard).toContainText('8:00 PM');
 
     // Discontinue from the single card → BOTH series go inactive.
-    await activeCard.getByRole('button', { name: `Discontinue ${name}` }).click();
+    await activeCard.getByRole('button', { name: `More actions for ${name}` }).click();
+    const wholeMedMenu = page.getByRole('menu');
+    await expect(wholeMedMenu).toBeVisible();
+    await wholeMedMenu.getByRole('menuitem', { name: 'Discontinue', exact: true }).click();
     const discontinueDialog = page.getByRole('dialog', { name: 'Discontinue medication' });
     await discontinueDialog.getByRole('button', { name: 'Discontinue', exact: true }).click();
     await expect(discontinueDialog).toBeHidden({ timeout: 20_000 });

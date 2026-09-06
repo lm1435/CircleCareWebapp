@@ -20,8 +20,6 @@ import { getCurrentUser, updateProfile } from '../../api/users';
 import type { User } from '../../api/users';
 import {
   getDeviceTimezone,
-  getTimezoneAbbreviation,
-  getTimezoneLabel,
   formatTimeOfDay,
   formatTimeDisplay,
   formatTimeWithTimezone,
@@ -109,130 +107,20 @@ describe('getDeviceTimezone', () => {
 });
 
 // ============================================================================
-// getTimezoneAbbreviation
+// getTimezoneAbbreviation is GONE, and so is the block that pinned it here.
+//
+// It returned a curated abbreviation for seven US zones and fell through to
+// Intl's short name for everything else — which the deleted assertions had
+// themselves recorded as "GMT+9" for Asia/Tokyo and a GMT-shaped string for
+// Europe/London. That is an OFFSET, not an abbreviation, and the product rule
+// is that a user never sees one. A zone is now named by its CITY.
+//
+// getTimezoneLabel's assertions moved with it: they lived here to lock in
+// "Eastern Time" / Intl's long name, and both of those are gone too. The
+// current contract — city names, Spanish spellings, the ids that have no city
+// in them — lives in ./timezoneSuffix.test.ts alongside the suppression rule it
+// belongs to.
 // ============================================================================
-describe('getTimezoneAbbreviation', () => {
-  // Positive tests
-  it('should return ET for America/New_York', () => {
-    expect(getTimezoneAbbreviation('America/New_York')).toBe('ET');
-  });
-
-  it('should return CT for America/Chicago', () => {
-    expect(getTimezoneAbbreviation('America/Chicago')).toBe('CT');
-  });
-
-  it('should return MT for America/Denver', () => {
-    expect(getTimezoneAbbreviation('America/Denver')).toBe('MT');
-  });
-
-  it('should return PT for America/Los_Angeles', () => {
-    expect(getTimezoneAbbreviation('America/Los_Angeles')).toBe('PT');
-  });
-
-  it('should return AZ for America/Phoenix', () => {
-    expect(getTimezoneAbbreviation('America/Phoenix')).toBe('AZ');
-  });
-
-  it('should return HT for Pacific/Honolulu', () => {
-    expect(getTimezoneAbbreviation('Pacific/Honolulu')).toBe('HT');
-  });
-
-  it('should return ET for America/Detroit (alias)', () => {
-    expect(getTimezoneAbbreviation('America/Detroit')).toBe('ET');
-  });
-
-  // Unmapped zones: Intl's short name, NOT the city.
-  // This used to be `timezone.split('/').pop()`, which appended a CITY to every
-  // rendered time — a Mexico City circle read "8:00 PM Mexico_City". An
-  // abbreviation may never contain a '/' or a '_'.
-  it('should return a real abbreviation, not the city, for an unmapped zone', () => {
-    const abbr = getTimezoneAbbreviation('America/Mexico_City');
-    expect(abbr).not.toBe('Mexico_City');
-    expect(abbr).not.toContain('_');
-    expect(abbr).not.toContain('/');
-    // Mexico abolished DST in 2022, so this one is stable year-round.
-    expect(abbr).toBe('CST');
-  });
-
-  it('should return a real abbreviation for an unmapped Asia zone', () => {
-    // Japan has no DST either, so 'GMT+9' does not drift with the season.
-    const abbr = getTimezoneAbbreviation('Asia/Tokyo');
-    expect(abbr).not.toBe('Tokyo');
-    expect(abbr).toBe('GMT+9');
-  });
-
-  it('should not leak a city for a DST-observing unmapped zone', () => {
-    // Europe/London alternates GMT / GMT+1 across the year, so assert the
-    // SHAPE rather than a value that would break every spring.
-    const abbr = getTimezoneAbbreviation('Europe/London');
-    expect(abbr).not.toBe('London');
-    expect(abbr).toMatch(/^(?:GMT(?:[+-]\d{1,2}(?::\d{2})?)?|[A-Z]{2,5})$/);
-  });
-
-  it('should return the full string if no slash present', () => {
-    expect(getTimezoneAbbreviation('UTC')).toBe('UTC');
-  });
-
-  it('should handle empty string gracefully', () => {
-    expect(getTimezoneAbbreviation('')).toBe('');
-  });
-
-  it('should fall back to the last segment when Intl rejects the zone', () => {
-    // A malformed id makes Intl throw; the old split('/') behaviour is kept as
-    // the last resort so this never returns empty.
-    expect(getTimezoneAbbreviation('Not/AZone')).toBe('AZone');
-  });
-});
-
-// ============================================================================
-// getTimezoneLabel
-// ============================================================================
-describe('getTimezoneLabel', () => {
-  // i18next is NOT initialized in this file, so `t` is unavailable and every
-  // curated label degrades to its English default — which is exactly the
-  // pre-existing behaviour these assertions lock in. The LOCALIZED path lives
-  // in ./timezone.i18n.test.ts, which boots a real i18next.
-
-  // Positive tests
-  it('should return "Eastern Time" for America/New_York', () => {
-    expect(getTimezoneLabel('America/New_York')).toBe('Eastern Time');
-  });
-
-  it('should return "Pacific Time" for America/Los_Angeles', () => {
-    expect(getTimezoneLabel('America/Los_Angeles')).toBe('Pacific Time');
-  });
-
-  it('should return "Hawaii Time" for Pacific/Honolulu', () => {
-    expect(getTimezoneLabel('Pacific/Honolulu')).toBe('Hawaii Time');
-  });
-
-  // Unmapped zones. The old code returned the RAW IANA id, which landed inside
-  // a translated sentence: "Times are saved in America/Mexico_City." Intl's
-  // long name replaces it, so ANY zone reads as prose.
-  it('should return a readable name, not the IANA id, for an unmapped zone', () => {
-    const label = getTimezoneLabel('America/Mexico_City', 'en');
-    expect(label).not.toBe('America/Mexico_City');
-    expect(label).not.toContain('/');
-    expect(label).not.toContain('_');
-    expect(label).toBe('Central Standard Time');
-  });
-
-  it('should return a readable name for an unmapped European zone', () => {
-    // London flips between GMT and BST, so assert the shape, not the season.
-    const label = getTimezoneLabel('Europe/London', 'en');
-    expect(label).not.toBe('Europe/London');
-    expect(label).not.toContain('/');
-    expect(label.length).toBeGreaterThan(3);
-  });
-
-  it('should fall back to the IANA id only when Intl rejects the zone', () => {
-    expect(getTimezoneLabel('Not/AZone', 'en')).toBe('Not/AZone');
-  });
-
-  it('should return empty string for empty input', () => {
-    expect(getTimezoneLabel('')).toBe('');
-  });
-});
 
 // ============================================================================
 // formatTimeOfDay — THE renderer every display site delegates to.
@@ -373,24 +261,30 @@ describe('formatTimeDisplay', () => {
 // formatTimeWithTimezone
 // ============================================================================
 describe('formatTimeWithTimezone', () => {
-  it('should include timezone abbreviation', () => {
-    expect(formatTimeWithTimezone(14, 30, 'America/Denver', '12h')).toBe('2:30 PM MT');
+  // The one renderer here that names the zone UNCONDITIONALLY: its name is a
+  // promise, so a caller asking for the time "with timezone" has already
+  // decided the zone needs saying. Everything that has to DECIDE goes through
+  // getTimezoneSuffix — see ./timezoneSuffix.test.ts.
+  it('should include the zone name', () => {
+    expect(formatTimeWithTimezone(14, 30, 'America/Denver', '12h', 'en')).toBe('2:30 PM (Denver)');
   });
 
   it('should format midnight with timezone', () => {
-    expect(formatTimeWithTimezone(0, 0, 'America/New_York', '12h')).toBe('12:00 AM ET');
+    expect(formatTimeWithTimezone(0, 0, 'America/New_York', '12h', 'en')).toBe(
+      '12:00 AM (New York)'
+    );
   });
 
   it('should handle unknown timezone gracefully', () => {
-    // Was '8:00 AM London' — the old split('/').pop() appended the CITY.
-    // Mexico City has no DST, so 'CST' is stable year-round.
-    const result = formatTimeWithTimezone(8, 0, 'America/Mexico_City', '12h');
-    expect(result).toBe('8:00 AM CST');
+    // Was '8:00 AM Mexico_City' — the old split('/').pop() appended the raw id,
+    // underscore and all. The city is now derived properly.
+    const result = formatTimeWithTimezone(8, 0, 'America/Mexico_City', '12h', 'en');
+    expect(result).toBe('8:00 AM (Mexico City)');
     expect(result).not.toContain('Mexico_City');
   });
 
-  it('keeps the abbreviation under a 24-hour cycle', () => {
-    expect(formatTimeWithTimezone(14, 30, 'America/Denver', '24h')).toBe('14:30 MT');
+  it('keeps the zone name under a 24-hour cycle', () => {
+    expect(formatTimeWithTimezone(14, 30, 'America/Denver', '24h', 'en')).toBe('14:30 (Denver)');
   });
 
 });
@@ -407,7 +301,8 @@ describe('formatDualTimezoneDisplay', () => {
       'America/New_York',
       '12h'
     );
-    expect(result).toBe('2:30 PM ET');
+    // BARE. One clock, one time — a label answers a question nobody asked.
+    expect(result).toBe('2:30 PM');
     expect(result).not.toContain('/');
   });
 
@@ -419,7 +314,7 @@ describe('formatDualTimezoneDisplay', () => {
       'America/New_York',
       '24h'
     );
-    expect(result).toBe('14:30 ET');
+    expect(result).toBe('14:30');
   });
 
   it('should show dual times when timezones differ', () => {
@@ -431,8 +326,8 @@ describe('formatDualTimezoneDisplay', () => {
       '12h'
     );
     expect(result).toContain('/');
-    expect(result).toContain('ET');
-    expect(result).toContain('CT');
+    expect(result).toContain('(New York)');
+    expect(result).toContain('(Chicago)');
   });
 });
 
@@ -518,9 +413,10 @@ describe('getTimezoneOffsetMinutes', () => {
 describe('formatEventTimeForDisplay', () => {
   // Positive tests
   it('should format HH:MM time string correctly', () => {
+    // Viewer and recipient are both America/New_York (pinned at the top of the
+    // file), so this is a single-zone circle and the time renders bare.
     const result = formatEventTimeForDisplay('14:30', 'America/New_York', undefined, undefined, '12h');
-    expect(result).toContain('2:30 PM');
-    expect(result).toContain('ET');
+    expect(result).toBe('2:30 PM');
   });
 
   it('should format HH:MM:SS time string correctly', () => {
@@ -532,15 +428,17 @@ describe('formatEventTimeForDisplay', () => {
       '12h'
     );
     expect(result).toContain('8:00 AM');
-    expect(result).toContain('CT');
+    expect(result).toContain('(Chicago)');
   });
 
   it('formats both halves in the 24-hour cycle', () => {
+    // Viewer and recipient are both America/New_York here, so there is no
+    // second frame to disclose and the time renders bare.
     const single = formatEventTimeForDisplay('14:30', 'America/New_York', false, undefined, '24h');
-    expect(single).toBe('14:30 ET');
+    expect(single).toBe('14:30');
 
     const dual = formatEventTimeForDisplay('14:30', 'America/Chicago', true, undefined, '24h');
-    expect(dual).toContain('14:30 CT');
+    expect(dual).toContain('14:30 (Chicago)');
     expect(dual).toContain('/');
     expect(dual).not.toMatch(/[AP]M/);
   });
@@ -608,22 +506,26 @@ describe('formatEventTimeForDisplay', () => {
 // ============================================================================
 describe('formatEventTimeCompact', () => {
   // Positive tests
-  it('should format time with timezone abbreviation', () => {
-    expect(formatEventTimeCompact('14:30', 'America/Denver', '12h')).toBe('2:30 PM MT');
+  it('names the zone for a viewer outside it', () => {
+    expect(formatEventTimeCompact('14:30', 'America/Denver', '12h')).toBe('2:30 PM (Denver)');
   });
 
-  it('should format morning time', () => {
-    expect(formatEventTimeCompact('08:00', 'America/New_York', '12h')).toBe('8:00 AM ET');
+  it('leaves the label off inside a single-zone circle', () => {
+    // The device is pinned to America/New_York at the top of this file, so a
+    // New York recipient shares the viewer's clock. This is the row that read
+    // "8:00 AM ET" to a caregiver already standing in New York.
+    expect(formatEventTimeCompact('08:00', 'America/New_York', '12h')).toBe('8:00 AM');
   });
 
   it('should format midnight', () => {
-    expect(formatEventTimeCompact('00:00', 'America/Chicago', '12h')).toBe('12:00 AM CT');
+    expect(formatEventTimeCompact('00:00', 'America/Chicago', '12h')).toBe('12:00 AM (Chicago)');
   });
 
   it('formats in the 24-hour cycle', () => {
-    expect(formatEventTimeCompact('14:30', 'America/Denver', '24h')).toBe('14:30 MT');
-    expect(formatEventTimeCompact('08:00', 'America/New_York', '24h')).toBe('08:00 ET');
-    expect(formatEventTimeCompact('00:00', 'America/Chicago', '24h')).toBe('00:00 CT');
+    expect(formatEventTimeCompact('14:30', 'America/Denver', '24h')).toBe('14:30 (Denver)');
+    // New York is the pinned device zone — nothing to disclose, so no label.
+    expect(formatEventTimeCompact('08:00', 'America/New_York', '24h')).toBe('08:00');
+    expect(formatEventTimeCompact('00:00', 'America/Chicago', '24h')).toBe('00:00 (Chicago)');
   });
 
   // Negative tests
@@ -1136,6 +1038,30 @@ describe('getRelativeDateLabel', () => {
     const result = getRelativeDateLabel('2026-01-14', 'America/Denver', now);
     expect(result).toBe('yesterday');
   });
+
+  /**
+   * A DAY IS NOT ALWAYS 24 HOURS LONG.
+   *
+   * `yesterday` used to be `now - 24h` reformatted in the recipient's zone.
+   * 2027-03-14 is US spring-forward: America/Denver skips 02:00, so that
+   * calendar day is 23 hours. For the hour after it, subtracting 24 real hours
+   * lands on the 13th — the day BEFORE yesterday — so the wrong date got the
+   * "Yesterday" heading and the real one fell through to a bare date. The
+   * caregiver sees this on the task list and on the dose they are being asked
+   * to confirm.
+   *
+   * Stepping the recipient's own date STRING has no such slack.
+   */
+  it('names the right yesterday in the hour after the recipient springs forward', () => {
+    // 2027-03-15T06:10Z = 00:10 on the 15th in Denver (MDT), the hour after
+    // the 23-hour day of the 14th.
+    const justAfterMidnight = new Date('2027-03-15T06:10:00Z');
+
+    expect(getRelativeDateLabel('2027-03-14', 'America/Denver', justAfterMidnight)).toBe(
+      'yesterday'
+    );
+    expect(getRelativeDateLabel('2027-03-13', 'America/Denver', justAfterMidnight)).toBeNull();
+  });
 });
 
 // ============================================================================
@@ -1319,6 +1245,45 @@ describe('isDoseConfirmable', () => {
   it('honours a caller-supplied window', () => {
     // 5h out, with a 6h window → confirmable.
     expect(isDoseConfirmable('2026-08-05', '21:00:00', TZ, fourOhSevenPmDenver, 360)).toBe(true);
+  });
+
+  /**
+   * THE CROSS-MIDNIGHT WINDOW ON A 23-HOUR DAY.
+   *
+   * "Tomorrow" used to be derived as `now + 1440 minutes` reformatted in the
+   * recipient's zone — which is only tomorrow on a day that is 1440 minutes
+   * long. 2027-03-14 is US spring-forward, so America/Denver's 14th is 23
+   * hours; at 23:00 on the 13th that sum formats as the 15th.
+   *
+   * Both halves matter and they fail in opposite directions:
+   *
+   *   * the 15th then matched the "tomorrow" branch, and the branch's minute
+   *     test is a fixed sub-24h window, so a dose TWENTY-FOUR AND A HALF HOURS
+   *     AWAY came back confirmable. That is a dose that has not come around
+   *     yet, and confirming it writes a falsified record into the adherence
+   *     PDF a doctor reads — reachable straight from the calendar, since
+   *     EventDetailActions gates Take/Skip on this predicate and
+   *     ConfirmMedDialog re-checks it on submit.
+   *   * the 14th — real tomorrow, 90 minutes away — stopped matching at all,
+   *     silently closing the legitimate early window on the one night a year
+   *     it is hardest to notice.
+   */
+  describe('the recipient springs forward tomorrow', () => {
+    // 2027-03-14T06:00Z = 23:00 on 2027-03-13 in Denver (MST). The 14th is the
+    // 23-hour day: 02:00 does not exist.
+    const elevenPmBeforeSpringForward = new Date('2027-03-14T06:00:00Z');
+
+    it('does NOT offer a dose that is still a day and a half away', () => {
+      expect(
+        isDoseConfirmable('2027-03-15', '00:30:00', TZ, elevenPmBeforeSpringForward)
+      ).toBe(false);
+    });
+
+    it('still offers tomorrow morning`s dose 90 minutes out', () => {
+      expect(isDoseConfirmable('2027-03-14', '00:30:00', TZ, elevenPmBeforeSpringForward)).toBe(
+        true
+      );
+    });
   });
 
   // A timeless dose has no due moment to open a window around — it behaves

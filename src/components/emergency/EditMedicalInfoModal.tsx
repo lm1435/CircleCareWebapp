@@ -84,11 +84,11 @@ function EditMedicalInfoModalForm({
       closeLabel={t('edit.close')}
       footer={
         <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={update.isPending}>
+          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
             {t('edit.cancel')}
           </Button>
-          <Button type="submit" form="edit-medical-form" disabled={update.isPending}>
-            {update.isPending ? t('edit.saving') : t('edit.save')}
+          <Button type="submit" form="edit-medical-form" variant="primary" loading={update.isPending}>
+            {t('edit.save')}
           </Button>
         </div>
       }
@@ -98,7 +98,13 @@ function EditMedicalInfoModalForm({
             Legacy free-text values stay visible as an extra chip so they can be
             deselected; new selections are standard types only. */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-ink-2">{t('edit.medical.bloodType')}</span>
+          {/* ChipSelect exposes its accessible name only via `label` → its own
+              aria-label (it has no aria-labelledby prop to point at this
+              span instead), so this visible span and that aria-label
+              necessarily carry the same text — not a component to fix here. */}
+          <span id="blood-type-label" className="text-sm font-medium text-ink-2">
+            {t('edit.medical.bloodType')}
+          </span>
           <ChipSelect
             id="blood_type"
             label={t('edit.medical.bloodType')}

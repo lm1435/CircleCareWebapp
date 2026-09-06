@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ElementType, type ReactElement, type ReactNode } from 'react';
+import { Icon } from './Icon';
 
 export interface AccordionProps {
   /**
@@ -7,7 +8,7 @@ export interface AccordionProps {
    * sections are open.
    */
   id: string;
-  /** Header label — rendered with the `.section-title` treatment so it reads as a title. */
+  /** Header label — rendered at the section-title weight/size so it reads as a title. */
   title: ReactNode;
   /** Controlled open state. */
   open: boolean;
@@ -15,6 +16,15 @@ export interface AccordionProps {
   onToggle: (id: string) => void;
   /** Optional right-aligned header slot (e.g. a count). Hidden from the title link semantics. */
   meta?: ReactNode;
+  /**
+   * The heading level wrapping this section's header button. Default `'h2'`
+   * (unchanged behavior). Pass `'h3'` (or `'h4'`) for a NESTED accordion — e.g.
+   * a per-question disclosure inside a per-section one — so heading navigation
+   * reflects the real outline (section `h2` → question `h3`) instead of two
+   * sibling `h2`s. Purely the wrapping tag; the visual title styling is
+   * unchanged at every level.
+   */
+  headingAs?: 'h2' | 'h3' | 'h4';
   children: ReactNode;
 }
 
@@ -25,11 +35,17 @@ export interface AccordionProps {
  * the panel is `role="region"` + `aria-labelledby` pointing back at the header.
  *
  * PRINT + MOUNT: the panel is ALWAYS mounted (children never unmount) so its
- * content stays in the DOM for screen readers/tests. Collapse is visual only —
- * `open ? 'block' : 'hidden'` PLUS `print:block`, so `@media print` reveals a
- * collapsed panel. The chevron is `print:hidden`. This needs no globals.css
- * change for print; the global prefers-reduced-motion block already neutralizes
- * the chevron transition.
+ * content stays in the DOM for screen readers/tests. Collapse is visual only.
+ *
+ * The collapse ANIMATES with the grid trick: the panel is a one-column grid
+ * whose single row goes `0fr` → `1fr`, with an `overflow-hidden min-h-0` inner
+ * div. That is the only way to transition to a CONTENT-DERIVED height in CSS
+ * (`height: auto` is not animatable and a hardcoded max-height either clips
+ * long panels or makes short ones ease at the wrong speed) and it needs no JS
+ * measurement. `print:[grid-template-rows:1fr]` keeps a collapsed panel on the
+ * printed page, as `print:block` used to, and `inert` keeps the collapsed
+ * panel's controls out of the tab order and the a11y tree the way the old
+ * `display:none` did.
  */
 export function Accordion({
   id,
@@ -37,67 +53,73 @@ export function Accordion({
   open,
   onToggle,
   meta,
+  headingAs = 'h2',
   children,
 }: AccordionProps): ReactElement {
   const headerId = `${id}-accordion-header`;
   const titleId = `${id}-accordion-title`;
   const panelId = `${id}-accordion-panel`;
+  const Heading = headingAs as ElementType;
 
   return (
     <section className="scroll-mt-28" id={id}>
-      <h2 className="m-0">
+      <Heading className="m-0">
         <button
           type="button"
           id={headerId}
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => onToggle(id)}
-          className="flex w-full items-center gap-3 rounded-2xl px-1 py-2 text-left hover:text-ink"
+          className="flex min-h-[44px] w-full items-center gap-3 rounded-2xl px-1 py-2 text-left hover:text-ink"
         >
-          <ChevronIcon open={open} />
+          <Icon
+            name="chevron-down"
+            size="inline"
+            className={`text-ink-3 transition-transform duration-normal ease-spring motion-reduce:transition-none print:hidden ${
+              open ? 'rotate-180' : ''
+            }`.trim()}
+          />
           <span id={titleId} className="flex-1 text-lg font-semibold leading-snug text-ink">
             {title}
           </span>
           {meta != null && <span className="shrink-0 text-sm text-ink-3">{meta}</span>}
         </button>
-      </h2>
+      </Heading>
       {/* Panel name comes from the title span ONLY (not the whole button), so the
           accessible region name excludes the chevron + meta count. */}
       <div
         id={panelId}
         role="region"
         aria-labelledby={titleId}
-        className={`${open ? 'block' : 'hidden'} print:block pt-2`}
+        // A zero-height `overflow-hidden` panel is still FOCUSABLE — unlike the
+        // `display:none` it replaced, the grid collapse leaves every link and
+        // button inside it in the tab order, so a keyboard user tabs into a
+        // section they just closed and lands on controls they cannot see.
+        // `inert` restores what `hidden` gave for free (no focus, out of the
+        // a11y tree) without removing the node from layout, so the panel still
+        // animates and still prints.
+        //
+        // @types/react is 18.3.31, which predates `inert` in the JSX intrinsics
+        // (React 19's types have it), hence the spread. The value is the empty
+        // string rather than `true` because React 18 stringifies an unknown
+        // boolean prop to `inert="false"` — which is still inert, per HTML's
+        // boolean-attribute rules, and would collapse the open state too.
+        {...(open ? {} : ({ inert: '' } as Record<string, string>))}
+        className={`grid transition-[grid-template-rows] duration-normal ease-spring motion-reduce:transition-none print:[grid-template-rows:1fr] ${
+          open ? '[grid-template-rows:1fr]' : '[grid-template-rows:0fr]'
+        }`}
       >
-        {/* Inner wrapper gives stacked panel items consistent vertical
-            separation (e.g. multiple contact/doctor cards) instead of letting
-            their borders touch. Single-child panels (a list with its own gap)
-            are unaffected since the gap only applies between siblings. */}
-        <div className="flex flex-col gap-4">{children}</div>
+        {/* `min-h-0` defeats the grid item's `auto` minimum, without which the
+            row can never actually collapse to 0fr. */}
+        <div className="overflow-hidden min-h-0">
+          {/* Inner wrapper gives stacked panel items consistent vertical
+              separation (e.g. multiple contact/doctor cards) instead of letting
+              their borders touch. Single-child panels (a list with its own gap)
+              are unaffected since the gap only applies between siblings. */}
+          <div className="flex flex-col gap-4 pt-2">{children}</div>
+        </div>
       </div>
     </section>
-  );
-}
-
-function ChevronIcon({ open }: { open: boolean }): ReactElement {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`shrink-0 text-ink-3 transition-transform duration-200 print:hidden ${
-        open ? 'rotate-90' : 'rotate-0'
-      }`}
-    >
-      <path d="M9 18l6-6-6-6" />
-    </svg>
   );
 }
 

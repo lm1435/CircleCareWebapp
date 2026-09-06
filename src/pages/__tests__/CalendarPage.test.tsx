@@ -224,11 +224,17 @@ describe('CalendarPage', () => {
     renderPage();
 
     expect(await screen.findByRole('grid', { name: 'Week view calendar' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Week' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'false');
+    // Week/Month is the shared `SegmentedControl` (spec §6.4): a tablist of
+    // tabs, not a hand-rolled pressed-button pair.
+    const weekTab = screen.getByRole('tab', { name: 'Week' });
+    const monthTab = screen.getByRole('tab', { name: 'Month' });
+    expect(weekTab).toHaveAttribute('aria-selected', 'true');
+    expect(monthTab).toHaveAttribute('aria-selected', 'false');
+    expect(weekTab.className).toContain('text-cream');
+    expect(monthTab.className).not.toContain('text-cream');
 
     // Times shown in the CARE RECIPIENT's timezone
-    expect(screen.getByText('Times shown in Central Time (CT)')).toBeInTheDocument();
+    expect(screen.getByText('Times shown in Chicago')).toBeInTheDocument();
 
     // Fetched the visible Sunday-first week in the recipient timezone
     expect(mockGetEvents).toHaveBeenCalledWith('circle-1', {
@@ -257,17 +263,95 @@ describe('CalendarPage', () => {
     renderPage();
     await screen.findByRole('grid', { name: 'Week view calendar' });
 
-    await user.click(screen.getByRole('button', { name: 'Month' }));
+    await user.click(screen.getByRole('tab', { name: 'Month' }));
 
     expect(await screen.findByRole('grid', { name: 'Month view calendar' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Week' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('tab', { name: 'Month' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Week' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('heading', { name: 'June 2026' })).toBeInTheDocument();
 
     expect(mockGetEvents).toHaveBeenCalledWith('circle-1', {
       start_date: '2026-05-31',
       end_date: '2026-07-11',
     });
+  });
+
+  it('disables Today on load and re-enables it once the anchor moves', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    const todayButton = screen.getByRole('button', { name: 'Today' });
+    expect(todayButton).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(todayButton).toBeEnabled();
+
+    await user.click(todayButton);
+    expect(todayButton).toBeDisabled();
+  });
+
+  // Mobile `DateNavHeader` parity: transparent 1px-line pill, r6, min-height
+  // 32, 12/600 ink (spec §6.4).
+  it('renders the Today pill with mobile DateNavHeader classes, on a 44px hit area', async () => {
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    // The visible pill is drawn on an inner span (mobile-parity 32px);
+    // the BUTTON itself carries the 44px tap target (WCAG 2.5.5).
+    const todayButton = screen.getByRole('button', { name: 'Today' });
+    expect(todayButton.className).toContain('min-h-[44px]');
+
+    const pill = todayButton.firstElementChild as HTMLElement;
+    expect(pill.className).toContain('rounded-[6px]');
+    expect(pill.className).toContain('border-line');
+    expect(pill.className).toContain('min-h-[32px]');
+    expect(pill.className).toContain('text-xs');
+    expect(pill.className).toContain('font-semibold');
+    expect(pill.className).toContain('text-ink');
+  });
+
+  // Regression (2026-09-05): at 390px the SegmentedControl clipped off the
+  // right edge instead of wrapping to its own row. A follow-up fix found
+  // `flex-wrap` alone never actually broke the line (see CalendarPage.tsx's
+  // comment on this row) — jsdom can't measure layout, so this asserts the
+  // STRUCTURAL classes (forced `flex-col` below 480px) rather than pixels;
+  // the real-browser proof lives in the Playwright verification, not here.
+  it('stacks the toolbar into two full-width rows below 480px, instead of relying on flex-wrap alone', async () => {
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    const toggleWrap = screen.getByTestId('calendar-view-toggle-wrap');
+    expect(toggleWrap.className).toContain('max-[480px]:w-full');
+    expect(toggleWrap.className).toContain('max-[480px]:order-last');
+    expect(toggleWrap.className).toContain('w-40');
+
+    const row = toggleWrap.parentElement as HTMLElement;
+    expect(row.className).toContain('flex-wrap');
+    expect(row.className).toContain('max-[480px]:flex-col');
+    expect(row.className).toContain('max-[480px]:items-stretch');
+
+    const todayNavGroup = screen.getByRole('button', { name: 'Today' })
+      .parentElement as HTMLElement;
+    expect(todayNavGroup.className).toContain('min-w-0');
+    expect(todayNavGroup.className).toContain('flex-1');
+    expect(todayNavGroup.className).toContain('max-[480px]:w-full');
+  });
+
+  it('disables Today after next then prev lands back on today, even with a non-null override', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    const todayButton = screen.getByRole('button', { name: 'Today' });
+    await user.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(todayButton).toBeEnabled();
+
+    // The anchor override is non-null here (an explicit prev step, not a
+    // reset to null) but it resolves to today's date — Today must compare
+    // the RESOLVED anchor against today, not just check for a null override.
+    await user.click(screen.getByRole('button', { name: 'Previous week' }));
+    expect(todayButton).toBeDisabled();
   });
 
   it('navigates prev/next/today and changes the fetched range', async () => {
@@ -348,7 +432,7 @@ describe('CalendarPage', () => {
     expect(within(dialog).getByRole('heading', { name: /Dr\. Smith/ })).toBeInTheDocument();
     expect(within(dialog).getByText('Appointment')).toBeInTheDocument();
     expect(within(dialog).getByText('Friday, June 12, 2026')).toBeInTheDocument();
-    expect(within(dialog).getByText(/2:00 PM CT/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/2:00 PM \(Chicago\)/)).toBeInTheDocument();
     expect(within(dialog).getByText('Clinic')).toBeInTheDocument();
     expect(within(dialog).getByText('Bring insurance card')).toBeInTheDocument();
     // Read-only: download-the-app CTA in the footer slot
@@ -398,7 +482,7 @@ describe('CalendarPage', () => {
     renderPage();
     await screen.findByRole('grid', { name: 'Week view calendar' });
 
-    await user.click(screen.getByRole('button', { name: 'Month' }));
+    await user.click(screen.getByRole('tab', { name: 'Month' }));
     await screen.findByRole('grid', { name: 'Month view calendar' });
 
     // Day cell aria-label includes the date and event count (Jun 12 has 4)
@@ -414,7 +498,7 @@ describe('CalendarPage', () => {
     await user.click(panelEvent);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: /Metformin/ })).toBeInTheDocument();
-    expect(within(dialog).getByText('Taken at 8:05 AM')).toBeInTheDocument();
+    expect(within(dialog).getByText('Taken at 8:05 AM (Chicago)')).toBeInTheDocument();
   });
 
   // The point of the device-aware clock: a 24h viewer must see 24-hour times on
@@ -427,22 +511,22 @@ describe('CalendarPage', () => {
     await screen.findByRole('grid', { name: 'Week view calendar' });
 
     // WeekView chip → formatEventTimeCompact
-    const trigger = screen.getByRole('button', { name: /Vitamin D, Medication, 20:00 CT/ });
-    expect(screen.queryByRole('button', { name: /8:00 PM CT/ })).not.toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: /Vitamin D, Medication, 20:00 \(Chicago\)/ });
+    expect(screen.queryByRole('button', { name: /8:00 PM \(Chicago\)/ })).not.toBeInTheDocument();
 
     // EventDetailModal → formatEventTimeForDisplay (dual: Chicago + New_York)
     await user.click(trigger);
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('20:00 CT / 21:00 ET')).toBeInTheDocument();
+    expect(within(dialog).getByText('20:00 (Chicago) / 21:00 (New York)')).toBeInTheDocument();
     fireEvent.keyDown(dialog, { key: 'Escape' });
 
     // MonthView side panel → formatEventTimeCompact
-    await user.click(screen.getByRole('button', { name: 'Month' }));
+    await user.click(screen.getByRole('tab', { name: 'Month' }));
     await screen.findByRole('grid', { name: 'Month view calendar' });
     await user.click(screen.getByRole('button', { name: 'Friday, June 12, 4 events' }));
     const panel = screen.getByRole('complementary', { name: 'Events for the selected day' });
     expect(
-      within(panel).getByRole('button', { name: /Metformin, Medication, 08:00 CT/ })
+      within(panel).getByRole('button', { name: /Metformin, Medication, 08:00 \(Chicago\)/ })
     ).toBeInTheDocument();
   });
 
@@ -493,5 +577,27 @@ describe('CalendarPage', () => {
     expect(
       await screen.findByRole('dialog', { name: 'Confirm medication' })
     ).toBeInTheDocument();
+  });
+
+  // The masthead's right action renders TWICE (spec §5.4: the round chrome
+  // control below xl, a labelled button at xl) — both must open the same
+  // AddEventModal, and neither renders at all for a read-only member.
+  it("masthead right action opens AddEventModal, and is absent when the viewer can't edit", async () => {
+    const user = userEvent.setup();
+    mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
+    renderEditablePage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    const addButtons = screen.getAllByRole('button', { name: 'Add event' });
+    expect(addButtons).toHaveLength(2);
+    await user.click(addButtons[0]);
+    expect(await screen.findByRole('dialog', { name: 'New event' })).toBeInTheDocument();
+  });
+
+  it('renders no masthead Add-event action for a read-only member', async () => {
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    expect(screen.queryByRole('button', { name: 'Add event' })).not.toBeInTheDocument();
   });
 });

@@ -34,6 +34,19 @@ function rx(value: string): RegExp {
   return new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 }
 
+/**
+ * Preview/Download/Edit/Delete all live behind one trailing MoreMenu per row
+ * now (DocumentRow.tsx spec §6.6), named "Options for <document name>" — not
+ * separate inline buttons. Opens it and returns the menu, so the caller only
+ * needs to click the menuitem it wants.
+ */
+async function openDocMenu(page: import('@playwright/test').Page, name: string) {
+  await page.getByRole('button', { name: rx(`Options for ${name}`) }).click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
 test('upload, rename, and delete a document', async ({ page, circleId }) => {
   const name = uniqueLabel('Doc');
   const renamed = `${name} renamed`;
@@ -49,7 +62,7 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
     await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible({ timeout: 15_000 });
 
     // --- Upload ---
-    await page.getByRole('button', { name: 'Upload document' }).click();
+    await page.getByRole('button', { name: 'Upload document' }).first().click();
     const uploadDialog = page.getByRole('dialog');
     await expect(uploadDialog).toBeVisible();
 
@@ -65,7 +78,8 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
     await expect(row.first()).toBeVisible({ timeout: 30_000 });
 
     // --- Preview (regression guard, see header) ---
-    await page.getByRole('button', { name: rx(`Preview ${name}`) }).click();
+    const previewMenu = await openDocMenu(page, name);
+    await previewMenu.getByRole('menuitem', { name: 'Preview', exact: true }).click();
     const previewDialog = page.getByRole('dialog');
     await expect(previewDialog).toBeVisible();
 
@@ -95,7 +109,8 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
     await expect(previewDialog).toBeHidden({ timeout: 10_000 });
 
     // --- Rename ---
-    await page.getByRole('button', { name: rx(`Edit ${name}`) }).click();
+    const editMenu = await openDocMenu(page, name);
+    await editMenu.getByRole('menuitem', { name: 'Edit', exact: true }).click();
     const editDialog = page.getByRole('dialog');
     await expect(editDialog).toBeVisible();
     await editDialog.locator('#document-edit-label').fill(renamed);
@@ -107,7 +122,8 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
     });
 
     // --- Delete (cleanup) ---
-    await page.getByRole('button', { name: rx(`Delete ${renamed}`) }).click();
+    const deleteMenu = await openDocMenu(page, renamed);
+    await deleteMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     const confirm = page.getByRole('dialog');
     await expect(confirm).toBeVisible();
     await confirm.getByRole('button', { name: 'Delete', exact: true }).click();

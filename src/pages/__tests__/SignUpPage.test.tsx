@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
@@ -17,6 +17,17 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockedPost = vi.mocked(apiClient.post);
+
+// AuthGuard redirects with `replace`, so /login can be history entry 0 —
+// `useAuthBack` reads the real `window.history.length` (not MemoryRouter's
+// own stack), so these tests stub that getter directly.
+function mockHistoryLength(length: number): () => void {
+  const original = Object.getOwnPropertyDescriptor(window.history, 'length');
+  Object.defineProperty(window.history, 'length', { configurable: true, get: () => length });
+  return () => {
+    if (original) Object.defineProperty(window.history, 'length', original);
+  };
+}
 
 const VALID = {
   firstName: 'Pat',
@@ -109,6 +120,48 @@ describe('SignUpPage', () => {
     expect(termsCheckbox()).not.toBeChecked();
   });
 
+  it('is a native checkbox: pressing Enter does not submit the form', async () => {
+    const user = userEvent.setup();
+    renderSignUp();
+
+    // A native <input type="checkbox"> only toggles on Space, never submits
+    // its form on Enter — confirmed here by asserting no signup request ever
+    // goes out.
+    expect(termsCheckbox()).toHaveAttribute('type', 'checkbox');
+
+    termsCheckbox().focus();
+    await user.keyboard('{Enter}');
+
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('toggles when the sentence text (not just the icon) is clicked, mirroring mobile\'s whole-row tap target', async () => {
+    const user = userEvent.setup();
+    renderSignUp();
+
+    // Click on plain text within the label's sentence, not the checkbox
+    // itself or one of the nested links.
+    await user.click(screen.getByText(/I am 18 or older and I agree to the/));
+
+    expect(termsCheckbox()).toBeChecked();
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it('keeps the Terms of Service link functional (href intact) inside the label', () => {
+    renderSignUp();
+
+    // OAuthButtons renders its own "Terms of Service" legal caption above this
+    // row, so scope the query to the consent checkbox's own <label>.
+    const label = termsCheckbox().closest('label');
+    expect(label).not.toBeNull();
+    const termsLink = within(label as HTMLElement).getByRole('link', {
+      name: 'Terms of Service',
+    });
+    expect(termsLink).toHaveAttribute('href');
+    expect(termsLink.getAttribute('href')).not.toBe('');
+  });
+
   it('validates locally and never calls the API with an empty form', async () => {
     const user = userEvent.setup();
     renderSignUp();
@@ -149,6 +202,60 @@ describe('SignUpPage', () => {
     expect(await screen.findByText("Passwords don't match.")).toBeInTheDocument();
     expect(mockedPost).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  // GoTrue rejects passwords over 72 UTF-8 BYTES (bcrypt's limit, not a
+  // character count) — verified against the local stack: 72 chars → 200, 73
+  // chars → 400, and a 72-JS-character/140-byte accented password → 400. A
+  // client that admits either case is looser than the server, so signup fails
+  // with an opaque upstream error after every other field already validated.
+  it('blocks submit on a 73-character password (over the 72-byte server cap)', async () => {
+    const user = userEvent.setup();
+    renderSignUp();
+    const password = 'Aa1!' + 'x'.repeat(73 - 4);
+    expect(password).toHaveLength(73);
+
+    await fillValidForm(user, { password, confirmPassword: password });
+    await user.click(submitButton());
+
+    expect(await screen.findByText('Password must be 72 characters or fewer.')).toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit on a 72-character password that is over 72 UTF-8 bytes (accented)', async () => {
+    const user = userEvent.setup();
+    renderSignUp();
+    // 'Aa1!' (4 ASCII bytes) + 68 'é' (2 bytes each) = 72 chars, 140 bytes.
+    const password = 'Aa1!' + 'é'.repeat(68);
+    expect(password).toHaveLength(72);
+
+    await fillValidForm(user, { password, confirmPassword: password });
+    await user.click(submitButton());
+
+    expect(await screen.findByText('Password must be 72 characters or fewer.')).toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('accepts a 72-character ASCII password (exactly at the server cap)', async () => {
+    mockedPost.mockResolvedValueOnce({
+      success: true,
+      data: {
+        user: { id: 'u1', email: VALID.email, first_name: 'Pat', last_name: 'Rivera' },
+        message: 'sent',
+      },
+    } as never);
+    const user = userEvent.setup();
+    renderSignUp();
+    const password = 'Aa1!' + 'x'.repeat(72 - 4);
+    expect(password).toHaveLength(72);
+
+    await fillValidForm(user, { password, confirmPassword: password });
+    await user.click(submitButton());
+
+    await waitFor(() => expect(mockedPost).toHaveBeenCalled());
+    expect(mockNavigate).toHaveBeenCalledWith('/verify-email', { state: { email: VALID.email } });
   });
 
   it('never calls the API while the checkbox is unchecked (form-level guard behind the disabled button)', async () => {
@@ -211,5 +318,31 @@ describe('SignUpPage', () => {
       'An account with this email already exists. Please sign in instead.'
     );
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  describe('back navigation (falls back to /login)', () => {
+    it('navigates to /login when there is no prior history', async () => {
+      const restore = mockHistoryLength(1);
+      try {
+        const user = userEvent.setup();
+        renderSignUp();
+        await user.click(screen.getByRole('button', { name: 'Back' }));
+        expect(mockNavigate).toHaveBeenCalledWith('/login');
+      } finally {
+        restore();
+      }
+    });
+
+    it('navigates through history when history is available', async () => {
+      const restore = mockHistoryLength(3);
+      try {
+        const user = userEvent.setup();
+        renderSignUp();
+        await user.click(screen.getByRole('button', { name: 'Back' }));
+        expect(mockNavigate).toHaveBeenCalledWith(-1);
+      } finally {
+        restore();
+      }
+    });
   });
 });

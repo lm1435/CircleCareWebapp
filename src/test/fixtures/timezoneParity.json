@@ -1,0 +1,55 @@
+{
+  "note": "SHARED between mobile and webapp. Both repos run these exact cases against their own timezone module. Keep the two copies byte-identical; timezoneParity.test asserts it when the sibling repo is present. Add a case here whenever a timezone bug is fixed in EITHER repo, so the other inherits the regression test instead of shipping the same defect.",
+  "cases": [
+    {
+      "id": "midnight-24-is-not-noon",
+      "why": "A stored scheduled_time of '24:00' rendered as '12:00 PM' in BOTH repos on 2026-08-31 — twelve hours wrong on a medication time. Guards existed at three other readers in each file but not in the shared renderer.",
+      "fn": "formatTimeOfDay",
+      "args": [24, 0, "12h"],
+      "expect": "12:00 AM"
+    },
+    {
+      "id": "midnight-24-matches-00-24h",
+      "why": "Same defect in the 24-hour cycle: raw, this printed '24:15'.",
+      "fn": "formatTimeOfDay",
+      "args": [24, 15, "24h"],
+      "expect": "00:15"
+    },
+    { "id": "noon-stays-pm", "why": "The guard must not fold real noon.", "fn": "formatTimeOfDay", "args": [12, 0, "12h"], "expect": "12:00 PM" },
+    { "id": "midnight-00-is-am", "fn": "formatTimeOfDay", "args": [0, 0, "12h"], "expect": "12:00 AM" },
+    { "id": "afternoon-unchanged", "fn": "formatTimeOfDay", "args": [13, 5, "12h"], "expect": "1:05 PM" },
+    { "id": "late-evening-24h", "fn": "formatTimeOfDay", "args": [23, 59, "24h"], "expect": "23:59" },
+
+    {
+      "id": "reference-instant-is-utc-noon",
+      "why": "Parsed without the Z in BOTH repos, giving noon in the DEVICE zone — an instant skewed by up to 14h, which decides DST comparisons. Webapp's sweep caught it in 6 of 10 zones; mobile's stayed green because its test used a local getter.",
+      "fn": "zoneReferenceInstant",
+      "args": ["2026-03-08"],
+      "expectISO": "2026-03-08T12:00:00.000Z"
+    },
+    { "id": "reference-instant-summer", "fn": "zoneReferenceInstant", "args": ["2026-07-15"], "expectISO": "2026-07-15T12:00:00.000Z" },
+
+    {
+      "id": "dst-transition-denver-vs-phoenix",
+      "why": "At noon UTC on the US transition day Denver has moved to MDT and Phoenix has not, so the zones genuinely differ and a dual line is required. With the device-local parse this flipped by device.",
+      "fn": "timezonesAreDifferent",
+      "args": ["America/Denver", "America/Phoenix"],
+      "atISO": "2026-03-08T12:00:00.000Z",
+      "expect": true
+    },
+    { "id": "same-zone-never-differs", "fn": "timezonesAreDifferent", "args": ["America/Denver", "America/Denver"], "atISO": "2026-03-08T12:00:00.000Z", "expect": false },
+
+    {
+      "id": "kiritimati-is-plus-14",
+      "why": "An older hour-of-day fold reported +14 as -10, which made timezonesAreDifferent(Kiritimati, Honolulu) false and hid the dual line for the pairs that break.",
+      "fn": "getTimezoneOffsetMinutes",
+      "args": ["Pacific/Kiritimati"],
+      "atISO": "2026-08-31T12:00:00.000Z",
+      "expect": 840
+    },
+    { "id": "midway-is-minus-11", "fn": "getTimezoneOffsetMinutes", "args": ["Pacific/Midway"], "atISO": "2026-08-31T12:00:00.000Z", "expect": -660 },
+    { "id": "chatham-is-quarter-hour", "fn": "getTimezoneOffsetMinutes", "args": ["Pacific/Chatham"], "atISO": "2026-08-31T12:00:00.000Z", "expect": 765 },
+    { "id": "kathmandu-is-quarter-hour", "fn": "getTimezoneOffsetMinutes", "args": ["Asia/Kathmandu"], "atISO": "2026-08-31T12:00:00.000Z", "expect": 345 },
+    { "id": "kolkata-is-half-hour", "fn": "getTimezoneOffsetMinutes", "args": ["Asia/Kolkata"], "atISO": "2026-08-31T12:00:00.000Z", "expect": 330 }
+  ]
+}

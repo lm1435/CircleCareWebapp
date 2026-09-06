@@ -257,13 +257,16 @@ describe('EmergencyInfoPage', () => {
     mockApi(fullInfo);
     renderPage();
 
-    // Name as an h2, DOB label + formatted value, and conditions string.
+    // Name as an h2 and DOB label + formatted value. Conditions are NOT here:
+    // the header answers "who is this sheet about", and the at-a-glance tiles
+    // are the single conditions list (circle.recipient_conditions is a
+    // create-time field that drifts from the maintained emergency-info list).
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Rose' })
     ).toBeInTheDocument();
     expect(screen.getByText('Date of birth')).toBeInTheDocument();
     expect(screen.getByText('March 12, 1948')).toBeInTheDocument();
-    expect(screen.getByText('Hypertension, Type 2 diabetes')).toBeInTheDocument();
+    expect(screen.queryByText('Hypertension, Type 2 diabetes')).not.toBeInTheDocument();
   });
 
   it('renders at-a-glance tiles for the highest-priority facts', async () => {
@@ -366,9 +369,13 @@ describe('EmergencyInfoPage', () => {
         "Keep the details first responders need — allergies, doctors, insurance, and who to call — ready in one place for your loved one. Add them in the CircleCare app and they'll appear here."
       )
     ).toBeInTheDocument();
-    // No sections or print button in the fully-empty state
+    // No sections or print button in the fully-empty state — the only h2 on
+    // the page is the EmptyState's own title (EmptyState now renders a real
+    // <h2>, so this asserts exactly one rather than none).
     expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+    const headings = screen.getAllByRole('heading', { level: 2 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('No emergency information yet');
   });
 
   it('calls window.print when the Print button is clicked', async () => {
@@ -378,7 +385,10 @@ describe('EmergencyInfoPage', () => {
     mockApi(fullInfo);
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Print' }));
+    // Two renderings, like every masthead action: the round control below
+    // xl and the labelled button at xl. Either must print.
+    const [printButton] = await screen.findAllByRole('button', { name: 'Print' });
+    fireEvent.click(printButton);
     expect(printSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -436,8 +446,12 @@ describe('EmergencyInfoPage', () => {
     expect(await screen.findByRole('button', { name: 'Add doctor' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add contact' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add insurance' })).toBeInTheDocument();
-    // Round 7: the medical edit affordance lives in the at-a-glance header area.
-    expect(screen.getByRole('button', { name: 'Edit medical information' })).toBeInTheDocument();
+    // The masthead's right action renders twice by design (spec §5.4): an
+    // icon-only control below xl, a labelled one at xl+. Both share the same
+    // accessible name, so at least one (not exactly one) must exist.
+    expect(
+      screen.getAllByRole('button', { name: 'Edit medical information' }).length
+    ).toBeGreaterThan(0);
     expect(screen.queryByText('This page is read-only.')).not.toBeInTheDocument();
   });
 
@@ -445,7 +459,8 @@ describe('EmergencyInfoPage', () => {
     mockApi(fullInfo, true);
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit medical information' }));
+    const [editButton] = await screen.findAllByRole('button', { name: 'Edit medical information' });
+    fireEvent.click(editButton);
 
     // The same { kind: 'medical' } modal the removed section used to open.
     const dialog = await screen.findByRole('dialog');
@@ -469,7 +484,8 @@ describe('EmergencyInfoPage', () => {
     );
     renderPage();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit medical information' }));
+    const [editButton] = await screen.findAllByRole('button', { name: 'Edit medical information' });
+    fireEvent.click(editButton);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Medical information')).toBeInTheDocument();
   });
@@ -482,7 +498,7 @@ describe('EmergencyInfoPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add doctor' }));
 
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText('Name *'), { target: { value: 'Dr. Lee' } });
+    fireEvent.change(within(dialog).getByLabelText(/^Name.*\(required\)/), { target: { value: 'Dr. Lee' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(mockedPut).toHaveBeenCalledTimes(1));
@@ -555,8 +571,11 @@ describe('EmergencyInfoPage', () => {
     mockedPut.mockResolvedValue({ success: true, data: { emergency_info: fullInfo } });
     renderPage();
 
-    // Per-item delete button is labelled with the doctor name.
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete doctor Dr. Patel' }));
+    // Per-card actions collapse into one MoreMenu (spec §6.6): open the
+    // trigger (uniquely labelled per item) then pick Delete from the panel.
+    // MoreMenu's items are role="menuitem" (WAI-ARIA menu-button pattern).
+    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Dr. Patel' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete doctor Dr. Patel' }));
 
     // Confirm dialog → Delete.
     const dialog = await screen.findByRole('dialog');
@@ -583,8 +602,11 @@ describe('EmergencyInfoPage', () => {
     // window.print() (panels are print:block) still reveals everything.
     const panel = document.getElementById('doctors-accordion-panel');
     expect(panel).not.toBeNull();
-    expect(panel?.className).toContain('hidden');
-    expect(panel?.className).toContain('print:block');
+    // Collapsed = grid row collapsed to 0fr (visually hidden) but still
+    // 1fr under print, and `inert` keeps it out of focus/the a11y tree.
+    expect(panel?.className).toContain('[grid-template-rows:0fr]');
+    expect(panel?.className).toContain('print:[grid-template-rows:1fr]');
+    expect(panel).toHaveAttribute('inert');
     expect(within(panel as HTMLElement).getByText('Dr. Chen')).toBeInTheDocument();
   });
 
@@ -625,5 +647,64 @@ describe('EmergencyInfoPage', () => {
     await waitFor(() =>
       expect(document.body.classList.contains('emergency-print-scope')).toBe(false)
     );
+  });
+
+  // ── Per-card MoreMenu (spec §6.6) ────────────────────────────────────────
+
+  it('opens the Edit Doctor modal via the per-card MoreMenu (Edit item)', async () => {
+    mockApi(fullInfo, true);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Actions for Dr. Patel' }));
+    // MoreMenu's items are role="menuitem" (WAI-ARIA menu-button pattern), not role="button".
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit doctor Dr. Patel' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Edit doctor')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/^Name/)).toHaveValue('Dr. Patel');
+  });
+
+  it('each doctor/contact/insurance card exposes its own MoreMenu trigger, not a shared one', async () => {
+    mockApi(fullInfo, true);
+    renderPage();
+
+    // Primary doctor + additional doctor + contact + insurance = 4 distinct
+    // triggers, each named after its own item.
+    expect(await screen.findByRole('button', { name: 'Actions for Dr. Chen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions for Dr. Patel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions for Sarah' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actions for Blue Cross' })).toBeInTheDocument();
+  });
+
+  // ── At-a-glance tiles render through the shared IconTile primitive ──────
+
+  it('renders each at-a-glance tile with an IconTile glyph', async () => {
+    mockApi(fullInfo);
+    renderPage();
+
+    const glance = await screen.findByRole('region', { name: 'At a glance' });
+    // IconTile renders a decorative Icon (an inline, aria-hidden svg) ahead of
+    // every tile's label/value — no more hand-drawn per-tile <svg> glyphs.
+    const tiles = glance.querySelectorAll('svg');
+    expect(tiles.length).toBeGreaterThanOrEqual(4);
+    for (const svg of tiles) {
+      expect(svg).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  // ── Print chrome is explicitly marked ─────────────────────────────────────
+
+  it('marks the masthead Print action and per-card MoreMenus with data-print-hide', async () => {
+    mockApi(fullInfo, true);
+    renderPage();
+
+    const printButtons = await screen.findAllByRole('button', { name: 'Print' });
+    expect(printButtons.length).toBeGreaterThan(0);
+    for (const printButton of printButtons) {
+      expect(printButton.closest('[data-print-hide]')).not.toBeNull();
+    }
+
+    const menuTrigger = screen.getByRole('button', { name: 'Actions for Dr. Patel' });
+    expect(menuTrigger.closest('[data-print-hide]')).not.toBeNull();
   });
 });

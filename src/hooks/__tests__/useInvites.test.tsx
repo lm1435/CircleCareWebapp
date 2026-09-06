@@ -142,6 +142,18 @@ const PENDING_INVITE_ENVELOPE = {
   success: false,
   error: { code: 'PENDING_INVITE', message: 'invite already pending' },
 };
+// The backend now refuses every invite path for a deleted circle, and a second
+// care-recipient invite. Both used to fall through to the generic
+// "something went wrong, try again" — a retry prompt for something that can
+// never succeed.
+const CIRCLE_ARCHIVED_ENVELOPE = {
+  success: false,
+  error: { code: 'CIRCLE_ARCHIVED', message: 'This circle has been archived' },
+};
+const CARE_RECIPIENT_EXISTS_ENVELOPE = {
+  success: false,
+  error: { code: 'CARE_RECIPIENT_EXISTS', message: 'Circle already has a care recipient' },
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -277,6 +289,42 @@ describe('useCreateInvite', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.pendingInvite', 'error');
+  });
+
+  it('surfaces a CIRCLE_ARCHIVED error as the archived-circle toast', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(CIRCLE_ARCHIVED_ENVELOPE);
+
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.circleArchived', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+  });
+
+  it('surfaces a CARE_RECIPIENT_EXISTS error as the care-recipient toast', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(CARE_RECIPIENT_EXISTS_ENVELOPE);
+
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'jane@example.com', member_type: 'care_recipient' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.careRecipientExists', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+  });
+
+  // The fallback the two new branches were carved out of stays put.
+  it('leaves an unmapped code on the generic save-failed toast', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue({ success: false, error: { code: 'SERVER_ERROR' } });
+
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
   });
 });
 

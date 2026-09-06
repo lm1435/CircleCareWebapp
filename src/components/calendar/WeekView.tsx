@@ -2,9 +2,14 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
+import { Card, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
-import { formatEventTimeCompact, getCurrentHoursInTimezone } from '@/utils/timezone';
+import {
+  formatEventTimeCompact,
+  getCurrentHoursInTimezone,
+  zoneReferenceInstant,
+} from '@/utils/timezone';
 import { formatDateForDisplay } from './dateMath';
 import {
   getEventCardClass,
@@ -31,6 +36,15 @@ export interface WeekViewProps {
 const HOUR_HEIGHT = 80;
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const MIN_EVENT_MINUTES = 30;
+// Mobile parity (review 2026-09-05): mobile/src/components/calendar/
+// WeekTimelineView.tsx:40 caps the shared all-day row at 2 visible chips per
+// day, then a "+N" overflow (lines 174-218) — without it a day with many
+// all-day items grows the shared row tall enough to push the whole hour grid
+// below the fold, at every viewport width, not just narrow ones. Mobile's own
+// "+N" is a plain (non-interactive) Text; this port makes it a real button
+// (aria-expanded) that reveals the rest of THAT day's column inline, since no
+// other per-day detail affordance exists in this view to route it to instead.
+const MAX_ALL_DAY_VISIBLE = 2;
 // Chip text metrics — both spans render at leading-[14px], and the chip's p-1
 // eats 4px top + bottom. Used to work out how many lines actually fit before
 // choosing the stacked vs inline layout, so nothing is ever clipped mid-line.
@@ -87,6 +101,13 @@ export function WeekView({
 
   const currentTimeTop = getCurrentHoursInTimezone(careRecipientTimezone, now) * HOUR_HEIGHT;
 
+  // Days whose all-day column the viewer has expanded past the MAX_ALL_DAY_VISIBLE
+  // cap (below). Per-day, not global — expanding Saturday's overflow must not
+  // also expand Sunday's.
+  const [expandedAllDayDays, setExpandedAllDayDays] = useState<Set<string>>(
+    () => new Set()
+  );
+
   const timedEvents = (day: string): CalendarEvent[] =>
     (eventsByDay.get(day) ?? []).filter((event) => !!event.scheduled_time);
   const allDayEvents = (day: string): CalendarEvent[] =>
@@ -127,7 +148,12 @@ export function WeekView({
     const status = getMedicationStatus(event, careRecipientTimezone, now);
     const title = event.medication_name || event.title;
     const timeLabel = event.scheduled_time
-      ? formatEventTimeCompact(event.scheduled_time, careRecipientTimezone, hourCycle)
+      ? formatEventTimeCompact(
+          event.scheduled_time,
+          careRecipientTimezone,
+          hourCycle,
+          zoneReferenceInstant(event.scheduled_date)
+        )
       : t('calendar:allDay');
     // A discontinued medication still shows every dose that was due BEFORE the
     // discontinue instant — historical rows keep their confirmation status and
@@ -204,8 +230,14 @@ export function WeekView({
         } block overflow-hidden rounded p-1 text-left ${getEventCardClass(event, status)}`}
       >
         <span className={stacked ? 'flex flex-col' : 'flex items-baseline gap-1'}>
+          {/* Not <Text variant="mono">: getEventTextClass's color MUST win over
+              the variant's own text-ink-3, and both would be plain utilities in
+              the same cascade layer — order between them in the compiled
+              stylesheet is not guaranteed. The mono scale is inlined with no
+              color of its own instead, so getEventTextClass supplies the only
+              color utility here. */}
           <span
-            className={`mono min-w-0 ${stacked ? 'w-full' : 'flex-1'} ${titleClamp} break-words text-[11px] leading-[14px] ${getEventTextClass(event, status)} ${
+            className={`min-w-0 ${stacked ? 'w-full' : 'flex-1'} ${titleClamp} break-words font-normal tracking-wider text-[11px] leading-[14px] ${getEventTextClass(event, status)} ${
               status === 'skipped' ? 'line-through' : ''
             }`}
           >
@@ -215,14 +247,14 @@ export function WeekView({
             <span className="flex shrink-0 items-baseline gap-1">
               {showTime && (
                 <span
-                  className={`mono shrink-0 text-[10px] leading-[14px] ${getEventTextClass(event, status)}`}
+                  className={`shrink-0 font-normal tracking-wider text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
                 >
                   {timeLabel}
                 </span>
               )}
               {inactive && (
                 <span
-                  className={`mono shrink-0 text-[10px] leading-[14px] ${getEventTextClass(event, status)}`}
+                  className={`shrink-0 font-normal tracking-wider text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
                 >
                   {inactiveLabel}
                 </span>
@@ -235,10 +267,12 @@ export function WeekView({
   };
 
   return (
-    <div
+    <Card
+      variant="outlined"
+      padding="none"
       role="grid"
       aria-label={t('calendar:weekViewLabel')}
-      className="overflow-hidden rounded-2xl border border-line bg-cream"
+      className="overflow-hidden"
     >
       {/* Single 2D scroller: pans horizontally (day columns, ~2 fit a phone via
           --dc + scroll-snap) AND scrolls vertically through the timed grid. The
@@ -281,14 +315,17 @@ export function WeekView({
                   })}, ${t('calendar:eventCount', { count })}`}
                   className="snap-start border-l border-line-2 p-1 text-center"
                 >
+                  {/* Visible weekday-short + day-number now participate in
+                      the accessible tree (review 2026-09-05, WCAG 2.5.3):
+                      `aria-label` above still carries the full date, which
+                      contains both. */}
                   <div
-                    aria-hidden="true"
                     className={`mx-auto flex flex-col items-center justify-center rounded-lg px-1 py-1 ${
                       isToday ? 'bg-ink' : ''
                     }`}
                   >
                     <span
-                      className={`mono block uppercase ${isToday ? 'text-cream' : 'text-ink-3'}`}
+                      className={`block text-xs font-medium capitalize ${isToday ? 'text-cream' : 'text-ink-3'}`}
                     >
                       {formatDateForDisplay(day, { weekday: 'short' })}
                     </span>
@@ -310,18 +347,68 @@ export function WeekView({
               className="grid grid-cols-[3.5rem_repeat(7,var(--dc))] border-b border-line-2"
             >
               <div role="rowheader" className="sticky left-0 z-[7] bg-cream p-1 text-right">
-                <span className="mono">{t('calendar:allDay')}</span>
+                <Text variant="mono" as="span">
+                  {t('calendar:allDay')}
+                </Text>
               </div>
-              {days.map((day) => (
-                <div
-                  key={day}
-                  role="gridcell"
-                  data-date={day}
-                  className="snap-start flex flex-col gap-1 border-l border-line-2 p-1"
-                >
-                  {allDayEvents(day).map((event) => renderEventButton(event, false))}
-                </div>
-              ))}
+              {days.map((day) => {
+                const dayAllDay = allDayEvents(day);
+                const isExpanded = expandedAllDayDays.has(day);
+                const overflow = dayAllDay.length - MAX_ALL_DAY_VISIBLE;
+                const visible =
+                  isExpanded || overflow <= 0 ? dayAllDay : dayAllDay.slice(0, MAX_ALL_DAY_VISIBLE);
+                // "Sat 5" — the same day identity the columnheader's aria-label
+                // already speaks, just shorter (this is a compact overflow
+                // control's name, not the header itself).
+                const dayLabel = formatDateForDisplay(day, { weekday: 'short', day: 'numeric' });
+                return (
+                  <div
+                    key={day}
+                    role="gridcell"
+                    data-date={day}
+                    className="snap-start flex flex-col gap-1 border-l border-line-2 p-1"
+                  >
+                    {visible.map((event) => renderEventButton(event, false))}
+                    {overflow > 0 && !isExpanded && (
+                      <button
+                        type="button"
+                        aria-expanded={false}
+                        aria-label={t('calendar:allDayMoreLabel', { count: overflow, day: dayLabel })}
+                        onClick={() =>
+                          setExpandedAllDayDays((prev) => new Set(prev).add(day))
+                        }
+                        // WCAG 2.5.5: 22px of text does not clear the 44px
+                        // minimum on its own; `min-h-[44px]` + centering gives
+                        // it a real tap target without a separate hit-area
+                        // hack that could bleed into a neighbouring chip.
+                        className="flex min-h-[44px] w-full items-center text-left font-normal tracking-wider text-[11px] leading-[14px] text-ink-3 hover:text-ink"
+                      >
+                        +{overflow}
+                      </button>
+                    )}
+                    {overflow > 0 && isExpanded && (
+                      <button
+                        type="button"
+                        aria-expanded={true}
+                        // Per-day, not just "Show fewer" — two expanded days
+                        // in the same week would otherwise share one
+                        // accessible name (review 2026-09-05).
+                        aria-label={t('calendar:allDayShowFewerLabel', { day: dayLabel })}
+                        onClick={() =>
+                          setExpandedAllDayDays((prev) => {
+                            const next = new Set(prev);
+                            next.delete(day);
+                            return next;
+                          })
+                        }
+                        className="flex min-h-[44px] w-full items-center text-left font-normal tracking-wider text-[11px] leading-[14px] text-ink-3 hover:text-ink"
+                      >
+                        {t('calendar:allDayShowFewer')}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           </div>
@@ -337,13 +424,15 @@ export function WeekView({
                 style={{ height: 24 * HOUR_HEIGHT }}
               >
                 {HOURS.map((hour) => (
-                  <span
+                  <Text
                     key={hour}
-                    className="mono absolute right-1 -translate-y-1/2 normal-case"
+                    variant="mono"
+                    as="span"
+                    className="absolute right-1 -translate-y-1/2 normal-case"
                     style={{ top: hour * HOUR_HEIGHT }}
                   >
                     {hour === 0 ? '' : formatHourLabel(hour, hourCycle)}
-                  </span>
+                  </Text>
                 ))}
               </div>
 
@@ -382,10 +471,13 @@ export function WeekView({
                         // pointer-events-none: purely decorative — it sits ABOVE
                         // event chips (z-2 vs z-1) and must never swallow clicks
                         // on an event scheduled at the current time.
-                        className="pointer-events-none absolute inset-x-0 z-[2] h-0.5 bg-terracotta-deep"
+                        // Mobile parity (review 2026-09-05): mobile's
+                        // WeekTimelineView.currentTimeLine/currentTimeDot use
+                        // CC.terracotta, not ink — a 2px line + 8px dot.
+                        className="pointer-events-none absolute inset-x-0 z-[2] h-0.5 bg-terracotta"
                         style={{ top: currentTimeTop }}
                       >
-                        <span className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-terracotta-deep" />
+                        <span className="absolute -left-1 -top-[3px] h-2 w-2 rounded-full bg-terracotta" />
                       </div>
                     )}
 
@@ -401,6 +493,6 @@ export function WeekView({
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

@@ -2,3 +2,45 @@
 # Everything here lives behind login; there is no public content to crawl.
 User-agent: *
 Disallow: /
+
+# LINK-PREVIEW UNFURLERS ARE ALLOWED, deliberately, and this is not indexing.
+#
+# An invite link is meant to be pasted into a chat, and index.html carries the
+# OpenGraph card for exactly that. But several unfurlers HONOUR robots.txt and
+# fetch nothing when the path is disallowed — Slack, Twitter, LinkedIn and
+# Discord among them — so the card was dead in the places invites actually get
+# shared. (facebookexternalhit and iMessage ignore robots, which is why WhatsApp
+# appeared to work and hid the problem.)
+#
+# These agents fetch ONE url on demand and do not crawl, so allowing them
+# exposes nothing beyond the static tags in index.html. Every search engine
+# stays under the blanket Disallow above, so the app remains unindexable.
+#
+# Note also: this is a client-rendered SPA. Unfurlers do not execute JavaScript,
+# so ONLY the static tags in index.html are ever seen — the per-invite
+# og:title/og:description that InviteLandingPage sets via react-helmet-async are
+# invisible to them by construction, which is what keeps invite details out of
+# a crawler cache.
+User-agent: Slackbot
+Allow: /
+
+User-agent: Slackbot-LinkExpanding
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: Discordbot
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /

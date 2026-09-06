@@ -4,11 +4,13 @@ import { test, expect } from '../fixtures';
 // path. (The happy-path login is exercised by auth.setup.ts.)
 
 test('log out from the account menu returns to /login', async ({ page, circleId }) => {
-  // Stub the logout endpoint: the real backend does a GLOBAL admin.signOut that
-  // revokes ALL of the demo user's refresh tokens — which would break every
-  // other test sharing this session. We only want to verify the CLIENT logout
-  // path here (menu → redirect to /login + local state cleared); the server-side
-  // revoke is covered by backend tests. Stubbing keeps the shared session alive.
+  // Stub the logout endpoint. The backend revoke is now scoped 'local' (it no
+  // longer nukes every device — see backend auth.ts /logout), but 'local' still
+  // revokes THIS session's refresh token, and every worker in this suite shares
+  // one storageState. A real logout here would still cascade the others to
+  // /login. We only want to verify the CLIENT logout path (menu → redirect to
+  // /login + local state cleared); the server-side revoke and its scope are
+  // covered by backend tests. Stubbing keeps the shared session alive.
   await page.route('**/auth/logout', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
   );
@@ -17,7 +19,12 @@ test('log out from the account menu returns to /login', async ({ page, circleId 
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole('button', { name: 'Account' }).click();
-  await page.getByRole('menuitem', { name: 'Log out' }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+
+  // Signing out asks first (spec §5.6) — confirm the dialog.
+  const confirm = page.getByRole('dialog');
+  await expect(confirm).toBeVisible({ timeout: 10_000 });
+  await confirm.getByRole('button', { name: 'Sign out', exact: true }).click();
 
   await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
 });

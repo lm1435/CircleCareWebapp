@@ -187,6 +187,43 @@ export async function deleteAccount(): Promise<void> {
 }
 
 /**
+ * Tell the server the user withdrew analytics consent, so their PostHog person
+ * and events are deleted server-side and every future server-originated
+ * capture is suppressed (POST /users/me/withdraw-analytics-consent).
+ *
+ * Rides alongside a settings toggle — the local teardown (disableAnalytics +
+ * writing the local flag) has already happened by the time this is called.
+ * A privacy action must never surface an error, so this never throws; the
+ * result IS reported (true/false) so `analyticsConsentSync` can tell delivery
+ * from failure and retry rather than silently dropping the decision.
+ */
+export async function withdrawAnalyticsConsent(): Promise<boolean> {
+  try {
+    await apiClient.post('/users/me/withdraw-analytics-consent');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Tell the server the user granted analytics consent again, clearing the
+ * `analytics_consent_withdrawn_at` stamp that suppresses server-side capture
+ * (POST /users/me/restore-analytics-consent).
+ *
+ * Same shape as its sibling above: never throws, reports true/false so a
+ * failed restore can be retried instead of silently lapsing.
+ */
+export async function restoreAnalyticsConsent(): Promise<boolean> {
+  try {
+    await apiClient.post('/users/me/restore-analytics-consent');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * With `responseType: 'blob'` axios parses ERROR bodies as Blobs too, so the
  * response interceptor's rejection (`error.response.data`) is a Blob instead of
  * the usual `{ success, error: { code } }` envelope. Re-hydrate it so callers

@@ -1,9 +1,20 @@
 import { useMemo, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFreshSignedUrl, type CircleDocument } from '@/api/documents';
-import { Badge, Button, useToast } from '@/components/ui';
+import {
+  Badge,
+  IconTile,
+  MoreMenu,
+  useToast,
+  careCardBadgeRow,
+  careCardMeta,
+  careCardShell,
+  careCardTitle,
+  careCardTopRow,
+  type MoreMenuEntry,
+} from '@/components/ui';
 import { buildDownloadFileName, triggerSignedUrlDownload } from './downloadFile';
-import { categoryTileClass, DocumentIcon } from './documentIcon';
+import { CATEGORY_TONE, categoryBadgeVariant } from './documentIcon';
 import { formatFileSize } from './formatFileSize';
 
 export interface DocumentRowProps {
@@ -13,8 +24,8 @@ export interface DocumentRowProps {
   onPreview: (doc: CircleDocument) => void;
   /**
    * Whether the current user may edit/delete THIS document (uploader or circle
-   * owner, AND the circle is editable). When false, the edit/delete buttons are
-   * hidden. The backend re-checks regardless.
+   * owner, AND the circle is editable). When false, the Edit/Delete menu items
+   * are omitted entirely. The backend re-checks regardless.
    */
   canManage?: boolean;
   /** Open the metadata edit modal for this document. */
@@ -32,9 +43,22 @@ export function isPreviewable(fileType: string): boolean {
 }
 
 /**
- * Single document entry (plan Task 33): label, category badge, upload date,
- * human file size, preview (when renderable) + download actions.
- * Download fetches a FRESH signed URL at click time — never a cached one.
+ * First name only (mobile `DocumentRow.getUploaderName`) — attribution inside
+ * a family circle reads fine on a first name, and it is the difference
+ * between a meta line that fits and one that truncates.
+ */
+function getUploaderName(doc: CircleDocument): string {
+  const user = doc.uploaded_by_user;
+  if (!user) return '';
+  if (user.first_name || user.last_name) return user.first_name || user.last_name || '';
+  return user.email;
+}
+
+/**
+ * Single document entry (spec §6.6, care card shell §4.6). Preview (when
+ * renderable), Download, Edit, and Delete all live behind the trailing
+ * `MoreMenu` rather than inline row buttons. Download fetches a FRESH signed
+ * URL at click time — never a cached one.
  */
 export function DocumentRow({
   doc,
@@ -56,6 +80,7 @@ export function DocumentRow({
       ),
     [doc.created_at, i18n.language]
   );
+  const uploaderName = useMemo(() => getUploaderName(doc), [doc]);
 
   const handleDownload = async (): Promise<void> => {
     if (isDownloading) return;
@@ -71,62 +96,64 @@ export function DocumentRow({
     }
   };
 
+  const items: MoreMenuEntry[] = [];
+  if (isPreviewable(doc.file_type)) {
+    items.push({
+      id: 'preview',
+      label: t('preview'),
+      icon: 'eye-outline',
+      onSelect: () => onPreview(doc),
+    });
+  }
+  items.push({
+    id: 'download',
+    label: t('download'),
+    icon: 'download-outline',
+    onSelect: () => void handleDownload(),
+  });
+  if (canManage && onEdit) {
+    items.push({
+      id: 'edit',
+      label: t('editAction'),
+      icon: 'create-outline',
+      onSelect: () => onEdit(doc),
+    });
+  }
+  if (canManage && onDelete) {
+    items.push({ divider: true, id: 'manage-divider' });
+    items.push({
+      id: 'delete',
+      label: t('deleteAction'),
+      icon: 'trash-outline',
+      danger: true,
+      onSelect: () => onDelete(doc),
+    });
+  }
+
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line-2 py-4 last:border-b-0">
-      {/* Category/MIME icon tile — never an image thumbnail (signed URLs are
-          fetched on demand at click time and never held at rest). */}
-      <span
-        aria-hidden="true"
-        className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${categoryTileClass[doc.category]}`}
-      >
-        <DocumentIcon category={doc.category} fileType={doc.file_type} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="m-0 truncate text-base font-medium text-ink">{doc.label}</p>
-        <p className="m-0 mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-3">
-          <Badge variant="moss">{t(`categories.${doc.category}`)}</Badge>
-          <span>{t('uploadedOn', { date: uploadedDate })}</span>
-          <span aria-hidden="true">&middot;</span>
-          <span>{formatFileSize(doc.file_size)}</span>
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {isPreviewable(doc.file_type) && (
-          <Button
-            variant="ghost"
-            aria-label={t('previewDocument', { name: doc.label })}
-            onClick={() => onPreview(doc)}
-          >
-            {t('preview')}
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          aria-label={t('downloadDocument', { name: doc.label })}
-          aria-busy={isDownloading}
-          disabled={isDownloading}
-          onClick={() => void handleDownload()}
-        >
-          {isDownloading ? t('downloading') : t('download')}
-        </Button>
-        {canManage && onEdit && (
-          <Button
-            variant="ghost"
-            aria-label={t('editDocument', { name: doc.label })}
-            onClick={() => onEdit(doc)}
-          >
-            {t('editAction')}
-          </Button>
-        )}
-        {canManage && onDelete && (
-          <Button
-            variant="ghost"
-            aria-label={t('deleteDocument', { name: doc.label })}
-            onClick={() => onDelete(doc)}
-          >
-            {t('deleteAction')}
-          </Button>
-        )}
+    <li className={careCardShell}>
+      <div className={careCardTopRow}>
+        <IconTile size={36} tone={CATEGORY_TONE[doc.category]} name="document-text-outline" />
+        <div className="min-w-0 flex-1">
+          <p className={`m-0 truncate ${careCardTitle}`}>{doc.label}</p>
+          <p className={`m-0 ${careCardMeta}`}>
+            <span>{formatFileSize(doc.file_size)}</span>
+            <span>·</span>
+            <span>{uploadedDate}</span>
+            {uploaderName && (
+              <>
+                <span>·</span>
+                <span>{uploaderName}</span>
+              </>
+            )}
+          </p>
+          <div className={careCardBadgeRow}>
+            <Badge variant={categoryBadgeVariant(doc.category)} size="sm">
+              {t(`categories.${doc.category}`)}
+            </Badge>
+          </div>
+        </div>
+        <MoreMenu items={items} label={t('actionsFor', { name: doc.label })} />
       </div>
     </li>
   );

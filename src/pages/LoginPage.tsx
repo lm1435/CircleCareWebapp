@@ -7,9 +7,11 @@ import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { supabase } from '@/lib/supabase';
 import { Analytics } from '@/lib/analytics';
-import { Button } from '@/components/ui';
+import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
-import { FormField } from '@/components/auth/FormField';
+import { AuthTopBar } from '@/components/auth/AuthTopBar';
+import { AuthHeader } from '@/components/auth/AuthHeader';
+import { AuthDivider } from '@/components/auth/AuthDivider';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 
 // Task 8 — email/password login (cookie mode) + Google/Apple OAuth broker.
@@ -31,10 +33,12 @@ export default function LoginPage(): ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const signIn = useAuthStore((state) => state.signIn);
+  // No sensible fallback route for Login — when there's no prior history
+  // (AuthGuard redirected here with `replace`, making /login history entry 0),
+  // hide the back control instead of rendering a dead/site-exiting button.
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -152,28 +156,32 @@ export default function LoginPage(): ReactElement {
   };
 
   return (
-    <AuthShell title={t('login.title')} subtitle={t('login.subtitle')}>
+    <AuthShell>
+      {/* Login is the root of the signed-out flow: no back control. */}
+      <AuthTopBar />
+      <AuthHeader title={t('login.title')} subtitle={t('login.subtitle')} />
+
       {emailVerified && !formError ? (
-        <div
-          role="status"
-          className="mb-4 rounded-xl border border-line bg-bg-2 p-3 text-sm text-ink-2"
-        >
-          {t('verifyOtp.verifiedSignInNotice')}
+        <div role="status" className="mb-4">
+          <Card variant="filled" padding="sm">
+            <Text variant="caption" className="text-ink-2">
+              {t('verifyOtp.verifiedSignInNotice')}
+            </Text>
+          </Card>
         </div>
       ) : null}
       {formError ? (
-        <div
-          ref={errorRef}
-          role="alert"
-          tabIndex={-1}
-          className="mb-4 rounded-xl border border-terracotta-deep/40 bg-bg-2 p-3 text-sm text-terracotta-deep"
-        >
-          {formError}
+        <div ref={errorRef} role="alert" tabIndex={-1} className="mb-4">
+          <Card variant="filled" padding="sm">
+            <Text variant="caption" className="text-terracotta-deep!">
+              {formError}
+            </Text>
+          </Card>
         </div>
       ) : null}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-        <FormField
+        <TextField
           ref={emailRef}
           id="login-email"
           name="email"
@@ -188,11 +196,13 @@ export default function LoginPage(): ReactElement {
         />
 
         <div className="flex flex-col gap-1.5">
-          <FormField
+          <TextField
             ref={passwordRef}
             id="login-password"
             name="password"
-            type={showPassword ? 'text' : 'password'}
+            type="password"
+            showToggle
+            toggleLabels={{ show: t('login.showPassword'), hide: t('login.hidePassword') }}
             label={t('login.passwordLabel')}
             placeholder={t('login.passwordPlaceholder')}
             autoComplete="current-password"
@@ -201,31 +211,22 @@ export default function LoginPage(): ReactElement {
             onChange={(event) => setPassword(event.target.value)}
             error={fieldErrors.password}
           />
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              aria-pressed={showPassword}
-              className="cursor-pointer border-0 bg-transparent p-0 text-sm text-ink-3 underline"
+          <div className="flex items-center justify-end">
+            <Link
+              to="/forgot-password"
+              className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss"
             >
-              {showPassword ? t('login.hidePassword') : t('login.showPassword')}
-            </button>
-            <Link to="/forgot-password" className="text-sm font-medium text-terracotta-deep">
               {t('login.forgotPassword')}
             </Link>
           </div>
         </div>
 
-        <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full">
+        <Button type="submit" variant="primary" size="lg" fullWidth loading={isSubmitting}>
           {isSubmitting ? t('login.signingIn') : t('login.signInButton')}
         </Button>
       </form>
 
-      <div className="my-6 flex items-center gap-3" aria-hidden="true">
-        <span className="h-px flex-1 bg-line" />
-        <span className="text-sm text-ink-3">{t('login.orContinueWith')}</span>
-        <span className="h-px flex-1 bg-line" />
-      </div>
+      <AuthDivider label={t('login.orContinueWith')} />
 
       <OAuthButtons
         disabled={isSubmitting}
@@ -237,10 +238,17 @@ export default function LoginPage(): ReactElement {
 
       <p className="m-0 mt-6 text-center text-sm text-ink-3">
         {t('login.noAccount')}{' '}
-        <Link to="/signup" className="font-medium text-terracotta-deep">
+        <Link to="/signup" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss">
           {t('login.createAccount')}
         </Link>
       </p>
+
+      <a
+        href="https://circlecare.app/help/"
+        className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center text-sm text-ink-3 underline"
+      >
+        {t('needHelp')}
+      </a>
     </AuthShell>
   );
 }

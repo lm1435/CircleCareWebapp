@@ -17,6 +17,22 @@ import {
   startOfWeek,
 } from '../dateMath';
 
+/**
+ * The VIEWER's zone. A rendered timestamp is labelled only when the viewer sits
+ * outside the zone it is read in, so every case that asserts a label has to say
+ * where the viewer is — reading the real machine zone would pass on the dev
+ * machine (America/Denver) and fail everywhere else.
+ */
+function pinDeviceTimezone(timeZone: string) {
+  vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
+    timeZone,
+  } as Intl.ResolvedDateTimeFormatOptions);
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('addDays', () => {
   it('adds within a month', () => {
     expect(addDays('2026-06-07', 6)).toBe('2026-06-13');
@@ -97,6 +113,19 @@ describe('display formatting', () => {
   });
 
   it('formatTimestampInTimezone renders an ISO UTC instant in the target TZ', () => {
+    // The zone label is part of the contract WHEN THE VIEWER IS ELSEWHERE: this
+    // string is the evidence a dose was taken, and read in the wrong frame it is
+    // evidence of something that did not happen.
+    pinDeviceTimezone('America/Denver');
+    expect(formatTimestampInTimezone('2026-06-12T13:05:00Z', 'America/Chicago', 'en')).toBe(
+      '8:05 AM (Chicago)'
+    );
+  });
+
+  it('formatTimestampInTimezone leaves the label off for a viewer in that TZ', () => {
+    // A zone label answers "whose clock is this?". In a single-zone circle
+    // nobody is asking, and this surface used to answer anyway.
+    pinDeviceTimezone('America/Chicago');
     expect(formatTimestampInTimezone('2026-06-12T13:05:00Z', 'America/Chicago', 'en')).toBe(
       '8:05 AM'
     );
@@ -120,5 +149,51 @@ describe('formatDateForDisplay default locale', () => {
 
     await i18n.changeLanguage('en');
     expect(formatDateForDisplay('2026-06-12', { month: 'short', day: 'numeric' })).toBe('Jun 12');
+  });
+});
+
+describe('formatTimestampInTimezone honours the app hour cycle and the instant', () => {
+  it('uses the resolved cycle, not whatever the locale implies', () => {
+    // The bug: formatting straight off the locale made the same instant render
+    // differently for the same user depending on the tag — `es-MX` gave
+    // "8:05 p.m." while a bare `es` gave "20:05".
+    const iso = '2026-06-12T13:05:00Z';
+    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'es', '12h')).toContain('8:05');
+    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'es-MX', '12h')).toContain('8:05');
+    // Same cycle in, same digits out, regardless of the locale tag.
+    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'es', '12h')).toBe(
+      formatTimestampInTimezone(iso, 'America/Chicago', 'es-MX', '12h')
+    );
+    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'en', '24h')).toBe(
+      '08:05 (Chicago)'
+    );
+  });
+
+  it('names ANY zone by its city, never by an offset', () => {
+    // What this replaced: Intl's short name, which is a real abbreviation for
+    // about ten US zones and an OFFSET for the rest — Europe/Berlin came out
+    // "GMT+2" in July and "GMT+1" in January, so the label both leaked an
+    // offset AND changed with the season. A city does neither.
+    pinDeviceTimezone('America/Denver');
+    const summer = formatTimestampInTimezone('2026-07-15T12:00:00Z', 'Europe/Berlin', 'en', '24h');
+    const winter = formatTimestampInTimezone('2026-01-15T12:00:00Z', 'Europe/Berlin', 'en', '24h');
+    expect(summer).toContain('(Berlin)');
+    expect(winter).toContain('(Berlin)');
+    expect(summer).not.toContain('GMT');
+    expect(winter).not.toContain('+1');
+  });
+
+  it('decides whether to label AT THE INSTANT, not at today', () => {
+    // The DST dependence moved: the LABEL no longer changes with the season
+    // (a city has one name), but whether it is shown still does. Phoenix and
+    // Denver are the same clock in January and an hour apart in July, so the
+    // same pair must label in one and stay silent in the other.
+    pinDeviceTimezone('America/Phoenix');
+    expect(formatTimestampInTimezone('2026-01-15T20:00:00Z', 'America/Denver', 'en', '24h')).toBe(
+      '13:00'
+    );
+    expect(formatTimestampInTimezone('2026-07-15T20:00:00Z', 'America/Denver', 'en', '24h')).toBe(
+      '14:00 (Denver)'
+    );
   });
 });

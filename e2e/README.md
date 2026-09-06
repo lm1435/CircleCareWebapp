@@ -56,8 +56,8 @@ multiple series per card, so UI-click deletion races card re-grouping/remounts.
 | `members` | List renders + invite-form validation + cancel (**non-destructive — sends no invite**). |
 | `circle` | Edit circle name + restore; create-modal validation + cancel (**never creates/deletes a circle**). |
 | `ai` | Open assistant, send a message, verify it posts (graceful on slow AI). |
-| `auth` | Logout → /login (logout endpoint stubbed so it doesn't revoke the shared session); bad-credentials error. |
-| `navigation` | Click-through every sidebar nav link + header circle-switcher / account menu (Profile, Help, My Circles); asserts URL + render + no error fallback. |
+| `auth` | Sign out (with its confirm dialog) → /login (logout endpoint stubbed so it doesn't revoke the shared session); bad-credentials error. |
+| `navigation` | Click-through every sidebar nav link + header circle-switcher / account menu (Profile, Help, All circles); asserts URL + render + no error fallback. |
 | `calendar-controls` | Week/month toggle + prev / next / today navigation. |
 | `tasks-controls` | Status filter + sort options. |
 | `vitals-controls` | Type filter + date-range filter. |

@@ -7,7 +7,8 @@
     "notifications": "Notificaciones",
     "quietHours": "Horario sin interrupciones",
     "units": "Unidades de medida",
-    "emailDigest": "Resumen semanal por correo"
+    "emailDigest": "Resumen semanal por correo",
+    "privacy": "Privacidad"
   },
   "account": {
     "email": "Correo electrónico",
@@ -98,7 +99,7 @@
     "premiumDescription": "Tienes acceso completo a todas las funciones de CircleCare.",
     "freeTitle": "Plan gratuito",
     "upgradeInApp": "Mejora a Premium en la app de CircleCare.",
-    "upgradeBenefit": "Desbloquea todo lo que CircleCare ofrece para todo tu círculo de cuidado.",
+    "upgradeBenefit": "Todo lo que tu familia necesita para coordinar el cuidado, en cada círculo del que formas parte.",
     "upgradeCta": "Mejora a Premium",
     "orInApp": "O mejora en la app de CircleCare.",
     "manageSubscription": "Administrar suscripción",
@@ -116,13 +117,21 @@
   },
   "delete": {
     "title": "Eliminar cuenta",
-    "description": "Elimina tu cuenta de forma permanente y quita tu acceso a todos los círculos de cuidado. Esto no se puede deshacer. ¿Quieres una copia de tu información primero? Usa 'Descargar mis datos' arriba.",
+    "description": "Elimina de forma permanente tu cuenta y todos los círculos de cuidado que te pertenecen. Esto no se puede deshacer. ¿Quieres una copia de tu información primero? Usa 'Descargar mis datos' arriba.",
     "cta": "Eliminar mi cuenta",
     "confirmTitle": "¿Eliminar tu cuenta?",
-    "confirmBody": "Esto elimina tu cuenta de forma permanente y te quita de todos los círculos de cuidado. Los círculos que te pertenecen seguirán disponibles para sus miembros, pero se quedarán sin propietario que los administre. Esto no se puede deshacer.",
+    "confirmBody": "Esto elimina de forma permanente tu cuenta y todos los círculos de cuidado que te pertenecen, incluidos los medicamentos, las citas, las tareas, las notas, los signos vitales, los documentos y la información de emergencia que contienen. Las demás personas de esos círculos pierden el acceso y recibirán un aviso. Los círculos a los que perteneces pero que no te pertenecen no se eliminan; solo se te quita de ellos. Esto no se puede deshacer.",
     "confirm": "Eliminar cuenta",
     "keep": "Conservar mi cuenta",
     "success": "Tu cuenta ha sido eliminada.",
     "error": "No pudimos eliminar tu cuenta. Tu cuenta sigue igual: inténtalo de nuevo o escribe a support@circlecare.app."
+  },
+  "analytics": {
+    "description": "Controla qué datos de uso compartes con nosotros.",
+    "enable": "Compartir datos de uso",
+    "hint": "Vinculado a tu cuenta, incluido tu correo electrónico. Nos ayuda a mejorar CircleCare: nunca incluye tus mediciones, nombres de medicamentos ni el contenido de los mensajes."
+  },
+  "footer": {
+    "version": "WEB · v{{version}}"
   }
 }

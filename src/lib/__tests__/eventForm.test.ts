@@ -70,34 +70,109 @@ describe('remindersApply', () => {
 });
 
 describe('reminderFlagsForSave', () => {
+  /** Everything on — the anchor alert AND all four earlier reminders. */
   const allOn: ReminderSelection = {
+    reminder_at_due: true,
     reminder_24h: true,
     reminder_1h: true,
     reminder_30m: true,
     reminder_15m: true,
   };
+  /**
+   * Everything off, `reminder_at_due` included — the ONLY genuinely silent
+   * state, and what the helper must produce for "notifications off" / "no time".
+   */
   const allOff: ReminderSelection = {
+    reminder_at_due: false,
     reminder_24h: false,
     reminder_1h: false,
     reminder_30m: false,
     reminder_15m: false,
   };
+  /**
+   * The anchor alone. This is NOT silence: the alert still fires at the
+   * scheduled time. Before `reminder_at_due` existed, "all four earlier flags
+   * off" WAS the silent state, and this shape is what that assertion has to
+   * become.
+   */
+  const anchorOnly: ReminderSelection = { ...allOff, reminder_at_due: true };
 
   it('persists the selection when notifications are on and a time exists', () => {
     expect(reminderFlagsForSave(allOn, true, true)).toEqual(allOn);
   });
 
-  it('zeroes everything when notifications are off', () => {
-    expect(reminderFlagsForSave(allOn, false, true)).toEqual(allOff);
+  it('keeps the at-due anchor when every earlier reminder is off — not a silent event', () => {
+    // The four `reminder_*` flags are opt-IN extras now. Zeroing the anchor
+    // because none of them are checked would delete the primary alert on the
+    // most common save there is: a plain event nobody asked for extras on.
+    expect(reminderFlagsForSave(anchorOnly, true, true)).toEqual(anchorOnly);
+    expect(reminderFlagsForSave(anchorOnly, true, true).reminder_at_due).toBe(true);
   });
 
-  it('zeroes everything when there is no time to fire against', () => {
-    expect(reminderFlagsForSave(allOn, true, false)).toEqual(allOff);
+  it('persists an explicit at-due opt-out — the one state that really is silent', () => {
+    // Companion to the case above: the user deliberately turned the anchor off
+    // with notifications still on and a time set. Re-arming it "helpfully"
+    // would overrule the only way to make an event silent.
+    expect(reminderFlagsForSave(allOff, true, true)).toEqual(allOff);
+    expect(reminderFlagsForSave(allOff, true, true).reminder_at_due).toBe(false);
   });
 
-  it('zeroes the default-on 15-minute reminder specifically', () => {
-    const defaults: ReminderSelection = { ...allOff, reminder_15m: true };
-    expect(reminderFlagsForSave(defaults, true, false).reminder_15m).toBe(false);
+  // ── The master toggle mutes; it does not erase ────────────────────────────
+  //
+  // It used to erase, and that was defensible exactly as long as
+  // process_task_reminders() honoured no mute at all — blanking the columns was
+  // then the only thing that could silence a task. Migration 20260823120000
+  // added `notifications_enabled = true` to its four pre-reminder blocks and
+  // 20260901120000 added the fifth (at-due) block carrying the same guard, so
+  // every selector on the platform now skips a muted row: both process_*
+  // functions, tiers 1/2/3, and the manual POST /task-reminders sweep.
+
+  it('does NOT zero anything when notifications are off', () => {
+    expect(reminderFlagsForSave(allOn, false, true)).toEqual(allOn);
+  });
+
+  it('keeps the at-due anchor across a master off → on cycle', () => {
+    // The whole point of the contract. `reminder_at_due` is NOT NULL DEFAULT
+    // TRUE, so the old zeroing stored a plain `false` indistinguishable from a
+    // deliberate opt-out — the anchor could never be restored, and a muted-then-
+    // unmuted medication only ever spoke through the missed-dose escalation.
+    const savedWhileMuted = reminderFlagsForSave(anchorOnly, false, true);
+    expect(savedWhileMuted.reminder_at_due).toBe(true);
+    // Hydration reads those columns back verbatim; unmuting saves them again.
+    expect(reminderFlagsForSave(savedWhileMuted, true, true)).toEqual(anchorOnly);
+  });
+
+  it('does NOT zero anything when there is no time to fire against', () => {
+    // Every reminder function filters `scheduled_time IS NOT NULL`, so the flags
+    // are INERT without a time. Zeroing them wrote the anchor off, and adding a
+    // time later then produced a silent event with nothing on screen to explain
+    // it — the same defect one step removed.
+    expect(reminderFlagsForSave(allOn, true, false)).toEqual(allOn);
+  });
+
+  it('keeps both column-default-TRUE flags on a timeless entry', () => {
+    // `reminder_15m` and `reminder_at_due` are the two whose DB default is TRUE,
+    // so they are the two the old zeroing actually changed for a fresh task.
+    const defaults: ReminderSelection = { ...allOff, reminder_at_due: true, reminder_15m: true };
+    const saved = reminderFlagsForSave(defaults, true, false);
+    expect(saved.reminder_15m).toBe(true);
+    expect(saved.reminder_at_due).toBe(true);
+  });
+
+  it('leaves the selection alone when notifications are off AND there is no time', () => {
+    expect(reminderFlagsForSave(allOn, false, false)).toEqual(allOn);
+  });
+
+  it('sends all five flags, never a subset', () => {
+    // A dropped key is a partial patch server-side: the stored value survives.
+    const keys = Object.keys(reminderFlagsForSave(allOn, false, false)).sort();
+    expect(keys).toEqual([
+      'reminder_15m',
+      'reminder_1h',
+      'reminder_24h',
+      'reminder_30m',
+      'reminder_at_due',
+    ]);
   });
 
   it('does not mutate the caller selection', () => {

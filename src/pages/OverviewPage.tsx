@@ -1,138 +1,145 @@
-import { type ReactElement } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useState, type ReactElement } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCircle } from '@/hooks/useCircle';
-import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useAuthStore } from '@/store/authStore';
-import { Avatar, Card, Skeleton, SectionHeader } from '@/components/ui';
+import { Skeleton } from '@/components/ui';
 import { TodaysMeds } from '@/components/meds/TodaysMeds';
 import { OpenTasksCard } from '@/components/tasks/OpenTasksCard';
-import { ActivityItem } from '@/components/activity/ActivityItem';
 import { GettingStartedChecklist } from '@/components/circles/GettingStartedChecklist';
-import type { CircleMember } from '@/api/circleMembers';
+import { FirstRunWizardModal } from '@/components/circles/firstRun/FirstRunWizardModal';
+import { Hero } from '@/components/overview/Hero';
+import { AdherenceCard } from '@/components/overview/AdherenceCard';
+import { QuickAccess } from '@/components/overview/QuickAccess';
+import { CareTeam } from '@/components/overview/CareTeam';
+import { SettingsRows } from '@/components/overview/SettingsRows';
+import { UpcomingAppointments } from '@/components/overview/UpcomingAppointments';
 
-function memberName(member: CircleMember): string {
-  return [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+interface FirstRunLocationState {
+  firstRun?: boolean;
+  firstRunRecipientName?: string;
 }
 
 /**
- * Circle Overview — the landing page when you open a circle (mirrors mobile's
- * home tab). A "what's going on with my person" surface: a recipient hero, the
- * get-started checklist while setup is incomplete, then at-a-glance cards
- * (today's meds, open tasks, recent activity, care team) that each link into
- * their full section. The calendar is now one nav item among others, not the
- * default landing.
+ * Circle Home (`/circles/:id`) — the landing page when you open a circle,
+ * mirroring mobile's `CircleDetailScreen` (spec §6.3).
+ *
+ * ORDER IS MOBILE'S ORDER, adapted to two columns above 1024px with the hero
+ * spanning both (spec §6.3's opening paragraph):
+ *
+ *   hero  ·  getting-started checklist (both columns)
+ *   left:  adherence · quick access · care team (+ solo invite) · manage
+ *   right: today's medications · upcoming appointments · open tasks
+ *
+ * Below 1024px the grid collapses to one column, and the left column's blocks
+ * read first — which is where mobile puts adherence and quick access relative
+ * to appointments and tasks. Mobile threads today's medications between the
+ * hero and adherence; on web that block heads the right-hand column, the one
+ * divergence the two-column adaptation forces.
+ *
+ * The "recent activity" card web used to carry here is GONE: mobile's home has
+ * no activity list — the feed is one Quick Access row, and duplicating it as a
+ * card rendered the same rows twice on one page.
  */
 export default function OverviewPage(): ReactElement {
-  const { t } = useTranslation(['overview', 'common']);
   const { circleId = '' } = useParams<{ circleId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUserId = useAuthStore((s) => s.user?.id);
 
-  const { circle, members, isLoading } = useCircle(circleId);
+  /**
+   * FIRST RUN — the four-step wizard, shown once, immediately after this
+   * circle was created (`CreateCircleModal` sets the flag on the navigation).
+   *
+   * Read into state ONCE rather than off `location.state` on every render, and
+   * the history entry is rewritten to drop the flag as soon as it is read. Two
+   * reasons: a browser reload or a Back to this entry must not reopen a wizard
+   * for a circle the user has since set up, and dismissal must not depend on a
+   * second navigation landing correctly. `useState`'s initializer runs once, so
+   * the wizard survives the rewrite that immediately follows it.
+   */
+  const firstRunState = location.state as FirstRunLocationState | null;
+  const [firstRun, setFirstRun] = useState<{ recipientName: string } | null>(() =>
+    firstRunState?.firstRun ? { recipientName: firstRunState.firstRunRecipientName ?? '' } : null
+  );
+  useEffect(() => {
+    if (!firstRunState?.firstRun) return;
+    // `replace` swaps the CURRENT history entry, so the flag is gone from the
+    // moment the wizard opens. `location.state` survives a reload (it lives in
+    // `history.state`), so without this a refresh — or a Back onto this entry
+    // later — would reopen the wizard for a circle the user has since set up.
+    navigate(location.pathname, { replace: true, state: null });
+  }, [firstRunState?.firstRun, location.pathname, navigate]);
+
+  const { circle, members, isLoading, timezone } = useCircle(circleId);
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
-  const isSelfCare = circle?.is_self_care === true;
   const base = `/circles/${circleId}`;
 
-  const activityQuery = useActivityFeed(circleId, { pageSize: 5 });
-  const activities = activityQuery.data?.pages.flatMap((page) => page.activities) ?? [];
-
-  // People besides you, excluding the care recipient — "helping coordinate care".
-  const helperCount = members.filter(
-    (m) => m.id !== currentUserId && !m.is_care_recipient
-  ).length;
-
-  const heroTitle = isSelfCare
-    ? t('hero.selfCareTitle')
-    : t('hero.caringFor', { name: circle?.recipient_name ?? '' });
-  const heroSubtitle =
-    helperCount === 0 ? t('hero.subtitleSolo') : t('hero.subtitleTeam', { count: helperCount });
-
   return (
-    <section className="mx-auto w-full max-w-5xl p-6 md:p-8">
-      {/* Hero */}
-      <header>
-        <p className="eyebrow m-0">{t('hero.eyebrow')}</p>
-        {isLoading && !circle ? (
-          <Skeleton className="mt-2 h-9 w-64" />
-        ) : (
-          <h1 className="serif m-0 mt-1.5 text-3xl leading-tight text-ink">{heroTitle}</h1>
-        )}
-        <p className="m-0 mt-2 text-ink-3">{heroSubtitle}</p>
-      </header>
+    <section className="mx-auto w-full max-w-5xl">
+      {isLoading && !circle ? (
+        <div className="flex flex-col items-center px-7 pt-6 pb-[18px]" aria-hidden="true">
+          <Skeleton className="mb-3 h-24 w-24 rounded-full" />
+          <Skeleton className="h-10 w-56" />
+        </div>
+      ) : (
+        <Hero
+          recipientName={circle?.recipient_name ?? ''}
+          recipientPhotoUrl={circle?.recipient_photo_url}
+          recipientDob={circle?.recipient_dob}
+          members={members}
+        />
+      )}
 
-      {/* Get-started checklist — self-hides once complete, dismissed, or when
-          the viewer can't edit (view-only member); gating is by write
-          CAPABILITY, not ownership, and there is deliberately no circle-age
-          window (see GettingStartedChecklist's docstring). `empty:hidden`
-          drops this wrapper's margin in those cases, so a hidden checklist
-          leaves no stray gap above the card grid. */}
-      <div className="mt-6 empty:hidden">
+      {/* Get-started checklist — spans both columns, above the grid.
+          Self-hides once complete, dismissed, or when the viewer can't edit
+          (view-only member); gating is by write CAPABILITY, not ownership, and
+          there is deliberately no circle-age window (see the component's
+          docstring). `empty:hidden` drops this wrapper in those cases, so a
+          hidden checklist leaves no stray gap above the grid. */}
+      <div className="px-5 empty:hidden">
         <GettingStartedChecklist
           circleId={circleId}
           onAddEvent={() => navigate(`${base}/calendar`)}
         />
       </div>
 
-      {/* At-a-glance */}
-      <div className="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Today's medications — self-contained section (own heading + confirm flow). */}
-        <Card className="p-6">
+      <div className="grid grid-cols-1 gap-6 px-5 pb-6 xl:grid-cols-2">
+        <div className="flex min-w-0 flex-col">
+          <AdherenceCard circleId={circleId} />
+          <QuickAccess circleId={circleId} />
+          <CareTeam
+            circleId={circleId}
+            circle={circle}
+            members={members}
+            currentUserId={currentUserId}
+            isOwner={isOwner}
+          />
+          <SettingsRows circleId={circleId} isOwner={isOwner} />
+        </div>
+
+        <div className="flex min-w-0 flex-col">
+          {/* Today's medications — self-contained section (own heading, its own
+              queries and the confirm flow). Task 20 owns its internals. */}
           <TodaysMeds circleId={circleId} limit={5} />
-        </Card>
-
-        {/* Open tasks — self-contained section (own heading + the shared
-            TaskRow, so a task can be completed/undone/edited straight from
-            here, exactly as on the Tasks page and on mobile's home screen). */}
-        <Card className="p-6">
+          <UpcomingAppointments circleId={circleId} timezone={timezone} />
+          {/* Open tasks — self-contained too: same TaskRow, same undo window as
+              the Tasks page, so a task is completable straight from Home,
+              exactly as on mobile. Rendered directly on paper (no Card
+              wrapper): mobile lists these as bare cards on the page ground. */}
           <OpenTasksCard circleId={circleId} limit={3} />
-        </Card>
-
-        {/* Recent activity */}
-        <Card className="p-6">
-          <SectionHeader
-            title={t('activity.title')}
-            to={`${base}/activity`}
-            linkLabel={t('activity.viewAll')}
-          />
-          {activityQuery.isLoading ? (
-            <div className="mt-4 flex flex-col gap-2" aria-busy="true">
-              <span role="status" className="sr-only">
-                {t('common:loading')}
-              </span>
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : activities.length === 0 ? (
-            <p className="m-0 mt-4 text-sm text-ink-3">{t('activity.empty')}</p>
-          ) : (
-            <ul className="m-0 mt-2 flex list-none flex-col p-0">
-              {activities.slice(0, 3).map((activity) => (
-                <ActivityItem key={activity.id} activity={activity} />
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        {/* Care team */}
-        <Card className="p-6">
-          <SectionHeader
-            title={t('team.title')}
-            to={`${base}/members`}
-            linkLabel={isOwner ? t('team.invite') : t('team.manage')}
-          />
-          <p className="m-0 mt-1 text-sm text-ink-3">{t('team.count', { count: members.length })}</p>
-          {members.length > 0 ? (
-            <ul className="m-0 mt-4 flex list-none flex-wrap gap-2 p-0">
-              {members.slice(0, 8).map((member) => (
-                <li key={member.id}>
-                  <Avatar name={memberName(member)} size="md" />
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </Card>
+        </div>
       </div>
+
+      {/* First run — the four-step wizard, over the circle it just created.
+          `recipient_name` from the circle detail wins once it lands; the name
+          carried on the navigation covers the seconds before it does. */}
+      {firstRun && (
+        <FirstRunWizardModal
+          circleId={circleId}
+          circleName={circle?.recipient_name || firstRun.recipientName}
+          onClose={() => setFirstRun(null)}
+        />
+      )}
     </section>
   );
 }

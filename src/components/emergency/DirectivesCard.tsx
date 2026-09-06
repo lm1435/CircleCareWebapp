@@ -27,7 +27,7 @@ export function DirectivesCard({ hasDnr, directives }: DirectivesCardProps): Rea
   }
 
   return (
-    <Card className="print-card">
+    <Card padding="lg" className="print-card">
       <FieldList fields={fields} />
     </Card>
   );

@@ -27,6 +27,19 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { first_name: 'Luis', last_name: 'Meza' } }),
 }));
 
+// The onboarding-paywall gate reads the pre-create circle list and the plan
+// tier. Both are React Query hooks; this suite renders without a
+// QueryClientProvider, so they are mocked at the hook boundary. Defaults put
+// the modal on the NO-paywall branch (the user already has a circle) so every
+// pre-existing assertion below keeps exercising the plain create → navigate
+// path; the paywall suite overrides them per test.
+const circlesData = vi.fn(() => [{ id: 'existing' }]);
+vi.mock('@/hooks/useCircles', () => ({ useCircles: () => ({ data: circlesData() }) }));
+const subscriptionData = vi.fn(() => ({ tier: 'free' }));
+vi.mock('@/hooks/useSubscriptionStatus', () => ({
+  useSubscriptionStatus: () => ({ data: subscriptionData() }),
+}));
+
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();
@@ -91,6 +104,25 @@ afterEach(async () => {
 });
 
 describe('CreateCircleModal', () => {
+  // Modal footer convention (M4): actions live in the Modal footer prop, the
+  // ghost secondary comes before the filled primary in DOM order, and the
+  // form still submits via `form="create-circle-form"` even though the button
+  // is no longer nested inside the <form> element.
+  it('puts the ghost Cancel before the filled Create circle in the footer', () => {
+    renderModal();
+
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    expect(labels.indexOf('Cancel')).toBeGreaterThan(-1);
+    expect(labels.indexOf('Cancel')).toBeLessThan(labels.indexOf('Create circle'));
+  });
+
+  // WCAG 2.4.3: Modal always used to grab initial focus for its own close
+  // button, which made the field's own `autoFocus` dead on arrival.
+  it('focuses the recipient name field on open, not the close button', () => {
+    renderModal();
+    expect(screen.getByLabelText(/Care recipient name/)).toHaveFocus();
+  });
+
   it('blocks submit and shows a validation error when the name is empty', async () => {
     const user = userEvent.setup();
     renderModal();
@@ -146,7 +178,13 @@ describe('CreateCircleModal', () => {
     await user.click(screen.getByRole('button', { name: 'Create circle' }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(navigate).toHaveBeenCalledWith('/circles/circle-new');
+    // FIRST RUN rides on the navigation. Landing on the circle alone drops the
+    // owner on an empty app, which is the moment the four-step wizard exists to
+    // fix; the flag is `location.state` rather than a query param so it is not
+    // shareable, not bookmarkable, and gone on reload.
+    expect(navigate).toHaveBeenCalledWith('/circles/circle-new', {
+      state: { firstRun: true, firstRunRecipientName: 'Rose Meza' },
+    });
     expect(showToast).toHaveBeenCalledWith('Circle created.', 'success');
     // R4-5: successful create reports onboarding completion via 'created'.
     expect(trackOnboardingCompleted).toHaveBeenCalledWith('created');

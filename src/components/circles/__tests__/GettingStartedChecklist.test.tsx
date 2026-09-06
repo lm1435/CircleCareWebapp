@@ -112,7 +112,7 @@ describe('GettingStartedChecklist', () => {
     setup();
 
     expect(screen.getByRole('region', { name: 'Get started' })).toBeInTheDocument();
-    expect(screen.getByText('Add a medication or appointment')).toBeInTheDocument();
+    expect(screen.getByText('Add a medication')).toBeInTheDocument();
     expect(screen.getByText('Invite family & caregivers')).toBeInTheDocument();
     expect(screen.getByText('Add emergency info')).toBeInTheDocument();
 
@@ -126,7 +126,7 @@ describe('GettingStartedChecklist', () => {
     setup();
 
     expect(
-      screen.getByText('Everyone on the app gets a reminder, so no dose or visit is missed.')
+      screen.getByText('Everyone gets the reminder, so no one has to be the one who remembers.')
     ).toBeInTheDocument();
     expect(
       screen.getByText('Share the load — they see the same schedule and updates.')
@@ -136,10 +136,30 @@ describe('GettingStartedChecklist', () => {
     ).toBeInTheDocument();
   });
 
-  it('marks step 1 done (strikethrough, no action) when an event exists', () => {
-    setup({ events: [{ id: 'e1' }] });
+  /**
+   * THE STEP ASKS FOR A MEDICATION, SO ONLY A MEDICATION MAY TICK IT.
+   *
+   * The check counted any event in the window, so an appointment or a task
+   * completed it. Reported on mobile, which had the same defect with a stricter
+   * label: create a circle, add a TASK through the first-run wizard, and "Add
+   * medications" was struck through on a circle holding no medication. Both
+   * surfaces now test `event_type === 'medication'`.
+   *
+   * Asserted for both non-medication types, because a fix that special-cased
+   * tasks alone would still tick on an appointment.
+   */
+  it.each(['appointment', 'task'])('leaves step 1 pending for a %s', (eventType) => {
+    setup({ events: [{ id: 'e1', event_type: eventType }] });
 
-    const label = screen.getByText('Add a medication or appointment');
+    const label = screen.getByText('Add a medication');
+    expect(label.className).not.toContain('line-through');
+    expect(screen.getByText('0 of 3 done')).toBeInTheDocument();
+  });
+
+  it('marks step 1 done (strikethrough, no action) when an event exists', () => {
+    setup({ events: [{ id: 'e1', event_type: 'medication' }] });
+
+    const label = screen.getByText('Add a medication');
     expect(label.className).toContain('line-through');
     expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
     // Only the two remaining pending steps still show an action.
@@ -225,7 +245,7 @@ describe('GettingStartedChecklist', () => {
 
   it('hides for good once all steps are complete', () => {
     setup({
-      events: [{ id: 'e1' }],
+      events: [{ id: 'e1', event_type: 'medication' }],
       members: [{ id: 'owner' }, { id: 'caregiver' }],
       emergency: { blood_type: 'O+' },
     });
@@ -294,7 +314,7 @@ describe('GettingStartedChecklist', () => {
     expect(screen.getByRole('region', { name: 'Get started' })).toBeInTheDocument();
     expect(screen.queryByText('Nothing scheduled yet.')).not.toBeInTheDocument();
 
-    expect(screen.getByText('Add a medication or appointment')).toBeInTheDocument();
+    expect(screen.getByText('Add a medication')).toBeInTheDocument();
     expect(screen.getByText('Add emergency info')).toBeInTheDocument();
     expect(screen.queryByText('Invite family & caregivers')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Invite/ })).not.toBeInTheDocument();
@@ -305,7 +325,7 @@ describe('GettingStartedChecklist', () => {
   });
 
   it('counts a non-owner progress out of 2 as their steps complete', () => {
-    configure({ ownerId: 'someone-else', events: [{ id: 'e1' }] });
+    configure({ ownerId: 'someone-else', events: [{ id: 'e1', event_type: 'medication' }] });
     renderChecklist('circle-1');
 
     expect(screen.getByText('1 of 2 done')).toBeInTheDocument();
@@ -314,7 +334,7 @@ describe('GettingStartedChecklist', () => {
   it('hides for good for a non-owner once their two steps are done', () => {
     configure({
       ownerId: 'someone-else',
-      events: [{ id: 'e1' }],
+      events: [{ id: 'e1', event_type: 'medication' }],
       emergency: { blood_type: 'O+' },
     });
     renderChecklist('circle-1', { fallback: <p>Nothing scheduled yet.</p> });
@@ -337,7 +357,7 @@ describe('GettingStartedChecklist', () => {
     configure();
     renderChecklist('circle-1');
 
-    expect(screen.getByText('Add a medication or appointment')).toBeInTheDocument();
+    expect(screen.getByText('Add a medication')).toBeInTheDocument();
     expect(screen.getByText('Invite family & caregivers')).toBeInTheDocument();
     expect(screen.getByText('Add emergency info')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Invite/ })).toBeInTheDocument();

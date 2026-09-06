@@ -12,7 +12,7 @@
   "endOfFeed": "Estás al día.",
   "system": "Sistema",
   "latest": "Reciente",
-  "live": "Nuevo",
+  "new": "Nuevo",
   "latestEntry": "{{time}} · {{name}}",
   "today": "Hoy",
   "yesterday": "Ayer",
@@ -22,6 +22,19 @@
     "minutesAgo": "hace {{count}}m",
     "hoursAgo": "hace {{count}}h",
     "daysAgo": "hace {{count}}d"
+  },
+  "entries": {
+    "medicationRescheduled": "Medicamento reprogramado: {{title}} a las {{time}}",
+    "medicationNotTaken": "Omitido: {{title}} el {{date}}",
+    "recurrenceStopped": "Detuvo recurrencia de {{title}} desde {{date}}",
+    "memberInvited": {
+      "careRecipient": "Invitó a {{email}} a unirse como Receptor de Cuidado",
+      "caregiver": "Invitó a {{email}} a unirse como Cuidador"
+    },
+    "memberJoined": {
+      "careRecipient": "{{name}} se unió al círculo como Receptor de Cuidado",
+      "caregiver": "{{name}} se unió al círculo como Cuidador"
+    }
   },
   "phrases": {
     "confirmedMedication": "Medicamento confirmado:",
