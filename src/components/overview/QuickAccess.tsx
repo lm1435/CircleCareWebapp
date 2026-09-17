@@ -4,6 +4,7 @@ import { Icon, IconTile, SectionHeader, Sheet, SheetRowPressable } from '@/compo
 import type { IconName } from '@/components/ui';
 import type { IconTileTone } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
+import { Analytics } from '@/lib/analytics';
 
 // Spec §6.3.4 — port of mobile's Quick Access list
 // (CircleDetailScreen.tsx:890-1019 + `utils/quickAccessTabs.ts`).
@@ -86,6 +87,10 @@ export function QuickAccess({ circleId }: QuickAccessProps): ReactElement {
             <SheetRowPressable
               key={row.id}
               to={`/circles/${circleId}/${row.segment}`}
+              // Same event + destination id as mobile's `quick_access_tapped`,
+              // so one PostHog insight covers both surfaces. The Link still
+              // navigates; this only observes the press.
+              onClick={() => Analytics.quickAccessTapped(row.id)}
               aria-label={
                 badge === null ? label : `${label}, ${t('quickAccess.tasksNote', { count: badge })}`
               }

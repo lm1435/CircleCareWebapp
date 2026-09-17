@@ -85,7 +85,28 @@ test('create a task end-to-end from the pill NEW cell', async ({ page, circleId 
   await expect(dialog.locator('#event_type')).toHaveValue('task');
 
   await dialog.locator('#title').fill(title);
-  await dialog.locator('#scheduled_date').fill(todayISO());
+
+  // THE DATE IS PICKED, NOT TYPED — this is a Pixel 5, i.e. a coarse pointer,
+  // and `DateField` makes its `<input>` `readOnly` there. That is not an
+  // obstacle the test is routing around: it is the change under test. The
+  // input is readOnly precisely because WebKit summons its own picker from a
+  // focused, editable date input and `PICKER_INDICATOR_HIDDEN` provably cannot
+  // stop it (97px -> 97px; see `e2e/coarse-pointer.spec.ts`), so a caregiver on
+  // a phone taps the field and gets OUR sheet. `.fill()` would throw here, and
+  // it should: a passing `fill` would mean touch had been handed back to the
+  // OS picker. The desktop flows in `e2e/flows/` still type, correctly — they
+  // run under a fine pointer, where the field is still a text control.
+  await dialog.locator('#scheduled_date').tap();
+  const datePicker = page.getByRole('dialog', { name: 'Date picker' });
+  await expect(datePicker).toBeVisible();
+  // The sheet opens on today when the field is empty, so the cell is on screen.
+  // Committing a day also dismisses, which is what leaves ONE dialog again for
+  // the `dialog` locator below — it is `getByRole('dialog')` and would be
+  // ambiguous while both are open.
+  await datePicker.locator(`[data-day="${todayISO()}"]`).tap();
+  await expect(datePicker).toBeHidden();
+  await expect(dialog.locator('#scheduled_date')).toHaveValue(todayISO());
+
   // The modal's own Create button (dialog-scoped, never the nav trigger).
   await dialog.getByRole('button', { name: 'Create' }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });

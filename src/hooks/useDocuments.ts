@@ -20,6 +20,7 @@ import {
   type UploadDocumentRequest,
 } from '@/api/documents';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
   classifyFailureCode,
   isPermissionDeniedError,
@@ -110,10 +111,10 @@ function useDocumentMutationOnError(circleId: string): (error: unknown) => void 
     } else if (isSubscriptionRequiredError(error)) {
       // Free-tier 200MB cap — web cannot transact, point at the app to upgrade.
       promptUpgrade();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else {
       showToast(t('errors.saveFailed'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.documents(circleId) });

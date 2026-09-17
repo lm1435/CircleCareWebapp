@@ -8,6 +8,7 @@ import { setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { supabase } from '@/lib/supabase';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
+import { clickTwice, neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 
 // Task 45 — LoginPage. `@/lib/api` + `@/lib/supabase` are mocked by the global
 // setup. The `X-Session-Mode: cookie` header itself is attached by the real
@@ -147,6 +148,23 @@ describe('LoginPage', () => {
     expect(tokenAccessor.getAuthToken()).toBeNull();
   });
 
+  it('tells a rate-limited (429 RATE_LIMIT) user to WAIT, never the generic "try again" copy', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'RATE_LIMIT', message: 'Too many authentication attempts, please try again later' },
+    });
+
+    await fillAndSubmit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      'Too many attempts. Please wait a few minutes before trying again.'
+    );
+    expect(alert).not.toHaveTextContent("We couldn't sign you in. Please try again.");
+    expect(alert).not.toHaveTextContent('Invalid email or password.');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('validates locally and never calls the API with an empty form', async () => {
     const user = userEvent.setup();
     renderLogin();
@@ -255,5 +273,97 @@ describe('LoginPage', () => {
   it('never renders a back button (login is the root of the signed-out flow)', () => {
     renderLogin();
     expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+  });
+});
+
+// Regression — double submit. On 2026-09-03 a real user produced three
+// `login_started` events inside 52 ms, spent three of the five attempts
+// `loginRateLimit` allows per five minutes, and was answered with RATE_LIMIT.
+// `isSubmitting` was set but never CHECKED, and `loading`/`disabled` on the
+// button lands a render too late to matter — see hooks/useGuardedSubmit.ts.
+// These assert the API CALL COUNT: "the button ends up disabled" would pass
+// against the bug.
+describe('LoginPage — double-submit guard', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    vi.mocked(supabase.auth.signInWithOAuth).mockClear();
+    tokenAccessor.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+  });
+
+  it('sends exactly ONE /auth/login when the form is submitted twice in the same tick', async () => {
+    // Never settles: the first request is still in flight when the second
+    // submit arrives, which is the window the guard has to close.
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    const user = userEvent.setup();
+    const { container } = renderLogin();
+
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Secret#123');
+    await submitFormTwice(container.querySelector('form') as HTMLFormElement);
+
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+  });
+
+  // WHAT THE REJECTED SUBMIT COSTS IF IT IS NOT SWALLOWED. This form is
+  // `<form onSubmit={...} noValidate>` with `name="email"` / `name="password"`
+  // and no `action`/`method`, so an unprevented submission is a native GET to
+  // the current URL: the password lands in the address bar, in browser history
+  // and in the `Referer` header of every request that follows, and the page
+  // navigates away mid-login. `useGuardedSubmit` calls `preventDefault()`
+  // BEFORE its ref check for exactly this reason; reordering those two lines
+  // leaves the call-count assertions above green.
+  it('swallows the submit it rejects — credentials never reach the URL', async () => {
+    const user = userEvent.setup();
+    mockedPost.mockImplementation(() => neverSettles());
+    const { container } = renderLogin();
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Secret#123');
+
+    const prevented = await submitFormTwice(container.querySelector('form') as HTMLFormElement);
+
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+    expect(prevented).toEqual([true, true]);
+  });
+
+  it('is still submittable after a validation failure (the guard releases, it does not latch)', async () => {
+    // The validation branches `return` BEFORE isSubmitting is set — if the
+    // guard were not released on that path the form would be dead after one
+    // mistyped submit.
+    const user = userEvent.setup();
+    const { container } = renderLogin();
+    const form = container.querySelector('form') as HTMLFormElement;
+
+    await submitFormTwice(form);
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(await screen.findByText('Email is required.')).toBeInTheDocument();
+
+    // Left in flight on purpose: a resolved login would call signIn(), which
+    // fires its own /auth/session-established POST and muddies the count.
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'Secret#123');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+    expect(mockedPost).toHaveBeenCalledWith('/auth/login', {
+      email: 'pat@example.com',
+      password: 'Secret#123',
+    });
+  });
+
+  it('starts exactly ONE OAuth handshake when a provider button is pressed twice in the same tick', async () => {
+    // Nothing in handleOAuth ever set isSubmitting, so these buttons had no
+    // guard at all — two presses meant two `login_started` events and two
+    // redirects.
+    const signInWithOAuth = vi.mocked(supabase.auth.signInWithOAuth);
+    signInWithOAuth.mockImplementation((() => neverSettles()) as never);
+    renderLogin();
+
+    await clickTwice(screen.getByRole('button', { name: 'Continue with Google' }));
+
+    expect(signInWithOAuth).toHaveBeenCalledTimes(1);
   });
 });

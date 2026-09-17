@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { Analytics } from '@/lib/analytics';
+import { isRateLimitError } from '@/lib/apiErrors';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { utf8ByteLength } from '@/lib/utf8ByteLength';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -63,7 +65,13 @@ export default function ResetPasswordPage(): ReactElement {
     return undefined;
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  // `isResetting` is the LOADING state, not the guard: React commits it a
+  // render too late to stop a second submit dispatched in the same tick (see
+  // `useGuardedSubmit`). /auth/reset-password sits on the 5-per-5-minutes
+  // `authRateLimit` bucket, and the recovery OTP is single-use — the second
+  // request would fail with an already-consumed code and show "that code
+  // didn't work" on a reset that actually succeeded.
+  const submitReset = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setFormError(null);
 
@@ -100,14 +108,19 @@ export default function ResetPasswordPage(): ReactElement {
       await authApi.resetPassword({ email, otp, new_password: password });
       setSucceeded(true);
       Analytics.passwordResetCompleted();
-    } catch {
-      // INVALID_CODE / RESET_FAILED — same calm guidance either way.
-      setFormError(t('resetPassword.errors.resetFailed'));
+    } catch (err) {
+      // INVALID_CODE / RESET_FAILED — same calm guidance either way. A 429
+      // says wait: another attempt only extends the limiter window.
+      setFormError(
+        isRateLimitError(err) ? t('rateLimited') : t('resetPassword.errors.resetFailed')
+      );
       Analytics.passwordResetFailed();
     } finally {
       setIsResetting(false);
     }
   };
+
+  const handleSubmit = useGuardedSubmit(submitReset);
 
   // Arrived without an email in router state (deep link, refresh) — mirror
   // mobile: explain and send them back to request a new code.

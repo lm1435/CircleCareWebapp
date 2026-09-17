@@ -66,21 +66,20 @@ describe('LatestHero', () => {
     expect(avatar?.className).toContain('w-[18px]!');
   });
 
-  it.each([
-    ['medication_confirmed', 'bg-clay'],
-    ['appointment_created', 'bg-dusk'],
-    ['task_completed', 'bg-moss'],
-    ['emergency_info_updated', 'bg-terracotta'],
-    ['circle_created', 'bg-moss'],
-    ['care_note_added', 'bg-dusk'],
-    ['something_unknown', 'bg-ink-2'],
-  ])('gives the %s hero rail the %s accent', (actionType, railClass) => {
+  it('renders no accent rail down the leading edge', () => {
     const { container } = render(
-      <LatestHero activity={makeActivity({ action_type: actionType })} timezone="America/New_York" />
+      <LatestHero activity={makeActivity({ action_type: 'medication_confirmed' })} timezone="America/New_York" />
     );
 
-    const rail = container.querySelector('span[aria-hidden="true"].absolute');
-    expect(rail).not.toBeNull();
-    expect(rail?.className).toContain(railClass);
+    // ANCHORED FIRST. The selector below is right about what it looks for —
+    // re-adding the span does fail it — but `querySelector(...)` returns null
+    // just as readily for a component that rendered NOTHING, so on its own this
+    // passes against `LatestHero` stubbed to `return null`. The named region is
+    // the anchor (same pattern as `sidebarAssistant()` in
+    // AppLayout.aiGate.test.tsx): a `getBy*` that THROWS when the hero is gone.
+    expect(screen.getByRole('region', { name: 'Latest' })).toBeInTheDocument();
+    // The event-type rail was removed with the card outline: the icon tile and
+    // eyebrow carry the accent now. FALSIFY BY: re-adding the absolute span.
+    expect(container.querySelector('span[aria-hidden="true"].absolute')).toBeNull();
   });
 });

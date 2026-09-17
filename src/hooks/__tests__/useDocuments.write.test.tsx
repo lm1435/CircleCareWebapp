@@ -114,6 +114,15 @@ const PERMISSION_ENVELOPE = {
   success: false,
   error: { code: 'FORBIDDEN', message: 'not uploader/owner' },
 };
+// The code a FROZEN circle's member actually gets. `backend/src/routes/
+// documents.ts:673` and `backend/src/routes/upload.ts:328,:487` are the only
+// emitters of a read-only refusal, and documents.ts was widened so a free-tier
+// owner's NON-SELECTED circle (`view_only` false, `can_edit` false) is refused
+// on upload/rename/delete. Nothing else on web sends this shape.
+const READ_ONLY_MEMBER_ENVELOPE = {
+  success: false,
+  error: { code: 'READ_ONLY_MEMBER', message: 'This circle is read-only' },
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -138,7 +147,7 @@ describe('useUploadDocument', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.documents(CIRCLE_ID))).toBe(true);
   });
 
-  it('distinguishes a 402 (free-tier 200MB) → subscriptionRequired toast + refetch circles', async () => {
+  it('distinguishes a 402 (free-tier 200MB) → upgrade prompt (promptUpgrade) + refetch circles', async () => {
     const { invalidateSpy, wrapper } = setup();
     mockUpload.mockRejectedValue(SUBSCRIPTION_ENVELOPE);
 
@@ -188,6 +197,80 @@ describe('useUploadDocument', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A FROZEN circle's refusal must drive the read-only path, not the generic one.
+// ---------------------------------------------------------------------------
+// End-to-end for the code the server actually sends. A code the client does not
+// recognise does not fail loudly — it falls through `isPermissionDeniedError`
+// to the else branch, which shows "couldn't save" (wrong: nothing was wrong
+// with the save) and, worse, does NOT call `invalidateCircleAccessFlags`. Both
+// gating caches then stay stale for the rest of the session, so the Edit /
+// Delete / Upload affordances keep being offered on a circle the server
+// refuses every write on. Asserting the toast alone would miss the second half,
+// so both are pinned here.
+describe('read-only (frozen circle) refusals across every document write', () => {
+  it('upload: READ_ONLY_MEMBER → permissionDenied toast + BOTH access caches refreshed', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockUpload.mockRejectedValue(READ_ONLY_MEMBER_ENVELOPE);
+
+    const { result } = renderHook(() => useUploadDocument(CIRCLE_ID), { wrapper });
+    result.current.mutate({
+      file: makeFile(),
+      label: 'x',
+      category: 'other',
+      fileExtension: 'pdf',
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+    // `invalidateCircleAccessFlags` refreshes the list AND the detail key.
+    expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.circleDetail(CIRCLE_ID))).toBe(true);
+  });
+
+  it('rename: READ_ONLY_MEMBER → permissionDenied toast + BOTH access caches refreshed', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockUpdate.mockRejectedValue(READ_ONLY_MEMBER_ENVELOPE);
+
+    const { result } = renderHook(() => useUpdateDocument(CIRCLE_ID), { wrapper });
+    result.current.mutate({ documentId: DOC_ID, data: { label: 'Renamed' } });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.circleDetail(CIRCLE_ID))).toBe(true);
+  });
+
+  it('delete: READ_ONLY_MEMBER → permissionDenied toast + BOTH access caches refreshed', async () => {
+    // The regression in the report: yesterday this delete SUCCEEDED. Today the
+    // server refuses it, and before this fix the user saw "couldn't save".
+    const { invalidateSpy, wrapper } = setup();
+    mockDelete.mockRejectedValue(READ_ONLY_MEMBER_ENVELOPE);
+
+    const { result } = renderHook(() => useDeleteDocument(CIRCLE_ID), { wrapper });
+    result.current.mutate(DOC_ID);
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.circleDetail(CIRCLE_ID))).toBe(true);
+  });
+
+  it('is NOT mistaken for the 402 upgrade path — no purchase lifts a frozen seat', async () => {
+    const { wrapper } = setup();
+    mockDelete.mockRejectedValue(READ_ONLY_MEMBER_ENVELOPE);
+
+    const { result } = renderHook(() => useDeleteDocument(CIRCLE_ID), { wrapper });
+    result.current.mutate(DOC_ID);
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(promptUpgrade).not.toHaveBeenCalled();
   });
 });
 

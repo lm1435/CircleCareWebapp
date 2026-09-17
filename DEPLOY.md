@@ -59,15 +59,64 @@ content-type — lives entirely in `public/.htaccess`, which Vite copies into
      the sandbox `rcb_sb_…`. When unset the `/upgrade` page hides the Subscribe
      flow; when set to the wrong/sandbox key the offering loads empty and Subscribe
      stays disabled.)
-2. `npm run build`, then upload the contents of `dist/` (including the hidden
-   `.htaccess` and `.well-known/`) to the `my.circlecare.app` document root via
-   cPanel File Manager or FTP.
+2. `npm run build` — **not** `npx vite build`. The build has TWO stages: Vite,
+   then `scripts/build-locale-html.mjs`, which derives `dist/index.es.html` for
+   Spanish link previews. **Vite runs first, so a locale-step failure leaves a
+   complete-looking, deployable `dist/` that is missing `index.es.html`** — and
+   the error prints just under Rollup's chunk-size warning, which is easy to skim
+   past. The last line MUST read:
+
+   ```
+   build-locale-html: wrote .../dist/index.es.html (7 rewrites, all asserted).
+   ```
+
+   Then confirm before uploading:
+
+   ```bash
+   ls dist/index.es.html dist/.htaccess dist/.well-known/
+   ```
+
+   Upload the contents of `dist/` — **including the hidden `.htaccess`, the
+   `.well-known/` directory, and `index.es.html`** — to the `my.circlecare.app`
+   document root via cPanel File Manager or FTP. **Turn on "show hidden files"**:
+   cPanel hides dotfiles by default and many FTP clients skip them. A split upload
+   fails in two ways, and one of them is silent:
+   - new `.htaccess` without `index.es.html` → **404 on every Spanish invite**
+   - `index.es.html` without the new `.htaccess` → **200, English card, no error
+     anywhere**
+
+   **Then prune old chunks from `assets/`.** Uploads only add files; nothing
+   removes the previous deploy's hashed JS/CSS, so every past build stays
+   downloadable. ORDER IS LOAD-BEARING: upload first, prune second. Emptying
+   `assets/` before the upload white-screens the site until it lands.
+   - In File Manager, open `assets/` and sort by **Last Modified**.
+   - Keep this upload **and the previous deploy's** files; delete anything
+     older. The one-deploy buffer covers tabs still open on the last version.
+   - A tab older than that which lazy-loads a deleted chunk shows the error
+     screen, and its "Try again" does a full reload onto the new build
+     (`src/components/ErrorBoundary.tsx`, `isChunkLoadError`). One extra tap,
+     not a broken app.
+
+   Verify directory listing stays off (`Options -Indexes` in `.htaccess`):
+
+   ```bash
+   curl -s -o /dev/null -w '%{http_code}\n' https://my.circlecare.app/assets/
+   ```
+
+   Expect `403`. A `200` means the new `.htaccess` did not upload.
 3. DNS (already done): Namecheap → **CNAME**: host `my` → the hosting target.
 
 > Moving to a different static host later (Vercel/Netlify/container): build
-> command `npm run build`, output `dist`, SPA rewrite all routes →
-> `/index.html`, and replicate the headers and AASA content-type from
-> `public/.htaccess` in the host's config format.
+> command `npm run build`, output `dist`, and replicate the headers and AASA
+> content-type from `public/.htaccess` in the host's config format.
+>
+> **Do NOT blanket-rewrite all routes to `/index.html`.** `public/.htaccess` now
+> serves `index.es.html` for any non-file route whose query carries `lang=es`, and
+> that rule is order-dependent: it must sit AFTER the `.well-known` and
+> `-f`/`-d` passthroughs and BEFORE the unconditional `index.html` fallback. A
+> catch-all SPA rewrite silently drops it and reverts every Spanish invite to an
+> English preview card, with no error anywhere. Nothing in the test suite catches
+> a `.htaccess` regression.
 
 ### Before deploying — check the CSP origins in `public/.htaccess`
 
@@ -91,8 +140,43 @@ Email + Google work immediately. Apple on web needs an Apple Developer **Service
 ID** with return URL `https://my.circlecare.app/auth/callback`. Until then the
 Apple button can be hidden. (Team ID `68Y4NLQ3VS`.)
 
-## Crawler note for invite previews
+## Crawler note for invite previews — DONE, do not re-solve
 
-`/invite/*` link previews need server-side meta tags. The SPA sets them via
-react-helmet-async, which crawlers without JS won't see. If rich previews matter,
-add a prerender rule for `/invite/*` at the host (or a small prerender service).
+`/invite/*` link previews need server-side meta tags, because the SPA sets them via
+react-helmet-async and crawlers without JS never see them. **This is now handled at
+build time**: `index.html` is prerendered with the English tags, and
+`scripts/build-locale-html.mjs` derives `index.es.html` with the Spanish ones.
+`public/.htaccess` picks between them on `?lang=es`, which
+`src/utils/inviteShareUrl.ts` stamps onto the link when the sender's app language
+is Spanish. No prerender service is needed.
+
+Known gap: `/?lang=es` on the bare **root** serves English, because the `-d`
+passthrough matches first. Invites are always `/invite/:code`, so this does not
+affect them.
+
+## Public files carry no comments
+
+Everything in `index.html` and `public/` is downloadable by any visitor, so none
+of it has comments. The reasoning that used to live inline is recorded here.
+
+**`index.html` link-preview tags**
+- Copy (title, description, image alt) is edited in `index.html` only;
+  `scripts/build-locale-html.mjs` asserts every string it rewrites for
+  `index.es.html` and fails the build if an edit stops matching.
+- The preview copy deliberately differs from the marketing site's SEO copy; do
+  not resync the two.
+- `og-invite-en.jpg` / `og-invite-es.jpg` are a separate cut from the marketing
+  `og-image-*` (no subtitle or store badge, legible at iMessage's ~260pt card).
+  Re-export via screenshot-gen `/api/export-og?lang=en&variant=invite`.
+- `og-image-en.jpg` / `og-image-es.jpg` stay in `public/` unreferenced on
+  purpose: invite links already sent must not 404 when a crawler re-fetches.
+- `og:image` is an absolute URL because some crawlers do not resolve relative
+  paths. There is no `og:url`, because some clients show it in place of the
+  shared invite link. The image file is 2400x1260, declared as 1200x630.
+
+**`public/robots.txt`**
+- Search engines are blocked (`Disallow: /`); the app is behind login.
+- Link-preview unfurlers (Slack, Twitter, LinkedIn, Discord, Telegram, WhatsApp,
+  facebookexternalhit) are allowed, because several honor robots.txt and would
+  otherwise render no invite card. They fetch one URL on demand and see only the
+  static tags in `index.html`, never per-invite details set at runtime.

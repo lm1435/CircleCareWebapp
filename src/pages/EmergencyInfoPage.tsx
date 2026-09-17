@@ -37,6 +37,7 @@ import {
 import { PageMasthead, type MastheadAction } from '@/components/layout/PageMasthead';
 import { HealthTabs } from '@/components/layout/HealthTabs';
 import { useCircle } from '@/hooks/useCircle';
+import { useCareSummaryExport } from '@/hooks/useCareSummaryExport';
 import { useCircleMembers } from '@/hooks/useCircleMembers';
 import { useCircles } from '@/hooks/useCircles';
 import { useEmergencyInfo } from '@/hooks/useEmergencyInfo';
@@ -80,6 +81,24 @@ type OpenModal =
   | { kind: 'contact'; index?: number }
   | { kind: 'insurance'; index?: number }
   | { kind: 'medical' };
+
+/**
+ * Mobile's privacy notice is two paragraphs joined by "\n\n" (the string is
+ * copied verbatim into `careSummary.privacy.message`). A plain string in
+ * `ConfirmDialog` collapses the break, so it is split into `<p>`s here — the
+ * same content, laid out the way the native alert shows it.
+ */
+function PrivacyMessage({ text }: { text: string }): ReactElement {
+  return (
+    <>
+      {text.split(/\n\s*\n/).map((paragraph, index) => (
+        <p key={index} className={index === 0 ? 'm-0' : 'mb-0 mt-3'}>
+          {paragraph}
+        </p>
+      ))}
+    </>
+  );
+}
 
 // Pending delete descriptor (per-item, confirmed via ConfirmDialog).
 type PendingDelete =
@@ -202,8 +221,9 @@ function EmergencyMasthead({
 }
 
 /**
- * Emergency Info page (plan Stage 4): sectioned layout with in-page nav, Print
- * button, per-section empty states. When the requester can edit, per-section
+ * Emergency Info page (plan Stage 4): sectioned layout with in-page nav, an
+ * Share action (the shared care-summary document, behind mobile's privacy
+ * confirm — docs/plans/pdf-export-parity.md B3), per-section empty states. When the requester can edit, per-section
  * Add buttons + per-item MoreMenu (Edit/Delete) affordances drive the section
  * edit modals (all backed by the single partial-merge PUT). When the
  * requester cannot edit, the read-only view + download-app CTA is preserved.
@@ -218,9 +238,13 @@ export default function EmergencyInfoPage(): ReactElement {
   const { data: circleDetail } = useCircleMembers(circleId);
   const { canEdit } = useCircle(circleId);
   const update = useUpdateEmergencyInfo(circleId);
+  // Gathers circle, emergency info and the medication window itself at
+  // export time (fresh cache reused), so nothing PHI-shaped is threaded here.
+  const { exportPdf, isExporting } = useCareSummaryExport({ circleId });
 
   const [openModal, setOpenModal] = useState<OpenModal | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   // Collapsible (accordion) sections — expanded by default. Code Status stays
   // always-visible, so it's NOT in this group. The at-a-glance summary + the
@@ -253,10 +277,31 @@ export default function EmergencyInfoPage(): ReactElement {
     onClick: openEditMedical,
   };
 
-  const printAction: MastheadAction = {
-    name: 'print-outline',
-    label: t('print'),
-    onClick: () => window.print(),
+  // Replaces the old `window.print()` fridge sheet as a BUTTON (the
+  // `print.css` path stays wired for Ctrl+P — plan decision 8). The click only
+  // opens the privacy confirm; the export itself runs from the dialog's
+  // confirm so its double-submit guard holds the whole promise.
+  const exportAction: MastheadAction = {
+    // "Share", not "Export PDF": it is mobile's label for this exact action (Shell
+    // rightIcon="share") and the privacy dialog's own confirm word. It also has to
+    // stay SHORT — at 1024px the page toast sits top-left of <main> (Toast.tsx)
+    // and was tuned around this slot; "Export PDF" was 34px wider and slid under it
+    // (e2e/unhappy/writes/toast-page-gate-overlap.spec.ts, Emergency, tablet).
+    name: 'share-outline',
+    label: t('careSummary.share'),
+    onClick: () => setPrivacyOpen(true),
+    disabled: isExporting,
+    busy: isExporting,
+  };
+
+  // Resolves when the print dialog has been requested; the hook never
+  // rejects (failures toast + set its `error`). The dialog closes either way.
+  const confirmExport = async (): Promise<void> => {
+    try {
+      await exportPdf();
+    } finally {
+      setPrivacyOpen(false);
+    }
   };
 
   const confirmDelete = (): void => {
@@ -496,12 +541,12 @@ export default function EmergencyInfoPage(): ReactElement {
       <EmergencyMasthead
         title={t('title')}
         subtitle={t('subtitle')}
-        rightAction={canEdit ? editMedicalAction : printAction}
-        // Print rides beside Edit in the masthead's own action row (it was a
-        // stranded row of its own under the title). Without edit rights Print
-        // IS the right action, so nothing doubles up. The masthead marks both
-        // slots `data-print-hide` (spec §6.6).
-        secondaryAction={canEdit ? printAction : undefined}
+        rightAction={canEdit ? editMedicalAction : exportAction}
+        // Share rides beside Edit in the masthead's own action row.
+        // Without edit rights it IS the right action, so nothing doubles up.
+        // The masthead marks both slots `data-print-hide` (spec §6.6), so
+        // Ctrl+P still hides the control on the fridge sheet.
+        secondaryAction={canEdit ? exportAction : undefined}
       />
 
       <div className="px-5">
@@ -670,6 +715,23 @@ export default function EmergencyInfoPage(): ReactElement {
       {/* DIRECTIVES_EDIT_ENABLED is false (hidden for launch, mirror of mobile).
           When flipped on, an Edit affordance + EditDirectivesModal mount here. */}
       {DIRECTIVES_EDIT_ENABLED && null}
+
+      {/* ── Privacy confirm before the care summary is generated (mobile's
+          `emergency.privacy.*` copy, verbatim). `loading` keeps the dialog's
+          focus trap in place while the document is built; focus returns to the
+          Share control when it closes (Modal restores the opener). ── */}
+      {privacyOpen && (
+        <ConfirmDialog
+          title={t('careSummary.privacy.title')}
+          message={<PrivacyMessage text={t('careSummary.privacy.message')} />}
+          confirmLabel={t('careSummary.privacy.confirm')}
+          cancelLabel={t('careSummary.privacy.cancel')}
+          loading={isExporting}
+          loadingLabel={t('careSummary.generating')}
+          onConfirm={confirmExport}
+          onCancel={() => setPrivacyOpen(false)}
+        />
+      )}
 
       {/* ── Per-item delete confirmation. ── */}
       {pendingDelete && (

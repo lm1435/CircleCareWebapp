@@ -59,7 +59,16 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
 
   try {
     await page.goto(`/circles/${circleId}/documents`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible({ timeout: 15_000 });
+    // `exact: true` is load-bearing: getByRole's `name` is a SUBSTRING match,
+    // so the bare 'Documents' also matched the empty state's own heading, "No
+    // documents yet". The two only coexist once the (async) list query has
+    // resolved to zero rows, so this raced the fetch — strict-mode violation
+    // when the query won, pass when it lost. Exactly the same trap as the
+    // week view's "N more all-day event" toggle vs the modal footer's "More"
+    // in calendar.spec.ts. documents-controls.spec.ts already pins it.
+    await expect(
+      page.getByRole('heading', { name: 'Documents', exact: true })
+    ).toBeVisible({ timeout: 15_000 });
 
     // --- Upload ---
     await page.getByRole('button', { name: 'Upload document' }).first().click();

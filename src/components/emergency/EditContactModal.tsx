@@ -6,6 +6,7 @@ import {
   upsertWithPrimaryExclusivity,
   useUpdateEmergencyInfo,
 } from '@/hooks/useEmergencyInfo';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { RELATIONSHIP_KEYS } from '@/lib/quickPicks';
 import { Button, ChipSelect, Modal, TextField, Toggle } from '@/components/ui';
 
@@ -34,6 +35,17 @@ function EditContactModalForm({
 }: EditContactModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
+  // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `update.isPending` drives `loading` on
+  // the footer button, but that is React Query state committed a render AFTER
+  // the submit that started the request — and implicit form submission (Enter
+  // in a field) never consults the button at all, so two submits in the SAME
+  // tick both fire. The payload is recomputed from the same state, so today's
+  // second PUT is idempotent; what it costs is a wasted write against a
+  // premium-gated, rate-limited route and a second activity-feed entry for one
+  // edit. "Idempotent" is a property of this payload, not of the form.
+  // `isPending` first, then the ref (`useSubmitGuard`); released in
+  // `onSettled`, since `mutate` returns immediately.
+  const submitGuard = useSubmitGuard();
 
   const existing =
     index !== undefined ? (info?.emergency_contacts?.[index] ?? EMPTY_CONTACT) : EMPTY_CONTACT;
@@ -51,6 +63,10 @@ function EditContactModalForm({
       return;
     }
 
+    // Claimed AFTER the validity gate, so a claim is never taken (and then
+    // abandoned) on a submit that was going to bail out anyway.
+    if (update.isPending || !submitGuard.claim()) return;
+
     const contact: EmergencyContact = {
       name: name.trim(),
       relationship: relationship.trim(),
@@ -60,7 +76,10 @@ function EditContactModalForm({
     };
     const next = upsertWithPrimaryExclusivity(info?.emergency_contacts ?? [], contact, index);
 
-    update.mutate({ emergency_contacts: toRequestContacts(next) }, { onSuccess: onClose });
+    update.mutate(
+      { emergency_contacts: toRequestContacts(next) },
+      { onSuccess: onClose, onSettled: submitGuard.release }
+    );
   };
 
   return (

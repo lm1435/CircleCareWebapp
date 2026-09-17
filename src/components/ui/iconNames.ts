@@ -46,7 +46,6 @@ import iconTrendingDown from '../../../node_modules/ionicons/dist/svg/trending-d
 import iconEllipsisHorizontal from '../../../node_modules/ionicons/dist/svg/ellipsis-horizontal.svg?raw';
 import iconNotificationsOutline from '../../../node_modules/ionicons/dist/svg/notifications-outline.svg?raw';
 import iconTrashOutline from '../../../node_modules/ionicons/dist/svg/trash-outline.svg?raw';
-import iconPrintOutline from '../../../node_modules/ionicons/dist/svg/print-outline.svg?raw';
 import iconWaterOutline from '../../../node_modules/ionicons/dist/svg/water-outline.svg?raw';
 import iconScaleOutline from '../../../node_modules/ionicons/dist/svg/scale-outline.svg?raw';
 import iconTimeOutline from '../../../node_modules/ionicons/dist/svg/time-outline.svg?raw';
@@ -108,7 +107,6 @@ export const ICON_NAMES = [
   'ellipsis-horizontal',
   'notifications-outline',
   'trash-outline',
-  'print-outline',
   'water-outline',
   'scale-outline',
   'time-outline',
@@ -170,7 +168,6 @@ export const ICON_FILES: Record<IconName, string> = {
   'ellipsis-horizontal': iconEllipsisHorizontal,
   'notifications-outline': iconNotificationsOutline,
   'trash-outline': iconTrashOutline,
-  'print-outline': iconPrintOutline,
   'water-outline': iconWaterOutline,
   'scale-outline': iconScaleOutline,
   'time-outline': iconTimeOutline,

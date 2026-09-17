@@ -118,6 +118,21 @@ describe('useAiSuggestions', () => {
     expect(result.current.data).toBeUndefined();
   });
 
+  // The AI routes' view-only refusal (backend/src/routes/ai.ts
+  // `rejectIfViewOnlySeat`) is 403 VIEW_ONLY, and the suggestions fetch fires
+  // the instant the modal opens. It is as terminal as FORBIDDEN — the seat
+  // cannot change for the length of the session — so it must never be retried.
+  it('does not retry a 403 VIEW_ONLY — the seat cannot change mid-session', async () => {
+    mockGet.mockRejectedValue({ success: false, error: { code: 'VIEW_ONLY' } });
+    const { wrapper } = setup();
+
+    const { result } = renderHook(() => useAiSuggestions(CIRCLE_ID, true), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(result.current.data).toBeUndefined();
+  });
+
   it('retries a transient failure once, then gives up with no data', async () => {
     mockGet.mockRejectedValue(new Error('network'));
     const { wrapper } = setup();

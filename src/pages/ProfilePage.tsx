@@ -1,16 +1,19 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getCurrentUser,
   getUnitPreferences,
+  updateProfile as updateProfileRequest,
   type NotificationPreferences,
+  type UpdateProfileRequest,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
-import { getAnalyticsConsent, setAnalyticsConsent } from '@/lib/analyticsConsent';
+import { classifyFailureCode } from '@/lib/apiErrors';
+import { getAnalyticsConsent } from '@/lib/analyticsConsent';
+import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
 import { syncAnalyticsConsent } from '@/lib/analyticsConsentSync';
-import { disableAnalytics, identifyUser, initAnalytics } from '@/lib/posthog';
 import { Analytics } from '@/lib/analytics';
 import { normalizeTimeOfDay } from '@/utils/timezone';
 import { useAuthStore } from '@/store/authStore';
@@ -26,6 +29,7 @@ import {
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import { DataExportSection } from '@/components/profile/DataExportSection';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import {
   Button,
   Card,
@@ -186,11 +190,36 @@ export default function ProfilePage(): ReactElement {
   const updateUnits = useUpdateUnitPrefs();
   const updateDigest = useUpdateEmailDigest();
   const deleteAccount = useDeleteAccount();
+  const deleteGuard = useSubmitGuard();
 
   // ── Name (inline edit) ────────────────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  // A FAILED NAME SAVE IS SHOWN INLINE IN THE FORM, NOT AS A TOAST.
+  //
+  // At 360x640 the name form's Save sits so low that, scrolled just far enough
+  // to reach it, the "Manage subscription" button above the form is inside the
+  // phone toast band (120-186px) — the error for this form's own submit covered
+  // another control (e2e/unhappy/writes/toast-page-overlap.spec.ts). Inline,
+  // `role="alert"`, it is announced without moving focus and sits next to the
+  // Save the user retries with. Same copy as the toast it replaces
+  // (common:errors.saveFailed). `useUpdateProfile` toasts on EVERY error at the
+  // hook level, so this form uses its own mutation over the same request, the
+  // same `currentUser` invalidation, and the same closed-set error report;
+  // timezone and language keep the hook and its toast.
+  const [nameError, setNameError] = useState<string | null>(null);
+  const saveName = useMutation({
+    mutationFn: (data: UpdateProfileRequest) => updateProfileRequest(data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+    },
+    onError: (error) => {
+      Analytics.errorOccurred('profile', 'profile_mutation_error', {
+        code: classifyFailureCode(error),
+      });
+    },
+  });
 
   // ── Quiet hours local state (start/end live behind an enable toggle) ────
   const [quietStart, setQuietStart] = useState('22:00');
@@ -244,13 +273,18 @@ export default function ProfilePage(): ReactElement {
 
   // ── Handlers ───────────────────────────────────────────────────────────
   const handleSaveName = (): void => {
-    updateProfile.mutate(
+    if (saveName.isPending) return;
+    // A retry replaces the previous failure; a new alert mounts (and is
+    // announced again) if this attempt fails too.
+    setNameError(null);
+    saveName.mutate(
       { first_name: firstName.trim() || undefined, last_name: lastName.trim() || undefined },
       {
         onSuccess: () => {
           showToast(t('account.nameSuccess'), 'success');
           setEditingName(false);
         },
+        onError: () => setNameError(t('common:errors.saveFailed')),
       }
     );
   };
@@ -287,10 +321,21 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleAnalyticsToggle = (next: boolean): void => {
-    // Tear down BEFORE persisting: PostHog batches, and the queue built up
-    // before someone opts out is the worst possible one to transmit.
-    if (!next) disableAnalytics();
-    setAnalyticsConsent(next);
+    // The CLIENT half — tear down before persisting (PostHog batches, and the
+    // queue built up before someone opts out is the worst possible one to
+    // transmit), persist, then re-init and re-identify on an opt-in — now
+    // lives in `recordAnalyticsConsentDecision`, shared with the signup
+    // consent moment so the two surfaces cannot drift on a sequence whose
+    // every failure is silent. The current user is passed so an opt-in
+    // re-attaches the identity immediately: `identifyUser` runs from the auth
+    // store on sign-in, which for a visitor who had analytics OFF was refused
+    // by the `identifyAllowed` gate, and the teardown deliberately resets the
+    // distinct id.
+    const current = userQuery.data;
+    recordAnalyticsConsentDecision(
+      next,
+      current?.id ? { id: current.id } : undefined
+    );
     setAnalyticsEnabledState(next);
     // Tell the SERVER half of this decision too. Stopping local collection is
     // only half of honouring a withdrawal — the privacy policy promises that
@@ -302,19 +347,6 @@ export default function ProfilePage(): ReactElement {
     // `syncAnalyticsConsent` persists a retry marker if this fails.
     const userId = userQuery.data?.id ?? authUserId;
     if (userId) void syncAnalyticsConsent(next, userId);
-    // Opting IN mid-session has to start the client that the gate skipped at
-    // boot, or the toggle reads as on while nothing is collected.
-    if (next) {
-      initAnalytics();
-      // …and re-identify. `identifyUser` runs from the auth store on sign-in,
-      // which for a visitor who had analytics OFF was a no-op against a client
-      // that did not exist yet. Without this, everything captured after the
-      // toggle is attributed to a fresh anonymous id — and `disableAnalytics`
-      // deliberately resets the distinct id, so this is also what re-attaches
-      // identity after an off/on cycle within one session.
-      const current = userQuery.data;
-      if (current?.id) identifyUser(current.id, current.email);
-    }
   };
 
   const handleQuietEnabledToggle = (next: boolean): void => {
@@ -368,7 +400,14 @@ export default function ProfilePage(): ReactElement {
     );
   };
 
+  // Account deletion is irreversible, so the confirm button gets a real guard
+  // and not just `confirmDisabled={deleteAccount.isPending}` — that state lands
+  // a render after the press that would double-fire it (see
+  // `useGuardedSubmit`). A second DELETE would land after the first has already
+  // torn the account down and would leave the dialog showing an error for a
+  // deletion that succeeded.
   const handleDeleteAccount = (): void => {
+    if (deleteAccount.isPending || !deleteGuard.claim()) return;
     deleteAccount.mutate(undefined, {
       onSuccess: () => {
         // Best-effort: posthog-js batches captures, and signOut() below resets
@@ -382,6 +421,7 @@ export default function ProfilePage(): ReactElement {
       },
       // On error the dialog stays OPEN with the failure shown inline (plus the
       // hook's toast), so the failure is never silently swallowed.
+      onSettled: () => deleteGuard.release(),
     });
   };
 
@@ -434,8 +474,17 @@ export default function ProfilePage(): ReactElement {
               onChange={(e) => setLastName(e.target.value)}
               maxLength={50}
             />
+            {nameError ? (
+              <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">
+                {nameError}
+              </p>
+            ) : null}
             <div className="flex gap-3">
-              <Button size="sm" onClick={handleSaveName} disabled={updateProfile.isPending}>
+              <Button
+                size="sm"
+                onClick={handleSaveName}
+                disabled={saveName.isPending || updateProfile.isPending}
+              >
                 {t('account.save')}
               </Button>
               <Button
@@ -444,6 +493,7 @@ export default function ProfilePage(): ReactElement {
                 onClick={() => {
                   setFirstName(user.first_name ?? '');
                   setLastName(user.last_name ?? '');
+                  setNameError(null);
                   setEditingName(false);
                 }}
               >
@@ -471,7 +521,7 @@ export default function ProfilePage(): ReactElement {
           options={timezoneOptions}
           value={user.timezone ?? 'America/New_York'}
           onChange={(e) => handleTimezone(e.target.value)}
-          disabled={updateProfile.isPending}
+          disabled={updateProfile.isPending || saveName.isPending}
         />
 
         {/* Password changes happen through the sign-in reset flow — point there. */}
@@ -484,7 +534,7 @@ export default function ProfilePage(): ReactElement {
           label={t('sections.language')}
           value={(user.language as SupportedLanguage) ?? 'en'}
           onChange={handleLanguage}
-          disabled={updateProfile.isPending}
+          disabled={updateProfile.isPending || saveName.isPending}
           options={(Object.keys(supportedLanguages) as SupportedLanguage[]).map((code) => ({
             value: code,
             label: t(`language.names.${code}`),
@@ -579,10 +629,13 @@ export default function ProfilePage(): ReactElement {
 
       {/* ── Privacy ───────────────────────────────────────────────────── */}
       {/*
-        The opt-in the privacy policy has always described. Defaults OFF here —
-        unlike mobile, this app has no local marker that can tell a returning
-        user from a first-time visitor (authStore persists nothing by design),
-        so there is nobody it could safely grandfather. See lib/analyticsConsent.
+        The opt-in the privacy policy has always described, and the place to
+        CHANGE an answer — the signup flow is where it is first asked
+        (pages/SignUpPage.tsx). Both write through
+        `recordAnalyticsConsentDecision`, so this toggle always reflects
+        whatever the signup checkbox recorded. Defaults OFF: web does not
+        grandfather an unasked visitor into full analytics — see
+        `GRANDFATHER_UNASKED_WEB_USERS` in lib/analyticsMode.
       */}
       <SettingsSheetSection title={t('sections.privacy')} description={t('analytics.description')}>
         <SheetRow>

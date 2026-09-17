@@ -18,6 +18,7 @@ import {
   type ResendInviteResult,
 } from '@/api/invites';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
   getPendingInviteSeat,
   isPermissionDeniedError,
@@ -59,6 +60,8 @@ import { Analytics } from '@/lib/analytics';
  * branch — and callers never double-toast by adding their own onError.
  */
 function useInviteMutationOnError(
+  /** Undefined only for `useAcceptInvite` — the invitee has no circle yet. */
+  circleId: string | undefined,
   fallbackMessageKey = 'errors.saveFailed'
 ): (error: unknown) => void {
   const queryClient = useQueryClient();
@@ -81,13 +84,13 @@ function useInviteMutationOnError(
           ? t('errors.pendingInviteSeat', { email: pendingSeat.email })
           : t('errors.pendingInviteSeatUnknown')
       );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (code === 'ALREADY_MEMBER') {
       showToast(t('errors.alreadyMember'), 'error');
     } else if (code === 'PENDING_INVITE') {
@@ -116,7 +119,7 @@ export function useCreateInvite(
   circleId: string
 ): UseMutationResult<CreateInviteResponse, unknown, CreateInviteRequest> {
   const queryClient = useQueryClient();
-  const onError = useInviteMutationOnError();
+  const onError = useInviteMutationOnError(circleId);
 
   return useMutation({
     mutationFn: (data: CreateInviteRequest) => createInvite(circleId, data),
@@ -147,7 +150,7 @@ export function useCancelInvite(
   circleId: string
 ): UseMutationResult<void, unknown, CancelInviteVariables> {
   const queryClient = useQueryClient();
-  const onError = useInviteMutationOnError();
+  const onError = useInviteMutationOnError(circleId);
 
   return useMutation({
     mutationFn: ({ inviteId }: CancelInviteVariables) => cancelInvite(inviteId),
@@ -180,7 +183,7 @@ export function useResendInvite(
   circleId: string
 ): UseMutationResult<ResendInviteResult, unknown, ResendInviteVariables> {
   const queryClient = useQueryClient();
-  const onError = useInviteMutationOnError('manage.resendInviteFailed');
+  const onError = useInviteMutationOnError(circleId, 'manage.resendInviteFailed');
 
   return useMutation({
     mutationFn: ({ inviteId }: ResendInviteVariables) => resendInvite(inviteId),
@@ -203,7 +206,9 @@ export interface AcceptInviteVariables {
  */
 export function useAcceptInvite(): UseMutationResult<void, unknown, AcceptInviteVariables> {
   const queryClient = useQueryClient();
-  const onError = useInviteMutationOnError();
+  // No circleId: the invitee is not a member of the target circle yet, so there
+  // is no cached circle detail to refresh (see invalidateCircleAccessFlags).
+  const onError = useInviteMutationOnError(undefined);
 
   return useMutation({
     mutationFn: ({ inviteId }: AcceptInviteVariables) => acceptInvite(inviteId),

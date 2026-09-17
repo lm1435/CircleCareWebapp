@@ -185,3 +185,74 @@ export function matchingDurationIndex(startStr: string, endStr: string): number 
   if (mins === null) return -1;
   return DURATION_PRESETS.indexOf(mins as (typeof DURATION_PRESETS)[number]);
 }
+
+// ─── The "15 minutes before" default ─────────────────────────────────────────
+
+/**
+ * Whether "15 minutes before" starts checked on a FRESH form of this type.
+ *
+ * OFF, for EVERY type. "Earlier reminders" is an opt-IN group and nothing in it
+ * is pre-selected: a new entry fires once, at the time it is scheduled for, and
+ * anything earlier is a choice the user makes.
+ *
+ * It used to be ON for task / appointment, on the grounds that those types had
+ * NO at-time notification, so the four earlier flags were the only notifications
+ * they had and an all-off default would ship a silent event. THAT PREMISE DIED
+ * WITH MIGRATION 20260901120000: `reminder_at_due` is a real column on every
+ * event, `BOOLEAN NOT NULL DEFAULT TRUE`, and `process_task_reminders()` carries
+ * an at-due block that reads it — `event_type IN ('task','appointment') AND
+ * ce.reminder_at_due = true`. A task with all four earlier boxes off is NOT
+ * silent; it is an entry that speaks exactly once, when it is due. The same
+ * stale assumption was already corrected on the sync side (the `reminderAtDue`
+ * clauses in `nextReminderControlState`) and in the warning copy
+ * (`showNoneSelectedWarning`); this is the default catching up to both.
+ *
+ * The visible cost of the old default was on the EDIT form. A task created with
+ * a pre-checked 15m stores `reminder_15m = true`, so reopening it showed a box
+ * the user never ticked — and, being real stored data, it kept sending a second
+ * push 15 minutes early forever, on every occurrence of a recurring series.
+ * (Medication was already OFF for a related reason: `notifications_enabled`
+ * alone fires the at-dose-time push AND the escalation chain, so a pre-checked
+ * 15m there was a pure duplicate — a 4x/day medication meant 8 pushes a day.)
+ *
+ * MOBILE PARITY, NOT A WEB PREFERENCE. This is the same rule, with the same
+ * name, as `mobile/src/utils/reminderNotices.ts`'s `defaultReminder15mFor`,
+ * which returns false for every type. The two clients write to one column read
+ * by one cron; a task created on the phone and the same task created here must
+ * arrive with the same flags.
+ *
+ * The type parameter is retained: it is what the call sites (mount, hydration,
+ * the type switcher) pass, and a future per-type default belongs here rather
+ * than back inline at those sites, which is where they got it wrong before.
+ *
+ * ALREADY-SAVED EVENTS KEEP THEIR STORED VALUE — see `hydratedReminder15m`.
+ */
+export function defaultReminder15mFor(_eventType: EventType | undefined | null): boolean {
+  return false;
+}
+
+/**
+ * `reminder_15m` for an existing event being loaded into the form.
+ *
+ * An explicitly stored value ALWAYS wins — hydration never overrides a choice,
+ * including a choice made FOR the user by the old task/appointment default. A
+ * task created under it really does hold `reminder_15m = true`, that is what the
+ * cron will actually send, and silently rewriting it on open would mutate a
+ * notification the user never touched. The fallback covers only a row that came
+ * back without the key at all (`null`/`undefined`), and it agrees with the
+ * fresh-form default: off.
+ *
+ * `??` not `||`: an explicit stored `false` must survive.
+ *
+ * Note the deliberate contrast with `reminder_at_due`, which AddEventModal
+ * hydrates `?? true`. That column is `NOT NULL DEFAULT TRUE`, so an absent key
+ * there can only mean "not serialised", and defaulting it off would show an
+ * unchecked box for an alert the server WILL send. `reminder_15m` is the
+ * opposite kind of flag: opt-in, and off is the honest blank.
+ */
+export function hydratedReminder15m(
+  eventType: EventType,
+  stored: boolean | null | undefined
+): boolean {
+  return stored ?? defaultReminder15mFor(eventType);
+}

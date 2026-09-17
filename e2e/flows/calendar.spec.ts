@@ -40,9 +40,14 @@ test('create, edit, and delete a calendar task', async ({ page, circleId }) => {
   // --- Edit ---
   // Edit lives behind the footer's overflow menu (Edit + Delete, per the M2
   // modal-footer convention) alongside the primary "Mark complete" button.
+  // `exact: true` is load-bearing: getByRole's `name` is a SUBSTRING match, and
+  // the week view's per-day overflow toggle is labelled "N more all-day
+  // event(s) on <day>" — which contains "more" and so also matched the
+  // non-exact locator, failing with a strict-mode violation whenever that day
+  // had an overflow. (tasks-recurring.spec.ts already documents the same trap.)
   await chip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Edit event' }).click();
   const editDialog = page.getByRole('dialog');
   await editDialog.locator('#title').fill(editedTitle);
@@ -59,7 +64,7 @@ test('create, edit, and delete a calendar task', async ({ page, circleId }) => {
   // Delete is the sole danger item in the same overflow menu.
   await editedChip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
   // Non-recurring → simple confirm dialog with a Delete button.
   const confirm = page.getByRole('dialog');

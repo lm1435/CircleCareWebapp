@@ -40,6 +40,7 @@
   "empty": {
     "open": "No hay tareas pendientes",
     "openHint": "Coordina los pendientes que mantienen al día el cuidado de tu ser querido: mandados, resurtidos, seguimientos, y compártelos con todos los que ayudan.",
+    "openHintReadOnly": "Las tareas que agregue el equipo de cuidado aparecerán aquí.",
     "completed": "Aún no hay tareas completadas",
     "completedHint": "Las tareas que el círculo termine aparecerán aquí para que todos vean qué ya se atendió.",
     "all": "Aún no hay tareas",

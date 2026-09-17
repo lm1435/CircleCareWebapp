@@ -28,12 +28,12 @@
     "medicationNotTaken": "Omitido: {{title}} el {{date}}",
     "recurrenceStopped": "Detuvo recurrencia de {{title}} desde {{date}}",
     "memberInvited": {
-      "careRecipient": "Invitó a {{email}} a unirse como Receptor de Cuidado",
-      "caregiver": "Invitó a {{email}} a unirse como Cuidador"
+      "careRecipient": "Invitó a {{email}} a unirse como receptor de cuidado",
+      "caregiver": "Invitó a {{email}} a unirse como cuidador"
     },
     "memberJoined": {
-      "careRecipient": "{{name}} se unió al círculo como Receptor de Cuidado",
-      "caregiver": "{{name}} se unió al círculo como Cuidador"
+      "careRecipient": "{{name}} se unió al círculo como receptor de cuidado",
+      "caregiver": "{{name}} se unió al círculo como cuidador"
     }
   },
   "phrases": {
@@ -51,10 +51,10 @@
     "deletedTask": "Tarea eliminada:",
     "completedTask": "Tarea completada:",
     "createdCircleFor": "Círculo de cuidado creado para",
-    "joinedAsCareRecipient": "se unió al círculo como persona que recibe cuidado",
+    "joinedAsCareRecipient": "se unió al círculo como receptor de cuidado",
     "joinedAsCaregiver": "se unió al círculo como cuidador",
     "invited": "Invitó a",
-    "toJoinAsCareRecipient": "a unirse como persona que recibe cuidado",
+    "toJoinAsCareRecipient": "a unirse como receptor de cuidado",
     "toJoinAsCaregiver": "a unirse como cuidador",
     "updatedEmergencyInfo": "Actualizó la información de emergencia",
     "taken": "tomado",

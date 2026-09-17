@@ -27,23 +27,24 @@ const register = vi.fn();
 const optIn = vi.fn();
 const optOut = vi.fn();
 const resetFn = vi.fn();
-const moduleFactory = vi.fn();
+const identifyFn = vi.fn();
 
-vi.mock('posthog-js', () => {
-  moduleFactory();
-  return {
-    default: {
-      init,
-      register,
-      capture,
-      reset: resetFn,
-      opt_in_capturing: optIn,
-      opt_out_capturing: optOut,
-      identify: vi.fn(),
-      captureException: vi.fn(),
-    },
-  };
-});
+// No factory-call spy: vitest caches the mock factory's result across
+// `vi.resetModules()`, so "the factory ran" only held for whichever test ran
+// FIRST and failed under `--sequence.shuffle`. Tests assert on the fresh
+// loader's own state instead — something each test itself causes.
+vi.mock('posthog-js', () => ({
+  default: {
+    init,
+    register,
+    capture,
+    reset: resetFn,
+    opt_in_capturing: optIn,
+    opt_out_capturing: optOut,
+    identify: identifyFn,
+    captureException: vi.fn(),
+  },
+}));
 
 /** Import the real posthog.ts + pageview.ts + posthogLoader.ts + the consent
  *  module they'll actually read, all fresh, with a PostHog key configured. */
@@ -77,7 +78,8 @@ beforeEach(() => {
   optIn.mockClear();
   optOut.mockClear();
   resetFn.mockClear();
-  moduleFactory.mockClear();
+  identifyFn.mockClear();
+  handedToLoader.length = 0;
   localStorage.clear();
 });
 
@@ -85,21 +87,40 @@ afterEach(() => {
   vi.doUnmock('@/lib/env');
 });
 
-describe('a declined visitor never triggers the SDK fetch', () => {
-  it('initAnalytics then resetAnalytics (logout) never imports posthog-js', async () => {
-    const { initAnalytics, resetAnalytics, setAnalyticsConsent } = await loadFresh();
+describe('a declined visitor gets an ANONYMOUS client at boot (flag on)', () => {
+  it('initAnalytics loads + inits posthog-js, never opts in, never identifies; logout resets without opting out', async () => {
+    const {
+      initAnalytics,
+      resetAnalytics,
+      identifyUser,
+      setAnalyticsConsent,
+      loadPosthogModule,
+      getLoadedPosthogModule,
+    } = await loadFresh();
     setAnalyticsConsent(false);
+    // Fresh loader (vi.resetModules in loadFresh): nothing loaded yet, so a
+    // loaded module below can only come from THIS test's initAnalytics.
+    expect(getLoadedPosthogModule()).toBeNull();
 
-    initAnalytics(); // consent gate returns early — mode is 'off'
-    resetAnalytics(); // logout — the getLoadedPosthogModule() guard returns early
+    initAnalytics(); // declined -> 'anonymous' -> loads and configures
+    // Awaiting the SAME shared promise resolves only AFTER the already-
+    // attached `.then(configure)` has run (Promise callbacks on one promise
+    // fire in attachment order), so this is a deterministic wait for
+    // `configure()` to have fully executed — no arbitrary timeout needed.
+    await loadPosthogModule();
     await flush();
 
-    // The load-bearing assertion: posthog-js's module factory never ran at
-    // all, i.e. `import('posthog-js')` was never attempted.
-    expect(moduleFactory).not.toHaveBeenCalled();
-    expect(init).not.toHaveBeenCalled();
-    expect(resetFn).not.toHaveBeenCalled();
-    expect(optOut).not.toHaveBeenCalled();
+    expect(getLoadedPosthogModule()).not.toBeNull();
+    expect(getLoadedPosthogModule()?.init).toBe(init); // the mocked posthog-js, loaded here
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(optIn).not.toHaveBeenCalled(); // nothing to un-remember; SDK default
+
+    identifyUser('user-1'); // the auth store on sign-in
+    expect(identifyFn).not.toHaveBeenCalled(); // identifyAllowed('anonymous') is false
+
+    resetAnalytics(); // logout while declined
+    expect(resetFn).toHaveBeenCalledTimes(1); // fresh random id, queue dropped
+    expect(optOut).not.toHaveBeenCalled(); // capture continues anonymously
   });
 });
 
@@ -109,21 +130,124 @@ describe('logging out while declined leaves no stale opt-out to fire after re-co
       await loadFresh();
     setAnalyticsConsent(false);
 
-    initAnalytics(); // declined -> no-op
-    resetAnalytics(); // logout while declined -> guarded no-op (the fix)
+    initAnalytics(); // declined -> anonymous client
+    await loadPosthogModule();
+    await flush();
+    resetAnalytics(); // logout while declined -> reset only, nothing to leave behind
 
     setAnalyticsConsent(true); // re-consent, same tab/session
-    initAnalytics(); // now loads and configures for real — attaches its
-    // `.then(configure)` to the shared load promise FIRST.
-    // Awaiting the SAME shared promise resolves only AFTER that already-
-    // attached `.then(configure)` has run (Promise callbacks on one promise
-    // fire in attachment order), so this is a deterministic wait for
-    // `configure()` to have fully executed — no arbitrary timeout needed.
-    await loadPosthogModule();
+    initAnalytics(); // warm cache -> configures synchronously, opts in for real
     await flush();
 
     expect(optIn).toHaveBeenCalledTimes(1);
     expect(optOut).not.toHaveBeenCalled();
+  });
+});
+
+type AnalyticsModeModule = typeof import('@/lib/analyticsMode');
+type PosthogLoaderModule = typeof import('@/lib/posthogLoader');
+
+/** Every `withPosthog` hand-off from lib/posthog.ts, by kind, in order. */
+const handedToLoader: string[] = [];
+
+/**
+ * Wrap the REAL loader's `withPosthog` so every hand-off is recorded before it
+ * is queued (or run). The queue itself has no getter, and `markPosthogReady`
+ * silently drops `consentControl` entries — so without this, a logout that
+ * queued a stale reset/opt-out (and did not fetch) was invisible. Call BEFORE
+ * `loadFresh`; the describe below unmocks it.
+ */
+function watchLoaderHandOffs(): void {
+  vi.doMock('@/lib/posthogLoader', async (importOriginal) => {
+    const actual = await importOriginal<PosthogLoaderModule>();
+    const withPosthog: PosthogLoaderModule['withPosthog'] = (action, kind) => {
+      handedToLoader.push(kind ?? 'capture');
+      actual.withPosthog(action, kind);
+    };
+    return { ...actual, withPosthog };
+  });
+}
+
+/**
+ * Force the DECLINED mode to 'off' — what ANONYMOUS_ANALYTICS_WHEN_DECLINED=false
+ * resolves to — without editing the constant (same override as
+ * analytics.test.ts). Call BEFORE `loadFresh`; the describe below unmocks it.
+ */
+function forceDeclinedModeOff(): void {
+  vi.doMock('@/lib/analyticsMode', async (importOriginal) => {
+    const actual = await importOriginal<AnalyticsModeModule>();
+    const resolveAnalyticsMode = (consented: boolean): 'full' | 'off' =>
+      consented ? 'full' : 'off';
+    // Read consent through the SAME fresh module instance posthog.ts will use.
+    const consent = await import('@/lib/analyticsConsent');
+    const currentAnalyticsMode = () => resolveAnalyticsMode(consent.getAnalyticsConsent());
+    return {
+      ...actual,
+      ANONYMOUS_ANALYTICS_WHEN_DECLINED: false,
+      resolveAnalyticsMode,
+      currentAnalyticsMode,
+      analyticsCollectionAllowed: () => actual.collectionAllowed(currentAnalyticsMode()),
+    };
+  });
+}
+
+/**
+ * THE CONFIGURATION WHERE THE HEADER'S BUG IS REACHABLE.
+ *
+ * With the flag ON (as shipped) a declined visitor has a loaded anonymous
+ * client and `resetAnalytics` never opts out, so the describe above cannot
+ * exercise the "SDK not loaded" guard at all. With the flag OFF the declined
+ * mode is 'off': nothing is loaded at boot, and logout computes
+ * `shouldStayOptedOut = true` — exactly the reset+opt-out closure the guard
+ * exists to never queue.
+ *
+ * The guard's observable is the FETCH: without it, logout queues the closure
+ * AND starts loading posthog-js for a visitor who said no. (The loader also
+ * drops queued `consentControl` entries at `markPosthogReady`, so the stale
+ * opt-out is defended twice; the fetch is what only the guard prevents.)
+ */
+describe('flag OFF: logging out while declined neither fetches the SDK nor leaves an opt-out behind', () => {
+  afterEach(() => {
+    vi.doUnmock('@/lib/analyticsMode');
+    vi.doUnmock('@/lib/posthogLoader');
+  });
+
+  it('never loads posthog-js on logout; re-consenting opts in once and nothing opts out', async () => {
+    forceDeclinedModeOff();
+    watchLoaderHandOffs();
+    const {
+      initAnalytics,
+      resetAnalytics,
+      setAnalyticsConsent,
+      loadPosthogModule,
+      getLoadedPosthogModule,
+    } = await loadFresh();
+    setAnalyticsConsent(false);
+
+    initAnalytics(); // declined -> 'off' -> constructs and fetches nothing
+    await flush();
+    expect(getLoadedPosthogModule()).toBeNull();
+
+    resetAnalytics(); // logout while declined, flag off
+    await flush();
+    expect(getLoadedPosthogModule()).toBeNull(); // no fetch
+    // …AND nothing queued: the guard must stop the reset/opt-out closure from
+    // ever reaching the loader, not merely stop the fetch.
+    expect(handedToLoader).toEqual([]);
+    expect(resetFn).not.toHaveBeenCalled();
+    expect(optOut).not.toHaveBeenCalled();
+
+    setAnalyticsConsent(true); // re-consent, same tab/session
+    initAnalytics();
+    await loadPosthogModule();
+    await flush();
+
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(optIn).toHaveBeenCalledTimes(1);
+    expect(resetFn).not.toHaveBeenCalled();
+    expect(optOut).not.toHaveBeenCalled();
+    // Re-consent flushed no stale consent-control entry: none was ever handed over.
+    expect(handedToLoader).not.toContain('consentControl');
   });
 });
 
@@ -148,41 +272,41 @@ describe('trackPageview fired before the SDK loads is delivered once initAnalyti
 });
 
 describe('consent withdrawn WHILE the SDK is still loading is honored at configure time', () => {
-  it('never calls init/register/opt-in if the visitor declines before the dynamic import resolves', async () => {
+  it('configures as ANONYMOUS (init + register, NO opt-in) if the visitor declines before the dynamic import resolves', async () => {
     const { initAnalytics, setAnalyticsConsent, loadPosthogModule } = await loadFresh();
     setAnalyticsConsent(true);
 
     initAnalytics(); // starts the (async) load while consenting
     // Declines in the SAME synchronous tick — before the mocked dynamic
     // import has had a chance to resolve. `configure()` must re-read consent
-    // itself rather than trust the `mode` `initAnalytics` saw before the await.
+    // itself rather than trust the `mode` `initAnalytics` saw before the await:
+    // the 'full' decision it started with must NOT produce an opt-in.
     setAnalyticsConsent(false);
 
     await loadPosthogModule();
     await flush();
 
-    expect(init).not.toHaveBeenCalled();
-    expect(register).not.toHaveBeenCalled();
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(register).toHaveBeenCalledTimes(1); // $ip: null etc. apply anonymously too
     expect(optIn).not.toHaveBeenCalled();
   });
 
-  it('a genuinely consenting initAnalytics afterward still configures for real (not stuck "ready")', async () => {
+  it('a genuinely consenting initAnalytics afterward opts in for real', async () => {
     const { initAnalytics, setAnalyticsConsent, loadPosthogModule } = await loadFresh();
     setAnalyticsConsent(true);
     initAnalytics();
     setAnalyticsConsent(false);
     await loadPosthogModule();
     await flush();
-    expect(init).not.toHaveBeenCalled();
+    expect(optIn).not.toHaveBeenCalled();
 
-    // Re-consenting and calling initAnalytics again must still configure for
-    // real — the earlier decline must not have left the instance stuck in a
-    // half-ready state that skips init forever.
+    // Re-consenting and calling initAnalytics again must upgrade the running
+    // anonymous client to 'full' — the earlier decline must not have left it
+    // stuck without an opt-in.
     setAnalyticsConsent(true);
     initAnalytics();
-    await loadPosthogModule();
     await flush();
 
-    expect(init).toHaveBeenCalledTimes(1);
+    expect(optIn).toHaveBeenCalledTimes(1);
   });
 });

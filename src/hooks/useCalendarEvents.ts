@@ -13,20 +13,25 @@ import {
   deleteEvent,
   getCircleDetail,
   getEvents,
+  getEventsPresence,
   setMedicationStatus,
   updateEvent,
   type CalendarEvent,
   type CircleDetail,
   type CreateEventRequest,
   type DeleteEventOptions,
+  type EventsPresence,
   type MedicationStatusResult,
   type MedicationStatusScope,
   type UpdateEventRequest,
 } from '@/api/calendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
   classifyFailureCode,
   isDoseAlreadyLoggedError,
+  isInvalidOccurrenceDateError,
+  isNotFoundError,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
 } from '@/lib/apiErrors';
@@ -43,19 +48,37 @@ export interface UseCalendarEventsResult {
   events: CalendarEvent[];
 }
 
+export interface UseCalendarEventsOptions {
+  /**
+   * Prefetch the previous and next windows of the same span once this one
+   * resolves, so week/month navigation feels instant. OFF by default.
+   *
+   * OPT-IN BECAUSE IT MULTIPLIES EVERY READ BY THREE. It used to be
+   * unconditional, and Home paid for it: the checklist's 211-day presence
+   * window dragged in two more 211-day lists (~1.4 MB each on the demo circle)
+   * and UpcomingAppointments' 15-day window two 15-day ones — 8 requests and
+   * 680 days of events to render three cards. Only a surface that actually
+   * moves window-to-window (CalendarPage) should pass `true`.
+   */
+  prefetchAdjacent?: boolean;
+}
+
 /**
  * React Query hook for GET /circles/:circleId/events with a date window
- * (plan Task 21). Fetches the visible week/month window and prefetches the
- * adjacent previous/next windows of the same span so navigation feels instant.
+ * (plan Task 21). Fetches exactly the requested window; with
+ * `prefetchAdjacent: true` it also prefetches the previous/next windows of the
+ * same span (see `UseCalendarEventsOptions`).
  * Dates are YYYY-MM-DD strings in the CARE RECIPIENT's timezone.
  */
 export function useCalendarEvents(
   circleId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  options: UseCalendarEventsOptions = {}
 ): UseQueryResult<CalendarEvent[]> & UseCalendarEventsResult {
   const queryClient = useQueryClient();
   const enabled = !!circleId && !!startDate && !!endDate;
+  const prefetchAdjacent = options.prefetchAdjacent === true;
 
   const query = useQuery({
     queryKey: queryKeys.calendarEventsRange(circleId, {
@@ -66,10 +89,10 @@ export function useCalendarEvents(
     enabled,
   });
 
-  // Prefetch adjacent windows once the visible one resolves.
+  // Prefetch adjacent windows once the visible one resolves — opt-in only.
   const { isSuccess } = query;
   useEffect(() => {
-    if (!enabled || !isSuccess) return;
+    if (!prefetchAdjacent || !enabled || !isSuccess) return;
     const span = daysBetween(startDate, endDate) + 1;
     const adjacent = [
       { start_date: addDays(startDate, -span), end_date: addDays(startDate, -1) },
@@ -81,9 +104,118 @@ export function useCalendarEvents(
         queryFn: () => getEvents(circleId, range),
       });
     }
-  }, [enabled, isSuccess, circleId, startDate, endDate, queryClient]);
+  }, [prefetchAdjacent, enabled, isSuccess, circleId, startDate, endDate, queryClient]);
 
   return { ...query, events: query.data ?? EMPTY_EVENTS };
+}
+
+/**
+ * True when a presence request failed because the ROUTE does not exist — an
+ * older backend. There, GET /events/presence falls through to
+ * GET /events/:eventId with eventId "presence" and answers 404 NOT_FOUND (the
+ * apiClient interceptor rejects with that envelope, which carries no status);
+ * a bare 404 with no body is accepted too.
+ */
+function isPresenceRouteMissing(error: unknown): boolean {
+  if (isNotFoundError(error)) return true;
+  if (typeof error !== 'object' || error === null) return false;
+  const candidate = error as { status?: unknown; response?: { status?: unknown } | null };
+  return candidate.response?.status === 404 || candidate.status === 404;
+}
+
+function presenceFromEvents(events: CalendarEvent[]): EventsPresence {
+  return {
+    medication: events.some((e) => e.event_type === 'medication'),
+    appointment: events.some((e) => e.event_type === 'appointment'),
+    task: events.some((e) => e.event_type === 'task'),
+  };
+}
+
+export interface UseEventsPresenceResult {
+  /** Per-type presence in the window; undefined unless `isSuccess`. */
+  data: EventsPresence | undefined;
+  isSuccess: boolean;
+  /** Still loading OR paused offline — never a settled "nothing exists". */
+  isPending: boolean;
+  isError: boolean;
+  /** Answered by the full-range list fallback (backend without the route). */
+  isFallback: boolean;
+  /** Re-asks whichever read is deciding: the presence endpoint, or the fallback list. */
+  refetch: () => Promise<unknown>;
+}
+
+/**
+ * "Does this window hold at least one medication / appointment / task?" —
+ * GET /circles/:circleId/events/presence, per-type booleans, no rows.
+ *
+ * Replaces reading a 211-day events LIST just to call `.some()` on it (the
+ * Get-started checklist and TodaysMeds' first-run split). Each boolean means
+ * exactly "GET /events for this window would return >= 1 event of that type".
+ *
+ * KEY: `calendarEventsPresence` lives UNDER the `calendarEvents(circleId)`
+ * prefix on purpose, so every event write's existing prefix invalidation (and
+ * any refetch of that prefix, e.g. a Retry) refreshes presence too — adding the
+ * first medication flips `medication` without a second invalidation to forget.
+ *
+ * DEPLOY-ORDER FALLBACK: if the backend has no presence route yet (404), the
+ * query resolves to `null` and the hook derives presence from ONE full-range
+ * `getEvents` read under the same range key the old code used, with no
+ * adjacent prefetch — behaviour identical to before on an old backend. Any
+ * OTHER failure is a plain error: no fallback download.
+ */
+export function useEventsPresence(
+  circleId: string,
+  startDate: string,
+  endDate: string
+): UseEventsPresenceResult {
+  const enabled = !!circleId && !!startDate && !!endDate;
+  const range = { start_date: startDate, end_date: endDate };
+
+  const presenceQuery = useQuery<EventsPresence | null>({
+    queryKey: queryKeys.calendarEventsPresence(circleId, range),
+    queryFn: async () => {
+      try {
+        return await getEventsPresence(circleId, range);
+      } catch (error) {
+        // `null` = "this backend cannot answer" — a settled answer, so it is
+        // not retried and the fallback below takes over.
+        if (isPresenceRouteMissing(error)) return null;
+        throw error;
+      }
+    },
+    enabled,
+  });
+
+  const routeMissing = presenceQuery.isSuccess && presenceQuery.data === null;
+  const fallbackQuery = useQuery({
+    queryKey: queryKeys.calendarEventsRange(circleId, range),
+    queryFn: () => getEvents(circleId, range),
+    enabled: enabled && routeMissing,
+  });
+  const fallbackEvents = fallbackQuery.data;
+  const fallbackPresence = useMemo(
+    () => (fallbackEvents ? presenceFromEvents(fallbackEvents) : undefined),
+    [fallbackEvents]
+  );
+
+  if (!routeMissing) {
+    return {
+      data: presenceQuery.isSuccess ? (presenceQuery.data ?? undefined) : undefined,
+      isSuccess: presenceQuery.isSuccess,
+      isPending: presenceQuery.isPending,
+      isError: presenceQuery.isError,
+      isFallback: false,
+      refetch: presenceQuery.refetch,
+    };
+  }
+  return {
+    data: fallbackQuery.isSuccess ? fallbackPresence : undefined,
+    isSuccess: fallbackQuery.isSuccess,
+    isPending: fallbackQuery.isPending,
+    isError: fallbackQuery.isError,
+    isFallback: true,
+    refetch: fallbackQuery.refetch,
+  };
 }
 
 /**
@@ -262,10 +394,25 @@ function useEventMutationOnError(circleId: string): (error: unknown) => void {
     if (isSubscriptionRequiredError(error)) {
       // Web cannot transact — point the user at the app to upgrade.
       promptUpgrade();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
+    } else if (isInvalidOccurrenceDateError(error)) {
+      // 400 INVALID_OCCURRENCE_DATE: the day this row was drawn for is no
+      // longer an occurrence of the series — someone else shortened the
+      // recurrence or changed its pattern while this tab held a 60s-stale
+      // calendar. The request can NEVER succeed (a retry re-posts the same
+      // off-pattern date), so "Couldn't save, try again" was both wrong and
+      // useless. Say what happened, then refetch: leaving the dead row on
+      // screen only sets up the next press to fail the same way.
+      showToast(t('errors.invalidOccurrenceDate'), 'error');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+    } else if (isNotFoundError(error)) {
+      // 404: the row was deleted by another member between render and press.
+      // Same stale-snapshot shape, same remedy.
+      showToast(t('errors.eventNotFound'), 'error');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
     } else if (isDoseAlreadyLoggedError(error)) {
       // 409 DOSE_ALREADY_LOGGED: the edit tried to move a confirmed dose's
       // time. Not retryable — say exactly why, then refetch the real state.
@@ -402,16 +549,32 @@ export function useMedicationStatus(
   });
 }
 
+export interface CompleteEventVariables {
+  /**
+   * THE MUTATION TARGET. A recurring series is addressed by its ROOT
+   * (`parent_event_id || id`) — its later occurrences are virtual rows with a
+   * composite id no `id` column can match.
+   */
+  eventId: string;
+  /**
+   * WHICH OCCURRENCE, for a series addressed by its root. Left undefined when
+   * the target IS the row being completed (a one-off, or a physical row opened
+   * by its own id), which keeps that request body-less and unchanged.
+   */
+  scheduledDate?: string;
+}
+
 /** POST /circles/:circleId/events/:eventId/complete — complete a task/appt. */
 export function useCompleteEvent(
   circleId: string
-): UseMutationResult<CalendarEvent, unknown, string> {
+): UseMutationResult<CalendarEvent, unknown, CompleteEventVariables> {
   const queryClient = useQueryClient();
   const onError = useEventMutationOnError(circleId);
 
   return useMutation({
-    mutationFn: (eventId: string) => completeEvent(circleId, eventId),
-    onSuccess: (event, eventId) => {
+    mutationFn: ({ eventId, scheduledDate }: CompleteEventVariables) =>
+      completeEvent(circleId, eventId, scheduledDate),
+    onSuccess: (event, variables) => {
       // PHI-safe: only circle_id. Branch on the event_type enum so appointments
       // and tasks land on the matching mobile event names.
       if (event?.event_type === 'appointment') {
@@ -419,7 +582,7 @@ export function useCompleteEvent(
       } else {
         Analytics.taskCompleted(circleId);
       }
-      void invalidateEventQueries(queryClient, circleId, eventId);
+      void invalidateEventQueries(queryClient, circleId, variables.eventId);
     },
     onError,
   });

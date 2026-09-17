@@ -1,17 +1,22 @@
 import { test, expect } from '../fixtures';
 
-// Member REMOVAL (destructive-then-restored, local testing-ground DB).
+// Member REMOVAL (destructive, local testing-ground DB).
 //
-// Unlike invite+cancel (net-zero, in members.spec.ts), removing an accepted
-// member can't be undone through the UI — re-adding needs an invite + accept,
-// which requires a second authenticated account. So this test does that
-// itself, via the API, in the SAME run: remove through the UI (the real path
-// under test), then restore by re-inviting the removed email as the owner and
-// accepting as that member — both real backend calls, no UI. Net-zero overall,
-// so the spec stays repeatable without a reseed. Still SKIPS (rather than
-// failing) if there's no removable member at all, and the restore step warns
-// loudly instead of failing if the member's account can't sign back in — a
-// failed restore must not make an otherwise-correct removal test red.
+// Removal is driven through the UI (the real path under test) and then
+// confirmed on the SERVER: the removed member is gone from GET /circles/:id,
+// not just from the rendered roster.
+//
+// There is deliberately NO restore step any more. One used to re-invite the
+// removed e-mail and accept as that member so the shared demo account stayed
+// net-zero — but it wrapped its only assertion in try/catch with early returns,
+// so it could never fail, and since per-worker isolation it has had no job:
+// this runs against THIS WORKER's cloned circle, which globalTeardown deletes
+// wholesale. An assertion that cannot fail, guarding cleanup nobody needs, was
+// removed rather than kept as noise.
+//
+// Nor does it skip when no member is removable. The clone always carries the
+// demo template's satellite members, so "nothing to remove" now means the
+// clone or the roster is broken — a failure, not a reason to go quiet.
 //
 // Member actions live behind a per-row MoreMenu now (MembersPage.tsx), named
 // "Actions for <name>" (manage.memberActionsLabel) — NOT a direct
@@ -21,10 +26,6 @@ import { test, expect } from '../fixtures';
 // that prefix to stay scoped to MEMBER rows only.
 
 const MEMBER_ACTIONS_NAME = /^Actions for (?!invite to )/;
-
-// Local seeded accounts share this password (see e2e/fixtures.ts, e2e/README.md).
-const SEED_PASSWORD = process.env.PW_DEMO_PASSWORD ?? 'DemoPass123!';
-const OWNER_EMAIL = process.env.PW_DEMO_EMAIL ?? 'demo@circlecare.app';
 
 interface ApiMember {
   id: string;
@@ -55,13 +56,27 @@ async function loginForToken(
   return body?.data?.session?.access_token ?? null;
 }
 
-test('remove a non-owner circle member', async ({ page, circleId, baseURL }) => {
+async function apiMembers(
+  page: import('@playwright/test').Page,
+  circleId: string,
+  token: string
+): Promise<ApiMember[]> {
+  const res = await page.request.get(`/api/circles/${circleId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(res.ok(), `GET /api/circles/:id returned ${res.status()}`).toBeTruthy();
+  return ((await res.json())?.data?.circle?.members ?? []) as ApiMember[];
+}
+
+test('remove a non-owner circle member', async ({ page, circleId, baseURL, account }) => {
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 15_000 });
-  // Wait for the roster to actually render before counting — otherwise we'd
-  // false-skip on an empty pre-load DOM.
+  // Wait for the roster to actually render before counting — otherwise the
+  // count below would read an empty pre-load DOM.
   await expect(page.locator('ul li').first()).toBeVisible({ timeout: 15_000 });
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
+  await expect(page.getByRole('button', { name: MEMBER_ACTIONS_NAME }).first()).toBeVisible({
+    timeout: 15_000,
+  });
 
   // A member row only carries an actions trigger when the owner can manage
   // that member (MembersPage.tsx `canManage`: not the owner, not the care
@@ -90,27 +105,24 @@ test('remove a non-owner circle member', async ({ page, circleId, baseURL }) => 
     }
   }
 
-  test.skip(removableName === null, 'no removable (non-owner) members left — reseed to replenish');
+  expect(
+    removableName,
+    'the cloned circle has a removable (non-owner, non-recipient) member'
+  ).not.toBeNull();
   const name = removableName as string;
   expect(name.length, 'parsed member name from actions-trigger label').toBeGreaterThan(0);
 
-  // --- Read the removed member's email BEFORE removing them (API, owner
-  // token) — the roster won't have their row to read it from afterward. ---
+  // --- Identify the member on the SERVER before removing them (the roster
+  // won't have their row to read afterwards). ---
   const origin = baseURL ?? 'http://localhost:5173';
-  const ownerToken = await loginForToken(page, origin, OWNER_EMAIL, SEED_PASSWORD);
-  expect(ownerToken, 'owner API login (needed to read the email + later restore)').toBeTruthy();
+  const ownerToken = await loginForToken(page, origin, account.email, account.password);
+  expect(ownerToken, 'owner API login').toBeTruthy();
 
-  const circleRes = await page.request.get(`/api/circles/${circleId}`, {
-    headers: { Authorization: `Bearer ${ownerToken}` },
-  });
-  expect(circleRes.ok(), 'GET /api/circles/:id to read member emails').toBeTruthy();
-  const circleBody = await circleRes.json();
-  const apiMembers: ApiMember[] = circleBody?.data?.circle?.members ?? [];
-  const matched = apiMembers.find(
+  const before = await apiMembers(page, circleId, ownerToken!);
+  const matched = before.find(
     (m) => [m.first_name, m.last_name].filter(Boolean).join(' ').trim() === name
   );
   expect(matched, `API roster has a member named "${name}"`).toBeTruthy();
-  const removedEmail = matched!.email;
 
   // --- Remove → confirm ---
   const memberTrigger = page.getByRole('button', { name: `Actions for ${name}`, exact: true });
@@ -131,53 +143,10 @@ test('remove a non-owner circle member', async ({ page, circleId, baseURL }) => 
   ).toHaveCount(0, { timeout: 20_000 });
   await expect(page.locator('ul li').first()).toBeVisible({ timeout: 10_000 });
 
-  // --- Restore (net-zero): re-invite the removed email, accept as them. ---
-  // A failed restore is a cleanup problem, not a test-under-test problem — it
-  // must warn loudly, never fail this test, which has already proven removal
-  // works.
-  try {
-    const inviteRes = await page.request.post(`/api/circles/${circleId}/invites`, {
-      headers: { Authorization: `Bearer ${ownerToken}` },
-      data: { email: removedEmail, member_type: 'caregiver' },
-    });
-    if (!inviteRes.ok()) {
-      console.warn(
-        `[members-remove] restore SKIPPED: POST /invites for ${removedEmail} failed (${inviteRes.status()}). Reseed if this account is now permanently missing.`
-      );
-      return;
-    }
-    const inviteBody = await inviteRes.json();
-    const inviteCode: string | undefined = inviteBody?.data?.invite?.invite_code;
-    if (!inviteCode) {
-      console.warn(
-        `[members-remove] restore SKIPPED: invite response for ${removedEmail} carried no invite_code.`
-      );
-      return;
-    }
-
-    const memberToken = await loginForToken(page, origin, removedEmail, SEED_PASSWORD);
-    if (!memberToken) {
-      console.warn(
-        `[members-remove] restore SKIPPED: could not sign in as ${removedEmail} (password rotated / account gone?). The circle keeps a live pending invite for them instead.`
-      );
-      return;
-    }
-
-    const acceptRes = await page.request.post(
-      `/api/invites/code/${encodeURIComponent(inviteCode)}/accept`,
-      { headers: { Authorization: `Bearer ${memberToken}` } }
-    );
-    if (!acceptRes.ok()) {
-      console.warn(
-        `[members-remove] restore SKIPPED: POST /invites/code/${inviteCode}/accept for ${removedEmail} failed (${acceptRes.status()}).`
-      );
-      return;
-    }
-
-    // --- Confirm the restore actually landed in the roster. ---
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByText(name, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
-  } catch (err) {
-    console.warn(`[members-remove] restore SKIPPED after an unexpected error:`, err);
-  }
+  // --- And the server agrees: exactly that member left, nobody else did. ---
+  const after = await apiMembers(page, circleId, ownerToken!);
+  expect(after.map((m) => m.id), 'removed member is gone from GET /circles/:id').not.toContain(
+    matched!.id
+  );
+  expect(after.length, 'exactly one member was removed').toBe(before.length - 1);
 });

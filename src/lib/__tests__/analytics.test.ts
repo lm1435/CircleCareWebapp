@@ -64,6 +64,34 @@ async function loadWithKey(key: string | undefined) {
   };
 }
 
+type AnalyticsModeModule = typeof import('@/lib/analyticsMode');
+
+/**
+ * Force the DECLINED mode to 'off' — what ANONYMOUS_ANALYTICS_WHEN_DECLINED=false
+ * resolves to — without editing the constant. The flag is ON in the shipped
+ * build (analyticsMode.test.ts pins it), but the 'off' branches in
+ * lib/posthog.ts are kept correct so it can be turned back off in one line;
+ * these overrides keep those branches under test. Call BEFORE `loadWithKey`
+ * and `vi.doUnmock('@/lib/analyticsMode')` in `afterEach`.
+ */
+function forceDeclinedModeOff(): void {
+  vi.doMock('@/lib/analyticsMode', async (importOriginal) => {
+    const actual = await importOriginal<AnalyticsModeModule>();
+    const resolveAnalyticsMode = (consented: boolean): 'full' | 'off' =>
+      consented ? 'full' : 'off';
+    // Read consent through the SAME fresh module instance posthog.ts will use.
+    const consent = await import('@/lib/analyticsConsent');
+    const currentAnalyticsMode = () => resolveAnalyticsMode(consent.getAnalyticsConsent());
+    return {
+      ...actual,
+      ANONYMOUS_ANALYTICS_WHEN_DECLINED: false,
+      resolveAnalyticsMode,
+      currentAnalyticsMode,
+      analyticsCollectionAllowed: () => actual.collectionAllowed(currentAnalyticsMode()),
+    };
+  });
+}
+
 beforeEach(() => {
   capture.mockClear();
   identify.mockClear();
@@ -96,7 +124,7 @@ describe('analytics wrapper — optional / no-op path', () => {
   it('identifyUser / resetAnalytics no-op when key is unset', async () => {
     const { identifyUser, resetAnalytics } = await loadWithKey(undefined);
     identifyUser('user-1');
-    identifyUser('user-1', 'pat@example.com');
+    identifyUser('user-1');
     resetAnalytics();
     expect(identify).not.toHaveBeenCalled();
     expect(reset).not.toHaveBeenCalled();
@@ -389,6 +417,52 @@ describe('analytics wrapper — active path (key set)', () => {
  * unknown amount. Comparing against a constant imported from the source would
  * make a rename invisible here, which is precisely the failure to prevent.
  */
+describe('PDF export events mirror mobile exactly (plan pdf-export-parity, decision 10)', () => {
+  it('adherence_report_exported carries circle_id + period enum', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.adherenceReportExported('circle-123', '30d');
+    expect(capture).toHaveBeenCalledWith('adherence_report_exported', {
+      circle_id: 'circle-123',
+      period: '30d',
+    });
+  });
+
+  it('care_summary_shared carries circle_id + format', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.careSummaryShared('circle-123', 'pdf');
+    expect(capture).toHaveBeenCalledWith('care_summary_shared', {
+      circle_id: 'circle-123',
+      format: 'pdf',
+    });
+  });
+
+  it('care_summary_export_failed / adherence_report_export_failed carry stage + code ONLY (no circle_id, no message)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.careSummaryExportFailed({ stage: 'print', code: 'PRINT_FAILED' });
+    expect(capture).toHaveBeenCalledWith('care_summary_export_failed', {
+      stage: 'print',
+      code: 'PRINT_FAILED',
+    });
+    Analytics.adherenceReportExportFailed({ stage: 'timeout', code: 'PRINT_TIMEOUT' });
+    expect(capture).toHaveBeenCalledWith('adherence_report_export_failed', {
+      stage: 'timeout',
+      code: 'PRINT_TIMEOUT',
+    });
+    for (const call of capture.mock.calls) {
+      expect(Object.keys(call[1] as Record<string, unknown>).sort()).toEqual(['code', 'stage']);
+    }
+  });
+
+  it('sends no export event at all when PostHog is unconfigured', async () => {
+    const { Analytics } = await loadWithKey(undefined);
+    Analytics.adherenceReportExported('circle-123', '7d');
+    Analytics.careSummaryShared('circle-123', 'pdf');
+    Analytics.careSummaryExportFailed({ stage: 'print', code: 'PRINT_FAILED' });
+    Analytics.adherenceReportExportFailed({ stage: 'print', code: 'PRINT_FAILED' });
+    expect(capture).not.toHaveBeenCalled();
+  });
+});
+
 describe('paywall events mirror mobile exactly', () => {
   it('plan_selection_viewed carries paywall_context', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
@@ -789,11 +863,17 @@ describe('identify / reset (active path)', () => {
     expect(identify).toHaveBeenCalledWith('user-42');
   });
 
-  it('identifyUser with an email attaches email as the ONLY person property', async () => {
+  it('drops an email a caller still passes — NO person property ever reaches PostHog', async () => {
+    // Founder decision 2026-09-10: web matches mobile and identifies by opaque
+    // id only. Called through a loose reference on purpose, so the removed
+    // parameter is EXERCISED at runtime rather than merely rejected by tsc —
+    // an `any`, a JS import or a future edit must not be able to reopen it.
     const { identifyUser } = await loadWithKey('phc_test_key');
-    identifyUser('user-42', 'pat@example.com');
+    const loose = identifyUser as unknown as (id: string, email?: string) => void;
+    loose('user-42', 'pat@example.com');
     expect(identify).toHaveBeenCalledTimes(1);
-    expect(identify).toHaveBeenCalledWith('user-42', { email: 'pat@example.com' });
+    expect(identify.mock.calls).toEqual([['user-42']]);
+    expect(JSON.stringify(identify.mock.calls)).not.toContain('pat@example.com');
   });
 
   it('resetAnalytics calls posthog.reset', async () => {
@@ -818,10 +898,28 @@ describe('initAnalytics — consent gate', () => {
     __resetAnalyticsConsentCache();
   });
 
-  it('does NOT initialise without consent, even with a key configured', async () => {
-    const { initAnalytics } = await loadWithKey('phc_test_key');
+  it('initialises an ANONYMOUS client without consent (flag on): init, no opt-in, no identify', async () => {
+    // Declined resolves to 'anonymous' while ANONYMOUS_ANALYTICS_WHEN_DECLINED
+    // is on (decision 2026-09-07): the client is constructed so the declined
+    // cohort's failures stay visible, but it is never opted in (nothing to
+    // un-remember under memory persistence) and identify is refused.
+    const { initAnalytics, identifyUser } = await loadWithKey('phc_test_key');
     initAnalytics();
-    expect(init).not.toHaveBeenCalled();
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(optIn).not.toHaveBeenCalled();
+    identifyUser('user-1');
+    expect(identify).not.toHaveBeenCalled();
+  });
+
+  it('constructs NOTHING without consent while the flag is off', async () => {
+    forceDeclinedModeOff();
+    try {
+      const { initAnalytics } = await loadWithKey('phc_test_key');
+      initAnalytics();
+      expect(init).not.toHaveBeenCalled();
+    } finally {
+      vi.doUnmock('@/lib/analyticsMode');
+    }
   });
 
   it('initialises once consent is given', async () => {
@@ -870,32 +968,40 @@ describe('initAnalytics — consent gate', () => {
   });
 
   /**
-   * opt_out alone stops FUTURE events; reset drops the queue and the distinct
-   * id, so the batch built up before someone opted out is never transmitted.
+   * Withdrawing lands the visitor in the DECLINED mode — 'anonymous' with the
+   * flag on. reset drops the queue and the distinct id so the batch built up
+   * under the known identity is never transmitted; opting out would silence
+   * the anonymous client until the next page load — the exact cohort the flag
+   * exists to keep visible — so it must NOT happen.
    */
-  it('opts out AND resets when consent is withdrawn', async () => {
+  it('resets but does NOT opt out when consent is withdrawn (anonymous fallback)', async () => {
     setAnalyticsConsent(true);
     const { disableAnalytics } = await loadWithKey('phc_test_key');
     disableAnalytics();
-    expect(optOut).toHaveBeenCalled();
-    expect(reset).toHaveBeenCalled();
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(optOut).not.toHaveBeenCalled();
   });
 });
 
-describe('withdrawing consent actually stops collection', () => {
+describe('withdrawing consent drops the identity, not the collection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     __resetAnalyticsConsentCache();
   });
 
+  afterEach(() => {
+    vi.doUnmock('@/lib/analyticsMode');
+  });
+
   /**
-   * posthog-js's `reset()` calls `consent.reset()`, which DELETES the
-   * `__ph_opt_in_out_<token>` key. Opting out and THEN resetting therefore
-   * throws the opt-out away and leaves the SDK opted back in — so the order
-   * here is the fix, not a style choice.
+   * The 'off' branch (flag off). posthog-js's `reset()` calls
+   * `consent.reset()`, which DELETES the `__ph_opt_in_out_<token>` key. Opting
+   * out and THEN resetting therefore throws the opt-out away and leaves the
+   * SDK opted back in — so the order here is the fix, not a style choice.
    */
-  it('resets BEFORE opting out, so the opt-out is what survives', async () => {
+  it('OFF mode: resets BEFORE opting out, so the opt-out is what survives', async () => {
+    forceDeclinedModeOff();
     const { disableAnalytics } = await loadWithKey('phc_test');
     disableAnalytics();
 
@@ -910,12 +1016,12 @@ describe('withdrawing consent actually stops collection', () => {
   });
 
   /**
-   * The boot gate covers a visitor who never opted in. It says nothing about
-   * one who opts OUT mid-session: posthog-js stays constructed, so without an
-   * emit-path check every event kept transmitting until the next page load.
+   * The Profile toggle tears down FIRST (`disableAnalytics`) and persists the
+   * new consent SECOND — mirrored here. In anonymous mode the client keeps
+   * capturing after both steps, under the fresh id `reset` produced.
    */
-  it('suppresses captures immediately after an opt-out, without a reload', async () => {
-    const { Analytics } = await loadWithKey('phc_test');
+  it('keeps capturing after withdrawal — anonymously, not silently', async () => {
+    const { Analytics, disableAnalytics } = await loadWithKey('phc_test');
     // `loadWithKey` calls vi.resetModules(), so the consent module the freshly
     // imported analytics sees is a DIFFERENT instance (with its own cache) than
     // the one imported at the top of this file. Drive the one it actually uses.
@@ -925,21 +1031,248 @@ describe('withdrawing consent actually stops collection', () => {
     expect(capture).toHaveBeenCalledTimes(1);
 
     capture.mockClear();
+    disableAnalytics();
     consent.setAnalyticsConsent(false);
     Analytics.circleCreated(true);
-    expect(capture).not.toHaveBeenCalled();
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(optOut).not.toHaveBeenCalled();
+    expect(capture).toHaveBeenCalledTimes(1);
   });
 
-  it('resumes when consent is granted again', async () => {
-    const { Analytics } = await loadWithKey('phc_test');
+  it('OFF mode: suppresses captures immediately after withdrawal, without a reload', async () => {
+    forceDeclinedModeOff();
+    const { Analytics, disableAnalytics } = await loadWithKey('phc_test');
     const consent = await import('@/lib/analyticsConsent');
-    consent.setAnalyticsConsent(false);
-    Analytics.circleCreated(true);
-    expect(capture).not.toHaveBeenCalled();
-
     consent.setAnalyticsConsent(true);
     Analytics.circleCreated(true);
     expect(capture).toHaveBeenCalledTimes(1);
+
+    capture.mockClear();
+    disableAnalytics();
+    consent.setAnalyticsConsent(false);
+    Analytics.circleCreated(true);
+    expect(optOut).toHaveBeenCalledTimes(1);
+    expect(capture).not.toHaveBeenCalled();
+  });
+
+  it('refuses identify after withdrawal and re-attaches it on re-consent', async () => {
+    const { identifyUser, disableAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    identifyUser('user-1');
+    expect(identify).toHaveBeenCalledTimes(1);
+
+    identify.mockClear();
+    disableAnalytics();
+    consent.setAnalyticsConsent(false);
+    identifyUser('user-1'); // e.g. a re-bootstrap
+    expect(identify).not.toHaveBeenCalled();
+
+    consent.setAnalyticsConsent(true); // the toggle back ON, then ProfilePage re-identifies
+    identifyUser('user-1');
+    expect(identify).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('anonymous mode strips stable identifiers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    __resetAnalyticsConsentCache();
+  });
+
+  type BeforeSend = (e: { event: string; properties: Record<string, unknown> }) => {
+    properties: Record<string, unknown>;
+  } | null;
+
+  /** The `before_send` posthog.init was configured with. */
+  function installedBeforeSend(): BeforeSend {
+    expect(init).toHaveBeenCalledTimes(1);
+    const options = init.mock.calls[0][1] as { before_send: BeforeSend };
+    expect(typeof options.before_send).toBe('function');
+    return options.before_send;
+  }
+
+  const SAMPLE = {
+    circle_id: 'c-1',
+    event_id: 'e-1',
+    $device_id: 'random-device',
+    destination: 'calendar',
+    count: 3,
+    // Redaction must still run first, in every mode.
+    $current_url: 'https://my.circlecare.app/invite/ABC123',
+  };
+
+  const CIRCLE = '3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b';
+  const OTHER = 'A1B2C3D4-E5F6-4A7B-8C9D-0E1F2A3B4C5D';
+  /** Mirrors what posthog-js attaches from `location.href` + a crash on a circle page. */
+  const URL_SAMPLE = {
+    $current_url: `https://my.circlecare.app/circles/${CIRCLE}/calendar`,
+    $pathname: `/circles/${CIRCLE}/calendar`,
+    $referrer: `https://my.circlecare.app/circles/${CIRCLE}`,
+    $exception_list: [
+      {
+        type: 'Error',
+        value: `Failed to fetch https://api.circlecare.app/circles/${CIRCLE}/events`,
+        stacktrace: { frames: [{ filename: `https://my.circlecare.app/circles/${CIRCLE}/x.js`, lineno: 12 }] },
+      },
+    ],
+    distinct_id: OTHER,
+    $session_id: OTHER,
+    count: 3,
+    recurring: true,
+  };
+
+  it('stripIdentifiersForAnonymous drops *_id / id keys, keeps $-keys, distinct_id and everything else', async () => {
+    const { stripIdentifiersForAnonymous } = await loadWithKey('phc_test');
+    expect(
+      stripIdentifiersForAnonymous({
+        circle_id: 'c-1',
+        event_id: 'e-1',
+        id: 'x',
+        MEMBER_ID: 'm-1',
+        $device_id: 'd',
+        $session_id: 's',
+        distinct_id: 'random-in-ram',
+        destination: 'calendar',
+        count: 3,
+        video: 'not an id suffix',
+      })
+    ).toEqual({
+      $device_id: 'd',
+      $session_id: 's',
+      distinct_id: 'random-in-ram',
+      destination: 'calendar',
+      count: 3,
+      video: 'not an id suffix',
+    });
+    expect(stripIdentifiersForAnonymous(undefined)).toBeUndefined();
+  });
+
+  it('maskUuidsDeep masks every UUID inside every string, at any depth, leaving other leaves typed', async () => {
+    const { maskUuidsDeep } = await loadWithKey('phc_test');
+    expect(maskUuidsDeep(`https://my.circlecare.app/circles/${CIRCLE}/calendar`)).toBe(
+      'https://my.circlecare.app/circles/[id]/calendar'
+    );
+    // Global + case-insensitive: two in one string, one of them uppercase.
+    expect(maskUuidsDeep(`${CIRCLE} then ${OTHER}`)).toBe('[id] then [id]');
+    expect(
+      maskUuidsDeep({
+        list: [{ value: `boom at /circles/${CIRCLE}` }],
+        n: 3,
+        b: false,
+        nil: null,
+      })
+    ).toEqual({ list: [{ value: 'boom at /circles/[id]' }], n: 3, b: false, nil: null });
+    expect(maskUuidsDeep('no ids here')).toBe('no ids here');
+    expect(maskUuidsDeep(undefined)).toBeUndefined();
+  });
+
+  it('before_send in ANONYMOUS mode masks circle UUIDs in $current_url / $pathname / $referrer and inside $exception_list', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+    initAnalytics();
+
+    const out = installedBeforeSend()({ event: '$exception', properties: { ...URL_SAMPLE } });
+    expect(out?.properties).toMatchObject({
+      $current_url: 'https://my.circlecare.app/circles/[id]/calendar',
+      $pathname: '/circles/[id]/calendar',
+      $referrer: 'https://my.circlecare.app/circles/[id]',
+      count: 3,
+      recurring: true,
+    });
+    const list = out?.properties.$exception_list as Array<{
+      value: string;
+      stacktrace: { frames: Array<{ filename: string; lineno: number }> };
+    }>;
+    expect(list[0].value).toBe('Failed to fetch https://api.circlecare.app/circles/[id]/events');
+    expect(list[0].stacktrace.frames[0]).toEqual({
+      filename: 'https://my.circlecare.app/circles/[id]/x.js',
+      lineno: 12,
+    });
+    expect(JSON.stringify(out?.properties)).not.toContain(CIRCLE);
+  });
+
+  it('before_send in ANONYMOUS mode leaves the SDK\'s own UUID-shaped ids intact (distinct_id, $session_id)', async () => {
+    // The memory-mode distinct id is a random UUID; masking it to "[id]" would
+    // hand ingestion an event with no usable distinct_id at all.
+    const { initAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+    initAnalytics();
+
+    const out = installedBeforeSend()({ event: '$exception', properties: { ...URL_SAMPLE } });
+    expect(out?.properties.distinct_id).toBe(OTHER);
+    expect(out?.properties.$session_id).toBe(OTHER);
+  });
+
+  it('before_send in FULL mode leaves the circle UUID in $current_url and $exception_list in place', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    initAnalytics();
+
+    const out = installedBeforeSend()({ event: '$exception', properties: { ...URL_SAMPLE } });
+    expect(out?.properties).toMatchObject({
+      $current_url: `https://my.circlecare.app/circles/${CIRCLE}/calendar`,
+      $pathname: `/circles/${CIRCLE}/calendar`,
+      $referrer: `https://my.circlecare.app/circles/${CIRCLE}`,
+      distinct_id: OTHER,
+    });
+    const list = out?.properties.$exception_list as Array<{ value: string }>;
+    expect(list[0].value).toContain(CIRCLE);
+  });
+
+  it('before_send in ANONYMOUS mode strips circle_id (and still redacts)', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+    initAnalytics();
+
+    const out = installedBeforeSend()({ event: 'calendar_viewed', properties: { ...SAMPLE } });
+    expect(out).not.toBeNull();
+    expect(out?.properties).not.toHaveProperty('circle_id');
+    expect(out?.properties).not.toHaveProperty('event_id');
+    expect(out?.properties).toMatchObject({
+      $device_id: 'random-device',
+      destination: 'calendar',
+      count: 3,
+    });
+    expect(String(out?.properties.$current_url)).not.toContain('ABC123');
+  });
+
+  it('before_send in FULL mode leaves circle_id in place (byte-identical to before)', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    initAnalytics();
+
+    const out = installedBeforeSend()({ event: 'calendar_viewed', properties: { ...SAMPLE } });
+    expect(out?.properties).toMatchObject({
+      circle_id: 'c-1',
+      event_id: 'e-1',
+      $device_id: 'random-device',
+      destination: 'calendar',
+      count: 3,
+    });
+    expect(String(out?.properties.$current_url)).not.toContain('ABC123');
+  });
+
+  it('a mid-session withdrawal strips from the NEXT event on, without re-init', async () => {
+    const { initAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(true);
+    initAnalytics();
+    const beforeSend = installedBeforeSend();
+
+    expect(beforeSend({ event: 'x', properties: { circle_id: 'c-1' } })?.properties).toHaveProperty(
+      'circle_id'
+    );
+    consent.setAnalyticsConsent(false);
+    expect(
+      beforeSend({ event: 'x', properties: { circle_id: 'c-1' } })?.properties
+    ).not.toHaveProperty('circle_id');
   });
 });
 
@@ -998,7 +1331,7 @@ describe('identify requires PERMISSION, not just a key', () => {
     const consent = await import('@/lib/analyticsConsent');
     consent.setAnalyticsConsent(false);
 
-    identifyUser('user-1', 'pat@example.com');
+    identifyUser('user-1');
     expect(identify).not.toHaveBeenCalled();
   });
 
@@ -1007,48 +1340,61 @@ describe('identify requires PERMISSION, not just a key', () => {
     const consent = await import('@/lib/analyticsConsent');
     consent.setAnalyticsConsent(true);
 
-    identifyUser('user-1', 'pat@example.com');
-    expect(identify).toHaveBeenCalledWith('user-1', { email: 'pat@example.com' });
+    identifyUser('user-1');
+    expect(identify.mock.calls).toEqual([['user-1']]);
   });
 
   it('stops identifying the moment consent is withdrawn mid-session', async () => {
     const { identifyUser } = await loadWithKey('phc_test');
     const consent = await import('@/lib/analyticsConsent');
     consent.setAnalyticsConsent(true);
-    identifyUser('user-1', 'pat@example.com');
+    identifyUser('user-1');
     expect(identify).toHaveBeenCalledTimes(1);
 
     identify.mockClear();
     consent.setAnalyticsConsent(false);
-    identifyUser('user-1', 'pat@example.com');
+    identifyUser('user-1');
     expect(identify).not.toHaveBeenCalled();
   });
 
-  it('does not send crash reports for a visitor who declined', async () => {
-    const { captureException } = await loadWithKey('phc_test');
+  /**
+   * Crash data from the declined cohort is the whole point of the anonymous
+   * flag (decision 2026-09-07): it goes out under a random memory-only id,
+   * never identified. The `identify` assertion is the control that the report
+   * did not sneak out with an identity attached.
+   */
+  it('DOES send crash reports for a visitor who declined — anonymously', async () => {
+    const { captureException, identifyUser } = await loadWithKey('phc_test');
     const consent = await import('@/lib/analyticsConsent');
     consent.setAnalyticsConsent(false);
 
+    identifyUser('user-1');
     captureException(new Error('boom'), 'AppBoundary');
-    expect(captureExceptionSpy).not.toHaveBeenCalled();
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+    expect(identify).not.toHaveBeenCalled();
   });
 
   /**
-   * THE CONTROL, deliberately co-located with the assertion above.
-   *
-   * `not.toHaveBeenCalled()` on its own is satisfied by a captureException that
-   * NEVER works — a wrong early return, a broken import, a renamed export all
-   * pass it. Pairing the two means the negative can only be green for the right
-   * reason.
-   *
-   * mobile-63 hit the sharper version of this: their "disabled" state is the
-   * ABSENCE of a posthog instance, so there was no installed mock to observe
-   * and the negative assertion was structurally vacuous — it passed their
-   * equivalent mutation. Ours observes the spy installed in the `posthog-js`
-   * module mock at the top of this file, and M4 (removing the gate) turns the
-   * assertion above red, so the shape is sound. This control keeps it that way
-   * if either half is ever edited alone.
+   * The 'off' branch (flag off): nothing at all. `not.toHaveBeenCalled()` on
+   * its own is satisfied by a captureException that NEVER works — a wrong
+   * early return, a broken import, a renamed export all pass it — so the
+   * consenting case right below is its control: the same spy, installed in
+   * the `posthog-js` module mock at the top of this file, must fire there.
    */
+  it('OFF mode: does not send crash reports for a visitor who declined', async () => {
+    forceDeclinedModeOff();
+    try {
+      const { captureException } = await loadWithKey('phc_test');
+      const consent = await import('@/lib/analyticsConsent');
+      consent.setAnalyticsConsent(false);
+
+      captureException(new Error('boom'), 'AppBoundary');
+      expect(captureExceptionSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.doUnmock('@/lib/analyticsMode');
+    }
+  });
+
   it('DOES send crash reports once consent is granted', async () => {
     const { captureException } = await loadWithKey('phc_test');
     const consent = await import('@/lib/analyticsConsent');
@@ -1063,7 +1409,7 @@ describe('identify requires PERMISSION, not just a key', () => {
     );
   });
 
-  it('stops sending crash reports the moment consent is withdrawn', async () => {
+  it('keeps sending crash reports after consent is withdrawn mid-session (anonymous mode)', async () => {
     const { captureException } = await loadWithKey('phc_test');
     const consent = await import('@/lib/analyticsConsent');
     consent.setAnalyticsConsent(true);
@@ -1073,7 +1419,7 @@ describe('identify requires PERMISSION, not just a key', () => {
     captureExceptionSpy.mockClear();
     consent.setAnalyticsConsent(false);
     captureException(new Error('second'), 'AppBoundary');
-    expect(captureExceptionSpy).not.toHaveBeenCalled();
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1084,13 +1430,35 @@ describe('logout does not resurrect analytics for someone who opted out', () => 
     __resetAnalyticsConsentCache();
   });
 
+  afterEach(() => {
+    vi.doUnmock('@/lib/analyticsMode');
+  });
+
   /**
-   * `posthog.reset()` deletes the opt-out key posthog-js persists, so a bare
-   * reset on logout silently re-enables collection: opt out -> log out -> next
-   * session is opted back IN with the Privacy toggle still reading off.
-   * `disableAnalytics` already ordered around this; the LOGOUT path did not.
+   * Flag on: a declined visitor's logout is a plain reset — fresh random
+   * distinct id, queue dropped — and capture continues anonymously. Opting out
+   * here would silence the anonymous client until the next page load.
    */
-  it('re-asserts the opt-out after resetting, when consent is withheld', async () => {
+  it('resets to a fresh anonymous id and does NOT opt out, when consent is withheld', async () => {
+    const { resetAnalytics } = await loadWithKey('phc_test');
+    const consent = await import('@/lib/analyticsConsent');
+    consent.setAnalyticsConsent(false);
+
+    resetAnalytics();
+
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(optOut).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The 'off' branch (flag off). `posthog.reset()` deletes the opt-out key
+   * posthog-js persists, so a bare reset on logout silently re-enables
+   * collection: opt out -> log out -> next session is opted back IN with the
+   * Privacy toggle still reading off. `disableAnalytics` already ordered
+   * around this; the LOGOUT path did not.
+   */
+  it('OFF mode: re-asserts the opt-out after resetting, when consent is withheld', async () => {
+    forceDeclinedModeOff();
     const { resetAnalytics } = await loadWithKey('phc_test');
     const consent = await import('@/lib/analyticsConsent');
     consent.setAnalyticsConsent(false);

@@ -22,6 +22,13 @@ export interface MastheadAction {
    */
   disabled?: boolean;
   title?: string;
+  /**
+   * The action is in progress (an export being generated): the labelled
+   * button shows its spinner (`loading`), the round control is `aria-busy`,
+   * and both are disabled. Distinct from `disabled` so a screen reader hears
+   * "busy" rather than an unexplained dead control.
+   */
+  busy?: boolean;
 }
 
 export interface PageMastheadProps {
@@ -122,7 +129,8 @@ export function PageMasthead({
               {...(secondaryAction.to
                 ? { to: secondaryAction.to }
                 : { onClick: secondaryAction.onClick })}
-              disabled={secondaryAction.disabled}
+              disabled={secondaryAction.disabled || secondaryAction.busy}
+              aria-busy={secondaryAction.busy || undefined}
               title={secondaryAction.title}
               className="xl:hidden"
             />
@@ -132,7 +140,8 @@ export function PageMasthead({
               name={rightAction.name}
               label={rightAction.label}
               {...(rightAction.to ? { to: rightAction.to } : { onClick: rightAction.onClick })}
-              disabled={rightAction.disabled}
+              disabled={rightAction.disabled || rightAction.busy}
+              aria-busy={rightAction.busy || undefined}
               title={rightAction.title}
               className="xl:hidden"
             />
@@ -171,6 +180,7 @@ export function PageMasthead({
                   onClick={secondaryAction.onClick}
                   leftIcon={<Icon name={secondaryAction.name} size="row" />}
                   disabled={secondaryAction.disabled}
+                  loading={secondaryAction.busy}
                   title={secondaryAction.title}
                 >
                   {secondaryAction.label}
@@ -195,6 +205,7 @@ export function PageMasthead({
                 onClick={rightAction.onClick}
                 leftIcon={<Icon name={rightAction.name} size="row" />}
                 disabled={rightAction.disabled}
+                loading={rightAction.busy}
                 title={rightAction.title}
               >
                 {rightAction.label}

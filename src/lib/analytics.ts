@@ -107,27 +107,66 @@ const INVITE_QUERY_RE = /([?&](?:code|invite|invite_code|inviteCode)=)[^&#\s]+/g
  * activation funnel) — only the credential is removed. Never throws.
  */
 /**
- * Auth-callback credentials, in any string that reaches PostHog.
+ * Credential-bearing URL parameters, in any string that reaches PostHog.
  *
- * Defence in depth behind `mask_personal_data_properties`. That option closes
- * the known vector ($initial_person_info capturing the landing URL before
- * AuthCallbackPage scrubs the hash), but a token can reach a property by other
- * routes — a sanitized error message quoting the URL it failed on, a future
- * property someone adds. A live credential is the one thing worth stripping
- * twice.
+ * THIS IS THE ONLY LAYER THAT REMOVES THEM. `mask_personal_data_properties`
+ * (lib/posthog.ts) masks posthog-js's built-in AD-CLICK / campaign params
+ * (gclid, fbclid, …) — it does NOT touch `access_token`, `refresh_token` or any
+ * other credential. Proven by e2e/consent/granted-identify.consent.spec.ts: a
+ * consented user landing on `/profile?access_token=…#refresh_token=…` had the
+ * raw values stored on their PostHog PERSON via `$identify`'s
+ * `$set_once.$current_url` / `$initial_current_url`, while `gclid` came out
+ * `<masked>`. `before_send` now runs this over the event's properties AND its
+ * `$set` / `$set_once` payloads.
  *
- * Matches the Supabase hash/query params by NAME, so it does not depend on
- * guessing what a JWT looks like.
+ * Matching rules:
+ *   - by parameter NAME, case-insensitive, so it never depends on guessing what
+ *     a token value looks like;
+ *   - WHOLE names only: the name must start the string or follow `?`, `&`, `#`,
+ *     `;`, whitespace, or their percent-encoded forms (`%3F`, `%26`, `%23`, for
+ *     a callback URL nested inside `redirect_to=`), and be followed by `=` /
+ *     `%3D`. So `tokenizer=1`, `keyboard=1`, `my_token=1` are left alone;
+ *   - query string AND hash fragment alike (the same delimiters);
+ *   - the name is kept and only the value becomes `[redacted]`, so dashboards
+ *     can still see WHICH flow the URL was;
+ *   - Supabase's `type=` companion is redacted only when it names an auth flow
+ *     (recovery, magiclink, …) — `type=event` is ordinary.
+ *
+ * Deliberately a string rewrite, not `new URL()`: there is no parse step to
+ * fail on a malformed or relative URL, and `URLSearchParams` would re-encode
+ * every untouched param (and `[redacted]` itself). If the rewrite ever throws,
+ * the fallback cuts everything from the first `?` / `#` — losing the params
+ * beats sending them.
  */
-const AUTH_TOKEN_RE =
-  /\b(access_token|refresh_token|provider_token|provider_refresh_token|id_token)=[^&\s#]+/gi;
+const SENSITIVE_PARAM_NAMES =
+  'access_token|refresh_token|provider_token|provider_refresh_token|id_token|token_hash|' +
+  'token|code|otp|secret|password|api_key|apikey|key|signature|sig';
+const PARAM_START = '(^|[?&#;\\s]|%3F|%26|%23)';
+const PARAM_EQ = '(=|%3D)';
+/** Value runs until the next raw or percent-encoded `&` / `#`, or whitespace. */
+const PARAM_VALUE = '(?:(?!%26|%23)[^&#\\s])+';
+const SENSITIVE_PARAM_RE = new RegExp(
+  `${PARAM_START}(${SENSITIVE_PARAM_NAMES})${PARAM_EQ}${PARAM_VALUE}`,
+  'gi'
+);
+const AUTH_FLOW_TYPE_RE = new RegExp(
+  `${PARAM_START}(type)${PARAM_EQ}(?:recovery|magiclink|signup|invite|email_change|email)(?=$|[&#\\s]|%26|%23)`,
+  'gi'
+);
+const QUERY_OR_FRAGMENT_RE = /[?#][^\s]*/g;
 
 export function redactAuthTokens(value: string): string {
+  if (typeof value !== 'string' || value.length === 0) return value;
   try {
-    if (typeof value !== 'string' || value.length === 0) return value;
-    return value.replace(AUTH_TOKEN_RE, '$1=[redacted]');
+    return value
+      .replace(SENSITIVE_PARAM_RE, '$1$2$3[redacted]')
+      .replace(AUTH_FLOW_TYPE_RE, '$1$2$3[redacted]');
   } catch {
-    return value;
+    try {
+      return value.replace(QUERY_OR_FRAGMENT_RE, '');
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -222,6 +261,14 @@ export type OnboardingPath = 'created' | 'joined' | 'existing';
 
 /** Subscription term, spelled exactly as mobile spells it in `plan`. */
 export type PlanKey = 'monthly' | 'annual';
+
+/**
+ * Where a PDF export failed. The WEB subset of mobile's
+ * `ExportFailureStage` ('print' | 'move' | 'share' | 'timeout'): the web has no
+ * file move or share sheet — 'print' is the iframe render / print request,
+ * 'timeout' the document never loading. Never a message or a path.
+ */
+export type ExportFailureStage = 'print' | 'timeout';
 
 export const Analytics = {
   // --- Auth ---
@@ -345,6 +392,28 @@ export const Analytics = {
   circleUpdated: (circleId: string) => capture('circle_updated', { circle_id: circleId }),
   /** Owner deleted (archived) the circle. */
   circleDeleted: (circleId: string) => capture('circle_deleted', { circle_id: circleId }),
+
+  // --- Circle Home (Overview) ---
+  // The Home surface had NO instrumentation on web (and the checklist / solo
+  // card had none on mobile either), so nothing about the new-circle empty
+  // state could be measured. NO circle_id on any of these: they are new
+  // events, and the 2026-09-04 decision is that an identifier is not added to
+  // an event that never carried one. Enums and counts are all these need —
+  // per-circle questions are answered from Postgres, not PostHog. (Mobile's
+  // `quick_access_tapped` predates that decision and still sends circle_id;
+  // web's deliberately does not.)
+  /** A Quick Access row was opened. `destination` is the row id (e.g. 'calendar'). */
+  quickAccessTapped: (destination: string) => capture('quick_access_tapped', { destination }),
+  /** A pending Get-started step's action button was pressed. `step` is the step key ('event' | 'invite' | 'emergency'). */
+  gettingStartedStepTapped: (step: string) => capture('getting_started_step_tapped', { step }),
+  /** The Get-started checklist was dismissed, with how far along it was. */
+  gettingStartedDismissed: (doneCount: number, total: number) =>
+    capture('getting_started_dismissed', { done_count: doneCount, total }),
+  /** The solo-owner "Invite your first caregiver" button was pressed. */
+  soloInviteTapped: () => capture('solo_invite_tapped'),
+  /** A Home empty-state CTA was pressed ("Add a medication" / "Add your first task"). */
+  homeEmptyCtaTapped: (section: 'medications' | 'tasks') =>
+    capture('home_empty_cta_tapped', { section }),
 
   // --- Members ---
   /** Owner removed a member. Deliberately NO removed-user id — that member's
@@ -715,8 +784,11 @@ export const Analytics = {
       turn_index: opts.turnIndex,
     }),
   /** Failed question. `reason` separates rate limits from everything else.
-   *  Typed as the closed `AiChatErrorKind` set from hooks/useAiChat.ts (the
-   *  only caller) rather than `string`, so a message can never be passed. */
+   *  Typed as the closed `AiChatFailureReason` set declared below rather than
+   *  `string`, so a message can never be passed. That set is NOT the same as
+   *  `AiChatErrorKind` in hooks/useAiChat.ts (its only caller): the hook has a
+   *  fifth kind, `'viewOnly'`, which is deliberately not an analytics reason —
+   *  `analyticsReason` folds it into `'sendFailed'`. See the note on the type. */
   aiChatFailed: (
     circleId: string,
     opts: { reason: AiChatFailureReason; latencyMs: number; turnIndex: number }
@@ -727,6 +799,34 @@ export const Analytics = {
       latency_ms: opts.latencyMs,
       turn_index: opts.turnIndex,
     }),
+
+  // ============================================
+  // PDF EXPORTS (mobile parity: services/analytics.ts ~L1828-1857)
+  // ============================================
+  /**
+   * The adherence report was handed to the browser's print dialog. Mobile
+   * fires this on share hand-off; the dialog is modal and unobservable, so
+   * web fires when the dialog is REQUESTED (plan decision 7). Same name, same
+   * shape — `period` is the '7d' | … | 'all' enum, never a date.
+   */
+  adherenceReportExported: (circleId: string, period: string) =>
+    capture('adherence_report_exported', { circle_id: circleId, period }),
+
+  /** The care summary was handed off — `format` mirrors mobile's two shares. */
+  careSummaryShared: (circleId: string, format: 'pdf' | 'text') =>
+    capture('care_summary_shared', { circle_id: circleId, format }),
+
+  /**
+   * The Emergency Info PDF export failed. `stage` and a coarse `code` ONLY —
+   * no `circle_id` (not needed to count failures), and never the error
+   * message or document title: the title carries the care recipient's name.
+   */
+  careSummaryExportFailed: (opts: { stage: ExportFailureStage; code: string }) =>
+    capture('care_summary_export_failed', { stage: opts.stage, code: opts.code }),
+
+  /** Same contract as `careSummaryExportFailed`, for the adherence report. */
+  adherenceReportExportFailed: (opts: { stage: ExportFailureStage; code: string }) =>
+    capture('adherence_report_export_failed', { stage: opts.stage, code: opts.code }),
 
   // ============================================
   // ERRORS (mobile parity: services/analytics.ts `errorOccurred`)
@@ -752,10 +852,28 @@ export const Analytics = {
 };
 
 /**
- * Mirrors `AiChatErrorKind` in hooks/useAiChat.ts. Declared here (not
- * imported) so lib/ never depends on hooks/; `useAiChat`'s `classifyAiError`
- * return type is assignable to this, and the compiler enforces that the two
- * stay in step.
+ * The analytics vocabulary for `ai_chat_failed`. Declared here (not imported)
+ * so lib/ never depends on hooks/.
+ *
+ * IT IS A SUBSET OF `AiChatErrorKind` (hooks/useAiChat.ts), NOT A MIRROR OF IT.
+ * This comment used to say the two mirrored each other and that
+ * `classifyAiError`'s return type was assignable to this — both were true until
+ * `'viewOnly'` was added to `AiChatErrorKind`. `AiChatErrorKind` now has five
+ * members to this type's four, and `'viewOnly'` is NOT assignable here: a
+ * view-only 403 is reported as the generic `'sendFailed'` bucket rather than
+ * widening an analytics grouping dimension from outside the module that owns
+ * it. A direct assignment of a `classifyAiError` result to an
+ * `AiChatFailureReason` no longer compiles, and should not.
+ *
+ * WHAT ACTUALLY KEEPS THE TWO IN STEP is neither assignability nor this
+ * comment: it is the exhaustive `switch` in `analyticsReason`
+ * (hooks/useAiChat.ts) — a different mechanism, in a different file. Every
+ * `AiChatErrorKind` has an arm there, and the function's declared
+ * `AiChatFailureReason` return type has no `default`, so adding a sixth kind to
+ * `AiChatErrorKind` fails to compile until somebody decides which bucket it
+ * reports as. Adding a member HERE, by contrast, is not caught by anything —
+ * it only widens what the switch is allowed to return. Widen this set only
+ * deliberately, and update `analyticsReason` in the same change.
  */
 export type AiChatFailureReason =
   | 'subscriptionRequired'

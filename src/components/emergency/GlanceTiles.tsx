@@ -17,12 +17,18 @@ interface Tile {
   value: ReactNode;
 }
 
-/** Condition Tags pill treatment (spec §6.6: the Badge error variant). */
+/** Condition Tags pill treatment (spec §6.6: the Badge error variant) with INK text, not
+ *  terracotta — mobile parity (EmergencyInfoScreen Badge: terracottaSoft fill, CC.ink
+ *  text). Eleven red-text pills beside four red icons read as a wall of red; the pale
+ *  fill alone still flags them as medical. `!` because Badge already sets
+ *  `text-terracotta-deep`, and between two text-colour utilities Tailwind resolves by
+ *  stylesheet order, not className order. Scoped here: the shared `error` Badge stays
+ *  red for real error states. */
 function GlancePills({ items }: { items: string[] }): ReactElement {
   return (
     <span className="flex flex-wrap gap-1.5">
       {items.map((item, index) => (
-        <Badge key={`${item}-${index}`} variant="error">
+        <Badge key={`${item}-${index}`} variant="error" className="text-ink!">
           {item}
         </Badge>
       ))}

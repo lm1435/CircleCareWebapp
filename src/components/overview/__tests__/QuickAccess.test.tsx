@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import { QuickAccess, QUICK_ACCESS_ROWS } from '../QuickAccess';
@@ -6,6 +7,13 @@ import { useTasks } from '@/hooks/useTasks';
 
 vi.mock('@/hooks/useTasks', () => ({ useTasks: vi.fn() }));
 const mockUseTasks = vi.mocked(useTasks);
+
+// Home had no instrumentation on web; each row press now mirrors mobile's
+// `quick_access_tapped` with the row id as `destination`.
+const quickAccessTapped = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: { quickAccessTapped: (...args: unknown[]) => quickAccessTapped(...args) },
+}));
 
 // The query is capped at `limit: 1` (only the count is needed) and reads the
 // backend's pre-limit `total`, not `tasks.length` — the mock reflects that:
@@ -57,6 +65,28 @@ describe('QuickAccess', () => {
       '/circles/c1/activity',
       '/circles/c1/emergency',
     ]);
+  });
+
+  it('reports a row press with the row id as the destination', async () => {
+    const user = userEvent.setup();
+    renderQuickAccess();
+    await user.click(screen.getByRole('link', { name: 'Calendar' }));
+    expect(quickAccessTapped).toHaveBeenCalledTimes(1);
+    expect(quickAccessTapped).toHaveBeenCalledWith('calendar');
+  });
+
+  // Calendar alone cannot tell the row ID from the path SEGMENT — they are the
+  // same string there. These three are the rows where they differ, so reporting
+  // the segment (`meds`, `activity`, `emergency`) would split mobile's
+  // `quick_access_tapped` series across two names. Expected values are literal,
+  // not read back off QUICK_ACCESS_ROWS, so a changed id fails here too.
+  it('reports the row id, NOT the path segment, where the two differ', async () => {
+    const user = userEvent.setup();
+    renderQuickAccess();
+    await user.click(screen.getByRole('link', { name: 'Meds' }));
+    await user.click(screen.getByRole('link', { name: 'Activity feed' }));
+    await user.click(screen.getByRole('link', { name: 'Care info' }));
+    expect(quickAccessTapped.mock.calls).toEqual([['medications'], ['activityFeed'], ['careInfo']]);
   });
 
   it('labels the rows from the shared mobile copy', () => {

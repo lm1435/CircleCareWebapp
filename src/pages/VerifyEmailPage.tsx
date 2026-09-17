@@ -5,6 +5,8 @@ import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
+import { isRateLimitError } from '@/lib/apiErrors';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
@@ -117,8 +119,9 @@ export default function VerifyEmailPage(): ReactElement {
         // instead of dropping the user on a silent sign-in form.
         navigate('/login', { replace: true, state: { emailVerified: true } });
       }
-    } catch {
-      setError(t('verifyOtp.errors.invalidCode'));
+    } catch (err) {
+      // A 429 says wait — "tap Resend" would spend the same limiter bucket.
+      setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.invalidCode'));
       Analytics.otpFailed();
       submittedRef.current = false;
     } finally {
@@ -140,7 +143,16 @@ export default function VerifyEmailPage(): ReactElement {
     void verify(otp);
   };
 
-  const handleResend = async (): Promise<void> => {
+  // `isResending` and `cooldown` are both STATE, so neither can reject a
+  // second click dispatched before React commits the first one's render (see
+  // `useGuardedSubmit`) — the ref wrapper below is what does. /auth/resend-otp
+  // sits on the 10-per-15-minutes `otpRateLimit` bucket and mails a real code
+  // that invalidates the previous one, so a double fire both spends a limiter
+  // slot and can leave the user typing a code that is already dead.
+  //
+  // `verify` above needs no wrapper: `submittedRef` is already a synchronous
+  // ref checked on its first line, which is this same idiom.
+  const resend = async (): Promise<void> => {
     if (cooldown > 0 || isResending) return;
     setError(null);
     setNotice(null);
@@ -158,12 +170,14 @@ export default function VerifyEmailPage(): ReactElement {
       setNotice(t('verifyOtp.codeSentMessage'));
       setCooldown(RESEND_COOLDOWN_SECONDS);
       Analytics.otpResent();
-    } catch {
-      setError(t('verifyOtp.errors.resendFailed'));
+    } catch (err) {
+      setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.resendFailed'));
     } finally {
       setIsResending(false);
     }
   };
+
+  const handleResend = useGuardedSubmit(resend);
 
   return (
     <AuthShell>

@@ -1,7 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { InviteMemberModal } from '../InviteMemberModal';
+import { submitFormTwice } from '@/test/doubleSubmit';
+import { Analytics } from '@/lib/analytics';
 
 // ── Hook mocks ──────────────────────────────────────────────────────────────
 const mutate = vi.fn();
@@ -27,10 +29,47 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => navigate };
 });
 
+/**
+ * The app's current UI language, as the modal sees it.
+ *
+ * The modal reads `useTranslation().i18n.language` to decide whether the
+ * shared link needs the `?lang=es` link-preview marker. We override ONLY that
+ * property rather than calling `i18n.changeLanguage('es')`, on purpose: the
+ * real switch lazily imports the whole Spanish bundle and suspends, and would
+ * turn every label query in this file ("Send invite", "Copy link") Spanish.
+ * The contract under test is "the component reads the app language and marks
+ * the URL", and this exercises exactly that, with English labels intact.
+ *
+ * `Object.create` keeps the real i18next instance as the prototype, so
+ * anything else reading off `i18n` still gets the genuine methods.
+ */
+let appLanguage = 'en';
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>();
+  return {
+    ...actual,
+    useTranslation: (...args: Parameters<typeof actual.useTranslation>) => {
+      const result = actual.useTranslation(...args);
+      // Patch in place, not `{ ...result }`: react-i18next returns an ARRAY
+      // with `t`/`i18n`/`ready` attached, and spreading it into a plain object
+      // silently breaks `const [t] = useTranslation()` for every component in
+      // the tree by dropping Symbol.iterator.
+      Object.defineProperty(result, 'i18n', {
+        value: Object.create(result.i18n, {
+          language: { value: appLanguage, enumerable: true },
+        }) as typeof result.i18n,
+        configurable: true,
+      });
+      return result;
+    },
+  };
+});
+
 const CIRCLE_ID = 'circle-1';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  appLanguage = 'en';
 });
 
 describe('InviteMemberModal — email-required', () => {
@@ -60,8 +99,14 @@ describe('InviteMemberModal — email-required', () => {
    * made email the only way an invite could reach anyone: the inviter never saw
    * the link, so they could not text it. Measured acceptance was 13% (71 sent /
    * 9 accepted). The modal now stays open on the share step.
+   *
+   * WHITESPACE: this pins the OUTCOME (spaces typed around the address never
+   * reach the request), not the component's own `.trim()` calls. jsdom — like
+   * every browser — sanitizes a `type="email"` value, stripping surrounding
+   * whitespace before React's onChange sees it, so those calls are not
+   * observable through the field at all (removing both stays green).
    */
-  it('sends an invite with the trimmed email and member_type, then offers the link', async () => {
+  it('sends an invite with the email (surrounding spaces never reach the request) and member_type, then offers the link', async () => {
     const user = userEvent.setup();
     mutate.mockImplementation((_vars, opts) =>
       opts?.onSuccess?.({ invite: { invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' } })
@@ -373,16 +418,52 @@ describe('InviteMemberModal — sharing the link', () => {
     expect(share.mock.calls[0][0]).not.toHaveProperty('title');
   });
 
-  /** navigator.share REJECTS on cancel. That must not surface as an error. */
+  /**
+   * navigator.share REJECTS on cancel. That must not surface as an error.
+   *
+   * Each consequence is asserted on its own. "Copy link is still there" alone
+   * held whatever the handler did — a rejection escaping the click handler only
+   * failed through vitest's global unhandled-error check, never through this
+   * test — so the rejection is now listened for explicitly, and a dismissal is
+   * checked not to be COUNTED as a share (the event must mean a completed one).
+   */
   it('survives the user dismissing the share sheet', async () => {
     const share = vi.fn().mockRejectedValue(new DOMException('Abort', 'AbortError'));
     succeedWith({ invite_code: 'ABC123', invite_url: 'https://x/invite/ABC123' });
+    const shared = vi.spyOn(Analytics, 'inviteLinkShared');
+    // tsconfig carries no Node types; the runner's `process` is there regardless.
+    type Listener = (reason: unknown) => void;
+    const nodeProcess = (
+      globalThis as unknown as {
+        process: { on: (e: string, l: Listener) => void; off: (e: string, l: Listener) => void };
+      }
+    ).process;
+    const unhandled = vi.fn<Listener>();
+    nodeProcess.on('unhandledRejection', unhandled);
 
-    const user = await sendInvite({ share, clipboard: { writeText: vi.fn() } });
-    await user.click(screen.getByRole('button', { name: 'Share invite link' }));
+    try {
+      const user = await sendInvite({ share, clipboard: { writeText: vi.fn() } });
+      await user.click(screen.getByRole('button', { name: 'Share invite link' }));
+      // Let the rejected share settle and Node's unhandled-rejection check run.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
 
-    // Still usable — the link did not disappear with the sheet.
-    expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+      expect(share).toHaveBeenCalledTimes(1);
+      // Caught — not left to escape the click handler.
+      expect(unhandled).not.toHaveBeenCalled();
+      // A dismissal is not a share.
+      expect(shared).not.toHaveBeenCalled();
+      // Nothing interrupts the user over it.
+      expect(showToast).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alert')).toBeNull();
+      // Still usable — the link did not disappear with the sheet.
+      expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+      expect(screen.getByText('https://x/invite/ABC123')).toBeInTheDocument();
+    } finally {
+      nodeProcess.off('unhandledRejection', unhandled);
+      shared.mockRestore();
+    }
   });
 
   /**
@@ -395,5 +476,183 @@ describe('InviteMemberModal — sharing the link', () => {
     await sendInvite({ clipboard: { writeText: vi.fn() } });
 
     expect(screen.getByText('https://x/invite/ABC123')).toBeInTheDocument();
+  });
+
+  /**
+   * SPANISH LINK-PREVIEW MARKER.
+   *
+   * Link-preview crawlers (iMessage, WhatsApp, Slack) do not run JS, so the
+   * card an invite previews as is baked into the served HTML — English, for
+   * everyone. A Spanish-speaking sender was texting an English card into a
+   * Spanish conversation. The sender's client now appends `?lang=es`, which
+   * .htaccess answers with the prerendered index.es.html.
+   *
+   * All three surfaces are asserted, because the failure that matters is not
+   * "no marker" but "display and copy disagree" — the user reads one link and
+   * pastes another.
+   */
+  describe('Spanish app language', () => {
+    it('marks the copied link with lang=es', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      succeedWith({ invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' });
+      appLanguage = 'es';
+
+      const user = await sendInvite({ clipboard: { writeText } });
+      await user.click(screen.getByRole('button', { name: 'Copy link' }));
+
+      expect(writeText).toHaveBeenCalledWith('https://my.circlecare.app/invite/ABC123?lang=es');
+    });
+
+    it('marks the shared message link with lang=es', async () => {
+      const share = vi.fn().mockResolvedValue(undefined);
+      succeedWith({ invite_code: 'ABC123', invite_url: 'https://x/invite/ABC123' });
+      appLanguage = 'es-419';
+
+      const user = await sendInvite({ share, clipboard: { writeText: vi.fn() } });
+      await user.click(screen.getByRole('button', { name: 'Share invite link' }));
+
+      expect(share.mock.calls[0][0].text).toContain('https://x/invite/ABC123?lang=es');
+    });
+
+    it('shows the SAME marked link on screen as it copies', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      succeedWith({ invite_code: 'ABC123', invite_url: 'https://x/invite/ABC123' });
+      appLanguage = 'es';
+
+      const user = await sendInvite({ clipboard: { writeText } });
+      await user.click(screen.getByRole('button', { name: 'Copy link' }));
+
+      const displayed = screen.getByText('https://x/invite/ABC123?lang=es');
+      expect(displayed).toBeInTheDocument();
+      expect(writeText).toHaveBeenCalledWith(displayed.textContent);
+      // The unmarked link must not be on screen anywhere — an exact-text
+      // query would still match the marked node's parent otherwise, so this
+      // asserts on the exact string.
+      expect(screen.queryByText('https://x/invite/ABC123')).toBeNull();
+    });
+
+    it('marks the code-built fallback link too, when the backend sends no invite_url', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      succeedWith({ invite_code: 'XYZ789' });
+      appLanguage = 'es-MX';
+
+      const user = await sendInvite({ clipboard: { writeText } });
+      await user.click(screen.getByRole('button', { name: 'Copy link' }));
+
+      expect(writeText).toHaveBeenCalledWith(
+        `${window.location.origin}/invite/XYZ789?lang=es`
+      );
+    });
+
+    /**
+     * The English link is the DEFAULT document, and every invite link already
+     * sent is a bare URL. If this ever starts marking English links, all of
+     * them acquire a second cache key for an identical page.
+     */
+    it('leaves the link bare for an English sender', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      succeedWith({ invite_code: 'ABC123', invite_url: 'https://x/invite/ABC123' });
+      appLanguage = 'en-US';
+
+      const user = await sendInvite({ clipboard: { writeText } });
+      await user.click(screen.getByRole('button', { name: 'Copy link' }));
+
+      expect(writeText).toHaveBeenCalledWith('https://x/invite/ABC123');
+      expect(screen.getByText('https://x/invite/ABC123')).toBeInTheDocument();
+    });
+  });
+});
+
+// Regression — double submit. POST /circles/:id/invites sits on
+// `inviteRateLimit` (10/hour per IP) and sends a real email;
+// `disabled={createInvite.isPending}` on the footer button lands a render late
+// and implicit form submission (Enter in the email field) never consults it at
+// all.
+describe('InviteMemberModal — double-submit guard', () => {
+  it('creates exactly ONE invite when the form is submitted twice in the same tick', async () => {
+    const user = userEvent.setup();
+    // In flight: no callback fires, so the guard is still held on the second
+    // submit.
+    mutate.mockImplementation(() => {});
+    const { container } = render(
+      <InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
+    );
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await submitFormTwice(container.querySelector('#invite-member-form') as HTMLFormElement);
+
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('is still submittable after a validation failure (the guard releases, it does not latch)', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation(() => {});
+    const { container } = render(
+      <InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
+    );
+    const form = container.querySelector('#invite-member-form') as HTMLFormElement;
+
+    await user.type(screen.getByLabelText('Email address'), 'not-an-email');
+    await submitFormTwice(form);
+    expect(mutate).not.toHaveBeenCalled();
+
+    await user.clear(screen.getByLabelText('Email address'));
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
+
+  // The test above cannot see the release: an invalid address returns BEFORE
+  // the guard is claimed, so there is nothing to release. These two claim it
+  // for real, and hold React Query's callbacks until the "request" returns —
+  // firing them inside `mutate()` would release the guard before `mutate`
+  // came back, which is not the order production runs in.
+  it('is submittable again after a SERVER failure (onSettled releases the guard)', async () => {
+    const user = userEvent.setup();
+    let pending: Parameters<typeof mutate>[1] | undefined;
+    mutate.mockImplementation((_vars, opts) => {
+      pending = opts;
+    });
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      pending?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED' } });
+      pending?.onSettled?.();
+    });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(mutate).toHaveBeenCalledTimes(2);
+  });
+
+  it('is submittable again after a SUCCESS and "Invite someone else"', async () => {
+    const user = userEvent.setup();
+    let pending: Parameters<typeof mutate>[1] | undefined;
+    mutate.mockImplementation((_vars, opts) => {
+      pending = opts;
+    });
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      pending?.onSuccess?.({
+        invite: { invite_code: 'ABC123', invite_url: 'https://x/invite/ABC123' },
+      });
+      pending?.onSettled?.();
+    });
+    await user.click(screen.getByRole('button', { name: 'Invite someone else' }));
+
+    await user.type(screen.getByLabelText('Email address'), 'ben@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(mutate).toHaveBeenCalledTimes(2);
+    expect(mutate.mock.calls[1][0]).toEqual({ email: 'ben@example.com', member_type: 'caregiver' });
   });
 });

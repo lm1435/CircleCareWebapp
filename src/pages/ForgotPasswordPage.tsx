@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { Analytics } from '@/lib/analytics';
+import { isRateLimitError } from '@/lib/apiErrors';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
@@ -38,10 +40,12 @@ export default function ForgotPasswordPage(): ReactElement {
     try {
       await authApi.forgotPassword({ email: email.trim() });
       return true;
-    } catch {
+    } catch (err) {
       // Only transport/server errors land here — the endpoint never reveals
-      // whether the account exists.
-      setFormError(t('forgotPassword.errors.sendFailed'));
+      // whether the account exists. A 429 says wait, not "try again".
+      setFormError(
+        isRateLimitError(err) ? t('rateLimited') : t('forgotPassword.errors.sendFailed')
+      );
       return false;
     } finally {
       // Fired once regardless of outcome — the endpoint (and this page) never
@@ -51,7 +55,13 @@ export default function ForgotPasswordPage(): ReactElement {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  // `isSending` / `isResending` are the LOADING states, not the guards: React
+  // commits them a render too late to stop a second submit dispatched in the
+  // same tick (see `useGuardedSubmit`). Both handlers below hit
+  // /auth/forgot-password, which sits on the 5-per-5-minutes `authRateLimit`
+  // bucket AND sends a real email, so a double fire costs a limiter slot and
+  // mails a second code that invalidates the first.
+  const sendResetCodeForm = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setFormError(null);
 
@@ -74,11 +84,18 @@ export default function ForgotPasswordPage(): ReactElement {
     if (ok) setSent(true);
   };
 
-  const handleResend = async (): Promise<void> => {
+  const handleSubmit = useGuardedSubmit(sendResetCodeForm);
+
+  const resend = async (): Promise<void> => {
     setIsResending(true);
     await sendResetCode();
     setIsResending(false);
   };
+
+  // A SEPARATE guard from the form's: the two live on different views (the
+  // form vs. the "check your email" terminal state), so they can never be in
+  // flight at the same time and must not block each other.
+  const handleResend = useGuardedSubmit(resend);
 
   if (sent) {
     return (

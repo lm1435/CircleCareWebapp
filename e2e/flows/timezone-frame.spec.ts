@@ -1,4 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
+import {
+  CROSS_TZ,
+  gotoCircleWithRecipientZone,
+  loginAs,
+  openCircle,
+} from '../crossTimezoneLogin';
 
 /**
  * THE VIEWER-FRAME CONTRACT, IN A REAL BROWSER, ACROSS REAL TIMEZONES.
@@ -19,62 +25,25 @@ import { test, expect, type Page } from '@playwright/test';
  *
  * ── WHY A SEPARATE LOGIN ────────────────────────────────────────────────
  *
- * The shared storageState is the demo account, whose circles are all
- * Denver -> Denver. Every conversion there is the IDENTITY case — exactly where
- * these bugs hide, and a suite that only saw that data would pass with the
- * conversion deleted. These log in as a cross-timezone circle owner instead
- * (seeded by mobile/scripts/seed-cross-timezone.mjs).
+ * Every isolated account's circles are cloned from the demo account, whose
+ * circles are all Denver -> Denver. Every conversion there is the IDENTITY
+ * case — exactly where these bugs hide, and a suite that only saw that data
+ * would pass with the conversion deleted. These log in as a cross-timezone
+ * circle owner instead.
  *
- * Skips itself, loudly, if that seed is absent rather than passing vacuously.
+ * ── THE SEED, AND WHY THIS SPEC NEVER SKIPS ─────────────────────────────
+ *
+ * globalSetup seeds that owner idempotently (e2e/crossTimezoneSeed.ts) whenever
+ * the run includes `chromium` against a local database. This spec used to
+ * `test.skip` when the login failed — so on any machine where nobody had run
+ * the mobile seeder by hand, all seven tests skipped, and the gate (failed +
+ * flaky) stayed green. Now:
+ *   - the seed is checked in the database first, and its absence FAILS with a
+ *     message naming the fix;
+ *   - a login failure FAILS with the login response's status, never a skip.
  */
 
-const PASSWORD = process.env.PW_DEMO_PASSWORD ?? 'DemoPass123!';
-const RECIPIENT = { email: 'tz-owner-tokyo@tz.test', zone: 'Asia/Tokyo' };
-
-async function loginAs(page: Page, email: string): Promise<boolean> {
-  await page.goto('/login');
-  await page.locator('#login-email').fill(email);
-  await page.locator('#login-password').fill(PASSWORD);
-  await page.getByRole('button', { name: /sign in/i }).click();
-  try {
-    await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const CIRCLE_URL = /\/circles\/[0-9a-f-]{36}/;
-
-/**
- * Land on the owner's only circle and return its id.
- *
- * A user with a single circle is auto-redirected straight into it
- * (CirclePickerPage.tsx's single-circle `useEffect`; CircleCard.tsx's own
- * comment confirms the picker grid "only ever renders when there are 2+
- * circles"). That redirect fires client-side after the circles query
- * resolves, so `waitForURL` past `/login` can land on the picker for a
- * moment before it navigates again — check for the circle URL first, give
- * the auto-redirect a beat to happen, and only then fall back to clicking a
- * card (for a seed that ever grows a second circle for this owner). The
- * card's `aria-label` composes role/med-status text around the circle name
- * (CircleCard.tsx `cardLabel`), so matching by `href` + the seeded circle's
- * name is more robust than depending on that composed sentence.
- */
-async function openCircle(page: Page): Promise<string> {
-  const onCircle = (): boolean => CIRCLE_URL.test(page.url());
-
-  if (!onCircle()) {
-    await page.waitForURL(CIRCLE_URL, { timeout: 5_000 }).catch(() => {});
-  }
-  if (!onCircle()) {
-    const card = page.locator('a[href^="/circles/"]').filter({ hasText: /tokyo/i });
-    await expect(card.first()).toBeVisible({ timeout: 20_000 });
-    await card.first().click();
-    await page.waitForURL(CIRCLE_URL, { timeout: 20_000 });
-  }
-  return new URL(page.url()).pathname.split('/')[2];
-}
+const RECIPIENT = { email: CROSS_TZ.ownerEmail, zone: CROSS_TZ.recipientZone };
 
 /**
  * Open the sidebar's "New" button and pick an AddMenu option by its VISIBLE
@@ -91,6 +60,9 @@ async function openCreateOption(page: Page, name: string): Promise<void> {
   await page.getByRole('menuitem', { name, exact: true }).click();
 }
 
+/** "8:00 PM Denver = 5:00 PM Tokyo" — the conversion line's shape. */
+const CONVERSION_TEXT = 'text=/\\d{1,2}:\\d{2}.*=.*\\d{1,2}:\\d{2}/';
+
 /**
  * Viewer zones chosen for what they expose, not for coverage: Denver is the dev
  * machine and the zone every seeded circle uses; Midway sits far WEST of Tokyo
@@ -103,9 +75,9 @@ for (const timezoneId of VIEWER_ZONES) {
     test.use({ timezoneId, storageState: { cookies: [], origins: [] } });
 
     test('discloses the conversion instead of hiding it', async ({ page }) => {
-      test.skip(!(await loginAs(page, RECIPIENT.email)), 'cross-timezone seed missing');
+      await loginAs(page, RECIPIENT.email);
       const circleId = await openCircle(page);
-      await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+      await gotoCircleWithRecipientZone(page, circleId);
 
       await openCreateOption(page, 'Med');
       const dialog = page.getByRole('dialog');
@@ -126,7 +98,7 @@ for (const timezoneId of VIEWER_ZONES) {
        * suite, and re-deriving it here would just be a second implementation to
        * keep in step. This test's job is that the user is told.
        */
-      const conversion = dialog.locator('text=/\\d{1,2}:\\d{2}.*=.*\\d{1,2}:\\d{2}/');
+      const conversion = dialog.locator(CONVERSION_TEXT);
       await expect(
         conversion.first(),
         `no conversion shown from ${timezoneId} to ${RECIPIENT.zone}`
@@ -136,9 +108,9 @@ for (const timezoneId of VIEWER_ZONES) {
     test('native date/time controls round-trip what we set', async ({ page }) => {
       // Guards the jsdom gap directly: whatever the browser's widgets do with a
       // typed value under this locale/timezone, the form must still hold it.
-      test.skip(!(await loginAs(page, RECIPIENT.email)), 'cross-timezone seed missing');
+      await loginAs(page, RECIPIENT.email);
       const circleId = await openCircle(page);
-      await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+      await gotoCircleWithRecipientZone(page, circleId);
 
       await openCreateOption(page, 'Med');
       const dialog = page.getByRole('dialog');
@@ -161,15 +133,28 @@ test.describe('viewer in the recipient’s own zone', () => {
   test.use({ timezoneId: RECIPIENT.zone, storageState: { cookies: [], origins: [] } });
 
   test('shows no conversion when the zones match', async ({ page }) => {
-    test.skip(!(await loginAs(page, RECIPIENT.email)), 'cross-timezone seed missing');
+    await loginAs(page, RECIPIENT.email);
     const circleId = await openCircle(page);
-    await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+    // Positive precondition: the recipient zone has LOADED. Without it the
+    // modal has nothing to compare and shows no conversion regardless.
+    await gotoCircleWithRecipientZone(page, circleId);
 
     await openCreateOption(page, 'Med');
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
+    // Both halves of the conversion's input are filled — the line needs a date
+    // AND a time, so filling only the time would make the absence vacuous.
+    await dialog.locator('#medication_name').fill('TZ e2e probe');
+    await dialog.locator('#scheduled_date').fill('2026-09-01');
     await dialog.locator('#scheduled_time').fill('20:00');
 
-    await expect(dialog.locator('text=/\\d{1,2}:\\d{2}.*=.*\\d{1,2}:\\d{2}/')).toHaveCount(0);
+    // Positive: the form really rendered and holds the time being checked.
+    await expect(dialog.locator('#scheduled_date')).toHaveValue('2026-09-01');
+    await expect(dialog.locator('#scheduled_time')).toHaveValue('20:00');
+    await expect(dialog.locator('#scheduled_time')).toBeVisible();
+
+    // Then the absence: no conversion line and no dual-zone field hint.
+    await expect(dialog.locator(CONVERSION_TEXT)).toHaveCount(0);
+    await expect(dialog.getByText(/^Your time \//)).toHaveCount(0);
   });
 });

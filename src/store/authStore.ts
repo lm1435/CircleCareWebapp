@@ -4,8 +4,10 @@ import { tokenAccessor } from '@/lib/tokenAccessor';
 import { queryClient } from '@/lib/queryClient';
 import { authApi, type AuthSession, type AuthUser } from '@/api/auth';
 import { getCurrentUser } from '@/api/users';
-import { identifyUser, resetAnalytics } from '@/lib/posthog';
+import { resetAnalytics } from '@/lib/posthog';
 import { flushAnalyticsConsentSync } from '@/lib/analyticsConsentSync';
+import { reconcileAnalyticsConsentOwner } from '@/lib/analyticsConsent';
+import { identifyAfterServerReconcile } from '@/lib/analyticsConsentServerReconcile';
 import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
 import i18n from '@/i18n';
@@ -45,6 +47,37 @@ const AUTH_CHANNEL_NAME = 'cc-auth';
 const SESSION_HINT_COOKIE_NAME = 'cc_session';
 let channel: BroadcastChannel | null = null;
 let bootstrapPromise: Promise<void> | null = null;
+
+/**
+ * WHICH SIGN-IN IS LIVE, for work that outlives the moment it was started.
+ *
+ * `identifyAfterServerReconcile` awaits a `/users/me` read and then records a
+ * decision and identifies. Sign-out is not gated on that read, so it can finish
+ * first — `resetAnalytics()` drops the identity — and the late identify then
+ * re-attaches the account that just left. On a shared browser the next
+ * visitor's events land on that person.
+ *
+ * `useAuthStore.getState().user` cannot be the check: `bootstrap` only sets
+ * `user` AFTER the reconcile it awaits, so the store reads "nobody" for the
+ * whole of its read. An epoch is bumped on every session boundary instead —
+ * each sign-in and bootstrap begins one, sign-out and every local teardown
+ * (including the cross-tab one) end it — and a reconcile is handed a check
+ * bound to the epoch it started in. Passed as a callback so the reconcile
+ * module never imports this store (which imports it).
+ */
+let sessionEpoch = 0;
+
+/** Start a new session epoch; the returned check is true until it ends. */
+function beginSessionEpoch(): () => boolean {
+  sessionEpoch += 1;
+  const epoch = sessionEpoch;
+  return () => sessionEpoch === epoch;
+}
+
+/** End whatever session epoch is live — nothing started under it may act. */
+function endSessionEpoch(): void {
+  sessionEpoch += 1;
+}
 
 /**
  * True when the backend's readable `cc_session` companion cookie is present —
@@ -111,6 +144,10 @@ function clearSessionHintCookie(): void {
 /** Local-only teardown (no network, no broadcast) — shared by signOut and the
  *  cross-tab logout listener. */
 function clearLocalSession(): void {
+  // FIRST: from here on no reconcile started under the ending session may
+  // record a decision or identify (see sessionEpoch). Covers every teardown
+  // route — signOut, the 401 path, and another tab's logout.
+  endSessionEpoch();
   resetRefreshState();
   tokenAccessor.clear();
   queryClient.clear();
@@ -180,7 +217,46 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Clear any stale refresh locks from a previous session (mirrors mobile).
     resetRefreshState();
     tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
-    identifyUser(user.id, user.email);
+    // BEFORE identifyUser, always. The recorded consent answer is one key in
+    // one browser and this browser can be signed in as a different account
+    // minutes apart; `identifyUser` reads that key (through
+    // `identifyAllowed(currentAnalyticsMode())`) and would otherwise create a
+    // PostHog person for THIS user on the strength of the PREVIOUS user's yes.
+    // Reconciling here — not inside `identifyUser` — because it is a fact about the
+    // account arriving, and must hold whether or not analytics is configured
+    // at all (`identifyUser` returns early with no VITE_POSTHOG_KEY).
+    reconcileAnalyticsConsentOwner(user.id);
+    // IDENTIFY IS DEFERRED behind the account's OWN recorded answer.
+    //
+    // The owner check above settles whose the BROWSER's answer is. It cannot
+    // settle whether the account still stands by it: someone who withdraws in
+    // their phone's browser leaves this laptop's `cc_analytics_enabled` reading
+    // granted, and identifying on that stale yes re-creates the PostHog person
+    // the withdrawal deleted — once per sign-in, forever, until this browser's
+    // site data is cleared.
+    //
+    // signIn has no profile to reconcile against: `AuthSession`/`AuthUser` carry
+    // only id/email/first_name/last_name, so unlike `bootstrap` this path pays
+    // its own `/users/me` read. It is fire-and-forget and NEVER awaited — the
+    // session is live the moment `set` below runs, and analytics must not gate
+    // authentication — but the identify inside it waits, which is the whole
+    // point. `identifyAfterServerReconcile` never throws.
+    //
+    // NO RACE WITH THE FLUSH BELOW, in either resolution order. An undelivered
+    // decision in `analyticsConsentSync` is newer than anything `/users/me` can
+    // say, and the reconcile snapshots whether one is queued SYNCHRONOUSLY,
+    // inside this call — before the flush can have delivered and cleared it —
+    // and checks again at decision time. If one is queued the reconcile stands
+    // aside, the identify follows the LOCAL answer, and the flush carries that
+    // answer to the server. Deliberately not sequenced flush-then-reconcile: a
+    // flush that fails again (still offline) would leave the reconcile facing
+    // the same stale server copy, so the queue check has to exist regardless,
+    // and with it the sequencing buys nothing but a delayed identify.
+    //
+    // Bound to THIS sign-in's epoch: a sign-out that completes while the read is
+    // in flight must not be followed by a recorded decision or an identify.
+    const isCurrentSession = beginSessionEpoch();
+    void identifyAfterServerReconcile(user.id, undefined, isCurrentSession);
     // Deliver a consent decision that failed to reach the server last time.
     void flushAnalyticsConsentSync(user.id);
     set({ user, isAuthenticated: true, isBootstrapping: false });
@@ -197,6 +273,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ user: null, isAuthenticated: false, isBootstrapping: false });
         return;
       }
+      // Begun before any await, so a sign-out (or a signIn from the OAuth
+      // callback) landing during this restore ends it — see sessionEpoch.
+      const isCurrentSession = beginSessionEpoch();
       try {
         // Silent cookie refresh — the apiClient interceptor adds
         // `X-Session-Mode: cookie` + withCredentials on /auth/* calls.
@@ -208,7 +287,26 @@ export const useAuthStore = create<AuthState>((set) => ({
         tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
 
         const user = await getCurrentUser();
-        identifyUser(user.id, user.email);
+        // A restored cookie session is a sign-in — reconcile before
+        // identifying here too, or the fix is bypassed by the commonest way
+        // this app authenticates (reloading the page). See `signIn`.
+        reconcileAnalyticsConsentOwner(user.id);
+        // Same deferral as `signIn`, but FREE here: `user` is the `/users/me`
+        // document this path just fetched, and it already carries
+        // `analytics_consent_withdrawn_at` / `analytics_consent_granted_at`.
+        // Handing it over means the reconcile costs no second request and
+        // resolves in a microtask, so awaiting it delays nothing measurable.
+        //
+        // AWAITED INSIDE bootstrap's try BLOCK ON PURPOSE, and safe only
+        // because `identifyAfterServerReconcile` cannot throw: bootstrap reads
+        // a throw from anywhere in here as "no session" and signs the user out.
+        //
+        // A QUEUED, UNDELIVERED LOCAL DECISION IS NOT OVERRIDDEN. The reconcile
+        // stands aside when `analyticsConsentSync` holds one for this account
+        // (the server's copy predates it), so the identify follows the local
+        // answer and the flush below delivers it. Awaited before the flush
+        // starts, but the reconcile does not rely on that order — see `signIn`.
+        await identifyAfterServerReconcile(user.id, user, isCurrentSession);
         // Deliver a consent decision that failed to reach the server last time.
         void flushAnalyticsConsentSync(user.id);
         set({
@@ -239,6 +337,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Capture while the identity is still attached (clearLocalSession resets it).
     Analytics.logout();
     const signingOutUserId = useAuthStore.getState().user?.id ?? null;
+
+    // The session is ending as of now, not as of the teardown below (which
+    // waits on the network). A reconcile still reading `/users/me` for this
+    // session must not record a decision or identify in that window either.
+    endSessionEpoch();
 
     // Best-effort server logout (clears httpOnly cookie, revokes session).
     // Idempotent on the backend; a network failure must not block local cleanup.

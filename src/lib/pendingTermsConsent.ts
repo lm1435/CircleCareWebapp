@@ -48,3 +48,23 @@ export function consumePendingTermsConsent(): boolean {
     return false;
   }
 }
+
+/**
+ * Drop the parked acceptance without reading it — for the signup paths where
+ * the provider handshake never started (see
+ * `clearPendingAnalyticsConsent` for the full reasoning; this is the same
+ * seam).
+ *
+ * The consequence here is smaller but is still a false record: a later OAuth
+ * LOGIN from /login parks NO terms consent of its own, so the callback would
+ * consume this leftover and relay `termsAccepted: true` for a returning user
+ * who ticked nothing — stamping `users.terms_accepted_at` on an account whose
+ * column was still NULL.
+ */
+export function clearPendingTermsConsent(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage unavailable — nothing was stored either, so nothing to clear.
+  }
+}

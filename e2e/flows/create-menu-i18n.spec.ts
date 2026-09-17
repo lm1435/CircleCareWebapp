@@ -27,7 +27,10 @@ const NAV_TIMEOUT = 20_000;
 // Source of truth: src/i18n/es/common.json → "nav.new" + the "addMenu" block.
 // SHORT is the accessible name; FULL is the title.
 const ES_SHORT = {
-  medication: 'Medicina',
+  // "Med." — the SHORT label, and the button's accessible name. It is deliberately
+  // not the full "Medicamento": four options share one row, and ES_SHORT must stay
+  // no longer than ES_FULL (pinned by translationKeys.test.ts). EN is "Med".
+  medication: 'Med.',
   appointment: 'Cita',
   task: 'Tarea',
   note: 'Nota',

@@ -110,8 +110,43 @@ describe('useCircle', () => {
     expect(result.current.circleSummary?.id).toBe(CIRCLE_ID);
   });
 
-  it('falls back to America/New_York when the detail TZ is empty', () => {
+  // ── timezone: LOADING and "no zone set" are different answers ────────────
+  //
+  // `timezone` used to be `circle?.care_recipient_timezone || 'America/New_York'`,
+  // which collapsed the two: a consumer that computed a DATE from it before the
+  // detail query resolved got a New-York-anchored answer and then a different
+  // one, firing whatever request that date keyed TWICE (see
+  // GettingStartedChecklist.timezoneGate.test.tsx and the e2e spec
+  // e2e/unhappy/writes/home-events-requests.spec.ts).
+  it('reports null — NOT the New York fallback — while the circle detail is loading', () => {
+    mockMembers({ data: undefined, members: [], isLoading: true });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current.timezone).toBeNull();
+  });
+
+  it('reports null when the circle detail ERRORED (still not an answer)', () => {
+    mockMembers({ data: undefined, members: [], isLoading: false, isError: true });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current.timezone).toBeNull();
+  });
+
+  it('reports the resolved care_recipient_timezone once the detail settles', () => {
+    mockMembers({ data: detail({ care_recipient_timezone: 'Asia/Tokyo' }) });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current.timezone).toBe('Asia/Tokyo');
+  });
+
+  // The ONE case where 'America/New_York' is the correct answer: the circle HAS
+  // loaded and genuinely carries no zone. That is a real answer, not a
+  // placeholder for an unknown one, so it is a string and not null.
+  it('falls back to America/New_York when the LOADED detail has no TZ', () => {
     mockMembers({ data: detail({ care_recipient_timezone: '' }) });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current.timezone).toBe('America/New_York');
+  });
+
+  it('falls back to America/New_York when the LOADED detail TZ is null', () => {
+    mockMembers({ data: detail({ care_recipient_timezone: null as unknown as string }) });
     const { result } = renderHook(() => useCircle(CIRCLE_ID));
     expect(result.current.timezone).toBe('America/New_York');
   });
@@ -130,7 +165,10 @@ describe('useCircle', () => {
     expect(result.current.canEdit).toBe(false);
     expect(result.current.viewOnly).toBe(false);
     expect(result.current.readOnly).toBe(false);
-    expect(result.current.timezone).toBe('America/New_York');
+    // Was `toBe('America/New_York')` — this test ASSERTED THE BUG. A loading
+    // circle has no timezone, and saying it does is what fired a second,
+    // differently-anchored request once the real zone arrived.
+    expect(result.current.timezone).toBeNull();
     expect(result.current.members).toEqual([]);
     expect(result.current.isLoading).toBe(true);
   });

@@ -6,10 +6,15 @@ import '@/i18n';
 import { CircleCard } from '@/components/circles/CircleCard';
 import type { Circle } from '@/api/circles';
 import { getMedicationTodaySummary } from '@/api/medicationConfirmations';
+import { getActivityFeed, type ActivityFeedItem } from '@/api/activityFeed';
 import { Analytics } from '@/lib/analytics';
 
 vi.mock('@/api/medicationConfirmations', () => ({
   getMedicationTodaySummary: vi.fn(),
+}));
+
+vi.mock('@/api/activityFeed', () => ({
+  getActivityFeed: vi.fn(),
 }));
 
 vi.mock('@/lib/analytics', () => ({
@@ -17,6 +22,24 @@ vi.mock('@/lib/analytics', () => ({
 }));
 
 const mockGetSummary = vi.mocked(getMedicationTodaySummary);
+const mockGetActivity = vi.mocked(getActivityFeed);
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function makeActivity(overrides: Partial<ActivityFeedItem> = {}): ActivityFeedItem {
+  return {
+    id: 'a1',
+    circle_id: 'c1',
+    actor_id: 'u1',
+    action_type: 'care_note_added',
+    description: 'Added Care Note',
+    description_key: null,
+    description_params: null,
+    created_at: new Date(Date.now() - 2 * DAY_MS).toISOString(),
+    actor: { id: 'u1', email: 'kait@example.com', first_name: 'Kait', last_name: 'Popp' },
+    ...overrides,
+  };
+}
 
 const EMPTY_SUMMARY = {
   total_today: 0,
@@ -74,16 +97,17 @@ describe('CircleCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetSummary.mockResolvedValue(EMPTY_SUMMARY);
+    mockGetActivity.mockResolvedValue({ activities: [], hasMore: false });
   });
 
   it('renders the name, subtitle, owner badge, and chevron for a normal circle', async () => {
     renderCard(makeCircle());
 
     // aria-label REPLACES the link's accessible name wholesale — a screen
-    // reader tabbing to the card never hears the visible med-row text
+    // reader tabbing to the card never hears the visible status-row text
     // otherwise, so it has to be folded into the label by hand.
     const link = await screen.findByRole('link', {
-      name: "Open Mom's Care (Owner), No medications today",
+      name: "Open Mom's Care (Owner), Nothing tracked yet",
     });
     expect(link).toHaveAttribute('href', '/circles/c1');
     expect(link).not.toHaveAttribute('data-restricted');
@@ -177,17 +201,17 @@ describe('CircleCard', () => {
     // `label` resolves to the status `<span>` itself (its icon child carries
     // no text, so RTL's getByText lands on the element whose own text content
     // is the full match — there is no deeper node to prefer).
-    it('shows "No medications today" in ink-3, with the medkit icon', async () => {
+    // The old "No medications today" line is GONE, and that is the point of
+    // this change: 57% of paying circles have no medications at all, so that
+    // string was a permanent dead end for most of the picker. With nothing
+    // scheduled today the row hands off to the activity branch below.
+    it('does not claim anything about medications when none are scheduled today', async () => {
       mockGetSummary.mockResolvedValue(EMPTY_SUMMARY);
       renderCard(makeCircle());
 
       await screen.findByRole('link');
-      const label = await screen.findByText('No medications today');
-      expect(label).toHaveClass('text-ink-2');
-      const icon = label.querySelector('span');
-      expect(icon).not.toBeNull();
-      expect(icon?.className).toContain('text-ink-3');
-      expect(icon?.querySelector('svg')).not.toBeNull();
+      await screen.findByText('Nothing tracked yet');
+      expect(screen.queryByText(/medications/i)).not.toBeInTheDocument();
     });
 
     it('shows "All medications taken" in moss, with the checkmark-circle icon, and folds it into the label', async () => {
@@ -215,11 +239,11 @@ describe('CircleCard', () => {
     });
 
     it('puts the role badge on the right of the status row', async () => {
-      mockGetSummary.mockResolvedValue(EMPTY_SUMMARY);
+      mockGetSummary.mockResolvedValue({ ...EMPTY_SUMMARY, total_today: 4, taken: 2 });
       renderCard(makeCircle());
 
       await screen.findByRole('link');
-      const label = await screen.findByText('No medications today');
+      const label = await screen.findByText('2/4 taken today');
       const row = label.parentElement;
       expect(row).not.toBeNull();
       expect(row?.className).toContain('border-t');
@@ -228,10 +252,94 @@ describe('CircleCard', () => {
 
     it('never renders a status row for a restricted circle', async () => {
       mockGetSummary.mockResolvedValue({ ...EMPTY_SUMMARY, total_today: 3, taken: 1 });
+      mockGetActivity.mockResolvedValue({ activities: [makeActivity()], hasMore: false });
       renderCard(makeCircle({ view_only: true, can_edit: false }));
 
       await screen.findByRole('link');
-      expect(screen.queryByText(/taken today|No medications today|All medications taken/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/taken today|All medications taken|Nothing tracked yet|Care Note/)
+      ).not.toBeInTheDocument();
+      expect(mockGetActivity).not.toHaveBeenCalled();
+    });
+  });
+
+  // The status line past medications (this change): with nothing scheduled
+  // today the row reports the circle's most recent REAL activity, and only
+  // falls back to an empty line when there is none.
+  describe('activity status line', () => {
+    it('fetches only three rows, once, per non-restricted card', async () => {
+      renderCard(makeCircle());
+
+      await screen.findByRole('link');
+      expect(mockGetActivity).toHaveBeenCalledWith('c1', { limit: 3, offset: 0 });
+    });
+
+    it('shows the localized description and a relative timestamp', async () => {
+      mockGetActivity.mockResolvedValue({ activities: [makeActivity()], hasMore: false });
+      renderCard(makeCircle());
+
+      await screen.findByRole('link');
+      expect(await screen.findByText('Added Care Note · 2d ago')).toBeInTheDocument();
+    });
+
+    it('folds the activity line into the link label', async () => {
+      mockGetActivity.mockResolvedValue({ activities: [makeActivity()], hasMore: false });
+      renderCard(makeCircle());
+
+      expect(
+        await screen.findByRole('link', {
+          name: "Open Mom's Care (Owner), Added Care Note · 2d ago",
+        })
+      ).toBeInTheDocument();
+    });
+
+    // "You created this circle · 3w ago" never changes and is not care — it is
+    // a worse line than admitting nothing has happened yet.
+    it('skips circle_created and takes the first real entry behind it', async () => {
+      mockGetActivity.mockResolvedValue({
+        activities: [
+          makeActivity({ id: 'a0', action_type: 'circle_created', description: 'Created Care Circle for Rose' }),
+          makeActivity({ id: 'a1', action_type: 'task_completed', description: 'Completed Task: Groceries' }),
+        ],
+        hasMore: false,
+      });
+      renderCard(makeCircle());
+
+      await screen.findByRole('link');
+      expect(await screen.findByText(/Completed Task: Groceries/)).toBeInTheDocument();
+      expect(screen.queryByText(/Created Care Circle/)).not.toBeInTheDocument();
+    });
+
+    it('falls through to the empty line when every returned entry is circle_created', async () => {
+      mockGetActivity.mockResolvedValue({
+        activities: [makeActivity({ action_type: 'circle_created', description: 'Created Care Circle for Rose' })],
+        hasMore: false,
+      });
+      renderCard(makeCircle());
+
+      await screen.findByRole('link');
+      expect(await screen.findByText('Nothing tracked yet')).toBeInTheDocument();
+    });
+
+    // A flashed "Nothing tracked yet" reads as a bug about the user's own
+    // data, so the Skeleton has to outlive BOTH queries, not just the meds one.
+    it('keeps the skeleton up while the activity query is still in flight', async () => {
+      mockGetActivity.mockReturnValue(new Promise(() => {}));
+      renderCard(makeCircle());
+
+      await screen.findByRole('link');
+      expect(screen.queryByText('Nothing tracked yet')).not.toBeInTheDocument();
+    });
+
+    // Medications still win the row outright — the activity line only exists
+    // for the circles that had nothing to say before.
+    it('never displaces the medication line when meds are scheduled today', async () => {
+      mockGetSummary.mockResolvedValue({ ...EMPTY_SUMMARY, total_today: 4, taken: 2 });
+      mockGetActivity.mockResolvedValue({ activities: [makeActivity()], hasMore: false });
+      renderCard(makeCircle());
+
+      await screen.findByRole('link', { name: "Open Mom's Care (Owner), 2/4 taken today" });
+      expect(screen.queryByText(/Care Note/)).not.toBeInTheDocument();
     });
   });
 });

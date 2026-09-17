@@ -23,14 +23,18 @@ describe('DateField', () => {
     expect(shell.querySelector('[data-icon="calendar-outline"]')).toBeInTheDocument();
   });
 
-  // The native picker button is kept (transparent, over our glyph) so the
-  // picker stays reachable with a mouse — hiding it outright would make the
-  // field type-only.
-  it('overlays the native picker indicator on the trailing slot', () => {
+  // INVERTED, deliberately, when DateField grew `DatePickerPanel`. This test
+  // used to assert the opposite — that the native indicator was kept alive and
+  // made transparent over our glyph — because there was no replacement for
+  // Chrome's calendar and hiding it would have made the field type-only. There
+  // is a replacement now, and a system-blue calendar reachable from under our
+  // own trigger is two pickers on one field. Same reasoning, and same
+  // assertion, as the TimeField case in `TimePicker.test.tsx`.
+  it('removes the native picker indicator instead of overlaying it', () => {
     render(<DateField id="start" label="Start date" value="" onChange={() => {}} />);
     const control = screen.getByLabelText('Start date');
-    expect(control.className).toContain('[&::-webkit-calendar-picker-indicator]:opacity-0');
-    expect(control.className).toContain('[&::-webkit-calendar-picker-indicator]:w-11');
+    expect(control.className).toContain('[&::-webkit-calendar-picker-indicator]:hidden');
+    expect(control.className).not.toContain('[&::-webkit-calendar-picker-indicator]:opacity-0');
     expect(shellOf(control).className).toContain('relative');
   });
 

@@ -7,8 +7,12 @@
 //  2. That URL is a SIGNED Storage URL. It must be fetched on demand and held in
 //     component state that dies with the modal, never in the React Query cache —
 //     the rule `api/documents.ts` already follows for `file_url`.
+//
+// Layout mirrors mobile's MedicationDetailModal (2026-09-14): eyebrow → name →
+// dosage header, then one icon-row info card. The recurrence appears ONCE, in
+// Repeat; the Time row carries the dose times alone.
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { MedicationDetailModal } from '../MedicationDetailModal';
@@ -34,7 +38,6 @@ const event = {
   title: 'Lisinopril',
   event_type: 'medication',
   description: 'Take with food',
-  quantity_remaining: 12,
 } as never;
 
 const baseProps = {
@@ -42,7 +45,8 @@ const baseProps = {
   event,
   name: 'Lisinopril',
   dosage: '10mg',
-  schedule: '8:00 AM · Daily',
+  times: '8:00 AM',
+  repeat: 'Daily',
   inactive: false,
   canEdit: true,
   onClose: vi.fn(),
@@ -83,29 +87,97 @@ describe('MedicationDetailModal', () => {
 
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.getByText('10mg')).toBeInTheDocument();
-    expect(screen.getByText('8:00 AM · Daily')).toBeInTheDocument();
+    expect(screen.getByText('8:00 AM')).toBeInTheDocument();
   });
 
-  it('shows the notes and remaining count when present', async () => {
+  // THE duplicate: the schedule line used to end with the recurrence
+  // ("8:00 PM · Daily") right above a Repeat row saying "Daily" again.
+  it('shows the recurrence exactly once, in the Repeat row, and times alone in the Time row', () => {
+    render(<MedicationDetailModal {...baseProps} times="8:00 AM · 8:00 PM" repeat="Daily" />);
+
+    expect(screen.getAllByText('Daily')).toHaveLength(1);
+    expect(screen.queryByText(/·\s*Daily/)).toBeNull();
+
+    const timeRow = screen.getByText('meds:page.detail.time').closest('div.flex') as HTMLElement;
+    expect(within(timeRow).getByText('8:00 AM · 8:00 PM')).toBeInTheDocument();
+    const repeatRow = screen.getByText('meds:page.detail.repeat').closest('div.flex') as HTMLElement;
+    expect(within(repeatRow).getByText('Daily')).toBeInTheDocument();
+  });
+
+  it('omits the Repeat row for a one-off medication', () => {
+    render(<MedicationDetailModal {...baseProps} repeat={null} />);
+    expect(screen.queryByText('meds:page.detail.repeat')).toBeNull();
+    expect(screen.getByText('meds:page.detail.time')).toBeInTheDocument();
+  });
+
+  // Mobile's header: eyebrow → name → dosage. The dialog keeps exactly one
+  // heading (the Modal's sr-only title); the visible name is not a second one.
+  it('renders the mobile header and keeps the dialog named by a single heading', () => {
+    render(<MedicationDetailModal {...baseProps} />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAccessibleName('Lisinopril');
+    expect(within(dialog).getAllByRole('heading')).toHaveLength(1);
+    expect(screen.getByText('calendar:eventTypes.medication')).toBeInTheDocument();
+    expect(screen.getAllByText('Lisinopril').some((el) => el.tagName === 'P')).toBe(true);
+    expect(screen.getByText('10mg').tagName).toBe('P');
+  });
+
+  it('shows the notes in the info card', async () => {
     render(<MedicationDetailModal {...baseProps} />);
 
     await waitFor(() => expect(getMedicationPhotoUrl).toHaveBeenCalled());
 
+    expect(screen.getByText('meds:page.detail.notes')).toBeInTheDocument();
     expect(screen.getByText('Take with food')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
   });
 
-  // The <dt> labels used to hand-roll `text-xs uppercase tracking-wide
-  // text-ink-3`, then a local `.section-title-sm`. They are now the shared
-  // `mono` type variant (spec §4.5/§6.4) — the same label treatment the
-  // history cards and the emergency cards use, so a field label reads the same
-  // everywhere instead of once per page.
+  it('shows days of supply left as a Refill row only when refill tracking yields one', () => {
+    const { unmount } = render(<MedicationDetailModal {...baseProps} daysLeft={null} />);
+    expect(screen.queryByText('meds:page.detail.refill')).toBeNull();
+    unmount();
+
+    render(<MedicationDetailModal {...baseProps} daysLeft={20} />);
+    const value = screen.getByText('meds:page.stock.daysLeft');
+    expect(value.className).toContain('text-ink');
+    expect(value.className).not.toContain('text-terracotta');
+  });
+
+  it('flags low stock in the deep terracotta shade', () => {
+    render(<MedicationDetailModal {...baseProps} daysLeft={5} lowStock />);
+    const value = screen.getByText('meds:page.stock.lowStock · meds:page.stock.daysLeft');
+    expect(value.className).toContain('text-terracotta-deep');
+  });
+
+  it('marks an inactive medication with the badge and the reference note', () => {
+    render(<MedicationDetailModal {...baseProps} inactive />);
+    expect(screen.getByText('calendar:discontinueMed.inactiveBadge')).toBeInTheDocument();
+    expect(screen.getByText('meds:page.inactiveHint')).toBeInTheDocument();
+  });
+
+  // Valid definition-list structure (axe `definition-list` / `dlitem`, both
+  // serious): each row group holds a <dt> then a <dd> and nothing else. The
+  // decorative icon sits inside the <dt>, hidden from assistive tech.
+  it('builds each info row as a bare dt + dd group with the icon hidden inside the dt', () => {
+    const { container } = render(<MedicationDetailModal {...baseProps} daysLeft={20} />);
+    const rows = container.ownerDocument.querySelectorAll('dl > div');
+    expect(rows.length).toBe(4);
+    rows.forEach((row) => {
+      expect(Array.from(row.children).map((c) => c.tagName)).toEqual(['DT', 'DD']);
+      const icon = row.querySelector('dt > [aria-hidden="true"]');
+      expect(icon).not.toBeNull();
+      expect(icon?.textContent).toBe('');
+    });
+  });
+
+  // The <dt> labels use the shared `mono` type variant (spec §4.5/§6.4) — the
+  // same label treatment the history cards and the emergency cards use.
   it('renders detail labels with the shared mono type variant, not local classes', async () => {
     render(<MedicationDetailModal {...baseProps} />);
 
     await waitFor(() => expect(getMedicationPhotoUrl).toHaveBeenCalled());
 
-    const label = screen.getByText('meds:page.detail.dosage');
+    const label = screen.getByText('meds:page.detail.time');
     expect(label.tagName).toBe('DT');
     expect(label.className).toContain(TEXT_CLASS.mono);
     expect(label.className).not.toContain('section-title-sm');
@@ -173,22 +245,6 @@ describe('MedicationDetailModal', () => {
     expect(
       screen.queryByRole('menuitem', { name: 'meds:page.actions.discontinue' }),
     ).toBeNull();
-  });
-
-  // The facts sit in a `Card filled` block rather than loose on the modal
-  // ground, and REPEAT is its own row: the schedule line already ends with the
-  // recurrence, but "Repeat · Daily" is what a caregiver checking whether a
-  // medication is still daily actually scans for. It is formatted by the
-  // caller — this modal must not reach into the calendar module (and through
-  // it into `@/i18n`) just to say one word.
-  it('renders the repeat row only when the caller supplies one', () => {
-    const { unmount } = render(<MedicationDetailModal {...baseProps} repeat="Daily" />);
-    expect(screen.getByText('meds:page.detail.repeat')).toBeInTheDocument();
-    expect(screen.getByText('Daily')).toBeInTheDocument();
-    unmount();
-
-    render(<MedicationDetailModal {...baseProps} />);
-    expect(screen.queryByText('meds:page.detail.repeat')).toBeNull();
   });
 
   // The footer holds exactly two controls — the More overflow trigger and

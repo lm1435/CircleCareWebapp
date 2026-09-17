@@ -16,6 +16,7 @@ import {
   type CircleMember,
 } from '@/api/circleMembers';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -83,7 +84,7 @@ function invalidateCircleQueries(
 }
 
 /** Shared onError for member mutations (these are owner-gated → mostly 403). */
-function useMemberMutationOnError(): (error: unknown) => void {
+function useMemberMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // Seat cap on the member write path — CAPACITY, same as invites.
@@ -93,10 +94,10 @@ function useMemberMutationOnError(): (error: unknown) => void {
   return (error: unknown) => {
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else {
       showToast(t('errors.saveFailed'), 'error');
     }
@@ -112,7 +113,7 @@ export function useRemoveMember(
   circleId: string
 ): UseMutationResult<void, unknown, RemoveMemberVariables> {
   const queryClient = useQueryClient();
-  const onError = useMemberMutationOnError();
+  const onError = useMemberMutationOnError(circleId);
 
   return useMutation({
     mutationFn: ({ userId }: RemoveMemberVariables) => removeMember(circleId, userId),
@@ -128,7 +129,7 @@ export function useRemoveMember(
 /** POST /circles/:circleId/leave — current member voluntarily leaves. */
 export function useLeaveCircle(circleId: string): UseMutationResult<void, unknown, void> {
   const queryClient = useQueryClient();
-  const onError = useMemberMutationOnError();
+  const onError = useMemberMutationOnError(circleId);
 
   return useMutation({
     mutationFn: () => leaveCircle(circleId),
@@ -150,7 +151,7 @@ export function useSetMedicationResponsible(
   circleId: string
 ): UseMutationResult<void, unknown, string | null> {
   const queryClient = useQueryClient();
-  const onError = useMemberMutationOnError();
+  const onError = useMemberMutationOnError(circleId);
 
   return useMutation({
     mutationFn: (userId: string | null) => setMedicationResponsible(circleId, userId),

@@ -33,6 +33,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { mapPdfKey } from '@/pdf/pdfEnv';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 
@@ -147,6 +148,21 @@ function declaredNamespaces(content: string): string[] {
 const lineOf = (content: string, index: number): number =>
   content.slice(0, index).split('\n').length;
 
+/**
+ * `src/pdf/shared/` is a byte-identical MIRROR of mobile's platform-pure PDF
+ * templates (`pdf/__tests__/pdfSharedMirror.test.ts` pins it). By design those
+ * files call `t` in MOBILE's flat key space (`careSummary.*`,
+ * `medicationHistory.export.*`, `vitals.types.*`); the web adapter
+ * (`src/pdf/pdfEnv.ts`) rewrites the prefixes onto the web namespaces at
+ * render time. The scans below apply THE SAME rewrite (imported, not copied)
+ * to every literal and template found under that folder, so the mirrored
+ * templates are audited against the keys they actually resolve to — and a
+ * template key the adapter does not map shows up here as missing.
+ */
+const MIRRORED_MOBILE_KEY_DIR = 'pdf/shared/';
+const webKeyFor = (rel: string, key: string): string =>
+  rel.startsWith(MIRRORED_MOBILE_KEY_DIR) ? mapPdfKey(key) : key;
+
 // Bare `t('key')` or `i18n.t('key')`. The lookbehind keeps `format(`, `.at(`,
 // `useEffect(` and friends out.
 const STATIC_CALL = /(?<![\w$])(?:i18n\.)?t\(\s*(['"])([^'"\n]*)\1/g;
@@ -200,8 +216,17 @@ const TRANS_KEY = /i18nKey=\s*(['"])([^'"\n]+)\1/g;
  * is already resolved by the W5 (a) `BACKTICK_CALL` sweep via the
  * `CategoryFilter` `.map()` call site, so every key is proven live and
  * present in both locales.
+ *
+ * 65 -> 66 (PDF export parity, Stage B1): `pdf/shared/adherenceReportTemplate.ts`
+ * — a byte-identical mirror of mobile's template — labels the summary trend
+ * with `t(trendKey)`, where `trendKey` is a ternary over the three literal
+ * `medicationHistory.export.{improving,declining,stable}` keys two lines
+ * above. Not a real blind spot: the W5 (a) sweep below resolves all three
+ * literals (rewritten onto `meds:export.*` by `webKeyFor`), so each is proven
+ * live and present in both locales. The file cannot be edited here — it is
+ * owned by mobile and synced (see `MIRRORED_MOBILE_KEY_DIR`).
  */
-const EXPECTED_DYNAMIC_KEY_CALL_SITES = 65;
+const EXPECTED_DYNAMIC_KEY_CALL_SITES = 66;
 
 /**
  * Comments are stripped before scanning — a `t(key)` inside a JSDoc block is
@@ -238,7 +263,7 @@ for (const file of sourceFiles(SRC_DIR)) {
   for (const re of [STATIC_CALL, TRANS_KEY]) {
     re.lastIndex = 0;
     for (const m of content.matchAll(re)) {
-      const key = m[2];
+      const key = m[2] ? webKeyFor(rel, m[2]) : m[2];
       if (!key || !/^[\w.:-]+$/.test(key)) continue; // not a translation key
       references.push({ key, file: rel, line: lineOf(content, m.index), declaredNs });
     }
@@ -470,24 +495,25 @@ describe('W5: no unreferenced en keys', () => {
 
   for (const file of sourceFiles(SRC_DIR)) {
     const content = stripCommentsSafe(readFileSync(file, 'utf8'));
+    const rel = relative(SRC_DIR, file);
     const declaredNs = declaredNamespaces(content);
 
     for (const re of [STATIC_CALL, TRANS_KEY]) {
       re.lastIndex = 0;
       for (const m of content.matchAll(re)) {
         const key = m[2];
-        if (key && /^[\w.:-]+$/.test(key)) markExact(key);
+        if (key && /^[\w.:-]+$/.test(key)) markExact(webKeyFor(rel, key));
       }
     }
     BACKTICK_CALL.lastIndex = 0;
-    for (const m of content.matchAll(BACKTICK_CALL)) markPattern(m[1], declaredNs);
+    for (const m of content.matchAll(BACKTICK_CALL)) markPattern(webKeyFor(rel, m[1]), declaredNs);
     // Key-builders are resolved against every namespace (see block comment
     // above) — pass no declared namespaces so tier1 IS "every namespace".
     KEY_BUILDER_TEMPLATE.lastIndex = 0;
-    for (const m of content.matchAll(KEY_BUILDER_TEMPLATE)) markPattern(m[1], []);
+    for (const m of content.matchAll(KEY_BUILDER_TEMPLATE)) markPattern(webKeyFor(rel, m[1]), []);
     for (const re of [QUOTED_KEYSHAPED, QUOTED_NS_KEY]) {
       re.lastIndex = 0;
-      for (const m of content.matchAll(re)) markExact(m[1] ?? m[2]);
+      for (const m of content.matchAll(re)) markExact(webKeyFor(rel, m[1] ?? m[2]));
     }
   }
 
@@ -585,6 +611,38 @@ describe('W5: no unreferenced en keys', () => {
     // per spec §6.7) instead of manually swapping the label to this
     // "Opening checkout…" copy. Genuinely dead now, not merely unwired.
     'upgrade:subscribing',
+    // PDF export parity (docs/plans/pdf-export-parity.md), Stage B1. Mobile's
+    // `careSummary` and `medicationHistory.export` subtrees are copied
+    // VERBATIM into `emergency.json` / `meds.json` — `pdf/__tests__/i18nParity.test.ts`
+    // fails on any key drift, so nothing here may be pruned. Two groups:
+    //
+    //   (1) UI strings for the hooks and controls B3/B4 add next (the Export
+    //       PDF masthead action + privacy confirm, the adherence period
+    //       chooser, spinners and toasts). Being an upper bound, wiring them up
+    //       needs no change here.
+    'emergency:careSummary.shareAsPdf',
+    'emergency:careSummary.shareAsText',
+    'emergency:careSummary.shareTitle',
+    'emergency:careSummary.subtitle',
+    //   (2) Keys the shared templates no longer read on EITHER platform (the
+    //       recurrence label now comes from each app's own formatter via
+    //       `PdfEnv.formatRecurrence`; a few section/field labels were
+    //       superseded in mobile's 2026-09-14 layout pass). Carried for
+    //       verbatim parity with mobile, which owns the subtree.
+    'emergency:careSummary.empty.noInfo',
+    'emergency:careSummary.empty.noMedicalInfo',
+    'emergency:careSummary.fields.medicalConditions',
+    'emergency:careSummary.fields.primaryDoctor',
+    'emergency:careSummary.frequency.custom',
+    'emergency:careSummary.frequency.custom_unknown',
+    'emergency:careSummary.frequency.cycle',
+    'emergency:careSummary.frequency.daily',
+    'emergency:careSummary.frequency.every_other_day',
+    'emergency:careSummary.frequency.monthly',
+    'emergency:careSummary.frequency.weekly',
+    'emergency:careSummary.frequency.yearly',
+    'emergency:careSummary.sections.medicalInfo',
+    'meds:export.trend',
   ];
 
   it('has no unreferenced en keys beyond the pinned dead-key allowlist', () => {
@@ -685,5 +743,41 @@ describe('W5: string-constant translation keys used outside t()', () => {
     );
     expect(keys.length).toBeGreaterThanOrEqual(3);
     expect(missingFrom('common', keys)).toEqual([]);
+  });
+  /**
+   * THE SHORT ADD-MENU LABELS HAVE TO BE SHORT.
+   *
+   * `addMenu.<type>Short` exists for exactly one reason: four options share
+   * ONE row in the Add menu, so the pill shows the short label. It is also the
+   * button's ACCESSIBLE NAME — `AddMenu.tsx` deliberately sets no aria-label,
+   * because naming a button "Appointment" over a visible "Appt" fails WCAG
+   * 2.5.3 Label in Name — so a short label that is not actually shorter is not
+   * a harmless duplicate: it is the layout the key was added to prevent, in the
+   * one language whose words are longest.
+   *
+   * Spanish shipped `medicationShort: "Medicamento"`, identical to the full
+   * label (English is "Med"), so the row it was meant to fit was never fitted.
+   */
+  it('keeps every addMenu short label no longer than its full label, and abbreviates the long one', () => {
+    for (const locale of ['en', 'es'] as const) {
+      const addMenu = (resources[locale].common as { addMenu: Record<string, string> }).addMenu;
+      for (const [key, full] of Object.entries(addMenu)) {
+        if (key.endsWith('Short')) continue;
+        const short = addMenu[`${key}Short`];
+        expect(short, `${locale} addMenu.${key}Short`).toBeTruthy();
+        expect(
+          short.length,
+          `${locale} addMenu.${key}Short ("${short}") must not be longer than "${full}"`
+        ).toBeLessThanOrEqual(full.length);
+      }
+      // "Task"/"Note" are already short in both languages, so an equal-length
+      // short label is fine for them. `medication` is the long one everywhere
+      // and is the reason the short variants exist at all — if it is not
+      // abbreviated, nothing is.
+      expect(
+        addMenu.medicationShort.length,
+        `${locale} addMenu.medicationShort ("${addMenu.medicationShort}")`
+      ).toBeLessThan(addMenu.medication.length);
+    }
   });
 });

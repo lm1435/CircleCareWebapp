@@ -187,6 +187,43 @@ export async function getEvents(
   return response.data.events;
 }
 
+/**
+ * Per-type presence for a window. Each flag is exactly "GET /events for this
+ * window would return >= 1 event of that type" (backend contract).
+ */
+export interface EventsPresence {
+  medication: boolean;
+  appointment: boolean;
+  task: boolean;
+}
+
+interface EventsPresenceEnvelope {
+  success: boolean;
+  data: EventsPresence;
+}
+
+/**
+ * GET /circles/:circleId/events/presence?start_date&end_date — the cheap
+ * "does anything exist here?" read, instead of downloading the window's events.
+ * Dates are YYYY-MM-DD in the care recipient's timezone. An OLDER backend has
+ * no such route and answers 404 NOT_FOUND; this function rethrows that like any
+ * other failure — `useEventsPresence` owns the fallback.
+ */
+export async function getEventsPresence(
+  circleId: string,
+  params: { start_date: string; end_date: string }
+): Promise<EventsPresence> {
+  const response = (await apiClient.get(`/circles/${circleId}/events/presence`, {
+    params: { start_date: params.start_date, end_date: params.end_date },
+  })) as unknown as EventsPresenceEnvelope;
+  const data = response.data;
+  return {
+    medication: data?.medication === true,
+    appointment: data?.appointment === true,
+    task: data?.task === true,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Circle detail — care recipient timezone source.
 // Verified in backend/src/routes/circles.ts GET /api/circles/:circleId:
@@ -404,14 +441,33 @@ export async function deleteEvent(
   await apiClient.delete(`/circles/${circleId}/events/${eventId}${qs ? `?${qs}` : ''}`);
 }
 
-/** POST /circles/:circleId/events/:eventId/complete — complete a task/appt. */
+/**
+ * POST /circles/:circleId/events/:eventId/complete — complete a task/appt.
+ *
+ * `scheduledDate` says WHICH DAY of a recurring series is being completed.
+ * `completed_at` lives on a ROW, and a series is addressed by its ROOT
+ * (`parent_event_id || id`), so without it the server can only stamp the root —
+ * the series' FIRST day, not the day the caregiver clicked. The calendar's
+ * recurring occurrences are also VIRTUAL rows the backend synthesises with a
+ * composite id (`${parentId}_${date}`, `is_virtual: true`), which no `id`
+ * column can match at all: root + date is the only addressable form they have.
+ *
+ * OMITTED FOR EVERYTHING ELSE. A one-off, or any row addressed by its own id,
+ * already IS its occurrence — and with no date this sends the exact body-less
+ * POST every shipped client sends, which the OLD server must keep answering
+ * through the deploy window. Same wire contract as mobile, so one backend
+ * serves both.
+ */
 export async function completeEvent(
   circleId: string,
-  eventId: string
+  eventId: string,
+  scheduledDate?: string
 ): Promise<CalendarEvent> {
-  const response = (await apiClient.post(
-    `/circles/${circleId}/events/${eventId}/complete`
-  )) as unknown as SingleEventEnvelope;
+  const path = `/circles/${circleId}/events/${eventId}/complete`;
+  // One argument, no body — literally the shipped call — unless there is a date.
+  const response = (await (scheduledDate
+    ? apiClient.post(path, { scheduled_date: scheduledDate })
+    : apiClient.post(path))) as unknown as SingleEventEnvelope;
   return response.data.event;
 }
 

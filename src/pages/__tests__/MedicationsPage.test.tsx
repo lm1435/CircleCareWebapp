@@ -785,6 +785,19 @@ describe('MedicationsPage', () => {
     });
   });
 
+  // The detail sheet printed the recurrence twice: the page handed it the roster's
+  // full schedule line ("8:00 AM · Daily") right above its own Repeat row. The
+  // page now passes the dose times alone, so the recurrence appears once.
+  it('opens the detail sheet with the recurrence shown once, in its Repeat row', async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'View details for Metformin' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(within(dialog).getAllByText(/\bDaily\b/)).toHaveLength(1);
+    expect(within(dialog).queryByText(/·\s*Daily/)).toBeNull();
+  });
+
   // WCAG 2.5.5 / 2.5.8. The name is the card's only way into the medication and
   // it used to be the bare title's own text box — a ~21px strip to hit exactly.
   it('gives the medication name a 44px-tall target spanning the name column', () => {

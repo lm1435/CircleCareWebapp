@@ -5,6 +5,7 @@ import { updateCircleSchema } from '@/api/circles';
 import { useCircle } from '@/hooks/useCircle';
 import { useUpdateCircle, useDeleteCircle } from '@/hooks/useCircleAdmin';
 import { useAuthStore } from '@/store/authStore';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import {
   Avatar,
@@ -64,6 +65,10 @@ export default function EditCirclePage(): ReactElement {
   const update = useUpdateCircle(circleId);
   const remove = useDeleteCircle(circleId);
   const form = useZodForm(updateCircleSchema, ['recipient_name', 'recipient_dob']);
+  // See `handleSubmit`: `useZodForm.submit` is synchronous and knows nothing
+  // about the request it triggers, so the in-flight guard belongs at the call
+  // site that owns the mutation.
+  const submitGuard = useSubmitGuard();
 
   // Local form state, seeded from the loaded circle on first render with data.
   const [recipientName, setRecipientName] = useState<string | null>(null);
@@ -190,8 +195,18 @@ export default function EditCirclePage(): ReactElement {
         ...(dobValue ? { recipient_dob: dobValue } : {}),
       },
       (data) => {
+        // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. This form had none: `useZodForm`
+        // calls `onValid` synchronously every time it is handed valid values,
+        // and `update.mutate(...)` returns immediately, so two submits in the
+        // SAME tick both fire. The payload is recomputed from the same state,
+        // so today's second PATCH is idempotent; what it costs is a wasted
+        // write and a second "Saved" toast for one edit. "Idempotent" is a
+        // property of this payload, not of the form. Released in `onSettled` —
+        // `mutate` returns immediately, so there is no promise to hold it open.
+        if (update.isPending || !submitGuard.claim()) return;
         update.mutate(data, {
           onSuccess: () => showToast(t('edit.savedToast'), 'success'),
+          onSettled: submitGuard.release,
         });
       }
     );

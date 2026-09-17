@@ -9,7 +9,8 @@
 // asserts wiring without a network/React Query roundtrip. i18n + ToastProvider
 // are real (the panel calls useToast).
 
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import { clickTwice, submitFormTwice } from '@/test/doubleSubmit';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { ToastProvider } from '@/components/ui';
@@ -192,6 +193,157 @@ describe('EventNotesPanel', () => {
       circleId: CIRCLE_ID,
       eventId: EVENT_ID,
       noteId: 'note-1',
+    });
+  });
+  // ──────────────────────────────────────────────────────────────────────────
+  // DOUBLE SUBMIT — a duplicated event note is a duplicated CARE RECORD, and
+  // this one also 500s: POST event notes is one of the three backend routes
+  // that insert against the partial unique index with NO 23505 recovery, so the
+  // losing racer does not lose quietly.
+  //
+  // `if (!body || createNote.isPending) return` cannot stop it: `isPending` is
+  // React Query state, committed a render AFTER the submit that started the
+  // request. `submitFormTwice` dispatches both inside one `act()` with no
+  // render in between — the production shape; two awaited clicks would not be.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('double submit', () => {
+    function composerForm(): HTMLFormElement {
+      const field = screen.getByLabelText('Add a note');
+      const form = field.closest('form');
+      if (!(form instanceof HTMLFormElement)) throw new Error('composer form not found');
+      return form;
+    }
+
+    it('posts ONE note when the composer is submitted twice in one tick', async () => {
+      const user = userEvent.setup();
+      renderPanel();
+
+      await user.type(screen.getByLabelText('Add a note'), 'Refill on Monday');
+      await submitFormTwice(composerForm());
+
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('still posts on a genuine RESUBMIT after the first attempt failed', async () => {
+      const user = userEvent.setup();
+      // Callbacks held rather than fired inline — React Query runs them when
+      // the REQUEST returns, not inside `mutate()`. Firing them synchronously
+      // would release the guard before `mutate` returned and this test would
+      // pass against no guard at all.
+      let pending: Parameters<typeof mockCreate>[1] | undefined;
+      mockCreate.mockImplementation((_vars, opts) => {
+        pending = opts;
+      });
+      renderPanel();
+
+      await user.type(screen.getByLabelText('Add a note'), 'Refill on Monday');
+      await submitFormTwice(composerForm());
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        pending?.onError?.(new Error('500'));
+        pending?.onSettled?.();
+      });
+
+      await submitFormTwice(composerForm());
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+    });
+
+    // EDIT and DELETE carry their own guards (one per action), and until these
+    // tests only CREATE's was pinned — either of the other two could be deleted
+    // with the suite still green.
+    it('saves ONE edit when Save is clicked twice in one tick', async () => {
+      const user = userEvent.setup();
+      // In flight: no callback fires, so the guard is still held on the second
+      // click. `isPending` is mocked false throughout — only the ref can stop it.
+      mockUpdate.mockImplementation(() => {});
+      notesData = [makeNote({ author_id: 'user-1' })];
+      renderPanel();
+
+      await user.click(screen.getByRole('button', { name: 'Edit' }));
+      const editBox = screen.getByLabelText('Edit note');
+      await user.clear(editBox);
+      await user.type(editBox, 'Updated body');
+      await clickTwice(screen.getByRole('button', { name: 'Save' }));
+
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('still saves an edit on a genuine RESUBMIT after the first attempt failed', async () => {
+      const user = userEvent.setup();
+      let pending: Parameters<typeof mockUpdate>[1] | undefined;
+      mockUpdate.mockImplementation((_vars, opts) => {
+        pending = opts;
+      });
+      notesData = [makeNote({ author_id: 'user-1' })];
+      renderPanel();
+
+      await user.click(screen.getByRole('button', { name: 'Edit' }));
+      await user.type(screen.getByLabelText('Edit note'), ' again');
+      await clickTwice(screen.getByRole('button', { name: 'Save' }));
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        pending?.onError?.(new Error('500'));
+        pending?.onSettled?.();
+      });
+
+      // A failed save keeps the editor open, so the retry is the same button.
+      await clickTwice(screen.getByRole('button', { name: 'Save' }));
+      expect(mockUpdate).toHaveBeenCalledTimes(2);
+    });
+
+    /**
+     * A TURN between the two confirms, not a same-tick pair. The delete goes
+     * through ConfirmDialog, whose own ref rejects a same-tick second click
+     * whatever this panel does — so a `clickTwice` here stays green with the
+     * panel's `deleteGuard` removed. But `handleConfirmDelete` returns nothing,
+     * so the shell's ref is released on the next microtask while the DELETE is
+     * still in flight; after that turn, the panel's guard is the only thing
+     * between a second click and a second DELETE (which 404s and toasts a
+     * failure over a delete that worked).
+     */
+    it('deletes ONE note when Confirm is clicked again a turn later, mid-request', async () => {
+      const user = userEvent.setup();
+      mockDelete.mockImplementation(() => {});
+      notesData = [makeNote({ author_id: 'user-1' })];
+      renderPanel();
+
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' });
+
+      await act(async () => {
+        confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it('still deletes on a genuine retry after the first delete failed', async () => {
+      const user = userEvent.setup();
+      let pending: Parameters<typeof mockDelete>[1] | undefined;
+      mockDelete.mockImplementation((_vars, opts) => {
+        pending = opts;
+      });
+      notesData = [makeNote({ author_id: 'user-1' })];
+      renderPanel();
+
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+
+      // A failed delete closes the dialog (and toasts); the retry reopens it.
+      await act(async () => {
+        pending?.onError?.(new Error('500'));
+        pending?.onSettled?.();
+      });
+      expect(screen.queryByRole('dialog')).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+      expect(mockDelete).toHaveBeenCalledTimes(2);
     });
   });
 });

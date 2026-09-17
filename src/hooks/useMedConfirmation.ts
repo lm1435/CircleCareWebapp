@@ -27,6 +27,7 @@ import {
   type TodaysMedication,
 } from '@/api/medicationConfirmations';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { classifyFailureCode } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { getDateInTimezone } from '@/utils/timezone';
@@ -172,7 +173,7 @@ export function useConfirmMedication(
         showToast(t('permissionDenied'), 'error');
         // Refresh access flags + visible med state — the rejection means the
         // cached can_edit/view_only/read_only flags are stale.
-        void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+        invalidateCircleAccessFlags(queryClient, circleId);
         void queryClient.invalidateQueries({ queryKey: todaysMedsKey(circleId) });
       } else {
         // Conflict/parallel-confirm path mirrors mobile: refetch current state.

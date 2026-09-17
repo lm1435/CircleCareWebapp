@@ -1,5 +1,19 @@
 @import 'tailwindcss';
 
+/* Tests are not markup. Tailwind scans every non-ignored file for class
+ * candidates, and test comments/fixtures quote class SHAPES — a comment
+ * mentioning `@min-[…]:px-4` once emitted an invalid container query that broke
+ * the production build. Product classes must live in product files anyway. */
+@source not "../**/__tests__";
+
+/* `modal-open:` — applies while a MODAL DIALOG is on screen anywhere in the
+ * document. Keyed on `aria-modal="true"` rather than on Modal.tsx internals, so
+ * every modal surface counts (the Modal shell, nested ConfirmDialogs inside it,
+ * the coarse-pointer picker sheet). Used by the toast region (Toast.tsx) to
+ * move clear of dialog controls. Declared ONCE: a second declaration would
+ * silently win (Toast.test.tsx pins that). */
+@custom-variant modal-open (body:has([aria-modal="true"]) &);
+
 /*
  * CircleCare design tokens — mirrored EXACTLY from the mobile app's design
  * system (mobile/src/theme/index.ts: the `CC` palette, `typography`, `spacing`,
@@ -303,6 +317,29 @@
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
+    }
+  }
+
+  /*
+   * Bottom-sheet entrance: the panel rises off the viewport floor. Used via
+   * animate-[sheet-in_…] by the picker shell's SHEET presentation
+   * (`pickerPopover.tsx`), which is what touch devices get instead of a panel
+   * anchored to the field.
+   *
+   * `translateY(100%)` and NOT `modal-in`'s 8px rise + `scale(0.98)`: the sheet
+   * is flush with three viewport edges, so a scale would paint a hairline of
+   * page down its sides on the way in, and an 8px rise from a surface that
+   * starts on the floor is a twitch rather than an entrance. The global
+   * prefers-reduced-motion block neutralizes it like every other keyframe here.
+   */
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 

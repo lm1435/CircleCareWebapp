@@ -6,6 +6,7 @@ import {
   upsertWithPrimaryExclusivity,
   useUpdateEmergencyInfo,
 } from '@/hooks/useEmergencyInfo';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { Button, Modal, TextField, Toggle } from '@/components/ui';
 
 export interface EditInsuranceModalProps {
@@ -34,6 +35,17 @@ function EditInsuranceModalForm({
 }: EditInsuranceModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
+  // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `update.isPending` drives `loading` on
+  // the footer button, but that is React Query state committed a render AFTER
+  // the submit that started the request — and implicit form submission (Enter
+  // in a field) never consults the button at all, so two submits in the SAME
+  // tick both fire. The payload is recomputed from the same state, so today's
+  // second PUT is idempotent; what it costs is a wasted write against a
+  // premium-gated, rate-limited route and a second activity-feed entry for one
+  // edit. "Idempotent" is a property of this payload, not of the form.
+  // `isPending` first, then the ref (`useSubmitGuard`); released in
+  // `onSettled`, since `mutate` returns immediately.
+  const submitGuard = useSubmitGuard();
 
   const existing =
     index !== undefined ? (info?.insurance_plans?.[index] ?? EMPTY_PLAN) : EMPTY_PLAN;
@@ -54,6 +66,10 @@ function EditInsuranceModalForm({
       return;
     }
 
+    // Claimed AFTER the validity gate, so a claim is never taken (and then
+    // abandoned) on a submit that was going to bail out anyway.
+    if (update.isPending || !submitGuard.claim()) return;
+
     const plan: InsurancePlan = {
       // Preserve any OCR-derived fields from the original plan (web never edits
       // these, but they must survive a read-modify-write).
@@ -67,7 +83,10 @@ function EditInsuranceModalForm({
     };
     const next = upsertWithPrimaryExclusivity(info?.insurance_plans ?? [], plan, index);
 
-    update.mutate({ insurance_plans: toRequestPlans(next) }, { onSuccess: onClose });
+    update.mutate(
+      { insurance_plans: toRequestPlans(next) },
+      { onSuccess: onClose, onSettled: submitGuard.release }
+    );
   };
 
   return (

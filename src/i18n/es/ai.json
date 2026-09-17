@@ -14,8 +14,11 @@
   "newChat": "Nuevo chat",
   "errors": {
     "subscriptionRequired": "El Asistente de Cuidado es una función premium. Mejora a Premium para usarlo.",
+    "viewOnly": "Tienes acceso de solo visualización a este círculo. Pídele al propietario del círculo acceso completo para usar el Asistente de Cuidado.",
+    "circleReadOnly": "Este círculo está en solo lectura por ahora. El Asistente de Cuidado volverá a estar disponible cuando la suscripción del propietario incluya este círculo.",
     "rateLimited": "Alcanzaste el límite de preguntas de hoy. El Asistente de Cuidado estará disponible de nuevo mañana.",
     "unavailable": "El Asistente de Cuidado no está disponible en este momento. Inténtalo más tarde.",
-    "sendFailed": "Lo sentimos, ocurrió un error. Inténtalo de nuevo."
+    "sendFailed": "Lo sentimos, ocurrió un error. Inténtalo de nuevo.",
+    "invalidMessage": "No pude procesar ese mensaje. Intenta reformular tu pregunta sobre el cuidado o la salud."
   }
 }

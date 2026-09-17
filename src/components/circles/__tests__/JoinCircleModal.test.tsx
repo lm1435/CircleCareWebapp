@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '@/i18n';
 import { JoinCircleModal } from '../JoinCircleModal';
+import { clickTwice, submitFormTwice } from '@/test/doubleSubmit';
 
 // Web port parity test for mobile's JoinCircleModal. Mocks the lookup/accept
 // mutations + toast so the test focuses on the two-step flow:
@@ -450,7 +451,7 @@ describe('JoinCircleModal', () => {
 
       const archived = await failLookupWith('CIRCLE_ARCHIVED', ES);
       expect(archived).toHaveTextContent(
-        'Este círculo ya no está activo. Pídele a quien te invitó que consulte con el dueño del círculo.'
+        'Este círculo ya no está activo. Pídele a quien te invitó que consulte con el propietario del círculo.'
       );
 
       cleanup();
@@ -476,5 +477,132 @@ describe('JoinCircleModal', () => {
       const acceptAlert = await failAcceptWith('SERVER_ERROR');
       expect(acceptAlert).toHaveTextContent("We couldn't join this circle. Please try again.");
     });
+  });
+});
+
+// Regression — double submit. Both steps hit rate-limited invite endpoints
+// (`inviteGuessRateLimit` per IP + `inviteRedeemRateLimit` per user) and both
+// buttons were protected only by `loading={...isPending}`, which React commits
+// a render after the press that would double-fire them.
+describe('JoinCircleModal — double-submit guard', () => {
+  it('looks a code up exactly ONCE when the form is submitted twice in the same tick', async () => {
+    const user = userEvent.setup();
+    // In flight: no callback fires, so the guard is still held on the second
+    // submit.
+    lookupMutate.mockImplementation(() => {});
+    const { container } = render(
+      <MemoryRouter>
+        <JoinCircleModal onClose={vi.fn()} onJoined={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    await pasteCode(user, 'abc123');
+    await submitFormTwice(
+      container.querySelector('#join-circle-code-form') as HTMLFormElement
+    );
+
+    expect(lookupMutate).toHaveBeenCalledTimes(1);
+  });
+
+  // THE OTHER HALF OF THE GUARD. Every mock above fires `onSuccess`/`onError`
+  // and never `onSettled` — where both guards are released — so deleting either
+  // `release()` stayed green in this file. React Query runs `onSettled` after
+  // `onError`; these mocks do the same, and the second press must go through.
+  it('lets the user look a code up again after a failed lookup', async () => {
+    const user = userEvent.setup();
+    lookupMutate
+      .mockImplementationOnce((_code, opts) => {
+        opts?.onError?.({ error: { code: 'SERVER_ERROR' } });
+        opts?.onSettled?.();
+      })
+      .mockImplementationOnce((_code, opts) => {
+        opts?.onSuccess?.(INVITE);
+        opts?.onSettled?.();
+      });
+    renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+
+    expect(lookupMutate).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("Rose's Circle")).toBeInTheDocument();
+  });
+
+  // …AND AFTER A SUCCESSFUL ONE. A lookup success does not unmount anything —
+  // it swaps to the preview, and "Enter a different code" swaps back — so the
+  // guard has to come back on success too. A release wired only into `onError`
+  // passed the failure test above and left "Find circle" dead the moment the
+  // user backed out of a preview to try another code.
+  it('lets the user look a code up again after a SUCCESSFUL lookup and going back', async () => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => {
+      opts?.onSuccess?.(INVITE);
+      opts?.onSettled?.();
+    });
+    renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByText("Rose's Circle");
+    expect(lookupMutate).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: 'Enter a different code' }));
+    // Back on the entry step with the code still filled in (a precondition —
+    // otherwise the disabled button, not the guard, would block the retry).
+    expect(codeValue()).toBe('ABC123');
+    const findCircle = screen.getByRole('button', { name: 'Find circle' });
+    expect(findCircle).toBeEnabled();
+
+    await user.click(findCircle);
+
+    expect(lookupMutate).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("Rose's Circle")).toBeInTheDocument();
+  });
+
+  it('lets the user press Join circle again after a failed accept', async () => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => {
+      opts?.onSuccess?.(INVITE);
+      opts?.onSettled?.();
+    });
+    acceptMutate
+      .mockImplementationOnce((_code, opts) => {
+        opts?.onError?.({ error: { code: 'SERVER_ERROR' } });
+        opts?.onSettled?.();
+      })
+      .mockImplementationOnce((_code, opts) => {
+        opts?.onSuccess?.();
+        opts?.onSettled?.();
+      });
+    const { onJoined } = renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByText("Rose's Circle");
+    await user.click(screen.getByRole('button', { name: 'Join circle' }));
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: 'Join circle' }));
+
+    expect(acceptMutate).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(onJoined).toHaveBeenCalledWith('circle-1'));
+  });
+
+  it('accepts exactly ONCE when Join circle is pressed twice in the same tick', async () => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
+    acceptMutate.mockImplementation(() => {});
+    renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByText("Rose's Circle");
+
+    await clickTwice(screen.getByRole('button', { name: 'Join circle' }));
+
+    expect(acceptMutate).toHaveBeenCalledTimes(1);
   });
 });

@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  *     loader, mocked posthog-js — same technique as
  *     posthogConsentIntegration.test.ts): a consenting visitor's boot errors
  *     reach `posthog.captureException` tagged `boundary: 'boot'`; a declining
- *     visitor's are DISCARDED, not deferred.
+ *     visitor's are replayed too — ANONYMOUSLY (flag on, lib/analyticsMode) —
+ *     exactly once, never deferred to a later consent.
  *
  * jsdom has `ErrorEvent` but no `PromiseRejectionEvent`, so rejections are
  * dispatched as a plain Event with a `reason` property — which is all the
@@ -272,27 +273,33 @@ describe('integration: initAnalytics decides flush vs discard', () => {
     expect(mod.__bootErrorCountForTests()).toBe(0);
   });
 
-  it('a declining visitor: the buffer is DISCARDED at init, and stays gone after a later consent', async () => {
+  it('a declining visitor: boot errors are replayed ANONYMOUSLY at init, once, and not again on a later consent', async () => {
     const mod = await loadFreshWithKey('phc_test_key');
     mod.installBootErrorBuffer();
     dispatchError(new Error('private crash'));
     expect(mod.__bootErrorCountForTests()).toBe(1);
 
     mod.setAnalyticsConsent(false);
-    mod.initAnalytics();
-    await flushMicrotasks();
-
-    expect(init).not.toHaveBeenCalled();
-    expect(captureExceptionSpy).not.toHaveBeenCalled();
-    expect(mod.__bootErrorCountForTests()).toBe(0);
-
-    // Consenting afterwards must not resurrect what was captured under "no".
-    mod.setAnalyticsConsent(true);
-    mod.initAnalytics();
+    mod.initAnalytics(); // declined -> 'anonymous' -> the client IS constructed
     await mod.loadPosthogModule();
     await flushMicrotasks();
+
+    // Crash data from the declined cohort is the whole point of the flag
+    // (analyticsMode.ts); it goes out under a random memory-only id.
     expect(init).toHaveBeenCalledTimes(1);
-    expect(captureExceptionSpy).not.toHaveBeenCalled();
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
+    expect(captureExceptionSpy).toHaveBeenCalledWith(expect.any(Error), {
+      boundary: 'boot',
+      platform: 'web',
+    });
+    expect(mod.__bootErrorCountForTests()).toBe(0);
+
+    // Consenting afterwards re-configures, but the buffer was flushed and the
+    // listeners removed — nothing is replayed a second time.
+    mod.setAnalyticsConsent(true);
+    mod.initAnalytics();
+    await flushMicrotasks();
+    expect(captureExceptionSpy).toHaveBeenCalledTimes(1);
   });
 
   it('no PostHog key: the buffer is released rather than held forever', async () => {

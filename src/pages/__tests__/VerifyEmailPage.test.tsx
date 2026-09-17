@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/api';
 import { setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
+import { clickTwice, neverSettles } from '@/test/doubleSubmit';
 
 // VerifyEmailPage — OTP verification is the last hop of the sign-up flow, so
 // it is a post-auth landing decision: it must resume a pending invite handoff
@@ -165,5 +166,35 @@ describe('VerifyEmailPage', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(tokenAccessor.getAuthToken()).toBeNull();
+  });
+});
+
+// Regression — double submit on Resend. /auth/resend-otp sits on the
+// 10-per-15-minutes `otpRateLimit` bucket and mails a real code that
+// invalidates the previous one, so a double fire both spends a limiter slot
+// and can leave the user typing a code that is already dead. `isResending`
+// and `cooldown` are both STATE — neither can reject a second click dispatched
+// before React commits the first one's render.
+//
+// `verify` is deliberately NOT covered here: `submittedRef` was already a
+// synchronous ref checked on its first line (the same idiom), and
+// "auto-submits once when the code completes" above exercises it.
+describe('VerifyEmailPage — double-submit guard', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    tokenAccessor.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+  });
+
+  it('resends exactly ONE code when Resend is pressed twice in the same tick', async () => {
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    renderVerify();
+
+    await clickTwice(screen.getByRole('button', { name: 'Resend Code' }));
+
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+    expect(mockedPost).toHaveBeenCalledWith('/auth/resend-otp', { email: 'pat@example.com' });
   });
 });

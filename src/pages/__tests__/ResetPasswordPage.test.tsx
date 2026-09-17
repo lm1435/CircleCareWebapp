@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import { apiClient } from '@/lib/api';
+import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 
 // ResetPasswordPage — reset with the emailed 6-digit recovery OTP. Email
 // arrives via router state from ForgotPasswordPage (never via query params);
@@ -165,5 +166,48 @@ describe('ResetPasswordPage', () => {
     await user.click(screen.getByRole('button', { name: 'Reset password' }));
 
     await vi.waitFor(() => expect(mockedPost).toHaveBeenCalled());
+  });
+});
+
+// Regression — double submit. /auth/reset-password sits on the
+// 5-per-5-minutes `authRateLimit` bucket and the recovery OTP is single-use:
+// the second request fails on an already-consumed code and shows "that code
+// didn't work" for a reset that actually succeeded.
+describe('ResetPasswordPage — double-submit guard', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+  });
+
+  it('sends exactly ONE /auth/reset-password when the form is submitted twice in the same tick', async () => {
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    const { container } = renderWithEmail();
+
+    await enterOtp();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/^New Password/), 'Secret#123');
+    await user.type(screen.getByLabelText(/^Confirm Password/), 'Secret#123');
+    await submitFormTwice(container.querySelector('form') as HTMLFormElement);
+
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+  });
+
+  it('is still submittable after a validation failure (the guard releases, it does not latch)', async () => {
+    const { container } = renderWithEmail();
+    const form = container.querySelector('form') as HTMLFormElement;
+
+    // No code, no password — three validation branches return before
+    // isSubmitting is ever set.
+    await submitFormTwice(form);
+    expect(mockedPost).not.toHaveBeenCalled();
+
+    await enterOtp();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/^New Password/), 'Secret#123');
+    await user.type(screen.getByLabelText(/^Confirm Password/), 'Secret#123');
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    await user.click(screen.getByRole('button', { name: 'Reset password' }));
+
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
   });
 });

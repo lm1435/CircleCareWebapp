@@ -15,7 +15,10 @@ test('compose, edit, and delete a daily care note', async ({ page, circleId }) =
   const editedBody = `${body} edited`;
 
   await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Notes', exact: false })).toBeVisible({
+  // `exact` because a substring match also hits the empty state's "No notes
+  // yet" heading, which is on screen for a circle with no notes yet and trips
+  // strict mode.
+  await expect(page.getByRole('heading', { name: 'Notes', exact: true })).toBeVisible({
     timeout: 20_000,
   });
 
@@ -88,8 +91,31 @@ test('compose, edit, and delete a daily care note', async ({ page, circleId }) =
   await expect(page.getByText(new RegExp(escapeRe(editedBody)))).toHaveCount(0, {
     timeout: 20_000,
   });
+  // After the reload, ABSENCE is only evidence once the page has demonstrably
+  // loaded its notes: a page still skeleton-loading, stuck on the error state,
+  // or never mounted "has no such text" too. So first require a positive
+  // loaded signal — the notes GET for this circle returned 200, the masthead
+  // and composer rendered, the loading list is gone, and the list itself
+  // rendered (a day section with rows, or the empty state).
+  const notesFetched = page.waitForResponse(
+    (r) =>
+      r.request().method() === 'GET' &&
+      new URL(r.url()).pathname === `/api/circles/${circleId}/care-notes`,
+    { timeout: 20_000 }
+  );
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.getByText(new RegExp(escapeRe(editedBody)))).toHaveCount(0, {
+  expect((await notesFetched).status(), 'GET care-notes after reload').toBe(200);
+  await expect(page.getByRole('heading', { name: 'Notes', exact: true })).toBeVisible({
     timeout: 20_000,
   });
+  await expect(page.getByLabel(/^Add a note/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('ul[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
+  await expect(
+    page
+      .locator('section[aria-label] li')
+      .or(page.getByRole('heading', { name: 'No notes yet' }))
+      .first(),
+    'the notes list (or its empty state) rendered after the reload'
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(new RegExp(escapeRe(editedBody)))).toHaveCount(0);
 });

@@ -38,6 +38,7 @@ export { Select, type SelectProps, type SelectOption } from './Select';
 export { DateField, type DateFieldProps } from './DateField';
 export { TimeField, type TimeFieldProps } from './TimeField';
 export { Toggle, type ToggleProps } from './Toggle';
+export { Checkbox, type CheckboxProps } from './Checkbox';
 export { RadioGroup, type RadioGroupProps, type RadioOption } from './RadioGroup';
 export { RequiredMarker } from './RequiredMarker';
 export {

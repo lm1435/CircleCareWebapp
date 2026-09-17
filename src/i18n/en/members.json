@@ -34,7 +34,7 @@
     }
   },
   "med": {
-    "noMedsToday": "No medications today",
+    "nothingTrackedYet": "Nothing tracked yet",
     "allTaken": "All medications taken",
     "takenToday": "{{taken}}/{{total}} taken today",
     "takenOverdue": "{{taken}}/{{total}} taken · {{overdue}} overdue"

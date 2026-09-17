@@ -67,13 +67,16 @@ test('emergency info prints as a clean single column with whole cards', async ({
   // share, so the two columns are not always pixel-equal, but there must
   // still be exactly two of them (not one, and not the screen breakpoint's
   // four).
+  //
+  // The tiles are ASSERTED to exist rather than checked "if present": the
+  // cloned demo circle always carries emergency info, so no tiles means they
+  // stopped rendering — and a guarded check would have passed that silently.
   const glanceCards = cardWidths.filter((c) => c.inGlance);
-  if (glanceCards.length > 0) {
-    const glanceColumnCount = await page
-      .locator('.glance-tiles-grid')
-      .evaluate((el) => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
-    expect(glanceColumnCount).toBe(2);
-  }
+  expect(glanceCards.length, 'at-a-glance tiles render on the printed sheet').toBeGreaterThan(0);
+  const glanceColumnCount = await page
+    .locator('.glance-tiles-grid')
+    .evaluate((el) => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
+  expect(glanceColumnCount).toBe(2);
 
   // 3) Print chrome (masthead actions, tabs, per-card MoreMenus) is hidden.
   const printHideVisible = await page.evaluate(

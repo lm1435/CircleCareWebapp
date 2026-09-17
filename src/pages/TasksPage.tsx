@@ -114,25 +114,27 @@ export default function TasksPage(): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, sort]);
 
+  const loadingSkeleton = (
+    <ul className={`${careCardListGap} m-0 list-none p-0 px-5`} aria-busy="true">
+      <li className="sr-only">{t('loading')}</li>
+      {SKELETON_ROWS.map((row) => (
+        <li key={row} className={`${careCardShell}`}>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-[22px] w-[22px] shrink-0 rounded-full" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-2/3 max-w-64" />
+              <Skeleton className="mt-2 h-3 w-1/3 max-w-40" />
+            </div>
+            <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
   let body: ReactElement;
   if (tasksQuery.isLoading) {
-    body = (
-      <ul className={`${careCardListGap} m-0 list-none p-0 px-5`} aria-busy="true">
-        <li className="sr-only">{t('loading')}</li>
-        {SKELETON_ROWS.map((row) => (
-          <li key={row} className={`${careCardShell}`}>
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-[22px] w-[22px] shrink-0 rounded-full" />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-2/3 max-w-64" />
-                <Skeleton className="mt-2 h-3 w-1/3 max-w-40" />
-              </div>
-              <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
-            </div>
-          </li>
-        ))}
-      </ul>
-    );
+    body = loadingSkeleton;
   } else if (tasksQuery.isError) {
     body = (
       <Card className="mx-5 text-center">
@@ -150,7 +152,9 @@ export default function TasksPage(): ReactElement {
           tone="moss"
           icon="checkbox-outline"
           title={t(`empty.${status}`)}
-          description={t(`empty.${status}Hint`)}
+          description={
+            status === 'open' && !canEdit ? t('empty.openHintReadOnly') : t(`empty.${status}Hint`)
+          }
           actions={
             canEdit && (
               <Button onClick={() => setShowCreate(true)}>{t('empty.cta')}</Button>

@@ -11,6 +11,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { useCircle } from '@/hooks/useCircle';
 import { useCircles } from '@/hooks/useCircles';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { useAuthStore } from '@/store/authStore';
+import { resolveAiEntry } from '@/lib/aiAccess';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
 
 /**
@@ -49,7 +52,73 @@ export function AppLayout(): ReactElement {
 
   // Write actions need an editable circle. Resolved once here so the sidebar's
   // New button and the pill's NEW cell share one source of truth.
-  const { canEdit } = useCircle(circleId ?? '');
+  const { circle, canEdit, viewOnly, isPremiumCircle } = useCircle(circleId ?? '');
+
+  // ── AI Care Assistant gate ────────────────────────────────────────────────
+  // The backend already refuses these callers (backend/src/routes/ai.ts); this
+  // decides whether we OFFER the entry at all, from data the circle detail
+  // response already carries — no extra request. See src/lib/aiAccess.ts for
+  // the rule, for why `view_only` is read before the premium flag, and for why
+  // the input is `is_premium_circle` and NOT `can_edit` (they disagree for a
+  // free-tier ACTIVE circle, where `can_edit` sold a paywall no non-owner's
+  // purchase could lift). Mobile's `useAIEntryAccess` reads the same input.
+  //
+  // `owner_id` is on the GET /circles/:id payload for every member, so "am I
+  // the owner?" is the same compare MembersPage / OverviewPage / EditCirclePage
+  // already make. The route spreads an EXPLICIT COLUMN PROJECTION, not the
+  // `care_circles` row (`backend/src/routes/circles.ts` selects
+  // `id, name, recipient_name, recipient_photo_url, recipient_dob,
+  // recipient_conditions, owner_id, created_at, is_self_care` — deliberately,
+  // to keep internal columns off the wire). `owner_id` is in that list today;
+  // it is not there by virtue of being a column, so removing it from the
+  // projection would silently make every viewer a non-owner here.
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
+  const aiEntry = resolveAiEntry({ viewOnly, isPremiumCircle, isOwner });
+  // 'feature' (not the default): a premium-only SURFACE, which is how mobile
+  // splits its paywall funnel. See usePremiumGate's `context` docs.
+  const { promptUpgrade } = usePremiumGate('feature');
+
+  // AN OPEN ASSISTANT BELONGS TO THE CIRCLE IT WAS OPENED FOR.
+  //
+  // The mount below is gated on `aiEntry === 'available'`, which unmounts the
+  // modal the moment the flags say the viewer may not have it — but `aiOpen` is
+  // layout state that outlives that, so the gate only ever HID it. The instant
+  // `aiEntry` came back to 'available' the modal was re-rendered with
+  // `isOpen={true}` and popped open again, unbidden.
+  //
+  // A CIRCLE SWITCH does exactly that, every time. `useCircle`'s flags are
+  // `?? false`, so a new query key — nothing cached yet — drives `aiEntry` away
+  // from 'available' and then back as the new circle's detail lands. This
+  // component is not keyed on `circleId` (only `<main>`'s inner div is keyed on
+  // the pathname, and `AIChatModal` sits outside it), so nothing else resets
+  // it: the caregiver arrives in the next circle with an assistant they never
+  // opened, scoped to a DIFFERENT care recipient.
+  //
+  // Both effects, not one. The `circleId` reset is the semantic rule (the
+  // conversation was about one person and does not travel); the `aiEntry` reset
+  // is the safety rule (a seat downgraded or a circle frozen mid-session must
+  // not leave a re-openable modal behind). Neither implies the other: the
+  // switch could in principle render without an intermediate non-available
+  // frame, and a downgrade never changes `circleId`.
+  useEffect(() => {
+    setAiOpen(false);
+  }, [circleId]);
+  useEffect(() => {
+    if (aiEntry !== 'available') setAiOpen(false);
+  }, [aiEntry]);
+
+  // One handler behind both entry points. A frozen circle's OWNER is the one
+  // person whose upgrade would actually unlock this, so they get the prompt
+  // rather than a chat window that can only fail; everyone else never sees an
+  // entry to press (aiEntry === 'hidden').
+  const openAssistant = (): void => {
+    if (aiEntry === 'upgrade') {
+      promptUpgrade();
+      return;
+    }
+    setAiOpen(true);
+  };
 
   const openCreate = (kind: AddMenuType): void => {
     // Notes have no create modal — the composer lives at the top of the Notes
@@ -101,7 +170,9 @@ export function AppLayout(): ReactElement {
       <div className="grid grid-cols-1 xl:grid-cols-[17rem_1fr]">
         <Sidebar
           variant="desktop"
-          onOpenAssistant={() => setAiOpen(true)}
+          // Sidebar renders its AI group only when this prop is present, so
+          // `undefined` IS the hidden state on that surface.
+          onOpenAssistant={aiEntry === 'hidden' ? undefined : openAssistant}
           onCreate={circleId ? openCreate : undefined}
           canCreate={canEdit}
         />
@@ -141,7 +212,8 @@ export function AppLayout(): ReactElement {
             addOpen={addOpen}
             onToggleAdd={() => setAddOpen((open) => !open)}
             assistantOpen={aiOpen}
-            onOpenAssistant={() => setAiOpen(true)}
+            onOpenAssistant={openAssistant}
+            canUseAssistant={aiEntry !== 'hidden'}
           />
           {/* Mounted here, not inside the pill: the sidebar's New button opens
               the same menu from its own anchor, and only one create flow may be
@@ -161,7 +233,13 @@ export function AppLayout(): ReactElement {
         </>
       )}
 
-      {circleId && (
+      {/* The MOUNT is gated, not just the entry points. `aiOpen` is layout
+          state that outlives a flag refresh: a member whose seat is downgraded
+          to view-only while the modal is open (or whose circle freezes) would
+          otherwise keep an open assistant, and re-render it from the stale
+          `true`. Gating here makes the modal disappear the moment the flags
+          say it may not be there. */}
+      {circleId && aiEntry === 'available' && (
         <AIChatModal circleId={circleId} isOpen={aiOpen} onClose={() => setAiOpen(false)} />
       )}
 

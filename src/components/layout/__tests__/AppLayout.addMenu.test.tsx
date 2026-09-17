@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { AppLayout } from '@/components/layout/AppLayout';
+// AppLayout now raises the premium gate itself for a frozen circle's owner
+// (the AI entry), and `usePremiumGate` -> `useToast` requires the provider that
+// App.tsx already wraps the whole authenticated tree in.
+import { ToastProvider } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 import { useCircle } from '@/hooks/useCircle';
 
@@ -66,12 +70,14 @@ const initialAuthState = useAuthStore.getState();
 function renderLayout(): void {
   render(
     <MemoryRouter initialEntries={['/circles/c1/calendar']}>
-      <Routes>
-        <Route path="/circles/:circleId" element={<AppLayout />}>
-          <Route path="calendar" element={<div>Calendar page stub</div>} />
-          <Route path="notes" element={<div data-testid="notes-page-stub">Notes page stub</div>} />
-        </Route>
-      </Routes>
+      <ToastProvider>
+        <Routes>
+          <Route path="/circles/:circleId" element={<AppLayout />}>
+            <Route path="calendar" element={<div>Calendar page stub</div>} />
+            <Route path="notes" element={<div data-testid="notes-page-stub">Notes page stub</div>} />
+          </Route>
+        </Routes>
+      </ToastProvider>
     </MemoryRouter>
   );
 }
@@ -224,5 +230,28 @@ describe('AppLayout AddMenu gating', () => {
     await user.click(cell);
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  // The OTHER trigger. Both New buttons are fed `canEdit` separately by the
+  // layout, so gating one proves nothing about the other: hand the sidebar
+  // `canCreate={true}` and a read-only viewer at xl gets a live create menu.
+  it('disables the sidebar New button and opens no menu for a read-only viewer', async () => {
+    vi.mocked(useCircle).mockReturnValue({
+      circle: { id: 'c1', owner_id: 'someone-else', is_self_care: false },
+      canEdit: false,
+    } as unknown as ReturnType<typeof useCircle>);
+    const user = userEvent.setup();
+    renderLayout();
+
+    // `newButton` throws if the sidebar or its New button is missing, so the
+    // absence assertions below cannot pass against a layout that rendered none.
+    const button = newButton('sidebar');
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+
+    await user.click(button);
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
   });
 });

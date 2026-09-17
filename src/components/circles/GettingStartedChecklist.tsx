@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Button, Eyebrow, Icon, Sheet, Text } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
 import { useEmergencyInfo } from '@/hooks/useEmergencyInfo';
-import { useCalendarEvents } from '@/hooks/useCalendarEvents';
+import { useEventsPresence } from '@/hooks/useCalendarEvents';
 import { useAuthStore } from '@/store/authStore';
 import { addDays } from '@/components/calendar/dateMath';
 import { getDateInTimezone } from '@/utils/timezone';
 import { isPendingInviteExpired } from '@/api/circleMembers';
+import { Analytics } from '@/lib/analytics';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
 
 // Dismissal persists across reloads via localStorage, per circle — same key
@@ -36,7 +37,12 @@ function writeDismissed(circleId: string): void {
 
 export interface GettingStartedChecklistProps {
   circleId: string;
-  /** Opens the calendar's Add-event modal (step 1's pending action). */
+  /**
+   * Step 1's pending action. The step asks for a MEDICATION, so the host must
+   * open the medication form (`AddEventModal` with `initialType="medication"`),
+   * never merely route to the calendar — that page's create modal cannot be
+   * opened from navigation, so the user would land on an empty grid.
+   */
   onAddEvent?: () => void;
   /**
    * Rendered in place of the checklist once it's complete or dismissed. Lets the
@@ -122,11 +128,22 @@ export function GettingStartedChecklist({
 
   // Presence check over a WIDE window (~30 days back, ~180 days ahead) in the
   // care recipient's timezone, so a single med/appointment anywhere nearby
-  // counts — not just one inside the currently visible week.
-  const today = getDateInTimezone(timezone);
-  const startDate = addDays(today, -30);
-  const endDate = addDays(today, 180);
-  const eventsQuery = useCalendarEvents(circleId, startDate, endDate);
+  // counts — not just one inside the currently visible week. Asked as a
+  // PRESENCE read (per-type booleans), never as the 211-day events list: the
+  // list was ~1.5k rows / ~1.4 MB on the demo circle to answer one `.some()`.
+  //
+  // GATED on the timezone: `useCircle` reports `null` until the circle detail
+  // has loaded, and the dates stay EMPTY until then — `useEventsPresence` is
+  // disabled on empty dates, so no request leaves the browser against a guessed
+  // zone. This used to date the window off the hook's unconditional
+  // 'America/New_York' fallback, which fired the read once for a New-York
+  // window and then AGAIN for the recipient's real window whenever the two
+  // zones straddled midnight. Same mechanism (and same cache key) as
+  // TodaysMeds, so when both are on screen the second one is a cache hit.
+  const today = timezone ? getDateInTimezone(timezone) : '';
+  const startDate = today ? addDays(today, -30) : '';
+  const endDate = today ? addDays(today, 180) : '';
+  const presenceQuery = useEventsPresence(circleId, startDate, endDate);
 
   const emergencyQuery = useEmergencyInfo(circleId);
 
@@ -153,7 +170,7 @@ export function GettingStartedChecklist({
   // medication in it. Both surfaces now test the same thing, and the label below
   // narrows to match rather than the check widening to excuse it — the
   // medication nudge is the point of the step.
-  const hasEvent = eventsQuery.events.some((event) => event.event_type === 'medication');
+  const hasEvent = presenceQuery.data?.medication === true;
   const hasEmergency = hasAnyEmergencyContent(emergencyQuery.data);
 
   // Only steps the viewer can actually perform. `invite` is owner-only (the
@@ -194,18 +211,30 @@ export function GettingStartedChecklist({
     [t, isOwner, hasEvent, invited, hasEmergency, onAddEvent, navigate, circleId]
   );
 
-  // Loading: wait until the circle + both presence signals have settled so the
-  // card never flickers from "all pending" to "done" on first paint.
-  const isLoading =
-    circleQuery.isLoading || eventsQuery.isLoading || emergencyQuery.isLoading;
+  // A step may read as NOT DONE (with its Add/Invite button) only when the read
+  // that decides it has SUCCEEDED and found nothing. Until both presence reads
+  // are known, the card renders nothing.
+  //
+  // This used to wait on `isLoading` alone, which covers neither failure nor a
+  // paused read: `isLoading` is `isPending && isFetching`, so an offline
+  // (paused) read reports false, and an ERRORED read has no data at all. Either
+  // way `hasEvent` came out false and a circle that HAS a medication was shown
+  // "0 of 3 done" with "Add a medication" pending — an invitation to create a
+  // duplicate series, directly above TodaysMeds' own "Couldn't load
+  // medications". Hiding (rather than a per-step "unknown" row) matches this
+  // card's existing loading behaviour, needs no new copy, and leaves the one
+  // error + Retry to TodaysMeds, which reads the SAME query key — its Retry
+  // brings this card back.
+  const signalsKnown =
+    !circleQuery.isLoading && presenceQuery.isSuccess && emergencyQuery.isSuccess;
 
   const total = steps.length;
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === total;
 
-  // While the checklist's own signals settle, render nothing so the empty slot
-  // never flashes the fallback before the checklist resolves.
-  if (isLoading) return null;
+  // While the checklist's own signals settle (or if one failed), render
+  // nothing so the empty slot never flashes the fallback or a false step.
+  if (!signalsKnown) return null;
   // View-only (or otherwise write-blocked): there is no step this member could
   // act on, so guidance would only nag. Ownership is NOT the gate — a non-owner
   // caregiver who can write still gets the card. Circle age is deliberately not
@@ -226,6 +255,10 @@ export function GettingStartedChecklist({
       <button
         type="button"
         onClick={() => {
+          // Recorded WITH the progress at the moment of dismissal: "0 of 3"
+          // versus "2 of 3" is the difference between a card people bounce off
+          // and one they close because it has done its job.
+          Analytics.gettingStartedDismissed(doneCount, total);
           writeDismissed(circleId);
           setDismissedCircleId(circleId);
         }}
@@ -288,7 +321,13 @@ export function GettingStartedChecklist({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={step.onAction}
+                  onClick={() => {
+                    // Fired BEFORE the action: step 1 opens a modal and the
+                    // others navigate away, so this is the last moment the
+                    // press is observable from here.
+                    Analytics.gettingStartedStepTapped(step.key);
+                    step.onAction();
+                  }}
                   className="flex-none"
                 >
                   {step.actionLabel}

@@ -4,7 +4,6 @@
   "loadingLabel": "Cargando información de emergencia",
   "errorTitle": "No se pudo cargar la información de emergencia",
   "retry": "Reintentar",
-  "print": "Imprimir",
   "printHeading": "Información de emergencia de CircleCare",
   "preparedFor": "Información de emergencia para {{name}}",
   "printedOn": "Generado el {{date}}",
@@ -55,7 +54,7 @@
     "phone": "Teléfono",
     "rxBin": "Rx BIN",
     "rxPcn": "Rx PCN",
-    "rxGroup": "Rx Group"
+    "rxGroup": "Grupo Rx"
   },
   "directives": {
     "dnrStatus": "Estado DNR",
@@ -250,6 +249,87 @@
       "beeStings": "Picaduras de abeja",
       "pollenSeasonal": "Polen/estacional",
       "petDander": "Caspa de mascotas"
+    }
+  },
+  "careSummary": {
+    "title": "Resumen de cuidado",
+    "subtitle": "Información de salud de {{name}}",
+    "share": "Compartir",
+    "shareTitle": "Compartir resumen de cuidado",
+    "shareAsPdf": "Compartir como PDF",
+    "shareAsText": "Compartir como texto",
+    "generating": "Generando...",
+    "error": "Error al generar el resumen. Intenta de nuevo.",
+    "sections": {
+      "careRecipient": "Receptor de cuidado",
+      "emergencyContacts": "Contactos de emergencia",
+      "medications": "Medicamentos actuales",
+      "healthcareProviders": "Proveedores de salud",
+      "insurance": "Seguro",
+      "medicalInfo": "Información médica",
+      "stoppedMedications": "Medicamentos suspendidos recientemente"
+    },
+    "fields": {
+      "name": "Nombre",
+      "dateOfBirth": "Fecha de nacimiento",
+      "conditions": "Condiciones conocidas",
+      "relationship": "Parentesco",
+      "phone": "Teléfono",
+      "medication": "Medicamento",
+      "dosage": "Dosis",
+      "time": "Hora",
+      "frequency": "Frecuencia",
+      "primaryDoctor": "Doctor principal",
+      "specialty": "Especialidad",
+      "carrier": "Aseguradora",
+      "policyNumber": "No. de póliza",
+      "groupNumber": "No. de grupo",
+      "bloodType": "Tipo de sangre",
+      "medicationAllergies": "Alergias a medicamentos",
+      "otherAllergies": "Otras alergias",
+      "medicalConditions": "Condiciones médicas",
+      "stopped": "Suspendido el {{date}}",
+      "stoppedOn": "Suspendido",
+      "codeStatus": "Estado de código",
+      "dnrOnFile": "DNR registrado",
+      "advanceDirectives": "Directivas anticipadas",
+      "rxBin": "Rx BIN",
+      "rxPcn": "Rx PCN",
+      "rxGroup": "Grupo Rx"
+    },
+    "frequency": {
+      "daily": "Diario",
+      "every_other_day": "Cada tercer día",
+      "weekly": "Semanal",
+      "custom": "Cada {{days}} días",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "cycle": "{{on}} días activos, {{off}} días de descanso",
+      "custom_unknown": "Horario personalizado",
+      "oneTime": "Una vez · {{date}}"
+    },
+    "empty": {
+      "noInfo": "Sin información agregada",
+      "noContacts": "Sin contactos de emergencia",
+      "noMedications": "Sin medicamentos actuales",
+      "noDoctors": "Sin proveedores de salud",
+      "noInsurance": "Sin información de seguro",
+      "noMedicalInfo": "Sin información médica",
+      "noAllergies": "Sin alergias conocidas registradas"
+    },
+    "privacy": {
+      "title": "¿Compartir información de salud?",
+      "message": "Este resumen contiene información sensible de salud incluyendo medicamentos, alergias y detalles del seguro. Solo comparte con personas de tu confianza.\n\nAl compartir, confirmas que tienes permiso para compartir la información de salud de esta persona.",
+      "confirm": "Compartir",
+      "cancel": "Cancelar"
+    },
+    "pdf": {
+      "confidentiality": "Confidencial: contiene información personal de salud",
+      "generatedBy": "Generado por CircleCare",
+      "primary": "Principal",
+      "preparedOn": "Preparado el {{date}} · {{zone}}",
+      "preparedBy": "Preparado por {{name}}",
+      "dobAge": "Nacimiento {{dob}} · Edad {{age}}"
     }
   }
 }

@@ -29,6 +29,13 @@ export interface SessionEnvelope {
   data: {
     session: AuthSession;
     user: AuthUser;
+    /**
+     * oauth-session only: whether this provider sign-in CREATED the account
+     * (backend utils/authUserNewness.ts). OPTIONAL on purpose — login omits it,
+     * and so does a backend that predates the field. Anything but `true` must
+     * be read as a RETURNING user (see AuthCallbackPage).
+     */
+    is_new_user?: boolean;
   };
 }
 

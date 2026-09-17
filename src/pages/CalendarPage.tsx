@@ -136,7 +136,11 @@ export default function CalendarPage(): ReactElement {
     return { start: gridStart, end: addDays(gridStart, 41) };
   }, [anchor, view]);
 
-  const eventsQuery = useCalendarEvents(circleId, range?.start ?? '', range?.end ?? '');
+  // The one surface that moves window-to-window: prefetch the neighbours so
+  // Previous/Next land instantly. Everything else fetches only what it shows.
+  const eventsQuery = useCalendarEvents(circleId, range?.start ?? '', range?.end ?? '', {
+    prefetchAdjacent: true,
+  });
   const { events } = eventsQuery;
 
   const eventsByDay = useMemo(() => {
@@ -383,6 +387,34 @@ export default function CalendarPage(): ReactElement {
                 // so the Inactive badge and the discontinue-toggle direction
                 // reflect the reactivation without a close/reopen.
                 setSelectedEvent((ev) => (ev ? { ...ev, discontinued_at: null } : ev));
+              }}
+              onCompleted={(completed) => {
+                // Same snapshot problem as onReactivated: the open modal draws
+                // its "Completed by / Completed on" row from `completed_at` on
+                // THIS state, so a completion that really persisted otherwise
+                // shows up only after a close and reopen — a working fix that
+                // looks broken.
+                //
+                // MERGE ONLY THE COMPLETION FIELDS, never the whole returned
+                // row. Completing a virtual occurrence beyond the materializer
+                // horizon makes the server create a NEW physical row, so
+                // `completed.id` is not the id this modal was opened with;
+                // adopting it would swap the identity mid-view and remount
+                // EventNotesPanel (which is keyed on `event.id`) under the
+                // user. Everything else on screen — title, date, recurrence —
+                // is unchanged by a completion anyway.
+                setSelectedEvent((ev) =>
+                  ev
+                    ? {
+                        ...ev,
+                        completed_at: completed.completed_at ?? null,
+                        // The calendar GET never embeds the completing user, so
+                        // the id is what EventDetailModal resolves against the
+                        // circle roster for the "Completed by <name>" row.
+                        completed_by: completed.completed_by ?? ev.completed_by ?? null,
+                      }
+                    : ev
+                );
               }}
             />
           }

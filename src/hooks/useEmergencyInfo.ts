@@ -16,6 +16,7 @@ import {
   type UpdateEmergencyInfoRequest,
 } from '@/api/emergencyInfo';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
   classifyFailureCode,
   isPermissionDeniedError,
@@ -208,10 +209,10 @@ export function useUpdateEmergencyInfo(
       if (isSubscriptionRequiredError(error)) {
         // Free-tier write block — web cannot transact, point at the app.
         promptUpgrade();
-        void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+        invalidateCircleAccessFlags(queryClient, circleId);
       } else if (isPermissionDeniedError(error)) {
         showToast(t('errors.permissionDenied'), 'error');
-        void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+        invalidateCircleAccessFlags(queryClient, circleId);
       } else {
         showToast(t('errors.saveFailed'), 'error');
         // Refetch so the UI reflects whatever the server actually has after a

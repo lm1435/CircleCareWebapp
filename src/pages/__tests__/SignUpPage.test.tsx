@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import SignUpPage from '@/pages/SignUpPage';
 import { apiClient } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
+import { clickTwice, neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 
 // Mirrors LoginPage.test.tsx mocking style: `@/lib/api` + `@/lib/supabase` are
 // mocked by the global setup; here we assert the page calls authApi.signup with
@@ -344,5 +346,55 @@ describe('SignUpPage', () => {
         restore();
       }
     });
+  });
+});
+
+// Regression — double submit (same class as the LoginPage one). /auth/signup
+// sits on the 5-per-5-minutes `authRateLimit` bucket, and the second request
+// 400s USER_EXISTS against the account the first one just created.
+describe('SignUpPage — double-submit guard', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    vi.mocked(supabase.auth.signInWithOAuth).mockClear();
+  });
+
+  it('sends exactly ONE /auth/signup when the form is submitted twice in the same tick', async () => {
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    const user = userEvent.setup();
+    const { container } = renderSignUp();
+
+    await fillValidForm(user);
+    await submitFormTwice(container.querySelector('form') as HTMLFormElement);
+
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+  });
+
+  it('is still submittable after a validation failure (the guard releases, it does not latch)', async () => {
+    const user = userEvent.setup();
+    const { container } = renderSignUp();
+
+    // Empty form: Zod fails and the handler returns before isSubmitting is set.
+    await submitFormTwice(container.querySelector('form') as HTMLFormElement);
+    expect(mockedPost).not.toHaveBeenCalled();
+
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+  });
+
+  it('starts exactly ONE OAuth handshake when a provider button is pressed twice in the same tick', async () => {
+    const signInWithOAuth = vi.mocked(supabase.auth.signInWithOAuth);
+    signInWithOAuth.mockImplementation((() => neverSettles()) as never);
+    const user = userEvent.setup();
+    renderSignUp();
+
+    // The consent checkbox gates OAuth on this page — tick it first.
+    await user.click(termsCheckbox());
+    await clickTwice(screen.getByRole('button', { name: /Continue with Google/ }));
+
+    expect(signInWithOAuth).toHaveBeenCalledTimes(1);
   });
 });

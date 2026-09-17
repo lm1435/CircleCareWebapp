@@ -40,6 +40,7 @@
   "empty": {
     "open": "No open tasks",
     "openHint": "Coordinate the to-dos that keep your loved one's care on track — errands, refills, follow-ups — and share them with everyone helping.",
+    "openHintReadOnly": "Tasks the care team adds will show up here.",
     "completed": "No completed tasks yet",
     "completedHint": "Tasks the circle finishes will show up here so everyone can see what's been handled.",
     "all": "No tasks yet",

@@ -4,8 +4,9 @@
 // (BroadcastChannel, bootstrap single-flight) starts fresh.
 
 // Mock the identify/reset helpers so we can assert the store passes the user's
-// email to identifyUser (signIn + bootstrap). The real helpers would silently
-// no-op here anyway (no VITE_POSTHOG_KEY in the test env).
+// ID — and only the id, never the email — to identifyUser (signIn + bootstrap).
+// The real helpers would silently no-op here anyway (no VITE_POSTHOG_KEY in the
+// test env).
 vi.mock('@/lib/posthog', () => ({
   identifyUser: vi.fn(),
   resetAnalytics: vi.fn(),
@@ -53,6 +54,15 @@ const testUser = {
   last_name: 'Rivera',
 };
 
+/**
+ * Let the deferred identify settle. `signIn` no longer identifies
+ * synchronously: it waits on `identifyAfterServerReconcile`, which reads
+ * /users/me (mocked to a rejection here) before attaching the identity.
+ */
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+}
+
 /** Set or clear the readable `cc_session` hint cookie bootstrap checks. */
 function setSessionHint(present: boolean): void {
   document.cookie = present
@@ -84,8 +94,14 @@ describe('authStore', () => {
 
     expect(tokenAccessor.getAuthToken()).toBe('tok-123');
     expect(tokenAccessor.getExpiresAt()).toBe(1234567890);
-    // Analytics identity carries the id + email (the only person property).
-    expect(posthogLib.identifyUser).toHaveBeenCalledWith('user-1', 'pat@example.com');
+    // The analytics identity is the opaque id and NOTHING else (no email, no
+    // person traits) — and it is attached only AFTER the account's own consent
+    // record has been reconciled, so a browser holding a stale "granted" cannot
+    // re-create the PostHog person of someone who withdrew elsewhere. See
+    // lib/analyticsConsentServerReconcile.ts and the dedicated ordering tests
+    // in authStoreConsentServerReconcile.test.ts.
+    await flushMicrotasks();
+    expect(posthogLib.identifyUser).toHaveBeenCalledWith('user-1');
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().user).toEqual(testUser);
     expect(useAuthStore.getState().isBootstrapping).toBe(false);
@@ -274,7 +290,7 @@ describe('authStore', () => {
     expect(api.apiClient.post).toHaveBeenCalledWith('/auth/refresh', {});
     expect(api.apiClient.get).toHaveBeenCalledWith('/users/me');
     expect(tokenAccessor.getAuthToken()).toBe('boot-token');
-    expect(posthogLib.identifyUser).toHaveBeenCalledWith('user-1', 'pat@example.com');
+    expect(posthogLib.identifyUser).toHaveBeenCalledWith('user-1');
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().user).toEqual(testUser);
     expect(useAuthStore.getState().isBootstrapping).toBe(false);

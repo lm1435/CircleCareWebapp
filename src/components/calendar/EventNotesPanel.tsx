@@ -11,6 +11,7 @@ import {
 } from '@/components/ui';
 import { formatRelativeTime } from '@/components/activity/activityFormat';
 import { useCircle } from '@/hooks/useCircle';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAuthStore } from '@/store/authStore';
 import { useCreateNote, useDeleteNote, useEventNotes, useUpdateNote } from '@/hooks/useEventNotes';
 import type { EventNote } from '@/api/eventNotes';
@@ -159,32 +160,52 @@ export function EventNotesPanel({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
+  // THE SYNCHRONOUS DOUBLE-SUBMIT GUARDS. `createNote.isPending` and friends
+  // are React Query state, committed a render AFTER the event that started the
+  // request, so a second submit dispatched in the SAME tick re-enters with the
+  // flag still false (see `useGuardedSubmit`'s docstring). For CREATE that
+  // writes a duplicate care record AND 500s: POST event notes is one of the
+  // three backend routes that insert against the partial unique index with no
+  // 23505 recovery, so the losing racer is answered with an error. DELETE's
+  // second call 404s and toasts a failure over a delete that worked.
+  //
+  // One guard per action: they are three different controls and must not block
+  // each other. `isPending` is checked FIRST in each (a claim is never taken on
+  // a call that was going to bail out anyway), and every guard is released in
+  // `onSettled` — `mutate` returns immediately, so there is no promise to hold
+  // it open.
+  const createGuard = useSubmitGuard();
+  const editGuard = useSubmitGuard();
+  const deleteGuard = useSubmitGuard();
+
   function handleCreate(e: FormEvent): void {
     e.preventDefault();
     const body = composer.trim();
-    if (!body || createNote.isPending) return;
+    if (!body || createNote.isPending || !createGuard.claim()) return;
     createNote.mutate(
       { circleId, eventId, body, scheduledDate },
       {
         onSuccess: () => setComposer(''),
         onError: () => showToast(t('calendar:notes.errorSaving'), 'error'),
+        onSettled: createGuard.release,
       }
     );
   }
 
   function handleSaveEdit(noteId: string, body: string): void {
-    if (!body || updateNote.isPending) return;
+    if (!body || updateNote.isPending || !editGuard.claim()) return;
     updateNote.mutate(
       { circleId, eventId, noteId, body },
       {
         onSuccess: () => setEditingNoteId(null),
         onError: () => showToast(t('calendar:notes.errorSaving'), 'error'),
+        onSettled: editGuard.release,
       }
     );
   }
 
   function handleConfirmDelete(): void {
-    if (!deletingNoteId || deleteNote.isPending) return;
+    if (!deletingNoteId || deleteNote.isPending || !deleteGuard.claim()) return;
     deleteNote.mutate(
       { circleId, eventId, noteId: deletingNoteId },
       {
@@ -193,6 +214,7 @@ export function EventNotesPanel({
           setDeletingNoteId(null);
           showToast(t('calendar:notes.errorSaving'), 'error');
         },
+        onSettled: deleteGuard.release,
       }
     );
   }

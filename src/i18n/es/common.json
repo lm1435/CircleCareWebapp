@@ -17,6 +17,22 @@
   "expandAll": "Expandir todo",
   "collapseAll": "Contraer todo",
   "skipToContent": "Saltar al contenido",
+  "timePicker": {
+    "open": "Elegir una hora",
+    "label": "Selector de hora",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "period": "a. m./p. m."
+  },
+  "datePicker": {
+    "open": "Elegir una fecha",
+    "label": "Selector de fecha",
+    "month": "Mes",
+    "year": "Año",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "clear": "Borrar"
+  },
   "pageTitles": {
     "login": "Iniciar sesión",
     "signup": "Crear cuenta",
@@ -68,7 +84,13 @@
     "allCircles": "Todos los círculos",
     "careShort": "Cuidado",
     "healthShort": "Salud",
-    "aiShort": "IA"
+    "aiShort": "IA",
+    "calendarShort": "Agenda",
+    "medsShort": "Medicinas",
+    "tasksShort": "Tareas",
+    "notesShort": "Notas",
+    "emergencyShort": "Emergencia",
+    "documentsShort": "Documentos"
   },
   "errors": {
     "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
@@ -135,7 +157,7 @@
     "appointment": "Cita",
     "task": "Tarea",
     "note": "Nota",
-    "medicationShort": "Medicina",
+    "medicationShort": "Med.",
     "appointmentShort": "Cita",
     "taskShort": "Tarea",
     "noteShort": "Nota"

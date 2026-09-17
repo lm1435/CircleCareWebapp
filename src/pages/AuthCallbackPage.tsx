@@ -5,7 +5,10 @@ import { authApi, getApiError } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { consumePendingAuthMethod } from '@/lib/pendingAuthMethod';
-import { consumePendingTermsConsent } from '@/lib/pendingTermsConsent';
+import { clearPendingTermsConsent, consumePendingTermsConsent } from '@/lib/pendingTermsConsent';
+import { consumePendingAnalyticsConsent } from '@/lib/pendingAnalyticsConsent';
+import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
+import { queueAnalyticsConsentForSignup } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
 import { Button, Spinner } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -62,6 +65,19 @@ export default function AuthCallbackPage(): ReactElement {
       // contract is read-and-clear so a stale provider can never be attributed
       // to a later, unrelated sign-in.
       const method = consumePendingAuthMethod() ?? 'oauth';
+      // Same read-and-clear contract for the parked ANALYTICS answer, and for
+      // the same reason: no account was created here, so nothing is recorded —
+      // but the parked value must not survive to be attributed to a later,
+      // unrelated sign-in (this browser can be signed in as a different
+      // account minutes from now). A retry re-renders the signup page with the
+      // box unticked and parks a fresh answer.
+      consumePendingAnalyticsConsent();
+      // …and for the parked TERMS acceptance. Left behind, the next successful
+      // callback in this tab (e.g. a returning user's OAuth LOGIN from /login,
+      // which parks no terms of its own) consumed it and relayed
+      // `termsAccepted: true` for an account that ticked nothing. The exchange
+      // path below consumes it before its try, so its failures clear it too.
+      clearPendingTermsConsent();
       if (!cancelled) {
         // Until now this branch reported NOTHING, so a broken web OAuth login
         // was invisible in the funnel: login_started fired at the button, the
@@ -85,6 +101,12 @@ export default function AuthCallbackPage(): ReactElement {
       // for LoginPage-initiated OAuth (returning users); the backend only ever
       // fills a NULL, never overwrites an existing consent timestamp.
       const termsAccepted = consumePendingTermsConsent();
+      // Consumed HERE, before the exchange, so it is cleared on every outcome
+      // — a failed exchange must not leave an answer parked for a later,
+      // unrelated sign-in. Held in a local and only RECORDED below, on
+      // success: no account, no decision. `null` means nothing was parked (an
+      // OAuth LOGIN, not a signup).
+      const analyticsAnswer = consumePendingAnalyticsConsent();
       try {
         // Backend validates the access token, moves the refresh token into the
         // httpOnly cookie, and returns a cookie-mode session (no refresh_token).
@@ -93,6 +115,44 @@ export default function AuthCallbackPage(): ReactElement {
           refresh_token: refreshToken,
           ...(termsAccepted ? { termsAccepted: true as const } : {}),
         });
+        // RECORD THE PARKED ANALYTICS ANSWER BEFORE `signIn`. The store's
+        // `signIn` calls `identifyUser`, and `identifyUser` refuses unless the
+        // mode is 'full' — so recording after it would leave a brand-new
+        // CONSENTING user unidentified for the rest of the session, silently,
+        // with the Profile toggle reading ON. `null` means nothing was parked
+        // (an OAuth LOGIN, not a signup): record nothing and leave whatever
+        // decision this browser already holds alone.
+        //
+        // …AND ONLY FOR AN ACCOUNT THIS SIGN-IN CREATED. The Sign-up page's
+        // provider buttons work for EXISTING accounts too, and its analytics
+        // box defaults to unticked, so a returning user who taps "Sign up with
+        // Google" arrives here with a parked DECLINE they never chose. Recorded,
+        // its server half withdraws their consent and deletes their PostHog
+        // person and events — including a mobile user grandfathered ON. The
+        // backend decides new-vs-returning from GoTrue's own timestamps; only
+        // an explicit `true` counts. A missing field (a backend older than the
+        // flag) is treated as RETURNING: losing a new user's answer is
+        // recoverable from Profile, deleting a returning user's history is not.
+        // The parked value was already consumed above, so it is cleared either
+        // way and cannot leak into a later sign-in.
+        if (analyticsAnswer !== null && response.data.is_new_user === true) {
+          recordAnalyticsConsentDecision(analyticsAnswer, {
+            id: response.data.user.id,
+          });
+          // The SERVER half of the same answer, and it has to be written HERE,
+          // before `signIn`: `signIn` runs `flushAnalyticsConsentSync`, which
+          // is what DELIVERS this marker. Recorded after it (or written
+          // asynchronously and not awaited) the decision races its own flush
+          // and is dropped for exactly the signups that go through a provider —
+          // mobile shipped that bug and found it by mutation.
+          //
+          // Queued rather than POSTed from here: `signIn` has not run yet, so
+          // this page's own request would carry whatever token the browser
+          // already holds — and /auth/callback is public, so on a shared
+          // browser that is somebody else's account. Delivery happens one line
+          // below under the arriving user's own token.
+          queueAnalyticsConsentForSignup(analyticsAnswer, response.data.user.id);
+        }
         signIn(response.data.session, response.data.user);
         // Fire the OAuth completion event exactly once, only on success. The
         // provider was parked in sessionStorage before the redirect (this
@@ -100,10 +160,9 @@ export default function AuthCallbackPage(): ReactElement {
         // it's absent rather than guessing a provider.
         //
         // NOTE: we always emit login_completed, never signup_completed, for web
-        // OAuth. The backend /auth/oauth-session response (backend/src/routes/
-        // auth.ts) exposes no new-vs-returning-user flag, so distinguishing
-        // first-time sign-up from returning login would require a backend change
-        // that's out of scope here.
+        // OAuth. /auth/oauth-session now returns `is_new_user` (used above for
+        // the consent gate), but switching this event on it is a funnel change
+        // left for a separate decision.
         Analytics.loginCompleted(consumePendingAuthMethod() ?? 'oauth');
         // An invite handoff parks its code in sessionStorage (router state
         // cannot survive the OAuth full-page redirect) — detour through the

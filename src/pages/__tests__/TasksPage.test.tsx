@@ -164,7 +164,19 @@ function tasksResult(tasks: CalendarEvent[], overrides: Record<string, unknown> 
     data: { tasks, today: '2026-03-15', timezone: TZ },
     isLoading: false,
     isError: false,
+    status: 'success',
     refetch: vi.fn(),
+    ...overrides,
+  };
+}
+
+/** `useCircle(...)` mock result. Defaults to a fully-resolved, editable circle. */
+function circleResult(overrides: Record<string, unknown> = {}) {
+  return {
+    canEdit: true,
+    members: MEMBERS,
+    isLoading: false,
+    circle: { care_recipient_timezone: TZ, can_edit: true },
     ...overrides,
   };
 }
@@ -202,7 +214,7 @@ beforeEach(() => {
   mockUseCircle.mockReset();
   mockUseHourCycle.mockReturnValue('12h');
 
-  mockUseCircle.mockReturnValue({ canEdit: true, members: MEMBERS });
+  mockUseCircle.mockReturnValue(circleResult());
   mockUseTasks.mockReturnValue(
     tasksResult([
       makeTask({ id: 'task-1', title: 'Pick up groceries', assigned_to: 'u-assignee' }),
@@ -257,6 +269,27 @@ describe('TasksPage', () => {
     expect(screen.getAllByRole('button', { name: 'Add task' }).length).toBeGreaterThan(1);
   });
 
+  it('shows the read-only empty state (no CTA) when a view-only member has no open tasks', () => {
+    mockUseCircle.mockReturnValue(circleResult({ canEdit: false, circle: { care_recipient_timezone: TZ, can_edit: false } }));
+    mockUseTasks.mockReturnValue(tasksResult([]));
+    renderPage();
+
+    expect(screen.getByText('No open tasks')).toBeInTheDocument();
+    expect(screen.getByText('Tasks the care team adds will show up here.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add task' })).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state for a non-default filter with zero results', async () => {
+    mockUseTasks.mockReturnValue(tasksResult([]));
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /Status: Open/ }));
+    await user.click(screen.getByRole('menuitem', { name: 'Completed' }));
+
+    expect(screen.getByText('No completed tasks yet')).toBeInTheDocument();
+  });
+
   // Starter chips were removed (cluttered the empty state; the AddEvent title
   // suggestions carry the quick-start value). Guard against regression.
   it('renders a clean empty state: no starter-chip group, plain Add task opens the modal untitled', async () => {
@@ -264,6 +297,7 @@ describe('TasksPage', () => {
     const user = userEvent.setup();
     renderPage();
 
+    expect(screen.getByText('No open tasks')).toBeInTheDocument();
     expect(
       screen.queryByRole('group', { name: 'Start with a common task' })
     ).not.toBeInTheDocument();
@@ -316,7 +350,7 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toBe('task-1');
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
 
       // The timer must not then fire a SECOND request for the same task.
       act(() => {
@@ -342,7 +376,7 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toBe('task-1');
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
     } finally {
       vi.useRealTimers();
     }
@@ -410,14 +444,14 @@ describe('TasksPage', () => {
         vi.advanceTimersByTime(3000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toBe('task-1');
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
 
       // ...and B commits at ITS OWN t+5s (t=7s overall).
       act(() => {
         vi.advanceTimersByTime(2000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(2);
-      expect(mockMutate.mock.calls[1][0]).toBe('task-2');
+      expect(mockMutate.mock.calls[1][0]).toEqual({ eventId: 'task-2' });
     } finally {
       vi.useRealTimers();
     }
@@ -511,7 +545,7 @@ describe('TasksPage', () => {
    * THE READ-ONLY GATE. Every affordance here is a BUTTON.
    */
   it('hides the complete and edit controls, and Add task, when canEdit is false', () => {
-    mockUseCircle.mockReturnValue({ canEdit: false, members: MEMBERS });
+    mockUseCircle.mockReturnValue(circleResult({ canEdit: false, circle: { care_recipient_timezone: TZ, can_edit: false } }));
     renderPage();
 
     expect(
@@ -702,7 +736,7 @@ describe('TasksPage', () => {
   // A view-only member gets the record (it writes nothing) but no Delete.
   it('a read-only member can open the completed detail but gets no Delete', async () => {
     withCompletedTask();
-    mockUseCircle.mockReturnValue({ canEdit: false, members: MEMBERS });
+    mockUseCircle.mockReturnValue(circleResult({ canEdit: false, circle: { care_recipient_timezone: TZ, can_edit: false } }));
     const user = userEvent.setup();
     renderPage();
 

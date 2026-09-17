@@ -93,4 +93,23 @@ describe('useTasks', () => {
     expect(result.current.fetchStatus).toBe('idle');
     expect(mockGetTasks).not.toHaveBeenCalled();
   });
+
+  // TasksPage's zero-total starter-kit probe gates a second `useTasks` call
+  // off until the default list resolves empty — `enabled: false` must stay
+  // idle even with a valid circleId, and flipping it back on must fetch.
+  it('honors an explicit `enabled: false` even with a valid circleId', () => {
+    const { Wrapper } = wrapper();
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useTasks(CIRCLE_ID, { status: 'all', limit: 1, enabled }),
+      { wrapper: Wrapper, initialProps: { enabled: false } }
+    );
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(mockGetTasks).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    // `enabled` is a React Query gate, not an API param — it must never reach
+    // `getTasks`. Asserts the TRIMMED shape, not the whole `opts` object.
+    expect(mockGetTasks).toHaveBeenCalledWith(CIRCLE_ID, { status: 'all', limit: 1 });
+  });
 });

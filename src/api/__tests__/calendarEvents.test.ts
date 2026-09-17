@@ -76,10 +76,28 @@ describe('deleteEvent', () => {
 });
 
 describe('completeEvent', () => {
-  it('POSTs to the /complete endpoint', async () => {
+  // WHICH OCCURRENCE. `completed_at` lives on a ROW, and a recurring series is
+  // addressed by its ROOT, so without a date the server can only stamp the
+  // series' FIRST day. The wire shape has to match mobile's exactly — one
+  // backend answers both.
+  it('POSTs to the /complete endpoint with NO BODY when there is no date', async () => {
     mockPost.mockResolvedValue({ success: true, data: { event } } as never);
     await completeEvent(CIRCLE_ID, EVENT_ID);
     expect(mockPost).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/events/${EVENT_ID}/complete`);
+    // ONE ARGUMENT, not an explicit `undefined` and not `{}`: the shipped web
+    // app sends a body-less POST and the OLD server must keep answering it
+    // through the deploy window. `toHaveBeenCalledWith` alone would pass for
+    // `post(path, undefined)` too, so the arity is asserted directly.
+    expect(mockPost.mock.calls[0]).toHaveLength(1);
+  });
+
+  it('sends { scheduled_date } when an occurrence date is given', async () => {
+    mockPost.mockResolvedValue({ success: true, data: { event } } as never);
+    await completeEvent(CIRCLE_ID, 'parent-1', '2026-08-06');
+    expect(mockPost).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/events/parent-1/complete`, {
+      // snake_case — the key the backend's completeEventSchema reads.
+      scheduled_date: '2026-08-06',
+    });
   });
 });
 

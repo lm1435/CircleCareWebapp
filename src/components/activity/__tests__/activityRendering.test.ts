@@ -173,7 +173,7 @@ describe('renderActivityDescription — key-based rendering', () => {
           tEs,
           { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' }
         )
-      ).toBe('Pat Rivera se unió al círculo como Cuidador');
+      ).toBe('Pat Rivera se unió al círculo como cuidador');
 
       expect(
         renderActivityDescription(
@@ -185,7 +185,7 @@ describe('renderActivityDescription — key-based rendering', () => {
           tEs,
           { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' }
         )
-      ).toBe('Mom se unió al círculo como Receptor de Cuidado');
+      ).toBe('Mom se unió al círculo como receptor de cuidado');
     });
 
     it('renders memberInvited for each role, EN and ES', () => {
@@ -198,7 +198,7 @@ describe('renderActivityDescription — key-based rendering', () => {
         'Invited tom@example.com to join as Caregiver'
       );
       expect(renderActivityDescription(caregiver, tEs, { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' })).toBe(
-        'Invitó a tom@example.com a unirse como Cuidador'
+        'Invitó a tom@example.com a unirse como cuidador'
       );
 
       expect(
@@ -211,7 +211,7 @@ describe('renderActivityDescription — key-based rendering', () => {
           tEs,
           { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' }
         )
-      ).toBe('Invitó a mom@example.com a unirse como Receptor de Cuidado');
+      ).toBe('Invitó a mom@example.com a unirse como receptor de cuidado');
     });
   });
 });

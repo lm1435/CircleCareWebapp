@@ -7,6 +7,7 @@ import {
   useUpdateEmergencyInfo,
   type UpdateEmergencyInfoRequest,
 } from '@/hooks/useEmergencyInfo';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { SPECIALTY_KEYS } from '@/lib/quickPicks';
 import { Button, ChipSelect, Modal, TextArea, TextField } from '@/components/ui';
 
@@ -39,6 +40,17 @@ function EditDoctorModalForm({
 }: EditDoctorModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
+  // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `update.isPending` drives `loading` on
+  // the footer button, but that is React Query state committed a render AFTER
+  // the submit that started the request — and implicit form submission (Enter
+  // in a field) never consults the button at all, so two submits in the SAME
+  // tick both fire. The payload is recomputed from the same state, so today's
+  // second PUT is idempotent; what it costs is a wasted write against a
+  // premium-gated, rate-limited route and a second activity-feed entry for one
+  // edit. "Idempotent" is a property of this payload, not of the form.
+  // `isPending` first, then the ref (`useSubmitGuard`); released in
+  // `onSettled`, since `mutate` returns immediately.
+  const submitGuard = useSubmitGuard();
 
   const isPrimary = target === 'primary';
   const editIndex = typeof target === 'number' ? target : undefined;
@@ -69,6 +81,10 @@ function EditDoctorModalForm({
       return;
     }
 
+    // Claimed AFTER the validity gate, so a claim is never taken (and then
+    // abandoned) on a submit that was going to bail out anyway.
+    if (update.isPending || !submitGuard.claim()) return;
+
     let partial: UpdateEmergencyInfoRequest;
     if (isPrimary) {
       partial = {
@@ -92,7 +108,7 @@ function EditDoctorModalForm({
       partial = { additional_doctors: next };
     }
 
-    update.mutate(partial, { onSuccess: onClose });
+    update.mutate(partial, { onSuccess: onClose, onSettled: submitGuard.release });
   };
 
   const title = isPrimary

@@ -80,7 +80,9 @@
   "errors": {
     "permissionDenied": "You don't have permission to make changes in this circle.",
     "saveFailed": "Couldn't save your changes. Please try again.",
-    "doseAlreadyLogged": "This dose was already logged — its time can't be changed."
+    "doseAlreadyLogged": "This dose was already logged — its time can't be changed.",
+    "invalidOccurrenceDate": "This event no longer repeats on that day — the calendar has been refreshed.",
+    "eventNotFound": "That event no longer exists. Someone else may have deleted it."
   },
   "addEvent": {
     "addEvent": "Add event",
@@ -184,8 +186,10 @@
       "atTime": "At the scheduled time",
       "atTimeHint": "The main alert, sent when it's due.",
       "atTimeOff": "Nothing will be sent at the scheduled time — only the earlier reminders you pick below.",
+      "atTimeOffNoEarlier": "No reminder will be sent before this dose — the first alert would be the missed-dose follow-up, 15 minutes after it was due.",
       "additional": "Earlier reminders",
       "escalation": "If a dose isn't confirmed, we follow up: the care recipient after 15 minutes, caregivers after 30, the whole circle after an hour.",
+      "escalationSelf": "If a dose isn't confirmed, we follow up: you after 15 minutes, caregivers after 30, the whole circle after an hour.",
       "offMedication": "No one will be notified when this dose is due, and no one will be alerted if it's missed.",
       "offGeneric": "No one will be reminded about this — not you, and not anyone else in the circle.",
       "noneSelected": "Select at least one time, or no reminder will be sent.",
@@ -193,7 +197,17 @@
       "h1": "1 hour before",
       "m30": "30 minutes before",
       "m15": "15 minutes before",
-      "webDelivery": "Reminders are delivered to the CircleCare mobile app. The web app cannot send them."
+      "webDelivery": "Reminders are delivered to the CircleCare mobile app.",
+      "howItWorks": {
+        "button": "How notifications work",
+        "title": "How notifications work",
+        "close": "Close how notifications work",
+        "scheduledTitle": "Scheduled reminders",
+        "scheduledBody": "A notification is sent at the scheduled time, to the CircleCare mobile app.",
+        "escalationTitle": "Escalation alerts",
+        "earlyTitle": "Early reminders",
+        "earlyBody": "Optionally get reminded 24 hours, 1 hour, 30 minutes, or 15 minutes before the scheduled time."
+      }
     },
     "validation": {
       "titleRequired": "Please enter a title.",

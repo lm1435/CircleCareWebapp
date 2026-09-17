@@ -240,12 +240,31 @@ describe('useCompleteEvent', () => {
     mockComplete.mockResolvedValue(makeEvent({ completed_at: '2026-07-01T10:00:00Z' }));
 
     const { result } = renderHook(() => useCompleteEvent(CIRCLE_ID), { wrapper });
-    result.current.mutate(EVENT_ID);
+    result.current.mutate({ eventId: EVENT_ID });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockComplete).toHaveBeenCalledWith(CIRCLE_ID, EVENT_ID);
+    // No occurrence date reaches the api layer, so it sends no body — the
+    // request every shipped client makes.
+    expect(mockComplete).toHaveBeenCalledWith(CIRCLE_ID, EVENT_ID, undefined);
     expect(invalidatedWith(invalidateSpy, queryKeys.tasks(CIRCLE_ID))).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvent(CIRCLE_ID, EVENT_ID))).toBe(true);
+  });
+
+  // WHICH OCCURRENCE. A recurring series is addressed by its ROOT, so the date
+  // is the only thing that tells the server which day was completed.
+  it('forwards scheduledDate, and invalidates the TARGET (root) id', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockComplete.mockResolvedValue(makeEvent({ completed_at: '2026-08-06T10:00:00Z' }));
+
+    const { result } = renderHook(() => useCompleteEvent(CIRCLE_ID), { wrapper });
+    result.current.mutate({ eventId: 'parent-1', scheduledDate: '2026-08-06' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockComplete).toHaveBeenCalledWith(CIRCLE_ID, 'parent-1', '2026-08-06');
+    // The invalidation follows the id that was POSTed, not the response row.
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvent(CIRCLE_ID, 'parent-1'))).toBe(
+      true
+    );
   });
 
   it('surfaces a non-permission error with the saveFailed toast', async () => {
@@ -253,7 +272,7 @@ describe('useCompleteEvent', () => {
     mockComplete.mockRejectedValue({ success: false, error: { code: 'CONFLICT' } });
 
     const { result } = renderHook(() => useCompleteEvent(CIRCLE_ID), { wrapper });
-    result.current.mutate(EVENT_ID);
+    result.current.mutate({ eventId: EVENT_ID });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
@@ -403,5 +422,73 @@ describe('useMedicationStatus', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// THE TWO REACHABLE CODES THAT HAD NO BRANCH.
+//
+// `useEventMutationOnError` mapped 402, 403 and 409 DOSE_ALREADY_LOGGED, and
+// sent everything else to "Couldn't save your changes. Please try again." —
+// retry copy, on two requests that cannot succeed no matter how many times they
+// are retried:
+//
+//   INVALID_OCCURRENCE_DATE (400, backend/src/routes/calendarEvents.ts:4887)
+//     The posted `scheduled_date` is not an occurrence of the series. REACHABLE
+//     without anyone doing anything wrong: another member shortens
+//     `recurrence_end_date` (or edits the pattern) while this tab holds a
+//     60s-stale calendar, and the virtual instance still on screen is now
+//     off-pattern. Retrying re-posts the same off-pattern date forever.
+//
+//   NOT_FOUND (404, same route)
+//     The row was deleted by someone else between render and press.
+//
+// Both are stale-snapshot conditions, so both must ALSO refetch the calendar —
+// telling the user why without correcting what they are looking at leaves the
+// same dead row on screen for the next press.
+// ────────────────────────────────────────────────────────────────────────────
+describe('useCompleteEvent — stale-snapshot rejections get their own copy', () => {
+  it('INVALID_OCCURRENCE_DATE says the day is no longer part of the series, and refetches', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockComplete.mockRejectedValue({
+      success: false,
+      error: { code: 'INVALID_OCCURRENCE_DATE', message: 'not an occurrence' },
+    });
+
+    const { result } = renderHook(() => useCompleteEvent(CIRCLE_ID), { wrapper });
+    result.current.mutate({ eventId: 'parent-1', scheduledDate: '2026-08-06' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.invalidOccurrenceDate', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
+  });
+
+  it('NOT_FOUND says the event is gone, and refetches', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockComplete.mockRejectedValue({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Event not found' },
+    });
+
+    const { result } = renderHook(() => useCompleteEvent(CIRCLE_ID), { wrapper });
+    result.current.mutate({ eventId: EVENT_ID });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.eventNotFound', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
+  });
+
+  it('an unrecognised code still lands on the generic retry copy', async () => {
+    // The new branches must be code-specific, not a widened "any 4xx" bucket.
+    const { wrapper } = setup();
+    mockComplete.mockRejectedValue({ success: false, error: { code: 'SOMETHING_NEW' } });
+
+    const { result } = renderHook(() => useCompleteEvent(CIRCLE_ID), { wrapper });
+    result.current.mutate({ eventId: EVENT_ID });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
   });
 });

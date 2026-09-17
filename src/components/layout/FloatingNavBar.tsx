@@ -68,6 +68,17 @@ export interface FloatingNavBarProps {
   /** AIChatModal visibility — the AI cell reads as active while it is up. */
   assistantOpen?: boolean;
   onOpenAssistant: () => void;
+  /**
+   * Whether this viewer gets the AI entry at all (`src/lib/aiAccess.ts`).
+   *
+   * NOT the `canCreate` treatment: NEW stays visible-but-inert because the
+   * action is one the viewer could regain, and the disabled affordance tells
+   * them the app has one. A view-only member cannot change their own role, so
+   * a dimmed AI cell would only advertise a door that is not theirs to open —
+   * the cell is not rendered at all. Defaults false, like `canCreate`: a gate
+   * that has not been told anything must fail closed.
+   */
+  canUseAssistant?: boolean;
 }
 
 /**
@@ -89,6 +100,7 @@ export function FloatingNavBar({
   onToggleAdd,
   assistantOpen = false,
   onOpenAssistant,
+  canUseAssistant = false,
 }: FloatingNavBarProps): ReactElement {
   const { t } = useTranslation('common');
   const { pathname } = useLocation();
@@ -160,23 +172,29 @@ export function FloatingNavBar({
 
       {/* The assistant is a modal, not a route, so it can never be the router's
           active match — its "active" state is the modal being open. The sparkle
-          stays coral either way: the bar's one warm mark (mobile parity). */}
-      <button
-        type="button"
-        onClick={onOpenAssistant}
-        aria-expanded={assistantOpen}
-        className={CELL}
-      >
-        {assistantOpen && <span aria-hidden="true" className={ACTIVE_DOT} />}
-        <Icon
-          name={assistantOpen ? 'sparkles' : 'sparkles-outline'}
-          size="chrome"
-          className="text-coral-deep"
-        />
-        <span className={`${LABEL} ${assistantOpen ? 'text-ink' : 'text-ink-2'}`}>
-          {t('nav.aiShort')}
-        </span>
-      </button>
+          stays coral either way: the bar's one warm mark (mobile parity).
+
+          Absent, not disabled, when the viewer has no AI access — see
+          `canUseAssistant` above. The four remaining cells simply re-split the
+          bar (they are `flex-1`; NEW is content-sized either way). */}
+      {canUseAssistant && (
+        <button
+          type="button"
+          onClick={onOpenAssistant}
+          aria-expanded={assistantOpen}
+          className={CELL}
+        >
+          {assistantOpen && <span aria-hidden="true" className={ACTIVE_DOT} />}
+          <Icon
+            name={assistantOpen ? 'sparkles' : 'sparkles-outline'}
+            size="chrome"
+            className="text-coral-deep"
+          />
+          <span className={`${LABEL} ${assistantOpen ? 'text-ink' : 'text-ink-2'}`}>
+            {t('nav.aiShort')}
+          </span>
+        </button>
+      )}
     </nav>
   );
 }

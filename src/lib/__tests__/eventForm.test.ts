@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import * as ts from 'typescript';
 import {
   DEFAULT_DURATION_MINUTES,
   DURATION_PRESETS,
   addMinutesToTimeStr,
   assignedToForSave,
+  defaultReminder15mFor,
+  hydratedReminder15m,
   matchingDurationIndex,
   minutesBetween,
   reminderFlagsForSave,
@@ -12,6 +17,118 @@ import {
 } from '../eventForm';
 
 const USER = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+
+/**
+ * Every place inside `hydratedReminder15m` where the stored value (second
+ * parameter, or a local alias of it) is used in a way that is not a `??`
+ * operand, a null/undefined comparison, `typeof`, or a pass-through ending in
+ * `return` / alias assignment. Empty means clean. See the ban test below.
+ */
+function storedValueViolations(source: string): string[] {
+  const sf = ts.createSourceFile('eventForm.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let fn: ts.FunctionDeclaration | undefined;
+  sf.forEachChild((node) => {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === 'hydratedReminder15m') fn = node;
+  });
+  if (!fn?.body) return ['hydratedReminder15m is not a function declaration with a body'];
+  const storedParam = fn.parameters[1];
+  if (!storedParam || !ts.isIdentifier(storedParam.name)) return ['second (stored) parameter not found'];
+
+  const aliases = new Set<string>([storedParam.name.text]);
+  const unwrap = (e: ts.Expression): ts.Expression =>
+    ts.isParenthesizedExpression(e) ? unwrap(e.expression) : e;
+  const isNullish = (e: ts.Expression): boolean => {
+    const inner = unwrap(e);
+    return (
+      inner.kind === ts.SyntaxKind.NullKeyword ||
+      (ts.isIdentifier(inner) && inner.text === 'undefined') ||
+      ts.isVoidExpression(inner)
+    );
+  };
+  const COMPARISONS = new Set([
+    ts.SyntaxKind.EqualsEqualsEqualsToken,
+    ts.SyntaxKind.ExclamationEqualsEqualsToken,
+    ts.SyntaxKind.EqualsEqualsToken,
+    ts.SyntaxKind.ExclamationEqualsToken,
+  ]);
+
+  /** Climb wrappers that carry the value through unchanged. */
+  const valuePosition = (node: ts.Node): ts.Node => {
+    let current = node;
+    for (;;) {
+      const parent = current.parent;
+      const passThrough =
+        ts.isParenthesizedExpression(parent) ||
+        ts.isAsExpression(parent) ||
+        ts.isNonNullExpression(parent) ||
+        ts.isSatisfiesExpression(parent) ||
+        ts.isTypeAssertionExpression(parent) ||
+        (ts.isConditionalExpression(parent) && parent.condition !== current) ||
+        (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken);
+      if (!passThrough) return current;
+      current = parent;
+    }
+  };
+
+  const isReference = (id: ts.Identifier): boolean => {
+    const parent = id.parent;
+    if ((ts.isVariableDeclaration(parent) || ts.isParameter(parent)) && parent.name === id) return false;
+    if (ts.isPropertyAccessExpression(parent) && parent.name === id) return false;
+    if (ts.isPropertyAssignment(parent) && parent.name === id) return false;
+    return aliases.has(id.text);
+  };
+
+  const scan = (): string[] => {
+    const found: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isIdentifier(node) && isReference(node)) {
+        const position = valuePosition(node);
+        const parent = position.parent;
+        if (ts.isReturnStatement(parent)) {
+          // the value is the function's result
+        } else if (ts.isVariableDeclaration(parent) && parent.initializer === position && ts.isIdentifier(parent.name)) {
+          aliases.add(parent.name.text);
+        } else if (
+          ts.isBinaryExpression(parent) &&
+          parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+          parent.right === position &&
+          ts.isIdentifier(parent.left)
+        ) {
+          aliases.add(parent.left.text);
+        } else if (
+          ts.isBinaryExpression(parent) &&
+          COMPARISONS.has(parent.operatorToken.kind) &&
+          isNullish(parent.left === position ? parent.right : parent.left)
+        ) {
+          // explicit null/undefined check
+        } else if (ts.isTypeOfExpression(parent)) {
+          // typeof inspects, never coerces
+        } else {
+          found.push(`${ts.SyntaxKind[parent.kind]}: ${parent.getText(sf)}`);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(fn!.body!);
+    return found;
+  };
+
+  // Fixpoint: an alias discovered late may have been used before this pass saw it.
+  let size = -1;
+  let violations: string[] = [];
+  while (size !== aliases.size) {
+    size = aliases.size;
+    violations = scan();
+  }
+  let referenced = false;
+  const countRefs = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && isReference(node)) referenced = true;
+    ts.forEachChild(node, countRefs);
+  };
+  countRefs(fn.body);
+  if (!referenced) violations.push('the stored value is never read — the ban would be vacuous');
+  return violations;
+}
 
 describe('supportsAssignee', () => {
   it.each(['task', 'appointment'] as const)('%s carries an assignee', (type) => {
@@ -152,7 +269,9 @@ describe('reminderFlagsForSave', () => {
 
   it('keeps both column-default-TRUE flags on a timeless entry', () => {
     // `reminder_15m` and `reminder_at_due` are the two whose DB default is TRUE,
-    // so they are the two the old zeroing actually changed for a fresh task.
+    // so an omitted key comes back ON for either. A fresh task now selects only
+    // the anchor, but a row can hold both — from the old task default, or from a
+    // user who ticked 15m — and neither may be zeroed on the way out.
     const defaults: ReminderSelection = { ...allOff, reminder_at_due: true, reminder_15m: true };
     const saved = reminderFlagsForSave(defaults, true, false);
     expect(saved.reminder_15m).toBe(true);
@@ -253,5 +372,116 @@ describe('matchingDurationIndex', () => {
     DURATION_PRESETS.forEach((preset, index) => {
       expect(matchingDurationIndex('10:00', addMinutesToTimeStr('10:00', preset))).toBe(index);
     });
+  });
+});
+
+/**
+ * The "15 minutes before" default — the rule both AddEventModal call sites (the
+ * initializer and the type switcher) now read instead of deriving inline. They
+ * disagreed once, which is how a task ended up arriving with an early push the
+ * user never chose; the helper exists so that cannot recur.
+ */
+describe('defaultReminder15mFor', () => {
+  it.each(['medication', 'task', 'appointment'] as const)('is OFF for a new %s', (type) => {
+    // Not medication-asymmetric any more. Migration 20260901120000 gave
+    // task/appointment a real at-due alert (`process_task_reminders()` reads
+    // `reminder_at_due` for both), so "all four earlier boxes off" stopped
+    // meaning "silent" and the last reason to pre-tick one went with it.
+    expect(defaultReminder15mFor(type)).toBe(false);
+  });
+
+  it('matches mobile, which returns false for every type', () => {
+    // One column, one cron, two clients: mobile/src/utils/reminderNotices.ts's
+    // `defaultReminder15mFor` is this same rule under the same name. A task
+    // created on the phone and the same task created on the web must arrive
+    // with the same flags.
+    expect(defaultReminder15mFor(undefined)).toBe(false);
+    expect(defaultReminder15mFor(null)).toBe(false);
+  });
+});
+
+describe('hydratedReminder15m', () => {
+  it('keeps a stored TRUE — the task written under the old default', () => {
+    // `reminder_15m = true` is real data the cron acts on. Rewriting it to the
+    // new default on open would mutate a notification the user never touched,
+    // and `reminderFlagsForSave` would persist that mutation on the next save.
+    expect(hydratedReminder15m('task', true)).toBe(true);
+    expect(hydratedReminder15m('medication', true)).toBe(true);
+  });
+
+  it('keeps a stored FALSE — `??`, never `||`', () => {
+    // Coalescing on falsiness would re-derive the default over every explicit
+    // opt-out. It happens to agree today (both false) and would stop agreeing
+    // the moment any type defaults ON again.
+    //
+    // INERT TODAY, AND KNOWN TO BE: `defaultReminder15mFor` is false for every
+    // type, so `stored || default` returns false here too and this assertion
+    // cannot tell the operators apart. The AST ban below is what goes red
+    // under `||`; this one starts biting the day any type defaults ON.
+    expect(hydratedReminder15m('appointment', false)).toBe(false);
+  });
+
+  /**
+   * TYPESCRIPT AST BAN, NOT A BEHAVIOUR TEST — and it says so on purpose.
+   *
+   * No behavioural seam exists without a product change: every type's default
+   * is false, and `hydratedReminder15m` calls `defaultReminder15mFor` through a
+   * same-module binding that `vi.mock` cannot intercept. A substring ban
+   * (`??` present, `||` absent) was bypassable by `const s = stored ?? null;
+   * return s ? s : default` or by a `||` helper declared above the function.
+   *
+   * The rule, on the parsed AST of lib/eventForm.ts: inside
+   * `hydratedReminder15m`, the stored value (the second parameter, and any
+   * local alias assigned from it) may only
+   *   - be an operand of `??`,
+   *   - be compared against `null`/`undefined` (`===`, `!==`, `==`, `!=`) or
+   *     inspected with `typeof`,
+   *   - pass through parentheses / type assertions / a `?:` BRANCH / `??`,
+   *     ending in a `return` or an alias declaration or assignment.
+   * Anything else is rejected: `||`, `&&`, `!x`, `if (x)`, a `?:` CONDITION,
+   * `Boolean(x)`, passing it to any function, or capturing it in a
+   * literal/closure.
+   */
+  it('hydratedReminder15m source (TypeScript AST): the stored value is never truthiness-tested, aliased into a test, or handed to a helper', () => {
+    const source = readFileSync(join(__dirname, '..', 'eventForm.ts'), 'utf8');
+    expect(storedValueViolations(source)).toEqual([]);
+  });
+
+  it('the AST ban itself rejects every known bypass and accepts honest null checks', () => {
+    const fn = (body: string, prelude = '') =>
+      `${prelude}\nexport function hydratedReminder15m(eventType: EventType, stored: boolean | null | undefined): boolean {\n${body}\n}\n`;
+    const d = 'defaultReminder15mFor(eventType)';
+
+    // Honest implementations: no violations.
+    expect(storedValueViolations(fn(`return stored ?? ${d};`))).toEqual([]);
+    expect(
+      storedValueViolations(fn(`if (stored === undefined || stored === null) return ${d};\nreturn stored;`))
+    ).toEqual([]);
+    expect(storedValueViolations(fn(`return stored == null ? ${d} : stored;`))).toEqual([]);
+
+    // Bypasses: each must be flagged.
+    const bypasses = [
+      fn(`return stored || ${d};`),
+      fn(`const s = stored ?? null;\nreturn s ? s : ${d};`),
+      fn(`let s: boolean | null | undefined;\ns = stored;\nreturn s || ${d};`),
+      fn(`return pick(stored, ${d});`, 'function pick(a: boolean | null | undefined, b: boolean) { return a || b; }'),
+      fn(`if (stored) return stored;\nreturn ${d};`),
+      fn(`return Boolean(stored) || ${d};`),
+      fn(`return !stored ? ${d} : true;`),
+      fn(`return (stored ?? null) || ${d};`),
+      fn(`return stored && true ? true : ${d};`),
+      fn(`const read = () => stored;\nreturn read() ?? ${d};`),
+    ];
+    for (const bypass of bypasses) {
+      expect(storedValueViolations(bypass), bypass).not.toEqual([]);
+    }
+    expect(storedValueViolations('export const unrelated = 1;')).not.toEqual([]);
+  });
+
+  it('falls back to the default only when the key is absent', () => {
+    // A row written before the column existed, or a response from a build that
+    // does not serialise it.
+    expect(hydratedReminder15m('task', undefined)).toBe(false);
+    expect(hydratedReminder15m('task', null)).toBe(false);
   });
 });

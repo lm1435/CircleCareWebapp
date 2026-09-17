@@ -12,10 +12,13 @@
 import { act, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import type { Mock } from 'vitest';
 import '@/i18n';
 import { apiClient } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
+import { todaysMedsKey } from '@/hooks/useMedConfirmation';
+import { useCreateEvent } from '@/hooks/useCalendarEvents';
 import { ToastProvider } from '@/components/ui';
 import { TodaysMeds } from '@/components/meds/TodaysMeds';
 import { MEDICATION_UNDO_DELAY_MS } from '@/components/meds/useMedicationUndo';
@@ -30,6 +33,29 @@ vi.mock('@/hooks/useHourCycle', () => ({
   useHourCycle: () => mockUseHourCycle(),
 }));
 
+// The first-run "Add a medication" door opens the shared AddEventModal — stub
+// it and assert the sentinel, not the real form.
+vi.mock('@/components/calendar/AddEventModal', () => ({
+  AddEventModal: ({ initialType }: { initialType?: string }) => (
+    <div data-testid="add-event-modal">{initialType}</div>
+  ),
+}));
+
+// Partial mock: the confirm flow underneath still calls other Analytics
+// members (medicationConfirmed, errorOccurred), so only the CTA event is
+// swapped for a spy.
+const homeEmptyCtaTapped = vi.fn();
+vi.mock('@/lib/analytics', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/analytics')>();
+  return {
+    ...actual,
+    Analytics: {
+      ...actual.Analytics,
+      homeEmptyCtaTapped: (...args: unknown[]) => homeEmptyCtaTapped(...args),
+    },
+  };
+});
+
 const mockedGet = apiClient.get as unknown as Mock;
 const mockedPost = apiClient.post as unknown as Mock;
 
@@ -40,6 +66,26 @@ const NOW = new Date('2026-06-12T16:00:00Z');
 const TODAY = '2026-06-12';
 // The widget asks for yesterday too, for its Needs Attention group.
 const YESTERDAY = '2026-06-11';
+// ...and for a wide presence window (today-30 → today+180, the Get-started
+// checklist's exact range) to tell a first-run circle from a quiet day.
+const PRESENCE_START = '2026-05-13';
+const PRESENCE_END = '2026-12-09';
+// That window is answered by the cheap presence endpoint — per-type booleans —
+// never by downloading the 211-day events list (HOME OVER-FETCH).
+const PRESENCE_URL = `/circles/${CIRCLE_ID}/events/presence`;
+
+/** The presence endpoint's envelope for a window holding `events`. */
+function presenceOf(events: { event_type: string }[]) {
+  const types = new Set(events.map((e) => e.event_type));
+  return {
+    success: true,
+    data: {
+      medication: types.has('medication'),
+      appointment: types.has('appointment'),
+      task: types.has('task'),
+    },
+  };
+}
 
 function makeCircle(overrides: Partial<Circle> = {}): Circle {
   return {
@@ -105,15 +151,23 @@ function mockApi({
   circles = [makeCircle()],
   events = DEFAULT_MEDS,
   yesterdayEvents = [],
+  presenceEvents = events,
 }: {
   circles?: Circle[];
   events?: TodaysMedication[];
   /** Yesterday's doses — the Needs Attention group's source. Empty by default. */
   yesterdayEvents?: TodaysMedication[];
+  /**
+   * Everything in the wide presence window. Defaults to today's list, so a
+   * circle with doses today naturally counts as having medications.
+   */
+  presenceEvents?: TodaysMedication[];
 } = {}): void {
-  // Routed by date. The widget makes TWO events calls (today and yesterday) and
-  // the real endpoint is date-scoped, so a mock that answers both with the same
-  // list would render every dose twice — once per group.
+  // Routed by date. The widget makes THREE events calls (today, yesterday, and
+  // the presence window) and the real endpoint is date-scoped, so a mock that
+  // answered them all with the same list would render every dose twice — once
+  // per group. Any other range is a `useCalendarEvents` neighbour prefetch the
+  // widget never reads.
   mockedGet.mockImplementation((url: string, config?: { params?: { start_date?: string } }) => {
     if (url === '/circles') {
       return Promise.resolve({ success: true, data: { circles } });
@@ -124,12 +178,20 @@ function mockApi({
         data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
       });
     }
+    if (url === PRESENCE_URL) {
+      return Promise.resolve(presenceOf(presenceEvents));
+    }
     if (url === `/circles/${CIRCLE_ID}/events`) {
-      const forYesterday = config?.params?.start_date === YESTERDAY;
-      return Promise.resolve({
-        success: true,
-        data: { events: forYesterday ? yesterdayEvents : events },
-      });
+      const start = config?.params?.start_date;
+      const list =
+        start === PRESENCE_START
+          ? presenceEvents
+          : start === YESTERDAY
+            ? yesterdayEvents
+            : start === TODAY
+              ? events
+              : [];
+      return Promise.resolve({ success: true, data: { events: list } });
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
@@ -188,6 +250,7 @@ function hasAction(row: HTMLElement, verb: 'Confirm' | 'Skip'): boolean {
 }
 
 beforeEach(() => {
+  homeEmptyCtaTapped.mockReset();
   mockUseHourCycle.mockReturnValue('12h');
   vi.useFakeTimers({ toFake: ['Date'], now: NOW });
   vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
@@ -416,15 +479,637 @@ describe('TodaysMeds', () => {
     });
   });
 
+  // ==========================================================================
+  // EMPTY STATES. "Nothing today" is two different circles: one whose weekly
+  // dose is simply not due today, and one that has never had a medication.
+  // The widget tells them apart with the checklist's wide presence window
+  // (today-30 → today+180) and only the first-run one gets a door.
+  // ==========================================================================
   it('renders the empty state when there are no medications today', async () => {
-    mockApi({ events: [] });
+    // A medication exists in the window (a weekly dose, say) — just not today.
+    mockApi({ events: [], presenceEvents: [makeMed({ id: 'weekly', scheduled_date: '2026-06-15' })] });
+    renderWidget();
+
+    expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
+    expect(screen.queryByText(/No medications yet/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+  });
+
+  // THE PRESENCE WINDOW IS PART OF THE LOADING GATE, NOT AN AFTERTHOUGHT.
+  //
+  // `presence.isLoading` sits inside the same `if` as `medsQuery.isPending`
+  // (TodaysMeds body). Deleting it leaves this whole file green, because every
+  // other case here resolves all three event requests together — and ships a
+  // FLASH OF THE WRONG STORY: today's list settles empty first, `presence`
+  // still has no rows, so `hasAnyMedication` is false and the widget tells a
+  // household that HAS medications "No medications yet" and offers a first-run
+  // door, before correcting itself a moment later. That is the one distinction
+  // this widget's empty state exists to make.
+  it('shows neither empty copy until the presence window has answered', async () => {
+    let answerPresence: (events: TodaysMedication[]) => void = () => {};
+    const presencePromise = new Promise<ReturnType<typeof presenceOf>>((resolve) => {
+      answerPresence = (events) => resolve(presenceOf(events));
+    });
+
+    mockedGet.mockImplementation((url: string, config?: { params?: { start_date?: string } }) => {
+      if (url === '/circles') {
+        return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+      }
+      if (url === `/circles/${CIRCLE_ID}`) {
+        return Promise.resolve({
+          success: true,
+          data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
+        });
+      }
+      // Only the PRESENCE read is held open; today and yesterday answer at once.
+      if (url === PRESENCE_URL) return presencePromise;
+      if (url === `/circles/${CIRCLE_ID}/events`) {
+        const start = config?.params?.start_date;
+        // A 211-day LIST read is the old over-fetch; it never answers here.
+        if (start === PRESENCE_START) return new Promise(() => {});
+        return Promise.resolve({ success: true, data: { events: [] } });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    renderWidget();
+
+    // Today's list has come back EMPTY and the presence window has not. The
+    // widget must still be busy — not guessing.
+    await waitFor(() =>
+      expect(mockedGet).toHaveBeenCalledWith(PRESENCE_URL, {
+        params: { start_date: PRESENCE_START, end_date: PRESENCE_END },
+      })
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByText(/No medications yet/)).toBeNull();
+    expect(screen.queryByText('No medications scheduled today.')).toBeNull();
+
+    // The window answers: this circle DOES have a medication, just not today.
+    await act(async () => {
+      answerPresence([makeMed({ id: 'weekly', scheduled_date: '2026-06-15' })]);
+      await presencePromise;
+    });
+
+    expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
+    // The first-run copy and its door never appeared at all.
+    expect(screen.queryByText(/No medications yet/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+  });
+
+  /** Every events-LIST request, as "start..end". */
+  const listRanges = () =>
+    mockedGet.mock.calls
+      .filter(([url]) => url === `/circles/${CIRCLE_ID}/events`)
+      .map(([, config]) => `${config?.params?.start_date}..${config?.params?.end_date}`);
+
+  // HOME OVER-FETCH: presence used to be a 211-day events LIST (1,511 rows,
+  // ~1.4 MB on the demo circle) plus two prefetched 211-day neighbours.
+  it("asks the presence ENDPOINT on the checklist's exact range, and fetches no wide events list", async () => {
+    mockApi({ events: [], presenceEvents: [] });
+    renderWidget();
+
+    await screen.findByText(/No medications yet/);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30));
+    });
+    expect(mockedGet).toHaveBeenCalledWith(PRESENCE_URL, {
+      params: { start_date: PRESENCE_START, end_date: PRESENCE_END },
+    });
+    expect(mockedGet.mock.calls.filter(([url]) => url === PRESENCE_URL)).toHaveLength(1);
+    // Only today's and yesterday's dose reads — no 211-day list, no neighbours.
+    expect([...listRanges()].sort()).toEqual([`${YESTERDAY}..${YESTERDAY}`, `${TODAY}..${TODAY}`]);
+  });
+
+  // DEPLOY ORDER: a web build can reach an OLDER backend that has no presence
+  // route — GET /events/presence then lands on GET /events/:eventId and answers
+  // 404 NOT_FOUND. The widget must behave exactly as it did before: derive
+  // presence from ONE full-range list read (and still no neighbour prefetch).
+  describe('older backend without the presence route (404)', () => {
+    const OLD_BACKEND_404 = { success: false, error: { code: 'NOT_FOUND', message: 'Event not found' } };
+
+    function oldBackend(opts: { presence: TodaysMedication[]; failList?: boolean }) {
+      mockedGet.mockImplementation((url: string, config?: { params?: { start_date?: string } }) => {
+        if (url === '/circles') {
+          return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+        }
+        if (url === `/circles/${CIRCLE_ID}`) {
+          return Promise.resolve({
+            success: true,
+            data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
+          });
+        }
+        if (url === PRESENCE_URL) return Promise.reject(OLD_BACKEND_404);
+        if (url === `/circles/${CIRCLE_ID}/events`) {
+          if (config?.params?.start_date === PRESENCE_START) {
+            return opts.failList
+              ? Promise.reject({ success: false, error: { code: 'SERVER_ERROR' } })
+              : Promise.resolve({ success: true, data: { events: opts.presence } });
+          }
+          return Promise.resolve({ success: true, data: { events: [] } });
+        }
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+    }
+
+    it('a circle with a medication (none today): "none today", no door; ONE 211-day list read, no neighbours', async () => {
+      oldBackend({ presence: [makeMed({ id: 'weekly', scheduled_date: '2026-06-15' })] });
+      renderWidget();
+
+      expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 30));
+      });
+      expect([...listRanges()].sort()).toEqual([
+        `${PRESENCE_START}..${PRESENCE_END}`,
+        `${YESTERDAY}..${YESTERDAY}`,
+        `${TODAY}..${TODAY}`,
+      ]);
+    });
+
+    it('an empty circle: the first-run door, exactly as before', async () => {
+      oldBackend({ presence: [] });
+      renderWidget();
+      expect(await screen.findByRole('button', { name: 'Add a medication' })).toBeInTheDocument();
+      expect(screen.queryByText("Couldn't load medications")).toBeNull();
+    });
+
+    it('the fallback list read fails: neutral error, no door', async () => {
+      oldBackend({ presence: [], failList: true });
+      renderWidget();
+      expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText(/No medications yet/)).toBeNull();
+    });
+  });
+
+  // THE PRESENCE ANSWER MUST NOT GO STALE AFTER A WRITE. It is a separate query
+  // from the events lists, so unless the write hooks' invalidation reaches it,
+  // a caregiver who adds the first medication keeps being offered "Add a
+  // medication" — the duplicate-series generator — until the cache expires.
+  it('creating the first medication refreshes presence: the first-run door gives way to the fact copy', async () => {
+    let existing: TodaysMedication[] = [];
+    const weekly = makeMed({ id: 'weekly', medication_name: 'Aspirin', scheduled_date: '2026-06-15' });
+    mockedGet.mockImplementation((url: string, config?: { params?: { start_date?: string } }) => {
+      if (url === '/circles') {
+        return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+      }
+      if (url === `/circles/${CIRCLE_ID}`) {
+        return Promise.resolve({
+          success: true,
+          data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
+        });
+      }
+      if (url === PRESENCE_URL) return Promise.resolve(presenceOf(existing));
+      if (url === `/circles/${CIRCLE_ID}/events`) {
+        const list = config?.params?.start_date === PRESENCE_START ? existing : [];
+        return Promise.resolve({ success: true, data: { events: list } });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    mockedPost.mockImplementation((url: string) =>
+      url === `/circles/${CIRCLE_ID}/events`
+        ? Promise.resolve({
+            success: true,
+            data: { event: { ...weekly, circle_id: CIRCLE_ID, created_at: '', updated_at: '' } },
+          })
+        : Promise.reject(new Error(`unexpected POST ${url}`))
+    );
+
+    // The real write hook, as AddEventModal uses it.
+    function CreateMedication() {
+      const create = useCreateEvent(CIRCLE_ID);
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            create.mutate({
+              event_type: 'medication',
+              title: 'Aspirin',
+              medication_name: 'Aspirin',
+              scheduled_date: '2026-06-15',
+              scheduled_time: '09:00',
+            })
+          }
+        >
+          test: save medication
+        </button>
+      );
+    }
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <TodaysMeds circleId={CIRCLE_ID} />
+            <CreateMedication />
+          </ToastProvider>
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('button', { name: 'Add a medication' })).toBeInTheDocument();
+
+    existing = [weekly];
+    await userEvent.setup().click(screen.getByRole('button', { name: 'test: save medication' }));
+
+    expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+    expect(mockedPost).toHaveBeenCalledWith(
+      `/circles/${CIRCLE_ID}/events`,
+      expect.objectContaining({ event_type: 'medication' })
+    );
+  });
+
+  it('on a first-run circle offers "Add a medication", which opens the med form and is tracked', async () => {
+    const user = userEvent.setup();
+    mockApi({ events: [], presenceEvents: [] });
     renderWidget();
 
     expect(
       await screen.findByText(
-        "No medications scheduled today. Add them from the calendar so the whole circle knows what's needed and when."
+        'No medications yet. Add the first one and everyone in the circle gets the reminder.'
       )
     ).toBeInTheDocument();
+    expect(screen.queryByText('No medications scheduled today.')).toBeNull();
+    expect(screen.queryByTestId('add-event-modal')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Add a medication' }));
+
+    expect(screen.getByTestId('add-event-modal')).toHaveTextContent('medication');
+    expect(homeEmptyCtaTapped).toHaveBeenCalledTimes(1);
+    expect(homeEmptyCtaTapped).toHaveBeenCalledWith('medications');
+  });
+
+  it('on a first-run circle the viewer cannot edit, shows the copy but no door', async () => {
+    mockApi({
+      circles: [makeCircle({ can_edit: false, view_only: true, access_level: 'view' })],
+      events: [],
+      presenceEvents: [],
+    });
+    renderWidget();
+
+    expect(await screen.findByText(/No medications yet/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+  });
+
+  // ==========================================================================
+  // A FAILED READ IS NOT A FIRST RUN.
+  //
+  // `presence.events` is empty when the wide window FAILS, so with no error
+  // branch a circle that HAS medications was told "No medications yet" and
+  // offered "Add a medication" — a duplicate series, a doubled adherence
+  // denominator (e2e/unhappy/writes/first-run-cta-failed-read.spec.ts).
+  // ==========================================================================
+  describe('failed reads', () => {
+    /** Routes like `mockApi`, but the named window(s) reject until `heal()`. */
+    function mockApiFailing(fail: { presence?: boolean; today?: boolean }, presenceEvents: TodaysMedication[]) {
+      const state = { failing: true };
+      mockedGet.mockImplementation((url: string, config?: { params?: { start_date?: string } }) => {
+        if (url === '/circles') {
+          return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+        }
+        if (url === `/circles/${CIRCLE_ID}`) {
+          return Promise.resolve({
+            success: true,
+            data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
+          });
+        }
+        if (url === PRESENCE_URL) {
+          return state.failing && fail.presence
+            ? Promise.reject({ success: false, error: { code: 'SERVER_ERROR' } })
+            : Promise.resolve(presenceOf(presenceEvents));
+        }
+        if (url === `/circles/${CIRCLE_ID}/events`) {
+          const start = config?.params?.start_date;
+          const isPresence = start === PRESENCE_START;
+          const isToday = start === TODAY;
+          if (state.failing && ((fail.presence && isPresence) || (fail.today && isToday))) {
+            return Promise.reject({ success: false, error: { code: 'SERVER_ERROR' } });
+          }
+          return Promise.resolve({ success: true, data: { events: isPresence ? presenceEvents : [] } });
+        }
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+      return { heal: () => (state.failing = false) };
+    }
+
+    const presenceCalls = () =>
+      mockedGet.mock.calls.filter(
+        ([url, config]) => url === PRESENCE_URL && config?.params?.start_date === PRESENCE_START
+      ).length;
+
+    it('presence window fails: neutral copy, no first-run door, and Retry refetches it', async () => {
+      const weekly = makeMed({ id: 'weekly', scheduled_date: '2026-06-15' });
+      const api = mockApiFailing({ presence: true }, [weekly]);
+      renderWidget();
+
+      expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText('No medications scheduled today.')).toBeNull();
+
+      const before = presenceCalls();
+      api.heal();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+      // The real answer: this circle has a medication, just not today.
+      expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
+      expect(presenceCalls()).toBe(before + 1);
+      expect(screen.queryByText("Couldn't load medications")).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+    });
+
+    it("today's read fails: error copy, no first-run door (even with an empty presence window), and Retry refetches", async () => {
+      const api = mockApiFailing({ today: true }, []);
+      renderWidget();
+
+      expect(await screen.findByText("Couldn't load today's medications")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText(/No medications yet/)).toBeNull();
+
+      api.heal();
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+      // Presence says never had one, today now loads empty: the real first run.
+      expect(await screen.findByRole('button', { name: 'Add a medication' })).toBeInTheDocument();
+      expect(screen.queryByText("Couldn't load today's medications")).toBeNull();
+    });
+
+    it('loading: skeleton, no first-run door', async () => {
+      // Every events window held open.
+      mockedGet.mockImplementation((url: string) => {
+        if (url === '/circles') {
+          return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+        }
+        if (url === `/circles/${CIRCLE_ID}`) {
+          return Promise.resolve({
+            success: true,
+            data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
+          });
+        }
+        return new Promise(() => {});
+      });
+      const { container } = render(
+        <MemoryRouter>
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            <ToastProvider>
+              <TodaysMeds circleId={CIRCLE_ID} />
+            </ToastProvider>
+          </QueryClientProvider>
+        </MemoryRouter>
+      );
+      await waitFor(() =>
+        expect(mockedGet).toHaveBeenCalledWith(PRESENCE_URL, {
+          params: { start_date: PRESENCE_START, end_date: PRESENCE_END },
+        })
+      );
+      expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText("Couldn't load medications")).toBeNull();
+    });
+
+    it('success with data: the list, no first-run door, no error copy', async () => {
+      mockApi();
+      renderWidget();
+      expect(await screen.findByText('Lisinopril')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText("Couldn't load medications")).toBeNull();
+    });
+
+    it('success and truly empty: the first-run door, no error copy', async () => {
+      mockApi({ events: [], presenceEvents: [] });
+      renderWidget();
+      expect(await screen.findByRole('button', { name: 'Add a medication' })).toBeInTheDocument();
+      expect(screen.queryByText("Couldn't load medications")).toBeNull();
+    });
+  });
+
+  // ==========================================================================
+  // PAUSED OFFLINE, AND PARTIAL FAILURES.
+  //
+  // The first-run door needs EVERY deciding read (today, yesterday, presence)
+  // to have SUCCEEDED and found nothing. Paused (offline: `isPending`, but
+  // `isLoading` false) and errored reads never reach it; doses that did load
+  // always render; a failed yesterday read is named instead of silently
+  // dropping its doses from Needs Attention.
+  // ==========================================================================
+  describe('paused offline and partial failures', () => {
+    const EVENTS_URL = `/circles/${CIRCLE_ID}/events`;
+    const presenceKey = () =>
+      queryKeys.calendarEventsPresence(CIRCLE_ID, {
+        start_date: PRESENCE_START,
+        end_date: PRESENCE_END,
+      });
+
+    afterEach(() => onlineManager.setOnline(true));
+
+    function routedApi(opts: {
+      today?: TodaysMedication[];
+      yesterday?: TodaysMedication[];
+      presence?: TodaysMedication[];
+      fail?: { presence?: boolean; yesterday?: boolean };
+    }) {
+      const state = { failing: true };
+      mockedGet.mockImplementation((url: string, config?: { params?: { start_date?: string } }) => {
+        if (url === '/circles') {
+          return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+        }
+        if (url === `/circles/${CIRCLE_ID}`) {
+          return Promise.resolve({
+            success: true,
+            data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
+          });
+        }
+        if (url === PRESENCE_URL) {
+          return state.failing && opts.fail?.presence
+            ? Promise.reject({ success: false, error: { code: 'SERVER_ERROR' } })
+            : Promise.resolve(presenceOf(opts.presence ?? []));
+        }
+        if (url === EVENTS_URL) {
+          const start = config?.params?.start_date;
+          const reject = () => Promise.reject({ success: false, error: { code: 'SERVER_ERROR' } });
+          const ok = (events: TodaysMedication[] = []) =>
+            Promise.resolve({ success: true, data: { events } });
+          if (start === PRESENCE_START) {
+            return state.failing && opts.fail?.presence ? reject() : ok(opts.presence);
+          }
+          if (start === YESTERDAY) {
+            return state.failing && opts.fail?.yesterday ? reject() : ok(opts.yesterday);
+          }
+          if (start === TODAY) return ok(opts.today);
+          return ok([]);
+        }
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+      return { heal: () => (state.failing = false) };
+    }
+
+    /** Requests for a window; PRESENCE_START counts the presence ENDPOINT, not a list read. */
+    const callsFor = (start: string) =>
+      mockedGet.mock.calls.filter(
+        ([url, config]) =>
+          url === (start === PRESENCE_START ? PRESENCE_URL : EVENTS_URL) &&
+          config?.params?.start_date === start
+      ).length;
+
+    const weekly = () => makeMed({ id: 'weekly', scheduled_date: '2026-06-15' });
+
+    /**
+     * A REAL QueryClient, offline, holding what an earlier visit cached (the
+     * circle, its timezone, today's doses) but NOT the presence window or
+     * yesterday — exactly the client-side-navigation-while-offline case. Those
+     * two reads end up genuinely paused.
+     */
+    function renderOfflineWithCache(today: TodaysMedication[]) {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, networkMode: 'online' } },
+      });
+      queryClient.setQueryData(queryKeys.circles, [makeCircle()]);
+      queryClient.setQueryData(queryKeys.circleDetail(CIRCLE_ID), {
+        id: CIRCLE_ID,
+        care_recipient_timezone: TZ,
+      });
+      queryClient.setQueryData([...todaysMedsKey(CIRCLE_ID), TODAY], today);
+      onlineManager.setOnline(false);
+      const view = render(
+        <MemoryRouter>
+          <QueryClientProvider client={queryClient}>
+            <ToastProvider>
+              <TodaysMeds circleId={CIRCLE_ID} />
+            </ToastProvider>
+          </QueryClientProvider>
+        </MemoryRouter>
+      );
+      return { queryClient, ...view };
+    }
+
+    it('(a) offline: presence + yesterday paused on a circle WITH a medication → no first-run door; online lands the real state', async () => {
+      routedApi({ today: [], presence: [weekly()] });
+      const { queryClient, container } = renderOfflineWithCache([]);
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      // Genuinely paused: pending, no fetch in flight, nothing sent.
+      const presence = queryClient.getQueryCache().find({ queryKey: presenceKey() })?.state;
+      const yesterday = queryClient
+        .getQueryCache()
+        .find({ queryKey: [...todaysMedsKey(CIRCLE_ID), YESTERDAY] })?.state;
+      expect(`${presence?.status}/${presence?.fetchStatus}`).toBe('pending/paused');
+      expect(`${yesterday?.status}/${yesterday?.fetchStatus}`).toBe('pending/paused');
+      expect(callsFor(PRESENCE_START)).toBe(0);
+
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText('No medications scheduled today.')).toBeNull();
+      expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+
+      await act(async () => {
+        onlineManager.setOnline(true);
+        await new Promise((r) => setTimeout(r, 50));
+      });
+      expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+    });
+
+    it('offline: a paused presence read does not hide today\'s doses that are cached', async () => {
+      routedApi({});
+      renderOfflineWithCache([makeMed({ id: 'm1', medication_name: 'Lisinopril' })]);
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+      expect(screen.getByText('Lisinopril')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+    });
+
+    it("presence fails while today's doses are listed: the doses render, no door, no presence error", async () => {
+      routedApi({
+        today: [makeMed({ id: 'm1', medication_name: 'Lisinopril' })],
+        fail: { presence: true },
+      });
+      renderWidget();
+      expect(await screen.findByText('Lisinopril')).toBeInTheDocument();
+      await waitFor(() => expect(callsFor(PRESENCE_START)).toBeGreaterThan(0));
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText("Couldn't load medications")).toBeNull();
+    });
+
+    it("presence fails while yesterday's doses are listed: Needs Attention renders, no door", async () => {
+      routedApi({
+        today: [],
+        yesterday: [
+          makeMed({ id: 'y1', medication_name: 'Warfarin', scheduled_date: YESTERDAY }),
+        ],
+        fail: { presence: true },
+      });
+      renderWidget();
+      expect(await screen.findByText('Needs attention')).toBeInTheDocument();
+      expect(screen.getByText('Warfarin')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText(/No medications yet/)).toBeNull();
+    });
+
+    it("yesterday's read fails while today's doses are listed: the doses render, the gap is named, and Retry refetches yesterday", async () => {
+      const api = routedApi({
+        today: [makeMed({ id: 'm1', medication_name: 'Lisinopril' })],
+        yesterday: [
+          makeMed({ id: 'y1', medication_name: 'Warfarin', scheduled_date: YESTERDAY }),
+        ],
+        presence: [makeMed({ id: 'm1' })],
+        fail: { yesterday: true },
+      });
+      renderWidget();
+
+      expect(await screen.findByText("Couldn't load yesterday's doses")).toBeInTheDocument();
+      expect(screen.getByText('Lisinopril')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+
+      const before = callsFor(YESTERDAY);
+      api.heal();
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
+
+      // The dose that would have silently vanished is back.
+      expect(await screen.findByText('Warfarin')).toBeInTheDocument();
+      expect(screen.getByText('Needs attention')).toBeInTheDocument();
+      expect(callsFor(YESTERDAY)).toBe(before + 1);
+      expect(screen.queryByText("Couldn't load yesterday's doses")).toBeNull();
+    });
+
+    it("yesterday's read fails on a circle with medications but none today: the fact copy plus the named gap, no door", async () => {
+      routedApi({ today: [], presence: [weekly()], fail: { yesterday: true } });
+      renderWidget();
+      expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
+      expect(screen.getByText("Couldn't load yesterday's doses")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+    });
+
+    it("yesterday's read fails and presence found nothing: neutral error, no door; Retry refetches yesterday and lands the real first run", async () => {
+      const api = routedApi({ today: [], presence: [], fail: { yesterday: true } });
+      renderWidget();
+
+      expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
+      expect(screen.queryByText(/No medications yet/)).toBeNull();
+
+      const before = callsFor(YESTERDAY);
+      const presenceBefore = callsFor(PRESENCE_START);
+      api.heal();
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
+
+      expect(await screen.findByRole('button', { name: 'Add a medication' })).toBeInTheDocument();
+      expect(callsFor(YESTERDAY)).toBe(before + 1);
+      // Presence did not fail, so it is not re-asked.
+      expect(callsFor(PRESENCE_START)).toBe(presenceBefore);
+    });
   });
 
   it('shows an error with retry that refetches', async () => {
@@ -439,6 +1124,7 @@ describe('TodaysMeds', () => {
           data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
         });
       }
+      if (url === PRESENCE_URL) return Promise.resolve(presenceOf(DEFAULT_MEDS));
       if (url === `/circles/${CIRCLE_ID}/events`) {
         return failEvents
           ? Promise.reject({ success: false, error: { code: 'SERVER_ERROR' } })
@@ -671,6 +1357,82 @@ describe('TodaysMeds', () => {
       const circlesCallsAfter = mockedGet.mock.calls.filter(([url]) => url === '/circles').length;
       expect(circlesCallsAfter).toBeGreaterThan(circlesCallsBefore);
     });
+
+    // EXACTLY ONE toast. The mutation hook owns the permission toast; the
+    // widget's own onError must stand down for it (`isPermissionDeniedError`),
+    // or the caregiver is told twice — once correctly, once with a generic
+    // "Couldn't save" that implies a retry could work.
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.queryByText("Couldn't save. Please try again.")).not.toBeInTheDocument();
+  });
+
+  /**
+   * THE NOT-DUE RE-CHECK IN `handleConfirm`, reached through the UI.
+   *
+   * The Take/Skip pair is rendered off `isDoseConfirmable` at RENDER time; the
+   * handler re-checks at CLICK time. The two disagree whenever the clock moves
+   * the predicate from true to false with no render in between — and moving
+   * forward can do that: on the recipient's fall-back night the wall clock
+   * repeats 01:00–02:00. A 03:30 dose is answerable from 01:30 (the 2h early
+   * window); at 01:45 EDT the pair is live, fifteen minutes later it is 01:00
+   * EST and the dose is 2½ hours away again. A card left on screen across that
+   * instant would POST a dose that is not due — a falsified adherence row.
+   */
+  it('refuses a stale Confirm when the dose stopped being due (DST fall-back), and says so', async () => {
+    // 2026-11-01 is America/New_York's fall-back day.
+    const BEFORE_FALL_BACK = new Date('2026-11-01T05:45:00Z'); // 01:45 EDT
+    const AFTER_FALL_BACK = new Date('2026-11-01T06:00:00Z'); // 01:00 EST
+    const DST_DAY = '2026-11-01';
+    const dose = makeMed({
+      id: 'dst-dose',
+      medication_name: 'Warfarin',
+      scheduled_date: DST_DAY,
+      scheduled_time: '03:30:00',
+    });
+    vi.useFakeTimers({ toFake: ['Date'], now: BEFORE_FALL_BACK });
+    mockedGet.mockImplementation((url: string, config?: { params?: { start_date?: string } }) => {
+      if (url === '/circles') {
+        return Promise.resolve({ success: true, data: { circles: [makeCircle()] } });
+      }
+      if (url === `/circles/${CIRCLE_ID}`) {
+        return Promise.resolve({
+          success: true,
+          data: { circle: { id: CIRCLE_ID, care_recipient_timezone: TZ } },
+        });
+      }
+      if (url === PRESENCE_URL) return Promise.resolve(presenceOf([dose]));
+      if (url === `/circles/${CIRCLE_ID}/events`) {
+        const start = config?.params?.start_date;
+        // Today's list and the presence window (today - 30) carry the dose.
+        const list = start === DST_DAY || start === '2026-10-02' ? [dose] : [];
+        return Promise.resolve({ success: true, data: { events: list } });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    renderWidget();
+
+    await screen.findByText('Warfarin');
+    // Live at render time: 01:45 is inside the window that opened at 01:30.
+    const take = action(medRow('Warfarin'), 'Confirm');
+
+    // The clock falls back with no render in between, then the stale button
+    // is pressed. The undo window is run out so a POST that slipped through
+    // would be visible.
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: AFTER_FALL_BACK });
+    fireEvent.click(take);
+    await act(async () => {
+      vi.advanceTimersByTime(MEDICATION_UNDO_DELAY_MS);
+    });
+    vi.useFakeTimers({ toFake: ['Date'], now: AFTER_FALL_BACK });
+
+    expect(
+      await screen.findByText("This dose isn't due yet, so it can't be recorded.")
+    ).toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+    // Nothing was armed: no optimistic "Taken" with an Undo on it.
+    expect(
+      within(medRow('Warfarin')).queryByRole('button', { name: 'Undo Warfarin' })
+    ).not.toBeInTheDocument();
   });
 
   it('caps the list at `limit` and toggles the rest in place', async () => {

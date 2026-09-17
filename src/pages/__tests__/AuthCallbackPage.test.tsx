@@ -384,3 +384,91 @@ describe('AuthCallbackPage', () => {
     expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_SESSION_FAILED');
   });
 });
+
+// ── Parked TERMS acceptance on every failure path ──────────────────────────
+// SignUpPage parks '1' before its provider redirect. Every callback that does
+// NOT complete must drop it: left behind, the next successful callback in the
+// same tab (a returning user's OAuth LOGIN, which parks nothing) consumed it
+// and relayed `termsAccepted: true` for an account that ticked nothing.
+
+describe('AuthCallbackPage — parked terms acceptance never survives a failed callback', () => {
+  const TERMS_KEY = 'cc_pending_terms_consent';
+
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    tokenAccessor.clear();
+    localStorage.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+    window.history.replaceState(null, '', '/auth/callback');
+    setPendingTermsConsent();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('provider error: clears the parked terms', async () => {
+    window.history.replaceState(null, '', '/auth/callback#error=server_error&error_description=boom');
+    renderCallback();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(sessionStorage.getItem(TERMS_KEY)).toBeNull();
+    expect(mockedPost).not.toHaveBeenCalled();
+  });
+
+  it('provider access_denied (cancel): clears the parked terms', async () => {
+    window.history.replaceState(null, '', '/auth/callback?error=access_denied');
+    renderCallback();
+    expect(
+      await screen.findByText("No problem — you can sign in whenever you're ready.")
+    ).toBeInTheDocument();
+    expect(sessionStorage.getItem(TERMS_KEY)).toBeNull();
+  });
+
+  it('missing tokens: clears the parked terms', async () => {
+    window.history.replaceState(null, '', '/auth/callback#token_type=bearer');
+    renderCallback();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(sessionStorage.getItem(TERMS_KEY)).toBeNull();
+  });
+
+  it('oauth-session rejection: clears the parked terms', async () => {
+    window.history.replaceState(null, '', '/auth/callback#access_token=a&refresh_token=r');
+    mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
+    renderCallback();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(sessionStorage.getItem(TERMS_KEY)).toBeNull();
+  });
+
+  it('exchange that never reached the backend (catch): clears the parked terms', async () => {
+    window.history.replaceState(null, '', '/auth/callback#access_token=a&refresh_token=r');
+    mockedPost.mockRejectedValueOnce(new Error('Network Error'));
+    renderCallback();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(sessionStorage.getItem(TERMS_KEY)).toBeNull();
+  });
+
+  it('a failed provider callback followed by an OAuth login relays NO termsAccepted', async () => {
+    window.history.replaceState(null, '', '/auth/callback#error=server_error');
+    const first = renderCallback();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    first.unmount();
+
+    // Second handshake: a LOGIN, nothing parked by the login page.
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=login-access&refresh_token=login-refresh&token_type=bearer'
+    );
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    // signIn's own side effects may POST elsewhere; only the exchange matters.
+    const exchanges = mockedPost.mock.calls.filter(([url]) => url === '/auth/oauth-session');
+    expect(exchanges).toEqual([
+      ['/auth/oauth-session', { access_token: 'login-access', refresh_token: 'login-refresh' }],
+    ]);
+  });
+});

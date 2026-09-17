@@ -15,6 +15,12 @@ export interface UseTasksOptions {
   status?: TaskStatus;
   sort?: TaskSort;
   limit?: number;
+  /**
+   * Gate the fetch off without skipping the hook call (React's rules of
+   * hooks) — e.g. TasksPage's zero-total probe, which must fire only once the
+   * default list has resolved empty. Defaults to `true`.
+   */
+  enabled?: boolean;
 }
 
 /**
@@ -29,8 +35,15 @@ export function useTasks(
 ): UseQueryResult<GetTasksResponse> {
   return useQuery({
     queryKey: queryKeys.tasksList(circleId, opts),
-    queryFn: () => getTasks(circleId, opts),
-    enabled: !!circleId,
+    // Trimmed to the fields `GetTasksParams` actually declares — `opts` also
+    // carries `enabled` (a React Query gate, not an API param), and forwarding
+    // it whole would put `enabled=true` on the wire.
+    queryFn: () =>
+      getTasks(
+        circleId,
+        opts ? { status: opts.status, sort: opts.sort, limit: opts.limit } : undefined
+      ),
+    enabled: !!circleId && (opts?.enabled ?? true),
     staleTime: 1000 * 60, // 1 min (mirrors mobile)
   });
 }

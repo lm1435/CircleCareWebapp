@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import { apiClient } from '@/lib/api';
+import { clickTwice, neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 
 // ForgotPasswordPage — request a password-reset OTP. The backend always
 // returns success (no account enumeration), so the "sent" state renders
@@ -90,6 +91,24 @@ describe('ForgotPasswordPage', () => {
     );
   });
 
+  it('tells a rate-limited (429 RATE_LIMIT) user to WAIT, never "Please try again"', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'RATE_LIMIT', message: 'Too many authentication attempts, please try again later' },
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset code' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      'Too many attempts. Please wait a few minutes before trying again.'
+    );
+    expect(alert).not.toHaveTextContent("We couldn't send the reset code. Please try again.");
+  });
+
   it('resends the code from the sent state without leaving the page', async () => {
     mockedPost.mockResolvedValue({ success: true, data: { message: 'sent' } } as never);
     const user = userEvent.setup();
@@ -150,5 +169,60 @@ describe('ForgotPasswordPage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Forgot password?' })
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+// Regression — double submit. /auth/forgot-password sits on the
+// 5-per-5-minutes `authRateLimit` bucket AND mails a real code, so a double
+// fire spends a limiter slot and sends a second code that invalidates the
+// first one the user is already reading.
+describe('ForgotPasswordPage — double-submit guard', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+  });
+
+  it('sends exactly ONE reset code when the form is submitted twice in the same tick', async () => {
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    const user = userEvent.setup();
+    const { container } = renderPage();
+
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await submitFormTwice(container.querySelector('form') as HTMLFormElement);
+
+    expect(mockedPost).toHaveBeenCalledTimes(1);
+  });
+
+  it('is still submittable after a validation failure (the guard releases, it does not latch)', async () => {
+    const user = userEvent.setup();
+    const { container } = renderPage();
+
+    await submitFormTwice(container.querySelector('form') as HTMLFormElement);
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(await screen.findByText('Email is required.')).toBeInTheDocument();
+
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset code' }));
+
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+  });
+
+  it('resends exactly ONE code when Resend is pressed twice in the same tick', async () => {
+    mockedPost.mockResolvedValueOnce({ success: true, data: { message: 'sent' } } as never);
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset code' }));
+    await screen.findByRole('heading', { level: 1, name: 'Check your email' });
+
+    // Resend lives on the terminal state and carries its own guard — the send
+    // that got us here must not have latched it.
+    mockedPost.mockReset();
+    mockedPost.mockImplementation((() => neverSettles()) as never);
+    await clickTwice(screen.getByRole('button', { name: 'Resend code' }));
+
+    expect(mockedPost).toHaveBeenCalledTimes(1);
   });
 });

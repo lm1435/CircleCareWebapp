@@ -32,6 +32,8 @@
     "title": "Open tasks",
     "empty": "You're all caught up — no open tasks.",
     "emptyFirstRun": "Coordinate the to-dos that keep care on track — errands, refills, follow-ups — and share them with everyone helping.",
+    "addFirst": "Add your first task",
+    "loadError": "Couldn't load open tasks",
     "showAll": "Show all {{count}}",
     "viewAll": "View all tasks"
   },

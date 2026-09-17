@@ -24,6 +24,7 @@ import {
   useUpdateCareNote,
 } from '@/hooks/useCareNotes';
 import { useCircle } from '@/hooks/useCircle';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
 import type { CareNote, CareNoteInput } from '@/api/careNotes';
@@ -88,8 +89,14 @@ export default function NotesPage(): ReactElement {
   const createMutation = useCreateCareNote();
   const updateMutation = useUpdateCareNote();
   const deleteMutation = useDeleteCareNote();
+  // One guard per action (see `handlePost`): three different controls that must
+  // not block each other.
+  const postGuard = useSubmitGuard();
+  const editGuard = useSubmitGuard();
+  const deleteGuard = useSubmitGuard();
 
   const [draft, setDraft] = useState<NoteDraft>(EMPTY_NOTE_DRAFT);
+  const [postError, setPostError] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
@@ -142,8 +149,19 @@ export default function NotesPage(): ReactElement {
     const submitted = draft;
     const input = draftToInput(submitted);
     if (input.body === undefined && input.mood === undefined) return;
-    if (createMutation.isPending) return;
+    // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `createMutation.isPending` — the
+    // same value NoteComposer receives as `submitting` — is React Query state,
+    // committed a render AFTER the submit that started the request. Two submits
+    // in the SAME tick therefore both get through it AND both read the same
+    // pre-clear `draft` (the optimistic `setDraft(EMPTY_NOTE_DRAFT)` below has
+    // not committed either), so the same care note is posted twice.
+    // `isPending` first, then the ref (`useSubmitGuard`); released in
+    // `onSettled`, since `mutate` returns immediately.
+    if (createMutation.isPending || !postGuard.claim()) return;
 
+    // A retry replaces the previous failure: the alert unmounts now and a new
+    // one mounts (and is announced again) if this attempt fails too.
+    setPostError(null);
     // Optimistic: the hook prepends the note; clear the composer now.
     setDraft(EMPTY_NOTE_DRAFT);
     createMutation.mutate(
@@ -158,7 +176,8 @@ export default function NotesPage(): ReactElement {
           });
         },
         onError: () => {
-          showToast(t('notes:composer.errorPosting'), 'error');
+          // INLINE in the composer, not a toast — see NoteComposer's `error`.
+          setPostError(t('notes:composer.errorPosting'));
           // Preserve the input: restore the submitted draft unless the user
           // has already started composing a new note.
           setDraft((current) =>
@@ -167,16 +186,19 @@ export default function NotesPage(): ReactElement {
               : current
           );
         },
+        onSettled: postGuard.release,
       }
     );
   }
 
   // ── Inline edit (own notes) ────────────────────────────────────────────────
   function handleSaveEdit(noteId: string, edited: NoteDraft): void {
-    if (updateMutation.isPending) return;
     const body = edited.body.trim();
     // The edit composer's gate mirrors the server refine (body-or-mood).
     if (!body && !edited.mood) return;
+    // Same guard, same reason as `handlePost` — checked AFTER the validity
+    // gate so a claim is never taken on a call that was going to bail out.
+    if (updateMutation.isPending || !editGuard.claim()) return;
     updateMutation.mutate(
       {
         circleId,
@@ -192,13 +214,14 @@ export default function NotesPage(): ReactElement {
           setEditingNoteId(null);
         },
         onError: () => showToast(t('notes:composer.errorSaving'), 'error'),
+        onSettled: editGuard.release,
       }
     );
   }
 
   // ── Delete (own note, or any note for the circle owner) ───────────────────
   function handleConfirmDelete(): void {
-    if (!deletingNoteId || deleteMutation.isPending) return;
+    if (!deletingNoteId || deleteMutation.isPending || !deleteGuard.claim()) return;
     deleteMutation.mutate(
       { circleId, noteId: deletingNoteId },
       {
@@ -210,6 +233,7 @@ export default function NotesPage(): ReactElement {
           setDeletingNoteId(null);
           showToast(t('notes:composer.errorSaving'), 'error');
         },
+        onSettled: deleteGuard.release,
       }
     );
   }
@@ -328,6 +352,7 @@ export default function NotesPage(): ReactElement {
               onSubmit={handlePost}
               submitLabel={t('notes:composer.post')}
               submitting={createMutation.isPending}
+              error={postError}
             />
           </Sheet>
         </div>

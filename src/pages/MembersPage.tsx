@@ -196,8 +196,11 @@ export default function MembersPage(): ReactElement {
       <EmptyState tone="moss" icon="people-outline" title={t('list.empty')} className="mx-5" />
     );
   } else {
+    // No `overflow-hidden` on this Sheet: the rows carry no background of
+    // their own, so nothing bleeds past its radius — and clipping here would
+    // cut off each row's `MoreMenu`, which renders inline inside the row.
     content = (
-      <Sheet as="ul" padding="none" className="mx-5 overflow-hidden">
+      <Sheet as="ul" padding="none" className="mx-5">
         {members.map((member) => {
           const isSelf = member.id === currentUserId;
           // Owners can manage caregivers, but never the care recipient, the
@@ -272,7 +275,10 @@ export default function MembersPage(): ReactElement {
       {isOwner && pendingInvites.length > 0 ? (
         <div className="mt-10">
           <SectionHeader title={t('manage.pendingHeading')} className="mx-5" />
-          <Sheet as="ul" padding="none" className="mx-5 overflow-hidden">
+          {/* No `overflow-hidden` — see the members list above. This Sheet is
+              often ONE row tall, so clipping left the cancel/resend menu with
+              nowhere to go: it flipped up and 64% of it went unpainted. */}
+          <Sheet as="ul" padding="none" className="mx-5">
             {pendingInvites.map((invite) => {
               const expiry = getInviteExpiryState(invite);
               const isExpired = expiry.state === 'expired';

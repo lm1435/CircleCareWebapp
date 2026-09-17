@@ -28,6 +28,12 @@ export const queryKeys = {
   calendarEvents: (circleId: string) => ['calendarEvents', circleId] as const,
   calendarEventsRange: (circleId: string, range: CalendarEventsRange) =>
     ['calendarEvents', circleId, range] as const,
+  // Web-only (no mobile twin): GET /events/presence per-type booleans for a
+  // window. DELIBERATELY under the `calendarEvents(circleId)` prefix so every
+  // event write's prefix invalidation refreshes it — moving it to its own root
+  // would leave "Add a medication" on screen after the first one is created.
+  calendarEventsPresence: (circleId: string, range: CalendarEventsRange) =>
+    ['calendarEvents', circleId, 'presence', range] as const,
   calendarEvent: (circleId: string, eventId: string) =>
     ['calendarEvent', circleId, eventId] as const,
 
@@ -50,6 +56,12 @@ export const queryKeys = {
     pageSize === undefined
       ? (['activityFeed', circleId] as const)
       : (['activityFeed', circleId, pageSize] as const),
+  // Web-only (no mobile twin): the first page-of-3 the circle picker card reads
+  // to name a circle's most recent real activity. DELIBERATELY under the
+  // `activityFeed(circleId)` prefix so every write that already invalidates the
+  // feed (meds, events, notes, emergency info) refreshes this too — moving it
+  // to its own root would leave a stale line on the picker after any change.
+  latestActivity: (circleId: string) => ['activityFeed', circleId, 'latest'] as const,
 
   // Emergency info
   emergencyInfo: (circleId: string) => ['emergencyInfo', circleId] as const,

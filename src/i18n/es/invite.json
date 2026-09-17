@@ -5,7 +5,7 @@
   "appDescription": "CircleCare ayuda a las familias a coordinar juntas los medicamentos, las citas y el cuidado diario.",
   "roles": {
     "caregiver": "Cuidador",
-    "care_recipient": "Persona que recibe cuidado"
+    "care_recipient": "Receptor de cuidado"
   },
   "accept": "Aceptar invitación",
   "accepting": "Uniéndote…",
@@ -36,11 +36,11 @@
     "suggestion": "Si ya te uniste, inicia sesión y encontrarás el círculo de cuidado en tu lista de círculos. Si no, pídele a quien te invitó que envíe una nueva invitación."
   },
   "expiresLabel": "Vence",
-  "acceptArchived": "Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con el dueño del círculo.",
+  "acceptArchived": "Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con el propietario del círculo.",
   "acceptRecipientExists": "Este círculo ya tiene un receptor de cuidado, así que esta invitación no se puede usar. Pídele a quien te invitó que te envíe una invitación de cuidador.",
   "errorArchived": {
     "title": "Este círculo de cuidado ya no está activo",
-    "suggestion": "El círculo se eliminó después de que se envió tu invitación, así que no se puede usar. Tu código no tiene ningún error; pídele a quien te invitó que consulte con el dueño del círculo."
+    "suggestion": "El círculo se eliminó después de que se envió tu invitación, así que no se puede usar. Tu código no tiene ningún error; pídele a quien te invitó que consulte con el propietario del círculo."
   },
   "errorRecipientExists": {
     "title": "Este círculo ya tiene un receptor de cuidado",

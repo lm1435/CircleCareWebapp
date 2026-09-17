@@ -14,7 +14,7 @@
     "title": "Acceso rápido",
     "notes": "Notas",
     "calendar": "Calendario",
-    "medications": "Medicinas",
+    "medications": "Medicamentos",
     "tasks": "Tareas",
     "tasksNote_one": "{{count}} pendiente",
     "tasksNote_other": "{{count}} pendientes",
@@ -32,6 +32,8 @@
     "title": "Tareas pendientes",
     "empty": "Están al día: no hay tareas pendientes.",
     "emptyFirstRun": "Coordina los pendientes que mantienen el cuidado en marcha —mandados, resurtidos y seguimientos— y compártelos con quienes ayudan.",
+    "addFirst": "Agrega tu primera tarea",
+    "loadError": "No se pudieron cargar las tareas pendientes",
     "showAll": "Ver las {{count}}",
     "viewAll": "Ver todas las tareas"
   },

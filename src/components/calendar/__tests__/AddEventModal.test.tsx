@@ -1,5 +1,6 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { AddEventModal } from '../AddEventModal';
@@ -50,7 +51,7 @@ vi.mock('@/hooks/useCalendarEvents', () => ({
 }));
 
 const useCircleResult = {
-  circle: undefined as { recipient_name?: string } | undefined,
+  circle: undefined as { recipient_name?: string; is_self_care?: boolean } | undefined,
   circleSummary: undefined,
   timezone: RECIPIENT_TZ,
   members: [] as Array<{
@@ -131,6 +132,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   useCircleResult.canEdit = true;
   useCircleResult.members = [];
+  // Reset between tests: a self-care circle set by one case must not leak into
+  // the next, where the escalation copy would silently change under it.
+  useCircleResult.circle = undefined;
   cachedEventsMock = [];
   mutateCreate.mockResolvedValue(makeEvent());
   mutateUpdate.mockResolvedValue(makeEvent());
@@ -245,12 +249,14 @@ describe('AddEventModal', () => {
       }
     });
 
-    it('re-applies the 15-minute default when the TYPE is switched', async () => {
+    it('a TYPE switch never checks 15m — the task that used to arrive pre-armed', async () => {
       // The global Create menu opens with NO initialType, so eventType starts
-      // 'medication' and reminder15m initializes false. Switching to Task used
-      // to leave it false — and a task has no at-time push, so the four
-      // reminder flags ARE the notification. The event saved with
-      // notifications_enabled true and nothing that ever fires.
+      // 'medication'. Switching to Task used to re-apply a task-specific
+      // default and tick "15 minutes before" on the user's behalf, on the
+      // (since falsified) grounds that a task had no at-time push. It has one:
+      // reminder_at_due is a real column and process_task_reminders() reads it
+      // for task/appointment. So the entry speaks once, when it is due, and the
+      // early push nobody asked for is gone.
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
@@ -264,14 +270,20 @@ describe('AddEventModal', () => {
       await user.clear(timeInput);
       await user.type(timeInput, '09:00');
 
+      expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
+        'aria-checked',
+        'false'
+      );
+
       await user.click(screen.getByRole('button', { name: 'Create' }));
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
 
       const payload = mutateCreate.mock.calls[0][0];
       expect(payload.event_type).toBe('task');
       expect(payload.notifications_enabled).toBe(true);
-      // The one flag that makes a task audible.
-      expect(payload.reminder_15m).toBe(true);
+      expect(payload.reminder_15m).toBe(false);
+      // Not silent: this is the flag that carries a task now.
+      expect(payload.reminder_at_due).toBe(true);
     });
 
     it('does not re-apply the default over a choice the user made', async () => {
@@ -282,13 +294,14 @@ describe('AddEventModal', () => {
       await user.clear(timeField);
       await user.type(timeField, '09:00');
 
-      // Explicitly turn 15m OFF, then switch type and back.
+      // Explicitly turn 15m ON, then switch type and back. The switcher must not
+      // reset it: `remindersTouched` records that the user has spoken.
       await user.click(screen.getByLabelText('15 minutes before'));
       await user.selectOptions(screen.getByLabelText('Type'), 'appointment');
 
       await user.click(screen.getByRole('button', { name: 'Create' }));
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
-      expect(mutateCreate.mock.calls[0][0].reminder_15m).toBe(false);
+      expect(mutateCreate.mock.calls[0][0].reminder_15m).toBe(true);
     });
 
     it('tells the user reminders are delivered by the mobile app', async () => {
@@ -304,7 +317,7 @@ describe('AddEventModal', () => {
 
       expect(
         screen.getByText(
-          'Reminders are delivered to the CircleCare mobile app. The web app cannot send them.'
+          'Reminders are delivered to the CircleCare mobile app.'
         )
       ).toBeInTheDocument();
     });
@@ -555,6 +568,44 @@ describe('AddEventModal', () => {
       expect(payload.scheduled_date).toBe('2026-06-15');
       // 10:00 Denver === 12:00 New York.
       expect(payload.scheduled_time).toBe('12:00');
+    });
+
+    /**
+     * THE NOTICE'S Continue IS A SUBMIT, AND IT HAS TO BE GUARDED LIKE ONE.
+     *
+     * `ConfirmDialog` wraps `onConfirm` in `useGuardedSubmit` and AWAITS what
+     * it returns — that is documented on the shell, and it is the only way the
+     * guard can be held for longer than the tick the click happened in. This
+     * call site returned nothing (`void persist(data)`), so the ref was
+     * released on the very next microtask while the create was still in
+     * flight, and the guard covered the synchronous window only. What gets
+     * through that gap is the failure the form's own guard is commented for:
+     * TWO medication series for one drug, each with its own reminder schedule
+     * and its own dose-confirmation stream, doubling the denominator of the
+     * adherence figure the clinician-facing report is built from.
+     *
+     * A microtask turn between the two clicks, not two synchronous dispatches:
+     * the synchronous pair is blocked either way (nothing runs between them to
+     * release the ref), so a test built that way passes over the defect. The
+     * turn is what the awaited promise is supposed to survive.
+     */
+    it('creates ONE series when Continue is double-clicked mid-save', async () => {
+      // Never settles: the request is still in flight when the second click
+      // arrives, which is the only state in which holding the guard means
+      // anything.
+      mutateCreate.mockImplementation(() => neverSettles());
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      await fillMedication('10:00');
+      const confirm = screen.getByRole('button', { name: 'Continue' });
+
+      await act(async () => {
+        confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        await Promise.resolve();
+        confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+
+      expect(mutateCreate).toHaveBeenCalledTimes(1);
     });
 
     it('cancelling the notice keeps the form open without saving', async () => {
@@ -834,12 +885,13 @@ describe('AddEventModal', () => {
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
       expect(payload.scheduled_time).toBeUndefined();
-      // The two flags whose column default is TRUE, and the two the old zeroing
-      // actually changed here.
-      expect(payload.reminder_15m).toBe(true);
+      // The anchor is the flag whose column default is TRUE and the one the old
+      // zeroing actually changed here. It must be sent as an explicit `true`.
       expect(payload.reminder_at_due).toBe(true);
-      // The three the user never opted into stay off — "preserve the selection"
-      // is not "turn everything on".
+      // The four the user never opted into stay off — "preserve the selection"
+      // is not "turn everything on", and `reminder_15m` is now one of them for
+      // every type (its column default is TRUE, so the explicit false matters).
+      expect(payload.reminder_15m).toBe(false);
       expect(payload.reminder_30m).toBe(false);
       expect(payload.reminder_1h).toBe(false);
       expect(payload.reminder_24h).toBe(false);
@@ -847,9 +899,11 @@ describe('AddEventModal', () => {
   });
 
   // ── Reminder messaging (display only) ─────────────────────────────────────
-  // Backend semantics are asymmetric: a medication notifies at the dose time
-  // and escalates off notifications_enabled ALONE, while a task/appointment has
-  // NO at-time push — its four reminder_* flags are the only notifications.
+  // Backend semantics are asymmetric: a medication notifies at the dose time and
+  // escalates off notifications_enabled ALONE, while a task/appointment gets its
+  // at-time alert from reminder_at_due and has no escalation chain. What both
+  // now share is that they DO speak at the scheduled time — which is why no
+  // earlier reminder is pre-selected for either.
   // These assert the UI says so, and that saying so changes nothing that saves.
   describe('reminder messaging', () => {
     /** Give a task a time so the reminders fieldset renders at all. */
@@ -859,12 +913,14 @@ describe('AddEventModal', () => {
       await user.type(timeInput, '14:00');
     }
 
-    it('shows the at-time anchor as a real switch, on, + escalation for a medication', () => {
+    it('shows the at-time anchor as a real checkbox, on, + escalation for a medication', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
 
       // It used to be a locked statement of fact ("Always on for medications.").
-      // `reminder_at_due` makes that sentence false — it is a control now.
-      const anchor = screen.getByRole('switch', { name: 'At the scheduled time' });
+      // `reminder_at_due` makes that sentence false — it is a control now, and a
+      // CHECKBOX rather than a switch: the one switch here is the master, and
+      // everything under it picks WHICH alerts, exactly as mobile splits them.
+      const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
       expect(anchor).toHaveAttribute('aria-checked', 'true');
       expect(screen.getByText("The main alert, sent when it's due.")).toBeInTheDocument();
       expect(screen.queryByText('Always on for medications.')).not.toBeInTheDocument();
@@ -874,6 +930,68 @@ describe('AddEventModal', () => {
       ).toBeInTheDocument();
     });
 
+    it('names the reader, not "the care recipient", on a self-care circle', () => {
+      // The one place in the webapp that was still blind to `is_self_care`.
+      // Mobile has branched this line since the escalation chain shipped.
+      useCircleResult.circle = { is_self_care: true };
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      expect(screen.getByText(/we follow up: you after 15 minutes/)).toBeInTheDocument();
+      expect(
+        screen.queryByText(/we follow up: the care recipient/)
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps "the care recipient" when the circle is not self-care', () => {
+      // FALSIFY BY: dropping the ternary and always rendering `escalationSelf`.
+      useCircleResult.circle = { is_self_care: false };
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      expect(
+        screen.getByText(/we follow up: the care recipient after 15 minutes/)
+      ).toBeInTheDocument();
+    });
+
+    it('tells a medication with the anchor off and nothing earlier that the first alert is the LATE one', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
+      await user.click(anchor);
+
+      // `atTimeOff` would point at "the earlier reminders you pick below" with
+      // none picked. A medication never reaches `showNoneSelectedWarning`
+      // (that is `!isMedication`, and correctly so — the escalation chain still
+      // fires), so without this the state had no honest description at all.
+      expect(anchor).toHaveAttribute('aria-checked', 'false');
+      expect(
+        screen.getByText(/the first alert would be the missed-dose follow-up/)
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/only the earlier reminders you pick below/)
+      ).not.toBeInTheDocument();
+      // Still inside the anchor's own description — not carried by color.
+      const describedBy = anchor.getAttribute('aria-describedby');
+      expect(document.getElementById(describedBy as string)).toContainElement(
+        screen.getByText(/the first alert would be the missed-dose follow-up/)
+      );
+    });
+
+    it('reverts to the ordinary off-notice once an earlier reminder is picked', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
+      await user.click(screen.getByRole('checkbox', { name: '1 hour before' }));
+
+      expect(
+        screen.getByText(/only the earlier reminders you pick below/)
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/the first alert would be the missed-dose follow-up/)
+      ).not.toBeInTheDocument();
+    });
+
     it('shows the same at-time anchor for a task, without the medication escalation', async () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
@@ -881,7 +999,7 @@ describe('AddEventModal', () => {
 
       // A task DOES get an at-time alert now — that is the whole feature. What
       // stays medication-only is the missed-dose escalation chain.
-      const anchor = screen.getByRole('switch', { name: 'At the scheduled time' });
+      const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
       expect(anchor).toHaveAttribute('aria-checked', 'true');
       expect(screen.getByText('Earlier reminders')).toBeInTheDocument();
       expect(screen.queryByText(/we follow up: the care recipient/)).not.toBeInTheDocument();
@@ -892,7 +1010,7 @@ describe('AddEventModal', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
       await setTaskTime(user);
 
-      const anchor = screen.getByRole('switch', { name: 'At the scheduled time' });
+      const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
       expect(
         screen.queryByText(/Nothing will be sent at the scheduled time/)
       ).not.toBeInTheDocument();
@@ -900,7 +1018,7 @@ describe('AddEventModal', () => {
       await user.click(anchor);
 
       expect(anchor).toHaveAttribute('aria-checked', 'false');
-      // Inside the switch's own description, so the consequence is announced
+      // Inside the checkbox's own description, so the consequence is announced
       // with the control rather than carried by color alone.
       const describedBy = anchor.getAttribute('aria-describedby');
       expect(describedBy).toBeTruthy();
@@ -933,6 +1051,66 @@ describe('AddEventModal', () => {
       expect(screen.queryByText('Earlier reminders')).not.toBeInTheDocument();
     });
 
+    it('keeps the legend naming the fieldset, with the explainer trigger outside it', () => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      // FALSIFY BY: wrapping the `<legend>` in a flex row with the button. A
+      // legend that is not the fieldset's first child stops naming the group,
+      // and nesting the button inside it instead appends "How notifications
+      // work" to the name every control in the fieldset inherits.
+      expect(screen.getByRole('group', { name: 'Reminders' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('group', { name: /How notifications work/ })
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens the "How notifications work" explainer, escalation section included', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'How notifications work' }));
+
+      const dialog = screen.getByRole('dialog', { name: 'How notifications work' });
+      expect(dialog).toBeInTheDocument();
+      // Reworded for web on purpose: mobile promises "You'll receive a
+      // notification", which contradicts this section's own "the web app cannot
+      // send them" a few lines above.
+      expect(
+        within(dialog).getByText('A notification is sent at the scheduled time, to the CircleCare mobile app.')
+      ).toBeInTheDocument();
+      expect(within(dialog).getByText('Escalation alerts')).toBeInTheDocument();
+      expect(within(dialog).getByText('Early reminders')).toBeInTheDocument();
+    });
+
+    it('omits the escalation section of the explainer for a task', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      await setTaskTime(user);
+
+      await user.click(screen.getByRole('button', { name: 'How notifications work' }));
+
+      const dialog = screen.getByRole('dialog', { name: 'How notifications work' });
+      // There is no missed-dose chain for a task, so there is nothing to explain.
+      expect(within(dialog).queryByText('Escalation alerts')).not.toBeInTheDocument();
+      expect(within(dialog).getByText('Scheduled reminders')).toBeInTheDocument();
+    });
+
+    it('carries the self-care wording into the explainer too', async () => {
+      // One sentence, one place to keep true: the explainer reuses the inline
+      // escalation string rather than holding a second copy of it, which is how
+      // mobile's now-dead `escalationInfo` drifted to 15 min / 1 hr / 2 hrs.
+      useCircleResult.circle = { is_self_care: true };
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'How notifications work' }));
+
+      const dialog = screen.getByRole('dialog', { name: 'How notifications work' });
+      expect(
+        within(dialog).getByText(/we follow up: you after 15 minutes/)
+      ).toBeInTheDocument();
+    });
+
     it('shows the neutral off note for a task with reminders off', async () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
@@ -946,9 +1124,10 @@ describe('AddEventModal', () => {
       ).not.toBeInTheDocument();
     });
 
-    // ── Two-way sync of the master toggle with the four boxes (task/appt only).
-    // "Master on + all four off" is a lie for these types: they have no at-time
-    // notification, so nothing would ever fire. See nextReminderControlState.
+    // ── One-way sync of the four boxes with the master toggle (task/appt only).
+    // The boxes can take the master down (rule 2, and only into real silence);
+    // the master never touches a box (rule 1 is gone). See
+    // nextReminderControlState.
 
     it('rule 2 does NOT fire while the at-due anchor is armed', async () => {
       const user = userEvent.setup();
@@ -956,8 +1135,12 @@ describe('AddEventModal', () => {
       await setTaskTime(user);
 
       const master = screen.getByRole('switch', { name: 'Send reminders' });
-      const fifteen = screen.getByRole('switch', { name: '15 minutes before' });
+      const fifteen = screen.getByRole('checkbox', { name: '15 minutes before' });
       expect(master).toHaveAttribute('aria-checked', 'true');
+      // Nothing in "Earlier reminders" is pre-selected any more, so this test
+      // has to ARM the box it is about to take away.
+      expect(fifteen).toHaveAttribute('aria-checked', 'false');
+      await user.click(fifteen);
       expect(fifteen).toHaveAttribute('aria-checked', 'true');
 
       await user.click(fifteen);
@@ -967,7 +1150,7 @@ describe('AddEventModal', () => {
       // the scheduled time, and flipping the master would discard an alert the
       // user never asked to lose.
       expect(master).toHaveAttribute('aria-checked', 'true');
-      expect(screen.getByRole('switch', { name: 'At the scheduled time' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: 'At the scheduled time' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
@@ -984,12 +1167,14 @@ describe('AddEventModal', () => {
       await setTaskTime(user);
 
       const master = screen.getByRole('switch', { name: 'Send reminders' });
-      // Real silence needs the anchor off FIRST; only then is "no earlier
-      // reminders" the same statement as "master off".
-      await user.click(screen.getByRole('switch', { name: 'At the scheduled time' }));
+      // Arm 15m first — it is no longer pre-selected — then reach real silence:
+      // the anchor off, and only then is "no earlier reminders" the same
+      // statement as "master off".
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
+      await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
       expect(master).toHaveAttribute('aria-checked', 'true');
 
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
 
       expect(master).toHaveAttribute('aria-checked', 'false');
       // Master off collapses the group, so the honest-state copy is the off note.
@@ -1002,68 +1187,83 @@ describe('AddEventModal', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
       await setTaskTime(user);
 
-      await user.click(screen.getByRole('switch', { name: '24 hours before' }));
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
+      // Two boxes on, then one back off: the master must not follow it down
+      // while another earlier reminder is still armed.
+      await user.click(screen.getByRole('checkbox', { name: '24 hours before' }));
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
 
       expect(screen.getByRole('switch', { name: 'Send reminders' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
-      expect(screen.getByRole('switch', { name: '24 hours before' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: '24 hours before' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
     });
 
-    it('rule 1 — turning the master back on with nothing selected restores the 15m default', async () => {
+    it('rule 1 is GONE — the master back on with nothing selected checks NOTHING', async () => {
+      // This used to re-check "15 minutes before" on the way back up, on the
+      // grounds that a master reading "on" over an entry that cannot speak is a
+      // lie. It is — but the fix is to SAY SO, not to tick a box the user never
+      // tapped. `showNoneSelectedWarning` covers exactly this state, and it is
+      // already the only thing standing behind the same state on the edit form,
+      // which must not auto-correct a hydrated row.
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
       await setTaskTime(user);
 
-      // Reach real silence: the anchor off, THEN the only box unchecked. Rule 2
-      // takes the master down only once nothing is left to fire.
-      await user.click(screen.getByRole('switch', { name: 'At the scheduled time' }));
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
+      // Reach real silence: 15m armed, the anchor off, THEN the only box
+      // unchecked. Rule 2 takes the master down once nothing is left to fire.
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
+      await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
       const master = screen.getByRole('switch', { name: 'Send reminders' });
       expect(master).toHaveAttribute('aria-checked', 'false');
 
       await user.click(master);
 
-      // 15m is the fresh-event default, so this restores it rather than
-      // inventing a reminder time the user never picked.
       expect(master).toHaveAttribute('aria-checked', 'true');
-      expect(screen.getByRole('switch', { name: '15 minutes before' })).toHaveAttribute(
+      for (const name of [
+        '24 hours before',
+        '1 hour before',
+        '30 minutes before',
+        '15 minutes before',
+      ]) {
+        expect(screen.getByRole('checkbox', { name })).toHaveAttribute('aria-checked', 'false');
+      }
+      // The anchor is still off, so this state IS silent — and the user is told
+      // rather than quietly corrected.
+      expect(screen.getByRole('checkbox', { name: 'At the scheduled time' })).toHaveAttribute(
         'aria-checked',
-        'true'
+        'false'
       );
       expect(
-        screen.queryByText('Select at least one time, or no reminder will be sent.')
-      ).not.toBeInTheDocument();
+        screen.getByText('Select at least one time, or no reminder will be sent.')
+      ).toBeInTheDocument();
     });
 
     /**
-     * RULE 1 IS GATED ON THE ANCHOR, exactly as rule 2 is.
+     * THE MUTE BUTTON IS A MUTE BUTTON.
      *
-     * The two rules share ONE premise — "no earlier reminders" means "nothing
-     * fires" — and `reminder_at_due` falsified it for both. Gating only rule 2
-     * left the master toggle able to INVENT a reminder on the way back up: the
-     * state below (anchor armed, all four earlier boxes off) is the state rule 2
-     * now deliberately produces, and an off→on cycle of the master used to
-     * re-check "15 minutes before" from it — silently restoring the very box the
-     * user had unchecked two clicks earlier.
+     * "Anchor armed, all four earlier boxes off" is now the DEFAULT state of a
+     * fresh task, and it is also the state rule 2 leaves behind when the last
+     * earlier reminder is unchecked. An off→on cycle of the master used to
+     * re-check "15 minutes before" from it — silently arming an early push on an
+     * entry the user had only muted and unmuted.
      *
-     * `reminderFlagsForSave` saves the selection verbatim, so that re-check goes
-     * straight to the wire: an off→on cycle of a toggle that is supposed to mean
-     * "mute / unmute" would ship a 15-minute-early push nobody asked for.
+     * `reminderFlagsForSave` saves the selection verbatim, so that re-check went
+     * straight to the wire: a toggle that is supposed to mean "mute / unmute"
+     * shipped a 15-minute-early push nobody asked for.
      */
-    it('rule 1 does NOT fire while the at-due anchor is armed', async () => {
+    it('a master off→on cycle invents nothing', async () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
       await setTaskTime(user);
 
-      // Reach "anchor on, all four earlier off" — the state rule 2 now leaves
-      // behind when the last earlier reminder is unchecked.
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
+      // The fresh state, untouched: the anchor carries the task and no earlier
+      // reminder is selected.
       const master = screen.getByRole('switch', { name: 'Send reminders' });
       expect(master).toHaveAttribute('aria-checked', 'true');
 
@@ -1074,7 +1274,7 @@ describe('AddEventModal', () => {
 
       // Nothing was invented: the anchor still carries the entry, and the box
       // the user unchecked stays unchecked.
-      expect(screen.getByRole('switch', { name: 'At the scheduled time' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: 'At the scheduled time' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
@@ -1084,7 +1284,7 @@ describe('AddEventModal', () => {
         '30 minutes before',
         '15 minutes before',
       ]) {
-        expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByRole('checkbox', { name })).toHaveAttribute('aria-checked', 'false');
       }
       // Not silent — the anchor fires — so no warning either.
       expect(
@@ -1094,13 +1294,12 @@ describe('AddEventModal', () => {
 
     it('a master off→on cycle with the anchor armed saves the selection unchanged', async () => {
       // The wire half of the test above. `reminderFlagsForSave` is verbatim now,
-      // so anything rule 1 invents is persisted.
+      // so anything the sync rules invent is persisted.
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Refill the water jug');
       await setTaskTime(user);
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
       const master = screen.getByRole('switch', { name: 'Send reminders' });
       await user.click(master);
       await user.click(master);
@@ -1135,13 +1334,13 @@ describe('AddEventModal', () => {
 
       await user.click(master);
 
-      // The four values were never cleared, so rule 1 cannot fire and the
-      // user's 24h choice comes back exactly as it was.
-      expect(screen.getByRole('switch', { name: '24 hours before' })).toHaveAttribute(
+      // The four values are never cleared and the master never writes to them,
+      // so the user's 24h choice comes back exactly as it was.
+      expect(screen.getByRole('checkbox', { name: '24 hours before' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
-      expect(screen.getByRole('switch', { name: '15 minutes before' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
         'aria-checked',
         'false'
       );
@@ -1189,7 +1388,11 @@ describe('AddEventModal', () => {
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Call the pharmacy');
       await setTaskTime(user);
-      await user.click(screen.getByRole('switch', { name: 'At the scheduled time' }));
+      // 15m is no longer on by default, so the user arms it here — it is what
+      // keeps the master up while the anchor comes down (rule 2 needs REAL
+      // silence), and it makes the anchor the only thing that changed.
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
+      await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
@@ -1207,9 +1410,11 @@ describe('AddEventModal', () => {
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Water the plants');
       await setTaskTime(user);
-      // Anchor off first, then the last box — rule 2 then takes the master down.
-      await user.click(screen.getByRole('switch', { name: 'At the scheduled time' }));
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
+      // 15m on, anchor off, 15m back off — rule 2 then takes the master down.
+      // (The box has to be armed first: nothing in the group starts selected.)
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
+      await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
@@ -1233,11 +1438,11 @@ describe('AddEventModal', () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
 
-      // 15m now starts OFF for medications — the at-time push and escalation
-      // chain already cover them, so pre-selecting it only doubled the pushes.
-      // Turn it ON first so this still exercises what it is named for:
-      // unchecking the LAST earlier reminder must not flip the master off.
-      const fifteenMed = screen.getByRole('switch', { name: '15 minutes before' });
+      // 15m starts OFF for every type now — every event alerts at its scheduled
+      // time on its own, so nothing earlier is pre-selected. Turn it ON first so
+      // this still exercises what it is named for: unchecking the LAST earlier
+      // reminder must not flip the master off.
+      const fifteenMed = screen.getByRole('checkbox', { name: '15 minutes before' });
       expect(fifteenMed).toHaveAttribute('aria-checked', 'false');
       await user.click(fifteenMed);
       expect(fifteenMed).toHaveAttribute('aria-checked', 'true');
@@ -1248,7 +1453,7 @@ describe('AddEventModal', () => {
         'aria-checked',
         'true'
       );
-      expect(screen.getByRole('switch', { name: '15 minutes before' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
         'aria-checked',
         'false'
       );
@@ -1256,7 +1461,7 @@ describe('AddEventModal', () => {
       expect(screen.getByText('At the scheduled time')).toBeInTheDocument();
     });
 
-    it('medication — turning the master on with nothing selected checks NOTHING (rule 1 skipped)', async () => {
+    it('medication — turning the master on with nothing selected checks NOTHING', async () => {
       const user = userEvent.setup();
       render(
         <AddEventModal
@@ -1277,7 +1482,7 @@ describe('AddEventModal', () => {
         '30 minutes before',
         '15 minutes before',
       ]) {
-        expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByRole('checkbox', { name })).toHaveAttribute('aria-checked', 'false');
       }
     });
 
@@ -1298,11 +1503,11 @@ describe('AddEventModal', () => {
       await user.click(master);
       await user.click(master);
 
-      expect(screen.getByRole('switch', { name: '1 hour before' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: '1 hour before' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
-      expect(screen.getByRole('switch', { name: '15 minutes before' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
         'aria-checked',
         'false'
       );
@@ -1331,7 +1536,7 @@ describe('AddEventModal', () => {
         />
       );
 
-      expect(screen.getByRole('switch', { name: 'At the scheduled time' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: 'At the scheduled time' })).toHaveAttribute(
         'aria-checked',
         'true'
       );
@@ -1376,7 +1581,7 @@ describe('AddEventModal', () => {
         'aria-checked',
         'true'
       );
-      expect(screen.getByRole('switch', { name: 'At the scheduled time' })).toHaveAttribute(
+      expect(screen.getByRole('checkbox', { name: 'At the scheduled time' })).toHaveAttribute(
         'aria-checked',
         'false'
       );
@@ -1386,7 +1591,7 @@ describe('AddEventModal', () => {
         '30 minutes before',
         '15 minutes before',
       ]) {
-        expect(screen.getByRole('switch', { name })).toHaveAttribute('aria-checked', 'false');
+        expect(screen.getByRole('checkbox', { name })).toHaveAttribute('aria-checked', 'false');
       }
     });
 
@@ -1394,7 +1599,7 @@ describe('AddEventModal', () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
 
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
+      await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
 
       expect(
         screen.queryByText('Select at least one time, or no reminder will be sent.')
@@ -1408,10 +1613,9 @@ describe('AddEventModal', () => {
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Water the plants');
       await setTaskTime(user);
-      // Swap the default 15m for 24h — one box stays checked throughout, so the
-      // master is never taken down and the payload is purely the user's choice.
-      await user.click(screen.getByRole('switch', { name: '24 hours before' }));
-      await user.click(screen.getByRole('switch', { name: '15 minutes before' }));
+      // Pick 24h and nothing else — no box starts checked, so the master is
+      // never taken down and the payload is purely the user's choice.
+      await user.click(screen.getByRole('checkbox', { name: '24 hours before' }));
       await user.click(screen.getByRole('button', { name: 'Create' }));
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
@@ -1495,35 +1699,88 @@ describe('AddEventModal', () => {
 });
 
 /**
- * The "15 minutes before" DEFAULT is medication-asymmetric, matching mobile.
+ * The "15 minutes before" DEFAULT — OFF for EVERY type, matching mobile's
+ * `defaultReminder15mFor`.
  *
- * A medication with notifications_enabled already fires at the dose time AND
- * runs the escalation chain — verified in the SQL, which references
- * notifications_enabled and never the four reminder_* flags. Pre-selecting 15m
- * there doubles the pushes for a reminder the baseline already covers. A
- * task/appointment has NO at-time notification, so those four ARE the
- * notifications and defaulting off would ship a silent event.
+ * Every event now alerts at its scheduled time on its own: a medication off
+ * `notifications_enabled` (plus the escalation chain), a task or appointment off
+ * `reminder_at_due`, which `process_task_reminders()` reads for exactly those
+ * two types. Nothing in "Earlier reminders" is therefore pre-selected — an
+ * earlier push is a second notification, and a second notification is a choice.
+ *
+ * THESE RENDER THE MODAL. An earlier version of this block re-implemented the
+ * default as a local `defaultFor` arrow and asserted against that, which would
+ * have stayed green through any change to the component whatsoever.
  */
 describe('AddEventModal — the 15-minute default', () => {
-  const defaultFor = (eventType: string, stored?: boolean): boolean =>
-    stored ?? eventType !== 'medication';
+  /** The reminders fieldset needs a time for anything but a medication. */
+  async function openReminders(
+    user: ReturnType<typeof userEvent.setup>,
+    type: 'medication' | 'task' | 'appointment'
+  ): Promise<void> {
+    if (type === 'medication') return;
+    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
+    await user.clear(timeInput);
+    await user.type(timeInput, '14:00');
+  }
 
-  it('is OFF for a new medication', () => {
-    expect(defaultFor('medication')).toBe(false);
-  });
+  it.each(['medication', 'task', 'appointment'] as const)('is OFF for a new %s', async (type) => {
+    const user = userEvent.setup();
+    render(<AddEventModal circleId={CIRCLE_ID} initialType={type} onClose={vi.fn()} />);
+    await openReminders(user, type);
 
-  it.each(['appointment', 'task'])('is ON for a new %s', (type) => {
-    expect(defaultFor(type)).toBe(true);
+    expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
+      'aria-checked',
+      'false'
+    );
+    // Off is not silent: the anchor is what carries every fresh entry now.
+    expect(screen.getByRole('checkbox', { name: 'At the scheduled time' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
   });
 
   /**
-   * `?? ` not `||`. A medication the user deliberately ticked, or a task they
-   * deliberately unticked, must survive hydration — coalescing on falsiness
-   * would silently re-enable every stored `false`.
+   * `??` not `||`, and hydration NEVER re-derives the default.
+   *
+   * A task created under the old task/appointment default really does hold
+   * `reminder_15m = true` — that is what the cron will send — so the edit form
+   * has to show it. Rewriting it to the new default on open would mutate a
+   * notification the user never touched, and `reminderFlagsForSave` would write
+   * the mutation back on the next save.
    */
-  it('respects an explicitly stored value over the default, in both directions', () => {
-    expect(defaultFor('medication', true)).toBe(true);
-    expect(defaultFor('appointment', false)).toBe(false);
+  it('shows a stored TRUE on a task written under the old default', () => {
+    render(
+      <AddEventModal
+        circleId={CIRCLE_ID}
+        event={makeReminderEvent(
+          { event_type: 'task', duration_minutes: 30 },
+          { notifications_enabled: true, reminder_15m: true }
+        )}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+  });
+
+  it('shows a stored FALSE on a medication the user deliberately unticked', () => {
+    render(
+      <AddEventModal
+        circleId={CIRCLE_ID}
+        event={makeReminderEvent(
+          { event_type: 'medication', medication_name: 'Lisinopril' },
+          { notifications_enabled: true, reminder_15m: false }
+        )}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
+      'aria-checked',
+      'false'
+    );
   });
 
   // ── The zone NAMES on the dual-timezone strip ─────────────────────────────
@@ -1610,5 +1867,87 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
 
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0]).not.toHaveProperty('rxcui');
+  });
+  // ──────────────────────────────────────────────────────────────────────────
+  // DOUBLE SUBMIT — a duplicated MEDICATION SERIES is a care record, not a
+  // cosmetic glitch: two series means two reminder schedules and two
+  // dose-confirmation streams for one drug, which doubles the denominator of
+  // the adherence figure a clinician reads.
+  //
+  // `if (!canEdit || isPending) return` cannot stop it. `isPending` is React
+  // Query state, committed a render AFTER the event that started the request,
+  // so a second submit dispatched in the SAME tick re-enters the handler with
+  // the flag still false — and `disabled` on the button is not consulted at all
+  // by implicit form submission (Enter in a field) or a synthetic
+  // `requestSubmit()`. See `useGuardedSubmit`'s docstring, which was written
+  // about exactly this shape.
+  //
+  // These use `submitFormTwice`, NOT two awaited `userEvent.click`s: userEvent
+  // awaits between interactions, so React commits the first render and a
+  // state-flag "fix" would pass while the real bug shipped.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('double submit', () => {
+    async function fillFutureMedication(): Promise<HTMLFormElement> {
+      const user = userEvent.setup();
+      await user.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
+      const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
+      await user.clear(dateInput);
+      await user.type(dateInput, '2099-01-01');
+      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
+      await user.clear(timeInput);
+      await user.type(timeInput, '09:00');
+      const form = document.getElementById('add-event-form');
+      if (!(form instanceof HTMLFormElement)) throw new Error('add-event-form not found');
+      return form;
+    }
+
+    it('creates ONE medication series when the form is submitted twice in one tick', async () => {
+      // Never settles: the request is still in flight when the second submit
+      // arrives, which is the only state in which the guard is under test. A
+      // `vi.fn()` returning undefined would resolve on the next microtask and
+      // legitimately free the guard.
+      mutateCreate.mockImplementation(() => neverSettles());
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      const form = await fillFutureMedication();
+      await submitFormTwice(form);
+
+      expect(mutateCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('still saves on a genuine RESUBMIT after the first attempt failed', async () => {
+      // The guard must be released on the rejection path too — otherwise a
+      // failed save latches the form shut for the rest of its life.
+      mutateCreate.mockRejectedValueOnce(new Error('500'));
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+      const form = await fillFutureMedication();
+      await submitFormTwice(form);
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+
+      mutateCreate.mockResolvedValueOnce({ id: 'e-1' });
+      await submitFormTwice(form);
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(2));
+    });
+
+    it('a validation failure does not latch the form — the corrected submit goes through', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+
+      const form = document.getElementById('add-event-form');
+      if (!(form instanceof HTMLFormElement)) throw new Error('add-event-form not found');
+
+      // Empty title → the handler returns before any request.
+      await submitFormTwice(form);
+      expect(mutateCreate).not.toHaveBeenCalled();
+
+      await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Eye exam');
+      const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
+      await user.clear(dateInput);
+      await user.type(dateInput, '2099-01-01');
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    });
   });
 });

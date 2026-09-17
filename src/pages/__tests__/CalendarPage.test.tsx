@@ -1,11 +1,16 @@
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import CalendarPage from '../CalendarPage';
 import { ToastProvider } from '@/components/ui';
-import { getCircleDetail, getEvents, type CalendarEvent } from '@/api/calendarEvents';
+import {
+  completeEvent,
+  getCircleDetail,
+  getEvents,
+  type CalendarEvent,
+} from '@/api/calendarEvents';
 
 // Task 47 — CalendarPage: week/month toggle, date navigation changes the
 // fetched range, event rendering with type/status styling, detail modal with
@@ -17,6 +22,7 @@ vi.mock('@/api/calendarEvents', async (importOriginal) => {
     ...actual,
     getEvents: vi.fn(),
     getCircleDetail: vi.fn(),
+    completeEvent: vi.fn(),
   };
 });
 
@@ -32,8 +38,13 @@ vi.mock('@/api/circles', () => ({
 }));
 // The detail modal now mounts EventNotesPanel (needs ToastProvider + React Query
 // auth context); stub it so the page test stays focused on calendar behavior.
+// The stub prints the event id it was handed: that id is the modal's SUBJECT,
+// and it is otherwise invisible — a swapped subject with the same title reads
+// identically on screen.
 vi.mock('@/components/calendar/EventNotesPanel', () => ({
-  EventNotesPanel: () => null,
+  EventNotesPanel: ({ eventId }: { eventId: string }) => (
+    <span data-testid="event-notes-subject">{eventId}</span>
+  ),
 }));
 // The GettingStartedChecklist (rendered on the landing) reads emergency info; stub
 // the fetcher so the page test doesn't make an unmocked network call. The checklist
@@ -55,6 +66,7 @@ import { getCircleDetail as getMembersCircleDetail } from '@/api/circleMembers';
 import { getCircles } from '@/api/circles';
 
 const mockGetEvents = vi.mocked(getEvents);
+const mockCompleteEvent = vi.mocked(completeEvent);
 const mockGetCircleDetail = vi.mocked(getCircleDetail);
 const mockGetMembersCircleDetail = vi.mocked(getMembersCircleDetail);
 const mockGetCircles = vi.mocked(getCircles);
@@ -210,6 +222,7 @@ const MEMBERS_DETAIL = {
 beforeEach(() => {
   mockUseHourCycle.mockReturnValue('12h');
   mockGetEvents.mockReset();
+  mockCompleteEvent.mockReset();
   mockGetCircleDetail.mockReset();
   mockGetMembersCircleDetail.mockReset();
   mockGetCircles.mockReset();
@@ -599,5 +612,141 @@ describe('CalendarPage', () => {
     await screen.findByRole('grid', { name: 'Week view calendar' });
 
     expect(screen.queryByRole('button', { name: 'Add event' })).not.toBeInTheDocument();
+  });
+
+  // ==========================================================================
+  // COMPLETING FROM THE DETAIL MODAL SHOWS IN THE OPEN MODAL.
+  //
+  // The write always worked — the row was stamped in the database — but the
+  // modal is rendered from `selectedEvent`, a SNAPSHOT this page sets once,
+  // when the chip is clicked, and never re-read from the refreshed cache. So
+  // the "Completed on" row did not appear and Mark complete stayed live until
+  // the modal was closed and reopened: a working fix that reads as broken, and
+  // an invitation to click complete a second time.
+  //
+  // `getEvents` deliberately keeps resolving the UNCOMPLETED list in both tests
+  // below, so nothing here can pass by accident on the post-mutation refetch —
+  // the only new information in the process is the mutation's response.
+  // ==========================================================================
+  describe('completing from the detail modal, without a close/reopen', () => {
+    it('a PHYSICAL one-off task stamps the open modal in place', async () => {
+      const user = userEvent.setup();
+      mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
+      const task = makeEvent({
+        id: 'ev-open-task',
+        event_type: 'task',
+        title: 'Pick up groceries',
+        scheduled_date: '2026-06-12',
+        scheduled_time: null,
+        completed_at: null,
+      });
+      mockGetEvents.mockResolvedValue([task]);
+      mockCompleteEvent.mockResolvedValue({
+        ...task,
+        completed_at: '2026-06-12T16:00:00Z',
+        completed_by: 'u1',
+      });
+
+      renderEditablePage();
+      await screen.findByRole('grid', { name: 'Week view calendar' });
+      await user.click(screen.getByRole('button', { name: /Pick up groceries/ }));
+
+      const detail = await screen.findByRole('dialog');
+      // Nothing claims completion yet.
+      expect(within(detail).queryByText('Completed on')).toBeNull();
+
+      await user.click(within(detail).getByRole('button', { name: 'Mark complete' }));
+
+      // The SAME dialog — never closed, never reopened — now carries the row.
+      expect(await within(detail).findByText('Completed on')).toBeInTheDocument();
+      // 2026-06-12T16:00:00Z is Jun 12 in America/Chicago (the recipient's
+      // timezone, never the viewer's device clock).
+      expect(within(detail).getByText(/Jun 12, 2026/)).toBeInTheDocument();
+      // ...and the action that just succeeded stops offering itself again.
+      expect(within(detail).queryByRole('button', { name: 'Mark complete' })).toBeNull();
+    });
+
+    it('a VIRTUAL occurrence stamps the open modal from the row the server CREATED', async () => {
+      const user = userEvent.setup();
+      mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
+      // A day past the materializer's 3-day horizon: the backend synthesises
+      // this with a composite id (`${parentId}_${date}`) that matches no `id`
+      // column, so the client posts the SERIES ROOT plus the date.
+      const virtual = makeEvent({
+        id: 'parent-1_2026-06-13',
+        parent_event_id: 'parent-1',
+        is_virtual: true,
+        event_type: 'task',
+        title: 'Water the plants',
+        recurrence_rule: 'daily',
+        scheduled_date: '2026-06-13',
+        scheduled_time: null,
+        completed_at: null,
+      });
+      mockGetEvents.mockResolvedValue([virtual]);
+      // THE SERVER MATERIALIZED THE DAY. The response is a brand-new physical
+      // row with an id the client has never seen — there was no
+      // `calendarEvent(circleId, 'parent-1_2026-06-13')` cache entry, and the
+      // id that WAS posted ('parent-1') describes the series, not this day. So
+      // the response is the only thing that can refresh the modal.
+      //
+      // AND IT IS NOT THE SAME ROW. A materialized child is physical, not
+      // virtual; it carries no recurrence of its own (the series lives on the
+      // root); and here the server has also handed back a title and a
+      // description the open modal never showed. If the response were merely a
+      // stamped copy of `virtual`, merging the WHOLE row (keeping only the id)
+      // would look identical on screen and pass — so every field below differs
+      // from the subject, and only `completed_at` / `completed_by` may reach it.
+      mockCompleteEvent.mockResolvedValue({
+        ...virtual,
+        id: 'child-created-0613',
+        parent_event_id: 'parent-1',
+        is_virtual: false,
+        recurrence_rule: null,
+        title: 'Water the plants (materialized)',
+        description: 'Row created by the completion request',
+        completed_at: '2026-06-13T17:00:00Z',
+        completed_by: 'u1',
+      });
+
+      renderEditablePage();
+      await screen.findByRole('grid', { name: 'Week view calendar' });
+      await user.click(screen.getByRole('button', { name: /Water the plants/ }));
+
+      const detail = await screen.findByRole('dialog');
+      expect(within(detail).queryByText('Completed on')).toBeNull();
+      expect(within(detail).getByTestId('event-notes-subject')).toHaveTextContent(
+        'parent-1_2026-06-13'
+      );
+      // The subject's own rows, before: there is a recurrence to lose.
+      expect(within(detail).getByText('Repeats')).toBeInTheDocument();
+      expect(within(detail).getByText('Daily')).toBeInTheDocument();
+
+      await user.click(within(detail).getByRole('button', { name: 'Mark complete' }));
+
+      // Request shape unchanged: root + the occurrence's own date.
+      await waitFor(() =>
+        expect(mockCompleteEvent).toHaveBeenCalledWith('circle-1', 'parent-1', '2026-06-13')
+      );
+
+      expect(await within(detail).findByText('Completed on')).toBeInTheDocument();
+      expect(within(detail).getByText(/Jun 13, 2026/)).toBeInTheDocument();
+      // Still the occurrence the caregiver opened — the new row's id is used
+      // for its completion fields only, never to swap the modal's subject.
+      // The SUBJECT ID is read off what the notes panel was handed: adopting
+      // the returned row would put 'child-created-0613' here.
+      expect(within(detail).getByTestId('event-notes-subject')).toHaveTextContent(
+        'parent-1_2026-06-13'
+      );
+      // And none of the returned row's OTHER fields — a merge that kept the id
+      // but spread the rest would retitle the modal, drop its Repeats row and
+      // add a description the subject never had.
+      expect(within(detail).getByText('Water the plants')).toBeInTheDocument();
+      expect(within(detail).queryByText('Water the plants (materialized)')).toBeNull();
+      expect(within(detail).getByText('Repeats')).toBeInTheDocument();
+      expect(within(detail).getByText('Daily')).toBeInTheDocument();
+      expect(within(detail).queryByText('Row created by the completion request')).toBeNull();
+      expect(within(detail).queryByRole('button', { name: 'Mark complete' })).toBeNull();
+    });
   });
 });

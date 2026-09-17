@@ -49,9 +49,11 @@ describe('CareTabs', () => {
   it('offers mobile’s four Care sections in order', () => {
     renderTabs('care', '/circles/c1/calendar');
 
+    // The SHORT label set (`nav.*Short`), not the sidebar's `nav.*`: four
+    // segments don't fit "Medications" on a phone. See CareTabs.tsx.
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Calendar',
-      'Medications',
+      'Meds',
       'Tasks',
       'Notes',
     ]);
@@ -96,7 +98,7 @@ describe('CareTabs', () => {
     screen.getByRole('tab', { name: 'Calendar' }).focus();
     await user.keyboard('{ArrowRight}');
 
-    const medsTab = await screen.findByRole('tab', { name: 'Medications' });
+    const medsTab = await screen.findByRole('tab', { name: 'Meds' });
     expect(medsTab).toHaveFocus();
   });
 
@@ -125,7 +127,7 @@ describe('HealthTabs', () => {
     renderTabs('health', '/circles/c1/emergency');
 
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-      'Emergency Info',
+      'Emergency',
       'Documents',
     ]);
     expect(screen.getByRole('tablist', { name: 'Health' })).toBeInTheDocument();
@@ -141,7 +143,7 @@ describe('HealthTabs', () => {
     const user = userEvent.setup();
     renderTabs('health', '/circles/c1/documents');
 
-    await user.click(screen.getByRole('tab', { name: 'Emergency Info' }));
+    await user.click(screen.getByRole('tab', { name: 'Emergency' }));
 
     expect(screen.getByTestId('path')).toHaveTextContent('/circles/c1/emergency');
   });

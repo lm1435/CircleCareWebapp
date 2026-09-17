@@ -14,6 +14,7 @@ import {
   type EventNote,
 } from '@/api/eventNotes';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { classifyFailureCode, isPermissionDeniedError } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 
@@ -103,7 +104,7 @@ function refreshFlagsOnPermissionError(
     code: classifyFailureCode(error),
   });
   if (isPermissionDeniedError(error)) {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+    invalidateCircleAccessFlags(queryClient, circleId);
   }
 }
 

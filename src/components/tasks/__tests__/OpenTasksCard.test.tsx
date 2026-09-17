@@ -34,6 +34,13 @@ vi.mock('@/hooks/useCircle', () => ({
   useCircle: (circleId: string) => mockUseCircle(circleId),
 }));
 
+// The first-run "Add your first task" door is tracked; nothing else in this
+// card's tree touches Analytics, so a bare object is enough.
+const homeEmptyCtaTapped = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: { homeEmptyCtaTapped: (...args: unknown[]) => homeEmptyCtaTapped(...args) },
+}));
+
 // The viewer's 12h/24h clock — pin it so this test needs no QueryClientProvider
 // and due-date labels never depend on the runner's navigator.language.
 const mockUseHourCycle = vi.fn();
@@ -43,9 +50,18 @@ vi.mock('@/hooks/useHourCycle', () => ({
 
 // Stub AddEventModal — assert open/close via a sentinel, not the real form.
 vi.mock('@/components/calendar/AddEventModal', () => ({
-  AddEventModal: ({ event, onClose }: { event?: CalendarEvent | null; onClose: () => void }) => (
+  AddEventModal: ({
+    event,
+    initialType,
+    onClose,
+  }: {
+    event?: CalendarEvent | null;
+    initialType?: string;
+    onClose: () => void;
+  }) => (
     <div role="dialog" aria-label="add-event-modal">
       <span>{event ? 'edit-mode' : 'create-mode'}</span>
+      <span>{initialType ?? 'no-initial-type'}</span>
       <button type="button" onClick={onClose}>
         close-modal
       </button>
@@ -85,13 +101,31 @@ function makeTask(overrides: Partial<CalendarEvent>): CalendarEvent {
   };
 }
 
-function tasksResult(tasks: CalendarEvent[], overrides: Record<string, unknown> = {}) {
+type QueryStatus = 'pending' | 'error' | 'success';
+type FetchStatus = 'fetching' | 'paused' | 'idle';
+
+/**
+ * A `useQuery` result whose booleans are DERIVED from `status` + `fetchStatus`
+ * exactly as React Query v5 derives them, so a test cannot describe a state
+ * the library never produces (e.g. "loading" with data, or "not loading and
+ * not errored" with no data — which is precisely what a PAUSED offline query
+ * is, and what the old `isLoading` gate mistook for a settled empty answer).
+ */
+function queryResult<T>(status: QueryStatus, fetchStatus: FetchStatus, data: T | undefined, refetch: () => void) {
+  const isPending = status === 'pending';
+  const isFetching = fetchStatus === 'fetching';
   return {
-    data: { tasks, today: '2026-03-15', timezone: TZ },
-    isLoading: false,
-    isError: false,
-    refetch: vi.fn(),
-    ...overrides,
+    status,
+    fetchStatus,
+    data: isPending ? undefined : data,
+    isPending,
+    isSuccess: status === 'success',
+    isError: status === 'error',
+    isLoading: isPending && isFetching,
+    isFetching,
+    isPaused: fetchStatus === 'paused',
+    isRefetching: isFetching && !isPending,
+    refetch,
   };
 }
 
@@ -118,14 +152,49 @@ function setTasks(opts: {
   open: CalendarEvent[];
   ever?: CalendarEvent[];
   isLoading?: boolean;
+  /** Only the open-tasks list is in flight (no data yet). Overrides `isLoading`. */
+  openLoading?: boolean;
+  /** Only the ever-had-a-task probe is in flight (no data yet). Overrides `isLoading`. */
+  everLoading?: boolean;
+  /** The open-tasks list FAILED (settled, no data). */
+  openError?: boolean;
+  /** The ever-had-a-task probe FAILED (settled, no data). */
+  everError?: boolean;
+  /** BOTH reads paused offline (pending, no fetch in flight, no data). */
+  paused?: boolean;
+  /** Only the open-tasks list is paused offline. Overrides `paused`. */
+  openPaused?: boolean;
+  /** Only the ever-had-a-task probe is paused offline. Overrides `paused`. */
+  everPaused?: boolean;
 }): void {
   const ever = opts.ever ?? opts.open;
-  mockUseTasks.mockImplementation((_circleId: string, taskOpts: { status?: string }) =>
-    tasksResult(taskOpts?.status === 'all' ? ever : opts.open, {
-      isLoading: opts.isLoading ?? false,
-    })
-  );
+  mockUseTasks.mockImplementation((_circleId: string, taskOpts: { status?: string }) => {
+    const isProbe = taskOpts?.status === 'all';
+    const failed = (isProbe ? opts.everError : opts.openError) ?? false;
+    const paused = (isProbe ? opts.everPaused : opts.openPaused) ?? opts.paused ?? false;
+    const loading = (isProbe ? opts.everLoading : opts.openLoading) ?? opts.isLoading ?? false;
+    const [status, fetchStatus]: [QueryStatus, FetchStatus] = failed
+      ? ['error', 'idle']
+      : paused
+        ? ['pending', 'paused']
+        : loading
+          ? ['pending', 'fetching']
+          : ['success', 'idle'];
+    // Pending (loading OR paused) has no data by construction; a first-load
+    // failure has none either.
+    return queryResult(
+      status,
+      fetchStatus,
+      failed ? undefined : { tasks: isProbe ? ever : opts.open, today: '2026-03-15', timezone: TZ },
+      isProbe ? everRefetch : openRefetch
+    );
+  });
 }
+
+const openRefetch = vi.fn();
+const everRefetch = vi.fn();
+const FIRST_RUN_COPY =
+  'Coordinate the to-dos that keep care on track — errands, refills, follow-ups — and share them with everyone helping.';
 
 function renderCard(limit = 3) {
   return render(
@@ -140,7 +209,10 @@ beforeEach(() => {
   mockMutate.mockReset();
   mockUseCompleteEvent.mockClear();
   mockUseCircle.mockReset();
+  homeEmptyCtaTapped.mockReset();
   mockUseHourCycle.mockReturnValue('12h');
+  openRefetch.mockReset();
+  everRefetch.mockReset();
 
   mockUseCircle.mockReturnValue({ canEdit: true, members: MEMBERS });
   setTasks({ open: [makeTask({ id: 'task-1', title: 'Pick up groceries' })] });
@@ -158,6 +230,30 @@ describe('OpenTasksCard', () => {
     renderCard();
     expect(screen.getByRole('status')).toHaveTextContent('Loading...');
     expect(screen.queryByText("You're all caught up — no open tasks.")).not.toBeInTheDocument();
+  });
+
+  // EITHER, pinned one at a time. Setting both loading at once left each half
+  // of `tasksQuery.isLoading || everTasksQuery.isLoading` untested: dropping
+  // either operand still showed the skeleton, because the other one held it.
+  it('shows the loading skeleton while ONLY the open-tasks list is in flight', () => {
+    setTasks({ open: [], ever: [makeTask({ id: 't-done' })], openLoading: true, everLoading: false });
+    renderCard();
+    expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+    expect(screen.queryByText("You're all caught up — no open tasks.")).not.toBeInTheDocument();
+  });
+
+  it('shows the loading skeleton while ONLY the ever-had-a-task probe is in flight', () => {
+    // The open list has answered "none"; the probe has not answered yet. Without
+    // the wait, the card would flash first-run copy at a circle that may well
+    // have finished tasks before.
+    setTasks({ open: [], openLoading: false, everLoading: true });
+    renderCard();
+    expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+    expect(
+      screen.queryByText(
+        'Coordinate the to-dos that keep care on track — errands, refills, follow-ups — and share them with everyone helping.'
+      )
+    ).not.toBeInTheDocument();
   });
 
   it('lists up to `limit` open tasks with a "Show all N" row into the Tasks page', () => {
@@ -192,6 +288,30 @@ describe('OpenTasksCard', () => {
       )
     ).toBeInTheDocument();
     expect(screen.queryByText("You're all caught up — no open tasks.")).not.toBeInTheDocument();
+
+    // The door opens the task form right here (create mode, pre-typed to
+    // task), not a route — and is tracked.
+    expect(screen.queryByRole('dialog', { name: 'add-event-modal' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Add your first task' }));
+    const dialog = screen.getByRole('dialog', { name: 'add-event-modal' });
+    expect(dialog).toHaveTextContent('create-mode');
+    expect(dialog).toHaveTextContent('task');
+    expect(homeEmptyCtaTapped).toHaveBeenCalledTimes(1);
+    expect(homeEmptyCtaTapped).toHaveBeenCalledWith('tasks');
+    fireEvent.click(screen.getByRole('button', { name: 'close-modal' }));
+    expect(screen.queryByRole('dialog', { name: 'add-event-modal' })).toBeNull();
+  });
+
+  it('on first run, a viewer who cannot edit sees the copy but no door', () => {
+    mockUseCircle.mockReturnValue({ canEdit: false, members: MEMBERS });
+    setTasks({ open: [], ever: [] });
+    renderCard();
+    expect(
+      screen.getByText(
+        'Coordinate the to-dos that keep care on track — errands, refills, follow-ups — and share them with everyone helping.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
   });
 
   it('shows "all caught up" when past tasks exist but none are open, and links to the tasks page', () => {
@@ -209,6 +329,129 @@ describe('OpenTasksCard', () => {
       'href',
       '/circles/circle-1/tasks'
     );
+    // A genuine all-done state gets no first-task door.
+    expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+  });
+
+  // ==========================================================================
+  // A FAILED READ IS NOT A FIRST RUN.
+  //
+  // `hasEverHadTask` is false whenever the probe has no data — including when
+  // it FAILED. With no error branch, a circle that has tasks was invited to
+  // "Add your first task" (e2e/unhappy/writes/first-run-cta-failed-read.spec.ts).
+  // ==========================================================================
+  describe('failed reads', () => {
+    it('ever-had-a-task probe fails: neutral copy, no first-run door, and Retry refetches the probe', () => {
+      setTasks({ open: [], everError: true });
+      renderCard();
+
+      expect(screen.getByText("Couldn't load open tasks")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+      expect(screen.queryByText(FIRST_RUN_COPY)).toBeNull();
+      expect(screen.queryByText("You're all caught up — no open tasks.")).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(everRefetch).toHaveBeenCalledTimes(1);
+      // The open list did not fail — it is not re-asked.
+      expect(openRefetch).not.toHaveBeenCalled();
+    });
+
+    it('open-tasks list fails: neutral copy, no first-run door, and Retry refetches the list', () => {
+      // The probe answered "never had one" — the CTA would be legitimate if the
+      // list had loaded, but it did not, so nothing about emptiness is known.
+      setTasks({ open: [], ever: [], openError: true });
+      renderCard();
+
+      expect(screen.getByText("Couldn't load open tasks")).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+      expect(screen.queryByText(FIRST_RUN_COPY)).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(openRefetch).toHaveBeenCalledTimes(1);
+      expect(everRefetch).not.toHaveBeenCalled();
+    });
+
+    it('both fail: Retry refetches both', () => {
+      setTasks({ open: [], openError: true, everError: true });
+      renderCard();
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(openRefetch).toHaveBeenCalledTimes(1);
+      expect(everRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('a failed probe does not hide open tasks that DID load', () => {
+      // The probe only decides the EMPTY copy; with rows on screen it is moot.
+      setTasks({ open: [makeTask({ id: 't1', title: 'Refill prescription' })], everError: true });
+      renderCard();
+      expect(
+        screen.getByRole('button', { name: openRowName('Refill prescription') })
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Couldn't load open tasks")).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    });
+
+    it('loading: skeleton, no first-run door, no error copy', () => {
+      setTasks({ open: [], ever: [], isLoading: true });
+      renderCard();
+      expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+      expect(screen.queryByText("Couldn't load open tasks")).toBeNull();
+    });
+
+    it('success with data: the list, no first-run door, no error copy', () => {
+      renderCard();
+      expect(
+        screen.getByRole('button', { name: openRowName('Pick up groceries') })
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+      expect(screen.queryByText("Couldn't load open tasks")).toBeNull();
+    });
+
+    it('success and truly empty: the first-run door, no error copy', () => {
+      setTasks({ open: [], ever: [] });
+      renderCard();
+      expect(screen.getByRole('button', { name: 'Add your first task' })).toBeInTheDocument();
+      expect(screen.queryByText("Couldn't load open tasks")).toBeNull();
+    });
+
+    // PAUSED IS NOT SETTLED. Offline, React Query (networkMode 'online') parks
+    // both reads at status 'pending' / fetchStatus 'paused' — `isLoading` is
+    // false and `isError` is false, so an `isLoading` gate fell through to the
+    // first-run door with no read ever having answered.
+    it('both reads paused offline: skeleton, no first-run door, no error copy', () => {
+      setTasks({ open: [], ever: [], paused: true });
+      renderCard();
+      expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+      expect(screen.queryByText(FIRST_RUN_COPY)).toBeNull();
+      expect(screen.queryByText("Couldn't load open tasks")).toBeNull();
+    });
+
+    it('open list answered empty but the probe is paused offline: no first-run door', () => {
+      setTasks({ open: [], ever: [], everPaused: true });
+      renderCard();
+      expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+      expect(screen.queryByText("You're all caught up — no open tasks.")).toBeNull();
+    });
+
+    it('probe answered "never had one" but the open list is paused offline: no first-run door', () => {
+      setTasks({ open: [], ever: [], openPaused: true });
+      renderCard();
+      expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+    });
+
+    it('a paused probe does not hide open tasks that DID load', () => {
+      setTasks({ open: [makeTask({ id: 't1', title: 'Refill prescription' })], everPaused: true });
+      renderCard();
+      expect(
+        screen.getByRole('button', { name: openRowName('Refill prescription') })
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('status')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Add your first task' })).toBeNull();
+    });
   });
 
   // PARITY — the card used to render bare text with no way to finish a task.
@@ -243,7 +486,43 @@ describe('OpenTasksCard', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toBe('task-1');
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // NO `scheduledDate` FROM THIS SURFACE, and that is a decision rather than an
+  // oversight. GET /circles/:id/tasks reads PHYSICAL calendar_events rows and
+  // never expands a recurrence (backend/src/routes/tasks.ts), so a recurring
+  // task's row here — the series root, or a materialized child — already IS its
+  // own occurrence: its id addresses exactly the row to stamp, and the request
+  // stays body-less. Only the calendar hands out virtual occurrences, and that
+  // path resolves root + date in EventDetailActions. If this list ever started
+  // serving virtual rows, this test is the one that has to change.
+  it('completes a recurring task row by its OWN id, with no occurrence date', () => {
+    vi.useFakeTimers();
+    try {
+      setTasks({
+        open: [
+          makeTask({
+            id: 'child-0806',
+            title: 'Water the plants',
+            // A materialized child: a real row, under a series root.
+            parent_event_id: 'parent-1',
+          }),
+        ],
+      });
+      renderCard();
+
+      fireEvent.click(action('Mark "Water the plants" complete'));
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      // `toEqual` on the whole object: a `scheduledDate` sneaking in here would
+      // fail this, which is the point.
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'child-0806' });
     } finally {
       vi.useRealTimers();
     }

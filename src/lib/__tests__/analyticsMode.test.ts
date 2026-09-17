@@ -14,21 +14,22 @@ import {
  * not a gate.
  */
 describe('analytics mode', () => {
-  it('SAFETY: the anonymous flag ships OFF', () => {
-    // Deliberately brittle. If this ever fails, a build is measuring people who
-    // said no — and it must be a DECISION taken with counsel, recorded in this
-    // test's diff, not a default someone drifted into.
-    expect(ANONYMOUS_ANALYTICS_WHEN_DECLINED).toBe(false);
+  it('DECISION 2026-09-07: the anonymous flag ships ON', () => {
+    // Deliberately brittle. A build with this on measures people who said no —
+    // anonymously, memory-only, ids stripped — so the declined cohort's
+    // failures stay visible. Founder decision, 2026-09-07. Turning it back
+    // off is equally a decision to record in this test's diff, not a drift.
+    expect(ANONYMOUS_ANALYTICS_WHEN_DECLINED).toBe(true);
   });
 
   it('consent always means full analytics, whatever the flag says', () => {
     expect(resolveAnalyticsMode(true)).toBe('full');
   });
 
-  it('declining means OFF while the flag is off', () => {
+  it('declining means ANONYMOUS while the flag is on', () => {
     expect(resolveAnalyticsMode(false)).toBe(ANONYMOUS_ANALYTICS_WHEN_DECLINED ? 'anonymous' : 'off');
-    // Given the safety test above, this is the shipped behaviour:
-    expect(resolveAnalyticsMode(false)).toBe('off');
+    // Given the decision test above, this is the shipped behaviour:
+    expect(resolveAnalyticsMode(false)).toBe('anonymous');
   });
 
   it('never identifies without consent — in EITHER declined mode', () => {
@@ -64,7 +65,12 @@ describe('unreadable consent storage', () => {
     const consent = await import('../analyticsConsent');
     consent.__resetAnalyticsConsentCache();
     const mode = await import('../analyticsMode');
-    expect(mode.currentAnalyticsMode()).toBe('off');
-    expect(mode.analyticsCollectionAllowed()).toBe(false);
+    // Unreadable storage reads as "declined" — which is the anonymous mode
+    // now, never 'full': the failure mode is "collect without identity",
+    // never "identify someone who never answered".
+    expect(mode.currentAnalyticsMode()).toBe(
+      mode.ANONYMOUS_ANALYTICS_WHEN_DECLINED ? 'anonymous' : 'off'
+    );
+    expect(mode.identifyAllowed(mode.currentAnalyticsMode())).toBe(false);
   });
 });

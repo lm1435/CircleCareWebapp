@@ -15,6 +15,7 @@ import {
   type FieldErrors,
 } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { useCreateVital, useUpdateVital } from '@/hooks/useVitals';
 import type { HealthVital, VitalType } from '@/api/vitals';
@@ -190,8 +191,13 @@ export function VitalFormModal({
   // ICU alias (Asia/Kolkata -> Asia/Calcutta) is not mistaken for a second zone.
   const deviceTimezone = getDeviceTimezone();
   const hourCycle = useHourCycle();
+  // GATED on the zone (`useCircle` reports null until the circle detail lands)
+  // rather than defaulted: with no recipient zone there is nothing to compare
+  // the viewer's against, and a 'America/New_York' guess would either show a
+  // conversion that is wrong or hide one that is real.
   const showDualTimezone = useMemo(
     () =>
+      !!timezone &&
       timezonesAreDifferent(
         deviceTimezone,
         timezone,
@@ -202,12 +208,16 @@ export function VitalFormModal({
   // The recipient's zone by NAME — its city, localised for the reader. Bare
   // rather than parenthesised: the hint copy brings its own brackets and the
   // conversion line ends in a parenthetical day indicator.
-  const recipientZone = getTimezoneLabel(timezone);
+  // Empty until the zone resolves; every consumer is gated off then, and the
+  // nameless-zone case is already handled (see `withZone` below).
+  const recipientZone = timezone ? getTimezoneLabel(timezone) : '';
   const recipientName = circle?.recipient_name;
 
   /** "8:00 PM Denver = 9:00 PM Chicago (+1 day)", live as the user types. */
   const conversionText = useMemo(() => {
-    if (!showDualTimezone || !dateStr || !timeStr) return null;
+    // `!timezone` is implied by `!showDualTimezone`; spelled out so the
+    // recipient-frame conversions below provably never run on a guess.
+    if (!showDualTimezone || !timezone || !dateStr || !timeStr) return null;
     try {
       const instant = viewerInstant(dateStr, timeStr);
       const render = (clock: string): string => {
@@ -346,6 +356,22 @@ export function VitalFormModal({
     }
   }
 
+  // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `isPending` above is React Query
+  // state, committed a render AFTER the submit that started the request, so two
+  // submits dispatched in the SAME tick both re-enter `handleSubmit` with the
+  // flag still false — and `disabled` on the footer button is never consulted
+  // by implicit form submission (Enter in a field) or a synthetic
+  // `requestSubmit()`. The result is TWO IDENTICAL READINGS in the vitals
+  // record: the chart draws the duplicate, and nothing downstream can tell it
+  // from a real second measurement.
+  //
+  // `handleSubmit` awaits the request, so the promise-holding form of the hook
+  // is the right one — the guard is held for exactly as long as the save is in
+  // flight, and released in a `finally` so a rejected save or a validation
+  // failure still leaves the form usable. `isPending` stays where it is: it is
+  // the VISUAL guard (spinner, disabled styling), this is the correctness one.
+  const guardedSubmit = useGuardedSubmit(handleSubmit);
+
   // Hidden entirely when the user can't edit (parent gates too).
   if (!canEdit) return null;
 
@@ -386,7 +412,7 @@ export function VitalFormModal({
         </div>
       }
     >
-      <form id="vital-form" onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      <form id="vital-form" onSubmit={guardedSubmit} className="flex flex-col gap-4" noValidate>
         {/* Type selector — create only; locked (its own type) when editing. */}
         {isEditing ? (
           <div className="flex flex-col gap-1.5">

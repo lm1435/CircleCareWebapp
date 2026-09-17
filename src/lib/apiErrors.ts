@@ -26,11 +26,45 @@ interface ApiErrorEnvelope {
 export const SUBSCRIPTION_ERROR_CODES = new Set(['SUBSCRIPTION_REQUIRED', 'PAYMENT_REQUIRED']);
 
 /**
- * 403 Forbidden codes — the user does not have edit permission on this circle
- * (membership view-only, or non-selected free-tier circle = read-only). The
- * caller shows a "you don't have permission" toast and refetches circle flags.
+ * 403 Forbidden codes — the user does not have edit permission on this circle.
+ * The caller shows a "you don't have permission" toast and refetches circle
+ * flags via `invalidateCircleAccessFlags`.
+ *
+ * THESE ARE THE CODES THE SERVER SENDS, NOT PLAUSIBLE NAMES FOR THEM. The
+ * backend's entire 403 access vocabulary is three strings (verified by
+ * `grep -rhoE "code: '[A-Z_]+'" backend/src/routes backend/src/middleware`):
+ *
+ *   VIEW_ONLY          membership-level view-only seat — `rejectIfViewOnlySeat`
+ *                      and friends. No purchase by this member lifts it; only
+ *                      the owner handing them a full seat does.
+ *   FORBIDDEN          not a member of the circle at all, or not the resource's
+ *                      owner/uploader.
+ *   READ_ONLY_MEMBER   the FROZEN-circle refusal: a free-tier owner's
+ *                      NON-SELECTED circle, where `view_only` is false and
+ *                      `can_edit` is false. Emitted from exactly three places —
+ *                      `backend/src/routes/documents.ts:673` and
+ *                      `backend/src/routes/upload.ts:328` / `:487`.
+ *
+ * `READ_ONLY_MEMBER` MATTERS MORE THAN ITS ONE CALL SITE SUGGESTS.
+ * `documents.ts` was widened so a frozen circle's member is now refused on
+ * document upload / rename / delete — writes that used to succeed. Because
+ * every write hook classifies through `isPermissionDeniedError` /
+ * `isAccessDeniedError`, a code missing from this set does not fail loudly: it
+ * falls to the caller's generic branch, which shows "couldn't save" (wrong —
+ * nothing was wrong with the save) AND skips the flag refetch, so both gating
+ * caches stay stale and the Edit / Delete / Upload affordances keep being
+ * offered on a circle the server refuses every write on.
+ *
+ * `READ_ONLY` (no `_MEMBER`) WAS A PHANTOM AND HAS BEEN DROPPED. No backend
+ * revision ever emitted it: `git log --all -S'READ_ONLY' -- src` over
+ * `backend/` finds the single commit that introduced `READ_ONLY_MEMBER`, and no
+ * commit's tree contains a bare `READ_ONLY` under `backend/src`. It was a
+ * guessed name that happened to describe this exact frozen-circle case while
+ * matching nothing that arrives. Pinned by
+ * `src/lib/__tests__/apiErrors.test.ts` ("the backend 403 vocabulary, exactly")
+ * so the set cannot drift back to names nobody sends.
  */
-export const ACCESS_ERROR_CODES = new Set(['VIEW_ONLY', 'FORBIDDEN', 'READ_ONLY']);
+export const ACCESS_ERROR_CODES = new Set(['VIEW_ONLY', 'FORBIDDEN', 'READ_ONLY_MEMBER']);
 
 /**
  * 413 Payload Too Large codes — the PREMIUM circle has hit its hard storage cap
@@ -84,6 +118,26 @@ export function isSubscriptionRequiredError(err: unknown): boolean {
 export function isAccessDeniedError(err: unknown): boolean {
   const code = errorCode(err);
   return code !== undefined && ACCESS_ERROR_CODES.has(code);
+}
+
+/**
+ * True for the FROZEN-CIRCLE refusal specifically — a free-tier owner's
+ * non-selected circle, where `view_only` is false and `can_edit` is false.
+ *
+ * A NARROWER TEST THAN `isAccessDeniedError`, AND WHY IT HAS TO EXIST. The
+ * three codes in `ACCESS_ERROR_CODES` share exactly one property: the caller
+ * cannot buy their way past them. That is a fact about what the CLIENT should
+ * not offer next (no paywall), not about the REMEDY — and any surface that
+ * words its message in terms of the remedy has to tell them apart. "Ask the
+ * circle owner for full access" is right for `VIEW_ONLY` (a seat) and wrong
+ * for `READ_ONLY_MEMBER`, which no seat change fixes: the circle is frozen
+ * until a subscription covers it.
+ *
+ * Use it AFTER `isAccessDeniedError` has decided nothing may be sold, never
+ * instead of it.
+ */
+export function isFrozenCircleError(err: unknown): boolean {
+  return errorCode(err) === 'READ_ONLY_MEMBER';
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +258,41 @@ export function isDoseAlreadyLoggedError(err: unknown): boolean {
  */
 export function isMedicationDiscontinuedError(err: unknown): boolean {
   return errorCode(err) === 'MEDICATION_DISCONTINUED';
+}
+
+/**
+ * 400 `INVALID_OCCURRENCE_DATE` — the `scheduled_date` posted alongside a
+ * series root is not an occurrence of that series
+ * (`backend/src/routes/calendarEvents.ts`, the complete route's on-pattern
+ * check). Emitted only after the row was drawn, so it is a STALE-SNAPSHOT
+ * condition, not user error: another member shortening `recurrence_end_date` or
+ * editing the pattern while this tab holds its 60s-stale calendar is enough.
+ *
+ * It has to be distinguished from a generic failure because the request can
+ * never succeed — retrying re-posts the same off-pattern date — so the caller
+ * must say what happened and refetch, not offer "try again".
+ */
+export function isInvalidOccurrenceDateError(err: unknown): boolean {
+  return errorCode(err) === 'INVALID_OCCURRENCE_DATE';
+}
+
+/**
+ * 404 `NOT_FOUND` — the addressed row is gone. Same shape as the above: the
+ * client is holding a snapshot of something another member has deleted, so the
+ * answer is "it no longer exists" plus a refetch, never a retry.
+ */
+export function isNotFoundError(err: unknown): boolean {
+  return errorCode(err) === 'NOT_FOUND';
+}
+
+/**
+ * 400 `INVALID_MESSAGE` — the AI chat route's prompt-injection detector
+ * refused the message (`backend/src/routes/ai.ts`, `detectPromptInjection`).
+ * Terminal for that exact text: sending it again produces the same 400, so the
+ * assistant must ask for a rephrase rather than offering a retry.
+ */
+export function isInvalidMessageError(err: unknown): boolean {
+  return errorCode(err) === 'INVALID_MESSAGE';
 }
 
 /**

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement
 import { useTranslation } from 'react-i18next';
 import type { DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from './DrugAutocomplete';
+import { NotificationInfoModal } from './NotificationInfoModal';
 import {
   eventFormSchema,
   type CalendarEvent,
@@ -10,6 +11,7 @@ import {
 } from '@/api/calendarEvents';
 import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
 import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
 import {
@@ -17,6 +19,8 @@ import {
   DURATION_PRESETS,
   addMinutesToTimeStr,
   assignedToForSave,
+  defaultReminder15mFor,
+  hydratedReminder15m,
   matchingDurationIndex,
   reminderFlagsForSave,
   remindersApply,
@@ -24,9 +28,11 @@ import {
 import {
   Button,
   Card,
+  Checkbox,
   ChipSelect,
   ConfirmDialog,
   DateField,
+  Icon,
   Modal,
   Select,
   Text,
@@ -224,26 +230,29 @@ function noEarlierRemindersIn(state: ReminderControlState): boolean {
  *
  * For task / appointment the four flags used to be the ONLY notifications, so
  * "master on + all four off" read as "on" and notified nobody. `reminderAtDue`
- * changes that: with it on, the entry still alerts at the scheduled time. The
- * two controls stay two-way synced, but only over genuine silence:
+ * changes that: with it on, the entry still alerts at the scheduled time. What
+ * is left is ONE-WAY — the boxes can take the master down, the master never
+ * touches a box:
  *
- *  1. master false → true with all four off AND `reminderAtDue` ALSO off ⇒ also
- *     set `reminder15m`. 15m is the fresh-event default, so this restores the
- *     default rather than inventing a choice. The `reminderAtDue` clause is the
- *     SAME clause rule 2 carries, for the same reason: this rule exists only to
- *     stop a toggle reading "on" while nothing can fire, and an armed anchor
- *     fires. Without it the master became a reminder-INVENTING control —
- *     unchecking the last earlier box (which rule 2 now leaves the master on
- *     for) and then cycling the master off and on again silently re-checked
- *     "15 minutes before", and `reminderFlagsForSave` saves that verbatim.
+ *  1. GONE. Master off → on used to re-check `reminder15m` whenever nothing
+ *     would fire (all four earlier boxes off AND the anchor off), so that the
+ *     toggle never read "on" over an entry that could not speak. It was the last
+ *     path that could tick a box the user had not tapped, and NO path may do
+ *     that any more: "Earlier reminders" is opt-in end to end, from the
+ *     fresh-form default (`defaultReminder15mFor`) through the type switcher to
+ *     this helper. The honesty it was buying is bought instead by
+ *     `showNoneSelectedWarning`, which fires on exactly the state rule 1 used to
+ *     paper over — "Select at least one time, or no reminder will be sent."
+ *     Telling the user is better than choosing for them, and it is what the edit
+ *     form already had to do for a hydrated row it must not auto-correct.
  *  2. the last checked box turned off while the master is on AND `reminderAtDue`
  *     is ALSO off ⇒ master off. The `reminderAtDue` clause is load-bearing: this
  *     rule exists because "no earlier reminders" used to mean "silent", and it
  *     no longer does. Flipping the master off while the at-due alert is armed
  *     would discard an alert the user never asked to lose.
  *  3. master turned off by hand ⇒ the four values are left ALONE, so toggling
- *     back on restores the previous selection (rule 1 cannot fire, they are not
- *     all false). NOTHING clears them, here or at save time:
+ *     back on restores the previous selection, whatever it was — with rule 1
+ *     gone that is now unconditional. NOTHING clears them, here or at save time:
  *     `reminderFlagsForSave` used to, which broke this rule as soon as the modal
  *     was reopened. Silence is `notifications_enabled`'s job — every cron
  *     selector filters on it.
@@ -257,14 +266,12 @@ export function nextReminderControlState(
   const next: ReminderControlState = { ...current, [field]: value };
   if (isMedication) return next;
 
-  if (field === 'notificationsEnabled') {
-    // Rule 1 (on) / rule 3 (off — nothing else changes). Only into REAL
-    // silence, exactly like rule 2 below: an armed anchor already fires.
-    if (value && !next.reminderAtDue && noEarlierRemindersIn(next)) {
-      return { ...next, reminder15m: true };
-    }
-    return next;
-  }
+  // Rule 1 is gone: the master NEVER checks an earlier reminder, in either
+  // direction. Turning it on over an entry where nothing would fire leaves the
+  // four boxes exactly as the user left them and lets `showNoneSelectedWarning`
+  // say so out loud. Rule 3 — turning it off touches nothing — is the same
+  // statement, and is now all this branch does.
+  if (field === 'notificationsEnabled') return next;
 
   // Rule 2 — only on the way down, so checking a box never touches the master,
   // and only into REAL silence: an armed at-due alert still notifies.
@@ -316,8 +323,8 @@ export function AddEventModal({
    * recipient frame the event is stored in. This is the exact inverse of the
    * save below — see utils/recipientEventDate.
    *
-   * Keyed on `timezone` as well as `event` because `useCircle` reports its
-   * 'America/New_York' fallback until the circle detail query lands. A one-shot
+   * Keyed on `timezone` as well as `event` because `useCircle` reports `null`
+   * until the circle detail query lands. A one-shot
    * useState would hydrate through the WRONG ZONE and never correct itself, and
    * since the save converts with the RESOLVED zone that is a mixed-frame round
    * trip: it would move the very dose the user opened without editing. The
@@ -329,6 +336,13 @@ export function AddEventModal({
    */
   const hydrated = useMemo(() => {
     if (event) {
+      // GATE: no recipient zone yet means no frame to convert OUT of, so the
+      // fields stay EMPTY rather than being filled through a guessed zone. The
+      // resync effect below refills them the moment the real zone lands (the
+      // modal renders nothing until then — `canEdit` is false while loading).
+      if (!timezone) {
+        return { dateStr: '', timeStr: '', recurrenceEndDateStr: '' };
+      }
       return eventDatesFromApi({
         scheduledDate: event.scheduled_date,
         scheduledTime: event.scheduled_time ?? null,
@@ -393,20 +407,13 @@ export function AddEventModal({
   const [reminder1h, setReminder1h] = useState(reminders.reminder_1h ?? false);
   const [reminder30m, setReminder30m] = useState(reminders.reminder_30m ?? false);
   /**
-   * "15 minutes before" is pre-selected for TASK/APPOINTMENT only — the same
-   * asymmetry the rest of this section carries, and it is the backend's, not a
-   * UI preference.
-   *
-   * A medication with `notifications_enabled` already fires at the dose time AND
-   * runs the escalation chain, none of which read these four flags. Pre-selecting
-   * 15m there just doubles the pushes for a reminder the baseline already covers.
-   * A task/appointment has NO at-time notification, so these four ARE the
-   * notifications and defaulting off would create a silent event.
-   *
-   * `?? ` not `||` — an explicit stored `false` must survive hydration.
+   * "15 minutes before" — OFF on a fresh form of EVERY type, and whatever the
+   * row actually holds on an existing one. Both rules live in
+   * `defaultReminder15mFor` / `hydratedReminder15m`, which mobile mirrors by
+   * name; read the note there before changing either.
    */
   const [reminder15m, setReminder15m] = useState(
-    reminders.reminder_15m ?? (eventType !== 'medication')
+    hydratedReminder15m(eventType, reminders.reminder_15m)
   );
   /**
    * Has the user touched the reminder controls? Governs the type-switch
@@ -425,11 +432,13 @@ export function AddEventModal({
   //   - editing: no roll happens, the row stays on today; the only consequence
   //     is that today's reminder will not fire.
   const [pendingPastTime, setPendingPastTime] = useState<CreateEventRequest | null>(null);
+  /** The ⓘ explainer behind the Reminders heading (mobile's info bottom sheet). */
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   /**
    * Re-hydrate once the recipient timezone actually resolves.
    *
-   * `useCircle` reports its 'America/New_York' fallback until the circle detail
+   * `useCircle` reports `null` until the circle detail
    * query lands, and the useState initializers above run ONCE — hooks execute
    * even on the renders where this component returns null for `!canEdit`. So a
    * modal mounted mid-flight hydrates through the WRONG ZONE and never corrects
@@ -458,17 +467,16 @@ export function AddEventModal({
   }, [hydrated, event]);
 
   /**
-   * Re-apply the type-dependent "15 minutes before" default when the TYPE
-   * changes.
+   * Re-apply the fresh-form "15 minutes before" default when the TYPE changes.
    *
-   * The initializer above runs ONCE, off the type the modal opened with — and
-   * the global Create menu opens with no `initialType`, so that is always
-   * 'medication' and `reminder15m` starts FALSE. Switching the selector to Task
-   * or Appointment left it false, and since those types have no at-time push,
-   * the four reminder flags ARE the notification: the event saved with
-   * `notifications_enabled: true` and nothing that ever fires. A silent event,
-   * which is exactly what the comment above says this default exists to
-   * prevent, and it was the default for every type before that change.
+   * The initializer above runs ONCE, off the type the modal opened with, and the
+   * global Create menu opens with no `initialType` — so every type switch is a
+   * form the default was computed for under a different type. The default is
+   * currently the same for all three (`defaultReminder15mFor` returns false), so
+   * this is inert today; it stays because the call site is real. A per-type
+   * default reintroduced in the helper has to be re-applied HERE, and it was
+   * this exact site being written inline, out of sync with the initializer, that
+   * produced the asymmetry this change removes.
    *
    * Creating only, and only while the user has not touched the controls: an
    * edit hydrates from stored flags, and a chosen preference outranks a default.
@@ -480,7 +488,7 @@ export function AddEventModal({
    */
   useEffect(() => {
     if (isEditing || remindersTouched.current) return;
-    setReminder15m(eventType !== 'medication');
+    setReminder15m(defaultReminder15mFor(eventType));
   }, [eventType, isEditing]);
 
   // Keep the assignee selection valid as members load.
@@ -523,6 +531,37 @@ export function AddEventModal({
     ? null
     : t(isMedication ? 'addEvent.reminders.offMedication' : 'addEvent.reminders.offGeneric');
 
+  // ON A SELF-CARE CIRCLE THE OWNER *IS* THE CARE RECIPIENT.
+  //
+  // The escalation line names who gets pinged first, and "the care recipient
+  // after 15 minutes" reads as a third party to the one person it is actually
+  // describing. Mobile has branched this since the chain shipped
+  // (AddEventScreen's `circle?.is_self_care` ternary); web never did, and this
+  // is the only place in the webapp that was still missing the flag — it is
+  // already threaded through CreateCircleModal, InviteMemberModal and CareTeam.
+  //
+  // DISPLAY ONLY. The push itself has always been right: the tier selectors
+  // return `is_self_care` and `backend/src/routes/notifications.ts` picks the
+  // recipient from it, so this corrects what the form SAYS, not what it sends.
+  const isSelfCare = circle?.is_self_care === true;
+  const escalationNote = t(
+    isSelfCare ? 'addEvent.reminders.escalationSelf' : 'addEvent.reminders.escalation'
+  );
+
+  // THE ANCHOR IS OFF AND NOTHING EARLIER IS PICKED — a state `atTimeOff` lies
+  // about, because it points at "the earlier reminders you pick below" when the
+  // user has picked none.
+  //
+  // For a task `showNoneSelectedWarning` above already covers it. A MEDICATION
+  // never reaches that warning (it is `!isMedication`) and the omission was
+  // correct as far as it went: the escalation chain hangs off
+  // notifications_enabled alone, so the dose is not silent. But the only thing
+  // left to fire is a MISSED-dose follow-up — the first thing anyone hears is
+  // "this is 15 minutes late", which is the exact inversion the at-due anchor
+  // was added to fix. Saying so is the honest version of `atTimeOff` here.
+  const showNoEarlierBeforeDose =
+    isMedication && notificationsEnabled && !reminderAtDue && noEarlierReminders;
+
   /** Apply one reminder toggle through the sync rules. */
   function changeReminder(field: ReminderControlField, value: boolean): void {
     // A deliberate choice outranks the type-switch default above.
@@ -560,8 +599,13 @@ export function AddEventModal({
   // hint while `eventDatesForApi` still shifted the stored time by an hour —
   // the conversion happening silently is precisely the failure the hint exists
   // to prevent. `dateStr` therefore belongs in the deps.
+  //
+  // GATED on the zone rather than defaulted: with no recipient zone yet there
+  // is nothing to compare against, and a fallback would claim "your clock
+  // differs from theirs" (or, worse, that it does NOT) off a guess.
   const showDualTimezone = useMemo(
     () =>
+      !!timezone &&
       timezonesAreDifferent(
         deviceTimezone,
         timezone,
@@ -573,7 +617,10 @@ export function AddEventModal({
   // localised for the reader. Bare rather than parenthesised: both places this
   // is used already supply their own brackets, and the conversion line below
   // ends in a parenthetical day indicator it must not collide with.
-  const recipientZone = getTimezoneLabel(timezone);
+  // Empty until the zone resolves — the only consumers are the dual-timezone
+  // hint and the conversion line, both of which are gated off entirely then,
+  // and both already handle a nameless zone (see `withZone` below).
+  const recipientZone = timezone ? getTimezoneLabel(timezone) : '';
   const recipientName = circle?.recipient_name;
 
   /**
@@ -587,7 +634,9 @@ export function AddEventModal({
    * still misreads a 2-day gap).
    */
   const conversionText = useMemo(() => {
-    if (!showDualTimezone || !timeStr || !dateStr) return null;
+    // `!timezone` is implied by `!showDualTimezone`; it is spelled out so the
+    // recipient-frame conversions below are provably never run on a guess.
+    if (!showDualTimezone || !timezone || !timeStr || !dateStr) return null;
     try {
       const instant = viewerInstant(dateStr, timeStr);
       const render = (clock: string): string => {
@@ -680,7 +729,12 @@ export function AddEventModal({
     return t(`addEvent.validation.${key}`, { defaultValue: t('addEvent.validation.invalid') });
   }
 
-  function buildPayload():
+  // Takes the RESOLVED recipient timezone as an argument rather than closing
+  // over the nullable hook value: the save converts the viewer's wall clock
+  // into the recipient's frame, so "which zone" is not optional here and the
+  // gate belongs in the signature. `handleSubmit` is the only caller and it
+  // refuses to run until the zone is known.
+  function buildPayload(tz: string):
     | { ok: true; data: CreateEventRequest }
     | { ok: false; errors: FieldErrors } {
     const fieldErrors: FieldErrors = {};
@@ -730,7 +784,7 @@ export function AddEventModal({
       timeStr: timeStr || null,
       recurrenceEndDateStr:
         recurrence !== 'none' && recurrenceEndDate ? recurrenceEndDate : null,
-      timezone,
+      timezone: tz,
     });
     const scheduled_date = apiDates.scheduledDate;
     const scheduled_time = apiDates.scheduledTime;
@@ -826,9 +880,14 @@ export function AddEventModal({
 
   async function handleSubmit(formEvent: FormEvent): Promise<void> {
     formEvent.preventDefault();
-    if (!canEdit || isPending) return;
+    // GATE, not a fallback: every date below is derived in the CARE
+    // RECIPIENT's frame, so saving before the zone resolves would write the
+    // event at a New-York-derived instant and silently move it. `canEdit` is
+    // already false until the detail query lands, so this is belt-and-braces —
+    // but it is the one place where guessing the zone corrupts stored data.
+    if (!canEdit || !timezone || isPending) return;
 
-    const built = buildPayload();
+    const built = buildPayload(timezone);
     if (!built.ok) {
       setErrors(built.errors);
       // Cover every field that can error so focus always lands on an errored
@@ -870,6 +929,24 @@ export function AddEventModal({
     await persist(built.data);
   }
 
+  // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `isPending` above is React Query
+  // state, committed a render AFTER the submit that started the request, so two
+  // submits dispatched in the SAME tick both re-enter `handleSubmit` with the
+  // flag still false — and `disabled` on the footer button is never consulted
+  // by implicit form submission (Enter in a field) or a synthetic
+  // `requestSubmit()`. The result is TWO CARE RECORDS: two medication series
+  // for one drug, each with its own reminder schedule and its own
+  // dose-confirmation stream, which doubles the denominator of the adherence
+  // figure the clinician-facing report is built from.
+  //
+  // `handleSubmit` awaits the request, so the promise-holding form of the hook
+  // is the right one: the guard is held for exactly as long as the save is in
+  // flight, and released in a `finally` so a rejected save, a validation
+  // failure, or the past-time notice's early return all leave the form usable.
+  // `isPending` stays exactly where it is — it is the VISUAL guard (spinner,
+  // disabled styling); this is the correctness one.
+  const guardedSubmit = useGuardedSubmit(handleSubmit);
+
   // Hidden entirely when the user can't edit — the read-only path keeps the
   // EventDetailModal download CTA instead (Task 1.6 gating).
   if (!canEdit) return null;
@@ -900,7 +977,7 @@ export function AddEventModal({
         </>
       }
     >
-      <form id="add-event-form" onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      <form id="add-event-form" onSubmit={guardedSubmit} className="flex flex-col gap-4" noValidate>
         {/* Recurring edits rewrite the whole series — keep the warning visible. */}
         {isRecurringEdit && (
           <Card variant="filled" padding="sm" as="p" role="note" className="m-0 text-sm text-ink-2">
@@ -1226,11 +1303,43 @@ export function AddEventModal({
               no Notification API, and it never registers a push token. When a
               user has none, notificationService returns `no_token` and stops;
               there is no email fallback on that path.
-              So for a caregiver who only uses the web app, this whole section is
-              configuration for something they will never receive. Saying so is
-              the honest minimum until either web push or an email fallback
-              exists. Not conditional: it is true of every web session. */}
+
+              STATES THE DESTINATION, NOT THE LIMITATION. This used to carry a
+              second sentence — "The web app cannot send them" — which read as a
+              defect of the surface the user is standing on and invited "then why
+              am I setting this here?". It also overreached: the reminders are
+              mostly NOT for the viewer. The escalation chain pings the care
+              recipient and the other caregivers on their phones, so a web-only
+              caregiver arranging their mother's doses gets exactly the outcome
+              they wanted — the phrasing just implied nothing would happen.
+
+              The case it was protecting is a web-only user with NO device, for
+              whom these really do go nowhere. That warning wants
+              `GET /push-tokens` (already routed; `queryKeys.pushTokens` is
+              reserved and unused), so it can fire only for a viewer with no
+              active token and say "you" rather than "no one" — the member
+              payload carries no device info, so this surface can never speak for
+              anybody else. Until then one true sentence beats a blanket one. */}
           <p className="m-0 text-sm text-ink-3">{t('addEvent.reminders.webDelivery')}</p>
+          {/* The explainer trigger, mobile's ⓘ beside the notifications row.
+              NOT folded into the `<legend>` above, in either direction: a legend
+              must be the fieldset's FIRST child or it stops naming the group, so
+              it cannot be wrapped in a flex row, and nesting the button inside it
+              instead drags "How notifications work" into the accessible name
+              every control in this fieldset inherits.
+
+              Labelled with VISIBLE TEXT rather than an icon alone. Mobile can
+              lean on a bare ⓘ because its sheet is one tap from a thumb; here
+              the same glyph would be a 16px icon-only control whose only name is
+              an `aria-label`, which is the weakest form this could take. */}
+          <button
+            type="button"
+            onClick={() => setShowHowItWorks(true)}
+            className="-my-2 inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 self-start rounded-md text-sm font-medium text-ink-2 underline decoration-line underline-offset-2 hover:text-ink"
+          >
+            <Icon name="help-circle-outline" size="inline" />
+            {t('addEvent.reminders.howItWorks.button')}
+          </button>
           <Toggle
             id="notifications_enabled"
             label={t('addEvent.reminders.enable')}
@@ -1258,9 +1367,15 @@ export function AddEventModal({
                   one and the "earlier reminders" below are the optional extras.
                   It used to be a locked, medication-only statement of fact
                   ("Always on for medications"); `reminder_at_due` makes that
-                  sentence false, so it is a switch now, first in the group. */}
+                  sentence false, so it is a checkbox now, first in the group.
+                  A CHECKBOX, not a switch, and that distinction is the point:
+                  "Send reminders" above is the one kill switch for this entry,
+                  and everything below it — the anchor included — is a selection
+                  WITHIN that permission. Drawn as six identical lozenges the two
+                  kinds read as duplicates of each other, which is exactly how
+                  mobile already splits them (Switch vs `CheckboxRow`). */}
               <div className="flex flex-col gap-2 border-b border-line-2 pb-3">
-                <Toggle
+                <Checkbox
                   id="reminder_at_due"
                   label={t('addEvent.reminders.atTime')}
                   hint={
@@ -1269,11 +1384,15 @@ export function AddEventModal({
                     ) : (
                       <>
                         {t('addEvent.reminders.atTimeHint')}
-                        {/* Inside the switch's own aria-describedby hint, so the
-                            consequence is announced with the control rather than
-                            carried by color alone. */}
+                        {/* Inside the checkbox's own aria-describedby hint, so
+                            the consequence is announced with the control rather
+                            than carried by color alone. */}
                         <span className="mt-1 block font-medium text-terracotta-deep">
-                          {t('addEvent.reminders.atTimeOff')}
+                          {t(
+                            showNoEarlierBeforeDose
+                              ? 'addEvent.reminders.atTimeOffNoEarlier'
+                              : 'addEvent.reminders.atTimeOff'
+                          )}
                         </span>
                       </>
                     )
@@ -1283,9 +1402,7 @@ export function AddEventModal({
                 />
                 {/* Medication only: the escalation chain hangs off
                     notifications_enabled, not off any reminder_* flag. */}
-                {isMedication && (
-                  <p className="m-0 text-sm text-ink-3">{t('addEvent.reminders.escalation')}</p>
-                )}
+                {isMedication && <p className="m-0 text-sm text-ink-3">{escalationNote}</p>}
               </div>
               <div
                 role="group"
@@ -1298,22 +1415,22 @@ export function AddEventModal({
                 <Text variant="label" as="span" id={EARLIER_REMINDERS_LABEL_ID}>
                   {t('addEvent.reminders.additional')}
                 </Text>
-                <Toggle
+                <Checkbox
                   label={t('addEvent.reminders.h24')}
                   checked={reminder24h}
                   onChange={(next) => changeReminder('reminder24h', next)}
                 />
-                <Toggle
+                <Checkbox
                   label={t('addEvent.reminders.h1')}
                   checked={reminder1h}
                   onChange={(next) => changeReminder('reminder1h', next)}
                 />
-                <Toggle
+                <Checkbox
                   label={t('addEvent.reminders.m30')}
                   checked={reminder30m}
                   onChange={(next) => changeReminder('reminder30m', next)}
                 />
-                <Toggle
+                <Checkbox
                   label={t('addEvent.reminders.m15')}
                   checked={reminder15m}
                   onChange={(next) => changeReminder('reminder15m', next)}
@@ -1344,6 +1461,16 @@ export function AddEventModal({
       </form>
     </Modal>
 
+    {/* "How notifications work" — a sibling of the form's Modal, not a child of
+        it, exactly as the past-time confirm below is. */}
+    {showHowItWorks && (
+      <NotificationInfoModal
+        isMedication={isMedication}
+        isSelfCare={isSelfCare}
+        onClose={() => setShowHowItWorks(false)}
+      />
+    )}
+
     {/* Past-time notice — non-blocking: Continue saves anyway (parity with
         mobile's lightweight confirm), Cancel returns to the form. */}
     {pendingPastTime && (
@@ -1362,7 +1489,16 @@ export function AddEventModal({
         onConfirm={() => {
           const data = pendingPastTime;
           setPendingPastTime(null);
-          void persist(data);
+          // RETURNED, not `void`ed. `ConfirmDialog` wraps `onConfirm` in
+          // `useGuardedSubmit` and awaits what comes back, so a discarded
+          // promise leaves the guard covering only the tick the click landed
+          // in — and Continue is a SUBMIT, with the same consequence as the
+          // form's own: two medication series for one drug, each with its own
+          // reminders and dose-confirmation stream (see the note on
+          // `guardedSubmit`). No rejection risk to hand upwards: `persist`
+          // wraps its whole body in `try`/`catch` because the mutation hooks
+          // raise their own toasts, so it resolves on every path.
+          return persist(data);
         }}
         onCancel={() => setPendingPastTime(null)}
       />

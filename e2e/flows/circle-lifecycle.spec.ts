@@ -4,19 +4,49 @@ import type { Page } from '@playwright/test';
 // Real circle CREATE + DELETE lifecycle (local testing-ground DB — destructive
 // is fine). Net-zero: it creates a circle and deletes the one it created.
 //
-// The demo account can sit at the premium circle cap (5), where create returns
-// 402. beforeAll frees one slot if needed by deleting the LAST circle (never the
-// first — that's what other specs resolve as `circleId`). It also clears any
-// leftover "E2E …" circles from interrupted prior runs.
+// It runs against THIS WORKER's isolated account, which globalSetup provisions
+// with exactly two circles against a premium cap of five — so there is always a
+// free slot and this spec's create/delete can never collide with, or be starved
+// by, another spec.
+//
+// The `beforeAll` this file used to carry is gone on purpose. It opened a
+// context from the shared `e2e/.auth/user.json`, hunted for leftover "E2E …"
+// circles and, if the shared demo account was at the cap, DELETED "the last
+// circle" — a destructive sweep of an account that three other workers were
+// reading and writing at the same time, and one of the reasons the crawl
+// intermittently found no circle to crawl. Nothing replaces it: the account is
+// created fresh by globalSetup and removed wholesale by globalTeardown, so
+// there is no leftover to clear and no cap to free.
+//
+// NO SWALLOWED WAITS. The final "the deleted circle is gone" is an absence, and
+// an absence is satisfied by a list that has not loaded yet — so it is only
+// asserted after a POSITIVE loaded signal (the list GET succeeded and the
+// account's two provisioned circles rendered), and only after the DELETE
+// request itself is seen to succeed.
 //
 // (circle.spec.ts still covers the non-destructive rename+restore and the
 // create-modal validation; this spec adds the real write/delete paths.)
 
-const CIRCLE_CAP = 5;
+/** Cards the picker renders — one per live circle. */
+function circleCards(page: Page) {
+  return page.locator('main a[href^="/circles/"]');
+}
 
-async function gotoCircles(page: Page) {
+/**
+ * Open the picker and wait until the circle LIST has loaded: GET /circles
+ * returned 200 and at least `minCards` cards rendered.
+ */
+async function gotoCircles(page: Page, minCards: number) {
+  const listed = page.waitForResponse(
+    (r) => r.request().method() === 'GET' && new URL(r.url()).pathname === '/api/circles',
+    { timeout: 20_000 }
+  );
   await page.goto('/circles', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
+  expect((await listed).status(), 'GET /circles').toBe(200);
+  await expect(page).toHaveURL(/\/circles$/);
+  await expect
+    .poll(() => circleCards(page).count(), { timeout: 20_000, message: 'circle cards rendered' })
+    .toBeGreaterThanOrEqual(minCards);
 }
 
 function idFromHref(href: string | null): string | undefined {
@@ -30,42 +60,22 @@ async function deleteCircle(page: Page, id: string) {
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   await dialog.locator('#delete-confirm-input').fill('DELETE');
-  await dialog.getByRole('button', { name: 'Delete circle' }).click();
-  await page.waitForURL(/\/circles(\/)?$/, { timeout: 20_000 }).catch(() => {});
+  const [deleted] = await Promise.all([
+    page.waitForResponse(
+      (r) => r.request().method() === 'DELETE' && new URL(r.url()).pathname === `/api/circles/${id}`,
+      { timeout: 20_000 }
+    ),
+    dialog.getByRole('button', { name: 'Delete circle' }).click(),
+  ]);
+  expect(deleted.ok(), `DELETE /circles/${id} returned ${deleted.status()}`).toBe(true);
+  await page.waitForURL(/\/circles(\/)?$/, { timeout: 20_000 });
 }
-
-test.beforeAll(async ({ browser }) => {
-  const context = await browser.newContext({ storageState: 'e2e/.auth/user.json' });
-  const page = await context.newPage();
-  try {
-    await gotoCircles(page);
-    const links = page.locator('a[href*="/circles/"]');
-
-    // 1) Clear leftover E2E circles from interrupted runs.
-    const e2eLeftovers = links.filter({ hasText: 'E2E' });
-    for (let i = (await e2eLeftovers.count()) - 1; i >= 0; i -= 1) {
-      const id = idFromHref(await e2eLeftovers.nth(i).getAttribute('href'));
-      if (id) await deleteCircle(page, id);
-      await gotoCircles(page);
-    }
-
-    // 2) If still at the cap, free one slot by deleting the LAST circle (never
-    //    the first — other specs resolve that as circleId).
-    if ((await links.count()) >= CIRCLE_CAP) {
-      const count = await links.count();
-      const id = idFromHref(await links.nth(count - 1).getAttribute('href'));
-      if (id) await deleteCircle(page, id);
-    }
-  } finally {
-    await context.close();
-  }
-});
 
 test('create a new circle, then delete it', async ({ page }) => {
   const name = uniqueLabel('Circle');
 
   // --- Create ---
-  await gotoCircles(page);
+  await gotoCircles(page, 2);
   await page.getByRole('button', { name: 'Create circle' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 15_000 });
@@ -77,12 +87,16 @@ test('create a new circle, then delete it', async ({ page }) => {
   const id = idFromHref(page.url());
   expect(id, 'new circle id parsed from URL').toBeTruthy();
 
-  // It shows in the picker.
-  await gotoCircles(page);
+  // It shows in the picker, alongside the two provisioned circles.
+  await gotoCircles(page, 3);
   await expect(page.getByText(name)).toBeVisible({ timeout: 20_000 });
 
   // --- Delete (cleanup → net-zero) ---
   await deleteCircle(page, id!);
-  await gotoCircles(page);
-  await expect(page.getByText(name)).toHaveCount(0, { timeout: 20_000 });
+  // Loaded list (the two provisioned circles are back to being the whole set),
+  // and only then the absence.
+  await gotoCircles(page, 2);
+  await expect(circleCards(page)).toHaveCount(2);
+  await expect(page.getByText(name)).toHaveCount(0);
+  await expect(page.locator(`main a[href^="/circles/${id}"]`)).toHaveCount(0);
 });

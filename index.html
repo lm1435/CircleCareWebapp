@@ -4,38 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light" />
-    <!-- App icon — mirrors the mobile app icon (assets/icon.png). -->
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/icon.png" />
-    <!-- Authenticated app — keep it out of search indexes. -->
     <meta name="robots" content="noindex, nofollow" />
     <title>CircleCare — Care for them together</title>
-    <!--
-      LINK-PREVIEW CARD. Used to mirror CircleCareWeb/src/app/layout.tsx
-      verbatim; as of the W5 copy pass (2026-09-04) it deliberately does NOT.
-      This app's card speaks in the coordination voice ("Care for them
-      together" / the shared-calendar-and-meds description) that now runs
-      through login, upgrade, and this file. The marketing site's title/
-      description are its own SEO copy, chosen and kept on purpose — do not
-      resync the two. `og-image-en.jpg` is still a byte copy of the marketing
-      site's image asset, though; if that one is ever re-cut, re-copy it here
-      — there is no build step linking the two.
-
-      WHY STATIC, NOT react-helmet-async: link-preview crawlers (iMessage,
-      WhatsApp, Slack) do not execute JS, so runtime tags never reach them. The
-      .htaccess SPA fallback serves THIS file for every route including
-      /invite/:code, so these tags are what every shared invite link previews as.
-      Per-invite copy ("Sarah invited you to Dad's circle") would need real
-      prerendering — Namecheap shared hosting has no server to do it.
-
-      ABSOLUTE og:image URL, deliberately: crawlers do not all resolve relative
-      image paths, and a relative one silently yields a card with no image —
-      exactly the bare-favicon preview this replaces.
-
-      NO og:url: it would name the site root, and some clients display og:url in
-      place of the link that was actually shared. Omitting it lets the crawler
-      keep the real invite URL.
-    -->
     <meta
       name="description"
       content="CircleCare brings families together to coordinate care — a shared calendar, medications everyone can confirm, and who's doing what. So no one carries it alone."
@@ -47,28 +19,22 @@
       property="og:description"
       content="CircleCare brings families together to coordinate care — a shared calendar, medications everyone can confirm, and who's doing what. So no one carries it alone."
     />
-    <!-- Declared at the logical 1200x630; the file itself is 2400x1260 for 2x
-         displays, matching how the marketing site ships it. -->
-    <meta property="og:image" content="https://my.circlecare.app/og-image-en.jpg" />
+    <meta property="og:image" content="https://my.circlecare.app/og-invite-en.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="CircleCare — the family caregiver app: medication tracking, shared calendars, and daily updates, shown on two phones"
+      content="CircleCare — the family caregiver app, shown on a phone"
     />
-    <!-- A static host cannot vary tags by locale, so the card is English for
-         everyone; og-image-es.jpg ships alongside for when it can. -->
     <meta property="og:locale" content="en_US" />
     <meta property="og:locale:alternate" content="es_419" />
-    <!-- summary_large_image is what promotes the preview from a thumbnail strip
-         to the full-width card. -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="CircleCare — Care for them together" />
     <meta
       name="twitter:description"
       content="CircleCare brings families together to coordinate care — a shared calendar, medications everyone can confirm, and who's doing what. So no one carries it alone."
     />
-    <meta name="twitter:image" content="https://my.circlecare.app/og-image-en.jpg" />
+    <meta name="twitter:image" content="https://my.circlecare.app/og-invite-en.jpg" />
   </head>
   <body>
     <div id="root"></div>

@@ -2,12 +2,13 @@ import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Skeleton, SectionHeader, careCardListGap } from '@/components/ui';
+import { Button, Skeleton, SectionHeader, careCardListGap } from '@/components/ui';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useCircle } from '@/hooks/useCircle';
 import { useTasks } from '@/hooks/useTasks';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
+import { Analytics } from '@/lib/analytics';
 
 // Web counterpart of mobile/src/components/tasks/OpenTasks.tsx — the Overview
 // "Open tasks" card. It used to render bare, non-interactive <li> text while the
@@ -33,6 +34,8 @@ export function OpenTasksCard({
 }: OpenTasksCardProps): ReactElement {
   const { t } = useTranslation(['overview', 'common']);
   const [editingTask, setEditingTask] = useState<CalendarEvent | null>(null);
+  // First-run "Add your first task" opens the task form right here.
+  const [creatingTask, setCreatingTask] = useState(false);
 
   const { canEdit, members } = useCircle(circleId);
   const tasksQuery = useTasks(circleId, { status: 'open' });
@@ -48,7 +51,16 @@ export function OpenTasksCard({
   const everTasksQuery = useTasks(circleId, { status: 'all', limit: 1 });
   const hasEverHadTask = (everTasksQuery.data?.tasks.length ?? 0) > 0;
   // Wait for both so the empty copy never flips from "all caught up" to first-run.
-  const tasksLoading = tasksQuery.isLoading || everTasksQuery.isLoading;
+  //
+  // `isPending`, NOT `isLoading`. `isLoading` is `isPending && isFetching`, so a
+  // query React Query has PAUSED (offline under `networkMode: 'online'`) is
+  // pending with no data yet reports `isLoading: false`. Gating on it let an
+  // offline Home fall straight through to "Add your first task" for a circle
+  // that has tasks — no read had answered at all.
+  // The probe only decides the EMPTY copy, so it holds the skeleton only while
+  // the open list is empty — open rows that loaded are never hidden behind it.
+  const tasksLoading =
+    tasksQuery.isPending || (openTasks.length === 0 && everTasksQuery.isPending);
 
   const { pendingIds, handleComplete, handleUndo } = useTaskCompletion(circleId);
 
@@ -66,11 +78,54 @@ export function OpenTasksCard({
         <Skeleton className="h-10 w-full" />
       </div>
     );
-  } else if (openTasks.length === 0) {
+  } else if (tasksQuery.isError || (openTasks.length === 0 && everTasksQuery.isError)) {
+    // A FAILED read is not a first run. Without this branch an errored probe
+    // left `hasEverHadTask` false, and a circle that HAS tasks was invited to
+    // "Add your first task" — a duplicate-record generator. The probe only
+    // decides the empty copy, so its failure matters only when the open list
+    // is empty; open rows still render when they loaded. Neutral copy, no
+    // create door, and a retry — TodaysMeds' error pattern.
     body = (
-      <p className="m-0 text-sm text-ink-2">
-        {hasEverHadTask ? t('tasks.empty') : t('tasks.emptyFirstRun')}
-      </p>
+      <div>
+        <p className="m-0 mb-2 text-sm text-ink-2">{t('tasks.loadError')}</p>
+        <button
+          type="button"
+          onClick={() => {
+            if (tasksQuery.isError) void tasksQuery.refetch();
+            if (everTasksQuery.isError) void everTasksQuery.refetch();
+          }}
+          className="flex w-full min-h-[44px] items-center justify-center gap-1 py-3 text-md font-medium text-dusk"
+        >
+          {t('common:retry')}
+        </button>
+      </div>
+    );
+  } else if (openTasks.length === 0 && hasEverHadTask) {
+    body = <p className="m-0 text-sm text-ink-2">{t('tasks.empty')}</p>;
+  } else if (openTasks.length === 0 && tasksQuery.isSuccess && everTasksQuery.isSuccess) {
+    // THE FIRST-RUN RULE: the door shows only when BOTH reads that decide
+    // "first run" have actually SUCCEEDED and say nothing exists. Pending,
+    // paused and errored are all handled above; stating it here keeps any
+    // future branch reorder from reopening the hole.
+    // First run: the copy stays, and a writer gets a door straight into the
+    // task form — the same pre-typed AddEventModal the Tasks page's own "Add
+    // task" opens, hosted here so the first task is one click from Home.
+    body = (
+      <div className="flex flex-col items-start gap-3">
+        <p className="m-0 text-sm text-ink-2">{t('tasks.emptyFirstRun')}</p>
+        {canEdit && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              Analytics.homeEmptyCtaTapped('tasks');
+              setCreatingTask(true);
+            }}
+          >
+            {t('tasks.addFirst')}
+          </Button>
+        )}
+      </div>
     );
   } else {
     body = (
@@ -128,6 +183,14 @@ export function OpenTasksCard({
           circleId={circleId}
           event={editingTask}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {creatingTask && (
+        <AddEventModal
+          circleId={circleId}
+          initialType="task"
+          onClose={() => setCreatingTask(false)}
         />
       )}
     </section>

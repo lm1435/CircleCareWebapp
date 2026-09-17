@@ -12,6 +12,7 @@ import { getApiError } from '@/api/auth';
 import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
 import { useAuth } from '@/hooks/useAuth';
 import { useAcceptInviteByCode } from '@/hooks/useJoinCircle';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
@@ -128,6 +129,7 @@ export default function InviteLandingPage(): ReactElement {
   const navigate = useNavigate();
   const { isAuthenticated, isBootstrapping } = useAuth();
   const accept = useAcceptInviteByCode();
+  const acceptGuard = useSubmitGuard();
   const { showToast } = useToast();
   const [acceptError, setAcceptError] = useState<string | null>(null);
   // Backend normalizes too; normalize here so the displayed fallback code
@@ -160,33 +162,65 @@ export default function InviteLandingPage(): ReactElement {
   // endpoint doesn't expose the circle id, so on success we land on the circle
   // picker (now showing the just-joined circle). An already-member result is a
   // success from the user's point of view — send them to the picker too.
-  const handleAccept = useCallback(() => {
+  //
+  // `disabled={accept.isPending}` on the button is the VISUAL guard and lands a
+  // render too late to stop a second press in the same tick (see
+  // `useGuardedSubmit`); POST /invites/code/:code/accept is rate-limited twice
+  // over (`inviteGuessRateLimit` per IP + `inviteRedeemRateLimit` per user) and
+  // the second call resolves to ALREADY_MEMBER, which this handler treats as a
+  // redirect — so a double press could bounce the visitor to /circles out from
+  // under the success toast.
+  //
+  // ONE HANDLER FOR BOTH ENTRY POINTS, SETTLED ON THE PROMISE — NOT ON
+  // `mutate(code, { onSuccess })`. The sign-in handoff below calls this from a
+  // MOUNT effect, and per-call mutate callbacks are delivered through the
+  // component's MutationObserver only while it is still attached to the
+  // mutation. StrictMode's mount double-invoke (and any real unmount/remount)
+  // unsubscribes the observer between `mutate` and the response, and
+  // `MutationObserver.onUnsubscribe` detaches it from the in-flight mutation for
+  // good — so the accept landed (200, membership written, the hook-level circle
+  // invalidation ran) but the toast and the navigation never did, leaving the
+  // joiner on the invite card. `mutateAsync`'s promise is the mutation's own
+  // and settles regardless of observers. Pending state is local for the same
+  // reason: a detached observer's `isPending` never flips back.
+  const [accepting, setAccepting] = useState(false);
+  const acceptAsync = accept.mutateAsync;
+  const handleAccept = useCallback(async (): Promise<void> => {
+    if (!acceptGuard.claim()) return;
     setAcceptError(null);
-    accept.mutate(displayCode, {
-      onSuccess: () => {
-        // R4-5: joined their first circle here → onboarding complete. No-op
-        // when this browser already saw the user with circles ('existing'
-        // fired). ALREADY_MEMBER lands in onError, so it never fires 'joined'.
-        // Carries only the path enum — never the invite code.
-        trackOnboardingCompleted('joined');
-        // The accept funnel was previously unmeasured on BOTH platforms — 122
-        // invites sent since January produced zero invite_accepted events, so
-        // there was no way to tell a working join from a silently broken one.
-        Analytics.inviteAccepted(undefined, 'invite_link');
-        // Confirm the join — the circle picker we land on gives no feedback.
-        showToast(t('acceptSuccess'), 'success');
+    setAccepting(true);
+    try {
+      await acceptAsync(displayCode);
+    } catch (err) {
+      const errorCode = getApiError(err)?.code;
+      if (errorCode === 'ALREADY_MEMBER') {
         navigate('/circles');
-      },
-      onError: (err) => {
-        const errorCode = getApiError(err)?.code;
-        if (errorCode === 'ALREADY_MEMBER') {
-          navigate('/circles');
-          return;
-        }
-        setAcceptError(acceptErrorMessage(t, errorCode));
-      },
-    });
-  }, [accept, displayCode, navigate, showToast, t]);
+        return;
+      }
+      setAcceptError(acceptErrorMessage(t, errorCode));
+      return;
+    } finally {
+      // Releases on every path. The success path navigates away just below,
+      // where the release is harmless.
+      setAccepting(false);
+      acceptGuard.release();
+    }
+    // Success — outside the try, so a throw here can never be misreported as
+    // a failed accept for a join that landed.
+    //
+    // R4-5: joined their first circle here → onboarding complete. No-op when
+    // this browser already saw the user with circles ('existing' fired).
+    // ALREADY_MEMBER rejects, so it never fires 'joined'. Carries only the path
+    // enum — never the invite code.
+    trackOnboardingCompleted('joined');
+    // The accept funnel was previously unmeasured on BOTH platforms — 122
+    // invites sent since January produced zero invite_accepted events, so there
+    // was no way to tell a working join from a silently broken one.
+    Analytics.inviteAccepted(undefined, 'invite_link');
+    // Confirm the join — the circle picker we land on gives no feedback.
+    showToast(t('acceptSuccess'), 'success');
+    navigate('/circles');
+  }, [acceptAsync, acceptGuard, displayCode, navigate, showToast, t]);
 
   // Returning from the sign-in handoff: finish the job the visitor started.
   //
@@ -206,7 +240,7 @@ export default function InviteLandingPage(): ReactElement {
     const parked = consumePendingInviteCode();
     if (parked === displayCode && !autoAccepted.current) {
       autoAccepted.current = true;
-      handleAccept();
+      void handleAccept();
     }
   }, [isBootstrapping, isAuthenticated, displayCode, handleAccept]);
 
@@ -358,10 +392,10 @@ export default function InviteLandingPage(): ReactElement {
                 {isAuthenticated ? (
                   <Button
                     className="w-full max-w-xs"
-                    onClick={handleAccept}
-                    disabled={accept.isPending}
+                    onClick={() => void handleAccept()}
+                    disabled={accepting}
                   >
-                    {accept.isPending ? t('accepting') : t('accept')}
+                    {accepting ? t('accepting') : t('accept')}
                   </Button>
                 ) : (
                   <>

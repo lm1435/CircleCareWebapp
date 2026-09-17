@@ -4,6 +4,13 @@
 # truth for headers/rewrites. Vite copies public/ into dist/, so it ships
 # inside the upload automatically.
 
+# --- No directory listings ---------------------------------------------------
+# LiteSpeed on Namecheap autoindexes by default: without this, /assets/ and
+# /.well-known/ render a clickable list of every file ever uploaded, including
+# chunks from past deploys. A bare directory request now 403s; real files
+# (hashed assets, the AASA file) are still served by exact path.
+Options -Indexes
+
 # --- SPA fallback: send non-file routes to index.html so client routing works -
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -16,6 +23,34 @@
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
+
+  # --- Spanish link-preview card ----------------------------------------------
+  # Link-preview crawlers (iMessage, WhatsApp, Slack, Facebook) do not run JS,
+  # so the og:* tags a shared invite previews as are whatever is BAKED INTO the
+  # HTML this fallback serves. One static document can only carry one language,
+  # and it has been English for everyone — including invites sent by Spanish-
+  # speaking families, who are a large share of who this app is for.
+  #
+  # The fix is a second prerendered document. `npm run build` derives
+  # dist/index.es.html from dist/index.html (scripts/build-locale-html.mjs) —
+  # same hashed JS/CSS, Spanish title/description/og-invite-es.jpg — and the
+  # sender's client appends `?lang=es` to the invite URL when its app language
+  # is Spanish (src/utils/inviteShareUrl.ts). English links get no param at all,
+  # so every invite link already in the wild keeps working byte-for-byte.
+  #
+  # ORDER IS LOAD-BEARING. This must sit AFTER the .well-known rule (ACME
+  # validation is never a page) and AFTER the -f/-d passthrough, so a real file
+  # requested with a stray ?lang=es — say /assets/index-abc123.js?lang=es —
+  # is still served as itself and never replaced by HTML. It must sit BEFORE
+  # the index.html fallback, which is unconditional and would otherwise win.
+  #
+  # The query is matched with an ANCHORED alternation rather than a bare
+  # `lang=es`, so it matches the parameter and not a coincidence: a substring
+  # match would also fire on `?slang=escalate` or `?lang=est`. `(^|&)` and
+  # `($|&)` pin it to a whole parameter. Note the query string is NOT part of
+  # the RewriteRule pattern in Apache — it has to be tested as a RewriteCond.
+  RewriteCond %{QUERY_STRING} (^|&)lang=es($|&)
+  RewriteRule ^ index.es.html [L]
 
   # Everything else -> index.html (SPA client-side routing)
   RewriteRule ^ index.html [L]
@@ -31,9 +66,23 @@
   <FilesMatch "\.(js|css|woff2?|png|jpg|jpeg|svg|webp|ico)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
-  <Files "index.html">
+  # FilesMatch, not <Files "index.html">, and that is a bug fix, not a tidy-up.
+  # <Files> matches ONE exact filename, so the moment a second prerendered
+  # document existed (index.es.html — the Spanish link-preview card, see the
+  # rewrite above) it fell out of the never-cache rule entirely. Worse, it fell
+  # THROUGH to the immutable rule's blast radius in spirit if not in letter:
+  # with no Cache-Control of its own it inherits the host's default heuristic
+  # freshness, so a Spanish invitee's browser could pin a stale document that
+  # names last deploy's hashed JS bundle — which is exactly the deploy-day
+  # white screen the no-cache rule on index.html exists to prevent. Every entry
+  # document must be revalidated on every request; only the hashed assets they
+  # reference may be immutable.
+  #
+  # `^index(\.[a-z]{2})?\.html$` covers index.html plus any two-letter locale
+  # variant, so adding index.pt.html later needs no change here.
+  <FilesMatch "^index(\.[a-z]{2})?\.html$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
-  </Files>
+  </FilesMatch>
 
   # --- Security headers (edit origins if prod services change) ---------------
   # RevenueCat Web Billing: SDK fetches offerings from api.revenuecat.com

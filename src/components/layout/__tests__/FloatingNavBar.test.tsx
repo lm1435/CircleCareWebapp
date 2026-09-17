@@ -20,6 +20,10 @@ function renderNav(
               addOpen={false}
               onToggleAdd={vi.fn()}
               onOpenAssistant={vi.fn()}
+              // The AI cell is GATED (src/lib/aiAccess.ts) and the prop fails
+              // closed, so the shown-AI case — what most of these tests
+              // describe — has to say so. Individual tests override it.
+              canUseAssistant
               {...props}
             />
           }
@@ -160,7 +164,7 @@ describe('FloatingNavBar', () => {
   it('AI opens the assistant and reads as active while it is up', async () => {
     const onOpenAssistant = vi.fn();
     const user = userEvent.setup();
-    renderNav('/circles/c1', { onOpenAssistant });
+    const { rerender } = renderNav('/circles/c1', { onOpenAssistant });
 
     const ai = within(pill()).getByRole('button', { name: 'AI' });
     expect(ai).toHaveAttribute('aria-expanded', 'false');
@@ -168,6 +172,34 @@ describe('FloatingNavBar', () => {
 
     await user.click(ai);
     expect(onOpenAssistant).toHaveBeenCalledTimes(1);
+
+    // The pill does not own `assistantOpen` — AppLayout flips it once the modal
+    // is up. Hand it back the way the layout does: the SAME cell must now read
+    // as active, to assistive tech and to the eye.
+    rerender(
+      <MemoryRouter initialEntries={['/circles/c1']}>
+        <Routes>
+          <Route
+            path="/circles/:circleId/*"
+            element={
+              <FloatingNavBar
+                circleId="c1"
+                canCreate
+                addOpen={false}
+                onToggleAdd={vi.fn()}
+                onOpenAssistant={onOpenAssistant}
+                canUseAssistant
+                assistantOpen
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const open = within(pill()).getByRole('button', { name: 'AI' });
+    expect(open).toHaveAttribute('aria-expanded', 'true');
+    expect(hasActiveDot(open)).toBe(true);
   });
 
   it('AI shows the filled glyph and the dot while the modal is open', () => {
@@ -176,6 +208,36 @@ describe('FloatingNavBar', () => {
     const ai = within(pill()).getByRole('button', { name: 'AI' });
     expect(ai).toHaveAttribute('aria-expanded', 'true');
     expect(hasActiveDot(ai)).toBe(true);
+  });
+
+  // VIEW-ONLY GATING. A view-only member cannot change their own role, so the
+  // AI cell is absent rather than disabled — unlike NEW above, a dimmed cell
+  // would only advertise a door that is not theirs to open.
+  it('drops the AI cell entirely when the viewer has no assistant access', () => {
+    renderNav('/circles/c1', { canUseAssistant: false });
+
+    expect(within(pill()).queryByRole('button', { name: 'AI' })).not.toBeInTheDocument();
+    expect(Array.from(pill().children).map((c) => c.textContent)).toEqual([
+      'Home',
+      'Care',
+      'New',
+      'Health',
+    ]);
+  });
+
+  it('fails closed: no AI cell when the flag is not supplied at all', () => {
+    render(
+      <MemoryRouter initialEntries={['/circles/c1']}>
+        <FloatingNavBar
+          circleId="c1"
+          addOpen={false}
+          onToggleAdd={vi.fn()}
+          onOpenAssistant={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    expect(within(pill()).queryByRole('button', { name: 'AI' })).not.toBeInTheDocument();
   });
 
   it('publishes --nav-h while mounted and removes it on unmount', () => {

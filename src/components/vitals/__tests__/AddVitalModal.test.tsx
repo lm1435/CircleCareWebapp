@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 import '@/i18n';
 import { AddVitalModal } from '../AddVitalModal';
 
@@ -257,5 +258,56 @@ describe('AddVitalModal', () => {
     useCircleResult.canEdit = false;
     const { container } = render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
+  });
+  // ──────────────────────────────────────────────────────────────────────────
+  // DOUBLE SUBMIT — two identical readings is a corrupted vitals record: the
+  // chart draws the duplicate, and a clinician reading the trend cannot tell it
+  // from a real second measurement.
+  //
+  // `if (!canEdit || isPending) return` cannot stop it: `isPending` is React
+  // Query state, committed a render AFTER the submit, so a second submit in the
+  // SAME tick re-enters with the flag still false. `submitFormTwice` dispatches
+  // both inside ONE `act()` with no render in between, which is the production
+  // shape; two awaited `userEvent.click`s would pass against a state-flag fix.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('double submit', () => {
+    function vitalForm(): HTMLFormElement {
+      const form = document.getElementById('vital-form');
+      if (!(form instanceof HTMLFormElement)) throw new Error('vital-form not found');
+      return form;
+    }
+
+    it('records ONE reading when the form is submitted twice in one tick', async () => {
+      const user = userEvent.setup();
+      // Never settles: the request must still be in flight when the second
+      // submit arrives, or the guard is legitimately free again.
+      mutateCreate.mockImplementation(() => neverSettles());
+      render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      await user.type(screen.getByLabelText('Systolic'), '120');
+      await user.type(screen.getByLabelText('Diastolic'), '80');
+      await setRecordedTo(user, '2026-06-15', '09:00');
+
+      await submitFormTwice(vitalForm());
+
+      expect(mutateCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('still saves on a genuine RESUBMIT after the first attempt failed', async () => {
+      const user = userEvent.setup();
+      mutateCreate.mockRejectedValueOnce(new Error('500'));
+      render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      await user.type(screen.getByLabelText('Systolic'), '120');
+      await user.type(screen.getByLabelText('Diastolic'), '80');
+      await setRecordedTo(user, '2026-06-15', '09:00');
+
+      await submitFormTwice(vitalForm());
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+
+      mutateCreate.mockResolvedValueOnce({});
+      await submitFormTwice(vitalForm());
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(2));
+    });
   });
 });

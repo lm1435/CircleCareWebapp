@@ -1,7 +1,9 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
+import { Modal } from '@/components/ui';
+import { clickTwice, neverSettles } from '@/test/doubleSubmit';
 import { EventDetailActions } from '../EventDetailActions';
 
 // WA6 — after reactivate-for-edit succeeds, this component's OWN edit-guard
@@ -76,6 +78,23 @@ afterEach(async () => {
 // renders inline instead, exercised separately below.
 async function openMore(user: ReturnType<typeof userEvent.setup>, name = 'More'): Promise<void> {
   await user.click(screen.getByRole('button', { name }));
+}
+
+/**
+ * ANCHOR for the "this dose offers NO confirm controls" assertions below.
+ *
+ * `queryByRole(...)` returns null just as readily for a component that rendered
+ * NOTHING as for one that deliberately withheld a control, so an absence
+ * assertion on its own reads green when the whole action bar fails to render —
+ * and what those four tests guard is a permission-and-timing gate on a MEDICAL
+ * action (logging a dose against the adherence record a clinician reads). Every
+ * medication this component renders carries the overflow menu (Edit +
+ * Discontinue/Reactivate + Delete, three items), so a `getBy*` for it THROWS
+ * when the bar is missing. Same pattern as `sidebarAssistant()` in
+ * `AppLayout.aiGate.test.tsx`.
+ */
+function medicationActionBar(): HTMLElement {
+  return screen.getByRole('button', { name: 'More' });
 }
 
 describe('EventDetailActions', () => {
@@ -444,6 +463,395 @@ describe('EventDetailActions', () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // WHICH OCCURRENCE IS BEING COMPLETED
+  //
+  // `completed_at` lives on a ROW, and one row is one occurrence. A recurring
+  // series' later occurrences are VIRTUAL — the backend synthesises them with a
+  // composite id (`${parentId}_${date}`, `is_virtual: true`) that matches no
+  // `id` column — so this modal has to address the ROOT and name the day. Post
+  // `event.id` and a virtual occurrence can only 404; post the root with no
+  // date and the server stamps the series' FIRST day, which is the production
+  // bug (14 mis-stamped series across 7 households).
+  //
+  // These assert the mutation's ARGUMENTS, not that a button rendered.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('completing an occurrence of a recurring series', () => {
+    async function clickComplete(event: CalendarEvent): Promise<void> {
+      const user = userEvent.setup();
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={event}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+      await waitFor(() => expect(completeMutateAsync).toHaveBeenCalledTimes(1));
+    }
+
+    it('a VIRTUAL occurrence posts the ROOT id plus its own date', async () => {
+      await clickComplete(
+        makeMed({
+          // Exactly what generateVirtualInstances emits.
+          id: 'parent-1_2026-08-06',
+          parent_event_id: 'parent-1',
+          is_virtual: true,
+          event_type: 'task',
+          title: 'Water the plants',
+          medication_name: null,
+          medication_dosage: null,
+          scheduled_date: '2026-08-06',
+          completed_at: null,
+        })
+      );
+
+      expect(completeMutateAsync).toHaveBeenCalledWith({
+        eventId: 'parent-1',
+        scheduledDate: '2026-08-06',
+      });
+    });
+
+    // A MATERIALIZED CHILD IS ITS OWN OCCURRENCE — POST ITS OWN ID.
+    //
+    // This test used to assert the opposite (root + date), on the theory that
+    // the server always resolves a root+date back to the same child row. It
+    // does not: that resolution is gated on the addressed row STILL RECURRING
+    // (`backend/src/routes/calendarEvents.ts`:
+    // `if (addressed.recurrence_rule && !addressed.parent_event_id)`). Clear
+    // the rule on the series — "Repeat: Never" in the editor — and the whole
+    // block is skipped, leaving `targetEventId = eventId`: the PARENT row, on
+    // a DIFFERENT DAY, is stamped completed while the occurrence the caregiver
+    // pressed stays open. `pruneOffPatternFutureChildren` deletes only FUTURE
+    // off-pattern children, so past materialized children survive that edit and
+    // the calendar keeps rendering them — this is reachable, not theoretical.
+    //
+    // `is_virtual` is the discriminator, not "does it have a parent_event_id".
+    // A virtual instance has no row to address; a physical one is the row.
+    it('a PHYSICAL child is addressed by its OWN id, with no date', async () => {
+      await clickComplete(
+        makeMed({
+          id: 'child-0806',
+          parent_event_id: 'parent-1',
+          // Not virtual: the backend materialized this row and sent it as-is.
+          is_virtual: false,
+          event_type: 'task',
+          title: 'Water the plants',
+          medication_name: null,
+          medication_dosage: null,
+          scheduled_date: '2026-08-06',
+          completed_at: null,
+        })
+      );
+
+      expect(completeMutateAsync).toHaveBeenCalledWith({
+        eventId: 'child-0806',
+        scheduledDate: undefined,
+      });
+    });
+
+    it('a child row with is_virtual ABSENT is still treated as physical', async () => {
+      // `is_virtual` is optional on the wire (`api/calendarEvents.ts`) and the
+      // list response omits it for real rows. Absent must mean physical —
+      // reading it as "unknown, assume virtual" reinstates the parent-stamping
+      // bug for every row the backend does not bother to flag.
+      await clickComplete(
+        makeMed({
+          id: 'child-0807',
+          parent_event_id: 'parent-1',
+          event_type: 'task',
+          title: 'Water the plants',
+          medication_name: null,
+          medication_dosage: null,
+          scheduled_date: '2026-08-07',
+          completed_at: null,
+        })
+      );
+
+      expect(completeMutateAsync).toHaveBeenCalledWith({
+        eventId: 'child-0807',
+        scheduledDate: undefined,
+      });
+    });
+
+    it('a ONE-OFF task sends NO date — the request shipped clients make', async () => {
+      await clickComplete(
+        makeMed({
+          id: 't-solo',
+          parent_event_id: null,
+          event_type: 'task',
+          title: 'Pick up prescription',
+          medication_name: null,
+          medication_dosage: null,
+          scheduled_date: '2026-08-06',
+          completed_at: null,
+        })
+      );
+
+      // `scheduledDate: undefined`, so `completeEvent` sends no body at all.
+      expect(completeMutateAsync).toHaveBeenCalledWith({
+        eventId: 't-solo',
+        scheduledDate: undefined,
+      });
+    });
+
+    it("a series ROOT on its own start date sends no date either", async () => {
+      // The root IS that day's occurrence (`parent_event_id` null), so there is
+      // nothing to disambiguate and the request stays body-less.
+      await clickComplete(
+        makeMed({
+          id: 'parent-1',
+          parent_event_id: null,
+          recurrence_rule: 'daily',
+          event_type: 'task',
+          title: 'Water the plants',
+          medication_name: null,
+          medication_dosage: null,
+          scheduled_date: '2026-08-01',
+          completed_at: null,
+        })
+      );
+
+      expect(completeMutateAsync).toHaveBeenCalledWith({
+        eventId: 'parent-1',
+        scheduledDate: undefined,
+      });
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // THE COMPLETION MUST SHOW WITHOUT A CLOSE/REOPEN.
+  //
+  // `event` is a SNAPSHOT the parent set once, when the detail modal opened.
+  // Before this fix a successful completion changed nothing on screen: Mark
+  // complete stayed live (offering to complete an already-stamped row), a
+  // completed task kept its Edit affordance, and the modal's "Completed on"
+  // row — drawn by the PARENT from the same object — never appeared. The
+  // caregiver read a working write as a broken one and clicked again.
+  //
+  // Two halves, mirroring the WA6 reactivate precedent above:
+  //   - this component's own local override (its buttons), and
+  //   - `onCompleted`, carrying the SERVER'S ROW up so the parent can restamp
+  //     its snapshot. The row matters: completing a virtual occurrence past
+  //     the materializer horizon CREATES a physical row whose id the client
+  //     has never seen, so no cache entry under the posted (root) id can
+  //     describe it.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('reflecting the completion in place', () => {
+    const openTask = (overrides: Partial<CalendarEvent> = {}): CalendarEvent =>
+      makeMed({
+        id: 't-solo',
+        event_type: 'task',
+        title: 'Pick up prescription',
+        medication_name: null,
+        medication_dosage: null,
+        parent_event_id: null,
+        completed_at: null,
+        ...overrides,
+      });
+
+    it('a PHYSICAL row: Mark complete disappears the moment the write lands', async () => {
+      const user = userEvent.setup();
+      completeMutateAsync.mockResolvedValue({
+        ...openTask(),
+        completed_at: '2026-07-29T15:00:00Z',
+        completed_by: 'u-9',
+      });
+
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={openTask()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+
+      // NO re-render from a new `event` prop — the parent still holds the old
+      // snapshot, exactly as it does in production.
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull()
+      );
+      // ...and completion is terminal, so the task's Edit is gone too, which
+      // leaves Delete as the sole secondary action rendered inline (no menu).
+      expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    });
+
+    it('a PHYSICAL row: onCompleted hands the parent the stamped row', async () => {
+      const user = userEvent.setup();
+      const onCompleted = vi.fn();
+      completeMutateAsync.mockResolvedValue({
+        ...openTask(),
+        completed_at: '2026-07-29T15:00:00Z',
+        completed_by: 'u-9',
+      });
+
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={openTask()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+          onCompleted={onCompleted}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+
+      await waitFor(() => expect(onCompleted).toHaveBeenCalledTimes(1));
+      expect(onCompleted.mock.calls[0][0]).toMatchObject({
+        completed_at: '2026-07-29T15:00:00Z',
+        completed_by: 'u-9',
+      });
+    });
+
+    it('a VIRTUAL occurrence: onCompleted carries the NEWLY CREATED row, not the posted root', async () => {
+      const user = userEvent.setup();
+      const onCompleted = vi.fn();
+      const virtual = openTask({
+        // Exactly what generateVirtualInstances emits: a composite id matching
+        // no `id` column, beyond the materializer's 3-day horizon.
+        id: 'parent-1_2026-08-06',
+        parent_event_id: 'parent-1',
+        is_virtual: true,
+        scheduled_date: '2026-08-06',
+      });
+      // The server materialized the day: a BRAND-NEW physical row, an id the
+      // client has never seen, under no cache key it could have invalidated.
+      completeMutateAsync.mockResolvedValue({
+        ...virtual,
+        id: 'child-created-0806',
+        is_virtual: false,
+        completed_at: '2026-08-06T14:00:00Z',
+        completed_by: 'u-9',
+      });
+
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={virtual}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+          onCompleted={onCompleted}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+
+      // The request shape is unchanged — root + date.
+      await waitFor(() =>
+        expect(completeMutateAsync).toHaveBeenCalledWith({
+          eventId: 'parent-1',
+          scheduledDate: '2026-08-06',
+        })
+      );
+      await waitFor(() => expect(onCompleted).toHaveBeenCalledTimes(1));
+      // The completion read off the RESPONSE, whose id is the new row's.
+      expect(onCompleted.mock.calls[0][0]).toMatchObject({
+        id: 'child-created-0806',
+        completed_at: '2026-08-06T14:00:00Z',
+      });
+      // ...and this component's own action set already reflects it.
+      expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull();
+    });
+
+    it('a FAILED completion leaves Mark complete live — nothing is stamped optimistically', async () => {
+      const user = userEvent.setup();
+      const onCompleted = vi.fn();
+      completeMutateAsync.mockRejectedValue(new Error('403'));
+
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={openTask()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+          onCompleted={onCompleted}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+
+      await waitFor(() => expect(completeMutateAsync).toHaveBeenCalledTimes(1));
+      expect(onCompleted).not.toHaveBeenCalled();
+      expect(showToast).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Mark complete' })).toBeInTheDocument();
+    });
+
+    // WCAG 2.4.3 (focus order) / 2.1.2 (no keyboard trap).
+    //
+    // `disabled={completeEvent.isPending}` lands the instant the request
+    // starts, and A BROWSER BLURS AN ELEMENT THE MOMENT IT BECOMES DISABLED.
+    // jsdom does not — which is exactly why the test above, and the two
+    // success-path tests before it, cannot see this: they never lose focus in
+    // the first place. So this test performs the blur the browser would, and
+    // then asserts on where focus is once the request FAILS. The success path
+    // already recovers (the row's `tabIndex={-1}` landing spot); the failure
+    // path re-enabled the button and recovered nothing, leaving focus on
+    // `<body>` — and `Modal` binds Escape/Tab as a React `onKeyDown` on its own
+    // backdrop div, so from `<body>` Escape stops closing the dialog and the
+    // focus trap is dead. Rendering INSIDE a real Modal is the point: bare, as
+    // the test above renders it, there is no trap to break.
+    it('a FAILED completion puts focus back in the dialog — the browser blurred the disabling button', async () => {
+      const user = userEvent.setup();
+      let rejectComplete: (reason: unknown) => void = () => {};
+      completeMutateAsync.mockImplementation(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectComplete = reject;
+          })
+      );
+
+      render(
+        <Modal title="Pick up prescription" onClose={vi.fn()} closeLabel="Close">
+          <EventDetailActions
+            circleId="circle-1"
+            careRecipientTimezone="America/New_York"
+            onConfirmDose={vi.fn()}
+            event={openTask()}
+            onEdit={vi.fn()}
+            onDelete={vi.fn()}
+            onDiscontinue={vi.fn()}
+          />
+        </Modal>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+      await waitFor(() => expect(completeMutateAsync).toHaveBeenCalledTimes(1));
+
+      // What the browser does, and jsdom does not.
+      (document.activeElement as HTMLElement).blur();
+      expect(document.body).toHaveFocus();
+
+      await act(async () => {
+        rejectComplete(new Error('500'));
+      });
+
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Mark complete' })).toHaveFocus()
+      );
+    });
+  });
+
   it('a completed appointment still offers Edit (in the overflow menu) — the lock is scoped to tasks', async () => {
     const user = userEvent.setup();
     const completedAppt = makeMed({
@@ -614,6 +1022,7 @@ describe('EventDetailActions', () => {
         />
       );
 
+      expect(medicationActionBar()).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Skip dose' })).toBeNull();
     });
@@ -655,6 +1064,7 @@ describe('EventDetailActions', () => {
         />
       );
 
+      expect(medicationActionBar()).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Skip dose' })).toBeNull();
     });
@@ -695,6 +1105,7 @@ describe('EventDetailActions', () => {
       it('offers NO controls for a dose 8 hours out today — the day arriving is not enough', () => {
         renderAt(NOON_ET, makeMed({ scheduled_date: '2026-08-05', scheduled_time: '20:00:00' }));
 
+        expect(medicationActionBar()).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Skip dose' })).toBeNull();
       });
@@ -769,6 +1180,7 @@ describe('EventDetailActions', () => {
       it('an all-day medication row is still never confirmable here', () => {
         renderAt(NOON_ET, makeMed({ scheduled_date: '2026-08-05', scheduled_time: null }));
 
+        expect(medicationActionBar()).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
       });
     });
@@ -952,6 +1364,202 @@ describe('EventDetailActions', () => {
       await openMore(user);
       const deleteItem = screen.getByRole('menuitem', { name: 'Delete' });
       expect(deleteItem.className).toContain('text-terracotta-deep');
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // FOCUS MUST NOT FALL OUT OF THE DIALOG WHEN "MARK COMPLETE" UNMOUNTS.
+  //
+  // Mark complete is the FIRST control in this modal that disappears while the
+  // modal STAYS OPEN — every other action (Edit, Delete, Discontinue, the dose
+  // confirms) closes the detail modal, and Modal's cleanup restores focus to
+  // the trigger on the way out (Modal.tsx `previouslyFocused?.focus()`).
+  //
+  // Here nothing closes. `canComplete` flips false the instant the local stamp
+  // commits, React removes the button the user just activated, and focus falls
+  // to `document.body`. Modal listens for keys with `onKeyDown` ON THE DIALOG
+  // SUBTREE (Modal.tsx), not on `document`, so once focus is on body:
+  //   - Escape no longer closes the dialog, and
+  //   - the Tab trap is dead — the next Tab lands on the page behind the
+  //     backdrop, which is NOT aria-hidden or inert (aria-modal="true" is the
+  //     only background suppression the shell has; see Modal.tsx).
+  // Modal's focus effect deliberately runs only on open ("re-running would
+  // steal focus back mid-edit"). Its recovery would now park focus on the
+  // dialog PANEL, which is a floor, not an answer: this row moves focus
+  // somewhere that says what changed.
+  //
+  // This is inherent to the completion rendering at all — wiring only
+  // `onCompleted` and dropping the local latch produces the identical unmount.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('keyboard focus survives the completion (WCAG 2.4.3 / 2.1.2)', () => {
+    const openTask = (): CalendarEvent =>
+      makeMed({
+        id: 't-solo',
+        event_type: 'task',
+        title: 'Pick up prescription',
+        medication_name: null,
+        medication_dosage: null,
+        parent_event_id: null,
+        completed_at: null,
+      });
+
+    // The real composition: EventDetailModal drops this component into the
+    // shared Modal's `footer` slot, so the assertions below are about the
+    // dialog the caregiver is actually standing in.
+    function renderInDialog(onClose: () => void): void {
+      render(
+        <Modal
+          title="Pick up prescription"
+          onClose={onClose}
+          closeLabel="Close"
+          footer={
+            <EventDetailActions
+              circleId="circle-1"
+              careRecipientTimezone="America/New_York"
+              onConfirmDose={vi.fn()}
+              event={openTask()}
+              onEdit={vi.fn()}
+              onDelete={vi.fn()}
+              onDiscontinue={vi.fn()}
+            />
+          }
+        >
+          <p>Task details</p>
+        </Modal>
+      );
+    }
+
+    it('leaves focus inside the dialog after Mark complete unmounts itself', async () => {
+      const user = userEvent.setup();
+      renderInDialog(vi.fn());
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull()
+      );
+
+      const dialog = screen.getByRole('dialog');
+      expect(document.activeElement).not.toBe(document.body);
+      expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+
+    it('Escape still closes the dialog after completing — the key handler is on the dialog subtree', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      renderInDialog(onClose);
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull()
+      );
+
+      await user.keyboard('{Escape}');
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT park focus on the destructive Delete — completing must not arm a delete', async () => {
+      const user = userEvent.setup();
+      renderInDialog(vi.fn());
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull()
+      );
+
+      expect(document.activeElement).not.toBe(screen.getByRole('button', { name: 'Delete' }));
+    });
+
+    // THE OTHER control this component can retire in place is the reactivate
+    // flow's `locallyReactivated`. It does NOT have this trap, and this test
+    // is the proof rather than an assumption — it passes without the fix
+    // above, because the reactivate happens inside a ConfirmDialog, which is
+    // itself a Modal: closing it runs Modal's unmount cleanup
+    // (`previouslyFocused?.focus()`), handing focus back to the MoreMenu
+    // trigger that opened it — a trigger that still exists, since a reactivated
+    // medication still has three overflow items. `locallyReactivated` only
+    // relabels a menu item; it unmounts nothing that holds focus.
+    it('the reactivate flow does NOT drop focus — its ConfirmDialog restores it on close', async () => {
+      const user = userEvent.setup();
+      render(
+        <Modal
+          title="Metformin"
+          onClose={vi.fn()}
+          closeLabel="Close"
+          footer={
+            <EventDetailActions
+              circleId="circle-1"
+              careRecipientTimezone="America/New_York"
+              onConfirmDose={vi.fn()}
+              event={makeMed({ discontinued_at: '2026-07-01T12:00:00Z' })}
+              onEdit={vi.fn()}
+              onDelete={vi.fn()}
+              onDiscontinue={vi.fn()}
+            />
+          }
+        >
+          <p>Medication details</p>
+        </Modal>
+      );
+
+      await openMore(user);
+      await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
+      await user.click(screen.getByRole('button', { name: 'Reactivate' }));
+
+      await waitFor(() => expect(statusMutateAsync).toHaveBeenCalledTimes(1));
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.contains(document.activeElement)).toBe(true);
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'More' }));
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // MARK COMPLETE IS A MUTATION-FIRING BUTTON AND NEEDS THE SYNCHRONOUS GUARD.
+  //
+  // `disabled={completeEvent.isPending}` is the exact pattern
+  // `useGuardedSubmit`'s docstring was written to condemn: `isPending` is
+  // state, committed a render AFTER the click, so two clicks dispatched in the
+  // same tick both re-enter `handleComplete` with the flag still false.
+  //
+  // The damage is not the second POST (the route resolves it to the same row)
+  // — it is that `Analytics.taskCompleted` / `appointmentCompleted` fires
+  // twice (useCalendarEvents), and completion counts are this product's
+  // retention signal.
+  //
+  // `clickTwice` dispatches both clicks inside ONE `act()` with no await.
+  // Two `userEvent.click()` calls would NOT reproduce this: userEvent awaits,
+  // React commits, and the button is disabled before the second click lands —
+  // so a state-flag "fix" would pass such a test while the real bug shipped.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('double-submit guard on Mark complete', () => {
+    it('two clicks in ONE tick post exactly ONE completion', async () => {
+      // A request still in flight when the second click arrives — a resolved
+      // mock would free the guard on the next microtask and pass for the wrong
+      // reason.
+      completeMutateAsync.mockReturnValue(neverSettles());
+
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={makeMed({
+            id: 't-solo',
+            event_type: 'task',
+            title: 'Pick up prescription',
+            medication_name: null,
+            medication_dosage: null,
+            parent_event_id: null,
+            completed_at: null,
+          })}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      await clickTwice(screen.getByRole('button', { name: 'Mark complete' }));
+
+      expect(completeMutateAsync).toHaveBeenCalledTimes(1);
     });
   });
 });

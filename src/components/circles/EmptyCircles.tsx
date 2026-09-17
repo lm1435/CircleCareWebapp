@@ -5,20 +5,28 @@ import { Card, Eyebrow, Icon, Text } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 
 export interface EmptyCirclesProps {
-  /** The create-circle CTA (web can create circles; this is the primary action). */
+  /** The create-circle CTA. */
   action?: ReactNode;
-  /** Secondary "join with an invite code" CTA, for users invited by family. */
+  /**
+   * The "join with an invite code" CTA, for users invited by family.
+   *
+   * Rendered as the PEER of `action`, not underneath it — see the CTA row
+   * below. Either may be omitted; only when both are present is the `or`
+   * between them rendered.
+   */
   joinAction?: ReactNode;
 }
 
 /**
  * Empty state for the circle picker (user has no circles yet). Spec §6.2: a
  * moss icon tile, an `h2` headline, three numbered "how it works" steps, the
- * primary Create-circle CTA, and the mobile app positioned as an optional
+ * Create/Join CTA pair, and the mobile app positioned as an optional
  * companion below a hairline divider.
  */
 export function EmptyCircles({ action, joinAction }: EmptyCirclesProps): ReactElement {
-  const { t } = useTranslation('members');
+  // `circles` is the second namespace only for the `or` between the two CTAs:
+  // join/create copy lives there, and this component now owns their layout.
+  const { t } = useTranslation(['members', 'circles']);
   const steps = [
     t('picker.empty.step1'),
     t('picker.empty.step2'),
@@ -68,11 +76,23 @@ export function EmptyCircles({ action, joinAction }: EmptyCirclesProps): ReactEl
           </Link>
         </div>
 
-        {/* Primary action */}
-        {action ? <div className="mt-8">{action}</div> : null}
-
-        {/* Secondary action — join an existing circle by invite code */}
-        {joinAction ? <div className="mt-4">{joinAction}</div> : null}
+        {/* CTA ROW — two peers, not a primary and its fallback.
+            This used to stack: Create, then a "Were you invited?" prompt, then
+            a smaller secondary Join, then a text link. Three tiers of descent
+            told an invitee — who has no circle precisely BECAUSE someone else
+            already made one — that creating was the expected move and joining
+            was the exception. They now sit side by side (stacked only when the
+            card is too narrow for both) with `or` between, which is the same
+            shape as the page header's pair. */}
+        {action || joinAction ? (
+          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            {action}
+            {action && joinAction ? (
+              <span className="text-sm text-ink-3">{t('circles:join.or')}</span>
+            ) : null}
+            {joinAction}
+          </div>
+        ) : null}
 
         {/* Already invited by email — point at the pending-invitations page */}
         <p className="m-0 mt-4 text-sm text-ink-3">

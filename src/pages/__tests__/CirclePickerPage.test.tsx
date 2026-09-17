@@ -12,15 +12,25 @@ import {
 import type { ReactElement } from 'react';
 import '@/i18n';
 import CirclePickerPage from '@/pages/CirclePickerPage';
+import { ToastProvider } from '@/components/ui';
 import { getCircles, type Circle } from '@/api/circles';
 import { useAuthStore } from '@/store/authStore';
 
-vi.mock('@/api/circles', () => ({
-  getCircles: vi.fn(),
+// Only `getCircles` is stubbed: the create modal this page owns imports
+// `createCircleSchema` from the same module, and a bare factory mock would
+// blank it out.
+vi.mock('@/api/circles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/circles')>();
+  return { ...actual, getCircles: vi.fn() };
+});
+
+// The cards fetch a per-circle today's-meds summary AND a 3-row activity page
+// (the status line's two sources). Both are stubbed to empty so every card
+// settles deterministically on the "Nothing tracked yet" branch.
+vi.mock('@/api/activityFeed', () => ({
+  getActivityFeed: vi.fn().mockResolvedValue({ activities: [], hasMore: false }),
 }));
 
-// The hero cards fetch a per-circle today's-meds summary. Stub it to an
-// empty-day summary so cards settle deterministically on "No medications today".
 vi.mock('@/api/medicationConfirmations', () => ({
   getMedicationTodaySummary: vi.fn().mockResolvedValue({
     total_today: 0,
@@ -68,14 +78,18 @@ function renderPicker(): void {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  // ToastProvider: the page's Create/Join modals both call `useToast`, which
+  // throws outside a provider. Harmless for the tests that never open one.
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/circles']}>
-        <Routes>
-          <Route path="/circles" element={<CirclePickerPage />} />
-          <Route path="/circles/:circleId" element={<div data-testid="overview-page" />} />
-        </Routes>
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/circles']}>
+          <Routes>
+            <Route path="/circles" element={<CirclePickerPage />} />
+            <Route path="/circles/:circleId" element={<div data-testid="overview-page" />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -275,6 +289,57 @@ describe('CirclePickerPage', () => {
       'href',
       'https://play.google.com/store/apps/details?id=com.circlecare.circlecare'
     );
+  });
+
+  // JOIN IS NOT AN AFTERTHOUGHT. A user arriving from an invitation must never
+  // be left thinking they have to create a circle of their own, so every
+  // surface that offers Create offers Join beside it, at the same size.
+  describe('join prominence', () => {
+    it('offers join and create as one "A or B" pair in the header', async () => {
+      mockGetCircles.mockResolvedValue([makeCircle(), makeCircle({ id: 'c2', name: 'Dad' })]);
+      renderPicker();
+
+      const join = await screen.findByRole('button', { name: 'Join a circle' });
+      const create = screen.getByRole('button', { name: 'Create circle' });
+      const or = screen.getByText('or');
+      expect(or.parentElement).toContainElement(join);
+      expect(or.parentElement).toContainElement(create);
+    });
+
+    it('offers join beside create in the empty state', async () => {
+      mockGetCircles.mockResolvedValue([]);
+      renderPicker();
+
+      const join = await screen.findByRole('button', { name: 'Join with an invite code' });
+      const or = screen.getByText('or');
+      expect(or.parentElement).toContainElement(join);
+      expect(or.parentElement).toContainElement(
+        screen.getByRole('button', { name: 'Create circle' })
+      );
+    });
+
+    // The web analogue of mobile's create-screen dead end: the create modal
+    // hands the user over to the join modal this page already owns.
+    it('swaps the create modal for the join modal from inside create', async () => {
+      const user = userEvent.setup();
+      mockGetCircles.mockResolvedValue([]);
+      renderPicker();
+
+      await user.click(await screen.findByRole('button', { name: 'Create circle' }));
+      await screen.findByRole('heading', { name: 'New care circle' });
+
+      // Scoped to the dialog: the empty state behind it offers the same label,
+      // which is exactly the point — the escape hatch exists so the user does
+      // not have to find their way back out to it.
+      await user.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'Join with an invite code',
+        })
+      );
+
+      expect(await screen.findByRole('heading', { name: 'Join a circle' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'New care circle' })).not.toBeInTheDocument();
+    });
   });
 
   it('shows skeleton cards while loading', () => {

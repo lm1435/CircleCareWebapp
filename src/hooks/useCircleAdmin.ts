@@ -13,6 +13,7 @@ import {
   type UpdateCircleRequest,
 } from '@/api/circles';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -42,7 +43,7 @@ function invalidateCircleQueries(
 }
 
 /** Shared onError for circle-admin mutations (owner-gated → mostly 403). */
-function useCircleAdminOnError(): (error: unknown) => void {
+function useCircleAdminOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // Circle/seat quota rejections — CAPACITY, the bucket mobile uses for a hard
@@ -53,10 +54,10 @@ function useCircleAdminOnError(): (error: unknown) => void {
   return (error: unknown) => {
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else {
       showToast(t('errors.saveFailed'), 'error');
     }
@@ -121,7 +122,7 @@ export function useUpdateCircle(
   circleId: string
 ): UseMutationResult<void, unknown, UpdateCircleRequest> {
   const queryClient = useQueryClient();
-  const onError = useCircleAdminOnError();
+  const onError = useCircleAdminOnError(circleId);
 
   return useMutation({
     mutationFn: (data: UpdateCircleRequest) => updateCircle(circleId, data),
@@ -142,7 +143,7 @@ export function useDeleteCircle(
   circleId: string
 ): UseMutationResult<void, unknown, void> {
   const queryClient = useQueryClient();
-  const onError = useCircleAdminOnError();
+  const onError = useCircleAdminOnError(circleId);
 
   return useMutation({
     mutationFn: () => deleteCircle(circleId),

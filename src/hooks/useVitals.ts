@@ -17,6 +17,7 @@ import {
   type UpdateVitalRequest,
 } from '@/api/vitals';
 import { queryKeys } from '@/lib/queryKeys';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -80,10 +81,10 @@ function useVitalsMutationOnError(circleId: string): (error: unknown) => void {
   return (error: unknown) => {
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      invalidateCircleAccessFlags(queryClient, circleId);
     } else {
       showToast(t('errors.saveFailed'), 'error');
       invalidateVitals(queryClient, circleId);

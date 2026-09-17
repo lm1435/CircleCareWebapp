@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { submitFormTwice } from '@/test/doubleSubmit';
 import { MemoryRouter } from 'react-router-dom';
 import i18n from '@/i18n';
 import { CreateCircleModal } from '../CreateCircleModal';
@@ -126,13 +127,27 @@ describe('CreateCircleModal', () => {
   it('blocks submit and shows a validation error when the name is empty', async () => {
     const user = userEvent.setup();
     renderModal();
+    const nameInput = screen.getByLabelText(/Care recipient name/) as HTMLInputElement;
+    const invalid = vi.fn();
+    nameInput.addEventListener('invalid', invalid);
 
     await user.click(screen.getByRole('button', { name: 'Create circle' }));
 
     // The empty required name blocks the create mutation entirely.
     expect(createMutate).not.toHaveBeenCalled();
-    const nameInput = screen.getByLabelText(/Care recipient name/) as HTMLInputElement;
     expect(nameInput.validity.valid).toBe(false);
+    // THE ERROR SHOWN. On an EMPTY name it is the browser's, not ours: the
+    // field's `required` stops the submit before React's handler runs, and the
+    // form's constraint validation fires `invalid` on the field — the event the
+    // browser raises its "fill out this field" message from. jsdom draws no
+    // bubble, so the event is the observable. (A whitespace-only name passes
+    // `required`, reaches Zod, and gets the app's own translated error — the
+    // test below.)
+    expect(invalid).toHaveBeenCalledTimes(1);
+    // …and nothing swallowed it: `preventDefault()` on `invalid` is precisely
+    // how a page suppresses that message while the submit stays blocked — a
+    // dead button with no explanation.
+    expect((invalid.mock.calls[0]![0] as Event).defaultPrevented).toBe(false);
   });
 
   it('sends recipient_name in the payload (conditions are NOT collected at creation)', async () => {
@@ -246,5 +261,116 @@ describe('CreateCircleModal', () => {
 
     await waitFor(() => expect(createMutate).toHaveBeenCalled());
     expect(trackOnboardingCompleted).not.toHaveBeenCalled();
+  });
+
+  // THE WRONG DOOR. Without this, an invited family member who opened the
+  // create form can only finish creating a circle nobody needs, or cancel back
+  // to a page whose loudest control sends them straight back in.
+  describe('join-instead escape hatch', () => {
+    it('offers joining with a code when the caller owns a join surface', async () => {
+      const user = userEvent.setup();
+      const onJoinInstead = vi.fn();
+      render(
+        <MemoryRouter>
+          <CreateCircleModal onClose={vi.fn()} onJoinInstead={onJoinInstead} />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('Were you invited to a circle?')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Join with an invite code' }));
+      expect(onJoinInstead).toHaveBeenCalledTimes(1);
+    });
+
+    // Offering an exit the caller cannot deliver is worse than not offering it.
+    it('offers nothing when no join surface was supplied', () => {
+      renderModal();
+
+      expect(screen.queryByText('Were you invited to a circle?')).not.toBeInTheDocument();
+    });
+
+    // It is NOT a form control: an Enter press in the name field must submit
+    // the create form, never navigate the user out of it.
+    it('keeps the affordance outside the create form', () => {
+      render(
+        <MemoryRouter>
+          <CreateCircleModal onClose={vi.fn()} onJoinInstead={vi.fn()} />
+        </MemoryRouter>
+      );
+
+      const joinButton = screen.getByRole('button', { name: 'Join with an invite code' });
+      expect(joinButton.closest('form')).toBeNull();
+    });
+  });
+  // ──────────────────────────────────────────────────────────────────────────
+  // DOUBLE SUBMIT — this form had NO in-flight guard at all, not even a
+  // pending check: `useZodForm.submit` calls `onValid` synchronously every time
+  // it is handed valid values, and `create.mutate(...)` returns immediately.
+  // Two submits in one tick therefore created TWO CIRCLES, and fired
+  // `Analytics.circleCreated` and `trackOnboardingCompleted` twice each —
+  // the second circle lands in the picker with the same recipient name, and the
+  // activation funnel counts one household as two.
+  //
+  // `submitFormTwice`, not two awaited clicks: userEvent commits a render
+  // between interactions, which is precisely the window this bug lives in.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('double submit', () => {
+    function createCircleForm(): HTMLFormElement {
+      const form = document.getElementById('create-circle-form');
+      if (!(form instanceof HTMLFormElement)) throw new Error('create-circle-form not found');
+      return form;
+    }
+
+    it('creates ONE circle when the form is submitted twice in one tick', async () => {
+      const user = userEvent.setup();
+      // A `mutate` that never calls back: the request is still in flight when
+      // the second submit arrives, which is the only state under test.
+      createMutate.mockImplementation(() => {});
+      renderModal();
+
+      await user.type(screen.getByLabelText(/Care recipient name/), 'Rose Meza');
+      await submitFormTwice(createCircleForm());
+
+      expect(createMutate).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports circle creation and onboarding completion exactly once', async () => {
+      const user = userEvent.setup();
+      createMutate.mockImplementation((_data, opts) => {
+        opts?.onSuccess?.({ id: 'c-new' });
+      });
+      renderModal();
+
+      await user.type(screen.getByLabelText(/Care recipient name/), 'Rose Meza');
+      await submitFormTwice(createCircleForm());
+
+      await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(1));
+      expect(trackOnboardingCompleted).toHaveBeenCalledTimes(1);
+    });
+
+    it('still creates on a genuine RESUBMIT after the first attempt failed', async () => {
+      const user = userEvent.setup();
+      // The callbacks are held, not fired inline: React Query runs
+      // `onError`/`onSettled` when the REQUEST comes back, not inside
+      // `mutate()`. A mock that calls them synchronously would release the
+      // guard before `mutate` even returned, and this test would then pass
+      // against no guard at all.
+      let pending: Parameters<typeof createMutate>[1] | undefined;
+      createMutate.mockImplementation((_data, opts) => {
+        pending = opts;
+      });
+      renderModal();
+
+      await user.type(screen.getByLabelText(/Care recipient name/), 'Rose Meza');
+      await submitFormTwice(createCircleForm());
+      expect(createMutate).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        pending?.onError?.({ error: { code: 'CIRCLE_LIMIT_REACHED' } });
+        pending?.onSettled?.();
+      });
+
+      await submitFormTwice(createCircleForm());
+      await waitFor(() => expect(createMutate).toHaveBeenCalledTimes(2));
+    });
   });
 });

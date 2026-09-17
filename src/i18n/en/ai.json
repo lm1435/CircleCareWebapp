@@ -14,8 +14,11 @@
   "newChat": "New chat",
   "errors": {
     "subscriptionRequired": "The Care Assistant is a premium feature. Upgrade to Premium to use it.",
+    "viewOnly": "You have view-only access to this circle. Ask the circle owner for full access to use the Care Assistant.",
+    "circleReadOnly": "This circle is read-only right now. The Care Assistant is available again once the circle owner's subscription includes it.",
     "rateLimited": "You've reached today's question limit. The Care Assistant will be ready again tomorrow.",
     "unavailable": "The Care Assistant is unavailable right now. Please try again later.",
-    "sendFailed": "Sorry, I encountered an error. Please try again."
+    "sendFailed": "Sorry, I encountered an error. Please try again.",
+    "invalidMessage": "I couldn't process that message. Try rephrasing your question about care or health."
   }
 }

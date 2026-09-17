@@ -2,12 +2,12 @@
   "create": {
     "title": "Nuevo círculo de cuidado",
     "subtitle": "Crea un círculo para coordinar el cuidado con familiares y cuidadores.",
-    "recipientName": "Nombre de la persona a cuidar",
+    "recipientName": "Nombre del receptor de cuidado",
     "recipientNamePlaceholder": "Nombre completo",
     "recipientDob": "Fecha de nacimiento",
     "recipientDobHint": "Opcional. Aparece en su información de emergencia para que los médicos confirmen su identidad.",
     "selfCareToggle": "Este círculo es para mí",
-    "selfCareHint": "Serás la persona a cuidar. Invita a familiares o cuidadores para que ayuden.",
+    "selfCareHint": "Serás el receptor de cuidado. Invita a familiares o cuidadores para que ayuden.",
     "selfCareDefaultName": "Mi cuidado",
     "create": "Crear círculo",
     "creating": "Creando...",
@@ -48,7 +48,7 @@
     "alreadyUsed": "Esta invitación ya fue utilizada. Pídele a quien te invitó que te envíe una nueva.",
     "alreadyMember": "Ya eres miembro de este círculo.",
     "joinFailed": "No pudimos unirte a este círculo. Por favor intenta de nuevo.",
-    "circleArchived": "Este círculo ya no está activo. Pídele a quien te invitó que consulte con el dueño del círculo.",
+    "circleArchived": "Este círculo ya no está activo. Pídele a quien te invitó que consulte con el propietario del círculo.",
     "careRecipientExists": "Este círculo ya tiene un receptor de cuidado. Pídele a quien te invitó que te envíe una invitación de cuidador."
   },
   "edit": {
@@ -59,7 +59,7 @@
     "retry": "Reintentar",
     "ownerOnlyTitle": "Solo el propietario del círculo puede editar esto",
     "ownerOnlyMessage": "Pídele al propietario del círculo que actualice estos datos.",
-    "recipientName": "Nombre de la persona a cuidar",
+    "recipientName": "Nombre del receptor de cuidado",
     "recipientNamePlaceholder": "Nombre completo",
     "recipientDob": "Fecha de nacimiento",
     "recipientDobHint": "Opcional. Aparece en su información de emergencia para que los médicos confirmen su identidad.",
@@ -80,7 +80,7 @@
   },
   "validation": {
     "invalid": "Revisa este valor.",
-    "nameRequired": "Ingresa el nombre de la persona a tu cuidado.",
+    "nameRequired": "Ingresa el nombre del receptor de cuidado.",
     "nameTooLong": "El nombre debe tener 100 caracteres o menos.",
     "dobFormat": "Elige una fecha de nacimiento válida.",
     "dobInvalidDate": "Esa fecha de nacimiento no existe en el calendario."

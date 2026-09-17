@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Button,
   Card,
   Icon,
   Skeleton,
@@ -22,14 +23,16 @@ import {
   STATUS_PILL,
 } from '@/components/ui';
 import { addDays } from '@/components/calendar/dateMath';
+import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { ViewOnlyBanner } from '@/components/ViewOnlyBanner';
 import { ReadOnlyCircleBanner } from '@/components/ReadOnlyCircleBanner';
 import { useCircles } from '@/hooks/useCircles';
-import { useCareRecipientTimezone } from '@/hooks/useCalendarEvents';
+import { useCareRecipientTimezone, useEventsPresence } from '@/hooks/useCalendarEvents';
 import { useTodaysMeds, useMedsForDate } from '@/hooks/useMedConfirmation';
 import { doseNeedsAnswer } from '@/utils/medicationDose';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { isMedicationDiscontinuedError } from '@/lib/apiErrors';
+import { Analytics } from '@/lib/analytics';
 import {
   formatEventTimeCompact,
   getDateInTimezone,
@@ -161,6 +164,23 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
     circleId,
     timezone ? getYesterdayInTimezone(timezone) : undefined
   );
+  // FIRST-RUN PRESENCE. "Nothing today" covers two different circles: one with
+  // a weekly dose that is simply not due today, and one that has never had a
+  // medication at all. The second needs a door, not a shrug. This is the SAME
+  // wide window (30 days back, 180 ahead, recipient's frame) the Get-started
+  // checklist already asks for, so whenever that card is on screen this is a
+  // cache hit rather than a second fetch. The dates stay empty until the
+  // timezone resolves — `useEventsPresence` is disabled on empty dates — so the
+  // key only ever matches the checklist's, never a device-local guess. It is a
+  // PRESENCE read (booleans), not the 211-day events list it used to download.
+  const presenceToday = timezone ? getDateInTimezone(timezone) : '';
+  const presence = useEventsPresence(
+    circleId ?? '',
+    presenceToday ? addDays(presenceToday, -30) : '',
+    presenceToday ? addDays(presenceToday, 180) : ''
+  );
+  const hasAnyMedication = presence.data?.medication === true;
+  const [showAdd, setShowAdd] = useState(false);
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
   const [expanded, setExpanded] = useState(false);
@@ -221,14 +241,37 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   const showAllRow =
     'flex w-full items-center justify-center gap-1 min-h-[44px] py-3 text-md font-medium text-dusk';
 
+  const skeleton = (
+    <div className="flex flex-col gap-2" aria-busy="true">
+      <Skeleton className="h-14 w-full" />
+      <Skeleton className="h-14 w-full" />
+    </div>
+  );
+
+  // THE FIRST-RUN RULE. "No medications yet" + "Add a medication" renders only
+  // when EVERY read that decides first run — today, yesterday and the presence
+  // window — has SUCCEEDED and says nothing exists. Pending, paused (offline:
+  // `isPending` with no fetch in flight, where `isLoading` is false) or errored
+  // never reach the door. Presence and yesterday only decide the EMPTY copy, so
+  // they gate that branch alone: doses that did load always render.
+  const nothingListed =
+    medsQuery.isSuccess && medsQuery.data.length === 0 && needsAttention.length === 0;
+
+  // Yesterday's read FAILED while the card otherwise has something true to say
+  // (doses, or "none today"). Its doses would silently vanish from Needs
+  // Attention, so the gap is named, with its own retry.
+  const yesterdayErrorNotice = yesterdayQuery.isError ? (
+    <div className="mb-3">
+      <p className="m-0 text-sm text-ink-3">{t('needsAttentionLoadError')}</p>
+      <button type="button" onClick={() => void yesterdayQuery.refetch()} className={showAllRow}>
+        {t('common:retry')}
+      </button>
+    </div>
+  ) : null;
+
   let body: ReactElement;
   if (medsQuery.isPending || !circle || !timezone) {
-    body = (
-      <div className="flex flex-col gap-2" aria-busy="true">
-        <Skeleton className="h-14 w-full" />
-        <Skeleton className="h-14 w-full" />
-      </div>
-    );
+    body = skeleton;
   } else if (medsQuery.isError) {
     body = (
       <div>
@@ -242,8 +285,67 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
         </button>
       </div>
     );
-  } else if (medsQuery.data.length === 0 && needsAttention.length === 0) {
-    body = <p className="m-0 text-sm text-ink-3">{t('empty')}</p>;
+  } else if (
+    nothingListed &&
+    (presence.isError || (yesterdayQuery.isError && !(presence.isSuccess && hasAnyMedication)))
+  ) {
+    // A FAILED presence read is not a first run. `presence.events` is empty on
+    // error, so without this branch a circle that HAS medications was told "No
+    // medications yet" and offered "Add a medication" — a duplicate series that
+    // doubles the adherence denominator. Neutral copy, no door, and a retry of
+    // whichever read failed. (A failed YESTERDAY read with presence saying "has
+    // medications" is not ambiguous — "none today" is still true — so that case
+    // takes the fact copy below, with the yesterday notice.)
+    body = (
+      <div>
+        <p className="m-0 mb-2 text-sm text-ink-3">{t('presenceLoadError')}</p>
+        <button
+          type="button"
+          onClick={() => {
+            if (presence.isError) void presence.refetch();
+            if (yesterdayQuery.isError) void yesterdayQuery.refetch();
+          }}
+          className={showAllRow}
+        >
+          {t('common:retry')}
+        </button>
+      </div>
+    );
+  } else if (nothingListed && (presence.isPending || yesterdayQuery.isPending)) {
+    // Still pending or PAUSED offline. The empty copy must not guess — and must
+    // never flip from first-run to "none today" after paint.
+    body = skeleton;
+  } else if (nothingListed && presence.isSuccess && hasAnyMedication) {
+    // Split on presence (see above): a circle that HAS medications gets the
+    // plain fact.
+    body = (
+      <>
+        {yesterdayErrorNotice}
+        <p className="m-0 text-sm text-ink-3">{t('empty')}</p>
+      </>
+    );
+  } else if (nothingListed && presence.isSuccess && yesterdayQuery.isSuccess) {
+    // Every deciding read succeeded and found nothing: a genuine first run gets
+    // the invitation and, for a writer, the door itself. The modal is hosted
+    // here, not on the calendar — Medications is its own page with its own Add,
+    // and the old copy sent people to the wrong one.
+    body = (
+      <div className="flex flex-col items-start gap-3">
+        <p className="m-0 text-sm text-ink-3">{t('emptyFirstRun')}</p>
+        {canEdit && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              Analytics.homeEmptyCtaTapped('medications');
+              setShowAdd(true);
+            }}
+          >
+            {t('addFirst')}
+          </Button>
+        )}
+      </div>
+    );
   } else {
     /**
      * One dose card. Extracted from the today list so the Needs Attention group
@@ -435,6 +537,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
 
     body = (
       <>
+        {yesterdayErrorNotice}
         {needsAttention.length > 0 && (
           <section aria-labelledby="meds-needs-attention" className="mb-4">
             <h3
@@ -498,6 +601,14 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
         ) : null)}
 
       {body}
+
+      {showAdd && (
+        <AddEventModal
+          circleId={circleId}
+          initialType="medication"
+          onClose={() => setShowAdd(false)}
+        />
+      )}
     </section>
   );
 }

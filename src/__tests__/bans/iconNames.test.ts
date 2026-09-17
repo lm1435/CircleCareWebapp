@@ -13,8 +13,9 @@ const MOBILE_SRC = join(WEBAPP_ROOT, '..', 'mobile', 'src');
  * "adding a name here requires a mobile precedent").
  */
 const WEB_ONLY_ICONS: Partial<Record<(typeof ICON_NAMES)[number], string>> = {
-  'print-outline':
-    'Printing/exporting a page is a browser-only action — the mobile app has no print feature to mirror.',
+  // Empty since the Emergency Info "Print" action became "Share"
+  // (docs/plans/pdf-export-parity.md, B3) — `share-outline` has mobile
+  // precedent, so no web-only glyph remains.
 };
 
 function walkMobileSrc(dir: string, out: string[] = []): string[] {

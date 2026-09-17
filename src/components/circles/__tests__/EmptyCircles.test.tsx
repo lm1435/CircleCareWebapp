@@ -51,4 +51,22 @@ describe('EmptyCircles', () => {
     expect(screen.getByRole('button', { name: 'Create circle' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Join with an invite code' })).toBeInTheDocument();
   });
+
+  // The two CTAs are PEERS: an invitee has no circle precisely because someone
+  // else already made one, so joining must not read as the fallback under
+  // Create. They share one row, separated by `or`.
+  it('presents create and join as one "A or B" row', () => {
+    renderEmpty(<button type="button">Create circle</button>, <button type="button">Join with an invite code</button>);
+
+    const or = screen.getByText('or');
+    const row = or.parentElement as HTMLElement;
+    expect(row).toContainElement(screen.getByRole('button', { name: 'Create circle' }));
+    expect(row).toContainElement(screen.getByRole('button', { name: 'Join with an invite code' }));
+  });
+
+  it('renders no dangling "or" when only one action is given', () => {
+    renderEmpty(<button type="button">Create circle</button>);
+
+    expect(screen.queryByText('or')).not.toBeInTheDocument();
+  });
 });

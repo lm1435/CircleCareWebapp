@@ -26,13 +26,15 @@ interface DayGroup {
 export default function ActivityFeedPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
   const { t } = useTranslation(['activity', 'common']);
-  // Gates the empty-state invite CTA — view-only members can't invite.
-  // `circle` gates the timezone: useCircle reports a hardcoded
-  // 'America/New_York' while the detail query is in flight, and that is
-  // indistinguishable from a real New York circle. Parameterized rows fall back
-  // to the server description until it resolves.
-  const { canEdit, circle, timezone: resolvedTimezone } = useCircle(circleId);
-  const timezone = circle ? resolvedTimezone : null;
+  // `canEdit` gates the empty-state invite CTA — view-only members can't invite.
+  //
+  // The timezone is null until the circle detail lands; parameterized rows fall
+  // back to the server description until it resolves rather than dating
+  // themselves in a guessed zone. This page used to re-derive that null itself
+  // (`circle ? resolvedTimezone : null`) because `useCircle` reported a
+  // hardcoded 'America/New_York' while the query was in flight — the hook now
+  // owns it, so the workaround is gone.
+  const { canEdit, timezone } = useCircle(circleId);
 
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useActivityFeed(circleId);

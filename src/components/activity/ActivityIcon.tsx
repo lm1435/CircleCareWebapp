@@ -136,17 +136,6 @@ const TILE_CLASS: Record<ActivityIconName, string> = {
   generic: 'border-line bg-bg-2 text-ink-2',
 };
 
-/** Hero's 4px leading rail — full-strength tone background per type. */
-const RAIL_CLASS: Record<ActivityIconName, string> = {
-  medication: 'bg-clay',
-  appointment: 'bg-dusk',
-  task: 'bg-moss',
-  emergency: 'bg-terracotta',
-  circle: 'bg-moss',
-  note: 'bg-dusk',
-  generic: 'bg-ink-2',
-};
-
 /**
  * Hero "LATEST" eyebrow color (spec §6.5: "eyebrow in the type deep color") —
  * paired with `Eyebrow`'s `deep` prop, which resolves each of these to its
@@ -173,10 +162,6 @@ export function getActivityTone(actionType: string): IconTileTone {
 
 export function getActivityTileClass(actionType: string): string {
   return TILE_CLASS[getActivityIconName(actionType)];
-}
-
-export function getActivityRailClass(actionType: string): string {
-  return RAIL_CLASS[getActivityIconName(actionType)];
 }
 
 export function getActivityEyebrowColor(actionType: string): EyebrowColor {

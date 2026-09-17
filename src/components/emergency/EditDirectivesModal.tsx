@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
 import { useUpdateEmergencyInfo } from '@/hooks/useEmergencyInfo';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { Button, Modal, TextArea, Toggle } from '@/components/ui';
 
 export interface EditDirectivesModalProps {
@@ -28,15 +29,27 @@ function EditDirectivesModalForm({
 }: EditDirectivesModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
+  // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `update.isPending` drives `loading` on
+  // the footer button, but that is React Query state committed a render AFTER
+  // the submit that started the request — and implicit form submission (Enter
+  // in a field) never consults the button at all, so two submits in the SAME
+  // tick both fire. The payload is recomputed from the same state, so today's
+  // second PUT is idempotent; what it costs is a wasted write against a
+  // premium-gated, rate-limited route and a second activity-feed entry for one
+  // edit. "Idempotent" is a property of this payload, not of the form.
+  // `isPending` first, then the ref (`useSubmitGuard`); released in
+  // `onSettled`, since `mutate` returns immediately.
+  const submitGuard = useSubmitGuard();
 
   const [hasDnr, setHasDnr] = useState(info?.has_dnr ?? false);
   const [notes, setNotes] = useState(info?.advance_directives ?? '');
 
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
+    if (update.isPending || !submitGuard.claim()) return;
     update.mutate(
       { has_dnr: hasDnr, advance_directives: notes.trim() || undefined },
-      { onSuccess: onClose }
+      { onSuccess: onClose, onSettled: submitGuard.release }
     );
   };
 

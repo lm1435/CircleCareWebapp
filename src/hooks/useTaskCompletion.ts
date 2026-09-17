@@ -55,7 +55,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
     const flushedIds = Array.from(timers.keys());
     timers.forEach((timerId, eventId) => {
       clearTimeout(timerId);
-      completeMutationRef.current.mutate(eventId);
+      completeMutationRef.current.mutate({ eventId });
     });
     timers.clear();
     // WB2: flushing without clearing pendingIds left a committed task stuck
@@ -105,13 +105,22 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
   // commit for UNDO_DELAY_MS later. The commit clears its own pending entry so
   // a fresh fetch (post-invalidation) can take over.
   const handleComplete = useCallback((task: CalendarEvent): void => {
+    // THE ROW'S OWN ID, AND NO `scheduledDate` — deliberately, not by omission.
+    //
+    // Both surfaces on this hook (TasksPage, OpenTasksCard) are fed by GET
+    // /circles/:id/tasks, which reads PHYSICAL `calendar_events` rows and never
+    // expands a recurrence: every task here already IS its own occurrence, so
+    // the id addresses exactly the row to stamp and the request stays body-less.
+    // Only the calendar can hand out a virtual occurrence, and that path
+    // (EventDetailActions) resolves root + date itself. Mobile's Tasks tab draws
+    // the same distinction.
     const eventId = task.id;
     const existing = timersRef.current.get(eventId);
     if (existing) clearTimeout(existing);
 
     const timerId = setTimeout(() => {
       timersRef.current.delete(eventId);
-      completeMutationRef.current.mutate(eventId, {
+      completeMutationRef.current.mutate({ eventId }, {
         onSettled: () => {
           setPendingIds((prev) => {
             if (!prev.has(eventId)) return prev;

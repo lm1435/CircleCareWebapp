@@ -8,6 +8,7 @@ import { apiClient } from '@/lib/api';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { ToastProvider } from '@/components/ui';
 import InviteLandingPage from '@/pages/InviteLandingPage';
+import { clickTwice } from '@/test/doubleSubmit';
 
 // Auth-aware accept flow added for web parity with mobile. Mocks useAuth +
 // the accept mutation + navigation; the preview request uses the global
@@ -28,7 +29,7 @@ vi.mock('@/hooks/useAuth', () => ({
 
 const acceptMutate = vi.fn();
 vi.mock('@/hooks/useJoinCircle', () => ({
-  useAcceptInviteByCode: () => ({ mutate: acceptMutate, isPending: false }),
+  useAcceptInviteByCode: () => ({ mutateAsync: acceptMutate, isPending: false }),
 }));
 
 // R4-5 onboarding funnel — a successful landing-page accept must report
@@ -71,6 +72,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   sessionStorage.clear();
   mockedPost.mockResolvedValue(validEnvelope);
+  // clearAllMocks keeps implementations: default to an accept still in flight.
+  acceptMutate.mockImplementation(() => new Promise(() => {}));
   authState = { isAuthenticated: false, isBootstrapping: false };
 });
 
@@ -119,21 +122,22 @@ describe('InviteLandingPage — accept flow', () => {
     authState = { isAuthenticated: true, isBootstrapping: false };
     renderPage('abc123');
 
-    await screen.findByRole('button', { name: 'Accept invitation' });
+    // The parked code matches, so the auto-accept is in flight ("Joining…").
+    await screen.findByRole('button', { name: 'Joining…' });
 
     expect(consumePendingInviteCode()).toBeNull();
   });
 
   it('signed-in: accepts the invite, confirms with a toast, and navigates to the circle picker', async () => {
     authState = { isAuthenticated: true, isBootstrapping: false };
-    acceptMutate.mockImplementation((_code, opts) => opts?.onSuccess?.());
+    acceptMutate.mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderPage('abc123');
 
     const acceptBtn = await screen.findByRole('button', { name: 'Accept invitation' });
     await user.click(acceptBtn);
 
-    expect(acceptMutate).toHaveBeenCalledWith('ABC123', expect.anything());
+    expect(acceptMutate).toHaveBeenCalledWith('ABC123');
     // Success is confirmed via toast — the circle picker gives no feedback.
     expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
@@ -143,9 +147,7 @@ describe('InviteLandingPage — accept flow', () => {
 
   it('signed-in: an already-member result does NOT report onboarding completion', async () => {
     authState = { isAuthenticated: true, isBootstrapping: false };
-    acceptMutate.mockImplementation((_code, opts) =>
-      opts?.onError?.({ error: { code: 'ALREADY_MEMBER' } })
-    );
+    acceptMutate.mockRejectedValue({ error: { code: 'ALREADY_MEMBER' } });
     const user = userEvent.setup();
     renderPage('abc123');
 
@@ -158,9 +160,7 @@ describe('InviteLandingPage — accept flow', () => {
 
   it('signed-in: an already-member result still lands on the circle picker', async () => {
     authState = { isAuthenticated: true, isBootstrapping: false };
-    acceptMutate.mockImplementation((_code, opts) =>
-      opts?.onError?.({ error: { code: 'ALREADY_MEMBER' } })
-    );
+    acceptMutate.mockRejectedValue({ error: { code: 'ALREADY_MEMBER' } });
     const user = userEvent.setup();
     renderPage('abc123');
 
@@ -171,9 +171,7 @@ describe('InviteLandingPage — accept flow', () => {
 
   it('signed-in: a failed accept surfaces a localized error', async () => {
     authState = { isAuthenticated: true, isBootstrapping: false };
-    acceptMutate.mockImplementation((_code, opts) =>
-      opts?.onError?.({ error: { code: 'SERVER_ERROR' } })
-    );
+    acceptMutate.mockRejectedValue({ error: { code: 'SERVER_ERROR' } });
     const user = userEvent.setup();
     renderPage('abc123');
 
@@ -197,7 +195,7 @@ describe('InviteLandingPage — accept flow', () => {
 
     async function failAcceptWith(code: string, acceptLabel = 'Accept invitation') {
       authState = { isAuthenticated: true, isBootstrapping: false };
-      acceptMutate.mockImplementation((_code, opts) => opts?.onError?.({ error: { code } }));
+      acceptMutate.mockRejectedValue({ error: { code } });
       const user = userEvent.setup();
       renderPage('abc123');
       await user.click(await screen.findByRole('button', { name: acceptLabel }));
@@ -260,7 +258,7 @@ describe('InviteLandingPage — accept flow', () => {
       const alert = await failAcceptWith('CIRCLE_ARCHIVED', 'Aceptar invitación');
 
       expect(alert).toHaveTextContent(
-        'Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con el dueño del círculo.'
+        'Este círculo ya no está activo, así que la invitación no se puede usar. Pídele a quien te invitó que consulte con el propietario del círculo.'
       );
     });
 
@@ -274,5 +272,23 @@ describe('InviteLandingPage — accept flow', () => {
         "We couldn't add you to the circle just now. Try again — and if it keeps not working, ask for a fresh invite."
       );
     });
+  });
+});
+
+// Regression — double submit. POST /invites/code/:code/accept is rate-limited
+// twice over (`inviteGuessRateLimit` per IP + `inviteRedeemRateLimit` per
+// user), and `disabled={accept.isPending}` on the button lands a render too
+// late to reject a second press in the same tick.
+describe('InviteLandingPage — double-accept guard', () => {
+  it('fires the accept mutation exactly ONCE when the button is pressed twice in the same tick', async () => {
+    authState = { isAuthenticated: true, isBootstrapping: false };
+    // A mutation still in flight: the promise never settles, so the guard is
+    // still held when the second press arrives.
+    acceptMutate.mockImplementation(() => new Promise(() => {}));
+    renderPage('abc123');
+
+    await clickTwice(await screen.findByRole('button', { name: 'Accept invitation' }));
+
+    expect(acceptMutate).toHaveBeenCalledTimes(1);
   });
 });

@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { AppLayout } from '@/components/layout/AppLayout';
+// AppLayout now raises the premium gate itself for a frozen circle's owner
+// (the AI entry), and `usePremiumGate` -> `useToast` requires the provider that
+// App.tsx already wraps the whole authenticated tree in.
+import { ToastProvider } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 
 vi.mock('@/hooks/useCircles', () => ({
@@ -19,11 +23,20 @@ vi.mock('@/components/meds/TodaysMeds', () => ({
 }));
 
 // useCircle is React Query-backed; this layout test has no QueryClientProvider,
-// so stub it with the gating field the create surfaces read.
+// so stub it with the gating fields the create + assistant surfaces read.
+//
+// `isPremiumCircle` is NOT optional here. The AI gate reads it (see
+// `lib/aiAccess.ts`), and omitting it makes this a free-tier circle whose
+// viewer is not the owner — i.e. no assistant entry at all, which is a
+// different circle than this suite means. The AI RULE is covered by
+// AppLayout.aiGate.test.tsx; this suite only needs a circle where the entry
+// exists so it can test the shell around it.
 vi.mock('@/hooks/useCircle', () => ({
   useCircle: vi.fn(() => ({
     circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
     canEdit: true,
+    isPremiumCircle: true,
+    viewOnly: false,
   })),
 }));
 
@@ -57,16 +70,18 @@ const initialAuthState = useAuthStore.getState();
 function renderLayout(path = '/circles/c1/calendar'): ReturnType<typeof render> {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/circles/:circleId" element={<AppLayout />}>
-          <Route index element={<div>Overview page stub</div>} />
-          <Route path="calendar" element={<div>Calendar page stub</div>} />
-          <Route path="meds" element={<div>Meds page stub</div>} />
-          <Route path="emergency" element={<div>Emergency page stub</div>} />
-          <Route path="tasks" element={<div>Tasks page stub</div>} />
-          <Route path="notes" element={<div data-testid="notes-page-stub">Notes page stub</div>} />
-        </Route>
-      </Routes>
+      <ToastProvider>
+        <Routes>
+          <Route path="/circles/:circleId" element={<AppLayout />}>
+            <Route index element={<div>Overview page stub</div>} />
+            <Route path="calendar" element={<div>Calendar page stub</div>} />
+            <Route path="meds" element={<div>Meds page stub</div>} />
+            <Route path="emergency" element={<div>Emergency page stub</div>} />
+            <Route path="tasks" element={<div>Tasks page stub</div>} />
+            <Route path="notes" element={<div data-testid="notes-page-stub">Notes page stub</div>} />
+          </Route>
+        </Routes>
+      </ToastProvider>
     </MemoryRouter>
   );
 }

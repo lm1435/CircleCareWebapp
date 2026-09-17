@@ -30,10 +30,28 @@ const INVALID_CODE = 'ZZZZZZ';
 
 // Cookie-mode keeps the access token in JS memory (not the cookie jar), so a raw
 // APIRequestContext call carries no bearer and `requireAuth` 401s. Mint a fresh
-// token via the login API (mirrors auth.setup defaults) for the direct API calls.
-const DEMO_EMAIL = process.env.PW_DEMO_EMAIL ?? 'demo@circlecare.app';
-const DEMO_PASSWORD = process.env.PW_DEMO_PASSWORD ?? 'DemoPass123!';
+// token via the login API for the direct API calls, using THIS WORKER's isolated
+// account (the `account` fixture) — the invite is created in that account's own
+// circle, so no other worker can see or cancel it.
 const APP_ORIGIN = process.env.PW_BASE_URL ?? 'http://localhost:5173';
+
+/**
+ * Where the auth page the invitee just reached will send them afterwards:
+ * React Router's location state (`history.state.usr`, what
+ * `navigate(..., { state })` writes) and the invite code parked in
+ * sessionStorage by InviteLandingPage (src/lib/pendingInviteCode.ts).
+ */
+async function returnDestination(
+  page: import('@playwright/test').Page
+): Promise<{ statePath: string | null; parkedCode: string | null }> {
+  return page.evaluate(() => {
+    const usr = (window.history.state as { usr?: { from?: { pathname?: string } } } | null)?.usr;
+    return {
+      statePath: usr?.from?.pathname ?? null,
+      parkedCode: sessionStorage.getItem('cc_pending_invite_code'),
+    };
+  });
+}
 
 test.describe('invite landing page', () => {
   test('invalid / nonexistent code shows the localized error state (no mutation)', async ({
@@ -64,6 +82,7 @@ test.describe('invite landing page', () => {
     context,
     circleId,
     browser,
+    account,
   }) => {
     // --- Create ONE real email invite via the authenticated API to obtain a
     // valid code. The create response carries `invite_code`. We use a unique
@@ -75,7 +94,7 @@ test.describe('invite landing page', () => {
     // Mint a fresh access token for the direct API calls (cookies alone don't
     // carry the in-memory bearer; /auth/login is Web-Origin gated).
     const loginRes = await context.request.post('/api/auth/login', {
-      data: { email: DEMO_EMAIL, password: DEMO_PASSWORD },
+      data: { email: account.email, password: account.password },
       headers: { Origin: APP_ORIGIN },
     });
     expect(loginRes.ok(), `api login failed: ${loginRes.status()}`).toBeTruthy();
@@ -134,16 +153,36 @@ test.describe('invite landing page', () => {
         await expect(anonPage.getByRole('heading', { name: 'Welcome back' })).toBeVisible({
           timeout: 20_000,
         });
+        // ...carrying the invite as its return destination, both ways the app
+        // preserves it: router state (LoginPage honours `state.from.pathname`
+        // after an email/password login) and the parked sessionStorage code
+        // (what survives OAuth and login -> signup -> verify-email).
+        //
+        // Read, not exercised by signing in: the landing page AUTO-ACCEPTS a
+        // parked code once authenticated, and an accept is not reversible here.
+        expect(await returnDestination(anonPage), 'login carries the invite return path').toEqual({
+          statePath: `/invite/${code}`,
+          parkedCode: code,
+        });
 
         // Primary path: a brand-new invitee reaches the signup form. This is the
         // assertion whose absence let 17 web invitees dead-end on a password
         // prompt — a new invitee must be able to REACH account creation.
         await anonPage.goto(`/invite/${code}`, { waitUntil: 'domcontentloaded' });
         await anonPage.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
+        // Clear the code the sign-in CTA parked, so the signup assertion below
+        // can only pass if the CREATE CTA parks it again itself.
+        await anonPage.evaluate(() => sessionStorage.removeItem('cc_pending_invite_code'));
         await createCta.click();
         await expect(anonPage).toHaveURL(/\/signup$/, { timeout: 20_000 });
         await expect(anonPage.getByRole('heading', { name: 'Create account' })).toBeVisible({
           timeout: 20_000,
+        });
+        // Signup always hands off to /verify-email, which has no router state to
+        // honour — the parked code is what brings a new invitee back to accept.
+        expect(await returnDestination(anonPage), 'signup carries the invite return path').toEqual({
+          statePath: `/invite/${code}`,
+          parkedCode: code,
         });
       } finally {
         await anonContext.close();

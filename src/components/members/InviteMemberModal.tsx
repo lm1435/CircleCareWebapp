@@ -4,9 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import type { InviteMemberType } from '@/api/invites';
 import { useCreateInvite } from '@/hooks/useInvites';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { Analytics } from '@/lib/analytics';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { getPendingInviteSeat, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import { withInviteLocale } from '@/utils/inviteShareUrl';
 import {
   Button,
   Card,
@@ -66,9 +68,17 @@ export function InviteMemberModal({
   circleName,
   recipientName,
 }: InviteMemberModalProps): ReactElement {
-  const { t } = useTranslation('members');
+  const { t, i18n } = useTranslation('members');
   const navigate = useNavigate();
   const createInvite = useCreateInvite(circleId);
+  // POST /circles/:id/invites sits on `inviteRateLimit` (10/hour per IP) and
+  // sends a real email. `disabled={createInvite.isPending}` on the footer
+  // button is the VISUAL guard only — it lands a render late, and implicit
+  // form submission (Enter in the email field) never consults it anyway (see
+  // `useGuardedSubmit`). A double fire spends two of the ten hourly invites
+  // and answers the second with a pending-seat error for the invite the first
+  // one just created.
+  const submitGuard = useSubmitGuard();
 
   const [email, setEmail] = useState('');
   const [memberType, setMemberType] = useState<InviteMemberType>('caregiver');
@@ -106,6 +116,27 @@ export function InviteMemberModal({
   const [copied, setCopied] = useState(false);
 
   /**
+   * THE ONE URL. Everything that surfaces the link — the selectable text on
+   * screen, the clipboard, the share sheet — reads this and only this.
+   *
+   * Link-preview crawlers do not run JS, so the card an invite previews as is
+   * whatever og:* tags are baked into the served HTML — English, for everyone.
+   * A Spanish-speaking sender therefore texts an English card into a Spanish
+   * conversation. `withInviteLocale` stamps `?lang=es` when THIS user's app
+   * language is Spanish, and .htaccess answers that with the prerendered
+   * Spanish document (index.es.html). English links are returned untouched, so
+   * every invite link already in the wild stays byte-identical.
+   *
+   * Derived once rather than at each call site on purpose: display and copy
+   * diverging — the user reads one link and pastes another — is the exact bug
+   * this shape prevents.
+   */
+  const shareUrl = useMemo(
+    () => (sentInvite?.url ? withInviteLocale(sentInvite.url, i18n.language) : null),
+    [sentInvite?.url, i18n.language]
+  );
+
+  /**
    * The Web Share API opens the real OS share sheet — but only where it exists,
    * which in practice is iOS Safari and Android Chrome. That is exactly where
    * this matters (forwarding to Messages or WhatsApp), and exactly where the
@@ -137,14 +168,14 @@ export function InviteMemberModal({
           });
 
   const handleShare = async (): Promise<void> => {
-    if (!sentInvite?.url) return;
+    if (!shareUrl) return;
     try {
       // Message only, exactly as mobile's `Share.share({ message })`. Safari
       // and Android both PREPEND `title` to the shared text, so the old
       // `{ title, text }` landed in Messages as two lines — "Join our care
       // circle" stacked over the real sentence — instead of the one sentence
       // the recipient gets from the app.
-      await navigator.share({ text: shareMessage(sentInvite.url) });
+      await navigator.share({ text: shareMessage(shareUrl) });
       // navigator.share resolves on completion and REJECTS on cancel, so this
       // counts an actual share rather than an intent — unlike the mobile SDK,
       // which resolves either way.
@@ -156,9 +187,9 @@ export function InviteMemberModal({
   };
 
   const handleCopy = async (): Promise<void> => {
-    if (!sentInvite?.url) return;
+    if (!shareUrl) return;
     try {
-      await navigator.clipboard.writeText(sentInvite.url);
+      await navigator.clipboard.writeText(shareUrl);
       Analytics.inviteLinkCopied(circleId, memberType);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
@@ -187,6 +218,7 @@ export function InviteMemberModal({
       return;
     }
     setErrors({});
+    if (createInvite.isPending || !submitGuard.claim()) return;
 
     createInvite.mutate(
       { email: result.data, member_type: memberType },
@@ -218,6 +250,9 @@ export function InviteMemberModal({
             setCapNotice({ kind: 'cap' });
           }
         },
+        // This modal stays mounted on both outcomes (success swaps it to the
+        // "invite sent" panel), so the guard is always released here.
+        onSettled: () => submitGuard.release(),
       }
     );
   };
@@ -264,22 +299,28 @@ export function InviteMemberModal({
             <div className="min-w-0">
               <p className="m-0 text-base font-semibold text-ink">{t('invite.sentTitle')}</p>
               <p className="m-0 mt-1 text-sm text-ink-2">
-                {sentInvite.url ? t('invite.success') : t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
+                {shareUrl ? t('invite.success') : t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
               </p>
             </div>
           </div>
 
-          {sentInvite.url ? (
+          {shareUrl ? (
             <>
               {/* The link is rendered as selectable text as well as being
                   copyable: clipboard access can be denied outright (permissions
                   policy, insecure context) and the user still needs a way to
                   get the link out. It sits in a field shell, with Copy as the
                   one filled action — the thing to do next — and Share as the
-                  quiet alternative where the browser offers it. */}
+                  quiet alternative where the browser offers it.
+
+                  This renders `shareUrl`, NOT `sentInvite.url`: what is on
+                  screen must be exactly what Copy and Share hand over,
+                  `?lang=es` included. A user who selects the displayed text by
+                  hand — the fallback for a denied clipboard — would otherwise
+                  send a link that previews in the wrong language. */}
               <div className="flex flex-col gap-3">
                 <p className={`${fieldShell()} m-0 break-all px-4 py-3 font-mono text-sm text-ink`}>
-                  {sentInvite.url}
+                  {shareUrl}
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <Button

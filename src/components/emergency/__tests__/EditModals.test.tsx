@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactElement, ReactNode } from 'react';
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 import '@/i18n';
 
 // Mock the WRITE fn only — keep types/read fn + Zod intact. The mutation hook
@@ -115,6 +116,15 @@ describe('emergency modals — null info guard', () => {
 // announced "required" to a screen reader at all, only the asterisk glyph.
 // Querying by an accessible name that INCLUDES "required" only succeeds when
 // the marker actually rendered through the component, not a literal string.
+describe('EditMedicalInfoModal — panel width', () => {
+  // Four stacked tag fields of 44px chips wrapped into three rows at the default
+  // md (512px) panel; the modal opts into the xl panel (768px).
+  it('renders in the xl panel', () => {
+    render(wrap(<EditMedicalInfoModal circleId={CIRCLE_ID} info={baseInfo} onClose={vi.fn()} />));
+    expect(screen.getByRole('dialog').className).toContain('max-w-3xl');
+  });
+});
+
 describe('required-field labels render via the shared RequiredMarker', () => {
   it('EditContactModal: Name, Relationship and Phone announce as required', () => {
     render(
@@ -472,5 +482,124 @@ describe('EditMedicalInfoModal — tag arrays via TagInput', () => {
     expect(body.medication_allergies).toEqual([]);
     expect(body.allergies).toEqual([]);
     expect(body.medical_conditions).toEqual([]);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// DOUBLE SUBMIT. These five saves are read-modify-write PUTs computed from the
+// same component state, so the second one is idempotent — this is the lowest-
+// severity member of the family, fixed for consistency and because "idempotent"
+// is a property of today's payloads, not of the form. What it does cost today
+// is a wasted PUT against a premium-gated, rate-limited route and a second
+// activity-feed write for one edit.
+//
+// `loading={update.isPending}` cannot stop it: that is React Query state
+// committed a render AFTER the submit, and implicit form submission (Enter in
+// a field) never consults the footer button at all. `submitFormTwice`
+// dispatches both inside one `act()`, which is the production shape.
+//
+// Every case asserts ONE call, never zero: a modal whose validation refused the
+// submit outright would otherwise read green while proving nothing.
+// ────────────────────────────────────────────────────────────────────────────
+describe('emergency modals — double submit', () => {
+  const seeded: EmergencyInfo = {
+    ...baseInfo,
+    emergency_contacts: [
+      { name: 'Ana Lopez', relationship: 'Daughter', phone: '555-0100', is_primary: true },
+    ],
+    insurance_plans: [{ carrier: 'Blue Cross', is_primary: true }],
+  };
+
+  // Each modal is rendered through its real public signature, seeded so its
+  // required fields are already valid — the guard, not the validation, is what
+  // is under test.
+  const cases: [string, string, ReactElement][] = [
+    [
+      'EditContactModal',
+      'edit-contact-form',
+      <EditContactModal circleId={CIRCLE_ID} info={seeded} index={0} onClose={vi.fn()} />,
+    ],
+    [
+      'EditDoctorModal',
+      'edit-doctor-form',
+      <EditDoctorModal circleId={CIRCLE_ID} info={seeded} target={0} onClose={vi.fn()} />,
+    ],
+    [
+      'EditInsuranceModal',
+      'edit-insurance-form',
+      <EditInsuranceModal circleId={CIRCLE_ID} info={seeded} index={0} onClose={vi.fn()} />,
+    ],
+    [
+      'EditMedicalInfoModal',
+      'edit-medical-form',
+      <EditMedicalInfoModal circleId={CIRCLE_ID} info={seeded} onClose={vi.fn()} />,
+    ],
+    [
+      'EditDirectivesModal',
+      'edit-directives-form',
+      <EditDirectivesModal circleId={CIRCLE_ID} info={seeded} onClose={vi.fn()} />,
+    ],
+  ];
+
+  it.each(cases)('%s sends ONE PUT for two submits in one tick', async (_name, formId, ui) => {
+    // Never settles: the request has to still be in flight when the second
+    // submit arrives, or the guard is legitimately free again.
+    mockUpdate.mockImplementation(() => neverSettles());
+    render(wrap(ui));
+
+    const form = document.getElementById(formId);
+    if (!(form instanceof HTMLFormElement)) throw new Error(`${formId} not found`);
+    await submitFormTwice(form);
+
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // …AND THE GUARD COMES BACK AFTER A FAILED SAVE. The other half of the same
+  // guard: each modal releases it in `onSettled`, and a release that does not
+  // actually run on failure (`onSettled: () => submitGuard.release` — a bare
+  // reference inside an arrow, never called) jams Save for the life of the
+  // modal. That exact edit in EditDoctorModal passed the whole suite, because
+  // every test above either succeeded or never settled.
+  //
+  // Nothing is faked above the network: the real `useUpdateEmergencyInfo`
+  // receives a rejected PUT, and React Query runs the hook's onError and the
+  // modal's own onError/onSettled exactly as it does in production.
+  // ──────────────────────────────────────────────────────────────────────────
+  it.each(cases)('%s lets the user save again after a failed save', async (_name, formId, ui) => {
+    const onClose = vi.fn();
+    // `mockReset`, not just the file's `clearAllMocks`: a `…Once` value left
+    // unconsumed by a FAILING sibling case would otherwise leak into this one
+    // and fail it too, blurring which modal actually lost its release.
+    mockUpdate.mockReset();
+    mockUpdate
+      .mockRejectedValueOnce({ success: false, error: { code: 'INTERNAL_ERROR', message: 'boom' } })
+      .mockResolvedValueOnce(seeded);
+    render(wrap(cloneElement(ui as ReactElement<{ onClose: () => void }>, { onClose })));
+
+    const form = document.getElementById(formId);
+    if (!(form instanceof HTMLFormElement)) throw new Error(`${formId} not found`);
+
+    fireEvent.submit(form);
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    // The failure has landed and been surfaced, and the modal stayed open…
+    expect(
+      await screen.findByText("We couldn't save your changes. Please try again.")
+    ).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    // …and the mutation has fully settled (its per-call callbacks run after
+    // the hook's onError), so a still-claimed guard can only mean a missing
+    // release, not a race with this test.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save' })).not.toHaveAttribute('aria-busy', 'true')
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 });

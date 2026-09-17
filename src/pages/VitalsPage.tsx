@@ -515,7 +515,12 @@ export default function VitalsPage(): ReactElement {
 
   // ── Chart series (the selected type's readings, oldest → newest) ──────────
   const chart = useMemo(() => {
-    if (!selectedType || heroItems.length < MIN_CHART_POINTS || !heroStats) return null;
+    // GATED on the zone: the x-axis labels below turn two INSTANTS into
+    // recipient-frame DAYS, so a placeholder zone can label a late-evening
+    // reading with the wrong date. No chart until the real zone lands.
+    if (!selectedType || heroItems.length < MIN_CHART_POINTS || !heroStats || !timezone) {
+      return null;
+    }
 
     const sorted = [...heroItems].sort(
       (a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
@@ -586,12 +591,16 @@ export default function VitalsPage(): ReactElement {
     }
   }
 
-  function renderRow(vital: HealthVital): ReactElement {
+  // Takes the RESOLVED zone as an argument rather than closing over the
+  // nullable hook value: every row stamps its reading with a recipient-frame
+  // day and time, so "which zone" is not optional. The body below only maps
+  // this once the zone is known.
+  function renderRow(vital: HealthVital, tz: string): ReactElement {
     return (
       <VitalRow
         key={vital.id}
         vital={vital}
-        timezone={timezone}
+        timezone={tz}
         weightUnit={weightUnit}
         glucoseUnit={glucoseUnit}
         canEdit={canEdit}
@@ -602,7 +611,11 @@ export default function VitalsPage(): ReactElement {
   }
 
   let body: ReactElement;
-  if (vitalsQuery.isLoading) {
+  // `timezone === null` joins the skeleton branch rather than defaulting: each
+  // row prints the recipient-frame DAY a reading belongs to, and a reading
+  // taken near midnight lands on the wrong day under a placeholder zone. The
+  // vitals query is normally still in flight at that point anyway.
+  if (vitalsQuery.isLoading || timezone === null) {
     body = (
       <ul className={`${careCardListGap} m-0 list-none p-0`} aria-busy="true">
         <li className="sr-only">{t('loading')}</li>
@@ -649,7 +662,7 @@ export default function VitalsPage(): ReactElement {
     // One type selected — the group header would only repeat the chip above it.
     body = (
       <ul className={`${careCardListGap} m-0 list-none p-0`}>
-        {(groups.find((g) => g.type === selectedType)?.items ?? []).map(renderRow)}
+        {(groups.find((g) => g.type === selectedType)?.items ?? []).map((v) => renderRow(v, timezone))}
       </ul>
     );
   } else {
@@ -677,7 +690,7 @@ export default function VitalsPage(): ReactElement {
               onToggle={accordion.toggle}
             >
               <ul className={`${careCardListGap} m-0 list-none p-0`}>
-                {group.items.map(renderRow)}
+                {group.items.map((v) => renderRow(v, timezone))}
               </ul>
             </Accordion>
           );
@@ -742,7 +755,10 @@ export default function VitalsPage(): ReactElement {
         />
       </div>
 
-      {selectedType && heroItems.length > 0 && heroStats && (
+      {/* GATED: the hero stamps the latest reading with its recipient-frame
+          day and time, so it waits for the real zone rather than printing a
+          New-York-derived date it would then have to correct. */}
+      {selectedType && heroItems.length > 0 && heroStats && timezone !== null && (
         <div className="mt-4 px-5">
           <LatestVitalHero
             type={selectedType}
@@ -800,7 +816,11 @@ export default function VitalsPage(): ReactElement {
         />
       )}
 
-      {deletingVital && (
+      {/* GATED: the confirm copy names the reading by its recipient-frame DAY
+          ("Delete the reading from Jun 15?"), and a delete prompt that names the
+          wrong day is the worst place to guess. The dialog only opens from a
+          row, which does not render until the zone resolves. */}
+      {deletingVital && timezone !== null && (
         <ConfirmDialog
           title={t('delete.title')}
           message={t('delete.message', {

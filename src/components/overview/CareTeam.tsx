@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { useRemoveMember, useSetMedicationResponsible } from '@/hooks/useCircleMembers';
 import { isPendingInviteExpired } from '@/api/circleMembers';
+import { Analytics } from '@/lib/analytics';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
 
 // Spec §6.3.7 + §6.3.8 — port of mobile CircleDetailScreen's care-team Sheet
@@ -29,6 +30,11 @@ export interface SoloInviteCardProps {
   circleName: string;
   isSelfCare: boolean;
   to: string;
+  /**
+   * Observes the CTA press (the Link still navigates). Kept a plain callback
+   * so this card stays presentational and the host owns which event it means.
+   */
+  onCtaClick?: () => void;
 }
 
 /**
@@ -45,6 +51,7 @@ export function SoloInviteCard({
   circleName,
   isSelfCare,
   to,
+  onCtaClick,
 }: SoloInviteCardProps): ReactElement {
   const { t } = useTranslation('overview');
   const body = isSelfCare ? t('solo.bodySelfCare') : t('solo.body', { name: circleName });
@@ -57,7 +64,7 @@ export function SoloInviteCard({
       <Text variant="caption" className="mt-2 text-center">
         {body}
       </Text>
-      <Button as={Link} to={to} variant="primary" className="mt-5">
+      <Button as={Link} to={to} variant="primary" className="mt-5" onClick={onCtaClick}>
         {t('solo.cta')}
       </Button>
     </Card>
@@ -148,7 +155,9 @@ export function CareTeam({
         }
       />
 
-      <Sheet padding="none" className="overflow-hidden">
+      {/* No `overflow-hidden`: the rows have no background to clip to the
+          radius, and it would cut off each row's inline `MoreMenu`. */}
+      <Sheet padding="none">
         {members.map((member) => {
           const isSelf = member.id === currentUserId;
           const name = displayName(member);
@@ -220,6 +229,9 @@ export function CareTeam({
             circleName={circle?.recipient_name ?? ''}
             isSelfCare={circle?.is_self_care === true}
             to={`${base}/members`}
+            // The lone owner is the biggest retention risk on the whole
+            // surface; this is the one press that tells us the nudge worked.
+            onCtaClick={() => Analytics.soloInviteTapped()}
           />
         </div>
       ) : null}

@@ -7,6 +7,20 @@ import type { EmergencyInfo } from '@/api/emergencyInfo';
 import { ToastProvider } from '@/components/ui';
 import EmergencyInfoPage from '@/pages/EmergencyInfoPage';
 
+// The export hook is exercised in its own suite (useCareSummaryExport.test.tsx);
+// here it is a controllable stub so the page's confirm flow can be asserted
+// without an iframe print. `mockExportPdf` is reset per test.
+const mockExportPdf = vi.fn<() => Promise<void>>();
+let mockIsExporting = false;
+vi.mock('@/hooks/useCareSummaryExport', () => ({
+  useCareSummaryExport: () => ({
+    exportPdf: mockExportPdf,
+    isExporting: mockIsExporting,
+    error: null,
+    clearError: vi.fn(),
+  }),
+}));
+
 // @/lib/api is mocked globally in src/test/setup.ts. The real apiClient's
 // response interceptor unwraps to the `{ success, data }` envelope, so the
 // mock resolves with the envelope directly.
@@ -131,6 +145,9 @@ describe('EmergencyInfoPage', () => {
   beforeEach(() => {
     mockedGet.mockReset();
     mockedPut.mockReset();
+    mockExportPdf.mockReset();
+    mockExportPdf.mockResolvedValue(undefined);
+    mockIsExporting = false;
   });
 
   // A circle can hold nothing but an allergy list or a blood type. Those render
@@ -186,6 +203,21 @@ describe('EmergencyInfoPage', () => {
     renderPage();
 
     expect(await screen.findByText('O+')).toBeInTheDocument();
+  });
+
+  // Mobile parity: the glance pills keep the pale terracotta fill but carry INK text
+  // (EmergencyInfoScreen Badge uses CC.ink). `text-ink!` must out-rank the error
+  // Badge's own `text-terracotta-deep`, which a plain `text-ink` would not reliably do.
+  it('renders the glance allergy and condition pills with ink text on the pale terracotta fill', async () => {
+    mockApi(fullInfo);
+    renderPage();
+
+    const glance = await screen.findByRole('region', { name: 'At a glance' });
+    for (const label of ['Hypertension']) {
+      const pill = within(glance).getByText(label);
+      expect(pill.className).toContain('bg-terracotta-soft');
+      expect(pill.className).toContain('text-ink!');
+    }
   });
 
   it('renders all four sections with data (Medical Information merged into glance tiles)', async () => {
@@ -369,16 +401,18 @@ describe('EmergencyInfoPage', () => {
         "Keep the details first responders need — allergies, doctors, insurance, and who to call — ready in one place for your loved one. Add them in the CircleCare app and they'll appear here."
       )
     ).toBeInTheDocument();
-    // No sections or print button in the fully-empty state — the only h2 on
+    // No sections or export action in the fully-empty state — the only h2 on
     // the page is the EmptyState's own title (EmptyState now renders a real
     // <h2>, so this asserts exactly one rather than none).
-    expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument();
     const headings = screen.getAllByRole('heading', { level: 2 });
     expect(headings).toHaveLength(1);
     expect(headings[0]).toHaveTextContent('No emergency information yet');
   });
 
-  it('calls window.print when the Print button is clicked', async () => {
+  // ── Share / care summary PDF (docs/plans/pdf-export-parity.md B3) ───────────────────────
+
+  it('shows Share in the masthead, not Print, and never calls window.print', async () => {
     const printSpy = vi.fn();
     window.print = printSpy;
 
@@ -386,10 +420,83 @@ describe('EmergencyInfoPage', () => {
     renderPage();
 
     // Two renderings, like every masthead action: the round control below
-    // xl and the labelled button at xl. Either must print.
-    const [printButton] = await screen.findAllByRole('button', { name: 'Print' });
-    fireEvent.click(printButton);
-    expect(printSpy).toHaveBeenCalledTimes(1);
+    // xl and the labelled button at xl. Both carry the accessible name.
+    const exportButtons = await screen.findAllByRole('button', { name: 'Share' });
+    expect(exportButtons.length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument();
+
+    fireEvent.click(exportButtons[0]);
+    expect(printSpy).not.toHaveBeenCalled();
+    // The click opens the confirm — it does not export on its own.
+    expect(mockExportPdf).not.toHaveBeenCalled();
+  });
+
+  it('click → privacy confirm dialog with mobile\'s copy, as two paragraphs', async () => {
+    mockApi(fullInfo);
+    renderPage();
+
+    const [exportButton] = await screen.findAllByRole('button', { name: 'Share' });
+    fireEvent.click(exportButton);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Share health information?')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'This summary contains sensitive health information including medications, allergies, and insurance details. Only share with people you trust.'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "By sharing, you confirm you have permission to share this person's health information."
+      )
+    ).toBeInTheDocument();
+    // The footer holds Cancel + Share; the shell's close (x) reuses the cancel
+    // label as its accessible name, so scope to the footer row.
+    const footer = within(dialog.querySelector('[data-modal-footer]') as HTMLElement);
+    expect(footer.getByRole('button', { name: 'Share' })).toBeInTheDocument();
+    expect(footer.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('confirm → export invoked exactly once and the dialog closes', async () => {
+    mockApi(fullInfo);
+    renderPage();
+
+    const [exportButton] = await screen.findAllByRole('button', { name: 'Share' });
+    fireEvent.click(exportButton);
+    const dialog = await screen.findByRole('dialog');
+    const share = within(dialog).getByRole('button', { name: 'Share' });
+    // Two clicks in one tick: the shell's guard admits one.
+    fireEvent.click(share);
+    fireEvent.click(share);
+
+    await waitFor(() => expect(mockExportPdf).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('cancel → export not invoked and the dialog closes', async () => {
+    mockApi(fullInfo);
+    renderPage();
+
+    const [exportButton] = await screen.findAllByRole('button', { name: 'Share' });
+    fireEvent.click(exportButton);
+    const dialog = await screen.findByRole('dialog');
+    const footer = within(dialog.querySelector('[data-modal-footer]') as HTMLElement);
+    fireEvent.click(footer.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mockExportPdf).not.toHaveBeenCalled();
+  });
+
+  it('marks the Share control busy and disabled while exporting', async () => {
+    mockIsExporting = true;
+    mockApi(fullInfo);
+    renderPage();
+
+    const exportButtons = await screen.findAllByRole('button', { name: 'Share' });
+    for (const button of exportButtons) {
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
+    }
   });
 
   it('renders the in-page navigation with anchors to every section', async () => {
@@ -694,14 +801,16 @@ describe('EmergencyInfoPage', () => {
 
   // ── Print chrome is explicitly marked ─────────────────────────────────────
 
-  it('marks the masthead Print action and per-card MoreMenus with data-print-hide', async () => {
+  it('marks the masthead Export PDF action and per-card MoreMenus with data-print-hide', async () => {
     mockApi(fullInfo, true);
     renderPage();
 
-    const printButtons = await screen.findAllByRole('button', { name: 'Print' });
-    expect(printButtons.length).toBeGreaterThan(0);
-    for (const printButton of printButtons) {
-      expect(printButton.closest('[data-print-hide]')).not.toBeNull();
+    // Ctrl+P still prints the fridge sheet (print.css); the export control is
+    // chrome and must stay off it, exactly as the old Print button did.
+    const exportButtons = await screen.findAllByRole('button', { name: 'Share' });
+    expect(exportButtons.length).toBeGreaterThan(0);
+    for (const exportButton of exportButtons) {
+      expect(exportButton.closest('[data-print-hide]')).not.toBeNull();
     }
 
     const menuTrigger = screen.getByRole('button', { name: 'Actions for Dr. Patel' });

@@ -60,10 +60,10 @@
     "takenLateAt": "Tomado tarde a las {{time}}",
     "skippedAt": "Omitido a las {{time}}",
     "missed": "No tomado",
-    "markComplete": "Marcar como completado",
+    "markComplete": "Marcar como completada",
     "markTaken": "Marcar como tomada",
     "skipDose": "Omitir dosis",
-    "completedToast": "Marcado como completado",
+    "completedToast": "Marcada como completada",
     "close": "Cerrar detalles del evento",
     "completedByLabel": "Completada por",
     "completedByValue": "{{name}} · {{when}}",
@@ -71,7 +71,7 @@
   },
   "recurrence": {
     "daily": "Diario",
-    "everyOtherDay": "Cada tercer día",
+    "everyOtherDay": "Cada 2 días",
     "weekly": "Semanal",
     "weeklyOn": "Semanal los {{days}}",
     "everyNDays_one": "Cada día",
@@ -80,7 +80,9 @@
   "errors": {
     "permissionDenied": "No tienes permiso para hacer cambios en este círculo.",
     "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
-    "doseAlreadyLogged": "Esta dosis ya fue registrada; su hora no se puede cambiar."
+    "doseAlreadyLogged": "Esta dosis ya fue registrada; su hora no se puede cambiar.",
+    "invalidOccurrenceDate": "Este evento ya no se repite ese día; se actualizó el calendario.",
+    "eventNotFound": "Ese evento ya no existe. Es posible que alguien más lo haya eliminado."
   },
   "addEvent": {
     "addEvent": "Agregar evento",
@@ -97,7 +99,7 @@
     "updated": "Cambios guardados",
     "updatedSeries": "Serie actualizada",
     "recurringEditNotice": "Este evento se repite. Los cambios que guardes se aplicarán a toda la serie.",
-    "viewOnly": "Solo lectura",
+    "viewOnly": "Solo visualización",
     "types": {
       "medication": "Medicamento",
       "appointment": "Cita",
@@ -128,20 +130,20 @@
       "dosage": "ej. 500 mg",
       "location": "ej. Clínica de la calle Main",
       "details": "Agrega cualquier detalle…",
-      "instructions": "ej., tomar con comida"
+      "instructions": "ej. tomar con comida"
     },
     "timePresets": {
       "label": "Horarios comunes",
-      "morning": "Mañana (8:00 a.m.)",
-      "noon": "Mediodía (12:00 p.m.)",
-      "evening": "Tarde (6:00 p.m.)",
-      "bedtime": "Antes de dormir (9:00 p.m.)"
+      "morning": "Mañana (8:00 a. m.)",
+      "noon": "Mediodía (12:00 p. m.)",
+      "evening": "Tarde (6:00 p. m.)",
+      "bedtime": "Antes de dormir (9:00 p. m.)"
     },
     "schedulePresets": {
       "label": "Frecuencias comunes",
-      "onceDaily": "Una vez al día (8:00 a.m.)",
-      "everyMorning": "Cada mañana (8:00 a.m.)",
-      "everyEvening": "Cada noche (8:00 p.m.)",
+      "onceDaily": "Una vez al día (8:00 a. m.)",
+      "everyMorning": "Cada mañana (8:00 a. m.)",
+      "everyEvening": "Cada noche (8:00 p. m.)",
       "twiceDaily": "Dos veces al día (8:00 a. m., 8:00 p. m.)",
       "threeTimesDaily": "Tres veces al día (8:00 a. m., 2:00 p. m., 8:00 p. m.)"
     },
@@ -171,7 +173,7 @@
     "recurrence": {
       "never": "No se repite",
       "daily": "Diario",
-      "everyOtherDay": "Cada tercer día",
+      "everyOtherDay": "Cada 2 días",
       "weekly": "Semanal",
       "monthly": "Mensual",
       "yearly": "Anual",
@@ -184,8 +186,10 @@
       "atTime": "A la hora programada",
       "atTimeHint": "La alerta principal, se envía a la hora indicada.",
       "atTimeOff": "No se enviará nada a la hora programada, solo los recordatorios anticipados que elijas abajo.",
+      "atTimeOffNoEarlier": "No se enviará ningún recordatorio antes de esta dosis: la primera alerta sería el aviso por dosis no confirmada, 15 minutos después de la hora indicada.",
       "additional": "Recordatorios anticipados",
-      "escalation": "Si no se confirma una dosis, hacemos seguimiento: la persona a su cuidado a los 15 minutos, los cuidadores a los 30 y todo el círculo a la hora.",
+      "escalation": "Si no se confirma una dosis, hacemos seguimiento: el receptor de cuidado a los 15 minutos, los cuidadores a los 30 y todo el círculo a la hora.",
+      "escalationSelf": "Si no se confirma una dosis, hacemos seguimiento: tú a los 15 minutos, los cuidadores a los 30 y todo el círculo a la hora.",
       "offMedication": "Nadie recibirá aviso cuando toque esta dosis, ni alerta si no se confirma.",
       "offGeneric": "Nadie recibirá un recordatorio de esto: ni tú, ni nadie más del círculo.",
       "noneSelected": "Selecciona al menos una opción o no se enviará ningún recordatorio.",
@@ -193,7 +197,17 @@
       "h1": "1 hora antes",
       "m30": "30 minutos antes",
       "m15": "15 minutos antes",
-      "webDelivery": "Los recordatorios se envían a la app móvil de CircleCare. La versión web no puede enviarlos."
+      "webDelivery": "Los recordatorios se envían a la app móvil de CircleCare.",
+      "howItWorks": {
+        "button": "Cómo funcionan las notificaciones",
+        "title": "Cómo funcionan las notificaciones",
+        "close": "Cerrar cómo funcionan las notificaciones",
+        "scheduledTitle": "Recordatorios programados",
+        "scheduledBody": "Se envía una notificación a la hora programada, a la app móvil de CircleCare.",
+        "escalationTitle": "Alertas de escalamiento",
+        "earlyTitle": "Recordatorios anticipados",
+        "earlyBody": "Si quieres, recibe recordatorios 24 horas, 1 hora, 30 minutos o 15 minutos antes de la hora programada."
+      }
     },
     "validation": {
       "titleRequired": "Ingresa un título.",

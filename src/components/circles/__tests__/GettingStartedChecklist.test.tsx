@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import { useAuthStore } from '@/store/authStore';
+import { addDays } from '@/components/calendar/dateMath';
+import { getDateInTimezone } from '@/utils/timezone';
 import { GettingStartedChecklist } from '../GettingStartedChecklist';
 
 // Focused unit test for the get-started checklist. The three data signals come
@@ -24,9 +26,14 @@ vi.mock('@/hooks/useCircle', () => ({
   useCircle: (id: string) => useCircleMock(id),
 }));
 
+// Step 1 is decided by the cheap PRESENCE read (`useEventsPresence`), never the
+// 211-day events list: `useCalendarEvents` is mocked only so a regression that
+// goes back to it is caught (it answers "pending" and is asserted uncalled).
 const useCalendarEventsMock = vi.fn();
+const useEventsPresenceMock = vi.fn();
 vi.mock('@/hooks/useCalendarEvents', () => ({
   useCalendarEvents: (...args: unknown[]) => useCalendarEventsMock(...args),
+  useEventsPresence: (...args: unknown[]) => useEventsPresenceMock(...args),
 }));
 
 const useEmergencyInfoMock = vi.fn();
@@ -34,8 +41,51 @@ vi.mock('@/hooks/useEmergencyInfo', () => ({
   useEmergencyInfo: (id: string) => useEmergencyInfoMock(id),
 }));
 
+// Home had no instrumentation on web: a step press and a dismissal (with the
+// progress at that moment) are the two things worth knowing about this card.
+const gettingStartedStepTapped = vi.fn();
+const gettingStartedDismissed = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    gettingStartedStepTapped: (...args: unknown[]) => gettingStartedStepTapped(...args),
+    gettingStartedDismissed: (...args: unknown[]) => gettingStartedDismissed(...args),
+  },
+}));
+
 const CURRENT_USER_ID = 'owner';
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+type QueryStatus = 'pending' | 'error' | 'success';
+type FetchStatus = 'fetching' | 'paused' | 'idle';
+/** Shorthand for the four (status, fetchStatus) pairs a first load can be in. */
+type Phase = 'success' | 'fetching' | 'paused' | 'error';
+
+/**
+ * A `useQuery` result whose booleans are DERIVED from `status` + `fetchStatus`
+ * exactly as React Query v5 derives them — so a test cannot describe a state
+ * the library never produces. A PAUSED (offline) read is `isLoading: false`
+ * and `isError: false` with no data; the old gate read that as "settled".
+ */
+function queryResult<T>(phase: Phase, data: T | undefined) {
+  const status: QueryStatus = phase === 'success' ? 'success' : phase === 'error' ? 'error' : 'pending';
+  const fetchStatus: FetchStatus = phase === 'fetching' ? 'fetching' : phase === 'paused' ? 'paused' : 'idle';
+  const isPending = status === 'pending';
+  const isFetching = fetchStatus === 'fetching';
+  return {
+    status,
+    fetchStatus,
+    // Pending has no data by construction; a first-load failure has none either.
+    data: status === 'success' ? data : undefined,
+    isPending,
+    isSuccess: status === 'success',
+    isError: status === 'error',
+    isLoading: isPending && isFetching,
+    isFetching,
+    isPaused: fetchStatus === 'paused',
+    isRefetching: isFetching && !isPending,
+    refetch: vi.fn(),
+  };
+}
 
 interface Signals {
   members?: unknown[];
@@ -45,6 +95,10 @@ interface Signals {
   circleLoading?: boolean;
   eventsLoading?: boolean;
   emergencyLoading?: boolean;
+  /** Full state of the events presence read. Overrides `eventsLoading`. */
+  eventsPhase?: Phase;
+  /** Full state of the emergency-info read. Overrides `emergencyLoading`. */
+  emergencyPhase?: Phase;
   /** Circle owner — defaults to the signed-in user. Only filters the invite step. */
   ownerId?: string;
   /** Write capability — the actual gate. Defaults to an editing member. */
@@ -66,14 +120,21 @@ function configure(s: Signals = {}): void {
     canEdit: s.canEdit ?? true,
     isLoading: s.circleLoading ?? false,
   });
-  useCalendarEventsMock.mockReturnValue({
-    events: s.events ?? [],
-    isLoading: s.eventsLoading ?? false,
+  // The presence read answers per-type booleans; `events` is the fixture's way
+  // of saying which types exist in the window.
+  const types = new Set((s.events ?? []).map((e) => (e as { event_type?: string }).event_type));
+  const presence = queryResult(s.eventsPhase ?? (s.eventsLoading ? 'fetching' : 'success'), {
+    medication: types.has('medication'),
+    appointment: types.has('appointment'),
+    task: types.has('task'),
   });
-  useEmergencyInfoMock.mockReturnValue({
-    data: s.emergency ?? null,
-    isLoading: s.emergencyLoading ?? false,
-  });
+  useEventsPresenceMock.mockReturnValue(presence);
+  // A full events list must never be what decides the step.
+  const neverList = queryResult('fetching', undefined);
+  useCalendarEventsMock.mockReturnValue({ ...neverList, events: [] });
+  useEmergencyInfoMock.mockReturnValue(
+    queryResult(s.emergencyPhase ?? (s.emergencyLoading ? 'fetching' : 'success'), s.emergency ?? null)
+  );
 }
 
 function renderChecklist(
@@ -120,6 +181,21 @@ describe('GettingStartedChecklist', () => {
     expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(2);
     expect(screen.getByRole('button', { name: /Invite/ })).toBeInTheDocument();
     expect(screen.getByText('0 of 3 done')).toBeInTheDocument();
+  });
+
+  // HOME OVER-FETCH: the step used to read a 211-day events list (1,511 rows,
+  // ~1.4 MB, plus two prefetched 211-day neighbours). It needs one boolean.
+  it('decides step 1 from the presence read over today-30..today+180 and never fetches an events list', () => {
+    setup({ events: [{ id: 'e1', event_type: 'medication' }] });
+
+    const today = getDateInTimezone('America/New_York');
+    expect(useEventsPresenceMock).toHaveBeenCalledWith(
+      'circle-1',
+      addDays(today, -30),
+      addDays(today, 180)
+    );
+    expect(useCalendarEventsMock).not.toHaveBeenCalled();
+    expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
   });
 
   it('shows a "why this matters" line under each step', () => {
@@ -261,6 +337,16 @@ describe('GettingStartedChecklist', () => {
     expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
   });
 
+  it('reports a dismissal with the progress at that moment', async () => {
+    const user = userEvent.setup();
+    // One of the owner's three steps done, so the counts are not both trivial.
+    setup({ emergency: { blood_type: 'O+' } });
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss the get started checklist' }));
+    expect(gettingStartedDismissed).toHaveBeenCalledTimes(1);
+    expect(gettingStartedDismissed).toHaveBeenCalledWith(1, 3);
+  });
+
   it('shows the fallback in place of the checklist once dismissed', async () => {
     const user = userEvent.setup();
     configure();
@@ -382,6 +468,78 @@ describe('GettingStartedChecklist', () => {
     expect(screen.queryByText('Nothing scheduled yet.')).not.toBeInTheDocument();
   });
 
+  // ==========================================================================
+  // A STEP IS "TO DO" ONLY WHEN ITS READ SUCCEEDED AND FOUND NOTHING.
+  //
+  // The card waited on `isLoading` alone. A FAILED presence read (no data) or a
+  // PAUSED one (offline: `isLoading` false) left `hasEvent` false, so a circle
+  // that HAS a medication showed "0 of 3 done" with "Add a medication" pending
+  // and an Add button — directly above TodaysMeds' "Couldn't load medications".
+  // The card now stays hidden until both reads are known; TodaysMeds, which
+  // reads the same key, owns the error + Retry.
+  // ==========================================================================
+  describe('a step is pending only when its read succeeded', () => {
+    const MED = [{ id: 'e1', event_type: 'medication' }];
+
+    function expectNoCard(): void {
+      expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Add a medication')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Add/ })).not.toBeInTheDocument();
+      // Not counted as pending anywhere: no progress line at all.
+      expect(screen.queryByText(/of \d done/)).not.toBeInTheDocument();
+    }
+
+    it('(a) events read paused offline: no card and no Add-medication CTA', () => {
+      configure({ eventsPhase: 'paused', events: MED });
+      renderChecklist('circle-1', { fallback: <p>Nothing scheduled yet.</p> });
+      expectNoCard();
+      // Not the "all done" fallback either — nothing is known.
+      expect(screen.queryByText('Nothing scheduled yet.')).not.toBeInTheDocument();
+    });
+
+    it('(a) emergency read paused offline: no card', () => {
+      configure({ emergencyPhase: 'paused' });
+      renderChecklist();
+      expectNoCard();
+    });
+
+    it('(b) events read ERRORED on a circle with a medication: no Add-medication CTA, step not counted as pending', () => {
+      configure({ eventsPhase: 'error', events: MED });
+      renderChecklist('circle-1', { fallback: <p>Nothing scheduled yet.</p> });
+      expectNoCard();
+      expect(screen.queryByText('Nothing scheduled yet.')).not.toBeInTheDocument();
+    });
+
+    it('(b) emergency read ERRORED: no card (the emergency step is not offered as to-do)', () => {
+      configure({ emergencyPhase: 'error' });
+      renderChecklist();
+      expectNoCard();
+    });
+
+    it('events read still fetching: no card', () => {
+      configure({ eventsPhase: 'fetching' });
+      renderChecklist();
+      expectNoCard();
+    });
+
+    it('(c) both reads succeeded and found nothing: "Add a medication" is pending with its Add', () => {
+      configure({ eventsPhase: 'success', emergencyPhase: 'success' });
+      renderChecklist();
+      expect(screen.getByRole('region', { name: 'Get started' })).toBeInTheDocument();
+      expect(screen.getByText('Add a medication').className).not.toContain('line-through');
+      expect(screen.getByText('0 of 3 done')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(2);
+    });
+
+    it('(d) events read succeeded with a medication: the step is done, no Add for it', () => {
+      configure({ eventsPhase: 'success', events: MED });
+      renderChecklist();
+      expect(screen.getByText('Add a medication').className).toContain('line-through');
+      expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(1);
+    });
+  });
+
   it('fires onAddEvent for step 1 and navigates for steps 2 & 3', async () => {
     const user = userEvent.setup();
     const { onAddEvent } = setup();
@@ -389,11 +547,15 @@ describe('GettingStartedChecklist', () => {
     const addActions = screen.getAllByRole('button', { name: /Add/ });
     await user.click(addActions[0]); // step 1
     expect(onAddEvent).toHaveBeenCalledTimes(1);
+    expect(gettingStartedStepTapped).toHaveBeenCalledWith('event');
 
     await user.click(screen.getByRole('button', { name: /Invite/ })); // step 2 → members
     expect(navigate).toHaveBeenCalledWith('/circles/circle-1/members');
+    expect(gettingStartedStepTapped).toHaveBeenCalledWith('invite');
 
     await user.click(addActions[1]); // step 3 → emergency
     expect(navigate).toHaveBeenCalledWith('/circles/circle-1/emergency');
+    expect(gettingStartedStepTapped).toHaveBeenCalledWith('emergency');
+    expect(gettingStartedStepTapped).toHaveBeenCalledTimes(3);
   });
 });

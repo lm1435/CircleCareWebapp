@@ -129,7 +129,7 @@
   "analytics": {
     "description": "Controla qué datos de uso compartes con nosotros.",
     "enable": "Compartir datos de uso",
-    "hint": "Vinculado a tu cuenta, incluido tu correo electrónico. Nos ayuda a mejorar CircleCare: nunca incluye tus mediciones, nombres de medicamentos ni el contenido de los mensajes."
+    "hint": "Vinculado a tu cuenta. Nos ayuda a mejorar CircleCare: nunca incluye tus mediciones, nombres de medicamentos ni el contenido de los mensajes. Con esto desactivado, seguimos recopilando datos anónimos de uso y errores solo de esta sesión, que nunca se vinculan a ti."
   },
   "footer": {
     "version": "WEB · v{{version}}"

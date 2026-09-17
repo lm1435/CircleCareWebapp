@@ -7,6 +7,8 @@ import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { supabase } from '@/lib/supabase';
 import { Analytics } from '@/lib/analytics';
+import { isRateLimitError } from '@/lib/apiErrors';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
@@ -63,7 +65,12 @@ export default function LoginPage(): ReactElement {
     if (formError) errorRef.current?.focus();
   }, [formError]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  // `isSubmitting` below is the LOADING state, not the guard — see
+  // `useGuardedSubmit` for why a state flag cannot stop a second submit
+  // dispatched before React commits the first one's render (three
+  // `login_started` events in 52 ms on 2026-09-03, three of five limiter
+  // attempts burned, RATE_LIMIT 1.5 s later). The wrapper below is the guard.
+  const submitLogin = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setFormError(null);
 
@@ -115,17 +122,28 @@ export default function LoginPage(): ReactElement {
         navigate('/verify-email', { state: { email: verifyEmail, notVerified: true } });
         return;
       }
+      // A 429 must say WAIT, not "try again": every retry during the limiter
+      // window is another hit on the same bucket and extends the lockout.
       setFormError(
-        apiError?.code === 'LOGIN_FAILED'
-          ? t('login.errors.invalidCredentials')
-          : t('login.errors.loginFailed')
+        isRateLimitError(err)
+          ? t('rateLimited')
+          : apiError?.code === 'LOGIN_FAILED'
+            ? t('login.errors.invalidCredentials')
+            : t('login.errors.loginFailed')
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleOAuth = async (provider: OAuthProvider): Promise<void> => {
+  const handleSubmit = useGuardedSubmit(submitLogin);
+
+  // Guarded for the same reason, and more urgently: nothing here sets
+  // `isSubmitting`, so the OAuth buttons were never even visually disabled
+  // while a handshake was starting — two clicks fired two `login_started`
+  // events and two `signInWithOAuth` redirects. One guard covers both
+  // providers: only one handshake can be in flight at a time.
+  const startOAuth = async (provider: OAuthProvider): Promise<void> => {
     setFormError(null);
     Analytics.loginStarted(provider);
     // Park the provider so /auth/callback can fire an accurate completion event
@@ -154,6 +172,8 @@ export default function LoginPage(): ReactElement {
       setFormError(failureMessage);
     }
   };
+
+  const handleOAuth = useGuardedSubmit(startOAuth);
 
   return (
     <AuthShell>

@@ -1,7 +1,9 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getAiSuggestions } from '@/api/ai';
 import { isAccessDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { queryKeys } from '@/lib/queryKeys';
 
 // Web port of the suggestions half of mobile/src/components/ai/AIChatModal.tsx
@@ -46,13 +48,41 @@ function baseLanguage(tag: string | undefined): 'en' | 'es' {
  */
 export function useAiSuggestions(circleId: string, enabled: boolean): UseQueryResult<string[]> {
   const { i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const language = baseLanguage(i18n.language);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.aiSuggestions(circleId, language),
     queryFn: () => getAiSuggestions(circleId, language),
     enabled: enabled && !!circleId,
     staleTime: 1000 * 60 * 30, // 30 min — chips barely change within a session
     retry: (failureCount, error) => (isTerminalSuggestionsError(error) ? false : failureCount < 1),
   });
+
+  // A TERMINAL 403/402 HERE MEANS THE GATING FLAGS ARE STALE — REFRESH THEM.
+  //
+  // `isTerminalSuggestionsError` above already recognises this rejection; it
+  // used that only to stop retrying, which treats "you may not have this" as
+  // nothing more than a wasted request. It is more than that: `AppLayout` gates
+  // both AI entry points and the chat modal's MOUNT on `resolveAiEntry(...)`,
+  // read from the two circle caches, so this request is often the FIRST signal
+  // that the seat was downgraded or the circle froze since those caches were
+  // filled — it fires the moment the modal opens. Without this the assistant
+  // stays offered and usable until `staleTime` expires or the window regains
+  // focus.
+  //
+  // In an effect, not in `retry`: `retry` is a pure decision the client may
+  // call more than once, and a cache invalidation is not something to do from
+  // inside one. The dependency is the settled error object, so this fires once
+  // per failure and cannot loop — refreshing the circle caches does not re-run
+  // this query.
+  const { error, isError } = query;
+  useEffect(() => {
+    if (!isError) return;
+    if (isAccessDeniedError(error) || isSubscriptionRequiredError(error)) {
+      invalidateCircleAccessFlags(queryClient, circleId);
+    }
+  }, [isError, error, queryClient, circleId]);
+
+  return query;
 }

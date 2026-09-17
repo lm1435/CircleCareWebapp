@@ -129,7 +129,7 @@
   "analytics": {
     "description": "Control what usage data you share with us.",
     "enable": "Share usage data",
-    "hint": "Linked to your account, including your email address. Helps us improve CircleCare — never includes your readings, medication names, or message content."
+    "hint": "Linked to your account. Helps us improve CircleCare — never includes your readings, medication names, or message content. With this off, we still collect anonymous, session-only usage and crash data that is never linked to you."
   },
   "footer": {
     "version": "WEB · v{{version}}"

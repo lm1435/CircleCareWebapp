@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import OverviewPage from '@/pages/OverviewPage';
@@ -22,9 +23,37 @@ vi.mock('@/components/tasks/OpenTasksCard', () => ({
     <div data-testid="open-tasks-card" data-circle-id={circleId} data-limit={String(limit)} />
   ),
 }));
+// The stub exposes step 1's action so the page's hand-off — NOT the checklist's
+// own gating, which its own test covers — can be exercised from here.
 vi.mock('@/components/circles/GettingStartedChecklist', () => ({
-  GettingStartedChecklist: ({ circleId }: { circleId: string }) => (
-    <div data-testid="getting-started" data-circle-id={circleId} />
+  GettingStartedChecklist: ({
+    circleId,
+    onAddEvent,
+  }: {
+    circleId: string;
+    onAddEvent?: () => void;
+  }) => (
+    <div data-testid="getting-started" data-circle-id={circleId}>
+      <button type="button" onClick={onAddEvent}>
+        checklist-add
+      </button>
+    </div>
+  ),
+}));
+vi.mock('@/components/calendar/AddEventModal', () => ({
+  AddEventModal: ({
+    initialType,
+    onClose,
+  }: {
+    initialType?: string;
+    onClose: () => void;
+  }) => (
+    <div data-testid="add-event-modal">
+      {initialType}
+      <button type="button" onClick={onClose}>
+        close-modal
+      </button>
+    </div>
   ),
 }));
 vi.mock('@/components/overview/AdherenceCard', () => ({
@@ -228,6 +257,25 @@ describe('OverviewPage', () => {
     setCircle();
     renderOverview();
     expect(screen.getByTestId('getting-started')).toBeInTheDocument();
+  });
+
+  // Step 1 reads "Add a medication", so its button must open THE MEDICATION
+  // FORM here on Home — not route to the calendar, whose create modal is local
+  // state and cannot be opened from navigation (the user landed on an empty
+  // grid). Same fix mobile shipped in CircleDetailScreen.
+  it("opens the medication form from the checklist's add step, and closes it again", async () => {
+    const user = userEvent.setup();
+    setCircle();
+    renderOverview();
+    expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'checklist-add' }));
+    expect(screen.getByTestId('add-event-modal')).toHaveTextContent('medication');
+    // Still on Home: the page did not navigate away to the calendar.
+    expect(screen.getByTestId('getting-started')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'close-modal' }));
+    expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
   });
 
   describe('first run', () => {

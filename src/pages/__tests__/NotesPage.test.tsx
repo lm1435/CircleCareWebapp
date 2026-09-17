@@ -12,7 +12,8 @@
 // machine clock), and non-relative day labels are computed with the same
 // UTC-noon Intl call the page uses.
 
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import { submitFormTwice } from '@/test/doubleSubmit';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
@@ -266,7 +267,7 @@ describe('NotesPage — posting', () => {
     expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled();
   });
 
-  it('preserves the composer input and shows a toast when the post fails', async () => {
+  it('preserves the composer input and shows the failure INLINE in the composer (announced, no toast)', async () => {
     mockCreate.mockImplementation((_variables, opts?: { onError?: (e: unknown) => void }) => {
       opts?.onError?.(new Error('boom'));
     });
@@ -289,9 +290,15 @@ describe('NotesPage — posting', () => {
       })
     ).toBeChecked();
 
-    expect(
-      await screen.findByText("Couldn't post your note. Your note is still here — try again.")
-    ).toBeInTheDocument();
+    // Inside the composer's own form, as role="alert" — and NOT a toast, which
+    // at 360x640 covers the textarea the user retries from.
+    const form = screen.getByLabelText(/^Add a note/).closest('form') as HTMLFormElement;
+    expect(within(form).getByRole('alert')).toHaveTextContent(
+      "Couldn't post your note. Your note is still here — try again."
+    );
+    expect(document.querySelector('[data-toast-region] [data-toast]')).toBeNull();
+    // Announced, not focused: focus stays where the user left it.
+    expect(document.activeElement?.getAttribute('role')).not.toBe('alert');
 
     expect(mockCareNoteAdded).not.toHaveBeenCalled();
   });
@@ -501,5 +508,66 @@ describe('NotesPage — own-note affordances', () => {
     expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(mockDelete.mock.calls[0][0]).toEqual({ circleId: CIRCLE_ID, noteId: 'note-1' });
     expect(mockCareNoteDeleted).toHaveBeenCalledWith(CIRCLE_ID);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// DOUBLE SUBMIT — a duplicated care note. The composer's own guard
+// (`if (!canSubmit || submitting) return`) is `createMutation.isPending`
+// arriving as a prop: React Query state, committed a render AFTER the submit
+// that started the request. Two submits in the SAME tick both read the same
+// pre-clear `draft` (the optimistic `setDraft(EMPTY_NOTE_DRAFT)` has not
+// committed either), so the page posts the same note twice.
+//
+// `submitFormTwice` dispatches both inside one `act()` with no render in
+// between; two awaited `userEvent.click`s would let React commit and would pass
+// against a state-flag "fix".
+// ────────────────────────────────────────────────────────────────────────────
+describe('NotesPage — double submit', () => {
+  function composerForm(): HTMLFormElement {
+    const form = screen.getByLabelText(/^Add a note/).closest('form');
+    if (!(form instanceof HTMLFormElement)) throw new Error('composer form not found');
+    return form;
+  }
+
+  it('posts ONE note when the composer is submitted twice in one tick', async () => {
+    const user = userEvent.setup();
+    // No callbacks fired: the request is still in flight when the second
+    // submit arrives, which is the only state in which the guard is under test.
+    mockCreate.mockImplementation(() => {});
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^Add a note/), 'Ate all of lunch');
+    await submitFormTwice(composerForm());
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCareNoteAdded).not.toHaveBeenCalled();
+  });
+
+  it('still posts on a genuine RESUBMIT after the first attempt failed', async () => {
+    const user = userEvent.setup();
+    let pending: { onError?: (e: unknown) => void; onSettled?: () => void } | undefined;
+    mockCreate.mockImplementation((_variables, opts) => {
+      pending = opts;
+    });
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^Add a note/), 'Ate all of lunch');
+    await submitFormTwice(composerForm());
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+
+    // The request comes back a failure: the page restores the draft, so the
+    // composer is valid again and the retry must be allowed through.
+    await act(async () => {
+      pending?.onError?.(new Error('500'));
+      pending?.onSettled?.();
+    });
+
+    expect(within(composerForm()).getByRole('alert')).toBeInTheDocument();
+
+    await submitFormTwice(composerForm());
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    // The retry clears the previous failure (a new one mounts if it fails too).
+    expect(within(composerForm()).queryByRole('alert')).toBeNull();
   });
 });

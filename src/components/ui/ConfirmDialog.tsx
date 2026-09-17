@@ -1,7 +1,9 @@
-import { type ReactElement, type ReactNode } from 'react';
+import { useCallback, type ReactElement, type ReactNode } from 'react';
 import { Button } from './Button';
 import { IconTile, type IconTileTone } from './IconTile';
 import { Modal } from './Modal';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
+import { captureException } from '@/lib/posthog';
 import type { IconName } from './iconNames';
 
 export type ConfirmDialogVariant = 'confirm' | 'destructive' | 'success' | 'error';
@@ -17,7 +19,13 @@ export interface ConfirmDialogProps {
   cancelLabel: string;
   /** Accessible label for the close (×) button. Falls back to cancelLabel. */
   closeLabel?: string;
-  onConfirm: () => void;
+  /**
+   * The action. May return a PROMISE — when it does, the shell's double-submit
+   * guard is held for as long as that promise is pending, which is strictly
+   * better than the same-tick-only protection a synchronous handler gets. Every
+   * caller whose confirm fires a request should return it.
+   */
+  onConfirm: () => void | Promise<unknown>;
   onCancel: () => void;
   /**
    * When true, the confirm button uses the `danger` variant and a terracotta
@@ -95,6 +103,45 @@ export function ConfirmDialog({
   // same terracotta mark (something went wrong) but its confirm is just an
   // acknowledgment, so it stays primary.
   const isDestructive = resolvedVariant === 'destructive';
+  // THE SYNCHRONOUS DOUBLE-CONFIRM GUARD. `loading` puts `disabled` on the
+  // confirm button below, but that is React state committed a render AFTER the
+  // click that started the action — so two clicks dispatched in the SAME tick
+  // both reach `onConfirm` with the button still enabled. Every destructive
+  // action in the app comes through this shell, and for some of them the second
+  // call is not harmless: DeleteEventDialog's delete-one-occurrence hits one of
+  // the three backend routes that write against the partial unique index with
+  // no 23505 recovery, so the losing racer is answered with a 500 over a delete
+  // that already succeeded.
+  //
+  // Guarding HERE rather than at each call site is deliberate: the shell owns
+  // the button, so no caller can forget. A caller that returns its promise (see
+  // `onConfirm`) additionally gets the guard held for the whole request rather
+  // than just the tick. `loading` stays exactly where it is — it is the VISUAL
+  // guard; this is the correctness one.
+  const guardedConfirm = useGuardedSubmit(onConfirm);
+  // …AND THE ONE PLACE THE PROMISE IS DROPPED ON THE FLOOR HAS TO CATCH IT.
+  //
+  // `onConfirm` may return a promise (that is the point — the guard is then
+  // held for the whole request), this shell calls it from an `onClick` and
+  // discards what comes back, and `useGuardedSubmit` deliberately does not
+  // catch: it is a re-entrancy guard, and swallowing there would make a failed
+  // submit indistinguishable from a successful one for every caller that
+  // awaits. So a caller written the obvious way — `onConfirm={() =>
+  // thing.mutateAsync(id)}` — produced a browser-level unhandled rejection,
+  // which `capture_exceptions: true` turns into a context-free `$exception` in
+  // the admin digest, duplicating a failure the mutation's own onError has
+  // already toasted.
+  //
+  // Reported, not swallowed: a genuine bug stays visible and carries a
+  // boundary that says where it came from.
+  const handleConfirm = useCallback((): void => {
+    void guardedConfirm().catch((err: unknown) => {
+      captureException(
+        err instanceof Error ? err : new Error(String(err)),
+        'ConfirmDialog.onConfirm'
+      );
+    });
+  }, [guardedConfirm]);
   const disabled = confirmDisabled || loading;
   const confirmText = loading ? (loadingLabel ?? confirmLabel) : confirmLabel;
   const defaultMark = MARK[resolvedVariant];
@@ -124,7 +171,7 @@ export function ConfirmDialog({
           </Button>
           <Button
             variant={isDestructive ? 'danger' : 'primary'}
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={disabled}
             loading={loading}
           >

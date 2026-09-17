@@ -84,8 +84,93 @@ declare -a SUMMARY
 # same diff that adds or removes tests; the count must not vary by zone, or
 # the floor has to track the minimum and a zone-dependent skip is hiding
 # inside it.
-MIN_FILES="${MIN_FILES:-215}"
-MIN_TESTS="${MIN_TESTS:-3468}"
+#
+# RE-MEASURED 2026-09-12 (CI setup): 215/3468 -> 254/4208. The 2026-09-05 line
+# above had gone stale by 39 files and 783 tests, which is the precise thing the
+# paragraph above it says is dangerous — not the staleness, the SLACK. At
+# 215/3468 against an actual 259/4258, seven hundred and eighty-three tests
+# could have vanished in EVERY zone and this script would still have printed
+# "all 10 zones passed", because the cross-zone comparison only sees a loss that
+# affects SOME zones. The floor is the only check that sees a uniform loss, and
+# a floor with that much headroom is not a floor.
+#
+# Measured under node 24.20.0 (.nvmrc), `npx vitest run`, TZ=America/Denver:
+# 258 passed | 1 skipped (259) files / 4251 passed | 7 skipped (4258) tests,
+# exit 0. Set against the TOTALS, per the paragraph above (skips included — a
+# skip is still a test that exists, and the parenthesised total is what the
+# `files`/`tests` parsing below actually reads): MIN_FILES = 259 - 5 = 254,
+# MIN_TESTS = 4258 - 50 = 4208.
+#
+# CAVEAT recorded with that measurement, and the reason the floor was set from
+# the stable number rather than the highest one seen. Confirmed by running THIS
+# SCRIPT: the first EIGHT zones (America/Denver, UTC, Asia/Tokyo,
+# Pacific/Auckland, Pacific/Midway, Pacific/Kiritimati, Pacific/Chatham,
+# Asia/Kathmandu) all reported exactly 259 files / 4258 tests and passed. The
+# last two (Asia/Kolkata, America/St_Johns) reported 260 files / 4262 tests and
+# FAILED, because another agent working in this same tree created
+# src/components/ui/__tests__/pickerSheet.test.tsx partway through the sweep —
+# a mid-TDD file, red at the moment it was picked up. That is a concurrent-tree
+# artefact, not a zone-dependent failure: the extra file appears in the two
+# zones that ran after it was written and in no others, and its failures are the
+# same four/three cases each time rather than anything offset-shaped. Minutes
+# later that file was green and a single-zone `npm test` read 260 files / 4267
+# tests. The floor was deliberately set from the 259/4258 figure instead: that
+# is the one confirmed identical across eight zones, and a floor is a MINIMUM,
+# so the conservative number is the safe one to commit while the tree is moving.
+# That note ended "once pickerSheet.test.tsx settles, RAISE this floor" — which
+# is the entry below.
+#
+# RE-MEASURED 2026-09-12 (tree settled): 254/4208 -> 257/4230. The tree stopped
+# moving, so the conservative-while-concurrent number above is now just slack,
+# and slack is the failure mode this whole comment block exists to describe: a
+# cross-zone sweep can only see a loss that affects SOME zones, so the floor is
+# the ONLY check that catches a uniform one, and at 254/4208 against an actual
+# 262/4280 seventy-two tests could have vanished in every zone with the script
+# still printing "all 10 zones passed".
+#
+# Measured under node 24.20.0 (.nvmrc) by running THIS SCRIPT end to end —
+# cross-zone verified, not a single-zone reading. All TEN zones reported the
+# identical 261 passed | 1 skipped (262) files / 4273 passed | 7 skipped (4280)
+# tests and PASSED; no zone-dependent skip is hiding inside the number this
+# time. Set against the TOTALS per the convention above (skips included — a skip
+# is still a test that exists, and the parenthesised total is what the
+# `files`/`tests` parsing below actually reads): MIN_FILES = 262 - 5 = 257,
+# MIN_TESTS = 4280 - 50 = 4230.
+#
+# RE-MEASURED 2026-09-13 (test-hardening pass): 257/4230 -> 258/4266. Tests that
+# could not fail were rewritten to fail under the mutation they claim to guard,
+# which added cases and one file (posthogInitOptions.test.ts). Measured by
+# running THIS SCRIPT end to end: all TEN zones reported the identical
+# 262 passed | 1 skipped (263) files / 4309 passed | 7 skipped (4316) tests and
+# PASSED. Set against the TOTALS per the convention above: MIN_FILES = 263 - 5 =
+# 258, MIN_TESTS = 4316 - 50 = 4266.
+#
+# RE-MEASURED 2026-09-13 (after the independent re-audit of the hardened
+# tests): 258/4266 -> 259/4346. The re-audit's fixes added cases and one file
+# (sourceText.test.ts). Measured by running THIS SCRIPT end to end: all TEN
+# zones reported the identical 263 passed | 1 skipped (264) files / 4389 passed |
+# 7 skipped (4396) tests and PASSED. MIN_FILES = 264 - 5 = 259, MIN_TESTS =
+# 4396 - 50 = 4346.
+#
+# RE-MEASURED 2026-09-13 (final run after the unhappy-path e2e + consent/toast/
+# first-run fixes): 259/4346 -> 264/4496. Measured by running THIS SCRIPT end to
+# end: all TEN zones reported the identical 268 passed | 1 skipped (269) files /
+# 4539 passed | 7 skipped (4546) tests and PASSED. MIN_FILES = 269 - 5 = 264,
+# MIN_TESTS = 4546 - 50 = 4496.
+#
+# RE-MEASURED 2026-09-13 (after the auth/invite/toast-inline follow-up fixes):
+# 264/4496 -> 265/4510. Measured by running THIS SCRIPT end to end: all TEN zones
+# reported the identical 269 passed | 1 skipped (270) files / 4553 passed |
+# 7 skipped (4560) tests and PASSED. MIN_FILES = 270 - 5 = 265, MIN_TESTS =
+# 4560 - 50 = 4510.
+#
+# RE-MEASURED 2026-09-13 (after the Home over-fetch fix + presence tests):
+# 265/4510 -> 266/4532. Measured by running THIS SCRIPT end to end: all TEN zones
+# reported the identical 270 passed | 1 skipped (271) files / 4575 passed |
+# 7 skipped (4582) tests and PASSED. MIN_FILES = 271 - 5 = 266, MIN_TESTS =
+# 4582 - 50 = 4532.
+MIN_FILES="${MIN_FILES:-266}"
+MIN_TESTS="${MIN_TESTS:-4532}"
 low=""
 
 for zone in "${ZONES[@]}"; do

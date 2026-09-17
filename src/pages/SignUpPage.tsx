@@ -6,8 +6,17 @@ import { z } from 'zod';
 import { authApi, getApiError } from '@/api/auth';
 import { supabase } from '@/lib/supabase';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
-import { setPendingTermsConsent } from '@/lib/pendingTermsConsent';
+import { setPendingTermsConsent, clearPendingTermsConsent } from '@/lib/pendingTermsConsent';
+import {
+  setPendingAnalyticsConsent,
+  clearPendingAnalyticsConsent,
+} from '@/lib/pendingAnalyticsConsent';
+import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
+import { setAnalyticsConsentOwner } from '@/lib/analyticsConsent';
+import { queueAnalyticsConsentForSignup } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
+import { isRateLimitError } from '@/lib/apiErrors';
+import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { utf8ByteLength } from '@/lib/utf8ByteLength';
 import { Button, Card, Icon, Text, TextField } from '@/components/ui';
 import { validateWithZod, focusFirstError, type FieldErrors } from '@/components/ui/useZodForm';
@@ -80,6 +89,14 @@ export default function SignUpPage(): ReactElement {
   // submit and the OAuth buttons (this page is signup-only, so every path out
   // of it creates an account).
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // OPTIONAL analytics consent — the web app's only consent moment, and the
+  // reason the stored state can now say "declined" rather than only defaulting
+  // to it (lib/analyticsConsent.ts). Deliberately NOT bundled with the Terms
+  // checkbox above and deliberately not gating anything: analytics is not a
+  // condition of having an account. Default UNCHECKED, and never seeded from a
+  // stored decision either — a pre-ticked box is not consent, and signup means
+  // a NEW person may be at a browser where somebody else already said yes.
+  const [analyticsAccepted, setAnalyticsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,7 +133,13 @@ export default function SignUpPage(): ReactElement {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  // `isSubmitting` is the LOADING state, not the guard: React commits it a
+  // render too late to stop a second submit dispatched in the same tick (see
+  // `useGuardedSubmit`). Signup sits on the 5-per-5-minutes `authRateLimit`
+  // bucket and the second request would 400 USER_EXISTS against the account
+  // the first one just created — two of five slots spent to show the user an
+  // "email already registered" error for their own brand-new account.
+  const submitSignUp = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setFormError(null);
 
@@ -150,7 +173,7 @@ export default function SignUpPage(): ReactElement {
     setIsSubmitting(true);
     Analytics.signupStarted('email');
     try {
-      await authApi.signup({
+      const response = await authApi.signup({
         email: result.data.email,
         password: result.data.password,
         first_name: result.data.first_name,
@@ -159,6 +182,51 @@ export default function SignUpPage(): ReactElement {
         language: i18n.language === 'es' ? 'es' : 'en',
         termsAccepted: true,
       });
+      // RECORD THE ANALYTICS ANSWER — either answer — and record it HERE:
+      //
+      //  - After the account exists, so a failed attempt (USER_EXISTS, a
+      //    network blip) stamps nothing and the visitor is still owed the
+      //    question when they retry.
+      //  - Before `signupCompleted`, so the single most important event in the
+      //    activation funnel is captured under the mode the user just chose
+      //    rather than the one they arrived in.
+      //
+      // No user id is passed: this endpoint returns an OTP, not a session, so
+      // there is nobody to identify yet — the auth store does that at verify
+      // time, and by then consent is recorded and `identifyAllowed` says yes.
+      //
+      // ONLY ONCE AN ACCOUNT PROVABLY EXISTS — the record lives inside the
+      // `newUserId` check below. A blocked-domain signup gets a fake 200 with
+      // no `data`; recording before that check stored an OWNERLESS answer
+      // that the next account to sign in on this browser adopted.
+      //
+      // …and the SERVER half of the same answer. Recording only the client
+      // half left `analytics_consent_withdrawn_at` NULL, and NULL means
+      // CAPTURE ALLOWED: a decliner was silent in this browser while the
+      // backend went on capturing against their user id (a RevenueCat webhook
+      // is usually the first, which creates the PostHog person they refused).
+      //
+      // QUEUED, NOT SENT. There is no session yet — the response carries a
+      // user but no token — and /signup is a public route, so a request fired
+      // here would go out under whatever token this browser already holds and
+      // stamp somebody else's account. The marker is written under the NEW
+      // user's id and delivered by `flushAnalyticsConsentSync` inside
+      // `authStore.signIn`, which /verify-email reaches minutes later at most.
+      //
+      // Optional chaining, not confidence: a signup from a blocked domain gets
+      // a fake 200 with no `data` envelope at all (backend/src/routes/auth.ts),
+      // and no account means nothing to record.
+      const newUserId = response?.data?.user?.id;
+      if (newUserId) {
+        recordAnalyticsConsentDecision(analyticsAccepted);
+        // Stamp the CLIENT half with the same id. The answer above was
+        // recorded without a session, so it is ownerless until now — and an
+        // ownerless answer is adopted by whichever account signs in next,
+        // which on a shared browser need not be this one. The account exists
+        // by this line even though its session does not.
+        setAnalyticsConsentOwner(newUserId);
+        queueAnalyticsConsentForSignup(analyticsAccepted, newUserId);
+      }
       Analytics.signupCompleted('email');
       // Email travels in router STATE, never in query params.
       navigate('/verify-email', { state: { email: result.data.email } });
@@ -173,14 +241,23 @@ export default function SignUpPage(): ReactElement {
       // email or the full error object.
       Analytics.signupFailed('email', apiError?.code ?? 'SIGNUP_FAILED');
       setFormError(
-        alreadyExists ? t('signup.errors.emailExists') : t('signup.errors.signUpFailed')
+        isRateLimitError(err)
+          ? t('rateLimited')
+          : alreadyExists
+            ? t('signup.errors.emailExists')
+            : t('signup.errors.signUpFailed')
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleOAuth = async (provider: OAuthProvider): Promise<void> => {
+  const handleSubmit = useGuardedSubmit(submitSignUp);
+
+  // Guarded for the same reason, and more urgently: nothing here sets
+  // `isSubmitting`, so two clicks fired two `signup_started` events and two
+  // `signInWithOAuth` redirects. One guard covers both providers.
+  const startOAuth = async (provider: OAuthProvider): Promise<void> => {
     setFormError(null);
     // OAuth signups require the same explicit consent as email/password — the
     // buttons are disabled until the checkbox is ticked; this guard is the
@@ -193,6 +270,14 @@ export default function SignUpPage(): ReactElement {
     // /auth/callback can relay `termsAccepted: true` to the backend, which
     // records users.terms_accepted_at for OAuth signups.
     setPendingTermsConsent();
+    // Park the ANALYTICS answer across the same redirect, for the same reason:
+    // most signups are Google/Apple, so a consent moment that only worked on
+    // the email form would be skipped by the majority of new accounts. Both
+    // answers are parked (see lib/pendingAnalyticsConsent) — a decline that
+    // does not survive the redirect is indistinguishable from never asking.
+    // Nothing is recorded locally yet: AuthCallbackPage does that, and only on
+    // a completed sign-in, since this handshake can still fail or be cancelled.
+    setPendingAnalyticsConsent(analyticsAccepted);
     Analytics.signupStarted(provider);
     // Park the provider so /auth/callback can fire an accurate completion event
     // with the right method after the full-page OAuth redirect (router state
@@ -200,6 +285,28 @@ export default function SignUpPage(): ReactElement {
     setPendingAuthMethod(provider);
     const failureMessage =
       provider === 'google' ? t('login.errors.googleFailed') : t('login.errors.appleFailed');
+    // THE HANDSHAKE NEVER STARTED — UNPARK EVERYTHING.
+    //
+    // `AuthCallbackPage` clears both parked values on every path IT reaches,
+    // which covers a handshake that got as far as the provider. It cannot
+    // cover this one: when `signInWithOAuth` fails before the redirect
+    // (offline, a Supabase 5xx, a blocked popup) the browser stays on this
+    // page, no callback ever runs, and the parked values survive for the life
+    // of the TAB — across an SPA navigation to /login, where an OAuth sign-in
+    // for a different, possibly RETURNING, account consumes them.
+    //
+    // For the analytics answer that is destructive, not merely untidy: the
+    // stale value is '0' (the default — the box is unticked), the callback
+    // records it as a decline, and the server half of a decline calls
+    // `deletePostHogPerson(userId)` with `delete_events=true`. A returning
+    // user's whole analytics record, deleted on the strength of a box they
+    // never touched. For the terms acceptance it is a false legal record:
+    // /login parks no terms consent of its own, so the leftover would relay
+    // `termsAccepted: true` and stamp `users.terms_accepted_at`.
+    const unparkHandshake = (): void => {
+      clearPendingAnalyticsConsent();
+      clearPendingTermsConsent();
+    };
     try {
       // Supabase is an OAuth handshake broker ONLY — the browser redirects to
       // the provider and returns to /auth/callback, where the tokens are
@@ -212,14 +319,18 @@ export default function SignUpPage(): ReactElement {
         },
       });
       if (error) {
+        unparkHandshake();
         Analytics.signupFailed(provider, 'OAUTH_INIT_FAILED');
         setFormError(failureMessage);
       }
     } catch {
+      unparkHandshake();
       Analytics.signupFailed(provider, 'OAUTH_INIT_FAILED');
       setFormError(failureMessage);
     }
   };
+
+  const handleOAuth = useGuardedSubmit(startOAuth);
 
   return (
     <AuthShell>
@@ -379,6 +490,55 @@ export default function SignUpPage(): ReactElement {
               />
             </span>
           </label>
+        </div>
+
+        {/* OPTIONAL analytics consent — the consent moment this app never had.
+            Same control mechanics as the Terms checkbox above (visually-hidden
+            native <input> inside a <label> wrapping icon + sentence, so the
+            whole row is a 44px target and Space toggles it), with three
+            deliberate differences:
+
+            1. It gates NOTHING. Submit and the OAuth buttons stay bound to
+               `termsAccepted` alone — analytics must never be a condition of
+               signing up.
+            2. No `aria-required`, so assistive tech does not announce it as
+               something that must be answered to proceed.
+            3. Declining is at least as easy as accepting: accepting costs one
+               click, declining costs none — and BOTH are written down when the
+               signup completes, which is what finally makes "declined"
+               distinguishable from "never asked".
+
+            The full disclosure sits in an always-visible paragraph rather than
+            behind a "what's shared?" disclosure: material terms of a consent
+            should not be the part you have to go looking for. It is wired with
+            `aria-describedby` so a screen reader reads it with the control. */}
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="analyticsAccepted"
+            className="flex min-h-[44px] cursor-pointer items-start gap-3"
+          >
+            <input
+              type="checkbox"
+              id="analyticsAccepted"
+              checked={analyticsAccepted}
+              onChange={(event) => setAnalyticsAccepted(event.target.checked)}
+              aria-describedby="analyticsConsentDetail"
+              className="peer sr-only"
+            />
+            <Icon
+              name={analyticsAccepted ? 'checkbox' : 'square-outline'}
+              size="chrome"
+              className={`mt-0.5 shrink-0 rounded-sm peer-focus-visible:ring-2 peer-focus-visible:ring-moss peer-focus-visible:ring-offset-2 ${
+                analyticsAccepted ? 'text-moss-deep' : 'text-ink-3'
+              }`}
+            />
+            <span className="text-sm leading-snug text-ink-2">
+              {t('signup.analytics.label')}
+            </span>
+          </label>
+          <p id="analyticsConsentDetail" className="m-0 pl-8 text-xs leading-relaxed text-ink-3">
+            {t('signup.analytics.detail')}
+          </p>
         </div>
 
         <Button

@@ -4,6 +4,7 @@ import { Badge, Button, Card, Modal, Text, useToast } from '@/components/ui';
 import { OtpInput, type OtpInputHandle } from '@/components/auth/OtpInput';
 import { getApiError } from '@/api/auth';
 import { useLookupInviteByCode, useAcceptInviteByCode } from '@/hooks/useJoinCircle';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
@@ -113,6 +114,14 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
 
   const lookup = useLookupInviteByCode();
   const accept = useAcceptInviteByCode();
+  // Both steps hit rate-limited invite endpoints (`inviteGuessRateLimit` per
+  // IP + `inviteRedeemRateLimit` per user) and both are driven by buttons whose
+  // only protection was `loading={...isPending}` — state React commits a render
+  // too late to reject a second press in the same tick (see `useGuardedSubmit`).
+  // One guard per step: they belong to two different views of this modal and
+  // must not block each other.
+  const lookupGuard = useSubmitGuard();
+  const acceptGuard = useSubmitGuard();
 
   // Clipboard read is feature-detected: no readText → no button at all.
   const clipboardAvailable =
@@ -139,17 +148,20 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
   const handleLookup = (event: FormEvent): void => {
     event.preventDefault();
     if (!isCompleteJoinCode(code)) return;
+    if (lookup.isPending || !lookupGuard.claim()) return;
     setError(null);
     lookup.mutate(code, {
       onSuccess: (found) => setInvite(found),
       onError: (err) => {
         setError(joinErrorMessage(t, getApiError(err)?.code, t('joinModal.invalidCode')));
       },
+      onSettled: () => lookupGuard.release(),
     });
   };
 
   const handleAccept = (): void => {
     if (!invite) return;
+    if (accept.isPending || !acceptGuard.claim()) return;
     setError(null);
     accept.mutate(code, {
       onSuccess: () => {
@@ -167,6 +179,9 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
       onError: (err) => {
         setError(joinErrorMessage(t, getApiError(err)?.code, t('joinModal.joinFailed')));
       },
+      // Success closes the modal (unmount), so this only ever runs on failure —
+      // which is exactly when the guard has to come back.
+      onSettled: () => acceptGuard.release(),
     });
   };
 

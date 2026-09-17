@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { clickTwice, neverSettles } from '@/test/doubleSubmit';
 import { ConfirmDialog } from '../ConfirmDialog';
 
 describe('ConfirmDialog', () => {
@@ -250,5 +251,136 @@ describe('ConfirmDialog', () => {
     const confirmButton = screen.getByRole('button', { name: 'Delete' });
     expect(confirmButton.className).toContain('bg-moss');
     expect(confirmButton.className).not.toContain('bg-terracotta-soft');
+  });
+  // ──────────────────────────────────────────────────────────────────────────
+  // DOUBLE CONFIRM. `loading` sets `disabled` on the confirm button, but that
+  // is React state committed a render AFTER the click that started the action,
+  // so two clicks dispatched in the SAME tick both reach `onConfirm` with the
+  // button still enabled. What that costs depends on the caller, and for the
+  // destructive ones it is not nothing: DeleteEventDialog's
+  // delete-one-occurrence is one of the three backend routes with no 23505
+  // recovery, so the losing racer is answered with a 500 over a delete that
+  // already worked.
+  //
+  // `clickTwice` fires both inside one `act()` with no render in between — the
+  // production shape. Two awaited `userEvent.click`s would let React commit the
+  // `disabled` and would pass against no guard at all.
+  // ──────────────────────────────────────────────────────────────────────────
+  describe('double confirm', () => {
+    it('calls onConfirm ONCE for two clicks in the same tick', async () => {
+      const { onConfirm } = setup();
+      await clickTwice(screen.getByRole('button', { name: 'Delete' }));
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('holds the guard for as long as a promise-returning onConfirm is pending', async () => {
+      const onConfirm = vi.fn(() => neverSettles());
+      render(
+        <ConfirmDialog
+          title="Delete event"
+          message="This cannot be undone."
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          closeLabel="Close dialog"
+          onConfirm={onConfirm}
+          onCancel={vi.fn()}
+        />
+      );
+
+      const confirm = screen.getByRole('button', { name: 'Delete' });
+      await clickTwice(confirm);
+      // A later click, after React has committed, must still be refused while
+      // the request the first one started is in flight.
+      await clickTwice(confirm);
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('releases the guard once a settled onConfirm returns, so a retry works', async () => {
+      const onConfirm = vi.fn(() => Promise.reject(new Error('500')).catch(() => undefined));
+      render(
+        <ConfirmDialog
+          title="Delete event"
+          message="This cannot be undone."
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          closeLabel="Close dialog"
+          onConfirm={onConfirm}
+          onCancel={vi.fn()}
+        />
+      );
+
+      const confirm = screen.getByRole('button', { name: 'Delete' });
+      await clickTwice(confirm);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+
+      await clickTwice(confirm);
+      expect(onConfirm).toHaveBeenCalledTimes(2);
+    });
+  });
+});
+
+/**
+ * A REJECTING `onConfirm` MUST NOT BECOME AN UNHANDLED REJECTION.
+ *
+ * `onConfirm` is typed `() => void | Promise<unknown>` precisely so a caller
+ * can return its request and have the double-submit guard held for the whole
+ * thing — and the natural way to write that is `onConfirm={() =>
+ * thing.mutateAsync(id)}`. But this shell invokes the guarded handler from an
+ * `onClick` and DISCARDS the promise, and `useGuardedSubmit` is a `try`/
+ * `finally` with no `catch` (deliberately — see its doc comment). So a
+ * rejecting `onConfirm` produced a browser-level unhandled rejection, which
+ * `capture_exceptions: true` turns into a context-free `$exception` in the
+ * admin digest: the mutation's own onError has already shown the user a toast,
+ * and the digest gets a second, anonymous copy of the same failure.
+ *
+ * This is the one place the promise can be dropped on the floor, so it is the
+ * one place that has to catch it — reported WITH a boundary rather than
+ * swallowed, so a genuine bug is still visible and attributable.
+ */
+describe('a rejecting onConfirm', () => {
+  function renderWith(onConfirm: () => void | Promise<unknown>) {
+    render(
+      <ConfirmDialog
+        title="Delete document"
+        message="This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        closeLabel="Close dialog"
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />
+    );
+  }
+
+  it('is reported with a boundary instead of surfacing as an unhandled rejection', async () => {
+    const posthog = await import('@/lib/posthog');
+    const captureException = vi.spyOn(posthog, 'captureException').mockImplementation(() => {});
+    const boom = new Error('mutateAsync rejected');
+    renderWith(() => Promise.reject(boom));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(captureException).toHaveBeenCalledWith(boom, 'ConfirmDialog.onConfirm');
+    captureException.mockRestore();
+  });
+
+  it('still releases the double-submit guard, so the action can be retried', async () => {
+    const onConfirm = vi.fn(() => Promise.reject(new Error('nope')));
+    const posthog = await import('@/lib/posthog');
+    const captureException = vi.spyOn(posthog, 'captureException').mockImplementation(() => {});
+    renderWith(onConfirm);
+
+    const button = screen.getByRole('button', { name: 'Delete' });
+    fireEvent.click(button);
+    await Promise.resolve();
+    await Promise.resolve();
+    fireEvent.click(button);
+    await Promise.resolve();
+
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+    captureException.mockRestore();
   });
 });

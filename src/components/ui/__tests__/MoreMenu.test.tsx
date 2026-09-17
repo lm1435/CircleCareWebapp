@@ -330,6 +330,417 @@ describe('MoreMenu', () => {
     });
   });
 
+  // ── Clipping ancestors (the Members-page bug) ─────────────────────────────
+  //
+  // The panel renders INLINE (`absolute z-30`) inside the row, so ANY ancestor
+  // with a non-visible `overflow` clips it — not just a Modal. Measured in
+  // Chrome at 1280x720 on /circles/:id/members: the pending-invites
+  // `<Sheet as="ul" className="overflow-hidden">` is one row (~75px) tall, the
+  // panel flipped UP on viewport space alone, and 64% of it — including the
+  // "Cancel invite" hit point — landed outside the UL's clip rect and was
+  // never painted. Dead for a mouse.
+  //
+  // jsdom has no layout, so the geometry is driven entirely by mocked rects:
+  // `getBoundingClientRect` per element and a fixed panel `offsetHeight`. The
+  // assertion is the one that matters — resolve the box the component actually
+  // asked for (direction class + any `max-height` it set) and require it to sit
+  // INSIDE the clipping ancestor's rect.
+  describe('clipping ancestors', () => {
+    /** `mt-1` / `mb-1` — the gap the panel keeps from the trigger. */
+    const GAP = 4;
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    /**
+     * Mock rects for a trigger sitting inside a clipping box. Everything that
+     * is not the box (trigger, wrapper, panel) reports the trigger's rect —
+     * only the trigger's is read.
+     */
+    function clipLayout(opts: {
+      clip: { top: number; bottom: number };
+      trigger: { top: number; bottom: number };
+      panelHeight: number;
+      viewport: number;
+    }): void {
+      vi.stubGlobal('innerHeight', opts.viewport);
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: HTMLElement
+      ) {
+        const box = this.dataset.clipbox === 'true' ? opts.clip : opts.trigger;
+        return {
+          top: box.top,
+          bottom: box.bottom,
+          height: box.bottom - box.top,
+          left: 0,
+          right: 44,
+          width: 44,
+          x: 0,
+          y: box.top,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+        configurable: true,
+        get: () => opts.panelHeight,
+      });
+    }
+
+    /** The box the panel will actually occupy, per the classes + max-height. */
+    function resolvePanelBox(
+      panel: HTMLElement,
+      trigger: { top: number; bottom: number },
+      naturalHeight: number
+    ): { top: number; bottom: number; flippedUp: boolean } {
+      const flippedUp = panel.className.includes('bottom-full');
+      const cap = panel.style.maxHeight ? Number.parseFloat(panel.style.maxHeight) : Infinity;
+      const height = Math.min(naturalHeight, cap);
+      const top = flippedUp ? trigger.top - GAP - height : trigger.bottom + GAP;
+      return { top, bottom: top + height, flippedUp };
+    }
+
+    it('keeps the panel inside a non-dialog clipping ancestor', async () => {
+      const user = userEvent.setup();
+      // A short `Sheet ... overflow-hidden` low in a 720px-tall window: there
+      // is room ABOVE the trigger in the WINDOW (640px) but only 120px of it
+      // inside the UL. Pre-fix this flipped up and hung 160px out.
+      //
+      // The box must be tall enough to host an OPERABLE panel for containment
+      // to be the right answer at all: 108px of usable room here, comfortably
+      // over `MIN_USABLE_PANEL` (54px — one 44px item plus the panel's own
+      // chrome). Shorter boxes than that escalate to the viewport instead, and
+      // the old 100px fixture is exercised there — see 'never applies a cap
+      // that cannot scroll one whole 44px item into view' below.
+      const clip = { top: 520, bottom: 700 };
+      const trigger = { top: 640, bottom: 684 };
+      const panelHeight = 200;
+      clipLayout({ clip, trigger, panelHeight, viewport: 720 });
+
+      const { items } = makeItems();
+      render(
+        <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+          <li>
+            <MoreMenu items={items} />
+          </li>
+        </ul>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'More' }));
+      const box = resolvePanelBox(screen.getByRole('menu'), trigger, panelHeight);
+
+      expect(box.top).toBeGreaterThanOrEqual(clip.top);
+      expect(box.bottom).toBeLessThanOrEqual(clip.bottom);
+    });
+
+    it('caps the panel height and lets it scroll when it fits in neither direction', async () => {
+      const user = userEvent.setup();
+      // 108px of usable room above the trigger inside the box — over the
+      // `MIN_USABLE_PANEL` floor, so capping is the right answer here.
+      clipLayout({
+        clip: { top: 520, bottom: 700 },
+        trigger: { top: 640, bottom: 684 },
+        panelHeight: 200,
+        viewport: 720,
+      });
+
+      const { items } = makeItems();
+      render(
+        <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+          <li>
+            <MoreMenu items={items} />
+          </li>
+        </ul>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'More' }));
+      const panel = screen.getByRole('menu');
+      expect(panel.style.maxHeight).not.toBe('');
+      expect(Number.parseFloat(panel.style.maxHeight)).toBeLessThan(200);
+      expect(panel.className).toContain('overflow-y-auto');
+    });
+
+    it('flips up when the panel fits above INSIDE the clipping ancestor', async () => {
+      const user = userEvent.setup();
+      // A tall Sheet: only 4px below the trigger, but 428px above it — inside
+      // the same box this time, so flipping up is the right answer.
+      const clip = { top: 200, bottom: 700 };
+      const trigger = { top: 640, bottom: 684 };
+      const panelHeight = 200;
+      clipLayout({ clip, trigger, panelHeight, viewport: 720 });
+
+      const { items } = makeItems();
+      render(
+        <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+          <li>
+            <MoreMenu items={items} />
+          </li>
+        </ul>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'More' }));
+      const box = resolvePanelBox(screen.getByRole('menu'), trigger, panelHeight);
+
+      expect(box.flippedUp).toBe(true);
+      expect(box.top).toBeGreaterThanOrEqual(clip.top);
+      expect(box.bottom).toBeLessThanOrEqual(clip.bottom);
+      // It fits — nothing to cap.
+      expect(screen.getByRole('menu').style.maxHeight).toBe('');
+    });
+
+    it('opens DOWN when the clip box leaves more room below, even though the viewport says flip up', async () => {
+      const user = userEvent.setup();
+      // 145px-tall Sheet near the bottom of a 720px window. By viewport space
+      // alone there is 588px above the trigger and only 64px below, so the
+      // pre-fix rule flipped up — outside the Sheet. Inside the Sheet the
+      // panel fits NEITHER way, and below is the roomier of the two (59px,
+      // clear of the `MIN_USABLE_PANEL` floor, so it caps there rather than
+      // escalating).
+      const clip = { top: 570, bottom: 715 };
+      const trigger = { top: 600, bottom: 644 };
+      const panelHeight = 200;
+      clipLayout({ clip, trigger, panelHeight, viewport: 720 });
+
+      const { items } = makeItems();
+      render(
+        <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+          <li>
+            <MoreMenu items={items} />
+          </li>
+        </ul>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'More' }));
+      const box = resolvePanelBox(screen.getByRole('menu'), trigger, panelHeight);
+
+      expect(box.flippedUp).toBe(false);
+      expect(box.top).toBeGreaterThanOrEqual(clip.top);
+      expect(box.bottom).toBeLessThanOrEqual(clip.bottom);
+    });
+
+    it('clamps a clip box that runs past the fold to the viewport', async () => {
+      const user = userEvent.setup();
+      // A tall scroll container (bottom 1400) whose lower half is below the
+      // 720px fold. "Inside the container" is not enough — 918px down the page
+      // is still off-screen.
+      const clip = { top: 200, bottom: 1400 };
+      const trigger = { top: 600, bottom: 644 };
+      const panelHeight = 200;
+      clipLayout({ clip, trigger, panelHeight, viewport: 720 });
+
+      const { items } = makeItems();
+      render(
+        <ul data-clipbox="true" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
+          <li>
+            <MoreMenu items={items} />
+          </li>
+        </ul>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'More' }));
+      const box = resolvePanelBox(screen.getByRole('menu'), trigger, panelHeight);
+
+      expect(box.top).toBeGreaterThanOrEqual(clip.top);
+      expect(box.bottom).toBeLessThanOrEqual(720);
+    });
+
+    it('ignores an ancestor that does not clip and measures the viewport instead', async () => {
+      const user = userEvent.setup();
+      // Same geometry as the clipped case, but the ancestor scrolls nothing —
+      // the panel is free to flip up out of it, into the window.
+      const clip = { top: 600, bottom: 700 };
+      const trigger = { top: 640, bottom: 684 };
+      clipLayout({ clip, trigger, panelHeight: 200, viewport: 720 });
+
+      const { items } = makeItems();
+      render(
+        <ul data-clipbox="true">
+          <li>
+            <MoreMenu items={items} />
+          </li>
+        </ul>
+      );
+
+      await user.click(screen.getByRole('button', { name: 'More' }));
+      const panel = screen.getByRole('menu');
+      expect(panel.className).toContain('bottom-full');
+      expect(panel.style.maxHeight).toBe('');
+    });
+
+    // ── Short clipping boxes: the cap needs a FLOOR (the Vitals regression) ──
+    //
+    // Measured in Chrome at 1280x720 on /circles/:id/vitals with one manual
+    // reading: the row's MoreMenu sits inside the `Accordion`'s `0fr→1fr`
+    // collapse wrapper (`div.overflow-hidden.min-h-0`), and around a ONE-ROW
+    // group that wrapper's rect is 414–496 — an 82px box around a 44px
+    // trigger. 23px above it, 15px below it, and a 53px panel. Capping to
+    // "whatever is left" produced an 11px scrollport: the "Delete" item laid
+    // out at 487–530, entirely outside its own scrollport, and
+    // `elementFromPoint` over it returned the SECTION rather than the item.
+    // Present, and dead for a pointer (keyboard still reached it — the same
+    // invisible-but-operable-by-keyboard shape as the original bug).
+    //
+    // Containment is not usability. The floor is the shortest scrollport that
+    // can still scroll one whole item into view: the items are `min-h-[44px]`
+    // and the panel adds `p-1` (4px top + bottom) and a 1px border, all of
+    // which sit INSIDE `max-height` under `box-sizing: border-box` — 54px.
+    // Below that the clip box is not a viable boundary at all and the panel
+    // must fall back to the viewport instead of capping.
+    //
+    // jsdom has no layout, so "the item is reachable" cannot be asserted by
+    // hit-testing. The two concrete things that broke are asserted instead:
+    // no cap below the usable floor is ever applied, and the boundary
+    // escalated — the panel takes the direction the VIEWPORT dictates, which
+    // is the opposite of the one the 82px box dictates.
+    describe('short clipping boxes', () => {
+      /** 44px item + the panel's `p-1` + its 1px border, all inside max-height. */
+      const MIN_USABLE_PANEL = 54;
+
+      /** The panel's scrollport, or `Infinity` when it was left uncapped. */
+      function panelCap(panel: HTMLElement): number {
+        return panel.style.maxHeight ? Number.parseFloat(panel.style.maxHeight) : Infinity;
+      }
+
+      /** The real Vitals geometry: one reading, so a one-row group. */
+      const VITALS = {
+        clip: { top: 414, bottom: 496 },
+        trigger: { top: 437, bottom: 481 },
+        panelHeight: 53,
+        viewport: 720,
+      };
+
+      function renderInClip(): void {
+        const { items } = makeItems();
+        render(
+          <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+            <li>
+              <MoreMenu items={items} />
+            </li>
+          </ul>
+        );
+      }
+
+      it('escalates to the viewport rather than capping to an unusable 11px scrollport', async () => {
+        const user = userEvent.setup();
+        clipLayout(VITALS);
+        renderInClip();
+
+        await user.click(screen.getByRole('button', { name: 'More' }));
+        const panel = screen.getByRole('menu');
+
+        // No cap at all: the 11px the box had left cannot present an item.
+        expect(panel.style.maxHeight).toBe('');
+        expect(panel.className).not.toContain('overflow-y-auto');
+        // The boundary escalated. Inside the 82px box the roomier side is
+        // ABOVE (23 vs 15) — `bottom-full`; against the viewport there are
+        // 227px BELOW the trigger, so a viewport-measured panel opens down.
+        expect(panel.className).toContain('top-full');
+        expect(panel.className).not.toContain('bottom-full');
+      });
+
+      it('never applies a cap that cannot scroll one whole 44px item into view', async () => {
+        const user = userEvent.setup();
+        for (const clip of [
+          { top: 414, bottom: 496 }, // Vitals: 82px box → 11px left
+          { top: 600, bottom: 700 }, // 100px box → 28px left
+          { top: 560, bottom: 700 }, // 140px box → 44px left
+        ]) {
+          clipLayout({ ...VITALS, clip, panelHeight: 200 });
+          const { items } = makeItems();
+          const { unmount } = render(
+            <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+              <li>
+                <MoreMenu items={items} />
+              </li>
+            </ul>
+          );
+
+          await user.click(screen.getByRole('button', { name: 'More' }));
+          const cap = panelCap(screen.getByRole('menu'));
+          expect(cap === Infinity || cap >= MIN_USABLE_PANEL).toBe(true);
+          unmount();
+        }
+      });
+
+      // The floor is a threshold, so pin both sides of it one pixel apart.
+      it('caps at exactly the floor, and escalates one pixel below it', async () => {
+        const user = userEvent.setup();
+        const trigger = { top: 600, bottom: 644 };
+        const panelHeight = 200;
+
+        // 54px of usable room above the trigger — exactly `MIN_USABLE_PANEL`.
+        // Still a viable box: cap, scroll, stay inside it.
+        const atFloor = { top: 534, bottom: 650 };
+        clipLayout({ clip: atFloor, trigger, panelHeight, viewport: 720 });
+        const first = makeItems();
+        const { unmount } = render(
+          <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+            <li>
+              <MoreMenu items={first.items} />
+            </li>
+          </ul>
+        );
+        await user.click(screen.getByRole('button', { name: 'More' }));
+        const capped = screen.getByRole('menu');
+        expect(panelCap(capped)).toBe(MIN_USABLE_PANEL);
+        expect(capped.className).toContain('overflow-y-auto');
+        const box = resolvePanelBox(capped, trigger, panelHeight);
+        expect(box.top).toBeGreaterThanOrEqual(atFloor.top);
+        expect(box.bottom).toBeLessThanOrEqual(atFloor.bottom);
+        unmount();
+
+        // One pixel shorter: 53px cannot present a whole item, so the box
+        // stops being a boundary and the viewport takes over.
+        clipLayout({ clip: { top: 535, bottom: 650 }, trigger, panelHeight, viewport: 720 });
+        const second = makeItems();
+        render(
+          <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+            <li>
+              <MoreMenu items={second.items} />
+            </li>
+          </ul>
+        );
+        await user.click(screen.getByRole('button', { name: 'More' }));
+        expect(panelCap(screen.getByRole('menu'))).toBe(Infinity);
+      });
+
+      // The OTHER accordion-clipped call site: `CardActions` on the Emergency
+      // page. Same component, same clip, opposite outcome — there the
+      // Accordion wraps a whole SECTION, so the box is 691–988px and the
+      // 113px panel always fits. Measured in Chrome across all 8 menus
+      // (doctors / contacts / insurance): no cap on any of them. The floor
+      // must not start firing here.
+      it('leaves a tall accordion box (Emergency CardActions) rendering identically', async () => {
+        const user = userEvent.setup();
+        // AARP Medicare Supplement, the tightest of the eight: 336px above
+        // the trigger, 34px below it (the box runs past the fold, so the
+        // viewport clamps the bottom), 113px panel.
+        clipLayout({
+          clip: { top: 306, bottom: 997 },
+          trigger: { top: 642, bottom: 686 },
+          panelHeight: 113,
+          viewport: 720,
+        });
+
+        const { items } = makeItems();
+        render(
+          <ul data-clipbox="true" style={{ overflowY: 'hidden', overflowX: 'hidden' }}>
+            <li>
+              <MoreMenu items={items} />
+            </li>
+          </ul>
+        );
+
+        await user.click(screen.getByRole('button', { name: 'More' }));
+        const panel = screen.getByRole('menu');
+        expect(panel.className).toContain('bottom-full');
+        expect(panel.style.maxHeight).toBe('');
+        expect(panel.className).not.toContain('overflow-y-auto');
+      });
+    });
+  });
+
   it('renders the default trigger as a 44×44 icon button named by its label', () => {
     const { items } = makeItems();
     render(<MoreMenu items={items} />);

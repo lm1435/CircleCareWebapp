@@ -139,17 +139,19 @@ export default function CirclePickerPage(): ReactElement {
     );
   } else if (!circles || circles.length === 0) {
     content = (
+      // Both CTAs are now bare, equally-sized Buttons: EmptyCircles lays them
+      // out as one `A or B` row. The "Were you invited?" prompt that used to
+      // sit above the join button is gone from here — it framed joining as the
+      // exception, and it now does real work inside CreateCircleModal, where a
+      // user who opened the wrong door has no other way out.
       <EmptyCircles
         action={
           <Button onClick={() => setShowCreate(true)}>{t('circles:create.create')}</Button>
         }
         joinAction={
-          <div className="flex flex-col items-center gap-2">
-            <p className="m-0 text-sm text-ink-3">{t('circles:join.invitedPrompt')}</p>
-            <Button variant="secondary" onClick={() => setShowJoin(true)}>
-              {t('circles:join.withCode')}
-            </Button>
-          </div>
+          <Button variant="secondary" onClick={() => setShowJoin(true)}>
+            {t('circles:join.withCode')}
+          </Button>
         }
       />
     );
@@ -185,11 +187,23 @@ export default function CirclePickerPage(): ReactElement {
             </p>
           )}
         </div>
+        {/* TWO PEER CHOICES, not an action and its afterthought.
+            Join used to be a lone secondary button tucked to the left of
+            Create, which reads as "the real thing is Create, and this other
+            control is for people who did something unusual" — the opposite of
+            the truth for an invitee, who must never be made to think they have
+            to create a circle. Both controls are now the same size and sit
+            either side of the `or` (copy that already existed in both locales
+            and had no call site), so the pair reads as one question with two
+            answers. Create keeps the filled variant: it IS the heavier
+            commitment, and an invitee is being pointed at the other side of
+            the `or`, not asked to out-shout it. */}
         {showHeaderActions && (
-          <div className="flex shrink-0 flex-wrap gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             <Button variant="secondary" onClick={() => setShowJoin(true)}>
               {t('circles:join.button')}
             </Button>
+            <span className="text-sm text-ink-3">{t('circles:join.or')}</span>
             <Button onClick={() => setShowCreate(true)}>{t('circles:create.create')}</Button>
           </div>
         )}
@@ -199,7 +213,21 @@ export default function CirclePickerPage(): ReactElement {
       <PendingInvitesBanner />
       {content}
 
-      {showCreate && <CreateCircleModal onClose={() => setShowCreate(false)} />}
+      {/* THE ESCAPE HATCH OUT OF CREATE. An invitee who lands on the create
+          form has, until now, had exactly two exits: finish creating a circle
+          they do not want, or cancel back to a page whose loudest control
+          sends them straight back in. The two modals are siblings here — this
+          page owns both flags — so switching is a close-then-open, never a
+          modal inside a modal. */}
+      {showCreate && (
+        <CreateCircleModal
+          onClose={() => setShowCreate(false)}
+          onJoinInstead={() => {
+            setShowCreate(false);
+            setShowJoin(true);
+          }}
+        />
+      )}
       {showJoin && (
         <JoinCircleModal
           onClose={() => setShowJoin(false)}

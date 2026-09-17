@@ -110,9 +110,76 @@ export const INPUT_TRAILING =
  * The pseudo-element is positioned against the shell (the input itself is a
  * static flex child), which is why both date fields add `relative` to it.
  * WebKit/Blink only; Firefox draws no indicator of its own.
+ *
+ * UNUSED AGAIN, AND KEPT AGAIN — THE SECOND TIME ROUND, SO READ THIS BEFORE
+ * DELETING IT.
+ *
+ * It went unused once when `TimeField` and then `DateField` grew their own
+ * popovers and moved to {@link PICKER_INDICATOR_HIDDEN}, and was kept for the
+ * next native-dropdown input that arrives without a replacement popover behind
+ * it (`type="month"`, `type="week"`, `type="datetime-local"`). It then came
+ * back into service as the touch half of the coarse-pointer gate — the fields
+ * rendered no popover on a phone and needed the native picker to stay
+ * clickable. That gate is gone (the popover is now the picker on every device;
+ * see `pickerPopover.tsx` for the three defects that had to be solved first),
+ * so the constant is unused a second time and the ORIGINAL reason to keep it is
+ * the reason again. Twice now this exact code has been wanted back within a
+ * release of being written off; re-deriving the `w-11` overlay geometry from
+ * scratch is the cost of being wrong a third time.
  */
 export const PICKER_INDICATOR_OVERLAY =
   '[&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:top-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-11 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0';
+
+/**
+ * The OPPOSITE bargain, for `<input type="time">` AND `type="date"`: take the
+ * browser's picker button OUT of the tree entirely.
+ *
+ * `PICKER_INDICATOR_OVERLAY` above keeps the indicator alive so the native
+ * dropdown stays mouse-reachable, which is the right trade only while there is
+ * nothing to reach instead. Chrome's time wheel is a system-blue selection bar
+ * over a 60-row minute column; its calendar is a system-blue selected day under
+ * system-blue "Clear"/"Today" links. Both are drawn by the browser chrome,
+ * unstyleable by any selector, and visibly from a different app than everything
+ * around them. `TimeField` ships `TimePickerPanel` and `DateField` ships
+ * `DatePickerPanel`, so neither native dropdown is a fallback any more — each
+ * is a second, conflicting picker on the same field, one click away.
+ *
+ * `hidden` (`display: none`), not `opacity-0`: a transparent indicator is
+ * still a hit target, which is exactly how the wheel would keep appearing from
+ * under our own trigger button. Removing it also removes the click path that
+ * opens the dropdown at all — Chrome only opens it from the indicator, and from
+ * Alt+ArrowDown/F4, which both fields intercept and route to their popover
+ * (`opensNativePicker`, in `pickerField.ts`).
+ *
+ * `::-webkit-inner-spin-button` goes with it: WebKit draws spinners on some
+ * `type="time"` builds, and they would sit beside our trigger glyph.
+ *
+ * Firefox draws no picker button for `type="time"` at all (it has no dropdown
+ * to suppress), and exposes no `-moz-` pseudo-element for one — so there is
+ * deliberately no Firefox rule here. If a future Firefox grows one, add it
+ * here rather than at the call site.
+ *
+ * CHROMIUM ONLY, MEASURED — AND THAT IS WHY IT IS NOT THE WHOLE ANSWER. The
+ * paragraph above ("removing it also removes the click path") is true of Blink
+ * and FALSE of WebKit: applying this class moves an input's intrinsic width
+ * 148px -> 128px in Chromium and 97px -> 97px in WebKit, i.e. WebKit never laid
+ * out an indicator to remove — and it opens its date/time UI from the FOCUSED
+ * INPUT, not from a button, so there is no click path here to close. On iOS
+ * this class therefore suppresses nothing on its own.
+ *
+ * APPLIED ON EVERY POINTER CLASS ALL THE SAME, and paired with `readOnly` on
+ * the input where the pointer is coarse. The two close one route each and
+ * neither closes both: this class takes away Chromium's indicator, `readOnly`
+ * takes away WebKit's focus route (iOS does not summon a picker for an input it
+ * cannot edit). The fields used to hand touch back to
+ * {@link PICKER_INDICATOR_OVERLAY} instead, which was the honest answer while
+ * there was no popover on touch to conflict with; there is one now. The width
+ * measurement above is pinned per engine in `e2e/coarse-pointer.spec.ts` and
+ * matters MORE than it did — it is the evidence that `readOnly` is not
+ * optional.
+ */
+export const PICKER_INDICATOR_HIDDEN =
+  '[&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-inner-spin-button]:appearance-none';
 
 /** Wraps `<Text variant="label">`: 8px below the label (spec §4.5). */
 export const INPUT_LABEL = 'block mb-2 ml-1';

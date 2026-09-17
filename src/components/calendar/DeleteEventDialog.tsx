@@ -94,7 +94,10 @@ export function DeleteEventDialog({
         destructive
         loading={deleteEvent.isPending}
         loadingLabel={t('deleteEvent.deleting')}
-        onConfirm={() => void runDelete({ eventId: event.id })}
+        // The PROMISE is returned, not discarded: `ConfirmDialog` holds its
+        // double-submit guard for as long as it is pending, so a second press
+        // is refused for the whole request rather than only for the tick.
+        onConfirm={() => runDelete({ eventId: event.id })}
         onCancel={onClose}
       />
     );
@@ -127,8 +130,13 @@ export function DeleteEventDialog({
       destructive
       loading={deleteEvent.isPending}
       loadingLabel={t('deleteEvent.deleting')}
+      // Returned, not discarded — see the non-recurring branch above. This is
+      // the path that matters most: delete-one-occurrence is one of the three
+      // backend routes that insert against the partial unique index with no
+      // 23505 recovery, so a second DELETE that races the first is answered
+      // with a 500 over a delete that already worked.
       onConfirm={() =>
-        void runDelete({
+        runDelete({
           eventId: targetEventId,
           deleteScope: scope,
           scheduledDate: event.scheduled_date,

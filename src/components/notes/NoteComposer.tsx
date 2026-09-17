@@ -39,6 +39,15 @@ export interface NoteComposerProps {
   onCancel?: () => void;
   cancelLabel?: string;
   /**
+   * A failed submit, shown INLINE above the submit row with `role="alert"` so
+   * it is announced without moving focus. Inline rather than a toast: the
+   * create composer is 423px tall at 360x640 and only 371px fit between the
+   * page toast band and the nav pill, so a toast for its own submit always
+   * covered the textarea the user is asked to retry from
+   * (e2e/unhappy/writes/toast-page-overlap.spec.ts).
+   */
+  error?: string | null;
+  /**
    * Focus the body textarea on mount — WCAG 2.4.3 (focus order). `NoteRow`
    * passes this for its inline EDIT instance: choosing "Edit" from the row's
    * MoreMenu unmounts the trigger that had focus, and the generic
@@ -62,6 +71,7 @@ export function NoteComposer({
   submitting = false,
   onCancel,
   cancelLabel,
+  error = null,
   autoFocus = false,
 }: NoteComposerProps): ReactElement {
   const { t } = useTranslation('notes');
@@ -151,6 +161,12 @@ export function NoteComposer({
           })}
         </div>
       </div>
+
+      {error ? (
+        <p role="alert" className="m-0 text-sm text-terracotta-deep text-balance">
+          {error}
+        </p>
+      ) : null}
 
       <div className="flex justify-end gap-2">
         {onCancel && (

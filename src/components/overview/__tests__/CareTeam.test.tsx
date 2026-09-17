@@ -13,6 +13,13 @@ vi.mock('@/hooks/useCircleMembers', () => ({
   useSetMedicationResponsible: vi.fn(),
 }));
 
+// Home had no instrumentation on web; the solo nudge's CTA is the one press
+// that says whether the biggest retention lever on the surface is working.
+const soloInviteTapped = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  Analytics: { soloInviteTapped: (...args: unknown[]) => soloInviteTapped(...args) },
+}));
+
 const OWNER = 'u-owner';
 
 function member(overrides: Partial<CircleMember> & { id: string }): CircleMember {
@@ -160,6 +167,24 @@ describe('CareTeam', () => {
     expect(setMedMutate).toHaveBeenCalledWith('u-sam');
   });
 
+  // The other half of the toggle: on the CURRENT manager the same entry clears
+  // the role, which the API takes as `null` — sending the member's id again
+  // would re-assign the role the owner just asked to remove.
+  it('clears the medication manager from the menu when the member already holds it', async () => {
+    const user = userEvent.setup();
+    renderTeam({
+      members: [
+        member({ id: OWNER, first_name: 'Pat', role: 'owner' }),
+        member({ id: 'u-sam', first_name: 'Sam', is_medication_responsible: true }),
+      ],
+    });
+    await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
+    expect(screen.queryByRole('menuitem', { name: 'Make medication manager' })).toBeNull();
+    await user.click(screen.getByRole('menuitem', { name: 'Remove medication manager' }));
+    expect(setMedMutate).toHaveBeenCalledTimes(1);
+    expect(setMedMutate).toHaveBeenCalledWith(null);
+  });
+
   it('confirms before removing a member', async () => {
     const user = userEvent.setup();
     renderTeam({
@@ -186,6 +211,17 @@ describe('CareTeam', () => {
       expect(
         screen.getByRole('link', { name: 'Invite your first caregiver' })
       ).toHaveAttribute('href', '/circles/c1/members');
+    });
+
+    // `Analytics.soloInviteTapped` takes no arguments — the event carries no
+    // circle id — so this pins the press and its EMPTY argument list, not a
+    // circle.
+    it('reports the CTA press, with no properties', async () => {
+      const user = userEvent.setup();
+      renderTeam({ members: [member({ id: OWNER, first_name: 'Pat', role: 'owner' })] });
+      await user.click(screen.getByRole('link', { name: 'Invite your first caregiver' }));
+      expect(soloInviteTapped).toHaveBeenCalledTimes(1);
+      expect(soloInviteTapped).toHaveBeenCalledWith();
     });
 
     it('uses the self-care copy, which names nobody', () => {

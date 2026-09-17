@@ -5,7 +5,6 @@ import { Avatar, Badge, Eyebrow, IconTile, Sheet } from '@/components/ui';
 import {
   getActivityEyebrowColor,
   getActivityIcon,
-  getActivityRailClass,
   getActivityTone,
 } from './ActivityIcon';
 import { renderActivityDescription } from './activityTranslation';
@@ -21,7 +20,7 @@ import { useHourCycle } from '@/hooks/useHourCycle';
 // The hero LEADS WITH WHAT HAPPENED — the same localized description the feed
 // rows render (renderActivityDescription) — attributed to the actor with a
 // quiet relative timestamp, rather than just "{time} · {name}". Its accent
-// (rail + icon tile + eyebrow) picks up the event-type color so the freshest
+// (icon tile + eyebrow) picks up the event-type color so the freshest
 // event reads as informative at a glance. The badge says "New", not mobile's
 // "Live" — this feed is fetched, not realtime, so it must not promise live
 // updates (spec §6.5 renames the web key `live` -> `new` for exactly this).
@@ -52,7 +51,6 @@ export function LatestHero({ activity, timezone }: LatestHeroProps): ReactElemen
   const description = renderActivityDescription(activity, t, { hourCycle, timezone });
   const tone = getActivityTone(activity.action_type);
   const icon = getActivityIcon(activity.action_type);
-  const railClass = getActivityRailClass(activity.action_type);
   const eyebrowColor = getActivityEyebrowColor(activity.action_type);
 
   return (
@@ -67,9 +65,6 @@ export function LatestHero({ activity, timezone }: LatestHeroProps): ReactElemen
       padding="sm"
       className="relative mb-6 overflow-hidden"
     >
-      {/* Event-type accent rail down the leading edge. */}
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${railClass}`} />
-
       <div aria-hidden="true" className="flex items-start gap-4">
         <IconTile tone={tone} name={icon} size={44} />
 

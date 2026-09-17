@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,6 +7,7 @@ import '@/i18n';
 import ProfilePage from '@/pages/ProfilePage';
 import type { User, UnitPreferences } from '@/api/users';
 import { setAnalyticsConsent, __resetAnalyticsConsentCache } from '@/lib/analyticsConsent';
+import { clickTwice } from '@/test/doubleSubmit';
 
 // Stage 7 Task 7.6 — ProfilePage tests. The Stage 7 hooks are unit-tested in
 // useProfile.test.tsx; here we assert the PAGE wires them correctly: a toggle
@@ -56,8 +57,11 @@ vi.mock('@/api/users', async (importOriginal) => {
     ...actual,
     getCurrentUser: vi.fn(() => Promise.resolve(currentUser)),
     getUnitPreferences: vi.fn(() => Promise.resolve(UNITS)),
+    // The name form's own save (inline error, no hook toast).
+    updateProfile: (data: unknown) => mockUpdateProfileRequest(data),
   };
 });
+const mockUpdateProfileRequest = vi.fn();
 
 // Mutation hooks — capture the mutate calls.
 const updateProfile = vi.fn();
@@ -276,6 +280,44 @@ describe('ProfilePage', () => {
     expect(syncAnalyticsConsent).toHaveBeenCalledWith(true, 'u1');
   });
 
+  /**
+   * THE RESTORE DIRECTION. Someone who declined at SIGNUP now has
+   * `analytics_consent_withdrawn_at` stamped (the signup surfaces queue that
+   * decision — see signupAnalyticsConsentServerHalf.test.tsx), and stamping it
+   * suppresses every server-side capture. If accepting later did not clear it,
+   * they would stay server-suppressed for the life of the account while this
+   * toggle reads ON — the same silent contradiction in the other direction.
+   * `syncAnalyticsConsent(true, …)` routes to `restoreAnalyticsConsent`
+   * (pinned in lib/__tests__/analyticsConsentSync.test.ts), which is what
+   * clears the column.
+   */
+  it('a signup DECLINE followed by a Profile ACCEPT syncs the restore', async () => {
+    setAnalyticsConsent(false); // the state a signup decline leaves behind
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await user.click(toggle);
+
+    expect(syncAnalyticsConsent).toHaveBeenCalledWith(true, 'u1');
+  });
+
+  /**
+   * ONE decision, ONE request. Both consent endpoints sit behind a per-user
+   * rate limiter, and a toggle that fired twice per click would burn it — and
+   * on a fast double-flip could deliver the two decisions out of order.
+   */
+  it('fires the server sync exactly once per toggle', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /Share usage data/i });
+    await user.click(toggle);
+
+    expect(syncAnalyticsConsent).toHaveBeenCalledTimes(1);
+  });
+
   it('points to the sign-in reset flow for password changes', async () => {
     renderPage();
     expect(
@@ -298,6 +340,66 @@ describe('ProfilePage', () => {
 // straight back out of local state, so hydrating the raw value meant the
 // untouched field went to the API as "22:00:00" — which HH:MM-only validation
 // rejected ("editing only the end time fails to save, editing both works").
+describe('ProfilePage — name form', () => {
+  async function openNameForm() {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    const first = screen.getByLabelText(/^First name/);
+    await user.clear(first);
+    await user.type(first, 'Samantha');
+    return user;
+  }
+
+  it('a failed name save is shown INLINE in the form (announced, no toast), and a retry clears it', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    mockUpdateProfileRequest.mockRejectedValueOnce({ error: { code: 'SERVER_ERROR' } });
+    const user = await openNameForm();
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent("Couldn't save your changes. Please try again.");
+    // Next to the form it belongs to: in the same card as the name fields.
+    expect(alert.parentElement).toContainElement(
+      screen.getByLabelText(/^First name/)
+    );
+    expect(showToast).not.toHaveBeenCalled();
+    expect(document.activeElement).not.toBe(alert);
+    // Input kept; the failure still counts for the digest (closed-set code).
+    expect(screen.getByLabelText(/^First name/)).toHaveValue('Samantha');
+    expect(Analytics.errorOccurred).toHaveBeenCalledWith('profile', 'profile_mutation_error', {
+      code: expect.any(String),
+    });
+
+    mockUpdateProfileRequest.mockResolvedValueOnce(USER);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Name updated.', 'success'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(mockUpdateProfileRequest).toHaveBeenLastCalledWith({
+      first_name: 'Samantha',
+      last_name: 'Doe',
+    });
+  });
+
+  it('renders the inline name error in Spanish', async () => {
+    const i18n = (await import('@/i18n')).default;
+    await i18n.changeLanguage('es');
+    try {
+      mockUpdateProfileRequest.mockRejectedValueOnce(new Error('network'));
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('button', { name: 'Editar' }));
+      await user.click(screen.getByRole('button', { name: 'Guardar' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'No se pudieron guardar los cambios. Inténtalo de nuevo.'
+      );
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+});
+
 describe('ProfilePage quiet hours', () => {
   const WITH_SECONDS: User = {
     ...USER,
@@ -370,5 +472,105 @@ describe('ProfilePage quiet hours', () => {
       quiet_hours_start: '22:00',
       quiet_hours_end: '07:00',
     });
+  });
+});
+
+// Regression — double submit. Account deletion is irreversible, and
+// `confirmDisabled={deleteAccount.isPending}` lands a render after the press
+// that would double-fire it. A second DELETE arrives after the first has torn
+// the account down and leaves an error on screen for a deletion that worked.
+describe('ProfilePage — double-delete guard', () => {
+  it('fires the delete mutation exactly ONCE when Confirm is pressed twice in the same tick', async () => {
+    const user = userEvent.setup();
+    // In flight: no callback fires, so the guard is still held on the second
+    // press. (clearAllMocks does not undo an earlier test's implementation.)
+    deleteAccount.mockImplementation(() => {});
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    await clickTwice(await screen.findByRole('button', { name: 'Delete account' }));
+
+    expect(deleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * THE PAGE'S OWN GUARD, isolated. The test above cannot tell it apart from
+   * ConfirmDialog's: the shell wraps `onConfirm` in its own ref, so a same-tick
+   * second press is refused there whatever this page does. But
+   * `handleDeleteAccount` returns nothing (it calls `mutate`, not
+   * `mutateAsync`), so the shell releases its ref on the very next microtask
+   * while the DELETE is still in flight — and `isPending` does not reach the
+   * button until React Query's batched notify has rendered. A second press
+   * after that turn is refused by `deleteGuard` alone.
+   */
+  it('fires the delete mutation exactly ONCE when Confirm is pressed again a turn later, mid-request', async () => {
+    const user = userEvent.setup();
+    deleteAccount.mockImplementation(() => {});
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    const confirm = await screen.findByRole('button', { name: 'Delete account' });
+
+    await act(async () => {
+      confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+
+    expect(deleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * …AND A FAILED DELETE HANDS THE GUARD BACK. The two tests above only prove
+   * the guard is CLAIMED; nothing proved it is ever released. `onSettled` is
+   * the only release, and without it the first failure leaves `deleteGuard`
+   * held for the life of the page: the dialog stays open with the error
+   * showing, inviting a retry, and every later Confirm returns at `claim()` —
+   * a button that silently does nothing.
+   *
+   * React Query's callbacks are held until the "request" returns, as in
+   * `InviteMemberModal`'s twin of this test: firing them inside `mutate()`
+   * would release the guard before `mutate` came back, which is not the order
+   * production runs in.
+   */
+  it('lets Confirm retry after a FAILED delete (onSettled releases the guard)', async () => {
+    const user = userEvent.setup();
+    type DeleteCallbacks = {
+      onSuccess?: () => void;
+      onError?: (error: unknown) => void;
+      onSettled?: (data?: unknown, error?: unknown) => void;
+    };
+    let pending: DeleteCallbacks | undefined;
+    deleteAccount.mockImplementation((_vars: unknown, opts?: DeleteCallbacks) => {
+      pending = opts;
+    });
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete account' }));
+    expect(deleteAccount).toHaveBeenCalledTimes(1);
+
+    // The request fails.
+    const failure = new Error('network down');
+    const failed = pending;
+    await act(async () => {
+      failed?.onError?.(failure);
+      failed?.onSettled?.(undefined, failure);
+    });
+    // Still in the dialog, still signed in: the retry is the user's next move.
+    expect(screen.getByRole('button', { name: 'Delete account' })).toBeInTheDocument();
+    expect(signOut).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Delete account' }));
+    expect(deleteAccount).toHaveBeenCalledTimes(2);
+
+    // And the retry is a real one: when it succeeds, the deletion completes.
+    const retried = pending;
+    await act(async () => {
+      retried?.onSuccess?.();
+      retried?.onSettled?.();
+    });
+    expect(signOut).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login', { replace: true }));
   });
 });

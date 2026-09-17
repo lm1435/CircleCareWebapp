@@ -135,7 +135,7 @@ export async function checkA11y(page: Page, route: string, testInfo: TestInfo): 
  * Expand every "+N more all-day events" toggle currently collapsed in the
  * calendar's week view (WeekView.tsx caps each day's all-day row at
  * `MAX_ALL_DAY_VISIBLE` and hides the rest behind a per-day overflow button,
- * `aria-label` "N more all-day events on <day>"). Months of repeated e2e runs
+ * `aria-label` "N more all-day event(s) on <day>"). Months of repeated e2e runs
  * pile many synthetic all-day Task/Appointment events onto "today", so a
  * freshly-created chip can land past that cap — call this before searching
  * for a specific chip by title so it's actually in the accessibility tree.
@@ -146,10 +146,86 @@ export async function checkA11y(page: Page, route: string, testInfo: TestInfo): 
  * cached index would skip entries. A no-op when nothing is collapsed.
  */
 export async function expandAllDayOverflow(page: Page): Promise<void> {
-  const moreButton = page.getByRole('button', { name: /more all-day events/i });
+  // `events?` — the label is PLURALISED by the product, so a day hiding exactly
+  // one chip reads "1 more all-day event on <day>" (singular). The old
+  // plural-only regex silently skipped those days, leaving a chip out of the
+  // accessibility tree and, worse, leaving an unmatched "…more…" button on the
+  // page for a later non-exact `getByRole('button', { name: 'More' })` to
+  // collide with.
+  const moreButton = page.getByRole('button', { name: /more all-day events?\b/i });
   // Bounded so a naming regression here fails fast instead of hanging the test.
   for (let guard = 0; guard < 10; guard++) {
     if ((await moreButton.count()) === 0) return;
     await moreButton.first().click();
   }
+}
+
+/**
+ * Explain WHY a click on `locator` cannot land — for overlap/clipping bugs.
+ *
+ * Playwright's actionability error ("<div …> intercepts pointer events") names
+ * the element that won the hit test, which is usually mistaken for a selector
+ * problem. It is often a real product defect, and the difference is decidable:
+ * resolve the target's click point, ask the DOM what is actually painted there,
+ * then walk UP from the target for the nearest ancestor that CLIPS
+ * (`overflow` other than `visible`) and compare the two rects.
+ *
+ *   - target rect INSIDE the clip rect, another element on top  → stacking /
+ *     z-index problem.
+ *   - target rect OUTSIDE the clip rect                          → the target is
+ *     not painted at all; whatever sits there answers the hit test. A z-index
+ *     change cannot help. This is the shape that hid a dead "Cancel invite"
+ *     control on the Members page: an inline-rendered `MoreMenu` flipped up out
+ *     of a `Sheet`'s `overflow-hidden` box at a 720px-tall viewport, leaving 19
+ *     of 53 panel pixels visible and the menu item 7.5px above the clip rect.
+ *
+ * Also re-measure at a second viewport HEIGHT: a bug that reproduces at
+ * 1280x720 and not at 1440x900 is a flip/space-dependent one, which is exactly
+ * why it presents as flake rather than as a stable failure.
+ *
+ * Returns a plain object; log it or attach it to the report. Read-only.
+ */
+export async function diagnoseClickObstruction(
+  locator: import('@playwright/test').Locator
+): Promise<unknown> {
+  const handle = await locator.first().elementHandle();
+  if (!handle) return { error: 'locator resolved to no element' };
+  return handle.evaluate((target: Element) => {
+    const rect = target.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const atPoint = document.elementFromPoint(cx, cy) as HTMLElement | null;
+
+    let node: HTMLElement | null = target.parentElement;
+    let clip: Record<string, unknown> | null = null;
+    while (node) {
+      const cs = getComputedStyle(node);
+      if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {
+        const r = node.getBoundingClientRect();
+        clip = {
+          tag: node.tagName,
+          className: node.className,
+          overflow: `${cs.overflowX}/${cs.overflowY}`,
+          rect: { top: r.top, bottom: r.bottom, left: r.left, right: r.right },
+        };
+        break;
+      }
+      node = node.parentElement;
+    }
+
+    return {
+      targetRect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
+      clickPoint: { x: cx, y: cy },
+      elementAtClickPoint: atPoint && {
+        tag: atPoint.tagName,
+        className: atPoint.className,
+        text: (atPoint.textContent ?? '').slice(0, 80),
+        zIndex: getComputedStyle(atPoint).zIndex,
+        position: getComputedStyle(atPoint).position,
+      },
+      hitTargetIsTheTarget: atPoint === target || target.contains(atPoint),
+      nearestClippingAncestor: clip,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    };
+  });
 }

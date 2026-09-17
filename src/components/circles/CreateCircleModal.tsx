@@ -6,6 +6,7 @@ import { useCreateCircle } from '@/hooks/useCircleAdmin';
 import { useCircles } from '@/hooks/useCircles';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { Analytics } from '@/lib/analytics';
 import { classifyFailureCode } from '@/lib/apiErrors';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
@@ -35,9 +36,27 @@ import { Button, DateField, Modal, TextField, Toggle, useToast, useZodForm } fro
 
 export interface CreateCircleModalProps {
   onClose: () => void;
+  /**
+   * Leave this form and open the JOIN flow instead.
+   *
+   * Optional, and the affordance below renders only when it is supplied —
+   * the caller has to actually own a join surface for the offer to be honest.
+   * The owner is CirclePickerPage, which holds both modal flags, so switching
+   * is a close-then-open between siblings rather than a modal nested in a
+   * modal.
+   *
+   * This exists because the create form otherwise has NO exit that leads
+   * anywhere: an invited family member who opened it can only finish creating
+   * a circle nobody needs, or cancel. Mobile has the same gap on
+   * CreateCircleScreen.
+   */
+  onJoinInstead?: () => void;
 }
 
-export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactElement {
+export function CreateCircleModal({
+  onClose,
+  onJoinInstead,
+}: CreateCircleModalProps): ReactElement {
   const { t } = useTranslation('circles');
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -45,6 +64,10 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
 
   const create = useCreateCircle();
   const form = useZodForm(createCircleSchema, ['recipient_name', 'recipient_dob']);
+  // See the long comment at the `create.mutate` call below: `useZodForm.submit`
+  // is synchronous and knows nothing about the request it triggers, so the
+  // in-flight guard belongs here, at the call site that owns the mutation.
+  const submitGuard = useSubmitGuard();
 
   // ONBOARDING PAYWALL GATE INPUTS. Both are read from caches this page has
   // already warmed (the picker renders the circle list and the
@@ -104,6 +127,25 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
     };
 
     form.submit(payload, (data) => {
+      // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. This form had none at all — not
+      // even a `create.isPending` check — because `useZodForm.submit` calls
+      // `onValid` synchronously every time it is handed valid values and
+      // `create.mutate(...)` returns immediately. Two submits in one tick
+      // (Enter pressed twice, a double-click, a synthetic `requestSubmit()`)
+      // therefore created TWO CIRCLES for one household, and fired
+      // `Analytics.circleCreated` + `trackOnboardingCompleted` twice each.
+      //
+      // `isPending` FIRST, then the ref, per `useSubmitGuard`'s contract: the
+      // state flag rejects a second press once React has committed the pending
+      // render, the ref rejects the one that arrives before it. Neither
+      // replaces the other. `mutate` returns immediately, so there is no
+      // promise to hold the guard open — it is released in `onSettled` below.
+      //
+      // The SUCCESS path navigates away / closes this modal, so its `onSettled`
+      // never runs (React Query drops per-call callbacks once the observer is
+      // gone). That leaves the ref claimed on a component that no longer
+      // exists, which is harmless; every path that stays mounted releases it.
+      if (create.isPending || !submitGuard.claim()) return;
       create.mutate(data, {
         onSuccess: (circle) => {
           Analytics.circleCreated(isSelfCare);
@@ -158,6 +200,7 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
           // this event across platforms. The hook itself surfaces the toast.
           Analytics.circleCreationFailed(classifyFailureCode(error));
         },
+        onSettled: submitGuard.release,
       });
     });
   };
@@ -219,6 +262,20 @@ export function CreateCircleModal({ onClose }: CreateCircleModalProps): ReactEle
           </>
         )}
       </form>
+
+      {/* WRONG DOOR? Sits OUTSIDE the <form> on purpose: it is not a form
+          control and must never be swept up by an Enter-key submit. Modest by
+          design — the create flow is still the one the user chose — but it is
+          the only thing on this screen that leads anywhere other than a new
+          circle. */}
+      {onJoinInstead ? (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2 border-t border-line-2 pt-4 text-center">
+          <p className="m-0 text-sm text-ink-3">{t('join.invitedPrompt')}</p>
+          <Button type="button" variant="ghost" size="sm" onClick={onJoinInstead}>
+            {t('join.withCode')}
+          </Button>
+        </div>
+      ) : null}
     </Modal>
   );
 }

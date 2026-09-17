@@ -29,21 +29,55 @@ describe('apiErrors', () => {
 
     it('is false for view/read-only (403) codes', () => {
       expect(isSubscriptionRequiredError(envelope('VIEW_ONLY'))).toBe(false);
-      expect(isSubscriptionRequiredError(envelope('READ_ONLY'))).toBe(false);
+      expect(isSubscriptionRequiredError(envelope('READ_ONLY_MEMBER'))).toBe(false);
       expect(isSubscriptionRequiredError(envelope('FORBIDDEN'))).toBe(false);
     });
   });
 
   describe('isAccessDeniedError (403)', () => {
-    it('is true for VIEW_ONLY, FORBIDDEN, READ_ONLY', () => {
+    it('is true for VIEW_ONLY, FORBIDDEN, READ_ONLY_MEMBER', () => {
       expect(isAccessDeniedError(envelope('VIEW_ONLY'))).toBe(true);
       expect(isAccessDeniedError(envelope('FORBIDDEN'))).toBe(true);
-      expect(isAccessDeniedError(envelope('READ_ONLY'))).toBe(true);
+      expect(isAccessDeniedError(envelope('READ_ONLY_MEMBER'))).toBe(true);
     });
 
     it('is false for subscription (402) codes', () => {
       expect(isAccessDeniedError(envelope('SUBSCRIPTION_REQUIRED'))).toBe(false);
       expect(isAccessDeniedError(envelope('PAYMENT_REQUIRED'))).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The set must be the codes the SERVER SENDS, not a set of plausible names.
+  // -------------------------------------------------------------------------
+  // `READ_ONLY_MEMBER` is the code every read-only refusal actually arrives
+  // with — `backend/src/routes/documents.ts` and `backend/src/routes/upload.ts`
+  // are the only emitters, and `documents.ts` was widened so a member of a
+  // FROZEN circle (free-tier owner, non-selected circle: `view_only` false,
+  // `can_edit` false) is refused on upload/rename/delete too. Miss it and every
+  // one of the ~15 hooks that routes through `isPermissionDeniedError` falls to
+  // its generic "couldn't save" branch and skips `invalidateCircleAccessFlags`,
+  // so the stale flags keep offering write affordances for the whole session.
+  //
+  // `READ_ONLY` (no `_MEMBER`) is NOT in the set: no backend revision has ever
+  // emitted it (`git log --all -S` over `backend/src` finds nothing, and no
+  // commit's tree contains a bare `READ_ONLY` there). Pinned so the set cannot
+  // drift back to a name nobody sends.
+  describe('ACCESS_ERROR_CODES is the backend 403 vocabulary, exactly', () => {
+    it('contains every 403 code the backend emits', () => {
+      // grep -rhoE "code: '[A-Z_]+'" backend/src/routes backend/src/middleware
+      for (const code of ['VIEW_ONLY', 'FORBIDDEN', 'READ_ONLY_MEMBER']) {
+        expect(ACCESS_ERROR_CODES.has(code)).toBe(true);
+      }
+    });
+
+    it('contains no phantom code the backend never sends', () => {
+      expect([...ACCESS_ERROR_CODES].sort()).toEqual([
+        'FORBIDDEN',
+        'READ_ONLY_MEMBER',
+        'VIEW_ONLY',
+      ]);
+      expect(isAccessDeniedError(envelope('READ_ONLY'))).toBe(false);
     });
   });
 

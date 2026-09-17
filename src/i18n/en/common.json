@@ -17,6 +17,22 @@
   "expandAll": "Expand all",
   "collapseAll": "Collapse all",
   "skipToContent": "Skip to content",
+  "timePicker": {
+    "open": "Choose a time",
+    "label": "Time picker",
+    "hour": "Hour",
+    "minute": "Minute",
+    "period": "AM/PM"
+  },
+  "datePicker": {
+    "open": "Choose a date",
+    "label": "Date picker",
+    "month": "Month",
+    "year": "Year",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "clear": "Clear"
+  },
   "pageTitles": {
     "login": "Sign in",
     "signup": "Sign up",
@@ -68,7 +84,13 @@
     "allCircles": "All circles",
     "careShort": "Care",
     "healthShort": "Health",
-    "aiShort": "AI"
+    "aiShort": "AI",
+    "calendarShort": "Calendar",
+    "medsShort": "Meds",
+    "tasksShort": "Tasks",
+    "notesShort": "Notes",
+    "emergencyShort": "Emergency",
+    "documentsShort": "Documents"
   },
   "errors": {
     "saveFailed": "Couldn't save your changes. Please try again.",

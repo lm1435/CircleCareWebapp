@@ -23,6 +23,7 @@ import {
 import { useAiChat } from '@/hooks/useAiChat';
 import { useAiSuggestions } from '@/hooks/useAiSuggestions';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 
 // Web port of mobile/src/components/ai/AIChatModal.tsx (the core chat exchange
 // plus the server suggestions list). Mirrors mobile 1:1 for behavior; drops
@@ -75,6 +76,10 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
   const [remaining, setRemaining] = useState<number | null>(null);
 
   const listEndRef = useRef<HTMLDivElement>(null);
+  // See `handleSend` below: the send is reachable from the submit button, from
+  // Enter in the textarea, and from a suggestion chip, and all three land in
+  // the same handler.
+  const sendGuard = useSubmitGuard();
 
   // Clears the in-memory conversation without closing the modal — both the
   // "New chat" header button and the reset-on-open effect below share it.
@@ -109,7 +114,19 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
     (suggestion?: string) => {
       const usedSuggestion = typeof suggestion === 'string';
       const text = (usedSuggestion ? suggestion : input).trim();
-      if (!text || mutation.isPending) return;
+      // THE SYNCHRONOUS DOUBLE-SEND GUARD. `mutation.isPending` is React Query
+      // state, committed a render AFTER the send, so two sends dispatched in
+      // the SAME tick both get through it — and the composer is a textarea with
+      // Enter-to-send, where a key repeat does exactly that.
+      //
+      // What that costs here is not a duplicate row but a FORKED THREAD:
+      // `useAiChat` assigns `conversationIdRef` in the mutation's `onSuccess`,
+      // so both sends read `conversation_id: undefined`, the server opens TWO
+      // conversations for one question, and every later turn continues
+      // whichever one answered last. `isPending` first, then the ref (see
+      // `useSubmitGuard`); released in `onSettled`, since `mutate` returns
+      // immediately and there is no promise to hold the guard open.
+      if (!text || mutation.isPending || !sendGuard.claim()) return;
 
       setMessages((prev) => [...prev, { id: nextMessageId(), role: 'user', content: text }]);
       setInput('');
@@ -134,14 +151,47 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
             // gate. `errorKey` returns the NAMESPACED key ('errors.<kind>'), so
             // compare against that — an unprefixed compare never matched and the
             // toast silently never fired.
+            //
+            // WHO CAN REACH THIS. AppLayout gates both AI entry points and this
+            // modal's mount on `resolveAiEntry(...) === 'available'`
+            // (src/lib/aiAccess.ts), which is TWO conditions, not one:
+            // `!viewOnly && isPremiumCircle`. A view-only member never gets an
+            // entry, and where premium does not apply only the OWNER gets an
+            // entry, which raises the prompt on tap without opening the chat.
+            //
+            // This comment used to describe that gate as the single condition
+            // "everyone whose circle says premium benefits apply to THEM — no
+            // more and no less". The two readings coincide only because the
+            // backend hardcodes `is_premium_circle: false` for a view-only seat
+            // (`getCircleAccessLevel` short-circuits before reading anyone's
+            // tier), so today no payload has `view_only: true` WITH the premium
+            // flag set. That is a backend coupling, not a property of this gate
+            // — and the whole reason `resolveAiEntry` tests `viewOnly` first is
+            // that the coupling must never be assumed. Both conditions are load
+            // bearing; do not collapse them.
+            //
+            // (This comment used to claim "ONLY the circle OWNER can reach this
+            // now". That was false while the gate read `can_edit`: a free-tier
+            // ACTIVE circle is `can_edit: true` with `is_premium_circle: false`,
+            // so every member reached this modal, and a NON-OWNER's 402 landed
+            // right here on a prompt their own purchase could not lift — the
+            // route reads `getUserTier(circle.owner_id)`. The gate now reads the
+            // premium flag, so that population never opens the chat at all.)
+            //
+            // What survives here is the stale-flag race — the cached circle said
+            // 'available', the server disagreed mid-session — and a 403 VIEW_ONLY
+            // classifies as its own `viewOnly` kind, so it can no longer land on
+            // this branch. Never widen this comparison to the access kinds: a
+            // view-only seat's own purchase buys them nothing.
             if (errorKey(error) === 'errors.subscriptionRequired') {
               promptUpgrade();
             }
           },
+          onSettled: sendGuard.release,
         }
       );
     },
-    [input, mutation, errorKey, t, promptUpgrade]
+    [input, mutation, errorKey, t, promptUpgrade, sendGuard]
   );
 
   const handleSubmit = useCallback(

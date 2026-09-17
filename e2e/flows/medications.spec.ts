@@ -1,5 +1,6 @@
 import { request as apiRequest, type Locator, type Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
+import type { IsolatedAccount } from '../isolation';
 import { checkA11y } from '../helpers';
 
 // Medication lifecycle flows (Medications page — /circles/:id/meds).
@@ -53,8 +54,6 @@ import { checkA11y } from '../helpers';
 // generous post-mutation timeouts.
 
 const ORIGIN = process.env.PW_BASE_URL ?? 'http://localhost:5173';
-const DEMO_EMAIL = process.env.PW_DEMO_EMAIL ?? 'demo@circlecare.app';
-const DEMO_PASSWORD = process.env.PW_DEMO_PASSWORD ?? 'DemoPass123!';
 
 const MED_PREFIX = 'ZZ_E2E_MED_';
 
@@ -141,29 +140,52 @@ async function createDailyMed(
   await submitEventForm(page, dialog);
 }
 
-/** The calendar grid, settled enough that an absence assertion is meaningful. */
+/**
+ * The week-range heading between the prev/next arrows ("Sep 13 – Sep 19, 2026",
+ * CalendarPage.tsx `rangeLabel`).
+ */
+const WEEK_RANGE_HEADING = /^[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}, \d{4}$/;
+
+/**
+ * The calendar grid, LOADED. This is a positive signal, not a settle-and-hope:
+ * CalendarPage renders `role="grid"` (WeekView) only when the events query has
+ * resolved AND returned at least one event — loading shows CalendarSkeleton
+ * (no grid) and an empty range shows EmptyState (no grid). The isolated
+ * account's cloned circle carries daily medications with no end date, so every
+ * week has events and a visible grid always means "this week's data arrived".
+ */
 async function gotoCalendarSettled(page: Page, circleId: string): Promise<void> {
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
 }
 
 /**
- * Step the (default) week view forward/back N weeks and settle.
+ * Step the (default) week view forward/back N weeks and wait for THAT week to
+ * be loaded.
  *
  * Discontinue assertions must be scoped to a week that is entirely in the past
  * or entirely in the future — the CURRENT week straddles the stop instant, so
  * whether today's own dose is still shown depends on the wall clock (a med
  * stopped at 2pm keeps its 8am dose and loses its 8pm one). Stepping one week
  * either side removes the clock from the assertion completely.
+ *
+ * Each step waits for the range heading to CHANGE, and the final one for the
+ * grid (see gotoCalendarSettled for why a visible grid means "loaded"). The
+ * range change is what stops the grid check from being satisfied by the week
+ * we just left.
  */
 async function stepWeeks(page: Page, weeks: number): Promise<void> {
   const label = weeks < 0 ? 'Previous week' : 'Next week';
+  const range = page.getByRole('heading', { level: 2, name: WEEK_RANGE_HEADING });
   for (let i = 0; i < Math.abs(weeks); i++) {
+    await expect(range).toBeVisible({ timeout: 15_000 });
+    const from = (await range.textContent())?.trim() ?? '';
     await page.getByRole('button', { name: label }).click();
+    await expect(range, `week range moved off "${from}"`).not.toHaveText(from, {
+      timeout: 15_000,
+    });
   }
   await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
 }
 
 /**
@@ -181,22 +203,25 @@ async function stepWeeks(page: Page, weeks: number): Promise<void> {
 // extra attempts. Suite runs finish well inside the token's lifetime.
 let sweepToken: string | undefined;
 
-async function getSweepToken(ctx: Awaited<ReturnType<typeof apiRequest.newContext>>) {
+async function getSweepToken(
+  ctx: Awaited<ReturnType<typeof apiRequest.newContext>>,
+  account: IsolatedAccount
+) {
   if (sweepToken) return sweepToken;
   const login = await ctx.post('/api/auth/login', {
     headers: { 'X-Session-Mode': 'cookie', Origin: ORIGIN },
-    data: { email: DEMO_EMAIL, password: DEMO_PASSWORD },
+    data: { email: account.email, password: account.password },
   });
   if (!login.ok()) return undefined;
   sweepToken = (await login.json())?.data?.session?.access_token as string | undefined;
   return sweepToken;
 }
 
-async function sweepCreatedMeds(circleId: string): Promise<void> {
+async function sweepCreatedMeds(circleId: string, account: IsolatedAccount): Promise<void> {
   if (createdMedNames.size === 0) return;
   const ctx = await apiRequest.newContext({ baseURL: ORIGIN });
   try {
-    const token = await getSweepToken(ctx);
+    const token = await getSweepToken(ctx, account);
     if (!token) return;
     const auth = { Authorization: `Bearer ${token}` };
 
@@ -235,8 +260,8 @@ test.describe('medication lifecycle', () => {
   // Runs after EVERY test — pass, fail, or timeout — so a test that died
   // mid-flow never leaves ZZ_E2E_MED_% series behind for the next test (or the
   // next run) to trip over.
-  test.afterEach(async ({ circleId }) => {
-    await sweepCreatedMeds(circleId);
+  test.afterEach(async ({ circleId, account }) => {
+    await sweepCreatedMeds(circleId, account);
   });
 
   test('roster round-trip: create → discontinue → reactivate', async ({
@@ -253,6 +278,15 @@ test.describe('medication lifecycle', () => {
     await createDailyMed(page, circleId, name, dosage, '08:00', daysAgoISO(7));
     // The new series renders on the calendar (recurring → at least one chip).
     await expect(chip.first()).toBeVisible({ timeout: 20_000 });
+
+    // NEXT week HAS doses before the discontinue. Without this, "next week has
+    // none" below is an absence that a week which never showed the series
+    // would satisfy just as well.
+    await gotoCalendarSettled(page, circleId);
+    await stepWeeks(page, 1);
+    await expect(chip.first(), 'next week shows the series before it is stopped').toBeVisible({
+      timeout: 20_000,
+    });
 
     // --- Active roster shows name + dosage ---
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
@@ -403,19 +437,35 @@ test.describe('medication lifecycle', () => {
 
     // Two series of the SAME name + dose at different times (morning/evening).
     // The times are asserted verbatim below ("8:00 AM"/"8:00 PM" on the roster
-    // card), so they stay fixed rather than computed — but if BOTH have
-    // already passed today (only reachable late on a Saturday, in the
-    // circle's America/Denver timezone), each series starts with its NEXT
-    // dose (tomorrow), which lands in the FOLLOWING calendar week. Try the
-    // current week first, then advance once rather than assuming either way.
+    // card), so they stay fixed rather than computed. Whether today's doses are
+    // still ahead depends on the wall clock, but NEXT week is entirely ahead of
+    // both series' starts, so it deterministically holds doses of both — which
+    // is also the week the "gone" assertion below checks. Show it populated
+    // FIRST, so that absence is a change, not a week that never had doses.
     await createDailyMed(page, circleId, name, dosage, '08:00');
     await createDailyMed(page, circleId, name, dosage, '20:00');
-    const visibleThisWeek = await chip.first().isVisible().catch(() => false);
-    if (!visibleThisWeek) {
-      await page.getByRole('button', { name: 'Next week' }).click();
-      await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-    }
+    await gotoCalendarSettled(page, circleId);
+    await stepWeeks(page, 1);
     await expect(chip.first()).toBeVisible({ timeout: 20_000 });
+    // EACH series, by its own time. A bare `chip.count() >= 2` passed with ONE
+    // series: a single daily series already puts seven chips in the week. The
+    // chip's accessible name carries its time (WeekView.tsx ariaLabel:
+    // "<title>, Medication, 8:00 AM, …"), so the two series are told apart by
+    // it. `\s*` because Intl may separate "AM" with a narrow no-break space.
+    for (const [time, meridiem] of [
+      ['8:00', 'AM'],
+      ['8:00', 'PM'],
+    ] as const) {
+      const seriesChip = page.getByRole('button', {
+        name: new RegExp(`${name}.*\\b${time}\\s*${meridiem}\\b`),
+      });
+      await expect
+        .poll(() => seriesChip.count(), {
+          timeout: 20_000,
+          message: `next week shows doses of the ${time} ${meridiem} series`,
+        })
+        .toBeGreaterThanOrEqual(1);
+    }
 
     // ONE grouped card listing both times.
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });

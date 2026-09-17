@@ -1,6 +1,17 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, Modal, Button, MoreMenu, Text, type MoreMenuItem } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Eyebrow,
+  Icon,
+  Modal,
+  MoreMenu,
+  Sheet,
+  Text,
+  type IconName,
+  type MoreMenuItem,
+} from '@/components/ui';
 import { getMedicationPhotoUrl, type CalendarEvent } from '@/api/calendarEvents';
 
 export interface MedicationDetailModalProps {
@@ -9,8 +20,12 @@ export interface MedicationDetailModalProps {
   event: CalendarEvent;
   name: string;
   dosage: string | null;
-  /** Pre-formatted schedule line ("8:00 AM · 8:00 PM · Daily"). */
-  schedule: string;
+  /**
+   * The dose times ONLY ("8:00 AM · 8:00 PM"), never the recurrence. The
+   * recurrence has its own Repeat row; putting it here too printed "Daily"
+   * twice ("8:00 PM · Daily" above "Repeat · Daily"). Mobile's sheet never did.
+   */
+  times: string;
   /**
    * Pre-formatted recurrence on its own ("Daily"), or null for a one-off.
    * Formatted by the caller: `formatRecurrenceLabel` reaches `@/i18n` through
@@ -18,6 +33,10 @@ export interface MedicationDetailModalProps {
    * rendered in isolation.
    */
   repeat?: string | null;
+  /** Whole days of supply left, or null when the medication is not refill-tracked. */
+  daysLeft?: number | null;
+  /** True when `daysLeft` is under the low-stock threshold (the page owns the threshold). */
+  lowStock?: boolean;
   inactive: boolean;
   canEdit: boolean;
   onClose: () => void;
@@ -27,13 +46,24 @@ export interface MedicationDetailModalProps {
 }
 
 /**
- * Read view for a medication — the thing web has never had.
+ * Read view for a medication — laid out like mobile's MedicationDetailModal
+ * (components/medication/MedicationDetailModal.tsx), top to bottom:
  *
- * The medications page could only ever EDIT a medication: the card exposed
- * Edit / Discontinue / Delete and nothing else, so details a caregiver might
- * want to check (what the pill looks like, the full schedule) were only visible
- * inside a form, mixed in with inputs. Mobile's rule, arrived at the same way:
- * tapping an item shows it to you, and you act from there.
+ *   • header — MEDICATION eyebrow (+ Inactive badge) → name → dosage
+ *   • the medication photo, when one exists
+ *   • inactive only: "Kept for reference. Reminders are off."
+ *   • ONE info card of icon · label · value rows, each only when it has content:
+ *       TIME    — the dose times (mobile shows the next dose's date + time; web
+ *                 has no next-occurrence helper, and a roster group can hold
+ *                 several times, so the times are the honest answer here)
+ *       REPEAT  — the recurrence, the ONLY place it appears
+ *       REFILL  — days of supply left, flagged under the low-stock threshold
+ *       NOTES   — the medication's description
+ *   • footer — More (Discontinue|Reactivate, Delete) + Edit
+ *
+ * The dialog's name is still `name`, as the sr-only `<h2>` the Modal renders
+ * for `title` when `hideTitle` is set. The visible name in the header is a
+ * plain paragraph, so the dialog has exactly one heading.
  *
  * The PHOTO is the reason this fetches anything. It is deliberately absent from
  * the events list response and only exists, signed, on the single-event
@@ -46,14 +76,57 @@ export interface MedicationDetailModalProps {
  * surfaces never read it, so the row would be permanently blank.
  */
 
-/** One labelled fact: `mono` label above a 16/500 value (spec §4.5). */
-function InfoRow({ label, children }: { label: string; children: ReactNode }): ReactElement {
+/**
+ * One fact in the info card: decorative icon · `mono` label · 14/500 value.
+ *
+ * `<dt>` and `<dd>` are the ONLY children of the row `<div>` — HTML allows
+ * nothing else inside a `<dl>` group, and axe fails anything more as serious
+ * (`definition-list` + `dlitem`: the first version wrapped them in an extra
+ * `<div>` beside the icon). So the icon lives INSIDE the `<dt>`, hidden from
+ * assistive tech, and is positioned into the left gutter the row reserves.
+ *
+ * THE SEPARATOR IS `SheetRow`'s, COPIED RATHER THAN INHERITED. The rows sit in
+ * a `<Sheet>` (spec §4.5, the grouped-row surface), but `SheetRow` itself is
+ * `flex items-center`, which would lay `<dt>` beside `<dd>`; this row STACKS
+ * them and hangs the icon in an absolute gutter, so it keeps its own metrics
+ * and takes only the hairline — `border-t border-line-2 first:border-t-0`,
+ * byte-identical to Sheet.tsx's ROW and to mobile's `styles.infoRowBorder`
+ * (`borderTopWidth: 1` in `CC.hair` = `--color-line-2`). `first:` is a CSS
+ * `:first-child` rule, so the conditional rows below cannot leave a stray rule
+ * on top the way a JS index check would.
+ */
+function InfoRow({
+  icon,
+  label,
+  children,
+  danger = false,
+}: {
+  icon: IconName;
+  label: string;
+  children: ReactNode;
+  danger?: boolean;
+}): ReactElement {
   return (
-    <div>
+    <div className="relative border-t border-line-2 py-3 pl-14 pr-4 first:border-t-0">
       <Text variant="mono" as="dt">
+        <span
+          aria-hidden="true"
+          className="absolute left-4 top-1/2 flex w-7 -translate-y-1/2 justify-center text-ink-3"
+        >
+          <Icon name={icon} size="inline" />
+        </span>
         {label}
       </Text>
-      <dd className="m-0 mt-0.5 text-md font-medium text-ink">{children}</dd>
+      {/* terracotta-DEEP, not base terracotta, for the low-stock value:
+          7.29:1 on the card vs 5.35:1, and base terracotta is reserved for
+          glyphs and large type on web (see the web ADA audit). */}
+      <dd
+        className={`m-0 mt-0.5 break-words text-sm font-medium ${
+          danger ? 'text-terracotta-deep' : 'text-ink'
+        }`}
+      >
+        {children}
+      </dd>
     </div>
   );
 }
@@ -63,8 +136,10 @@ export function MedicationDetailModal({
   event,
   name,
   dosage,
-  schedule,
+  times,
   repeat,
+  daysLeft = null,
+  lowStock = false,
   inactive,
   canEdit,
   onClose,
@@ -89,6 +164,13 @@ export function MedicationDetailModal({
 
   const notes = event.description?.trim();
 
+  const refillText =
+    typeof daysLeft === 'number'
+      ? lowStock
+        ? `${t('meds:page.stock.lowStock')} · ${t('meds:page.stock.daysLeft', { count: daysLeft })}`
+        : t('meds:page.stock.daysLeft', { count: daysLeft })
+      : null;
+
   // Two-or-more secondary actions (Discontinue/Reactivate + Delete) live
   // inside the MoreMenu overflow, Delete last as the danger item; Edit is the
   // named button and stays last in DOM order.
@@ -101,12 +183,25 @@ export function MedicationDetailModal({
     { id: 'delete', label: t('meds:page.actions.delete'), onSelect: onDelete, danger: true },
   ];
 
+  const header = (
+    <div className="flex min-w-0 flex-col">
+      <div className="flex flex-wrap items-center gap-2">
+        <Eyebrow color="clay">{t('calendar:eventTypes.medication')}</Eyebrow>
+        {inactive && <Badge size="sm">{t('calendar:discontinueMed.inactiveBadge')}</Badge>}
+      </div>
+      <p className="m-0 mt-1.5 break-words text-lg font-semibold leading-8 text-ink">{name}</p>
+      {dosage && <p className="m-0 mt-1 text-base text-ink-2">{dosage}</p>}
+    </div>
+  );
+
   return (
     <Modal
       title={name}
+      hideTitle
+      header={header}
       onClose={onClose}
       closeLabel={t('common:close')}
-      size="sm"
+      size="md"
       footer={
         canEdit ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -129,34 +224,32 @@ export function MedicationDetailModal({
           />
         )}
 
-        <Card variant="filled" padding="sm">
-          <dl className="m-0 flex flex-col gap-3">
-            {dosage && <InfoRow label={t('meds:page.detail.dosage')}>{dosage}</InfoRow>}
-            <InfoRow label={t('meds:page.detail.schedule')}>{schedule}</InfoRow>
-            {/* The recurrence on its own line. `schedule` already ends with it,
-                but "REPEAT · Daily" is what a caregiver checking whether a
-                medication is still a daily one actually scans for. */}
-            {repeat && <InfoRow label={t('meds:page.detail.repeat')}>{repeat}</InfoRow>}
-            {typeof event.quantity_remaining === 'number' && (
-              <InfoRow label={t('meds:page.detail.remaining')}>{event.quantity_remaining}</InfoRow>
-            )}
-            {inactive && (
-              <InfoRow label={t('meds:page.detail.status')}>
-                {t('calendar:discontinueMed.inactiveBadge')}
-              </InfoRow>
-            )}
-          </dl>
-        </Card>
-
-        {notes && (
-          <Card variant="filled" padding="sm">
-            <dl className="m-0">
-              <InfoRow label={t('meds:page.detail.notes')}>
-                <span className="whitespace-pre-wrap font-normal">{notes}</span>
-              </InfoRow>
-            </dl>
-          </Card>
+        {inactive && (
+          <p className="m-0 rounded-lg bg-bg-2 px-4 py-3 text-sm text-ink-2">
+            {t('meds:page.inactiveHint')}
+          </p>
         )}
+
+        <Sheet as="dl" padding="none" className="m-0 overflow-hidden">
+          <InfoRow icon="time-outline" label={t('meds:page.detail.time')}>
+            {times}
+          </InfoRow>
+          {repeat && (
+            <InfoRow icon="repeat-outline" label={t('meds:page.detail.repeat')}>
+              {repeat}
+            </InfoRow>
+          )}
+          {refillText && (
+            <InfoRow icon="medkit-outline" label={t('meds:page.detail.refill')} danger={lowStock}>
+              {refillText}
+            </InfoRow>
+          )}
+          {notes && (
+            <InfoRow icon="document-text-outline" label={t('meds:page.detail.notes')}>
+              <span className="whitespace-pre-wrap font-normal">{notes}</span>
+            </InfoRow>
+          )}
+        </Sheet>
       </div>
     </Modal>
   );

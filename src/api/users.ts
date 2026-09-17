@@ -36,6 +36,24 @@ export interface User {
   quiet_hours_end?: string | null;
   email_digest_enabled?: boolean;
   email_digest_day?: number; // 0=Sunday, 1=Monday, etc.
+  /**
+   * THE ACCOUNT'S half of the analytics consent decision. `GET /users/me` has
+   * returned both columns all along (backend/src/routes/users.ts, the
+   * `/users/me` select list) — `getCurrentUser` is an untyped passthrough, so
+   * they have been arriving and being discarded.
+   *
+   * THREE STATES, and the third is the reason these are typed as they are:
+   *   - a STRING is a stamp: the account withdrew / granted at that moment.
+   *   - `null` is the backend answering "no stamp".
+   *   - `undefined` is the backend NOT ANSWERING — a build that predates the
+   *     columns. It is NOT "no decision", and reading it as one lets a stale
+   *     backend overwrite a real decision on every page load.
+   *
+   * Never read these with a falsy check. `lib/analyticsConsentServerReconcile`
+   * is the one place that interprets them; go through `deriveServerConsent`.
+   */
+  analytics_consent_withdrawn_at?: string | null;
+  analytics_consent_granted_at?: string | null;
   created_at: string;
   updated_at: string;
 }

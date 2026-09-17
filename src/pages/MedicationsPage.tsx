@@ -215,6 +215,18 @@ function groupMedications(events: CalendarEvent[]): {
 }
 
 /**
+ * "8:00 AM · 8:00 PM" — the dose times alone. The detail sheet shows these in its
+ * Time row and the recurrence in its own Repeat row (mobile's layout), so it must
+ * NOT get the full schedule line, which ends with the recurrence and printed
+ * "Daily" twice. The roster card still uses `formatSchedule`, which builds on this.
+ */
+function formatTimes(group: MedGroup, timezone: string, t: TFunction, cycle: HourCycle): string {
+  return group.times.length > 0
+    ? group.times.map((time) => formatEventTimeCompact(time, timezone, cycle)).join(' · ')
+    : t('meds:page.noTime');
+}
+
+/**
  * "8:00 AM · 8:00 PM · Daily" — the medication's schedule as one line.
  *
  * Extracted so the roster card and the detail sheet render the identical
@@ -231,10 +243,7 @@ function formatSchedule(
   language: string,
   cycle: HourCycle
 ): string {
-  const timesLabel =
-    group.times.length > 0
-      ? group.times.map((time) => formatEventTimeCompact(time, timezone, cycle)).join(' · ')
-      : t('meds:page.noTime');
+  const timesLabel = formatTimes(group, timezone, t, cycle);
   const recurrenceLabel = group.recurrenceEvent
     ? formatRecurrenceLabel(group.recurrenceEvent, t, language)
     : null;
@@ -413,8 +422,16 @@ export default function MedicationsPage(): ReactElement {
   // The filter's options come from the SAME query HistoryList renders (React
   // Query dedupes the two calls onto one fetch), so the menu can never offer a
   // medication the list below it has no rows for.
-  const historyQuery = useMedicationConfirmations(circleId, historyParams(timezone), {
-    enabled: tab === 'history',
+  //
+  // GATED on the recipient timezone. `historyParams` turns it into a
+  // `[start_date, end_date]` pair and that pair IS the query key, so a
+  // 'America/New_York' placeholder would fetch a 30-day window anchored on the
+  // wrong day and then fetch a SECOND one under a different key the moment the
+  // real zone landed — the same double-read that `GettingStartedChecklist` was
+  // fixed for. `useCircle` reports null until the circle detail resolves.
+  const historyWindow = timezone ? historyParams(timezone) : undefined;
+  const historyQuery = useMedicationConfirmations(circleId, historyWindow, {
+    enabled: tab === 'history' && historyWindow !== undefined,
   });
   const filterOptions = useMemo(
     () => medicationOptions((historyQuery.data?.confirmations ?? []) as HistoryConfirmation[]),
@@ -498,7 +515,12 @@ export default function MedicationsPage(): ReactElement {
   const isEmpty = active.length === 0 && inactive.length === 0;
 
   let roster: ReactElement;
-  if (isLoading) {
+  // `timezone === null` joins the skeleton branch rather than defaulting: every
+  // card below renders its dose times with a zone SUFFIX ("8:00 AM MT"), so a
+  // placeholder zone paints a label that is simply wrong and then repaints.
+  // The roster query is usually still in flight at that point anyway, so this
+  // costs no extra beat of skeleton in practice.
+  if (isLoading || timezone === null) {
     roster = (
       <ul className={`m-0 list-none p-0 ${careCardListGap}`} aria-busy="true">
         <li className="sr-only">{t('meds:page.loading')}</li>
@@ -649,7 +671,12 @@ export default function MedicationsPage(): ReactElement {
             value={historyFilter}
             onChange={setHistoryFilter}
           />
-          <HistoryList circleId={circleId} timezone={timezone} medicationName={historyFilter} />
+          {/* GATED: HistoryList derives its own 30-day window (and its day
+              groupings) from this zone, so it must not mount on a guess — it
+              would fetch one window, then a second under a different key. */}
+          {timezone !== null && (
+            <HistoryList circleId={circleId} timezone={timezone} medicationName={historyFilter} />
+          )}
         </div>
       )}
 
@@ -669,17 +696,27 @@ export default function MedicationsPage(): ReactElement {
         />
       )}
 
-      {detailGroup && (
+      {/* `timezone !== null` is structurally implied — the sheet only opens
+          from a roster card, and the roster is a skeleton until the zone
+          resolves — but the Time row it renders carries a zone suffix, so the
+          gate is spelled out rather than defaulted. */}
+      {detailGroup && timezone !== null && (
         <MedicationDetailModal
           circleId={circleId}
           event={detailGroup.event}
           name={detailGroup.name}
           dosage={detailGroup.dosage}
-          schedule={formatSchedule(detailGroup, timezone, t, i18n.language, hourCycle)}
+          times={formatTimes(detailGroup, timezone, t, hourCycle)}
           repeat={
             detailGroup.recurrenceEvent
               ? formatRecurrenceLabel(detailGroup.recurrenceEvent, t, i18n.language)
               : null
+          }
+          daysLeft={detailGroup.daysLeft}
+          lowStock={
+            !detailGroup.inactive &&
+            detailGroup.daysLeft !== null &&
+            detailGroup.daysLeft < LOW_STOCK_DAYS
           }
           inactive={detailGroup.inactive}
           canEdit={canEdit}
@@ -724,7 +761,12 @@ export default function MedicationsPage(): ReactElement {
           // in a mixed-state group.
           groupInactive={statusGroup.inactive}
           surface="meds_tab"
-          timezone={timezone}
+          // EXPLICIT FALLBACK (to the dialog's own documented default) is fine
+          // here: the prop is optional, ANALYTICS-ONLY (`days_active`), and
+          // `DiscontinueMedDialog` already owns the missing-zone case. The
+          // dialog can only open from a roster card, which does not render
+          // until the zone resolves, so `undefined` is unreachable in practice.
+          timezone={timezone ?? undefined}
           onClose={() => setStatusGroup(null)}
         />
       )}

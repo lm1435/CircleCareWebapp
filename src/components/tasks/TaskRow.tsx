@@ -241,14 +241,22 @@ export function TaskRow({
     <li className={careCardShell}>
       <div className={careCardTopRow}>
         {/* Status indicator, NOT a control — the Done button is the action, so
-            a task is completed the same way a dose is taken. */}
-        <span
-          aria-hidden="true"
-          className={`${careCardLeading} border-moss ${isDone ? 'bg-moss-deep' : ''} ${
-            isDone ? 'opacity-55' : ''
-          }`}
-        >
-          {isDone && <Icon name="checkmark" size={12} className="text-cream" />}
+            a task is completed the same way a dose is taken.
+
+            Held in a 44px slot and centred in it: the title is a min-h-11 button
+            with its text centred, and the Done pill is 44px tall, so both sit on
+            a line 22px down. A bare 22px circle in this items-start row sat at
+            the top of the card, ~11px above them. The slot keeps it on the title
+            line when the title wraps, too. (Mobile has no offset: its title is
+            not a 44pt button of its own.) */}
+        <span aria-hidden="true" className="flex h-11 shrink-0 items-center">
+          <span
+            className={`${careCardLeading} border-moss ${isDone ? 'bg-moss-deep' : ''} ${
+              isDone ? 'opacity-55' : ''
+            }`}
+          >
+            {isDone && <Icon name="checkmark" size={12} className="text-cream" />}
+          </span>
         </span>
 
         <div className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">

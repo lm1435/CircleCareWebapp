@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { submitFormTwice } from '@/test/doubleSubmit';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import EditCirclePage from '../EditCirclePage';
@@ -130,6 +131,32 @@ describe('EditCirclePage', () => {
     const payload = updateMutate.mock.calls[0][0];
     expect(payload.recipient_name).toBe('Rosa Meza');
     expect(payload.recipient_dob).toBe('1948-05-02');
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // DOUBLE SUBMIT. This form had no in-flight guard at all — `useZodForm.submit`
+  // calls `onValid` synchronously and `update.mutate(...)` returns immediately,
+  // so two submits in one tick both fired. The payload is recomputed from the
+  // same state, so the second PATCH is idempotent; what it costs is a wasted
+  // write and a second "Saved" toast for one edit.
+  // ──────────────────────────────────────────────────────────────────────────
+  it('sends ONE PATCH when the form is submitted twice in one tick', async () => {
+    const user = userEvent.setup();
+    // No callbacks fired: the request is still in flight when the second
+    // submit arrives, which is the only state in which the guard is under test.
+    updateMutate.mockImplementation(() => {});
+    mockCircleResult(makeCircle());
+    renderPage();
+
+    const name = screen.getByLabelText(/Care recipient name/);
+    await user.clear(name);
+    await user.type(name, 'Rosa Meza');
+
+    const form = screen.getByLabelText(/Care recipient name/).closest('form');
+    if (!(form instanceof HTMLFormElement)) throw new Error('edit-circle form not found');
+    await submitFormTwice(form);
+
+    expect(updateMutate).toHaveBeenCalledTimes(1);
   });
 
   it('does not edit conditions — Edit Medical Info is the single input', async () => {
