@@ -9,7 +9,9 @@ import {
 } from '@/hooks/useEmergencyInfo';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { SPECIALTY_KEYS } from '@/lib/quickPicks';
+import { initialPhoneValue } from '@/lib/phone';
 import { Button, ChipSelect, Modal, TextArea, TextField } from '@/components/ui';
+import { PhoneField } from './PhoneField';
 
 export interface EditDoctorModalProps {
   circleId: string;
@@ -69,7 +71,11 @@ function EditDoctorModalForm({
 
   const [name, setName] = useState(initial.name ?? '');
   const [specialty, setSpecialty] = useState(initial.specialty ?? '');
-  const [phone, setPhone] = useState(initial.phone ?? '');
+  // `phone` + `country_code` travel together: seeded (and normalized when the
+  // country is knowable) from the record, re-emitted as a pair by PhoneField.
+  const [phoneValue, setPhoneValue] = useState(() =>
+    initialPhoneValue(initial.phone, initial.country_code)
+  );
   const [address, setAddress] = useState(initial.address ?? '');
   const [nameError, setNameError] = useState<string | undefined>(undefined);
 
@@ -85,19 +91,27 @@ function EditDoctorModalForm({
     // abandoned) on a submit that was going to bail out anyway.
     if (update.isPending || !submitGuard.claim()) return;
 
+    const phone = phoneValue.phone.trim();
+    const countryCode = phone ? phoneValue.countryCode : null;
+
     let partial: UpdateEmergencyInfoRequest;
     if (isPrimary) {
       partial = {
         primary_doctor_name: name.trim(),
         primary_doctor_specialty: specialty.trim() || null,
-        primary_doctor_phone: phone.trim() || null,
+        primary_doctor_phone: phone || null,
+        primary_doctor_country_code: countryCode,
         primary_doctor_address: address.trim() || null,
       };
     } else {
+      // Every field is named explicitly — this rebuild used to omit
+      // `country_code`, so editing a +52 doctor (even a rename) silently
+      // turned it into a US number.
       const doctor: AdditionalDoctor = {
         name: name.trim(),
         specialty: specialty.trim() || null,
-        phone: phone.trim() || null,
+        phone: phone || null,
+        country_code: countryCode,
         address: address.trim() || null,
       };
       const current = info?.additional_doctors ?? [];
@@ -120,6 +134,9 @@ function EditDoctorModalForm({
   return (
     <Modal
       title={title}
+      // lg, not the md default: the phone row needs a ~17.5rem country column
+      // beside the number (see PhoneField).
+      size="lg"
       onClose={onClose}
       closeLabel={t('edit.close')}
       footer={
@@ -168,13 +185,12 @@ function EditDoctorModalForm({
           allowDeselect={false}
           onChange={(next) => setSpecialty(next ?? '')}
         />
-        <TextField
+        <PhoneField
           id="doctor-phone"
-          type="tel"
           label={t('edit.doctor.phone')}
-          value={phone}
-          maxLength={20}
-          onChange={(e) => setPhone(e.target.value)}
+          value={phoneValue.phone}
+          countryCode={phoneValue.countryCode}
+          onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
         />
         <TextArea
           id="doctor-address"

@@ -74,8 +74,8 @@ export function useVitals(
 function useVitalsMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  // Premium-only surface — FEATURE.
-  const { promptUpgrade } = usePremiumGate('feature');
+  // Premium-only surface — FEATURE. Circle-level (owner's tier): owner-aware.
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
   const { t } = useTranslation('vitals');
 
   return (error: unknown) => {

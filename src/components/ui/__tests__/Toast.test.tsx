@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import '@/i18n';
 import esMembers from '@/i18n/es/members.json';
 import { ToastProvider, useToast, type ToastType } from '@/components/ui';
+import { toastDuration } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
 
 type Show = ReturnType<typeof useToast>['showToast'];
@@ -86,18 +87,38 @@ describe('Toast action', () => {
 });
 
 describe('Toast appearance', () => {
+  it.each(['info', 'success', 'error'] as const)(
+    'draws no coloured left rail on a %s toast',
+    (type) => {
+      const { show } = setup();
+      act(() => show('Message', type));
+
+      const item = toastItem(type);
+      expect(item.querySelector('.w-1')).toBeNull();
+      expect(item.querySelector('.bg-dusk, .bg-moss, .bg-terracotta')).toBeNull();
+    }
+  );
+
+  // With no rail, the type is carried by a SHAPE (WCAG 1.4.1: never colour
+  // alone) — and only where it adds meaning. Info stays a plain card.
   it.each([
-    ['info', 'bg-dusk'],
-    ['success', 'bg-moss'],
-    ['error', 'bg-terracotta'],
-  ] as const)('paints a 4px %s rail in %s', (type, railClass) => {
+    ['error', 'text-terracotta-deep'],
+    ['success', 'text-moss'],
+  ] as const)('leads a %s toast with a decorative %s icon', (type, colour) => {
     const { show } = setup();
     act(() => show('Message', type));
 
-    const rail = toastItem(type).querySelector('span[aria-hidden="true"]') as HTMLElement;
-    expect(rail).toBeInTheDocument();
-    expect(rail.className).toContain('w-1');
-    expect(rail.className).toContain(railClass);
+    const icon = toastItem(type).querySelector('[data-toast-icon]') as HTMLElement;
+    expect(icon).toBeInTheDocument();
+    expect(icon.className).toContain(colour);
+    expect(icon.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(icon.getAttribute('role')).toBeNull();
+  });
+
+  it('draws no icon on an info toast', () => {
+    const { show } = setup();
+    act(() => show('Message', 'info'));
+    expect(toastItem('info').querySelector('[data-toast-icon]')).toBeNull();
   });
 
   it('announces errors assertively and everything else politely', () => {
@@ -205,20 +226,92 @@ describe('auto-dismiss', () => {
   });
 });
 
+// WCAG 2.2.1 (Timing Adjustable): an info toast is often the ONLY explanation
+// of why something did not happen, so its time on screen scales with what
+// there is to read, and a pointer resting on it holds it like focus does.
+describe('reading time', () => {
+  const OWNER_ONLY = 'This is a Premium feature for this circle. Only Ana, the circle owner, can upgrade.';
+  const VIEW_ONLY =
+    'This circle has more caregivers than the free plan allows, so your access is view only. The circle owner can upgrade to give everyone full access.';
+
+  it('short copy keeps the 5s floor; longer copy gets proportionally longer, within a ceiling', () => {
+    expect(toastDuration('Saved')).toBe(5000);
+    expect(toastDuration('Boom')).toBe(5000);
+    expect(toastDuration(OWNER_ONLY)).toBeGreaterThan(5000);
+    expect(toastDuration(VIEW_ONLY)).toBeGreaterThan(toastDuration(OWNER_ONLY));
+    // ~150 chars is ~25 words: at least 10s on screen.
+    expect(toastDuration(VIEW_ONLY)).toBeGreaterThanOrEqual(10_000);
+    expect(toastDuration('x'.repeat(2000))).toBe(20_000);
+  });
+
+  it('the view-only seat notice is still on screen well past 5s, then dismisses itself', () => {
+    reduceMotion(true);
+    vi.useFakeTimers();
+    const { show } = setup();
+    act(() => show(VIEW_ONLY, 'info'));
+    act(() => vi.advanceTimersByTime(9000));
+    expect(toastItem()).toHaveTextContent(VIEW_ONLY);
+    act(() => vi.advanceTimersByTime(toastDuration(VIEW_ONLY) - 9000 + 100));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('holds while the pointer rests on the toast, and restarts in full when it leaves', () => {
+    reduceMotion(true);
+    vi.useFakeTimers();
+    const { show } = setup();
+    act(() => show('Boom', 'error'));
+    fireEvent.mouseEnter(toastItem('error'));
+    act(() => vi.advanceTimersByTime(30_000));
+    expect(toastItem('error')).toBeInTheDocument();
+    fireEvent.mouseLeave(toastItem('error'));
+    act(() => vi.advanceTimersByTime(4900));
+    expect(toastItem('error')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(200));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
 describe('long copy', () => {
   const LONG_ES = esMembers.errors.pendingInviteSeat.replace('{{email}}', 'lucia.fernandez@example.com');
 
-  it('clamps the message to two lines visually while the live region carries the FULL text', () => {
+  // The owner-aware premium notices put the ACTIONABLE part last ("...Only
+  // Ana, the circle owner, can upgrade."): a page toast clamped to two lines
+  // cut exactly that. On a page the toast shows its whole message; only over
+  // an open dialog (whose fields it would otherwise cover) does it clamp.
+  it('shows the FULL message on a page — the two-line clamp applies only over an open dialog', () => {
     const { show } = setup();
     act(() => show(LONG_ES, 'error'));
     const item = toastItem('error');
     const message = item.querySelector('[data-toast-message] > p') as HTMLElement;
+    const classes = message.className.split(/\s+/);
 
-    expect(message.className.split(/\s+/)).toContain('line-clamp-2');
+    expect(classes).not.toContain('line-clamp-2');
+    expect(classes.filter((c) => c.includes('line-clamp'))).toEqual(['modal-open:line-clamp-2']);
     expect(message.textContent).toBe(LONG_ES);
     // Nothing is cut from what an assistive technology reads.
     expect(item.textContent).toContain(LONG_ES);
     expect(item.textContent).not.toMatch(/…|\.\.\./);
+  });
+
+  it('the owner-only premium notice renders unclamped on a page, with no "More" overlay', () => {
+    const { show } = setup();
+    const copy = 'This is a Premium feature for this circle. Only Ana, the circle owner, can upgrade.';
+    act(() => show(copy, 'info'));
+    const message = toastItem().querySelector('[data-toast-message] > p') as HTMLElement;
+    expect(message.className.split(/\s+/)).not.toContain('line-clamp-2');
+    expect(message).toHaveTextContent(copy);
+    expect(screen.queryByRole('button', { name: 'More' })).not.toBeInTheDocument();
+  });
+
+  // A toast WITH an action (the owner's "Upgrade" gate) is the tallest there
+  // is; its button is the way forward, so it keeps the two-line clamp on a page
+  // too (toast-page-gate-overlap.spec.ts: unclamped it covered the tab row at 360px).
+  it('a toast with an action keeps the two-line clamp on a page as well', () => {
+    const { show } = setup();
+    act(() => show(LONG_ES, 'info', { label: 'Mejorar', onClick: vi.fn() }));
+    const message = toastItem().querySelector('[data-toast-message] > p') as HTMLElement;
+    expect(message.className.split(/\s+/)).toContain('line-clamp-2');
+    expect(message.textContent).toBe(LONG_ES);
   });
 
   it('offers no "More" control when the text fits', () => {
@@ -244,7 +337,7 @@ describe('long copy', () => {
 
     fireEvent.click(more);
     expect(more).toHaveAttribute('aria-expanded', 'true');
-    expect(message.className.split(/\s+/)).not.toContain('line-clamp-2');
+    expect(message.className).not.toContain('line-clamp');
     expect(message.textContent).toBe(LONG_ES);
 
     // Expanded = the reader asked for time: no auto-dismiss.
@@ -254,7 +347,7 @@ describe('long copy', () => {
     fireEvent.click(more);
     expect(more).toHaveAttribute('aria-expanded', 'false');
     expect(message.className.split(/\s+/)).toContain('line-clamp-2');
-    act(() => vi.advanceTimersByTime(5100));
+    act(() => vi.advanceTimersByTime(toastDuration(LONG_ES) + 100));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

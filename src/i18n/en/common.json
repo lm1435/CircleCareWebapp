@@ -99,7 +99,10 @@
   },
   "upgradeGate": {
     "message": "That feature isn't included in the free plan. Upgrade to Premium to unlock it for your whole circle.",
-    "action": "Upgrade"
+    "action": "Upgrade",
+    "ownerOnly": "This is a Premium feature for this circle. Only the circle owner can upgrade.",
+    "ownerOnlyNamed": "This is a Premium feature for this circle. Only {{ownerName}}, the circle owner, can upgrade.",
+    "viewOnlySeat": "This circle has more caregivers than the free plan allows, so your access is view only. The circle owner can upgrade to give everyone full access."
   },
   "notFound": {
     "title": "We couldn't find that page",

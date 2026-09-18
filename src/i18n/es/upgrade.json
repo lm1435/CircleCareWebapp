@@ -4,9 +4,22 @@
   "subtitle": "Todo lo que tu familia necesita para coordinar el cuidado, en cada círculo del que formas parte.",
   "trialHook": "Comienza con una prueba gratis: hoy no pagas nada.",
   "benefits": {
-    "members": "Coordina el cuidado con miembros ilimitados del círculo",
-    "tools": "Acceso completo al calendario, tareas, medicamentos, documentos y signos vitales",
-    "sync": "Todos se mantienen sincronizados, en cada dispositivo"
+    "circles": {
+      "title": "Hasta 5 grupos de cuidado",
+      "sub": "Uno para mamá, papá o toda la familia"
+    },
+    "caregivers": {
+      "title": "Cuidadores ilimitados",
+      "sub": "Invita a hermanos, pareja y profesionales"
+    },
+    "ai": {
+      "title": "Asistente de IA",
+      "sub": "Resume visitas y destaca lo importante"
+    },
+    "exports": {
+      "title": "Informes de adherencia e importación de calendario",
+      "sub": "Comparte el historial de medicamentos con proveedores, importa citas de tu calendario"
+    }
   },
   "plans": {
     "monthly": "Mensual",

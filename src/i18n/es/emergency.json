@@ -331,5 +331,34 @@
       "preparedBy": "Preparado por {{name}}",
       "dobAge": "Nacimiento {{dob}} · Edad {{age}}"
     }
+  },
+  "phone": {
+    "countryLabel": "Código de país",
+    "invalid": "Ingresa un número de teléfono válido",
+    "countries": {
+      "US": "Estados Unidos",
+      "CA": "Canadá",
+      "MX": "México",
+      "PR": "Puerto Rico",
+      "DO": "República Dominicana",
+      "GT": "Guatemala",
+      "HN": "Honduras",
+      "SV": "El Salvador",
+      "NI": "Nicaragua",
+      "CR": "Costa Rica",
+      "PA": "Panamá",
+      "CO": "Colombia",
+      "VE": "Venezuela",
+      "EC": "Ecuador",
+      "PE": "Perú",
+      "BO": "Bolivia",
+      "CL": "Chile",
+      "AR": "Argentina",
+      "UY": "Uruguay",
+      "PY": "Paraguay",
+      "BR": "Brasil",
+      "ES": "España",
+      "CU": "Cuba"
+    }
   }
 }

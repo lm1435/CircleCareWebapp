@@ -254,7 +254,7 @@ describe('EditContactModal — relationship quick-fill chips vs manual entry', (
 
   const fillNameAndPhone = (): void => {
     fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Sarah Smith' } });
-    fireEvent.change(screen.getByLabelText(/^Phone.*required/i), { target: { value: '555-0101' } });
+    fireEvent.change(screen.getByLabelText(/^Phone.*required/i), { target: { value: '(303) 555-0101' } });
   };
 
   it('clicking a chip fills the relationship field and the saved payload contains it', async () => {
@@ -275,7 +275,9 @@ describe('EditContactModal — relationship quick-fill chips vs manual entry', (
     expect(body.emergency_contacts?.[0]).toMatchObject({
       name: 'Sarah Smith',
       relationship: 'Daughter',
-      phone: '555-0101',
+      phone: '(303) 555-0101',
+      // PhoneField formats as you type and saves the country with it.
+      country_code: '+1',
     });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
@@ -601,5 +603,106 @@ describe('emergency modals — double submit', () => {
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// PHONE COUNTRY. The additional-doctor save used to rebuild the doctor as
+// { name, specialty, phone, address } — dropping `country_code`, so a +52
+// doctor edited on web (even a rename) came back as a US number on mobile and
+// the web tel: link dialed the wrong country. Every modal now saves
+// `country_code` alongside `phone` from the shared PhoneField.
+// ────────────────────────────────────────────────────────────────────────────
+describe('emergency modals — phone country_code', () => {
+  const mxInfo: EmergencyInfo = {
+    ...baseInfo,
+    primary_doctor_name: 'Dr. Ruiz',
+    primary_doctor_phone: '55 1234 5678',
+    primary_doctor_country_code: '+52',
+    additional_doctors: [
+      { name: 'Dr. Garza', specialty: 'Cardiology', phone: '55 8765 4321', country_code: '+52' },
+    ],
+    emergency_contacts: [
+      { name: 'Ana', relationship: 'Daughter', phone: '+52 55 1234 5678', is_primary: true },
+    ],
+    insurance_plans: [
+      { carrier: 'GNP', phone: '+44 20 7946 0958', country_code: null, rx_bin: '123' },
+    ],
+  };
+
+  it('additional doctor: a rename preserves +52 and the national number', async () => {
+    render(wrap(<EditDoctorModal circleId={CIRCLE_ID} info={mxInfo} target={0} onClose={vi.fn()} />));
+    expect(screen.getByLabelText('Country code')).toHaveValue('MX');
+
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dra. Garza' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0][1].additional_doctors?.[0]).toEqual({
+      name: 'Dra. Garza',
+      specialty: 'Cardiology',
+      phone: '55 8765 4321',
+      country_code: '+52',
+      address: null,
+    });
+  });
+
+  it('primary doctor: sends primary_doctor_country_code with the phone', async () => {
+    render(wrap(<EditDoctorModal circleId={CIRCLE_ID} info={mxInfo} target="primary" onClose={vi.fn()} />));
+    fireEvent.change(screen.getByLabelText('Country code'), { target: { value: 'CO' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0][1]).toMatchObject({
+      primary_doctor_phone: expect.any(String),
+      primary_doctor_country_code: '+57',
+    });
+  });
+
+  it('new contact is saved with the chosen country', async () => {
+    render(wrap(<EditContactModal circleId={CIRCLE_ID} info={baseInfo} onClose={vi.fn()} />));
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Luis' } });
+    fireEvent.change(screen.getByLabelText(/^Relationship.*required/i), { target: { value: 'Son' } });
+    fireEvent.change(screen.getByLabelText('Country code'), { target: { value: 'MX' } });
+    fireEvent.change(screen.getByLabelText(/^Phone.*required/i), { target: { value: '5512345678' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0][1].emergency_contacts?.[0]).toMatchObject({
+      name: 'Luis',
+      phone: '55 1234 5678',
+      country_code: '+52',
+    });
+  });
+
+  it('existing contact with "+52 …" and no country_code saves normalized MX', async () => {
+    render(wrap(<EditContactModal circleId={CIRCLE_ID} info={mxInfo} index={0} onClose={vi.fn()} />));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0][1].emergency_contacts?.[0]).toMatchObject({
+      phone: '55 1234 5678',
+      country_code: '+52',
+    });
+  });
+
+  it('insurance: an unresolvable UK number is saved verbatim; OCR fields survive', async () => {
+    render(wrap(<EditInsuranceModal circleId={CIRCLE_ID} info={mxInfo} index={0} onClose={vi.fn()} />));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    const plan = mockUpdate.mock.calls[0][1].insurance_plans?.[0];
+    expect(plan).toMatchObject({ phone: '+44 20 7946 0958', rx_bin: '123' });
+    expect(plan?.country_code).toBeUndefined();
+  });
+
+  it('insurance: a typed number saves with its country', async () => {
+    render(wrap(<EditInsuranceModal circleId={CIRCLE_ID} info={baseInfo} onClose={vi.fn()} />));
+    fireEvent.change(screen.getByLabelText(/^Carrier.*required/i), { target: { value: 'Aetna' } });
+    fireEvent.change(screen.getByLabelText('Phone'), { target: { value: '4165551234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0][1].insurance_plans?.[0]).toMatchObject({
+      phone: '(416) 555-1234',
+      country_code: '+1',
+    });
   });
 });

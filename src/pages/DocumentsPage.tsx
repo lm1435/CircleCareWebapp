@@ -23,6 +23,7 @@ import { PageMasthead } from '@/components/layout/PageMasthead';
 import { HealthTabs } from '@/components/layout/HealthTabs';
 import { useDocuments, useDeleteDocument } from '@/hooks/useDocuments';
 import { useCircle } from '@/hooks/useCircle';
+import { getCircleOwnerName } from '@/lib/premiumOwnership';
 import { useAuthStore } from '@/store/authStore';
 
 const SKELETON_ROWS = [0, 1, 2, 3, 4];
@@ -140,6 +141,8 @@ export default function DocumentsPage(): ReactElement {
             limitBytes={storage.limit}
             onUpgrade={handleUpgrade}
             isOwner={isOwner}
+            ownerName={getCircleOwnerName(circle)}
+            isFreeTier={isFreeTier}
           />
         </div>
       )}

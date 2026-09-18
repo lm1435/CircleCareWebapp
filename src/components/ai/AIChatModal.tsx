@@ -65,7 +65,9 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
   const { mutation, errorKey, resetConversation } = useAiChat(circleId);
   // The AI assistant is a premium-only surface — FEATURE (mobile sends the
   // same value from its own AI gate).
-  const { promptUpgrade } = usePremiumGate('feature');
+  // Circle-level: in the stale-flag race below a NON-owner can still land on
+  // the 402, and must get the owner-only notice, not a paywall.
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
   // Server-owned suggestion chips — fetched only while the modal is open. Any
   // failure (402 free tier, 403 non-member, network) leaves `data` undefined and
   // the block simply does not render: no error text, no fallback strings.

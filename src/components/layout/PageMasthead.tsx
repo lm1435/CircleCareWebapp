@@ -151,8 +151,10 @@ export function PageMasthead({
 
       {/* 16 above the title, not mobile's 28: the chrome strip above is a
           44px row with the eyebrow centred in it, so its own slack already
-          separates the two — the full 28 read as a hole between them. */}
-      <div className="px-7 pb-5 pt-4">
+          separates the two — the full 28 read as a hole between them.
+          px-5, the gutter every masthead page pads its content with: at px-7
+          the title and the labelled action sat 8px inside the content edges. */}
+      <div className="px-5 pb-5 pt-4">
         <div className="flex items-start justify-between gap-4">
           <Text variant={compact ? 'editorialTitleCompact' : 'editorialTitle'}>{title}</Text>
           {/* Labelled desktop action. The `hidden` lives on a WRAPPER: on the Button

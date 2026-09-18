@@ -4,9 +4,22 @@
   "subtitle": "Everything your family needs to coordinate care, for every circle you're part of.",
   "trialHook": "Start with a free trial — nothing due today.",
   "benefits": {
-    "members": "Coordinate care across unlimited circle members",
-    "tools": "Full access to the calendar, tasks, medications, documents, and vitals",
-    "sync": "Everyone stays in sync, on every device"
+    "circles": {
+      "title": "Up to 5 care circles",
+      "sub": "One for Mom, Dad, or the whole family"
+    },
+    "caregivers": {
+      "title": "Unlimited caregivers",
+      "sub": "Invite siblings, partners, and professionals"
+    },
+    "ai": {
+      "title": "AI care assistant",
+      "sub": "Summarizes visits and surfaces what matters"
+    },
+    "exports": {
+      "title": "Adherence reports & calendar import",
+      "sub": "Share medication history with providers, import appointments from your calendar"
+    }
   },
   "plans": {
     "monthly": "Monthly",

@@ -187,8 +187,9 @@ export function useUpdateEmergencyInfo(
 ): UseMutationResult<EmergencyInfo, unknown, UpdateEmergencyInfoRequest> {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  // Premium-gated write — FEATURE.
-  const { promptUpgrade } = usePremiumGate('feature');
+  // Premium-gated write — FEATURE. Circle-level: the 402 is the OWNER's tier,
+  // so only the owner is offered Upgrade (see usePremiumGate).
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
   const { t } = useTranslation('emergency');
 
   return useMutation({

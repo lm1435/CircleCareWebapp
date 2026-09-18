@@ -4,10 +4,40 @@
 
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import { AdherenceHero } from '../AdherenceHero';
 import { AdherenceExportDialog } from '../AdherenceExportDialog';
+import { ToastProvider } from '@/components/ui/Toast';
+import { queryClient } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/queryKeys';
+import { useAuthStore } from '@/store/authStore';
 import type { AdherenceReport } from '@/api/medicationConfirmations';
+import type { CircleDetail } from '@/api/circleMembers';
+
+// The export is a CIRCLE-level Premium feature (mobile's MedicationHistoryScreen
+// export button -> useCirclePremiumGate). `useCircle` is React Query-backed and
+// this suite has no provider, so it is stubbed with the one flag the hero reads.
+const mockUseCircle = vi.fn();
+vi.mock('@/hooks/useCircle', () => ({
+  useCircle: (circleId: string) => mockUseCircle(circleId),
+}));
+
+vi.mock('@/lib/webBillingConfig', () => ({ isWebBillingConfigured: vi.fn(() => true) }));
+import { isWebBillingConfigured } from '@/lib/webBillingConfig';
+const mockedBillingConfigured = isWebBillingConfigured as unknown as ReturnType<typeof vi.fn>;
+
+const mockAdherenceReportExported = vi.fn();
+vi.mock('@/lib/analytics', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/analytics')>();
+  return {
+    ...actual,
+    Analytics: {
+      ...actual.Analytics,
+      adherenceReportExported: (...args: unknown[]) => mockAdherenceReportExported(...args),
+    },
+  };
+});
 
 const mockUseAdherenceReport = vi.fn();
 vi.mock('@/hooks/useMedConfirmation', () => ({
@@ -48,12 +78,63 @@ function report(summary: Partial<AdherenceReport['summary']>): { data: Adherence
   };
 }
 
+let lastLocation: { pathname: string; state: unknown } | null = null;
+function LocationProbe() {
+  const location = useLocation();
+  lastLocation = { pathname: location.pathname, state: location.state };
+  return null;
+}
+
 function renderHero() {
-  return render(<AdherenceHero circleId="circle-1" />);
+  return render(
+    <MemoryRouter initialEntries={['/circles/circle-1/meds']}>
+      <ToastProvider>
+        <LocationProbe />
+        <Routes>
+          <Route path="/circles/:circleId/meds" element={
+              // The hero's own slot: the providers around it render their own
+              // DOM, so "renders nothing" is asserted on this box.
+              <div data-testid="hero-slot">
+                <AdherenceHero circleId="circle-1" />
+              </div>
+            }
+          />
+          <Route path="/upgrade" element={<div>Upgrade page stub</div>} />
+        </Routes>
+      </ToastProvider>
+    </MemoryRouter>
+  );
+}
+
+/** Ownership lives in the circle-detail cache the premium gate reads at tap time. */
+function seedCircleDetail(overrides: Partial<CircleDetail> = {}): void {
+  queryClient.setQueryData(queryKeys.circleDetail('circle-1'), {
+    id: 'circle-1',
+    owner_id: 'owner-1',
+    view_only: false,
+    is_premium_circle: false,
+    members: [
+      { id: 'm1', user_id: 'owner-1', role: 'owner', first_name: 'Ana' },
+      { id: 'm2', user_id: 'member-1', role: 'member', first_name: 'Luis' },
+    ],
+    ...overrides,
+  } as unknown as CircleDetail);
+}
+
+function signInAs(id: string): void {
+  useAuthStore.setState({
+    user: { id, email: `${id}@example.com`, first_name: null, last_name: null },
+  });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  lastLocation = null;
+  queryClient.clear();
+  useAuthStore.setState({ user: null });
+  mockedBillingConfigured.mockReturnValue(true);
+  // Default: a premium circle, where the export opens as before.
+  mockUseCircle.mockReturnValue({ isPremiumCircle: true, viewOnly: false });
   mockExportPdf.mockResolvedValue(true);
   mockUseAdherenceExport.mockReturnValue({
     exportPdf: mockExportPdf,
@@ -158,16 +239,16 @@ describe('AdherenceHero', () => {
       ...report({ total_scheduled: 0, adherence_rate: 0 }),
       isPending: false,
     });
-    const { container } = renderHero();
+    renderHero();
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByTestId('hero-slot')).toBeEmptyDOMElement();
   });
 
   it('renders nothing when the report failed to load', () => {
     mockUseAdherenceReport.mockReturnValue({ data: undefined, isPending: false });
-    const { container } = renderHero();
+    renderHero();
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByTestId('hero-slot')).toBeEmptyDOMElement();
   });
 
   it('shows a busy skeleton while the report is in flight', () => {
@@ -179,8 +260,9 @@ describe('AdherenceHero', () => {
 });
 
 // The "Export report" button and its period chooser (plan
-// docs/plans/pdf-export-parity.md, decision 9). Export is read-only, so there
-// is no canEdit gate — a view-only member sees the same button mobile shows.
+// docs/plans/pdf-export-parity.md, decision 9), on a PREMIUM circle. Export is
+// read-only, so there is no canEdit gate — but it IS Premium (see the gate
+// suite at the bottom).
 describe('AdherenceHero — export report', () => {
   function openChooser(user: ReturnType<typeof userEvent.setup>) {
     mockUseAdherenceReport.mockReturnValue({ ...report({}), isPending: false });
@@ -275,9 +357,123 @@ describe('AdherenceHero — export report', () => {
       ...report({ total_scheduled: 0, adherence_rate: 0 }),
       isPending: false,
     });
-    const { container } = renderHero();
+    renderHero();
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByTestId('hero-slot')).toBeEmptyDOMElement();
     expect(screen.queryByRole('button', { name: 'Export report' })).toBeNull();
+  });
+});
+
+// THE EXPORT IS PREMIUM (mobile parity: MedicationHistoryScreen's export button
+// checks `is_premium_circle` and routes through useCirclePremiumGate). A
+// circle's premium status is its OWNER's tier, so only the owner is sold to.
+describe('AdherenceHero — export is a circle-level Premium feature', () => {
+  function renderFreeCircle() {
+    mockUseAdherenceReport.mockReturnValue({ ...report({}), isPending: false });
+    mockUseCircle.mockReturnValue({ isPremiumCircle: false, viewOnly: false });
+    renderHero();
+  }
+
+  it('reads the premium flag for THIS circle', () => {
+    renderFreeCircle();
+    expect(mockUseCircle).toHaveBeenCalledWith('circle-1');
+  });
+
+  it('premium circle: Export opens the period chooser', async () => {
+    const user = userEvent.setup();
+    mockUseAdherenceReport.mockReturnValue({ ...report({}), isPending: false });
+    renderHero();
+
+    await user.click(screen.getByRole('button', { name: 'Export report' }));
+
+    expect(screen.getByRole('dialog', { name: 'Adherence report' })).toBeInTheDocument();
+    expect(lastLocation?.pathname).toBe('/circles/circle-1/meds');
+  });
+
+  it('free circle, OWNER: no dialog; the Upgrade action goes to /upgrade (feature)', async () => {
+    const user = userEvent.setup();
+    seedCircleDetail();
+    signInAs('owner-1');
+    renderFreeCircle();
+
+    await user.click(screen.getByRole('button', { name: 'Export report' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(mockExportPdf).not.toHaveBeenCalled();
+    expect(mockAdherenceReportExported).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Upgrade' }));
+
+    expect(screen.getByText('Upgrade page stub')).toBeInTheDocument();
+    expect(lastLocation).toEqual({ pathname: '/upgrade', state: { paywallContext: 'feature' } });
+  });
+
+  it('free circle, owner, web billing OFF: the in-app pointer, no navigation', async () => {
+    const user = userEvent.setup();
+    mockedBillingConfigured.mockReturnValue(false);
+    seedCircleDetail();
+    signInAs('owner-1');
+    renderFreeCircle();
+
+    await user.click(screen.getByRole('button', { name: 'Export report' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent(/app/i);
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
+    expect(lastLocation?.pathname).toBe('/circles/circle-1/meds');
+  });
+
+  it('free circle, NON-OWNER: owner-only notice naming the owner, no action, no navigation', async () => {
+    const user = userEvent.setup();
+    seedCircleDetail();
+    signInAs('member-1');
+    renderFreeCircle();
+
+    await user.click(screen.getByRole('button', { name: 'Export report' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(mockExportPdf).not.toHaveBeenCalled();
+    expect(mockAdherenceReportExported).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(
+        'This is a Premium feature for this circle. Only Ana, the circle owner, can upgrade.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
+    expect(lastLocation?.pathname).toBe('/circles/circle-1/meds');
+  });
+
+  // The server reports is_premium_circle:false for a view-only SEAT even when
+  // the owner pays — "Premium feature for this circle" would be false there.
+  it('VIEW-ONLY seat: the seat wording, no action', async () => {
+    const user = userEvent.setup();
+    seedCircleDetail({ view_only: true });
+    signInAs('member-1');
+    mockUseAdherenceReport.mockReturnValue({ ...report({}), isPending: false });
+    mockUseCircle.mockReturnValue({ isPremiumCircle: false, viewOnly: true });
+    renderHero();
+
+    await user.click(screen.getByRole('button', { name: 'Export report' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      await screen.findByText(/more caregivers than the free plan allows/)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Premium feature for this circle/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
+  });
+
+  it('unknown ownership (circle detail not cached) never sells: owner-only notice', async () => {
+    const user = userEvent.setup();
+    signInAs('owner-1');
+    renderFreeCircle();
+
+    await user.click(screen.getByRole('button', { name: 'Export report' }));
+
+    expect(
+      await screen.findByText(
+        'This is a Premium feature for this circle. Only the circle owner can upgrade.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
   });
 });

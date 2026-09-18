@@ -67,7 +67,9 @@ function useInviteMutationOnError(
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // A seat cap — a hard limit that money lifts. Mobile calls this CAPACITY.
-  const { promptUpgrade } = usePremiumGate('capacity');
+  // The cap is the circle OWNER's tier, so it is owner-aware; `useAcceptInvite`
+  // passes no circle (it never answers 402) and keeps the plain gate.
+  const { promptUpgrade } = usePremiumGate('capacity', { circleId });
   const { t } = useTranslation('members');
 
   return (error: unknown) => {

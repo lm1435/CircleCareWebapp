@@ -79,6 +79,45 @@ beforeEach(() => {
 });
 
 describe('UpgradePage', () => {
+  // The benefits are what Premium ADDS, the four mobile's paywall lists
+  // (planSelection.feature*). The old "Full access to the calendar, tasks,
+  // medications, documents, and vitals" overclaimed: free users have all of it.
+  it('lists the four Premium benefits mobile lists, each with its subline', () => {
+    renderPage();
+    const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
+    expect(items.map((li) => li.textContent)).toEqual([
+      'Up to 5 care circlesOne for Mom, Dad, or the whole family',
+      'Unlimited caregiversInvite siblings, partners, and professionals',
+      'AI care assistantSummarizes visits and surfaces what matters',
+      'Adherence reports & calendar importShare medication history with providers, import appointments from your calendar',
+    ]);
+    expect(screen.queryByText(/Full access to the calendar/)).toBeNull();
+  });
+
+  // At 390px the ES pill ("Comienza con una prueba gratis de 2 semanas: hoy no
+  // pagas nada.") was a nowrap Badge 415px wide: horizontal page scroll. The
+  // trial pill must be allowed to wrap inside the viewport, centred.
+  it('lets the trial pill wrap within the viewport (no whitespace-nowrap)', () => {
+    renderPage();
+    const pill = screen.getByText('Start with a free trial — nothing due today.');
+    const classes = pill.className.split(/\s+/);
+    expect(classes).not.toContain('whitespace-nowrap');
+    expect(classes).toContain('whitespace-normal');
+    expect(classes).toContain('max-w-full');
+    expect(classes).toContain('text-center');
+    expect(classes).toContain('rounded-full');
+  });
+
+  // Coral-deep on coral-soft is the palette's alert look; "nothing due today"
+  // is reassurance, so it wears the same moss as "Save 28%" and the CTA.
+  it('renders the trial pill in moss, not the coral alert tint', () => {
+    renderPage();
+    const classes = screen.getByText('Start with a free trial — nothing due today.').className;
+    expect(classes).toContain('bg-moss-soft');
+    expect(classes).toContain('text-moss-deep');
+    expect(classes).not.toMatch(/coral/);
+  });
+
   it('renders both plans with their Stripe prices', () => {
     renderPage();
     expect(screen.getByText('$6.99')).toBeInTheDocument();
@@ -111,26 +150,70 @@ describe('UpgradePage', () => {
     expect(screen.queryByRole('button', { name: 'Subscribe' })).not.toBeInTheDocument();
   });
 
-  it('marks the selected plan card with the spec §6.7 selection classes, and flips them on click', () => {
+  // The selected card used to be `border-2 border-ink! bg-coral-soft! shadow-sm`:
+  // a pink fill under a heavy black 2px frame read as an error state, was the
+  // heaviest thing on the page, and — because the unselected card kept a 1px
+  // border — the selected card's content sat ~2px lower and jumped on toggle.
+  // Selection is now moss (the primary-action colour), drawn as a border COLOUR
+  // plus a 1px ring (box-shadow, no layout), so both states share one border
+  // width and the box/content never move.
+  it('marks the selected plan card in moss with no layout-shifting border change, and flips on click', () => {
     renderPage();
     const annualRadio = screen.getByRole('radio', { name: /Annual/ });
     const monthlyRadio = screen.getByRole('radio', { name: /Monthly/ });
+    const tokens = (el: HTMLElement): string[] => el.className.split(/\s+/);
+    const borderWidth = (el: HTMLElement): string[] =>
+      tokens(el).filter((c) => /^border(-[0-9]+)?$/.test(c) || /^border-[xytrbl]-?[0-9]*$/.test(c));
 
-    expect(annualRadio).toHaveAttribute('aria-checked', 'true');
-    expect(annualRadio.className).toContain('border-2');
-    expect(annualRadio.className).toContain('border-ink');
-    expect(annualRadio.className).toContain('bg-coral-soft!');
-    expect(annualRadio.className).toContain('shadow-sm');
-    expect(monthlyRadio).toHaveAttribute('aria-checked', 'false');
-    expect(monthlyRadio.className).not.toContain('bg-coral-soft!');
+    const assertSelected = (el: HTMLElement): void => {
+      expect(el).toHaveAttribute('aria-checked', 'true');
+      const c = tokens(el);
+      expect(c).toContain('border-moss!');
+      expect(c).toContain('ring-1');
+      expect(c).toContain('ring-moss');
+      // Never the old alert-looking treatment.
+      expect(el.className).not.toMatch(/bg-coral-soft|border-ink|border-2/);
+    };
+    const assertUnselected = (el: HTMLElement): void => {
+      expect(el).toHaveAttribute('aria-checked', 'false');
+      const c = tokens(el);
+      expect(c).toContain('border-line!');
+      expect(c).not.toContain('ring-1');
+      expect(el.className).not.toMatch(/moss!|bg-coral-soft|border-ink|border-2/);
+    };
+
+    assertSelected(annualRadio);
+    assertUnselected(monthlyRadio);
+    // Identical border-width token in both states: box size cannot change.
+    expect(borderWidth(annualRadio)).toEqual(['border']);
+    expect(borderWidth(monthlyRadio)).toEqual(['border']);
 
     fireEvent.click(monthlyRadio);
 
-    expect(monthlyRadio).toHaveAttribute('aria-checked', 'true');
-    expect(monthlyRadio.className).toContain('border-2');
-    expect(monthlyRadio.className).toContain('bg-coral-soft!');
-    expect(annualRadio).toHaveAttribute('aria-checked', 'false');
-    expect(annualRadio.className).not.toContain('bg-coral-soft!');
+    assertSelected(monthlyRadio);
+    assertUnselected(annualRadio);
+    expect(borderWidth(annualRadio)).toEqual(['border']);
+    expect(borderWidth(monthlyRadio)).toEqual(['border']);
+  });
+
+  it('keeps the plan cards moss/ink, not coral (savings pill + trial line)', () => {
+    renderPage();
+    const save = screen.getByText('Save 28%');
+    expect(save.className).toContain('bg-moss-soft');
+    expect(save.className).toContain('text-moss-deep');
+    expect(save.className).not.toContain('coral');
+
+    const annualRadio = screen.getByRole('radio', { name: /Annual/ });
+    const trialLine = annualRadio.querySelector('p:last-of-type') as HTMLElement;
+    expect(trialLine.className).toContain('text-moss-deep');
+    expect(annualRadio.innerHTML).not.toContain('coral');
+  });
+
+  // EN desktop broke "…for every circle you're part / of." — a one-word widow.
+  it('balances the subtitle so it never leaves a one-word last line', () => {
+    renderPage();
+    const subtitle = screen.getByText(/Everything your family needs to coordinate care/);
+    expect(subtitle.className.split(/\s+/)).toContain('text-balance');
   });
 
   it('gives exactly one plan card a tab stop (roving tabindex)', () => {

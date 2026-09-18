@@ -99,7 +99,10 @@
   },
   "upgradeGate": {
     "message": "Esa función no está incluida en el plan gratuito. Mejora a Premium para desbloquearla para todo tu círculo.",
-    "action": "Mejorar"
+    "action": "Mejorar",
+    "ownerOnly": "Esta es una función Premium para este círculo. Solo el dueño del círculo puede actualizar el plan.",
+    "ownerOnlyNamed": "Esta es una función Premium para este círculo. Solo {{ownerName}}, el dueño del círculo, puede actualizar el plan.",
+    "viewOnlySeat": "Este círculo tiene más cuidadores de los que permite el plan gratuito, así que tu acceso es de solo lectura. El dueño del círculo puede actualizar el plan para dar acceso completo a todos."
   },
   "notFound": {
     "title": "No encontramos esa página",

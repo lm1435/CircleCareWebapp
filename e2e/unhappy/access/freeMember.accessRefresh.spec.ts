@@ -1,7 +1,6 @@
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { API_ERRORS, countRequests, dbCount, failRequest, sqlStr } from '../../unhappy';
 import {
-  UPGRADE_GATE_MESSAGE,
   downgradeSeatWhenRequested,
   gotoCirclePage,
   loadSurfaceData,
@@ -128,7 +127,7 @@ test('documents: upload refused 403 VIEW_ONLY → detail refetched, Upload withd
   }
 });
 
-test('vitals: reading refused 402 SUBSCRIPTION_REQUIRED → detail refetched, upgrade prompt that opens /upgrade, no row', async ({
+test('vitals: reading refused 402 SUBSCRIPTION_REQUIRED → detail refetched, owner-only upgrade notice (no Upgrade action), no row', async ({
   page,
   personaHandle: h,
 }) => {
@@ -155,7 +154,12 @@ test('vitals: reading refused 402 SUBSCRIPTION_REQUIRED → detail refetched, up
   await dialog.getByRole('button', { name: 'Save reading' }).click();
 
   await fault.expectHits(1);
-  await expect(page.getByText(UPGRADE_GATE_MESSAGE)).toBeVisible();
+  // Owner-aware gate (usePremiumGate with { circleId }): a NON-owner of the
+  // circle is told only the owner can upgrade, and is offered no Upgrade action.
+  await expect(
+    page.getByText(/^This is a Premium feature for this circle\. Only (.+, )?the circle owner,? can upgrade\.$/)
+  ).toBeVisible();
+  await expect(page.getByText("That feature isn't included in the free plan.", { exact: false })).toHaveCount(0);
   await expect(page.getByText("You don't have permission to make this change.")).toHaveCount(0);
   await detail.expectCount(1);
   expect(
@@ -163,6 +167,6 @@ test('vitals: reading refused 402 SUBSCRIPTION_REQUIRED → detail refetched, up
     'no vital row'
   ).toBe(0);
 
-  await page.getByRole('button', { name: 'Upgrade', exact: true }).click();
-  await expect(page).toHaveURL(/\/upgrade$/, { timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Upgrade', exact: true })).toHaveCount(0);
+  await expect(page).not.toHaveURL(/\/upgrade$/);
 });

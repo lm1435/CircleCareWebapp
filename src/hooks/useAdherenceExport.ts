@@ -38,10 +38,21 @@ import type { PdfVitalsSummary } from '@/pdf/shared/types';
  * not a render — the adapter (`pdf/pdfEnv.ts`) reads the same singleton for
  * the viewer's clock preference for the same reason.
  *
- * PREMIUM GATE. `is_premium_circle` is the DETAIL response's per-membership
- * flag (see `hooks/useCircle.ts`) and mobile reads the same field, so a
- * view-only seat exports the report without a vitals section — the report
- * itself is read-only and view-only members CAN export it.
+ * PREMIUM GATE. The adherence export is a Premium feature, matching mobile
+ * (`MedicationHistoryScreen`'s export button checks `is_premium_circle` and
+ * routes through `useCirclePremiumGate`). The gate lives at the entry point,
+ * `AdherenceHero`: where premium does not apply, pressing Export never opens
+ * the chooser and never reaches this hook -- the circle-level `usePremiumGate`
+ * sends the OWNER to /upgrade and tells everyone else only the owner can
+ * upgrade (a view-only seat, which the server always reports as
+ * `is_premium_circle: false`, gets the seat explanation). So this hook runs
+ * for premium circles only, and the vitals section below still reads
+ * `is_premium_circle` from the DETAIL response (see `hooks/useCircle.ts`) at
+ * call time -- if the flag flipped since the button was pressed, the report
+ * goes out without vitals rather than failing.
+ *
+ * NOT THE CARE SUMMARY. The Emergency page's care summary PDF
+ * (`useCareSummaryExport`) stays FREE for everyone; only this report is gated.
  *
  * FAILURES. A vitals fetch that fails must not block the report (mobile
  * parity). A report or circle fetch that fails is a data problem the toast

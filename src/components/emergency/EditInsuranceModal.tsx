@@ -7,7 +7,9 @@ import {
   useUpdateEmergencyInfo,
 } from '@/hooks/useEmergencyInfo';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
+import { initialPhoneValue } from '@/lib/phone';
 import { Button, Modal, TextField, Toggle } from '@/components/ui';
+import { PhoneField } from './PhoneField';
 
 export interface EditInsuranceModalProps {
   circleId: string;
@@ -54,7 +56,10 @@ function EditInsuranceModalForm({
   const [carrier, setCarrier] = useState(existing.carrier ?? '');
   const [policyNumber, setPolicyNumber] = useState(existing.policy_number ?? '');
   const [groupNumber, setGroupNumber] = useState(existing.group_number ?? '');
-  const [phone, setPhone] = useState(existing.phone ?? '');
+  // `phone` + `country_code` travel together (see PhoneField).
+  const [phoneValue, setPhoneValue] = useState(() =>
+    initialPhoneValue(existing.phone, existing.country_code)
+  );
   const [isPrimary, setIsPrimary] = useState(existing.is_primary ?? false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -78,7 +83,8 @@ function EditInsuranceModalForm({
       carrier: carrier.trim(),
       policy_number: policyNumber.trim() || undefined,
       group_number: groupNumber.trim() || undefined,
-      phone: phone.trim() || undefined,
+      phone: phoneValue.phone.trim() || undefined,
+      country_code: (phoneValue.phone.trim() && phoneValue.countryCode) || undefined,
       is_primary: isPrimary,
     };
     const next = upsertWithPrimaryExclusivity(info?.insurance_plans ?? [], plan, index);
@@ -92,6 +98,9 @@ function EditInsuranceModalForm({
   return (
     <Modal
       title={index !== undefined ? t('edit.insurance.editTitle') : t('edit.insurance.addTitle')}
+      // lg, not the md default: the phone row needs a ~17.5rem country column
+      // beside the number (see PhoneField).
+      size="lg"
       onClose={onClose}
       closeLabel={t('edit.close')}
       footer={
@@ -141,13 +150,12 @@ function EditInsuranceModalForm({
           maxLength={100}
           onChange={(e) => setGroupNumber(e.target.value)}
         />
-        <TextField
+        <PhoneField
           id="insurance-phone"
-          type="tel"
           label={t('edit.insurance.phone')}
-          value={phone}
-          maxLength={20}
-          onChange={(e) => setPhone(e.target.value)}
+          value={phoneValue.phone}
+          countryCode={phoneValue.countryCode}
+          onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
         />
         <Toggle
           checked={isPrimary}

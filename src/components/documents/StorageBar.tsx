@@ -10,6 +10,22 @@ export interface StorageBarProps {
   onUpgrade?: () => void;
   /** Circle owner — the only person the Upgrade button is offered to. */
   isOwner?: boolean;
+  /**
+   * The circle owner's first name, for a NON-owner's full message ("Only Ana,
+   * the circle owner, can upgrade for more space."). Storage is the OWNER's
+   * tier, so a non-owner is told who can lift it, never to upgrade themselves.
+   * Omitted/unknown -> the nameless copy.
+   */
+  ownerName?: string;
+  /**
+   * The circle is on the FREE storage cap (200MB) -- the only case an upgrade
+   * raises it. A premium circle at its 1GB cap has no bigger plan, so nobody
+   * is offered Upgrade and the copy says the only remedy: delete files.
+   * Derived from the server's circle-level `storage.limit` (the OWNER's tier),
+   * not `is_premium_circle`, which is per-membership and false for a view-only
+   * seat even when the owner pays. Defaults to true (the free-tier behavior).
+   */
+  isFreeTier?: boolean;
 }
 
 /** `<80` is unreachable from this component (see the early return below) but
@@ -31,6 +47,8 @@ export function StorageBar({
   limitBytes,
   onUpgrade,
   isOwner = false,
+  ownerName,
+  isFreeTier = true,
 }: StorageBarProps): ReactElement {
   const { t } = useTranslation('documents');
   const pct = limitBytes > 0 ? (usedBytes / limitBytes) * 100 : 0;
@@ -66,11 +84,19 @@ export function StorageBar({
       </div>
       {isFull && (
         <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 text-xs text-terracotta">
-            <Icon name="alert-circle-outline" size="inline" className="text-terracotta" />
-            {t('storage.full')}
+          {/* terracotta-DEEP: base terracotta is never text on the web (ADA);
+              deep is 7.29:1 on the page background, 7.67:1 on white. */}
+          <span className="flex items-center gap-1.5 text-xs text-terracotta-deep">
+            <Icon name="alert-circle-outline" size="inline" className="text-terracotta-deep" />
+            {!isFreeTier
+              ? t('storage.fullPremium')
+              : isOwner
+                ? t('storage.full')
+                : ownerName
+                  ? t('storage.fullNonOwnerNamed', { ownerName })
+                  : t('storage.fullNonOwner')}
           </span>
-          {isOwner && (
+          {isOwner && isFreeTier && (
             <Button variant="primary" size="sm" className="min-h-[32px]!" onClick={onUpgrade}>
               {t('storage.upgrade')}
             </Button>

@@ -225,8 +225,13 @@ const TRANS_KEY = /i18nKey=\s*(['"])([^'"\n]+)\1/g;
  * literals (rewritten onto `meds:export.*` by `webKeyFor`), so each is proven
  * live and present in both locales. The file cannot be edited here — it is
  * owned by mobile and synced (see `MIRRORED_MOBILE_KEY_DIR`).
+ *
+ * 66 -> 65 (Upgrade page benefits = mobile's four paywall features):
+ * `UpgradePage.tsx` rendered `t(\`benefits.${key}\`)` over a key array; the
+ * new title/subline pairs are LITERAL `t('benefits.*.title|sub')` calls, so
+ * that template site is gone and every benefit key is resolved statically.
  */
-const EXPECTED_DYNAMIC_KEY_CALL_SITES = 66;
+const EXPECTED_DYNAMIC_KEY_CALL_SITES = 65;
 
 /**
  * Comments are stripped before scanning — a `t(key)` inside a JSDoc block is

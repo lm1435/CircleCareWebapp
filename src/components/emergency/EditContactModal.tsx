@@ -8,7 +8,9 @@ import {
 } from '@/hooks/useEmergencyInfo';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { RELATIONSHIP_KEYS } from '@/lib/quickPicks';
+import { initialPhoneValue } from '@/lib/phone';
 import { Button, ChipSelect, Modal, TextField, Toggle } from '@/components/ui';
+import { PhoneField } from './PhoneField';
 
 export interface EditContactModalProps {
   circleId: string;
@@ -52,7 +54,11 @@ function EditContactModalForm({
 
   const [name, setName] = useState(existing.name ?? '');
   const [relationship, setRelationship] = useState(existing.relationship ?? '');
-  const [phone, setPhone] = useState(existing.phone ?? '');
+  // `phone` + `country_code` travel together (see PhoneField).
+  const [phoneValue, setPhoneValue] = useState(() =>
+    initialPhoneValue(existing.phone, existing.country_code)
+  );
+  const phone = phoneValue.phone;
   const [isPrimary, setIsPrimary] = useState(existing.is_primary ?? false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -71,7 +77,7 @@ function EditContactModalForm({
       name: name.trim(),
       relationship: relationship.trim(),
       phone: phone.trim(),
-      country_code: existing.country_code ?? undefined,
+      country_code: phoneValue.countryCode ?? undefined,
       is_primary: isPrimary,
     };
     const next = upsertWithPrimaryExclusivity(info?.emergency_contacts ?? [], contact, index);
@@ -85,6 +91,9 @@ function EditContactModalForm({
   return (
     <Modal
       title={index !== undefined ? t('edit.contact.editTitle') : t('edit.contact.addTitle')}
+      // lg, not the md default: the phone row needs a ~17.5rem country column
+      // beside the number (see PhoneField).
+      size="lg"
       onClose={onClose}
       closeLabel={t('edit.close')}
       footer={
@@ -141,16 +150,15 @@ function EditContactModalForm({
             if (next && error) setError(undefined);
           }}
         />
-        <TextField
+        <PhoneField
           id="contact-phone"
-          type="tel"
           label={t('edit.contact.phone')}
           required
-          value={phone}
-          maxLength={20}
+          value={phoneValue.phone}
+          countryCode={phoneValue.countryCode}
           error={error && !phone.trim() ? error : undefined}
-          onChange={(e) => {
-            setPhone(e.target.value);
+          onChange={(nextPhone, countryCode) => {
+            setPhoneValue({ phone: nextPhone, countryCode });
             if (error) setError(undefined);
           }}
         />

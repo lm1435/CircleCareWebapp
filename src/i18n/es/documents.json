@@ -64,6 +64,9 @@
     "used": "{{used}} usado",
     "remaining": "{{remaining}} disponible",
     "full": "Almacenamiento lleno. Mejora tu plan para más espacio.",
+    "fullNonOwnerNamed": "Almacenamiento lleno. Solo {{ownerName}}, el dueño del círculo, puede mejorar el plan para tener más espacio.",
+    "fullNonOwner": "Almacenamiento lleno. Solo el dueño del círculo puede mejorar el plan para tener más espacio.",
+    "fullPremium": "Almacenamiento lleno. Elimina los archivos que ya no necesitas para liberar espacio.",
     "upgrade": "Mejorar plan",
     "trackLabel": "Almacenamiento usado"
   },

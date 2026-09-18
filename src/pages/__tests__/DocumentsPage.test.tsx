@@ -122,6 +122,18 @@ describe('DocumentsPage', () => {
     useCircleResult.circle = undefined;
   });
 
+  // Only the Calendar widens to max-w-7xl (its 7-column grid needs it); every
+  // other page keeps the shared 1024px reading width.
+  it('keeps the shared max-w-5xl page width (only Calendar widens)', async () => {
+    mockDocuments();
+    renderPage();
+    const row = await screen.findByText('Insurance Card');
+    const wrapper = row.closest('div.mx-auto') as HTMLElement;
+    expect(wrapper).not.toBeNull();
+    expect(wrapper).toHaveClass('max-w-5xl');
+    expect(wrapper).not.toHaveClass('max-w-7xl');
+  });
+
   it('renders the document list with name, category, size, and count', async () => {
     mockDocuments();
     renderPage();
@@ -398,6 +410,34 @@ describe('DocumentsPage', () => {
         'This circle has reached its storage limit. Free up space or upgrade to Premium to add more.'
       )
     ).toBeInTheDocument();
+  });
+
+  // The storage cap is the circle OWNER's tier, reported as `storage.limit`.
+  // At the free 200MB cap the owner is offered Upgrade; at the premium 1GB cap
+  // there is no bigger plan, so nobody is sold anything.
+  it('free circle at its cap: the owner sees the Upgrade button in the storage bar', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' };
+    mockDocuments([imageDoc, pdfDoc], { used: 209715200, limit: 209715200 });
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    expect(screen.getByText('Storage full. Upgrade for more space.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upgrade' })).toBeInTheDocument();
+  });
+
+  it('premium circle at its 1GB cap: the owner sees delete-files copy and no Upgrade', async () => {
+    useCircleResult.canEdit = true;
+    useCircleResult.circle = { owner_id: 'user-1' };
+    mockDocuments([imageDoc, pdfDoc], { used: 1073741824, limit: 1073741824 });
+    renderPage();
+
+    await screen.findByText('Insurance Card');
+    expect(
+      screen.getByText('Storage full. Delete files you no longer need to free up space.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Storage full. Upgrade for more space.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
   });
 
   it('hides edit/delete for documents uploaded by others when not the owner', async () => {

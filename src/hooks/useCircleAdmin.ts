@@ -47,8 +47,9 @@ function useCircleAdminOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // Circle/seat quota rejections — CAPACITY, the bucket mobile uses for a hard
-  // limit that an upgrade actually lifts.
-  const { promptUpgrade } = usePremiumGate('capacity');
+  // limit that an upgrade actually lifts. Circle-level (owner's tier):
+  // owner-aware. `useCreateCircle` below is the viewer's OWN plan and is not.
+  const { promptUpgrade } = usePremiumGate('capacity', { circleId });
   const { t } = useTranslation('common');
 
   return (error: unknown) => {

@@ -25,6 +25,17 @@ describe('PageMasthead', () => {
     expect(dot).toHaveClass('bg-terracotta');
   });
 
+  // Every page under a masthead pads its content `px-5`. At `px-7` the title
+  // and the right-hand action sat 8px inside the content edges on both sides —
+  // title left of the first card, "Upload document" short of the card's edge.
+  it('pads the title row on the same 20px gutter as the page content', () => {
+    renderMasthead();
+
+    const row = screen.getByRole('heading', { level: 1, name: 'Calendar' }).closest('div.pb-5');
+    expect(row).toHaveClass('px-5');
+    expect(row).not.toHaveClass('px-7');
+  });
+
   it('renders the title as the editorial h1', () => {
     renderMasthead();
 

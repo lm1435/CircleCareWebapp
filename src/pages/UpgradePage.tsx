@@ -409,20 +409,41 @@ function PlansView({
       <Text variant="editorialTitle" as="h1" className="mt-5">
         {isOnboarding ? t('onboarding.title') : t('title')}
       </Text>
-      <Text variant="bodyDense" className="mt-3 max-w-xl text-ink-2!">
+      {/* text-balance: EN desktop otherwise orphaned "of." on its own line. */}
+      <Text variant="bodyDense" className="mt-3 max-w-xl text-balance text-ink-2!">
         {isOnboarding ? t('onboarding.subtitle') : t('subtitle')}
       </Text>
       {anyTrial && (
-        <Badge variant="coral" className="mt-4">
+        // Moss, not coral: coral-deep on coral-soft reads as an alert, and this
+        // line is reassurance ("nothing due today").
+        <Badge variant="primary" wrap className="mt-4">
           {trialPeriodLabel ? t('trialHookWithDuration', { period: trialPeriodLabel }) : t('trialHook')}
         </Badge>
       )}
 
-      <ul className="mx-auto mt-8 grid w-full max-w-2xl list-none grid-cols-1 gap-x-6 gap-y-3 p-0 text-left sm:grid-cols-3">
-        {(['members', 'tools', 'sync'] as const).map((key) => (
-          <li key={key} className="flex items-start gap-2 text-sm text-ink-2">
-            <Icon name="checkmark" size="inline" className="mt-0.5 shrink-0 text-coral-deep" />
-            {t(`benefits.${key}`)}
+      {/* What Premium ADDS -- the same four benefits (title + subline) mobile's
+          paywall lists (planSelection.feature*Title/Sub). Literal keys so the
+          static key audit resolves each one. */}
+      <ul
+        data-benefits=""
+        className="mx-auto mt-8 grid w-full max-w-2xl list-none grid-cols-1 gap-x-6 gap-y-3 p-0 text-left sm:grid-cols-2"
+      >
+        {[
+          { id: 'circles', title: t('benefits.circles.title'), sub: t('benefits.circles.sub') },
+          {
+            id: 'caregivers',
+            title: t('benefits.caregivers.title'),
+            sub: t('benefits.caregivers.sub'),
+          },
+          { id: 'ai', title: t('benefits.ai.title'), sub: t('benefits.ai.sub') },
+          { id: 'exports', title: t('benefits.exports.title'), sub: t('benefits.exports.sub') },
+        ].map((benefit) => (
+          <li key={benefit.id} className="flex items-start gap-2 text-sm">
+            <Icon name="checkmark" size="inline" className="mt-0.5 shrink-0 text-moss" />
+            <span className="flex min-w-0 flex-col">
+              <span className="font-medium text-ink">{benefit.title}</span>
+              <span className="text-ink-2">{benefit.sub}</span>
+            </span>
           </li>
         ))}
       </ul>
@@ -621,14 +642,24 @@ function PlanOption({
       className={[
         'relative flex flex-col text-left transition-shadow',
         'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-coral has-[:focus-visible]:ring-offset-2',
-        // `!` on border-ink and bg-coral-soft: Card's own `border-line-2` and
-        // `bg-cream` are emitted LATER in the compiled stylesheet (verified
-        // against dist/assets/*.css), so a plain override loses the cascade —
-        // same reasoning as Eyebrow.tsx / inputStyles.ts's `!` overrides.
-        selected ? 'border-2 border-ink! bg-coral-soft! shadow-sm' : 'hover:shadow-md',
+        // Selection = moss (the primary-action colour), calm and lighter than
+        // the CTA. BOTH states keep Card's 1px `border`; the selected card only
+        // recolours it and adds a 1px `ring` (box-shadow — no layout), so the
+        // box size and content position are identical whichever is selected.
+        // (It used to be `border-2 border-ink! bg-coral-soft!`: an alert-looking
+        // pink/black block whose content sat 2px lower than its neighbour.)
+        // `!` on the colours: Card's own `border-line-2` and `bg-cream` are
+        // emitted LATER in the compiled stylesheet, so a plain override loses
+        // the cascade — same reasoning as Eyebrow.tsx / inputStyles.ts.
+        selected
+          ? 'border-moss! ring-1 ring-moss bg-moss-wash!'
+          : 'border-line! hover:shadow-md',
       ].join(' ')}
     >
-      <div className="flex items-center justify-between gap-2">
+      {/* min-h-6: the Save pill (22px) is taller than the label row (~20.7px),
+          so without a shared floor the card WITH the pill centred its title
+          ~0.7px lower and its price ~1.3px lower than the card without one. */}
+      <div className="flex min-h-6 items-center justify-between gap-2">
         <span className="flex items-center gap-2.5">
           <RadioDot selected={selected} />
           <Text variant="h3" as="span">
@@ -636,7 +667,7 @@ function PlanOption({
           </Text>
         </span>
         {badge && (
-          <Badge variant="coral" size="sm">
+          <Badge variant="primary" size="sm">
             {badge}
           </Badge>
         )}
@@ -658,14 +689,17 @@ function PlanOption({
       {feature && (
         <p
           className={[
-            'm-0 mt-3 flex items-center gap-2 text-sm',
-            feature.tone === 'brand' ? 'font-medium text-coral-deep' : 'text-ink-2',
+            // items-start + icon mt-0.5: ES "Cancela cuando quieras, sin
+            // compromiso" wraps at desktop width, and a centred check floated
+            // between its two lines.
+            'm-0 mt-3 flex items-start gap-2 text-sm',
+            feature.tone === 'brand' ? 'font-medium text-moss-deep' : 'text-ink-2',
           ].join(' ')}
         >
           <Icon
             name="checkmark"
             size="inline"
-            className={feature.tone === 'brand' ? 'text-coral-deep' : 'text-ink-3'}
+            className={`mt-0.5 shrink-0 ${feature.tone === 'brand' ? 'text-moss' : 'text-ink-3'}`}
           />
           {feature.text}
         </p>
@@ -680,7 +714,7 @@ function RadioDot({ selected }: { selected: boolean }): ReactElement {
       aria-hidden="true"
       className={[
         'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
-        selected ? 'border-ink bg-ink' : 'border-ink/30',
+        selected ? 'border-moss bg-moss' : 'border-ink/30',
       ].join(' ')}
     >
       {selected && <span className="h-2 w-2 rounded-full bg-white" />}

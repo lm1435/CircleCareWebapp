@@ -379,8 +379,9 @@ function withCalendarRefreshCap(refreshed: Promise<void>): Promise<unknown> {
 function useEventMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  // Premium-gated write on a free-tier read-only circle — FEATURE.
-  const { promptUpgrade } = usePremiumGate('feature');
+  // Premium-gated write on a free-tier read-only circle — FEATURE. Circle-level
+  // (owner's tier): owner-aware.
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
   const { t } = useTranslation('calendar');
 
   return (error: unknown) => {

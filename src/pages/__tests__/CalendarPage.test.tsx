@@ -233,6 +233,25 @@ beforeEach(() => {
 });
 
 describe('CalendarPage', () => {
+  // Wide-screen layout (2026-09-18): the calendar is the one page whose
+  // content is a 7-column grid, so it alone widens from the shared
+  // `max-w-5xl` (1024px) to `max-w-7xl` (1280px). ONE wrapper for both views
+  // and the masthead, so switching Week/Month never changes the width and the
+  // title/"Add event" stay flush with the grid edges.
+  it('caps the whole page (masthead + both views) at max-w-7xl, not the shared max-w-5xl', async () => {
+    renderPage();
+    const weekGrid = await screen.findByRole('grid', { name: 'Week view calendar' });
+    const wrapper = weekGrid.closest('div.mx-auto') as HTMLElement;
+    expect(wrapper).not.toBeNull();
+    expect(wrapper).toHaveClass('w-full', 'max-w-7xl');
+    expect(wrapper).not.toHaveClass('max-w-5xl');
+    expect(within(wrapper).getByRole('heading', { level: 1, name: 'Calendar' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Month' }));
+    const monthGrid = await screen.findByRole('grid', { name: /month/i });
+    expect(monthGrid.closest('div.mx-auto')).toBe(wrapper);
+  });
+
   it('renders the week view by default with the timezone caption', async () => {
     renderPage();
 
@@ -349,6 +368,21 @@ describe('CalendarPage', () => {
     expect(todayNavGroup.className).toContain('min-w-0');
     expect(todayNavGroup.className).toContain('flex-1');
     expect(todayNavGroup.className).toContain('max-[480px]:w-full');
+  });
+
+  // Gutter regression (2026-09-18): the body padded `md:px-8` while the
+  // PageMasthead above it pads `px-5` at every width, so from 768px up the
+  // toolbar and grid sat 12px inside the title and the "Add event" button
+  // (measured at 1280: title x=292 vs grid x=304; button right 1260 vs grid
+  // right 1248). Every other masthead page pads its content `px-5` only.
+  it('pads the calendar body with the masthead gutter (px-5) at every width', async () => {
+    renderPage();
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    const body = screen.getByTestId('calendar-view-toggle-wrap').parentElement
+      ?.parentElement as HTMLElement;
+    expect(body.className).toContain('px-5');
+    expect(body.className).not.toMatch(/\b(?:sm|md|lg|xl):px-/);
   });
 
   it('disables Today after next then prev lands back on today, even with a non-null override', async () => {

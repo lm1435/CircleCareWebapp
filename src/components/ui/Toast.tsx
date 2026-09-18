@@ -46,6 +46,23 @@ interface ToastEntry extends Toast {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const AUTO_DISMISS_MS = 5000;
+const MAX_DISMISS_MS = 20_000;
+const MS_PER_CHAR = 70;
+const READ_START_MS = 1000;
+
+/**
+ * How long a toast stays up before dismissing itself: 5s floor, then ~70ms per
+ * character (~170 characters a minute slower than a brisk reader, so a
+ * caregiver skimming on a phone still finishes), capped at 20s.
+ *
+ * WCAG 2.2.1 (Timing Adjustable). A toast is often the ONLY explanation of why
+ * something did not happen ("Only Ana, the circle owner, can upgrade."), so a
+ * flat 5s cut a ~150-character notice off mid-read. Pointer hover and focus
+ * inside the toast also hold it (ToastItem), and its close button ends it.
+ */
+export function toastDuration(message: string): number {
+  return Math.min(MAX_DISMISS_MS, Math.max(AUTO_DISMISS_MS, READ_START_MS + message.length * MS_PER_CHAR));
+}
 
 /**
  * Every control of the toast on screen that is not on its way out. An open
@@ -57,13 +74,15 @@ export const TOAST_CONTROL_SELECTOR =
   '[data-toast-region] > [data-toast]:not([data-leaving]) button';
 
 /**
- * The 4px status rail. Written out literally, one class per type: Tailwind
- * scans source text, so an interpolated `bg-${type}` compiles to nothing.
+ * The leading type icon. Written out literally per type: Tailwind scans source
+ * text, so an interpolated `text-${tone}` compiles to nothing. Same icons and
+ * tones as ConfirmDialog's error/success. Deep terracotta, never base, per the
+ * web's own contrast rule.
  */
-const RAIL_CLASS: Record<ToastType, string> = {
-  info: 'bg-dusk',
-  success: 'bg-moss',
-  error: 'bg-terracotta',
+const TYPE_ICON: Record<ToastType, { name: 'alert-circle-outline' | 'checkmark-circle'; className: string } | null> = {
+  info: null,
+  success: { name: 'checkmark-circle', className: 'text-moss' },
+  error: { name: 'alert-circle-outline', className: 'text-terracotta-deep' },
 };
 
 /**
@@ -92,18 +111,32 @@ interface ToastItemProps {
  * fallback timer, shared with Modal. See that module for why a native
  * listener rather than React's `onAnimationEnd`.
  *
- * LONG COPY IS CLAMPED TO TWO LINES, VISUALLY ONLY. A toast floats over the
- * page or an open dialog, so its height is the thing that decides what it
- * covers: an unclamped ~150-character Spanish error grew to 242px at 360x640
- * and sat on every field of the dialog behind it. Two lines is what fits above
- * a full-height dialog's body at every tested viewport
- * (e2e/unhappy/writes/toast-modal-overlap.spec.ts). The clamp is CSS
- * (`line-clamp-2`), so the full message is still in the DOM — the live region
- * announces all of it, never the truncation. When the text really is cut off
- * (measured, not guessed from length), an invisible "More" button over the
- * message expands it in place; an expanded toast also stops its auto-dismiss,
- * since the reader asked for time to read it. So does focus inside the toast:
- * a keyboard user tabbing to "Upgrade" must not have it vanish mid-Tab.
+ * WITHOUT AN ACTION, THE WHOLE MESSAGE SHOWS ON A PAGE. Such a toast IS the
+ * explanation — the owner-aware premium notices put the actionable part LAST
+ * ("This is a Premium feature for this circle. Only Ana, the circle owner,
+ * can upgrade.") and carry no button, so a two-line clamp at the page
+ * placement's 360px cut exactly the part that said what to do. A toast WITH an
+ * action keeps the two-line clamp everywhere: its button is the way forward,
+ * and it is the tallest toast there is — unclamped, the free-tier "Upgrade"
+ * gate grew to 162px at 360x640 and covered each page's tab row
+ * (e2e/unhappy/writes/toast-page-gate-overlap.spec.ts).
+ *
+ * OVER AN OPEN DIALOG EVERY TOAST IS CLAMPED TO TWO LINES, VISUALLY ONLY
+ * (`modal-open:line-clamp-2`). There the toast's height decides which fields
+ * it covers: an unclamped ~150-character Spanish error grew to 242px at
+ * 360x640 and sat on every field of the dialog behind it. Two lines is what
+ * fits above a full-height dialog's body at every tested viewport
+ * (e2e/unhappy/writes/toast-modal-overlap.spec.ts). The clamp is CSS, so the
+ * full message is still in the DOM — the live region announces all of it,
+ * never the truncation. When the text really is cut off (measured, not
+ * guessed from length, so an actionless toast on a page never is), a "More"
+ * button over the message expands it in place. It has no visible label (the
+ * ellipsis is the cue); keyboard focus draws the global focus ring
+ * (globals.css) inside the toast's padding. An expanded toast stops its
+ * auto-dismiss, since the reader asked for time to read it. So do focus inside
+ * the toast (a keyboard user tabbing to "Upgrade" must not have it vanish
+ * mid-Tab) and a resting pointer. Otherwise it stays up for `toastDuration`:
+ * longer copy, longer on screen.
  */
 function ToastItem({
   toast,
@@ -119,20 +152,23 @@ function ToastItem({
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     if (!leaving) return;
     return waitForExitAnimation(ref.current, () => onExited(id));
   }, [leaving, id, onExited]);
 
-  // Auto-dismiss, paused while the reader holds the toast (expanded, or focus
-  // inside it) and restarted in full when they let go.
-  const held = expanded || focused;
+  // Auto-dismiss after a reading time scaled to the message, paused while the
+  // reader holds the toast (expanded, focus inside it, or the pointer on it)
+  // and restarted in full when they let go.
+  const held = expanded || focused || hovered;
+  const duration = toastDuration(toast.message);
   useEffect(() => {
     if (leaving || held) return;
-    const timer = window.setTimeout(() => onDismiss(id), AUTO_DISMISS_MS);
+    const timer = window.setTimeout(() => onDismiss(id), duration);
     return () => window.clearTimeout(timer);
-  }, [leaving, held, id, onDismiss]);
+  }, [leaving, held, id, onDismiss, duration]);
 
   // Is the clamp actually hiding text? Measured while collapsed (an expanded
   // message is by definition not clipped, and must keep its toggle to collapse).
@@ -155,6 +191,8 @@ function ToastItem({
       data-leaving={leaving ? '' : undefined}
       role={toast.type === 'error' ? 'alert' : 'status'}
       aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onFocus={() => setFocused(true)}
       onBlur={(event: FocusEvent<HTMLDivElement>) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
@@ -163,22 +201,36 @@ function ToastItem({
         expanded ? 'flex-wrap gap-y-1' : ''
       } ${leaving ? 'animate-[modal-out_160ms_ease-in]' : 'animate-[modal-in_240ms_var(--ease-spring)]'}`}
     >
-      <span
-        aria-hidden="true"
-        className={`absolute bottom-0 left-0 top-0 w-1 ${RAIL_CLASS[toast.type]}`}
-      />
       <div
         ref={messageBoxRef}
         data-toast-message=""
-        className={expanded ? 'relative min-w-0 basis-full' : 'relative min-w-0 flex-1'}
+        className={`relative flex min-w-0 items-start gap-2 ${expanded ? 'basis-full' : 'flex-1'}`}
       >
         <Text
           id={messageId}
           variant="bodyDense"
-          className={expanded ? 'break-words' : 'line-clamp-2 break-words'}
+          className={`min-w-0 flex-1 ${
+            expanded
+              ? 'break-words'
+              : toast.action
+                ? 'break-words line-clamp-2'
+                : 'break-words modal-open:line-clamp-2'
+          }`}
         >
           {toast.message}
         </Text>
+        {/* AFTER the Text in the DOM (the clamp measure reads
+            `firstElementChild`), shown first via `order-first`. Error and
+            success carry a shape, not just a colour (WCAG 1.4.1); info stays
+            plain. Decorative: role/aria-live already tell assistive tech. */}
+        {TYPE_ICON[toast.type] && (
+          <span
+            data-toast-icon=""
+            className={`order-first mt-0.5 flex ${TYPE_ICON[toast.type]!.className}`}
+          >
+            <Icon name={TYPE_ICON[toast.type]!.name} size="inline" />
+          </span>
+        )}
         {(clamped || expanded) && (
           <button
             type="button"

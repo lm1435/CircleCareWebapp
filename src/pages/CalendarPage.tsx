@@ -195,7 +195,13 @@ export default function CalendarPage(): ReactElement {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    // max-w-7xl (1280px), not the max-w-5xl (1024px) every other page uses:
+    // this is the one page whose content is a 7-column grid. At 1024 the week
+    // view's day columns sat at 132px (titles truncated) with empty gutters
+    // either side on a ≥1440 screen. ONE wrapper for the masthead and BOTH
+    // views, so Week/Month switching never changes the width and the title and
+    // "Add event" stay flush with the grid edges.
+    <div className="mx-auto w-full max-w-7xl">
       <PageMasthead
         section={t('common:nav.calendar')}
         tone="dusk"
@@ -210,7 +216,9 @@ export default function CalendarPage(): ReactElement {
         <CareTabs />
       </PageMasthead>
 
-      <div className="px-5 pb-8 md:px-8">
+      {/* px-5 at every width: the PageMasthead gutter. `md:px-8` put the
+          toolbar and grid 12px inside the title and "Add event" button. */}
+      <div className="px-5 pb-8">
         {/* Date nav row (mobile `DateNavHeader` parity): Today pill · prev/range/next
             cluster · Week/Month segmented control.
 

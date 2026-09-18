@@ -58,4 +58,13 @@ describe('Badge', () => {
     const { container } = render(<Badge>Read only</Badge>);
     expect(container.querySelector('svg')).toBeNull();
   });
+
+  it('stays on one line by default, and `wrap` lets long copy wrap within its container', () => {
+    render(<Badge>One line</Badge>);
+    expect(screen.getByText('One line').className.split(/\s+/)).toContain('whitespace-nowrap');
+    render(<Badge wrap>Wraps</Badge>);
+    const classes = screen.getByText('Wraps').className.split(/\s+/);
+    expect(classes).not.toContain('whitespace-nowrap');
+    expect(classes).toEqual(expect.arrayContaining(['whitespace-normal', 'max-w-full', 'text-center', 'justify-center', 'rounded-full']));
+  });
 });

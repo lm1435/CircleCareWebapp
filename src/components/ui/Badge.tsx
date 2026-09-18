@@ -25,6 +25,13 @@ export interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'style
   size?: BadgeSize;
   /** Optional leading glyph, rendered at the `meta` (14px) icon tier. */
   icon?: IconName;
+  /**
+   * Let long copy wrap (centred, never wider than its container) instead of
+   * the default single line. For sentence-length pills such as the Upgrade
+   * page's trial hook, whose ES copy is 415px on one line — wider than a 390px
+   * phone, so the whole page scrolled sideways.
+   */
+  wrap?: boolean;
 }
 
 // Token classes only — no hardcoded hex.
@@ -54,11 +61,15 @@ export function Badge({
   variant = 'default',
   size = 'md',
   icon,
+  wrap = false,
   className,
   children,
   ...rest
 }: BadgeProps): ReactElement {
-  const base = `rounded-full font-semibold inline-flex items-center gap-1 whitespace-nowrap ${sizeClass[size]} ${variantClass[variant]}`;
+  const flow = wrap
+    ? 'whitespace-normal max-w-full justify-center text-center text-balance'
+    : 'whitespace-nowrap';
+  const base = `rounded-full font-semibold inline-flex items-center gap-1 ${flow} ${sizeClass[size]} ${variantClass[variant]}`;
   return (
     <span className={className ? `${base} ${className}` : base} {...rest}>
       {icon != null && <Icon name={icon} size="meta" />}

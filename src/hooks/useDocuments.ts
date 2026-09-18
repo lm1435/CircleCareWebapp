@@ -95,7 +95,8 @@ function useDocumentMutationOnError(circleId: string): (error: unknown) => void 
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // A premium-only surface, not a count the user ran out of — FEATURE.
-  const { promptUpgrade } = usePremiumGate('feature');
+  // Circle-level (the storage cap is the OWNER's tier): owner-aware.
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
   const { t } = useTranslation('documents');
 
   return (error: unknown) => {

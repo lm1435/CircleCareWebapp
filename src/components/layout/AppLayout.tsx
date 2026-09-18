@@ -77,7 +77,9 @@ export function AppLayout(): ReactElement {
   const aiEntry = resolveAiEntry({ viewOnly, isPremiumCircle, isOwner });
   // 'feature' (not the default): a premium-only SURFACE, which is how mobile
   // splits its paywall funnel. See usePremiumGate's `context` docs.
-  const { promptUpgrade } = usePremiumGate('feature');
+  // Circle-level: `aiEntry === 'upgrade'` already implies the owner, and the
+  // circle context keeps it that way if that rule ever loosens.
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
 
   // AN OPEN ASSISTANT BELONGS TO THE CIRCLE IT WAS OPENED FOR.
   //

@@ -63,6 +63,9 @@
     "used": "{{used}} used",
     "remaining": "{{remaining}} remaining",
     "full": "Storage full. Upgrade for more space.",
+    "fullNonOwnerNamed": "Storage full. Only {{ownerName}}, the circle owner, can upgrade for more space.",
+    "fullNonOwner": "Storage full. Only the circle owner can upgrade for more space.",
+    "fullPremium": "Storage full. Delete files you no longer need to free up space.",
     "upgrade": "Upgrade",
     "trackLabel": "Storage used"
   },

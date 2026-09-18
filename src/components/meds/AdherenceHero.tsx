@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Button, Card, Eyebrow, Icon, Skeleton } from '@/components/ui';
 import { useAdherenceReport } from '@/hooks/useMedConfirmation';
 import { useAdherenceExport } from '@/hooks/useAdherenceExport';
+import { useCircle } from '@/hooks/useCircle';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { AdherenceRing } from './AdherenceRing';
 import { AdherenceExportDialog } from './AdherenceExportDialog';
 
@@ -18,6 +20,15 @@ import { AdherenceExportDialog } from './AdherenceExportDialog';
  * 30-day report this hero shows is only one of six. The export is read-only,
  * so view-only members see the button too (mobile parity; there is no
  * `canEdit` gate here on purpose).
+ *
+ * THE EXPORT IS PREMIUM (mobile parity: `MedicationHistoryScreen`'s export
+ * button checks `is_premium_circle` and routes through `useCirclePremiumGate`).
+ * On a circle where premium does not apply to the viewer, pressing the button
+ * never opens the chooser: the circle-level `usePremiumGate` offers the OWNER
+ * the Upgrade action and tells everyone else only the owner can upgrade (a
+ * view-only seat gets the seat explanation). No export analytics fire on that
+ * path -- nothing was exported. The button itself stays visible, like mobile's,
+ * so the feature is discoverable.
  *
  * HIDDEN WHEN NOTHING WAS SCHEDULED. A "0% adherence" hero over a circle whose
  * medications were only added yesterday is a false accusation, not a statistic;
@@ -35,6 +46,16 @@ export function AdherenceHero({ circleId }: AdherenceHeroProps): ReactElement | 
   // path, and its busy state must survive the report refetching underneath.
   const [exportOpen, setExportOpen] = useState(false);
   const { exportPdf, isExporting } = useAdherenceExport({ circleId });
+  const { isPremiumCircle } = useCircle(circleId);
+  // A premium-only surface -- FEATURE, what mobile sends from this button.
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
+  const handleExportPress = (): void => {
+    if (!isPremiumCircle) {
+      promptUpgrade();
+      return;
+    }
+    setExportOpen(true);
+  };
 
   if (query.isPending) {
     return (
@@ -108,7 +129,7 @@ export function AdherenceHero({ circleId }: AdherenceHeroProps): ReactElement | 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setExportOpen(true)}
+              onClick={handleExportPress}
               disabled={isExporting}
               leftIcon={<Icon name="download-outline" size="inline" />}
             >

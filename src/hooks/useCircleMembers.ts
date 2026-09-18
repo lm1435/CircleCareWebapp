@@ -87,8 +87,9 @@ function invalidateCircleQueries(
 function useMemberMutationOnError(circleId: string): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  // Seat cap on the member write path — CAPACITY, same as invites.
-  const { promptUpgrade } = usePremiumGate('capacity');
+  // Seat cap on the member write path — CAPACITY, same as invites. The cap is
+  // the OWNER's tier, so the gate is owner-aware.
+  const { promptUpgrade } = usePremiumGate('capacity', { circleId });
   const { t } = useTranslation('members');
 
   return (error: unknown) => {

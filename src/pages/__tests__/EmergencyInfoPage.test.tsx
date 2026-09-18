@@ -661,7 +661,7 @@ describe('EmergencyInfoPage', () => {
       target: { value: 'Son' },
     });
     fireEvent.change(within(dialog).getByLabelText(/^Phone/), {
-      target: { value: '555-0199' },
+      target: { value: '(303) 555-0199' },
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -669,7 +669,8 @@ describe('EmergencyInfoPage', () => {
     expect(mockedPut.mock.calls[0][0]).toBe(`/circles/${CIRCLE_ID}/emergency-info`);
     const body = lastPutBody();
     expect(body.emergency_contacts).toEqual([
-      { name: 'Jamie', relationship: 'Son', phone: '555-0199', is_primary: false },
+      { name: 'Jamie', relationship: 'Son', phone: '(303) 555-0199',
+        country_code: '+1', is_primary: false },
     ]);
   });
 
