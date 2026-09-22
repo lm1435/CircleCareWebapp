@@ -169,8 +169,28 @@ declare -a SUMMARY
 # reported the identical 270 passed | 1 skipped (271) files / 4575 passed |
 # 7 skipped (4582) tests and PASSED. MIN_FILES = 271 - 5 = 266, MIN_TESTS =
 # 4582 - 50 = 4532.
-MIN_FILES="${MIN_FILES:-266}"
-MIN_TESTS="${MIN_TESTS:-4532}"
+#
+# RE-MEASURED 2026-09-20 (web checkout country gate): 266/4532 -> 279/4947.
+# The gate added three files (lib/checkoutCountry, its test, and
+# hooks/useAccountTimezone + test) and cases across UpgradePage's two suites.
+# The floor had also gone stale again by 415 tests, which is the slack this
+# comment block exists to warn about.
+#
+# THIS ENTRY MATTERS MORE THAN THE USUAL RAISE, because the gate is the first
+# thing in the app whose BEHAVIOUR depends on the process zone: it reads
+# `Intl.DateTimeFormat().resolvedOptions().timeZone` and refuses checkout for
+# anything off the US/CA/AU/NZ allowlist. Unpinned, UpgradePage's suites would
+# pass under America/Denver and fail under the other nine zones. Both suites
+# therefore patch `Intl.DateTimeFormat.prototype.resolvedOptions` to a fixed
+# zone; this sweep is what proves that patch actually holds — the counts being
+# IDENTICAL across all ten zones is the evidence, not just the green.
+#
+# Measured by running THIS SCRIPT end to end: all TEN zones reported the
+# identical 283 passed | 1 skipped (284) files / 4990 passed | 7 skipped (4997)
+# tests and PASSED. Set against the TOTALS per the convention above:
+# MIN_FILES = 284 - 5 = 279, MIN_TESTS = 4997 - 50 = 4947.
+MIN_FILES="${MIN_FILES:-279}"
+MIN_TESTS="${MIN_TESTS:-4947}"
 low=""
 
 for zone in "${ZONES[@]}"; do

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
@@ -23,6 +24,9 @@ import {
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useWebPlans, usePurchasePlan, useManageSubscription } from '@/hooks/useWebBilling';
+import { useAccountTimezone } from '@/hooks/useAccountTimezone';
+import { useCoarsePointer } from '@/hooks/useCoarsePointer';
+import { readBrowserTimezone, webCheckoutVerdict } from '@/lib/checkoutCountry';
 import { isUserCancelledError, type WebPlan } from '@/lib/purchases';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { legalUrl } from '@/lib/legalLinks';
@@ -178,6 +182,51 @@ export default function UpgradePage(): ReactElement {
     else navigate('/circles');
   }, [isOnboarding, goToDeferredFirstRun, navigate]);
 
+  /**
+   * THE COUNTRY GATE. Web checkout makes us the merchant of record, so it is
+   * offered only where that is safe (lib/checkoutCountry.ts has the full
+   * reasoning and the single editable allowlist). Everyone else is routed to
+   * the app stores, where Apple and Google are the merchant of record.
+   *
+   * FAILS OPEN — an unknown or unmappable zone transacts. That is the
+   * deliberate bias, not an oversight; see `isWebCheckoutAllowed`.
+   *
+   * NOT GATED ON `useWebPlans`: the offering fetch is harmless, and letting it
+   * run keeps the gate a pure render decision.
+   *
+   * TWO SIGNALS, BOTH REQUIRED: the account's saved zone AND the browser's
+   * live one must each land on the allowlist. The account zone is written
+   * once at signup and never refreshed (mobile's `syncDeviceSettings` skips
+   * a non-empty column), so on its own it is a historical record rather than
+   * a location; the browser zone is live but describes a machine, not an
+   * account. Full reasoning — including the deliberate, un-bypassed cost to a
+   * US customer buying while abroad — is in lib/checkoutCountry.ts.
+   *
+   * THREE STATES BEFORE SUBSCRIBE CAN APPEAR, and the page renders something
+   * different for each. Nothing is optimistic: the gate FAILS CLOSED, so a
+   * zone it has not positively matched never reaches a live Subscribe button.
+   *
+   *   countryPending    `/users/me` in flight        -> spinner
+   *   countryUnresolved either zone unreadable       -> retryable error
+   *   storeOnly         both read, one not eligible  -> StoreOnlyCard
+   *
+   * THE SECOND AND THIRD ARE NOT THE SAME THING and must not be merged. Both
+   * mean "not allowed to transact", but only the third is a fact about the
+   * user. Sending someone in Denver to the App Store because their request
+   * timed out is a bad outcome and, worse, not true.
+   */
+  const {
+    timezone: accountTimezone,
+    isPending: countryPending,
+    refetch: refetchCountry,
+  } = useAccountTimezone();
+  // Read once per mount: "where is this browser now", fixed for the life of
+  // the paywall so the verdict cannot change under the user mid-session.
+  const browserTimezone = useMemo(() => readBrowserTimezone(), []);
+  const verdict = webCheckoutVerdict(accountTimezone, browserTimezone);
+  const countryUnresolved = !countryPending && verdict === 'unresolved';
+  const storeOnly = !countryPending && verdict === 'store-only';
+
   const isPremium = status?.tier === 'premium';
   // Web billing IS configured but the offering came back empty or errored (bad
   // key, CSP block, RC outage). Degrade to the in-app upgrade path instead of
@@ -282,6 +331,21 @@ export default function UpgradePage(): ReactElement {
             </>
           }
         />
+      ) : countryPending ? (
+        // Resolving the gate, not the offering — see `countryPending`.
+        <div className="flex justify-center py-20">
+          <Spinner size={32} />
+        </div>
+      ) : countryUnresolved ? (
+        <CountryUnresolvedCard onRetry={refetchCountry} onBack={handleDecline} backLabel={declineLabel} />
+      ) : storeOnly ? (
+        /* AFTER the premium branch on purpose: the gate is about STARTING a
+           subscription, never about servicing one, so a subscriber travelling
+           (or living) outside the four countries still reaches Manage.
+           BEFORE the offering's own loading/empty branches, so a blocked user
+           never waits on — or is shown a failure of — a RevenueCat fetch whose
+           result this page will not use. */
+        <StoreOnlyCard onBack={handleDecline} backLabel={declineLabel} />
       ) : isLoading ? (
         <div className="flex justify-center py-20">
           <Spinner size={32} />
@@ -300,6 +364,133 @@ export default function UpgradePage(): ReactElement {
         />
       )}
     </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * "WE COULD NOT WORK OUT WHERE YOU ARE" — NOT "YOU CANNOT BUY HERE".
+ *
+ * Reached when `/users/me` failed, or answered with no usable timezone. The
+ * gate fails closed, so this user does not get a Subscribe button; but they
+ * are overwhelmingly likely to be a US buyer with a flaky connection, and the
+ * store-only card would tell them something both discouraging and false. So
+ * the honest state: say the account did not load, and offer the read again.
+ *
+ * Follows the page-level load-failure pattern already used by
+ * CirclePickerPage, DocumentsPage and EditCirclePage — a `role="alert"` Card
+ * with a title, a hint and a `common:retry` button wired to `refetch`.
+ */
+function CountryUnresolvedCard({
+  onRetry,
+  onBack,
+  backLabel,
+}: {
+  onRetry: () => void;
+  onBack: () => void;
+  backLabel: string;
+}): ReactElement {
+  const { t } = useTranslation(['upgrade', 'common']);
+
+  return (
+    <Card
+      variant="outlined"
+      padding="lg"
+      role="alert"
+      className="mx-auto max-w-md text-center"
+    >
+      <div className="flex flex-col items-center">
+        {/* Terminal, whole-page state — this IS the page's <h1>
+            (axe: page-has-heading-one), as in every other branch here. */}
+        <Text variant="h2" as="h1">
+          {t('countryError.title')}
+        </Text>
+        <Text variant="bodyDense" className="mt-2 text-balance text-ink-2!">
+          {t('countryError.body')}
+        </Text>
+        <Button variant="primary" className="mt-6" onClick={onRetry}>
+          {t('common:retry')}
+        </Button>
+        <BackLink onClick={onBack}>{backLabel}</BackLink>
+      </div>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * THE APP-STORE ROUTE, rendered INSTEAD OF the paywall — the plan radios and
+ * the Subscribe button are not in the tree at all here, not merely disabled.
+ * A disabled control is still announced, still a tab stop, and still
+ * advertises a checkout that will never open.
+ *
+ * THE COPY IS A ROUTE, NOT A REJECTION, and it says nothing about regions,
+ * countries, availability or tax. Which jurisdictions we can be merchant of
+ * record in is our problem; to the caregiver reading this, subscribing in the
+ * app is simply how it is done. (It is also true: the app is where the large
+ * majority of subscriptions are bought.)
+ *
+ * DEVICE-AWARE, through `useCoarsePointer` — the pointer media query the
+ * pickers already use, never a UA sniff. On a phone the badges deep-link
+ * straight to the listing and the copy says "below"; on a laptop "visit the
+ * App Store" would be meaningless, so the copy says where the purchase
+ * actually happens. Wrong-guess cost is one sentence, and the fine-pointer
+ * fallback (jsdom, a prerender) is the safe side.
+ *
+ * THE SUPPORT LINE IS THE ESCAPE HATCH. Without it a desktop visitor with no
+ * smartphone reaches a dead end with no recourse. It is visually secondary to
+ * the badges but it is a real link, not a phone number in prose.
+ */
+function StoreOnlyCard({
+  onBack,
+  backLabel,
+}: {
+  onBack: () => void;
+  backLabel: string;
+}): ReactElement {
+  // `help` for the support address only — one canonical copy of it, shared
+  // with HelpPage's "Still need help?" card rather than a second literal here.
+  const { t } = useTranslation(['upgrade', 'help']);
+  const coarsePointer = useCoarsePointer();
+
+  return (
+    <Card variant="outlined" padding="lg" className="mx-auto max-w-md text-center">
+      <div className="flex flex-col items-center">
+        <Eyebrow color="coral" deep>
+          {t('eyebrow')}
+        </Eyebrow>
+        {/* Terminal, whole-page state — no other heading renders alongside it,
+            so this IS the page's <h1> (axe: page-has-heading-one). */}
+        <Text variant="h2" as="h1" className="mt-3">
+          {t('storeOnly.title')}
+        </Text>
+        <Text variant="bodyDense" className="mt-2 text-balance text-ink-2!">
+          {coarsePointer ? t('storeOnly.bodyMobile') : t('storeOnly.bodyDesktop')}
+        </Text>
+
+        {/* A named group so the two badges are announced as one choice
+            ("Get the CircleCare app") rather than as two loose links. */}
+        <div
+          role="group"
+          aria-label={t('storeOnly.storesLabel')}
+          className="mt-5 flex justify-center"
+        >
+          <StoreBadges layout="row" />
+        </div>
+
+        <Text variant="caption" className="mt-6">
+          {t('storeOnly.helpPrefix')}{' '}
+          <a href={`mailto:${t('help:contact.email')}`} className="underline hover:text-ink">
+            {t('storeOnly.helpCta')}
+          </a>
+          .
+        </Text>
+
+        <BackLink onClick={onBack}>{backLabel}</BackLink>
+      </div>
+    </Card>
   );
 }
 
@@ -468,6 +659,7 @@ function PlansView({
             onSelect={() => setSelected('annual')}
             label={t('plans.annual')}
             price={annual.formattedPrice}
+            currency={annual.currency}
             period={t('plans.perYear')}
             badge={savePercent ? t('plans.savePercent', { percent: savePercent }) : t('plans.bestValue')}
             subline={perMonthEquivalent ? t('plans.perMonthBilled', { price: perMonthEquivalent }) : null}
@@ -490,6 +682,7 @@ function PlansView({
             onSelect={() => setSelected('monthly')}
             label={t('plans.monthly')}
             price={monthly.formattedPrice}
+            currency={monthly.currency}
             period={t('plans.perMonth')}
             subline={t('plans.billedMonthly')}
             feature={
@@ -599,6 +792,11 @@ interface PlanOptionProps {
   onSelect: () => void;
   label: string;
   price: string;
+  /** ISO 4217 code shown beside the price. Every market we sell to on the web
+   *  (US/CA/AU/NZ) renders a bare `$` in its own locale, so the symbol alone
+   *  never says WHICH dollar — a Canadian would otherwise have nothing telling
+   *  them "$79.99" is not USD they must convert. */
+  currency: string;
   period: string;
   badge?: string;
   subline: string | null;
@@ -624,6 +822,7 @@ function PlanOption({
   onSelect,
   label,
   price,
+  currency,
   period,
   badge,
   subline,
@@ -636,7 +835,7 @@ function PlanOption({
       onPress={onSelect}
       role="radio"
       aria-checked={selected}
-      aria-label={`${label}, ${price} ${period}`}
+      aria-label={`${label}, ${price} ${currency} ${period}`}
       data-plan-key={planKey}
       tabIndex={selected ? 0 : -1}
       className={[
@@ -676,6 +875,9 @@ function PlanOption({
       <p className="m-0 mt-4 flex items-baseline gap-1.5">
         <Text variant="editorialTitle" as="span">
           {price}
+        </Text>
+        <Text variant="caption" as="span" className="text-ink-2!">
+          {currency}
         </Text>
         <Text variant="caption" as="span">
           {period}

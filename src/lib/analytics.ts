@@ -849,6 +849,39 @@ export const Analytics = {
    */
   errorOccurred: (screen: string, error: string, context?: Record<string, unknown>) =>
     capture('error_occurred', { screen, error: sanitizeErrorText(error), ...context }),
+
+  // --- Cancel-reason prompt (docs/plans/cancel-reason-prompt.md) ---
+  // Same names and properties as mobile. No circle_id, no free text, no price.
+  cancelReasonPromptShown: (props: {
+    periodType: string;
+    daysSinceUnsubscribe: number;
+    entitlementActive: boolean;
+    isSandbox: boolean;
+  }) =>
+    capture('cancel_reason_prompt_shown', {
+      period_type: props.periodType,
+      days_since_unsubscribe: props.daysSinceUnsubscribe,
+      entitlement_active: props.entitlementActive,
+      is_sandbox: props.isSandbox,
+    }),
+  cancelReasonPromptSubmitted: (props: {
+    reason: string;
+    hasComment: boolean;
+    periodType: string;
+    isSandbox: boolean;
+  }) =>
+    capture('cancel_reason_prompt_submitted', {
+      reason: props.reason,
+      has_comment: props.hasComment,
+      period_type: props.periodType,
+      is_sandbox: props.isSandbox,
+    }),
+  cancelReasonPromptDismissed: (props: { periodType: string; hadSelection: boolean; isSandbox: boolean }) =>
+    capture('cancel_reason_prompt_dismissed', {
+      period_type: props.periodType,
+      had_selection: props.hadSelection,
+      is_sandbox: props.isSandbox,
+    }),
 };
 
 /**

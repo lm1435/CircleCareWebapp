@@ -33,8 +33,11 @@ export const PREMIUM_ENTITLEMENT = 'CircleCare Premium';
 
 /**
  * Offering identifier for Web Billing. The `web` offering is intentionally NOT
- * the dashboard's current/default (mobile keeps that), so we resolve it by id
- * rather than relying on `offerings.current`.
+ * the dashboard's current/default (mobile keeps that), so we resolve it by id —
+ * and by id ONLY. `offerings.current` is `default`, and `default`, `add_circle`
+ * and `invite_member` all package App Store / Play products, which the web SDK
+ * cannot purchase: falling back to `current` would hand the paywall an offering
+ * with ZERO Web Billing packages, not a working checkout.
  */
 export const WEB_OFFERING_ID = 'web';
 
@@ -74,6 +77,29 @@ function loadSdk(): Promise<PurchasesModule> {
   return sdkPromise;
 }
 
+/**
+ * SDK feature flags — passed on EVERY configure, regardless of analytics consent.
+ *
+ * `collectAnalyticsEvents: false` — purchases-js defaults this to TRUE, which
+ * posts SDK analytics events (SDKInitialized, checkout/paywall events, each
+ * carrying the app user id) to https://e.revenue.cat/v1/events. We turn it off
+ * unconditionally because:
+ *  - SDK flags are fixed at configure() time and the SDK is a singleton, so
+ *    they cannot follow a mid-session consent change (accept or revoke);
+ *  - the product does not use RevenueCat's SDK analytics — PostHog is the
+ *    analytics tool, consent-gated in lib/analytics.ts;
+ *  - the SDK no longer loads only at checkout: the cancel-reason prompt
+ *    configures it on the home page for EVERY circle owner, so the default
+ *    would send analytics on ordinary page loads, before any consent.
+ * (1.45 source: the flag becomes `EventsTracker.silent`, and a silent tracker
+ * never queues — so never flushes — an event.)
+ *
+ * `autoCollectUTMAsMetadata` is left at its default (true): the SDK reads the
+ * page's utm_* params only when a purchase STARTS, attaching them as metadata
+ * to that purchase — nothing is sent at configure time or on the home page.
+ */
+const PURCHASES_FLAGS = { collectAnalyticsEvents: false } as const;
+
 // The SDK forbids more than one configured instance, so we keep the singleton
 // and only switch identities when the logged-in user changes.
 let configuredUserId: string | null = null;
@@ -97,7 +123,7 @@ export async function getPurchases(userId: string): Promise<PurchasesInstance> {
   const { Purchases } = await loadSdk();
   if (!Purchases.isConfigured()) {
     configuredUserId = userId;
-    return Purchases.configure({ apiKey, appUserId: userId });
+    return Purchases.configure({ apiKey, appUserId: userId, flags: PURCHASES_FLAGS });
   }
   const instance = Purchases.getSharedInstance();
   if (configuredUserId !== userId) {
@@ -127,12 +153,27 @@ export interface WebPlan {
   trialPeriod: { number: number; unit: string } | null;
 }
 
-/** Resolve the `web` offering (fallback to current) for this user. */
+/**
+ * Resolve the `web` offering for this user — by id only, never `offerings.current`
+ * (see {@link WEB_OFFERING_ID}: no other offering carries Web Billing packages,
+ * so there is nothing for a fallback to usefully return).
+ *
+ * A missing `web` offering means the RevenueCat configuration changed or broke.
+ * The caller turns the throw into the signal-free "online checkout isn't
+ * available" card, so the warn below is the ONLY place that records which
+ * offerings RevenueCat actually returned — without it the failure is invisible.
+ */
 export async function getWebOffering(userId: string): Promise<Offering> {
   const purchases = await getPurchases(userId);
   const offerings = await purchases.getOfferings();
-  const offering = offerings.all[WEB_OFFERING_ID] ?? offerings.current;
+  const offering = offerings.all[WEB_OFFERING_ID];
   if (!offering) {
+    // Offering IDENTIFIERS only — no customer data — so this is safe to log in
+    // production, where it's the one clue that the dashboard drifted.
+    console.warn(
+      `[purchases] No "${WEB_OFFERING_ID}" offering from RevenueCat; received:`,
+      Object.keys(offerings.all)
+    );
     throw new Error('No web offering available');
   }
   return offering;

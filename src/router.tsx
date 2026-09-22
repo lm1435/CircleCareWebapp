@@ -5,6 +5,7 @@ import { PageviewTracker } from '@/components/PageviewTracker';
 import { RouteTitle } from '@/components/RouteTitle';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
+import { CancelReasonPrompt } from '@/components/subscription/CancelReasonPrompt';
 // Public / pre-auth routes stay EAGER: a signed-out visitor's very first paint
 // is one of these, so lazy-loading them would trade entry-chunk size for a
 // network round trip on the critical path. NotFoundPage is unauthenticated
@@ -69,6 +70,9 @@ export const router = createBrowserRouter([
     element: (
       <AuthGuard>
         <Outlet />
+        {/* Post-cancel "why?" prompt — renders nothing unless eligible; lives
+            here so it unmounts with the session. docs/plans/cancel-reason-prompt.md */}
+        <CancelReasonPrompt />
       </AuthGuard>
     ),
     children: [

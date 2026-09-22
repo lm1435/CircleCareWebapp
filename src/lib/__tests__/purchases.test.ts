@@ -14,11 +14,22 @@ vi.mock('@revenuecat/purchases-js', () => {
       super(message);
     }
   }
+  // One fake instance behind both configure() and getSharedInstance(), so a
+  // test can stub getOfferings() no matter which branch of getPurchases ran.
+  // Exposed as `__instance` because the factory is hoisted and cannot close
+  // over a top-level variable — see `mockInstance` below.
+  const instance = {
+    getOfferings: vi.fn(),
+    getCustomerInfo: vi.fn(),
+    purchase: vi.fn(),
+    changeUser: vi.fn(),
+  };
   return {
     Purchases: {
-      configure: vi.fn(),
-      getSharedInstance: vi.fn(),
+      configure: vi.fn(() => instance),
+      getSharedInstance: vi.fn(() => instance),
       isConfigured: vi.fn(() => false),
+      __instance: instance,
     },
     PurchasesError: FakePurchasesError,
     ErrorCode: { UnknownError: 0, UserCancelledError: 1 },
@@ -37,6 +48,17 @@ async function loadWithKey(key: string | undefined) {
     },
   }));
   return import('@/lib/purchases');
+}
+
+/** The fake Purchases instance the mocked SDK hands back. `loadWithKey` calls
+ *  `vi.resetModules()`, which re-runs the mock factory, so this must be read
+ *  from the SDK import taken AFTER the reload — otherwise the stub lands on a
+ *  stale instance that lib/purchases no longer holds. */
+function mockInstance(sdk: typeof import('@revenuecat/purchases-js')): {
+  getOfferings: ReturnType<typeof vi.fn>;
+} {
+  return (sdk.Purchases as unknown as { __instance: { getOfferings: ReturnType<typeof vi.fn> } })
+    .__instance;
 }
 
 afterEach(() => {
@@ -78,16 +100,41 @@ describe('purchases wrapper', () => {
     expect(plan.rcPackage).toBe(pkg);
   });
 
-  it('marks a product with a free-trial phase as hasFreeTrial', async () => {
+  // The real shape: purchases-js parses the product's ISO trial duration into a
+  // `period` object, so `web_premium_yearly_1wk`'s P1W arrives as
+  // {number: 1, unit: 'week'}. The old fixture passed a bare `periodDuration`
+  // string, which no SDK version emits — so the trialPeriod mapping was never
+  // exercised and the paywall's duration copy rode on an untested field.
+  it('marks a product with a free-trial phase as hasFreeTrial and carries its duration', async () => {
     const { toWebPlan } = await loadWithKey(undefined);
     const pkg = {
       identifier: '$rc_annual',
       webBillingProduct: {
         price: { formattedPrice: '$59.99' },
-        freeTrialPhase: { periodDuration: 'P2W' },
+        freeTrialPhase: { period: { number: 1, unit: 'week' } },
       },
     };
-    expect(toWebPlan(pkg as never).hasFreeTrial).toBe(true);
+    const plan = toWebPlan(pkg as never);
+    expect(plan.hasFreeTrial).toBe(true);
+    expect(plan.trialPeriod).toEqual({ number: 1, unit: 'week' });
+  });
+
+  // A trial phase the SDK couldn't parse a period out of is still a trial, but
+  // it has no length to advertise: trialPeriod must be null so the paywall
+  // falls back to the duration-less "Free trial included" copy rather than
+  // reading `.number` off undefined.
+  it('leaves trialPeriod null when the free-trial phase carries no period', async () => {
+    const { toWebPlan } = await loadWithKey(undefined);
+    const pkg = {
+      identifier: '$rc_annual',
+      webBillingProduct: {
+        price: { formattedPrice: '$59.99' },
+        freeTrialPhase: { periodDuration: 'P1W' },
+      },
+    };
+    const plan = toWebPlan(pkg as never);
+    expect(plan.hasFreeTrial).toBe(true);
+    expect(plan.trialPeriod).toBeNull();
   });
 
   it('reports "not a cancel" for anything before the SDK has ever loaded', async () => {
@@ -112,6 +159,75 @@ describe('purchases wrapper', () => {
     expect(isUserCancelledError(new sdk.PurchasesError(sdk.ErrorCode.UnknownError))).toBe(false);
     expect(isUserCancelledError(new Error('network'))).toBe(false);
     expect(isUserCancelledError(null)).toBe(false);
+  });
+});
+
+describe('getPurchases — SDK analytics are off', () => {
+  // purchases-js defaults collectAnalyticsEvents to TRUE (events posted to
+  // https://e.revenue.cat). Flags are fixed at configure() and can't follow a
+  // consent change, and the SDK now loads on the home page for every owner —
+  // so the flag must be passed on every configure, consent or not.
+  it('configures with flags.collectAnalyticsEvents === false, apiKey and the Supabase user id', async () => {
+    const { getPurchases } = await loadWithKey('rcb_sb_test');
+    const sdk = await import('@revenuecat/purchases-js');
+    await getPurchases('user-1');
+
+    const configure = sdk.Purchases.configure as unknown as ReturnType<typeof vi.fn>;
+    // The mock may carry calls from earlier tests in this file; assert the
+    // call THIS getPurchases made (and that every configure passed the flag).
+    expect(configure).toHaveBeenLastCalledWith({
+      apiKey: 'rcb_sb_test',
+      appUserId: 'user-1',
+      flags: { collectAnalyticsEvents: false },
+    });
+    for (const [config] of configure.mock.calls as [{ flags?: unknown }][]) {
+      expect(config.flags).toEqual({ collectAnalyticsEvents: false });
+    }
+  });
+
+  it('leaves autoCollectUTMAsMetadata at the SDK default (purchase-time only)', async () => {
+    const { getPurchases } = await loadWithKey('rcb_sb_test');
+    const sdk = await import('@revenuecat/purchases-js');
+    await getPurchases('user-1');
+
+    const configure = sdk.Purchases.configure as unknown as ReturnType<typeof vi.fn>;
+    const [config] = configure.mock.lastCall as [{ flags: Record<string, unknown> }];
+    expect(config.flags).not.toHaveProperty('autoCollectUTMAsMetadata');
+  });
+});
+
+describe('getWebOffering — resolves by id, never offerings.current', () => {
+  it('returns the `web` offering even when a different offering is current', async () => {
+    const { getWebOffering } = await loadWithKey('rcb_sb_test');
+    const sdk = await import('@revenuecat/purchases-js');
+    const webOffering = { identifier: 'web' };
+    const other = { identifier: 'default' };
+    mockInstance(sdk).getOfferings.mockResolvedValue({
+      all: { web: webOffering, default: other },
+      current: other,
+    });
+
+    await expect(getWebOffering('user-1')).resolves.toBe(webOffering);
+  });
+
+  it('throws (and logs which offerings came back) rather than falling back to current', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { getWebOffering } = await loadWithKey('rcb_sb_test');
+    const sdk = await import('@revenuecat/purchases-js');
+    // `default`/`add_circle` package App Store + Play products, so `current`
+    // could only produce a checkout with zero purchasable packages. Returning
+    // it would turn a broken dashboard into a silent "checkout unavailable"
+    // card with nothing in the console to explain it.
+    const current = { identifier: 'default' };
+    mockInstance(sdk).getOfferings.mockResolvedValue({
+      all: { default: current, add_circle: { identifier: 'add_circle' } },
+      current,
+    });
+
+    await expect(getWebOffering('user-1')).rejects.toThrow(/No web offering available/);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"web"'), ['default', 'add_circle']);
+
+    warn.mockRestore();
   });
 });
 

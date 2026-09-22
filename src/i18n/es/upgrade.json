@@ -43,6 +43,18 @@
   "securedByStripe": "Pago seguro con Stripe.",
   "orUseApp": "¿Prefieres la app? También puedes mejorar en la app de CircleCare y pagar a través de tu tienda de aplicaciones.",
   "unavailable": "El pago en línea no está disponible en este momento. También puedes mejorar en la app de CircleCare.",
+  "storeOnly": {
+    "title": "Suscríbete en la app de CircleCare",
+    "bodyMobile": "CircleCare Premium está disponible en la app. Descarga CircleCare aquí abajo, inicia sesión con este mismo correo y activa tu suscripción desde tu perfil.",
+    "bodyDesktop": "CircleCare Premium está disponible en la app de CircleCare en tu celular. Instálala, inicia sesión con este mismo correo y activa tu suscripción desde tu perfil.",
+    "storesLabel": "Descarga la app de CircleCare",
+    "helpPrefix": "¿Tienes preguntas o no usas celular?",
+    "helpCta": "Escríbele a nuestro equipo de soporte"
+  },
+  "countryError": {
+    "title": "No pudimos cargar tu cuenta",
+    "body": "Necesitamos los datos de tu cuenta para abrir el pago. Revisa tu conexión e inténtalo de nuevo."
+  },
   "error": "Algo salió mal al iniciar el pago. Inténtalo de nuevo.",
   "back": "Volver al perfil",
   "alreadyPremium": {

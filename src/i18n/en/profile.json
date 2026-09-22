@@ -133,5 +133,27 @@
   },
   "footer": {
     "version": "WEB · v{{version}}"
+  },
+  "cancelReason": {
+    "headlineActive": "Your premium stays on until {{date}}.",
+    "headlineExpired": "Your premium ended on {{date}}.",
+    "body": "Mind telling us why you turned off renewal? It helps us improve.",
+    "reasons": {
+      "autoCharge": "I just didn't want to be charged automatically",
+      "tooExpensive": "Too expensive",
+      "somethingBroken": "Something didn't work",
+      "missingFeature": "Missing a feature I need",
+      "notNeeded": "I didn't need it",
+      "other": "Other"
+    },
+    "commentLabel": "Add a comment (optional)",
+    "placeholderBroken": "What happened?",
+    "placeholderMissing": "What were you looking for?",
+    "placeholderDefault": "Anything else? (optional)",
+    "send": "Send",
+    "notNow": "Not now",
+    "error": "Couldn't send. Try again.",
+    "thanks": "Thanks, this really helps.",
+    "reassurance": "Got it. You keep full access until {{date}}."
   }
 }

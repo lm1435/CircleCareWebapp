@@ -43,6 +43,18 @@
   "securedByStripe": "Secure checkout by Stripe.",
   "orUseApp": "Prefer the app? You can also upgrade in the CircleCare app and pay through your app store.",
   "unavailable": "Online checkout isn't available right now. You can also upgrade in the CircleCare app.",
+  "storeOnly": {
+    "title": "Subscribe in the CircleCare app",
+    "bodyMobile": "CircleCare Premium is available in the app. Get CircleCare below, sign in with this same email, and start your subscription from your profile.",
+    "bodyDesktop": "CircleCare Premium is available in the CircleCare app on your phone. Install it, sign in with this same email, and start your subscription from your profile.",
+    "storesLabel": "Get the CircleCare app",
+    "helpPrefix": "Questions, or no smartphone?",
+    "helpCta": "Email our support team"
+  },
+  "countryError": {
+    "title": "We couldn't load your account",
+    "body": "We need your account details before we can open checkout. Check your connection and try again."
+  },
   "error": "Something went wrong starting checkout. Please try again.",
   "back": "Back to profile",
   "alreadyPremium": {

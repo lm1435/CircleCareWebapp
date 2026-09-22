@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
@@ -32,6 +32,18 @@ vi.mock('@/lib/purchases', () => ({
 }));
 vi.mock('@/lib/webBillingConfig', () => ({
   isWebBillingConfigured: vi.fn(() => true),
+}));
+// The country gate's FIRST signal (`users.timezone`); the second is the
+// browser zone, pinned further down. This file gives the page no
+// QueryClientProvider and the gate is not what it is testing, so the hook is
+// injected with an allowed zone — exactly as `pickerCoarsePointer.test.tsx`
+// injects `useHourCycle`. `UpgradePage.test.tsx` owns the gate's coverage.
+vi.mock('@/hooks/useAccountTimezone', () => ({
+  useAccountTimezone: () => ({
+    timezone: 'America/New_York',
+    isPending: false,
+    refetch: vi.fn(),
+  }),
 }));
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
@@ -108,6 +120,27 @@ function plan(overrides: Record<string, unknown> = {}): Record<string, unknown> 
     ...overrides,
   };
 }
+
+/**
+ * The country gate's SECOND signal, which the page reads straight off `Intl`
+ * rather than through the mocked hook above. It has to be pinned: unpinned it
+ * is the runner's own `TZ`, and `scripts/run-unit-timezones.sh` runs this
+ * suite under UTC, Asia/Tokyo, Pacific/Midway and seven more — every one of
+ * which would send this file's paywall to the app-store card and fail every
+ * analytics assertion in it. The gate has its own coverage in
+ * `UpgradePage.test.tsx`; here it just has to stay out of the way.
+ */
+const realResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+beforeEach(() => {
+  Intl.DateTimeFormat.prototype.resolvedOptions = function resolvedOptions(
+    this: Intl.DateTimeFormat
+  ) {
+    return { ...realResolvedOptions.call(this), timeZone: 'America/New_York' };
+  };
+});
+afterEach(() => {
+  Intl.DateTimeFormat.prototype.resolvedOptions = realResolvedOptions;
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
