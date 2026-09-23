@@ -30,6 +30,49 @@ export function getMedKey(
 }
 
 /**
+ * Each series' CURRENT content, keyed by series-root id: the root row when it
+ * is in the pool, otherwise one of its virtual instances.
+ *
+ * A recurring-med edit updates only the parent; already-materialized children
+ * keep their point-in-time content (deliberate — see the edit-history rule).
+ * Keyed on their own dosage, those children split off into a ghost card after
+ * a dosage edit ("10" beside "10mg · Daily", both Active). The root is not
+ * always loaded — the roster's default window starts 15 days back, so a med
+ * started earlier arrives WITHOUT its root — but virtual instances are
+ * generated from the parent and carry its current content, so they stand in.
+ */
+export function indexSeriesContent(
+  events: readonly CalendarEvent[]
+): Map<string, CalendarEvent> {
+  const index = new Map<string, CalendarEvent>();
+  for (const e of events) {
+    if (!e.parent_event_id) index.set(e.id, e);
+  }
+  for (const e of events) {
+    if (e.is_virtual && e.parent_event_id && !index.has(e.parent_event_id)) {
+      index.set(e.parent_event_id, e);
+    }
+  }
+  return index;
+}
+
+/**
+ * Roster grouping key: an event takes its series' current content key (see
+ * `indexSeriesContent`), so stale materialized children join their
+ * medication's card. Falls back to the event's own key when nothing of its
+ * series' current content is loaded.
+ */
+export function getRosterMedKey(
+  event: CalendarEvent,
+  seriesContent: ReadonlyMap<string, CalendarEvent>
+): string {
+  return getMedKey(seriesContent.get(getSeriesRootId(event)) ?? event);
+}
+
+const getSeriesRootId = (e: Pick<CalendarEvent, 'id' | 'parent_event_id'>): string =>
+  e.parent_event_id ?? e.id;
+
+/**
  * Series-root id for a single event: the parent series root when the event is a
  * child/virtual instance, otherwise its own id. Discontinue/reactivate target
  * the root (the backend also resolves the root from any child id).

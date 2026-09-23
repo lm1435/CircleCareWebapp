@@ -314,6 +314,82 @@ describe('CancelReasonPrompt — gates', () => {
   });
 });
 
+describe('CancelReasonPrompt — seen = asked (at most once per cancellation per browser)', () => {
+  /** A new page load: the module-scope flag starts over, localStorage persists. */
+  function newPageLoad(): void {
+    __resetCancelReasonPromptForTests();
+  }
+
+  it('writes the key as the dialog is shown, before any interaction', async () => {
+    await renderShown();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await vi.waitFor(() => expect(window.localStorage.getItem(KEY)).toBe('true'));
+    expect(submit).not.toHaveBeenCalled();
+    expect(dismissed).not.toHaveBeenCalled();
+  });
+
+  it('shown, then the tab closed with no interaction → not shown on the next load', async () => {
+    const first = await renderShown();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    first.unmount(); // no click: tab closed
+    newPageLoad();
+    await renderShown();
+    expect(wasCancelReasonEvaluatedThisPageLoad()).toBe(true);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(shown).toHaveBeenCalledTimes(1);
+  });
+
+  it('sign-out mid-dialog then the same account signs back in → not re-asked', async () => {
+    const first = await renderShown();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    first.unmount(); // hands the page load its evaluation back (openRef)
+    expect(wasCancelReasonEvaluatedThisPageLoad()).toBe(false);
+    await renderShown();
+    expect(wasCancelReasonEvaluatedThisPageLoad()).toBe(true);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('failed send, then a later load → not shown again', async () => {
+    submit.mockRejectedValueOnce(new Error('500'));
+    const first = await renderShown();
+    fireEvent.click(screen.getByRole('radio', { name: 'Other' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    first.unmount();
+    newPageLoad();
+    await renderShown();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(shown).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed key write on show still shows the dialog', async () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+      throw new Error('quota');
+    });
+    await renderShown();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(window.localStorage.getItem(KEY)).toBeNull();
+    expect(shown).toHaveBeenCalledTimes(1);
+    setItemSpy.mockRestore();
+    // Dismiss still writes it (insurance for exactly this case).
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    await vi.waitFor(() => expect(window.localStorage.getItem(KEY)).toBe('true'));
+  });
+
+  it('after the dialog closes, navigating away and back home in the same load does not re-open it', async () => {
+    await renderShown();
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    act(() => navigateTo('/circles/c1/tasks'));
+    act(() => navigateTo('/circles'));
+    await elapse(PRESENT_DELAY_MS * 3);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(shown).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('CancelReasonPrompt — dialog', () => {
   it('focuses the headline, offers six native radios, and disables Send until one is picked', async () => {
     await renderShown();
@@ -391,9 +467,10 @@ describe('CancelReasonPrompt — dialog', () => {
     expect(screen.getByRole('status')).not.toHaveTextContent('full access');
   });
 
-  it('on failure: shows an alert, keeps the selection, and does NOT write the key', async () => {
+  it('on failure: shows an alert, keeps the selection, and the key stays written (from show)', async () => {
     submit.mockRejectedValueOnce(new Error('500'));
     await renderShown();
+    await vi.waitFor(() => expect(window.localStorage.getItem(KEY)).toBe('true'));
     fireEvent.click(screen.getByRole('radio', { name: 'Other' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'kept' } });
     await act(async () => {
@@ -401,7 +478,8 @@ describe('CancelReasonPrompt — dialog', () => {
     });
 
     expect(screen.getByRole('alert')).toHaveTextContent("Couldn't send. Try again.");
-    expect(window.localStorage.getItem(KEY)).toBeNull();
+    // Seen = asked: the key written on show is not undone by a failed send.
+    expect(window.localStorage.getItem(KEY)).toBe('true');
     expect(screen.getByRole('radio', { name: 'Other' })).toBeChecked();
     expect(screen.getByRole('textbox')).toHaveValue('kept');
     expect(submitted).not.toHaveBeenCalled();
@@ -415,6 +493,7 @@ describe('CancelReasonPrompt — dialog', () => {
 
   it('Not now dismisses, writes the key and fires the dismissed event', async () => {
     await renderShown();
+    window.localStorage.clear(); // drop the key written on show, so the dismiss re-write is observable
     fireEvent.click(screen.getByRole('radio', { name: 'Too expensive' }));
     fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -428,6 +507,7 @@ describe('CancelReasonPrompt — dialog', () => {
 
   it('Escape dismisses and writes the key', async () => {
     await renderShown();
+    window.localStorage.clear(); // drop the key written on show, so the dismiss re-write is observable
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await vi.waitFor(() => expect(window.localStorage.getItem(KEY)).toBe('true'));

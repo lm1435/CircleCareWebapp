@@ -1,6 +1,8 @@
 import {
   getMedKey,
   getMedSeriesAnalyticsFacts,
+  getRosterMedKey,
+  indexSeriesContent,
   getSeriesRoot,
 } from '@/utils/medicationGrouping';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -64,6 +66,48 @@ describe('getSeriesRoot', () => {
   it('returns parent_event_id when set, else own id', () => {
     expect(getSeriesRoot(med({ id: 'child', parent_event_id: 'parent' }))).toBe('parent');
     expect(getSeriesRoot(med({ id: 'solo', parent_event_id: undefined }))).toBe('solo');
+  });
+});
+
+describe('getRosterMedKey', () => {
+  // The dosage-edit ghost card: parent edited "10" -> "10mg", materialized
+  // children still carry "10". They must key as ONE medication.
+  const root = med({ id: 'root', medication_name: 'Escitalopram', medication_dosage: '10mg' });
+  const staleChild = med({
+    id: 'child',
+    medication_name: 'Escitalopram',
+    medication_dosage: '10',
+    parent_event_id: 'root',
+  });
+  const virtual = med({
+    id: 'root_2026-09-30',
+    medication_name: 'Escitalopram',
+    medication_dosage: '10mg',
+    parent_event_id: 'root',
+    is_virtual: true,
+  });
+
+  it('keys a stale child under its root when the root is loaded', () => {
+    const pool = [root, staleChild, virtual];
+    const index = indexSeriesContent(pool);
+    expect(new Set(pool.map((e) => getRosterMedKey(e, index)))).toEqual(
+      new Set([getMedKey(root)])
+    );
+    expect(getMedKey(staleChild)).not.toBe(getMedKey(root)); // the bug, if keyed alone
+  });
+
+  it('keys a stale child via a virtual instance when the root is outside the window', () => {
+    // Roster default window starts 15 days back: an older med arrives rootless.
+    const pool = [staleChild, virtual];
+    const index = indexSeriesContent(pool);
+    expect(getRosterMedKey(staleChild, index)).toBe(getMedKey(virtual));
+    expect(getRosterMedKey(virtual, index)).toBe(getMedKey(virtual));
+  });
+
+  it('falls back to the event\'s own key when nothing of its series is loaded', () => {
+    expect(getRosterMedKey(staleChild, indexSeriesContent([staleChild]))).toBe(
+      getMedKey(staleChild)
+    );
   });
 });
 

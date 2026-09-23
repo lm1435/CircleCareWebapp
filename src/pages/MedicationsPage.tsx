@@ -34,7 +34,7 @@ import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog
 import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 import { useMedicationRoster, useMedicationStatus } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
-import { getMedKey, getSeriesRoot } from '@/utils/medicationGrouping';
+import { getRosterMedKey, getSeriesRoot, indexSeriesContent } from '@/utils/medicationGrouping';
 import { MedicationDetailModal } from '@/components/meds/MedicationDetailModal';
 import { AdherenceHero } from '@/components/meds/AdherenceHero';
 import { HistoryList } from '@/components/meds/HistoryList';
@@ -126,7 +126,10 @@ function stockDaysLeft(e: CalendarEvent): number | null {
 function representativeScore(e: CalendarEvent): number {
   const isRoot = !e.parent_event_id;
   const isActive = !e.discontinued_at;
-  return (isRoot ? 2 : 0) + (isActive ? 1 : 0);
+  // Tiebreak only: with the root outside the window, a virtual instance
+  // carries the series' current content, a materialized child a stale one.
+  const isVirtual = !!e.is_virtual;
+  return (isRoot ? 2 : 0) + (isActive ? 1 : 0) + (isVirtual ? 0.5 : 0);
 }
 
 /**
@@ -140,20 +143,25 @@ function groupMedications(events: CalendarEvent[]): {
   inactive: MedGroup[];
 } {
   const groups = new Map<string, MedGroup>();
+  const seriesContent = indexSeriesContent(events);
 
   for (const e of events) {
     if (e.event_type !== 'medication') continue;
-    const name = e.medication_name || e.title || '';
-    if (!name) continue;
+    if (!(e.medication_name || e.title)) continue;
 
-    const key = getMedKey(e);
+    // A child joins its series' card, and the card's name/dosage come from the
+    // series' CURRENT content (root, or a virtual instance when the root is
+    // outside the window) — materialized children keep point-in-time values
+    // after an edit (see indexSeriesContent).
+    const source = seriesContent.get(getSeriesRoot(e)) ?? e;
+    const key = getRosterMedKey(e, seriesContent);
     let group = groups.get(key);
     if (!group) {
       group = {
         key,
         event: e,
-        name,
-        dosage: e.medication_dosage || null,
+        name: source.medication_name || source.title || '',
+        dosage: source.medication_dosage || null,
         times: [],
         recurrenceEvent: null,
         inactive: true,
@@ -165,7 +173,7 @@ function groupMedications(events: CalendarEvent[]): {
     // Prefer an ACTIVE series-root row as the representative (Edit/Delete/
     // Discontinue target it) — see representativeScore above.
     if (representativeScore(e) > representativeScore(group.event)) group.event = e;
-    if (!group.dosage && e.medication_dosage) group.dosage = e.medication_dosage;
+    if (!group.dosage && source.medication_dosage) group.dosage = source.medication_dosage;
     if (!group.recurrenceEvent && e.recurrence_rule) group.recurrenceEvent = e;
     if (e.scheduled_time) {
       const hhmm = e.scheduled_time.slice(0, 5);

@@ -141,7 +141,9 @@ export function CancelReasonPrompt(): ReactElement | null {
   const [context, setContext] = useState<ShownContext | null>(null);
 
   // Presented and not yet closed by the user. Read on unmount (sign-out mid-
-  // dialog) to hand the page load its evaluation back — nothing was written.
+  // dialog) to hand the page load its evaluation back, so a DIFFERENT account
+  // signing in next is still evaluated. The same account is not re-asked: the
+  // key was written when the dialog was shown.
   const openRef = useRef(false);
   useEffect(() => {
     return () => {
@@ -190,6 +192,12 @@ export function CancelReasonPrompt(): ReactElement | null {
           if (!isCancelReasonHomePath(pathRef.current)) return;
           if (anotherSurfaceIsOpen()) return;
 
+          // SEEN = ASKED. The key is written here, as the dialog is shown, not
+          // on answer or dismiss: someone who looks at it and then closes the
+          // tab without clicking anything must not be asked again on every load
+          // for 30 days. Fire and forget — the write never rejects (it swallows
+          // its own failures), so it can never block showing.
+          void markCancelReasonAsked(userId, eligibility.unsubscribeDetectedAtMs);
           openRef.current = true;
           setContext({
             userId,
@@ -287,10 +295,10 @@ function CancelReasonDialog({ context, onClose }: DialogProps): ReactElement {
   const showReassurance = selected === 'auto_charge' && context.entitlementActive;
 
   /**
-   * Not now, ×, Escape, backdrop. Counts as answered-by-declining: the key is
-   * written so this cancellation is never asked about again. Ignored while a
-   * send is in flight (the shell is also non-dismissible then). After a
-   * successful send it only closes (key already written).
+   * Not now, ×, Escape, backdrop. The key was already written when the dialog
+   * was shown; writing it again here is idempotent insurance in case that write
+   * failed. Ignored while a send is in flight (the shell is also
+   * non-dismissible then). After a successful send it only closes.
    */
   const dismiss = (): void => {
     if (submitting) return;
@@ -324,8 +332,9 @@ function CancelReasonDialog({ context, onClose }: DialogProps): ReactElement {
         isSandbox: context.isSandbox,
       });
     } catch {
-      // Selection and text survive for a retry, and the key is NOT written: an
-      // answer that never landed has not been given.
+      // Selection and text survive for a retry inside this open dialog. The
+      // key was already written on show, so a failed send is NOT re-asked on a
+      // later load — an accepted trade-off against nagging.
       if (mountedRef.current) {
         setSubmitting(false);
         setFailed(true);
@@ -333,8 +342,9 @@ function CancelReasonDialog({ context, onClose }: DialogProps): ReactElement {
       return;
     }
 
-    // ONLY AFTER THE 2xx. Awaited (never rejects) so the key is on disk before
-    // the thanks state shows.
+    // Re-written after the 2xx (idempotent; covers a failed write on show).
+    // Awaited (never rejects) so the key is on disk before the thanks state
+    // shows.
     await markCancelReasonAsked(context.userId, context.unsubscribeDetectedAtMs);
     Analytics.cancelReasonPromptSubmitted({
       reason: selected,

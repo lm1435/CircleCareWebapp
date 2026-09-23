@@ -142,8 +142,9 @@ export async function hasAskedCancelReason(
 }
 
 /**
- * Record that the question was answered or explicitly dismissed. Hashing and
- * write failures are swallowed — never rejects, so callers may fire and forget.
+ * Record that the question was asked. Written the moment the dialog is shown
+ * (seen = asked), and again on answer or dismiss. Hashing and write failures
+ * are swallowed — never rejects, so callers may fire and forget.
  */
 export async function markCancelReasonAsked(
   userId: string,
@@ -174,8 +175,9 @@ export function markCancelReasonEvaluatedThisPageLoad(): void {
 
 /**
  * Give the page load its evaluation back. Only for a prompt that was PRESENTED
- * and then unmounted without an explicit close (sign-out mid-modal): nothing
- * was written, so the next sign-in in this tab re-evaluates, per spec.
+ * and then unmounted without an explicit close (sign-out mid-modal): the next
+ * sign-in in this tab re-evaluates. The key written on show still keeps the
+ * same account from being re-asked; a different account is evaluated afresh.
  */
 export function resetCancelReasonEvaluation(): void {
   evaluatedThisPageLoad = false;
