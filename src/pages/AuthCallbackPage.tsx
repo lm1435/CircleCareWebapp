@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi, getApiError } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { consumePendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { clearPendingTermsConsent, consumePendingTermsConsent } from '@/lib/pendingTermsConsent';
@@ -25,7 +26,10 @@ export default function AuthCallbackPage(): ReactElement {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const signIn = useAuthStore((state) => state.signIn);
+  const { isAuthenticated, isBootstrapping } = useAuth();
   const [failure, setFailure] = useState<'error' | 'cancelled' | null>(null);
+  // A visit that carried nothing from a provider — see the stale branch below.
+  const [stale, setStale] = useState(false);
   const ranRef = useRef(false);
 
   useEffect(() => {
@@ -39,9 +43,16 @@ export default function AuthCallbackPage(): ReactElement {
     // identify — so they never sit in history, referrers, session replay, or
     // logs. Everything below reads ONLY from these captured strings; nothing
     // may touch window.location.hash/search again.
+    //
+    // Scrubbed to '/', NOT back to '/auth/callback': the bare callback URL
+    // ended up in Chrome's history/omnibox/tiles, and re-opening it later (no
+    // tokens, still signed in) read as a broken handshake. '/' is safe to
+    // revisit — AuthGuard routes it to /circles or /login. The router still
+    // believes it is on /auth/callback until the navigate below replaces this
+    // entry; router-owned `history.state` is kept so its index stays intact.
     const rawHash = window.location.hash;
     const rawSearch = window.location.search;
-    window.history.replaceState(null, '', '/auth/callback');
+    window.history.replaceState(window.history.state, '', '/');
 
     const hashParams = new URLSearchParams(rawHash.startsWith('#') ? rawHash.slice(1) : rawHash);
     const queryParams = new URLSearchParams(rawSearch);
@@ -64,7 +75,8 @@ export default function AuthCallbackPage(): ReactElement {
       // Consumed on EVERY exit path, not just the happy one: the module's
       // contract is read-and-clear so a stale provider can never be attributed
       // to a later, unrelated sign-in.
-      const method = consumePendingAuthMethod() ?? 'oauth';
+      const pendingMethod = consumePendingAuthMethod();
+      const method = pendingMethod ?? 'oauth';
       // Same read-and-clear contract for the parked ANALYTICS answer, and for
       // the same reason: no account was created here, so nothing is recorded —
       // but the parked value must not survive to be attributed to a later,
@@ -78,6 +90,16 @@ export default function AuthCallbackPage(): ReactElement {
       // `termsAccepted: true` for an account that ticked nothing. The exchange
       // path below consumes it before its try, so its failures clear it too.
       clearPendingTermsConsent();
+      // STALE VISIT: nothing from a provider (no tokens, no error) AND no
+      // handshake was started in this tab. That is a re-opened bookmark /
+      // history entry / omnibox suggestion, not a failed sign-in — every prod
+      // OAUTH_NO_TOKENS was this ($direct, no login_started). No failure
+      // event, no error screen: the spinner stays up until App's bootstrap
+      // resolves, then the effect below sends the visitor where they belong.
+      if (!oauthError && !accessToken && !refreshToken && pendingMethod === null) {
+        setStale(true);
+        return;
+      }
       if (!cancelled) {
         // Until now this branch reported NOTHING, so a broken web OAuth login
         // was invisible in the funnel: login_started fired at the button, the
@@ -185,6 +207,14 @@ export default function AuthCallbackPage(): ReactElement {
       }
     })();
   }, [navigate, signIn]);
+
+  // Stale-visit resolution. Reads the same bootstrap state AuthGuard does (the
+  // silent cookie refresh is kicked off once in App.tsx) rather than probing
+  // the session itself; the destinations match the success path and AuthGuard.
+  useEffect(() => {
+    if (!stale || isBootstrapping) return;
+    navigate(isAuthenticated ? '/circles' : '/login', { replace: true });
+  }, [stale, isBootstrapping, isAuthenticated, navigate]);
 
   if (failure === 'cancelled') {
     return (

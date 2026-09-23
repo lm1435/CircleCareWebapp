@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api';
 import { setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { setPendingTermsConsent } from '@/lib/pendingTermsConsent';
+import { setPendingAnalyticsConsent } from '@/lib/pendingAnalyticsConsent';
 import { Analytics } from '@/lib/analytics';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
@@ -64,12 +65,15 @@ describe('AuthCallbackPage', () => {
 
     renderCallback();
 
-    // Scrub happened, and strictly before the oauth-session POST
-    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/auth/callback');
+    // Scrub happened, and strictly before the oauth-session POST. Scrubbed to
+    // '/', never back to '/auth/callback' — the bare callback URL lingered in
+    // browser history and re-opening it read as a failed sign-in.
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/');
     expect(replaceStateSpy.mock.invocationCallOrder[0]).toBeLessThan(
       mockedPost.mock.invocationCallOrder[0]
     );
     expect(window.location.hash).toBe('');
+    expect(window.location.pathname).toBe('/');
 
     expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
       access_token: 'oauth-access',
@@ -272,11 +276,16 @@ describe('AuthCallbackPage', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('shows the error state when tokens are missing from the fragment', async () => {
+  it('shows the error state when a started handshake returns no tokens', async () => {
+    // A provider was parked, so this tab really did leave for the provider —
+    // coming back empty-handed is a broken handshake, not a stale visit.
+    setPendingAuthMethod('google');
+
     renderCallback();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(mockedPost).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('shows the error state when the oauth-session exchange fails, leaving storage empty', async () => {
@@ -327,13 +336,28 @@ describe('AuthCallbackPage', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
-  it("reports OAUTH_NO_TOKENS under the generic 'oauth' method when the fragment is empty", async () => {
+  it('reports OAUTH_NO_TOKENS with the parked provider when a started handshake returns no tokens', async () => {
     const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    setPendingAuthMethod('apple');
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('apple', 'OAUTH_NO_TOKENS');
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it("reports OAUTH_NO_TOKENS under the generic 'oauth' method for a half-filled fragment", async () => {
+    // Something DID come back (an access token without its refresh token), so
+    // this is not a stale re-visit even though no provider was parked.
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    window.history.replaceState(null, '', '/auth/callback#access_token=oauth-access');
 
     renderCallback();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_NO_TOKENS');
+    expect(mockedPost).not.toHaveBeenCalled();
   });
 
   it('reports NO failure event when the user cancels, but still clears the parked provider', async () => {
@@ -427,9 +451,17 @@ describe('AuthCallbackPage — parked terms acceptance never survives a failed c
   });
 
   it('missing tokens: clears the parked terms', async () => {
+    setPendingAuthMethod('google');
     window.history.replaceState(null, '', '/auth/callback#token_type=bearer');
     renderCallback();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(sessionStorage.getItem(TERMS_KEY)).toBeNull();
+  });
+
+  it('stale visit (nothing started, nothing returned): clears the parked terms', async () => {
+    window.history.replaceState(null, '', '/auth/callback#token_type=bearer');
+    renderCallback();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true }));
     expect(sessionStorage.getItem(TERMS_KEY)).toBeNull();
   });
 
@@ -470,5 +502,103 @@ describe('AuthCallbackPage — parked terms acceptance never survives a failed c
     expect(exchanges).toEqual([
       ['/auth/oauth-session', { access_token: 'login-access', refresh_token: 'login-refresh' }],
     ]);
+  });
+});
+
+// ── Stale visit ────────────────────────────────────────────────────────────
+// The scrub used to leave a bare /auth/callback in the address bar, which
+// Chrome for Android then offered in history / omnibox / tiles. Re-opening it
+// (no tokens, no error, no handshake started in this tab) fired
+// login_failed OAUTH_NO_TOKENS and showed "Sign-in didn't complete" to a user
+// who was, in fact, still signed in. Every prod OAUTH_NO_TOKENS was this.
+
+describe('AuthCallbackPage — stale visit (bare /auth/callback re-opened)', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    tokenAccessor.clear();
+    localStorage.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+    window.history.replaceState(null, '', '/auth/callback');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('signed in: lands on /circles with no failure event and no error screen', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    useAuthStore.setState({
+      user: { id: 'user-1', email: 'pat@example.com', first_name: 'Pat', last_name: 'Rivera' },
+      isAuthenticated: true,
+      isBootstrapping: false,
+    });
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(loginFailed).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe('/');
+  });
+
+  it('signed out: goes to /login with no failure event and no error screen', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true }));
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(loginFailed).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(mockedPost).not.toHaveBeenCalled();
+  });
+
+  it('holds the spinner until the session check resolves, then redirects', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    useAuthStore.setState({ isBootstrapping: true });
+
+    renderCallback();
+
+    expect(screen.getByText('Signing you in...')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    act(() => {
+      useAuthStore.setState({
+        user: { id: 'user-1', email: 'pat@example.com', first_name: 'Pat', last_name: 'Rivera' },
+        isAuthenticated: true,
+        isBootstrapping: false,
+      });
+    });
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(loginFailed).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('a PKCE-shaped ?code= leftover with nothing started is stale too', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    window.history.replaceState(null, '', '/auth/callback?code=abc123');
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true }));
+    expect(loginFailed).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('');
+  });
+
+  it('still read-and-clears the parked terms and analytics answers', async () => {
+    setPendingTermsConsent();
+    setPendingAnalyticsConsent(false);
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true }));
+    expect(sessionStorage.getItem('cc_pending_terms_consent')).toBeNull();
+    expect(sessionStorage.getItem('cc_pending_analytics_consent')).toBeNull();
+    expect(localStorage.getItem('cc_pending_analytics_consent')).toBeNull();
   });
 });
