@@ -882,7 +882,49 @@ export const Analytics = {
       had_selection: props.hadSelection,
       is_sandbox: props.isSandbox,
     }),
+
+  // --- Email click signal (docs/plans/email-lifecycle-overhaul.md, "CTA URLs
+  // and click measurement") ---
+  /**
+   * A visitor followed an email CTA into the web companion (`/open?src=...`
+   * or any page reached with a `?src=` query param). `src` is a fixed enum
+   * (`welcome`, `drip_d1_<variant>`, `drip_d4_<variant>`, `trial_reminder`) —
+   * never PII. Call through `trackEmailLinkFromLocation`, not directly, so
+   * the once-per-load guard applies.
+   */
+  emailLinkOpened: (src: string) => capture('email_link_opened', { src }),
 };
+
+// Module-level, NOT persisted (sessionStorage/localStorage): this only needs
+// to survive a single page load, and the boot call site (App.tsx) reads
+// `window.location.search` exactly once anyway. A plain in-memory flag is
+// enough to make React StrictMode's double-invoked mount effect (or any
+// other caller re-running the boot hook) fire `email_link_opened` at most
+// once per load, instead of once per invocation.
+let emailLinkTracked = false;
+
+/**
+ * Reads `src` out of a `location.search`-shaped string and fires
+ * `Analytics.emailLinkOpened(src)` at most once per page load. No-ops when
+ * `src` is missing/empty. Deliberately does NOT strip `src` from the URL —
+ * it isn't sensitive and downstream code (PageviewTracker, deep-link
+ * handling) doesn't need it removed.
+ *
+ * Call once from the app root on mount, e.g.:
+ *   useEffect(() => { trackEmailLinkFromLocation(window.location.search); }, []);
+ */
+export function trackEmailLinkFromLocation(search: string): void {
+  if (emailLinkTracked) return;
+  const src = new URLSearchParams(search).get('src');
+  if (!src) return;
+  emailLinkTracked = true;
+  Analytics.emailLinkOpened(src);
+}
+
+/** Test-only: reset the once-per-load guard between vitest cases. */
+export function __resetEmailLinkTrackedForTests(): void {
+  emailLinkTracked = false;
+}
 
 /**
  * The analytics vocabulary for `ai_chat_failed`. Declared here (not imported)

@@ -323,6 +323,21 @@ function configure(posthog: PostHogInstance): void {
     session_recording: {
       maskAllInputs: true,
     },
+    // NO BOOTSTRAP CALLS BEFORE THE FIRST EVENT. By default posthog-js phones
+    // home the moment it is constructed: `POST /flags/` (feature flags — it
+    // carries the distinct id) and `GET /array/<key>/config` (remote config).
+    // We use neither: every behaviour is pinned explicitly in this options
+    // object, and no code reads a feature flag. In the anonymous mode this
+    // client runs for visitors who have not opted in, those two requests were
+    // the only traffic that left the browser before an event did — proven
+    // 2026-09-23 with a Playwright probe (see memory
+    // project_web_posthog_sdk_loads_before_consent). With this on, the only
+    // pre-event fetch is the SDK's own exception-autocapture script, which
+    // carries no identifier; `capture()` and `$exception` capture were
+    // verified to still work with it set. The SDK's own warning: remote
+    // config no longer loads, so anything wanted must be set here — which is
+    // already the rule in this file.
+    advanced_disable_flags: true,
     // Runs on every event, including posthog's own auto-properties. Only string
     // values are touched, and only credentials inside them are removed (invite
     // codes, and token-like URL params — see `redactCaptureEvent`) -- the

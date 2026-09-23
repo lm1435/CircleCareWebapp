@@ -1,5 +1,5 @@
-import { lazy } from 'react';
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { lazy, type ReactElement } from 'react';
+import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthGuard } from '@/components/AuthGuard';
 import { PageviewTracker } from '@/components/PageviewTracker';
 import { RouteTitle } from '@/components/RouteTitle';
@@ -39,6 +39,18 @@ const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const HelpPage = lazy(() => import('@/pages/HelpPage'));
 const UpgradePage = lazy(() => import('@/pages/UpgradePage'));
 
+/**
+ * `/open` target for email CTAs — see "CTA URLs and click measurement" in
+ * docs/plans/email-lifecycle-overhaul.md. Every CTA appends `?src=...` so
+ * `App.tsx` can attribute the visit at boot (`Analytics.emailLinkOpened`);
+ * `<Navigate to="/" replace />` alone drops the query string on redirect, so
+ * this preserves `location.search` across the hop to '/'.
+ */
+function OpenRedirect(): ReactElement {
+  const location = useLocation();
+  return <Navigate to={{ pathname: '/', search: location.search }} replace />;
+}
+
 export const router = createBrowserRouter([
   // Root layout: keeps the per-route document <title> (RouteTitle) in sync and
   // fires sanitized $pageview events (PageviewTracker) for every path while
@@ -63,7 +75,7 @@ export const router = createBrowserRouter([
   // Deep-link target for the "Open CircleCare" email CTAs. On devices with the app installed,
   // the OS intercepts https://my.circlecare.app/open via Universal/App Links and opens the app;
   // on the web it falls back to home (AuthGuard sends signed-out users to login).
-  { path: '/open', element: <Navigate to="/" replace /> },
+  { path: '/open', element: <OpenRedirect /> },
 
   // Authenticated routes
   {

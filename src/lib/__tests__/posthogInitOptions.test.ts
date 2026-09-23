@@ -167,6 +167,17 @@ describe.each(ENV_MODES)('posthog.init privacy options (%s build)', (_modeName, 
   });
 
   it.each([
+    ['consenting (full)', true],
+    ['declined (anonymous)', false],
+  ])('%s: disables the SDK bootstrap calls (flags + remote config) so nothing but events leaves the browser', async (_label, consented) => {
+    // Proven with a live Playwright probe 2026-09-23: without this, posthog-js
+    // POSTs /flags/ (with the distinct id) and GETs /array/<key>/config before
+    // the first event, in the anonymous mode too. Neither is used anywhere.
+    const options = await initOptionsFor(consented);
+    expect(options.advanced_disable_flags).toBe(true);
+  });
+
+  it.each([
     ['starts consenting', true],
     ['starts declined', false],
   ])(

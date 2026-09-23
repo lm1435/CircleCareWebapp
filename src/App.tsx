@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAuthStore } from '@/store/authStore';
 import { router } from '@/router';
 import i18n from '@/i18n';
+import { trackEmailLinkFromLocation } from '@/lib/analytics';
 
 /**
  * Fallback for the single app-wide <Suspense> boundary below. It covers two
@@ -68,6 +69,18 @@ export default function App(): ReactElement {
   // StrictMode's double effect invocation is harmless.
   useEffect(() => {
     void useAuthStore.getState().bootstrap();
+  }, []);
+
+  // Email click signal (docs/plans/email-lifecycle-overhaul.md, "CTA URLs and
+  // click measurement"): every email CTA appends `?src=...`, including the
+  // `/open` deep-link target (router.tsx's OpenRedirect preserves the query
+  // string across its redirect to '/'). Reading `window.location.search`
+  // directly here — rather than via useLocation — is deliberate: this must
+  // fire once at BOOT from whatever URL the visitor actually landed on, not
+  // on every route change. trackEmailLinkFromLocation's own module-level
+  // guard makes StrictMode's double-invoked mount effect harmless.
+  useEffect(() => {
+    trackEmailLinkFromLocation(window.location.search);
   }, []);
 
   // Keep <html lang> in sync with the active i18n language (WCAG SC 3.1.1).
