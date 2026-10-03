@@ -65,6 +65,7 @@ vi.mock('@/api/users', async (importOriginal) => {
 
 vi.mock('@/hooks/useProfile', () => ({
   useUpdateProfile: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateAvatarColor: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateNotificationPrefs: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateQuietHours: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateUnitPrefs: () => ({ mutate: vi.fn(), isPending: false }),

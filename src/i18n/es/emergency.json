@@ -30,8 +30,7 @@
     "medicalInfo": "Información médica",
     "doctors": "Doctores",
     "contacts": "Contactos de emergencia",
-    "insurance": "Seguro",
-    "directives": "Estado de reanimación"
+    "insurance": "Seguro"
   },
   "medicalInfo": {
     "bloodType": "Tipo de sangre",
@@ -56,18 +55,11 @@
     "rxPcn": "Rx PCN",
     "rxGroup": "Grupo Rx"
   },
-  "directives": {
-    "dnrStatus": "Estado DNR",
-    "dnrYes": "Sí",
-    "dnrNo": "No",
-    "details": "Directivas anticipadas"
-  },
   "empty": {
     "medicalInfo": "Agrega tipo de sangre, alergias y condiciones para que los paramédicos conozcan a tu ser querido en segundos.",
     "doctors": "Agrega a los doctores que atienden a tu ser querido para que el círculo pueda contactarlos rápido.",
     "contacts": "Agrega a las personas a quienes llamar primero en una emergencia para que nadie quede en la duda.",
-    "insurance": "Agrega los datos del seguro para que la cobertura esté lista cuando el cuidado no pueda esperar.",
-    "directives": "Registra el estado de reanimación de tu ser querido para que sus deseos queden claros en una crisis."
+    "insurance": "Agrega los datos del seguro para que la cobertura esté lista cuando el cuidado no pueda esperar."
   },
   "edit": {
     "add": "Agregar",
@@ -149,12 +141,6 @@
       "medicationAllergiesPlaceholder": "Busca o agrega una alergia a medicamento…",
       "otherAllergiesPlaceholder": "Busca o agrega una alergia…",
       "conditionsPlaceholder": "Busca o agrega una condición…"
-    },
-    "directives": {
-      "title": "Estado de reanimación",
-      "dnrLabel": "DNR (no reanimar)",
-      "details": "Directivas anticipadas",
-      "detailsPlaceholder": "Notas sobre directivas anticipadas o deseos"
     }
   },
   "errors": {
@@ -267,11 +253,15 @@
       "healthcareProviders": "Proveedores de salud",
       "insurance": "Seguro",
       "medicalInfo": "Información médica",
-      "stoppedMedications": "Medicamentos suspendidos recientemente"
+      "stoppedMedications": "Medicamentos suspendidos recientemente",
+      "visitNotes": "Notas de citas",
+      "careNotes": "Notas de cuidado diarias"
     },
     "fields": {
       "name": "Nombre",
       "dateOfBirth": "Fecha de nacimiento",
+      "date": "Fecha",
+      "note": "Nota",
       "conditions": "Condiciones conocidas",
       "relationship": "Parentesco",
       "phone": "Teléfono",
@@ -290,9 +280,6 @@
       "medicalConditions": "Condiciones médicas",
       "stopped": "Suspendido el {{date}}",
       "stoppedOn": "Suspendido",
-      "codeStatus": "Estado de código",
-      "dnrOnFile": "DNR registrado",
-      "advanceDirectives": "Directivas anticipadas",
       "rxBin": "Rx BIN",
       "rxPcn": "Rx PCN",
       "rxGroup": "Grupo Rx"
@@ -301,6 +288,7 @@
       "daily": "Diario",
       "every_other_day": "Cada tercer día",
       "weekly": "Semanal",
+      "weeklyOn": "Semanal los {{days}}",
       "custom": "Cada {{days}} días",
       "monthly": "Mensual",
       "yearly": "Anual",
@@ -332,6 +320,14 @@
       "dobAge": "Nacimiento {{dob}} · Edad {{age}}"
     }
   },
+  "shareSummary": {
+    "title": "Compartir resumen de cuidado",
+    "includeVisitNotes": "Incluir notas de citas",
+    "includeCareNotes": "Incluir notas de cuidado diarias",
+    "countLine": "Incluye {{visit}} notas de citas y {{care}} notas de cuidado diarias",
+    "counting": "Contando notas…",
+    "countError": "No se pudieron cargar las notas. El resumen se compartirá sin ellas."
+  },
   "phone": {
     "countryLabel": "Código de país",
     "invalid": "Ingresa un número de teléfono válido",
@@ -360,5 +356,9 @@
       "ES": "España",
       "CU": "Cuba"
     }
+  },
+  "conflict": {
+    "title": "Alguien más actualizó esto",
+    "message": "Otro cuidador cambió esta sección mientras la editabas. Cargamos la versión más reciente. Revísala y vuelve a hacer tu cambio."
   }
 }

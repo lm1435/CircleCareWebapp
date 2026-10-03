@@ -110,6 +110,37 @@ describe('EventNotesPanel', () => {
     });
   });
 
+  // PK20 parity with mobile EventNotesScreen: a 409 OCCURRENCE_REMOVED (another
+  // caregiver chose "This appointment only" / "This task only") gets its own
+  // type-neutral sentence, never "Please try again" (no retry can succeed).
+  it('maps a 409 OCCURRENCE_REMOVED rejection to the type-neutral removed message', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await user.type(screen.getByLabelText('Add a note'), 'Late note');
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+
+    const { onError } = mockCreate.mock.calls[0][1];
+    act(() => onError({ success: false, error: { code: 'OCCURRENCE_REMOVED', message: 'x' } }));
+
+    expect(
+      await screen.findByText('This event was removed from the calendar for that day.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Please try again/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/dose/i)).not.toBeInTheDocument();
+  });
+
+  it('any other create failure keeps the generic save error', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await user.type(screen.getByLabelText('Add a note'), 'Note');
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+
+    const { onError } = mockCreate.mock.calls[0][1];
+    act(() => onError({ success: false, error: { code: 'SERVER_ERROR', message: 'x' } }));
+
+    expect(await screen.findByText("Couldn't save your note. Please try again.")).toBeInTheDocument();
+  });
+
   it('passes scheduled_date through for a virtual-instance id', async () => {
     const user = userEvent.setup();
     renderPanel(VIRTUAL_EVENT_ID, '2026-06-20');

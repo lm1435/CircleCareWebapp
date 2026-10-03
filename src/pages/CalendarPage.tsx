@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Button, Card, CircleButton, EmptyState, Icon, SegmentedControl } from '@/components/ui';
+import { Button, Card, CircleButton, EmptyState, Icon, SegmentedControl, useToast } from '@/components/ui';
+import { prefersReducedMotion } from '@/components/ui/motion';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { CareTabs } from '@/components/layout/CareTabs';
 import { CalendarSkeleton } from '@/components/calendar/CalendarSkeleton';
@@ -33,6 +34,40 @@ import { getDateInTimezone, getTimezoneLabel } from '@/utils/timezone';
 type CalendarView = 'week' | 'month';
 
 const LEGEND_TYPES: EventType[] = ['medication', 'appointment', 'task'];
+
+// ---------------------------------------------------------------------------
+// Notes-first-class deep link (docs/plans/notes-first-class.md, Slice 2, Task
+// 26): an Activity note row links here as
+// `?date=YYYY-MM-DD&eventId=<series root id>&panel=notes`. `eventId` is
+// ALWAYS the series root (`parent_event_id ?? id`), per the backend's
+// `note_target` contract (activityFeed.ts task 8) — never the physical/virtual
+// instance the note itself lives on — so the match below has to allow for
+// that: the root ON its own date, or the child/virtual instance whose
+// `parent_event_id` is that root, on the linked date.
+// ---------------------------------------------------------------------------
+
+const DATE_PARAM_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The id EventNotesPanel's own heading renders under (its `aria-labelledby`
+ *  target) — `panel=notes` scrolls here once the modal is open. */
+const EVENT_NOTES_HEADING_ID = 'event-notes-heading';
+
+interface PendingNoteLink {
+  date: string;
+  eventId: string;
+  panel: string | null;
+}
+
+/** Root-on-its-date, else the child/virtual row whose parent is that root on
+ *  that date. `null` when neither exists in the loaded window. */
+function findNoteLinkMatch(events: CalendarEvent[], link: PendingNoteLink): CalendarEvent | null {
+  const root = events.find((e) => e.id === link.eventId && e.scheduled_date === link.date);
+  if (root) return root;
+  const child = events.find(
+    (e) => e.parent_event_id === link.eventId && e.scheduled_date === link.date
+  );
+  return child ?? null;
+}
 
 /**
  * Color key for the event-type palette (clay = meds, dusk = appointments,
@@ -69,10 +104,35 @@ function CalendarLegend(): ReactElement {
 export default function CalendarPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
   const { t, i18n } = useTranslation(['calendar', 'common']);
+  const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // `?date=&eventId=&panel=` deep link (Task 26) — captured ONCE, before the
+  // effect below scrubs it from the URL. An incomplete/malformed pair (no
+  // `date`, no `eventId`, or a non-YYYY-MM-DD date) is dropped right here; the
+  // page then renders exactly as it would with no params at all.
+  const [pendingNoteLink] = useState<PendingNoteLink | null>(() => {
+    const date = searchParams.get('date');
+    const eventId = searchParams.get('eventId');
+    if (date && DATE_PARAM_RE.test(date) && eventId) {
+      return { date, eventId, panel: searchParams.get('panel') };
+    }
+    return null;
+  });
+  const noteLinkHandledRef = useRef(false);
+  // Set once the deep link's match is found and `panel=notes` — consumed by
+  // the effect below to scroll to the notes panel once the modal is open.
+  const scrollToNotesRef = useRef(false);
 
   const [view, setView] = useState<CalendarView>('week');
   // null = follow "today" in the care recipient's timezone; set on user nav.
-  const [anchorOverride, setAnchorOverride] = useState<string | null>(null);
+  // A note deep link starts the view on ITS date's week (plan: "move the view
+  // to that date's week") rather than the default today-week, and does so on
+  // the FIRST render — an effect that set this after mount would fetch the
+  // wrong week once, then refetch the right one.
+  const [anchorOverride, setAnchorOverride] = useState<string | null>(
+    () => pendingNoteLink?.date ?? null
+  );
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   // Write-flow modal state (Task 1.6) — owned by the page so the edit/delete
   // modals outlive the detail modal they were launched from.
@@ -193,6 +253,45 @@ export default function CalendarPage(): ReactElement {
     if (tzQuery.isError) void tzQuery.refetch();
     if (eventsQuery.isError) void eventsQuery.refetch();
   };
+
+  // Resolve the `?date&eventId&panel` deep link once its week's events have
+  // settled (loaded, or errored — either way there is nothing left to wait
+  // for). Runs exactly once: the ref guard, not the params themselves, is
+  // what stops a second pass, because the params are cleared as part of the
+  // SAME effect run that found (or missed) the match.
+  useEffect(() => {
+    if (!pendingNoteLink || noteLinkHandledRef.current) return;
+    if (isLoading || eventsQuery.isFetching) return;
+
+    noteLinkHandledRef.current = true;
+    const match = findNoteLinkMatch(events, pendingNoteLink);
+    if (match) {
+      setSelectedEvent(match);
+      if (pendingNoteLink.panel === 'notes') scrollToNotesRef.current = true;
+    } else {
+      // Edge case (plan): "Web deep link to an event that no longer exists:
+      // calendar opens at the date with no modal and a toast."
+      showToast(t('calendar:noteLinkMissing'), 'info');
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('date');
+    next.delete('eventId');
+    next.delete('panel');
+    setSearchParams(next, { replace: true });
+  }, [pendingNoteLink, isLoading, eventsQuery.isFetching, events, searchParams, setSearchParams, showToast, t]);
+
+  // Once the matched event's detail modal is open, scroll its notes panel
+  // into view for a `panel=notes` link (EventNotesPanel renders its heading
+  // under EVENT_NOTES_HEADING_ID — see its own `aria-labelledby`).
+  useEffect(() => {
+    if (!scrollToNotesRef.current || !selectedEvent) return;
+    scrollToNotesRef.current = false;
+    document
+      .getElementById(EVENT_NOTES_HEADING_ID)
+      // Reduced motion honoured (WCAG 2.3.3; the CSS block cannot reach a JS scroll).
+      ?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  }, [selectedEvent]);
 
   return (
     // max-w-7xl (1280px), not the max-w-5xl (1024px) every other page uses:

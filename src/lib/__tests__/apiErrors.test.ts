@@ -7,6 +7,7 @@ import {
   isMedicationConflictError,
   isDoseAlreadyLoggedError,
   isMedicationDiscontinuedError,
+  isOccurrenceRemovedError,
   PERMISSION_ERROR_CODES,
   SUBSCRIPTION_ERROR_CODES,
   ACCESS_ERROR_CODES,
@@ -112,6 +113,14 @@ describe('apiErrors', () => {
       expect(isMedicationDiscontinuedError(envelope('DOSE_ALREADY_LOGGED'))).toBe(false);
       expect(isMedicationDiscontinuedError(new Error('boom'))).toBe(false);
       expect(isMedicationDiscontinuedError(undefined)).toBe(false);
+    });
+
+    it('isOccurrenceRemovedError matches only OCCURRENCE_REMOVED', () => {
+      expect(isOccurrenceRemovedError(envelope('OCCURRENCE_REMOVED'))).toBe(true);
+      expect(isOccurrenceRemovedError(envelope('MEDICATION_DISCONTINUED'))).toBe(false);
+      expect(isOccurrenceRemovedError(envelope('DOSE_ALREADY_LOGGED'))).toBe(false);
+      expect(isOccurrenceRemovedError(new Error('boom'))).toBe(false);
+      expect(isOccurrenceRemovedError(undefined)).toBe(false);
     });
 
     it('isMedicationConflictError covers exactly the 409 code set', () => {

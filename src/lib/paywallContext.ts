@@ -12,15 +12,20 @@
  *
  *   DO NOT rename, re-case, or "tidy" these strings.
  *
- * `earned_meds` / `earned_invite` are mobile-only today (the value-gated
- * upsell has no web surface yet). They are listed because this is a mirror of
- * mobile's enum, not a subset of it, and because `asPaywallContext` must
- * accept them if a future web surface starts sending them.
+ * `earned_meds` / `earned_invite` are sent by the value-gated upsell (hooks/useEarnedUpsell.ts,
+ * opened from Overview for a free circle owner, PK28(1)).
  */
 export const PAYWALL_CONTEXTS = [
-  /** A hard limit was hit — seat cap, circle cap, a 402 on a create. */
+  /** A hard limit was hit — circle cap, frozen gate, a 402 on a create. */
   'capacity',
-  /** A premium-only feature was reached (AI assistant, vitals, documents…). */
+  /**
+   * The free-tier CAREGIVER SEAT cap, hit from an invite (create / resend /
+   * the in-modal cap card). Split out of `capacity` on 2026-09-25 because that
+   * value was shared by nine callers and the invite paywall — the one limit
+   * moment we most want to read — could not be isolated in the funnel.
+   */
+  'invite_cap',
+  /** A premium-only feature was reached (AI assistant, documents storage…). */
   'feature',
   /** The user went looking for it (profile Upgrade, re-subscribe banner). */
   'general',

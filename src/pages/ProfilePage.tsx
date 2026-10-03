@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getCurrentUser,
+  getTimezoneDependentCircles,
   getUnitPreferences,
   updateProfile as updateProfileRequest,
   type NotificationPreferences,
@@ -20,17 +21,20 @@ import { useAuthStore } from '@/store/authStore';
 import { supportedLanguages, type SupportedLanguage } from '@/i18n';
 import {
   useUpdateProfile,
+  useUpdateAvatarColor,
   useUpdateNotificationPrefs,
   useUpdateQuietHours,
   useUpdateUnitPrefs,
   useUpdateEmailDigest,
   useDeleteAccount,
 } from '@/hooks/useProfile';
+import { AvatarColorPicker } from '@/components/profile/AvatarColorPicker';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import { DataExportSection } from '@/components/profile/DataExportSection';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import {
+  Avatar,
   Button,
   Card,
   ConfirmDialog,
@@ -74,8 +78,13 @@ const TIMEZONE_VALUES = [
   'Australia/Sydney',
 ] as const;
 
-// The 6 notification flags the mobile UI exposes (ProfileScreen.tsx ~line 851).
-// `tips_and_suggestions` defaults ON when the key is absent.
+// The notification flags the mobile UI exposes (ProfileScreen.tsx ~line 851).
+// notes-first-class plan Decision 5: the single "note reminders" switch is
+// replaced by THREE: `event_notes` (notes on events), `note_nudges`
+// (relabelled — now ONLY the after-visit reminder), `care_notes` (daily care
+// notes, now exposed). All three, like `tips_and_suggestions`, default ON when
+// the key is absent from `notification_preferences` (backend returns raw
+// stored JSON; absent means true).
 const NOTIFICATION_KEYS: {
   key: keyof NotificationPreferences;
   label: string;
@@ -102,7 +111,24 @@ const NOTIFICATION_KEYS: {
     label: 'notifications.appointmentReminders',
     desc: 'notifications.appointmentRemindersDesc',
   },
-  { key: 'note_nudges', label: 'notifications.noteNudges', desc: 'notifications.noteNudgesDesc' },
+  {
+    key: 'event_notes',
+    label: 'notifications.eventNotes',
+    desc: 'notifications.eventNotesDesc',
+    defaultOn: true,
+  },
+  {
+    key: 'note_nudges',
+    label: 'notifications.noteNudges',
+    desc: 'notifications.noteNudgesDesc',
+    defaultOn: true,
+  },
+  {
+    key: 'care_notes',
+    label: 'notifications.careNotes',
+    desc: 'notifications.careNotesDesc',
+    defaultOn: true,
+  },
   {
     key: 'tips_and_suggestions',
     label: 'notifications.tipsAndSuggestions',
@@ -185,6 +211,7 @@ export default function ProfilePage(): ReactElement {
   const isPremium = subscription?.tier === 'premium';
 
   const updateProfile = useUpdateProfile();
+  const updateAvatarColor = useUpdateAvatarColor();
   const updateNotif = useUpdateNotificationPrefs();
   const updateQuiet = useUpdateQuietHours();
   const updateUnits = useUpdateUnitPrefs();
@@ -226,6 +253,16 @@ export default function ProfilePage(): ReactElement {
   const [quietEnd, setQuietEnd] = useState('07:00');
 
   const [showDelete, setShowDelete] = useState(false);
+
+  // PK10: a time-zone change that would move dose times waits here for the
+  // user's answer. `zone` is the zone they picked; `names` the recipients whose
+  // reminders follow the owner's zone. Cancel drops it: the Select is
+  // controlled by the saved zone, so it snaps back on its own.
+  // "Color updated." live-region confirmation after a colour save lands.
+  const [colorSaved, setColorSaved] = useState(false);
+  const [pendingZone, setPendingZone] = useState<{ zone: string; names: string[]; count: number } | null>(
+    null
+  );
 
   // Seed local state from the loaded user once.
   useEffect(() => {
@@ -289,7 +326,7 @@ export default function ProfilePage(): ReactElement {
     );
   };
 
-  const handleTimezone = (tz: string): void => {
+  const saveTimezone = (tz: string): void => {
     updateProfile.mutate(
       { timezone: tz },
       {
@@ -299,6 +336,40 @@ export default function ProfilePage(): ReactElement {
         },
       }
     );
+  };
+
+  const handleTimezone = async (tz: string): Promise<void> => {
+    if (tz === user.timezone) return;
+    // Recipients without their own account follow THIS zone, so a change moves
+    // their dose reminders: ask first. Never block a change on a failed read.
+    let dependent: { id: string; recipient_name: string }[] = [];
+    try {
+      dependent = await getTimezoneDependentCircles();
+    } catch {
+      dependent = [];
+    }
+    if (dependent.length === 0) {
+      saveTimezone(tz);
+      return;
+    }
+    setPendingZone({
+      zone: tz,
+      names: Array.from(new Set(dependent.map((c) => c.recipient_name))),
+      count: dependent.length,
+    });
+  };
+
+  const confirmTimezone = (): void => {
+    if (!pendingZone) return;
+    Analytics.timezoneChangeWarning(pendingZone.count, true);
+    const { zone } = pendingZone;
+    setPendingZone(null);
+    saveTimezone(zone);
+  };
+
+  const cancelTimezone = (): void => {
+    if (pendingZone) Analytics.timezoneChangeWarning(pendingZone.count, false);
+    setPendingZone(null);
   };
 
   const handleLanguage = (lang: string): void => {
@@ -314,10 +385,19 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleNotif = (key: keyof NotificationPreferences, next: boolean): void => {
-    updateNotif.mutate(
-      { [key]: next },
-      { onSuccess: () => showToast(t('notifications.success'), 'success') }
-    );
+    const body: Partial<NotificationPreferences> = { [key]: next };
+    if (key === 'note_nudges') {
+      // Backend legacy shim (backend/src/routes/users.ts ~357-370): a request
+      // that sets `note_nudges` without an explicit `event_notes` mirrors
+      // note_nudges's value onto event_notes, for pre-1.3.0 clients that had
+      // a single "Note notifications" switch. Pin event_notes to its CURRENT
+      // displayed value here so flipping "After-visit reminders" cannot also
+      // flip "Notes on events" for this (new, three-switch) client.
+      body.event_notes = user.notification_preferences?.event_notes !== false;
+    }
+    updateNotif.mutate(body, {
+      onSuccess: () => showToast(t('notifications.success'), 'success'),
+    });
   };
 
   const handleAnalyticsToggle = (next: boolean): void => {
@@ -509,7 +589,14 @@ export default function ProfilePage(): ReactElement {
                 {fullName || t('account.namePlaceholder')}
               </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setEditingName(true)}>
+            {/* Named "Edit name", not a bare "Edit" (WCAG 2.4.6; mobile P5).
+                The visible word stays inside the name (2.5.3 Label in Name). */}
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={t('account.editNameLabel')}
+              onClick={() => setEditingName(true)}
+            >
               {t('account.edit')}
             </Button>
           </div>
@@ -520,12 +607,39 @@ export default function ProfilePage(): ReactElement {
           label={t('account.timezone')}
           options={timezoneOptions}
           value={user.timezone ?? 'America/New_York'}
-          onChange={(e) => handleTimezone(e.target.value)}
+          onChange={(e) => void handleTimezone(e.target.value)}
           disabled={updateProfile.isPending || saveName.isPending}
         />
 
         {/* Password changes happen through the sign-in reset flow — point there. */}
         <Text variant="caption">{t('account.changePasswordHint')}</Text>
+      </SettingsCard>
+
+      {/* ── Your colour (member avatar) ──────────────────────────────── */}
+      <SettingsCard title={t('avatarColor.label')} description={t('avatarColor.hint')}>
+        <div className="flex items-center gap-4">
+          <Avatar
+            size="lg"
+            name={fullName || user.email}
+            colorKey={user.avatar_color}
+          />
+          <AvatarColorPicker
+            value={user.avatar_color}
+            onChange={(key) => {
+              if (key === user.avatar_color) return;
+              setColorSaved(false);
+              updateAvatarColor.mutate(key, { onSuccess: () => setColorSaved(true) });
+            }}
+            disabled={updateAvatarColor.isPending}
+          />
+        </div>
+        <p
+          role="status"
+          data-testid="avatar-color-saved"
+          className="m-0 min-h-5 text-sm font-medium text-moss-deep"
+        >
+          {colorSaved ? t('avatarColor.saved') : ''}
+        </p>
       </SettingsCard>
 
       {/* ── Language ──────────────────────────────────────────────────── */}
@@ -707,6 +821,23 @@ export default function ProfilePage(): ReactElement {
           {t('delete.cta')}
         </Button>
       </Card>
+
+      {pendingZone ? (
+        <ConfirmDialog
+          title={t('timezoneImpact.impactTitle')}
+          message={t('timezoneImpact.impactMessage', {
+            count: pendingZone.count,
+            names: pendingZone.names.join(', '),
+            zone:
+              timezoneOptions.find((o) => o.value === pendingZone.zone)?.label ??
+              pendingZone.zone,
+          })}
+          confirmLabel={t('timezoneImpact.impactConfirm')}
+          cancelLabel={t('common:cancel')}
+          onConfirm={confirmTimezone}
+          onCancel={cancelTimezone}
+        />
+      ) : null}
 
       {showDelete ? (
         <ConfirmDialog

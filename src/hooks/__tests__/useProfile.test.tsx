@@ -164,6 +164,35 @@ describe('useUpdateNotificationPrefs', () => {
     expect(mockUpdateNotif).toHaveBeenCalledWith({ missed_medications: false });
     expect(invalidatedWith(invalidateSpy, queryKeys.currentUser)).toBe(true);
   });
+
+  // ProfilePage renders the switches from this cache and re-enables them when
+  // the mutation settles; the saved prefs must be in the cache BY THEN, not
+  // only after the refetch (see ProfilePage.notificationRefetchGap.test.tsx).
+  it('writes the PATCH response prefs into the currentUser cache before isSuccess', async () => {
+    const { queryClient, wrapper } = setup();
+    queryClient.setQueryData(queryKeys.currentUser, {
+      id: 'u1',
+      email: 'a@b.co',
+      first_name: 'Sam',
+      notification_preferences: { care_notes: true, note_nudges: true },
+    });
+    mockUpdateNotif.mockResolvedValue({
+      id: 'u1',
+      email: 'a@b.co',
+      notification_preferences: { care_notes: false, note_nudges: true },
+    } as never);
+
+    const { result } = renderHook(() => useUpdateNotificationPrefs(), { wrapper });
+    result.current.mutate({ care_notes: false });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(queryKeys.currentUser)).toEqual({
+      id: 'u1',
+      email: 'a@b.co',
+      first_name: 'Sam', // other fields kept — only the prefs are replaced
+      notification_preferences: { care_notes: false, note_nudges: true },
+    });
+  });
 });
 
 describe('useUpdateQuietHours', () => {

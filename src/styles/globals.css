@@ -89,7 +89,16 @@
   --color-amber-soft: #f7eddc;
   --color-amber: #b07a2e;
   --color-amber-deep: #7e5620;
-  --color-placeholder: rgba(26, 25, 22, 0.32);
+  /* WCAG 1.4.3 (a11y audit 2026-09-29): was rgba(26,25,22,0.32) = 2.05:1 on
+     the white field. #737069 is 4.94:1 on white (fields are always cream). */
+  --color-placeholder: #737069;
+  /* WCAG 1.4.11 non-text contrast: the boundary of a CONTROL whose edge is the
+     only thing that identifies it — text-field shells, an unchecked checkbox,
+     an empty OTP cell, the off switch track. Same hex as mobile's `fieldBorder`
+     (parity): 3.58:1 on cream, 3.40 on bg, 3.12 on bg-2. (2.85 on bg-3, which
+     only paints skeletons and a decorative dot — no control sits on it.)
+     Hairlines that merely separate content keep --color-line / --color-line-2. */
+  --color-line-strong: #8a8783;
   --color-overlay: rgba(26, 25, 22, 0.4);
 
   /* ── Type families ────────────────────────────────────────────────────── */
@@ -194,6 +203,23 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* WCAG 2.4.11 Focus Not Obscured (a11y audit 2026-09-29). When Tab moves
+       focus to a control outside the viewport, the browser scrolls it just
+       into view — flush against the viewport edge, i.e. UNDER the sticky
+       60px app header (Back / Add event / Add reading landed at y=-3..41,
+       fully hidden) or under the floating nav pill below xl (Meal, note
+       chips, row menus at the bottom edge). Scroll padding makes that scroll
+       stop clear of both. `--nav-h` is published by FloatingNavBar and is
+       absent where there is no pill, so the bottom inset collapses to 16px. */
+    scroll-padding-top: 76px;
+    scroll-padding-bottom: calc(var(--nav-h, 0px) + var(--nav-inset) + 16px);
+  }
+
+  @media (width >= 64rem) {
+    html {
+      /* xl: the sidebar replaces the pill (the bar may still publish --nav-h). */
+      scroll-padding-bottom: 16px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

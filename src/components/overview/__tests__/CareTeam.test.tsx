@@ -5,6 +5,7 @@ import '@/i18n';
 import { CareTeam } from '../CareTeam';
 import { useRemoveMember, useSetMedicationResponsible } from '@/hooks/useCircleMembers';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
+import { avatarGradientFor, avatarGradientForKey } from '@/components/ui/Avatar';
 
 const removeMutate = vi.fn();
 const setMedMutate = vi.fn();
@@ -122,6 +123,13 @@ describe('CareTeam', () => {
       'href',
       '/circles/c1/members'
     );
+  });
+
+  it('renders the Invite button as the primary (moss) action', () => {
+    renderTeam();
+    const link = screen.getByRole('link', { name: 'Invite member' });
+    expect(link).toHaveClass('bg-moss');
+    expect(link).not.toHaveClass('bg-cream');
   });
 
   it('hides the Invite button from non-owners', () => {
@@ -266,5 +274,34 @@ describe('CareTeam', () => {
         screen.queryByRole('heading', { name: 'Care is easier together' })
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('CareTeam member avatar colour', () => {
+  beforeEach(() => {
+    vi.mocked(useRemoveMember).mockReturnValue({
+      mutate: vi.fn(),
+    } as unknown as ReturnType<typeof useRemoveMember>);
+    vi.mocked(useSetMedicationResponsible).mockReturnValue({
+      mutate: vi.fn(),
+    } as unknown as ReturnType<typeof useSetMedicationResponsible>);
+  });
+
+  const bg = (initial: string): string => screen.getByText(initial).style.backgroundImage;
+  const gradient = (pair: readonly [string, string]): string =>
+    `linear-gradient(135deg, ${pair[0]}, ${pair[1]})`;
+
+  it('paints a member with their chosen colour and the rest with the name hash', () => {
+    // "Fay" hashes to forest ('F' = 70, 70 % 6 = 4); she chose dusk.
+    // "Owen" hashes to coral ('O' = 79 % 6 = 1) and chose nothing.
+    renderTeam({
+      members: [
+        member({ id: OWNER, first_name: 'Owen', role: 'owner' }),
+        member({ id: 'u-fay', first_name: 'Fay', avatar_color: 'dusk' }),
+      ],
+    });
+    expect(bg('F')).toBe(gradient(avatarGradientForKey('dusk')));
+    expect(bg('F')).not.toBe(gradient(avatarGradientFor('Fay')));
+    expect(bg('O')).toBe(gradient(avatarGradientFor('Owen')));
   });
 });

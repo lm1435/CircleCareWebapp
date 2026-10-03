@@ -10,6 +10,8 @@ import {
 } from '@/lib/analyticsConsent';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/lib/supabase';
+import { PKCE_VERIFIER_KEY } from '@/lib/pkceVerifierStorage';
 
 /**
  * THE OAUTH HALF OF THE CONSENT MOMENT.
@@ -92,17 +94,23 @@ function renderCallback() {
   );
 }
 
+/** A PKCE provider return for a handshake this tab started (verifier parked). */
 function withTokens(): void {
-  window.history.replaceState(
-    null,
-    '',
-    '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-  );
+  sessionStorage.setItem(PKCE_VERIFIER_KEY, 'parked-verifier');
+  window.history.replaceState(null, '', '/auth/callback?code=oauth-code');
+  vi.mocked(supabase.auth.exchangeCodeForSession).mockResolvedValueOnce({
+    data: {
+      session: { access_token: 'oauth-access', refresh_token: 'oauth-refresh', token_type: 'bearer', expires_in: 3600 },
+      user: { id: 'user-1' },
+    },
+    error: null,
+  } as never);
 }
 
 beforeEach(() => {
   mockNavigate.mockReset();
   mockedPost.mockReset();
+  vi.mocked(supabase.auth.exchangeCodeForSession).mockReset();
   identifyUser.mockClear();
   initAnalytics.mockClear();
   order.length = 0;

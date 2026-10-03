@@ -201,6 +201,43 @@ describe('useUploadDocument', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PK19: the three bytes-rejections the backend names in `error.details.reason`.
+// ---------------------------------------------------------------------------
+describe('upload: unsupported or damaged file (PK19)', () => {
+  it.each(['UNSUPPORTED_TYPE', 'INVALID_EXTENSION', 'CONTENT_MISMATCH'])(
+    '400 VALIDATION_ERROR reason %s → specific toast, not saveFailed, no refetch',
+    async (reason) => {
+      const { invalidateSpy, wrapper } = setup();
+      mockUpload.mockRejectedValue({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'x', details: { reason } },
+      });
+
+      const { result } = renderHook(() => useUploadDocument(CIRCLE_ID), { wrapper });
+      result.current.mutate({ file: makeFile(), label: 'x', category: 'other', fileExtension: 'pdf' });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(showToast).toHaveBeenCalledWith('upload.unsupportedOrDamaged', 'error');
+      expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+      expect(invalidatedWith(invalidateSpy, queryKeys.documents(CIRCLE_ID))).toBe(false);
+    }
+  );
+
+  it('a VALIDATION_ERROR with no/unknown reason keeps the generic toast', async () => {
+    const { wrapper } = setup();
+    mockUpload.mockRejectedValue({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'x', details: { reason: 'OTHER' } },
+    });
+    const { result } = renderHook(() => useUploadDocument(CIRCLE_ID), { wrapper });
+    result.current.mutate({ file: makeFile(), label: 'x', category: 'other', fileExtension: 'pdf' });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('upload.unsupportedOrDamaged', 'error');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // A FROZEN circle's refusal must drive the read-only path, not the generic one.
 // ---------------------------------------------------------------------------
 // End-to-end for the code the server actually sends. A code the client does not

@@ -187,7 +187,7 @@ describe('DocumentsPage', () => {
     expect(screen.getByText('Insurance Card')).toBeInTheDocument();
   });
 
-  it('downloads via a fresh signed URL fetched at click time', async () => {
+  it('Download in the viewer header fetches a fresh signed URL at click time', async () => {
     mockDocuments();
     const clickedHrefs: string[] = [];
     const clickSpy = vi
@@ -198,10 +198,13 @@ describe('DocumentsPage', () => {
 
     renderPage();
     await screen.findByText('Insurance Card');
-    const callsBefore = mockedGet.mock.calls.length;
 
     openRowMenu('Insurance Card');
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Open' }));
+    await screen.findByRole('img', { name: 'Insurance Card' });
+    const callsBefore = mockedGet.mock.calls.length;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download Insurance Card' }));
 
     await waitFor(() => expect(clickSpy).toHaveBeenCalledTimes(1));
     // A FRESH signed URL was requested at click time (narrowed by category)
@@ -212,31 +215,34 @@ describe('DocumentsPage', () => {
     // The anchor used the signed URL with the attachment filename appended
     expect(clickedHrefs[0]).toContain('token=image-token');
     expect(clickedHrefs[0]).toContain('download=Insurance+Card.jpg');
+    expect(await screen.findByText('Download started.')).toBeInTheDocument();
 
     clickSpy.mockRestore();
   });
 
-  it('shows an error toast when fetching the signed URL fails', async () => {
+  it('shows an error toast when fetching the signed URL for Download fails', async () => {
     mockDocuments();
     renderPage();
     await screen.findByText('Insurance Card');
+    openRowMenu('Insurance Card');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Open' }));
+    await screen.findByRole('img', { name: 'Insurance Card' });
 
     mockedGet.mockRejectedValue(
       { success: false, error: { code: 'SERVER_ERROR', message: 'Internal server error' } }
     );
-    openRowMenu('Insurance Card');
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download Insurance Card' }));
 
     expect(await screen.findByText('Download failed. Please try again.')).toBeInTheDocument();
   });
 
-  it('opens the preview modal and renders the image from the actions menu', async () => {
+  it('opens the viewer and renders the image from the actions menu', async () => {
     mockDocuments();
     renderPage();
     await screen.findByText('Insurance Card');
 
     openRowMenu('Insurance Card');
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Preview' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Open' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Insurance Card' });
     expect(dialog).toBeInTheDocument();
@@ -246,14 +252,25 @@ describe('DocumentsPage', () => {
     expect(image).toHaveAttribute('src', imageDoc.file_url);
   });
 
-  it('offers preview only for renderable types (no preview for HEIC)', async () => {
+  it('opens the viewer when the row itself is clicked', async () => {
+    mockDocuments();
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Insurance Card' }));
+    expect(await screen.findByRole('dialog', { name: 'Insurance Card' })).toBeInTheDocument();
+  });
+
+  it("opens HEIC in the viewer's can't-preview state (Open, never Preview/Download on the row)", async () => {
     mockDocuments([{ ...imageDoc, id: 'doc-3', label: 'HEIC Photo', file_type: 'image/heic' }]);
     renderPage();
 
     await screen.findByText('HEIC Photo');
     openRowMenu('HEIC Photo');
     expect(screen.queryByRole('menuitem', { name: 'Preview' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Download' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Download' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Open' }));
+
+    await screen.findByRole('dialog', { name: 'HEIC Photo' });
+    expect(screen.getByText("This file can't be previewed here")).toBeInTheDocument();
   });
 
   it('shows the empty state when there are no documents', async () => {

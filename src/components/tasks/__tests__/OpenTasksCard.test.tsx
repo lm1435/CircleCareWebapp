@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
 import { OpenTasksCard } from '../OpenTasksCard';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -41,8 +42,10 @@ vi.mock('@/lib/analytics', () => ({
   Analytics: { homeEmptyCtaTapped: (...args: unknown[]) => homeEmptyCtaTapped(...args) },
 }));
 
-// The viewer's 12h/24h clock — pin it so this test needs no QueryClientProvider
-// and due-date labels never depend on the runner's navigator.language.
+// The viewer's 12h/24h clock — pin it so due-date labels never depend on the
+// runner's navigator.language (a real QueryClientProvider is still needed
+// below: useTaskCompletion reads the query client directly, to wait out the
+// tasks-list refetch a completion starts — see useTaskCompletion.ts).
 const mockUseHourCycle = vi.fn();
 vi.mock('@/hooks/useHourCycle', () => ({
   useHourCycle: () => mockUseHourCycle(),
@@ -197,10 +200,19 @@ const FIRST_RUN_COPY =
   'Coordinate the to-dos that keep care on track — errands, refills, follow-ups — and share them with everyone helping.';
 
 function renderCard(limit = 3) {
+  // useTaskCompletion calls useQueryClient() directly (to wait out the tasks
+  // refetch a completion starts), so it needs a provider even though
+  // useTasks/useCompleteEvent are both mocked above and never touch it for
+  // real — a fresh client per render, never asserted on.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
-    <MemoryRouter>
-      <OpenTasksCard circleId="circle-1" limit={limit} />
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <OpenTasksCard circleId="circle-1" limit={limit} />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -486,7 +498,7 @@ describe('OpenTasksCard', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
     } finally {
       vi.useRealTimers();
     }
@@ -522,7 +534,7 @@ describe('OpenTasksCard', () => {
 
       // `toEqual` on the whole object: a `scheduledDate` sneaking in here would
       // fail this, which is the point.
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'child-0806' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'child-0806', circleId: 'circle-1' });
     } finally {
       vi.useRealTimers();
     }

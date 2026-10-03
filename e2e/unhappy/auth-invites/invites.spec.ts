@@ -35,8 +35,20 @@ const COPY = {
   acceptFailed:
     "We couldn't add you to the circle just now. Try again — and if it keeps not working, ask for a fresh invite.",
   acceptExpired: 'This invitation has expired. Ask whoever invited you to send a new one.',
+  // Generic — only when the accept response carries no circle (or ALREADY_MEMBER never shows it).
   joined: 'You joined the circle.',
+  // The accept response names the circle joined (backend `data.circle`): web
+  // opens it and says so — parity with mobile's circles.joinModal.youveJoined.
+  joinedNamed: (circleName: string) => `You've joined ${circleName}.`,
 };
+
+/** `createCircle` names the circle after its recipient: `E2E <label>` (backend sets name = recipient_name). */
+const circleNameFor = (label: string) => `E2E ${label}`.slice(0, 100);
+
+/** The invitee's own circle, so they have TWO afterwards and `/circles` would NOT auto-forward into the joined one. */
+async function giveInviteeOwnCircle(request: APIRequestContext, invitee: { email: string; password: string }) {
+  await createCircle(await ownerApi(request, invitee), uniq('own'));
+}
 
 async function acceptButton(page: Page) {
   const btn = page.getByRole('button', { name: 'Accept invitation' });
@@ -173,7 +185,8 @@ test('double-click Accept while held: one accept request, one membership', async
   baseURL,
 }) => {
   const api = await ownerApi(request, await createScopedAccount('invite-owner'));
-  const circleId = await createCircle(api, uniq('double'));
+  const label = uniq('double');
+  const circleId = await createCircle(api, label);
   const invite = await createInvite(api, circleId);
   const invitee = await createScopedAccount('invitee-double');
   await cookieLogin(context, invitee, baseURL);
@@ -193,18 +206,25 @@ test('double-click Accept while held: one accept request, one membership', async
   await joining.click({ force: true });
   await hold.release();
 
-  await expect(page.getByText(COPY.joined)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(COPY.joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
   await accepts.expectCount(1);
   expect(membershipCount(circleId, invitee.userId)).toBe(1);
   expect(inviteStatus(invite.id)).toBe('accepted');
 });
 
 /** Logged-out visitor → "I already have an account" → /login → signs in. Returns once the accept answered. */
-async function signInHandoff(page: Page, request: APIRequestContext) {
+async function signInHandoff(
+  page: Page,
+  request: APIRequestContext,
+  opts: { inviteeOwnsACircle?: boolean } = {}
+) {
   const api = await ownerApi(request, await createScopedAccount('invite-owner'));
-  const circleId = await createCircle(api, uniq('handoff'));
+  const label = uniq('handoff');
+  const circleId = await createCircle(api, label);
   const invite = await createInvite(api, circleId);
   const invitee = await createScopedAccount('invitee-handoff');
+  if (opts.inviteeOwnsACircle) await giveInviteeOwnCircle(request, invitee);
 
   const accepts = countRequests(page, 'POST', ACCEPT);
   await page.goto(`/invite/${invite.code}`, { waitUntil: 'domcontentloaded' });
@@ -220,11 +240,11 @@ async function signInHandoff(page: Page, request: APIRequestContext) {
     }),
     page.getByRole('button', { name: 'Sign in', exact: true }).click(),
   ]);
-  return { circleId, invite, invitee, accepts, acceptRes };
+  return { circleId, circleName: circleNameFor(label), invite, invitee, accepts, acceptRes };
 }
 
-// The server side of the handoff. Where the joiner ends up (the join toast and
-// /circles) is the next test's assertion, not this one's.
+// The server side of the handoff. Where the joiner ends up (the named join toast
+// and the joined circle) is the next test's assertion, not this one's.
 test('logged-out visitor: sign-in handoff returns to the invite and the join completes server-side', async ({
   page,
   request,
@@ -245,15 +265,92 @@ test('logged-out visitor: sign-in handoff returns to the invite and the join com
 // detached from the in-flight mutation: the join landed but no toast and no
 // navigation followed (reproduced 3/3). It now settles on `mutateAsync`'s promise,
 // through the same handler as a direct accept.
-test('sign-in handoff auto-accept confirms the join and takes the joiner to their circles, accepting once', async ({
+//
+// The joiner already owns a circle, so they have TWO afterwards: the picker's
+// single-circle auto-skip cannot be what lands them in the joined one — only
+// the accept response's `data.circle` can (P-M1 parity with mobile).
+test('sign-in handoff auto-accept names the joined circle and opens it, accepting once', async ({
   page,
   request,
 }) => {
-  const { acceptRes, accepts } = await signInHandoff(page, request);
+  const { acceptRes, accepts, circleId, circleName } = await signInHandoff(page, request, {
+    inviteeOwnsACircle: true,
+  });
   expect(acceptRes.status()).toBe(200);
-  await expect(page.getByText(COPY.joined)).toBeVisible({ timeout: 10_000 });
-  await expect(page).toHaveURL(/\/circles/);
+  const body = (await acceptRes.json()) as { data: { circle: { id: string; name: string } | null } };
+  expect(body.data.circle?.id, 'backend names the joined circle').toBe(circleId);
+  await expect(page.getByText(COPY.joinedNamed(circleName))).toBeVisible({ timeout: 10_000 });
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
+  await expect(page.getByText(COPY.joined)).toHaveCount(0);
   await accepts.expectCount(1);
+});
+
+// `circle: null` (the backend's post-join read of the circle failed) is still a
+// join: generic confirmation and the circle picker — never an error, never
+// `/circles/undefined`. Same real accept, only `data.circle` nulled.
+test('accept response without a circle: generic toast, lands on the circle picker', async ({
+  page,
+  request,
+  context,
+  baseURL,
+}) => {
+  const api = await ownerApi(request, await createScopedAccount('invite-owner'));
+  const circleId = await createCircle(api, uniq('nullcircle'));
+  const invite = await createInvite(api, circleId);
+  const invitee = await createScopedAccount('invitee-nullcircle');
+  await giveInviteeOwnCircle(request, invitee);
+  await cookieLogin(context, invitee, baseURL);
+
+  await page.goto(`/invite/${invite.code}`, { waitUntil: 'domcontentloaded' });
+  const accept = await acceptButton(page);
+  const rewrite = await rewriteJson(page, 'POST', ACCEPT, (json) => ({
+    ...json,
+    data: { ...(json.data as Record<string, unknown>), circle: null },
+  }));
+  await accept.click();
+
+  await expect(page.getByText(COPY.joined)).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(/\/circles$/);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(rewrite.requests).toHaveLength(1);
+  expect(membershipCount(circleId, invitee.userId)).toBe(1);
+});
+
+// /invites (PendingInvitesPage, POST /invites/:inviteId/accept): accepting opens
+// the joined circle by name — it used to toast and stay on the list.
+test('pending invitations: Accept names the joined circle and opens it', async ({
+  page,
+  request,
+  context,
+  baseURL,
+}) => {
+  const api = await ownerApi(request, await createScopedAccount('invite-owner'));
+  const label = uniq('pending');
+  const circleId = await createCircle(api, label);
+  const invitee = await createScopedAccount('invitee-pending');
+  await giveInviteeOwnCircle(request, invitee);
+  const created = await api.post(`/api/circles/${circleId}/invites`, {
+    email: invitee.email,
+    member_type: 'caregiver',
+  });
+  expect(created.status(), `create invite: ${await created.text()}`).toBeLessThan(300);
+  const inviteId = ((await created.json()) as { data: { invite: { id: string } } }).data.invite.id;
+  await cookieLogin(context, invitee, baseURL);
+
+  await page.goto('/invites', { waitUntil: 'domcontentloaded' });
+  const accept = page.getByRole('button', { name: 'Accept', exact: true });
+  await expect(accept).toBeVisible({ timeout: 20_000 });
+  const acceptRes = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === `/api/invites/${inviteId}/accept`,
+    { timeout: 20_000 }
+  );
+  await accept.click();
+  expect((await acceptRes).status()).toBe(200);
+
+  await expect(page.getByText(COPY.joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
+  expect(membershipCount(circleId, invitee.userId)).toBe(1);
+  expect(inviteStatus(inviteId)).toBe('accepted');
 });
 
 test('accept failure (500): error copy, nothing joined; retry works', async ({
@@ -263,7 +360,8 @@ test('accept failure (500): error copy, nothing joined; retry works', async ({
   baseURL,
 }) => {
   const api = await ownerApi(request, await createScopedAccount('invite-owner'));
-  const circleId = await createCircle(api, uniq('retry'));
+  const label = uniq('retry');
+  const circleId = await createCircle(api, label);
   const invite = await createInvite(api, circleId);
   const invitee = await createScopedAccount('invitee-retry');
   await cookieLogin(context, invitee, baseURL);
@@ -281,7 +379,8 @@ test('accept failure (500): error copy, nothing joined; retry works', async ({
   expect(membershipCount(circleId, invitee.userId)).toBe(0);
 
   await accept.click();
-  await expect(page.getByText(COPY.joined)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(COPY.joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 20_000 });
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
   await accepts.expectCount(2);
   expect(membershipCount(circleId, invitee.userId)).toBe(1);
 });

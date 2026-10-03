@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Card, Text } from '@/components/ui';
+import { Card, Icon, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
 import {
@@ -11,6 +11,7 @@ import {
   zoneReferenceInstant,
 } from '@/utils/timezone';
 import { formatDateForDisplay } from './dateMath';
+import { eventAssigneeName, eventNoteCount } from './eventChipMeta';
 import {
   getEventCardClass,
   getEventTextClass,
@@ -45,6 +46,11 @@ const MIN_EVENT_MINUTES = 30;
 // (aria-expanded) that reveals the rest of THAT day's column inline, since no
 // other per-day detail affordance exists in this view to route it to instead.
 const MAX_ALL_DAY_VISIBLE = 2;
+/**
+ * Minimum width per collision lane (WCAG 2.5.8): lane centres >=24px apart
+ * plus the 2% gutter mobile's TimelineEventBlock uses. Exported for the test.
+ */
+export const LANE_MIN_PX = 25;
 // Chip text metrics — both spans render at leading-[14px], and the chip's p-1
 // eats 4px top + bottom. Used to work out how many lines actually fit before
 // choosing the stacked vs inline layout, so nothing is ever clipped mid-line.
@@ -114,6 +120,25 @@ export function WeekView({
     (eventsByDay.get(day) ?? []).filter((event) => !event.scheduled_time);
   const hasAllDayRow = days.some((day) => allDayEvents(day).length > 0);
 
+  // TARGET SIZE (WCAG 2.5.8). Overlapping timed events split the day column
+  // into equal lanes, so five 8:00 AM doses in a phone's ~116px column were
+  // ~21px-wide chips crowding each other — under the 24px minimum/spacing.
+  // Floor every day column at LANE_MIN_PX per lane of the busiest slot in the
+  // week, so lane centres sit >=24px apart; the grid already pans sideways
+  // (a 2D calendar, exempt from reflow), so a wider column just scrolls. At
+  // desktop widths the natural column already clears the floor for typical
+  // weeks, so nothing changes there.
+  const dayColumnFloorPx = useMemo(() => {
+    let maxLanes = 1;
+    for (const day of days) {
+      const timed = (eventsByDay.get(day) ?? []).filter((event) => !!event.scheduled_time);
+      for (const info of resolveOverlaps(timed).values()) {
+        maxLanes = Math.max(maxLanes, info.totalColumns);
+      }
+    }
+    return maxLanes > 1 ? maxLanes * LANE_MIN_PX : 0;
+  }, [days, eventsByDay]);
+
   // Earliest timed event in the week (so the grid opens on real content instead
   // of a wall of empty pre-dawn hours). Falls back to the current hour.
   const earliestHour = useMemo(() => {
@@ -128,16 +153,25 @@ export function WeekView({
 
   // Auto-scroll the timed grid to that anchor on mount / week change. Mirrors
   // mobile's scrollToCurrentTime — keeps one hour of lead-in above the target.
+  //
+  // WHY NOTHING IS ADDED FOR THE PINNED HEAD. The head (day headers + all-day
+  // row) is `sticky top-0` INSIDE this scroller, and the timed grid starts right
+  // below it in the content. So the head covers viewport rows [0, headHeight)
+  // at every scrollTop >= 0, and timed-grid offset `t` sits at viewport row
+  // `headHeight + t - scrollTop`. The head height cancels: the first row visible
+  // under the head is timed offset `scrollTop`, whatever the head's height. To
+  // put the hour (target - 1) on that row, scrollTop is simply its offset.
+  // This used to be `timedRef.offsetTop + ...`, i.e. the head height ADDED —
+  // which hid that many pixels of the lead-in under the head. With an all-day
+  // row the head is ~110-210px against an 80px lead-in, so the first timed
+  // chips (and the target hour itself) slid under it, leaving slivers and
+  // target-size failures. The browser clamps this at the bottom of the grid.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const timedRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const targetHour = earliestHour ?? getCurrentHoursInTimezone(careRecipientTimezone);
-    // The day-headers/all-day head is sticky and still occupies scroll height, so
-    // offset by the timed grid's position before scrolling to the target hour.
-    const base = timedRef.current?.offsetTop ?? 0;
-    el.scrollTop = base + Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
+    el.scrollTop = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
   }, [earliestHour, careRecipientTimezone, days]);
 
   const renderEventButton = (
@@ -161,12 +195,21 @@ export function WeekView({
     // both visibly in the chip and in the accessible name.
     const inactive = isInactiveMedication(event);
     const inactiveLabel = t('calendar:discontinueMed.inactiveBadge');
+    // Mobile TimelineEventBlock parity: who the event is assigned to and how
+    // many notes it has. Both are ALWAYS in the accessible name (mobile's
+    // a11yLabel order: name, time, assignee, notes), even when the chip is too
+    // small to print them.
+    const assigneeName = eventAssigneeName(event);
+    const noteCount = eventNoteCount(event);
+    const noteLabel = noteCount > 0 ? t('calendar:notes.noteCount', { count: noteCount }) : null;
     const ariaLabel = [
       title,
       t(`calendar:eventTypes.${event.event_type}`),
       timeLabel,
       status ? t(`calendar:status.${status}`) : null,
       inactive ? inactiveLabel : null,
+      assigneeName,
+      noteLabel,
     ]
       .filter(Boolean)
       .join(', ');
@@ -208,8 +251,22 @@ export function WeekView({
     // At 3+ lanes a chip is too narrow for both; the title is what identifies it,
     // and the time is still in the aria-label and the hour axis.
     const showTime = !!event.scheduled_time && totalColumns < 3;
-    // Two title lines only when the time label still has a line of its own.
-    const titleClamp = fitLines >= 3 ? 'line-clamp-2' : 'truncate';
+    // The assignee + note badge line (mobile's meta row). Mobile renders it
+    // only when it FITS below the title (TimelineEventBlock META_MIN_HEIGHT);
+    // here the time already owns the second line, so the meta line needs a
+    // THIRD free line — a 45-minute or longer event. A 30-minute chip has
+    // exactly two lines and keeps title + time, as before. All-day chips never
+    // print it (mobile's all-day chips are title-only), and neither do 3+ lane
+    // chips, which are too narrow for a name — the same rule that drops the
+    // time there. In every one of those cases the name and the count are still
+    // spoken, via the aria-label above.
+    const hasMeta = !!assigneeName || noteCount > 0;
+    const secondLine = showTime || inactive;
+    const showMeta =
+      positioned && hasMeta && totalColumns < 3 && fitLines >= (secondLine ? 3 : 2);
+    // Two title lines only when the time label (and the meta line, if shown)
+    // still have lines of their own.
+    const titleClamp = fitLines >= (showMeta ? 4 : 3) ? 'line-clamp-2' : 'truncate';
 
     return (
       <button
@@ -261,6 +318,34 @@ export function WeekView({
               )}
             </span>
           )}
+          {showMeta && (
+            // Mobile's metaRow: the name gives way (truncates) first, the note
+            // badge never shrinks. Its text is presentational — the button's
+            // aria-label already carries both.
+            <span
+              data-testid="event-chip-meta"
+              aria-hidden="true"
+              className="flex min-w-0 items-center gap-1"
+            >
+              {assigneeName && (
+                <span
+                  data-testid="event-chip-assignee"
+                  className={`min-w-0 truncate font-normal text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
+                >
+                  {assigneeName}
+                </span>
+              )}
+              {noteCount > 0 && (
+                <span
+                  data-testid="event-chip-notes"
+                  className={`flex shrink-0 items-center gap-0.5 font-normal text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
+                >
+                  <Icon name="document-text" size={10} />
+                  {noteCount}
+                </span>
+              )}
+            </span>
+          )}
         </span>
       </button>
     );
@@ -284,15 +369,22 @@ export function WeekView({
       <div
         ref={scrollRef}
         role="presentation"
+        data-testid="week-scroller"
         className="snap-x snap-mandatory overflow-auto max-h-[70vh] scroll-pl-14 lg:snap-none"
       >
         <div
           role="rowgroup"
-          className="relative w-max [--dc:calc((100vw_-_2rem_-_3.5rem)/2)] md:[--dc:calc((100vw_-_3rem_-_3.5rem)/3)] lg:w-auto lg:min-w-0 lg:[--dc:minmax(0,1fr)]"
+          data-day-column-floor={dayColumnFloorPx}
+          style={{ '--dc-floor': `${dayColumnFloorPx}px` } as CSSProperties}
+          className="relative w-max [--dc:max(var(--dc-floor),calc((100vw_-_2rem_-_3.5rem)/2))] md:[--dc:max(var(--dc-floor),calc((100vw_-_3rem_-_3.5rem)/3))] lg:w-auto lg:min-w-0 lg:[--dc:minmax(var(--dc-floor),1fr)]"
         >
           {/* Pinned head — day headers + all-day stay at the top while the timed
               grid scrolls under them; their left cells also pin left. */}
-          <div role="presentation" className="sticky top-0 z-[6] bg-cream">
+          <div
+            role="presentation"
+            data-testid="week-pinned-head"
+            className="sticky top-0 z-[6] bg-cream"
+          >
           {/* Day headers */}
           <div
             role="row"
@@ -415,7 +507,7 @@ export function WeekView({
 
           {/* Timed grid — scrolls vertically under the pinned head; the hour rail
               pins left to the 2D scroller above. */}
-          <div ref={timedRef} role="row" className="grid grid-cols-[3.5rem_repeat(7,var(--dc))]">
+          <div role="row" className="grid grid-cols-[3.5rem_repeat(7,var(--dc))]">
               {/* Hour axis — pinned so the labels stay visible while days scroll. */}
               <div
                 role="rowheader"

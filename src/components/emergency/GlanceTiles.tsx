@@ -28,7 +28,15 @@ function GlancePills({ items }: { items: string[] }): ReactElement {
   return (
     <span className="flex flex-wrap gap-1.5">
       {items.map((item, index) => (
-        <Badge key={`${item}-${index}`} variant="error" className="text-ink!">
+        // `wrap` + `overflow-wrap:anywhere` (WCAG 1.4.10): a nowrap pill such as
+        // "Hypercholesterolemia" (152px) ran 14px past a 320px viewport out of
+        // its ~106px half-width tile.
+        <Badge
+          key={`${item}-${index}`}
+          variant="error"
+          wrap
+          className="text-ink! [overflow-wrap:anywhere]"
+        >
           {item}
         </Badge>
       ))}

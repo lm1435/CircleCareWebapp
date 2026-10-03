@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi, getApiError } from '@/api/auth';
+import { supabase } from '@/lib/supabase';
+import { PKCE_VERIFIER_KEY, clearPkceVerifier, pkceVerifierStorage } from '@/lib/pkceVerifierStorage';
 import { useAuthStore } from '@/store/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
@@ -16,11 +18,16 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
 import { TerminalState } from '@/components/auth/TerminalState';
 
-// Task 8b — OAuth redirect callback.
-// Supabase's implicit flow returns tokens in the URL FRAGMENT. They are read
-// once, scrubbed from the address bar/history IMMEDIATELY (before any network
-// call), exchanged with the backend for an httpOnly cookie session, and then
-// discarded. Tokens are never logged and never written to any storage.
+// Task 8b — OAuth redirect callback (PKCE since 2026-10-01).
+// The provider (via Supabase) returns a one-time authorization CODE in the
+// query string — never tokens. The URL is scrubbed from the address bar IMMEDIATELY
+// (before any network call); the code is traded for a session with the PKCE
+// verifier parked in this tab's sessionStorage (`exchangeCodeForSession`, a
+// POST — tokens only ever travel in request/response bodies), the session is
+// handed to the backend for an httpOnly cookie session, and then discarded.
+// Tokens are never logged and never written to any storage (see
+// lib/pkceVerifierStorage.ts). The old implicit flow put the tokens themselves
+// in the fragment, and Chrome's global history kept them even after the scrub.
 
 export default function AuthCallbackPage(): ReactElement {
   const { t } = useTranslation('auth');
@@ -38,8 +45,8 @@ export default function AuthCallbackPage(): ReactElement {
     if (ranRef.current) return;
     ranRef.current = true;
 
-    // Capture the raw fragment + query SYNCHRONOUSLY, then scrub tokens from
-    // the URL IMMEDIATELY — before any parsing, await, analytics call, or
+    // Capture the raw fragment + query SYNCHRONOUSLY, then scrub the code
+    // (and any provider error prose) from the URL IMMEDIATELY — before any parsing, await, analytics call, or
     // identify — so they never sit in history, referrers, session replay, or
     // logs. Everything below reads ONLY from these captured strings; nothing
     // may touch window.location.hash/search again.
@@ -62,10 +69,15 @@ export default function AuthCallbackPage(): ReactElement {
       queryParams.get('error_description') ||
       hashParams.get('error') ||
       queryParams.get('error');
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
+    const code = queryParams.get('code');
+    // The verifier this tab parked when the handshake started. Absent means
+    // the code cannot be redeemed here (a re-opened history entry, another
+    // tab/browser, cleared storage) — don't spend a request on it.
+    const hasVerifier = pkceVerifierStorage.getItem(PKCE_VERIFIER_KEY) !== null;
 
-    if (oauthError || !accessToken || !refreshToken) {
+    if (oauthError || !code || !hasVerifier) {
+      // Nothing to redeem: drop the verifier so it cannot pair with a later code.
+      clearPkceVerifier();
       // access_denied means the user deliberately cancelled the provider's
       // consent screen — that deserves a shrug, not a failure message.
       const cancelled =
@@ -90,13 +102,16 @@ export default function AuthCallbackPage(): ReactElement {
       // `termsAccepted: true` for an account that ticked nothing. The exchange
       // path below consumes it before its try, so its failures clear it too.
       clearPendingTermsConsent();
-      // STALE VISIT: nothing from a provider (no tokens, no error) AND no
-      // handshake was started in this tab. That is a re-opened bookmark /
-      // history entry / omnibox suggestion, not a failed sign-in — every prod
-      // OAUTH_NO_TOKENS was this ($direct, no login_started). No failure
-      // event, no error screen: the spinner stays up until App's bootstrap
-      // resolves, then the effect below sends the visitor where they belong.
-      if (!oauthError && !accessToken && !refreshToken && pendingMethod === null) {
+      // STALE VISIT: nothing redeemable from a provider (no error, and no code
+      // or no verifier to pair it with) AND no handshake was started in this
+      // tab. That is a re-opened bookmark / history entry / omnibox suggestion,
+      // not a failed sign-in — every prod OAUTH_NO_TOKENS was this ($direct,
+      // no login_started). Under PKCE a re-opened history entry still carries
+      // its spent `?code=`, which is why a code without a verifier counts. No
+      // failure event, no error screen: the spinner stays up until App's
+      // bootstrap resolves, then the effect below sends the visitor where they
+      // belong.
+      if (!oauthError && pendingMethod === null) {
         setStale(true);
         return;
       }
@@ -110,7 +125,15 @@ export default function AuthCallbackPage(): ReactElement {
         // both a user-text leak and an unbounded analytics dimension. The two
         // codes mirror mobile's OAuthErrorCode members so a `login_failed`
         // breakdown reads across platforms.
-        Analytics.loginFailed(method, oauthError ? 'OAUTH_PROVIDER_ERROR' : 'OAUTH_NO_TOKENS');
+        //
+        // OAUTH_NO_TOKENS keeps its pre-PKCE name ("the redirect brought back
+        // nothing redeemable" — now: no code) so the funnel reads across the
+        // switch. OAUTH_NO_VERIFIER: a code arrived for a handshake this tab
+        // did not start (or whose storage was cleared).
+        Analytics.loginFailed(
+          method,
+          oauthError ? 'OAUTH_PROVIDER_ERROR' : !code ? 'OAUTH_NO_TOKENS' : 'OAUTH_NO_VERIFIER'
+        );
       }
       setFailure(cancelled ? 'cancelled' : 'error');
       return;
@@ -129,6 +152,25 @@ export default function AuthCallbackPage(): ReactElement {
       // success: no account, no decision. `null` means nothing was parked (an
       // OAuth LOGIN, not a signup).
       const analyticsAnswer = consumePendingAnalyticsConsent();
+      // Trade the one-time code (+ this tab's verifier) for the provider
+      // session. auth-js removes the verifier itself on every outcome; the
+      // explicit clear is belt-and-braces so it can never pair with a later
+      // code. The session is held ONLY in these locals.
+      let accessToken: string;
+      let refreshToken: string;
+      try {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error || !data.session) throw error ?? new Error('no session');
+        accessToken = data.session.access_token;
+        refreshToken = data.session.refresh_token;
+      } catch {
+        // Never the error message: GoTrue prose. A stable code only.
+        Analytics.loginFailed(consumePendingAuthMethod() ?? 'oauth', 'OAUTH_CODE_EXCHANGE_FAILED');
+        setFailure('error');
+        return;
+      } finally {
+        clearPkceVerifier();
+      }
       try {
         // Backend validates the access token, moves the refresh token into the
         // httpOnly cookie, and returns a cookie-mode session (no refresh_token).

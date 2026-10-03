@@ -11,7 +11,6 @@
   "save": "Save",
   "close": "Close",
   "more": "More",
-  "moreActions": "More actions",
   "required": "(required)",
   "today": "Today",
   "expandAll": "Expand all",
@@ -102,7 +101,10 @@
     "action": "Upgrade",
     "ownerOnly": "This is a Premium feature for this circle. Only the circle owner can upgrade.",
     "ownerOnlyNamed": "This is a Premium feature for this circle. Only {{ownerName}}, the circle owner, can upgrade.",
-    "viewOnlySeat": "This circle has more caregivers than the free plan allows, so your access is view only. The circle owner can upgrade to give everyone full access."
+    "viewOnlySeat": "This circle has more caregivers than the free plan allows, so your access is view only. The circle owner can upgrade to give everyone full access.",
+    "lapsedOwner": "Your subscription has ended, so this circle is read-only for everyone. Your data is safe.",
+    "lapsedMember": "The circle owner's subscription has ended. Only the owner can re-subscribe to restore access.",
+    "lapsedMemberNamed": "{{ownerName}}'s subscription has ended. Only {{ownerName}} can re-subscribe to restore access."
   },
   "notFound": {
     "title": "We couldn't find that page",
@@ -164,5 +166,6 @@
     "appointmentShort": "Appt",
     "taskShort": "Task",
     "noteShort": "Note"
-  }
+  },
+  "draftRestored": "We restored your unsaved draft."
 }

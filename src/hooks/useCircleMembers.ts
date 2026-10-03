@@ -15,6 +15,7 @@ import {
   type CircleDetail,
   type CircleMember,
 } from '@/api/circleMembers';
+import type { Circle } from '@/api/circles';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
@@ -137,6 +138,15 @@ export function useLeaveCircle(circleId: string): UseMutationResult<void, unknow
     onSuccess: () => {
       Analytics.circleLeft(circleId);
       // The user is no longer in this circle — drop its detail and refresh the list.
+      //
+      // PK16: take the circle out of the CACHED list synchronously, before the
+      // caller navigates to /circles. Invalidating alone keeps the stale list as
+      // `data` until the refetch lands, and the picker's single-circle auto-skip
+      // reads it on mount: leaving your only circle forwarded you straight back
+      // into /circles/<left>.
+      queryClient.setQueryData<Circle[] | undefined>(queryKeys.circles, (old) =>
+        Array.isArray(old) ? old.filter((c) => c.id !== circleId) : old
+      );
       void queryClient.invalidateQueries({ queryKey: queryKeys.circleDetail(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
     },

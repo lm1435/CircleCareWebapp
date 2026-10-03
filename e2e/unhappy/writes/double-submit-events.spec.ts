@@ -149,7 +149,8 @@ test('delete event (DeleteEventDialog): double confirm while the DELETE is pendi
     const detail = await openCalendarEvent(page, circleId, date, title);
     await detail.getByRole('button', { name: 'More', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-    const confirm = page.getByRole('dialog', { name: 'Delete event' });
+    // A task, so the dialog names itself "Delete task" (never "event").
+    const confirm = page.getByRole('dialog', { name: 'Delete task' });
     await expect(confirm).toBeVisible();
     await doubleSubmitWhileHeld(page, {
       method: 'DELETE',

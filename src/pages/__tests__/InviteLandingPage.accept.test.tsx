@@ -128,9 +128,13 @@ describe('InviteLandingPage — accept flow', () => {
     expect(consumePendingInviteCode()).toBeNull();
   });
 
-  it('signed-in: accepts the invite, confirms with a toast, and navigates to the circle picker', async () => {
+  it('signed-in: accepts the invite, names the joined circle in a toast, and opens it', async () => {
     authState = { isAuthenticated: true, isBootstrapping: false };
-    acceptMutate.mockResolvedValue(undefined);
+    acceptMutate.mockResolvedValue({
+      circle: { id: 'circle-joined-1', name: "Rose's Care Team", recipient_name: 'Rose', owner_id: 'o-1' },
+      view_only: false,
+      message: 'Successfully joined the circle',
+    });
     const user = userEvent.setup();
     renderPage('abc123');
 
@@ -138,11 +142,44 @@ describe('InviteLandingPage — accept flow', () => {
     await user.click(acceptBtn);
 
     expect(acceptMutate).toHaveBeenCalledWith('ABC123');
-    // Success is confirmed via toast — the circle picker gives no feedback.
-    expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    expect(await screen.findByText("You've joined Rose's Care Team.")).toBeInTheDocument();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles/circle-joined-1'));
+    expect(navigate).not.toHaveBeenCalledWith('/circles');
     // R4-5: successful accept reports onboarding completion via the join path.
     expect(trackOnboardingCompleted).toHaveBeenCalledWith('joined');
+  });
+
+  it('signed-in: a null circle in the response → generic toast and the circle picker', async () => {
+    authState = { isAuthenticated: true, isBootstrapping: false };
+    acceptMutate.mockResolvedValue({
+      circle: null,
+      view_only: false,
+      message: 'Successfully joined the circle',
+    });
+    const user = userEvent.setup();
+    renderPage('abc123');
+
+    await user.click(await screen.findByRole('button', { name: 'Accept invitation' }));
+
+    expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    expect(trackOnboardingCompleted).toHaveBeenCalledWith('joined');
+  });
+
+  it('signed-in: a blank circle name falls back to the generic copy but still opens the circle', async () => {
+    authState = { isAuthenticated: true, isBootstrapping: false };
+    acceptMutate.mockResolvedValue({
+      circle: { id: 'circle-joined-2', name: '   ', recipient_name: null, owner_id: 'o-1' },
+      view_only: true,
+      message: 'Successfully joined the circle',
+    });
+    const user = userEvent.setup();
+    renderPage('abc123');
+
+    await user.click(await screen.findByRole('button', { name: 'Accept invitation' }));
+
+    expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles/circle-joined-2'));
   });
 
   it('signed-in: an already-member result does NOT report onboarding completion', async () => {

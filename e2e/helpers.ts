@@ -1,5 +1,6 @@
 import { expect, type Page, type TestInfo } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { sqlExec, sqlStr } from './db';
 
 // Shared crawl helpers: visit a route, prove it didn't error, prove it's not a
 // white screen, and run an axe accessibility scan.
@@ -87,7 +88,31 @@ export function expectNoRuntimeErrors(result: CrawlResult): void {
  * Run an axe accessibility scan on the current page and fail on any violation
  * at moderate+ impact. Attaches the full violation list to the test report.
  */
-export async function checkA11y(page: Page, route: string, testInfo: TestInfo): Promise<void> {
+export async function checkA11y(
+  page: Page,
+  route: string,
+  testInfo: TestInfo,
+  options: {
+    /**
+     * Scope the scan to one subtree — for an OPEN MENU (non-modal popover):
+     * its panel paints over the page, and axe's target-size rule then reports
+     * every page control under it as "partially obscured", which is the
+     * popover doing its job, not a defect. Dialogs are aria-modal and are
+     * scanned with the whole page.
+     */
+    include?: string;
+    /**
+     * Also gate on WCAG 2.2 AA (`wcag22aa` → 2.5.8 Target Size). OPT-IN, for
+     * scans taken at a controlled state — a route just loaded at scroll 0, or
+     * a dialog just opened (smoke.spec.ts, public-smoke.spec.ts,
+     * a11y-wcag22*.spec.ts). A flow scanning mid-interaction is usually
+     * scrolled, and axe then reports every control that has slid under the
+     * sticky header's buttons as "partially obscured" — a scroll position, not
+     * a target size.
+     */
+    wcag22?: boolean;
+  } = {}
+): Promise<void> {
   // Let entrance animations (e.g. `rise-in`) finish before scanning: mid-animation
   // opacity/transform blends a token's true color against the page behind it,
   // and axe reads that transient blended color as a color-contrast violation
@@ -112,9 +137,21 @@ export async function checkA11y(page: Page, route: string, testInfo: TestInfo): 
   // (same as visitAndCheck above).
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
 
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
-    .analyze();
+  // `wcag22aa` (a11y audit 2026-09-29, opt-in — see `wcag22`): adds 2.5.8
+  // Target Size (Minimum), the 2.2 criterion axe can measure; the rest of 2.2
+  // AA (2.4.11 focus not obscured, 3.3.7, 3.3.8, 3.2.6) is not
+  // machine-checkable and lives in e2e/a11y-wcag22.spec.ts as explicit
+  // keyboard/geometry assertions.
+  let builder = new AxeBuilder({ page }).withTags([
+    'wcag2a',
+    'wcag2aa',
+    'wcag21a',
+    'wcag21aa',
+    ...(options.wcag22 ? ['wcag22aa'] : []),
+    'best-practice',
+  ]);
+  if (options.include) builder = builder.include(options.include);
+  const results = await builder.analyze();
 
   if (results.violations.length > 0) {
     await testInfo.attach(`axe-${route.replace(/\W+/g, '_')}.json`, {
@@ -228,4 +265,28 @@ export async function diagnoseClickObstruction(
       viewport: { width: window.innerWidth, height: window.innerHeight },
     };
   });
+}
+
+/**
+ * Pin the circle's care-recipient zone (and the account owner's) to the BROWSER's zone.
+ *
+ * The app renders and reads times in the RECIPIENT frame (useCircle takes the care-recipient
+ * MEMBER's zone first, then the owner's), while a spec that types "12:00" or "8:00 AM" into the
+ * editor and asserts it back is describing the VIEWER's wall clock. Those are the same thing only
+ * when the browser happens to be in the seeded zone (Denver). Call this before the first
+ * navigation of such a test so it holds from any browser zone: the test then stays meaningful
+ * in Denver (a no-op there) and in a far zone (Pacific/Kiritimati, Pacific/Midway) alike.
+ * A test that WANTS a cross-zone circle must not call it.
+ */
+export async function pinRecipientZoneToBrowser(
+  page: Page,
+  account: { userId: string },
+  circleId: string
+): Promise<string> {
+  const viewerTz = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  sqlExec(
+    `update users set timezone = ${sqlStr(viewerTz)} where id = ${sqlStr(account.userId)}::uuid
+        or id in (select user_id from circle_memberships where circle_id = ${sqlStr(circleId)}::uuid);`
+  );
+  return viewerTz;
 }

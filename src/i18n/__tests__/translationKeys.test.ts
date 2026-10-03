@@ -645,9 +645,42 @@ describe('W5: no unreferenced en keys', () => {
     'emergency:careSummary.frequency.every_other_day',
     'emergency:careSummary.frequency.monthly',
     'emergency:careSummary.frequency.weekly',
+    // Added on mobile for the days-of-week repeat (docs/plans/weekly-days-of-week.md,
+    // Task 14); web renders the same label through `calendar:recurrence.weeklyOn`.
+    'emergency:careSummary.frequency.weeklyOn',
     'emergency:careSummary.frequency.yearly',
     'emergency:careSummary.sections.medicalInfo',
+    // Notes-first-class (docs/plans/notes-first-class.md), Slice 4, task 30:
+    // the plain privacy CONFIRM (title "Share health information?") is
+    // replaced by the full share sheet (`emergency:shareSummary.title`,
+    // "Share care summary") — `CareSummaryShareDialog` still reuses
+    // `careSummary.privacy.message`/`confirm`/`cancel` verbatim (per the
+    // plan: "reuse the existing privacy sentence key from the current
+    // confirm"), but the TITLE has no reader left on web. Mobile's own
+    // `CareSummaryShareSheet` (task 21, done) dropped the same key on ITS
+    // side too — this is dead on BOTH platforms now, not just web. Carried
+    // here rather than deleted anyway: `pdf/__tests__/i18nParity.test.ts`
+    // requires the whole `careSummary` subtree to mirror mobile's LOCALE FILE
+    // verbatim (key set + values), and mobile's `en.json`/`es.json` still
+    // carry `careSummary.privacy.title` even though no mobile code reads it
+    // either — deleting it from only one side's JSON would break that parity
+    // check. Whoever deletes this key must delete it from both files in the
+    // same change.
+    'emergency:careSummary.privacy.title',
     'meds:export.trend',
+    // Vitals web-parity task: VitalsPage's hero trend sentence now reports a
+    // signed average DELTA in display units (`detail.trendVs.*`/
+    // `detail.trendSame.*`, mobile parity via `formatAverageDelta`) instead
+    // of a percent-of-average comparison. These three keys backed that old
+    // sentence; per the product-owner copy rule, an unused key stays in place
+    // rather than being deleted.
+    'vitals:detail.trendDown',
+    'vitals:detail.trendStable',
+    'vitals:detail.trendUp',
+    // approved-recs-2026-09-30 Batch B0: copy landed ahead of its consumers so
+    // later batches never touch the shared locale files. Each batch that wires
+    // a key MUST delete its line here (BV verifies this block is empty).
+    'profile:avatarColor.selected',
   ];
 
   it('has no unreferenced en keys beyond the pinned dead-key allowlist', () => {

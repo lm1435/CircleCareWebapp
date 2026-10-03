@@ -31,7 +31,7 @@ import { useCareRecipientTimezone, useEventsPresence } from '@/hooks/useCalendar
 import { useTodaysMeds, useMedsForDate } from '@/hooks/useMedConfirmation';
 import { doseNeedsAnswer } from '@/utils/medicationDose';
 import { useHourCycle } from '@/hooks/useHourCycle';
-import { isMedicationDiscontinuedError } from '@/lib/apiErrors';
+import { isMedicationDiscontinuedError, isOccurrenceRemovedError } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import {
   formatEventTimeCompact,
@@ -46,6 +46,14 @@ import {
   type TodaysMedication,
 } from '@/api/medicationConfirmations';
 import { useMedicationUndo } from './useMedicationUndo';
+import { confirmFailureOutcome } from '@/lib/confirmVerify';
+import {
+  changeAnswerCopy,
+  doseAlreadyRecorded,
+  doseAlreadyRecordedMessage,
+  type DoseAlreadyRecorded,
+} from '@/lib/doseAlreadyRecorded';
+import { ChangeAnswerDialog } from './ChangeAnswerDialog';
 
 // Today's medications (spec §6.3.2 / §4.6): the dose cards a caregiver answers,
 // rendered on Home and anywhere else a day's doses belong. "Today" and every
@@ -186,6 +194,13 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   const [expanded, setExpanded] = useState(false);
   const [attentionExpanded, setAttentionExpanded] = useState(false);
 
+  // PK29: the already-recorded notice's "Change answer" opens this.
+  const [changing, setChanging] = useState<{
+    med: TodaysMedication;
+    mine: ConfirmableStatus;
+    theirs: DoseAlreadyRecorded;
+  } | null>(null);
+
   const undoFlow = useMedicationUndo({
     circleId: circleId ?? '',
     source: 'care_profile',
@@ -195,7 +210,28 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
         'success'
       );
     },
-    onError: (error) => {
+    onError: (error, status, med) => {
+      // 409 DOSE_ALREADY_RECORDED (PK1): ANOTHER caregiver already answered
+      // this dose and their answer stands. Not a failure — who and when, calmly.
+      // The mutation already refetched the day before settling, so the row now
+      // shows their answer and the undo badge is gone.
+      const alreadyRecorded = doseAlreadyRecorded(error);
+      if (alreadyRecorded) {
+        // PK29: offer "Change answer" when the answers differ and the time of
+        // theirs is known (otherwise the notice stands alone, as before).
+        const canChange = changeAnswerCopy(t, alreadyRecorded, status, hourCycle) !== null;
+        showToast(
+          doseAlreadyRecordedMessage(t, alreadyRecorded, hourCycle),
+          'info',
+          canChange
+            ? {
+                label: t('dialog.changeAnswerAction'),
+                onClick: () => setChanging({ med, mine: status, theirs: alreadyRecorded }),
+              }
+            : undefined
+        );
+        return;
+      }
       // The mutation hook already toasts (and refreshes access flags) for a
       // permission rejection — anything else needs its own word, and a 409 on a
       // stopped medication needs a DIFFERENT word: no retry can ever succeed.
@@ -204,7 +240,12 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
         t(
           isMedicationDiscontinuedError(error)
             ? 'dialog.errorDiscontinued'
-            : 'dialog.error'
+            : isOccurrenceRemovedError(error)
+              ? 'dialog.errorOccurrenceRemoved'
+              : confirmFailureOutcome(error) === 'unverified'
+                ? 'dialog.errorUnverified'
+                : 'dialog.error',
+          { medication: med.medication_name || med.title }
         ),
         'error'
       );
@@ -607,6 +648,17 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
           circleId={circleId}
           initialType="medication"
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {changing && (
+        <ChangeAnswerDialog
+          circleId={circleId}
+          med={changing.med}
+          mine={changing.mine}
+          theirs={changing.theirs}
+          source="care_profile"
+          onClose={() => setChanging(null)}
         />
       )}
     </section>

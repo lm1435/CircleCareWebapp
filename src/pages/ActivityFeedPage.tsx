@@ -2,6 +2,7 @@ import { useEffect, useMemo, type ReactElement } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ActivityFeedItem } from '@/api/activityFeed';
+import { lastPageAllHidden, visibleActivities } from '@/components/activity/activityVisibility';
 import { ActivityItem } from '@/components/activity/ActivityItem';
 import { LatestHero } from '@/components/activity/LatestHero';
 import { formatDayLabel, getLocalDateKey } from '@/components/activity/activityFormat';
@@ -36,18 +37,74 @@ export default function ActivityFeedPage(): ReactElement {
   // owns it, so the workaround is gone.
   const { canEdit, timezone } = useCircle(circleId);
 
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useActivityFeed(circleId);
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useActivityFeed(circleId);
 
   // Instrumented from day one (the vitals lesson) — ids only, never content.
   useEffect(() => {
     if (circleId) Analytics.activityFeedViewed(circleId);
   }, [circleId]);
 
+  // Rows whose note is gone (`note_missing`) are hidden HERE, at render time —
+  // `useActivityFeed` still pages by the raw row count.
   const activities = useMemo(
-    () => data?.pages.flatMap((page) => page.activities) ?? [],
+    () => visibleActivities(data?.pages.flatMap((page) => page.activities) ?? []),
     [data]
   );
+
+  // A page whose rows were ALL hidden renders nothing new (a first page like
+  // that would show the empty state with no "Load more"). Move on by itself.
+  // Mirrors mobile's ActivityFeedScreen.
+  //
+  // - `lastPageParam` is a dependency so the effect re-runs for EVERY page that
+  //   lands: when a response arrives before the in-flight state renders, the
+  //   other flags read the same before and after the hop and the chain stalled
+  //   on the skeleton. (Not `pages.length` — `maxPages` pins that at 20.)
+  // - Never while a failed next-page fetch stands (`isFetchNextPageError`):
+  //   the failure flips isFetchingNextPage true→false and re-fired this effect
+  //   nonstop. The error card's Retry is the retry; a successful refetch clears
+  //   the error and the chain resumes.
+  // - Never while ANY fetch is in flight (`isFetching`), so the resume after
+  //   Retry waits for the refetch instead of cancelling it.
+  // No "N hops in a row" cap on top: with the raw-offset `getNextPageParam`
+  // every hop strictly advances, so the chain ends when the backend says
+  // `hasMore: false`; a cap would need its own stalled-feed UI to not strand
+  // an all-hidden feed on the skeleton.
+  const lastPageHidden = lastPageAllHidden(data?.pages);
+  const lastPageParam = data?.pageParams[data.pageParams.length - 1];
+  useEffect(() => {
+    if (
+      lastPageHidden &&
+      hasNextPage &&
+      !isFetching &&
+      !isFetchingNextPage &&
+      !isFetchNextPageError
+    ) {
+      void fetchNextPage();
+    }
+  }, [
+    lastPageHidden,
+    lastPageParam,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage,
+  ]);
+  // Every row fetched so far was hidden and the effect is fetching past them:
+  // that is still loading, never the empty state — unless it failed, when the
+  // error card (with Retry) is the whole story.
+  const showLoading =
+    isLoading || (activities.length === 0 && lastPageHidden && !!hasNextPage && !isError);
 
   // Group by viewer-local day, newest day first (backend returns newest-first).
   const dayGroups = useMemo<DayGroup[]>(() => {
@@ -70,7 +127,7 @@ export default function ActivityFeedPage(): ReactElement {
         subtitle={t('activity:subtitle')}
       />
 
-      {isLoading && (
+      {showLoading && (
         <div role="status" aria-live="polite" className="px-5">
           <span className="sr-only">{t('activity:loading')}</span>
           <Skeleton className="h-6 w-28" />
@@ -100,7 +157,7 @@ export default function ActivityFeedPage(): ReactElement {
         </div>
       )}
 
-      {!isLoading && !isError && activities.length === 0 && (
+      {!showLoading && !isError && activities.length === 0 && (
         <div className="px-5">
           <EmptyState
             tone="dusk"

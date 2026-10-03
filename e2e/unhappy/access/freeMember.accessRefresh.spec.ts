@@ -23,8 +23,14 @@ import {
 //                   `applyCaregiverCap` writes). So the refetch the client makes
 //                   is answered by the REAL backend deriving `can_edit: false`,
 //                   and the controls must disappear because of THAT refetch.
-//   402             the write is refused as premium-only; the client must show
-//                   the upgrade prompt (and still refetch its flags).
+//   403 SUBSCRIPTION_REQUIRED
+//                   `requireCircleEditAccess`'s circle-wide refusal for a circle
+//                   whose owner lapsed (backend/src/middleware/circleAccess.ts;
+//                   body = `API_ERRORS.writeSubscriptionRequired`, verbatim).
+//                   Vitals are NOT a premium feature — no vitals route ever
+//                   answers 402. The client must show the same owner-aware
+//                   upgrade notice the calendar write surface shows for this
+//                   refusal (and still refetch its flags).
 //
 // Each test proves: exactly one GET /api/circles/:id after the refusal, the
 // right toast, the controls withdrawn / the upgrade prompt, and no row in the
@@ -127,7 +133,7 @@ test('documents: upload refused 403 VIEW_ONLY → detail refetched, Upload withd
   }
 });
 
-test('vitals: reading refused 402 SUBSCRIPTION_REQUIRED → detail refetched, owner-only upgrade notice (no Upgrade action), no row', async ({
+test('vitals: reading refused 403 SUBSCRIPTION_REQUIRED (lapsed circle) → detail refetched, lapsed-circle member notice (no Upgrade action), draft kept, no row', async ({
   page,
   personaHandle: h,
 }) => {
@@ -145,21 +151,27 @@ test('vitals: reading refused 402 SUBSCRIPTION_REQUIRED → detail refetched, ow
   await dialog.locator('#value1').fill('77');
   await dialog.locator('#notes').fill(note);
 
-  const fault = await failRequest(page, 'POST', '/api/circles/:id/vitals', {
-    status: 402,
-    code: 'SUBSCRIPTION_REQUIRED',
-    message: 'Upgrade to Premium',
-  });
+  // The real refusal, not a 402 the backend never sends for vitals. Injected
+  // rather than produced: a real one needs this persona's free HOST to own a
+  // second circle with this one not `selected_on_downgrade` — the freeMember
+  // persona is "a free host's ONLY circle", and that state would also withdraw
+  // Add reading before it could be pressed.
+  const fault = await failRequest(page, 'POST', '/api/circles/:id/vitals', API_ERRORS.writeSubscriptionRequired);
   const detail = countRequests(page, 'GET', '/api/circles/:id');
   await dialog.getByRole('button', { name: 'Save reading' }).click();
 
   await fault.expectHits(1);
-  // Owner-aware gate (usePremiumGate with { circleId }): a NON-owner of the
+  // Same handling as a calendar write refused this way (useEventMutationOnError):
+  // owner-aware gate (usePremiumGate with { circleId }) — a NON-owner of the
   // circle is told only the owner can upgrade, and is offered no Upgrade action.
   await expect(
-    page.getByText(/^This is a Premium feature for this circle\. Only (.+, )?the circle owner,? can upgrade\.$/)
+    page.getByText(/^(The circle owner|.+)'s subscription has ended\. Only (the owner|.+) can re-subscribe to restore access\.$/)
   ).toBeVisible();
+  // PK18: the accurate lapse wording, never the free-plan / Premium-feature copy.
   await expect(page.getByText("That feature isn't included in the free plan.", { exact: false })).toHaveCount(0);
+  await expect(page.getByText('This is a Premium feature for this circle', { exact: false })).toHaveCount(0);
+  // The draft is kept: the form is still open with what the member typed.
+  await expect(dialog.locator('#value1')).toHaveValue('77');
   await expect(page.getByText("You don't have permission to make this change.")).toHaveCount(0);
   await detail.expectCount(1);
   expect(

@@ -1,10 +1,11 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Card, Text } from '@/components/ui';
+import { Card, Icon, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatEventTimeCompact, zoneReferenceInstant } from '@/utils/timezone';
 import { formatDateForDisplay, getWeekdayName, isSameMonth } from './dateMath';
+import { eventNoteCount } from './eventChipMeta';
 import {
   EVENT_TYPE_DOT_CLASS,
   getEventCardClass,
@@ -53,7 +54,12 @@ export function MonthView({
     : EMPTY_DAY_EVENTS;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    // Explicit single track below lg: an implicit `auto` track sizes to the
+    // panel's min-content, and one long unbreakable event title (min-content of
+    // a `truncate` span is still its longest word) widened the track past the
+    // page, clipping the time and the note badge off the right edge at phone
+    // width. `minmax(0,1fr)` lets the title truncate instead.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <Card
         variant="outlined"
         padding="none"
@@ -189,6 +195,12 @@ export function MonthView({
                   // and the same word joins the row's accessible name.
                   const inactive = isInactiveMedication(event);
                   const inactiveLabel = t('calendar:discontinueMed.inactiveBadge');
+                  // Mobile's month (and day) list card marks an event that has
+                  // notes with the document icon; no assignee there, so none
+                  // here either. Web prints the count beside the icon (the same
+                  // badge the week chip uses) and speaks it — an icon alone
+                  // would have no text alternative.
+                  const noteCount = eventNoteCount(event);
                   return (
                     <li key={`${event.id}_${event.scheduled_date}`}>
                       <button
@@ -201,6 +213,9 @@ export function MonthView({
                           timeLabel,
                           status ? t(`calendar:status.${status}`) : null,
                           inactive ? inactiveLabel : null,
+                          noteCount > 0
+                            ? t('calendar:notes.noteCount', { count: noteCount })
+                            : null,
                         ]
                           .filter(Boolean)
                           .join(', ')}
@@ -233,6 +248,16 @@ export function MonthView({
                           >
                             {timeLabel}
                           </span>
+                          {noteCount > 0 && (
+                            <span
+                              data-testid="event-chip-notes"
+                              aria-hidden="true"
+                              className={`flex shrink-0 items-center gap-0.5 self-center text-[11px] font-normal leading-tight ${getEventTextClass(event, status)}`}
+                            >
+                              <Icon name="document-text" size={10} />
+                              {noteCount}
+                            </span>
+                          )}
                         </span>
                       </button>
                     </li>

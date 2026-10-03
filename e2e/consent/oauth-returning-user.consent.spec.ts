@@ -53,7 +53,7 @@ test('returning user with a parked decline: consent untouched, no withdraw, iden
   await parkSignupAnalyticsAnswer(page, false);
   const session = await mintPasswordSession(acct);
   const exchanged = oauthSessionResponse(page);
-  await page.goto(oauthCallbackPath(session));
+  await page.goto(await oauthCallbackPath(page, session));
 
   const body = (await (await exchanged).json()) as { data?: { is_new_user?: boolean; user?: { id?: string } } };
   expect(body.data?.user?.id).toBe(acct.userId);
@@ -104,7 +104,7 @@ test('negative control: the same flow answered is_new_user=true DOES record and 
   await parkSignupAnalyticsAnswer(page, false);
   const session = await mintPasswordSession(acct);
   const exchanged = oauthSessionResponse(page);
-  await page.goto(oauthCallbackPath(session));
+  await page.goto(await oauthCallbackPath(page, session));
   await exchanged;
   expect(realIsNewUser, 'the only difference from the returning-user test is the stubbed flag').toBe(false);
 
@@ -130,7 +130,7 @@ test('new user (created seconds ago) with a parked decline: recorded and deliver
   await parkSignupAnalyticsAnswer(page, false);
   const session = await mintPasswordSession(acct);
   const exchanged = oauthSessionResponse(page);
-  await page.goto(oauthCallbackPath(session));
+  await page.goto(await oauthCallbackPath(page, session));
 
   const body = (await (await exchanged).json()) as { data?: { is_new_user?: boolean } };
   expect(body.data?.is_new_user, 'the backend classifies this sign-in as NEW (no stub)').toBe(true);

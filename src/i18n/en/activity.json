@@ -26,14 +26,21 @@
   "entries": {
     "medicationRescheduled": "Rescheduled Medication: {{title}} to {{time}}",
     "medicationNotTaken": "Skipped: {{title}} on {{date}}",
+    "medicationOccurrenceRemoved": "Removed dose: {{title}} on {{date}}",
+    "appointmentOccurrenceRemoved": "Removed appointment: {{title}} on {{date}}",
+    "taskOccurrenceRemoved": "Removed task: {{title}} on {{date}}",
     "recurrenceStopped": "Stopped recurrence for {{title}} from {{date}}",
+    "eventNoteAdded": "Added a note to {{title}}",
+    "careNoteAdded": "Added a daily care note",
     "memberInvited": {
       "careRecipient": "Invited {{email}} to join as Care Recipient",
       "caregiver": "Invited {{email}} to join as Caregiver"
     },
     "memberJoined": {
       "careRecipient": "{{name}} joined the circle as Care Recipient",
-      "caregiver": "{{name}} joined the circle as Caregiver"
+      "caregiver": "{{name}} joined the circle as Caregiver",
+      "careRecipientUnknown": "Someone joined the circle as care recipient",
+      "caregiverUnknown": "Someone joined the circle as caregiver"
     }
   },
   "phrases": {
@@ -66,6 +73,22 @@
     "stoppedRecurrence": "Stopped recurrence for",
     "fromDate": "from",
     "importedAppointment": "Imported {{count}} appointment from calendar",
-    "importedAppointments": "Imported {{count}} appointments from calendar"
+    "importedAppointments": "Imported {{count}} appointments from calendar",
+    "changedAnswer": "(changed another caregiver's answer)"
+  },
+  "sentences": {
+    "memberLeft": "A member left the circle",
+    "memberLeftNamed": "{{name}} left the circle",
+    "memberLeftAccountDeleted": "A member left the circle (account deleted)",
+    "memberLeftNamedAccountDeleted": "{{name}} left the circle (account deleted)",
+    "memberRemoved": "A member was removed from the circle",
+    "memberRemovedNamed": "{{name}} was removed from the circle",
+    "memberInvited": "A member was invited to the circle",
+    "memberJoined": "A member joined the circle",
+    "createdSelfCareCircleFor": "Created Self-Care Circle for {{name}}",
+    "discontinuedMedication": "Discontinued medication: {{title}}",
+    "reactivatedMedication": "Reactivated medication: {{title}}",
+    "rescheduledMedication": "Rescheduled Medication: {{title}} to {{time}}",
+    "addedNotes": "Added notes to {{title}}"
   }
 }

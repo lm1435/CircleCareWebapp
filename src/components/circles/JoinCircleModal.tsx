@@ -5,6 +5,7 @@ import { OtpInput, type OtpInputHandle } from '@/components/auth/OtpInput';
 import { getApiError } from '@/api/auth';
 import { useLookupInviteByCode, useAcceptInviteByCode } from '@/hooks/useJoinCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
+import { joinedCircleMessage } from '@/hooks/useOpenJoinedCircle';
 import { extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
@@ -164,7 +165,11 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
     if (accept.isPending || !acceptGuard.claim()) return;
     setError(null);
     accept.mutate(code, {
-      onSuccess: () => {
+      onSuccess: (result) => {
+        // The accept response names the circle actually joined; the looked-up
+        // invite is the fallback for a `circle: null` answer (the join still
+        // happened, and the look-up already told us which circle it was).
+        const joined = result.circle ?? invite.circle;
         // WB4: the code-entry join path fired no invite_accepted event —
         // the join-by-link path already does (InviteLandingPage). PHI-safe:
         // only the circle_id + a source enum, never the code itself.
@@ -172,9 +177,9 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
         // R4-5: joined their first circle here → onboarding complete. No-op
         // when this browser already saw the user with circles. Carries no code.
         trackOnboardingCompleted('joined');
-        showToast(t('joinModal.youveJoined', { circleName: invite.circle.name }), 'success');
+        showToast(joinedCircleMessage(t, joined), 'success');
         onClose();
-        onJoined(invite.circle.id);
+        onJoined(joined.id);
       },
       onError: (err) => {
         setError(joinErrorMessage(t, getApiError(err)?.code, t('joinModal.joinFailed')));

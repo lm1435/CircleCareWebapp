@@ -20,6 +20,7 @@ import {
   type CircleDetail,
   type CreateEventRequest,
   type DeleteEventOptions,
+  type DeleteEventResult,
   type EventsPresence,
   type MedicationStatusResult,
   type MedicationStatusScope,
@@ -32,6 +33,7 @@ import {
   isDoseAlreadyLoggedError,
   isInvalidOccurrenceDateError,
   isNotFoundError,
+  isRecurrenceDaysExcludeStartError,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
 } from '@/lib/apiErrors';
@@ -236,8 +238,14 @@ export function useMedicationRoster(
   circleId: string
 ): UseQueryResult<CalendarEvent[]> & UseCalendarEventsResult {
   const query = useQuery({
-    queryKey: [...queryKeys.calendarEvents(circleId), { includeDiscontinued: true }],
-    queryFn: () => getEvents(circleId, { includeDiscontinued: true }),
+    queryKey: [
+      ...queryKeys.calendarEvents(circleId),
+      { includeDiscontinued: true, includeInactiveRoots: true },
+    ],
+    // `includeInactiveRoots`: series roots of discontinued/ended meds with no
+    // row in the default window, so a med stopped long ago stays listed under
+    // Inactive. THIS request only — see GetEventsParams.
+    queryFn: () => getEvents(circleId, { includeDiscontinued: true, includeInactiveRoots: true }),
     enabled: !!circleId,
   });
   return { ...query, events: query.data ?? EMPTY_EVENTS };
@@ -376,15 +384,28 @@ function withCalendarRefreshCap(refreshed: Promise<void>): Promise<unknown> {
  * so the stale can_edit/view_only/read_only state refreshes — the backend
  * enforces access regardless of cached UI state.
  */
-function useEventMutationOnError(circleId: string): (error: unknown) => void {
+function useEventMutationOnError(
+  hookCircleId: string
+): (error: unknown, sentCircleId?: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  // Premium-gated write on a free-tier read-only circle — FEATURE. Circle-level
-  // (owner's tier): owner-aware.
-  const { promptUpgrade } = usePremiumGate('feature', { circleId });
+  // PK18: the only SUBSCRIPTION_REQUIRED an event write can get is the
+  // circle-wide lapsed-owner 403 (`requireCircleEditAccess`; the one premium
+  // 402 on the events routes is the calendar IMPORT, which web does not
+  // have). So it gets the LAPSED copy ("Your subscription has ended ... Your
+  // data is safe"), never the "not included in the free plan" gate copy.
+  // Circle-level (owner's tier): only the owner is offered Upgrade.
+  const { promptLapsed } = usePremiumGate('capacity', { circleId: hookCircleId });
   const { t } = useTranslation('calendar');
 
-  return (error: unknown) => {
+  // `sentCircleId`: the circle the failed request actually went to, when a
+  // caller can send somewhere other than the hook's own circle (useCompleteEvent
+  // with a per-call `circleId` — the undo-window commit). `unknown`, and only a
+  // string counts, because most mutations hand this function to TanStack as
+  // `onError` directly, and TanStack's second argument is the mutation
+  // VARIABLES object, never a circle id.
+  return (error: unknown, sentCircleId?: unknown) => {
+    const circleId = typeof sentCircleId === 'string' ? sentCircleId : hookCircleId;
     // Counted before it is classified for the UI — every failed event write
     // reaches the admin digest as `error_occurred`. ids/enums only: `code` is
     // the closed-set `classifyFailureCode` value, never the toast copy.
@@ -393,8 +414,7 @@ function useEventMutationOnError(circleId: string): (error: unknown) => void {
       code: classifyFailureCode(error),
     });
     if (isSubscriptionRequiredError(error)) {
-      // Web cannot transact — point the user at the app to upgrade.
-      promptUpgrade();
+      promptLapsed(circleId);
       invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
@@ -408,12 +428,24 @@ function useEventMutationOnError(circleId: string): (error: unknown) => void {
       // useless. Say what happened, then refetch: leaving the dead row on
       // screen only sets up the next press to fail the same way.
       showToast(t('errors.invalidOccurrenceDate'), 'error');
+      // EVERY surface that can draw the dead row, not just the calendar: the
+      // Tasks page and Home's Open tasks card read GET /tasks, and refetching
+      // only `calendarEvents` left the row there offering Done (plan
+      // mobile-e2e-parity P12; mobile refetches the same set).
+      void invalidateEventQueries(queryClient, circleId);
+    } else if (isRecurrenceDaysExcludeStartError(error)) {
+      // 400 RECURRENCE_DAYS_EXCLUDE_START: the day set left out the series'
+      // start weekday. Not retryable as posted — say which rule it broke, then
+      // refetch in case another member moved the series' start meanwhile.
+      showToast(t('errors.recurrenceDaysExcludeStart'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
     } else if (isNotFoundError(error)) {
       // 404: the row was deleted by another member between render and press.
       // Same stale-snapshot shape, same remedy.
       showToast(t('errors.eventNotFound'), 'error');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+      // Same set as the 400 above — a task deleted elsewhere stayed on the
+      // Tasks page / Open tasks card when only the calendar was refetched.
+      void invalidateEventQueries(queryClient, circleId);
     } else if (isDoseAlreadyLoggedError(error)) {
       // 409 DOSE_ALREADY_LOGGED: the edit tried to move a confirmed dose's
       // time. Not retryable — say exactly why, then refetch the real state.
@@ -482,7 +514,7 @@ export interface DeleteEventVariables extends DeleteEventOptions {
  */
 export function useDeleteEvent(
   circleId: string
-): UseMutationResult<void, unknown, DeleteEventVariables> {
+): UseMutationResult<DeleteEventResult, unknown, DeleteEventVariables> {
   const queryClient = useQueryClient();
   const onError = useEventMutationOnError(circleId);
 
@@ -563,6 +595,14 @@ export interface CompleteEventVariables {
    * by its own id), which keeps that request body-less and unchanged.
    */
   scheduledDate?: string;
+  /**
+   * THE CIRCLE TO SEND TO, when it must not be the hook's own. The task undo
+   * window (useTaskCompletion) commits up to 5s after the tap — on its timer or
+   * in a flush — and by then the hook may be rendering a different circle; the
+   * request, its analytics and its cache invalidation all belong to the circle
+   * the tap was made in. Omitted, the hook's `circleId` is used, as before.
+   */
+  circleId?: string;
 }
 
 /** POST /circles/:circleId/events/:eventId/complete — complete a task/appt. */
@@ -573,18 +613,19 @@ export function useCompleteEvent(
   const onError = useEventMutationOnError(circleId);
 
   return useMutation({
-    mutationFn: ({ eventId, scheduledDate }: CompleteEventVariables) =>
-      completeEvent(circleId, eventId, scheduledDate),
+    mutationFn: ({ eventId, scheduledDate, circleId: sentCircleId }: CompleteEventVariables) =>
+      completeEvent(sentCircleId ?? circleId, eventId, scheduledDate),
     onSuccess: (event, variables) => {
+      const sentCircleId = variables.circleId ?? circleId;
       // PHI-safe: only circle_id. Branch on the event_type enum so appointments
       // and tasks land on the matching mobile event names.
       if (event?.event_type === 'appointment') {
-        Analytics.appointmentCompleted(circleId);
+        Analytics.appointmentCompleted(sentCircleId);
       } else {
-        Analytics.taskCompleted(circleId);
+        Analytics.taskCompleted(sentCircleId);
       }
-      void invalidateEventQueries(queryClient, circleId, variables.eventId);
+      void invalidateEventQueries(queryClient, sentCircleId, variables.eventId);
     },
-    onError,
+    onError: (error, variables) => onError(error, variables.circleId ?? circleId),
   });
 }

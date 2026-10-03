@@ -1,10 +1,29 @@
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { getWeekdayName } from './dateMath';
+import { getWeekdayName, orderedWeekdays } from './dateMath';
 
 // Local translate-fn type (mirrors mobile/src/utils/recurrenceFormat.ts) —
 // avoids coupling to i18next's generic TFunction signature.
 type TranslateFn = (key: string, opts?: Record<string, unknown>) => string;
+
+/**
+ * "Mon, Wed, Fri" / "lun, mié, vie" — short Intl weekday names in the LOCALE's
+ * week order (`es` starts Monday, `en` Sunday; see `firstDayOfWeek`), joined
+ * with ", ". Values outside 0..6 and duplicates are dropped; the input order is
+ * irrelevant, so the same set always renders the same string. Empty string for
+ * no valid day. Mobile's `recurrenceFormat` produces the identical string.
+ */
+export function formatWeekdayList(
+  days: readonly number[] | null | undefined,
+  locale: string = i18n.language
+): string {
+  if (!days || days.length === 0) return '';
+  const set = new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6));
+  return orderedWeekdays(locale)
+    .filter((d) => set.has(d))
+    .map((d) => getWeekdayName(d, 'short', locale))
+    .join(', ');
+}
 
 /**
  * Human-readable recurrence label. PORT of mobile's
@@ -29,11 +48,7 @@ export function formatRecurrenceLabel(
   if (rule === 'weekly') {
     const days = event.recurrence_days;
     if (days && days.length > 0) {
-      const names = [...days]
-        .filter((d) => d >= 0 && d <= 6)
-        .sort((a, b) => a - b)
-        .map((d) => getWeekdayName(d, 'short', locale))
-        .join(', ');
+      const names = formatWeekdayList(days, locale);
       if (names) return t('calendar:recurrence.weeklyOn', { days: names });
     }
     return t('calendar:recurrence.weekly');

@@ -8,6 +8,7 @@ import {
   INPUT_LABEL,
   INPUT_TEXT,
   fieldShell,
+  focusControlOnShellPress,
 } from './inputStyles';
 
 export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -43,7 +44,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
           {required ? <RequiredMarker /> : null}
         </Text>
       </label>
-      <div className={shell}>
+      <div className={shell} onMouseDown={focusControlOnShellPress}>
         <textarea
           ref={ref}
           id={id}

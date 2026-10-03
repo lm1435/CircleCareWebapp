@@ -115,6 +115,16 @@ describe('Header', () => {
   });
 
   describe('circle switcher', () => {
+    // a11y audit 2026-09-29 (WCAG 1.4.10): at 320px the switcher must be able
+    // to give up width (its name truncates) instead of widening the header.
+    it('lets the switcher shrink below its content width', () => {
+      renderHeader('/circles/c1/calendar');
+      const trigger = screen.getByRole('button', { name: /Mom's Care/ });
+      expect(trigger.className).toContain('max-w-full');
+      expect(trigger.parentElement?.className).toContain('min-w-0');
+      expect(trigger.querySelector('span')?.className).toContain('min-w-0');
+    });
+
     it('shows the current circle name on the trigger', () => {
       renderHeader('/circles/c1/calendar');
       expect(screen.getByRole('button', { name: /Mom's Care/ })).toHaveAttribute(
@@ -327,6 +337,52 @@ describe('Header', () => {
       expect(within(menu).getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument();
       expect(within(menu).getByRole('menuitem', { name: 'Help & FAQ' })).toBeInTheDocument();
       expect(within(menu).getByRole('menuitem', { name: LOGOUT })).toBeInTheDocument();
+    });
+
+    it('identity block uses the name/email hierarchy classes', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      await user.click(screen.getByRole('button', { name: 'Account' }));
+      const menu = screen.getByRole('menu', { name: 'Account' });
+      const name = within(menu).getByText('Pat Lee');
+      expect(name).toHaveClass('text-md', 'font-semibold', 'text-ink', 'truncate', 'm-0');
+      const email = name.nextElementSibling;
+      expect(email).toHaveClass('text-sm', 'text-ink-3', 'truncate', 'm-0');
+      expect(name.parentElement).toHaveClass('px-3', 'pt-2', 'pb-3');
+      expect(name.parentElement).not.toHaveClass('border-b');
+    });
+
+    it('separates identity / Profile+Help / Sign out with standalone dividers', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      await user.click(screen.getByRole('button', { name: 'Account' }));
+      const menu = screen.getByRole('menu', { name: 'Account' });
+      const children = Array.from(menu.children);
+      const isDivider = (el: Element): boolean =>
+        el.getAttribute('role') === 'presentation' && el.classList.contains('border-t');
+      const help = within(menu).getByRole('menuitem', { name: 'Help & FAQ' });
+      const logout = within(menu).getByRole('menuitem', { name: LOGOUT });
+      expect(isDivider(children[1])).toBe(true);
+      expect(isDivider(help.nextElementSibling as Element)).toBe(true);
+      expect(help.nextElementSibling?.nextElementSibling).toBe(logout);
+      expect(children.filter(isDivider)).toHaveLength(2);
+    });
+
+    it('renders no identity divider when there is no user', async () => {
+      const user = userEvent.setup();
+      useAuthStore.setState({ user: null });
+      renderHeader();
+
+      await user.click(screen.getByRole('button', { name: 'Account' }));
+      const menu = screen.getByRole('menu', { name: 'Account' });
+      const dividers = Array.from(menu.children).filter(
+        (el) => el.getAttribute('role') === 'presentation'
+      );
+      // Only the divider before Sign out remains; nothing floats at the top.
+      expect(dividers).toHaveLength(1);
+      expect(menu.firstElementChild).not.toBe(dividers[0]);
     });
 
     // Spec §5.6: logout is one click from every page, so it asks first.

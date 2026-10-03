@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 import '@/i18n';
@@ -48,6 +48,33 @@ vi.mock('@/hooks/useCalendarEvents', () => ({
   useCreateEvent: () => ({ mutateAsync: mutateCreate, isPending: false }),
   useUpdateEvent: () => ({ mutateAsync: mutateUpdate, isPending: false }),
   useCachedCircleEvents: () => cachedEventsMock,
+}));
+
+// Series-root resolution (hooks/useSeriesRoot) runs a React Query fetch, and
+// this file mounts no QueryClient — so it is replaced by its contract: the
+// event itself when it IS a root, and for an occurrence whatever
+// `seriesRootOverride` says (`{ root: undefined }` = still resolving), else a
+// root on the occurrence's own date (the pre-hook behavior, so every existing
+// occurrence case below keeps its meaning). The real resolution order is
+// pinned in hooks/__tests__/useSeriesRoot.test.tsx.
+//
+// STABLE IDENTITY per event, like the real hook's (a cached row or
+// `query.data`): the form's hydration effects key on the root object, and a
+// fresh object every render would re-hydrate forever.
+let seriesRootOverride: { root: Partial<CalendarEvent> | null | undefined } | null = null;
+const derivedRoots = new WeakMap<CalendarEvent, { root: CalendarEvent }>();
+vi.mock('@/hooks/useSeriesRoot', () => ({
+  useSeriesRoot: (_circleId: string, event: CalendarEvent | null | undefined) => {
+    if (!event) return { root: null };
+    if (!event.parent_event_id) return { root: event };
+    if (seriesRootOverride) return seriesRootOverride;
+    let derived = derivedRoots.get(event);
+    if (!derived) {
+      derived = { root: { ...event, id: event.parent_event_id, parent_event_id: null } };
+      derivedRoots.set(event, derived);
+    }
+    return derived;
+  },
 }));
 
 const useCircleResult = {
@@ -136,6 +163,7 @@ beforeEach(() => {
   // the next, where the escalation copy would silently change under it.
   useCircleResult.circle = undefined;
   cachedEventsMock = [];
+  seriesRootOverride = null;
   mutateCreate.mockResolvedValue(makeEvent());
   mutateUpdate.mockResolvedValue(makeEvent());
 });
@@ -353,13 +381,15 @@ describe('AddEventModal', () => {
       expect(mutateUpdate.mock.calls[0][0].data.duration_minutes).toBe(180);
     });
 
-    it('refuses, rather than truncates, when the end really does cross midnight', async () => {
+    it('SAVES a span that crosses midnight, counted the way mobile counts it (PK21)', async () => {
+      // Was a refusal while web compared clock minutes. Mobile reads an end at
+      // or before the start as the NEXT day (`resolveEndTime`), so the two apps
+      // now agree: 23:00 NY hydrates to 21:00 MT; +240 rolls to 01:00 = 240 min.
       const user = userEvent.setup();
       const stored = makeEvent({
         event_type: 'appointment',
         title: 'Night shift handover',
         scheduled_date: '2026-06-15',
-        // 23:00 NY hydrates to 21:00 MT; +240 rolls past midnight to 01:00.
         scheduled_time: '23:00:00',
         duration_minutes: 240,
       });
@@ -368,10 +398,9 @@ describe('AddEventModal', () => {
       expect((screen.getByLabelText(/^End time/) as HTMLInputElement).value).toBe('01:00');
 
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
-
-      // Loud, not silent: nothing is written and the user is told.
-      expect(mutateUpdate).not.toHaveBeenCalled();
-      expect(screen.getByLabelText(/^End time/)).toHaveAttribute('aria-invalid', 'true');
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      expect(mutateUpdate.mock.calls[0][0].data.duration_minutes).toBe(240);
+      expect(screen.getByLabelText(/^End time/)).not.toHaveAttribute('aria-invalid', 'true');
     });
 
     it('keeps scheduled_date and recurrence_end_date in the SAME frame', async () => {
@@ -1696,6 +1725,115 @@ describe('AddEventModal', () => {
       expect(args.data.assigned_to).toBeNull();
     });
   });
+
+  // An independent care recipient with their own phone can OWN a task (e.g.
+  // meal-time reminders): the backend accepts them as `assigned_to` and sends
+  // the reminder only to the assignee. The picker used to filter them out —
+  // every case below fails if `.filter((m) => !m.is_care_recipient)` returns.
+  describe('assignee — the care recipient is assignable', () => {
+    // Circle member order as useCircleMembers sorts it: owner, recipient,
+    // caregivers. The picker must keep that order, recipient in place.
+    // Real UUIDs: the form's Zod schema requires `assigned_to` to be one.
+    const OWNER_ID = '11111111-1111-4111-8111-111111111111';
+    const RECIPIENT_ID = '22222222-2222-4222-8222-222222222222';
+    const CAREGIVER_ID = '33333333-3333-4333-8333-333333333333';
+    const MEMBERS = [
+      { id: OWNER_ID, first_name: 'Tess', email: 't@example.com', is_care_recipient: false },
+      { id: RECIPIENT_ID, first_name: 'Ray', email: 'r@example.com', is_care_recipient: true },
+      { id: CAREGIVER_ID, first_name: null, email: 'cara@example.com', is_care_recipient: false },
+    ];
+
+    function assigneeSelect(): HTMLSelectElement {
+      return document.getElementById('assigned_to') as HTMLSelectElement;
+    }
+
+    function optionLabels(): string[] {
+      return Array.from(assigneeSelect().options).map((o) => o.textContent ?? '');
+    }
+
+    afterEach(async () => {
+      const { default: i18n } = await import('@/i18n');
+      if (i18n.language !== 'en') await i18n.changeLanguage('en');
+    });
+
+    it('lists Anyone first, then every member in order with the recipient captioned (EN)', () => {
+      useCircleResult.members = MEMBERS;
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+
+      expect(optionLabels()).toEqual(['Anyone', 'Tess', 'Ray · Care recipient', 'cara']);
+      expect(Array.from(assigneeSelect().options).map((o) => o.value)).toEqual([
+        '',
+        OWNER_ID,
+        RECIPIENT_ID,
+        CAREGIVER_ID,
+      ]);
+      // Default stays "Anyone" (unassigned).
+      expect(assigneeSelect()).toHaveValue('');
+    });
+
+    it('captions the recipient in Spanish', async () => {
+      const { default: i18n } = await import('@/i18n');
+      await i18n.changeLanguage('es');
+      useCircleResult.members = MEMBERS;
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+
+      expect(optionLabels()).toContain('Ray · Receptor de cuidado');
+      expect(optionLabels()).toContain('Tess');
+    });
+
+    it('creates a task assigned to the recipient (his user_id is sent as assigned_to)', async () => {
+      const user = userEvent.setup();
+      useCircleResult.members = MEMBERS;
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+
+      await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Lunch');
+      const timeField = screen.getByLabelText(/^Time/) as HTMLInputElement;
+      await user.clear(timeField);
+      await user.type(timeField, '12:00');
+      await user.selectOptions(screen.getByLabelText('Assigned to'), RECIPIENT_ID);
+      expect(assigneeSelect()).toHaveValue(RECIPIENT_ID);
+
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+      expect(mutateCreate.mock.calls[0][0].assigned_to).toBe(RECIPIENT_ID);
+    });
+
+    it('hydrates a recipient-assigned task on edit and keeps him (not reset to Anyone)', async () => {
+      const user = userEvent.setup();
+      useCircleResult.members = MEMBERS;
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeEvent({ event_type: 'task', assigned_to: RECIPIENT_ID, duration_minutes: 30 })}
+          onClose={vi.fn()}
+        />
+      );
+
+      // The validity effect drops an assignee missing from the options' source
+      // list — a recipient must survive it.
+      expect(assigneeSelect()).toHaveValue(RECIPIENT_ID);
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      expect(mutateUpdate.mock.calls[0][0].data.assigned_to).toBe(RECIPIENT_ID);
+    });
+
+    it('reassigns an existing task from a caregiver to the recipient', async () => {
+      const user = userEvent.setup();
+      useCircleResult.members = MEMBERS;
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeEvent({ event_type: 'task', assigned_to: OWNER_ID, duration_minutes: 30 })}
+          onClose={vi.fn()}
+        />
+      );
+
+      await user.selectOptions(screen.getByLabelText('Assigned to'), RECIPIENT_ID);
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      expect(mutateUpdate.mock.calls[0][0].data.assigned_to).toBe(RECIPIENT_ID);
+    });
+  });
 });
 
 /**
@@ -1949,5 +2087,459 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     });
+  });
+});
+
+// ── Days of the week (docs/plans/weekly-days-of-week.md, Task 25) ────────────
+//
+// "Today" is frozen at 2026-06-15T18:00:00Z = Monday 14:00 in New York (the
+// recipient's zone). Only Date is faked, so userEvent's timers stay real.
+// Weekdays used below (0=Sun): 06-01 Mon, 06-15 Mon, 06-16 Tue, 06-17 Wed,
+// 06-23 Tue, 06-25 Thu. Every case is an ALL-DAY task/appointment, so the
+// viewer and recipient dates are the same string and nothing here depends on
+// the zone conversion (which has its own suite above).
+describe('AddEventModal — days of the week', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-06-15T18:00:00Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const chip = (name: string): HTMLElement => screen.getByRole('checkbox', { name });
+  const repeatGroup = (): HTMLElement => screen.getByRole('group', { name: 'Repeat on' });
+
+  /** A series ROOT, all-day, so no end-time validation gets in the way. */
+  function makeSeries(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+    return makeEvent({
+      id: 'root-1',
+      event_type: 'task',
+      title: 'Physio exercises',
+      scheduled_time: null,
+      recurrence_rule: 'weekly',
+      ...overrides,
+    });
+  }
+
+  async function createTaskOn(date: string): Promise<ReturnType<typeof userEvent.setup>> {
+    const user = userEvent.setup();
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Physio exercises');
+    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
+    await user.clear(dateInput);
+    await user.type(dateInput, date);
+    return user;
+  }
+
+  it('offers "Days of the week" as the LAST repeat option, right after Cycle', () => {
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+    const options = within(screen.getByLabelText('Repeat')).getAllByRole('option');
+    expect(options.map((o) => o.textContent).slice(-2)).toEqual([
+      'Cycle (days on / off)',
+      'Days of the week',
+    ]);
+    expect(options[options.length - 1]).toHaveValue('days_of_week');
+    // Hidden until chosen, like the Cycle inputs.
+    expect(screen.queryByRole('group', { name: 'Repeat on' })).not.toBeInTheDocument();
+  });
+
+  it('reveals the chips inline in week order and pre-selects the start date weekday', async () => {
+    const user = await createTaskOn('2026-06-16'); // Tuesday
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+
+    const names = within(repeatGroup())
+      .getAllByRole('checkbox')
+      .map((el) => el.getAttribute('aria-label'));
+    // EN weeks start on Sunday; full names are the accessible names.
+    expect(names).toEqual([
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ]);
+    expect(chip('Tuesday')).toHaveAttribute('aria-checked', 'true');
+    expect(chip('Monday')).toHaveAttribute('aria-checked', 'false');
+    // Short visible names; the summary line under the chips.
+    expect(chip('Tuesday')).toHaveTextContent('Tue');
+    expect(within(repeatGroup().parentElement!.parentElement!).getByText('Tue', { selector: 'p' }))
+      .toBeInTheDocument();
+    // Nothing moves — the start day is selected — and nothing is locked on a create.
+    expect(screen.queryByText(/^First time:/)).not.toBeInTheDocument();
+    expect(chip('Tuesday')).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('creates weekly + the chosen days and moves the start to the first selected day', async () => {
+    const user = await createTaskOn('2026-06-16'); // Tuesday
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await user.click(chip('Tuesday')); // off
+    await user.click(chip('Friday'));
+    await user.click(chip('Monday'));
+    await user.click(chip('Wednesday'));
+
+    expect(screen.getByText('Mon, Wed, Fri')).toBeInTheDocument();
+    // Tuesday is not selected: the series cannot start there.
+    expect(screen.getByText('First time: Wed, Jun 17')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    const payload = mutateCreate.mock.calls[0][0];
+    expect(payload.recurrence_rule).toBe('weekly');
+    expect(payload.recurrence_days).toEqual([1, 3, 5]);
+    expect(payload.scheduled_date).toBe('2026-06-17');
+  });
+
+  it('a single day is weekly + [that day], with the start left where it is', async () => {
+    const user = await createTaskOn('2026-06-16');
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    const payload = mutateCreate.mock.calls[0][0];
+    expect(payload.recurrence_rule).toBe('weekly');
+    expect(payload.recurrence_days).toEqual([2]);
+    expect(payload.scheduled_date).toBe('2026-06-16');
+  });
+
+  it('refuses to save with no day selected: inline error, focus on the chips, no request', async () => {
+    const user = await createTaskOn('2026-06-16');
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    await user.click(chip('Tuesday')); // now empty
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(mutateCreate).not.toHaveBeenCalled();
+    const error = screen.getByText('Choose at least one day');
+    // The error is among the descriptions (the PK23 zone note may follow it).
+    expect(repeatGroup().getAttribute('aria-describedby')!.split(' ')).toContain(error.closest('p')!.id);
+    expect(repeatGroup()).toHaveFocus();
+
+    // Picking a day clears the error and the save goes through.
+    await user.click(chip('Thursday'));
+    expect(screen.queryByText('Choose at least one day')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+  });
+
+  it('all seven days are saved as Daily, with no day list', async () => {
+    const user = await createTaskOn('2026-06-16');
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    for (const day of ['Sunday', 'Monday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']) {
+      await user.click(chip(day));
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    const payload = mutateCreate.mock.calls[0][0];
+    expect(payload.recurrence_rule).toBe('daily');
+    expect(payload).not.toHaveProperty('recurrence_days');
+    expect(payload.scheduled_date).toBe('2026-06-16');
+  });
+
+  it('Space toggles a focused chip (keyboard parity with a click)', async () => {
+    const user = await createTaskOn('2026-06-16');
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    chip('Thursday').focus();
+    await user.keyboard(' ');
+    expect(chip('Thursday')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  describe('editing a series that has STARTED', () => {
+    it('hydrates the stored days and locks the anchor weekday on with the note', async () => {
+      const user = userEvent.setup();
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [5, 1, 3] })}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(screen.getByLabelText('Repeat')).toHaveValue('days_of_week');
+      expect(chip('Monday')).toHaveAttribute('aria-checked', 'true');
+      expect(chip('Wednesday')).toHaveAttribute('aria-checked', 'true');
+      expect(chip('Friday')).toHaveAttribute('aria-checked', 'true');
+
+      const note = screen.getByText(
+        'Started on Monday. To remove Monday, end this series and add a new one.'
+      );
+      expect(chip('Monday')).toHaveAttribute('aria-disabled', 'true');
+      expect(chip('Monday')).toHaveAttribute('aria-describedby', note.id);
+      // Only the anchor is locked.
+      expect(chip('Wednesday')).not.toHaveAttribute('aria-disabled');
+
+      // Neither a click nor Space removes it.
+      await user.click(chip('Monday'));
+      chip('Monday').focus();
+      await user.keyboard(' ');
+      expect(chip('Monday')).toHaveAttribute('aria-checked', 'true');
+
+      await user.click(chip('Wednesday')); // off
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      const { eventId, data } = mutateUpdate.mock.calls[0][0];
+      expect(eventId).toBe('root-1');
+      expect(data.recurrence_rule).toBe('weekly');
+      expect(data.recurrence_days).toEqual([1, 5]);
+      // The anchor never moves on a started series.
+      expect(data.scheduled_date).toBe('2026-06-01');
+    });
+
+    it('locks the ROOT anchor weekday, not the weekday of the occurrence that was opened', async () => {
+      // The Calendar opens the form with a VIRTUAL occurrence (Wed 06-17): it
+      // carries the rule but neither the root's date nor its days.
+      seriesRootOverride = {
+        root: {
+          id: 'root-1',
+          scheduled_date: '2026-06-01', // Monday
+          scheduled_time: null,
+          recurrence_rule: 'weekly',
+          recurrence_days: [1, 3],
+          recurrence_end_date: null,
+        },
+      };
+      const user = userEvent.setup();
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeSeries({
+            id: 'root-1_2026-06-17',
+            parent_event_id: 'root-1',
+            is_virtual: true,
+            scheduled_date: '2026-06-17',
+          })}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(screen.getByLabelText('Repeat')).toHaveValue('days_of_week');
+      expect(chip('Monday')).toHaveAttribute('aria-disabled', 'true');
+      expect(chip('Wednesday')).not.toHaveAttribute('aria-disabled');
+      // The form edits the SERIES, so it shows the series' start date.
+      expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-06-01');
+
+      await user.click(chip('Wednesday')); // off — allowed, it is not the anchor
+      await user.click(chip('Thursday'));
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      const { eventId, data } = mutateUpdate.mock.calls[0][0];
+      expect(eventId).toBe('root-1');
+      expect(data.recurrence_days).toEqual([1, 4]);
+      // Never the occurrence's date written onto the root.
+      expect(data.scheduled_date).toBe('2026-06-01');
+    });
+
+    it('refuses to save while the series root is still being resolved', async () => {
+      seriesRootOverride = { root: undefined };
+      const user = userEvent.setup();
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeSeries({
+            id: 'root-1_2026-06-17',
+            parent_event_id: 'root-1',
+            is_virtual: true,
+            scheduled_date: '2026-06-17',
+          })}
+          onClose={vi.fn()}
+        />
+      );
+
+      // Empty rather than the occurrence's date standing in for the root's.
+      expect(screen.getByLabelText(/^Date/)).toHaveValue('');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      expect(mutateUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('leaving a days series', () => {
+    it('switching back to plain Weekly sends recurrence_days: null (clears the set)', async () => {
+      const user = userEvent.setup();
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [1, 3, 5] })}
+          onClose={vi.fn()}
+        />
+      );
+      await user.selectOptions(screen.getByLabelText('Repeat'), 'weekly');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      const { data } = mutateUpdate.mock.calls[0][0];
+      expect(data.recurrence_rule).toBe('weekly');
+      expect(data).toHaveProperty('recurrence_days', null);
+    });
+
+    it('switching to Daily also clears the set explicitly', async () => {
+      const user = userEvent.setup();
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [1, 3, 5] })}
+          onClose={vi.fn()}
+        />
+      );
+      await user.selectOptions(screen.getByLabelText('Repeat'), 'daily');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      const { data } = mutateUpdate.mock.calls[0][0];
+      expect(data.recurrence_rule).toBe('daily');
+      expect(data).toHaveProperty('recurrence_days', null);
+    });
+
+    it('an untouched plain Weekly series never writes a day list, null or otherwise', async () => {
+      const user = userEvent.setup();
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: null })}
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.getByLabelText('Repeat')).toHaveValue('weekly');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      expect(mutateUpdate.mock.calls[0][0].data).not.toHaveProperty('recurrence_days');
+    });
+  });
+
+  it('a series that has NOT started moves its start to the first selected day, unlocked', async () => {
+    const user = userEvent.setup();
+    render(
+      <AddEventModal
+        circleId={CIRCLE_ID}
+        event={makeSeries({ scheduled_date: '2026-06-23', recurrence_days: null })} // Tue, future
+        onClose={vi.fn()}
+      />
+    );
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    expect(chip('Tuesday')).toHaveAttribute('aria-checked', 'true');
+    expect(chip('Tuesday')).not.toHaveAttribute('aria-disabled');
+    expect(screen.queryByText(/^Started on/)).not.toBeInTheDocument();
+
+    await user.click(chip('Tuesday')); // off — allowed before the series starts
+    await user.click(chip('Thursday'));
+    expect(screen.getByText('First time: Thu, Jun 25')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+    const { data } = mutateUpdate.mock.calls[0][0];
+    expect(data.recurrence_days).toEqual([4]);
+    expect(data.scheduled_date).toBe('2026-06-25');
+  });
+});
+
+// ── B9b: PK21 start/end + PK23 zone note ─────────────────────────────────────
+describe('PK21: moving the start moves the end', () => {
+  const timeInput = () => screen.getByLabelText(/^Time/) as HTMLInputElement;
+  const endInput = () => screen.getByLabelText(/^End time/) as HTMLInputElement;
+
+  it('keeps the duration when the start changes (edit: 14:00 NY = 12:00 MT, 60 min)', async () => {
+    const user = userEvent.setup();
+    const stored = makeEvent({ scheduled_time: '14:00:00', duration_minutes: 60 });
+    render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
+    expect(timeInput().value).toBe('12:00');
+    expect(endInput().value).toBe('13:00');
+
+    fireEvent.change(timeInput(), { target: { value: '15:30' } });
+    expect(endInput().value).toBe('16:30');
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+    expect(mutateUpdate.mock.calls[0][0].data.duration_minutes).toBe(60);
+  });
+
+  it('wraps past midnight instead of clamping at 23:59 (22:00-23:00 moved to 23:30 ends 00:30)', async () => {
+    const user = userEvent.setup();
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Late visit');
+    fireEvent.change(timeInput(), { target: { value: '22:00' } });
+    fireEvent.change(endInput(), { target: { value: '23:00' } });
+    fireEvent.change(timeInput(), { target: { value: '23:30' } });
+    expect(endInput().value).toBe('00:30');
+
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0].duration_minutes).toBe(60);
+  });
+
+  it('a hand-typed midnight-crossing end saves as the next-day span (23:45 -> 00:15 = 30)', async () => {
+    const user = userEvent.setup();
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Night call');
+    fireEvent.change(timeInput(), { target: { value: '23:45' } });
+    fireEvent.change(endInput(), { target: { value: '00:15' } });
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0].duration_minutes).toBe(30);
+  });
+
+  it('a NEW entry still gets the 30-minute default end', async () => {
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    fireEvent.change(timeInput(), { target: { value: '09:00' } });
+    expect(endInput().value).toBe('09:30');
+  });
+});
+
+describe('PK21: editing a row stored without a duration', () => {
+  it('opens with no end, does not require one, and saves without duration_minutes', async () => {
+    const user = userEvent.setup();
+    const stored = makeEvent({ scheduled_time: '14:00:00' }); // no duration_minutes
+    render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
+    const end = screen.getByLabelText(/^End time/) as HTMLInputElement;
+    expect(end.value).toBe('');
+    expect(end).not.toBeRequired();
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+    expect(mutateUpdate.mock.calls[0][0].data.duration_minutes).toBeUndefined();
+    expect(end).not.toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('moving its start does not invent an end', async () => {
+    const stored = makeEvent({ scheduled_time: '14:00:00' });
+    render(<AddEventModal circleId={CIRCLE_ID} event={stored} onClose={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '16:00' } });
+    expect((screen.getByLabelText(/^End time/) as HTMLInputElement).value).toBe('');
+  });
+});
+
+describe('PK23: the weekday chips name the recipient zone only when it differs', () => {
+  afterEach(() => {
+    useCircleResult.timezone = RECIPIENT_TZ;
+  });
+
+  async function openDays() {
+    const user = userEvent.setup();
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+    await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
+    return screen.getByRole('group', { name: 'Repeat on' });
+  }
+
+  it('viewer (Denver) vs recipient (New York): the note shows and describes the group', async () => {
+    useCircleResult.circle = { recipient_name: 'Rosa' };
+    const group = await openDays();
+    const note = screen.getByText(/^Days are in Rosa's time zone/);
+    expect(note).toBeInTheDocument();
+    expect(group.getAttribute('aria-describedby')).toContain(note.id);
+  });
+
+  it('no recipient name: the generic note', async () => {
+    await openDays();
+    expect(screen.getByText(/^Days are in their time zone/)).toBeInTheDocument();
+  });
+
+  it('same zone: no note at all', async () => {
+    useCircleResult.timezone = 'America/Denver';
+    useCircleResult.circle = { recipient_name: 'Rosa' };
+    const group = await openDays();
+    expect(screen.queryByText(/^Days are in /)).not.toBeInTheDocument();
+    expect(group.getAttribute('aria-describedby')).toBeNull();
   });
 });

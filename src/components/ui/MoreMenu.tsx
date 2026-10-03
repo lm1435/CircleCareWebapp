@@ -254,13 +254,16 @@ function itemClasses(item: MoreMenuItem): string {
  *
  * What that leaves: a call site whose clip is DECORATIVE should drop it (see
  * MembersPage / CareTeam) and the panel is then free. A call site whose clip is
- * LOAD-BEARING — VitalsPage's rows sit in the `Accordion`'s `0fr→1fr` collapse
- * wrapper, which cannot simply lose its `overflow-hidden` — keeps the clip, and
- * an escalated panel is still PAINTED clipped by it. It is operable there
- * (uncapped, so the browser can scroll the item into view, and the keyboard
- * path is untouched) but not fully visible; that is the same rendering the page
- * shipped before the cap existed. The portal, or an `Accordion` that stops
- * clipping once it is fully open, is what actually makes it visible.
+ * LOAD-BEARING keeps the clip, and an escalated panel is still PAINTED clipped
+ * by it (operable by keyboard, not fully visible). The `Accordion` collapse
+ * wrapper used to be exactly that case — a one-reading Vitals group put "Edit"
+ * under the next section — and is no longer: `Accordion` now applies its
+ * `overflow-hidden` only while closed or animating and drops it once the open
+ * transition ends ("CLIP ONLY WHILE MOVING" in Accordion.tsx), so a menu in an
+ * open section measures against the viewport and paints whole. Proved in the
+ * browser by e2e/flows/vitals.spec.ts. What remains clipped by design is a
+ * menu inside a `Modal` body, whose `overflow-y-auto` IS the scroll container;
+ * the measurement keeps the panel inside it.
  *
  * Grouping: pass an explicit `{ divider: true }` entry to control the
  * hairlines yourself and the list renders in the order given. With no explicit
@@ -387,7 +390,10 @@ export function MoreMenu({
           ref={menu.menuRef}
           id={menuId}
           role="menu"
-          aria-label={t('common:moreActions')}
+          // Named BY ITS TRIGGER (WCAG 4.1.2 / 2.4.6): the Tasks sort pill's
+          // menu used to announce as "More actions" instead of "Sort: Due
+          // date". Both trigger kinds carry `triggerProps.id`.
+          aria-labelledby={triggerProps.id}
           onKeyDown={menu.onMenuKeyDown}
           // `max-height` is set ONLY when the panel cannot fit whole in the
           // chosen direction; it then scrolls internally rather than hanging

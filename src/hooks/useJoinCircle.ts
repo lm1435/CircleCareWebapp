@@ -6,6 +6,7 @@ import {
 import {
   lookupInviteByCode,
   acceptInviteByCode,
+  type AcceptInviteResponse,
   type InviteByCode,
 } from '@/api/invites';
 import { queryKeys } from '@/lib/queryKeys';
@@ -34,15 +35,22 @@ export function useLookupInviteByCode(): UseMutationResult<InviteByCode, unknown
  * accepting by code can resolve the SAME invite that shows up in
  * `/invites/pending` (e.g. the visitor typed the code instead of tapping the
  * emailed link), which would otherwise keep showing a now-stale "Accept" row.
+ *
+ * The invalidations are RETURNED (awaited), not fired and forgotten: the
+ * mutation — and so `mutateAsync` / per-call `onSuccess` — settles only once the
+ * active circle list has refetched, so a caller that then opens the joined
+ * circle finds it already in the cache (header switcher included).
  */
-export function useAcceptInviteByCode(): UseMutationResult<void, unknown, string> {
+export function useAcceptInviteByCode(): UseMutationResult<AcceptInviteResponse, unknown, string> {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (code: string) => acceptInviteByCode(code),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.invitesPending });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.invitesPending }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.circles }),
+      ]);
     },
   });
 }

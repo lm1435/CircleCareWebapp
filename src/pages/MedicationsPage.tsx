@@ -35,6 +35,10 @@ import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 import { useMedicationRoster, useMedicationStatus } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
 import { getRosterMedKey, getSeriesRoot, indexSeriesContent } from '@/utils/medicationGrouping';
+// THE shared "ended" definition (synced from mobile/src/pdf/shared): the Care
+// Summary PDF uses the same helper, so the roster and the printout can never
+// disagree about whether a medication is current.
+import { isMedicationSeriesEnded } from '@/pdf/shared/medicationSelection';
 import { MedicationDetailModal } from '@/components/meds/MedicationDetailModal';
 import { AdherenceHero } from '@/components/meds/AdherenceHero';
 import { HistoryList } from '@/components/meds/HistoryList';
@@ -47,7 +51,11 @@ import {
 import { useMedicationConfirmations } from '@/hooks/useMedConfirmation';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
-import { formatEventTimeCompact } from '@/utils/timezone';
+import {
+  formatEventTimeCompact,
+  getCachedDateTimeFormat,
+  getDateInTimezone,
+} from '@/utils/timezone';
 import { Analytics } from '@/lib/analytics';
 
 // The Medications page (spec §6.4), mirroring mobile's MedicationHistoryScreen:
@@ -82,6 +90,22 @@ interface MedGroup {
   recurrenceEvent: CalendarEvent | null;
   inactive: boolean;
   /**
+   * Set only on an INACTIVE group none of whose rows is discontinued — the
+   * medication stopped because its series ENDED ("This & future" delete, or an
+   * end date that passed): the latest `recurrence_end_date` (naive YYYY-MM-DD,
+   * recipient frame) among its ended series. Drives the "Ended <date>" badge
+   * and hides Discontinue/Reactivate (Reactivate only clears `discontinued_at`
+   * and could never restart a series). null for active and discontinued groups.
+   */
+  endedOn: string | null;
+  /**
+   * Inactive groups only: the most recent STOP day (YYYY-MM-DD, recipient
+   * frame) across the group's stopped rows — a discontinued row's
+   * `discontinued_at` resolved to a day in the recipient's zone, or an ended
+   * series' `recurrence_end_date`. Orders the Inactive list, newest first.
+   */
+  stopDay: string;
+  /**
    * Whole days of supply left, or null when this med is not refill-tracked.
    * Aggregated across the group's events, not read off `event` — see
    * `stockDaysLeft` and the reducer in `groupMedications`.
@@ -110,6 +134,23 @@ function stockDaysLeft(e: CalendarEvent): number | null {
 }
 
 /**
+ * "Jan 5, 2026" / "5 ene 2026" for a naive YYYY-MM-DD — the web twin of
+ * mobile's `formatWireDay(day, locale, { month: 'short', day: 'numeric',
+ * year: 'numeric' })`: the day is built at noon UTC from its parts and
+ * formatted IN UTC, so the browser's own zone can never shift it.
+ */
+function formatNaiveDate(dateStr: string, locale: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return '';
+  return getCachedDateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
+
+/**
  * Representative-selection priority for a med group's `event` (used as the
  * Edit/Delete/Discontinue target): an ACTIVE series root beats an inactive
  * series root beats an active non-root beats an inactive non-root.
@@ -123,9 +164,8 @@ function stockDaysLeft(e: CalendarEvent): number | null {
  * representative's `discontinued_at`, so clicking "Discontinue" on an
  * overall-active card silently REACTIVATED instead.
  */
-function representativeScore(e: CalendarEvent): number {
+function representativeScore(e: CalendarEvent, isActive: boolean): number {
   const isRoot = !e.parent_event_id;
-  const isActive = !e.discontinued_at;
   // Tiebreak only: with the root outside the window, a virtual instance
   // carries the series' current content, a materialized child a stale one.
   const isVirtual = !!e.is_virtual;
@@ -138,12 +178,34 @@ function representativeScore(e: CalendarEvent): number {
  * with ANY active event is Active; an inactive entry is suppressed when an
  * active med of the SAME key exists (e.g. re-added at the same dose).
  */
-function groupMedications(events: CalendarEvent[]): {
+function groupMedications(
+  events: CalendarEvent[],
+  timezone: string | null,
+  now: Date = new Date()
+): {
   active: MedGroup[];
   inactive: MedGroup[];
 } {
   const groups = new Map<string, MedGroup>();
   const seriesContent = indexSeriesContent(events);
+  // A row is LIVE when it is not discontinued AND its series has not ended.
+  // "Ended" is read off the series' CURRENT content (root, or a virtual
+  // instance standing in for it): a "This & future" delete writes the end date
+  // on the root only, so a materialized child of an ended series must not keep
+  // its medication Active.
+  const seriesEndedOn = (e: CalendarEvent): string | null => {
+    const source = seriesContent.get(getSeriesRoot(e)) ?? e;
+    return isMedicationSeriesEnded(source, now) ? (source.recurrence_end_date ?? null) : null;
+  };
+  // Discontinued is PER SERIES too: with `includeInactiveRoots` the window can
+  // hold only materialized children of a stopped series (confirmed doses),
+  // which carry no `discontinued_at` of their own — only the root does.
+  const discontinuedAtOf = (e: CalendarEvent): string | null =>
+    e.discontinued_at ?? (seriesContent.get(getSeriesRoot(e)) ?? e).discontinued_at ?? null;
+  const isLive = (e: CalendarEvent): boolean =>
+    !discontinuedAtOf(e) && seriesEndedOn(e) === null;
+  // Keys with at least one DISCONTINUED row: those stay "Inactive" + Reactivate.
+  const discontinuedKeys = new Set<string>();
 
   for (const e of events) {
     if (e.event_type !== 'medication') continue;
@@ -165,6 +227,8 @@ function groupMedications(events: CalendarEvent[]): {
         times: [],
         recurrenceEvent: null,
         inactive: true,
+        endedOn: null,
+        stopDay: '',
         daysLeft: null,
       };
       groups.set(key, group);
@@ -172,15 +236,44 @@ function groupMedications(events: CalendarEvent[]): {
 
     // Prefer an ACTIVE series-root row as the representative (Edit/Delete/
     // Discontinue target it) — see representativeScore above.
-    if (representativeScore(e) > representativeScore(group.event)) group.event = e;
+    const live = isLive(e);
+    if (representativeScore(e, live) > representativeScore(group.event, isLive(group.event))) {
+      group.event = e;
+    }
     if (!group.dosage && source.medication_dosage) group.dosage = source.medication_dosage;
-    if (!group.recurrenceEvent && e.recurrence_rule) group.recurrenceEvent = e;
+    // A virtual instance carries its parent's rule but NOT `recurrence_days`
+    // (backend `generateVirtualInstances`), so a Mon/Wed/Fri series would label
+    // as plain "Weekly" whenever a virtual row happened to come first. Prefer a
+    // row that actually carries the day set.
+    if (
+      e.recurrence_rule &&
+      (!group.recurrenceEvent ||
+        (!group.recurrenceEvent.recurrence_days?.length && !!e.recurrence_days?.length))
+    ) {
+      group.recurrenceEvent = e;
+    }
     if (e.scheduled_time) {
       const hhmm = e.scheduled_time.slice(0, 5);
       if (!group.times.includes(hhmm)) group.times.push(hhmm);
     }
-    // Any active event of this key makes the whole med Active.
-    if (!e.discontinued_at) group.inactive = false;
+    // Any LIVE event of this key makes the whole med Active — a multi-series
+    // med (8am + 8pm) stays Active while any one series still runs.
+    if (live) group.inactive = false;
+    const discontinuedAt = discontinuedAtOf(e);
+    if (discontinuedAt) discontinuedKeys.add(key);
+    const endedOn = seriesEndedOn(e);
+    if (endedOn && (!group.endedOn || endedOn > group.endedOn)) group.endedOn = endedOn;
+    // Stop day (mobile parity): a discontinued row stops on its discontinue
+    // day IN THE RECIPIENT'S ZONE, an ended one on its end date. The zone is
+    // only null while the roster is still a skeleton, when order is moot.
+    if (!live) {
+      const stop = discontinuedAt
+        ? timezone
+          ? getDateInTimezone(timezone, new Date(discontinuedAt))
+          : ''
+        : (endedOn ?? '');
+      if (stop > group.stopDay) group.stopDay = stop;
+    }
 
     // Stock is aggregated across the group rather than read off `event`. One
     // card can cover several series of the same med (8am + 8pm), and only the
@@ -201,7 +294,10 @@ function groupMedications(events: CalendarEvent[]): {
     // The minimum then came off the DEAD row: a fresh 90-count bottle read
     // "Low stock · 4 days left" forever, on the card that says a stopped
     // medication is never low.
-    if (e.discontinued_at) continue;
+    //
+    // ENDED series are excluded the same way, for the same reason: nothing
+    // decrements a counter once its series stops producing doses.
+    if (!live) continue;
 
     const rowDaysLeft = stockDaysLeft(e);
     if (rowDaysLeft !== null) {
@@ -214,11 +310,18 @@ function groupMedications(events: CalendarEvent[]): {
   const inactive: MedGroup[] = [];
   for (const group of groups.values()) {
     group.times.sort();
+    // "Ended <date>" only when the med is inactive AND nothing of it was
+    // discontinued: a discontinued series keeps the "Inactive" badge and its
+    // Reactivate action, which does something for it.
+    if (!group.inactive || discontinuedKeys.has(group.key)) group.endedOn = null;
     (group.inactive ? inactive : active).push(group);
   }
+  // Active stays alphabetical. Inactive is MOST RECENT STOP FIRST (mobile
+  // parity) — a caregiver checking a just-stopped med finds it on top; ties keep
+  // arrival order (Array.prototype.sort is stable).
   const byName = (a: MedGroup, b: MedGroup) => a.name.localeCompare(b.name);
   active.sort(byName);
-  inactive.sort(byName);
+  inactive.sort((a, b) => (a.stopDay === b.stopDay ? 0 : a.stopDay < b.stopDay ? 1 : -1));
   return { active, inactive };
 }
 
@@ -283,6 +386,9 @@ function MedCard({
   const { t, i18n } = useTranslation(['meds', 'calendar']);
 
   const meta = formatSchedule(group, timezone, t, i18n.language, hourCycle);
+  const endedLabel = group.endedOn
+    ? t('calendar:discontinueMed.endedOn', { date: formatNaiveDate(group.endedOn, i18n.language) })
+    : null;
 
   // A STOPPED MEDICATION IS NEVER LOW. "Low stock · 3 days left" is a claim
   // about a schedule that no longer runs, and the INACTIVE badge owns this slot
@@ -300,13 +406,24 @@ function MedCard({
   // `ellipsis-horizontal` trigger holds all three, exactly as mobile's
   // `medMenuButton` does, and Delete sits behind an explicit divider so it is
   // never the immediate neighbour of Edit.
+  //
+  // An ENDED medication (series end date passed, never discontinued) has no
+  // Discontinue/Reactivate (mobile parity): Reactivate only clears
+  // `discontinued_at` and cannot restart a series, and there is nothing left
+  // to discontinue. Edit and Delete stay.
   const menuItems: MoreMenuEntry[] = [
     { id: 'edit', label: t('meds:page.actions.edit'), onSelect: () => onEdit(group) },
-    {
-      id: 'toggle-status',
-      label: t(group.inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue'),
-      onSelect: () => onToggleStatus(group),
-    },
+    ...(endedLabel
+      ? []
+      : [
+          {
+            id: 'toggle-status',
+            label: t(
+              group.inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue'
+            ),
+            onSelect: () => onToggleStatus(group),
+          },
+        ]),
     { divider: true },
     {
       id: 'delete',
@@ -342,7 +459,11 @@ function MedCard({
           <button
             type="button"
             onClick={() => onViewDetails(group)}
-            aria-label={t('meds:page.detail.viewLabel', { name: group.name })}
+            aria-label={
+              endedLabel
+                ? `${t('meds:page.detail.viewLabel', { name: group.name })}, ${endedLabel}`
+                : t('meds:page.detail.viewLabel', { name: group.name })
+            }
             className={`m-0 flex min-h-[44px] w-full items-center border-0 bg-transparent p-0 text-left ${careCardTitle} ${
               group.inactive ? 'text-ink-2' : ''
             } underline-offset-2 hover:underline`}
@@ -353,7 +474,7 @@ function MedCard({
           <div className={careCardBadgeRow}>
             {group.inactive && (
               <span className={STATUS_PILL.inactive}>
-                {t('calendar:discontinueMed.inactiveBadge')}
+                {endedLabel ?? t('calendar:discontinueMed.inactiveBadge')}
               </span>
             )}
             {/* Low stock, in the slot the INACTIVE badge uses — the two are
@@ -392,7 +513,7 @@ export default function MedicationsPage(): ReactElement {
   const { t, i18n } = useTranslation(['meds', 'calendar', 'common']);
   const { showToast } = useToast();
 
-  const { canEdit, timezone } = useCircle(circleId);
+  const { canEdit, timezone, isError: circleReadFailed, refetch: refetchCircle } = useCircle(circleId);
   // Viewer's 12h/24h clock — threaded into every schedule string on this page.
   const hourCycle = useHourCycle();
   const rosterQuery = useMedicationRoster(circleId);
@@ -425,7 +546,10 @@ export default function MedicationsPage(): ReactElement {
   // History filter — a medication NAME (see MedicationFilter), or null for all.
   const [historyFilter, setHistoryFilter] = useState<string | null>(null);
 
-  const { active, inactive } = useMemo(() => groupMedications(events), [events]);
+  const { active, inactive } = useMemo(
+    () => groupMedications(events, timezone),
+    [events, timezone]
+  );
 
   // The filter's options come from the SAME query HistoryList renders (React
   // Query dedupes the two calls onto one fetch), so the menu can never offer a
@@ -482,7 +606,10 @@ export default function MedicationsPage(): ReactElement {
   }
 
   function handleEdit(group: MedGroup): void {
-    if (group.inactive) {
+    // Only a DISCONTINUED med is guarded (mobile's useMedicationActions keys on
+    // `discontinued_at` too): reactivating an ENDED one is a no-op, so the
+    // prompt would promise "Reactivated" and leave the editor closed.
+    if (group.inactive && !group.endedOn) {
       // Editing an inactive med is blocked — prompt to reactivate first.
       setInactiveEditGroup(group);
       return;
@@ -528,7 +655,21 @@ export default function MedicationsPage(): ReactElement {
   // placeholder zone paints a label that is simply wrong and then repaints.
   // The roster query is usually still in flight at that point anyway, so this
   // costs no extra beat of skeleton in practice.
-  if (isLoading || timezone === null) {
+  //
+  // ...unless the CIRCLE read itself failed (a removed member's 403, a 5xx): then
+  // `timezone` stays null with nothing left to wait for, so show the error card
+  // instead of an endless skeleton.
+  if (timezone === null && circleReadFailed) {
+    roster = (
+      <Card className="text-center">
+        <p className="m-0 font-medium text-ink">{t('meds:page.errorTitle')}</p>
+        <p className="m-0 mt-1 text-sm text-ink-3">{t('meds:page.errorHint')}</p>
+        <Button variant="ghost" className="mt-4" onClick={() => refetchCircle()}>
+          {t('common:retry')}
+        </Button>
+      </Card>
+    );
+  } else if (isLoading || timezone === null) {
     roster = (
       <ul className={`m-0 list-none p-0 ${careCardListGap}`} aria-busy="true">
         <li className="sr-only">{t('meds:page.loading')}</li>
@@ -727,6 +868,13 @@ export default function MedicationsPage(): ReactElement {
             detailGroup.daysLeft < LOW_STOCK_DAYS
           }
           inactive={detailGroup.inactive}
+          endedLabel={
+            detailGroup.endedOn
+              ? t('calendar:discontinueMed.endedOn', {
+                  date: formatNaiveDate(detailGroup.endedOn, i18n.language),
+                })
+              : null
+          }
           canEdit={canEdit}
           onClose={() => setDetailGroup(null)}
           // Each action closes the sheet first, so the dialog it opens is never
@@ -754,6 +902,13 @@ export default function MedicationsPage(): ReactElement {
           circleId={circleId}
           event={deletingEvent}
           surface="meds_tab"
+          // A CARD is never a dose the user picked: `deletingEvent` is the
+          // group's representative (usually the series root, dated its START
+          // day). No "This dose / This and future" picker from here — that
+          // anchored on the start date and erased recorded doses (test-gap
+          // audit #1). Whole-medication confirm + Discontinue hint instead,
+          // exactly like mobile's card (`doseScoped` false).
+          doseScoped={false}
           onClose={() => setDeletingEvent(null)}
         />
       )}

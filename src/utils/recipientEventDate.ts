@@ -1,4 +1,4 @@
-import { getTimezoneOffsetMinutes } from './timezone';
+import { getDateInTimezone, getTimezoneOffsetMinutes } from './timezone';
 
 /**
  * Date/time conversion for the calendar-event save payload.
@@ -49,6 +49,28 @@ import { getTimezoneOffsetMinutes } from './timezone';
  * so a display locale CANNOT reach wire formatting through this module. Do not
  * add one.
  */
+
+/**
+ * The default date of a NEW event: the CARE RECIPIENT's "today" (`YYYY-MM-DD`).
+ *
+ * It used to be the VIEWER's today (`getDateInTimezone(getDeviceTimezone())`).
+ * A caregiver 25 hours behind their recipient (Midway -> Kiritimati) therefore
+ * got a default - and, for a date-only task, a saved date - one day before the
+ * recipient's today.
+ *
+ * `null` zone means the circle is still loading: returns `''` (no date at all)
+ * rather than a guessed day, so nothing wrong is shown and then replaced. This
+ * is the same gate the edit hydration uses, and callers must NOT pass a
+ * placeholder zone here (see useCircle's `timezone: null`).
+ *
+ * Only the DATE is recipient-frame. The form has no "now"-derived default time
+ * (it starts empty, or carries the wizard's fixed wall-clock time); once a time
+ * is typed the pair is converted viewer -> recipient on save, with the
+ * dual-timezone hint shown beside it.
+ */
+export function defaultNewEventDate(timezone: string | null, now: Date = new Date()): string {
+  return timezone ? getDateInTimezone(timezone, now) : '';
+}
 
 /** Formatter options that make a wire format a wire format. */
 const WIRE = { calendar: 'gregory', numberingSystem: 'latn' } as const;

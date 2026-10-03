@@ -57,6 +57,8 @@ vi.mock('@/api/users', async (importOriginal) => {
     ...actual,
     getCurrentUser: vi.fn(() => Promise.resolve(currentUser)),
     getUnitPreferences: vi.fn(() => Promise.resolve(UNITS)),
+    // PK10 helper read: nobody depends on the owner's zone in these tests.
+    getTimezoneDependentCircles: vi.fn(() => Promise.resolve([])),
     // The name form's own save (inline error, no hook toast).
     updateProfile: (data: unknown) => mockUpdateProfileRequest(data),
   };
@@ -75,6 +77,7 @@ const deleteReset = vi.fn();
 let deleteAccountState: { isError: boolean } = { isError: false };
 vi.mock('@/hooks/useProfile', () => ({
   useUpdateProfile: () => ({ mutate: updateProfile, isPending: false }),
+  useUpdateAvatarColor: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateNotificationPrefs: () => ({ mutate: updateNotif, isPending: false }),
   useUpdateQuietHours: () => ({ mutate: updateQuiet, isPending: false }),
   useUpdateUnitPrefs: () => ({ mutate: updateUnits, isPending: false }),
@@ -160,6 +163,92 @@ describe('ProfilePage', () => {
     expect(updateNotif).toHaveBeenCalledTimes(1);
     // Was ON → flips to false.
     expect(updateNotif.mock.calls[0][0]).toEqual({ medication_confirmations: false });
+  });
+
+  // notes-first-class plan Decision 5: the single "note reminders" switch is
+  // replaced by three: event_notes, note_nudges (relabelled), care_notes.
+  // USER's notification_preferences has no `event_notes`/`care_notes` key at
+  // all (absent) and an explicit `note_nudges: true` — all three must render
+  // ON, since the backend contract is "absent key means true".
+  it('renders the three note switches with the right labels, all ON', async () => {
+    renderPage();
+
+    const eventNotes = await screen.findByRole('switch', { name: /Notes on events/i });
+    const noteNudges = await screen.findByRole('switch', { name: /After-visit reminders/i });
+    const careNotes = await screen.findByRole('switch', { name: /Daily care notes/i });
+
+    expect(eventNotes).toHaveAttribute('aria-checked', 'true');
+    expect(noteNudges).toHaveAttribute('aria-checked', 'true');
+    expect(careNotes).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('toggling "Notes on events" sends exactly { event_notes: false }', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /Notes on events/i });
+    await user.click(toggle);
+
+    expect(updateNotif).toHaveBeenCalledTimes(1);
+    expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false });
+  });
+
+  // BUG: the backend's legacy shim (backend/src/routes/users.ts ~357-370)
+  // mirrors `note_nudges` onto `event_notes` whenever a request sets the
+  // former without the latter — that shim exists for pre-1.3.0 clients with a
+  // single "Note notifications" switch. This (new, three-switch) client must
+  // pin `event_notes` to its current displayed value on every note_nudges
+  // PATCH so the shim can't cross-flip "Notes on events".
+  it('toggling "After-visit reminders" sends { note_nudges: false, event_notes: true } when event_notes is absent (defaults ON)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /After-visit reminders/i });
+    await user.click(toggle);
+
+    expect(updateNotif).toHaveBeenCalledTimes(1);
+    expect(updateNotif.mock.calls[0][0]).toEqual({ note_nudges: false, event_notes: true });
+  });
+
+  it('toggling "After-visit reminders" sends { note_nudges: false, event_notes: false } when event_notes is already off', async () => {
+    currentUser = {
+      ...USER,
+      notification_preferences: { ...USER.notification_preferences, event_notes: false },
+    };
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /After-visit reminders/i });
+    await user.click(toggle);
+
+    expect(updateNotif).toHaveBeenCalledTimes(1);
+    expect(updateNotif.mock.calls[0][0]).toEqual({ note_nudges: false, event_notes: false });
+  });
+
+  it('toggling "Notes on events" and "Daily care notes" still send only their own key (not mirrored onto note_nudges)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const eventNotesToggle = await screen.findByRole('switch', { name: /Notes on events/i });
+    await user.click(eventNotesToggle);
+    expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false });
+
+    const careNotesToggle = await screen.findByRole('switch', { name: /Daily care notes/i });
+    await user.click(careNotesToggle);
+    expect(updateNotif.mock.calls[1][0]).toEqual({ care_notes: false });
+
+    expect(updateNotif).toHaveBeenCalledTimes(2);
+  });
+
+  it('toggling "Daily care notes" sends exactly { care_notes: false }', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: /Daily care notes/i });
+    await user.click(toggle);
+
+    expect(updateNotif).toHaveBeenCalledTimes(1);
+    expect(updateNotif.mock.calls[0][0]).toEqual({ care_notes: false });
   });
 
   it('fires useUpdateProfile({language}) when the language radio changes', async () => {
@@ -344,7 +433,8 @@ describe('ProfilePage — name form', () => {
   async function openNameForm() {
     const user = userEvent.setup();
     renderPage();
-    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    // "Edit name", not a bare "Edit" (a11y audit 2026-09-29, WCAG 2.4.6).
+    await user.click(await screen.findByRole('button', { name: 'Edit name' }));
     const first = screen.getByLabelText(/^First name/);
     await user.clear(first);
     await user.type(first, 'Samantha');
@@ -389,7 +479,7 @@ describe('ProfilePage — name form', () => {
       mockUpdateProfileRequest.mockRejectedValueOnce(new Error('network'));
       const user = userEvent.setup();
       renderPage();
-      await user.click(await screen.findByRole('button', { name: 'Editar' }));
+      await user.click(await screen.findByRole('button', { name: 'Editar nombre' }));
       await user.click(screen.getByRole('button', { name: 'Guardar' }));
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'No se pudieron guardar los cambios. Inténtalo de nuevo.'

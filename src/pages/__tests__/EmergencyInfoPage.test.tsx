@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
@@ -9,17 +10,40 @@ import EmergencyInfoPage from '@/pages/EmergencyInfoPage';
 
 // The export hook is exercised in its own suite (useCareSummaryExport.test.tsx);
 // here it is a controllable stub so the page's confirm flow can be asserted
-// without an iframe print. `mockExportPdf` is reset per test.
-const mockExportPdf = vi.fn<() => Promise<void>>();
+// without an iframe print. `mockExportPdf` is reset per test. `exportPdf` now
+// takes the share sheet's options object (task 30) — `careSummaryNotesWindow`
+// is re-exported via `importOriginal` since `CareSummaryShareDialog` imports
+// it from this same module for its own count queries' window.
+const mockExportPdf =
+  vi.fn<(options?: { includeVisitNotes: boolean; includeCareNotes: boolean }) => Promise<void>>();
 let mockIsExporting = false;
-vi.mock('@/hooks/useCareSummaryExport', () => ({
-  useCareSummaryExport: () => ({
-    exportPdf: mockExportPdf,
-    isExporting: mockIsExporting,
-    error: null,
-    clearError: vi.fn(),
-  }),
-}));
+vi.mock('@/hooks/useCareSummaryExport', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useCareSummaryExport')>();
+  return {
+    ...actual,
+    useCareSummaryExport: () => ({
+      exportPdf: mockExportPdf,
+      isExporting: mockIsExporting,
+      error: null,
+      clearError: vi.fn(),
+    }),
+  };
+});
+
+// CareSummaryShareDialog's own two count queries (task 30) — this file's
+// focus is page wiring, not the counting logic itself (that is
+// CareSummaryShareDialog's own suite). A quiet, resolved-empty default keeps
+// every pre-existing share-flow test's dialog free of "Counting notes…".
+const mockUseEventNotesRange = vi.fn();
+const mockUseCareNotes = vi.fn();
+vi.mock('@/hooks/useEventNotes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useEventNotes')>();
+  return { ...actual, useEventNotesRange: (...args: unknown[]) => mockUseEventNotesRange(...args) };
+});
+vi.mock('@/hooks/useCareNotes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useCareNotes')>();
+  return { ...actual, useCareNotes: (...args: unknown[]) => mockUseCareNotes(...args) };
+});
 
 // @/lib/api is mocked globally in src/test/setup.ts. The real apiClient's
 // response interceptor unwraps to the `{ success, data }` envelope, so the
@@ -148,6 +172,14 @@ describe('EmergencyInfoPage', () => {
     mockExportPdf.mockReset();
     mockExportPdf.mockResolvedValue(undefined);
     mockIsExporting = false;
+    mockUseEventNotesRange.mockReset();
+    mockUseCareNotes.mockReset();
+    mockUseEventNotesRange.mockReturnValue({ data: [], isLoading: false, isError: false });
+    mockUseCareNotes.mockReturnValue({
+      data: { notes: [], today: '2026-06-01', timezone: 'America/New_York' },
+      isLoading: false,
+      isError: false,
+    });
   });
 
   // A circle can hold nothing but an allergy list or a blood type. Those render
@@ -166,8 +198,6 @@ describe('EmergencyInfoPage', () => {
       additional_doctors: [],
       emergency_contacts: [],
       advance_directives: null,
-      // has_dnr must be NULL, not false: hasDirectives() treats any non-null value
-      // (false included) as "the directives section has data".
       has_dnr: null,
       medical_conditions: [],
       blood_type: null,
@@ -191,8 +221,6 @@ describe('EmergencyInfoPage', () => {
       additional_doctors: [],
       emergency_contacts: [],
       advance_directives: null,
-      // has_dnr must be NULL, not false: hasDirectives() treats any non-null value
-      // (false included) as "the directives section has data".
       has_dnr: null,
       medical_conditions: [],
       allergies: [],
@@ -220,7 +248,7 @@ describe('EmergencyInfoPage', () => {
     }
   });
 
-  it('renders all four sections with data (Medical Information merged into glance tiles)', async () => {
+  it('renders all three sections with data (Medical Information merged into glance tiles)', async () => {
     mockApi(fullInfo);
     renderPage();
 
@@ -231,8 +259,6 @@ describe('EmergencyInfoPage', () => {
       screen.getByRole('heading', { level: 2, name: /Emergency Contacts/ })
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: /Insurance/ })).toBeInTheDocument();
-    // Code Status stays always-visible (a plain section, not an accordion).
-    expect(screen.getByRole('heading', { level: 2, name: 'Code Status' })).toBeInTheDocument();
 
     // Round 7 merge: the Medical Information section is gone — its facts all
     // live in the at-a-glance tiles now.
@@ -258,8 +284,6 @@ describe('EmergencyInfoPage', () => {
     expect(screen.getByText('Dr. Patel')).toBeInTheDocument();
     expect(screen.getByText('Blue Cross')).toBeInTheDocument();
     expect(screen.getByText('POL-123')).toBeInTheDocument();
-    expect(screen.getByText('Yes')).toBeInTheDocument(); // DNR status
-    expect(screen.getByText('Living will on file')).toBeInTheDocument();
 
     // Print header identifies the care recipient
     expect(screen.getByText('Emergency information for Rose')).toBeInTheDocument();
@@ -298,6 +322,11 @@ describe('EmergencyInfoPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Date of birth')).toBeInTheDocument();
     expect(screen.getByText('March 12, 1948')).toBeInTheDocument();
+    // Stacked like the conditions block: a mono <dt> over a <dd> value.
+    expect(screen.getByText('Date of birth').tagName).toBe('DT');
+    const dobValue = screen.getByText('March 12, 1948');
+    expect(dobValue.tagName).toBe('DD');
+    expect(dobValue).toHaveClass('text-md', 'font-medium', 'text-ink');
     expect(screen.queryByText('Hypertension, Type 2 diabetes')).not.toBeInTheDocument();
   });
 
@@ -359,7 +388,6 @@ describe('EmergencyInfoPage', () => {
 
     // The rest of the page is unaffected.
     expect(screen.getByText('Dr. Chen')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Code Status' })).toBeInTheDocument();
   });
 
   it('shows per-section empty states when only some sections have data', async () => {
@@ -386,9 +414,8 @@ describe('EmergencyInfoPage', () => {
     expect(
       screen.getByText("Add insurance details so coverage is ready when care can't wait.")
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Record your loved one's code status so their wishes are clear in a crisis.")
-    ).toBeInTheDocument();
+    // No code-status empty state / CTA (the section is gone, decision T1).
+    expect(screen.queryByText(/code status/i)).not.toBeInTheDocument();
   });
 
   it('shows the fully-empty state when there is no emergency info record', async () => {
@@ -431,7 +458,7 @@ describe('EmergencyInfoPage', () => {
     expect(mockExportPdf).not.toHaveBeenCalled();
   });
 
-  it('click → privacy confirm dialog with mobile\'s copy, as two paragraphs', async () => {
+  it('click → share sheet with the privacy copy, as two paragraphs, plus the two note switches', async () => {
     mockApi(fullInfo);
     renderPage();
 
@@ -439,7 +466,9 @@ describe('EmergencyInfoPage', () => {
     fireEvent.click(exportButton);
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Share health information?')).toBeInTheDocument();
+    // Notes-first-class (task 30): the plain privacy confirm is replaced by
+    // the full share sheet — new title, same privacy sentence verbatim.
+    expect(within(dialog).getByText('Share care summary')).toBeInTheDocument();
     expect(
       within(dialog).getByText(
         'This summary contains sensitive health information including medications, allergies, and insurance details. Only share with people you trust.'
@@ -450,6 +479,15 @@ describe('EmergencyInfoPage', () => {
         "By sharing, you confirm you have permission to share this person's health information."
       )
     ).toBeInTheDocument();
+    // The two switches, at their documented defaults (visit ON, care OFF).
+    expect(within(dialog).getByRole('switch', { name: 'Include visit notes' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(
+      within(dialog).getByRole('switch', { name: 'Include daily care notes' })
+    ).toHaveAttribute('aria-checked', 'false');
+    expect(within(dialog).getByText('Includes 0 visit notes and 0 daily care notes')).toBeInTheDocument();
     // The footer holds Cancel + Share; the shell's close (x) reuses the cancel
     // label as its accessible name, so scope to the footer row.
     const footer = within(dialog.querySelector('[data-modal-footer]') as HTMLElement);
@@ -457,7 +495,7 @@ describe('EmergencyInfoPage', () => {
     expect(footer.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
-  it('confirm → export invoked exactly once and the dialog closes', async () => {
+  it('confirm → export invoked exactly once, with the default switch payload, and the dialog closes', async () => {
     mockApi(fullInfo);
     renderPage();
 
@@ -470,7 +508,32 @@ describe('EmergencyInfoPage', () => {
     fireEvent.click(share);
 
     await waitFor(() => expect(mockExportPdf).toHaveBeenCalledTimes(1));
+    expect(mockExportPdf).toHaveBeenCalledWith({
+      includeVisitNotes: true,
+      includeCareNotes: false,
+    });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('toggling a switch before confirming changes the export payload', async () => {
+    const user = userEvent.setup();
+    mockApi(fullInfo);
+    renderPage();
+
+    const [exportButton] = await screen.findAllByRole('button', { name: 'Share' });
+    await user.click(exportButton);
+    const dialog = await screen.findByRole('dialog');
+
+    await user.click(within(dialog).getByRole('switch', { name: 'Include visit notes' }));
+    await user.click(within(dialog).getByRole('switch', { name: 'Include daily care notes' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Share' }));
+
+    await waitFor(() =>
+      expect(mockExportPdf).toHaveBeenCalledWith({
+        includeVisitNotes: false,
+        includeCareNotes: true,
+      })
+    );
   });
 
   it('cancel → export not invoked and the dialog closes', async () => {
@@ -506,10 +569,11 @@ describe('EmergencyInfoPage', () => {
     const nav = await screen.findByRole('navigation', { name: 'On this page' });
     expect(nav).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Doctors' })).toHaveAttribute('href', '#doctors');
-    expect(screen.getByRole('link', { name: 'Code Status' })).toHaveAttribute(
-      'href',
-      '#directives'
-    );
+    expect(screen.getByRole('link', { name: 'Insurance' })).toHaveAttribute('href', '#insurance');
+    // Code status is hidden on web (decision T1): no anchor, no target.
+    expect(screen.queryByRole('link', { name: 'Code Status' })).not.toBeInTheDocument();
+    expect(nav.querySelector('a[href="#directives"]')).toBeNull();
+    expect(within(nav).getAllByRole('link')).toHaveLength(3);
     // Round 7: no Medical Information section, so no nav anchor for it.
     expect(screen.queryByRole('link', { name: 'Medical Information' })).not.toBeInTheDocument();
   });
@@ -692,6 +756,70 @@ describe('EmergencyInfoPage', () => {
     await waitFor(() => expect(mockedPut).toHaveBeenCalledTimes(1));
     // fullInfo had exactly one additional doctor → filtered to empty.
     expect(lastPutBody().additional_doctors).toEqual([]);
+    // …and nothing else: fullInfo's DNR / directives are left to the backend's
+    // partial merge (a named key would overwrite them).
+    expect(Object.keys(lastPutBody())).toEqual(['additional_doctors']);
+  });
+
+  // ── Code status: hidden, but the stored data is kept (decision T1,
+  // docs/plans/mobile-web-decisions-2026-09-29.md) ─────────────────────────
+  it.each([true, false])(
+    'never renders code status or advance directives (canEdit=%s), even when on file',
+    async (canEdit) => {
+      mockApi(fullInfo, canEdit);
+      const { container } = renderPage();
+
+      expect(await screen.findByText('Dr. Chen')).toBeInTheDocument();
+      expect(screen.queryByText('Living will on file')).not.toBeInTheDocument();
+      expect(screen.queryByText(/code status/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/DNR/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/advance directives/i)).not.toBeInTheDocument();
+      expect(container.querySelector('#directives')).toBeNull();
+    }
+  );
+
+  it('treats a record holding ONLY code status as empty for a view-only member', async () => {
+    mockApi(
+      {
+        ...fullInfo,
+        insurance_plans: [],
+        primary_doctor_name: null,
+        additional_doctors: [],
+        allergies: [],
+        medication_allergies: [],
+        medical_conditions: [],
+        blood_type: null,
+        emergency_contacts: [],
+        advance_directives: 'Living will on file',
+        has_dnr: true,
+      },
+      false
+    );
+    renderPage();
+
+    expect(await screen.findByText('No emergency information yet')).toBeInTheDocument();
+    expect(screen.queryByText('Living will on file')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['primary doctor', 'Dr. Chen', 'Delete doctor Dr. Chen'],
+    ['contact', 'Sarah', 'Delete contact Sarah'],
+    ['insurance', 'Blue Cross', 'Delete insurance Blue Cross'],
+  ])('deleting a %s never names a code-status key in the PUT', async (_kind, name, menuItem) => {
+    mockApi(fullInfo, true);
+    mockedPut.mockResolvedValue({ success: true, data: { emergency_info: fullInfo } });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: `Actions for ${name}` }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: menuItem }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(mockedPut).toHaveBeenCalledTimes(1));
+    const body = mockedPut.mock.calls[0][1] as Record<string, unknown>;
+    expect(Object.keys(body).length).toBeGreaterThan(0);
+    for (const key of ['has_dnr', 'advance_directives', 'dnr_document_url']) {
+      expect(body).not.toHaveProperty(key);
+    }
   });
 
   // ── Collapsible accordion sections ──────────────────────────────────────

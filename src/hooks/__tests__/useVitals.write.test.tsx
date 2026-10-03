@@ -24,7 +24,14 @@ vi.mock('@/components/ui', () => ({
 }));
 
 const promptUpgrade = vi.fn();
-vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade }) }));
+const promptLapsed = vi.fn();
+const usePremiumGateArgs = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: (...args: unknown[]) => {
+    usePremiumGateArgs(...args);
+    return { promptUpgrade, promptLapsed };
+  },
+}));
 
 const mockVitalUpdated = vi.fn();
 const mockVitalDeleted = vi.fn();
@@ -96,9 +103,17 @@ function invalidatedWith(
   );
 }
 
+// The ONLY SUBSCRIPTION_REQUIRED a vitals write can get: requireCircleEditAccess's
+// circle-wide 403 for a circle whose owner lapsed (backend/src/middleware/
+// circleAccess.ts), body verbatim. Vitals are not premium — no route sends 402.
 const SUBSCRIPTION_ENVELOPE = {
   success: false,
-  error: { code: 'SUBSCRIPTION_REQUIRED', message: 'upgrade' },
+  error: {
+    code: 'SUBSCRIPTION_REQUIRED',
+    message:
+      'This circle requires an active subscription. Only the owner and care recipient can make changes.',
+    details: { accessLevel: 'view', isPremiumCircle: false, reason: 'Subscription required' },
+  },
 };
 const PERMISSION_ENVELOPE = {
   success: false,
@@ -130,7 +145,7 @@ describe('useCreateVital', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.vitalsLatest(CIRCLE_ID))).toBe(true);
   });
 
-  it('surfaces a 402 → subscriptionRequired toast + refetch circles', async () => {
+  it('surfaces the lapsed-circle 403 SUBSCRIPTION_REQUIRED like calendar writes: circle-level gate + refetch circles', async () => {
     const { invalidateSpy, wrapper } = setup();
     mockCreate.mockRejectedValue(SUBSCRIPTION_ENVELOPE);
 
@@ -138,7 +153,13 @@ describe('useCreateVital', () => {
     result.current.mutate(CREATE_BODY);
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(promptUpgrade).toHaveBeenCalled();
+    // Same gate configuration as useCalendarEvents' useEventMutationOnError:
+    // circle-level (owner-aware), so a non-owner is never sold a paywall.
+    expect(usePremiumGateArgs).toHaveBeenCalledWith('capacity', { circleId: CIRCLE_ID });
+    // PK18: the LAPSED prompt, never the generic "not in the free plan" gate.
+    expect(promptLapsed).toHaveBeenCalledTimes(1);
+    expect(promptUpgrade).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalled();
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 

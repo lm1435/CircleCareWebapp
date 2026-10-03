@@ -22,6 +22,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { classifyFailureCode, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
+import type { AvatarColorKey } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import i18n from '@/i18n';
@@ -73,6 +74,51 @@ export function useUpdateProfile(): UseMutationResult<User, unknown, UpdateProfi
   });
 }
 
+/**
+ * Member colour (`users.avatar_color`). Optimistic: the picker, the header
+ * avatar and the Profile preview repaint on the click, and an error puts the
+ * previous value back and toasts `profile:avatarColor.saveFailed`. Other
+ * members see the colour through the circle detail's members embed, so every
+ * cached circle is invalidated once the save settles.
+ */
+export function useUpdateAvatarColor(): UseMutationResult<
+  User,
+  unknown,
+  AvatarColorKey,
+  { previous: User | undefined }
+> {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { t } = useTranslation('profile');
+
+  return useMutation({
+    mutationFn: (avatar_color: AvatarColorKey) => updateProfile({ avatar_color }),
+    onMutate: async (avatar_color) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.currentUser });
+      const previous = queryClient.getQueryData<User>(queryKeys.currentUser);
+      queryClient.setQueryData<User>(queryKeys.currentUser, (old) =>
+        old ? { ...old, avatar_color } : old
+      );
+      return { previous };
+    },
+    onSuccess: (_user, avatar_color) => {
+      Analytics.avatarColorChanged(avatar_color);
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.currentUser, context.previous);
+      }
+      reportProfileError(error);
+      showToast(t('avatarColor.saveFailed'), 'error');
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+      void queryClient.invalidateQueries({ queryKey: ['circle'] });
+    },
+  });
+}
+
 /** PATCH /users/me/notification-preferences — partial boolean flags. */
 export function useUpdateNotificationPrefs(): UseMutationResult<
   User,
@@ -85,7 +131,21 @@ export function useUpdateNotificationPrefs(): UseMutationResult<
 
   return useMutation({
     mutationFn: (data: UpdateNotificationPreferencesRequest) => updateNotificationPrefs(data),
-    onSuccess: () => {
+    onSuccess: (user) => {
+      // ProfilePage renders each switch straight from the currentUser query
+      // (no local state) and re-enables them when this mutation settles. With
+      // invalidate alone the switches came back ENABLED but still showing the
+      // PRE-toggle value until the refetch landed, so a second click in that
+      // window re-sent the value just saved (the toggle never turned back) and
+      // `handleNotif`'s event_notes pin read the stale value too. Write the
+      // PATCH response's preferences into the cache first — this callback is
+      // awaited before `isPending` clears, so the switches re-enable already
+      // showing the saved state — then refetch to reconcile.
+      if (user?.notification_preferences) {
+        queryClient.setQueryData<User>(queryKeys.currentUser, (old) =>
+          old ? { ...old, notification_preferences: user.notification_preferences } : old
+        );
+      }
       void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
     },
     onError: (error) => {

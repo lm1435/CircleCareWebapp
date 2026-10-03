@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Outlet, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from './Header';
@@ -9,6 +9,7 @@ import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBan
 import { AIChatModal } from '@/components/ai/AIChatModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { CircleAccessLost } from '@/components/circles/CircleAccessLost';
 import { useCircle } from '@/hooks/useCircle';
 import { useCircles } from '@/hooks/useCircles';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -35,7 +36,17 @@ export function AppLayout(): ReactElement {
   const { circleId } = useParams<{ circleId: string }>();
   const [aiOpen, setAiOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [createKind, setCreateKind] = useState<AddMenuType | null>(null);
+  // THE "+ NEW" FLOW BELONGS TO THE CIRCLE IT WAS OPENED IN. This layout is
+  // not keyed by circle (only the page <Outlet> is, by pathname), so browser
+  // back/forward to another circle while AddEventModal was open kept the typed
+  // input and re-pointed its save at the NEW circle. The modal renders only for
+  // the circle it was opened for, and a circle change closes it (effect below)
+  // so returning to that circle does not pop it back open. Mobile twin:
+  // mobile/src/navigation/useCloseOnCircleSwitch.ts.
+  const [createFor, setCreateFor] = useState<{ kind: AddMenuType; circleId: string } | null>(
+    null,
+  );
+  const createKind = createFor && createFor.circleId === circleId ? createFor.kind : null;
   const location = useLocation();
   const navigationType = useNavigationType();
 
@@ -44,15 +55,27 @@ export function AppLayout(): ReactElement {
   // from the foot of the overview used to land mid-feed. PUSH/REPLACE only:
   // Back and Forward (POP) keep the browser's own restoration, and a hash
   // navigation is a jump to a section, which the page itself handles.
+  //
+  // Gated on the PATHNAME actually changing (not just `navigationType`): a
+  // page-owned `setSearchParams(..., { replace: true })` — e.g. NotesPage's
+  // `?date=` deep-link effect clearing its own param after scrolling to a
+  // day group — is also a REPLACE navigation, and used to reset the window
+  // to (0, 0) here even though the pathname never changed. That's more than
+  // cosmetic: it can cancel an in-flight smooth `scrollIntoView` the page
+  // just started (confirmed — the deep-link scroll landed at 0 every time
+  // until this was scoped to real page changes).
+  const previousPathnameRef = useRef(location.pathname);
   useEffect(() => {
-    if (navigationType === 'POP' || location.hash) return;
+    const pathnameChanged = previousPathnameRef.current !== location.pathname;
+    previousPathnameRef.current = location.pathname;
+    if (!pathnameChanged || navigationType === 'POP' || location.hash) return;
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
   }, [location.pathname, location.hash, navigationType]);
   const navigate = useNavigate();
 
   // Write actions need an editable circle. Resolved once here so the sidebar's
   // New button and the pill's NEW cell share one source of truth.
-  const { circle, canEdit, viewOnly, isPremiumCircle } = useCircle(circleId ?? '');
+  const { circle, canEdit, viewOnly, isPremiumCircle, accessLost } = useCircle(circleId ?? '');
 
   // ── AI Care Assistant gate ────────────────────────────────────────────────
   // The backend already refuses these callers (backend/src/routes/ai.ts); this
@@ -109,6 +132,11 @@ export function AppLayout(): ReactElement {
   useEffect(() => {
     if (aiEntry !== 'available') setAiOpen(false);
   }, [aiEntry]);
+  // Same rule for the create flow and its type menu (see `createFor` above).
+  useEffect(() => {
+    setCreateFor(null);
+    setAddOpen(false);
+  }, [circleId]);
 
   // One handler behind both entry points. A frozen circle's OWNER is the one
   // person whose upgrade would actually unlock this, so they get the prompt
@@ -129,7 +157,7 @@ export function AppLayout(): ReactElement {
       if (circleId) navigate(`/circles/${circleId}/notes`);
       return;
     }
-    setCreateKind(kind);
+    if (circleId) setCreateFor({ kind, circleId });
   };
 
   // R4-5 onboarding funnel: users can deep-link straight into a circle without
@@ -145,8 +173,14 @@ export function AppLayout(): ReactElement {
   // container, and `position: sticky` only sticks against the nearest scroll
   // container — so the sticky header and sidebar rail would scroll away with
   // the page. clip trims sideways overflow without becoming one.
+  //
+  // `grid-cols-[minmax(0,1fr)]` (WCAG 1.4.10): without an explicit column the
+  // implicit `auto` track sized itself to the header's min-content (334px), so
+  // at a 320px viewport — 400% zoom of 1280 — every page laid out 14px wider
+  // than the screen and this `overflow-x-clip` silently cut the right edge off
+  // (account menu, card edges) instead of reflowing.
   return (
-    <div className="grid min-h-screen grid-rows-[auto_1fr] overflow-x-clip bg-bg">
+    <div className="grid min-h-screen grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] overflow-x-clip bg-bg">
       <a
         href="#main"
         // `href="#main"` alone moves the URL hash but not necessarily DOM
@@ -156,7 +190,7 @@ export function AppLayout(): ReactElement {
         // focus on <body> and the very next Tab re-entered the nav instead of
         // reaching page content.
         onClick={() => document.getElementById('main')?.focus()}
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
       >
         {t('skipToContent')}
       </a>
@@ -200,7 +234,10 @@ export function AppLayout(): ReactElement {
               key={location.pathname}
               className="animate-[fade-in_200ms_ease-out] motion-reduce:animate-none"
             >
-              <Outlet />
+              {/* Removed from / deleted circle: one state for EVERY circle page
+                  (mobile twin: CircleDetailScreen's access-removed branch). Only
+                  FORBIDDEN / NOT_FOUND; 5xx keeps each page's own retry card. */}
+              {accessLost ? <CircleAccessLost reason={accessLost} /> : <Outlet />}
             </div>
           </ErrorBoundary>
         </main>
@@ -249,8 +286,8 @@ export function AppLayout(): ReactElement {
         <AddEventModal
           circleId={circleId}
           initialType={createKind}
-          onClose={() => setCreateKind(null)}
-          onSaved={() => setCreateKind(null)}
+          onClose={() => setCreateFor(null)}
+          onSaved={() => setCreateFor(null)}
         />
       )}
     </div>

@@ -10,6 +10,11 @@ vi.mock('@/lib/purchases', () => ({
   toWebPlan: vi.fn((pkg: unknown) => pkg),
 }));
 
+vi.mock('@/api/users', () => ({
+  refreshSubscriptionStatus: vi.fn(),
+  getCurrentUser: vi.fn(),
+}));
+
 vi.mock('@/lib/webBillingConfig', () => ({
   isWebBillingConfigured: vi.fn(() => true),
 }));
@@ -20,6 +25,7 @@ vi.mock('@/store/authStore', () => ({
 }));
 
 import { getWebOffering, purchasePackage } from '@/lib/purchases';
+import { refreshSubscriptionStatus } from '@/api/users';
 import { useWebPlans, usePurchasePlan } from '@/hooks/useWebBilling';
 
 const mockedGetOffering = getWebOffering as unknown as ReturnType<typeof vi.fn>;
@@ -74,6 +80,35 @@ describe('usePurchasePlan', () => {
       { identifier: '$rc_monthly' },
       'a@b.com'
     );
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['subscription-status'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['circles'] });
+  });
+  it('syncs the tier with the backend BEFORE invalidating subscription-status and circles', async () => {
+    mockedPurchase.mockResolvedValue({});
+    (refreshSubscriptionStatus as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue();
+
+    const { result } = renderHook(() => usePurchasePlan(), { wrapper: wrapper(client) });
+    await result.current.mutateAsync({ rcPackage: { identifier: '$rc_monthly' } } as never);
+
+    const sync = refreshSubscriptionStatus as unknown as ReturnType<typeof vi.fn>;
+    expect(sync).toHaveBeenCalledTimes(1);
+    expect(sync.mock.invocationCallOrder[0]).toBeLessThan(invalidate.mock.invocationCallOrder[0]);
+  });
+
+  it('a failed sync still invalidates and resolves (never reports the purchase as failed)', async () => {
+    mockedPurchase.mockResolvedValue({});
+    (refreshSubscriptionStatus as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('x')
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries').mockResolvedValue();
+
+    const { result } = renderHook(() => usePurchasePlan(), { wrapper: wrapper(client) });
+    await expect(
+      result.current.mutateAsync({ rcPackage: { identifier: '$rc_monthly' } } as never)
+    ).resolves.toBeUndefined();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['subscription-status'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['circles'] });
   });

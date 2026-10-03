@@ -27,6 +27,7 @@
   },
   "errorTitle": "Couldn't load the calendar",
   "errorHint": "Check your connection and try again.",
+  "noteLinkMissing": "That note is no longer available.",
   "eventCount_one": "{{count}} event",
   "eventCount_other": "{{count}} events",
   "moreEvents": "{{count}} more",
@@ -82,7 +83,8 @@
     "saveFailed": "Couldn't save your changes. Please try again.",
     "doseAlreadyLogged": "This dose was already logged — its time can't be changed.",
     "invalidOccurrenceDate": "This event no longer repeats on that day — the calendar has been refreshed.",
-    "eventNotFound": "That event no longer exists. Someone else may have deleted it."
+    "eventNotFound": "That event no longer exists. Someone else may have deleted it.",
+    "recurrenceDaysExcludeStart": "The start day must stay selected."
   },
   "addEvent": {
     "addEvent": "Add event",
@@ -177,7 +179,16 @@
       "weekly": "Weekly",
       "monthly": "Monthly",
       "yearly": "Yearly",
-      "cycle": "Cycle (days on / off)"
+      "cycle": "Cycle (days on / off)",
+      "daysOfWeek": "Days of the week"
+    },
+    "daysOfWeek": {
+      "title": "Repeat on",
+      "firstTime": "First time: {{date}}",
+      "startLocked": "Started on {{day}}. To remove {{day}}, end this series and add a new one.",
+      "noneSelected": "Choose at least one day",
+      "timezoneNote": "Days are in {{name}}'s time zone ({{timezone}})",
+      "timezoneNoteGeneric": "Days are in their time zone ({{timezone}})"
     },
     "reminders": {
       "section": "Reminders",
@@ -264,6 +275,26 @@
     "deleting": "Deleting…",
     "deleted": "Event deleted"
   },
+  "deleteMedication": {
+    "title": "Delete medication",
+    "scopeSingle": "This dose only",
+    "scopeFuture": "This and all future doses",
+    "deleted": "Medication deleted",
+    "wholeMessage": "Delete \"{{title}}\"? It will be removed from your medication list and its reminders will stop. Doses already recorded stay in adherence reports. This can't be undone.",
+    "discontinueHint": "To keep it in your Inactive list so you can turn it back on later, use Discontinue instead."
+  },
+  "deleteTask": {
+    "title": "Delete task",
+    "scopeSingle": "This task only",
+    "scopeFuture": "This and all future tasks",
+    "deleted": "Task deleted"
+  },
+  "deleteAppointment": {
+    "title": "Delete appointment",
+    "scopeSingle": "This appointment only",
+    "scopeFuture": "This and all future appointments",
+    "deleted": "Appointment deleted"
+  },
   "discontinueMed": {
     "title": "Discontinue medication",
     "reactivateTitle": "Reactivate medication",
@@ -276,6 +307,7 @@
     "discontinuedToast": "Medication discontinued",
     "reactivatedToast": "Medication reactivated",
     "inactiveBadge": "Inactive",
+    "endedOn": "Ended {{date}}",
     "inactiveCalendarNote": "This medication is inactive. Doses from before it was discontinued stay on the calendar, and you can still mark one taken or skipped — a dose that was really given should be recorded. Reactivate the medication to change its details or resume reminders.",
     "editInactiveTitle": "Medication is inactive",
     "editInactiveMessage": "This medication is inactive. Reactivate it to make changes."
@@ -294,6 +326,10 @@
     "deleteConfirm": "Delete this note? This can't be undone.",
     "empty": "No notes yet.",
     "loadError": "Couldn't load notes.",
-    "errorSaving": "Couldn't save your note. Please try again."
-  }
+    "errorSaving": "Couldn't save your note. Please try again.",
+    "errorOccurrenceRemoved": "This event was removed from the calendar for that day.",
+    "noteCount_one": "{{count}} note",
+    "noteCount_other": "{{count}} notes"
+  },
+  "permissionDenied": "You don't have permission to make changes in this circle."
 }

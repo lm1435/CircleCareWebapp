@@ -1,5 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Avatar, AVATAR_GRADIENTS, avatarGradientFor } from '../Avatar';
+import {
+  Avatar,
+  AVATAR_COLOR_KEYS,
+  AVATAR_GRADIENTS,
+  avatarGradientFor,
+  avatarGradientForKey,
+} from '../Avatar';
 
 describe('Avatar', () => {
   it('renders a single initial from the first name (mobile parity)', () => {
@@ -54,10 +60,8 @@ describe('Avatar', () => {
     const el = screen.getByText('R');
     expect(el.className).toContain('text-cream');
     expect(el.className).toContain('font-semibold');
-    // 'R' = 82; 82 % 6 = 4 → the moss-mid → moss-dark pair.
-    expect(el.style.backgroundImage).toBe(
-      'linear-gradient(135deg, var(--color-moss-mid), var(--color-moss-dark))'
-    );
+    const [from, to] = avatarGradientFor('Rose Meza');
+    expect(el.style.backgroundImage).toBe(`linear-gradient(135deg, ${from}, ${to})`);
   });
 
   it('adds a 2px cream ring only when `bordered`', () => {
@@ -76,31 +80,60 @@ describe('Avatar', () => {
   });
 });
 
-describe('avatarGradientFor (mobile parity)', () => {
-  it('carries mobile’s six pairs in mobile’s order', () => {
-    // mobile/src/components/ui/Avatar.tsx:44-51, expressed through the web
-    // tokens holding the identical hex.
-    expect(AVATAR_GRADIENTS).toEqual([
-      ['var(--color-moss)', 'var(--color-moss-deep)'],
-      ['var(--color-coral)', 'var(--color-coral-deep)'],
-      ['var(--color-dusk)', 'var(--color-dusk-deep)'],
-      ['var(--color-clay)', 'var(--color-clay-ramp-deep)'],
-      ['var(--color-moss-mid)', 'var(--color-moss-dark)'],
-      ['var(--color-clay-light)', 'var(--color-clay)'],
-    ]);
-  });
-
-  it('hashes on the FIRST character code modulo six, as mobile does', () => {
-    // 'A' = 65 → 65 % 6 = 5; 'B' = 66 → 0; 'a' = 97 → 1.
+describe('avatarGradientFor (web-only whole-name hash, approved 2026-10-02)', () => {
+  it('hashes the whole trimmed name (djb2-xor, mod six)', () => {
+    // Pinned indices: Ana 5, Bea 1, Maria 3, Margaret 0, Sarah 4.
     expect(avatarGradientFor('Ana')).toBe(AVATAR_GRADIENTS[5]);
-    expect(avatarGradientFor('Bea')).toBe(AVATAR_GRADIENTS[0]);
-    expect(avatarGradientFor('ana')).toBe(AVATAR_GRADIENTS[1]);
-    // Only the first character matters — the rest of the name cannot move it.
-    expect(avatarGradientFor('Ana Reyes')).toBe(avatarGradientFor('Alfredo Zamora'));
+    expect(avatarGradientFor('Bea')).toBe(AVATAR_GRADIENTS[1]);
+    expect(avatarGradientFor('Maria')).toBe(AVATAR_GRADIENTS[3]);
+    expect(avatarGradientFor('  Ana  ')).toBe(avatarGradientFor('Ana'));
   });
 
-  it('returns the first pair for an empty or missing name', () => {
+  it('separates Margaret Mitchell and Sarah Mitchell (the real regression case)', () => {
+    expect(avatarGradientFor('Margaret Mitchell')).toBe(AVATAR_GRADIENTS[0]);
+    expect(avatarGradientFor('Sarah Mitchell')).toBe(AVATAR_GRADIENTS[2]);
+    expect(avatarGradientFor('Margaret Mitchell')).not.toBe(avatarGradientFor('Sarah Mitchell'));
+    expect(avatarGradientFor('Margaret')).toBe(AVATAR_GRADIENTS[0]);
+    expect(avatarGradientFor('Sarah')).toBe(AVATAR_GRADIENTS[4]);
+  });
+
+  it('a valid colorKey beats the hash', () => {
+    expect(avatarGradientFor('Ana', 'dusk')).toBe(avatarGradientForKey('dusk'));
+  });
+
+  it('returns the first pair for an empty, blank or missing name', () => {
     expect(avatarGradientFor()).toBe(AVATAR_GRADIENTS[0]);
     expect(avatarGradientFor('')).toBe(AVATAR_GRADIENTS[0]);
+    expect(avatarGradientFor('   ')).toBe(AVATAR_GRADIENTS[0]);
+  });
+});
+
+describe('Avatar colorKey (member colour)', () => {
+  it('a chosen palette key wins over the name hash', () => {
+    // 'Maria' hashes to gradient 3; the member chose dusk.
+    expect(avatarGradientFor('Maria')).not.toEqual(avatarGradientForKey('dusk'));
+    expect(avatarGradientFor('Maria', 'dusk')).toEqual(avatarGradientForKey('dusk'));
+    render(<Avatar name="Maria" colorKey="dusk" />);
+    const [from, to] = avatarGradientForKey('dusk');
+    expect(screen.getByText('M').style.backgroundImage).toBe(
+      `linear-gradient(135deg, ${from}, ${to})`
+    );
+  });
+
+  it.each([[null], [undefined], ['#ff0000'], ['teal'], ['']])(
+    'falls back to the name hash for colorKey %j',
+    (key) => {
+      render(<Avatar name="Maria" colorKey={key as string | null | undefined} />);
+      const [from, to] = avatarGradientFor('Maria');
+      expect(screen.getByText('M').style.backgroundImage).toBe(
+        `linear-gradient(135deg, ${from}, ${to})`
+      );
+    }
+  );
+
+  it('keeps the palette index order: key i is gradient i', () => {
+    AVATAR_COLOR_KEYS.forEach((key, i) => {
+      expect(avatarGradientForKey(key)).toEqual(AVATAR_GRADIENTS[i]);
+    });
   });
 });

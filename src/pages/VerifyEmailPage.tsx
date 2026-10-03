@@ -5,7 +5,7 @@ import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
-import { isRateLimitError } from '@/lib/apiErrors';
+import { classifyFailureCode, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -23,6 +23,13 @@ import { useAuthBack } from '@/components/auth/useAuthBack';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_COOLDOWN_SECONDS = 60;
 const OTP_LENGTH = 6;
+
+// POST /auth/verify-otp answers a wrong OR an expired code with 400
+// VERIFICATION_FAILED (backend/src/routes/auth.ts, both branches) — the one
+// reply that says the code ITSELF is dead. Anything else (no response, a
+// timeout, a 5xx, an edge error page, a 429) says nothing about the code, so it
+// must not cost the person the digits they typed.
+const CODE_REJECTED = 'VERIFICATION_FAILED';
 
 interface VerifyEmailState {
   email?: string;
@@ -57,6 +64,9 @@ export default function VerifyEmailPage(): ReactElement {
   const emailRef = useRef<HTMLInputElement>(null);
   const otpRef = useRef<OtpInputHandle>(null);
   const submittedRef = useRef(false);
+  // Set when a rejected code has emptied the boxes: focus goes back to box 1 as
+  // soon as they are enabled again (a disabled input cannot take focus).
+  const refocusOtpRef = useRef(false);
   const otpErrorId = 'verify-otp-error';
 
   // Resend cooldown countdown
@@ -67,6 +77,16 @@ export default function VerifyEmailPage(): ReactElement {
     }, 1000);
     return () => window.clearInterval(timer);
   }, [cooldown]);
+
+  // A rejected code empties the boxes (see `verify`) while they are still
+  // disabled by `isVerifying`. Once the same commit has re-enabled them, put
+  // focus on the first one, so the next thing typed is the new code. The error
+  // stays on screen (role="alert"), and the group stays described by it.
+  useEffect(() => {
+    if (isVerifying || !refocusOtpRef.current) return;
+    refocusOtpRef.current = false;
+    otpRef.current?.focus();
+  }, [isVerifying]);
 
   const validateEmail = (): string | null => {
     const trimmed = email.trim();
@@ -124,6 +144,18 @@ export default function VerifyEmailPage(): ReactElement {
       setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.invalidCode'));
       Analytics.otpFailed();
       submittedRef.current = false;
+      // A DEFINITELY rejected code is emptied, not left to be typed over. This
+      // page submits on every report of a full code, so retyping over a full
+      // one changes it on every keystroke and sends each half-corrected code
+      // (199999, 129999, 123999 ...) on its own — and the first request disables
+      // the boxes, so the rest of the typing is lost while the OTP limiter
+      // (10 per 15 minutes) is spent. Emptied, nothing is submitted until a
+      // whole NEW code has been typed. The message is not touched here: like
+      // every other error on this page it stays until the next attempt starts.
+      if (classifyFailureCode(err) === CODE_REJECTED) {
+        setOtp('');
+        refocusOtpRef.current = true;
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -170,6 +202,15 @@ export default function VerifyEmailPage(): ReactElement {
       setNotice(t('verifyOtp.codeSentMessage'));
       setCooldown(RESEND_COOLDOWN_SECONDS);
       Analytics.otpResent();
+      // The new code replaces whatever is in the boxes, so empty them and start
+      // at box 1 (mobile does the same). Left full, the stale code is the same
+      // trap as a rejected one: this page submits on every report of a full
+      // code, so typing the new one over it sends each half-corrected code.
+      // Only a SUCCESSFUL resend gets here — a failed one (below) changed
+      // nothing, so the person's code stays. The boxes are never disabled while
+      // resending (only `verify` disables them), so focus can move right away.
+      setOtp('');
+      otpRef.current?.focus();
     } catch (err) {
       setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.resendFailed'));
     } finally {

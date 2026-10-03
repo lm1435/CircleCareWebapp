@@ -30,7 +30,7 @@ import { PageMasthead } from '@/components/layout/PageMasthead';
 import { AddVitalModal } from '@/components/vitals/AddVitalModal';
 import { EditVitalModal } from '@/components/vitals/EditVitalModal';
 import { VitalsChart, type VitalsChartSeries } from '@/components/vitals/VitalsChart';
-import { useVitals, useDeleteVital } from '@/hooks/useVitals';
+import { useVitals, useDeleteVital, useLatestVitals } from '@/hooks/useVitals';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { useCircle } from '@/hooks/useCircle';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -43,7 +43,9 @@ import {
   type GlucoseUnit,
   type WeightUnit,
 } from '@/lib/vitals';
+import { formatAverageDelta } from '@/lib/vitalsTrend';
 import { utcISOToRecipientWallTime } from '@/components/vitals/vitalDateTime';
+import { getLoggedByLabel } from '@/components/vitals/loggedBy';
 import { formatTimeOfDay } from '@/utils/timezone';
 
 // Task 21 (mobile parity) — vitals page. MIRRORS
@@ -85,6 +87,38 @@ type RangeChoice = '7d' | '30d' | '90d';
 const RANGE_CHOICES: RangeChoice[] = ['7d', '30d', '90d'];
 const RANGE_DAYS: Record<RangeChoice, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
+/** The range window's start instant, `days` before `now`. */
+function rangeStartDate(range: RangeChoice, now: Date): Date {
+  const start = new Date(now);
+  start.setDate(start.getDate() - RANGE_DAYS[range]);
+  return start;
+}
+
+/**
+ * PORT of mobile `getWiderRangeContaining` (vitalsDateRange.ts): the
+ * narrowest range AFTER `current` (in `RANGE_CHOICES` order) whose window
+ * would include `recordedAt` — used to offer "Show past 30/90 days" from the
+ * out-of-range empty state, jumping to the smallest wider window rather than
+ * always the widest. Ranges at or before `current` are never considered: the
+ * caller already knows nothing in the current (and by construction any
+ * narrower) window contains the reading.
+ */
+export function getWiderRangeContaining(
+  recordedAtISO: string,
+  current: RangeChoice,
+  now: Date = new Date()
+): RangeChoice | null {
+  const recordedTime = Date.parse(recordedAtISO);
+  if (Number.isNaN(recordedTime)) return null;
+
+  const currentIndex = RANGE_CHOICES.indexOf(current);
+  for (let i = currentIndex + 1; i < RANGE_CHOICES.length; i++) {
+    const candidate = RANGE_CHOICES[i]!;
+    if (rangeStartDate(candidate, now).getTime() <= recordedTime) return candidate;
+  }
+  return null;
+}
+
 const SKELETON_ROWS = [0, 1, 2, 3];
 
 /** A curve needs two points; below that the chart section stays closed. */
@@ -109,9 +143,14 @@ function formatRecordedDay(
   }).format(new Date(`${wall.date}T12:00:00Z`));
 }
 
-/** "Jun 15" — the compact form the chart's x axis carries. */
-function formatShortDay(recordedAtISO: string, timezone: string): string {
-  const wall = utcISOToRecipientWallTime(recordedAtISO, timezone);
+/**
+ * "Jun 15" — the compact form the chart's x axis carries, from a raw epoch
+ * instant rather than a reading's `recorded_at`: the chart's axis ticks
+ * (range start, midpoint, "now") are window-arithmetic instants with no
+ * reading of their own to read a timestamp off.
+ */
+function formatShortDayFromMs(ms: number, timezone: string): string {
+  const wall = utcISOToRecipientWallTime(new Date(ms).toISOString(), timezone);
   return new Intl.DateTimeFormat(i18n.language, {
     month: 'short',
     day: 'numeric',
@@ -212,7 +251,11 @@ function computeStats(
 
 interface VitalTrend {
   text: string;
-  icon: IconName;
+  /** `null` for a 'mixed' direction (e.g. BP systolic up, diastolic down) —
+   *  no single trending arrow can honestly claim a direction only part of the
+   *  reading moved in, and the 'same' dash would just as wrongly claim
+   *  nothing changed. */
+  icon: IconName | null;
 }
 
 // ── Reading row ──────────────────────────────────────────────────────────────
@@ -262,7 +305,9 @@ function VitalRow({
         <div className="min-w-0 flex-1">
           <p className={careCardTitle}>{displayValue}</p>
           <div className={careCardMeta}>
-            <span>{recordedLabel}</span>
+            <span>
+              {recordedLabel} · {getLoggedByLabel(vital, t('detail.system'))}
+            </span>
             {vital.notes && <span>· {vital.notes}</span>}
           </div>
         </div>
@@ -354,7 +399,7 @@ function LatestVitalHero({
         <span className="ml-1 text-md text-ink-2">{unit}</span>
       </p>
       <Text variant="caption" className="mt-1">
-        {recordedLabel}
+        {recordedLabel} · {getLoggedByLabel(latest, t('detail.system'))}
       </Text>
 
       {/* Average/Lowest/Highest across ONE reading are all identical to the
@@ -388,7 +433,7 @@ function LatestVitalHero({
 
       {trend && (
         <div className="mt-4 flex items-center gap-1">
-          <Icon name={trend.icon} size="meta" className="text-ink-2" />
+          {trend.icon && <Icon name={trend.icon} size="meta" className="text-ink-2" />}
           <Text variant="caption">{trend.text}</Text>
         </div>
       )}
@@ -445,6 +490,10 @@ export default function VitalsPage(): ReactElement {
     to: prevTo,
   });
   const deleteMutation = useDeleteVital(circleId);
+  // Independent of the range query: the single latest reading PER TYPE
+  // regardless of the selected window — what lets the empty states tell
+  // "never logged" apart from "not in this range" (mobile parity).
+  const latestQuery = useLatestVitals(circleId);
 
   const vitals = vitalsQuery.data ?? [];
 
@@ -470,6 +519,65 @@ export default function VitalsPage(): ReactElement {
     typeFilter === 'all' ? [] : (groups.find((g) => g.type === typeFilter)?.items ?? []);
   const selectedType = typeFilter === 'all' ? null : typeFilter;
 
+  /**
+   * ONE story for the empty list, derived once, instead of the page reaching
+   * the same generic "No readings yet" conclusion whether a type was truly
+   * NEVER logged, logged only OUTSIDE the selected range, or the answer to
+   * either question just isn't in yet. PORT of mobile's `viewState`
+   * (VitalsDetailScreen ~361-402), collapsed to the three outcomes this
+   * page's empty-list slot actually renders:
+   *
+   *  - `neverLogged` — a SINGLE type is selected and its latest-vitals entry
+   *    resolved to `null` — this type has no reading at all, in any range.
+   *  - `range`       — a reading exists (for the selected type, or — with
+   *    "All types" selected — the most recent across every type) but is
+   *    OLDER than the window this page queried with. Also covers the "All
+   *    types" case per the product-owner spec: if EVERY type's latest is
+   *    null, "All types" instead falls through to `generic` unchanged.
+   *  - `generic`     — the latest-vitals query hasn't resolved (still
+   *    loading, or failed) or genuinely found nothing anywhere: keep
+   *    today's plain empty state rather than claim "never logged" without an
+   *    answer, and rather than invent a loading empty state nobody asked for.
+   */
+  const emptyState = useMemo(():
+    | { kind: 'generic' }
+    | { kind: 'neverLogged'; type: VitalType }
+    | { kind: 'range'; latest: HealthVital; jumpTo: RangeChoice | null } => {
+    const latest = latestQuery.data;
+    if (!latest) return { kind: 'generic' };
+
+    if (selectedType) {
+      const latestForType = latest[selectedType];
+      if (latestForType === null) return { kind: 'neverLogged', type: selectedType };
+      if (Date.parse(latestForType.recorded_at) < Date.parse(from)) {
+        return {
+          kind: 'range',
+          latest: latestForType,
+          jumpTo: getWiderRangeContaining(latestForType.recorded_at, range),
+        };
+      }
+      // Should not normally happen alongside an empty `groups` (the range
+      // query and the latest-vitals query would then disagree), but a stale
+      // cache can race here the same way mobile's `isFetching` branch guards
+      // against — never claim a story this can't back up.
+      return { kind: 'generic' };
+    }
+
+    // "All types" — most recent reading ACROSS every type, if any exists.
+    const everyLatest = VITAL_TYPES.map((ty) => latest[ty]).filter(
+      (v): v is HealthVital => v !== null
+    );
+    if (everyLatest.length === 0) return { kind: 'generic' };
+    const mostRecent = everyLatest.reduce((a, b) =>
+      Date.parse(a.recorded_at) > Date.parse(b.recorded_at) ? a : b
+    );
+    return {
+      kind: 'range',
+      latest: mostRecent,
+      jumpTo: getWiderRangeContaining(mostRecent.recorded_at, range),
+    };
+  }, [latestQuery.data, selectedType, from, range]);
+
   const heroStats = useMemo(
     () =>
       selectedType ? computeStats(heroItems, selectedType, weightUnit, glucoseUnit) : null,
@@ -483,21 +591,93 @@ export default function VitalsPage(): ReactElement {
     [previousQuery.data, selectedType, weightUnit, glucoseUnit]
   );
 
+  // Literal `t('...')` calls only, one per range — mirrors mobile's
+  // `trendVsTexts`/`trendSameTexts` (VitalsDetailScreen ~558-575): a
+  // template-literal or computed key here would register as a new DYNAMIC
+  // call site in `translationKeys.test.ts`'s pinned count. `trendVsTexts`
+  // holds functions rather than strings because its sentence carries a
+  // `{{delta}}` only known once `formatAverageDelta` runs below.
+  const trendVsTexts: Record<RangeChoice, (delta: string) => string> = useMemo(
+    () => ({
+      '7d': (delta) => t('detail.trendVs.7d', { delta }),
+      '30d': (delta) => t('detail.trendVs.30d', { delta }),
+      '90d': (delta) => t('detail.trendVs.90d', { delta }),
+    }),
+    [t]
+  );
+  const trendSameTexts: Record<RangeChoice, string> = useMemo(
+    () => ({
+      '7d': t('detail.trendSame.7d'),
+      '30d': t('detail.trendSame.30d'),
+      '90d': t('detail.trendSame.90d'),
+    }),
+    [t]
+  );
+
+  // Empty-state copy lookups — literal `t('...')` calls only, keyed into
+  // objects, for the same reason `trendVsTexts` above is: `t(dynamicKey)`
+  // would register as a new call site in `translationKeys.test.ts`'s pinned
+  // dynamic-site count. Mirrors mobile's `emptyNeverTitles`/`emptyRangeTitles`.
+  const emptyNeverTitles: Record<VitalType, string> = useMemo(
+    () => ({
+      blood_pressure: t('emptyState.neverLogged.title.blood_pressure'),
+      heart_rate: t('emptyState.neverLogged.title.heart_rate'),
+      glucose: t('emptyState.neverLogged.title.glucose'),
+      weight: t('emptyState.neverLogged.title.weight'),
+    }),
+    [t]
+  );
+  const emptyNeverCtas: Record<VitalType, string> = useMemo(
+    () => ({
+      blood_pressure: t('emptyState.neverLogged.cta.blood_pressure'),
+      heart_rate: t('emptyState.neverLogged.cta.heart_rate'),
+      glucose: t('emptyState.neverLogged.cta.glucose'),
+      weight: t('emptyState.neverLogged.cta.weight'),
+    }),
+    [t]
+  );
+  const emptyRangeTitles: Record<RangeChoice, string> = useMemo(
+    () => ({
+      '7d': t('emptyState.outOfRange.title.7d'),
+      '30d': t('emptyState.outOfRange.title.30d'),
+      '90d': t('emptyState.outOfRange.title.90d'),
+    }),
+    [t]
+  );
+  // No '7d' entry — 7d is the narrowest range, never a wider jump target.
+  const emptyRangeShowLabels: Partial<Record<RangeChoice, string>> = useMemo(
+    () => ({
+      '30d': t('emptyState.outOfRange.show.30d'),
+      '90d': t('emptyState.outOfRange.show.90d'),
+    }),
+    [t]
+  );
+
   /**
-   * PORT of mobile's trend (VitalsDetailScreen ~376-386): a plain
-   * period-over-period comparison of the MEAN, with a ±1% dead band called
-   * "Stable". It is deliberately NOT type-aware — mobile does not claim a
-   * falling blood pressure is an improvement, and neither does this.
+   * PORT of mobile's trend (`formatAverageDelta`, src/lib/vitalsTrend.ts):
+   * replaces a percent-of-average comparison — systolic-only for blood
+   * pressure (diastolic was invisible), and a percentage is not how a
+   * caregiver or clinician reads a blood-pressure or glucose average — with a
+   * signed absolute delta per component, in display units.
    */
   const trend = useMemo<VitalTrend | null>(() => {
-    if (!heroStats || !previousStats || previousStats.avg === 0) return null;
-    const diff = heroStats.avg - previousStats.avg;
-    const pct = Math.abs((diff / previousStats.avg) * 100);
-    if (pct < 1) return { text: t('detail.trendStable'), icon: 'remove' };
-    return diff > 0
-      ? { text: t('detail.trendUp', { pct: pct.toFixed(1) }), icon: 'trending-up' }
-      : { text: t('detail.trendDown', { pct: pct.toFixed(1) }), icon: 'trending-down' };
-  }, [heroStats, previousStats, t]);
+    if (!selectedType || !heroStats || !previousStats) return null;
+    const unit = getDisplayUnit(selectedType, weightUnit, glucoseUnit);
+    const { delta, direction } = formatAverageDelta(selectedType, heroStats, previousStats, unit);
+    const text =
+      direction === 'same' ? trendSameTexts[range] : trendVsTexts[range](delta);
+    // 'mixed' (e.g. systolic up, diastolic down) renders NO icon — see
+    // `VitalTrend`'s own comment.
+    const icon: IconName | null =
+      direction === 'up'
+        ? 'trending-up'
+        : direction === 'down'
+          ? 'trending-down'
+          : direction === 'same'
+            ? 'remove'
+            : null;
+    return { text, icon };
+  }, [selectedType, heroStats, previousStats, weightUnit, glucoseUnit, range, trendVsTexts, trendSameTexts]);
 
   const typeOptions = useMemo(
     () =>
@@ -554,12 +734,23 @@ export default function VitalsPage(): ReactElement {
     const fmt = (v1: number, v2: number | null): string =>
       formatVitalValue(selectedType, v1, v2, unit, { unit: false });
 
+    // X DOMAIN = the selected range window (the query's own `from`) through
+    // "now", captured HERE rather than reused from a frozen query bound —
+    // mobile-parity (vitalsDateRange.ts): a point lands at its TRUE time
+    // position instead of being stretched to whatever span the loaded
+    // readings happen to cover (mobile's own "NOT first-to-last" fix for the
+    // same reason).
+    const windowStartMs = Date.parse(from);
+    const nowMs = Date.now();
+
     return {
       series,
-      xLabels: [
-        formatShortDay(sorted[0]!.recorded_at, timezone),
-        formatShortDay(sorted[sorted.length - 1]!.recorded_at, timezone),
-      ],
+      xDomain: [windowStartMs, nowMs] as [number, number],
+      axisLabels: {
+        start: formatShortDayFromMs(windowStartMs, timezone),
+        mid: formatShortDayFromMs((windowStartMs + nowMs) / 2, timezone),
+        end: t('detail.chartToday'),
+      },
       yFormatter: (value: number): string =>
         formatVitalValue(selectedType, value, null, unit, { unit: false }),
       label: t('detail.chartSummary', {
@@ -572,7 +763,7 @@ export default function VitalsPage(): ReactElement {
       }),
       isBloodPressure: selectedType === 'blood_pressure' && diastolic.length > 0,
     };
-  }, [selectedType, heroItems, heroStats, weightUnit, glucoseUnit, timezone, t]);
+  }, [selectedType, heroItems, heroStats, weightUnit, glucoseUnit, timezone, t, from]);
 
   // One accordion per vital-type group. The group key set is the types present;
   // useAccordionGroup recomputes allOpen/anyOpen when the set changes.
@@ -646,7 +837,61 @@ export default function VitalsPage(): ReactElement {
         </Button>
       </Card>
     );
+  } else if (groups.length === 0 && emptyState.kind === 'neverLogged') {
+    // A single type is selected and has NO reading at all, in any range.
+    // Description + CTA only when the viewer can write — an instruction they
+    // cannot act on is just noise (mobile parity).
+    const neverType = emptyState.type;
+    body = (
+      <Card padding="none">
+        <EmptyState
+          tone={TYPE_CONFIG[neverType].tone}
+          icon={TYPE_CONFIG[neverType].icon}
+          title={emptyNeverTitles[neverType]}
+          description={canEdit ? t('emptyState.neverLogged.description') : undefined}
+          actions={
+            canEdit ? (
+              <Button onClick={() => setShowAdd(true)}>{emptyNeverCtas[neverType]}</Button>
+            ) : undefined
+          }
+        />
+      </Card>
+    );
+  } else if (groups.length === 0 && emptyState.kind === 'range') {
+    // A reading exists (for the selected type, or the most recent across all
+    // types with "All types" selected) but is older than the selected
+    // window. Shown to EVERYONE, not gated on canEdit — this is information,
+    // not a write affordance. The jump button only appears when a wider
+    // range would actually contain it (never for 90d, the widest).
+    const { latest, jumpTo } = emptyState;
+    const jumpLabel = jumpTo ? emptyRangeShowLabels[jumpTo] : undefined;
+    const latestUnit = getDisplayUnit(latest.vital_type, weightUnit, glucoseUnit);
+    const latestValue = fromCanonicalValue(latest.vital_type, latest.value1, weightUnit, glucoseUnit);
+    body = (
+      <Card padding="none">
+        <EmptyState
+          tone={selectedType ? TYPE_CONFIG[selectedType].tone : 'moss'}
+          icon={selectedType ? TYPE_CONFIG[selectedType].icon : 'heart-outline'}
+          title={emptyRangeTitles[range]}
+          description={t('emptyState.outOfRange.lastReading', {
+            value: formatVitalValue(latest.vital_type, latestValue, latest.value2, latestUnit),
+            date: formatRecordedDay(latest.recorded_at, timezone),
+          })}
+          actions={
+            jumpTo && jumpLabel ? (
+              <Button variant="secondary" onClick={() => setRange(jumpTo)}>
+                {jumpLabel}
+              </Button>
+            ) : undefined
+          }
+        />
+      </Card>
+    );
   } else if (groups.length === 0) {
+    // `emptyState.kind === 'generic'` — the latest-vitals query hasn't
+    // resolved or found nothing anywhere. Unchanged from before this task:
+    // the plain "No readings yet" empty state, never claiming more than is
+    // known.
     body = (
       <Card padding="none">
         <EmptyState
@@ -780,7 +1025,8 @@ export default function VitalsPage(): ReactElement {
               className="mt-2"
               series={chart.series}
               yFormatter={chart.yFormatter}
-              xLabels={chart.xLabels}
+              xDomain={chart.xDomain}
+              axisLabels={chart.axisLabels}
               label={chart.label}
             />
             {chart.isBloodPressure && (

@@ -66,6 +66,16 @@ describe('deleteEvent', () => {
     );
   });
 
+  // PK3: whole-medication delete that kept recorded doses answers data.history_kept.
+  it('reports historyKept from data.history_kept (false when absent: old server, hard delete)', async () => {
+    mockDelete.mockResolvedValueOnce({ success: true, data: { history_kept: true } } as never);
+    await expect(deleteEvent(CIRCLE_ID, EVENT_ID)).resolves.toEqual({ historyKept: true });
+    mockDelete.mockResolvedValueOnce({ success: true, data: { message: 'ok' } } as never);
+    await expect(deleteEvent(CIRCLE_ID, EVENT_ID)).resolves.toEqual({ historyKept: false });
+    mockDelete.mockResolvedValueOnce(undefined as never);
+    await expect(deleteEvent(CIRCLE_ID, EVENT_ID)).resolves.toEqual({ historyKept: false });
+  });
+
   it('includes only the provided scope param', async () => {
     mockDelete.mockResolvedValue({ success: true } as never);
     await deleteEvent(CIRCLE_ID, 'parent-1', { deleteScope: 'future' });

@@ -1,7 +1,6 @@
 export { DoctorCard, type DoctorCardProps } from './DoctorCard';
 export { ContactCard, type ContactCardProps } from './ContactCard';
 export { InsuranceCard, type InsuranceCardProps } from './InsuranceCard';
-export { DirectivesCard, type DirectivesCardProps } from './DirectivesCard';
 export {
   EmergencySection,
   EmptySection,
@@ -20,4 +19,7 @@ export { EditInsuranceModal, type EditInsuranceModalProps } from './EditInsuranc
 // (its only would-be consumer) carries its own local copy rather than
 // importing this one, so re-exporting it from the barrel was dead weight.
 export { EditMedicalInfoModal, type EditMedicalInfoModalProps } from './EditMedicalInfoModal';
-export { EditDirectivesModal, type EditDirectivesModalProps } from './EditDirectivesModal';
+export {
+  CareSummaryShareDialog,
+  type CareSummaryShareDialogProps,
+} from './CareSummaryShareDialog';

@@ -12,6 +12,7 @@ import {
   createInvite,
   getPendingInvites,
   resendInvite,
+  type AcceptInviteResponse,
   type CreateInviteRequest,
   type CreateInviteResponse,
   type PendingInvite,
@@ -66,10 +67,12 @@ function useInviteMutationOnError(
 ): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  // A seat cap — a hard limit that money lifts. Mobile calls this CAPACITY.
+  // The caregiver SEAT cap — a hard limit that money lifts. It gets its own
+  // context, INVITE_CAP, rather than the shared CAPACITY, so the invite
+  // paywall can be read on its own in the funnel (see lib/paywallContext.ts).
   // The cap is the circle OWNER's tier, so it is owner-aware; `useAcceptInvite`
   // passes no circle (it never answers 402) and keeps the plain gate.
-  const { promptUpgrade } = usePremiumGate('capacity', { circleId });
+  const { promptUpgrade } = usePremiumGate('invite_cap', { circleId });
   const { t } = useTranslation('members');
 
   return (error: unknown) => {
@@ -206,7 +209,11 @@ export interface AcceptInviteVariables {
  * POST /invites/:inviteId/accept — the invitee accepts. Accepting adds the user
  * to a new circle and clears the invite from their pending list.
  */
-export function useAcceptInvite(): UseMutationResult<void, unknown, AcceptInviteVariables> {
+export function useAcceptInvite(): UseMutationResult<
+  AcceptInviteResponse,
+  unknown,
+  AcceptInviteVariables
+> {
   const queryClient = useQueryClient();
   // No circleId: the invitee is not a member of the target circle yet, so there
   // is no cached circle detail to refresh (see invalidateCircleAccessFlags).
@@ -214,9 +221,13 @@ export function useAcceptInvite(): UseMutationResult<void, unknown, AcceptInvite
 
   return useMutation({
     mutationFn: ({ inviteId }: AcceptInviteVariables) => acceptInvite(inviteId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.invitesPending });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
+    // Awaited, not fire-and-forget: the caller opens the joined circle straight
+    // after, and it should already be in the (active) circle list by then.
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.invitesPending }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.circles }),
+      ]);
     },
     onError,
   });

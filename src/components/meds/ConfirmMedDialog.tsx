@@ -5,7 +5,15 @@ import { useConfirmMedication } from '@/hooks/useMedConfirmation';
 import type { MedicationConfirmSource } from '@/lib/analytics';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { isPermissionDeniedError, type TodaysMedication } from '@/api/medicationConfirmations';
-import { isMedicationDiscontinuedError } from '@/lib/apiErrors';
+import { isMedicationDiscontinuedError, isOccurrenceRemovedError } from '@/lib/apiErrors';
+import { confirmFailureOutcome } from '@/lib/confirmVerify';
+import {
+  changeAnswerCopy,
+  doseAlreadyRecorded,
+  doseAlreadyRecordedMessage,
+  type DoseAlreadyRecorded,
+} from '@/lib/doseAlreadyRecorded';
+import { ChangeAnswerDialog } from './ChangeAnswerDialog';
 import {
   isDoseConfirmable,
   formatEventTimeCompact,
@@ -82,9 +90,15 @@ export function ConfirmMedDialog({
   const [status, setStatus] = useState<'taken' | 'skipped'>(initialStatus);
   // 'discontinued' = 409 MEDICATION_DISCONTINUED (inactive med — retry can
   // never succeed, so the message points at reactivation instead).
-  const [submitError, setSubmitError] = useState<'generic' | 'discontinued' | 'notDue' | null>(
-    null
-  );
+  // 'unverified' = an ambiguous failure whose re-read ALSO failed: we do not
+  // know whether the dose was recorded, and must not claim it was not.
+  const [submitError, setSubmitError] = useState<
+    'generic' | 'discontinued' | 'occurrenceRemoved' | 'notDue' | 'unverified' | null
+  >(null);
+  // PK29: another caregiver answered this dose differently. The dialog stays
+  // open and says so, with "Change answer" -> the confirm dialog.
+  const [conflict, setConflict] = useState<DoseAlreadyRecorded | null>(null);
+  const [changing, setChanging] = useState(false);
   const mutation = useConfirmMedication(circleId, source);
 
   const handleSubmit = (): void => {
@@ -108,6 +122,9 @@ export function ConfirmMedDialog({
         event_id: med.id,
         status,
         scheduled_time: med.scheduled_time,
+        // The dose's day — an ambiguous failure is verified against the server
+        // before anything is reported (lib/confirmVerify.ts).
+        dose: { scheduled_date: med.scheduled_date, parent_event_id: med.parent_event_id ?? null },
       },
       {
         onSuccess: () => {
@@ -118,7 +135,20 @@ export function ConfirmMedDialog({
           onClose();
         },
         onError: (error) => {
-          if (isPermissionDeniedError(error)) {
+          const alreadyRecorded = doseAlreadyRecorded(error);
+          if (alreadyRecorded) {
+            // 409: ANOTHER caregiver already answered this dose; their answer
+            // stands. Nothing failed — say who and when, calmly. When the
+            // answers differ (and their time is known) stay open with "Change
+            // answer" (PK29); otherwise toast and close: the day has been
+            // refetched, so the calendar shows the real state.
+            if (changeAnswerCopy(t, alreadyRecorded, status, hourCycle)) {
+              setConflict(alreadyRecorded);
+              return;
+            }
+            showToast(doseAlreadyRecordedMessage(t, alreadyRecorded, hourCycle), 'info');
+            onClose();
+          } else if (isPermissionDeniedError(error)) {
             // The mutation hook already showed the permission toast and
             // refreshed circle access flags — just close.
             onClose();
@@ -126,6 +156,11 @@ export function ConfirmMedDialog({
             // 409: the med was discontinued (likely by another caregiver) —
             // retrying can't succeed, so say what unblocks it.
             setSubmitError('discontinued');
+          } else if (isOccurrenceRemovedError(error)) {
+            // 409: this single dose was removed from the schedule.
+            setSubmitError('occurrenceRemoved');
+          } else if (confirmFailureOutcome(error) === 'unverified') {
+            setSubmitError('unverified');
           } else {
             setSubmitError('generic');
           }
@@ -136,6 +171,20 @@ export function ConfirmMedDialog({
 
   const medName = med.medication_name || med.title;
 
+  if (conflict && changing) {
+    // The confirm dialog replaces this one; either way out closes both.
+    return (
+      <ChangeAnswerDialog
+        circleId={circleId}
+        med={med}
+        mine={status}
+        theirs={conflict}
+        source={source}
+        onClose={onClose}
+      />
+    );
+  }
+
   return (
     <Modal
       title={t('dialog.title')}
@@ -144,14 +193,25 @@ export function ConfirmMedDialog({
       size="sm"
       dismissible={!mutation.isPending}
       footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
-            {t('dialog.cancel')}
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} loading={mutation.isPending}>
-            {mutation.isPending ? t('dialog.submitting') : t('dialog.submit')}
-          </Button>
-        </>
+        conflict ? (
+          <>
+            <Button variant="secondary" onClick={onClose}>
+              {t('common:close')}
+            </Button>
+            <Button variant="primary" onClick={() => setChanging(true)}>
+              {t('dialog.changeAnswerAction')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
+              {t('dialog.cancel')}
+            </Button>
+            <Button variant="primary" onClick={handleSubmit} loading={mutation.isPending}>
+              {mutation.isPending ? t('dialog.submitting') : t('dialog.submit')}
+            </Button>
+          </>
+        )
       }
     >
       <p className="m-0 mb-4 text-sm text-ink-3">
@@ -171,6 +231,13 @@ export function ConfirmMedDialog({
         {dayLabel ? ` · ${dayLabel}` : ''}
       </p>
 
+      {conflict ? (
+        // A calm notice (the dose IS recorded, by someone else): a status
+        // region, never an alert.
+        <p role="status" className="m-0 text-sm text-ink">
+          {doseAlreadyRecordedMessage(t, conflict, hourCycle)}
+        </p>
+      ) : (
       <RadioGroup
         label={t('dialog.statusLabel')}
         value={status}
@@ -180,6 +247,7 @@ export function ConfirmMedDialog({
           { value: 'skipped', label: t('dialog.skipped') },
         ]}
       />
+      )}
 
       {/* Kept OUT of RadioGroup's `error` slot: that slot is silent to a screen
           reader (it only wires aria-describedby), and a submit failure has to
@@ -189,9 +257,14 @@ export function ConfirmMedDialog({
           {t(
             submitError === 'discontinued'
               ? 'dialog.errorDiscontinued'
-              : submitError === 'notDue'
-                ? 'dialog.errorNotDue'
-                : 'dialog.error'
+              : submitError === 'occurrenceRemoved'
+                ? 'dialog.errorOccurrenceRemoved'
+                : submitError === 'notDue'
+                  ? 'dialog.errorNotDue'
+                  : submitError === 'unverified'
+                    ? 'dialog.errorUnverified'
+                    : 'dialog.error',
+            { medication: medName }
           )}
         </p>
       )}

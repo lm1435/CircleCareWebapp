@@ -196,3 +196,95 @@ describe('WeekView', () => {
     });
   });
 });
+
+// a11y audit 2026-09-29 (WCAG 2.5.8 target size): five simultaneous doses in a
+// phone-width day column were ~21px-wide chips. The day column is floored at
+// LANE_MIN_PX per lane of the week's busiest slot.
+describe('WeekView lane width floor', () => {
+  function makeTimedMed(id: string, time: string): CalendarEvent {
+    return { ...makeAllDayTask(id, `Med ${id}`, '2026-03-16'), event_type: 'medication', scheduled_time: time };
+  }
+
+  it('floors the day column at LANE_MIN_PX per overlapping lane', async () => {
+    const { LANE_MIN_PX } = await import('../WeekView');
+    const meds = ['a', 'b', 'c', 'd', 'e'].map((id) => makeTimedMed(id, '08:00'));
+    const { container } = render(
+      <WeekView
+        days={DAYS}
+        eventsByDay={new Map([['2026-03-16', meds]])}
+        careRecipientTimezone="America/Chicago"
+        todayStr={TODAY}
+        onEventClick={vi.fn()}
+      />
+    );
+    const rowgroup = container.querySelector('[data-day-column-floor]') as HTMLElement;
+    expect(rowgroup.dataset.dayColumnFloor).toBe(String(5 * LANE_MIN_PX));
+    expect(rowgroup.style.getPropertyValue('--dc-floor')).toBe(`${5 * LANE_MIN_PX}px`);
+    // Every breakpoint's column width honours the floor.
+    expect(rowgroup.className).toContain('[--dc:max(var(--dc-floor),');
+    expect(rowgroup.className).toContain('lg:[--dc:minmax(var(--dc-floor),1fr)]');
+    // 5 lanes x 25px keeps lane centres >= 24px apart.
+    expect((5 * LANE_MIN_PX) / 5).toBeGreaterThanOrEqual(24);
+  });
+
+  it('adds no floor when nothing overlaps', () => {
+    const { container } = render(
+      <WeekView
+        days={DAYS}
+        eventsByDay={new Map([['2026-03-16', [makeTimedMed('a', '08:00'), makeTimedMed('b', '12:00')]]])}
+        careRecipientTimezone="America/Chicago"
+        todayStr={TODAY}
+        onEventClick={vi.fn()}
+      />
+    );
+    expect((container.querySelector('[data-day-column-floor]') as HTMLElement).dataset.dayColumnFloor).toBe('0');
+  });
+});
+
+// Opening scroll (2026-10-02). The pinned head (day headers + all-day row) is
+// `sticky top-0` inside the SAME scroller as the hour grid, so the head height
+// cancels out of the scroll arithmetic: scrollTop is the lead-in hour's own
+// offset, nothing added for the head. The old code added the timed grid's
+// `offsetTop` (= the head's height), which hid that many pixels of the lead-in
+// under the head. jsdom has no layout, so this only pins the ARITHMETIC against
+// a head height we feed it; that the chips really clear the head is proved in a
+// browser by e2e/flows/calendar-initial-scroll.spec.ts.
+describe('WeekView opening scroll offset', () => {
+  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetTop');
+
+  afterEach(() => {
+    if (original) Object.defineProperty(HTMLElement.prototype, 'offsetTop', original);
+  });
+
+  /** Every element reports `px` as its offsetTop - i.e. the pinned head is `px` tall. */
+  function headIsTall(px: number): void {
+    Object.defineProperty(HTMLElement.prototype, 'offsetTop', { configurable: true, get: () => px });
+  }
+
+  function openScrollTop(times: string[]): number {
+    const eventsByDay = new Map([
+      ['2026-03-16', times.map((t, i) => ({ ...makeAllDayTask(`m${i}`, `Med ${i}`, '2026-03-16'), event_type: 'medication' as const, scheduled_time: t }))],
+    ]);
+    const { container } = render(
+      <WeekView
+        days={DAYS}
+        eventsByDay={eventsByDay}
+        careRecipientTimezone="America/Chicago"
+        todayStr={TODAY}
+        onEventClick={vi.fn()}
+      />
+    );
+    return (container.querySelector('[data-testid="week-scroller"]') as HTMLElement).scrollTop;
+  }
+
+  it.each([0, 57, 111, 207])('opens one hour above the earliest event no matter how tall the head is (%ipx)', (headPx) => {
+    headIsTall(headPx);
+    // 08:00 -> (8 - 1) * 80. The head's height is not part of it.
+    expect(openScrollTop(['08:00', '09:30'])).toBe(7 * 80);
+  });
+
+  it('has nothing to scroll to when the earliest event is within the first hour', () => {
+    headIsTall(111);
+    expect(openScrollTop(['00:30'])).toBe(0);
+  });
+});

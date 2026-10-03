@@ -1,6 +1,13 @@
 {
   "eyebrow": "CircleCare Premium",
-  "title": "Care for them together",
+  "headline": {
+    "onboarding": { "lead": "Better care,", "accent": "together." },
+    "general": { "lead": "Unlock the full", "accent": "experience." },
+    "capacity": { "lead": "More people,", "accent": "better care." },
+    "feature": { "lead": "Get more from", "accent": "CircleCare." },
+    "earnedMeds": { "lead": "You're keeping", "accent": "on track." },
+    "earnedInvite": { "lead": "Your circle is", "accent": "growing." }
+  },
   "subtitle": "Everything your family needs to coordinate care, for every circle you're part of.",
   "trialHook": "Start with a free trial — nothing due today.",
   "benefits": {
@@ -85,9 +92,8 @@
     "year_other": "{{count}}-year"
   },
   "onboarding": {
-    "title": "Better care, together.",
     "subtitle": "Everything your family needs to coordinate care for the people who matter most.",
-    "continueFree": "Continue with Free plan",
+    "continueFree": "Continue with free plan",
     "continueFreeSub": "1 circle, 2 caregivers — upgrade anytime",
     "notNow": "Not now"
   }

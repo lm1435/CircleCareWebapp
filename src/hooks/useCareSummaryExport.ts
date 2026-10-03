@@ -4,10 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { getEvents, type CalendarEvent } from '@/api/calendarEvents';
 import { getCircleDetail, type CircleDetail } from '@/api/circleMembers';
 import { getEmergencyInfo, type EmergencyInfo } from '@/api/emergencyInfo';
+import { getEventNotesInRange } from '@/api/eventNotes';
+import { getCareNotes } from '@/api/careNotes';
 import { useToast } from '@/components/ui';
 import { Analytics, type ExportFailureStage } from '@/lib/analytics';
 import { queryKeys } from '@/lib/queryKeys';
 import { careSummaryFileTitle, generateCareSummaryHtml } from '@/pdf/careSummaryPdf';
+import type { CareSummaryVisitNote, CareSummaryCareNote } from '@/pdf/shared/types';
 import { PrintError, printHtml } from '@/pdf/printHtml';
 import {
   addDaysToDateString,
@@ -50,6 +53,10 @@ export interface CareSummaryEventsWindow {
   start_date: string;
   end_date: string;
   event_type: 'medication';
+  /** PK26: roster mode + the roots of ended/discontinued series, so a course ended with
+   *  "This and future" reaches "Recently stopped" (mobile sends the same two flags). */
+  includeDiscontinued: true;
+  includeInactiveRoots: true;
 }
 
 /**
@@ -62,7 +69,38 @@ export function careSummaryEventsWindow(todayStr: string): CareSummaryEventsWind
     start_date: addDaysToDateString(todayStr, -CARE_SUMMARY_MEDICATION_LOOKBACK_DAYS),
     end_date: addDaysToDateString(todayStr, CARE_SUMMARY_MEDICATION_LOOKBACK_DAYS),
     event_type: 'medication',
+    includeDiscontinued: true,
+    includeInactiveRoots: true,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Notes (docs/plans/notes-first-class.md, Slice 4, task 30). A DIFFERENT
+// window from the medications one above: LAST 30 DAYS TO TODAY (never a
+// symmetric window -- there is no such thing as a future note), in the
+// recipient's timezone.
+// ---------------------------------------------------------------------------
+
+/** Plan: "notes window = last 30 days to today in the RECIPIENT timezone." */
+const CARE_SUMMARY_NOTES_LOOKBACK_DAYS = 30;
+
+export interface CareSummaryNotesWindow {
+  from: string;
+  to: string;
+}
+
+export function careSummaryNotesWindow(todayStr: string): CareSummaryNotesWindow {
+  return {
+    from: addDaysToDateString(todayStr, -CARE_SUMMARY_NOTES_LOOKBACK_DAYS),
+    to: todayStr,
+  };
+}
+
+/** The two opt-in switches on the share sheet. Both default OFF at this
+ *  layer -- `EmergencyInfoPage`'s dialog is what defaults visit notes ON. */
+export interface CareSummaryShareOptions {
+  includeVisitNotes?: boolean;
+  includeCareNotes?: boolean;
 }
 
 /**
@@ -110,8 +148,12 @@ export interface UseCareSummaryExportResult {
    * Resolves once the dialog has been REQUESTED (it is modal and unobservable
    * — plan decision 7). Never rejects: failures land in `error`, a toast and
    * analytics. A call made while one is in flight is a no-op.
+   *
+   * `options` is the share sheet's two switches (task 30). Omitted or both
+   * false — the pre-Slice-4 behavior — fetches neither note source and prints
+   * byte-identically to before this slice.
    */
-  exportPdf: () => Promise<void>;
+  exportPdf: (options?: CareSummaryShareOptions) => Promise<void>;
   isExporting: boolean;
   /** Localised failure copy, or null. Cleared by `clearError` and on the next export. */
   error: string | null;
@@ -159,7 +201,7 @@ export function useCareSummaryExport({
     [t, showToast]
   );
 
-  const exportPdf = useCallback(async (): Promise<void> => {
+  const exportPdf = useCallback(async (options?: CareSummaryShareOptions): Promise<void> => {
     if (inFlightRef.current || !circleId) return;
     inFlightRef.current = true;
     setIsExporting(true);
@@ -198,6 +240,55 @@ export function useCareSummaryExport({
         getDateInTimezone,
       });
 
+      // Notes (task 30) — both OPTIONAL, both gated behind an explicit
+      // switch. A fetch failure here is caught LOCALLY: it degrades that one
+      // section to "not included" rather than failing the whole export (the
+      // circle/emergency-info/medications reads above are NOT wrapped this
+      // way — those are load-bearing for the document; a note is not).
+      const includeVisitNotes = options?.includeVisitNotes ?? false;
+      const includeCareNotes = options?.includeCareNotes ?? false;
+      const notesWindow = careSummaryNotesWindow(todayStr);
+
+      let visitNotes: CareSummaryVisitNote[] | undefined;
+      if (includeVisitNotes) {
+        try {
+          const items = await queryClient.fetchQuery({
+            queryKey: queryKeys.eventNotesRange(circleId, {
+              ...notesWindow,
+              event_type: 'appointment',
+            }),
+            queryFn: () =>
+              getEventNotesInRange(circleId, { ...notesWindow, event_type: 'appointment' }),
+          });
+          visitNotes = items.map((n) => ({
+            date: n.event.scheduled_date,
+            eventTitle: n.event.title,
+            authorFirstName: n.author.first_name,
+            body: n.body,
+          }));
+        } catch {
+          visitNotes = undefined;
+        }
+      }
+
+      let careNotes: CareSummaryCareNote[] | undefined;
+      if (includeCareNotes) {
+        try {
+          const response = await queryClient.fetchQuery({
+            queryKey: queryKeys.careNotesRange(circleId, notesWindow),
+            queryFn: () => getCareNotes(circleId, notesWindow),
+          });
+          careNotes = response.notes.map((n) => ({
+            date: n.note_date,
+            authorFirstName: n.author?.first_name ?? null,
+            body: n.body,
+            mood: n.mood,
+          }));
+        } catch {
+          careNotes = undefined;
+        }
+      }
+
       const html = generateCareSummaryHtml({
         recipientName: circle.recipient_name,
         recipientDob: circle.recipient_dob || null,
@@ -206,13 +297,24 @@ export function useCareSummaryExport({
         medications: forExport,
         careRecipientTimezone,
         preparedBy: preparedByFromStore(),
+        visitNotes,
+        careNotes,
       });
 
       await printHtml({ html, title: careSummaryFileTitle(circle.recipient_name) });
 
       // Fired when the dialog is requested — mobile fires on share hand-off
       // (plan decision 7). ids and enums only.
-      Analytics.careSummaryShared(circleId, 'pdf');
+      //
+      // The 2-arg call is kept BYTE-IDENTICAL to every pre-Slice-4 call site
+      // (and every pre-Slice-4 test's assertion of it) when the caller passed
+      // no options at all — only a caller that actually asked for a notes
+      // section gets the 3rd argument.
+      if (options) {
+        Analytics.careSummaryShared(circleId, 'pdf', { includeVisitNotes, includeCareNotes });
+      } else {
+        Analytics.careSummaryShared(circleId, 'pdf');
+      }
     } catch (err) {
       reportFailure(err);
     } finally {

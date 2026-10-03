@@ -164,6 +164,16 @@ describe('SignUpPage', () => {
     expect(termsLink.getAttribute('href')).not.toBe('');
   });
 
+  it('marks the new account email as USERNAME (type stays email) and both passwords as new-password', () => {
+    renderSignUp();
+    const email = document.getElementById('email');
+    expect(email).toHaveAttribute('autocomplete', 'username');
+    expect(email).toHaveAttribute('type', 'email');
+    const passwords = Array.from(document.querySelectorAll('input[type="password"]'));
+    expect(passwords).toHaveLength(2);
+    for (const p of passwords) expect(p).toHaveAttribute('autocomplete', 'new-password');
+  });
+
   it('validates locally and never calls the API with an empty form', async () => {
     const user = userEvent.setup();
     renderSignUp();
@@ -318,6 +328,24 @@ describe('SignUpPage', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(
       'An account with this email already exists. Please sign in instead.'
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('SIGNUP_FAILED shows the neutral rejection copy (PK2+, mobile wording) and not "email exists"', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'SIGNUP_FAILED', message: 'Unable to create account. Please try again.' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      "We couldn't create your account. If you already have one, try signing in instead."
     );
     expect(mockNavigate).not.toHaveBeenCalled();
   });

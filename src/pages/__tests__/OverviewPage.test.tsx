@@ -5,6 +5,7 @@ import '@/i18n';
 import OverviewPage from '@/pages/OverviewPage';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
+import { useEarnedUpsell } from '@/hooks/useEarnedUpsell';
 
 // OverviewPage is a COMPOSITION layer (spec §6.3): its job is the hero, the
 // two-column grid, the section order and the first-run hand-off. Every block's
@@ -12,6 +13,9 @@ import { useAuthStore } from '@/store/authStore';
 // OpenTasksCard / GettingStartedChecklist / FirstRunWizardModal's own tests),
 // so the children are stubbed here.
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
+// The earned-upsell hook has its own suite (hooks/__tests__/useEarnedUpsell.test.tsx);
+// here only the page's WIRING (who/when it is enabled for) is under test.
+vi.mock('@/hooks/useEarnedUpsell', () => ({ useEarnedUpsell: vi.fn() }));
 
 vi.mock('@/components/meds/TodaysMeds', () => ({
   TodaysMeds: ({ circleId, limit }: { circleId?: string; limit?: number }) => (
@@ -300,6 +304,37 @@ describe('OverviewPage', () => {
         'data-circle-name',
         'Rose Meza'
       );
+    });
+  });
+
+  describe('earned upsell wiring (PK28(1))', () => {
+    const enabled = () => vi.mocked(useEarnedUpsell).mock.calls.at(-1)?.[0];
+
+    it('is enabled for the circle owner on a plain visit', () => {
+      setCircle({ ownerId: 'u1' });
+      renderOverview();
+      expect(enabled()).toBe(true);
+    });
+
+    it('is never enabled for a member', () => {
+      setCircle({ ownerId: 'someone-else' });
+      renderOverview();
+      expect(enabled()).toBe(false);
+    });
+
+    it('is held off while the first-run wizard is open', () => {
+      setCircle({ ownerId: 'u1' });
+      renderOverview({ firstRun: true, firstRunRecipientName: 'Rose' });
+      expect(enabled()).toBe(false);
+    });
+
+    it('is held off while the add-medication modal is open and returns when it closes', async () => {
+      setCircle({ ownerId: 'u1' });
+      renderOverview();
+      await userEvent.click(screen.getByRole('button', { name: 'checklist-add' }));
+      expect(enabled()).toBe(false);
+      await userEvent.click(screen.getByRole('button', { name: 'close-modal' }));
+      expect(enabled()).toBe(true);
     });
   });
 

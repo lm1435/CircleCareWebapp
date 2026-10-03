@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
 import { ToastProvider } from '@/components/ui';
 import TasksPage from '../TasksPage';
@@ -182,14 +183,23 @@ function circleResult(overrides: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
+  // useTaskCompletion calls useQueryClient() directly (to wait out the tasks
+  // refetch a completion starts), so it needs a provider even though every
+  // React Query hook this page reaches is mocked above and never touches it
+  // for real — a fresh client per render, never asserted on.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   return render(
-    <ToastProvider>
-      <MemoryRouter initialEntries={['/circles/circle-1/tasks']}>
-        <Routes>
-          <Route path="/circles/:circleId/tasks" element={<TasksPage />} />
-        </Routes>
-      </MemoryRouter>
-    </ToastProvider>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/circles/circle-1/tasks']}>
+          <Routes>
+            <Route path="/circles/:circleId/tasks" element={<TasksPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -350,7 +360,7 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
 
       // The timer must not then fire a SECOND request for the same task.
       act(() => {
@@ -376,7 +386,7 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
     } finally {
       vi.useRealTimers();
     }
@@ -444,14 +454,14 @@ describe('TasksPage', () => {
         vi.advanceTimersByTime(3000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
 
       // ...and B commits at ITS OWN t+5s (t=7s overall).
       act(() => {
         vi.advanceTimersByTime(2000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(2);
-      expect(mockMutate.mock.calls[1][0]).toEqual({ eventId: 'task-2' });
+      expect(mockMutate.mock.calls[1][0]).toEqual({ eventId: 'task-2', circleId: 'circle-1' });
     } finally {
       vi.useRealTimers();
     }

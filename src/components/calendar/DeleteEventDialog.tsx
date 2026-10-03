@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { CalendarEvent } from '@/api/calendarEvents';
+import type { CalendarEvent, EventType } from '@/api/calendarEvents';
 import { useDeleteEvent } from '@/hooks/useCalendarEvents';
 import { ConfirmDialog, RadioGroup, useToast } from '@/components/ui';
 import { Analytics, type MedicationLifecycleSurface } from '@/lib/analytics';
@@ -17,7 +17,7 @@ import { Analytics, type MedicationLifecycleSurface } from '@/lib/analytics';
 // path hand-rolling its own `Modal` + footer. The scope picker is the
 // `RadioGroup` `EditCirclePage` already uses — passed as the ReactNode
 // `message` — with its OWN label (`deleteEvent.scopeLabel`, "What should be
-// deleted?") rather than reusing the dialog title ("Delete event") a second
+// deleted?") rather than reusing the dialog title ("Delete medication" etc.) a second
 // time as the group's accessible name: reusing it gave the dialog two
 // headings that said the same thing.
 
@@ -37,6 +37,22 @@ export interface DeleteEventDialogProps {
    * the breakdown the moment someone did emit from it.
    */
   surface: MedicationLifecycleSurface | null;
+  /**
+   * Whether `event` IS the dose/occurrence the user picked (default `true`).
+   *
+   * The "This dose only / This and all future" picker anchors on
+   * `event.scheduled_date`, which is only a real choice when the user tapped
+   * that occurrence (the calendar). A Meds page CARD passes its group's
+   * REPRESENTATIVE row — the series root, whose date is the START date the
+   * caregiver never saw — so "future" deleted the whole medication and "single"
+   * removed the recorded start-date dose (test-gap audit #1, proven live).
+   *
+   * `false` (a card) skips the picker and goes to the whole-medication confirm
+   * that says the recorded history goes too, plus the Discontinue hint; the
+   * DELETE targets the series root with NO scope and NO date. Mirrors mobile's
+   * `useMedicationActions` `doseScoped` (2026-09-27).
+   */
+  doseScoped?: boolean;
   onClose: () => void;
   /** Called after a successful delete (parent typically closes the detail modal). */
   onDeleted?: () => void;
@@ -44,10 +60,19 @@ export interface DeleteEventDialogProps {
 
 type DeleteScopeChoice = 'single' | 'future';
 
+/** The per-type half of the dialog's copy (see `copyByType` below). */
+interface DeleteCopy {
+  title: string;
+  scopeSingle: string;
+  scopeFuture: string;
+  deleted: string;
+}
+
 export function DeleteEventDialog({
   circleId,
   event,
   surface,
+  doseScoped = true,
   onClose,
   onDeleted,
 }: DeleteEventDialogProps): ReactElement {
@@ -62,9 +87,43 @@ export function DeleteEventDialog({
   const targetEventId = event.parent_event_id || event.id;
   const title = event.medication_name || event.title;
 
+  // Every item type names itself: a medication says "medication"/"dose", a
+  // task "task", an appointment "appointment" — never the generic "event"
+  // (matches mobile). Only the title, the two scope options and the success
+  // toast are per-type; the messages, scope label, buttons and close label stay
+  // shared in `deleteEvent.*`, whose own title/scope/toast are the fallback for
+  // a missing or unknown `event_type`. LITERAL keys, not a built template, so
+  // every one is resolved by the static translation-key scan.
+  const copyByType: Record<EventType, DeleteCopy> = {
+    medication: {
+      title: t('deleteMedication.title'),
+      scopeSingle: t('deleteMedication.scopeSingle'),
+      scopeFuture: t('deleteMedication.scopeFuture'),
+      deleted: t('deleteMedication.deleted'),
+    },
+    task: {
+      title: t('deleteTask.title'),
+      scopeSingle: t('deleteTask.scopeSingle'),
+      scopeFuture: t('deleteTask.scopeFuture'),
+      deleted: t('deleteTask.deleted'),
+    },
+    appointment: {
+      title: t('deleteAppointment.title'),
+      scopeSingle: t('deleteAppointment.scopeSingle'),
+      scopeFuture: t('deleteAppointment.scopeFuture'),
+      deleted: t('deleteAppointment.deleted'),
+    },
+  };
+  const copy: DeleteCopy = copyByType[event.event_type] ?? {
+    title: t('deleteEvent.title'),
+    scopeSingle: t('deleteEvent.scopeSingle'),
+    scopeFuture: t('deleteEvent.scopeFuture'),
+    deleted: t('deleteEvent.deleted'),
+  };
+
   async function runDelete(options: Parameters<typeof deleteEvent.mutateAsync>[0]): Promise<void> {
     try {
-      await deleteEvent.mutateAsync(options);
+      const result = await deleteEvent.mutateAsync(options);
       // CONFIRMED SUCCESS only, and MEDICATIONS only. No `deleteScope` means no
       // scope picker was shown (non-recurring), so the single record IS the
       // whole series. `capture` is non-throwing, so this cannot divert into the
@@ -73,9 +132,10 @@ export function DeleteEventDialog({
         Analytics.medicationDeleted(circleId, {
           surface,
           scope: options.deleteScope ?? 'series',
+          historyKept: result?.historyKept,
         });
       }
-      showToast(t('deleteEvent.deleted'), 'success');
+      showToast(copy.deleted, 'success');
       onDeleted?.();
       onClose();
     } catch {
@@ -83,10 +143,41 @@ export function DeleteEventDialog({
     }
   }
 
+  if (!doseScoped) {
+    // WHOLE-MEDICATION delete (a Meds page card). No picker, no date: the
+    // server resolves the whole series from its root id alone. Never
+    // `event.scheduled_date` here — on a card that is a day nobody chose.
+    // PK3: the copy says the recorded doses stay in the adherence reports (the backend
+    // keeps them when any were recorded, and hard-deletes a med with none), and points at
+    // Discontinue for a med the caregiver wants to keep in the Inactive list.
+    return (
+      <ConfirmDialog
+        title={copy.title}
+        message={
+          <div className="flex flex-col gap-3">
+            <p className="m-0 text-base text-ink-2">
+              {t('deleteMedication.wholeMessage', { title })}
+            </p>
+            <p className="m-0 text-base text-ink-2">{t('deleteMedication.discontinueHint')}</p>
+          </div>
+        }
+        confirmLabel={t('deleteEvent.delete')}
+        cancelLabel={t('common:cancel')}
+        closeLabel={t('deleteEvent.close')}
+        destructive
+        loading={deleteEvent.isPending}
+        loadingLabel={t('deleteEvent.deleting')}
+        // Returned, not discarded — see the non-recurring branch below.
+        onConfirm={() => runDelete({ eventId: targetEventId })}
+        onCancel={onClose}
+      />
+    );
+  }
+
   if (!isRecurring) {
     return (
       <ConfirmDialog
-        title={t('deleteEvent.title')}
+        title={copy.title}
         message={t('deleteEvent.confirmMessage', { title })}
         confirmLabel={t('deleteEvent.delete')}
         cancelLabel={t('common:cancel')}
@@ -109,7 +200,7 @@ export function DeleteEventDialog({
   // the picker isn't squeezed.
   return (
     <ConfirmDialog
-      title={t('deleteEvent.title')}
+      title={copy.title}
       message={
         <div className="flex flex-col gap-4">
           <p className="m-0 text-base text-ink-2">{t('deleteEvent.recurringMessage', { title })}</p>
@@ -118,8 +209,8 @@ export function DeleteEventDialog({
             value={scope}
             onChange={(value) => setScope(value as DeleteScopeChoice)}
             options={[
-              { value: 'single', label: t('deleteEvent.scopeSingle') },
-              { value: 'future', label: t('deleteEvent.scopeFuture') },
+              { value: 'single', label: copy.scopeSingle },
+              { value: 'future', label: copy.scopeFuture },
             ]}
           />
         </div>

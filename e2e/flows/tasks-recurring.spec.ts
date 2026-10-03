@@ -1,6 +1,26 @@
 import type { Locator } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../fixtures';
 import { expandAllDayOverflow } from '../helpers';
+import {
+  addDaysISO,
+  assertChipAbsent,
+  circleTimezone,
+  dateInTz,
+  gotoWeekContaining,
+  openChip,
+  uniqueSuffix,
+} from '../notesFirstClassShared';
+import { sqlExec, sqlStr } from '../db';
+import { dbQuery } from '../unhappy';
+import { apiCreateEvent } from '../unhappy/writes/_helpers';
+import {
+  captureJson,
+  cookieLogin,
+  createCircle,
+  createScopedAccount,
+  ownerApi,
+  uniq,
+} from '../unhappy/auth-invites/_helpers';
 
 // COMPLETING ONE OCCURRENCE OF A RECURRING TASK STAMPS THAT DAY, NOT DAY ONE.
 //
@@ -171,7 +191,7 @@ test('completing a later occurrence of a recurring task stamps THAT day, not the
   // also named "…more all-day event…".
   await detailForDelete.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-  // Recurring → a scope picker. "This and future events" from the FIRST
+  // Recurring → a scope picker. "This and all future tasks" from the FIRST
   // occurrence removes the root and every child, including the one completed
   // above, so the run leaves nothing behind.
   const confirm = page.getByRole('dialog');
@@ -182,4 +202,106 @@ test('completing a later occurrence of a recurring task stamps THAT day, not the
     0,
     { timeout: 20_000 }
   );
+});
+
+// PK20 (docs/plans/appointment-delete-single-occurrence.md): "This task only" on
+// a recurring task used to be refused by the backend (400 NOT_SUPPORTED, the
+// row stayed). It now tombstones exactly that occurrence.
+//
+// The Tasks page lists PHYSICAL rows only (the series root and any materialized
+// children), so the occurrences are materialized here the way the hourly
+// materializer does (a child row at (root, date)); the assertion that matters is
+// that the SAME child row is the one tombstoned and its siblings are untouched.
+// An OPEN task on the Tasks page opens the editor (no Delete), so the delete is
+// driven from the Calendar detail modal (same picker, same request) and the Tasks
+// page is where the removal is observed. A scoped owner (never the worker's account); dates are computed in
+// the care recipient's zone, not the runner's clock.
+test('"This task only" removes just that occurrence of a recurring task and leaves its siblings', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  test.setTimeout(120_000);
+  const owner = await createScopedAccount('taskonly');
+  const api = await ownerApi(request, owner);
+  const circleId = await createCircle(api, uniq('taskonly'));
+  const tz = await circleTimezone(api, circleId);
+  const today = dateInTz(tz, 0);
+  const at = (n: number) => addDaysISO(today, n);
+  const title = `ZZ_E2E_TASKONLY_${uniqueSuffix()}`;
+  const titleRe = new RegExp(escapeRegExp(title));
+
+  const root = await apiCreateEvent(api, circleId, {
+    event_type: 'task',
+    title,
+    scheduled_date: at(-1),
+    recurrence_rule: 'daily',
+  });
+  const mint = (date: string): string => {
+    sqlExec(
+      `insert into calendar_events (circle_id, parent_event_id, event_type, title, scheduled_date, scheduled_time, created_by)
+       select circle_id, id, event_type, title, ${sqlStr(date)}::date, scheduled_time, created_by
+         from calendar_events where id = ${sqlStr(root.id)}::uuid`
+    );
+    return dbQuery<{ id: string }>(
+      `select id::text as id from calendar_events
+        where parent_event_id = ${sqlStr(root.id)}::uuid and scheduled_date = ${sqlStr(date)}::date`
+    )[0].id;
+  };
+  const child1 = mint(at(1));
+  const child2 = mint(at(2));
+
+  await cookieLogin(context, owner, baseURL);
+
+  // The Tasks page lists PHYSICAL rows: the series root (yesterday) and the two
+  // materialized children. An OPEN task there opens the editor (no Delete), so the
+  // delete is driven from the Calendar's detail modal -- the same picker, the same
+  // request -- and the Tasks page is the place the removal is OBSERVED.
+  const taskRows = () =>
+    page.getByRole('button', { name: new RegExp(`Edit "${escapeRegExp(title)}"`) });
+  const openTasksPage = async () => {
+    await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Tasks' })).toBeVisible({ timeout: 15_000 });
+  };
+  await openTasksPage();
+  await expect(taskRows()).toHaveCount(3, { timeout: 25_000 });
+
+  await gotoWeekContaining(page, circleId, today, at(2));
+  const detail = await openChip(page, at(2), titleRe);
+  await detail.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  const del = page.getByRole('dialog', { name: 'Delete task' });
+  await expect(del).toBeVisible({ timeout: 10_000 });
+  await del.getByRole('radio', { name: 'This task only' }).check();
+  const responses = await captureJson(page, 'DELETE', '/api/circles/:id/events/:eventId');
+  await del.getByRole('button', { name: 'Delete', exact: true }).click();
+  const res = await responses.next();
+  expect(res.status).toBe(200);
+  expect(res.json?.data?.message).toBe('Instance removed successfully');
+  await responses.dispose();
+  await expect(del).toBeHidden({ timeout: 10_000 });
+
+  // Gone from the calendar day; the neighbouring occurrence is still there.
+  await assertChipAbsent(page, at(2), titleRe);
+
+  // Gone from the Tasks list (3 -> 2 rows); the other two are still listed.
+  await openTasksPage();
+  await expect(taskRows()).toHaveCount(2, { timeout: 25_000 });
+
+  // DB: the SAME child row is the one tombstoned; nothing else was.
+  const tombstones = dbQuery<{ id: string; scheduled_date: string }>(
+    `select id::text as id, scheduled_date::text as scheduled_date from calendar_events
+      where parent_event_id = ${sqlStr(root.id)}::uuid and removed_at is not null`
+  );
+  expect(tombstones).toEqual([{ id: child2, scheduled_date: at(2) }]);
+  const live = dbQuery<{ id: string }>(
+    `select id::text as id from calendar_events
+      where (id = ${sqlStr(root.id)}::uuid or parent_event_id = ${sqlStr(root.id)}::uuid) and removed_at is null`
+  ).map((r) => r.id);
+  expect(live.sort()).toEqual([root.id, child1].sort());
+  expect(
+    dbQuery(`select 1 from calendar_events where id = ${sqlStr(root.id)}::uuid and recurrence_end_date is not null`),
+    'a single delete must not end the series'
+  ).toHaveLength(0);
 });

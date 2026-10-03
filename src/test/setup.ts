@@ -29,6 +29,7 @@ vi.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       signInWithOAuth: vi.fn(),
+      exchangeCodeForSession: vi.fn(),
       signInWithIdToken: vi.fn(),
       setSession: vi.fn(),
       getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),

@@ -1,5 +1,8 @@
 import i18n from '@/i18n';
 import { renderActivityDescription } from '@/components/activity/activityTranslation';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
 
 // ---------------------------------------------------------------------------
 // renderActivityDescription — the KEY-BASED activity-feed renderer (web twin of
@@ -112,6 +115,40 @@ describe('renderActivityDescription — key-based rendering', () => {
       );
     });
 
+    it('renders "Removed dose" from a raw date', () => {
+      const row = {
+        description: `Removed dose: Aspirin on ${PAST}`,
+        description_key: 'entries.medicationOccurrenceRemoved',
+        description_params: { title: 'Aspirin', scheduledDate: PAST },
+      };
+      expect(renderActivityDescription(row, tEn, { timezone: 'America/Denver', hourCycle: '12h', locale: 'en' })).toBe(
+        'Removed dose: Aspirin on Jun 10'
+      );
+      expect(renderActivityDescription(row, tEs, { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' })).toBe(
+        'Dosis eliminada: Aspirin el 10 jun'
+      );
+      expect(
+        renderActivityDescription(row, tEn, { timezone: 'America/Denver', hourCycle: '12h', locale: 'en' })
+      ).not.toContain(PAST);
+    });
+
+    it.each([
+      ['entries.appointmentOccurrenceRemoved', 'Removed appointment', 'Cita eliminada'],
+      ['entries.taskOccurrenceRemoved', 'Removed task', 'Tarea eliminada'],
+    ])('renders %s from a raw date, EN + ES, never leaking the raw date', (key, en, es) => {
+      const row = {
+        description: `${en}: Cardiology on ${PAST}`,
+        description_key: key,
+        description_params: { title: 'Cardiology', scheduledDate: PAST },
+      };
+      const enOut = renderActivityDescription(row, tEn, { timezone: 'America/Denver', hourCycle: '12h', locale: 'en' });
+      const esOut = renderActivityDescription(row, tEs, { timezone: 'America/Denver', hourCycle: '12h', locale: 'es' });
+      expect(enOut).toBe(`${en}: Cardiology on Jun 10`);
+      expect(esOut).toBe(`${es}: Cardiology el 10 jun`);
+      expect(enOut).not.toContain(PAST);
+      expect(esOut).not.toContain(PAST);
+    });
+
     it('renders the key path as "Skipped:", matching the legacy phrase path', () => {
       // The divergence this test used to pin is RESOLVED (2026-09-01). It was
       // justified by "the backend has said 'Not taken:' for some time", and
@@ -213,6 +250,147 @@ describe('renderActivityDescription — key-based rendering', () => {
         )
       ).toBe('Invitó a mom@example.com a unirse como receptor de cuidado');
     });
+
+    // A joiner with NO feed name (an OAuth signup with no first_name and no
+    // usable email). The backend encodes the absence in the KEY -- never as a
+    // literal 'Someone' in the params, which would persist in one language
+    // forever -- so each client must render its own sentence for these keys.
+    // Mobile does (mobile/src/utils/activityTranslation.ts); web had no entry,
+    // so the row fell through to the stored English `description`, and the
+    // legacy substring path turned "Someone joined the circle as Caregiver"
+    // into "Someone se unió al círculo como cuidador" for a Spanish reader.
+    describe('a joiner with no feed name (entries.memberJoined.<role>Unknown)', () => {
+      const CTX_EN = { timezone: 'America/Denver', hourCycle: '12h' as const, locale: 'en' };
+      const CTX_ES = { timezone: 'America/Denver', hourCycle: '12h' as const, locale: 'es' };
+
+      // The wording MOBILE renders (mobile/src/i18n/locales/{en,es}.json,
+      // activity.entries.memberJoined.*Unknown). Pinned literally here; the
+      // sibling-checkout case below proves these literals still match mobile.
+      const ROLES = {
+        caregiver: {
+          key: 'entries.memberJoined.caregiverUnknown',
+          writerDescription: 'Someone joined the circle as Caregiver',
+          en: 'Someone joined the circle as caregiver',
+          es: 'Alguien se unió al círculo como cuidador',
+        },
+        careRecipient: {
+          key: 'entries.memberJoined.careRecipientUnknown',
+          writerDescription: 'Someone joined the circle as Care Recipient',
+          en: 'Someone joined the circle as care recipient',
+          es: 'Alguien se unió al círculo como receptor de cuidado',
+        },
+      } as const;
+
+      // Both shapes that exist in the database, params `{}` in each:
+      //  - what routes/invites.ts and routes/auth.ts write for a nameless joiner
+      //  - what services/accountDeletionFeedScrub.ts rewrites a deleted
+      //    member's join row to ("A member joined the circle")
+      const shapes = (role: keyof typeof ROLES) => ({
+        'as the invite routes write it': {
+          description: ROLES[role].writerDescription,
+          description_key: ROLES[role].key,
+          description_params: {},
+        },
+        'as the account-deletion scrub rewrites it': {
+          description: 'A member joined the circle',
+          description_key: ROLES[role].key,
+          description_params: {},
+        },
+      });
+
+      for (const role of Object.keys(ROLES) as Array<keyof typeof ROLES>) {
+        for (const [shape, row] of Object.entries(shapes(role))) {
+          it(`${role}, ${shape}: renders mobile's sentence in English and Spanish`, () => {
+            expect(renderActivityDescription(row, tEn, CTX_EN)).toBe(ROLES[role].en);
+            expect(renderActivityDescription(row, tEs, CTX_ES)).toBe(ROLES[role].es);
+          });
+
+          it(`${role}, ${shape}: a Spanish reader never sees an English subject or the stored English`, () => {
+            const es = renderActivityDescription(row, tEs, CTX_ES);
+            expect(es).not.toMatch(/\b(Someone|member|joined)\b/i);
+            expect(es).not.toBe(row.description);
+            expect(es).not.toMatch(/entries\.|\{\{/);
+          });
+        }
+      }
+
+      it('matches the strings mobile ships (sibling checkout), key for key', () => {
+        const mobileLocales = resolve(
+          dirname(fileURLToPath(import.meta.url)),
+          '../../../../../mobile/src/i18n/locales'
+        );
+        if (!existsSync(mobileLocales)) {
+          console.info(`[activityRendering] mobile parity case skipped: ${mobileLocales} not on disk.`);
+          return;
+        }
+        const read = (lang: 'en' | 'es') =>
+          JSON.parse(readFileSync(join(mobileLocales, `${lang}.json`), 'utf8')).activity.entries
+            .memberJoined as Record<string, string>;
+        const mobile = { en: read('en'), es: read('es') };
+        for (const role of Object.keys(ROLES) as Array<keyof typeof ROLES>) {
+          const name = `${role}Unknown`;
+          expect(mobile.en[name]).toBe(ROLES[role].en);
+          expect(mobile.es[name]).toBe(ROLES[role].es);
+        }
+      });
+
+      it('rows WITH a name still render exactly as before (the new keys do not touch them)', () => {
+        const named = {
+          description: 'Pat Rivera joined the circle as Caregiver',
+          description_key: 'entries.memberJoined.caregiver',
+          description_params: { name: 'Pat Rivera' },
+        };
+        expect(renderActivityDescription(named, tEn, CTX_EN)).toBe(
+          'Pat Rivera joined the circle as Caregiver'
+        );
+        expect(renderActivityDescription(named, tEs, CTX_ES)).toBe(
+          'Pat Rivera se unió al círculo como cuidador'
+        );
+        // ...and a NAMED key with `{}` params is still the incomplete-params
+        // case: the stored description wins rather than a sentence with a hole.
+        expect(
+          renderActivityDescription({ ...named, description_params: {} }, tEn, CTX_EN)
+        ).toBe('Pat Rivera joined the circle as Caregiver');
+      });
+    });
+  });
+});
+
+describe('renderActivityDescription — notes first-class (Slice 1/2, task 24)', () => {
+  const CTX_EN = { timezone: 'America/Denver', hourCycle: '12h' as const, locale: 'en' };
+  const CTX_ES = { timezone: 'America/Denver', hourCycle: '12h' as const, locale: 'es' };
+
+  it('renders an event-note row with the event title interpolated, EN and ES', () => {
+    const row = {
+      description: 'Added a note to Cardiology visit',
+      description_key: 'entries.eventNoteAdded',
+      description_params: { title: 'Cardiology visit' },
+    };
+    expect(renderActivityDescription(row, tEn, CTX_EN)).toBe('Added a note to Cardiology visit');
+    expect(renderActivityDescription(row, tEs, CTX_ES)).toBe('Agregó una nota a Cardiology visit');
+  });
+
+  it('renders a care-note row with NO params required, EN and ES', () => {
+    const row = {
+      description: 'Added a care note',
+      description_key: 'entries.careNoteAdded',
+      description_params: {},
+    };
+    expect(renderActivityDescription(row, tEn, CTX_EN)).toBe('Added a daily care note');
+    expect(renderActivityDescription(row, tEs, CTX_ES)).toBe('Agregó una nota de cuidado diaria');
+  });
+
+  it('falls back to `description` for an event-note row with a blank title', () => {
+    const out = renderActivityDescription(
+      {
+        description: 'Added a note to Cardiology visit',
+        description_key: 'entries.eventNoteAdded',
+        description_params: { title: '' },
+      },
+      tEn,
+      CTX_EN
+    );
+    expect(out).toBe('Added a note to Cardiology visit');
   });
 });
 

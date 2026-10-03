@@ -67,7 +67,7 @@ describe('ConfirmDialog', () => {
     setup();
     const cancel = screen.getByRole('button', { name: 'Cancel' });
     expect(cancel.className).toContain('bg-cream');
-    expect(cancel.className).toContain('border-line ');
+    expect(cancel.className).toContain('border-line-strong ');
   });
 
   it('disables the confirm button when confirmDisabled', () => {

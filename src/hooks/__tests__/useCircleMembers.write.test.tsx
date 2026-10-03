@@ -150,6 +150,19 @@ describe('useLeaveCircle', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockCircleLeft).toHaveBeenCalledWith(CIRCLE_ID);
   });
+
+  it('toasts errors.saveFailed on a generic rejection', async () => {
+    const { wrapper } = setup();
+    showToast.mockClear();
+    mockLeave.mockRejectedValue(new Error('boom'));
+
+    const { result } = renderHook(() => useLeaveCircle(CIRCLE_ID), { wrapper });
+    result.current.mutate();
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(mockCircleLeft).not.toHaveBeenCalledWith(CIRCLE_ID);
+  });
 });
 
 describe('useSetMedicationResponsible', () => {
@@ -174,5 +187,29 @@ describe('useSetMedicationResponsible', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockSetMedResp).toHaveBeenCalledWith(CIRCLE_ID, null);
+  });
+
+  it('toasts errors.saveFailed on a generic rejection', async () => {
+    const { wrapper } = setup();
+    showToast.mockClear();
+    mockSetMedResp.mockRejectedValue(new Error('boom'));
+
+    const { result } = renderHook(() => useSetMedicationResponsible(CIRCLE_ID), { wrapper });
+    result.current.mutate(USER_ID);
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
+  });
+
+  it('toasts errors.permissionDenied on a 403', async () => {
+    const { wrapper } = setup();
+    showToast.mockClear();
+    mockSetMedResp.mockRejectedValue(PERMISSION_ENVELOPE);
+
+    const { result } = renderHook(() => useSetMedicationResponsible(CIRCLE_ID), { wrapper });
+    result.current.mutate(USER_ID);
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.permissionDenied', 'error');
   });
 });

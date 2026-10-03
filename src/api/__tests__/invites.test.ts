@@ -61,11 +61,54 @@ describe('cancelInvite', () => {
   });
 });
 
+// The exact JSON both backend accept routes send (backend/src/routes/invites.ts,
+// `res.json({ success: true, data: { circle, view_only, message } })`, where
+// `circle` is `select('*')` from care_circles). The apiClient interceptor
+// resolves to this envelope, so the API functions must unwrap `.data` ONCE —
+// mobile's bug was reading `response.data.data` / the envelope instead.
+const JOINED_CIRCLE_ROW = {
+  id: CIRCLE_ID,
+  name: "Rose's Circle",
+  recipient_name: 'Rose',
+  owner_id: 'owner-1',
+  timezone: 'America/Denver',
+  archived_at: null,
+  created_at: '2026-09-01T00:00:00.000Z',
+  updated_at: '2026-09-01T00:00:00.000Z',
+};
+const ACCEPT_ENVELOPE = {
+  success: true,
+  data: {
+    circle: JOINED_CIRCLE_ROW,
+    view_only: false,
+    message: 'Successfully joined the circle',
+  },
+};
+
 describe('acceptInvite', () => {
   it('POSTs /invites/:inviteId/accept', async () => {
-    mockPost.mockResolvedValue({ success: true, data: {} });
+    mockPost.mockResolvedValue(ACCEPT_ENVELOPE);
     await acceptInvite(INVITE_ID);
     expect(mockPost).toHaveBeenCalledWith(`/invites/${INVITE_ID}/accept`);
+  });
+
+  it("resolves to the backend's `data` — the joined circle, view_only and message", async () => {
+    mockPost.mockResolvedValue(ACCEPT_ENVELOPE);
+    const result = await acceptInvite(INVITE_ID);
+    expect(result).toEqual(ACCEPT_ENVELOPE.data);
+    expect(result.circle?.id).toBe(CIRCLE_ID);
+    expect(result.circle?.name).toBe("Rose's Circle");
+    expect(result.view_only).toBe(false);
+  });
+
+  it('passes a null circle through (post-join read failed; the join still happened)', async () => {
+    mockPost.mockResolvedValue({
+      success: true,
+      data: { circle: null, view_only: true, message: 'Successfully joined the circle' },
+    });
+    const result = await acceptInvite(INVITE_ID);
+    expect(result.circle).toBeNull();
+    expect(result.view_only).toBe(true);
   });
 });
 
@@ -101,11 +144,28 @@ describe('lookupInviteByCode', () => {
 
 describe('acceptInviteByCode', () => {
   it('POSTs /invites/code/:code/accept (normalized)', async () => {
-    mockPost.mockResolvedValue({ success: true, data: {} });
+    mockPost.mockResolvedValue(ACCEPT_ENVELOPE);
 
     await acceptInviteByCode('abc123');
 
     expect(mockPost).toHaveBeenCalledWith('/invites/code/ABC123/accept');
+  });
+
+  it("resolves to the backend's `data` (one unwrap — not the envelope, not data.data)", async () => {
+    mockPost.mockResolvedValue(ACCEPT_ENVELOPE);
+    const result = await acceptInviteByCode('abc123');
+    expect(result).toEqual(ACCEPT_ENVELOPE.data);
+    expect(result.circle).toEqual(JOINED_CIRCLE_ROW);
+    expect(result.message).toBe('Successfully joined the circle');
+  });
+
+  it('passes a null circle through', async () => {
+    mockPost.mockResolvedValue({
+      success: true,
+      data: { circle: null, view_only: false, message: 'Successfully joined the circle' },
+    });
+    const result = await acceptInviteByCode('abc123');
+    expect(result.circle).toBeNull();
   });
 });
 

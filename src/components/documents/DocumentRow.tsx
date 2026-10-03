@@ -1,11 +1,10 @@
-import { useMemo, useState, type ReactElement } from 'react';
+import { useId, useMemo, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getFreshSignedUrl, type CircleDocument } from '@/api/documents';
+import type { CircleDocument } from '@/api/documents';
 import {
   Badge,
   IconTile,
   MoreMenu,
-  useToast,
   careCardBadgeRow,
   careCardMeta,
   careCardShell,
@@ -13,14 +12,18 @@ import {
   careCardTopRow,
   type MoreMenuEntry,
 } from '@/components/ui';
-import { buildDownloadFileName, triggerSignedUrlDownload } from './downloadFile';
 import { CATEGORY_TONE, categoryBadgeVariant } from './documentIcon';
 import { formatFileSize } from './formatFileSize';
 
 export interface DocumentRowProps {
   doc: CircleDocument;
+  /** Kept for callers; the viewer (not the row) now fetches signed URLs. */
   circleId: string;
-  /** Open the preview modal for this document (images + PDFs only). */
+  /**
+   * Open the in-app viewer (DocumentPreviewModal) for this document — every
+   * type; one the browser can't render shows the viewer's "can't preview"
+   * state with Download, as on mobile.
+   */
   onPreview: (doc: CircleDocument) => void;
   /**
    * Whether the current user may edit/delete THIS document (uploader or circle
@@ -32,14 +35,6 @@ export interface DocumentRowProps {
   onEdit?: (doc: CircleDocument) => void;
   /** Open the delete-confirm dialog for this document. */
   onDelete?: (doc: CircleDocument) => void;
-}
-
-// Browsers can render JPEG/PNG and (natively or via fallback) PDFs.
-// HEIC is not renderable in any mainstream browser → download only.
-const PREVIEWABLE_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf']);
-
-export function isPreviewable(fileType: string): boolean {
-  return PREVIEWABLE_TYPES.has(fileType);
 }
 
 /**
@@ -55,22 +50,20 @@ function getUploaderName(doc: CircleDocument): string {
 }
 
 /**
- * Single document entry (spec §6.6, care card shell §4.6). Preview (when
- * renderable), Download, Edit, and Delete all live behind the trailing
- * `MoreMenu` rather than inline row buttons. Download fetches a FRESH signed
- * URL at click time — never a cached one.
+ * Single document entry (spec §6.6, care card shell §4.6). Same actions, order
+ * and wording as mobile's row (DocumentActionsModal): Open, Edit, Delete — in
+ * the trailing `MoreMenu`. The row's name + meta is itself a button that
+ * opens the document, as tapping the row does on mobile. Download lives in
+ * the viewer's header (mobile's Share), never on the row.
  */
 export function DocumentRow({
   doc,
-  circleId,
   onPreview,
   canManage = false,
   onEdit,
   onDelete,
 }: DocumentRowProps): ReactElement {
   const { t, i18n } = useTranslation('documents');
-  const { showToast } = useToast();
-  const [isDownloading, setIsDownloading] = useState(false);
 
   // Upload timestamps are UTC ISO; viewer-local display is intended here.
   const uploadedDate = useMemo(
@@ -81,36 +74,17 @@ export function DocumentRow({
     [doc.created_at, i18n.language]
   );
   const uploaderName = useMemo(() => getUploaderName(doc), [doc]);
+  const titleId = useId();
+  const metaId = useId();
 
-  const handleDownload = async (): Promise<void> => {
-    if (isDownloading) return;
-    setIsDownloading(true);
-    try {
-      const signedUrl = await getFreshSignedUrl(circleId, doc);
-      triggerSignedUrlDownload(signedUrl, buildDownloadFileName(doc));
-    } catch {
-      // Never log document names or URLs.
-      showToast(t('downloadFailed'), 'error');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const items: MoreMenuEntry[] = [];
-  if (isPreviewable(doc.file_type)) {
-    items.push({
-      id: 'preview',
-      label: t('preview'),
+  const items: MoreMenuEntry[] = [
+    {
+      id: 'open',
+      label: t('open'),
       icon: 'eye-outline',
       onSelect: () => onPreview(doc),
-    });
-  }
-  items.push({
-    id: 'download',
-    label: t('download'),
-    icon: 'download-outline',
-    onSelect: () => void handleDownload(),
-  });
+    },
+  ];
   if (canManage && onEdit) {
     items.push({
       id: 'edit',
@@ -135,18 +109,30 @@ export function DocumentRow({
       <div className={careCardTopRow}>
         <IconTile size={36} tone={CATEGORY_TONE[doc.category]} name="document-text-outline" />
         <div className="min-w-0 flex-1">
-          <p className={`m-0 truncate ${careCardTitle}`}>{doc.label}</p>
-          <p className={`m-0 ${careCardMeta}`}>
-            <span>{formatFileSize(doc.file_size)}</span>
-            <span>·</span>
-            <span>{uploadedDate}</span>
-            {uploaderName && (
-              <>
-                <span>·</span>
-                <span>{uploaderName}</span>
-              </>
-            )}
-          </p>
+          {/* Named by the label alone (aria-labelledby), described by the meta
+              line — the whole block is the target, the name stays short. */}
+          <button
+            type="button"
+            onClick={() => onPreview(doc)}
+            aria-labelledby={titleId}
+            aria-describedby={metaId}
+            className="block w-full min-w-0 cursor-pointer rounded-md border-0 bg-transparent p-0 text-left"
+          >
+            <span id={titleId} className={`block truncate ${careCardTitle}`}>
+              {doc.label}
+            </span>
+            <span id={metaId} className={`${careCardMeta}`}>
+              <span>{formatFileSize(doc.file_size)}</span>
+              <span>·</span>
+              <span>{uploadedDate}</span>
+              {uploaderName && (
+                <>
+                  <span>·</span>
+                  <span>{uploaderName}</span>
+                </>
+              )}
+            </span>
+          </button>
           <div className={careCardBadgeRow}>
             <Badge variant={categoryBadgeVariant(doc.category)} size="sm">
               {t(`categories.${doc.category}`)}

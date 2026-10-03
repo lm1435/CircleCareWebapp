@@ -15,7 +15,7 @@
 import { act, render, screen, within } from '@testing-library/react';
 import { submitFormTwice } from '@/test/doubleSubmit';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import i18n from '@/i18n';
 import { ToastProvider } from '@/components/ui';
@@ -110,10 +110,18 @@ function notesResult(notes: CareNote[], overrides: Record<string, unknown> = {})
   };
 }
 
-function renderPage() {
+/** Renders `location.search` into the DOM so tests can assert the `?date=`
+ *  param was cleared (via `replace`) after NotesPage consumes it. */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location-search">{location.search}</div>;
+}
+
+function renderPage(initialPath = `/circles/${CIRCLE_ID}/notes`) {
   return render(
     <ToastProvider>
-      <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/notes`]}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <LocationProbe />
         <Routes>
           <Route path="/circles/:circleId/notes" element={<NotesPage />} />
         </Routes>
@@ -139,6 +147,9 @@ beforeEach(() => {
   mockCareNoteUpdated.mockReset();
   mockCareNoteDeleted.mockReset();
   mockUseHourCycle.mockReturnValue('12h');
+  // jsdom has no layout, so scrollIntoView doesn't exist — stub it so the
+  // MoodWeekStrip / `?date=` scroll wiring below can assert on it directly.
+  Element.prototype.scrollIntoView = vi.fn();
   circleState = { circle: { owner_id: 'owner-1' }, canEdit: true };
   currentUserId = 'user-1';
   mockUseCareNotes.mockReturnValue(notesResult([makeNote()]));
@@ -353,6 +364,210 @@ describe('NotesPage — day grouping', () => {
     expect(within(row).getByText('Great day')).toBeInTheDocument();
     expect(within(row).getByText('Meal')).toBeInTheDocument();
     expect(within(row).getByText('Visit')).toBeInTheDocument();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Mood strip + `?date=` deep link (docs/plans/notes-first-class.md, Slice 3 +
+// the date-param part of Slice 2). `today` is always the mocked
+// `notesResult`'s TODAY — never the machine clock — so the week strip and the
+// widen/scroll math below are timezone-independent. Day groups get an
+// element id (`notes-day-<date>`) that both the strip's onSelectDay and the
+// `?date=` effect scroll to; `Element.prototype.scrollIntoView` is stubbed in
+// the top-level beforeEach.
+// ────────────────────────────────────────────────────────────────────────────
+describe('NotesPage — mood strip', () => {
+  it('renders the strip above the list using the already-loaded notes (no new request)', () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ note_date: TODAY, mood: 'good', body: 'Good day' })])
+    );
+    renderPage();
+
+    // Same query the list itself uses — no second call with different args.
+    expect(mockUseCareNotes).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('This week: 1 good')).toBeInTheDocument();
+  });
+
+  it('clicking a day cell scrolls to that day\'s group', async () => {
+    const user = userEvent.setup();
+    mockUseCareNotes.mockReturnValue(
+      notesResult([
+        makeNote({ id: 'n-today', note_date: TODAY, mood: 'good', body: 'Today note' }),
+      ])
+    );
+    renderPage();
+
+    const todayHeading = screen.getByRole('heading', { level: 2, name: 'Today' });
+    const todaySection = todayHeading.closest('section') as HTMLElement;
+    expect(todaySection.id).toBe(`notes-day-${TODAY}`);
+
+    // The strip's own day button carries the mood summary in its name (2026-03-15 is a Sunday).
+    await user.click(screen.getByRole('button', { name: /1 good/ }));
+
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect((Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>).mock.instances[0]).toBe(
+      todaySection
+    );
+  });
+});
+
+describe('NotesPage — ?date= deep link', () => {
+  // TODAY = '2026-03-15'; default window `from` = TODAY - 13d = '2026-03-02'.
+  const WITHIN_WINDOW_DATE = '2026-03-12'; // TODAY - 3d, already loaded by default
+  const OUTSIDE_WINDOW_DATE = '2026-02-13'; // TODAY - 30d, needs a widen
+  const TOO_OLD_DATE = '2025-12-01'; // > 92 days back — beyond the hard cap
+
+  it('scrolls to the group and clears the param when the date is already within the loaded window', async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([
+        makeNote({ id: 'n-old', note_date: WITHIN_WINDOW_DATE, body: 'Within-window note' }),
+      ])
+    );
+    renderPage(`/circles/${CIRCLE_ID}/notes?date=${WITHIN_WINDOW_DATE}`);
+
+    await act(async () => {});
+
+    // The window was never widened — the date was already inside the default one.
+    for (const [, params] of mockUseCareNotes.mock.calls) {
+      expect(params).toBeUndefined();
+    }
+
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    const section = document.getElementById(`notes-day-${WITHIN_WINDOW_DATE}`);
+    expect(section).not.toBeNull();
+    expect((Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>).mock.instances[0]).toBe(
+      section
+    );
+
+    // The param is removed (replace) so a re-render never re-triggers the scroll.
+    expect(screen.getByTestId('location-search')).toHaveTextContent('');
+  });
+
+  it('widens the query range to include an out-of-window date, then scrolls', async () => {
+    mockUseCareNotes.mockImplementation((_circleId: string, params?: { from?: string }) => {
+      if (params?.from && params.from <= OUTSIDE_WINDOW_DATE) {
+        return notesResult([
+          makeNote({ id: 'n-far', note_date: OUTSIDE_WINDOW_DATE, body: 'Far-back note' }),
+        ]);
+      }
+      return notesResult([makeNote({ id: 'n-today', note_date: TODAY, body: 'Today note' })]);
+    });
+    renderPage(`/circles/${CIRCLE_ID}/notes?date=${OUTSIDE_WINDOW_DATE}`);
+
+    // First render: default window, no `from` widened yet.
+    expect(mockUseCareNotes).toHaveBeenNthCalledWith(1, CIRCLE_ID, undefined);
+
+    await act(async () => {});
+
+    // The widened call actually reached the hook (real request, not a client-side trick).
+    expect(mockUseCareNotes.mock.calls.some(([, params]) => params?.from === OUTSIDE_WINDOW_DATE)).toBe(
+      true
+    );
+
+    const section = document.getElementById(`notes-day-${OUTSIDE_WINDOW_DATE}`);
+    expect(section).not.toBeNull();
+    expect(screen.getByText('Far-back note')).toBeInTheDocument();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect((Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>).mock.instances[0]).toBe(
+      section
+    );
+    expect(screen.getByTestId('location-search')).toHaveTextContent('');
+  });
+
+  // BUG (found by notes-mood-strip.spec.ts): `useCareNotes`'s
+  // `placeholderData: keepPreviousData` can report `isLoading`/`isFetching`
+  // as false for the STALE (pre-widen) query one render before the widened
+  // fetch's in-flight state registers. The effect used to gate only on
+  // `isLoading || isFetching`, so it would scroll against the OLD groups
+  // (`getElementById` → null, a silent no-op), then consume the ref + clear
+  // the param — never retrying once the real data with the target group
+  // actually landed.
+  it('does not consume the deep link on stale placeholder data — only once settled data contains the target group', async () => {
+    let call = 0;
+    mockUseCareNotes.mockImplementation((_circleId: string, params?: { from?: string }) => {
+      call += 1;
+      if (!params?.from) {
+        // Initial, narrow default window — does not contain the target date.
+        return notesResult([makeNote({ note_date: TODAY })]);
+      }
+      if (call === 2) {
+        // The widened `from` was requested, but this render still reports the
+        // OLD (pre-widen) data as `isLoading: false, isFetching: false` —
+        // exactly the transient `keepPreviousData` window this bug exploited.
+        return notesResult([makeNote({ note_date: TODAY })], { isPlaceholderData: true });
+      }
+      // Settled, non-placeholder data for the widened window — contains the
+      // target day group.
+      return notesResult([
+        makeNote({ id: 'n-far', note_date: OUTSIDE_WINDOW_DATE, body: 'Far-back note' }),
+      ]);
+    });
+
+    const rendered = render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/notes?date=${OUTSIDE_WINDOW_DATE}`]}>
+          <LocationProbe />
+          <Routes>
+            <Route path="/circles/:circleId/notes" element={<NotesPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    );
+
+    await act(async () => {});
+
+    // Still waiting on the placeholder render — must not have scrolled or
+    // cleared the param yet.
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location-search')).toHaveTextContent(
+      `date=${OUTSIDE_WINDOW_DATE}`
+    );
+
+    // The next render lands with settled, non-placeholder data containing the
+    // target group.
+    rendered.rerender(
+      <ToastProvider>
+        <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/notes?date=${OUTSIDE_WINDOW_DATE}`]}>
+          <LocationProbe />
+          <Routes>
+            <Route path="/circles/:circleId/notes" element={<NotesPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    );
+    await act(async () => {});
+
+    const section = document.getElementById(`notes-day-${OUTSIDE_WINDOW_DATE}`);
+    expect(section).not.toBeNull();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect((Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>).mock.instances[0]).toBe(
+      section
+    );
+    expect(screen.getByTestId('location-search')).toHaveTextContent('');
+  });
+
+  it('ignores a date older than the 92-day cap — no widen, no scroll, page renders normally', async () => {
+    mockUseCareNotes.mockReturnValue(notesResult([makeNote({ note_date: TODAY })]));
+    renderPage(`/circles/${CIRCLE_ID}/notes?date=${TOO_OLD_DATE}`);
+
+    await act(async () => {});
+
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    // Never asked for a window that reaches past the cap.
+    for (const [, params] of mockUseCareNotes.mock.calls) {
+      expect((params as { from?: string } | undefined)?.from).not.toBe(TOO_OLD_DATE);
+    }
+    expect(screen.getByText('Quiet morning, good appetite.')).toBeInTheDocument();
+  });
+
+  it('ignores a malformed date param', async () => {
+    mockUseCareNotes.mockReturnValue(notesResult([makeNote({ note_date: TODAY })]));
+    renderPage(`/circles/${CIRCLE_ID}/notes?date=not-a-date`);
+
+    await act(async () => {});
+
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(screen.getByText('Quiet morning, good appetite.')).toBeInTheDocument();
   });
 });
 

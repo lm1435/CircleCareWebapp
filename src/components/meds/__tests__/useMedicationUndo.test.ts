@@ -23,6 +23,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { MEDICATION_UNDO_DELAY_MS, useMedicationUndo } from '../useMedicationUndo';
 import type { TodaysMedication } from '@/api/medicationConfirmations';
+import { tokenAccessor } from '@/lib/tokenAccessor';
 
 const observer = vi.hoisted(() => {
   interface Call {
@@ -99,6 +100,7 @@ const observer = vi.hoisted(() => {
 const useConfirmMedication = vi.hoisted(() => vi.fn());
 
 vi.mock('@/hooks/useMedConfirmation', () => ({
+  todaysMedsKey: (circleId: string) => ['todaysMeds', circleId],
   useConfirmMedication: (circleId: string, source: string) =>
     useConfirmMedication(circleId, source),
 }));
@@ -193,6 +195,10 @@ describe('useMedicationUndo', () => {
       event_id: 'med-1',
       status: 'taken',
       scheduled_time: '08:00:00',
+      // The circle the dose was answered in, stamped on the entry at confirm.
+      circleId: 'circle-1',
+      // The dose's day, for verify-before-alert (lib/confirmVerify.ts).
+      dose: { scheduled_date: '2026-09-05', parent_event_id: null },
     });
 
     // The badge stays put until the request SETTLES — clearing it mid-flight
@@ -203,7 +209,7 @@ describe('useMedicationUndo', () => {
     await flushMicrotasks();
 
     expect(result.current.pending).toEqual({});
-    expect(onConfirmed).toHaveBeenCalledWith('taken', METFORMIN);
+    expect(onConfirmed).toHaveBeenCalledWith('taken', METFORMIN, 'circle-1');
     // Running the clock on cannot re-send it.
     act(() => {
       vi.advanceTimersByTime(MEDICATION_UNDO_DELAY_MS * 3);
@@ -301,8 +307,8 @@ describe('useMedicationUndo', () => {
 
     expect(result.current.pending).toEqual({});
     expect(onConfirmed).toHaveBeenCalledTimes(2);
-    expect(onConfirmed).toHaveBeenNthCalledWith(1, 'taken', METFORMIN);
-    expect(onConfirmed).toHaveBeenNthCalledWith(2, 'skipped', WARFARIN);
+    expect(onConfirmed).toHaveBeenNthCalledWith(1, 'taken', METFORMIN, 'circle-1');
+    expect(onConfirmed).toHaveBeenNthCalledWith(2, 'skipped', WARFARIN, 'circle-1');
   });
 
   it('reports a rejection to the caller and withdraws the badge', async () => {
@@ -320,7 +326,8 @@ describe('useMedicationUndo', () => {
     expect(onError).toHaveBeenCalledWith(
       { success: false, error: { code: 'SERVER_ERROR' } },
       'taken',
-      METFORMIN
+      METFORMIN,
+      'circle-1'
     );
     expect(result.current.pending).toEqual({});
   });
@@ -425,5 +432,96 @@ describe('useMedicationUndo', () => {
 
     expect(observer.calls).toHaveLength(0);
     expect(result.current.pending).toEqual({});
+  });
+});
+
+// PK11 (approved 2026-09-30): the pagehide / hidden flush is a keepalive fetch
+// with the in-memory bearer token; one request per dose, never two.
+describe('useMedicationUndo: PK11 keepalive flush', () => {
+  const fetchMock = vi.fn();
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, status: 201 });
+    vi.stubGlobal('fetch', fetchMock);
+    tokenAccessor.setToken('tok-abc', null);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    tokenAccessor.clear();
+  });
+
+  it('pagehide: ONE keepalive POST with bearer + the confirm body, and no axios request', () => {
+    const { result } = setup();
+    act(() => result.current.confirm(WARFARIN, 'skipped'));
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toMatch(/\/circles\/circle-1\/medications\/confirm$/);
+    expect(init.keepalive).toBe(true);
+    expect(init.headers.Authorization).toBe('Bearer tok-abc');
+    expect(JSON.parse(init.body)).toEqual({
+      event_id: 'med-2',
+      status: 'skipped',
+      scheduled_time: '09:00:00',
+    });
+    expect(observer.calls).toHaveLength(0);
+  });
+
+  it('pagehide + hidden + unmount for one dose is still ONE request', () => {
+    const { result, unmount } = setup();
+    act(() => result.current.confirm(METFORMIN, 'taken'));
+    act(() => {
+      hideDocument();
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    unmount();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(observer.calls).toHaveLength(0);
+  });
+
+  it('the 5s timer after a keepalive flush never re-sends', () => {
+    const { result } = setup();
+    act(() => result.current.confirm(METFORMIN, 'taken'));
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    act(() => {
+      vi.advanceTimersByTime(MEDICATION_UNDO_DELAY_MS * 2);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(observer.calls).toHaveLength(0);
+  });
+
+  it('the UNMOUNT flush keeps axios (the page is alive: refresh/verify apply)', () => {
+    const { result, unmount } = setup();
+    act(() => result.current.confirm(METFORMIN, 'taken'));
+    unmount();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(observer.calls).toHaveLength(1);
+  });
+
+  it('no token: pagehide falls back to the ordinary request', () => {
+    tokenAccessor.clear();
+    const { result } = setup();
+    act(() => result.current.confirm(METFORMIN, 'taken'));
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(observer.calls).toHaveLength(1);
+  });
+
+  it('a keepalive request that comes back refused (page still alive) falls back to the ordinary path once', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 500 });
+    const { result } = setup();
+    act(() => result.current.confirm(METFORMIN, 'taken'));
+    act(() => {
+      hideDocument();
+    });
+    await flushMicrotasks();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(observer.calls).toHaveLength(1);
   });
 });

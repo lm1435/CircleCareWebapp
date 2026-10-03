@@ -25,6 +25,9 @@ export interface PdfCalendarEvent {
   recurrence_days?: number[] | null;
   /** A real UTC instant when the series was stopped; absent/null while active. */
   discontinued_at?: string | null;
+  /** Naive `YYYY-MM-DD` (recipient frame) a course ended on via "This and future";
+   *  with no `discontinued_at` it makes a recurring course "stopped" in the summary. */
+  recurrence_end_date?: string | null;
 }
 
 export interface PdfEmergencyContact {
@@ -75,6 +78,8 @@ export interface PdfAdherenceReportSummary {
   adherence_rate: number;
   trend: 'improving' | 'declining' | 'stable';
   trend_change: number;
+  /** PK25: false = either half of the window had nothing due; hide the badge. Absent = available. */
+  trend_available?: boolean;
 }
 
 export interface PdfAdherenceReportDaily {
@@ -136,4 +141,24 @@ export interface PdfHealthVital {
   unit: string;
   /** ISO instant. */
   recorded_at: string;
+}
+
+/** One appointment/task/dose note, as the care summary's "Visit notes"
+ *  section reads it. `date` is the event's `scheduled_date` (YYYY-MM-DD,
+ *  recipient zone) — never the note's `created_at` instant. */
+export interface CareSummaryVisitNote {
+  date: string;
+  eventTitle: string;
+  authorFirstName: string | null;
+  body: string;
+}
+
+/** One Daily Care Notes journal entry, as the care summary's "Daily care
+ *  notes" section reads it. `body` is null for a mood-only note; `mood` is
+ *  null for a note with no mood set — never both null (nothing to print). */
+export interface CareSummaryCareNote {
+  date: string;
+  authorFirstName: string | null;
+  body: string | null;
+  mood: 'great' | 'good' | 'okay' | 'tough' | null;
 }

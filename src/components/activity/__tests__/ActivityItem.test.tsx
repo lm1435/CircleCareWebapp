@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import { ActivityItem } from '@/components/activity/ActivityItem';
 import { getActivityIconName } from '@/components/activity/ActivityIcon';
@@ -39,9 +40,11 @@ function makeActivity(overrides: Partial<ActivityFeedItem> = {}): ActivityFeedIt
 
 function renderItem(activity: ActivityFeedItem, timezone = 'America/New_York') {
   return render(
-    <ul>
-      <ActivityItem activity={activity} timezone={timezone} />
-    </ul>
+    <MemoryRouter>
+      <ul>
+        <ActivityItem activity={activity} timezone={timezone} />
+      </ul>
+    </MemoryRouter>
   );
 }
 
@@ -213,6 +216,131 @@ describe('ActivityItem', () => {
         screen.getByText('Confirmed Medication: Aspirin 100mg (taken)')
       ).toBeInTheDocument();
       expect(screen.queryByText(/entries\./)).not.toBeInTheDocument();
+    });
+  });
+
+  // Notes first-class Slice 2 (plan docs/plans/notes-first-class.md, task 25):
+  // a note row with `note_target` shows a one-line preview and renders as a
+  // link to the right deep-link target; a row without one (old `note_added`
+  // rows, or any non-note row) stays read-only.
+  describe('note rows (Slice 2)', () => {
+    it('renders an event-note row as a link to the calendar deep link, with the preview visible', () => {
+      renderItem(
+        makeActivity({
+          circle_id: 'circle-9',
+          action_type: 'note_added',
+          description: 'Added a note to Cardiology visit',
+          description_key: 'entries.eventNoteAdded',
+          description_params: { title: 'Cardiology visit' },
+          note_preview: 'Dr. Patel lowered the metoprolol to 25mg, recheck BP in…',
+          note_target: {
+            kind: 'event',
+            event_id: 'event-root-1',
+            scheduled_date: '2026-06-10',
+            event_type: 'appointment',
+            event_title: 'Cardiology visit',
+          },
+        })
+      );
+
+      const link = screen.getByRole('link');
+      expect(link).toHaveAttribute(
+        'href',
+        '/circles/circle-9/calendar?date=2026-06-10&eventId=event-root-1&panel=notes'
+      );
+      expect(
+        screen.getByText('Dr. Patel lowered the metoprolol to 25mg, recheck BP in…')
+      ).toBeInTheDocument();
+      // Accessible name includes both the description AND the preview.
+      expect(link).toHaveAccessibleName(
+        expect.stringContaining('Added a note to Cardiology visit')
+      );
+      expect(link).toHaveAccessibleName(
+        expect.stringContaining('Dr. Patel lowered the metoprolol to 25mg')
+      );
+    });
+
+    it('renders a care-note row as a link to the notes page at that date', () => {
+      renderItem(
+        makeActivity({
+          circle_id: 'circle-9',
+          action_type: 'care_note_added',
+          description: 'Added a care note',
+          description_key: 'entries.careNoteAdded',
+          description_params: {},
+          note_preview: 'Good morning, ate a full breakfast.',
+          note_target: { kind: 'care', note_date: '2026-06-11' },
+        })
+      );
+
+      const link = screen.getByRole('link');
+      expect(link).toHaveAttribute('href', '/circles/circle-9/notes?date=2026-06-11');
+      expect(screen.getByText('Good morning, ate a full breakfast.')).toBeInTheDocument();
+    });
+
+    it('does not render a preview line for a mood-only care note (null preview)', () => {
+      renderItem(
+        makeActivity({
+          circle_id: 'circle-9',
+          action_type: 'care_note_added',
+          description: 'Added a care note',
+          description_key: 'entries.careNoteAdded',
+          note_preview: null,
+          note_target: { kind: 'care', note_date: '2026-06-11' },
+        })
+      );
+
+      // Still a link (the row is still openable) but no preview text node.
+      expect(screen.getByRole('link')).toHaveAttribute(
+        'href',
+        '/circles/circle-9/notes?date=2026-06-11'
+      );
+    });
+
+    it('truncates the preview to a single line with CSS, never wrapping', () => {
+      renderItem(
+        makeActivity({
+          circle_id: 'circle-9',
+          action_type: 'note_added',
+          note_preview: 'A very long preview line that should be clamped visually',
+          note_target: {
+            kind: 'event',
+            event_id: 'event-root-1',
+            scheduled_date: '2026-06-10',
+            event_type: 'appointment',
+            event_title: 'Cardiology visit',
+          },
+        })
+      );
+
+      const preview = screen.getByText('A very long preview line that should be clamped visually');
+      expect(preview.className).toContain('truncate');
+    });
+
+    it('leaves an OLD note_added row (no note_target) read-only, not a link', () => {
+      renderItem(
+        makeActivity({
+          action_type: 'note_added',
+          description: 'Added a note to Cardiology visit',
+          // No description_key, no note_preview, no note_target -- exactly a
+          // pre-Slice-2 row.
+        })
+      );
+
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.getByText('Added a note to Cardiology visit')).toBeInTheDocument();
+    });
+
+    it('leaves a non-note row read-only even if it somehow carried a preview', () => {
+      renderItem(
+        makeActivity({
+          action_type: 'medication_confirmed',
+          note_preview: 'should never appear',
+        })
+      );
+
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.queryByText('should never appear')).not.toBeInTheDocument();
     });
   });
 });

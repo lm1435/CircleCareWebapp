@@ -523,7 +523,7 @@ export const SURFACES: Surface[] = [
       await expect(options).toBeVisible({ timeout: 20_000 });
       await options.click();
       const menu = page.getByRole('menu');
-      await expect(menu.getByRole('menuitem', { name: 'Preview', exact: true })).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Open', exact: true })).toBeVisible();
       return [{ label: 'Edit / Delete menu items', locator: menu.getByRole('menuitem', { name: /^(Edit|Delete)$/ }) }];
     },
   },

@@ -37,7 +37,7 @@ describe('TextArea', () => {
     expect(shell.className).toContain('items-start');
     expect(shell.className).not.toContain('items-center');
     expect(shell.className).toContain('min-h-[44px]');
-    expect(shell.className).toContain('focus-within:border-moss-light');
+    expect(shell.className).toContain('focus-within:border-moss');
     expect(control.className).toContain('min-h-[72px]');
     expect(control.className).toContain('resize-y');
   });
@@ -59,7 +59,7 @@ describe('TextArea', () => {
     render(<TextArea id="notes" label="Notes" error="Too long" value="" onChange={() => {}} />);
     const shell = shellOf(screen.getByLabelText('Notes'));
     expect(shell.className).toContain('border-terracotta');
-    expect(shell.className).not.toContain('moss-light');
+    expect(shell.className).not.toContain('focus-within:border-moss');
     expect(document.querySelector('[data-icon="alert-circle-outline"]')).toBeInTheDocument();
   });
 
@@ -67,5 +67,15 @@ describe('TextArea', () => {
     render(<TextArea id="notes" label="Notes" disabled value="" onChange={() => {}} />);
     expect(screen.getByLabelText('Notes')).toBeDisabled();
     expect(shellOf(screen.getByLabelText('Notes')).className).toContain('opacity-50');
+  });
+});
+
+// a11y audit 2026-09-29: a press on the shell's padding focuses the textarea.
+describe('TextArea — shell padding press', () => {
+  it('focuses the textarea when the shell itself is pressed', () => {
+    render(<TextArea id="notes" label="Notes" value="" onChange={() => {}} />);
+    const area = screen.getByLabelText(/^Notes/);
+    fireEvent.mouseDown(area.parentElement as HTMLElement);
+    expect(area).toHaveFocus();
   });
 });

@@ -63,6 +63,14 @@ export interface ConfirmMedicationRequest {
   status: ConfirmableStatus;
   notes?: string;
   scheduled_time: string; // HH:MM:SS — in the care recipient's timezone
+  /**
+   * PK29 "Change <name>'s answer?": replace ANOTHER caregiver's answer. Only
+   * honoured together with `expected_status` (the answer the caregiver saw):
+   * the server overwrites only while that answer is still the stored one,
+   * otherwise it answers the normal 409 with the fresh details.
+   */
+  overwrite?: true;
+  expected_status?: 'taken' | 'skipped';
 }
 
 /**
@@ -79,6 +87,8 @@ export interface TodaysMedication {
   scheduled_date: string; // YYYY-MM-DD in care recipient's timezone
   scheduled_time?: string | null; // HH:MM:SS in care recipient's timezone
   is_virtual?: boolean;
+  /** The series root for a child or virtual occurrence (null on a root/one-off). */
+  parent_event_id?: string | null;
   /**
    * Discontinue marker (ISO instant) when this dose belongs to a medication
    * that has since been stopped. This fetch passes NO `includeDiscontinued`, so
@@ -252,6 +262,12 @@ export interface AdherenceReportSummary {
   adherence_rate: number;
   trend: 'improving' | 'declining' | 'stable';
   trend_change: number;
+  /**
+   * PK25: false when either half of the window has nothing scheduled, so the
+   * trend is not meaningful (the server then sends trend 'stable', change 0).
+   * Absent on older servers: treat as available.
+   */
+  trend_available?: boolean;
 }
 
 export interface AdherenceReportDaily {

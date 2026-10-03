@@ -87,6 +87,20 @@ describe('usePremiumGate', () => {
     });
   });
 
+  // The caregiver seat cap has its own context so the invite paywall can be
+  // read apart from the circle cap and the other 'capacity' callers.
+  it('carries the invite_cap context onto /upgrade unchanged', () => {
+    mockedConfigured.mockReturnValue(true);
+    const { result } = renderHook(() => usePremiumGate('invite_cap'));
+
+    result.current.promptUpgrade();
+    showToast.mock.calls[0][2].onClick();
+
+    expect(navigate).toHaveBeenCalledWith('/upgrade', {
+      state: { paywallContext: 'invite_cap' },
+    });
+  });
+
   it('falls back to the in-app pointer toast when web billing is off', () => {
     mockedConfigured.mockReturnValue(false);
     const { result } = renderHook(() => usePremiumGate());
@@ -218,5 +232,89 @@ describe('usePremiumGate — circle-level (owner-aware)', () => {
     result.current.promptUpgrade();
 
     expect(showToast).toHaveBeenCalledWith('errors.subscriptionRequired', 'error');
+  });
+});
+
+// PK18 — a write refused on a LAPSED (frozen) circle. The generic gate copy
+// ("not included in the free plan") is false there; the owner gets the accurate
+// lapse sentence + Upgrade, members are never sold anything.
+describe('usePremiumGate — promptLapsed (PK18)', () => {
+  it('the OWNER gets the lapse sentence with an Upgrade action to /upgrade (capacity)', () => {
+    mockedConfigured.mockReturnValue(true);
+    seedCircle();
+    signInAs('owner-1');
+    const { result } = renderHook(() => usePremiumGate('capacity', { circleId: 'c1' }));
+
+    result.current.promptLapsed();
+
+    expect(showToast).toHaveBeenCalledTimes(1);
+    const [message, type, action] = showToast.mock.calls[0];
+    expect(message).toBe('upgradeGate.lapsedOwner');
+    expect(type).toBe('info');
+    expect(action.label).toBe('upgradeGate.action');
+    action.onClick();
+    expect(navigate).toHaveBeenCalledWith('/upgrade', { state: { paywallContext: 'capacity' } });
+  });
+
+  it('the owner with web billing off still gets the lapse sentence, no action', () => {
+    mockedConfigured.mockReturnValue(false);
+    seedCircle();
+    signInAs('owner-1');
+    const { result } = renderHook(() => usePremiumGate('capacity', { circleId: 'c1' }));
+
+    result.current.promptLapsed();
+
+    expect(showToast.mock.calls[0]).toEqual(['upgradeGate.lapsedOwner', 'info']);
+  });
+
+  it('a MEMBER gets the owner-resubscribes notice naming the owner, NO action', () => {
+    mockedConfigured.mockReturnValue(true);
+    seedCircle();
+    signInAs('member-1');
+    const { result } = renderHook(() => usePremiumGate('capacity', { circleId: 'c1' }));
+
+    result.current.promptLapsed();
+
+    expect(showToast.mock.calls[0]).toEqual([
+      'upgradeGate.lapsedMemberNamed:{"ownerName":"Ana"}',
+      'info',
+    ]);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('a member of a circle whose owner has no name gets the nameless copy', () => {
+    seedCircle({
+      members: [
+        { user_id: 'owner-1', role: 'owner', first_name: null },
+        { user_id: 'member-1', role: 'member', first_name: 'Luis' },
+      ],
+    } as unknown as Partial<CircleDetail>);
+    signInAs('member-1');
+    const { result } = renderHook(() => usePremiumGate('capacity', { circleId: 'c1' }));
+
+    result.current.promptLapsed();
+
+    expect(showToast.mock.calls[0]).toEqual(['upgradeGate.lapsedMember', 'info']);
+  });
+
+  it('unknown ownership (circle not cached) is a non-owner: never an action', () => {
+    mockedConfigured.mockReturnValue(true);
+    signInAs('owner-1');
+    const { result } = renderHook(() => usePremiumGate('capacity', { circleId: 'c1' }));
+
+    result.current.promptLapsed();
+
+    expect(showToast.mock.calls[0]).toEqual(['upgradeGate.lapsedMember', 'info']);
+  });
+
+  it('forCircleId overrides the hook circle for the owner check', () => {
+    mockedConfigured.mockReturnValue(true);
+    seedCircle();
+    signInAs('owner-1');
+    const { result } = renderHook(() => usePremiumGate('capacity', { circleId: 'other' }));
+
+    result.current.promptLapsed('c1');
+
+    expect(showToast.mock.calls[0][0]).toBe('upgradeGate.lapsedOwner');
   });
 });

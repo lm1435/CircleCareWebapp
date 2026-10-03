@@ -11,6 +11,7 @@ import {
 } from '@/api/calendarEvents';
 import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
 import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
@@ -24,7 +25,10 @@ import {
   matchingDurationIndex,
   reminderFlagsForSave,
   remindersApply,
+  shiftEndTimeStr,
+  spanMinutes,
 } from '@/lib/eventForm';
+import { INPUT_ERROR } from '@/components/ui/inputStyles';
 import {
   Button,
   Card,
@@ -56,11 +60,23 @@ import {
 import {
   clockInZone,
   dayInZone,
+  defaultNewEventDate,
   eventDatesForApi,
   eventDatesFromApi,
   viewerInstant,
 } from '@/utils/recipientEventDate';
 import { useHourCycle } from '@/hooks/useHourCycle';
+import { useSeriesRoot } from '@/hooks/useSeriesRoot';
+import { DaysOfWeekPicker } from './DaysOfWeekPicker';
+import {
+  addDays,
+  daysBetween,
+  formatDateForDisplay,
+  getDayOfWeek,
+  getWeekdayName,
+  nextDateOnWeekdays,
+} from './dateMath';
+import { formatWeekdayList } from './recurrenceLabel';
 
 // Task 1.4 — create/edit form modal for all three event types.
 //
@@ -142,7 +158,10 @@ type RecurrenceChoice =
   | 'weekly'
   | 'monthly'
   | 'yearly'
-  | 'cycle';
+  | 'cycle'
+  // Not a stored rule: `weekly` + `recurrence_days`. LAST, after Cycle — the
+  // same position as mobile's Repeat sheet tile.
+  | 'days_of_week';
 
 const RECURRENCE_CHOICES: RecurrenceChoice[] = [
   'none',
@@ -152,29 +171,58 @@ const RECURRENCE_CHOICES: RecurrenceChoice[] = [
   'monthly',
   'yearly',
   'cycle',
+  'days_of_week',
 ];
 
-/** Map a stored recurrence_rule back to the form's choice + cycle parts. */
-function parseRecurrence(rule: string | null | undefined): {
+/**
+ * A stored `recurrence_days` as a clean set: integers 0..6 (0=Sun — never 7),
+ * deduped, ascending. Anything else in the column is dropped, not guessed at.
+ */
+function cleanRecurrenceDays(days: readonly number[] | null | undefined): number[] {
+  if (!days) return [];
+  return [...new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort(
+    (a, b) => a - b
+  );
+}
+
+/**
+ * Map a stored recurrence_rule (+ days) back to the form's choice, cycle parts
+ * and day set. `weekly` with a non-empty day set IS "Days of the week" — a
+ * single day included ("Weekly on Mon" reopens on the days picker, as on mobile).
+ */
+function parseRecurrence(
+  rule: string | null | undefined,
+  recurrenceDays?: readonly number[] | null
+): {
   choice: RecurrenceChoice;
   daysOn: string;
   daysOff: string;
+  days: number[];
 } {
-  if (!rule) return { choice: 'none', daysOn: '7', daysOff: '7' };
+  if (!rule) return { choice: 'none', daysOn: '7', daysOff: '7', days: [] };
   if (rule.startsWith('cycle:')) {
     const [, on, off] = rule.split(':');
-    return { choice: 'cycle', daysOn: on || '7', daysOff: off || '7' };
+    return { choice: 'cycle', daysOn: on || '7', daysOff: off || '7', days: [] };
   }
-  if ((RECURRENCE_CHOICES as string[]).includes(rule)) {
-    return { choice: rule as RecurrenceChoice, daysOn: '7', daysOff: '7' };
+  if (rule === 'weekly') {
+    const days = cleanRecurrenceDays(recurrenceDays);
+    if (days.length > 0) return { choice: 'days_of_week', daysOn: '7', daysOff: '7', days };
   }
-  return { choice: 'none', daysOn: '7', daysOff: '7' };
+  if (rule !== 'days_of_week' && (RECURRENCE_CHOICES as string[]).includes(rule)) {
+    return { choice: rule as RecurrenceChoice, daysOn: '7', daysOff: '7', days: [] };
+  }
+  return { choice: 'none', daysOn: '7', daysOff: '7', days: [] };
 }
 
 // Static ids — one AddEventModal is mounted at a time, and the earlier-reminders
 // group needs stable targets for aria-labelledby / aria-describedby.
 const EARLIER_REMINDERS_LABEL_ID = 'reminders-earlier-label';
 const EARLIER_REMINDERS_WARNING_ID = 'reminders-earlier-warning';
+// The days-of-week picker: its group id doubles as the field-error focus target.
+const RECURRENCE_DAYS_ID = 'recurrence_days';
+const RECURRENCE_DAYS_ERROR_ID = 'recurrence_days-error';
+const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
+const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
 
 /**
  * The viewer's end time for a stored `duration_minutes`, ROLLING OVER midnight.
@@ -287,6 +335,18 @@ export function nextReminderControlState(
   return next;
 }
 
+interface AddEventDraft {
+  eventType: EventType;
+  title: string;
+  dosage: string;
+  dateStr: string;
+  timeStr: string;
+  endTimeStr: string;
+  location: string;
+  description: string;
+  assignedTo: string | null;
+}
+
 export function AddEventModal({
   circleId,
   event,
@@ -298,7 +358,7 @@ export function AddEventModal({
   onClose,
   onSaved,
 }: AddEventModalProps): ReactElement | null {
-  const { t } = useTranslation(['calendar', 'common']);
+  const { t, i18n } = useTranslation(['calendar', 'common']);
   const { showToast } = useToast();
   const { circle, timezone, canEdit, members } = useCircle(circleId);
 
@@ -310,6 +370,27 @@ export function AddEventModal({
   const targetEventId = isEditing ? event.parent_event_id || event.id : undefined;
   // Editing any instance of a recurring event rewrites the whole series — warn.
   const isRecurringEdit = isEditing && (!!event.parent_event_id || !!event.recurrence_rule);
+
+  // History-based title quick-fill source (QP6) — and the first place the
+  // series root is looked for, below. Cache read only, no fetching.
+  const cachedEvents = useCachedCircleEvents(circleId);
+  /**
+   * THE ROW THIS FORM EDITS IS THE SERIES ROOT, so its SCHEDULE hydrates from
+   * the root — never from the tapped occurrence. The Calendar opens this form
+   * with a virtual instance, which carries neither the root's `scheduled_date`
+   * (the series anchor) nor `recurrence_days`; hydrating from it showed the
+   * occurrence's date and PATCHed it onto the root (moving the whole series'
+   * start) and showed a Mon/Wed/Fri series as plain "Weekly". See
+   * `useSeriesRoot`. `undefined` = still resolving: the schedule fields stay
+   * empty and Save is refused until it lands (the same gate as the timezone).
+   */
+  const { root: seriesRoot } = useSeriesRoot(circleId, event, cachedEvents);
+  const scheduleSource = isEditing ? seriesRoot : null;
+  const seriesRootPending = isEditing && seriesRoot === undefined;
+  // PK21: editing a row stored WITHOUT a duration. It saves with no end time:
+  // no silent 30-minute default on edit, and no "end time required" refusal.
+  const isEditingWithoutDuration =
+    isEditing && !!scheduleSource && !scheduleSource.duration_minutes;
 
   const [eventType, setEventType] = useState<EventType>(
     event?.event_type ?? initialType ?? 'medication'
@@ -330,9 +411,11 @@ export function AddEventModal({
    * trip: it would move the very dose the user opened without editing. The
    * resync effect below closes that.
    *
-   * Creating: default to the VIEWER's today, because that is the frame the
-   * field is in. (It used to default to the recipient's today, which was right
-   * only while the field was read as recipient-frame.)
+   * Creating: default to the CARE RECIPIENT's today (user-approved 2026-10-01),
+   * so a date-only task for a recipient far ahead of / behind the caregiver
+   * lands on the recipient's today. (History: it was the recipient's today, then
+   * the viewer's; the viewer's default put a Midway caregiver's task for a
+   * Kiritimati recipient a day before the recipient's today.)
    */
   const hydrated = useMemo(() => {
     if (event) {
@@ -340,13 +423,15 @@ export function AddEventModal({
       // fields stay EMPTY rather than being filled through a guessed zone. The
       // resync effect below refills them the moment the real zone lands (the
       // modal renders nothing until then — `canEdit` is false while loading).
-      if (!timezone) {
+      // Same for a series root still being resolved (`scheduleSource`
+      // undefined): empty, never the occurrence's date standing in for it.
+      if (!timezone || !scheduleSource) {
         return { dateStr: '', timeStr: '', recurrenceEndDateStr: '' };
       }
       return eventDatesFromApi({
-        scheduledDate: event.scheduled_date,
-        scheduledTime: event.scheduled_time ?? null,
-        recurrenceEndDate: event.recurrence_end_date ?? null,
+        scheduledDate: scheduleSource.scheduled_date,
+        scheduledTime: scheduleSource.scheduled_time ?? null,
+        recurrenceEndDate: scheduleSource.recurrence_end_date ?? null,
         timezone,
       });
     }
@@ -354,11 +439,14 @@ export function AddEventModal({
       // `initialTime` is already VIEWER-frame `HH:MM` (the wizard's own field
       // frame), so it drops straight in with no conversion — the same value the
       // user would have typed here themselves.
-      dateStr: getDateInTimezone(getDeviceTimezone()),
+      // The CARE RECIPIENT's today; '' while the zone is still loading (the same
+      // gate as an edit), so no wrong day is shown and then replaced. The resync
+      // effect below fills it the moment the zone lands.
+      dateStr: defaultNewEventDate(timezone),
       timeStr: initialTime ?? '',
       recurrenceEndDateStr: '',
     };
-  }, [event, timezone, initialTime]);
+  }, [event, timezone, initialTime, scheduleSource]);
 
   const [dateStr, setDateStr] = useState(hydrated.dateStr);
   const [timeStr, setTimeStr] = useState(hydrated.timeStr);
@@ -366,8 +454,8 @@ export function AddEventModal({
     // `duration_minutes` is a DELTA, so it is frame-independent: the viewer's
     // end time is the viewer's start time plus the duration. Derived from the
     // hydrated (viewer-frame) start, never from the stored recipient string.
-    if (!hydrated.timeStr || !event?.duration_minutes) return '';
-    return endTimeForDuration(hydrated.timeStr, event.duration_minutes);
+    if (!hydrated.timeStr || !scheduleSource?.duration_minutes) return '';
+    return endTimeForDuration(hydrated.timeStr, scheduleSource.duration_minutes);
   });
   const [location, setLocation] = useState(event?.location ?? '');
   const [description, setDescription] = useState(event?.description ?? '');
@@ -376,12 +464,23 @@ export function AddEventModal({
   // An edit hydrates from the stored rule; a create may carry the wizard's
   // hand-off answer. `parseRecurrence` maps null/undefined to 'none', so an
   // ordinary create is unchanged.
-  const initialRecurrenceState = parseRecurrence(
-    event ? event.recurrence_rule : initialRecurrence
-  );
+  //
+  // An edit reads the rule AND day set off the series root (see
+  // `scheduleSource`); while the root is still resolving it starts from the
+  // occurrence's rule and the resync effect below corrects it once it lands.
+  const initialRecurrenceState = event
+    ? parseRecurrence(
+        scheduleSource ? scheduleSource.recurrence_rule : event.recurrence_rule,
+        scheduleSource ? scheduleSource.recurrence_days : null
+      )
+    : parseRecurrence(initialRecurrence);
   const [recurrence, setRecurrence] = useState<RecurrenceChoice>(initialRecurrenceState.choice);
   const [daysOn, setDaysOn] = useState(initialRecurrenceState.daysOn);
   const [daysOff, setDaysOff] = useState(initialRecurrenceState.daysOff);
+  /** The "Days of the week" selection, 0=Sun..6=Sat (used only in that mode). */
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>(initialRecurrenceState.days);
+  /** Has the user touched the Repeat controls? Then the root resync keeps off. */
+  const recurrenceTouched = useRef(false);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(hydrated.recurrenceEndDateStr);
 
   // The six reminder switches hydrate from the event itself — the list response
@@ -422,6 +521,38 @@ export function AddEventModal({
   const remindersTouched = useRef(false);
 
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  // PK9: a NEW event survives a forced sign-out (sessionStorage, same user,
+  // 30 min). The core fields only; recurrence/reminder choices are cheap to
+  // redo and tie to rules that must be re-derived. Edits are not drafts.
+  useSessionDraft<AddEventDraft>(
+    isEditing ? null : `calendar:addEvent:${circleId}`,
+    () =>
+      title.trim() || dosage.trim() || location.trim() || description.trim()
+        ? {
+            eventType,
+            title,
+            dosage,
+            dateStr,
+            timeStr,
+            endTimeStr,
+            location,
+            description,
+            assignedTo,
+          }
+        : null,
+    (d) => {
+      setEventType(d.eventType);
+      setTitle(d.title);
+      setDosage(d.dosage);
+      setDateStr(d.dateStr);
+      setTimeStr(d.timeStr);
+      setEndTimeStr(d.endTimeStr);
+      setLocation(d.location);
+      setDescription(d.description);
+      setAssignedTo(d.assignedTo);
+    }
+  );
   // Payload held while the past-time notice is showing (mobile GAP #4 parity):
   // a medication scheduled for TODAY at a time that already passed gets a
   // lightweight confirm, then proceeds. The two paths mean different things:
@@ -460,11 +591,25 @@ export function AddEventModal({
     setTimeStr(hydrated.timeStr);
     setRecurrenceEndDate(hydrated.recurrenceEndDateStr);
     setEndTimeStr(
-      hydrated.timeStr && event?.duration_minutes
-        ? endTimeForDuration(hydrated.timeStr, event.duration_minutes)
+      hydrated.timeStr && scheduleSource?.duration_minutes
+        ? endTimeForDuration(hydrated.timeStr, scheduleSource.duration_minutes)
         : ''
     );
-  }, [hydrated, event]);
+  }, [hydrated, scheduleSource]);
+
+  /**
+   * Re-hydrate the Repeat controls when the series root resolves AFTER mount
+   * (an occurrence whose root was not in the cache). Untouched controls only —
+   * the same "a user who has chosen owns it" rule as the dates above.
+   */
+  useEffect(() => {
+    if (!event || !scheduleSource || recurrenceTouched.current) return;
+    const parsed = parseRecurrence(scheduleSource.recurrence_rule, scheduleSource.recurrence_days);
+    setRecurrence(parsed.choice);
+    setDaysOn(parsed.daysOn);
+    setDaysOff(parsed.daysOff);
+    setRecurrenceDays(parsed.days);
+  }, [event, scheduleSource]);
 
   /**
    * Re-apply the fresh-form "15 minutes before" default when the TYPE changes.
@@ -668,6 +813,9 @@ export function AddEventModal({
   }, [showDualTimezone, dateStr, timeStr, deviceTimezone, timezone, hourCycle, recipientZone, t]);
 
   /** The label above the time field: "Your time / Margaret's time (New York)". */
+  const daysTimezoneNote = recipientName
+    ? t('addEvent.daysOfWeek.timezoneNote', { name: recipientName, timezone: recipientZone })
+    : t('addEvent.daysOfWeek.timezoneNoteGeneric', { timezone: recipientZone });
   const dualTimezoneLabel = recipientName
     ? t('addEvent.dualTimezoneHint', { name: recipientName, timezone: recipientZone })
     : t('addEvent.dualTimezoneHintGeneric', { timezone: recipientZone });
@@ -675,7 +823,6 @@ export function AddEventModal({
   // History-based title quick-fill (QP6) — sourced from the circle's ALREADY
   // CACHED calendar events (no new fetching); generics pad the list. The row
   // hides when the title exactly matches a chip (it has done its job).
-  const cachedEvents = useCachedCircleEvents(circleId);
   const titleSuggestions = useMemo(() => {
     if (isMedication) return [];
     const generics = (eventType === 'appointment' ? APPOINTMENT_TITLE_KEYS : TASK_TITLE_KEYS).map(
@@ -687,14 +834,20 @@ export function AddEventModal({
   // tapped again to clear (accidental-tap undo).
   const showTitleSuggestions = !isMedication && titleSuggestions.length > 0;
 
-  // Assignee options — caregivers only (exclude the care recipient), like mobile.
+  // Assignee options — "Anyone" first, then EVERY member in the circle's member
+  // order, the care recipient included (like mobile). An independent recipient
+  // with their own phone can own a task (e.g. meal-time reminders): the backend
+  // accepts them as `assigned_to` and sends the reminder only to the assignee.
+  // Their option carries the "Care recipient" role caption so caregivers can
+  // tell who they're assigning to. Do NOT re-add a caregivers-only filter.
   const assigneeOptions = useMemo(() => {
-    const opts = members
-      .filter((m) => !m.is_care_recipient)
-      .map((m) => ({
+    const opts = members.map((m) => {
+      const name = m.first_name || m.email.split('@')[0];
+      return {
         value: m.id,
-        label: m.first_name || m.email.split('@')[0],
-      }));
+        label: m.is_care_recipient ? `${name} · ${t('members:roles.careRecipient')}` : name,
+      };
+    });
     return [{ value: '', label: t('addEvent.anyone') }, ...opts];
   }, [members, t]);
 
@@ -709,6 +862,93 @@ export function AddEventModal({
       })),
     [t]
   );
+
+  // ── Days of the week ─────────────────────────────────────────────────────
+  //
+  // Every date below is a NAIVE 'YYYY-MM-DD' in the CARE RECIPIENT's frame —
+  // the frame `recurrence_days` is evaluated in (backend `is_recurrence_date`,
+  // the crons, the materializer). Weekdays come from `getDayOfWeek` on the
+  // string (0=Sun), never `getDay()` on a local Date.
+  const language = i18n.language;
+  /** The start date the save would send, in the recipient's frame. */
+  const recipientStartDate = useMemo(() => {
+    if (!timezone || !dateStr) return null;
+    try {
+      return eventDatesForApi({
+        dateStr,
+        timeStr: timeStr || null,
+        recurrenceEndDateStr: null,
+        timezone,
+      }).scheduledDate;
+    } catch {
+      return null;
+    }
+  }, [timezone, dateStr, timeStr]);
+  /** "Today" in the circle's (recipient's) timezone — never the device's. */
+  const recipientToday = timezone ? getDateInTimezone(timezone) : null;
+  /**
+   * The series ANCHOR: the ROOT's stored `scheduled_date` when editing (never
+   * the tapped occurrence's — see `useSeriesRoot`); the form's own start date
+   * when creating.
+   */
+  const seriesAnchorDate = isEditing ? (scheduleSource?.scheduled_date ?? null) : recipientStartDate;
+  /**
+   * A STARTED series keeps its start weekday: dropping it would leave the anchor
+   * off its own pattern, which hides the whole series (`seriesStartMatchesOwnPattern`)
+   * and silences its reminders (`recurrence_start_is_valid`). The backend
+   * refuses it (`RECURRENCE_DAYS_EXCLUDE_START`); the form makes it impossible.
+   */
+  const seriesStarted =
+    isEditing && !!seriesAnchorDate && !!recipientToday && seriesAnchorDate <= recipientToday;
+  const lockedDay = seriesStarted && seriesAnchorDate ? getDayOfWeek(seriesAnchorDate) : null;
+  /** The effective selection — the locked weekday is always part of it. */
+  const selectedDays = useMemo(
+    () =>
+      lockedDay == null ? recurrenceDays : cleanRecurrenceDays([...recurrenceDays, lockedDay]),
+    [recurrenceDays, lockedDay]
+  );
+  /** Did the ROOT this form hydrated from carry a day set? (Clearing it needs `null`.) */
+  const storedHadDays =
+    isEditing &&
+    scheduleSource?.recurrence_rule === 'weekly' &&
+    cleanRecurrenceDays(scheduleSource.recurrence_days).length > 0;
+  /**
+   * The start date's weekday is not in the set: the series cannot start there,
+   * so the save moves it forward to the next selected day (at most six days —
+   * the backend create normalizer does exactly the same). Shown as "First time".
+   * `null` when no move is needed, or with 7 days (saved as Daily).
+   */
+  const firstTimeShiftDays = useMemo(() => {
+    if (recurrence !== 'days_of_week' || !recipientStartDate) return null;
+    if (selectedDays.length === 0 || selectedDays.length === 7) return null;
+    const next = nextDateOnWeekdays(recipientStartDate, selectedDays);
+    if (!next || next === recipientStartDate) return null;
+    return daysBetween(recipientStartDate, next);
+  }, [recurrence, recipientStartDate, selectedDays]);
+  // Displayed in the VIEWER's frame, the same frame as the Date field above it.
+  const firstTimeLabel =
+    firstTimeShiftDays !== null && dateStr
+      ? formatDateForDisplay(
+          addDays(dateStr, firstTimeShiftDays),
+          { weekday: 'short', month: 'short', day: 'numeric' },
+          language
+        )
+      : null;
+  const lockedDayName = lockedDay == null ? '' : getWeekdayName(lockedDay, 'long', language);
+
+  /** Choosing a Repeat option — "Days of the week" pre-selects if nothing is. */
+  function chooseRecurrence(next: RecurrenceChoice): void {
+    recurrenceTouched.current = true;
+    setRecurrence(next);
+    clearError('recurrence_rule', RECURRENCE_DAYS_ID);
+    if (next === 'days_of_week' && recurrenceDays.length === 0) {
+      // Existing days are kept; otherwise the start date's weekday (the
+      // anchor's, for a started series — the one that cannot be removed).
+      const start =
+        lockedDay ?? (recipientStartDate ? getDayOfWeek(recipientStartDate) : null);
+      if (start !== null) setRecurrenceDays([start]);
+    }
+  }
 
   function clearError(...fields: string[]): void {
     setErrors((prev) => {
@@ -753,13 +993,19 @@ export function AddEventModal({
     if (isMedication && !timeStr) {
       fieldErrors.scheduled_time = t('addEvent.validation.timeRequired');
     }
+    if (recurrence === 'days_of_week' && selectedDays.length === 0) {
+      fieldErrors[RECURRENCE_DAYS_ID] = t('addEvent.daysOfWeek.noneSelected');
+    }
     if (!isMedication) {
       if (timeStr && !endTimeStr) {
-        fieldErrors.endTime = t('addEvent.validation.endTimeRequired');
+        // PK21: an EDIT of a row stored without a duration saves with no end.
+        if (!isEditingWithoutDuration) {
+          fieldErrors.endTime = t('addEvent.validation.endTimeRequired');
+        }
       } else if (timeStr && endTimeStr) {
-        const [sh, sm] = timeStr.split(':').map(Number);
-        const [eh, em] = endTimeStr.split(':').map(Number);
-        if (eh * 60 + em <= sh * 60 + sm) {
+        // Same rule as mobile: an end at or before the start reads as the NEXT
+        // day (a span past midnight), so this only trips on an unparseable value.
+        if (spanMinutes(timeStr, endTimeStr) === null) {
           fieldErrors.endTime = t('addEvent.validation.endTimeAfterStart');
         }
       }
@@ -786,21 +1032,43 @@ export function AddEventModal({
         recurrence !== 'none' && recurrenceEndDate ? recurrenceEndDate : null,
       timezone: tz,
     });
-    const scheduled_date = apiDates.scheduledDate;
+    let scheduled_date = apiDates.scheduledDate;
     const scheduled_time = apiDates.scheduledTime;
 
     let durationMinutes: number | undefined;
     if (!isMedication && timeStr && endTimeStr) {
-      const [sh, sm] = timeStr.split(':').map(Number);
-      const [eh, em] = endTimeStr.split(':').map(Number);
-      durationMinutes = eh * 60 + em - (sh * 60 + sm);
+      // Midnight-crossing spans count as mobile counts them (see spanMinutes).
+      durationMinutes = spanMinutes(timeStr, endTimeStr) ?? undefined;
     }
 
     let recurrence_rule: string | undefined;
+    // `undefined` = key omitted (the stored value stays); `null` = explicit
+    // "no specific days", which CLEARS a stored set on PATCH.
+    let recurrence_days: number[] | null | undefined;
     if (recurrence === 'cycle') {
       recurrence_rule = `cycle:${parseInt(daysOn, 10) || 7}:${parseInt(daysOff, 10) || 7}`;
+    } else if (recurrence === 'days_of_week') {
+      if (selectedDays.length === 7) {
+        // Every day IS daily — same schedule, simpler label.
+        recurrence_rule = 'daily';
+      } else {
+        recurrence_rule = 'weekly';
+        recurrence_days = selectedDays;
+        // The series cannot start on an unselected weekday: move the start to
+        // the next selected day (the "First time" the form shows). A started
+        // series never needs this — its start weekday is locked in the set.
+        const next = nextDateOnWeekdays(scheduled_date, selectedDays);
+        if (next) scheduled_date = next;
+      }
     } else if (recurrence !== 'none') {
       recurrence_rule = recurrence;
+    }
+    // Leaving a days series (plain Weekly, Daily, …) must clear the stored set
+    // explicitly — omitting the key would keep it. ONLY when the root we
+    // hydrated from actually had one: an occurrence carries no `recurrence_days`
+    // at all, so "we saw none" must never be written back as "there are none".
+    if (recurrence_days === undefined && storedHadDays) {
+      recurrence_days = null;
     }
 
     const data: CreateEventRequest = {
@@ -834,6 +1102,7 @@ export function AddEventModal({
       // start date's frame.
       recurrence_end_date: apiDates.recurrenceEndDate,
     };
+    if (recurrence_days !== undefined) data.recurrence_days = recurrence_days;
 
     if (isMedication) {
       data.medication_name = trimmedTitle;
@@ -885,7 +1154,9 @@ export function AddEventModal({
     // event at a New-York-derived instant and silently move it. `canEdit` is
     // already false until the detail query lands, so this is belt-and-braces —
     // but it is the one place where guessing the zone corrupts stored data.
-    if (!canEdit || !timezone || isPending) return;
+    // Likewise the series ROOT: this save PATCHes it with the form's schedule,
+    // so it must not run on an occurrence's values standing in for the root's.
+    if (!canEdit || !timezone || isPending || seriesRootPending) return;
 
     const built = buildPayload(timezone);
     if (!built.ok) {
@@ -904,6 +1175,7 @@ export function AddEventModal({
         'description',
         'assigned_to',
         'recurrence_rule',
+        RECURRENCE_DAYS_ID,
         'recurrence_end_date',
       ]);
       return;
@@ -1123,6 +1395,7 @@ export function AddEventModal({
                 ? MED_SCHEDULE_PRESETS.find((candidate) => candidate.id === next)
                 : undefined;
               datesTouched.current = true;
+              recurrenceTouched.current = true;
               if (preset) {
                 setTimeStr(preset.time);
                 setRecurrence(preset.recurrence);
@@ -1158,7 +1431,12 @@ export function AddEventModal({
               clearError('scheduled_time');
               if (!next) {
                 setEndTimeStr('');
-              } else if (!isMedication && !endTimeStr) {
+              } else if (!isMedication && endTimeStr && timeStr) {
+                // PK21: moving the start moves the end (the duration is kept).
+                const shifted = shiftEndTimeStr(timeStr, next, endTimeStr);
+                if (shifted) setEndTimeStr(shifted);
+                clearError('endTime');
+              } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
                 // An end time is required (the calendar renders these as
                 // blocks), so prefill the default rather than making the user
                 // supply a second value before they can save.
@@ -1173,7 +1451,7 @@ export function AddEventModal({
               label={t('addEvent.fields.endTime')}
               // Required only once a start time exists (the validator's rule);
               // until then the field is disabled and nothing is asked of it.
-              required={Boolean(timeStr)}
+              required={Boolean(timeStr) && !isEditingWithoutDuration}
               value={endTimeStr}
               error={errors.endTime}
               disabled={!timeStr}
@@ -1247,11 +1525,60 @@ export function AddEventModal({
           options={recurrenceOptions}
           value={recurrence}
           error={errors.recurrence_rule}
-          onChange={(e) => {
-            setRecurrence(e.target.value as RecurrenceChoice);
-            clearError('recurrence_rule');
-          }}
+          onChange={(e) => chooseRecurrence(e.target.value as RecurrenceChoice)}
         />
+
+        {/* "Days of the week" — the chips reveal inline under the select, the
+            way Cycle reveals its on/off inputs (mobile shows the same chips as
+            a step of its Repeat sheet). */}
+        {recurrence === 'days_of_week' && (
+          <div className="flex flex-col gap-2">
+            <DaysOfWeekPicker
+              id={RECURRENCE_DAYS_ID}
+              label={t('addEvent.daysOfWeek.title')}
+              selected={selectedDays}
+              lockedDay={lockedDay}
+              lockedHintId={lockedDay != null ? RECURRENCE_DAYS_LOCK_ID : undefined}
+              describedBy={errors[RECURRENCE_DAYS_ID] ? RECURRENCE_DAYS_ERROR_ID : undefined}
+              // PK23: the chips are in the RECIPIENT's frame; say so only when
+              // the viewer's zone differs (the dual-time hint's condition).
+              note={showDualTimezone ? daysTimezoneNote : undefined}
+              noteId={RECURRENCE_DAYS_NOTE_ID}
+              language={language}
+              onChange={(days) => {
+                recurrenceTouched.current = true;
+                setRecurrenceDays(days);
+                clearError(RECURRENCE_DAYS_ID);
+              }}
+            />
+            {errors[RECURRENCE_DAYS_ID] && (
+              <p id={RECURRENCE_DAYS_ERROR_ID} className={INPUT_ERROR}>
+                <Icon name="alert-circle-outline" size="inline" />
+                {errors[RECURRENCE_DAYS_ID]}
+              </p>
+            )}
+            {/* Polite live region, always mounted while the picker is: the
+                "First time" move is a consequence of a chip toggle that a
+                screen-reader user would otherwise never hear about. */}
+            <div aria-live="polite" className="ml-1 flex flex-col gap-1">
+              {selectedDays.length > 0 && (
+                <p className="m-0 text-sm text-ink-2">
+                  {formatWeekdayList(selectedDays, language)}
+                </p>
+              )}
+              {firstTimeLabel && (
+                <p className="m-0 text-sm font-medium text-ink">
+                  {t('addEvent.daysOfWeek.firstTime', { date: firstTimeLabel })}
+                </p>
+              )}
+              {lockedDay != null && (
+                <p id={RECURRENCE_DAYS_LOCK_ID} className="m-0 text-sm text-ink-3">
+                  {t('addEvent.daysOfWeek.startLocked', { day: lockedDayName })}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {recurrence === 'cycle' && (
           <div className="grid grid-cols-2 gap-4">
@@ -1526,6 +1853,8 @@ function recurrenceKey(choice: RecurrenceChoice): string {
   switch (choice) {
     case 'every_other_day':
       return 'everyOtherDay';
+    case 'days_of_week':
+      return 'daysOfWeek';
     default:
       return choice;
   }

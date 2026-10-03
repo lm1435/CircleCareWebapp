@@ -45,9 +45,18 @@ import { sqlExec, sqlStr } from '../db';
 // `renewal_off_*` columns to NULL before every test and each test then writes
 // exactly the state its scenario needs. FRESH BROWSER STATE PER TEST:
 // Playwright gives every test a new context, so the show-once localStorage
-// key never carries over — asserted at the start of each test rather than
-// assumed. The module-scope "evaluated this page load" flag resets on every
-// `page.reload()`.
+// key never carries over. The module-scope "evaluated this page load" flag
+// resets on every `page.reload()`.
+//
+// SEEN = ASKED (user decision 2026-09-22; CancelReasonPrompt.tsx, "THE MOMENT
+// OF SHOWING"): the show-once key is written the moment the dialog APPEARS,
+// not only on answer/dismiss — someone who looks at it and closes the tab is
+// not asked again, and a failed send is not re-asked on a later load. Answer
+// and dismiss write the same key again (idempotent). Mirrors mobile's
+// CancelReasonModal.test.tsx "seen = asked" block. `recordAskWrites` (an init
+// script) timestamps every show-once key write and the dialog's first
+// appearance, so the suite also fails if the key is written on page load
+// instead of at the moment of showing.
 
 const SCREENS_DIR =
   '/private/tmp/claude-501/-Users-meza-Desktop-projects-CircleCare/220bd14f-0758-4d31-a0eb-ce5278b8c1c4/scratchpad/screens';
@@ -95,6 +104,16 @@ function clearRenewalOffCache(userId: string): void {
 }
 
 test.beforeEach(async ({ account }) => {
+  clearRenewalOffCache(account.userId);
+});
+
+// ...AND after every test. The worker account is shared with EVERY other spec
+// file this worker runs (`fullyParallel`), and a test here leaves
+// `renewal_off_*` set to its scenario. Without this, the next test the worker
+// picks up (in any file) loads an eligible account in a fresh context, and the
+// real prompt opens over its page ~2s in — e.g. create-menu.spec.ts's note
+// test had its "Post" click intercepted by this dialog's backdrop.
+test.afterEach(async ({ account }) => {
   clearRenewalOffCache(account.userId);
 });
 
@@ -186,6 +205,55 @@ function hashedUserPart(userId: string): string {
   return createHash('sha256').update(`cancel_ask:${userId}`).digest('hex').slice(0, 16);
 }
 
+/** The exact show-once key for this user + cancellation instant. */
+function expectedAskKey(userId: string, renewalOffAtMs: number): string {
+  return `${KEY_PREFIX}${hashedUserPart(userId)}:${renewalOffAtMs}`;
+}
+
+/**
+ * Seen = asked: once the dialog is visible, exactly the one show-once key is
+ * on disk. Polled — the write lands after an async WebCrypto hash.
+ */
+async function expectAskedKey(page: Page, userId: string, renewalOffAtMs: number, message: string): Promise<void> {
+  await expect.poll(() => askKeys(page), { message, timeout: 5_000 }).toEqual([expectedAskKey(userId, renewalOffAtMs)]);
+}
+
+interface AskWriteLog {
+  /** performance.now() (ms since this document's navigation) of each show-once key write. */
+  writes: { key: string; t: number }[];
+  /** performance.now() when a [role="dialog"] first appeared in this document, or null. */
+  dialogAt: number | null;
+}
+
+/**
+ * Init script (re-runs on every navigation/reload): timestamps every
+ * localStorage write of a show-once key and the first appearance of a dialog,
+ * both on the document's own clock. Lets a test prove the key is written AT
+ * the moment of showing — not on page load, not before the settle delay.
+ */
+async function recordAskWrites(page: Page): Promise<void> {
+  await page.addInitScript((prefix: string) => {
+    const log = { writes: [] as { key: string; t: number }[], dialogAt: null as number | null };
+    (window as unknown as { __cancelAskLog: typeof log }).__cancelAskLog = log;
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (this === window.localStorage && key.startsWith(prefix)) log.writes.push({ key, t: performance.now() });
+      return original.call(this, key, value);
+    };
+    const observer = new MutationObserver(() => {
+      if (log.dialogAt === null && document.querySelector('[role="dialog"]')) {
+        log.dialogAt = performance.now();
+        observer.disconnect();
+      }
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  }, KEY_PREFIX);
+}
+
+async function askWriteLog(page: Page): Promise<AskWriteLog> {
+  return page.evaluate(() => (window as unknown as { __cancelAskLog: AskWriteLog }).__cancelAskLog);
+}
+
 /**
  * Pre-existing keys, OUTSIDE this prompt, that still embed the raw user id.
  * `cc:onboardingCompleted:<userId>` is written by the onboarding flow (not this
@@ -261,10 +329,12 @@ test.describe('cancel reason prompt (web)', () => {
     account,
   }, testInfo) => {
     const guard = await watchNetwork(page);
+    await recordAskWrites(page);
     const now = Date.now();
     const expiresMs = now + 5 * DAY_MS;
+    const renewalOffAtMs = now - 2 * DAY_MS;
     writeRenewalOffCache(account.userId, {
-      renewalOffAtMs: now - 2 * DAY_MS,
+      renewalOffAtMs,
       accessEndsAtMs: expiresMs,
       periodType: 'trial',
     });
@@ -272,7 +342,24 @@ test.describe('cancel reason prompt (web)', () => {
 
     const elapsed = await openHomeAndAwaitPrompt(page);
     expect(elapsed, 'the prompt must wait out the 2 s settle delay').toBeGreaterThanOrEqual(PRESENT_DELAY_MS);
-    expect(await askKeys(page), 'fresh context: no show-once key yet').toEqual([]);
+    // SEEN = ASKED: the key is on disk as soon as the dialog is visible,
+    // before any interaction — exactly one key, hashed user part, this
+    // cancellation's instant.
+    await expectAskedKey(page, account.userId, renewalOffAtMs, 'seen = asked: key written when the prompt shows');
+    // ...and it was written AT the moment of showing: not on page load /
+    // before the settle delay, and once (the show write), in lockstep with the
+    // dialog's appearance.
+    const log = await askWriteLog(page);
+    expect(log.dialogAt, 'dialog appearance recorded').not.toBeNull();
+    expect(log.writes, 'exactly one key write on show, before any interaction').toHaveLength(1);
+    expect(log.writes[0].key).toBe(expectedAskKey(account.userId, renewalOffAtMs));
+    expect(log.writes[0].t, 'key must not be written before the 2 s settle delay').toBeGreaterThanOrEqual(
+      PRESENT_DELAY_MS
+    );
+    expect(
+      Math.abs(log.writes[0].t - log.dialogAt!),
+      'key is written as the dialog appears (same moment, not earlier/later)'
+    ).toBeLessThan(1_000);
     expect(guard.subscriptionStatusHits(), 'exactly one GET /subscription-status for the page load').toBe(1);
 
     const dialog = promptDialog(page);
@@ -315,10 +402,26 @@ test.describe('cancel reason prompt (web)', () => {
     await dialog.getByRole('radio', { name: 'Missing a feature I need', exact: true }).check();
     await expect(comment).toHaveAttribute('placeholder', 'What were you looking for?');
 
-    // Nothing was sent by merely interacting.
+    // Nothing was sent by merely interacting, and interacting wrote nothing more.
     expect(feedback.bodies).toEqual([]);
+    expect((await askWriteLog(page)).writes, 'selecting / typing writes no extra key').toHaveLength(1);
     expect(guard.revenueCatHits(), 'requests to api.revenuecat.com / e.revenue.cat').toBe(0);
     expect(guard.purchasesChunkHits(), 'purchases-js chunk requested').toBe(0);
+  });
+
+  test('shown, then reloaded with no interaction: not asked again (seen = asked)', async ({ page, account }) => {
+    const now = Date.now();
+    const renewalOffAtMs = now - 2 * DAY_MS;
+    writeRenewalOffCache(account.userId, { renewalOffAtMs, accessEndsAtMs: now + 5 * DAY_MS });
+    const feedback = await stubFeedback(page);
+    await openHomeAndAwaitPrompt(page);
+    await expectAskedKey(page, account.userId, renewalOffAtMs, 'seen = asked: key written when the prompt shows');
+
+    // No tap at all — the equivalent of closing the tab. The next load really
+    // evaluates (GET /subscription-status, still eligible) and stops at the key.
+    await expectEvaluatedButNotShown(page, () => page.reload({ waitUntil: 'domcontentloaded' }));
+    expect(await askKeys(page), 'still exactly one key').toEqual([expectedAskKey(account.userId, renewalOffAtMs)]);
+    expect(feedback.bodies).toEqual([]);
   });
 
   test('send success: thanks + reassurance, closes, key written, not asked again on reload', async ({
@@ -327,10 +430,11 @@ test.describe('cancel reason prompt (web)', () => {
   }, testInfo) => {
     const now = Date.now();
     const expiresMs = now + 5 * DAY_MS;
-    writeRenewalOffCache(account.userId, { renewalOffAtMs: now - 2 * DAY_MS, accessEndsAtMs: expiresMs });
+    const renewalOffAtMs = now - 2 * DAY_MS;
+    writeRenewalOffCache(account.userId, { renewalOffAtMs, accessEndsAtMs: expiresMs });
     const feedback = await stubFeedback(page, 200);
     await openHomeAndAwaitPrompt(page);
-    expect(await askKeys(page)).toEqual([]);
+    await expectAskedKey(page, account.userId, renewalOffAtMs, 'seen = asked: key written when the prompt shows');
 
     const dialog = promptDialog(page);
     await dialog.getByRole('radio', { name: "I just didn't want to be charged automatically" }).check();
@@ -351,7 +455,8 @@ test.describe('cancel reason prompt (web)', () => {
     // Auto-closes after the thanks beat (THANKS_DURATION_MS = 1.5 s).
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 5_000 });
     const keys = await askKeys(page);
-    expect(keys).toHaveLength(1);
+    // The answer re-writes the same key (idempotent) — still exactly one.
+    expect(keys).toEqual([expectedAskKey(account.userId, renewalOffAtMs)]);
     // Hashed user part, never the raw id.
     expect(keys[0]).toMatch(new RegExp(`^${KEY_PREFIX}[0-9a-f]{16}:\\d+$`));
     expect(keys[0]).toMatch(new RegExp(`^${KEY_PREFIX}${hashedUserPart(account.userId)}:\\d+$`));
@@ -376,14 +481,16 @@ test.describe('cancel reason prompt (web)', () => {
     expect(feedback.bodies).toEqual([{ type: 'cancellation', reason: 'too_expensive', isSandbox: false }]);
   });
 
-  test('send failure (500): alert shown, selection kept, no key, asked again on reload', async ({
+  test('send failure (500): alert shown, selection kept, key stays written (from show), not asked again on reload', async ({
     page,
     account,
   }, testInfo) => {
     const now = Date.now();
-    writeRenewalOffCache(account.userId, { renewalOffAtMs: now - 2 * DAY_MS, accessEndsAtMs: now + 5 * DAY_MS });
+    const renewalOffAtMs = now - 2 * DAY_MS;
+    writeRenewalOffCache(account.userId, { renewalOffAtMs, accessEndsAtMs: now + 5 * DAY_MS });
     const feedback = await stubFeedback(page, 500);
     await openHomeAndAwaitPrompt(page);
+    await expectAskedKey(page, account.userId, renewalOffAtMs, 'seen = asked: key written when the prompt shows');
 
     const dialog = promptDialog(page);
     const broken = dialog.getByRole('radio', { name: "Something didn't work", exact: true });
@@ -400,7 +507,10 @@ test.describe('cancel reason prompt (web)', () => {
     expect(feedback.bodies).toEqual([
       { type: 'cancellation', reason: 'something_broken', description: 'Reminders came late.', isSandbox: false },
     ]);
-    expect(await askKeys(page), 'an answer that never landed writes no key').toEqual([]);
+    // Seen = asked: the key written on show is not undone by a failed send.
+    expect(await askKeys(page), 'a failed send keeps the key from show, still exactly one').toEqual([
+      expectedAskKey(account.userId, renewalOffAtMs),
+    ]);
     await shoot(page, '03-desktop-error', testInfo);
     await checkA11y(page, 'cancel-reason-dialog-error', testInfo);
 
@@ -408,9 +518,12 @@ test.describe('cancel reason prompt (web)', () => {
     await dialog.getByRole('radio', { name: 'Other', exact: true }).check();
     await expect(dialog.getByRole('alert')).toHaveCount(0);
 
-    // The key was never written, so a reload re-evaluates and asks again.
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(promptDialog(page)).toBeVisible({ timeout: 20_000 });
+    // Accepted trade-off (2026-09-22): a failed send is NOT re-asked on the
+    // next open. The reload really re-evaluates (still eligible) and stops at
+    // the key written on show.
+    await expectEvaluatedButNotShown(page, () => page.reload({ waitUntil: 'domcontentloaded' }));
+    expect(await askKeys(page), 'still exactly one key').toEqual([expectedAskKey(account.userId, renewalOffAtMs)]);
+    expect(feedback.bodies, 'no automatic resend on the next open').toHaveLength(1);
   });
 
   test('Not now closes, writes the key, and is not asked again on reload', async ({ page, account }) => {

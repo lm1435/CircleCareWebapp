@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Eyebrow, Skeleton, Text, useToast } from '@/components/ui';
+import { Badge, Button, Eyebrow, Skeleton, Text } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
 import { StoreBadges } from '@/components/layout/StoreBadges';
@@ -12,6 +12,8 @@ import { getApiError } from '@/api/auth';
 import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
 import { useAuth } from '@/hooks/useAuth';
 import { useAcceptInviteByCode } from '@/hooks/useJoinCircle';
+import { useOpenJoinedCircle } from '@/hooks/useOpenJoinedCircle';
+import type { AcceptInviteResponse } from '@/api/invites';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
@@ -130,7 +132,7 @@ export default function InviteLandingPage(): ReactElement {
   const { isAuthenticated, isBootstrapping } = useAuth();
   const accept = useAcceptInviteByCode();
   const acceptGuard = useSubmitGuard();
-  const { showToast } = useToast();
+  const openJoinedCircle = useOpenJoinedCircle();
   const [acceptError, setAcceptError] = useState<string | null>(null);
   // Backend normalizes too; normalize here so the displayed fallback code
   // matches what the app expects users to type.
@@ -159,8 +161,10 @@ export default function InviteLandingPage(): ReactElement {
   );
 
   // Accept the invite when the visitor is already signed in. The preview
-  // endpoint doesn't expose the circle id, so on success we land on the circle
-  // picker (now showing the just-joined circle). An already-member result is a
+  // endpoint doesn't expose the circle id, but the ACCEPT response does
+  // (`data.circle`), so on success we open the joined circle and name it —
+  // parity with mobile. If the backend returns `circle: null` the join still
+  // happened: generic toast + the circle picker. An already-member result is a
   // success from the user's point of view — send them to the picker too.
   //
   // `disabled={accept.isPending}` on the button is the VISUAL guard and lands a
@@ -189,8 +193,9 @@ export default function InviteLandingPage(): ReactElement {
     if (!acceptGuard.claim()) return;
     setAcceptError(null);
     setAccepting(true);
+    let result: AcceptInviteResponse;
     try {
-      await acceptAsync(displayCode);
+      result = await acceptAsync(displayCode);
     } catch (err) {
       const errorCode = getApiError(err)?.code;
       if (errorCode === 'ALREADY_MEMBER') {
@@ -217,10 +222,10 @@ export default function InviteLandingPage(): ReactElement {
     // invites sent since January produced zero invite_accepted events, so there
     // was no way to tell a working join from a silently broken one.
     Analytics.inviteAccepted(undefined, 'invite_link');
-    // Confirm the join — the circle picker we land on gives no feedback.
-    showToast(t('acceptSuccess'), 'success');
-    navigate('/circles');
-  }, [acceptAsync, acceptGuard, displayCode, navigate, showToast, t]);
+    // Confirm the join by name and open the joined circle ("You've joined
+    // <name>"); `circle: null` → generic copy + /circles.
+    openJoinedCircle(result.circle);
+  }, [acceptAsync, acceptGuard, displayCode, navigate, openJoinedCircle, t]);
 
   // Returning from the sign-in handoff: finish the job the visitor started.
   //

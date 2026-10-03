@@ -34,7 +34,7 @@ async function expectGatePassed(page: Page): Promise<void> {
   // acceptable here — whether the sandbox offering loads is not what this
   // spec is testing. What matters is that the GATE did not intervene.
   await expect(
-    page.getByRole('heading', { name: /Care for them together|Online checkout isn't available/ })
+    page.getByRole('heading', { name: /Unlock the full|Online checkout isn't available/ })
   ).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText(STORE_CARD)).toHaveCount(0);
   await expect(page.getByText(ERROR_CARD)).toHaveCount(0);

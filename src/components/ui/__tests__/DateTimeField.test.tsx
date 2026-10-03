@@ -19,7 +19,7 @@ describe('DateField', () => {
     expect(control).toHaveAttribute('type', 'date');
     const shell = shellOf(control);
     expect(shell.className).toContain('min-h-[44px]');
-    expect(shell.className).toContain('focus-within:border-moss-light');
+    expect(shell.className).toContain('focus-within:border-moss');
     expect(shell.querySelector('[data-icon="calendar-outline"]')).toBeInTheDocument();
   });
 
@@ -69,7 +69,7 @@ describe('TimeField', () => {
     expect(control).toHaveAttribute('type', 'time');
     const shell = shellOf(control);
     expect(shell.className).toContain('min-h-[44px]');
-    expect(shell.className).toContain('focus-within:border-moss-light');
+    expect(shell.className).toContain('focus-within:border-moss');
     expect(shell.querySelector('[data-icon="time-outline"]')).toBeInTheDocument();
   });
 
@@ -77,7 +77,7 @@ describe('TimeField', () => {
     render(<TimeField id="at" label="Time" error="Required" value="" onChange={() => {}} />);
     const shell = shellOf(screen.getByLabelText(/^Time/));
     expect(shell.className).toContain('border-terracotta');
-    expect(shell.className).not.toContain('moss-light');
+    expect(shell.className).not.toContain('focus-within:border-moss');
   });
 
   it('dims the shell at 50% when disabled', () => {

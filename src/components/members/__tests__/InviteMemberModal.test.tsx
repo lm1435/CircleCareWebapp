@@ -312,9 +312,107 @@ describe('InviteMemberModal — email-required', () => {
     const upgrade = await screen.findByRole('button', { name: 'Upgrade' });
     await user.click(upgrade);
 
+    // 'invite_cap', NOT the shared 'capacity': the seat cap is the one limit
+    // moment the invite funnel is read on (lib/paywallContext.ts).
     expect(navigate).toHaveBeenCalledWith('/upgrade', {
+      state: { paywallContext: 'invite_cap' },
+    });
+    expect(navigate).not.toHaveBeenCalledWith('/upgrade', {
       state: { paywallContext: 'capacity' },
     });
+  });
+});
+
+/**
+ * The cap card appearing IS the limit moment, and until now it fired nothing:
+ * `plan_selection_viewed` only counts the people who then pressed Upgrade, so
+ * the denominator — how many inviters hit the cap at all — was invisible.
+ * `invite_cap_reached` is that denominator. It must fire exactly once per
+ * time the card appears, never on a plain re-render.
+ */
+describe('InviteMemberModal — invite_cap_reached', () => {
+  const capReached = vi.spyOn(Analytics, 'inviteCapReached');
+
+  async function rejectWith402(details?: Record<string, unknown>): Promise<void> {
+    const user = userEvent.setup();
+    // onSettled too: it releases the double-submit guard, as the real
+    // mutation does, so a second attempt can reach the server.
+    mutate.mockImplementation((_vars, opts) => {
+      opts?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED', details } });
+      opts?.onSettled?.();
+    });
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    await screen.findByRole('alert');
+  }
+
+  it('fires exactly once, with no arguments (no circle id), when the cap card appears after a 402', async () => {
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    expect(capReached).not.toHaveBeenCalled();
+
+    await rejectWith402();
+
+    expect(capReached).toHaveBeenCalledTimes(1);
+    expect(capReached).toHaveBeenCalledWith();
+  });
+
+  it('does not fire again on a re-render that leaves the card in place', async () => {
+    const user = userEvent.setup();
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    await rejectWith402();
+
+    // Typing re-renders the modal several times; the card stays as it was.
+    await user.type(screen.getByLabelText('Email address'), 'x');
+    await user.click(screen.getByRole('radio', { name: /Care Recipient/i }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    expect(capReached).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires once more when a SECOND attempt hits the cap again', async () => {
+    const user = userEvent.setup();
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    await rejectWith402();
+
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    await screen.findByRole('alert');
+
+    expect(capReached).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts the recoverable pending-seat card as a cap reached too', async () => {
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await rejectWith402({
+      reason: 'pending_invite_seat',
+      blocking_invite: { id: 'inv-2', invited_email: 'blocked@example.com' },
+    });
+
+    expect(capReached).toHaveBeenCalledTimes(1);
+    expect(capReached).toHaveBeenCalledWith();
+  });
+
+  it('never fires for a failure that is not the cap, nor on open', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onError?.({ error: { code: 'ALREADY_MEMBER' } })
+    );
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(capReached).not.toHaveBeenCalled();
+  });
+
+  it('leaves invite_started on open exactly as it was', () => {
+    const started = vi.spyOn(Analytics, 'inviteStarted');
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+
+    expect(started).toHaveBeenCalledTimes(1);
+    expect(started).toHaveBeenCalledWith(CIRCLE_ID);
+    expect(capReached).not.toHaveBeenCalled();
   });
 });
 
@@ -377,6 +475,19 @@ describe('InviteMemberModal — sharing the link', () => {
     await user.click(screen.getByRole('button', { name: 'Copy link' }));
 
     expect(writeText).toHaveBeenCalledWith('https://my.circlecare.app/invite/ABC123');
+  });
+
+  // a11y audit 2026-09-29 (WCAG 4.1.3): "Link copied" is a status message and
+  // must reach a live region, not only the focused button's changing label.
+  it('announces "Link copied" through a status region', async () => {
+    succeedWith({ invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' });
+    const user = await sendInvite({ clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    await user.click(screen.getByRole('button', { name: 'Copy link' }));
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('status').some((node) => node.textContent === 'Link copied')
+      ).toBe(true)
+    );
   });
 
   /**

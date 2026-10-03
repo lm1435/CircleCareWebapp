@@ -37,6 +37,19 @@ test.describe('empty states (list endpoints stubbed empty)', () => {
     await page.route(/\/api\/circles\/[^/]+\/vitals(\?|$)/, (r) =>
       r.fulfill(emptyJson({ success: true, data: { vitals: [] } }))
     );
+    // The page also reads the latest reading PER TYPE to choose its empty
+    // story ("No readings yet" vs "nothing in this range, your last was…").
+    // Unstubbed, it hits the real server, where the isolated account has old
+    // readings, and the page (correctly) shows the range story. A circle that
+    // has never logged anything answers every type with null.
+    await page.route(/\/api\/circles\/[^/]+\/vitals\/latest(\?|$)/, (r) =>
+      r.fulfill(
+        emptyJson({
+          success: true,
+          data: { latest: { blood_pressure: null, heart_rate: null, glucose: null, weight: null } },
+        })
+      )
+    );
     const path = `/circles/${circleId}/vitals`;
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('No readings yet')).toBeVisible({ timeout: 20_000 });

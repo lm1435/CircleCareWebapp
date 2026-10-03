@@ -243,9 +243,13 @@ export default function SignUpPage(): ReactElement {
       setFormError(
         isRateLimitError(err)
           ? t('rateLimited')
-          : alreadyExists
-            ? t('signup.errors.emailExists')
-            : t('signup.errors.signUpFailed')
+          : apiError?.code === 'SIGNUP_FAILED'
+            ? // PK2+: the backend's deliberately-neutral rejection; mobile's
+              // wording, which points an existing user at sign-in.
+              t('signup.errors.signUpRejected')
+            : alreadyExists
+              ? t('signup.errors.emailExists')
+              : t('signup.errors.signUpFailed')
       );
     } finally {
       setIsSubmitting(false);
@@ -309,8 +313,9 @@ export default function SignUpPage(): ReactElement {
     };
     try {
       // Supabase is an OAuth handshake broker ONLY — the browser redirects to
-      // the provider and returns to /auth/callback, where the tokens are
-      // exchanged with our backend for an httpOnly cookie session.
+      // the provider and returns to /auth/callback?code=… (PKCE: the verifier
+      // is parked in this tab's sessionStorage here), where the code is traded
+      // for a session that is handed to our backend for an httpOnly cookie.
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -395,7 +400,10 @@ export default function SignUpPage(): ReactElement {
           type="email"
           label={t('signup.emailLabel')}
           placeholder={t('signup.emailPlaceholder')}
-          autoComplete="email"
+          // "username", not "email" (decided 2026-09-29, same on mobile's
+          // textContentType): password managers key the saved credential on the
+          // field marked username; type=email keeps the keyboard and validation.
+          autoComplete="username"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}

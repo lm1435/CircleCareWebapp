@@ -29,9 +29,16 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { classifyFailureCode } from '@/lib/apiErrors';
+import { withRefetchCap } from '@/lib/refetchCap';
 import { useToast } from '@/components/ui';
 import { getDateInTimezone } from '@/utils/timezone';
 import { Analytics, type MedicationConfirmSource } from '@/lib/analytics';
+import {
+  isAmbiguousConfirmFailure,
+  markConfirmFailure,
+  verifyConfirmLanded,
+} from '@/lib/confirmVerify';
+import { doseAlreadyRecorded } from '@/lib/doseAlreadyRecorded';
 
 // Plan Tasks 23 + 39 — confirm mutation + today's meds query.
 //
@@ -107,20 +114,89 @@ export function useMedicationTodaySummary(
  * toast and invalidates circle queries so stale access flags refresh —
  * backend enforces access regardless of UI state.
  */
+/**
+ * The confirm body plus, optionally, THE CIRCLE TO SEND TO. The dose undo window
+ * (components/meds/useMedicationUndo) commits up to 5s after the tap — on its
+ * timer or in a flush — and by then the hook may be rendering a different
+ * circle; the request, its analytics and its invalidations belong to the circle
+ * the tap was made in. Omitted, the hook's `circleId` is used, as before.
+ * `circleId` is stripped before the POST — it is never part of the body.
+ */
+export type ConfirmMedicationVariables = ConfirmMedicationRequest & {
+  circleId?: string;
+  /**
+   * The dose's DAY (and series), for VERIFY-BEFORE-ALERT: an ambiguous
+   * rejection (timeout, network, 5xx) re-reads this day before anything is
+   * reported — see lib/confirmVerify.ts. Omitted, a rejection is reported as
+   * it is (the old behaviour). Stripped before the POST, like `circleId`.
+   */
+  dose?: { scheduled_date: string; parent_event_id?: string | null };
+};
+
+/**
+ * Confirmations that came back from a VERIFIED re-read after an ambiguous
+ * rejection, mapped to the bounded failure code that was recovered from — so
+ * `onSuccess` can log `medication_confirm_recovered` (mobile parity).
+ */
+const RECOVERED = new WeakMap<object, string>();
+
 export function useConfirmMedication(
-  circleId: string,
+  hookCircleId: string,
   /** Which surface answered the dose — see Analytics.medicationConfirmed. */
   source: MedicationConfirmSource
-): UseMutationResult<MedicationConfirmation, unknown, ConfirmMedicationRequest> {
+): UseMutationResult<MedicationConfirmation, unknown, ConfirmMedicationVariables> {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { t } = useTranslation('meds');
 
   return useMutation({
-    mutationFn: (data: ConfirmMedicationRequest) => confirmMedication(circleId, data),
-    onSuccess: (_confirmation, variables) => {
+    mutationFn: async ({
+      circleId: sentCircleId,
+      dose,
+      ...data
+    }: ConfirmMedicationVariables): Promise<MedicationConfirmation> => {
+      const circleId = sentCircleId ?? hookCircleId;
+      try {
+        return await confirmMedication(circleId, data);
+      } catch (error) {
+        // VERIFY BEFORE ALERT (test-gap audit 2026-09-29 #3, mobile parity).
+        // A definitive refusal — DOSE_ALREADY_RECORDED included — is reported
+        // as it is. An AMBIGUOUS one may have been written: re-read the day.
+        if (!dose || !isAmbiguousConfirmFailure(error)) throw error;
+        const { verdict, row } = await verifyConfirmLanded(
+          circleId,
+          {
+            id: data.event_id,
+            scheduled_date: dose.scheduled_date,
+            scheduled_time: data.scheduled_time,
+            parent_event_id: dose.parent_event_id ?? null,
+          },
+          data.status
+        );
+        if (verdict !== 'recorded') throw markConfirmFailure(error, verdict);
+        // It landed. Resolve — the success toast, the success invalidations.
+        const recovered = {
+          id: '',
+          event_id: row?.id ?? data.event_id,
+          circle_id: circleId,
+          confirmed_by: row?.confirmation?.confirmed_by ?? '',
+          confirmed_at: row?.confirmation?.confirmed_at ?? '',
+          status: row?.confirmation?.status ?? data.status,
+          scheduled_time: data.scheduled_time,
+        } as MedicationConfirmation;
+        RECOVERED.set(recovered, classifyFailureCode(error));
+        return recovered;
+      }
+    },
+    onSuccess: (confirmation, variables) => {
+      const circleId = variables.circleId ?? hookCircleId;
       // PHI-safe: only circle_id + the status enum (never the medication name).
       Analytics.medicationConfirmed(circleId, variables.status, source);
+      const recoveredFrom =
+        confirmation && typeof confirmation === 'object' ? RECOVERED.get(confirmation) : undefined;
+      if (recoveredFrom !== undefined) {
+        Analytics.medicationConfirmRecovered(circleId, variables.status, source, recoveredFrom);
+      }
 
       // THE TODAY'S-MEDS INVALIDATION IS RETURNED, NOT FIRED AND FORGOTTEN.
       //
@@ -138,9 +214,18 @@ export function useConfirmMedication(
       // screens the caregiver is not looking at (adherence, activity, weekly),
       // and awaiting them would hold the Take/Skip pair hostage to a report
       // fetch nobody is waiting on.
-      const todaysMedsRefetched = queryClient.invalidateQueries({
-        queryKey: todaysMedsKey(circleId),
-      });
+      //
+      // CAPPED at `REFETCH_CAP_MS` (src/lib/refetchCap.ts) — this QueryClient
+      // runs `networkMode: 'online'` (src/lib/queryClient.ts), so a refetch
+      // begun while the caregiver is offline PAUSES rather than fails, and its
+      // promise would otherwise never settle. Past the cap the badge clears
+      // exactly as it did before this wait existed — the same behavior a
+      // rejected refetch already got here.
+      const todaysMedsRefetched = withRefetchCap(
+        queryClient.invalidateQueries({
+          queryKey: todaysMedsKey(circleId),
+        })
+      );
 
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(circleId) });
@@ -157,6 +242,22 @@ export function useConfirmMedication(
       return todaysMedsRefetched;
     },
     onError: (error, variables) => {
+      const circleId = variables.circleId ?? hookCircleId;
+
+      // PK1 (2026-09-29): ANOTHER CAREGIVER ALREADY ANSWERED this dose (409
+      // DOSE_ALREADY_RECORDED). Nothing failed and nothing was overwritten, so
+      // this is not an `error_occurred`. Refetch the day on every surface that
+      // shows it, and RETURN the capped today's-meds refetch so the mutation
+      // settles only once the row can show the real answer — the undo badge
+      // clears on settle, and it must not fall back to a stale Take/Skip pair.
+      if (doseAlreadyRecorded(error)) {
+        Analytics.medicationConfirmAlreadyRecorded(variables.status, source);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(circleId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.medicationTodaySummary(circleId) });
+        return withRefetchCap(queryClient.invalidateQueries({ queryKey: todaysMedsKey(circleId) }));
+      }
+
       // Mobile parity (`medicationConfirmFailed`): the SAME `error_occurred` /
       // `medication_confirm_error` row, so the digest and a cross-platform
       // breakdown join on `error` + `code`. Every property is an id or an enum:

@@ -5,6 +5,7 @@ import { expect, type Page, type Request, type Response, type Route } from '@pla
 import { SUPABASE_URL, assertLocalDbTargets, sqlExec, sqlRows, sqlStr } from '../db';
 import { ACCOUNT_PASSWORD, createAccount, runScopedEmail } from '../isolation';
 import type { CapturedEvent, PosthogCapture } from '../unhappy';
+import { parkPkceReturn, stubPkceTokenEndpoint } from '../oauthPkce';
 
 // ===========================================================================
 // Helpers for the analytics-consent specs in e2e/consent/. Built only on the
@@ -153,19 +154,15 @@ export async function mintPasswordSession(account: { email: string; password: st
 }
 
 /**
- * `/auth/callback#…` shaped like Supabase's implicit-flow OAuth redirect.
- * AuthCallbackPage reads only `access_token`, `refresh_token` and `error*`
- * from the fragment; the rest mirrors what GoTrue appends.
+ * Simulate a PKCE OAuth provider return for `session` (web OAuth is PKCE since
+ * 2026-10-01): park a verifier in this tab's sessionStorage exactly as auth-js
+ * does, stub GoTrue's `/token?grant_type=pkce` to redeem the code once for it
+ * with this REAL session, and return `/auth/callback?code=…`. The page must
+ * already be on the app origin (sessionStorage is per-origin, per-tab).
  */
-export function oauthCallbackPath(session: PasswordGrantSession): string {
-  const fragment = new URLSearchParams({
-    access_token: session.access_token,
-    expires_at: String(session.expires_at ?? Math.floor(Date.now() / 1000) + session.expires_in),
-    expires_in: String(session.expires_in),
-    refresh_token: session.refresh_token,
-    token_type: session.token_type ?? 'bearer',
-  });
-  return `/auth/callback#${fragment.toString()}`;
+export async function oauthCallbackPath(page: Page, session: PasswordGrantSession): Promise<string> {
+  const provider = await stubPkceTokenEndpoint(page, session);
+  return parkPkceReturn(page, provider);
 }
 
 /** Cookie-mode login for `account` in the page's context (what fixtures.ts does for the worker account). */

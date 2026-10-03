@@ -16,6 +16,7 @@
     "lastName": "Apellido",
     "timezone": "Zona horaria",
     "edit": "Editar",
+    "editNameLabel": "Editar nombre",
     "save": "Guardar",
     "cancel": "Cancelar",
     "nameSuccess": "Nombre actualizado.",
@@ -54,8 +55,12 @@
     "taskAssignmentsDesc": "Cuando se te asigna una tarea.",
     "appointmentReminders": "Recordatorios de citas",
     "appointmentRemindersDesc": "Antes de las próximas citas.",
-    "noteNudges": "Recordatorios de notas",
-    "noteNudgesDesc": "Recordatorios suaves para agregar una nota.",
+    "eventNotes": "Notas en eventos",
+    "eventNotesDesc": "Cuando alguien agrega una nota a una cita, tarea o dosis",
+    "noteNudges": "Recordatorios después de citas",
+    "noteNudgesDesc": "Un recordatorio para agregar notas después de una cita",
+    "careNotes": "Notas de cuidado diarias",
+    "careNotesDesc": "Cuando alguien agrega una nota de cuidado diaria",
     "tipsAndSuggestions": "Consejos y sugerencias",
     "tipsAndSuggestionsDesc": "Consejos útiles de cuidado y novedades.",
     "success": "Preferencias de notificación actualizadas."
@@ -155,5 +160,27 @@
     "error": "No se pudo enviar. Inténtalo de nuevo.",
     "thanks": "Gracias, esto nos ayuda mucho.",
     "reassurance": "Entendido. Mantienes acceso completo hasta el {{date}}."
+  },
+  "avatarColor": {
+    "label": "Tu color",
+    "hint": "Se muestra detrás de tu inicial en las listas de miembros. Todos en tus círculos lo ven.",
+    "pickerTitle": "Elige tu color",
+    "saved": "Color actualizado.",
+    "saveFailed": "No pudimos actualizar tu color. Por favor intenta de nuevo.",
+    "names": {
+      "moss": "Verde salvia",
+      "coral": "Coral",
+      "dusk": "Azul pizarra",
+      "clay": "Arcilla",
+      "forest": "Verde bosque",
+      "amber": "Ámbar"
+    },
+    "selected": "seleccionado"
+  },
+  "timezoneImpact": {
+    "impactTitle": "¿Cambiar tu zona horaria?",
+    "impactMessage_one": "Los horarios de las dosis de {{names}} siguen tu zona horaria porque no tiene su propia cuenta. Si la cambias a {{zone}}, esos recordatorios pasarán a la misma hora en {{zone}}.",
+    "impactMessage_other": "Los horarios de las dosis de {{names}} siguen tu zona horaria porque no tienen su propia cuenta. Si la cambias a {{zone}}, esos recordatorios pasarán a la misma hora en {{zone}}.",
+    "impactConfirm": "Cambiar zona horaria"
   }
 }

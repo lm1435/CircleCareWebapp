@@ -161,8 +161,16 @@ async function revealLikeAUser(page: Page, control: Locator): Promise<number> {
     const pill = document.querySelector('[data-testid="floating-nav"]');
     const pillTop = pill && getComputedStyle(pill).display !== 'none' ? pill.getBoundingClientRect().top : innerHeight;
     const headerBottom = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
-    const floor = Math.min(pillTop, innerHeight) - 8;
-    const ceiling = headerBottom + 8;
+    // The app's `scroll-padding` (globals.css, WCAG 2.4.11 — a11y audit
+    // 2026-09-29) makes the browser scroll a FOCUSED control until it is clear
+    // of the sticky header / nav pill by that padding, so a control revealed
+    // any less clear would be nudged by the click's own focus — the page's
+    // doing, not the action under test. Honour it (it is 0 → the old 8px rule).
+    const root = getComputedStyle(document.documentElement);
+    const padTop = parseFloat(root.scrollPaddingTop) || 0;
+    const padBottom = parseFloat(root.scrollPaddingBottom) || 0;
+    const floor = Math.min(Math.min(pillTop, innerHeight) - 8, innerHeight - padBottom);
+    const ceiling = Math.max(headerBottom + 8, padTop);
     let delta = 0;
     if (r.bottom > floor) delta = r.bottom - floor;
     else if (r.top < ceiling) delta = r.top - ceiling;
@@ -258,7 +266,7 @@ test.describe('save failures', () => {
       test('ProfilePage: the failed name save is reported inline in its form, never as a toast over the page', async ({ page }) => {
         await page.goto('/profile', { waitUntil: 'domcontentloaded' });
         await pageSettled(page);
-        const edit = page.getByRole('button', { name: 'Edit', exact: true }).first();
+        const edit = page.getByRole('button', { name: 'Edit name', exact: true }).first();
         await actInPlace(page, edit, () => edit.click());
         const first = page.locator('#profile-first-name');
         await actInPlace(page, first, () => first.fill(uniqueLabel('TPO').slice(0, 40)));

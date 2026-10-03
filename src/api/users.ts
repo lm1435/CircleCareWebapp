@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiClient } from '@/lib/api';
+import { AVATAR_COLOR_KEYS, type AvatarColorKey } from '@/components/ui/Avatar';
 
 // PORT of mobile/src/api/users.ts + mobile/src/hooks/useUnitPreferences.ts.
 // The apiClient response interceptor already unwraps to the
@@ -15,7 +16,14 @@ export interface NotificationPreferences {
   appointment_reminders: boolean;
   activity_updates: boolean;
   chat_messages: boolean;
+  // Three note-alert keys (notes-first-class plan, Decision 5): `event_notes`
+  // gates "someone added a note to an appointment/task/dose"; `note_nudges` is
+  // now ONLY the after-visit "How did it go?" reminder; `care_notes` gates the
+  // daily care note push. All three default to true when absent (the backend
+  // returns raw stored JSON — `prefs[key] !== false`).
+  event_notes?: boolean;
   note_nudges: boolean;
+  care_notes?: boolean;
   tips_and_suggestions?: boolean;
 }
 
@@ -54,6 +62,12 @@ export interface User {
    */
   analytics_consent_withdrawn_at?: string | null;
   analytics_consent_granted_at?: string | null;
+  /**
+   * The member's chosen avatar colour: a palette KEY, never a hex. NULL /
+   * absent = no choice, so avatars keep the name-derived gradient. A backend
+   * that predates the column omits it.
+   */
+  avatar_color?: AvatarColorKey | null;
   created_at: string;
   updated_at: string;
 }
@@ -73,11 +87,16 @@ export const updateProfileSchema = z.object({
   last_name: z.string().max(50).optional(),
   timezone: z.string().optional(),
   language: z.enum(['en', 'es']).optional(),
+  // Palette key, never a hex (backend z.enum(AVATAR_COLOR_KEYS)); null resets.
+  avatar_color: z.enum(AVATAR_COLOR_KEYS).nullable().optional(),
 });
 export type UpdateProfileRequest = z.infer<typeof updateProfileSchema>;
 
-// updateNotificationPreferencesSchema (backend lines ~69-77). Every field is an
-// optional boolean — only the flags the user toggled are sent.
+// updateNotificationPreferencesSchema (backend lines ~124-132). Every field is
+// an optional boolean — only the flags the user toggled are sent. 9-key
+// allow-list: `event_notes` (new — note added to an appointment/task/dose),
+// `note_nudges` (existing — ONLY the after-visit "How did it go?" reminder),
+// `care_notes` (existing push key, now accepted from clients).
 export const updateNotificationPreferencesSchema = z.object({
   medication_reminders: z.boolean().optional(),
   medication_confirmations: z.boolean().optional(),
@@ -86,6 +105,8 @@ export const updateNotificationPreferencesSchema = z.object({
   appointment_reminders: z.boolean().optional(),
   note_nudges: z.boolean().optional(),
   tips_and_suggestions: z.boolean().optional(),
+  event_notes: z.boolean().optional(),
+  care_notes: z.boolean().optional(),
 });
 export type UpdateNotificationPreferencesRequest = z.infer<
   typeof updateNotificationPreferencesSchema
@@ -147,6 +168,23 @@ export async function updateProfile(data: UpdateProfileRequest): Promise<User> {
   return response.data.user;
 }
 
+export interface TimezoneDependentCircle {
+  id: string;
+  recipient_name: string;
+}
+
+/**
+ * GET /users/me/timezone-dependent-circles (PK10): circles this user OWNS whose
+ * dose times follow the owner's time zone because the recipient has no zone of
+ * their own. Changing the profile zone moves those reminders, so Profile asks.
+ */
+export async function getTimezoneDependentCircles(): Promise<TimezoneDependentCircle[]> {
+  const response = (await apiClient.get(
+    '/users/me/timezone-dependent-circles'
+  )) as unknown as { data?: { circles?: TimezoneDependentCircle[] } };
+  return response?.data?.circles ?? [];
+}
+
 /** PATCH /users/me/notification-preferences — partial boolean flags. */
 export async function updateNotificationPrefs(
   data: UpdateNotificationPreferencesRequest
@@ -200,6 +238,16 @@ export async function updateEmailDigest(data: UpdateEmailDigestRequest): Promise
 }
 
 /** DELETE /users/me — authenticated account deletion (soft-delete server-side). */
+/**
+ * Ask the backend to re-read entitlement from RevenueCat and re-cache
+ * `users.plan_tier`. Mirrors mobile `refreshSubscriptionStatus`
+ * (mobile/src/api/users.ts). Call after a purchase, BEFORE refetching
+ * subscription-derived queries.
+ */
+export async function refreshSubscriptionStatus(): Promise<void> {
+  await apiClient.post('/users/me/refresh-subscription');
+}
+
 export async function deleteAccount(): Promise<void> {
   await apiClient.delete('/users/me');
 }

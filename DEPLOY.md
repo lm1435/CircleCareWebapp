@@ -127,7 +127,7 @@ origins if they differ (e.g. a different Supabase project URL or PostHog region)
 ## 3. Universal links (re-enables invite share links)
 
 `public/.well-known/` ships:
-- `apple-app-site-association` — already filled (`68Y4NLQ3VS.com.circlecare.circlecare`, paths `/invite/*`).
+- `apple-app-site-association` — already filled (`68Y4NLQ3VS.com.circlecare.circlecare`). Paths: `/invite/*`, `/open`, `/open/*`, and (2026-09-29) `/circles/*/{calendar,activity,meds,notes,emergency}` so those web links open the app when installed. Keep in sync with mobile `linkingConfig.ts` + `app.config.js` intent filters; guarded by `src/__tests__/appSiteAssociation.test.ts`. Apple caches the file — changes can take up to ~a day to reach devices.
 - `assetlinks.json` — **replace** `REPLACE_WITH_RELEASE_SIGNING_SHA256_FINGERPRINT`
   with the Android release signing cert SHA-256 (`keytool -list -v -keystore <release.keystore>`).
 

@@ -374,7 +374,13 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
       {/* Composer. `Sheet` (not a hand-rolled div) supplies the white/r20/
           hairline/shadow-sm wrapper so this file draws no card shell by hand. */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <Sheet padding="none" className="flex items-end gap-1 pl-2 pr-1 py-1">
+        {/* `border-line-strong!` + focus edge (WCAG 1.4.11 / 2.4.7): the Sheet
+            IS this textarea's visible boundary, and its default hairline was
+            1.33:1 with no focus change at all. */}
+        <Sheet
+          padding="none"
+          className="flex items-end gap-1 pl-2 pr-1 py-1 border-line-strong! focus-within:border-moss! focus-within:shadow-[0_0_0_1px_var(--color-moss)]"
+        >
           <textarea
             aria-label={t('inputLabel')}
             value={input}

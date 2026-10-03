@@ -58,6 +58,14 @@ describe('StandalonePageLayout', () => {
     expect(firstLink).toHaveAttribute('href', '#main');
   });
 
+  // a11y audit 2026-09-29 (WCAG 2.4.11): visible wherever the page is scrolled.
+  it('pins the focused skip link to the viewport', () => {
+    renderLayout();
+    const skip = document.body.querySelector('a') as HTMLAnchorElement;
+    expect(skip.className).toContain('focus:fixed');
+    expect(skip.className).not.toContain('focus:absolute');
+  });
+
   // 2.4.1 (SERIOUS, live-repro'd): `<main>` used to have no way to receive
   // focus at all, so activating `href="#main"` moved the URL hash but left
   // focus on <body> — the very next Tab re-entered the header instead of

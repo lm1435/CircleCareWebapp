@@ -27,6 +27,7 @@
   },
   "errorTitle": "No se pudo cargar el calendario",
   "errorHint": "Revisa tu conexión e intenta de nuevo.",
+  "noteLinkMissing": "Esa nota ya no está disponible.",
   "eventCount_one": "{{count}} evento",
   "eventCount_other": "{{count}} eventos",
   "moreEvents": "{{count}} más",
@@ -82,7 +83,8 @@
     "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
     "doseAlreadyLogged": "Esta dosis ya fue registrada; su hora no se puede cambiar.",
     "invalidOccurrenceDate": "Este evento ya no se repite ese día; se actualizó el calendario.",
-    "eventNotFound": "Ese evento ya no existe. Es posible que alguien más lo haya eliminado."
+    "eventNotFound": "Ese evento ya no existe. Es posible que alguien más lo haya eliminado.",
+    "recurrenceDaysExcludeStart": "El día de inicio debe seguir seleccionado."
   },
   "addEvent": {
     "addEvent": "Agregar evento",
@@ -177,7 +179,16 @@
       "weekly": "Semanal",
       "monthly": "Mensual",
       "yearly": "Anual",
-      "cycle": "Ciclo (días activos / descanso)"
+      "cycle": "Ciclo (días activos / descanso)",
+      "daysOfWeek": "Días de la semana"
+    },
+    "daysOfWeek": {
+      "title": "Repetir los",
+      "firstTime": "Primera vez: {{date}}",
+      "startLocked": "Empezó el {{day}}. Para quitar el {{day}}, termina esta serie y crea una nueva.",
+      "noneSelected": "Elige al menos un día",
+      "timezoneNote": "Los días están en la zona horaria de {{name}} ({{timezone}})",
+      "timezoneNoteGeneric": "Los días están en su zona horaria ({{timezone}})"
     },
     "reminders": {
       "section": "Recordatorios",
@@ -264,6 +275,26 @@
     "deleting": "Eliminando…",
     "deleted": "Evento eliminado"
   },
+  "deleteMedication": {
+    "title": "Eliminar medicamento",
+    "scopeSingle": "Solo esta dosis",
+    "scopeFuture": "Esta y todas las dosis futuras",
+    "deleted": "Medicamento eliminado",
+    "wholeMessage": "¿Eliminar \"{{title}}\"? Se quitará de tu lista de medicamentos y se detendrán sus recordatorios. Las dosis ya registradas se conservan en los reportes de adherencia. Esta acción no se puede deshacer.",
+    "discontinueHint": "Para conservarlo en tu lista de inactivos y poder reactivarlo después, usa «Suspender»."
+  },
+  "deleteTask": {
+    "title": "Eliminar tarea",
+    "scopeSingle": "Solo esta tarea",
+    "scopeFuture": "Esta y todas las tareas futuras",
+    "deleted": "Tarea eliminada"
+  },
+  "deleteAppointment": {
+    "title": "Eliminar cita",
+    "scopeSingle": "Solo esta cita",
+    "scopeFuture": "Esta y todas las citas futuras",
+    "deleted": "Cita eliminada"
+  },
   "discontinueMed": {
     "title": "Suspender medicamento",
     "reactivateTitle": "Reactivar medicamento",
@@ -276,6 +307,7 @@
     "discontinuedToast": "Medicamento suspendido",
     "reactivatedToast": "Medicamento reactivado",
     "inactiveBadge": "Inactivo",
+    "endedOn": "Finalizó el {{date}}",
     "inactiveCalendarNote": "Este medicamento está inactivo. Las dosis anteriores a la suspensión se conservan en el calendario y todavía puedes marcarlas como tomadas u omitidas: una dosis que sí se dio debe quedar registrada. Reactiva el medicamento para cambiar sus datos o reanudar los recordatorios.",
     "editInactiveTitle": "El medicamento está inactivo",
     "editInactiveMessage": "Este medicamento está inactivo. Reactívalo para hacer cambios."
@@ -294,6 +326,10 @@
     "deleteConfirm": "¿Eliminar esta nota? Esta acción no se puede deshacer.",
     "empty": "Aún no hay notas.",
     "loadError": "No se pudieron cargar las notas.",
-    "errorSaving": "No se pudo guardar tu nota. Inténtalo de nuevo."
-  }
+    "errorSaving": "No se pudo guardar tu nota. Inténtalo de nuevo.",
+    "errorOccurrenceRemoved": "Este evento se eliminó del calendario para ese día.",
+    "noteCount_one": "{{count}} nota",
+    "noteCount_other": "{{count}} notas"
+  },
+  "permissionDenied": "No tienes permiso para hacer cambios en este círculo."
 }

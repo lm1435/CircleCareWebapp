@@ -10,11 +10,23 @@ import {
 // Task 21 — the vitals trend chart, drawn as pure inline SVG.
 //
 // MIRRORS mobile/src/screens/vitals/VitalsDetailScreen.tsx's
-// `react-native-gifted-charts` <LineChart>: 160 tall, curved, thickness 2.5,
-// 4 horizontal sections in the hairline colour, an area fill under the FIRST
+// `react-native-gifted-charts` <LineChart>: 160 tall, thickness 2.5, 4
+// horizontal sections in the hairline colour, an area fill under the FIRST
 // series only (`areaChart1`, never the unnumbered flag — see the mobile
 // comment), radius-3 data points, y labels 11px inkMute and an x axis hair.
 // No chart library is added on web: that dependency buys one line chart.
+//
+// STRAIGHT SEGMENTS, NOT CURVED (vitals web-parity task). This used to draw a
+// Catmull-Rom curve (`catmullRomPath`, still exported below and unit-tested
+// as a pure function). With UNEVEN, time-scaled spacing — which is exactly
+// what `xDomain` below produces once points sit at their real recorded time
+// instead of one-per-index — a bezier between a close pair of points and a
+// distant one visibly overshoots: the demo data's blood-pressure series
+// (readings ~0, 1, 2, 18, 26, 38, 47, 55 days apart) draws a loop backwards in
+// time around Sep 25-27, a value nobody ever recorded. Mobile hit the same
+// shape of bug for the same reason and fixed it the same way (see
+// VitalsDetailScreen's own "NOT `curved`" comment) — straight segments
+// (`straightPath`) between real points show only what was actually recorded.
 //
 // This file is the ONE hand-drawn <svg> allowlisted outside components/ui
 // (src/__tests__/bans/iconNames.test.ts SVG_ALLOWLIST).
@@ -54,8 +66,28 @@ export interface VitalsChartProps {
   height?: number;
   /** Renders a y-axis value — the caller owns rounding and units. */
   yFormatter: (value: number) => string;
-  /** Axis labels; the FIRST and LAST are rendered beneath the plot. */
+  /**
+   * Axis labels; the FIRST and LAST are rendered beneath the plot. Legacy
+   * two-label row — superseded by `axisLabels` below wherever the caller has
+   * a range window to describe, but kept (and still tested) for callers that
+   * only know their data's own first/last reading.
+   */
   xLabels?: string[];
+  /**
+   * The x-axis DOMAIN, as `[startMs, endMs]` instants. Defaults to the data's
+   * own min/max x when omitted (this file's own pre-port behavior). Pass the
+   * QUERY WINDOW — range start .. "now" — rather than the first/last reading,
+   * so a point lands at its true time position instead of being stretched to
+   * fill whatever span the loaded readings happen to cover.
+   */
+  xDomain?: [number, number];
+  /**
+   * Three-tick axis row — range start / midpoint / "Today" (mobile parity) —
+   * rendered instead of the legacy `xLabels` first/last row when given. The
+   * caller resolves these through the care recipient's timezone; this
+   * component only lays them out.
+   */
+  axisLabels?: { start: string; mid: string; end: string };
   /** Sentence describing the plot for screen readers (lowest/highest/latest). */
   label: string;
   className?: string;
@@ -108,6 +140,20 @@ export function catmullRomPath(points: VitalsChartPoint[]): string {
   return d;
 }
 
+/**
+ * A bare moveto plus one lineto per remaining point — what this component
+ * actually draws now (see the file-header "STRAIGHT SEGMENTS" comment).
+ * Exactly one `M` and `points.length - 1` `L` segments, always.
+ */
+export function straightPath(points: VitalsChartPoint[]): string {
+  if (points.length === 0) return '';
+  let d = `M ${r(points[0]!.x)},${r(points[0]!.y)}`;
+  for (let i = 1; i < points.length; i += 1) {
+    d += ` L ${r(points[i]!.x)},${r(points[i]!.y)}`;
+  }
+  return d;
+}
+
 /** `useLayoutEffect` in the browser, `useEffect` where there is no layout. */
 const useMeasureEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
@@ -121,6 +167,8 @@ export function VitalsChart({
   height = DEFAULT_HEIGHT,
   yFormatter,
   xLabels,
+  xDomain,
+  axisLabels,
   label,
   className,
 }: VitalsChartProps): ReactElement | null {
@@ -167,8 +215,9 @@ export function VitalsChart({
   const maxY = rawMax + padY;
 
   const xs = all.map((p) => p.x);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
+  // Defaults to the data's own min/max (pre-port behavior) when the caller has
+  // no range window to describe — see `xDomain`'s doc comment.
+  const [minX, maxX] = xDomain ?? [Math.min(...xs), Math.max(...xs)];
   const spanX = maxX - minX;
 
   const scaleX = (x: number): number =>
@@ -245,7 +294,7 @@ export function VitalsChart({
           />
 
           {projected.map((s, index) => {
-            const d = catmullRomPath(s.pixels);
+            const d = straightPath(s.pixels);
             const first = s.pixels[0]!;
             const last = s.pixels[s.pixels.length - 1]!;
             // Area under the FIRST series only. Mobile leaves `areaChart2`
@@ -288,15 +337,27 @@ export function VitalsChart({
         </svg>
       </div>
 
-      {firstXLabel && (
+      {axisLabels ? (
         <div
           aria-hidden="true"
           className="mt-1 flex justify-between text-xs text-ink-3"
           style={{ paddingLeft: MARGIN.left, paddingRight: MARGIN.right }}
         >
-          <span>{firstXLabel}</span>
-          {lastXLabel && <span>{lastXLabel}</span>}
+          <span>{axisLabels.start}</span>
+          <span>{axisLabels.mid}</span>
+          <span>{axisLabels.end}</span>
         </div>
+      ) : (
+        firstXLabel && (
+          <div
+            aria-hidden="true"
+            className="mt-1 flex justify-between text-xs text-ink-3"
+            style={{ paddingLeft: MARGIN.left, paddingRight: MARGIN.right }}
+          >
+            <span>{firstXLabel}</span>
+            {lastXLabel && <span>{lastXLabel}</span>}
+          </div>
+        )
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { env } from './env';
 import { tokenAccessor } from './tokenAccessor';
+import { hasTraversalSegment } from './routeIds';
 import { API_TIMEOUT } from '@/constants/config';
 
 // PORT of mobile/src/api/client.ts adapted for the web threat model:
@@ -152,6 +153,14 @@ async function refreshTokenIfNeeded(): Promise<void> {
 // Request interceptor: cookie mode for auth endpoints only + Bearer token
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    // SECURITY: never send the Bearer token to a path rebuilt by a dot segment
+    // smuggled in through an interpolated id (lib/routeIds.ts).
+    if (hasTraversalSegment(config.url)) {
+      return Promise.reject({
+        success: false,
+        error: { code: 'INVALID_REQUEST_PATH', message: 'Invalid request path' },
+      });
+    }
     if (isCookieAuthEndpoint(config.url)) {
       // Cookie-mode auth endpoints ONLY: send the httpOnly session cookie +
       // CSRF custom header (forces a CORS preflight cross-origin attackers fail).

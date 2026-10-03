@@ -40,6 +40,11 @@ const KEY_PREFIX_MAP: ReadonlyArray<readonly [mobilePrefix: string, webPrefix: s
   ['medicationHistory.export.', 'meds:export.'],
   // `shared/vitalsSummary.ts` labels vital rows with `vitals.types.*`.
   ['vitals.', 'vitals:'],
+  // `shared/careSummaryTemplate.ts` labels a Daily Care Note's mood with
+  // `notes.moods.<mood>` (notes-first-class plan, task 30) — the same flat
+  // mobile key the Notes tab / NotesPage already render from the `notes`
+  // namespace.
+  ['notes.', 'notes:'],
 ];
 
 /** Exported for the unit test; not part of the adapter contract. */

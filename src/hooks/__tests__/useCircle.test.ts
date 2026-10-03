@@ -187,4 +187,38 @@ describe('useCircle', () => {
     expect(result.current.circleSummary).toBeUndefined();
     expect(result.current.readOnly).toBe(false);
   });
+
+  describe('accessLost (circle read FORBIDDEN / NOT_FOUND with no data)', () => {
+    const fail = (code: string) =>
+      mockMembers({ data: undefined, members: [], isError: true, error: { error: { code } } });
+
+    it.each(['FORBIDDEN', 'NOT_FOUND'])('%s -> that code', (code) => {
+      fail(code);
+      const { result } = renderHook(() => useCircle(CIRCLE_ID));
+      expect(result.current.accessLost).toBe(code);
+    });
+
+    it.each(['SERVER_ERROR', 'VIEW_ONLY', 'SUBSCRIPTION_REQUIRED', 'PAYMENT_REQUIRED'])(
+      '%s (transient / still a member) -> null',
+      (code) => {
+        fail(code);
+        const { result } = renderHook(() => useCircle(CIRCLE_ID));
+        expect(result.current.accessLost).toBeNull();
+      }
+    );
+
+    it('a network Error -> null; success -> null; loading -> null', () => {
+      mockMembers({ data: undefined, members: [], isError: true, error: new Error('Network Error') });
+      expect(renderHook(() => useCircle(CIRCLE_ID)).result.current.accessLost).toBeNull();
+      mockMembers();
+      expect(renderHook(() => useCircle(CIRCLE_ID)).result.current.accessLost).toBeNull();
+      mockMembers({ data: undefined, members: [], isLoading: true });
+      expect(renderHook(() => useCircle(CIRCLE_ID)).result.current.accessLost).toBeNull();
+    });
+
+    it('cached data wins over a late FORBIDDEN (the purge clears data first)', () => {
+      mockMembers({ error: { error: { code: 'FORBIDDEN' } }, isError: true });
+      expect(renderHook(() => useCircle(CIRCLE_ID)).result.current.accessLost).toBeNull();
+    });
+  });
 });

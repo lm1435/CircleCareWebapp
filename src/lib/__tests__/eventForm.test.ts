@@ -10,6 +10,8 @@ import {
   hydratedReminder15m,
   matchingDurationIndex,
   minutesBetween,
+  shiftEndTimeStr,
+  spanMinutes,
   reminderFlagsForSave,
   remindersApply,
   supportsAssignee,
@@ -483,5 +485,38 @@ describe('hydratedReminder15m', () => {
     // does not serialise it.
     expect(hydratedReminder15m('task', undefined)).toBe(false);
     expect(hydratedReminder15m('task', null)).toBe(false);
+  });
+});
+
+describe('spanMinutes (PK21: the mobile absolute-instant rule)', () => {
+  it('counts a same-day span', () => {
+    expect(spanMinutes('14:00', '14:30')).toBe(30);
+  });
+  it('reads an end at or before the start as the next day', () => {
+    expect(spanMinutes('23:45', '00:15')).toBe(30);
+    expect(spanMinutes('22:00', '01:00')).toBe(180);
+    expect(spanMinutes('10:00', '10:00')).toBe(1440);
+  });
+  it('null when either side is missing or malformed', () => {
+    expect(spanMinutes('', '10:00')).toBeNull();
+    expect(spanMinutes('10:00', 'bad')).toBeNull();
+  });
+  it('the 60-minute chip still matches across midnight', () => {
+    expect(matchingDurationIndex('23:30', '00:30')).toBe(1);
+  });
+});
+
+describe('shiftEndTimeStr (PK21: the end follows the start)', () => {
+  it('shifts by the same delta', () => {
+    expect(shiftEndTimeStr('10:00', '11:30', '11:00')).toBe('12:30');
+    expect(shiftEndTimeStr('10:00', '08:15', '10:45')).toBe('09:00');
+  });
+  it('wraps past midnight rather than clamping', () => {
+    expect(shiftEndTimeStr('22:00', '23:30', '23:00')).toBe('00:30');
+    expect(shiftEndTimeStr('00:30', '23:30', '01:00')).toBe('00:00');
+  });
+  it('empty when any input is missing', () => {
+    expect(shiftEndTimeStr('', '11:00', '12:00')).toBe('');
+    expect(shiftEndTimeStr('10:00', '11:00', '')).toBe('');
   });
 });

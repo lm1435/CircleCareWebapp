@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Card, Text, useToast } from '@/components/ui';
 import { exportUserData } from '@/api/users';
 import { isRateLimitError } from '@/lib/apiErrors';
+import { Analytics } from '@/lib/analytics';
 
 /** Filename the browser saves the export as. */
 export const EXPORT_FILENAME = 'circlecare-export.json';
@@ -39,6 +40,7 @@ export function DataExportSection(): ReactElement {
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
       showToast(t('dataExport.success'), 'success');
+      Analytics.dataExportDownloaded();
     } catch (err) {
       showToast(
         isRateLimitError(err) ? t('dataExport.rateLimited') : t('dataExport.error'),

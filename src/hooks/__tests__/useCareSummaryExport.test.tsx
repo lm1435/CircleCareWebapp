@@ -16,6 +16,15 @@ vi.mock('@/api/emergencyInfo', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/emergencyInfo')>();
   return { ...actual, getEmergencyInfo: vi.fn() };
 });
+// task 30 — the share sheet's two opt-in note sections.
+vi.mock('@/api/eventNotes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/eventNotes')>();
+  return { ...actual, getEventNotesInRange: vi.fn() };
+});
+vi.mock('@/api/careNotes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/careNotes')>();
+  return { ...actual, getCareNotes: vi.fn() };
+});
 
 // The print path is a hidden iframe + modal dialog — mocked; its own suite is
 // src/pdf/__tests__/printHtml.test.ts. `PrintError` stays real so the hook's
@@ -48,6 +57,8 @@ vi.mock('@/lib/analytics', () => ({
 import { getEvents, type CalendarEvent } from '@/api/calendarEvents';
 import { getCircleDetail, type CircleDetail } from '@/api/circleMembers';
 import { getEmergencyInfo, type EmergencyInfo } from '@/api/emergencyInfo';
+import { getEventNotesInRange, type EventNoteRangeItem } from '@/api/eventNotes';
+import { getCareNotes, type GetCareNotesResponse } from '@/api/careNotes';
 import { PrintError, printHtml } from '@/pdf/printHtml';
 import { useAuthStore } from '@/store/authStore';
 import { getDateInTimezone } from '@/utils/timezone';
@@ -62,6 +73,8 @@ import {
 const mockGetEvents = vi.mocked(getEvents);
 const mockGetCircleDetail = vi.mocked(getCircleDetail);
 const mockGetEmergencyInfo = vi.mocked(getEmergencyInfo);
+const mockGetEventNotesInRange = vi.mocked(getEventNotesInRange);
+const mockGetCareNotes = vi.mocked(getCareNotes);
 const mockPrintHtml = vi.mocked(printHtml);
 
 const CIRCLE_ID = 'circle-1';
@@ -139,6 +152,8 @@ describe('useCareSummaryExport', () => {
     mockGetCircleDetail.mockResolvedValue(circle);
     mockGetEmergencyInfo.mockResolvedValue(emergencyInfo);
     mockGetEvents.mockResolvedValue([]);
+    mockGetEventNotesInRange.mockResolvedValue([]);
+    mockGetCareNotes.mockResolvedValue({ notes: [], today: getDateInTimezone(TZ), timezone: TZ });
     mockPrintHtml.mockResolvedValue(undefined);
     useAuthStore.setState({ user: null });
   });
@@ -173,6 +188,9 @@ describe('useCareSummaryExport', () => {
       start_date: addDaysToDateString(today, -30),
       end_date: addDaysToDateString(today, 30),
       event_type: 'medication',
+      // PK26: roster mode + roots of ended series, so an ended course reaches "Recently stopped".
+      includeDiscontinued: true,
+      includeInactiveRoots: true,
     });
   });
 
@@ -414,5 +432,192 @@ describe('useCareSummaryExport', () => {
     });
     expect(mockPrintHtml).toHaveBeenCalledTimes(1);
     expect(mockCareSummaryShared).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ============================================================================
+// Notes-first-class (docs/plans/notes-first-class.md, Slice 4, task 30): the
+// share sheet's two opt-in sections. Both default OFF here (mirrors the
+// hook's own default when `exportPdf()` is called with no options at all —
+// every test above this block does exactly that, so their behavior/output
+// must be byte-identical to before this slice).
+// ============================================================================
+describe('useCareSummaryExport — notes options (task 30)', () => {
+  // This is a SIBLING describe to `describe('useCareSummaryExport', ...)`
+  // above, so its own `beforeEach` (mocks for circle/emergency-info/events/
+  // print) does NOT apply here — repeat the same setup.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetCircleDetail.mockResolvedValue(circle);
+    mockGetEmergencyInfo.mockResolvedValue(emergencyInfo);
+    mockGetEvents.mockResolvedValue([]);
+    mockGetEventNotesInRange.mockResolvedValue([]);
+    mockGetCareNotes.mockResolvedValue({ notes: [], today: getDateInTimezone(TZ), timezone: TZ });
+    mockPrintHtml.mockResolvedValue(undefined);
+    useAuthStore.setState({ user: null });
+  });
+
+  const VISIT_NOTE: EventNoteRangeItem = {
+    id: 'vn-1',
+    body: 'Dr. Patel lowered the metoprolol to 25mg, recheck BP in 2 weeks',
+    created_at: '2026-01-01T00:00:00.000Z',
+    author: { first_name: 'Sam', last_name: 'Rivera' },
+    event: {
+      id: 'ev-1',
+      title: 'Cardiology visit',
+      scheduled_date: '2026-01-01',
+      event_type: 'appointment',
+    },
+  };
+
+  function careNotesResponse(notes: GetCareNotesResponse['notes']): GetCareNotesResponse {
+    return { notes, today: getDateInTimezone(TZ), timezone: TZ };
+  }
+
+  it('fetches neither note source when exportPdf() is called with no options (unchanged default)', async () => {
+    const { result } = setup();
+    await act(async () => {
+      await result.current.exportPdf();
+    });
+    expect(mockGetEventNotesInRange).not.toHaveBeenCalled();
+    expect(mockGetCareNotes).not.toHaveBeenCalled();
+    // 2-arg call, byte-identical to every pre-existing assertion of this shape.
+    expect(mockCareSummaryShared).toHaveBeenCalledWith(CIRCLE_ID, 'pdf');
+  });
+
+  it('fetches neither source when both flags are explicitly false', async () => {
+    const { result } = setup();
+    await act(async () => {
+      await result.current.exportPdf({ includeVisitNotes: false, includeCareNotes: false });
+    });
+    expect(mockGetEventNotesInRange).not.toHaveBeenCalled();
+    expect(mockGetCareNotes).not.toHaveBeenCalled();
+  });
+
+  it('includeVisitNotes: fetches the last-30-days-to-today window (appointments only) and maps it into the html', async () => {
+    mockGetEventNotesInRange.mockResolvedValue([VISIT_NOTE]);
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.exportPdf({ includeVisitNotes: true, includeCareNotes: false });
+    });
+
+    const today = getDateInTimezone(TZ);
+    expect(mockGetEventNotesInRange).toHaveBeenCalledWith(CIRCLE_ID, {
+      from: addDaysToDateString(today, -30),
+      to: today,
+      event_type: 'appointment',
+    });
+    expect(mockGetCareNotes).not.toHaveBeenCalled();
+
+    const html = printedHtml();
+    expect(html).toContain('Cardiology visit');
+    expect(html).toContain('Dr. Patel lowered the metoprolol to 25mg');
+    expect(html).toContain('Visit notes');
+
+    expect(mockCareSummaryShared).toHaveBeenCalledWith(CIRCLE_ID, 'pdf', {
+      includeVisitNotes: true,
+      includeCareNotes: false,
+    });
+  });
+
+  it('includeCareNotes: fetches the same window (unfiltered) and maps mood + body into the html', async () => {
+    mockGetCareNotes.mockResolvedValue(
+      careNotesResponse([
+        {
+          id: 'cn-1',
+          circle_id: CIRCLE_ID,
+          author_id: 'u1',
+          note_date: '2026-01-02',
+          body: 'Good morning, ate a full breakfast.',
+          mood: 'good',
+          categories: [],
+          created_at: '2026-01-02T00:00:00.000Z',
+          updated_at: '2026-01-02T00:00:00.000Z',
+          author: { id: 'u1', first_name: 'Sam', last_name: 'Rivera' },
+        },
+      ])
+    );
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.exportPdf({ includeVisitNotes: false, includeCareNotes: true });
+    });
+
+    const today = getDateInTimezone(TZ);
+    expect(mockGetCareNotes).toHaveBeenCalledWith(CIRCLE_ID, {
+      from: addDaysToDateString(today, -30),
+      to: today,
+    });
+    expect(mockGetEventNotesInRange).not.toHaveBeenCalled();
+
+    const html = printedHtml();
+    expect(html).toContain('Good morning, ate a full breakfast.');
+    expect(html).toContain('Daily care notes');
+
+    expect(mockCareSummaryShared).toHaveBeenCalledWith(CIRCLE_ID, 'pdf', {
+      includeVisitNotes: false,
+      includeCareNotes: true,
+    });
+  });
+
+  it('both sections on at once', async () => {
+    mockGetEventNotesInRange.mockResolvedValue([VISIT_NOTE]);
+    mockGetCareNotes.mockResolvedValue(
+      careNotesResponse([
+        {
+          id: 'cn-1',
+          circle_id: CIRCLE_ID,
+          author_id: 'u1',
+          note_date: '2026-01-02',
+          body: null,
+          mood: 'tough',
+          categories: [],
+          created_at: '2026-01-02T00:00:00.000Z',
+          updated_at: '2026-01-02T00:00:00.000Z',
+          author: { id: 'u1', first_name: 'Sam', last_name: 'Rivera' },
+        },
+      ])
+    );
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.exportPdf({ includeVisitNotes: true, includeCareNotes: true });
+    });
+
+    const html = printedHtml();
+    expect(html).toContain('Cardiology visit');
+    expect(html).toContain('Visit notes');
+    expect(html).toContain('Daily care notes');
+  });
+
+  // A note fetch is OPTIONAL content: a failure there must never fail the
+  // whole export the way a circle/emergency-info/medications failure does.
+  it('a visit-notes fetch failure shares the summary WITHOUT that section — never fails the export', async () => {
+    mockGetEventNotesInRange.mockRejectedValue(new Error('network down'));
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.exportPdf({ includeVisitNotes: true, includeCareNotes: false });
+    });
+
+    expect(mockPrintHtml).toHaveBeenCalledTimes(1);
+    expect(printedHtml()).not.toContain('Visit notes');
+    expect(result.current.error).toBeNull();
+    expect(mockCareSummaryExportFailed).not.toHaveBeenCalled();
+  });
+
+  it('a care-notes fetch failure shares the summary WITHOUT that section — never fails the export', async () => {
+    mockGetCareNotes.mockRejectedValue(new Error('network down'));
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.exportPdf({ includeVisitNotes: false, includeCareNotes: true });
+    });
+
+    expect(mockPrintHtml).toHaveBeenCalledTimes(1);
+    expect(printedHtml()).not.toContain('Daily care notes');
+    expect(result.current.error).toBeNull();
+    expect(mockCareSummaryExportFailed).not.toHaveBeenCalled();
   });
 });

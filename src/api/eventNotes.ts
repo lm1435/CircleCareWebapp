@@ -30,11 +30,8 @@ export interface EventNote {
   body: string;
   created_at: string;
   updated_at: string;
-  author: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  };
+  // null only when a departed author has no name at all (backend leaves it null).
+  author: { id: string; first_name: string | null; last_name: string | null } | null;
 }
 
 /**
@@ -144,4 +141,61 @@ export async function deleteNote(
 ): Promise<void> {
   const { eventId: realEventId } = splitEventId(eventId);
   await apiClient.delete(`/circles/${circleId}/events/${realEventId}/notes/${noteId}`);
+}
+
+// ===========================================================================
+// Event notes BY DATE RANGE (docs/plans/notes-first-class.md, Slice 4, task
+// 30). Verified backend contract (backend/src/routes/eventNotes.ts):
+//   GET /circles/:circleId/event-notes?from=YYYY-MM-DD&to=YYYY-MM-DD&event_type=
+//       (range capped at 92 days; requireAuth + circle membership, view-only
+//       may read) → { success, data: { notes } }
+// One note per row, joined to its event's title/date/type and the author's
+// first/last name — this is the "visit notes" source for the care summary
+// share sheet, NOT the per-event thread endpoint above.
+// ===========================================================================
+
+export interface EventNoteRangeAuthor {
+  first_name: string | null;
+  last_name: string | null;
+}
+
+export interface EventNoteRangeEvent {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD, recipient zone. */
+  scheduled_date: string;
+  event_type: string;
+}
+
+export interface EventNoteRangeItem {
+  id: string;
+  body: string;
+  created_at: string;
+  author: EventNoteRangeAuthor;
+  event: EventNoteRangeEvent;
+}
+
+export interface GetEventNotesInRangeParams {
+  /** YYYY-MM-DD, recipient zone — inclusive window start. */
+  from: string;
+  /** YYYY-MM-DD, recipient zone — inclusive window end. */
+  to: string;
+  /** Narrow to one event type (the care summary only ever wants
+   *  'appointment' — "visit notes" never includes task/medication notes). */
+  event_type?: 'appointment' | 'task' | 'medication';
+}
+
+interface EventNotesRangeEnvelope {
+  success: boolean;
+  data: { notes: EventNoteRangeItem[] };
+}
+
+export async function getEventNotesInRange(
+  circleId: string,
+  params: GetEventNotesInRangeParams
+): Promise<EventNoteRangeItem[]> {
+  const response = (await apiClient.get(`/circles/${circleId}/event-notes`, {
+    params,
+  })) as unknown as EventNotesRangeEnvelope;
+  return response.data?.notes ?? [];
 }

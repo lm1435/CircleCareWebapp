@@ -1,5 +1,7 @@
 import { test, expect } from '../../fixtures';
+import { checkA11y } from '../../helpers';
 import { countRequests, dbCount, sqlStr } from '../../unhappy';
+import { sqlExec } from '../../db';
 import {
   UPGRADE_GATE_MESSAGE,
   circleNameOf,
@@ -119,3 +121,70 @@ test('invite at the free caregiver cap: real 402, cap notice in the modal, no in
     'no invite row'
   ).toBe(0);
 });
+
+// ---------------------------------------------------------------------------
+// Two-tone hero headline: ink lead + coral ACCENT on its own line, inside ONE
+// <h1> (mobile's PlanSelectionScreen parity). Coral is allowed here only
+// because the accent is LARGE text (32px semibold = 0.75 x lead, 3.9:1 on the page).
+// ---------------------------------------------------------------------------
+const HEADLINES = [
+  { name: 'EN', locale: 'en-US', lead: 'Unlock the full', accent: 'experience.' },
+  { name: 'ES', locale: 'es-MX', lead: 'Desbloquea la', accent: 'experiencia completa.' },
+] as const;
+
+for (const hl of HEADLINES) {
+  test.describe(`two-tone upgrade headline (${hl.name})`, () => {
+    test.use({ locale: hl.locale, timezoneId: 'America/Denver' });
+
+    test('h1 holds lead + coral accent, axe clean, accent stays large at desktop and 390px', async ({
+      page,
+      personaHandle: h,
+    }, testInfo) => {
+      // users.language (not the browser locale) drives the UI once signed in.
+      sqlExec(`update users set language = ${sqlStr(hl.name.toLowerCase())} where id = ${sqlStr(h.userId)}::uuid`);
+      testInfo.annotations.push({ type: 'restore', description: 'language reset in finally' });
+      await page.goto('/upgrade');
+      const h1 = page.getByRole('heading', { level: 1 });
+      await expect(h1).toHaveCount(1, { timeout: 20_000 });
+      await expect(h1).toContainText(hl.lead);
+      const accent = h1.locator('[data-headline-accent]');
+      await expect(accent).toHaveText(hl.accent);
+      await expect(h1).toHaveAccessibleName(`${hl.lead} ${hl.accent}`);
+
+      const measure = async (): Promise<{ lead: number; size: number; weight: number; color: string; overflow: boolean; block: boolean }> =>
+        accent.evaluate((el) => {
+          const cs = getComputedStyle(el);
+          const r = el.getBoundingClientRect();
+          return {
+            lead: parseFloat(getComputedStyle(el.parentElement as HTMLElement).fontSize),
+            size: parseFloat(cs.fontSize),
+            weight: Number(cs.fontWeight),
+            color: cs.color,
+            overflow: document.documentElement.scrollWidth > window.innerWidth || r.right > window.innerWidth + 0.5 || r.left < -0.5,
+            block: cs.display === 'block',
+          };
+        });
+
+      try {
+      for (const vp of [
+        { width: 1280, height: 800, shot: 'desktop' },
+        { width: 390, height: 844, shot: 'phone' },
+      ]) {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        const m = await measure();
+        expect(m.size, `accent font-size @${vp.width}`).toBeGreaterThanOrEqual(24);
+        expect(m.size / m.lead, `accent/lead ratio @${vp.width}`).toBeGreaterThanOrEqual(0.7);
+        expect(m.size / m.lead, `accent/lead ratio @${vp.width}`).toBeLessThanOrEqual(0.8);
+        expect(m.weight).toBeGreaterThanOrEqual(600);
+        expect(m.color).toBe('rgb(198, 93, 84)');
+        expect(m.block).toBe(true);
+        expect(m.overflow, `no horizontal overflow @${vp.width}`).toBe(false);
+        await page.screenshot({ path: `/tmp/cc-upgrade-headline-${hl.name}-${vp.shot}.png` });
+        await checkA11y(page, `/upgrade (${hl.name} ${vp.width}px)`, testInfo);
+      }
+      } finally {
+        sqlExec(`update users set language = 'en' where id = ${sqlStr(h.userId)}::uuid`);
+      }
+    });
+  });
+}

@@ -25,6 +25,14 @@ describe('translateActivityDescription', () => {
     );
   });
 
+  it("PK29: translates the overwrite suffix the backend appends (wire substring)", () => {
+    const wire = "Confirmed Medication: Eliquis (skipped) (changed another caregiver's answer)";
+    expect(translateActivityDescription(wire, tEn)).toBe(wire);
+    expect(translateActivityDescription(wire, tEs)).toBe(
+      'Medicamento confirmado: Eliquis (omitido) (cambió la respuesta de otro cuidador)'
+    );
+  });
+
   it('rewrites the "Not taken" pattern with a formatted date (no raw ISO)', () => {
     // Dates far enough in the past render as a localized short date, not ISO.
     //

@@ -240,6 +240,177 @@ describe('ActivityFeedPage', () => {
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
   });
 
+  // The backend returns EVERY raw row; a note row whose note/event is gone
+  // comes back flagged `note_missing` (never dropped — the next offset is the
+  // raw row count). The page hides flagged rows at RENDER time only.
+  it('hides note_missing rows but still pages by the RAW row count', async () => {
+    mockedGetActivityFeed.mockResolvedValueOnce({
+      activities: [
+        makeActivity({ id: 'a1', description: 'Completed Task: Groceries', action_type: 'task_completed' }),
+        makeActivity({
+          id: 'a2',
+          action_type: 'care_note_added',
+          subject_type: 'care_note',
+          description: 'ZZ orphaned care note row',
+          note_preview: null,
+          note_missing: true,
+        }),
+        makeActivity({
+          id: 'a3',
+          action_type: 'note_added',
+          subject_type: 'event_note',
+          description: 'ZZ removed event note row',
+          note_preview: null,
+          note_missing: true,
+        }),
+      ],
+      hasMore: true,
+    });
+    mockedGetActivityFeed.mockResolvedValueOnce({
+      activities: [makeActivity({ id: 'a4', description: 'Updated health information', action_type: 'emergency_info_updated' })],
+      hasMore: false,
+    });
+
+    renderPage();
+    const user = userEvent.setup();
+
+    expect((await screen.findAllByText('Completed Task: Groceries')).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('ZZ orphaned care note row')).not.toBeInTheDocument();
+    expect(screen.queryByText('ZZ removed event note row')).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Load more' }));
+    expect(await screen.findByText('Updated health information')).toBeInTheDocument();
+    // 3 raw rows fetched (2 hidden) → offset 3, not 1.
+    expect(mockedGetActivityFeed).toHaveBeenLastCalledWith('circle-1', { limit: 30, offset: 3 });
+  });
+
+  it('fetches past a first page whose rows are ALL note_missing instead of showing the empty state', async () => {
+    mockedGetActivityFeed.mockResolvedValueOnce({
+      activities: [
+        makeActivity({ id: 'g1', description: 'ZZ gone 1', note_preview: null, note_missing: true }),
+        makeActivity({ id: 'g2', description: 'ZZ gone 2', note_preview: null, note_missing: true }),
+      ],
+      hasMore: true,
+    });
+    mockedGetActivityFeed.mockResolvedValueOnce({
+      activities: [makeActivity({ id: 'v1', description: 'Completed Task: Groceries', action_type: 'task_completed' })],
+      hasMore: false,
+    });
+
+    renderPage();
+
+    expect((await screen.findAllByText('Completed Task: Groceries')).length).toBeGreaterThanOrEqual(1);
+    expect(mockedGetActivityFeed).toHaveBeenCalledTimes(2);
+    expect(mockedGetActivityFeed).toHaveBeenLastCalledWith('circle-1', { limit: 30, offset: 2 });
+    expect(screen.queryByText('ZZ gone 1')).not.toBeInTheDocument();
+    expect(screen.queryByText('No Activity Yet')).not.toBeInTheDocument();
+  });
+
+  // A FAILED next-page fetch flips isFetchingNextPage true→false, which used to
+  // re-fire the auto-advance effect with nothing changed: a nonstop retry loop.
+  // Auto-advance must stop on the error; only a user action (Retry) resumes.
+  it('does not loop when the auto-advance fetch fails; Retry resumes it', async () => {
+    const hiddenPage = {
+      activities: [
+        makeActivity({ id: 'g1', description: 'ZZ gone 1', note_preview: null, note_missing: true }),
+        makeActivity({ id: 'g2', description: 'ZZ gone 2', note_preview: null, note_missing: true }),
+      ],
+      hasMore: true,
+    };
+    // A real request takes time, so the page renders isFetchingNextPage=true
+    // before the failure lands (an instant rejection gets batched away).
+    const failSlowly = () =>
+      new Promise<Page>((_, reject) => setTimeout(() => reject(new Error('500')), 20));
+    mockedGetActivityFeed.mockResolvedValueOnce(hiddenPage); // offset 0
+    // offset 2 (auto-advance) fails — and anything after it is a loop, so keep
+    // failing to keep a loop a loop.
+    mockedGetActivityFeed.mockImplementation(failSlowly);
+
+    renderPage();
+
+    expect(await screen.findByText("Couldn't load the activity feed")).toBeInTheDocument();
+    // Give a looping effect every chance to show itself.
+    await new Promise((r) => setTimeout(r, 300));
+    expect(mockedGetActivityFeed).toHaveBeenCalledTimes(2);
+    expect(mockedGetActivityFeed).toHaveBeenLastCalledWith('circle-1', { limit: 30, offset: 2 });
+    // Not "still loading" forever: the error card is the whole story.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    // A user action retries: the cached page refetches, then auto-advance moves on.
+    mockedGetActivityFeed.mockReset();
+    mockedGetActivityFeed.mockResolvedValueOnce(hiddenPage);
+    mockedGetActivityFeed.mockResolvedValueOnce({
+      activities: [makeActivity({ id: 'v1', description: 'Completed Task: Groceries', action_type: 'task_completed' })],
+      hasMore: false,
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect((await screen.findAllByText('Completed Task: Groceries')).length).toBeGreaterThanOrEqual(1);
+    expect(mockedGetActivityFeed).toHaveBeenCalledTimes(2);
+    expect(mockedGetActivityFeed).toHaveBeenLastCalledWith('circle-1', { limit: 30, offset: 2 });
+  });
+
+  // `maxPages: 20` evicts the oldest cached page. The next offset used to be the
+  // SUM over CACHED pages, which stops growing at 20 x 30 = 600 — past that the
+  // same page was re-served forever (and an all-hidden one looped). The offset
+  // must be the last page's own offset + its RAW length.
+  it('keeps advancing the offset past the maxPages cap (evicted pages still count)', async () => {
+    const TOTAL_PAGES = 24;
+    const seenOffsets: number[] = [];
+    mockedGetActivityFeed.mockImplementation(async (_circleId, opts) => {
+      const offset = opts?.offset ?? 0;
+      seenOffsets.push(offset);
+      await new Promise((r) => setTimeout(r, 5)); // network-like latency
+      const index = offset / 30;
+      // Safety valve: a frozen offset would otherwise loop without end.
+      if (seenOffsets.length > TOTAL_PAGES + 5) return { activities: [], hasMore: false };
+      if (index === TOTAL_PAGES - 1) {
+        return {
+          activities: [makeActivity({ id: 'last', description: 'ZZ final visible row', action_type: 'task_completed' })],
+          hasMore: false,
+        };
+      }
+      // Pages 0..22: 30 raw rows each, every one hidden → auto-advance chain.
+      return {
+        activities: Array.from({ length: 30 }, (_, i) =>
+          makeActivity({ id: `h-${offset + i}`, description: 'ZZ hidden', note_preview: null, note_missing: true })
+        ),
+        hasMore: true,
+      };
+    });
+
+    renderPage();
+
+    expect((await screen.findAllByText('ZZ final visible row', {}, { timeout: 4000 })).length).toBeGreaterThanOrEqual(1);
+    expect(seenOffsets).toEqual(Array.from({ length: TOTAL_PAGES }, (_, i) => i * 30));
+  });
+
+  // The effect used to depend only on (lastPageHidden, hasNextPage,
+  // isFetchingNextPage). When a response lands before React renders the
+  // in-flight state, all three read the same before and after the hop, the
+  // effect never re-runs, and the page sits on the skeleton for good.
+  it('chains through several all-hidden pages even when responses are instant', async () => {
+    const hidden = (offset: number) => ({
+      activities: [
+        makeActivity({ id: `h-${offset}`, description: 'ZZ hidden', note_preview: null, note_missing: true }),
+      ],
+      hasMore: true,
+    });
+    mockedGetActivityFeed.mockResolvedValueOnce(hidden(0));
+    mockedGetActivityFeed.mockResolvedValueOnce(hidden(1));
+    mockedGetActivityFeed.mockResolvedValueOnce(hidden(2));
+    mockedGetActivityFeed.mockResolvedValueOnce({
+      activities: [makeActivity({ id: 'v1', description: 'Completed Task: Groceries', action_type: 'task_completed' })],
+      hasMore: false,
+    });
+
+    renderPage();
+
+    expect((await screen.findAllByText('Completed Task: Groceries')).length).toBeGreaterThanOrEqual(1);
+    expect(mockedGetActivityFeed.mock.calls.map(([, opts]) => opts?.offset)).toEqual([0, 1, 2, 3]);
+  });
+
   it('renders the empty state when the circle has no activity', async () => {
     mockedGetActivityFeed.mockResolvedValueOnce({ activities: [], hasMore: false });
 

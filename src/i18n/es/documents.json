@@ -48,14 +48,22 @@
     },
     "other": "Subir otro documento"
   },
-  "preview": "Vista previa",
+  "open": "Abrir",
   "download": "Descargar",
   "downloadDocument": "Descargar {{name}}",
   "downloadFailed": "Error al descargar. Intenta de nuevo.",
   "closePreview": "Cerrar vista previa",
-  "previewFailed": "No se pudo cargar la vista previa.",
   "pdfFallbackHint": "¿No se muestra el PDF? Ábrelo en una pestaña nueva o descárgalo.",
   "openInNewTab": "Abrir en pestaña nueva",
+  "viewer": {
+    "failedTitle": "No se pudo abrir este documento",
+    "failedMessage": "Revisa tu conexión e inténtalo de nuevo.",
+    "unsupportedTitle": "Este archivo no se puede previsualizar aquí",
+    "unsupportedMessage": "Usa Descargar para guardarlo en tu dispositivo.",
+    "downloadStarted": "Descarga iniciada.",
+    "newTabBlocked": "Tu navegador bloqueó la pestaña nueva, así que el archivo se está descargando.",
+    "newTabFailed": "No se pudo abrir este documento en una pestaña nueva. Inténtalo de nuevo."
+  },
   "editAction": "Editar",
   "deleteAction": "Eliminar",
   "actionsFor": "Opciones para {{name}}",
@@ -94,7 +102,8 @@
       "storageFull": "Este archivo superaría el límite de almacenamiento del círculo.",
       "labelRequired": "Ingresa un nombre para este documento.",
       "noteTooLong": "Las notas pueden tener hasta 500 caracteres."
-    }
+    },
+    "unsupportedOrDamaged": "Este tipo de archivo no es compatible o el archivo está dañado. Prueba con otro archivo."
   },
   "edit": {
     "title": "Editar documento",

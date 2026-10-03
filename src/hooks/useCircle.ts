@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useCircles } from '@/hooks/useCircles';
 import { useCircleMembers } from '@/hooks/useCircleMembers';
+import { isCircleLostError } from '@/lib/purgeCircleCache';
 import type { Circle, CircleAccessLevel } from '@/api/circles';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
 
@@ -76,6 +77,12 @@ export interface UseCircleResult {
   readOnly: boolean;
   isLoading: boolean;
   isError: boolean;
+  /**
+   * The circle READ answered FORBIDDEN / NOT_FOUND and there is no data: this user
+   * is no longer in the circle (or it was deleted). `null` for loading, success, and
+   * every transient failure (5xx / network), which keep their retry cards.
+   */
+  accessLost: 'FORBIDDEN' | 'NOT_FOUND' | null;
   refetch: () => void;
 }
 
@@ -107,6 +114,10 @@ export function useCircle(circleId: string): UseCircleResult {
     // flag except `read_only`.
     isLoading: detailQuery.isLoading,
     isError: detailQuery.isError,
+    accessLost:
+      !circle && isCircleLostError(detailQuery.error)
+        ? (detailQuery.error as unknown as { error: { code: 'FORBIDDEN' | 'NOT_FOUND' } }).error.code
+        : null,
     refetch: () => {
       void detailQuery.refetch();
       void circlesQuery.refetch();

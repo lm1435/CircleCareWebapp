@@ -20,6 +20,14 @@ type TFn = (key: string, opts?: Record<string, unknown>) => string;
  */
 export interface ActivityDescriptionSource {
   description: string;
+  /**
+   * The row's `action_type`. Optional so a caller that has only a description
+   * still compiles, but REQUIRED for the whole-sentence rows in
+   * {@link translateSentenceRow}: they are recognised by action type PLUS the
+   * exact stored sentence, never by the sentence alone. A row without it simply
+   * keeps today's behaviour (the English `description`).
+   */
+  action_type?: string | null;
   /** Stable key, WITHOUT a namespace prefix -- web already resolves inside the
    *  `activity` namespace, so the stored value is used verbatim. Null on rows
    *  written before parameterization and on sites not yet parameterized. */
@@ -151,6 +159,21 @@ const KEY_RENDERERS = new Map<string, KeyRenderer>(Object.entries({
       title: p.title ?? '',
       date: renderDate(p.scheduledDate, ctx),
     }) },
+  'entries.medicationOccurrenceRemoved': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
+    ctx.t('entries.medicationOccurrenceRemoved', {
+      title: p.title ?? '',
+      date: renderDate(p.scheduledDate, ctx),
+    }) },
+  'entries.appointmentOccurrenceRemoved': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
+    ctx.t('entries.appointmentOccurrenceRemoved', {
+      title: p.title ?? '',
+      date: renderDate(p.scheduledDate, ctx),
+    }) },
+  'entries.taskOccurrenceRemoved': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
+    ctx.t('entries.taskOccurrenceRemoved', {
+      title: p.title ?? '',
+      date: renderDate(p.scheduledDate, ctx),
+    }) },
   'entries.recurrenceStopped': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
     ctx.t('entries.recurrenceStopped', {
       title: p.title ?? '',
@@ -164,6 +187,28 @@ const KEY_RENDERERS = new Map<string, KeyRenderer>(Object.entries({
     ctx.t('entries.memberJoined.careRecipient', { name: p.name ?? '' }) },
   'entries.memberJoined.caregiver': { requires: ['name'], render: (p, ctx) =>
     ctx.t('entries.memberJoined.caregiver', { name: p.name ?? '' }) },
+  // THE JOINER HAD NO FEED NAME (an OAuth signup with no first_name), which the
+  // backend writes as its own key (routes/invites.ts, both accept paths) and
+  // which the account-deletion feed scrub rewrites every deleted member's join
+  // row to. Absent here, the row fell through to the legacy English-phrase
+  // substitution, which replaces only the matched substring: a Spanish reader
+  // saw "Someone se unió al círculo como cuidador", or the scrub's English
+  // "A member joined the circle" verbatim.
+  //
+  // No params by design -- the sentence has no name slot -- so `requires` is
+  // empty and the `{}` the backend sends is a COMPLETE params object here.
+  'entries.memberJoined.careRecipientUnknown': { requires: [], render: (_p, ctx) =>
+    ctx.t('entries.memberJoined.careRecipientUnknown') },
+  'entries.memberJoined.caregiverUnknown': { requires: [], render: (_p, ctx) =>
+    ctx.t('entries.memberJoined.caregiverUnknown') },
+  // Notes first-class (Slice 1/2, plan docs/plans/notes-first-class.md task
+  // 24). `careNoteAdded` carries NO params -- there is no subject to
+  // interpolate, just "someone added a daily care note" -- so `requires` is
+  // empty and `hasRenderableParams` is trivially satisfied.
+  'entries.eventNoteAdded': { requires: ['title'], render: (p, ctx) =>
+    ctx.t('entries.eventNoteAdded', { title: p.title ?? '' }) },
+  'entries.careNoteAdded': { requires: [], render: (_p, ctx) =>
+    ctx.t('entries.careNoteAdded') },
 }));
 
 /**
@@ -243,7 +288,113 @@ export function renderActivityDescription(
     }
   }
 
+  // Whole-sentence rows first (see translateSentenceRow); everything else goes
+  // through the unchanged phrase-substitution path.
+  const sentence = translateSentenceRow(activity.action_type, activity.description, t);
+  if (sentence !== null) return sentence;
   return translateActivityDescription(activity.description, t, locale);
+}
+
+/**
+ * WHOLE-SENTENCE ROWS: recognised by `action_type` PLUS an anchored match of the
+ * stored English sentence.
+ *
+ * WHY THIS EXISTS. These rows reach a Spanish reader in English from every
+ * client that predates it, because the backend writes them with NO
+ * `description_key` and none of the phrase substitutions below matches a sentence
+ * like "<Name> left the circle":
+ *
+ *   member_left      "<name|email> left the circle"          circles.ts (leave)
+ *                    "A member left the circle"              same, user lookup failed / F-1 scrub
+ *                    "A member left the circle (account deleted)"   users.ts deletion + scrub
+ *                    "<name|email> left the circle (account deleted)"   same, before 2026-07-07
+ *   member_removed   "<name|email> was removed from the circle"      circles.ts (kick)
+ *                    "A member was removed from the circle"          same / F-1 scrub
+ *   member_invited   "A member was invited to the circle"            F-1 scrub of "Invited <email> ..."
+ *   member_joined    "A member joined the circle"                    F-1 scrub, role unrecoverable
+ *   circle_created   "Created Self-Care Circle for <name>"           circles.ts (the care variant has a phrase)
+ *   medication_updated  "Discontinued|Reactivated medication: <title>"   calendarEvents.ts (never keyed)
+ *                    "Rescheduled Medication: <title> to HH:MM"      rows 2026-07-30..08-20, before keys
+ *   note_added       "Added notes to <title>"                        rows 2026-06-02..09-27, before keys
+ *
+ * WHY NOT A PHRASE SUBSTITUTION. A named row's "name" is arbitrary text (an
+ * e-mail when the person had no name), so there is no fixed substring to swap,
+ * and an UNANCHORED " left the circle" would also rewrite a task someone titled
+ * "Mom left the circle" ("Added Task: Mom left the circle"). Gating on the
+ * action type and anchoring both ends keeps the match to exactly the shape the
+ * writer produces. Whatever sits in the name slot is shown as stored.
+ *
+ * ORDER MATTERS WITHIN AN ACTION TYPE: the nameless sentences are listed before
+ * the named ones, otherwise "A member left the circle" would match the named rule
+ * with the name "A member" and print "A member salió del círculo".
+ *
+ * EN IS BYTE-IDENTICAL to the stored sentence (these `sentences.*` strings are
+ * the English the writers emit), so an English reader sees no change.
+ *
+ * NO BACKEND CHANGE: nothing writes a key for these rows and nothing here asks
+ * it to. Builds that predate this keep showing the stored English.
+ *
+ * KEEP IN SYNC WITH mobile/src/utils/activityTranslation.ts -- same rules, same
+ * `sentences.*` keys and strings (mobile stores them under `activity.sentences`).
+ */
+interface SentenceRule {
+  actionType: string;
+  /** Anchored at BOTH ends: the stored sentence must be exactly this shape. */
+  pattern: RegExp;
+  render: (match: RegExpExecArray, t: TFn) => string;
+}
+
+const SENTENCE_RULES: readonly SentenceRule[] = [
+  // --- member_left ---------------------------------------------------------
+  { actionType: 'member_left', pattern: /^A member left the circle$/,
+    render: (_m, t) => t('sentences.memberLeft') },
+  { actionType: 'member_left', pattern: /^A member left the circle \(account deleted\)$/,
+    render: (_m, t) => t('sentences.memberLeftAccountDeleted') },
+  { actionType: 'member_left', pattern: /^(.+) left the circle \(account deleted\)$/,
+    render: (m, t) => t('sentences.memberLeftNamedAccountDeleted', { name: m[1] }) },
+  { actionType: 'member_left', pattern: /^(.+) left the circle$/,
+    render: (m, t) => t('sentences.memberLeftNamed', { name: m[1] }) },
+  // --- member_removed ------------------------------------------------------
+  { actionType: 'member_removed', pattern: /^A member was removed from the circle$/,
+    render: (_m, t) => t('sentences.memberRemoved') },
+  { actionType: 'member_removed', pattern: /^(.+) was removed from the circle$/,
+    render: (m, t) => t('sentences.memberRemovedNamed', { name: m[1] }) },
+  // --- member_invited / member_joined (F-1 scrub forms) --------------------
+  { actionType: 'member_invited', pattern: /^A member was invited to the circle$/,
+    render: (_m, t) => t('sentences.memberInvited') },
+  { actionType: 'member_joined', pattern: /^A member joined the circle$/,
+    render: (_m, t) => t('sentences.memberJoined') },
+  // --- keyless shapes found by sweeping every action_type the backend writes ---
+  { actionType: 'circle_created', pattern: /^Created Self-Care Circle for (.+)$/,
+    render: (m, t) => t('sentences.createdSelfCareCircleFor', { name: m[1] }) },
+  { actionType: 'medication_updated', pattern: /^Discontinued medication: (.+)$/,
+    render: (m, t) => t('sentences.discontinuedMedication', { title: m[1] }) },
+  { actionType: 'medication_updated', pattern: /^Reactivated medication: (.+)$/,
+    render: (m, t) => t('sentences.reactivatedMedication', { title: m[1] }) },
+  // The server-formatted 'HH:MM' is shown as stored: a row written before the
+  // key carries no raw time to re-render in the viewer's clock.
+  { actionType: 'medication_updated', pattern: /^Rescheduled Medication: (.+) to (\d{1,2}:\d{2})$/,
+    render: (m, t) => t('sentences.rescheduledMedication', { title: m[1], time: m[2] }) },
+  { actionType: 'note_added', pattern: /^Added notes to (.+)$/,
+    render: (m, t) => t('sentences.addedNotes', { title: m[1] }) },
+];
+
+/**
+ * The localized sentence for a whole-sentence row, or `null` when this row is not
+ * one (so the caller falls through to the phrase-substitution path).
+ */
+export function translateSentenceRow(
+  actionType: string | null | undefined,
+  description: string,
+  t: TFn
+): string | null {
+  if (!actionType) return null;
+  for (const rule of SENTENCE_RULES) {
+    if (rule.actionType !== actionType) continue;
+    const match = rule.pattern.exec(description);
+    if (match) return rule.render(match, t);
+  }
+  return null;
 }
 
 /**
@@ -283,6 +434,7 @@ export function translateActivityDescription(
     '(skipped)': `(${t('phrases.skipped')})`,
     '(missed)': `(${t('phrases.missed')})`,
     '(not taken)': `(${t('phrases.skipped')})`,
+    "(changed another caregiver's answer)": t('phrases.changedAnswer'),
   };
 
   let translated = description;

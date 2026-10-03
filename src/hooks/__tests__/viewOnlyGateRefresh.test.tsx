@@ -87,7 +87,11 @@ vi.mock('@/components/ui', async (importOriginal) => {
 });
 
 const promptUpgrade = vi.fn();
-vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade }) }));
+// PK18: event writes use the lapsed wording (promptLapsed).
+const promptLapsed = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade, promptLapsed }),
+}));
 
 vi.mock('@/lib/analytics', () => ({
   Analytics: new Proxy({}, { get: () => vi.fn() }),

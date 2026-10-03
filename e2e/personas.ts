@@ -260,19 +260,39 @@ const SEED_PDF = new TextEncoder().encode(
     'trailer<</Root 1 0 R>>\n%%EOF\n'
 );
 
+/**
+ * DETERMINISTIC picks. Every clone mints fresh random UUIDs, so `order by id`
+ * chose a DIFFERENT template row per clone (and per run) — e.g. a 2-month-old
+ * vital that the Vitals page's default "Last 30 days" range hides, which made
+ * `loadSurfaceData().vitalText` intermittently unfindable. Order by what the
+ * clone copies verbatim from the template (dates, times, titles) and, for rows
+ * a page shows inside a date window, NEWEST first: the persona seed rows
+ * (`seedMissingRecords`: vital at now()-1h, note dated today) always win, so
+ * the pick is always inside every page's default window. `id` is only the
+ * final tie-break.
+ */
 function selectSeeded(circleId: string): SeededRecords {
   const c = `${sqlStr(circleId)}::uuid`;
+  // Open, one-off roots first (the ones a list shows and a write can act on),
+  // then by template-copied content.
   const firstEvent = (type: string) =>
     `(select id::text from calendar_events where circle_id = ${c} and event_type = ${sqlStr(type)}
-       and parent_event_id is null order by id limit 1)`;
+       and parent_event_id is null
+     order by (completed_at is not null), (discontinued_at is not null), (recurrence_rule is not null),
+              scheduled_date, scheduled_time nulls first, title, id
+     limit 1)`;
   const row = sqlRows<Record<string, string | null>>(`
     select ${firstEvent('medication')} as "medicationId",
            ${firstEvent('appointment')} as "appointmentId",
            ${firstEvent('task')} as "taskId",
-           (select id::text from event_notes where circle_id = ${c} order by id limit 1) as "eventNoteId",
-           (select id::text from care_notes where circle_id = ${c} order by id limit 1) as "careNoteId",
-           (select id::text from health_vitals where circle_id = ${c} order by id limit 1) as "vitalId",
-           (select id::text from circle_documents where circle_id = ${c} order by id limit 1) as "documentId",
+           (select id::text from event_notes where circle_id = ${c}
+             order by created_at desc, id limit 1) as "eventNoteId",
+           (select id::text from care_notes where circle_id = ${c}
+             order by note_date desc, created_at desc, id limit 1) as "careNoteId",
+           (select id::text from health_vitals where circle_id = ${c}
+             order by recorded_at desc, id limit 1) as "vitalId",
+           (select id::text from circle_documents where circle_id = ${c}
+             order by created_at desc, id limit 1) as "documentId",
            (select id::text from emergency_info where circle_id = ${c} order by id limit 1) as "emergencyInfoId"
   `)[0];
   return row as unknown as SeededRecords;

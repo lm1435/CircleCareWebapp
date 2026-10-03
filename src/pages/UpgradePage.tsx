@@ -24,6 +24,7 @@ import {
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useWebPlans, usePurchasePlan, useManageSubscription } from '@/hooks/useWebBilling';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAccountTimezone } from '@/hooks/useAccountTimezone';
 import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { readBrowserTimezone, webCheckoutVerdict } from '@/lib/checkoutCountry';
@@ -31,7 +32,8 @@ import { isUserCancelledError, type WebPlan } from '@/lib/purchases';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { legalUrl } from '@/lib/legalLinks';
 import { Analytics } from '@/lib/analytics';
-import { asPaywallContext, type UpgradeLocationState } from '@/lib/paywallContext';
+import { asPaywallContext, type PaywallContext, type UpgradeLocationState } from '@/lib/paywallContext';
+import { notifyEarnedPaywallAccepted, notifyEarnedPaywallDismissed } from '@/lib/earnedUpsellSession';
 import { firstRunNavigationState, takeDeferredFirstRun } from '@/lib/onboardingPaywall';
 
 /**
@@ -67,6 +69,8 @@ export default function UpgradePage(): ReactElement {
   const { data: status } = useSubscriptionStatus();
   const { data: plans, isLoading, isError } = useWebPlans();
   const purchase = usePurchasePlan();
+  // Same-tick double click: `isPending` only flips after React commits.
+  const purchaseGuard = useSubmitGuard();
   const manage = useManageSubscription();
   const [purchased, setPurchased] = useState(false);
 
@@ -101,6 +105,9 @@ export default function UpgradePage(): ReactElement {
     if (dismissalRecordedRef.current || purchasedRef.current) return;
     dismissalRecordedRef.current = true;
     Analytics.paywallDismissed(paywallContext);
+    // Earned ask only (no-op for every other context): the DURABLE per-trigger
+    // dismissal, as mobile's PlanSelectionScreen reports back.
+    notifyEarnedPaywallDismissed(paywallContext);
   }, [paywallContext]);
 
   /**
@@ -243,7 +250,10 @@ export default function UpgradePage(): ReactElement {
   };
 
   const handleSubscribe = (plan: WebPlan, planKey: PlanKey): void => {
+    if (purchase.isPending || !purchaseGuard.claim()) return;
+    notifyEarnedPaywallAccepted(paywallContext);
     purchase.mutate(plan, {
+      onSettled: purchaseGuard.release,
       onSuccess: () => {
         // Bought. Recorded BEFORE any state change so the unmount cleanup can
         // never read a stale `false` and log the exit as a dismissal.
@@ -357,6 +367,7 @@ export default function UpgradePage(): ReactElement {
           plans={plans}
           pending={purchase.isPending}
           isOnboarding={isOnboarding}
+          paywallContext={paywallContext}
           onSubscribe={handleSubscribe}
           onContinueFree={handleContinueFree}
           onBack={handleDecline}
@@ -496,12 +507,25 @@ function StoreOnlyCard({
 
 /* ------------------------------------------------------------------ */
 
+/** Mobile's headlineKeyMap/accentKeyMap, collapsed to one i18n group per context. */
+const HEADLINE_KEY = {
+  onboarding: 'onboarding',
+  general: 'general',
+  capacity: 'capacity',
+  invite_cap: 'capacity',
+  feature: 'feature',
+  earned_meds: 'earnedMeds',
+  earned_invite: 'earnedInvite',
+} as const satisfies Record<PaywallContext, string>;
+
 interface PlansViewProps {
   plans: { monthly: WebPlan | null; annual: WebPlan | null } | undefined;
   pending: boolean;
   /** The once-ever post-first-circle ask. Adds the explicit free-plan
    *  affordance and swaps in mobile's onboarding headline. */
   isOnboarding: boolean;
+  /** Picks the two-tone headline (mobile's per-context headline + accent). */
+  paywallContext: PaywallContext;
   /** `planKey` is passed alongside the plan because analytics must send
    *  mobile's `'monthly' | 'annual'`, not RevenueCat's `$rc_*` identifiers. */
   onSubscribe: (plan: WebPlan, planKey: PlanKey) => void;
@@ -514,6 +538,7 @@ function PlansView({
   plans,
   pending,
   isOnboarding,
+  paywallContext,
   onSubscribe,
   onContinueFree,
   onBack,
@@ -521,6 +546,19 @@ function PlansView({
 }: PlansViewProps): ReactElement {
   const { t, i18n } = useTranslation('upgrade');
 
+  // Literal keys (the static key audit cannot resolve a template string).
+  const headlines = {
+    onboarding: { lead: t('headline.onboarding.lead'), accent: t('headline.onboarding.accent') },
+    general: { lead: t('headline.general.lead'), accent: t('headline.general.accent') },
+    capacity: { lead: t('headline.capacity.lead'), accent: t('headline.capacity.accent') },
+    feature: { lead: t('headline.feature.lead'), accent: t('headline.feature.accent') },
+    earnedMeds: { lead: t('headline.earnedMeds.lead'), accent: t('headline.earnedMeds.accent') },
+    earnedInvite: {
+      lead: t('headline.earnedInvite.lead'),
+      accent: t('headline.earnedInvite.accent'),
+    },
+  };
+  const headline = headlines[HEADLINE_KEY[paywallContext]];
   const monthly = plans?.monthly ?? null;
   const annual = plans?.annual ?? null;
   const anyTrial = Boolean(monthly?.hasFreeTrial || annual?.hasFreeTrial);
@@ -594,11 +632,18 @@ function PlansView({
       <Eyebrow color="coral" deep>
         {t('eyebrow')}
       </Eyebrow>
-      {/* Mobile's onboarding headline/subtitle verbatim (planSelection.headline
-          + headlineAccent, planSelection.subtitle) — the same words a mobile
-          user sees at the same moment. Other contexts keep the generic copy. */}
-      <Text variant="editorialTitle" as="h1" className="mt-5">
-        {isOnboarding ? t('onboarding.title') : t('title')}
+      {/* Mobile's two-tone hero headline (PlanSelectionScreen headline +
+          headlineAccent), same words per context. ONE <h1>: the accent is a
+          block span inside it so screen readers announce a single heading
+          (the literal space keeps the accessible name "lead accent").
+          Accent = coral #C65D54 on the #FBF9F5 page = 3.9:1; allowed ONLY
+          because it is >= 24px semibold (WCAG large text, >= 3:1); 32px = 0.75 x the 42px lead (mobile 24/32) at every
+          breakpoint -- never shrink it (ADA rule: coral is not small text). */}
+      <Text variant="editorialTitle" as="h1" className="mt-5 text-balance">
+        {headline.lead}{' '}
+        <span data-headline-accent="" className="block text-[length:32px] font-semibold leading-[36px] text-coral">
+          {headline.accent}
+        </span>
       </Text>
       {/* text-balance: EN desktop otherwise orphaned "of." on its own line. */}
       <Text variant="bodyDense" className="mt-3 max-w-xl text-balance text-ink-2!">

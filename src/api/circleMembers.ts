@@ -17,6 +17,8 @@ export interface CircleMember {
   /** ISO timestamp (timestamptz) or date-only string — format defensively. */
   joined_at: string;
   timezone: string | null;
+  /** The member's chosen palette key (users.avatar_color); null = name-derived. */
+  avatar_color?: string | null;
   /**
    * Membership-level view-only flag (freemium caregiver cap).
    * NOTE: the backend currently does NOT return this per member on

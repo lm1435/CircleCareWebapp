@@ -145,4 +145,70 @@ describe('DrugAutocomplete', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(input).toHaveValue('metformin');
   });
+
+  // The list is portalled out of the host: an `absolute` list inside a Modal's
+  // scrolling body was clipped under the footer (first-run wizard, K8), so the
+  // suggestions could not be picked. Placement is confined to the dialog.
+  describe('placement inside a dialog', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    const rect = (top: number, height: number) =>
+      ({ top, bottom: top + height, height, left: 20, right: 320, width: 300, x: 20, y: top, toJSON: () => ({}) }) as DOMRect;
+
+    function renderInDialog(anchorTop: number, footerTop: number) {
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        if (this.hasAttribute('data-modal-footer')) return rect(footerTop, 60);
+        if (this.getAttribute('role') === 'dialog') return rect(50, 500);
+        return rect(anchorTop, 44);
+      });
+      return render(
+        <div role="dialog" aria-label="wizard">
+          <Host onSelectDrug={vi.fn()} />
+          <div data-modal-footer />
+        </div>
+      );
+    }
+
+    it('renders the list in document.body, fixed, above the modal backdrop', async () => {
+      const user = userEvent.setup();
+      const { container } = renderInDialog(150, 500);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'me');
+      const listbox = await screen.findByRole('listbox');
+      expect(container.contains(listbox)).toBe(false);
+      expect(listbox.parentElement).toBe(document.body);
+      expect(listbox.style.position).toBe('fixed');
+      expect(listbox).toHaveClass('z-[60]');
+    });
+
+    it('opens BELOW the field when there is room above the footer', async () => {
+      const user = userEvent.setup();
+      renderInDialog(150, 500);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'me');
+      const listbox = await screen.findByRole('listbox');
+      expect(listbox.style.top).toBe('198px'); // anchor bottom 194 + 4
+      expect(listbox.style.bottom).toBe('');
+      expect(listbox.style.maxHeight).toBe('256px');
+    });
+
+    it('never runs under the footer: short room below flips the list above the field, capped to the dialog', async () => {
+      const user = userEvent.setup();
+      renderInDialog(400, 460);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'me');
+      const listbox = await screen.findByRole('listbox');
+      expect(listbox.style.top).toBe('');
+      expect(listbox.style.bottom).toBe(`${window.innerHeight - 400 + 4}px`);
+      // room above = anchor top 400 - dialog top 50 - 8 gutters
+      expect(listbox.style.maxHeight).toBe('256px');
+    });
+
+    it('shrinks to the room left when neither side fits the full height', async () => {
+      const user = userEvent.setup();
+      renderInDialog(150, 300);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'me');
+      const listbox = await screen.findByRole('listbox');
+      // below: floor 300 - anchor bottom 194 - 8 = 98 (< 132), above: 150 - 50 - 8 = 92 -> below wins (98 >= 92)
+      expect(listbox.style.top).toBe('198px');
+      expect(listbox.style.maxHeight).toBe('98px');
+    });
+  });
 });

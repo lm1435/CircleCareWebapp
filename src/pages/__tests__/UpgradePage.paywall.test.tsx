@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-route
 import type { ReactElement } from 'react';
 import '@/i18n';
 import { ToastProvider } from '@/components/ui';
+import { markEarnedUpsellPresented, resetEarnedUpsellSession } from '@/lib/earnedUpsellSession';
 
 /**
  * THE WEB PAYWALL'S ANALYTICS AND ITS ONWARD NAVIGATION.
@@ -170,7 +171,7 @@ describe('UpgradePage — paywall_context', () => {
     expect(Analytics.planSelectionViewed).toHaveBeenCalledWith('onboarding');
   });
 
-  it.each(['capacity', 'feature', 'general'] as const)(
+  it.each(['capacity', 'invite_cap', 'feature', 'general'] as const)(
     'reports the view with the %s context from an existing entry point',
     (context) => {
       renderAt({ paywallContext: context });
@@ -178,6 +179,33 @@ describe('UpgradePage — paywall_context', () => {
       expect(Analytics.planSelectionViewed).toHaveBeenCalledWith(context);
     }
   );
+
+  // 'invite_cap' is split out of 'capacity' for the FUNNEL only — the page a
+  // capped inviter lands on is the same page a capped circle-creator lands
+  // on. Copy is keyed on `onboarding` alone, so this proves nothing renders
+  // blank and nothing changes between the two.
+  it('renders the invite_cap paywall with the same copy and exits as capacity', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderAt({ paywallContext: 'capacity' });
+    const capacityHeading = screen.getByRole('heading', { level: 1 }).textContent;
+    const capacitySubscribe = screen.getByRole('button', { name: 'Subscribe' }).textContent;
+    unmount();
+    vi.clearAllMocks();
+
+    renderAt({ paywallContext: 'invite_cap' });
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading.textContent).toBe(capacityHeading);
+    expect(heading.textContent?.trim()).not.toBe('');
+    expect(screen.getByRole('button', { name: 'Subscribe' }).textContent).toBe(capacitySubscribe);
+    expect(screen.queryByRole('button', { name: /Continue with Free plan/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Better care, together.' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Back to profile' }));
+
+    expect(await screen.findByTestId('profile')).toBeInTheDocument();
+    expect(Analytics.paywallDismissed).toHaveBeenCalledWith('invite_cap');
+  });
 
   it('falls back to general for an un-instrumented or forged entry', () => {
     // `location.state` is user-reachable via history.pushState. An unknown
@@ -392,5 +420,40 @@ describe('UpgradePage — degraded states still reach the wizard', () => {
     await user.click(screen.getByRole('button', { name: 'Not now' }));
 
     await waitFor(() => expect(screen.getByTestId('wizard')).toBeInTheDocument());
+  });
+});
+
+describe('UpgradePage — reports the earned-ask outcome back (PK28(1))', () => {
+  const handlers = () => ({ onDismissed: vi.fn(), onAccepted: vi.fn() });
+  beforeEach(() => resetEarnedUpsellSession());
+
+  it('leaving an earned_invite paywall writes the durable dismissal once', async () => {
+    const h = handlers();
+    markEarnedUpsellPresented('user-1', h);
+    const { unmount } = renderAt({ paywallContext: 'earned_invite' });
+    await flushArming();
+    unmount();
+    expect(h.onDismissed).toHaveBeenCalledTimes(1);
+    expect(h.onAccepted).not.toHaveBeenCalled();
+  });
+
+  it('tapping Subscribe is an acceptance, NOT a dismissal', async () => {
+    const user = userEvent.setup();
+    const h = handlers();
+    markEarnedUpsellPresented('user-1', h);
+    renderAt({ paywallContext: 'earned_meds' });
+    await flushArming();
+    await user.click(screen.getByRole('button', { name: 'Subscribe' }));
+    expect(h.onAccepted).toHaveBeenCalledTimes(1);
+    expect(h.onDismissed).not.toHaveBeenCalled();
+  });
+
+  it('a limit-moment paywall (capacity) never touches the earned handlers', async () => {
+    const h = handlers();
+    markEarnedUpsellPresented('user-1', h);
+    const { unmount } = renderAt({ paywallContext: 'capacity' });
+    await flushArming();
+    unmount();
+    expect(h.onDismissed).not.toHaveBeenCalled();
   });
 });

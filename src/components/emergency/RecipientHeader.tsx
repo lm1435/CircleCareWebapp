@@ -72,12 +72,12 @@ export function RecipientHeader({
             {name}
           </Text>
           {dobLabel && (
-            <p className="m-0 mt-1">
-              <Text variant="mono" as="span">
+            <dl className="m-0 mt-2">
+              <Text variant="mono" as="dt" className="mb-1">
                 {t('recipient.dob')}
-              </Text>{' '}
-              <span className="text-ink-2">{dobLabel}</span>
-            </p>
+              </Text>
+              <dd className="m-0 text-md font-medium leading-relaxed text-ink">{dobLabel}</dd>
+            </dl>
           )}
         </div>
       </div>

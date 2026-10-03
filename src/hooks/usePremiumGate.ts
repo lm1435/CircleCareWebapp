@@ -53,13 +53,17 @@ export interface PremiumGateOptions {
  *   (mobile/src/services/analytics.ts:1211-1227), so a gate that leaves it at
  *   the default silently pools with the "user went looking for it" bucket and
  *   makes limit-moment conversion unreadable. Pick 'capacity' for a hard limit
- *   (seats, circles) and 'feature' for a premium-only surface.
+ *   (circles, frozen circle) and 'feature' for a premium-only surface. Pick
+ *   'invite_cap' for the caregiver SEAT cap hit from an invite (create,
+ *   resend, the in-modal cap card) — it is NOT the circle cap, and keeping it
+ *   separate is what makes the invite paywall readable on its own.
  */
 export function usePremiumGate(
   context: PaywallContext = DEFAULT_PAYWALL_CONTEXT,
   options?: PremiumGateOptions
 ): {
-  promptUpgrade: (message?: string) => void;
+  promptUpgrade: (message?: string, forCircleId?: string) => void;
+  promptLapsed: (forCircleId?: string) => void;
 } {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
@@ -73,11 +77,18 @@ export function usePremiumGate(
    *   is kept either way -- a more specific explanation must not cost the user
    *   their route to actually buying more. For a non-owner of a circle-level
    *   gate the message is shown as-is, with no action.
+   * @param forCircleId The circle the gated write was actually SENT to, when it
+   *   can differ from the hook's own `options.circleId` (a deferred undo-window
+   *   commit carries the circle it was tapped in). The owner check must ask
+   *   about that circle, not whichever one is rendered now.
    */
   const promptUpgrade = useCallback(
-    (message?: string) => {
-      if (circleId) {
-        const circle = queryClient.getQueryData<CircleDetail>(queryKeys.circleDetail(circleId));
+    (message?: string, forCircleId?: string) => {
+      const gateCircleId = forCircleId ?? circleId;
+      if (gateCircleId) {
+        const circle = queryClient.getQueryData<CircleDetail>(
+          queryKeys.circleDetail(gateCircleId)
+        );
         const userId = useAuthStore.getState().user?.id;
         if (!viewerOwnsCircle(circle, userId)) {
           let notice: string;
@@ -107,5 +118,48 @@ export function usePremiumGate(
     [navigate, showToast, t, context, circleId]
   );
 
-  return { promptUpgrade };
+  /**
+   * PK18 -- the refusal for a write on a LAPSED (frozen) circle: a 403
+   * SUBSCRIPTION_REQUIRED from `requireCircleEditAccess` means the circle's
+   * OWNER's subscription ended, NOT "that feature isn't in the free plan", so
+   * the generic gate copy would be false. Same structure as `promptUpgrade`
+   * with mobile's accurate wording:
+   *   - owner            -> "Your subscription has ended, so this circle is
+   *                         read-only for everyone. Your data is safe." with an
+   *                         Upgrade action -> /upgrade (context 'capacity');
+   *   - everyone else    -> the owner-resubscribes notice (named when known),
+   *                         NO action, never a paywall. Unknown ownership is
+   *                         treated as a non-owner.
+   * Draft handling is the caller's (forms stay open on a failed save).
+   */
+  const promptLapsed = useCallback(
+    (forCircleId?: string) => {
+      const gateCircleId = forCircleId ?? circleId;
+      const circle = gateCircleId
+        ? queryClient.getQueryData<CircleDetail>(queryKeys.circleDetail(gateCircleId))
+        : undefined;
+      const userId = useAuthStore.getState().user?.id;
+      if (!gateCircleId || !viewerOwnsCircle(circle, userId)) {
+        const ownerName = getCircleOwnerName(circle);
+        showToast(
+          ownerName
+            ? t('upgradeGate.lapsedMemberNamed', { ownerName })
+            : t('upgradeGate.lapsedMember'),
+          'info'
+        );
+        return;
+      }
+      if (isWebBillingConfigured()) {
+        showToast(t('upgradeGate.lapsedOwner'), 'info', {
+          label: t('upgradeGate.action'),
+          onClick: () => navigate('/upgrade', { state: { paywallContext: 'capacity' } }),
+        });
+      } else {
+        showToast(t('upgradeGate.lapsedOwner'), 'info');
+      }
+    },
+    [navigate, showToast, t, circleId]
+  );
+
+  return { promptUpgrade, promptLapsed };
 }

@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { addDaysToIsoDay } from '@/utils/recipientEventDate';
+import { firstDayOfWeek } from '@/components/calendar/dateMath';
 import { getCachedDateTimeFormat, getDateInTimezone, getDeviceTimezone } from '@/utils/timezone';
 import { Button } from './Button';
 import { Icon } from './Icon';
@@ -134,34 +135,12 @@ export function stepMonths(iso: string, delta: number): string {
 }
 
 /**
- * WHICH DAY THE WEEK STARTS ON, per locale — 0 = Sunday.
- *
- * Read from CLDR through `Intl.Locale`, not hardcoded and not keyed off a
- * translation file: Spanish weeks start Monday and English (US) weeks start
- * Sunday, and that is a property of the locale in exactly the way month and
- * weekday NAMES are (see the `meridiemLabel` note in `TimePickerPanel` for the
- * same judgment call — format primitives come from `Intl`, only chrome comes
- * from `common.json`).
- *
- * `getWeekInfo().firstDay` is 1 = Monday … 7 = Sunday, so `% 7` maps it onto the
- * 0 = Sunday that `getUTCDay` speaks. The fallback covers a runtime without the
- * API at all rather than a wrong answer from it: this app ships `en` and `es`,
- * and Sunday-first is the minority position worldwide, so anything that is not
- * English starts on Monday.
+ * WHICH DAY THE WEEK STARTS ON, per locale — 0 = Sunday. Moved to
+ * `components/calendar/dateMath` (the days-of-week repeat picker and the
+ * recurrence label need it without importing this component) and re-exported
+ * here so every existing import keeps working. See the note there.
  */
-export function firstDayOfWeek(language: string): number {
-  try {
-    const locale = new Intl.Locale(language) as Intl.Locale & {
-      getWeekInfo?: () => { firstDay: number };
-      weekInfo?: { firstDay: number };
-    };
-    const info = typeof locale.getWeekInfo === 'function' ? locale.getWeekInfo() : locale.weekInfo;
-    if (typeof info?.firstDay === 'number') return info.firstDay % 7;
-  } catch {
-    // An unparseable language tag is not worth a blank calendar.
-  }
-  return language.toLowerCase().startsWith('en') ? 0 : 1;
-}
+export { firstDayOfWeek };
 
 /**
  * ALWAYS SIX ROWS, never five or four.
@@ -503,7 +482,7 @@ export function DatePickerPanel({
   // component — `appearance-none` plus our own `chevron-down`, so no platform
   // caret appears inside a popover that exists to get rid of platform chrome.
   const JUMP_SELECT =
-    'min-h-[44px] w-full cursor-pointer appearance-none rounded-md border border-line-2 bg-cream pl-2 pr-7 text-sm text-ink outline-none transition-colors focus:border-moss-light';
+    'min-h-[44px] w-full cursor-pointer appearance-none rounded-md border border-line-strong bg-cream pl-2 pr-7 text-sm text-ink outline-none transition-colors focus:border-moss focus:shadow-[0_0_0_1px_var(--color-moss)]';
 
   return (
     <PickerPopover

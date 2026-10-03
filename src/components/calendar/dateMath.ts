@@ -39,6 +39,70 @@ export function getDayOfWeek(dateStr: string): number {
   return parseUTC(dateStr).getUTCDay();
 }
 
+/**
+ * WHICH DAY THE WEEK STARTS ON, per locale — 0 = Sunday.
+ *
+ * Read from CLDR through `Intl.Locale`, not hardcoded and not keyed off a
+ * translation file: Spanish weeks start Monday and English (US) weeks start
+ * Sunday, and that is a property of the locale in exactly the way month and
+ * weekday NAMES are (see the `meridiemLabel` note in `TimePickerPanel` for the
+ * same judgment call — format primitives come from `Intl`, only chrome comes
+ * from `common.json`).
+ *
+ * `getWeekInfo().firstDay` is 1 = Monday … 7 = Sunday, so `% 7` maps it onto the
+ * 0 = Sunday that `getUTCDay` speaks. The fallback covers a runtime without the
+ * API at all rather than a wrong answer from it: this app ships `en` and `es`,
+ * and Sunday-first is the minority position worldwide, so anything that is not
+ * English starts on Monday.
+ *
+ * Lives HERE (re-exported by `DatePickerPanel`, its first consumer) so that
+ * non-UI modules — `recurrenceLabel`, and through it the care-summary PDF — can
+ * order weekdays without importing a React component file.
+ */
+export function firstDayOfWeek(language: string): number {
+  try {
+    const locale = new Intl.Locale(language) as Intl.Locale & {
+      getWeekInfo?: () => { firstDay: number };
+      weekInfo?: { firstDay: number };
+    };
+    const info = typeof locale.getWeekInfo === 'function' ? locale.getWeekInfo() : locale.weekInfo;
+    if (typeof info?.firstDay === 'number') return info.firstDay % 7;
+  } catch {
+    // An unparseable language tag is not worth a blank calendar.
+  }
+  return language.toLowerCase().startsWith('en') ? 0 : 1;
+}
+
+/**
+ * The seven weekday indexes (0=Sun..6=Sat, the `recurrence_days` convention —
+ * NEVER Sunday as 7) in the locale's week order: `es` → [1..6, 0], `en` → [0..6].
+ *
+ * Ordered by the BASE language, not the full tag: the care-summary PDF formats
+ * with the browser's regional locale (`es-MX`, which CLDR starts on Sunday)
+ * while the app UI speaks bare `es`, and a day list must read the same in both
+ * — and the same as mobile, which orders by the base app language too.
+ */
+export function orderedWeekdays(language: string): number[] {
+  const first = firstDayOfWeek(language.split('-')[0] || language);
+  return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
+}
+
+/**
+ * The first date ON OR AFTER `dateStr` whose weekday is in `days`, or null when
+ * `days` holds no valid weekday. String date math only — never a local Date.
+ * Mirrors the backend create-path normalizer, which snaps a weekly+days start
+ * forward the same way (at most six days).
+ */
+export function nextDateOnWeekdays(dateStr: string, days: readonly number[]): string | null {
+  const valid = days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  if (valid.length === 0) return null;
+  for (let offset = 0; offset < 7; offset += 1) {
+    const candidate = addDays(dateStr, offset);
+    if (valid.includes(getDayOfWeek(candidate))) return candidate;
+  }
+  return null;
+}
+
 /** Sunday that starts the week containing `dateStr`. */
 export function startOfWeek(dateStr: string): string {
   return addDays(dateStr, -getDayOfWeek(dateStr));

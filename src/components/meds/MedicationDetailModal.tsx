@@ -38,6 +38,13 @@ export interface MedicationDetailModalProps {
   /** True when `daysLeft` is under the low-stock threshold (the page owns the threshold). */
   lowStock?: boolean;
   inactive: boolean;
+  /**
+   * "Ended <date>" when the medication stopped because its series ENDED (never
+   * discontinued); null/undefined otherwise. Replaces the Inactive badge and
+   * drops Discontinue/Reactivate (mobile parity): Reactivate cannot restart a
+   * series and there is nothing left to discontinue. Edit and Delete stay.
+   */
+  endedLabel?: string | null;
   canEdit: boolean;
   onClose: () => void;
   onEdit: () => void;
@@ -141,6 +148,7 @@ export function MedicationDetailModal({
   daysLeft = null,
   lowStock = false,
   inactive,
+  endedLabel = null,
   canEdit,
   onClose,
   onEdit,
@@ -175,11 +183,15 @@ export function MedicationDetailModal({
   // inside the MoreMenu overflow, Delete last as the danger item; Edit is the
   // named button and stays last in DOM order.
   const menuItems: MoreMenuItem[] = [
-    {
-      id: 'toggle-status',
-      label: t(inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue'),
-      onSelect: onToggleStatus,
-    },
+    ...(endedLabel
+      ? []
+      : [
+          {
+            id: 'toggle-status',
+            label: t(inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue'),
+            onSelect: onToggleStatus,
+          },
+        ]),
     { id: 'delete', label: t('meds:page.actions.delete'), onSelect: onDelete, danger: true },
   ];
 
@@ -187,7 +199,9 @@ export function MedicationDetailModal({
     <div className="flex min-w-0 flex-col">
       <div className="flex flex-wrap items-center gap-2">
         <Eyebrow color="clay">{t('calendar:eventTypes.medication')}</Eyebrow>
-        {inactive && <Badge size="sm">{t('calendar:discontinueMed.inactiveBadge')}</Badge>}
+        {inactive && (
+          <Badge size="sm">{endedLabel ?? t('calendar:discontinueMed.inactiveBadge')}</Badge>
+        )}
       </div>
       <p className="m-0 mt-1.5 break-words text-lg font-semibold leading-8 text-ink">{name}</p>
       {dosage && <p className="m-0 mt-1 text-base text-ink-2">{dosage}</p>}

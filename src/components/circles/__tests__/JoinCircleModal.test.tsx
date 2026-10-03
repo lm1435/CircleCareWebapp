@@ -48,6 +48,13 @@ const INVITE = {
   expires_at: '2026-07-01T00:00:00Z',
 };
 
+// The backend's accept `data` (POST /invites/code/:code/accept).
+const ACCEPT_RESULT = {
+  circle: { id: 'circle-1', name: "Rose's Circle", recipient_name: 'Rose Meza', owner_id: 'o-1' },
+  view_only: false,
+  message: 'Successfully joined the circle',
+};
+
 function renderModal(overrides: Partial<Parameters<typeof JoinCircleModal>[0]> = {}) {
   const onClose = overrides.onClose ?? vi.fn();
   const onJoined = overrides.onJoined ?? vi.fn();
@@ -206,7 +213,7 @@ describe('JoinCircleModal', () => {
   it('accepts the invite → toast, close, and onJoined with the circle id', async () => {
     const user = userEvent.setup();
     lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
-    acceptMutate.mockImplementation((_code, opts) => opts?.onSuccess?.());
+    acceptMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(ACCEPT_RESULT));
     const { onClose, onJoined } = renderModal();
 
     await pasteCode(user, 'abc123');
@@ -223,6 +230,43 @@ describe('JoinCircleModal', () => {
     // WB4 REGRESSION — the code-entry join fired no invite_accepted at all
     // before this fix (only the invite-link and pending-invites paths did).
     expect(inviteAccepted).toHaveBeenCalledWith('circle-1', 'code_entry');
+  });
+
+  it('names and opens the circle the accept RESPONSE reports', async () => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
+    acceptMutate.mockImplementation((_code, opts) =>
+      opts?.onSuccess?.({
+        ...ACCEPT_RESULT,
+        circle: { ...ACCEPT_RESULT.circle, id: 'circle-from-response', name: 'Renamed Circle' },
+      })
+    );
+    const { onJoined } = renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByText("Rose's Circle");
+    await user.click(screen.getByRole('button', { name: 'Join circle' }));
+
+    await waitFor(() => expect(onJoined).toHaveBeenCalledWith('circle-from-response'));
+    expect(showToast).toHaveBeenCalledWith("You've joined Renamed Circle.", 'success');
+  });
+
+  it('a null circle in the response falls back to the looked-up circle', async () => {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) => opts?.onSuccess?.(INVITE));
+    acceptMutate.mockImplementation((_code, opts) =>
+      opts?.onSuccess?.({ ...ACCEPT_RESULT, circle: null })
+    );
+    const { onJoined } = renderModal();
+
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByText("Rose's Circle");
+    await user.click(screen.getByRole('button', { name: 'Join circle' }));
+
+    await waitFor(() => expect(onJoined).toHaveBeenCalledWith('circle-1'));
+    expect(showToast).toHaveBeenCalledWith("You've joined Rose's Circle.", 'success');
   });
 
   it('does NOT report onboarding completion when the accept fails', async () => {
@@ -574,7 +618,7 @@ describe('JoinCircleModal — double-submit guard', () => {
         opts?.onSettled?.();
       })
       .mockImplementationOnce((_code, opts) => {
-        opts?.onSuccess?.();
+        opts?.onSuccess?.(ACCEPT_RESULT);
         opts?.onSettled?.();
       });
     const { onJoined } = renderModal();

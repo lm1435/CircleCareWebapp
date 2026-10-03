@@ -28,7 +28,7 @@ export function EmergencySection({
       className={['scroll-mt-28', className].filter(Boolean).join(' ')}
     >
       {/* Matches the accordion section-header treatment so always-visible
-          sections (Code Status) and collapsible ones read with one consistent
+          sections and collapsible ones read with one consistent
           section-title style. */}
       <Text variant="h2" as="h2" id={`${id}-heading`} className="mb-3">
         {title}

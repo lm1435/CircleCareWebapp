@@ -3,15 +3,13 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { AdditionalDoctor, EmergencyContact, EmergencyInfo, InsurancePlan } from '@/api/emergencyInfo';
 import {
+  CareSummaryShareDialog,
   ContactCard,
-  DirectivesCard,
   DoctorCard,
   EditContactModal,
   EditDoctorModal,
   EditInsuranceModal,
   EditMedicalInfoModal,
-  EmergencySection,
-  EmptySection,
   GlanceTiles,
   InsuranceCard,
   RecipientHeader,
@@ -19,11 +17,11 @@ import {
 // Not (yet) re-exported from the barrel above — see EmergencySection.tsx.
 import { EmergencyAccordionSection } from '@/components/emergency/EmergencySection';
 import {
-  filterOutIndex,
-  toRequestContacts,
-  toRequestPlans,
+  buildEmergencyDelete,
   useUpdateEmergencyInfo,
+  type EmergencyDeleteTarget,
 } from '@/hooks/useEmergencyInfo';
+import { getEmergencyInfoConflict } from '@/lib/apiErrors';
 import {
   Button,
   CHIP_BASE,
@@ -46,9 +44,11 @@ import '@/styles/print.css';
 
 // PHI page: never log the payload, never attach any of it to analytics.
 
-// Advance directives are hidden for launch (mirror of mobile). Flip to true to
-// surface the EditDirectivesModal + Edit affordance on the directives section.
-const DIRECTIVES_EDIT_ENABLED = false;
+// Code status / advance directives (`has_dnr`, `advance_directives`,
+// `dnr_document_url`) are NOT shown or editable on web (product decision
+// 2026-09-29, docs/plans/mobile-web-decisions-2026-09-29.md T1; mobile hides the
+// same section). The stored values are kept: every edit modal on this page
+// sends a partial PUT that never names those keys, so a save leaves them as-is.
 
 const SKELETON_SECTIONS = [0, 1, 2];
 
@@ -60,18 +60,14 @@ const SECTIONS = [
   { id: 'doctors', key: 'doctors' },
   { id: 'contacts', key: 'contacts' },
   { id: 'insurance', key: 'insurance' },
-  { id: 'directives', key: 'directives' },
 ] as const;
 
-// The three sections that live inside collapsible accordions. Code Status
-// ('directives') is intentionally excluded — it stays always-visible.
+// The three sections that live inside collapsible accordions.
 const COLLAPSIBLE_SECTION_IDS = ['doctors', 'contacts', 'insurance'];
 
 // Print break-avoidance for one section inside the `.emergency-sections`
 // masonry (spec §6.6). Applied on a plain wrapper div rather than
-// `Accordion`'s own `<section>` (it has no `className` prop) — see
-// `EmergencySection`'s own `className` prop for the one section this page
-// owns directly.
+// `Accordion`'s own `<section>` (it has no `className` prop).
 const SECTION_WRAP_CLASS = 'mb-10 break-inside-avoid lg:mt-0';
 
 // Open-modal descriptor. `target` is the doctor target ('primary' | index |
@@ -82,30 +78,12 @@ type OpenModal =
   | { kind: 'insurance'; index?: number }
   | { kind: 'medical' };
 
-/**
- * Mobile's privacy notice is two paragraphs joined by "\n\n" (the string is
- * copied verbatim into `careSummary.privacy.message`). A plain string in
- * `ConfirmDialog` collapses the break, so it is split into `<p>`s here — the
- * same content, laid out the way the native alert shows it.
- */
-function PrivacyMessage({ text }: { text: string }): ReactElement {
-  return (
-    <>
-      {text.split(/\n\s*\n/).map((paragraph, index) => (
-        <p key={index} className={index === 0 ? 'm-0' : 'mb-0 mt-3'}>
-          {paragraph}
-        </p>
-      ))}
-    </>
-  );
-}
-
-// Pending delete descriptor (per-item, confirmed via ConfirmDialog).
-type PendingDelete =
-  | { kind: 'doctor-primary' }
-  | { kind: 'doctor'; index: number }
-  | { kind: 'contact'; index: number }
-  | { kind: 'insurance'; index: number };
+// Pending delete descriptor (per-item, confirmed via ConfirmDialog). `base` is the
+// emergency-info snapshot the list was rendered from when the user picked Delete:
+// the delete is built from IT (array and versions together), never from the live
+// cache, so a refetch under the open confirm cannot re-point `index` at another
+// entry. See buildEmergencyDelete in hooks/useEmergencyInfo.
+type PendingDelete = EmergencyDeleteTarget & { base: EmergencyInfo | null };
 
 // One row of the doctors accordion: the primary doctor (flat fields on
 // `EmergencyInfo`, at most one) or an entry from `additional_doctors` (needs
@@ -155,10 +133,6 @@ function hasContacts(info: EmergencyInfo): boolean {
 
 function hasInsurance(info: EmergencyInfo): boolean {
   return (info.insurance_plans?.length ?? 0) > 0;
-}
-
-function hasDirectives(info: EmergencyInfo): boolean {
-  return info.has_dnr !== null && info.has_dnr !== undefined ? true : !!info.advance_directives;
 }
 
 /**
@@ -236,7 +210,7 @@ export default function EmergencyInfoPage(): ReactElement {
   // Circle detail carries the recipient's photo, DOB, and conditions — the
   // GET /circles list does NOT. (verified: src/api/circleMembers.ts)
   const { data: circleDetail } = useCircleMembers(circleId);
-  const { canEdit } = useCircle(circleId);
+  const { canEdit, timezone: careRecipientTimezone } = useCircle(circleId);
   const update = useUpdateEmergencyInfo(circleId);
   // Gathers circle, emergency info and the medication window itself at
   // export time (fresh cache reused), so nothing PHI-shaped is threaded here.
@@ -246,9 +220,8 @@ export default function EmergencyInfoPage(): ReactElement {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
-  // Collapsible (accordion) sections — expanded by default. Code Status stays
-  // always-visible, so it's NOT in this group. The at-a-glance summary + the
-  // recipient header are always visible too.
+  // Collapsible (accordion) sections — expanded by default. The at-a-glance
+  // summary + the recipient header are always visible.
   const accordion = useAccordionGroup(COLLAPSIBLE_SECTION_IDS, { defaultOpen: true });
 
   const recipientName =
@@ -296,61 +269,35 @@ export default function EmergencyInfoPage(): ReactElement {
 
   // Resolves when the print dialog has been requested; the hook never
   // rejects (failures toast + set its `error`). The dialog closes either way.
-  const confirmExport = async (): Promise<void> => {
+  // `options` carries the share sheet's two switches (task 30).
+  const confirmExport = async (options: {
+    includeVisitNotes: boolean;
+    includeCareNotes: boolean;
+  }): Promise<void> => {
     try {
-      await exportPdf();
+      await exportPdf(options);
     } finally {
       setPrivacyOpen(false);
     }
   };
 
+  // Freeze what the user is looking at the moment they pick Delete (`info` is the
+  // data this render's list was built from).
+  const askDelete = (target: EmergencyDeleteTarget): void =>
+    setPendingDelete({ ...target, base: info ?? null });
+
   const confirmDelete = (): void => {
     if (!pendingDelete) return;
     const onSuccess = () => setPendingDelete(null);
-    switch (pendingDelete.kind) {
-      case 'doctor-primary':
-        update.mutate(
-          {
-            primary_doctor_name: null,
-            primary_doctor_specialty: null,
-            primary_doctor_phone: null,
-            primary_doctor_address: null,
-          },
-          { onSuccess }
-        );
-        break;
-      case 'doctor':
-        update.mutate(
-          {
-            additional_doctors: filterOutIndex(
-              info?.additional_doctors ?? [],
-              pendingDelete.index
-            ),
-          },
-          { onSuccess }
-        );
-        break;
-      case 'contact':
-        update.mutate(
-          {
-            emergency_contacts: toRequestContacts(
-              filterOutIndex(info?.emergency_contacts ?? [], pendingDelete.index)
-            ),
-          },
-          { onSuccess }
-        );
-        break;
-      case 'insurance':
-        update.mutate(
-          {
-            insurance_plans: toRequestPlans(
-              filterOutIndex(info?.insurance_plans ?? [], pendingDelete.index)
-            ),
-          },
-          { onSuccess }
-        );
-        break;
-    }
+    // PK5: a 409 means the section changed under us; the hook toasts + reloads,
+    // so drop the stale confirm (the list behind it now shows the latest).
+    const cbs = {
+      onSuccess,
+      onError: (err: unknown) => {
+        if (getEmergencyInfoConflict(err)) setPendingDelete(null);
+      },
+    };
+    update.mutate(buildEmergencyDelete(pendingDelete.base, pendingDelete), cbs);
   };
 
   const deleteCopy: Record<PendingDelete['kind'], { title: string; message: string }> = {
@@ -412,9 +359,8 @@ export default function EmergencyInfoPage(): ReactElement {
         doctors: hasDoctors(info),
         contacts: hasContacts(info),
         insurance: hasInsurance(info),
-        directives: hasDirectives(info),
       }
-    : { doctors: false, contacts: false, insurance: false, directives: false };
+    : { doctors: false, contacts: false, insurance: false };
 
   // Header counts for the accordion meta slot (e.g. number of doctors).
   const doctorCount =
@@ -452,7 +398,7 @@ export default function EmergencyInfoPage(): ReactElement {
         address={row.primary_doctor_address}
         isPrimary
         onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: 'primary' }) : undefined}
-        onDelete={canEdit ? () => setPendingDelete({ kind: 'doctor-primary' }) : undefined}
+        onDelete={canEdit ? () => askDelete({ kind: 'doctor-primary' }) : undefined}
       />
     ) : (
       <DoctorCard
@@ -462,7 +408,7 @@ export default function EmergencyInfoPage(): ReactElement {
         countryCode={row.doctor.country_code}
         address={row.doctor.address}
         onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: row.index }) : undefined}
-        onDelete={canEdit ? () => setPendingDelete({ kind: 'doctor', index: row.index }) : undefined}
+        onDelete={canEdit ? () => askDelete({ kind: 'doctor', index: row.index }) : undefined}
       />
     );
 
@@ -475,7 +421,7 @@ export default function EmergencyInfoPage(): ReactElement {
       countryCode={contact.country_code}
       isPrimary={contact.is_primary}
       onEdit={canEdit ? () => setOpenModal({ kind: 'contact', index }) : undefined}
-      onDelete={canEdit ? () => setPendingDelete({ kind: 'contact', index }) : undefined}
+      onDelete={canEdit ? () => askDelete({ kind: 'contact', index }) : undefined}
     />
   );
 
@@ -484,7 +430,7 @@ export default function EmergencyInfoPage(): ReactElement {
     <InsuranceCard
       plan={plan}
       onEdit={canEdit ? () => setOpenModal({ kind: 'insurance', index }) : undefined}
-      onDelete={canEdit ? () => setPendingDelete({ kind: 'insurance', index }) : undefined}
+      onDelete={canEdit ? () => askDelete({ kind: 'insurance', index }) : undefined}
     />
   );
 
@@ -663,18 +609,6 @@ export default function EmergencyInfoPage(): ReactElement {
                 emptyMessage={t('empty.insurance')}
               />
             </div>
-
-            <EmergencySection
-              id="directives"
-              title={t('sections.directives')}
-              className={SECTION_WRAP_CLASS}
-            >
-              {sectionHasData.directives && info ? (
-                <DirectivesCard hasDnr={!!info.has_dnr} directives={info.advance_directives} />
-              ) : (
-                <EmptySection message={t('empty.directives')} />
-              )}
-            </EmergencySection>
           </div>
         </div>
       </div>
@@ -712,23 +646,19 @@ export default function EmergencyInfoPage(): ReactElement {
         />
       )}
 
-      {/* DIRECTIVES_EDIT_ENABLED is false (hidden for launch, mirror of mobile).
-          When flipped on, an Edit affordance + EditDirectivesModal mount here. */}
-      {DIRECTIVES_EDIT_ENABLED && null}
-
-      {/* ── Privacy confirm before the care summary is generated (mobile's
-          `emergency.privacy.*` copy, verbatim). `loading` keeps the dialog's
-          focus trap in place while the document is built; focus returns to the
-          Share control when it closes (Modal restores the opener). ── */}
+      {/* ── Share sheet before the care summary is generated (notes-first-class
+          plan, task 30 — replaces the old plain privacy confirm): the SAME
+          privacy sentence, plus "Include visit notes" (default ON) /
+          "Include daily care notes" (default OFF) and a live count line.
+          `isSharing` keeps the dialog's focus trap in place while the
+          document is built; focus returns to the Share control when it
+          closes (Modal restores the opener). ── */}
       {privacyOpen && (
-        <ConfirmDialog
-          title={t('careSummary.privacy.title')}
-          message={<PrivacyMessage text={t('careSummary.privacy.message')} />}
-          confirmLabel={t('careSummary.privacy.confirm')}
-          cancelLabel={t('careSummary.privacy.cancel')}
-          loading={isExporting}
-          loadingLabel={t('careSummary.generating')}
-          onConfirm={confirmExport}
+        <CareSummaryShareDialog
+          circleId={circleId}
+          careRecipientTimezone={careRecipientTimezone}
+          isSharing={isExporting}
+          onShare={confirmExport}
           onCancel={() => setPrivacyOpen(false)}
         />
       )}

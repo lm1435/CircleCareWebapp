@@ -7,7 +7,8 @@ import {
 } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { queryKeys } from '@/lib/queryKeys';
-import { getCurrentUser } from '@/api/users';
+import { getCurrentUser, refreshSubscriptionStatus } from '@/api/users';
+import { devError } from '@/constants/config';
 import {
   getWebOffering,
   purchasePackage,
@@ -65,6 +66,16 @@ export function usePurchasePlan(): UseMutationResult<void, Error, WebPlan> {
       await purchasePackage(user.id, plan.rcPackage, email || undefined);
     },
     onSuccess: async () => {
+      // Re-sync the cached tier with RevenueCat BEFORE refetching: the status
+      // read and every write gate use the cached `users.plan_tier`, which only
+      // the RC webhook writes, so refetching first re-caches `free`. Mirrors
+      // mobile/src/utils/entitlementSync.ts. A failed sync must never report
+      // the (already paid) purchase as failed; the webhook is the backstop.
+      try {
+        await refreshSubscriptionStatus();
+      } catch (err) {
+        devError('Entitlement sync failed; falling back to the webhook:', err);
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.subscriptionStatus }),
         queryClient.invalidateQueries({ queryKey: queryKeys.circles }),

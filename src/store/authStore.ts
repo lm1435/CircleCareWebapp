@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import { onSessionEnded, reconcileDrafts, saveDraftsForForcedSignOut } from '@/lib/sessionDraft';
 import { resetRefreshState, setOnAuthFailure, apiClient } from '@/lib/api';
 import { tokenAccessor } from '@/lib/tokenAccessor';
+import { markForcedSignOut, clearForcedSignOut } from '@/lib/forcedSignOut';
 import { queryClient } from '@/lib/queryClient';
 import { authApi, type AuthSession, type AuthUser } from '@/api/auth';
 import { getCurrentUser } from '@/api/users';
@@ -159,6 +161,9 @@ function clearLocalSession(): void {
   // callback pages PEEK the code and forward to /invite/:code, which consumes
   // it on any authenticated arrival).
   clearPendingInviteCode();
+  // PK9: saved form drafts survive ONLY a forced sign-out (the handler below
+  // marks it); an explicit or cross-tab sign-out purges them here.
+  onSessionEnded();
   // Drop the analytics identity so the next user on a shared device starts
   // fresh (no-op when PostHog isn't initialized).
   resetAnalytics();
@@ -214,6 +219,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isBootstrapping: true,
 
   signIn: (session, user) => {
+    clearForcedSignOut();
     // Clear any stale refresh locks from a previous session (mirrors mobile).
     resetRefreshState();
     tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
@@ -226,6 +232,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     // account arriving, and must hold whether or not analytics is configured
     // at all (`identifyUser` returns early with no VITE_POSTHOG_KEY).
     reconcileAnalyticsConsentOwner(user.id);
+    // PK9: a saved draft belongs to one user only; anyone else's is dropped.
+    reconcileDrafts(user.id);
     // IDENTIFY IS DEFERRED behind the account's OWN recorded answer.
     //
     // The owner check above settles whose the BROWSER's answer is. It cannot
@@ -291,6 +299,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         // identifying here too, or the fix is bypassed by the commonest way
         // this app authenticates (reloading the page). See `signIn`.
         reconcileAnalyticsConsentOwner(user.id);
+        reconcileDrafts(user.id);
         // Same deferral as `signIn`, but FREE here: `user` is the `/users/me`
         // document this path just fetched, and it already carries
         // `analytics_consent_withdrawn_at` / `analytics_consent_granted_at`.
@@ -379,4 +388,11 @@ getAuthChannel();
 
 // When a 401 survives the deduplicated refresh, the API client clears the
 // token and calls this — full sign-out also clears the stale cookie.
-setOnAuthFailure(() => useAuthStore.getState().signOut());
+setOnAuthFailure(() => {
+  // PK9: this is the FORCED path (refresh failed). Save open forms' drafts to
+  // sessionStorage while the user id is still attached.
+  // In-flight saves' error toasts are dropped (lib/forcedSignOut).
+  markForcedSignOut();
+  saveDraftsForForcedSignOut(useAuthStore.getState().user?.id);
+  return useAuthStore.getState().signOut();
+});

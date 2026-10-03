@@ -5,8 +5,14 @@
  * script.
  */
 import type { PdfEnv } from './env';
-import type { PdfCalendarEvent, PdfEmergencyInfo } from './types';
+import type {
+  PdfCalendarEvent,
+  PdfEmergencyInfo,
+  CareSummaryVisitNote,
+  CareSummaryCareNote,
+} from './types';
 import { PDF_PALETTE as CC } from './palette';
+import { isMedicationSeriesEnded } from './medicationSelection';
 import {
   getSharedPdfStyles,
   displayValue,
@@ -30,6 +36,13 @@ export interface CareSummaryTemplateOptions {
   /** Display name of the person who generated the export, for the header's
    *  "Prepared by" line. Omitted (not printed) when unavailable. */
   preparedBy?: string;
+  /** Appointment/task/dose notes for the "Visit notes" section. Omitted or
+   *  empty prints no section at all (never an empty-state row — this section
+   *  is opt-in via the share sheet's switch, unlike the sections above). */
+  visitNotes?: CareSummaryVisitNote[];
+  /** Daily Care Notes journal entries for the "Daily care notes" section.
+   *  Same omit-when-empty rule as {@link visitNotes}. */
+  careNotes?: CareSummaryCareNote[];
 }
 
 /** One row of the medications table/list: every scheduled event sharing a
@@ -41,7 +54,7 @@ interface MedicationGroup {
   dosage: string | null;
   /** Raw `HH:MM` scheduled times, recipient zone, insertion order, deduped. */
   times: string[];
-  /** One event per DISTINCT raw recurrence rule across the group, insertion
+  /** One event per DISTINCT raw recurrence rule + weekday set across the group, insertion
    *  order — formatted (and deduped again on their TEXT) at render time, since
    *  two different raw rules can format to the same label. The whole event is
    *  kept, not just the rule, because `env.formatRecurrence` may also read
@@ -53,6 +66,31 @@ interface MedicationGroup {
   /** True when this group is a discontinued series. Stopped medications print
    *  in their own table below the current ones, never mixed in. */
   stopped: boolean;
+}
+
+/**
+ * Distinctness key for `recurrenceSources`: raw rule + normalized weekdays
+ * (0=Sun..6=Sat, sorted, deduped; null when absent/empty). The rule ALONE
+ * collapsed two weekly series on different days (Mon/Wed vs Tue/Thu) into one
+ * source, so the Frequency column printed only the first one's days.
+ */
+function recurrenceKey(e: PdfCalendarEvent): string {
+  const days =
+    e.recurrence_days && e.recurrence_days.length > 0
+      ? Array.from(new Set(e.recurrence_days)).sort((a, b) => a - b).join(',')
+      : null;
+  return `${e.recurrence_rule ?? ''}|${days ?? 'null'}`;
+}
+
+/**
+ * Stopped = discontinued, OR a recurring course that ended through its
+ * `recurrence_end_date` ("This and future", PK26). The second kind has no
+ * `discontinued_at`, so it was in no table at all before. Same "ended" definition as the
+ * roster and the selection (`isMedicationSeriesEnded`).
+ */
+function isStoppedMedication(m: PdfCalendarEvent): boolean {
+  if (m.discontinued_at) return true;
+  return Boolean(m.recurrence_rule) && isMedicationSeriesEnded(m);
 }
 
 /**
@@ -70,7 +108,7 @@ function groupMedications(medications: PdfCalendarEvent[]): MedicationGroup[] {
   for (const m of medications) {
     const name = m.medication_name || m.title;
     const dosage = m.medication_dosage || null;
-    const stopped = Boolean(m.discontinued_at);
+    const stopped = isStoppedMedication(m);
     const key = `${stopped ? 'stopped' : 'active'} ${name} ${dosage ?? ''}`;
 
     let group = groups.get(key);
@@ -84,13 +122,36 @@ function groupMedications(medications: PdfCalendarEvent[]): MedicationGroup[] {
     }
     if (
       m.recurrence_rule &&
-      !group.recurrenceSources.some((e) => e.recurrence_rule === m.recurrence_rule)
+      !group.recurrenceSources.some((e) => recurrenceKey(e) === recurrenceKey(m))
     ) {
       group.recurrenceSources.push(m);
     }
   }
 
   return order.map((key) => groups.get(key)!);
+}
+
+/**
+ * `notes.moods.<mood>` as a literal PER BRANCH, never
+ * `t(\`notes.moods.${mood}\`)` — the mobile i18n coverage ratchet
+ * (`translationKeyCoverage.test.ts`) pins the count of DYNAMIC `t(var)` call
+ * sites, which a templated key is invisible to. `components/notes/
+ * MoodWeekStrip.tsx` hit exactly this and deliberately uses a `switch` over
+ * the 4 literal mood keys for the same reason — mirrored here.
+ */
+function careNoteMoodLabel(mood: 'great' | 'good' | 'okay' | 'tough' | null, env: PdfEnv): string {
+  switch (mood) {
+    case 'great':
+      return env.t('notes.moods.great');
+    case 'good':
+      return env.t('notes.moods.good');
+    case 'okay':
+      return env.t('notes.moods.okay');
+    case 'tough':
+      return env.t('notes.moods.tough');
+    default:
+      return '';
+  }
 }
 
 /** The group's Time column: every scheduled time, recipient zone, joined. */
@@ -149,7 +210,7 @@ function formatStoppedLabel(
   careRecipientTimezone: string,
   env: PdfEnv
 ): string {
-  if (!m.discontinued_at) return '';
+  if (!isStoppedMedication(m)) return '';
   return env.t('careSummary.fields.stopped', {
     date: formatStoppedDate(m, careRecipientTimezone, env),
   });
@@ -158,7 +219,9 @@ function formatStoppedLabel(
 /** The bare stop date (no "Stopped" prefix) for a column already titled
  *  "Stopped". Same recipient-zone day resolution as {@link formatStoppedLabel}. */
 function formatStoppedDate(m: PdfCalendarEvent, careRecipientTimezone: string, env: PdfEnv): string {
-  if (!m.discontinued_at) return '';
+  // An ended course prints its `recurrence_end_date` exactly: it is already a naive
+  // recipient-frame date, so no zone resolution (which would shift it in far zones).
+  if (!m.discontinued_at) return m.recurrence_end_date ? formatDateForPdf(m.recurrence_end_date, env.locale) : '';
   const day = env.getDateInTimezone(careRecipientTimezone, new Date(m.discontinued_at));
   return formatDateForPdf(day, env.locale);
 }
@@ -335,16 +398,11 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
     })
     .join('');
 
-  // Code status. `has_dnr` is a real, deliberately set flag (EditDirectives);
-  // its default-false is NOT evidence of "no DNR", so nothing prints for
-  // false. Free-text directives print in full when present.
-  const directiveNotes = emergencyInfo?.advance_directives?.trim() || '';
-  const codeStatusBlock = emergencyInfo?.has_dnr || directiveNotes
-    ? `<div class="directives-box">
-        ${emergencyInfo?.has_dnr ? `<div class="directives-row"><span class="directives-label">${escapeHtml(t('careSummary.fields.codeStatus'))}:</span> <strong>${escapeHtml(t('careSummary.fields.dnrOnFile'))}</strong></div>` : ''}
-        ${directiveNotes ? `<div class="directives-row"><span class="directives-label">${escapeHtml(t('careSummary.fields.advanceDirectives'))}:</span> ${escapeHtml(directiveNotes)}</div>` : ''}
-      </div>`
-    : '';
+  // Code status / advance directives (`has_dnr`, `advance_directives`) are
+  // deliberately NOT printed (product decision 2026-09-29,
+  // docs/plans/mobile-web-decisions-2026-09-29.md T1): neither app shows or
+  // edits them any more, so the document must not surface a value nobody can
+  // see or correct. The stored data is kept (data export still carries it).
 
   // Allergy info — lives in the Care recipient section now (see item 8), not
   // beneath the medications table.
@@ -360,6 +418,68 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
     : `<div class="no-allergies">${escapeHtml(t('careSummary.empty.noAllergies'))}</div>`;
 
   const emptyRow = (msg: string, cols: number) => `<tr><td colspan="${cols}" style="text-align:center;color:${CC.inkMute};padding:12px">${escapeHtml(msg)}</td></tr>`;
+
+  // 6/7. Visit notes / Daily care notes — opt-in via the share sheet's two
+  // switches (never counted as "empty" data like the sections above): when
+  // the array is missing or empty, no section prints at all, not even a
+  // "no notes" row. Every value is user-authored free text, so every one of
+  // them goes through `escapeHtml`.
+  const visitNotes = options.visitNotes ?? [];
+  const careNotes = options.careNotes ?? [];
+  const visitNoteRows = visitNotes
+    .map((n) => `
+      <tr>
+        <td class="nowrap">${escapeHtml(formatDateForPdf(n.date, locale))}${n.authorFirstName ? `<span class="sub">${escapeHtml(n.authorFirstName)}</span>` : ''}</td>
+        <td><strong>${escapeHtml(n.eventTitle)}</strong><br/>${escapeHtml(n.body)}</td>
+      </tr>`)
+    .join('');
+  const visitNotesSection = visitNotes.length > 0
+    ? `
+  <!-- 6. Visit notes (opt-in) -->
+  <section aria-labelledby="section-visit-notes" class="${keepShort(visitNotes.length)}">
+    <h2 id="section-visit-notes">${escapeHtml(t('careSummary.sections.visitNotes'))}</h2>
+    <table role="table" aria-label="${escapeHtml(t('careSummary.sections.visitNotes'))}">
+      <caption class="visually-hidden">${escapeHtml(t('careSummary.sections.visitNotes'))}</caption>
+      <thead>
+        <tr>
+          <th scope="col">${escapeHtml(t('careSummary.fields.date'))}</th>
+          <th scope="col">${escapeHtml(t('careSummary.fields.note'))}</th>
+        </tr>
+      </thead>
+      <tbody>${visitNoteRows}</tbody>
+    </table>
+  </section>`
+    : '';
+  const careNoteRows = careNotes
+    .map((n) => {
+      const moodText = careNoteMoodLabel(n.mood, env);
+      const moodLabel = moodText ? `<strong>${escapeHtml(moodText)}</strong>` : '';
+      const body = n.body ? escapeHtml(n.body) : '';
+      const content = [moodLabel, body].filter(Boolean).join('<br/>');
+      return `
+      <tr>
+        <td class="nowrap">${escapeHtml(formatDateForPdf(n.date, locale))}${n.authorFirstName ? `<span class="sub">${escapeHtml(n.authorFirstName)}</span>` : ''}</td>
+        <td>${content}</td>
+      </tr>`;
+    })
+    .join('');
+  const careNotesSection = careNotes.length > 0
+    ? `
+  <!-- 7. Daily care notes (opt-in) -->
+  <section aria-labelledby="section-care-notes" class="${keepShort(careNotes.length)}">
+    <h2 id="section-care-notes">${escapeHtml(t('careSummary.sections.careNotes'))}</h2>
+    <table role="table" aria-label="${escapeHtml(t('careSummary.sections.careNotes'))}">
+      <caption class="visually-hidden">${escapeHtml(t('careSummary.sections.careNotes'))}</caption>
+      <thead>
+        <tr>
+          <th scope="col">${escapeHtml(t('careSummary.fields.date'))}</th>
+          <th scope="col">${escapeHtml(t('careSummary.fields.note'))}</th>
+        </tr>
+      </thead>
+      <tbody>${careNoteRows}</tbody>
+    </table>
+  </section>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="${langCode}">
@@ -401,17 +521,6 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
     .allergy-row { margin-bottom: 4px; font-size: 12px; color: ${CC.ink}; }
     .allergy-row:last-child { margin-bottom: 0; }
     .allergy-label { font-weight: 700; color: ${CC.terracotta}; }
-    .directives-box {
-      border: 1px solid ${CC.hairStrong};
-      border-left: 3px solid ${CC.terracotta};
-      border-radius: 6px;
-      padding: 8px 14px;
-      margin-top: 10px;
-      page-break-inside: avoid;
-    }
-    .directives-row { font-size: 12px; color: ${CC.ink}; margin-bottom: 4px; }
-    .directives-row:last-child { margin-bottom: 0; }
-    .directives-label { font-weight: 700; color: ${CC.terracotta}; }
     /* Identifiers and phone numbers must never break mid-number: an iOS export wrapped
        "(800) 633-4227" onto three lines, which also pushed the footer onto a page of
        its own. The carrier column takes the wrapping instead. */
@@ -435,7 +544,7 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
   <main>
   <!-- 1. Patient Info. Name and DOB are already the header; this block
        carries only what the header does not: conditions, blood type,
-       allergies and code status — the facts a first responder scans for. -->
+       allergies — the facts a first responder scans for. -->
   <section aria-labelledby="section-patient" class="keep-together">
     <h2 id="section-patient">${t('careSummary.sections.careRecipient')}</h2>
     ${recipientConditions?.length || emergencyInfo?.blood_type ? `
@@ -452,11 +561,10 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
       </div>` : ''}
     </div>` : ''}
     ${allergySection}
-    ${codeStatusBlock}
   </section>
 
   <!-- 2. Emergency Contacts — directly under the patient block so the people
-       to call are on page one, next to the allergies and code status. -->
+       to call are on page one, next to the allergies. -->
   <section aria-labelledby="section-contacts" class="${keepShort((emergencyInfo?.emergency_contacts || []).length)}">
     <h2 id="section-contacts">${t('careSummary.sections.emergencyContacts')}</h2>
     <table role="table" aria-label="${t('careSummary.sections.emergencyContacts')}">
@@ -522,6 +630,8 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
       <tbody>${insuranceRows || emptyRow(t('careSummary.empty.noInsurance'), 4)}</tbody>
     </table>
   </section>
+  ${visitNotesSection}
+  ${careNotesSection}
   </main>
 
   <footer class="footer">
@@ -533,7 +643,7 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
 }
 
 export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: PdfEnv): string {
-  const { recipientName, recipientDob, recipientConditions, emergencyInfo, medications, careRecipientTimezone } = options;
+  const { recipientName, recipientDob, recipientConditions, emergencyInfo, medications, careRecipientTimezone, visitNotes, careNotes } = options;
   const { t, locale } = env;
 
   const lines: string[] = [];
@@ -567,12 +677,7 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
   if (!emergencyInfo?.medication_allergies?.length && !emergencyInfo?.allergies?.length) {
     lines.push(t('careSummary.empty.noAllergies'));
   }
-  if (emergencyInfo?.has_dnr) {
-    lines.push(`${t('careSummary.fields.codeStatus')}: ${t('careSummary.fields.dnrOnFile')}`);
-  }
-  if (emergencyInfo?.advance_directives?.trim()) {
-    lines.push(`${t('careSummary.fields.advanceDirectives')}: ${emergencyInfo.advance_directives.trim()}`);
-  }
+  // Code status / advance directives: never printed (see the HTML variant).
 
   // 2. Emergency Contacts — same position as the PDF: right after the
   // patient's own facts.
@@ -658,6 +763,32 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
     });
   } else {
     lines.push(t('careSummary.empty.noInsurance'));
+  }
+
+  // 6. Visit notes (opt-in — omitted entirely when there is nothing to show,
+  // unlike the sections above).
+  if (visitNotes && visitNotes.length > 0) {
+    lines.push(`\n${t('careSummary.sections.visitNotes')}`);
+    lines.push(divider);
+    visitNotes.forEach((n) => {
+      const date = formatDateForPdf(n.date, locale);
+      const author = n.authorFirstName ? ` (${n.authorFirstName})` : '';
+      lines.push(`${date}${author} — ${n.eventTitle}`);
+      lines.push(`  ${n.body}`);
+    });
+  }
+
+  // 7. Daily care notes (opt-in, same omit-when-empty rule).
+  if (careNotes && careNotes.length > 0) {
+    lines.push(`\n${t('careSummary.sections.careNotes')}`);
+    lines.push(divider);
+    careNotes.forEach((n) => {
+      const date = formatDateForPdf(n.date, locale);
+      const author = n.authorFirstName ? ` (${n.authorFirstName})` : '';
+      const mood = careNoteMoodLabel(n.mood, env);
+      lines.push(`${date}${author}${mood ? ` — ${mood}` : ''}`);
+      if (n.body) lines.push(`  ${n.body}`);
+    });
   }
 
   // Footer

@@ -113,6 +113,20 @@ describe('AppLayout', () => {
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main');
   });
 
+  // a11y audit 2026-09-29. WCAG 1.4.10: the root grid needs an explicit
+  // 0-min column, or its implicit auto track grows to the header's
+  // min-content (334px) and the overflow-x-clip cuts off the right edge at a
+  // 320px viewport. WCAG 2.4.11: the skip link is `focus:fixed`, so it is on
+  // screen when focused from anywhere on a scrolled page (absolute put it at
+  // the document top, off-screen).
+  it('clamps the root grid column and pins the focused skip link to the viewport', () => {
+    renderLayout();
+    const skip = document.body.querySelector('a') as HTMLAnchorElement;
+    expect(skip.parentElement?.className).toContain('grid-cols-[minmax(0,1fr)]');
+    expect(skip.className).toContain('focus:fixed');
+    expect(skip.className).not.toContain('focus:absolute');
+  });
+
   it('R4-5: reports the resolved circle count to the onboarding funnel on deep links', () => {
     renderLayout();
 

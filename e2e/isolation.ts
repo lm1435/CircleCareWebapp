@@ -466,12 +466,20 @@ export async function createAccount(email: string, tier: PlanTier = 'premium'): 
         `on_auth_user_created trigger may be missing from this database.`
     );
   }
+  // `language_set_at` is stamped with the language. A NULL stamp means "never
+  // decided" to the backend, so the account's FIRST session-established call
+  // overwrites `language` with the browser's (routes/auth.ts). A spec that runs
+  // with `locale: 'es'` (a11y-wcag22's Spanish block, i18n-spanish, ...) as a
+  // worker slot's first test then flipped that slot's account to Spanish for the
+  // rest of the run, and later English specs on the slot failed on Spanish UI
+  // (targeted e2e 10-02: ai, members-remove, emergency-arrays, ai-entry control).
   sqlExec(`
     update public.users
        set first_name = 'E2E',
            last_name  = ${sqlStr(email.replace(/@.*$/, ''))},
            timezone   = 'America/Denver',
            language   = 'en',
+           language_set_at = now(),
            plan_tier  = ${sqlStr(tier)},
            terms_accepted_at = coalesce(terms_accepted_at, now()),
            welcome_email_sent = true,

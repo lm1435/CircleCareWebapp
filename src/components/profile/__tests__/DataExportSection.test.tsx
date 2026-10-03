@@ -20,6 +20,16 @@ vi.mock('@/api/users', async (importOriginal) => {
 
 const mockedExport = vi.mocked(exportUserData);
 
+// Parity with mobile's Analytics.dataExportDownloaded (same event name, no props).
+const mockDataExportDownloaded = vi.fn();
+vi.mock('@/lib/analytics', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/analytics')>();
+  return {
+    ...actual,
+    Analytics: { ...actual.Analytics, dataExportDownloaded: () => mockDataExportDownloaded() },
+  };
+});
+
 const createObjectURL = vi.fn(() => 'blob:mock-export');
 const revokeObjectURL = vi.fn();
 
@@ -81,6 +91,7 @@ describe('DataExportSection', () => {
     // Success toast in the polite live region.
     const toast = await screen.findByRole('status');
     expect(toast).toHaveTextContent('Your data export has been downloaded.');
+    expect(mockDataExportDownloaded).toHaveBeenCalledTimes(1);
   });
 
   it('disables the button with aria-busy and a progress label while exporting', async () => {
@@ -139,5 +150,6 @@ describe('DataExportSection', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent("We couldn't prepare your export. Please try again.");
     expect(createObjectURL).not.toHaveBeenCalled();
+    expect(mockDataExportDownloaded).not.toHaveBeenCalled();
   });
 });

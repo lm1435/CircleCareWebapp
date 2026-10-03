@@ -25,6 +25,7 @@ import {
   classifyFailureCode,
   isPermissionDeniedError,
   isStorageFullError,
+  isUnsupportedUploadError,
   isSubscriptionRequiredError,
 } from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
@@ -116,6 +117,10 @@ function useDocumentMutationOnError(circleId: string): (error: unknown) => void 
     } else if (isPermissionDeniedError(error)) {
       showToast(t('errors.permissionDenied'), 'error');
       invalidateCircleAccessFlags(queryClient, circleId);
+    } else if (isUnsupportedUploadError(error)) {
+      // PK19: backend 400 `details.reason` — a retry re-sends the same bytes,
+      // so name the file, not the connection. No refetch: nothing changed.
+      showToast(t('upload.unsupportedOrDamaged'), 'error');
     } else {
       showToast(t('errors.saveFailed'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.documents(circleId) });

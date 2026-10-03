@@ -41,6 +41,7 @@ export { computeVitalsSummary, VITAL_TYPE_LABEL_KEYS } from './vitalsSummary';
 export {
   selectCareSummaryMedications,
   collectStoppedSeries,
+  isMedicationSeriesEnded,
   addDaysToDateString,
   CARE_SUMMARY_MEDICATION_LOOKBACK_DAYS,
   type CareSummaryMedicationEvent,

@@ -3,8 +3,8 @@ import { getActivityFeed, type ActivityFeedPage } from '@/api/activityFeed';
 import { queryKeys } from '@/lib/queryKeys';
 
 // PORT of mobile/src/hooks/useActivityFeed.ts (Task 27): limit/offset
-// pagination via useInfiniteQuery. The next offset is the total number of
-// items fetched so far (backend contract: GET /circles/:circleId/activity).
+// pagination via useInfiniteQuery. The next offset is the last page's offset
+// plus its raw row count (backend contract: GET /circles/:circleId/activity).
 
 const DEFAULT_PAGE_SIZE = 30;
 
@@ -16,9 +16,16 @@ export function useActivityFeed(circleId: string, options?: { pageSize?: number 
     queryFn: ({ pageParam = 0 }) =>
       getActivityFeed(circleId, { limit: pageSize, offset: pageParam as number }),
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
+    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
       if (!lastPage.hasMore) return undefined;
-      return allPages.reduce((sum, page) => sum + page.activities.length, 0);
+      // The last page's OWN offset + its RAW length. Never a sum over
+      // `allPages`: `maxPages` below evicts the oldest cached pages, so that sum
+      // stops growing once the cap is hit (20 x 30 = 600) and the same page
+      // would be re-served forever. RAW length — rows flagged `note_missing`
+      // are hidden at RENDER time (components/activity/activityVisibility), never here: the
+      // backend's offset is a raw row offset, so counting only visible rows
+      // would re-serve rows.
+      return (lastPageParam as number) + lastPage.activities.length;
     },
     // Cap cached pages to bound memory growth (mirrors mobile, RQ v5).
     maxPages: 20,

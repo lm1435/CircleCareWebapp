@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
+import { useEarnedUpsell } from '@/hooks/useEarnedUpsell';
 import { Skeleton } from '@/components/ui';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { TodaysMeds } from '@/components/meds/TodaysMeds';
@@ -84,6 +85,12 @@ export default function OverviewPage(): ReactElement {
 
   const { circle, members, isLoading, timezone } = useCircle(circleId);
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
+
+  // PK28(1): the earned upsell. Asked HERE (arriving on the circle is a natural
+  // pause, never mid-care-action), only for the circle's OWNER (members never
+  // see a paywall) and never over the first-run wizard or the add-medication
+  // modal. The server decides eligibility and owns the shared cap/cooldown.
+  useEarnedUpsell(isOwner && firstRun === null && !showAddMed);
 
   return (
     <section className="mx-auto w-full max-w-5xl">

@@ -15,6 +15,7 @@ import iconCheckboxOutline from '../../../node_modules/ionicons/dist/svg/checkbo
 import iconCheckbox from '../../../node_modules/ionicons/dist/svg/checkbox.svg?raw';
 import iconSquareOutline from '../../../node_modules/ionicons/dist/svg/square-outline.svg?raw';
 import iconDocumentTextOutline from '../../../node_modules/ionicons/dist/svg/document-text-outline.svg?raw';
+import iconDocumentText from '../../../node_modules/ionicons/dist/svg/document-text.svg?raw';
 import iconPulseOutline from '../../../node_modules/ionicons/dist/svg/pulse-outline.svg?raw';
 import iconHeartOutline from '../../../node_modules/ionicons/dist/svg/heart-outline.svg?raw';
 import iconPeopleOutline from '../../../node_modules/ionicons/dist/svg/people-outline.svg?raw';
@@ -76,6 +77,7 @@ export const ICON_NAMES = [
   'checkbox',
   'square-outline',
   'document-text-outline',
+  'document-text',
   'pulse-outline',
   'heart-outline',
   'people-outline',
@@ -137,6 +139,7 @@ export const ICON_FILES: Record<IconName, string> = {
   checkbox: iconCheckbox,
   'square-outline': iconSquareOutline,
   'document-text-outline': iconDocumentTextOutline,
+  'document-text': iconDocumentText,
   'pulse-outline': iconPulseOutline,
   'heart-outline': iconHeartOutline,
   'people-outline': iconPeopleOutline,

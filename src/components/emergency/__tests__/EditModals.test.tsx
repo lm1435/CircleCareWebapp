@@ -16,7 +16,6 @@ import { updateEmergencyInfo, type EmergencyInfo } from '@/api/emergencyInfo';
 import { ToastProvider } from '@/components/ui';
 import {
   EditContactModal,
-  EditDirectivesModal,
   EditDoctorModal,
   EditInsuranceModal,
   EditMedicalInfoModal,
@@ -86,9 +85,6 @@ describe('emergency modals — null info guard', () => {
     ),
     EditMedicalInfoModal: (info: EmergencyInfo | null) => (
       <EditMedicalInfoModal circleId={CIRCLE_ID} info={info} onClose={vi.fn()} />
-    ),
-    EditDirectivesModal: (info: EmergencyInfo | null) => (
-      <EditDirectivesModal circleId={CIRCLE_ID} info={info} onClose={vi.fn()} />
     ),
   };
   const names = Object.keys(renderers) as (keyof typeof renderers)[];
@@ -488,7 +484,7 @@ describe('EditMedicalInfoModal — tag arrays via TagInput', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// DOUBLE SUBMIT. These five saves are read-modify-write PUTs computed from the
+// DOUBLE SUBMIT. These four saves are read-modify-write PUTs computed from the
 // same component state, so the second one is idempotent — this is the lowest-
 // severity member of the family, fixed for consistency and because "idempotent"
 // is a property of today's payloads, not of the form. What it does cost today
@@ -535,11 +531,6 @@ describe('emergency modals — double submit', () => {
       'EditMedicalInfoModal',
       'edit-medical-form',
       <EditMedicalInfoModal circleId={CIRCLE_ID} info={seeded} onClose={vi.fn()} />,
-    ],
-    [
-      'EditDirectivesModal',
-      'edit-directives-form',
-      <EditDirectivesModal circleId={CIRCLE_ID} info={seeded} onClose={vi.fn()} />,
     ],
   ];
 
@@ -704,5 +695,73 @@ describe('emergency modals — phone country_code', () => {
       phone: '(416) 555-1234',
       country_code: '+1',
     });
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// CODE STATUS IS KEPT. Code status / advance directives are no longer shown or
+// editable on web (docs/plans/mobile-web-decisions-2026-09-29.md T1), but the
+// stored values stay. The backend PUT is a partial merge (`update({...body})`),
+// so a key the body never names is untouched — and a body that DID name them
+// (a whole-object save, or a form defaulting them to false/empty) would wipe a
+// DNR the user can no longer see or restore. Every remaining save path is
+// pinned to a body that never mentions them.
+// ────────────────────────────────────────────────────────────────────────────
+describe('emergency modals — code status is never written', () => {
+  const DIRECTIVE_KEYS = ['has_dnr', 'advance_directives', 'dnr_document_url'];
+  const withDirectives: EmergencyInfo = {
+    ...baseInfo,
+    primary_doctor_name: 'Dr. Ruiz',
+    has_dnr: true,
+    advance_directives: 'No intubation',
+    dnr_document_url: 'https://example.com/dnr.pdf',
+    emergency_contacts: [
+      { name: 'Ana Lopez', relationship: 'Daughter', phone: '555-0100', is_primary: true },
+    ],
+    insurance_plans: [{ carrier: 'Blue Cross', is_primary: true }],
+  };
+
+  const saves: [string, string, ReactElement][] = [
+    [
+      'EditContactModal',
+      'edit-contact-form',
+      <EditContactModal circleId={CIRCLE_ID} info={withDirectives} index={0} onClose={vi.fn()} />,
+    ],
+    [
+      'EditDoctorModal (primary)',
+      'edit-doctor-form',
+      <EditDoctorModal circleId={CIRCLE_ID} info={withDirectives} target="primary" onClose={vi.fn()} />,
+    ],
+    [
+      'EditDoctorModal (additional)',
+      'edit-doctor-form',
+      <EditDoctorModal circleId={CIRCLE_ID} info={withDirectives} target={0} onClose={vi.fn()} />,
+    ],
+    [
+      'EditInsuranceModal',
+      'edit-insurance-form',
+      <EditInsuranceModal circleId={CIRCLE_ID} info={withDirectives} index={0} onClose={vi.fn()} />,
+    ],
+    [
+      'EditMedicalInfoModal',
+      'edit-medical-form',
+      <EditMedicalInfoModal circleId={CIRCLE_ID} info={withDirectives} onClose={vi.fn()} />,
+    ],
+  ];
+
+  it.each(saves)('%s saves without naming any code-status key', async (_name, formId, ui) => {
+    render(wrap(ui));
+    const form = document.getElementById(formId);
+    if (!(form instanceof HTMLFormElement)) throw new Error(`${formId} not found`);
+
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    const [circleId, body] = mockUpdate.mock.calls[0];
+    expect(circleId).toBe(CIRCLE_ID);
+    // A real save happened (not an empty body that trivially passes)…
+    expect(Object.keys(body).length).toBeGreaterThan(0);
+    // …and it leaves the stored code status alone.
+    for (const key of DIRECTIVE_KEYS) expect(body).not.toHaveProperty(key);
   });
 });

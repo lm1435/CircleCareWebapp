@@ -62,9 +62,9 @@ describe('TextField — the §4.5 shell', () => {
   it('puts the border, the 44px floor and the focus transition on the shell, not the input', () => {
     render(<TextField id="title" label="Title" value="" onChange={() => {}} />);
     const shell = shellOf(screen.getByLabelText(/^Title( \* \(required\))?$/));
-    expect(shell.className).toContain('border-line-2');
+    expect(shell.className).toContain('border-line-strong');
     expect(shell.className).toContain('min-h-[44px]');
-    expect(shell.className).toContain('focus-within:border-moss-light');
+    expect(shell.className).toContain('focus-within:border-moss');
     expect(shell.className).toContain('duration-fast');
   });
 
@@ -77,8 +77,8 @@ describe('TextField — the §4.5 shell', () => {
     // Error REPLACES the resting pair — two border-color utilities in one class
     // string would be resolved by Tailwind's emit order, not by intent.
     expect(shell.className).toContain('focus-within:border-terracotta');
-    expect(shell.className).not.toContain('moss-light');
-    expect(shell.className).not.toContain('border-line-2');
+    expect(shell.className).not.toContain('focus-within:border-moss');
+    expect(shell.className).not.toContain('border-line-strong');
     const alert = document.querySelector('[data-icon="alert-circle-outline"]');
     expect(alert).toBeInTheDocument();
   });
@@ -232,5 +232,24 @@ describe('TextField — trailing icon slot', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Clear' }));
     expect(onRightIconPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+// a11y audit 2026-09-29 (mobile finding, web equivalent): a press on the
+// shell's padding focuses the input instead of landing on dead space.
+describe('TextField — shell padding press', () => {
+  it('focuses the input when the shell itself is pressed', () => {
+    render(<TextField id="pad" label="Name" value="" onChange={() => {}} />);
+    const input = screen.getByLabelText(/^Name/);
+    fireEvent.mouseDown(input.parentElement as HTMLElement);
+    expect(input).toHaveFocus();
+  });
+
+  it('leaves a trailing button press alone', () => {
+    render(
+      <TextField id="pw" label="Password" type="password" value="" onChange={() => {}} showToggle toggleLabels={{ show: 'Show password', hide: 'Hide password' }} />
+    );
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Show password' }));
+    expect(screen.getByLabelText(/^Password/)).not.toHaveFocus();
   });
 });

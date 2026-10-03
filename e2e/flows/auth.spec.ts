@@ -141,7 +141,8 @@ test.describe('invalid login', () => {
     // the login rate limiter, a 403 from the origin guard, or an unreachable
     // backend, none of which is LOGIN_FAILED
     // (LoginPage.tsx: LOGIN_FAILED -> login.errors.invalidCredentials).
-    await expect(page.getByRole('alert')).toContainText('Invalid email or password.', {
+    await expect(page.getByRole('alert')).toContainText(
+      "We couldn't sign you in. Check your password, or reset it.", {
       timeout: 20_000,
     });
     await expect(page).toHaveURL(/\/login/);

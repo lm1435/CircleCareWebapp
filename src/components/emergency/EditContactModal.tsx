@@ -1,14 +1,20 @@
-import { useState, type FormEvent, type ReactElement } from 'react';
+import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import type { EmergencyContact, EmergencyInfo } from '@/api/emergencyInfo';
 import {
+  relocateIndex,
   toRequestContacts,
   upsertWithPrimaryExclusivity,
+  useEmergencyEditSeed,
   useUpdateEmergencyInfo,
+  withIfMatch,
 } from '@/hooks/useEmergencyInfo';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
+import { getEmergencyInfoConflict } from '@/lib/apiErrors';
 import { RELATIONSHIP_KEYS } from '@/lib/quickPicks';
 import { initialPhoneValue } from '@/lib/phone';
+import { CONTACT_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, ChipSelect, Modal, TextField, Toggle } from '@/components/ui';
 import { PhoneField } from './PhoneField';
 
@@ -27,13 +33,18 @@ const EMPTY_CONTACT: EmergencyContact = { name: '', relationship: '', phone: '' 
  * single-primary exclusivity (setting one primary clears the flag on others).
  * Mirrors mobile EditContactScreen.
  */
-type EditContactModalPropsLoaded = Omit<EditContactModalProps, 'info'> & { info: EmergencyInfo };
+type EditContactModalPropsLoaded = Omit<EditContactModalProps, 'info'> & {
+  info: EmergencyInfo;
+  /** PK5: the save was refused 409; the wrapper re-seeds this form from the server. */
+  onConflict: () => void;
+};
 
 function EditContactModalForm({
   circleId,
   info,
   index,
   onClose,
+  onConflict,
 }: EditContactModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
@@ -62,6 +73,28 @@ function EditContactModalForm({
   const [isPrimary, setIsPrimary] = useState(existing.is_primary ?? false);
   const [error, setError] = useState<string | undefined>(undefined);
 
+  // PK9: survives a forced sign-out (sessionStorage, same user, 30 min); only
+  // saved when the form differs from what it opened with.
+  //
+  // KEYED BY THE CONTACT, NOT ITS INDEX. Contacts have no id, and an index key let
+  // another member's delete of an earlier contact hand this draft to whoever then
+  // sat in the slot (`if_match` cannot catch that: its base is read at mount).
+  // `info` here is the seed the form was opened with, so the key names the contact
+  // the form really holds. See lib/emergencyDraftKey.
+  const draftId = emergencyEntryDraftId(info?.emergency_contacts, index, CONTACT_DRAFT_FIELDS);
+  const contactSnapshot = { name, relationship, phoneValue, isPrimary };
+  const contactBaseline = useRef(JSON.stringify(contactSnapshot));
+  useSessionDraft<typeof contactSnapshot>(
+    draftId ? `emergency:contact:${circleId}:${draftId}` : null,
+    () => (JSON.stringify(contactSnapshot) === contactBaseline.current ? null : contactSnapshot),
+    (d) => {
+      setName(d.name);
+      setRelationship(d.relationship);
+      setPhoneValue(d.phoneValue);
+      setIsPrimary(d.isPrimary);
+    }
+  );
+
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
     if (!name.trim() || !relationship.trim() || !phone.trim()) {
@@ -82,10 +115,13 @@ function EditContactModalForm({
     };
     const next = upsertWithPrimaryExclusivity(info?.emergency_contacts ?? [], contact, index);
 
-    update.mutate(
-      { emergency_contacts: toRequestContacts(next) },
-      { onSuccess: onClose, onSettled: submitGuard.release }
-    );
+    update.mutate(withIfMatch(info, { emergency_contacts: toRequestContacts(next) }), {
+      onSuccess: onClose,
+      onError: (err) => {
+        if (getEmergencyInfoConflict(err)) onConflict();
+      },
+      onSettled: submitGuard.release,
+    });
   };
 
   return (
@@ -188,6 +224,37 @@ function EditContactModalForm({
  * a bad form. Mounting the form only once `info` exists avoids both.
  */
 export function EditContactModal(props: EditContactModalProps): ReactElement | null {
-  if (!props.info) return null;
-  return <EditContactModalForm {...props} info={props.info} />;
+  const seed = useEmergencyEditSeed(props.circleId, props.info);
+  const [index, setIndex] = useState(props.index);
+  if (!seed.info) return null;
+  const onConflict = (): void => {
+    // Editing an existing contact: find it again in the fresh list. If the other
+    // caregiver removed or rewrote it there is nothing left to edit: close (the
+    // toast already said why and the list behind shows the latest).
+    const fresh = seed.latest();
+    if (index !== undefined) {
+      const original = seed.info?.emergency_contacts?.[index];
+      const at = relocateIndex(
+        fresh?.emergency_contacts,
+        original,
+        index,
+        (a, b) => a.name === b.name
+      );
+      if (at < 0) {
+        props.onClose();
+        return;
+      }
+      setIndex(at);
+    }
+    seed.reseed();
+  };
+  return (
+    <EditContactModalForm
+      key={seed.epoch}
+      {...props}
+      info={seed.info}
+      index={index}
+      onConflict={onConflict}
+    />
+  );
 }

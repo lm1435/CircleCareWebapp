@@ -429,6 +429,17 @@ export const Analytics = {
   inviteFailed: (circleId: string, error: string) =>
     capture('invite_failed', { circle_id: circleId, error: sanitizeErrorText(error) }),
   /**
+   * The free-tier caregiver seat cap was surfaced to the inviter (the in-modal
+   * cap / pending-seat card after a 402). Fired once per time the card
+   * appears — the paywall's own `plan_selection_viewed` only counts those who
+   * then press Upgrade, so without this the cap moment itself was invisible.
+   * Same name and shape as mobile's `inviteCapReached`; web has no caregiver
+   * count at that moment (the 402 is the first it hears of the cap) so it
+   * carries NO properties (no circle_id: founder rule, memory
+   * feedback_conservative_analytics_identifiers).
+   */
+  inviteCapReached: () => capture('invite_cap_reached'),
+  /**
    * The inviter handed the link to someone directly rather than relying on our
    * email being the only delivery channel. Event names MIRROR mobile so the
    * funnel aggregates across platforms — the `platform` super-property is what
@@ -470,6 +481,84 @@ export const Analytics = {
     status: MedicationStatus,
     source: MedicationConfirmSource
   ) => capture('medication_confirmed', { circle_id: circleId, status, source }),
+
+  /**
+   * A confirm whose POST REJECTED ambiguously (timeout, network, 5xx) but whose
+   * dose a re-read of the day showed RECORDED — the caregiver saw the success
+   * toast, not an error. Mobile parity (`medication_confirm_recovered`, same
+   * properties minus mobile's `screen`). `code` is `classifyFailureCode`'s
+   * closed set, never a message. Test-gap audit 2026-09-29 #3.
+   */
+  medicationConfirmRecovered: (
+    circleId: string,
+    status: MedicationStatus,
+    source: MedicationConfirmSource,
+    code: string
+  ) => capture('medication_confirm_recovered', { circle_id: circleId, status, source, code }),
+
+  /**
+   * PK1 (2026-09-29): a Take/Skip the server refused because ANOTHER caregiver
+   * had already answered the dose (409 DOSE_ALREADY_RECORDED). Not an error —
+   * never `error_occurred`. Same event and properties as mobile: the surface
+   * and the answer tried. No circle id, no name, no time.
+   */
+  medicationConfirmAlreadyRecorded: (status: MedicationStatus, source: MedicationConfirmSource) =>
+    capture('medication_confirm_already_recorded', { source, status }),
+
+  /**
+   * PK29 (2026-09-30): "Change answer" after a 409 DOSE_ALREADY_RECORDED
+   * succeeded. Same event and properties as mobile (`surface` = where it was
+   * done). No circle id, no names, no time.
+   */
+  medicationConfirmOverwritten: (status: 'taken' | 'skipped', surface: MedicationConfirmSource) =>
+    capture('medication_confirm_overwritten', { status, surface }),
+
+  /**
+   * PK5 (2026-09-30): an Emergency Info save was refused 409
+   * EMERGENCY_INFO_CHANGED and the editor reloaded. `field_count` = sections that
+   * conflicted. No circle id, no field contents.
+   */
+  emergencyInfoConflict: (fieldCount: number) =>
+    capture('emergency_info_conflict', { field_count: fieldCount }),
+
+  /**
+   * Member colour feature (2026-09-30): saved a new avatar colour. `color` is the
+   * closed palette key, or 'default' when reset to the name-derived colour.
+   */
+  avatarColorChanged: (color: string) => capture('avatar_color_changed', { color }),
+
+  /**
+   * PK10 (2026-09-30): profile time-zone change prompt. `circles` = how many
+   * circles were listed, `confirmed` = the user went ahead. No ids, names, zones.
+   */
+  timezoneChangeWarning: (circles: number, confirmed: boolean) =>
+    capture('timezone_change_warning', { circles, confirmed }),
+
+  // --- Value-gated upsell (PK28(1), 2026-09-30) ---
+  //
+  // Same event names and properties as mobile's upsell funnel so one PostHog
+  // dashboard covers both. Eligibility is server-side (`GET /subscription-status`
+  // `upsell`), so impressions and the 14-day cap are shared across platforms.
+  // Fire `upsell_eligible` only on the FALSE->TRUE transition and
+  // `upsell_suppressed` only when the reason CHANGES (never per poll).
+
+  upsellEligible: (trigger: string, impressionNumber: number) =>
+    capture('upsell_eligible', { trigger, impression_number: impressionNumber }),
+
+  upsellSuppressed: (reason: string) => capture('upsell_suppressed', { reason }),
+
+  upsellShown: (trigger: string, impressionNumber: number) =>
+    capture('upsell_shown', { trigger, impression_number: impressionNumber }),
+
+  upsellDismissed: (trigger: string, impressionNumber: number, secondsVisible: number) =>
+    capture('upsell_dismissed', {
+      trigger,
+      impression_number: impressionNumber,
+      seconds_visible: secondsVisible,
+    }),
+
+  upsellCtaTapped: (trigger: string, impressionNumber: number) =>
+    capture('upsell_cta_tapped', { trigger, impression_number: impressionNumber }),
 
   // --- Medication lifecycle (discontinue / reactivate / delete) ---
   //
@@ -560,12 +649,18 @@ export const Analytics = {
    */
   medicationDeleted: (
     circleId: string,
-    opts: { surface: MedicationLifecycleSurface; scope: MedicationDeleteScope }
+    opts: {
+      surface: MedicationLifecycleSurface;
+      scope: MedicationDeleteScope;
+      /** PK3: the whole-medication delete kept its recorded doses (soft delete). */
+      historyKept?: boolean;
+    }
   ) =>
     capture('medication_deleted', {
       circle_id: circleId,
       surface: opts.surface,
       scope: opts.scope,
+      ...(opts.historyKept !== undefined ? { history_kept: opts.historyKept } : {}),
     }),
 
   // --- Medication creation funnel (first-run wizard) ---
@@ -700,6 +795,17 @@ export const Analytics = {
   calendarViewed: (circleId: string, view: string) =>
     capture('calendar_viewed', { circle_id: circleId, view }),
 
+  // --- Event notes (notes-first-class plan) — NEVER include note text.
+  // Same event as mobile's Analytics.dataExportDownloaded — no properties (a GDPR
+  // export must not add identifiers to analytics).
+  dataExportDownloaded: () => capture('data_export_downloaded', {}),
+
+  // Same event names + shape as mobile's Analytics.eventNoteAdded/Updated/Deleted
+  // (mobile/src/services/analytics.ts ~2400-2408). ---
+  eventNoteAdded: (circleId: string) => capture('event_note_added', { circle_id: circleId }),
+  eventNoteUpdated: (circleId: string) => capture('event_note_updated', { circle_id: circleId }),
+  eventNoteDeleted: (circleId: string) => capture('event_note_deleted', { circle_id: circleId }),
+
   // --- Daily care notes (daily-care-notes plan) — NEVER include note body. ---
   careNotesViewed: (circleId: string) => capture('care_notes_viewed', { circle_id: circleId }),
   /** WB8: mood REMOVED from this payload — it's user-authored health content,
@@ -812,9 +918,29 @@ export const Analytics = {
   adherenceReportExported: (circleId: string, period: string) =>
     capture('adherence_report_exported', { circle_id: circleId, period }),
 
-  /** The care summary was handed off — `format` mirrors mobile's two shares. */
-  careSummaryShared: (circleId: string, format: 'pdf' | 'text') =>
-    capture('care_summary_shared', { circle_id: circleId, format }),
+  /**
+   * The care summary was handed off — `format` mirrors mobile's two shares.
+   *
+   * `notesOptions` (notes-first-class plan, task 30): booleans ONLY — never
+   * note text, count of notes, or mood. Omitted entirely for a caller that
+   * never asked about notes at all (keeps the event's shape byte-identical to
+   * every pre-Slice-4 capture).
+   */
+  careSummaryShared: (
+    circleId: string,
+    format: 'pdf' | 'text',
+    notesOptions?: { includeVisitNotes: boolean; includeCareNotes: boolean }
+  ) =>
+    capture('care_summary_shared', {
+      circle_id: circleId,
+      format,
+      ...(notesOptions
+        ? {
+            include_visit_notes: notesOptions.includeVisitNotes,
+            include_care_notes: notesOptions.includeCareNotes,
+          }
+        : {}),
+    }),
 
   /**
    * The Emergency Info PDF export failed. `stage` and a coarse `code` ONLY —

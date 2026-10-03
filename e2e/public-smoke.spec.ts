@@ -11,7 +11,7 @@ test.describe('public route crawl', () => {
     test(`crawl ${route}`, async ({ page }, testInfo) => {
       const result = await visitAndCheck(page, route);
       expectNoRuntimeErrors(result);
-      await checkA11y(page, route, testInfo);
+      await checkA11y(page, route, testInfo, { wcag22: true });
     });
   }
 });

@@ -7,6 +7,12 @@ export interface AvatarProps {
   name?: string;
   /** Already-signed photo URL (backend `getSignedPhotoUrl`). */
   photoUrl?: string | null;
+  /**
+   * A member's chosen colour (`users.avatar_color`). A valid palette key wins
+   * over the name hash; null / undefined / an unknown key falls back to it.
+   * Pass it for MEMBER avatars only: care-recipient avatars stay name-hashed.
+   */
+  colorKey?: string | null;
   size?: AvatarSize;
   /** 2px cream ring, for avatars sitting on a tinted/photographic ground. */
   bordered?: boolean;
@@ -47,11 +53,15 @@ const fontSizePx: Record<AvatarSize, number> = {
  * the web tokens that carry the identical hex:
  *
  *   [CC.moss #5C6B4E,      CC.mossInk #3A4832]   → moss / moss-deep
- *   [CC.coral #C65D54,     CC.coralDeep #B5453C] → coral / coral-deep
+ *   [CC.coralDeep #B5453C, CC.terracottaDeep #8B3A2C] → coral-deep / terracotta-deep
  *   [CC.dusk #4A6073,      CC.duskDeep #3A4E5E]  → dusk / dusk-deep
  *   [CC.clay #8B5C32,      CC.clayDeep #865830]  → clay / clay-ramp-deep
  *   [CC.mossDeep #4A5940,  CC.mossDark #2C3826]  → moss-mid / moss-dark
- *   [CC.clayLight #C48D5E, CC.clay #8B5C32]      → clay-light / clay
+ *   [CC.amberDeep #7E5620, CC.clayDeep #865830]  → amber-deep / clay-ramp-deep
+ *
+ * WCAG 1.4.3 (a11y audit 2026-09-29, same change as mobile's): the white
+ * initials measured 4.12:1 on the old coral stop and 2.87:1 on the old
+ * clay-light stop; every stop is now >= 5.4:1 against white.
  *
  * (`--color-clay-deep` on web is #6E4825, a different value; mobile's
  * `CC.clayDeep` lives at `--color-clay-ramp-deep`. Likewise mobile's
@@ -60,21 +70,49 @@ const fontSizePx: Record<AvatarSize, number> = {
  */
 export const AVATAR_GRADIENTS: readonly (readonly [string, string])[] = [
   ['var(--color-moss)', 'var(--color-moss-deep)'],
-  ['var(--color-coral)', 'var(--color-coral-deep)'],
+  ['var(--color-coral-deep)', 'var(--color-terracotta-deep)'],
   ['var(--color-dusk)', 'var(--color-dusk-deep)'],
   ['var(--color-clay)', 'var(--color-clay-ramp-deep)'],
   ['var(--color-moss-mid)', 'var(--color-moss-dark)'],
-  ['var(--color-clay-light)', 'var(--color-clay)'],
+  ['var(--color-amber-deep)', 'var(--color-clay-ramp-deep)'],
 ] as const;
 
 /**
- * Canonical name→gradient hash. Mirrors mobile exactly: the FIRST character's
- * code point modulo six, and gradient 0 when there is no name.
+ * Palette KEYS stored in `users.avatar_color` (backend CHECK constraint). Index
+ * order == `AVATAR_GRADIENTS`, so a key and today's name hash agree.
  */
-export function avatarGradientFor(name?: string): readonly [string, string] {
-  if (!name) return AVATAR_GRADIENTS[0]!;
-  const charCode = name.charCodeAt(0) || 0;
-  return AVATAR_GRADIENTS[charCode % AVATAR_GRADIENTS.length]!;
+export const AVATAR_COLOR_KEYS = ['moss', 'coral', 'dusk', 'clay', 'forest', 'amber'] as const;
+export type AvatarColorKey = (typeof AVATAR_COLOR_KEYS)[number];
+
+export function isAvatarColorKey(value: unknown): value is AvatarColorKey {
+  return typeof value === 'string' && (AVATAR_COLOR_KEYS as readonly string[]).includes(value);
+}
+
+/** Gradient pair for a palette key. */
+export function avatarGradientForKey(key: AvatarColorKey): readonly [string, string] {
+  return AVATAR_GRADIENTS[AVATAR_COLOR_KEYS.indexOf(key)]!;
+}
+
+/**
+ * Canonical gradient. A valid `colorKey` (the member's own choice) wins;
+ * otherwise the name→gradient hash: a djb2-xor hash over every code point
+ * of the trimmed name, modulo six, and gradient 0 when there is no name.
+ *
+ * DELIBERATE WEB-ONLY DIVERGENCE from mobile (approved 2026-10-02). Mobile
+ * hashes only the FIRST character, so "Margaret" and "Sarah" both landed on
+ * gradient 5. Do NOT "fix" this back to the first-character hash in a parity
+ * sweep.
+ */
+export function avatarGradientFor(
+  name?: string,
+  colorKey?: string | null
+): readonly [string, string] {
+  if (isAvatarColorKey(colorKey)) return avatarGradientForKey(colorKey);
+  const trimmed = name?.trim();
+  if (!trimmed) return AVATAR_GRADIENTS[0]!;
+  let h = 5381;
+  for (const ch of trimmed) h = ((h * 33) ^ ch.codePointAt(0)!) >>> 0;
+  return AVATAR_GRADIENTS[h % AVATAR_GRADIENTS.length]!;
 }
 
 /** First letter of the first + last name token (e.g. "Rose Meza" → "RM"). */
@@ -94,6 +132,7 @@ function initialsFor(name?: string): string {
 export function Avatar({
   name,
   photoUrl,
+  colorKey,
   size = 'md',
   bordered = false,
   className,
@@ -121,7 +160,7 @@ export function Avatar({
     );
   }
 
-  const [from, to] = avatarGradientFor(name);
+  const [from, to] = avatarGradientFor(name, colorKey);
 
   // Initials fallback. Decorative: the surrounding row already names the
   // member, so the glyphs carry no independent meaning.

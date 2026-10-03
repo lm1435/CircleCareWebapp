@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { prefersReducedMotion } from '@/components/ui/motion';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -15,8 +16,10 @@ import {
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { CareTabs } from '@/components/layout/CareTabs';
 import { ViewOnlyBanner } from '@/components/ViewOnlyBanner';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { NoteComposer, EMPTY_NOTE_DRAFT, type NoteDraft } from '@/components/notes/NoteComposer';
 import { NoteRow } from '@/components/notes/NoteRow';
+import { MoodWeekStrip } from '@/components/notes/MoodWeekStrip';
 import {
   useCareNotes,
   useCreateCareNote,
@@ -57,6 +60,24 @@ function shiftDateString(dateString: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** Strict YYYY-MM-DD — anything else from `?date=` is ignored outright. */
+const DATE_PARAM_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The DOM id a day-group `<section>` renders under — shared by the mood
+ *  strip's `onSelectDay` and the `?date=` deep-link effect below, so both
+ *  scroll to exactly the same element. */
+function dayGroupElementId(date: string): string {
+  return `notes-day-${date}`;
+}
+
+/** Returns whether the day-group element existed (and was scrolled to). */
+function scrollToDayGroup(date: string): boolean {
+  const el = document.getElementById(dayGroupElementId(date));
+  // Reduced motion honoured (WCAG 2.3.3; the CSS block cannot reach a JS scroll).
+  el?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  return !!el;
+}
+
 interface DayGroup {
   date: string;
   notes: CareNote[];
@@ -76,6 +97,7 @@ export default function NotesPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
   const { t, i18n } = useTranslation(['notes', 'common']);
   const { showToast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const currentUserId = useAuthStore((s) => s.user?.id);
   const { circle, canEdit } = useCircle(circleId);
@@ -85,6 +107,17 @@ export default function NotesPage(): ReactElement {
   // earlier notes" walks `from` back in 14-day pages up to the 92-day cap.
   const [fromDate, setFromDate] = useState<string | undefined>(undefined);
   const notesQuery = useCareNotes(circleId, fromDate ? { from: fromDate } : undefined);
+
+  // `?date=YYYY-MM-DD` deep link (web-only Slice 2 part + Slice 3's strip):
+  // captured ONCE, before the effect below scrubs it from the URL — reading
+  // `searchParams.get('date')` directly anywhere past the first render would
+  // see nothing to act on. An invalid/malformed value is dropped right here
+  // ("Invalid ... dates: ignore" — the page just renders normally).
+  const [pendingDate] = useState<string | null>(() => {
+    const raw = searchParams.get('date');
+    return raw && DATE_PARAM_RE.test(raw) ? raw : null;
+  });
+  const scrolledForDateRef = useRef(false);
 
   const createMutation = useCreateCareNote();
   const updateMutation = useUpdateCareNote();
@@ -97,6 +130,21 @@ export default function NotesPage(): ReactElement {
 
   const [draft, setDraft] = useState<NoteDraft>(EMPTY_NOTE_DRAFT);
   const [postError, setPostError] = useState<string | null>(null);
+  // PK9: the post clears the composer optimistically, so a session that dies
+  // MID-post would otherwise find it empty. Holds the submitted draft until the
+  // post settles; the forced-sign-out snapshot falls back to it.
+  const inFlightDraftRef = useRef<NoteDraft | null>(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  useSessionDraft<NoteDraft>(
+    circleId ? `notes:create:${circleId}` : null,
+    () => {
+      const d = draftRef.current;
+      const live = d.body.trim() !== '' || d.mood !== null || d.categories.length > 0;
+      return live ? d : inFlightDraftRef.current;
+    },
+    setDraft
+  );
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
@@ -109,6 +157,65 @@ export default function NotesPage(): ReactElement {
   // Server-resolved "today" + timezone (recipient TZ fallback chain applied).
   const today = notesQuery.data?.today;
   const timezone = notesQuery.data?.timezone ?? 'America/New_York';
+
+  // Widen the window to include `pendingDate` (≤ MAX_WINDOW_DAYS), then
+  // scroll to it once loaded — a single effect re-evaluated on every render
+  // so the widen and the eventual scroll never race each other (widening
+  // schedules a state update; this effect simply runs again with the fresher
+  // `fromDate`/query state on the next pass instead of assuming one happened
+  // before the other within the same commit).
+  useEffect(() => {
+    if (!pendingDate || scrolledForDateRef.current || !today) return;
+
+    const oldestAllowedForDate = shiftDateString(today, -(MAX_WINDOW_DAYS - 1));
+    if (pendingDate < oldestAllowedForDate || pendingDate > today) {
+      // Too old (past the hard cap) or in the future — ignore outright, per
+      // the plan's edge case; never touch the window for it.
+      scrolledForDateRef.current = true;
+      return;
+    }
+
+    const loadedFrom = fromDate ?? shiftDateString(today, -(DEFAULT_WINDOW_DAYS - 1));
+    if (pendingDate < loadedFrom) {
+      setFromDate(pendingDate);
+      return; // re-run once the widened window's data lands
+    }
+
+    // `useCareNotes`'s `placeholderData: keepPreviousData` can report
+    // `isLoading`/`isFetching` as false for ONE render on the OLD (narrower)
+    // window's data, one tick before the widened fetch's in-flight state
+    // registers. Gating on that alone let this effect scroll (and fail
+    // silently — `getElementById` on stale groups) against data that didn't
+    // cover `pendingDate` yet, then consume the ref/param so it never
+    // retried. Gate on `isPlaceholderData` too: only settled, non-placeholder
+    // data for the CURRENT `fromDate` is trustworthy about whether the
+    // target day group exists.
+    if (notesQuery.isLoading || notesQuery.isFetching || notesQuery.isPlaceholderData) {
+      return; // keep waiting — do not touch the ref or the URL
+    }
+
+    // Range covers the date and data has settled. Try the scroll; only mark
+    // the deep link handled (ref + clear the param) once it actually lands,
+    // OR once we can be sure — settled, non-placeholder data, range covers
+    // the date — that the group will never exist (e.g. no notes that day),
+    // in which case give up silently rather than retrying forever.
+    scrolledForDateRef.current = true;
+    scrollToDayGroup(pendingDate);
+    // Clear the param (replace) so a later re-render / back-nav never re-fires
+    // this scroll for the same date.
+    const next = new URLSearchParams(searchParams);
+    next.delete('date');
+    setSearchParams(next, { replace: true });
+  }, [
+    pendingDate,
+    today,
+    fromDate,
+    notesQuery.isLoading,
+    notesQuery.isFetching,
+    notesQuery.isPlaceholderData,
+    searchParams,
+    setSearchParams,
+  ]);
 
   // Group by note_date, dates descending. Server order is already
   // note_date DESC, created_at DESC; grouping preserves in-day order and the
@@ -162,12 +269,14 @@ export default function NotesPage(): ReactElement {
     // A retry replaces the previous failure: the alert unmounts now and a new
     // one mounts (and is announced again) if this attempt fails too.
     setPostError(null);
+    inFlightDraftRef.current = submitted;
     // Optimistic: the hook prepends the note; clear the composer now.
     setDraft(EMPTY_NOTE_DRAFT);
     createMutation.mutate(
       { circleId, input },
       {
         onSuccess: () => {
+          inFlightDraftRef.current = null;
           // WB8: mood dropped from the payload — "ids only, never content" for
           // this event family (careNotesViewed docstring), and mood is
           // user-authored health content, not an id/count/enum-of-fixed-shape.
@@ -176,6 +285,7 @@ export default function NotesPage(): ReactElement {
           });
         },
         onError: () => {
+          inFlightDraftRef.current = null;
           // INLINE in the composer, not a toast — see NoteComposer's `error`.
           setPostError(t('notes:composer.errorPosting'));
           // Preserve the input: restore the submitted draft unless the user
@@ -295,7 +405,11 @@ export default function NotesPage(): ReactElement {
     body = (
       <div className="flex flex-col gap-6 px-5">
         {groups.map((group) => (
-          <section key={group.date} aria-label={dayLabel(group.date)}>
+          <section
+            key={group.date}
+            id={dayGroupElementId(group.date)}
+            aria-label={dayLabel(group.date)}
+          >
             <h2 className="m-0 text-base font-semibold text-ink">{dayLabel(group.date)}</h2>
             <ul className={`${careCardListGap} m-0 mt-3 list-none p-0`}>
               {group.notes.map((note) => {
@@ -357,6 +471,11 @@ export default function NotesPage(): ReactElement {
           </Sheet>
         </div>
       )}
+
+      {/* Reuses the already-loaded `notes`/`today` — no second request (UI
+          States: "renders once the list data is there — same query"). Shown
+          even on an empty week (never hidden — it teaches the feature). */}
+      {today && <MoodWeekStrip notes={notes} today={today} onSelectDay={scrollToDayGroup} />}
 
       <div className="mt-2">{body}</div>
 

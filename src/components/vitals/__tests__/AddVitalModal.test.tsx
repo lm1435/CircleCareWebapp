@@ -254,6 +254,45 @@ describe('AddVitalModal', () => {
     expect(screen.getByLabelText('Heart rate')).toHaveAttribute('aria-invalid', 'true');
   });
 
+  // PK15: a decimal comma is a decimal; absurd readings are still range-rejected.
+  it('PK15: reads a decimal comma ("72,5" kg) as 72.5', async () => {
+    unitPrefs.weight_unit = 'kg';
+    const user = userEvent.setup();
+    render(<AddVitalModal circleId={CIRCLE_ID} initialType="weight" onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Weight'), '72,5');
+    await setRecordedTo(user, '2026-06-15', '09:00');
+    await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0].value1).toBe(72.5);
+    unitPrefs.weight_unit = 'lbs';
+  });
+
+  it('PK15: "1,200" heart rate is read as 1.2 and refused by the range check', async () => {
+    const user = userEvent.setup();
+    render(<AddVitalModal circleId={CIRCLE_ID} initialType="heart_rate" onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Heart rate'), '1,200');
+    await setRecordedTo(user, '2026-06-15', '09:00');
+    await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+    expect(mutateCreate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Heart rate')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('PK15: "7,2,1" (two commas) is not guessed at: refused, nothing sent', async () => {
+    const user = userEvent.setup();
+    render(<AddVitalModal circleId={CIRCLE_ID} initialType="glucose" onClose={vi.fn()} />);
+
+    await user.type(screen.getByLabelText('Glucose'), '7,2,1');
+    await setRecordedTo(user, '2026-06-15', '09:00');
+    await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+    expect(mutateCreate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Glucose')).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('renders nothing when the user cannot edit', () => {
     useCircleResult.canEdit = false;
     const { container } = render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);

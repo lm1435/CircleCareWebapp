@@ -45,5 +45,18 @@
   "deleteTitle": "¿Eliminar nota?",
   "deleteConfirm": "Esta nota se eliminará para todos en el círculo.",
   "loadOlder": "Ver notas anteriores",
-  "postRequirementHint": "Escribe una nota o elige un estado de ánimo para publicar"
+  "postRequirementHint": "Escribe una nota o elige un estado de ánimo para publicar",
+  "moodStrip": {
+    "summary": "Esta semana: {{list}}",
+    "empty": "No hay estados de ánimo registrados esta semana",
+    "dayA11y": "{{day}}: {{summary}}",
+    "count_great_one": "{{count}} excelente",
+    "count_great_other": "{{count}} excelentes",
+    "count_good_one": "{{count}} bueno",
+    "count_good_other": "{{count}} buenos",
+    "count_okay_one": "{{count}} regular",
+    "count_okay_other": "{{count}} regulares",
+    "count_tough_one": "{{count}} difícil",
+    "count_tough_other": "{{count}} difíciles"
+  }
 }

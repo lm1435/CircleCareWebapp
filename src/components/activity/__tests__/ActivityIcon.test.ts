@@ -6,12 +6,20 @@ describe('getActivityIconName', () => {
       'medication_created',
       'medication_updated',
       'medication_deleted',
+      'medication_occurrence_removed',
       'medication_skipped',
       'medication_not_taken',
     ]) {
       expect(getActivityIconName(type)).toBe('medication');
       expect(getActivityIcon(type)).toBe('medkit-outline');
     }
+  });
+
+  it('maps the PK20 occurrence_removed types to their own subject glyph, explicitly', () => {
+    expect(getActivityIconName('appointment_occurrence_removed')).toBe('appointment');
+    expect(getActivityIcon('appointment_occurrence_removed')).toBe('calendar-outline');
+    expect(getActivityIconName('task_occurrence_removed')).toBe('task');
+    expect(getActivityIconName('medication_occurrence_removed')).toBe('medication');
   });
 
   it('maps member churn to the circle glyph', () => {

@@ -366,4 +366,59 @@ describe('authStore', () => {
     // Auth failure → full sign-out (clears the stale cookie server-side too)
     expect(api.apiClient.post).toHaveBeenCalledWith('/auth/logout', {});
   });
+
+  describe('PK9 draft survival', () => {
+    async function withOpenDraft() {
+      const mods = await loadModules();
+      const sd = await import('@/lib/sessionDraft');
+      mods.useAuthStore.getState().signIn({ access_token: 't' }, testUser);
+      vi.mocked(mods.api.apiClient.post).mockResolvedValue({ success: true } as never);
+      const off = sd.registerDraft('notes:create:c1', () => ({ body: 'secret' }));
+      return { ...mods, sd, off };
+    }
+
+    it('a FORCED sign-out (auth-failure hook) keeps the draft in sessionStorage for the same user', async () => {
+      const { api, sd, off } = await withOpenDraft();
+      await vi.mocked(api.setOnAuthFailure).mock.calls[0][0]?.();
+      off();
+      expect(localStorage.length).toBe(0);
+      expect(sd.takeDraft('user-1', 'notes:create:c1')).toEqual({ body: 'secret' });
+    });
+
+    it('a forced sign-out draft is not handed to a different user', async () => {
+      const { api, sd, off } = await withOpenDraft();
+      await vi.mocked(api.setOnAuthFailure).mock.calls[0][0]?.();
+      off();
+      expect(sd.takeDraft('user-2', 'notes:create:c1')).toBeNull();
+      expect(sessionStorage.length).toBe(0);
+    });
+
+    it('a VOLUNTARY sign-out saves nothing', async () => {
+      const { useAuthStore, sd, off } = await withOpenDraft();
+      await useAuthStore.getState().signOut();
+      off();
+      expect(sessionStorage.length).toBe(0);
+      expect(sd.takeDraft('user-1', 'notes:create:c1')).toBeNull();
+    });
+
+    it('a voluntary sign-out after a forced one purges the leftover draft', async () => {
+      const { api, useAuthStore, sd, off } = await withOpenDraft();
+      await vi.mocked(api.setOnAuthFailure).mock.calls[0][0]?.();
+      off();
+      expect(sessionStorage.length).toBe(1);
+      useAuthStore.getState().signIn({ access_token: 't2' }, testUser);
+      await useAuthStore.getState().signOut();
+      expect(sessionStorage.length).toBe(0);
+      expect(sd.takeDraft('user-1', 'notes:create:c1')).toBeNull();
+    });
+
+    it('another user signing in drops the entry at once', async () => {
+      const { api, useAuthStore, off } = await withOpenDraft();
+      await vi.mocked(api.setOnAuthFailure).mock.calls[0][0]?.();
+      off();
+      expect(sessionStorage.length).toBe(1);
+      useAuthStore.getState().signIn({ access_token: 't3' }, { ...testUser, id: 'user-2' });
+      expect(sessionStorage.length).toBe(0);
+    });
+  });
 });

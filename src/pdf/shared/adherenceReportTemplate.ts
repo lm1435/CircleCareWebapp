@@ -81,7 +81,9 @@ function getDayCellColors(day: PdfAdherenceReportDaily): { bg: string; fg: strin
   if (day.total === 0) return { bg: CC.paperDeep, fg: CC.ink };
   if (day.adherence_rate >= 100) return { bg: CC.moss, fg: '#FFFFFF' };
   if (day.adherence_rate >= 75) return { bg: CC.mossMuted, fg: CC.ink };
-  if (day.adherence_rate >= 50) return { bg: CC.amber, fg: '#FFFFFF' };
+  // Ink, not white, on amber: white measured 3.70:1 (under WCAG 1.4.3 AA for
+  // the day number); ink is 4.75:1. The amber stays, so the scale keeps its hue.
+  if (day.adherence_rate >= 50) return { bg: CC.amber, fg: CC.ink };
   return { bg: CC.terracotta, fg: '#FFFFFF' };
 }
 
@@ -172,13 +174,22 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
   const dobAgeLine = dobFormatted && age != null
     ? t('medicationHistory.export.dobAge', { dob: dobFormatted, age })
     : null;
-  const reportTitleLine = `${t('medicationHistory.export.title')} · ${t('medicationHistory.export.dateRange', { start: startDateFormatted, end: endDateFormatted })}`;
+  // Each date is a no-wrap unit (PK26): the Spanish range ("1 de septiembre de 2026 al
+  // 30 de septiembre de 2026") is long enough to wrap, and a wrap INSIDE a date left the
+  // year alone on its own line ("... al 30 sept / 2026"). Whole dates now wrap as units.
+  const noWrap = (text: string): string => `<span style="white-space:nowrap">${escapeHtml(text)}</span>`;
+  const reportTitleHtml = `${escapeHtml(t('medicationHistory.export.title'))} · ${t('medicationHistory.export.dateRange', { start: noWrap(startDateFormatted), end: noWrap(endDateFormatted) })}`;
   const adherenceColor = getAdherenceColor(summary.adherence_rate);
   const trendKey = summary.trend === 'improving'
     ? 'medicationHistory.export.improving'
     : summary.trend === 'declining'
       ? 'medicationHistory.export.declining'
       : 'medicationHistory.export.stable';
+  // PK25: the server sends `trend_available: false` when either half of the window has no
+  // dose due (a medication that started mid-window). The direction is then meaningless
+  // ("Improving (+80%)" for a med that simply began), so no badge prints. Absent (older
+  // server) = available, exactly as before.
+  const showTrend = summary.trend_available !== false;
   const trendLabel = t(trendKey);
   const trendArrow = getTrendArrow(summary.trend);
   const trendColor = getTrendColor(summary.trend);
@@ -382,7 +393,7 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
     <div class="patient-block">
       <div class="patient-name">${escapeHtml(careRecipientName)}</div>
       ${dobAgeLine ? `<div class="patient-dob">${escapeHtml(dobAgeLine)}</div>` : ''}
-      <div class="report-title">${escapeHtml(reportTitleLine)}</div>
+      <div class="report-title">${reportTitleHtml}</div>
       ${showCircleName ? `<div style="color:${CC.inkSoft};font-size:11px;margin-top:2px">${escapeHtml(circleName)}</div>` : ''}
     </div>
     <div class="meta">
@@ -430,11 +441,11 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
         <div class="label">${t('medicationHistory.export.total')}</div>
       </div>
     </div>
-    <div style="margin-top:8px">
+    ${showTrend ? `<div style="margin-top:8px">
       <span class="trend-badge" style="color:${trendColor};background:${trendColor}15">
         ${trendArrow} ${trendLabel} (${summary.trend_change > 0 ? '+' : ''}${summary.trend_change}%)
       </span>
-    </div>
+    </div>` : ''}
     <!-- Defines "not marked" where the term first appears, not in a footer
          two pages later. -->
     <div class="legend" style="margin-top:10px">${t('medicationHistory.export.notMarkedLegend')}</div>

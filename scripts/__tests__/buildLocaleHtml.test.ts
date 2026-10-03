@@ -45,7 +45,7 @@ function fixtureHtml(): string {
     `    <meta property="og:title" content="${EN_TITLE}" />`,
     `    <meta property="og:description" content="${EN_DESCRIPTION}" />`,
     '    <meta property="og:image" content="https://my.circlecare.app/og-invite-en.jpg" />',
-    '    <meta property="og:image:alt" content="CircleCare — the family caregiver app, shown on a phone" />',
+    '    <meta property="og:image:alt" content="Invitation to a care circle — free for you, no download needed. The CircleCare activity feed shown on a phone." />',
     '    <meta property="og:locale" content="en_US" />',
     '    <meta property="og:locale:alternate" content="es_419" />',
     `    <meta name="twitter:title" content="${EN_TITLE}" />`,
@@ -88,7 +88,7 @@ describe('build-locale-html — the happy path', () => {
     expect(es).toContain('CircleCare — Cuídenlos juntos');
     expect(es).toContain('CircleCare reúne a la familia para coordinar el cuidado');
     expect(es).toContain('https://my.circlecare.app/og-invite-es.jpg');
-    expect(es).toContain('CircleCare — la app para cuidadores familiares, en un teléfono');
+    expect(es).toContain('Te invitaron a un círculo de cuidado — gratis para ti, sin descargar nada. El historial de actividad de CircleCare en un teléfono.');
     expect(es).toContain('<meta property="og:locale" content="es_419" />');
     expect(es).toContain('<meta property="og:locale:alternate" content="en_US" />');
 

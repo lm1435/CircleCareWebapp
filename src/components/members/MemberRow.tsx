@@ -64,7 +64,11 @@ export function MemberRow({ member, actions }: MemberRowProps): ReactElement {
   return (
     <SheetRow as="li" className="gap-3 px-[18px] py-3.5">
       <div className="relative shrink-0">
-        <Avatar size="sm" name={hasName ? displayName : member.email} />
+        <Avatar
+          size="sm"
+          name={hasName ? displayName : member.email}
+          colorKey={member.avatar_color}
+        />
         {member.is_care_recipient ? (
           // Decorative: the role Badge right next to the name already
           // announces "Care recipient" — an aria-label here would repeat it.

@@ -179,6 +179,20 @@ describe('analytics wrapper — active path (key set)', () => {
     });
   });
 
+  it('invite_cap_reached carries NO circle_id (founder rule)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.inviteCapReached();
+    expect(capture).toHaveBeenCalledTimes(1);
+    const props = capture.mock.calls[0][1] as Record<string, unknown> | undefined;
+    expect(props ?? {}).not.toHaveProperty('circle_id');
+  });
+
+  it('invite_cap_reached no-ops without a key', async () => {
+    const { Analytics } = await loadWithKey(undefined);
+    Analytics.inviteCapReached();
+    expect(capture).not.toHaveBeenCalled();
+  });
+
   it('document_uploaded carries circle_id, category, file_type (no label)', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.documentUploaded('circle-123', 'medical_records', 'pdf');

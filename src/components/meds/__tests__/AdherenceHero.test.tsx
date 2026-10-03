@@ -219,6 +219,33 @@ describe('AdherenceHero', () => {
     expect(screen.queryByText(/vs last month/)).toBeNull();
   });
 
+  // PK25: the server sends trend_available:false when a half of the 30 days had nothing due
+  // (a new medication). There is no month to compare, so NO trend row at all -- not even
+  // "Same as last month", which would be as false as the +80% it replaces.
+  it('shows no trend row when the server says the trend is not available', () => {
+    mockUseAdherenceReport.mockReturnValue({
+      ...report({ trend: 'stable', trend_change: 0, trend_available: false }),
+      isPending: false,
+    });
+    renderHero();
+
+    expect(screen.getByText('82%')).toBeInTheDocument();
+    expect(screen.queryByText('Same as last month')).toBeNull();
+    expect(screen.queryByText(/vs last month/)).toBeNull();
+    // The Export button is still there.
+    expect(screen.getByRole('button', { name: /Export report/ })).toBeInTheDocument();
+  });
+
+  it('trend_available:true behaves like the field being absent', () => {
+    mockUseAdherenceReport.mockReturnValue({
+      ...report({ trend: 'improving', trend_change: 7, trend_available: true }),
+      isPending: false,
+    });
+    renderHero();
+
+    expect(screen.getByText('+7% vs last month')).toBeInTheDocument();
+  });
+
   // Zero is zero whatever the verdict says: "+0% vs last month" reads as a
   // measured claim about nothing.
   it('treats a zero change as unchanged even when the trend says improving', () => {

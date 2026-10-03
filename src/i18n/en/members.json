@@ -146,8 +146,6 @@
     "invitedYou": "{{inviter}} invited you to help care for {{recipient}}",
     "accept": "Accept",
     "accepting": "Joining…",
-    "accepted": "You joined {{circle}}.",
-    "openCircle": "Open circle",
     "ignoreHint": "Not ready to join? You can simply leave an invitation here — nothing happens until you accept.",
     "emptyTitle": "No pending invitations",
     "emptyBody": "When someone invites you to a care circle, it will appear here.",

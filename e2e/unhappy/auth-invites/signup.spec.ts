@@ -29,6 +29,9 @@ test.use({ storageState: { cookies: [], origins: [] } });
 const SIGNUP = '/api/auth/signup';
 const COPY = {
   failed: "We couldn't create your account. Please try again.",
+  // PK2+: backend SIGNUP_FAILED (neutral rejection) -> mobile's wording.
+  rejected:
+    "We couldn't create your account. If you already have one, try signing in instead.",
   exists: 'An account with this email already exists. Please sign in instead.',
   rules:
     'Password must be at least 8 characters with an uppercase letter, a lowercase letter, a number, and a special character.',
@@ -90,7 +93,7 @@ test('existing email (real backend): failure copy, no navigation, nothing record
   expect(res.status).toBe(400);
   expect(res.json.error.code).toBe('SIGNUP_FAILED');
 
-  await expect(page.getByRole('alert')).toHaveText(COPY.failed);
+  await expect(page.getByRole('alert')).toHaveText(COPY.rejected);
   await expect(page).toHaveURL(/\/signup$/);
   await posts.expectCount(1);
   await expectNoConsentRecorded(page);
@@ -159,7 +162,7 @@ test('real backend 400 SIGNUP_FAILED is surfaced and the form recovers', async (
   expect(res.status, 'local GoTrue refuses the signup (send_email hook unreachable)').toBe(400);
   expect(res.json.error.code).toBe('SIGNUP_FAILED');
 
-  await expect(page.getByRole('alert')).toHaveText(COPY.failed);
+  await expect(page.getByRole('alert')).toHaveText(COPY.rejected);
   await expect(page.getByRole('button', { name: 'Create account' })).toBeEnabled();
   await expect(page).toHaveURL(/\/signup$/);
   await posts.expectCount(1);

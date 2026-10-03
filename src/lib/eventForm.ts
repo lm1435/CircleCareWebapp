@@ -179,9 +179,44 @@ export function minutesBetween(startStr: string, endStr: string): number | null 
   return end - start;
 }
 
+/**
+ * Length of a start -> end span in minutes, the way the phone counts it.
+ *
+ * The time-only fields cannot say "tomorrow", so an end at or before the start
+ * has exactly one sensible reading: the NEXT DAY (23:45 -> 00:15 is a 30-minute
+ * appointment that runs past midnight; an equal time is a 24-hour span, as on
+ * mobile's `resolveEndTime`). Always in 1..1440, or null when either side is
+ * missing/invalid. NOT clock subtraction (`eh*60+em - (sh*60+sm)`), which
+ * rejected every midnight-crossing span mobile accepts.
+ */
+export function spanMinutes(startStr: string, endStr: string): number | null {
+  const start = parseTimeStr(startStr);
+  const end = parseTimeStr(endStr);
+  if (start === null || end === null) return null;
+  const diff = end - start;
+  return diff > 0 ? diff : diff + 1440;
+}
+
+/**
+ * PK21: the end time after the START moves from `oldStart` to `newStart`: the
+ * end shifts by the same delta so the DURATION is kept, wrapping past midnight
+ * (a 22:00-23:00 slot moved to 23:30 ends 00:30, not a clamped 23:59). Returns
+ * '' when any of the three is missing so the caller keeps its own rule.
+ */
+export function shiftEndTimeStr(oldStart: string, newStart: string, endStr: string): string {
+  const o = parseTimeStr(oldStart);
+  const n = parseTimeStr(newStart);
+  const e = parseTimeStr(endStr);
+  if (o === null || n === null || e === null) return '';
+  const total = (((e + (n - o)) % 1440) + 1440) % 1440;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 /** Index of the preset matching the span, or -1 for a custom duration. */
 export function matchingDurationIndex(startStr: string, endStr: string): number {
-  const mins = minutesBetween(startStr, endStr);
+  const mins = spanMinutes(startStr, endStr);
   if (mins === null) return -1;
   return DURATION_PRESETS.indexOf(mins as (typeof DURATION_PRESETS)[number]);
 }

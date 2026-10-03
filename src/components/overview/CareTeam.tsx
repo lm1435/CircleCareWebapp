@@ -147,7 +147,7 @@ export function CareTeam({
               {t('team.count', { count: members.length })}
             </span>
             {isOwner ? (
-              <Button as={Link} to={`${base}/members`} variant="secondary" size="sm">
+              <Button as={Link} to={`${base}/members`} variant="primary" size="sm">
                 {t('team.invite')}
               </Button>
             ) : null}
@@ -176,7 +176,11 @@ export function CareTeam({
               className="flex items-center gap-3 border-t border-line-2 px-[18px] py-3.5 first:border-t-0"
             >
               <span className="relative shrink-0">
-                <Avatar size="sm" name={member.first_name || member.email} />
+                <Avatar
+                  size="sm"
+                  name={member.first_name || member.email}
+                  colorKey={member.avatar_color}
+                />
                 {member.is_care_recipient ? (
                   <span
                     className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-coral ring-2 ring-cream"

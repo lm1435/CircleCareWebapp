@@ -11,6 +11,7 @@ import {
   type StorageUsage,
 } from '@/api/documents';
 import { useUploadDocument } from '@/hooks/useDocuments';
+import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Modal, Select, TextArea, TextField, useToast } from '@/components/ui';
 import { formatFileSize } from './formatFileSize';
 
@@ -90,6 +91,13 @@ export function DocumentUploadModal({
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadDocument(circleId);
+  // SYNCHRONOUS in-flight guard. `upload.isPending` is render-committed state: two
+  // clicks dispatched in the same tick both see it `false` and upload the file
+  // twice (two stored copies of the same PHI file, double storage). The ref is
+  // claimed just before the request and released in `onSettled`, so
+  // a failed upload can still be retried. Mirrors mobile's DocumentUploadScreen,
+  // which wraps its create in `useGuardedSubmit`.
+  const submitGuard = useSubmitGuard();
 
   const [file, setFile] = useState<File | null>(null);
   const [label, setLabel] = useState(initialLabel ?? '');
@@ -182,6 +190,8 @@ export function DocumentUploadModal({
     if (disabled || upload.isPending) return;
     const result = validate();
     if (!result.ok || !file || !result.fileExtension) return;
+    // Claimed AFTER validation so a bail-out above never holds the ref.
+    if (!submitGuard.claim()) return;
 
     upload.mutate(
       {
@@ -196,6 +206,7 @@ export function DocumentUploadModal({
           showToast(t('documents:upload.success'), 'success');
           onClose();
         },
+        onSettled: submitGuard.release,
         // onError is handled by the hook (distinct 402 / 413 / permission toasts).
         // Keep the modal open so the user can retry or pick a smaller file.
       }

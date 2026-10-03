@@ -184,14 +184,13 @@ export function EventDetailModal({
       : dateLabelForCompletion;
   }, [event.completed_at, careRecipientTimezone, locale, hourCycle]);
 
-  // Who a TASK is assigned to (mobile `TaskDetailSheet.tsx:323-334`; tasks
-  // only — appointments/medications have no assignee row on either
-  // surface). Same embed-then-roster-then-fallback shape as `completedByName`
-  // above; unlike completion, an unassigned task still gets a row rather than
-  // omitting it, so the fallback is the shared "Unassigned" label rather than
-  // `null`.
+  // Who a TASK or APPOINTMENT is assigned to (mobile `TaskDetailSheet` for
+  // tasks, the calendar detail sheet for appointments; medications have no
+  // assignee row). Same embed-then-roster-then-fallback shape as
+  // `completedByName` above; an unassigned TASK still gets a row (the shared
+  // "Unassigned" label) while an unassigned appointment omits it, as mobile does.
   const assignedToName = useMemo(() => {
-    if (event.event_type !== 'task') return null;
+    if (event.event_type !== 'task' && event.event_type !== 'appointment') return null;
     const embedded = event.assigned_to_user;
     if (embedded) {
       const name = [embedded.first_name, embedded.last_name].filter(Boolean).join(' ');
@@ -213,6 +212,12 @@ export function EventDetailModal({
       key: 'assignedTo',
       label: t('calendar:eventDetail.assignedTo'),
       value: assignedToName ?? t('tasks:row.unassigned'),
+    });
+  } else if (event.event_type === 'appointment' && assignedToName) {
+    rows.push({
+      key: 'assignedTo',
+      label: t('calendar:eventDetail.assignedTo'),
+      value: assignedToName,
     });
   }
   if (completedAtLabel) {
@@ -353,15 +358,25 @@ export function EventDetailModal({
         </Card>
       )}
 
-      {/* Event-notes panel (Task 1.8) — instance-scoped. For a recurring/virtual
-          instance we pass scheduled_date so the backend materializes the right
-          row; for a plain event the bare id is enough. */}
+      {/* Event-notes panel (Task 1.8) — instance-scoped. For ANY recurring row
+          — a persisted child, a virtual instance, OR the series ROOT itself
+          (recurrence_rule set) rendered on its own start date — we pass the
+          row's own scheduled_date so the backend resolves/materializes the
+          right physical row for THIS date. Passing nothing for the root was a
+          proven bug (2026-09-27): the note attached directly to the root row,
+          and GET always unions the root id into every date's query, so a note
+          added on the series' first day leaked onto every occurrence. Only a
+          genuinely non-recurring event (no recurrence_rule, no
+          parent_event_id, not virtual) passes no date — the bare id is enough
+          because there is no series to disambiguate within. */}
       <div className="border-t border-line-2 pt-4">
         <EventNotesPanel
           circleId={circleId ?? event.circle_id}
           eventId={event.id}
           scheduledDate={
-            event.is_virtual || event.parent_event_id ? event.scheduled_date : undefined
+            event.is_virtual || event.parent_event_id || event.recurrence_rule
+              ? event.scheduled_date
+              : undefined
           }
         />
       </div>

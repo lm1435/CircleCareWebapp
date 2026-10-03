@@ -1,8 +1,8 @@
 import { type ReactElement, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, EmptyState, Eyebrow, Skeleton, Text, useToast } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, Eyebrow, Skeleton, Text } from '@/components/ui';
 import { usePendingInvites, useAcceptInvite } from '@/hooks/useInvites';
+import { useOpenJoinedCircle } from '@/hooks/useOpenJoinedCircle';
 import type { PendingInvite } from '@/api/invites';
 import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
 import { Analytics } from '@/lib/analytics';
@@ -41,20 +41,17 @@ function InviteRowSkeleton(): ReactElement {
 
 export default function PendingInvitesPage(): ReactElement {
   const { t, i18n } = useTranslation('members');
-  const { showToast } = useToast();
+  const openJoinedCircle = useOpenJoinedCircle();
   const { data: invites, isPending, isError, refetch } = usePendingInvites();
   const acceptInvite = useAcceptInvite();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  // The most recently joined circle — gives the user a forward path ("Open
-  // circle") instead of leaving them stranded on this page after accepting.
-  const [joined, setJoined] = useState<{ id: string; name: string } | null>(null);
 
   const handleAccept = (invite: PendingInvite): void => {
     setAcceptingId(invite.id);
     acceptInvite.mutate(
       { inviteId: invite.id },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
           // PHI-safe: only the circle_id (available here; the hook takes only an
           // inviteId, so the capture lives at the call site). WB4: explicit
           // source distinguishes this list from the join-by-code modal and the
@@ -63,9 +60,12 @@ export default function PendingInvitesPage(): ReactElement {
           // R4-5: joined their first circle here → onboarding complete. No-op
           // when this browser already saw the user with circles.
           trackOnboardingCompleted('joined');
-          showToast(t('pending.accepted', { circle: invite.circle.name }), 'success');
-          setJoined({ id: invite.circle.id, name: invite.circle.name });
           setAcceptingId(null);
+          // Open the joined circle and name it — parity with mobile's
+          // PendingInvitesScreen (navigates straight into the circle) and with
+          // the invite link / join-by-code paths. The response names the circle
+          // joined; the listed invite is the fallback for `circle: null`.
+          openJoinedCircle(result.circle ?? invite.circle);
         },
         onError: () => {
           // The hook's shared onError already toasts the failure.
@@ -164,22 +164,6 @@ export default function PendingInvitesPage(): ReactElement {
         {t('pending.heading')}
       </Text>
       <p className="mt-2 text-ink-3">{t('pending.subheading')}</p>
-      {joined ? (
-        <Card
-          role="status"
-          className="mt-6 flex flex-wrap items-center justify-between gap-3 p-6"
-        >
-          <p className="m-0 font-medium text-ink">
-            {t('pending.accepted', { circle: joined.name })}
-          </p>
-          <Link
-            to={`/circles/${joined.id}`}
-            className="shrink-0 font-medium text-coral-deep underline-offset-4 hover:underline"
-          >
-            {t('pending.openCircle')}
-          </Link>
-        </Card>
-      ) : null}
       {content}
       {hasInvites ? <p className="mt-6 text-sm text-ink-3">{t('pending.ignoreHint')}</p> : null}
     </section>

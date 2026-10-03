@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StoreBadges } from '@/components/layout/StoreBadges';
@@ -147,6 +147,11 @@ export function Sidebar({
   const { t } = useTranslation('common');
   const { circleId } = useParams<{ circleId: string }>();
   const [addOpen, setAddOpen] = useState(false);
+  // A circle change (browser back/forward) closes the type menu: the create
+  // flow belongs to the circle it was opened in (AppLayout's `createFor`).
+  useEffect(() => {
+    setAddOpen(false);
+  }, [circleId]);
   /** The New button's box — the AddMenu pill is fixed off its measured rect. */
   const addAnchorRef = useRef<HTMLDivElement>(null);
   const base = `/circles/${circleId}`;

@@ -16,7 +16,11 @@ import type { HealthVital } from '@/api/vitals';
 const mockUseVitals = vi.fn();
 const mockDeleteMutate = vi.fn();
 const mockUseCircle = vi.fn();
+const mockUseLatestVitals = vi.fn();
 const unitPrefs = { weight_unit: 'lbs', glucose_unit: 'mg/dL' };
+
+/** Every type null — the default "nothing has ever been logged" answer. */
+const EMPTY_LATEST = { blood_pressure: null, heart_rate: null, glucose: null, weight: null };
 
 vi.mock('@/hooks/useVitals', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useVitals')>();
@@ -24,6 +28,7 @@ vi.mock('@/hooks/useVitals', async (importOriginal) => {
     ...actual,
     useVitals: (circleId: string | undefined, params: unknown) => mockUseVitals(circleId, params),
     useDeleteVital: () => ({ mutateAsync: mockDeleteMutate, isPending: false }),
+    useLatestVitals: () => mockUseLatestVitals(),
   };
 });
 
@@ -153,6 +158,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseHourCycle.mockReturnValue('12h');
   mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/New_York' });
+  mockUseLatestVitals.mockReturnValue({ data: EMPTY_LATEST, isLoading: false });
   serveVitals([makeVital({ id: 'v-1', vital_type: 'heart_rate', value1: 72 })]);
 });
 
@@ -254,6 +260,142 @@ describe('VitalsPage', () => {
     expect(screen.getByRole('button', { name: 'Log a reading' })).toBeInTheDocument();
   });
 
+  // ── Empty states (mobile parity: never-logged vs out-of-range) ─────────────
+  //
+  // The generic "No readings yet" state above is now only ONE of three
+  // stories, told apart by the latest-vitals answer (`useLatestVitals`) —
+  // PORT of mobile VitalsDetailScreen's `viewState`. Pinned to a fixed instant
+  // (not the real clock) so "outside the 30-day window, inside the 90-day
+  // window" holds regardless of when this suite runs.
+  describe('empty states (never-logged vs out-of-range)', () => {
+    const PINNED_NOW = '2026-06-15T16:00:00.000Z';
+
+    beforeEach(() => {
+      // Fakes ONLY `Date` (not setTimeout/setInterval) — userEvent's internal
+      // delays still run on the real clock, so `await user.click(...)` below
+      // does not hang waiting for a fake timer nobody advances.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(PINNED_NOW));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('names the never-logged type and offers a CTA when the viewer can edit', async () => {
+      const user = userEvent.setup();
+      renderPage(); // only heart_rate is served; default latest is EMPTY_LATEST
+      await user.click(screen.getByRole('radio', { name: 'Weight' }));
+
+      expect(screen.getByText('No weight readings yet')).toBeInTheDocument();
+      const cta = screen.getByRole('button', { name: 'Log weight' });
+      await user.click(cta);
+      expect(screen.getByRole('dialog', { name: 'add-vital-modal' })).toBeInTheDocument();
+    });
+
+    it('never-logged: a read-only viewer gets the title with no description or CTA', async () => {
+      mockUseCircle.mockReturnValue({ canEdit: false, timezone: 'America/New_York' });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Weight' }));
+
+      expect(screen.getByText('No weight readings yet')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Log weight' })).not.toBeInTheDocument();
+    });
+
+    it('out-of-range: names the last reading and offers to jump to the narrowest wider range', async () => {
+      mockUseLatestVitals.mockReturnValue({
+        data: {
+          ...EMPTY_LATEST,
+          // 68.0388555 kg canonical = exactly 150 lbs (same fixture value used
+          // elsewhere in this file). ~45 days before PINNED_NOW: outside the
+          // default 30-day window, inside 90 days.
+          weight: makeVital({
+            id: 'w-old',
+            vital_type: 'weight',
+            value1: 68.0388555,
+            unit: 'kg',
+            recorded_at: '2026-05-01T12:00:00.000Z',
+          }),
+        },
+        isLoading: false,
+      });
+      serveVitals([]); // nothing for ANY type in the current window
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Weight' }));
+
+      expect(screen.getByText('No readings in the past 30 days')).toBeInTheDocument();
+      expect(screen.getByText(/Last reading: 150 lbs/)).toBeInTheDocument();
+
+      const jump = screen.getByRole('button', { name: 'Show past 90 days' });
+      await user.click(jump);
+      expect(screen.getByRole('button', { name: 'Time range: Last 90 days' })).toBeInTheDocument();
+    });
+
+    it('out-of-range: shown to a read-only viewer too (it is information, not a write affordance)', async () => {
+      mockUseCircle.mockReturnValue({ canEdit: false, timezone: 'America/New_York' });
+      mockUseLatestVitals.mockReturnValue({
+        data: {
+          ...EMPTY_LATEST,
+          weight: makeVital({
+            id: 'w-old',
+            vital_type: 'weight',
+            value1: 68.0388555,
+            unit: 'kg',
+            recorded_at: '2026-05-01T12:00:00.000Z',
+          }),
+        },
+        isLoading: false,
+      });
+      serveVitals([]);
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Weight' }));
+
+      expect(screen.getByText('No readings in the past 30 days')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Show past 90 days' })).toBeInTheDocument();
+    });
+
+    it('all types: keeps the plain generic empty state when every type is null', () => {
+      serveVitals([]);
+      renderPage();
+      expect(screen.getByText('No readings yet')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Log a reading' })).toBeInTheDocument();
+    });
+
+    it('all types: uses the range empty state naming the MOST RECENT reading across types', () => {
+      mockUseLatestVitals.mockReturnValue({
+        data: {
+          ...EMPTY_LATEST,
+          weight: makeVital({
+            id: 'w-old',
+            vital_type: 'weight',
+            value1: 70,
+            unit: 'kg',
+            recorded_at: '2026-05-01T12:00:00.000Z',
+          }),
+          // Older than the weight reading above — must NOT win.
+          glucose: makeVital({
+            id: 'g-older',
+            vital_type: 'glucose',
+            value1: 5.5,
+            unit: 'mmol/L',
+            recorded_at: '2026-03-01T12:00:00.000Z',
+          }),
+        },
+        isLoading: false,
+      });
+      serveVitals([]);
+      renderPage(); // 'All types' is the default filter
+
+      expect(screen.getByText('No readings in the past 30 days')).toBeInTheDocument();
+      // 70 kg canonical = 154.3 lbs, rounded to 1 decimal — the WEIGHT
+      // reading, not the older glucose one.
+      expect(screen.getByText(/Last reading: 154.3 lbs/)).toBeInTheDocument();
+    });
+  });
+
   // ── Type filter (a ChipSelect radiogroup, not a <select>) ──────────────────
 
   it('renders the type filter as a radiogroup of chips and re-fetches on selection', async () => {
@@ -298,21 +440,114 @@ describe('VitalsPage', () => {
     expect(spanAfter).toBeLessThan(spanBefore);
   });
 
-  it('reads a SECOND window of the same length, ending where the active one starts', async () => {
-    const user = userEvent.setup();
-    renderPage();
-    await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
+  // The windows are CALENDAR days in the viewer's device zone ("Last 30 days"
+  // = same wall-clock time, 30 dates back), not a fixed number of ms. Across a
+  // DST change 30 calendar days is 30d ± 1h (NZ DST start 2026-09-27 made it
+  // 2588400000 ms in Auckland), so the old real-clock ms-equality assertion was
+  // a date bomb: red in Auckland/Chatham from 09-27, in Denver Nov–Dec. The
+  // invariants that matter: the previous window ends EXACTLY where the current
+  // one starts (no gap, no overlap), and each spans the same number of calendar
+  // days at the same wall-clock time.
+  //
+  // Clocks are pinned to LOCAL NOON (`new Date(y, m, d, 12)`) in whatever zone
+  // the suite runs in, so `npm run test:timezones` replays the same calendar
+  // dates everywhere and noon never lands in a DST gap. The dates put a DST
+  // change inside the current or the previous window for BOTH America/Denver
+  // (Mar 8 / Nov 1 2026) and Pacific/Auckland (Apr 5 / Sep 27 2026).
+  describe('the previous window used for the trend', () => {
+    const DAY_MS = 86_400_000;
+    const localNoon = (y: number, m1: number, d: number) => new Date(y, m1 - 1, d, 12, 0, 0, 0);
+    const wall = (iso: string) => {
+      const d = new Date(iso);
+      return { y: d.getFullYear(), m: d.getMonth(), d: d.getDate(), hm: `${d.getHours()}:${d.getMinutes()}` };
+    };
+    const calendarDaysBetween = (fromISO: string, toISO: string) => {
+      const a = wall(fromISO);
+      const b = wall(toISO);
+      return Math.round((Date.UTC(b.y, b.m, b.d) - Date.UTC(a.y, a.m, a.d)) / DAY_MS);
+    };
+    /** The ms a span of calendar days gains/loses to the DST offset change inside it. */
+    const offsetShiftMs = (fromISO: string, toISO: string) =>
+      (new Date(toISO).getTimezoneOffset() - new Date(fromISO).getTimezoneOffset()) * 60_000;
 
-    const current = lastCurrentParams() as { from: string; to: string };
-    const previous = mockUseVitals.mock.calls
-      .map((call) => call[1] as { from: string; to: string })
-      .filter(isPreviousWindow)
-      .pop()!;
+    const windowsAfterSelectingHeartRate = async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
+      const current = lastCurrentParams() as { from: string; to: string };
+      const previous = mockUseVitals.mock.calls
+        .map((call) => call[1] as { from: string; to: string })
+        .filter(isPreviousWindow)
+        .pop()!;
+      return { user, current, previous };
+    };
 
-    expect(previous.to).toBe(current.from);
-    expect(Date.parse(current.to) - Date.parse(current.from)).toBe(
-      Date.parse(previous.to) - Date.parse(previous.from)
-    );
+    const expectCalendarWindows = (
+      current: { from: string; to: string },
+      previous: { from: string; to: string },
+      now: Date,
+      days: number
+    ) => {
+      // Adjacent to the millisecond: no gap, no overlap.
+      expect(previous.to).toBe(current.from);
+      // The active window ends at "now" — built as instants, sent as UTC ISO.
+      expect(current.to).toBe(now.toISOString());
+      for (const iso of [current.from, current.to, previous.from, previous.to]) {
+        expect(iso).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      }
+      // Same number of calendar days, same wall-clock time.
+      expect(calendarDaysBetween(current.from, current.to)).toBe(days);
+      expect(calendarDaysBetween(previous.from, previous.to)).toBe(days);
+      expect(wall(current.from).hm).toBe('12:0');
+      expect(wall(previous.from).hm).toBe('12:0');
+      // And therefore NOT a fixed ms length when DST changes inside a window —
+      // spelled out so a switch to `now - days * DAY_MS` goes red.
+      for (const w of [current, previous]) {
+        expect(Date.parse(w.to) - Date.parse(w.from)).toBe(days * DAY_MS + offsetShiftMs(w.from, w.to));
+      }
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each<[string, Date]>([
+      ['Denver spring-forward inside the current window', localNoon(2026, 3, 20)],
+      ['Denver spring-forward inside the previous window', localNoon(2026, 4, 20)],
+      ['Denver fall-back inside the current window', localNoon(2026, 11, 10)],
+      ['Denver fall-back inside the previous window', localNoon(2026, 12, 10)],
+      ['Auckland DST end inside the current window', localNoon(2026, 4, 25)],
+      ['Auckland DST end inside the previous window', localNoon(2026, 5, 20)],
+      ['Auckland DST start inside the current window', localNoon(2026, 10, 15)],
+      ['Auckland DST start inside the previous window', localNoon(2026, 11, 5)],
+      ['no DST change anywhere near (control)', localNoon(2026, 7, 15)],
+    ])('30 days: adjacent, same calendar length — %s', async (_label, now) => {
+      // Fakes ONLY `Date`, so userEvent's internal delays still run.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(now);
+      const { current, previous } = await windowsAfterSelectingHeartRate();
+      expectCalendarWindows(current, previous, now, 30);
+    });
+
+    it.each<[string, number]>([
+      ['Last 7 days', 7],
+      ['Last 90 days', 90],
+    ])('%s: adjacent, same calendar length across Denver fall-back', async (label, days) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      const now = localNoon(2026, 11, 3);
+      vi.setSystemTime(now);
+      const { user } = await windowsAfterSelectingHeartRate();
+
+      await user.click(screen.getByRole('button', { name: /Time range/ }));
+      await user.click(screen.getByRole('menuitem', { name: label }));
+
+      const current = lastCurrentParams() as { from: string; to: string };
+      const previous = mockUseVitals.mock.calls
+        .map((call) => call[1] as { from: string; to: string })
+        .filter(isPreviousWindow)
+        .pop()!;
+      expectCalendarWindows(current, previous, now, days);
+    });
   });
 
   // ── Latest-reading hero ────────────────────────────────────────────────────
@@ -361,6 +596,64 @@ describe('VitalsPage', () => {
     expect(screen.getByText('121/82')).toBeInTheDocument();
   });
 
+  // ── Logged by (mobile parity: "<time> · <First Last>", "System" when none) ──
+
+  describe('who logged a reading', () => {
+    const ana = { first_name: 'Ana', last_name: 'Ruiz' };
+
+    it('prints the author name after the timestamp on a reading row', () => {
+      serveVitals([makeVital({ id: 'v-1', users: ana })]);
+      renderPage();
+      expect(screen.getByText(/12:00 PM · Ana Ruiz/)).toBeInTheDocument();
+    });
+
+    it('also prints the author in the latest-reading hero', async () => {
+      const user = userEvent.setup();
+      serveVitals([
+        makeVital({ id: 'v-1', users: ana }),
+        makeVital({
+          id: 'v-2',
+          users: { first_name: 'Ben', last_name: 'Cole' },
+          recorded_at: '2026-06-14T16:00:00.000Z',
+        }),
+      ]);
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
+      // Hero (newest) + its own row both name Ana; Ben appears on the older row only.
+      expect(screen.getAllByText(/ · Ana Ruiz/)).toHaveLength(2);
+      expect(screen.getAllByText(/ · Ben Cole/)).toHaveLength(1);
+    });
+
+    it('says "System" when the reading has no author (null embed)', () => {
+      serveVitals([makeVital({ id: 'v-1', users: null })]);
+      renderPage();
+      expect(screen.getByText(/12:00 PM · System/)).toBeInTheDocument();
+    });
+
+    it('says "System" when the users embed is missing entirely', () => {
+      serveVitals([makeVital({ id: 'v-1' })]);
+      renderPage();
+      expect(screen.getByText(/12:00 PM · System/)).toBeInTheDocument();
+    });
+
+    it('is Spanish under es ("Sistema" for no author)', async () => {
+      const { default: i18n } = await import('@/i18n');
+      await i18n.changeLanguage('es');
+      try {
+        serveVitals([
+          makeVital({ id: 'v-1', users: ana }),
+          makeVital({ id: 'v-2', users: null, recorded_at: '2026-06-14T16:00:00.000Z' }),
+        ]);
+        renderPage();
+        expect(screen.getByText(/ · Ana Ruiz/)).toBeInTheDocument();
+        expect(screen.getByText(/ · Sistema/)).toBeInTheDocument();
+        expect(screen.queryByText(/ · System\b/)).not.toBeInTheDocument();
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    });
+  });
+
   it('hides the latest-reading hero and the chart when "All types" is selected', () => {
     renderPage();
     expect(screen.queryByText('Latest')).not.toBeInTheDocument();
@@ -368,14 +661,17 @@ describe('VitalsPage', () => {
     expect(screen.queryByRole('img', { name: /Trend chart/ })).not.toBeInTheDocument();
   });
 
-  it('hides the hero when the selected type has no readings in range', async () => {
+  it('hides the hero when the selected type has no readings in range, naming the never-logged type', async () => {
+    // The default latest-vitals mock (EMPTY_LATEST) says Weight has never been
+    // logged at all — mobile parity distinguishes that from "not in range".
     const user = userEvent.setup();
     renderPage(); // only a heart_rate reading is served
     await user.click(screen.getByRole('radio', { name: 'Weight' }));
 
     expect(screen.queryByText('Latest')).not.toBeInTheDocument();
     expect(screen.queryByText('Average')).not.toBeInTheDocument();
-    expect(screen.getByText('No readings yet')).toBeInTheDocument();
+    expect(screen.getByText('No weight readings yet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log weight' })).toBeInTheDocument();
   });
 
   it('renders a BP reading with no diastolic as systolic-only — never "/0"', async () => {
@@ -447,7 +743,11 @@ describe('VitalsPage', () => {
 
   // ── Trend ─────────────────────────────────────────────────────────────────
 
-  it('says the average is UP against the previous period', async () => {
+  // Trend is now mobile's signed AVERAGE DELTA ("Average +20 bpm vs the
+  // previous 30 days"), not a percent-of-average comparison — see
+  // src/lib/vitalsTrend.ts's `formatAverageDelta`.
+
+  it('says the average is up by a signed delta, with the up glyph', async () => {
     const user = userEvent.setup();
     serveVitals(
       [
@@ -459,10 +759,12 @@ describe('VitalsPage', () => {
     renderPage();
     await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
 
-    expect(screen.getByText('Up 25.0% vs previous period')).toBeInTheDocument();
+    const trendText = screen.getByText('Average +20 bpm vs the previous 30 days');
+    expect(trendText).toBeInTheDocument();
+    expect(trendText.parentElement?.querySelector('svg')).not.toBeNull();
   });
 
-  it('says the average is DOWN against the previous period', async () => {
+  it('says the average is down by a signed delta, with the real minus sign', async () => {
     const user = userEvent.setup();
     serveVitals(
       [
@@ -474,10 +776,11 @@ describe('VitalsPage', () => {
     renderPage();
     await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
 
-    expect(screen.getByText('Down 20.0% vs previous period')).toBeInTheDocument();
+    // U+2212 MINUS SIGN, not a hyphen.
+    expect(screen.getByText('Average −20 bpm vs the previous 30 days')).toBeInTheDocument();
   });
 
-  it('calls a sub-1% move Stable rather than a direction, with the remove glyph (mobile parity)', async () => {
+  it('rounds a sub-1-unit heart-rate move to "same average", with the remove glyph (mobile parity)', async () => {
     const user = userEvent.setup();
     serveVitals(
       [makeVital({ id: 'hr-1', value1: 100 })],
@@ -486,10 +789,10 @@ describe('VitalsPage', () => {
     renderPage();
     await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
 
-    const stableText = screen.getByText('Stable');
-    expect(stableText).toBeInTheDocument();
-    // Mobile shows a `remove` (—) glyph beside "Stable" rather than no icon.
-    expect(stableText.parentElement?.querySelector('svg')).not.toBeNull();
+    const sameText = screen.getByText('Same average as the previous 30 days');
+    expect(sameText).toBeInTheDocument();
+    // Mobile shows a `remove` (—) glyph beside the "same" sentence rather than no icon.
+    expect(sameText.parentElement?.querySelector('svg')).not.toBeNull();
   });
 
   it('shows no trend at all with nothing to compare against', async () => {
@@ -498,8 +801,40 @@ describe('VitalsPage', () => {
     renderPage();
     await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
 
-    expect(screen.queryByText('Stable')).not.toBeInTheDocument();
-    expect(screen.queryByText(/vs previous period/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Same average as the previous 30 days')).not.toBeInTheDocument();
+    expect(screen.queryByText(/vs the previous/)).not.toBeInTheDocument();
+  });
+
+  it('shows both components for a blood-pressure trend, in a clay/dusk-neutral single line', async () => {
+    const user = userEvent.setup();
+    serveVitals(
+      [
+        makeVital({ id: 'bp-1', vital_type: 'blood_pressure', value1: 124, value2: 79 }),
+        makeVital({
+          id: 'bp-2',
+          vital_type: 'blood_pressure',
+          value1: 124,
+          value2: 79,
+          recorded_at: '2026-06-14T16:00:00.000Z',
+        }),
+      ],
+      [
+        makeVital({
+          id: 'bp-0',
+          vital_type: 'blood_pressure',
+          value1: 120,
+          value2: 80,
+          recorded_at: '2026-05-14T16:00:00.000Z',
+        }),
+      ]
+    );
+    renderPage();
+    await user.click(screen.getByRole('radio', { name: 'Blood pressure' }));
+
+    // Systolic +4 (up), diastolic −1 (down) — a MIXED direction renders no icon.
+    const trendText = screen.getByText('Average +4/−1 mmHg vs the previous 30 days');
+    expect(trendText).toBeInTheDocument();
+    expect(trendText.parentElement?.querySelector('svg')).toBeNull();
   });
 
   // ── Chart ─────────────────────────────────────────────────────────────────
@@ -511,6 +846,34 @@ describe('VitalsPage', () => {
     await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
 
     expect(screen.queryByRole('img', { name: /Trend chart/ })).not.toBeInTheDocument();
+  });
+
+  it('labels the x axis with the range start, a midpoint, and "Today" — not the first/last reading', async () => {
+    // Pinned so "range start" / "midpoint" resolve to fixed, assertable dates
+    // (not the real clock) — mobile parity: the axis describes the QUERY
+    // WINDOW, not wherever the loaded readings happen to fall.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-06-15T16:00:00.000Z'));
+    try {
+      const user = userEvent.setup();
+      serveVitals([
+        // Both readings sit in the LAST couple of days of the 30-day window —
+        // a first/last-reading axis would mislabel the start as mid-June.
+        makeVital({ id: 'hr-1', value1: 72, recorded_at: '2026-06-15T16:00:00.000Z' }),
+        makeVital({ id: 'hr-2', value1: 80, recorded_at: '2026-06-14T16:00:00.000Z' }),
+      ]);
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Heart rate' }));
+
+      // Range start = 2026-06-15 minus 30 days = 2026-05-16 (America/New_York).
+      expect(screen.getByText('May 16')).toBeInTheDocument();
+      expect(screen.getByText('Today')).toBeInTheDocument();
+      // NEITHER reading's own day ("Jun 15"/"Jun 14") is the axis label the
+      // legacy first/last scheme would have shown for the start.
+      expect(screen.queryByText('Jun 14')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('plots one terracotta line for 2+ heart-rate readings', async () => {

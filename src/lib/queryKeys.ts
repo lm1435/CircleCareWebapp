@@ -74,6 +74,13 @@ export const queryKeys = {
     scheduledDate === undefined
       ? (['eventNotes', circleId, eventId] as const)
       : (['eventNotes', circleId, eventId, scheduledDate] as const),
+  // Event notes BY DATE RANGE (notes-first-class plan, task 30) — a separate
+  // root from the per-event `eventNotes` above (different query shape
+  // entirely), keyed like `careNotesRange` so a window's cache is per-window.
+  eventNotesRange: (
+    circleId: string,
+    range: { from: string; to: string; event_type?: string }
+  ) => ['eventNotesRange', circleId, range] as const,
 
   // Care notes (daily-care-notes plan) — date-window keys like calendar:
   // the bare key is the invalidation prefix, the range key is per-window.

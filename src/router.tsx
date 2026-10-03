@@ -3,7 +3,7 @@ import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router
 import { AuthGuard } from '@/components/AuthGuard';
 import { PageviewTracker } from '@/components/PageviewTracker';
 import { RouteTitle } from '@/components/RouteTitle';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { CircleRoute } from '@/components/layout/CircleRoute';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
 import { CancelReasonPrompt } from '@/components/subscription/CancelReasonPrompt';
 // Public / pre-auth routes stay EAGER: a signed-out visitor's very first paint
@@ -103,7 +103,9 @@ export const router = createBrowserRouter([
       },
       {
         path: '/circles/:circleId',
-        element: <AppLayout />,
+        // CircleRoute refuses a malformed :circleId (path traversal) before
+        // AppLayout or any page can build a request from it.
+        element: <CircleRoute />,
         children: [
           { index: true, element: <OverviewPage /> },
           { path: 'calendar', element: <CalendarPage /> },

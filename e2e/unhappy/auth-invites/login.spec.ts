@@ -9,7 +9,8 @@ import { captureJson, hasRefreshCookie, uniq } from './_helpers';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-const INVALID = 'Invalid email or password.';
+// PK2: credentials copy is mobile's (promotes reset), same on both apps.
+const INVALID = "We couldn't sign you in. Check your password, or reset it.";
 const GENERIC = "We couldn't sign you in. Please try again.";
 const RATE_LIMITED = 'Too many attempts. Please wait a few minutes before trying again.';
 const LOGIN = '/api/auth/login';

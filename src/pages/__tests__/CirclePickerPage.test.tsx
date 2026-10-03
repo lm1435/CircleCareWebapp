@@ -304,6 +304,10 @@ describe('CirclePickerPage', () => {
       const or = screen.getByText('or');
       expect(or.parentElement).toContainElement(join);
       expect(or.parentElement).toContainElement(create);
+      // a11y audit 2026-09-29 (WCAG 1.4.10): `shrink-0` pinned this row at
+      // 326px, past a 320px viewport; it must be free to shrink and wrap.
+      expect(or.parentElement?.className).not.toContain('shrink-0');
+      expect(or.parentElement?.className).toContain('flex-wrap');
     });
 
     it('offers join beside create in the empty state', async () => {

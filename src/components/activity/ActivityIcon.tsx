@@ -35,6 +35,7 @@ export function getActivityIconName(actionType: string): ActivityIconName {
     case 'medication_created':
     case 'medication_updated':
     case 'medication_deleted':
+    case 'medication_occurrence_removed':
     case 'medication_skipped':
     case 'medication_not_taken':
       return 'medication';
@@ -42,12 +43,14 @@ export function getActivityIconName(actionType: string): ActivityIconName {
     case 'appointment_created':
     case 'appointment_updated':
     case 'appointment_deleted':
+    case 'appointment_occurrence_removed':
     case 'events_imported':
       return 'appointment';
     case 'task_completed':
     case 'task_created':
     case 'task_updated':
     case 'task_deleted':
+    case 'task_occurrence_removed':
     case 'event_created':
     case 'event_updated':
     case 'event_completed':

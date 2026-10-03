@@ -106,11 +106,26 @@ export default function CirclePickerPage(): ReactElement {
   useEffect(() => {
     if (autoSkippedRef.current || deferredHandledRef.current) return;
     if (isPending || isError) return;
+    // A CREATE/JOIN STARTED HERE OWNS THE NAVIGATION — for the rest of this
+    // mount, not just while its modal is open. Creating the first circle
+    // invalidates `circles`, so the list can reach ONE circle while the modal
+    // is still up, or in the render right after it closes (the modal's
+    // onClose is urgent, its navigate is a router transition): skipping then
+    // either unmounted the modal before its onSuccess ran (React Query drops
+    // an unmounted observer's per-call callbacks) or REPLACED the history
+    // entry the modal had just pushed with its first-run / paywall state.
+    // Either way the user landed on the circle with no first-run wizard and,
+    // if free, no onboarding paywall (proven 2026-09-30 under CPU throttling;
+    // CirclePickerPage.createRace.test.tsx).
+    if (showCreate || showJoin) {
+      autoSkippedRef.current = true;
+      return;
+    }
     if (!circles || circles.length !== 1) return;
     if ((location.state as PickerLocationState | null)?.fromSwitcher) return;
     autoSkippedRef.current = true;
     navigate(`/circles/${circles[0].id}`, { replace: true });
-  }, [circles, isPending, isError, location.state, navigate]);
+  }, [circles, isPending, isError, location.state, navigate, showCreate, showJoin]);
 
   let content: ReactElement;
   if (isPending) {
@@ -199,7 +214,10 @@ export default function CirclePickerPage(): ReactElement {
             commitment, and an invitee is being pointed at the other side of
             the `or`, not asked to out-shout it. */}
         {showHeaderActions && (
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
+          // No `shrink-0` (WCAG 1.4.10): it pinned this row at its one-line
+          // width (326px), 30px past a 320px viewport, so Create circle hung
+          // off-screen; free to shrink, the buttons wrap instead.
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <Button variant="secondary" onClick={() => setShowJoin(true)}>
               {t('circles:join.button')}
             </Button>

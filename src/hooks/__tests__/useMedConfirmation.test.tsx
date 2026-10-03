@@ -36,6 +36,7 @@ import {
 } from '@/api/medicationConfirmations';
 import { medicationOptions } from '@/components/meds/historyQuery';
 import { queryKeys } from '@/lib/queryKeys';
+import { REFETCH_CAP_MS } from '@/lib/refetchCap';
 import {
   MEDICATION_CONFIRMATIONS_PAGE_SIZE,
   useConfirmMedication,
@@ -283,6 +284,60 @@ describe('useConfirmMedication', () => {
     // forever. Awaiting those would have deadlocked this assertion.
     expect(confirmation).toEqual({ id: 'conf-2' });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  // THE CAP. This QueryClient runs `networkMode: 'online'` in production
+  // (src/lib/queryClient.ts): a refetch begun while offline PAUSES rather than
+  // rejects, so without a cap a dropped connection would hold the Take/Skip
+  // badge open forever. `withRefetchCap` (src/lib/refetchCap.ts) bounds the
+  // wait this hook's onSuccess already returns — same promise, just capped.
+  it('releases mutateAsync at the 4s cap when the today’s-meds refetch never resolves', async () => {
+    vi.useFakeTimers();
+    try {
+      mockConfirm.mockResolvedValue({ id: 'conf-3' } as MedicationConfirmation);
+      const { Wrapper, queryClient } = wrapper();
+
+      const never = new Promise<void>(() => {});
+      vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(
+        (filters?: { queryKey?: readonly unknown[] }) =>
+          filters?.queryKey?.[0] === 'todaysMeds' ? never : Promise.resolve()
+      );
+
+      const { result } = renderHook(() => useConfirmMedication(CIRCLE_ID, 'care_profile'), {
+        wrapper: Wrapper,
+      });
+
+      let settled = false;
+      act(() => {
+        void result.current
+          .mutateAsync({ event_id: 'e1', status: 'taken', scheduled_time: '08:00:00' })
+          .then(() => {
+            settled = true;
+          });
+      });
+      // Enough turns for the POST itself to resolve — only the (never-ending)
+      // refetch is left.
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(settled).toBe(false);
+
+      // Paired: still open one ms short of the cap...
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(REFETCH_CAP_MS - 1);
+      });
+      expect(settled).toBe(false);
+
+      // ...released once the cap itself is reached.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

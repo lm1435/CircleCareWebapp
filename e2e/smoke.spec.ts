@@ -82,7 +82,7 @@ test.describe('authenticated route crawl', () => {
       const result = await visitAndCheck(page, route);
       await expectAuthenticatedAt(page, route);
       expectNoRuntimeErrors(result);
-      await checkA11y(page, route, testInfo);
+      await checkA11y(page, route, testInfo, { wcag22: true });
       await expectAuthenticatedAt(page, route);
     });
   }
@@ -93,7 +93,7 @@ test.describe('authenticated route crawl', () => {
       const result = await visitAndCheck(page, route);
       await expectAuthenticatedAt(page, route);
       expectNoRuntimeErrors(result);
-      await checkA11y(page, route, testInfo);
+      await checkA11y(page, route, testInfo, { wcag22: true });
       await expectAuthenticatedAt(page, route);
     });
   }

@@ -78,7 +78,7 @@ export function Checkbox({
         <span
           aria-hidden="true"
           className={`flex h-6 w-6 items-center justify-center rounded-sm border transition-colors duration-fast ${
-            checked ? 'border-moss bg-moss text-cream' : 'border-line bg-cream'
+            checked ? 'border-moss bg-moss text-cream' : 'border-line-strong bg-cream'
           }`}
         >
           {checked ? <Icon name="checkmark" size="meta" /> : null}

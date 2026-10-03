@@ -12,8 +12,20 @@ import { EventDetailModal } from '../EventDetailModal';
 // description row is never labelled "Notes" for ANY event type
 // (Instructions for a medication, Details for everything else) — because
 // this panel heading is the second "Notes" the dialog would otherwise show.
+//
+// `notesPanelSpy` (via vi.hoisted, so it exists before the hoisted vi.mock
+// factory below runs) records the props EventDetailModal passes down, so the
+// `scheduledDate` gating bug (a persisted series ROOT rendered on its own
+// start date got `undefined`, so the backend attached the note to the root
+// and the GET's parent-id union then surfaced it on EVERY occurrence) has a
+// regression test that doesn't require mounting the real panel's React
+// Query/auth/toast stack.
+const { notesPanelSpy } = vi.hoisted(() => ({ notesPanelSpy: vi.fn() }));
 vi.mock('../EventNotesPanel', () => ({
-  EventNotesPanel: () => <h3>Notes</h3>,
+  EventNotesPanel: (props: { circleId: string; eventId: string; scheduledDate?: string }) => {
+    notesPanelSpy(props);
+    return <h3>Notes</h3>;
+  },
 }));
 
 // The viewer's 12h/24h clock. The real hook reads the shared currentUser React
@@ -26,6 +38,7 @@ vi.mock('@/hooks/useHourCycle', () => ({
 
 beforeEach(() => {
   mockUseHourCycle.mockReturnValue('12h');
+  notesPanelSpy.mockClear();
 });
 
 // Pin the "device" timezone (only getDeviceTimezone reads resolvedOptions —
@@ -355,6 +368,89 @@ describe('EventDetailModal', () => {
     expect(screen.queryByText('Assigned to')).not.toBeInTheDocument();
   });
 
+  // Parity with mobile's calendar detail sheet, which shows "Assigned to" for an
+  // appointment that has an assignee (and nothing when it has none).
+  describe('appointment assignee', () => {
+    const appointment = (over: Partial<CalendarEvent>): CalendarEvent =>
+      makeEvent({
+        event_type: 'appointment',
+        title: 'Cardiology visit',
+        medication_name: null,
+        medication_dosage: null,
+        ...over,
+      });
+
+    it('shows who an appointment is assigned to', () => {
+      render(
+        <EventDetailModal
+          event={appointment({
+            assigned_to: 'user-2',
+            assigned_to_user: {
+              id: 'user-2',
+              first_name: 'Sam',
+              last_name: 'Diaz',
+              email: 'sam@example.com',
+            } as never,
+          })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.getByText('Assigned to')).toBeInTheDocument();
+      expect(screen.getByText('Sam Diaz')).toBeInTheDocument();
+    });
+
+    it('omits the row (no Unassigned label) when the appointment has no assignee', () => {
+      render(
+        <EventDetailModal
+          event={appointment({ assigned_to: null, assigned_to_user: null })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.queryByText('Assigned to')).not.toBeInTheDocument();
+      expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
+    });
+
+    it('omits the row when the assignee has left the circle and no name embed came back', () => {
+      render(
+        <EventDetailModal
+          event={appointment({ assigned_to: 'gone-user', assigned_to_user: null })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+          members={[]}
+        />
+      );
+      expect(screen.queryByText('Assigned to')).not.toBeInTheDocument();
+    });
+
+    it('is labelled in Spanish', async () => {
+      const { default: i18n } = await import('@/i18n');
+      await i18n.changeLanguage('es');
+      try {
+        render(
+          <EventDetailModal
+            event={appointment({
+              assigned_to: 'user-2',
+              assigned_to_user: {
+                id: 'user-2',
+                first_name: 'Sam',
+                last_name: 'Diaz',
+                email: 'sam@example.com',
+              } as never,
+            })}
+            careRecipientTimezone={TZ}
+            onClose={vi.fn()}
+          />
+        );
+        expect(screen.getByText('Asignado a')).toBeInTheDocument();
+        expect(screen.getByText('Sam Diaz')).toBeInTheDocument();
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    });
+  });
+
   it('a task/appointment description row is labelled Details, leaving exactly one Notes heading', () => {
     render(
       <EventDetailModal
@@ -374,5 +470,98 @@ describe('EventDetailModal', () => {
     expect(screen.getByText('Bring insurance card')).toBeInTheDocument();
     expect(screen.queryByText('Instructions')).not.toBeInTheDocument();
     expect(screen.getAllByText('Notes')).toHaveLength(1);
+  });
+
+  // BUG (2026-09-27): a persisted series ROOT rendered on ITS OWN start date
+  // (not virtual, no parent_event_id) fell through the old
+  // `event.is_virtual || event.parent_event_id` gate and got `scheduledDate:
+  // undefined`. api/eventNotes.ts then sent no `scheduled_date`, the backend
+  // attached the note directly to the root row, and GET always unions the
+  // root id into every date's query — so a note added on day S appeared on
+  // EVERY occurrence of the series. Proven live: one first-day note on 20
+  // doses across 3 weeks. Every branch below must pass the row's OWN
+  // scheduled_date for a RECURRING event (root-with-recurrence_rule, a
+  // persisted child, or a virtual instance) and nothing for a genuinely
+  // one-off event.
+  describe('EventNotesPanel scheduledDate gating (event-note series-leak bug)', () => {
+    it('passes the row-own scheduled_date for a series ROOT rendered on its own start date', () => {
+      render(
+        <EventDetailModal
+          event={makeEvent({
+            id: 'root-1',
+            recurrence_rule: 'daily',
+            parent_event_id: null,
+            is_virtual: false,
+            scheduled_date: '2026-06-12',
+          })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(notesPanelSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: 'root-1', scheduledDate: '2026-06-12' })
+      );
+    });
+
+    it('passes the row-own scheduled_date for a persisted child (parent_event_id set)', () => {
+      render(
+        <EventDetailModal
+          event={makeEvent({
+            id: 'child-1',
+            parent_event_id: 'root-1',
+            recurrence_rule: null,
+            is_virtual: false,
+            scheduled_date: '2026-06-19',
+          })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(notesPanelSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: 'child-1', scheduledDate: '2026-06-19' })
+      );
+    });
+
+    it('passes the row-own scheduled_date for a virtual instance', () => {
+      render(
+        <EventDetailModal
+          event={makeEvent({
+            id: 'root-1_2026-06-26',
+            parent_event_id: null,
+            recurrence_rule: 'daily',
+            is_virtual: true,
+            scheduled_date: '2026-06-26',
+          })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(notesPanelSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: 'root-1_2026-06-26', scheduledDate: '2026-06-26' })
+      );
+    });
+
+    it('passes no scheduledDate for a genuinely one-off (non-recurring) event', () => {
+      render(
+        <EventDetailModal
+          event={makeEvent({
+            id: 'oneoff-1',
+            recurrence_rule: null,
+            parent_event_id: null,
+            is_virtual: false,
+            scheduled_date: '2026-06-12',
+          })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(notesPanelSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ eventId: 'oneoff-1', scheduledDate: undefined })
+      );
+    });
   });
 });

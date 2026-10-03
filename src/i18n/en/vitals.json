@@ -25,11 +25,23 @@
     "average": "Average",
     "min": "Lowest",
     "max": "Highest",
+    "system": "System",
     "trendStable": "Stable",
     "trendUp": "Up {{pct}}% vs previous period",
     "trendDown": "Down {{pct}}% vs previous period",
     "chartTitle": "Trend",
-    "chartSummary": "Trend chart. Lowest {{min}}, highest {{max}}, latest {{latest}}."
+    "chartSummary": "Trend chart. Lowest {{min}}, highest {{max}}, latest {{latest}}.",
+    "chartToday": "Today",
+    "trendVs": {
+      "7d": "Average {{delta}} vs the previous 7 days",
+      "30d": "Average {{delta}} vs the previous 30 days",
+      "90d": "Average {{delta}} vs the previous 90 days"
+    },
+    "trendSame": {
+      "7d": "Same average as the previous 7 days",
+      "30d": "Same average as the previous 30 days",
+      "90d": "Same average as the previous 90 days"
+    }
   },
   "fields": {
     "systolic": "Systolic",
@@ -69,6 +81,35 @@
     "hint": "Track your loved one's vitals over time — blood pressure, weight, and more — so the whole circle can watch trends.",
     "hintReadOnly": "Readings logged for this circle will appear here so everyone can follow your loved one's health over time.",
     "cta": "Log a reading"
+  },
+  "emptyState": {
+    "neverLogged": {
+      "title": {
+        "blood_pressure": "No blood pressure readings yet",
+        "heart_rate": "No heart rate readings yet",
+        "glucose": "No glucose readings yet",
+        "weight": "No weight readings yet"
+      },
+      "description": "Log readings over time so the circle can spot a trend before the next appointment.",
+      "cta": {
+        "blood_pressure": "Log blood pressure",
+        "heart_rate": "Log heart rate",
+        "glucose": "Log glucose",
+        "weight": "Log weight"
+      }
+    },
+    "outOfRange": {
+      "title": {
+        "7d": "No readings in the past 7 days",
+        "30d": "No readings in the past 30 days",
+        "90d": "No readings in the past 90 days"
+      },
+      "lastReading": "Last reading: {{value}} · {{date}}",
+      "show": {
+        "30d": "Show past 30 days",
+        "90d": "Show past 90 days"
+      }
+    }
   },
   "toast": {
     "added": "Reading saved",

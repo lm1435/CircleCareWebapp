@@ -94,6 +94,11 @@ export function AdherenceHero({ circleId }: AdherenceHeroProps): ReactElement | 
   // 'stable' +5 has to read as the improvement it is.
   const improving = change > 0;
   const declining = change < 0;
+  // PK25: the server says `trend_available: false` when either half of the 30 days had
+  // nothing due (a new medication) -- there is no month to compare against, so NO trend row
+  // at all (not even "Same as last month", which would be as false as a +80%). Absent on an
+  // older server = available.
+  const trendAvailable = summary.trend_available !== false;
 
   return (
     <>
@@ -104,7 +109,7 @@ export function AdherenceHero({ circleId }: AdherenceHeroProps): ReactElement | 
 
           {/* One row, three mutually exclusive shapes. `stable` says so in words
               rather than showing a flat arrow nobody can read as "unchanged". */}
-          {improving || declining ? (
+          {!trendAvailable ? null : improving || declining ? (
             <p
               className={`m-0 flex items-center gap-1 text-sm font-medium ${
                 improving ? 'text-moss' : 'text-terracotta'

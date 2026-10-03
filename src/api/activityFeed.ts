@@ -5,7 +5,9 @@ import { apiClient } from '@/lib/api';
 //   GET /circles/:circleId/activity?limit=<1..100>&offset=<0..>
 //   → { success, data: { activities: [...], count, hasMore } }
 // - limit defaults to 50 server-side and is clamped to 1..100.
-// - hasMore is the backend heuristic `activities.length === limit`.
+// - hasMore is the backend heuristic `activities.length === limit`. The backend
+//   never drops rows (activities.length is the raw page length); note rows whose
+//   note is gone come back flagged `note_missing` and are hidden at render time.
 // - `created_at` is a UTC ISO timestamp — always format viewer-local via
 //   Intl/`timeZone`-aware helpers; NEVER `.split('T')[0]`.
 // - For medication confirmations, the backend merges the event's
@@ -14,7 +16,12 @@ import { apiClient } from '@/lib/api';
 
 export interface ActivityActor {
   id: string;
-  email: string;
+  /**
+   * ABSENT for a person who has left the circle: the backend then fills the
+   * embed with `{ id, first_name, last_name }` only (backend
+   * utils/userDisplayNames.ts), never their email. Read the name first.
+   */
+  email?: string | null;
   first_name: string | null;
   last_name: string | null;
 }
@@ -23,6 +30,28 @@ export interface ActivityMetadata {
   scheduled_date?: string;
   [key: string]: unknown;
 }
+
+/**
+ * Where a note-feed row's note lives — Slice 2 (notes-first-class plan, Task
+ * 8's backend contract). `event_id` is the SERIES ROOT id (`parent_event_id
+ * ?? id`), never the physical/virtual instance the note was actually
+ * attached to, so the web link always lands on the right week even for a
+ * recurring series.
+ */
+export interface ActivityNoteTargetEvent {
+  kind: 'event';
+  event_id: string;
+  scheduled_date: string;
+  event_type: string;
+  event_title: string;
+}
+
+export interface ActivityNoteTargetCare {
+  kind: 'care';
+  note_date: string;
+}
+
+export type ActivityNoteTarget = ActivityNoteTargetEvent | ActivityNoteTargetCare;
 
 export interface ActivityFeedItem {
   id: string;
@@ -47,6 +76,26 @@ export interface ActivityFeedItem {
   created_at: string; // UTC ISO timestamp
   /** Populated actor information (null/absent for system entries). */
   actor?: ActivityActor | null;
+  /**
+   * Notes-first-class (Slice 2): whitespace-collapsed, ≤140-char note body —
+   * read LIVE at feed-read time, never copied into the row. Present only on
+   * `subject_type IN ('event_note', 'care_note')` rows whose note still
+   * exists; `null` for a mood-only care note. Absent on every other row and
+   * on old `subject_type: 'event'` note rows (no backfill — plan decision 3).
+   */
+  note_preview?: string | null;
+  /** Deep-link target for a note row that carries `note_preview`. Absent on
+   *  an old note row (not clickable) and on every non-note row. */
+  note_target?: ActivityNoteTarget | null;
+  /**
+   * `true` on an `'event_note'`/`'care_note'` row whose note — or the event it
+   * was written on — no longer exists (deleted, or the event removed); such a
+   * row carries `note_preview: null` and no `note_target`. `false` on a note
+   * row that resolved; absent on every other row. Feed surfaces HIDE flagged
+   * rows via `visibleActivities`; the backend still returns them so the
+   * page length (and so the offset math) is the raw one.
+   */
+  note_missing?: boolean;
 }
 
 export interface GetActivityFeedParams {

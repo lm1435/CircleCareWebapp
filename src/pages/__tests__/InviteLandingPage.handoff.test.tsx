@@ -67,6 +67,25 @@ const previewEnvelope = {
   },
 };
 
+// The exact JSON the backend's POST /invites/code/:code/accept sends (the
+// `circle` is `select('*')` from care_circles), as the apiClient resolves it.
+const JOINED_ID = 'circle-joined-1';
+const acceptEnvelope = {
+  success: true,
+  data: {
+    circle: {
+      id: JOINED_ID,
+      name: "Rose's Care Team",
+      recipient_name: 'Rose',
+      owner_id: 'owner-1',
+      archived_at: null,
+      created_at: '2026-09-01T00:00:00.000Z',
+    },
+    view_only: false,
+    message: 'Successfully joined the circle',
+  },
+};
+
 /** Preview succeeds; the accept resolves or rejects as the test says. */
 function routeApi(accept: () => Promise<unknown>): void {
   mockedPost.mockImplementation(((url: string) =>
@@ -105,12 +124,16 @@ beforeEach(() => {
 });
 
 describe('InviteLandingPage — sign-in handoff auto-accept (real mutation, StrictMode)', () => {
-  it('confirms the join exactly like a direct accept: toast, analytics, circle cache, navigation — once', async () => {
-    routeApi(() => Promise.resolve({ success: true, data: {} }));
+  it('confirms the join exactly like a direct accept: named toast, analytics, circle cache, opens the joined circle — once', async () => {
+    routeApi(() => Promise.resolve(acceptEnvelope));
     const { invalidate } = renderHandoff();
 
-    expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    // The accept response names the circle joined: "You've joined <name>" and
+    // straight into that circle — not the generic copy and the picker.
+    expect(await screen.findByText("You've joined Rose's Care Team.")).toBeInTheDocument();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(`/circles/${JOINED_ID}`));
+    expect(navigate).not.toHaveBeenCalledWith('/circles');
+    expect(screen.queryByText('You joined the circle.')).not.toBeInTheDocument();
     expect(trackOnboardingCompleted).toHaveBeenCalledWith('joined');
     expect(inviteAccepted).toHaveBeenCalledWith(undefined, 'invite_link');
     // The hook-level success still invalidates the circle list the picker reads.
@@ -119,6 +142,21 @@ describe('InviteLandingPage — sign-in handoff auto-accept (real mutation, Stri
     // and the parked code is consumed.
     expect(acceptCalls()).toBe(1);
     expect(consumePendingInviteCode()).toBeNull();
+  });
+
+  it('a null circle in the accept response still reports success: generic toast + the circle picker', async () => {
+    routeApi(() =>
+      Promise.resolve({
+        success: true,
+        data: { circle: null, view_only: false, message: 'Successfully joined the circle' },
+      })
+    );
+    renderHandoff();
+
+    expect(await screen.findByText('You joined the circle.')).toBeInTheDocument();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    expect(trackOnboardingCompleted).toHaveBeenCalledWith('joined');
+    expect(acceptCalls()).toBe(1);
   });
 
   it('an ALREADY_MEMBER handoff lands on the circles list, with no join toast', async () => {

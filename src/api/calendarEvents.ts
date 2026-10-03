@@ -22,7 +22,12 @@ export interface EventConfirmation {
 
 export interface EventUser {
   id: string;
-  email: string;
+  /**
+   * ABSENT for a person who has left the circle: the backend then fills the
+   * embed with `{ id, first_name, last_name }` only (backend
+   * utils/userDisplayNames.ts), never their email. Read the name first.
+   */
+  email?: string | null;
   first_name: string | null;
   last_name: string | null;
 }
@@ -157,6 +162,16 @@ export interface GetEventsParams {
    * (Mirrors mobile/src/api/calendarEvents.ts GetEventsParams.)
    */
   includeDiscontinued?: boolean;
+  /**
+   * Medication roster only, and only together with `includeDiscontinued`: ALSO
+   * return the series ROOT rows of medications that are discontinued or whose
+   * series ended (`recurrence_end_date` before recipient-today) and have NO row
+   * in the window — so a med stopped more than 15 days ago stays on the roster's
+   * Inactive list instead of vanishing. The backend dedupes by series, so the
+   * extra rows need no client-side merge. Every other caller must leave it off
+   * (docs/plans/meds-roster-ended-series.md Task 2; mirrors mobile).
+   */
+  includeInactiveRoots?: boolean;
 }
 
 interface EventsEnvelope {
@@ -178,6 +193,7 @@ export async function getEvents(
     if (params.end_date) requestParams.end_date = params.end_date;
     if (params.event_type) requestParams.event_type = params.event_type;
     if (params.includeDiscontinued) requestParams.includeDiscontinued = 'true';
+    if (params.includeInactiveRoots) requestParams.includeInactiveRoots = 'true';
   }
   // apiClient's response interceptor unwraps axios' response.data, so the
   // resolved value IS the `{ success, data }` envelope.
@@ -312,7 +328,13 @@ export interface CreateEventRequest {
 
   // Recurrence
   recurrence_rule?: string;
-  recurrence_days?: number[];
+  /**
+   * 0=Sun..6=Sat, only meaningful with `recurrence_rule: 'weekly'`. `null` is an
+   * explicit "no specific days" — on PATCH it CLEARS a stored set (a days series
+   * switched back to plain Weekly); absent leaves the stored value alone. `[]`
+   * is rejected by the backend.
+   */
+  recurrence_days?: number[] | null;
   recurrence_end_date?: string;
 
   // Related event (e.g., follow-up linked to original)
@@ -361,6 +383,50 @@ export interface DeleteEventOptions {
 interface SingleEventEnvelope {
   success: boolean;
   data: { event: CalendarEvent };
+}
+
+/**
+ * The fields of a series ROOT the event form needs to edit that series: its
+ * anchor (`scheduled_date`), clock, and recurrence pattern.
+ */
+export type SeriesRoot = Pick<
+  CalendarEvent,
+  | 'id'
+  | 'scheduled_date'
+  | 'scheduled_time'
+  | 'duration_minutes'
+  | 'recurrence_rule'
+  | 'recurrence_days'
+  | 'recurrence_end_date'
+>;
+
+/**
+ * GET /circles/:circleId/events/:eventId, NARROWED to `SeriesRoot`.
+ *
+ * Used when the event form is opened from an OCCURRENCE (a virtual instance or
+ * a materialized child) whose root is not already in the cache. Edits always
+ * PATCH the root, so the form must hydrate from the root: a virtual instance
+ * carries neither the root's `scheduled_date` (the series anchor) nor
+ * `recurrence_days`.
+ *
+ * Narrowed on purpose: the detail response carries a SIGNED photo URL, and
+ * signed URLs must never sit in the React Query cache (see
+ * `getMedicationPhotoUrl` below). Only the scheduling fields are kept.
+ */
+export async function getSeriesRoot(circleId: string, eventId: string): Promise<SeriesRoot> {
+  const response = (await apiClient.get(
+    `/circles/${circleId}/events/${eventId}`,
+  )) as unknown as SingleEventEnvelope;
+  const event = response.data.event;
+  return {
+    id: event.id,
+    scheduled_date: event.scheduled_date,
+    scheduled_time: event.scheduled_time ?? null,
+    duration_minutes: event.duration_minutes ?? null,
+    recurrence_rule: event.recurrence_rule ?? null,
+    recurrence_days: event.recurrence_days ?? null,
+    recurrence_end_date: event.recurrence_end_date ?? null,
+  };
 }
 
 /**
@@ -424,6 +490,12 @@ export async function updateEvent(
   return response.data.event;
 }
 
+/** What a delete tells the client beyond "it worked" (PK3). */
+export interface DeleteEventResult {
+  /** True when a whole-medication delete kept its recorded doses for the reports. */
+  historyKept: boolean;
+}
+
 /**
  * DELETE /circles/:circleId/events/:eventId — delete an event. Deletes ARE
  * scoped: recurring events pass `deleteScope` (`single` | `future`) +
@@ -433,12 +505,17 @@ export async function deleteEvent(
   circleId: string,
   eventId: string,
   options?: DeleteEventOptions
-): Promise<void> {
+): Promise<DeleteEventResult> {
   const params = new URLSearchParams();
   if (options?.deleteScope) params.set('deleteScope', options.deleteScope);
   if (options?.scheduledDate) params.set('scheduledDate', options.scheduledDate);
   const qs = params.toString();
-  await apiClient.delete(`/circles/${circleId}/events/${eventId}${qs ? `?${qs}` : ''}`);
+  const response = (await apiClient.delete(
+    `/circles/${circleId}/events/${eventId}${qs ? `?${qs}` : ''}`
+  )) as unknown as { data?: { history_kept?: boolean } } | undefined;
+  // PK3: the server answers `data.history_kept: true` when a whole-medication delete kept
+  // the recorded doses (soft delete). Absent on an older server and on every other delete.
+  return { historyKept: response?.data?.history_kept === true };
 }
 
 /**
@@ -626,7 +703,9 @@ export const eventFormSchema = z.object({
 
   // Recurrence
   recurrence_rule: recurrenceRuleSchema.optional(),
-  recurrence_days: z.array(z.number()).max(7).optional(),
+  // Mirrors backend `eventSchema.recurrence_days`: 0..6, 1..7 entries, `null`
+  // = explicit "no specific days" (clears on PATCH).
+  recurrence_days: z.array(z.number().int().min(0).max(6)).min(1).max(7).nullable().optional(),
   recurrence_end_date: z.string().max(10).optional(),
 
   // Task-specific

@@ -41,6 +41,8 @@ test.setTimeout(60_000);
 interface Ctx {
   page: Page;
   circleId: string;
+  /** The signed-in worker account's user id (for owner-scoped row checks). */
+  userId: string;
   api: ApiSession;
   label: string;
   state: Record<string, string>;
@@ -268,6 +270,97 @@ const SURFACES: Surface[] = [
       }
     },
   },
+  {
+    name: 'create medication (AddEventModal)',
+    method: 'POST',
+    path: '/api/circles/:id/events',
+    toast: "Couldn't save your changes. Please try again.",
+    async prepare({ page, circleId, label }) {
+      await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+      await page.getByRole('button', { name: 'Add event' }).first().click();
+      const dialog = page.getByRole('dialog', { name: 'New event' });
+      await expect(dialog).toBeVisible();
+      await dialog.locator('#event_type').selectOption('medication');
+      await dialog.locator('#medication_name').fill(label);
+      await dialog.locator('#medication_dosage').fill('5 mg');
+      // Three days out: never "today" in any recipient zone, so the past-time notice cannot interpose.
+      await dialog.locator('#scheduled_date').fill(localDate(3));
+      await dialog.locator('#scheduled_time').fill('09:00');
+      return dialog.getByRole('button', { name: 'Create', exact: true });
+    },
+    async inputKept({ page, label }) {
+      const dialog = page.getByRole('dialog', { name: 'New event' });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator('#medication_name')).toHaveValue(label);
+    },
+    async succeeded({ page }) {
+      await expect(page.getByRole('dialog', { name: 'New event' })).toBeHidden({ timeout: 20_000 });
+    },
+    rows: (ctx) =>
+      `select 1 from calendar_events where circle_id = ${c(ctx)} and parent_event_id is null and medication_name = ${sqlStr(ctx.label)}`,
+    cleanup: (ctx) => purgeEventsTitled(ctx.circleId, ctx.label),
+  },
+  {
+    name: 'create task (AddEventModal)',
+    method: 'POST',
+    path: '/api/circles/:id/events',
+    toast: "Couldn't save your changes. Please try again.",
+    async prepare({ page, circleId, label }) {
+      await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+      await page.getByRole('button', { name: 'Add event' }).first().click();
+      const dialog = page.getByRole('dialog', { name: 'New event' });
+      await expect(dialog).toBeVisible();
+      await dialog.locator('#event_type').selectOption('task');
+      await dialog.locator('#title').fill(label);
+      await dialog.locator('#scheduled_date').fill(localDate(3));
+      return dialog.getByRole('button', { name: 'Create', exact: true });
+    },
+    async inputKept({ page, label }) {
+      const dialog = page.getByRole('dialog', { name: 'New event' });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator('#title')).toHaveValue(label);
+    },
+    async succeeded({ page }) {
+      await expect(page.getByRole('dialog', { name: 'New event' })).toBeHidden({ timeout: 20_000 });
+    },
+    rows: (ctx) =>
+      `select 1 from calendar_events where circle_id = ${c(ctx)} and title = ${sqlStr(ctx.label)} and event_type = 'task'`,
+    cleanup: (ctx) => purgeEventsTitled(ctx.circleId, ctx.label),
+  },
+  {
+    // Drives the WORKER account's circle list, so the created circle is ARCHIVED in
+    // cleanup: circle-lifecycle.spec.ts asserts exactly 2 live circles and the
+    // premium cap is 5 live circles.
+    name: 'create circle (CreateCircleModal)',
+    method: 'POST',
+    path: '/api/circles',
+    toast: "We couldn't create your circle just now. Nothing was lost — please try again.",
+    async prepare({ page, label }) {
+      await page.goto('/circles', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('button', { name: 'Create circle' }).first().click();
+      const dialog = page.getByRole('dialog', { name: 'New care circle' });
+      await expect(dialog).toBeVisible({ timeout: 20_000 });
+      await dialog.locator('#recipient_name').fill(label);
+      return dialog.getByRole('button', { name: 'Create circle', exact: true });
+    },
+    async inputKept({ page, label }) {
+      const dialog = page.getByRole('dialog', { name: 'New care circle' });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator('#recipient_name')).toHaveValue(label);
+    },
+    async succeeded({ page }) {
+      // The first-run wizard may open on the new circle; only the navigation matters.
+      await page.waitForURL(/\/circles\/[0-9a-f-]{36}/, { timeout: 20_000 });
+    },
+    rows: (ctx) =>
+      `select 1 from care_circles where owner_id = ${sqlStr(ctx.userId)}::uuid and recipient_name = ${sqlStr(ctx.label)} and archived_at is null`,
+    cleanup: (ctx) =>
+      sqlExec(
+        `update care_circles set archived_at = now(), archive_reason = 'user_deleted' where owner_id = ${sqlStr(ctx.userId)}::uuid and recipient_name = ${sqlStr(ctx.label)};`
+      ),
+  },
 ];
 
 const FAULTS: Array<{ label: string; fault: FaultOptions }> = [
@@ -284,7 +377,7 @@ for (const surface of SURFACES) {
       circleId,
     }) => {
       const api = await apiSession(request, account);
-      const ctx: Ctx = { page, circleId, api, label: uniqueLabel('RT'), state: {} };
+      const ctx: Ctx = { page, circleId, userId: account.userId, api, label: uniqueLabel('RT'), state: {} };
       try {
         const save = await surface.prepare(ctx);
         const injected = await failRequest(page, surface.method, surface.path, { ...fault, times: 1 });

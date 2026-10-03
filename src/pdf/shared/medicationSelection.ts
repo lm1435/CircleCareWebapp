@@ -45,8 +45,16 @@ export const CARE_SUMMARY_MEDICATION_LOOKBACK_DAYS = 30;
 
 export interface StoppedMedication<E extends CareSummaryMedicationEvent> {
   event: E;
-  /** The EARLIEST `discontinued_at` seen on the series — when it actually stopped. */
+  /** The EARLIEST `discontinued_at` seen on the series — when it actually stopped.
+   *  For a series ENDED via "This and future" (no `discontinued_at`) this is
+   *  `endedOn` at noon UTC, only so the list stays sortable: read `endedOn` first. */
   stoppedAt: string;
+  /**
+   * PK26: set only for a series that ended through its `recurrence_end_date`
+   * (naive `YYYY-MM-DD`, recipient frame). That date IS the stop date — print it
+   * as is, never resolve `stoppedAt` through a zone (a different day in Kiritimati).
+   */
+  endedOn?: string;
 }
 
 export interface SelectCareSummaryMedicationsOptions {
@@ -92,6 +100,27 @@ export function addDaysToDateString(dateStr: string, days: number): string {
   const mm = String(shifted.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(shifted.getUTCDate()).padStart(2, '0');
   return `${yy}-${mm}-${dd}`;
+}
+
+/**
+ * Has this series run past its `recurrence_end_date`? THE one definition of an
+ * "ended" medication series, shared by the Care Summary (below) and the Meds
+ * roster on both apps (mobile MedicationHistoryScreen, web MedicationsPage) so
+ * the printout and the roster can never disagree about whether a medication is
+ * still current. A series ended with "This and future" gets a
+ * `recurrence_end_date` and NO `discontinued_at`, so it is only recognisable
+ * through this check.
+ *
+ * KNOWN CAVEAT, kept on purpose so every surface agrees: this measures a naive
+ * recipient-frame `recurrence_end_date` against a real INSTANT, so a series
+ * "ends" at noon UTC on that day (8am in New York, a different DAY in
+ * Auckland). Changing it changes the PDF's output and needs its own cases.
+ */
+export function isMedicationSeriesEnded(
+  event: { recurrence_end_date?: string | null },
+  now: Date = new Date()
+): boolean {
+  return !!event.recurrence_end_date && new Date(event.recurrence_end_date + 'T12:00:00Z') < now;
 }
 
 function seriesKey(e: CareSummaryMedicationEvent): string {
@@ -150,7 +179,7 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
     // INSTANT (so a series "ends" at noon UTC, which is 8am in New York and a
     // different DAY in Auckland). Fixing it changes behaviour and needs its own
     // cases; both surfaces must keep printing the same list until then.
-    if (e.recurrence_end_date && new Date(e.recurrence_end_date + 'T12:00:00Z') < now) return false;
+    if (isMedicationSeriesEnded(e, now)) return false;
     const key = seriesKey(e);
     if (stoppedSeriesMap.has(key)) return false;
     if (seen.has(key)) return false;
@@ -182,10 +211,38 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
     if (!stoppedSeriesMap.has(key) || byKey.has(key)) continue;
     byKey.set(key, e);
   }
-  const stopped = Array.from(byKey.entries())
+  const discontinuedStopped: StoppedMedication<E>[] = Array.from(byKey.entries())
     .map(([key, event]) => ({ event, stoppedAt: stoppedSeriesMap.get(key)! }))
-    .filter(({ stoppedAt }) => getDateInTimezone(careRecipientTimezone, new Date(stoppedAt)) >= cutoff)
-    .sort((a, b) => b.stoppedAt.localeCompare(a.stoppedAt));
+    .filter(({ stoppedAt }) => getDateInTimezone(careRecipientTimezone, new Date(stoppedAt)) >= cutoff);
+
+  // PK26: a course ended with "This and future" has a `recurrence_end_date` and NO
+  // `discontinued_at`, so the walk above never saw it — it was in neither list. It is
+  // exactly the just-ended antibiotic course the stopped list exists for, so it joins
+  // "Recently stopped" with its end date as the stop date. Same "ended" definition as the
+  // roster (`isMedicationSeriesEnded`); a series that is ALSO discontinued stays with the
+  // discontinued walk. One row per series; bounded by the same cutoff.
+  const endedSeen = new Set<string>();
+  const endedStopped: StoppedMedication<E>[] = [];
+  for (const e of list) {
+    if (e.event_type !== 'medication' || !e.recurrence_rule || !e.recurrence_end_date) continue;
+    if (!isMedicationSeriesEnded(e, now)) continue;
+    const key = seriesKey(e);
+    if (stoppedSeriesMap.has(key) || endedSeen.has(key)) continue;
+    if (e.recurrence_end_date < cutoff) continue;
+    endedSeen.add(key);
+    endedStopped.push({
+      event: e,
+      stoppedAt: `${e.recurrence_end_date}T12:00:00Z`,
+      endedOn: e.recurrence_end_date,
+    });
+  }
+
+  // Newest stop first, by the stop DAY in the recipient's frame (ties: the instant).
+  const stopDay = (m: StoppedMedication<E>): string =>
+    m.endedOn ?? getDateInTimezone(careRecipientTimezone, new Date(m.stoppedAt));
+  const stopped = [...discontinuedStopped, ...endedStopped].sort(
+    (a, b) => stopDay(b).localeCompare(stopDay(a)) || b.stoppedAt.localeCompare(a.stoppedAt)
+  );
 
   // Carried into the PDF too — a paramedic reading the printout needs the
   // same stopped-medication history the screen shows. `discontinued_at`
@@ -193,7 +250,11 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
   const forExport: E[] = [
     ...active,
     ...recent,
-    ...stopped.map(({ event, stoppedAt }) => ({ ...event, discontinued_at: stoppedAt })),
+    // An ended course keeps NO `discontinued_at` (it was never discontinued): the
+    // template recognises it by its `recurrence_end_date` and prints that date.
+    ...stopped.map(({ event, stoppedAt, endedOn }) =>
+      endedOn ? event : { ...event, discontinued_at: stoppedAt }
+    ),
   ];
 
   return { active, recent, stopped, forExport, stoppedSeriesMap };

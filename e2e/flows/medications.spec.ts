@@ -1,7 +1,7 @@
 import { request as apiRequest, type Locator, type Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import type { IsolatedAccount } from '../isolation';
-import { checkA11y } from '../helpers';
+import { checkA11y, pinRecipientZoneToBrowser } from '../helpers';
 
 // Medication lifecycle flows (Medications page — /circles/:id/meds).
 //
@@ -429,8 +429,13 @@ test.describe('medication lifecycle', () => {
   test('whole-medication discontinue: both series of one med toggle together', async ({
     page,
     circleId,
+    account,
   }) => {
     test.slow(); // two series + roster + calendar assertions — needs 3x timeout
+    // Chip labels ("8:00 AM") are RECIPIENT-frame; the times are typed in the editor as the VIEWER's
+    // wall clock. Pin recipient = browser zone so they agree from any browser zone (a Kiritimati
+    // browser otherwise types 8:00 and reads "12:00 PM (Denver)").
+    await pinRecipientZoneToBrowser(page, account, circleId);
     const name = uniqueMedName('wholemed');
     const dosage = '20 mg';
     const chip = page.getByRole('button', { name: new RegExp(name) });

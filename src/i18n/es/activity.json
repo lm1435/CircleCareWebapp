@@ -26,14 +26,21 @@
   "entries": {
     "medicationRescheduled": "Medicamento reprogramado: {{title}} a las {{time}}",
     "medicationNotTaken": "Omitido: {{title}} el {{date}}",
+    "medicationOccurrenceRemoved": "Dosis eliminada: {{title}} el {{date}}",
+    "appointmentOccurrenceRemoved": "Cita eliminada: {{title}} el {{date}}",
+    "taskOccurrenceRemoved": "Tarea eliminada: {{title}} el {{date}}",
     "recurrenceStopped": "Detuvo recurrencia de {{title}} desde {{date}}",
+    "eventNoteAdded": "Agregó una nota a {{title}}",
+    "careNoteAdded": "Agregó una nota de cuidado diaria",
     "memberInvited": {
       "careRecipient": "Invitó a {{email}} a unirse como receptor de cuidado",
       "caregiver": "Invitó a {{email}} a unirse como cuidador"
     },
     "memberJoined": {
       "careRecipient": "{{name}} se unió al círculo como receptor de cuidado",
-      "caregiver": "{{name}} se unió al círculo como cuidador"
+      "caregiver": "{{name}} se unió al círculo como cuidador",
+      "careRecipientUnknown": "Alguien se unió al círculo como receptor de cuidado",
+      "caregiverUnknown": "Alguien se unió al círculo como cuidador"
     }
   },
   "phrases": {
@@ -66,6 +73,22 @@
     "stoppedRecurrence": "Detuvo recurrencia de",
     "fromDate": "desde",
     "importedAppointment": "Importó {{count}} cita del calendario",
-    "importedAppointments": "Importó {{count}} citas del calendario"
+    "importedAppointments": "Importó {{count}} citas del calendario",
+    "changedAnswer": "(cambió la respuesta de otro cuidador)"
+  },
+  "sentences": {
+    "memberLeft": "Un miembro salió del círculo",
+    "memberLeftNamed": "{{name}} salió del círculo",
+    "memberLeftAccountDeleted": "Un miembro salió del círculo (cuenta eliminada)",
+    "memberLeftNamedAccountDeleted": "{{name}} salió del círculo (cuenta eliminada)",
+    "memberRemoved": "Se eliminó a un miembro del círculo",
+    "memberRemovedNamed": "Se eliminó a {{name}} del círculo",
+    "memberInvited": "Se invitó a un miembro al círculo",
+    "memberJoined": "Un miembro se unió al círculo",
+    "createdSelfCareCircleFor": "Círculo de autocuidado creado para {{name}}",
+    "discontinuedMedication": "Medicamento suspendido: {{title}}",
+    "reactivatedMedication": "Medicamento reactivado: {{title}}",
+    "rescheduledMedication": "Medicamento reprogramado: {{title}} a las {{time}}",
+    "addedNotes": "Agregó notas a {{title}}"
   }
 }

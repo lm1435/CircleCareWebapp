@@ -5,11 +5,13 @@ import { apiClient } from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   getEventNotes,
+  getEventNotesInRange,
   createNote,
   updateNote,
   deleteNote,
   splitEventId,
   type EventNote,
+  type EventNoteRangeItem,
 } from '@/api/eventNotes';
 import { useCreateNote, useUpdateNote, useDeleteNote } from '@/hooks/useEventNotes';
 
@@ -132,6 +134,44 @@ describe('eventNotes api functions', () => {
     expect(mockDelete).toHaveBeenCalledWith(
       `/circles/${CIRCLE}/events/${PARENT_UUID}/notes/${NOTE_ID}`
     );
+  });
+});
+
+describe('getEventNotesInRange (task 30 — care summary share sheet)', () => {
+  const RANGE_ITEM: EventNoteRangeItem = {
+    id: 'note-range-1',
+    body: 'Dr. Patel lowered the metoprolol to 25mg',
+    created_at: '2026-06-01T00:00:00Z',
+    author: { first_name: 'Sam', last_name: 'Rivera' },
+    event: {
+      id: 'ev-1',
+      title: 'Cardiology visit',
+      scheduled_date: '2026-06-01',
+      event_type: 'appointment',
+    },
+  };
+
+  it('GETs the range endpoint with from/to/event_type and returns the notes', async () => {
+    mockGet.mockResolvedValueOnce({ success: true, data: { notes: [RANGE_ITEM] } } as never);
+
+    const notes = await getEventNotesInRange(CIRCLE, {
+      from: '2026-05-01',
+      to: '2026-06-01',
+      event_type: 'appointment',
+    });
+
+    expect(mockGet).toHaveBeenCalledWith(`/circles/${CIRCLE}/event-notes`, {
+      params: { from: '2026-05-01', to: '2026-06-01', event_type: 'appointment' },
+    });
+    expect(notes).toEqual([RANGE_ITEM]);
+  });
+
+  it('returns [] when the envelope carries no notes array', async () => {
+    mockGet.mockResolvedValueOnce({ success: true, data: {} } as never);
+
+    const notes = await getEventNotesInRange(CIRCLE, { from: '2026-05-01', to: '2026-06-01' });
+
+    expect(notes).toEqual([]);
   });
 });
 

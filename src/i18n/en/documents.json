@@ -47,14 +47,22 @@
     },
     "other": "Upload something else"
   },
-  "preview": "Preview",
+  "open": "Open",
   "download": "Download",
   "downloadDocument": "Download {{name}}",
   "downloadFailed": "Download failed. Please try again.",
   "closePreview": "Close preview",
-  "previewFailed": "Couldn't load the preview.",
   "pdfFallbackHint": "PDF not displaying? Open it in a new tab or download it.",
   "openInNewTab": "Open in new tab",
+  "viewer": {
+    "failedTitle": "Couldn't open this document",
+    "failedMessage": "Check your connection and try again.",
+    "unsupportedTitle": "This file can't be previewed here",
+    "unsupportedMessage": "Use Download to save it to your device.",
+    "downloadStarted": "Download started.",
+    "newTabBlocked": "Your browser blocked the new tab, so the file is downloading instead.",
+    "newTabFailed": "Couldn't open this document in a new tab. Please try again."
+  },
   "editAction": "Edit",
   "deleteAction": "Delete",
   "actionsFor": "Options for {{name}}",
@@ -93,7 +101,8 @@
       "storageFull": "This file would exceed the circle's storage limit.",
       "labelRequired": "Enter a name for this document.",
       "noteTooLong": "Notes can be up to 500 characters."
-    }
+    },
+    "unsupportedOrDamaged": "This file type isn't supported, or the file is damaged. Try a different file."
   },
   "edit": {
     "title": "Edit document",

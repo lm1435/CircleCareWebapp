@@ -22,6 +22,19 @@ vi.mock('@/hooks/useInvites', () => ({
   useAcceptInvite: () => ({ mutate: acceptMutate, isPending: acceptPending }),
 }));
 
+const navigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return { ...actual, useNavigate: () => navigate };
+});
+
+// The backend's accept `data` (POST /invites/:inviteId/accept).
+const ACCEPT_RESULT = {
+  circle: { id: 'c1', name: "Mom's Care", recipient_name: 'Rose', owner_id: 'o-1' },
+  view_only: false,
+  message: 'Successfully joined the circle',
+};
+
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();
@@ -109,16 +122,46 @@ describe('PendingInvitesPage', () => {
     expect(acceptMutate.mock.calls[0][0]).toEqual({ inviteId: 'inv-1' });
   });
 
-  it('toasts on a successful accept', async () => {
+  it('names the joined circle in a toast and opens it (parity with mobile)', async () => {
     const user = userEvent.setup();
     usePendingInvitesResult.data = [makeInvite()];
-    acceptMutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
+    acceptMutate.mockImplementation((_vars, opts) => opts?.onSuccess?.(ACCEPT_RESULT));
     renderPage();
 
     await user.click(screen.getByRole('button', { name: 'Accept' }));
-    expect(showToast).toHaveBeenCalledWith("You joined Mom's Care.", 'success');
+    expect(showToast).toHaveBeenCalledWith("You've joined Mom's Care.", 'success');
+    expect(navigate).toHaveBeenCalledWith('/circles/c1');
     // R4-5: successful accept reports onboarding completion via the join path.
     expect(trackOnboardingCompleted).toHaveBeenCalledWith('joined');
+  });
+
+  it('opens the circle the RESPONSE names', async () => {
+    const user = userEvent.setup();
+    usePendingInvitesResult.data = [makeInvite()];
+    acceptMutate.mockImplementation((_vars, opts) =>
+      opts?.onSuccess?.({
+        ...ACCEPT_RESULT,
+        circle: { ...ACCEPT_RESULT.circle, id: 'c-from-response', name: 'Renamed Care' },
+      })
+    );
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+    expect(showToast).toHaveBeenCalledWith("You've joined Renamed Care.", 'success');
+    expect(navigate).toHaveBeenCalledWith('/circles/c-from-response');
+  });
+
+  it('a null circle in the response falls back to the listed invite circle', async () => {
+    const user = userEvent.setup();
+    usePendingInvitesResult.data = [makeInvite()];
+    acceptMutate.mockImplementation((_vars, opts) =>
+      opts?.onSuccess?.({ ...ACCEPT_RESULT, circle: null })
+    );
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+    expect(showToast).toHaveBeenCalledWith("You've joined Mom's Care.", 'success');
+    expect(navigate).toHaveBeenCalledWith('/circles/c1');
   });
 
   // WB4 — this list is a THIRD invite_accepted source (distinct from the
@@ -128,7 +171,7 @@ describe('PendingInvitesPage', () => {
     const inviteAccepted = vi.spyOn(Analytics, 'inviteAccepted');
     const user = userEvent.setup();
     usePendingInvitesResult.data = [makeInvite()];
-    acceptMutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
+    acceptMutate.mockImplementation((_vars, opts) => opts?.onSuccess?.(ACCEPT_RESULT));
     renderPage();
 
     await user.click(screen.getByRole('button', { name: 'Accept' }));
@@ -145,19 +188,15 @@ describe('PendingInvitesPage', () => {
     expect(trackOnboardingCompleted).not.toHaveBeenCalled();
   });
 
-  it('offers an Open circle link to the joined circle after a successful accept', async () => {
+  it('does not navigate or toast success when the accept fails', async () => {
     const user = userEvent.setup();
     usePendingInvitesResult.data = [makeInvite()];
-    acceptMutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
+    acceptMutate.mockImplementation((_vars, opts) => opts?.onError?.(new Error('boom')));
     renderPage();
 
     await user.click(screen.getByRole('button', { name: 'Accept' }));
-
-    expect(screen.getByText("You joined Mom's Care.")).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open circle' })).toHaveAttribute(
-      'href',
-      '/circles/c1'
-    );
+    expect(navigate).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalledWith(expect.any(String), 'success');
   });
 
   it('explains that invitations can simply be left pending', () => {

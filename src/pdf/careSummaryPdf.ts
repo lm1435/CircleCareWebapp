@@ -12,6 +12,7 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CareSummaryTemplateOptions } from './shared/careSummaryTemplate';
 import { renderCareSummaryHtml, renderCareSummaryText } from './shared/careSummaryTemplate';
 import { buildPdfEnv } from './pdfEnv';
+import type { CareSummaryVisitNote, CareSummaryCareNote } from './shared/types';
 
 export interface WebCareSummaryOptions {
   recipientName: string;
@@ -23,6 +24,12 @@ export interface WebCareSummaryOptions {
   /** Display name of the person who generated the export, for the header's
    *  "Prepared by" line. Omitted (not printed) when unavailable. */
   preparedBy?: string;
+  /** Opt-in "Visit notes" section (task 30) — omitted/empty prints no
+   *  section at all, not even an empty-state row. */
+  visitNotes?: CareSummaryVisitNote[];
+  /** Opt-in "Daily care notes" section (task 30) — same omit-when-empty
+   *  rule as {@link visitNotes}. */
+  careNotes?: CareSummaryCareNote[];
 }
 
 export function generateCareSummaryHtml(options: WebCareSummaryOptions): string {

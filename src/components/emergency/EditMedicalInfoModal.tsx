@@ -1,7 +1,13 @@
-import { useState, type FormEvent, type ReactElement } from 'react';
+import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
-import { useUpdateEmergencyInfo } from '@/hooks/useEmergencyInfo';
+import {
+  useEmergencyEditSeed,
+  useUpdateEmergencyInfo,
+  withIfMatch,
+} from '@/hooks/useEmergencyInfo';
+import { getEmergencyInfoConflict } from '@/lib/apiErrors';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import {
   CONDITION_TAG_KEYS,
@@ -41,12 +47,17 @@ const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
  * arrays round-trip directly (no comma join/split), and the partial PUT sends
  * ALL four medical keys at once.
  */
-type EditMedicalInfoModalPropsLoaded = Omit<EditMedicalInfoModalProps, 'info'> & { info: EmergencyInfo };
+type EditMedicalInfoModalPropsLoaded = Omit<EditMedicalInfoModalProps, 'info'> & {
+  info: EmergencyInfo;
+  /** PK5: the save was refused 409; the wrapper re-seeds this form from the server. */
+  onConflict: () => void;
+};
 
 function EditMedicalInfoModalForm({
   circleId,
   info,
   onClose,
+  onConflict,
 }: EditMedicalInfoModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
@@ -69,6 +80,21 @@ function EditMedicalInfoModalForm({
   const [allergies, setAllergies] = useState<string[]>(info?.allergies ?? []);
   const [conditions, setConditions] = useState<string[]>(info?.medical_conditions ?? []);
 
+  // PK9: survives a forced sign-out (sessionStorage, same user, 30 min); only
+  // saved when the form differs from what it opened with.
+  const medicalSnapshot = { bloodType, medicationAllergies, allergies, conditions };
+  const medicalBaseline = useRef(JSON.stringify(medicalSnapshot));
+  useSessionDraft<typeof medicalSnapshot>(
+    `emergency:medical:${circleId}`,
+    () => (JSON.stringify(medicalSnapshot) === medicalBaseline.current ? null : medicalSnapshot),
+    (d) => {
+      setBloodType(d.bloodType);
+      setMedicationAllergies(d.medicationAllergies);
+      setAllergies(d.allergies);
+      setConditions(d.conditions);
+    }
+  );
+
   const storedBloodType = bloodType.trim();
   const bloodTypeOptions =
     BLOOD_TYPES.some((bt) => bt.toUpperCase() === storedBloodType.toUpperCase()) || !storedBloodType
@@ -79,14 +105,20 @@ function EditMedicalInfoModalForm({
     event.preventDefault();
     if (update.isPending || !submitGuard.claim()) return;
     update.mutate(
-      {
+      withIfMatch(info, {
         // null (not undefined) so clearing a previously-set value persists.
         blood_type: bloodType.trim() || null,
         medication_allergies: medicationAllergies,
         allergies,
         medical_conditions: conditions,
-      },
-      { onSuccess: onClose, onSettled: submitGuard.release }
+      }),
+      {
+        onSuccess: onClose,
+        onError: (err) => {
+          if (getEmergencyInfoConflict(err)) onConflict();
+        },
+        onSettled: submitGuard.release,
+      }
     );
   };
 
@@ -171,6 +203,14 @@ function EditMedicalInfoModalForm({
  * a bad form. Mounting the form only once `info` exists avoids both.
  */
 export function EditMedicalInfoModal(props: EditMedicalInfoModalProps): ReactElement | null {
-  if (!props.info) return null;
-  return <EditMedicalInfoModalForm {...props} info={props.info} />;
+  const seed = useEmergencyEditSeed(props.circleId, props.info);
+  if (!seed.info) return null;
+  return (
+    <EditMedicalInfoModalForm
+      key={seed.epoch}
+      {...props}
+      info={seed.info}
+      onConflict={seed.reseed}
+    />
+  );
 }

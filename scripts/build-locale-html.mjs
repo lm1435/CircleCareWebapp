@@ -102,8 +102,8 @@ const replacements = [
   },
   {
     what: 'og:image:alt',
-    find: 'CircleCare — the family caregiver app, shown on a phone',
-    replace: 'CircleCare — la app para cuidadores familiares, en un teléfono',
+    find: 'Invitation to a care circle — free for you, no download needed. The CircleCare activity feed shown on a phone.',
+    replace: 'Te invitaron a un círculo de cuidado — gratis para ti, sin descargar nada. El historial de actividad de CircleCare en un teléfono.',
     count: 1,
   },
   {

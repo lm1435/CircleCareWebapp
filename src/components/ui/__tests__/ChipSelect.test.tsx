@@ -44,7 +44,7 @@ describe('ChipSelect', () => {
   it('keeps the unselected chip on the hairline outline', () => {
     render(<ChipSelect label="Blood type" options={['A+', 'O+']} value="O+" onChange={vi.fn()} />);
     const unselected = screen.getByRole('radio', { name: 'A+' });
-    expect(unselected.className).toContain('border-line');
+    expect(unselected.className).toContain('border-line-strong');
     expect(unselected.className).toContain('text-ink');
     expect(unselected.className).not.toContain('bg-ink');
   });

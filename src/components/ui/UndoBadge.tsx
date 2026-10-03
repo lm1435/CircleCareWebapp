@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useLayoutEffect, useRef, type ReactElement } from 'react';
 
 export type UndoBadgeKind = 'taken' | 'skipped' | 'done';
 
@@ -52,9 +52,59 @@ export function UndoBadge({
   className = '',
 }: UndoBadgeProps): ReactElement {
   const isTaken = kind === 'taken' || kind === 'done';
+  const rootRef = useRef<HTMLDivElement>(null);
+  const undoRef = useRef<HTMLButtonElement>(null);
+
+  // KEYBOARD FOCUS (WCAG 2.4.3). The badge REPLACES the button that was just
+  // pressed (Confirm / Skip / Done), so that button leaves the DOM with focus
+  // on it and the browser drops focus to <body> — the next Tab restarts at the
+  // top of the page, and a screen reader loses its place. On mount, if focus
+  // was lost that way, it goes to Undo (the only control that replaced the one
+  // pressed). A caller rendering the badge twice (TaskRow's two layout slots,
+  // one CSS-hidden) is fine: a hidden button has no client rects and is
+  // skipped, so the visible copy takes it.
+  useLayoutEffect(() => {
+    const button = undoRef.current;
+    const active = document.activeElement;
+    if (!button || (active && active !== document.body)) return;
+    if (button.getClientRects().length === 0) return;
+    button.focus();
+  }, []);
+
+  // ...and when the badge itself leaves (Undo pressed, or the window closed)
+  // with focus inside it, focus goes back to the same row — the restored
+  // Confirm/Skip pair after an Undo — or, when the row is gone or has nothing
+  // focusable left, to the neighbouring row, instead of to <body>. Layout
+  // cleanup runs before the node is detached, so `contains` still sees it.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    return () => {
+      if (!root || !root.contains(document.activeElement)) return;
+      const row = root.closest('li') ?? root.parentElement;
+      const next = row?.nextElementSibling ?? null;
+      const prev = row?.previousElementSibling ?? null;
+      window.setTimeout(() => {
+        const active = document.activeElement;
+        if (active && active !== document.body) return;
+        for (const candidate of [row, next, prev]) {
+          if (!candidate || !candidate.isConnected) continue;
+          const target = Array.from(
+            candidate.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+          ).find((el) => el.getClientRects().length > 0);
+          if (target) {
+            target.focus();
+            return;
+          }
+        }
+      }, 0);
+    };
+  }, []);
 
   return (
     <div
+      ref={rootRef}
       role="status"
       aria-live="polite"
       className={`inline-flex flex-col rounded-full overflow-hidden ${className}`}
@@ -69,6 +119,7 @@ export function UndoBadge({
         </span>
         <span aria-hidden className="w-px h-3.5 bg-moss-muted mx-0.5" />
         <button
+          ref={undoRef}
           type="button"
           onClick={onUndo}
           aria-label={itemLabel ? `${undoLabel} ${itemLabel}` : undefined}

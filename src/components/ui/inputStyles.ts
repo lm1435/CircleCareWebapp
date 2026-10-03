@@ -1,3 +1,5 @@
+import type { MouseEvent } from 'react';
+
 /**
  * THE canonical field appearance (spec §4.5), ported from
  * `mobile/src/components/ui/inputStyles.ts` + `Field.tsx`.
@@ -32,8 +34,18 @@
 const SHELL_BOX =
   'gap-2.5 bg-cream border rounded-md px-3.5 min-h-[44px] transition-colors duration-fast';
 
-/** The resting/focus border pair — mobile's `INPUT_RESTING_BORDER` → `INPUT_FOCUSED_BORDER`. */
-const SHELL_RESTING = 'border-line-2 focus-within:border-moss-light';
+/**
+ * The resting/focus border pair — mobile's `INPUT_RESTING_BORDER` → `INPUT_FOCUSED_BORDER`.
+ *
+ * WCAG (a11y audit 2026-09-29): the white field sits on a near-white page, so
+ * its border is the ONLY thing that shows where the field is, and 1.4.11 wants
+ * that boundary at 3:1 — `line-2` was 1.17:1. `line-strong` is 3.58:1. With a
+ * darker resting edge, a 1px moss-light focus border (3.47:1, the same weight
+ * and nearly the same lightness) would no longer read as a change, so focus is
+ * now a 2px moss edge (1px border + 1px inset-free shadow, no layout shift).
+ */
+export const FOCUS_EDGE = 'focus-within:border-moss focus-within:shadow-[0_0_0_1px_var(--color-moss)]';
+const SHELL_RESTING = `border-line-strong ${FOCUS_EDGE}`;
 
 /** The bordered box. Wraps the native control; never applied TO it. */
 export const INPUT_SHELL = `flex items-center ${SHELL_BOX} ${SHELL_RESTING}`;
@@ -46,7 +58,11 @@ export const INPUT_SHELL_MULTILINE = `flex items-start ${SHELL_BOX} ${SHELL_REST
  * the error color short-circuits the focus interpolation entirely, so focusing
  * an invalid field must not turn it moss.
  */
-export const INPUT_SHELL_ERROR = 'border-terracotta focus-within:border-terracotta';
+export const INPUT_SHELL_ERROR =
+  // The 1px terracotta shadow is the errored field's focus cue: the border
+  // colour cannot change on focus (error wins), and without it focusing an
+  // invalid field showed no change at all (WCAG 2.4.7).
+  'border-terracotta focus-within:border-terracotta focus-within:shadow-[0_0_0_1px_var(--color-terracotta)]';
 
 /** Spec §4.5: disabled is 50% opacity everywhere. */
 export const INPUT_SHELL_DISABLED = 'opacity-50';
@@ -58,6 +74,21 @@ export interface FieldShellOptions {
   multiline?: boolean;
   /** Extra classes for the box (e.g. `relative` for the date/time overlay). */
   extra?: string;
+}
+
+/**
+ * `onMouseDown` for a field shell: a press on the shell's own padding (the
+ * 14px side insets, the gap beside a trailing icon) focuses the control inside
+ * instead of landing on dead space — the same fix mobile got for "tapping the
+ * box's padding doesn't focus the input" (a11y audit 2026-09-29). Presses on
+ * the control itself, or on a trailing button, are left alone.
+ */
+export function focusControlOnShellPress(event: MouseEvent<HTMLElement>): void {
+  if (event.target !== event.currentTarget) return;
+  const control = event.currentTarget.querySelector<HTMLElement>('input, textarea, select');
+  if (!control || (control as HTMLInputElement).disabled) return;
+  event.preventDefault();
+  control.focus();
 }
 
 /** The shell for one field, in one state. Every §4.5 control builds its box here. */
@@ -203,13 +234,13 @@ const CHIP_BOX =
   'min-h-[44px] px-4 rounded-full border text-sm font-medium inline-flex items-center gap-1.5 transition-[transform,background-color] duration-fast ease-spring active:scale-[0.97]';
 
 /** The unselected chip's full class string. */
-export const CHIP_BASE = `${CHIP_BOX} border-line`;
+export const CHIP_BASE = `${CHIP_BOX} border-line-strong`;
 
 /** Selected chip — ink is the interactive language (decision 2026-09-04). */
 export const CHIP_SELECTED = 'bg-ink text-cream border-ink';
 
 /** Unselected chip. */
-export const CHIP_UNSELECTED = 'border-line text-ink hover:bg-bg-2';
+export const CHIP_UNSELECTED = 'border-line-strong text-ink hover:bg-bg-2';
 
 export function chipClass(selected: boolean): string {
   return `${CHIP_BOX} ${selected ? CHIP_SELECTED : CHIP_UNSELECTED}`;

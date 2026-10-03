@@ -17,12 +17,24 @@ import {
   stubJson,
   type ScopedAccount,
 } from './_helpers';
+import {
+  PKCE_VERIFIER_KEY,
+  credentialUrls,
+  parkPkceReturn,
+  routeAuthorizeToCallback,
+  sessionHistoryUrls,
+  stubPkceTokenEndpoint,
+  type PkceProvider,
+} from '../../oauthPkce';
 
 // OAUTH CALLBACK unhappy paths (src/pages/AuthCallbackPage.tsx, backend
 // POST /api/auth/oauth-session). No real provider: provider returns are
-// simulated by navigating to /auth/callback with the fragment/query a provider
-// (via Supabase) would produce, and the "returning user" case intercepts the
-// Supabase /authorize redirect that SignUpPage's real button starts.
+// simulated by navigating to /auth/callback with the query a provider (via
+// Supabase, PKCE flow) would produce — `?code=` or `?error=` — and GoTrue's
+// PKCE token endpoint is stubbed by e2e/oauthPkce.ts (single-use code, S256
+// verifier check, answering with a REAL password-grant session). The "returning
+// user" case drives SignUpPage's real button: the app's own auth-js generates
+// the verifier/challenge and the /authorize redirect is intercepted.
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -48,7 +60,7 @@ async function expectErrorState(page: Page): Promise<void> {
   await expect(page.getByRole('link', { name: 'Back to Sign In' })).toHaveAttribute('href', '/login');
 }
 
-test('no tokens in the hash: error state, no exchange, no session, parked analytics answer cleared', async ({
+test('no code in the return: error state, no exchange, no session, parked analytics answer cleared', async ({
   page,
   context,
 }) => {
@@ -80,9 +92,8 @@ for (const kind of ['malformed', 'expired'] as const) {
     const exchanges = countRequests(page, 'POST', EXCHANGE);
     const withdraws = countRequests(page, 'POST', WITHDRAW);
     const captured = await captureJson(page, 'POST', EXCHANGE);
-    await page.goto(`/auth/callback#access_token=${token}&refresh_token=e2e-refresh&token_type=bearer`, {
-      waitUntil: 'domcontentloaded',
-    });
+    const provider = await stubPkceTokenEndpoint(page, { access_token: token, refresh_token: 'e2e-refresh' });
+    await page.goto(await parkPkceReturn(page, provider), { waitUntil: 'domcontentloaded' });
     const res = await captured.next();
     expect(res.status).toBe(401);
     expect(res.json.error.code).toBe('INVALID_TOKEN');
@@ -145,24 +156,17 @@ test('provider error (non-cancel) with a description: error state, the provider 
  * with the redirect a completed provider handshake produces: back to
  * /auth/callback with a REAL password-grant session for `acct` in the fragment.
  */
-async function oauthViaSignupButton(page: Page, acct: ScopedAccount, baseURL: string): Promise<void> {
+async function oauthViaSignupButton(page: Page, acct: ScopedAccount, baseURL: string): Promise<PkceProvider> {
   const session = await passwordGrant(acct.email, acct.password);
-  await page.route(/\/auth\/v1\/authorize/, async (route) => {
-    await route.fulfill({
-      status: 302,
-      headers: {
-        location:
-          `${new URL(baseURL).origin}/auth/callback#access_token=${session.access_token}` +
-          `&refresh_token=${session.refresh_token}&token_type=bearer&expires_in=3600`,
-      },
-    });
-  });
+  const provider = await stubPkceTokenEndpoint(page, session);
+  await routeAuthorizeToCallback(page, provider, baseURL);
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Create account' })).toBeVisible({ timeout: 20_000 });
   const terms = page.locator('#termsAccepted');
   await terms.check({ force: true });
   await expect(page.locator('#analyticsAccepted')).not.toBeChecked();
   await page.getByRole('button', { name: 'Continue with Google' }).click();
+  return provider;
 }
 
 test('RETURNING user via Sign-up Google: signed in, parked DECLINE is NOT applied, cleared', async ({
@@ -176,7 +180,7 @@ test('RETURNING user via Sign-up Google: signed in, parked DECLINE is NOT applie
 
   const withdraws = countRequests(page, 'POST', WITHDRAW);
   const exchange = await captureJson(page, 'POST', EXCHANGE);
-  await oauthViaSignupButton(page, acct, baseURL ?? 'http://localhost:5173');
+  const provider = await oauthViaSignupButton(page, acct, baseURL ?? 'http://localhost:5173');
 
   const res = await exchange.next(30_000);
   expect(res.status).toBe(200);
@@ -195,6 +199,11 @@ test('RETURNING user via Sign-up Google: signed in, parked DECLINE is NOT applie
     [PARKED.authMethod]: null,
   });
   expect((await localItems(page, CONSENT_LOCAL_KEYS)).analytics_consent_pending_sync).toBeNull();
+  // PKCE: the app's own challenge was S256, and the code was redeemed once with
+  // the matching verifier, which is then gone.
+  expect(provider.challenge, 'the app sent an S256 challenge to /authorize').not.toBeNull();
+  expect(provider.exchanges.map((e) => e.status)).toEqual([200]);
+  expect((await sessionItems(page, [PKCE_VERIFIER_KEY]))[PKCE_VERIFIER_KEY]).toBeNull();
 });
 
 test('proof: if oauth-session said is_new_user:true, the same flow WOULD withdraw consent', async ({
@@ -246,12 +255,110 @@ test(
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 20_000 });
     const session = await passwordGrant(acct.email, acct.password);
     const exchange = page.waitForRequest((r) => new URL(r.url()).pathname === EXCHANGE, { timeout: 20_000 });
-    await page.goto(
-      `${new URL(baseURL ?? 'http://localhost:5173').origin}/auth/callback#access_token=${session.access_token}` +
-        `&refresh_token=${session.refresh_token}&token_type=bearer`,
-      { waitUntil: 'domcontentloaded' }
-    );
+    const provider = await stubPkceTokenEndpoint(page, session);
+    const callbackPath = await parkPkceReturn(page, provider);
+    await page.goto(`${new URL(baseURL ?? 'http://localhost:5173').origin}${callbackPath}`, {
+      waitUntil: 'domcontentloaded',
+    });
     const body = (await exchange).postDataJSON() as { termsAccepted?: boolean };
     expect(body.termsAccepted, 'a login must not relay a terms acceptance').toBeUndefined();
   }
 );
+
+// ---------------------------------------------------------------------------
+// PKCE (2026-10-01): no credential in navigable history, single-use code
+// ---------------------------------------------------------------------------
+
+test('Login via Google (PKCE): signed in; no code or token in session history or Web Storage; verifier cleared', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  const acct = await createScopedAccount('oauth-pkce-login');
+  backdateAuthUser(acct.userId);
+  const session = await passwordGrant(acct.email, acct.password);
+  const provider = await stubPkceTokenEndpoint(page, session);
+  await routeAuthorizeToCallback(page, provider, baseURL ?? 'http://localhost:5173');
+  const exchange = await captureJson(page, 'POST', EXCHANGE);
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Continue with Google' }).click();
+
+  const res = await exchange.next(30_000);
+  expect(res.status).toBe(200);
+  await expect(page).toHaveURL(/\/circles$/, { timeout: 20_000 });
+  expect(await hasRefreshCookie(context)).toBe(true);
+
+  // The code was redeemed exactly once, with the verifier matching the app's challenge.
+  expect(provider.challenge).not.toBeNull();
+  expect(provider.exchanges).toHaveLength(1);
+  expect(provider.exchanges[0]).toMatchObject({ auth_code: provider.code, status: 200 });
+
+  // Navigable history: no `code=`, `access_token=`, `refresh_token=`, nor the raw secrets.
+  const urls = await sessionHistoryUrls(page);
+  expect(urls.length, 'positive control: history was read').toBeGreaterThan(0);
+  expect(credentialUrls(urls, [provider.code, session.access_token, session.refresh_token])).toEqual([]);
+
+  // Nothing token-shaped (nor the verifier) left in Web Storage.
+  const storage = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }));
+  expect(storage).not.toContain(session.access_token);
+  expect(storage).not.toContain(session.refresh_token);
+  expect(storage).not.toContain(PKCE_VERIFIER_KEY);
+});
+
+test('re-opening the spent ?code= callback while signed in: stale visit, no second redemption, no error', async ({
+  page,
+  baseURL,
+}) => {
+  const acct = await createScopedAccount('oauth-pkce-replay');
+  backdateAuthUser(acct.userId);
+  const provider = await oauthViaSignupButton(page, acct, baseURL ?? 'http://localhost:5173');
+  await expect(page).toHaveURL(/\/circles$/, { timeout: 30_000 });
+  expect(provider.exchanges.map((e) => e.status)).toEqual([200]);
+
+  // What Chrome's global history / omnibox would re-offer: the callback URL with its spent code.
+  await page.goto(`/auth/callback?code=${provider.code}`, { waitUntil: 'domcontentloaded' });
+  await expect(page).toHaveURL(/\/circles$/, { timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: "Sign-in didn't complete" })).toHaveCount(0);
+  expect(provider.exchanges, 'no verifier in this tab → the code is never sent again').toHaveLength(1);
+});
+
+test('a code for a handshake this tab did not start (no verifier): error state, never redeemed', async ({
+  page,
+  context,
+}) => {
+  const provider = await stubPkceTokenEndpoint(page, { access_token: 'unused', refresh_token: 'unused' });
+  const exchanges = countRequests(page, 'POST', EXCHANGE);
+  await parkLikeSignup(page); // a provider IS parked, so this is a broken handshake, not a stale visit
+  await page.goto(`/auth/callback?code=${provider.code}`, { waitUntil: 'domcontentloaded' });
+
+  await expectErrorState(page);
+  expect(new URL(page.url()).search, 'query scrubbed').toBe('');
+  expect(provider.exchanges).toHaveLength(0);
+  await exchanges.expectCount(0);
+  expect(await hasRefreshCookie(context)).toBe(false);
+});
+
+test('GoTrue rejects the code (bad verifier): error state, no backend handoff, verifier cleared', async ({
+  page,
+  context,
+}) => {
+  await parkLikeSignup(page);
+  const provider = await stubPkceTokenEndpoint(page, { access_token: 'unused', refresh_token: 'unused' });
+  const callbackPath = await parkPkceReturn(page, provider);
+  provider.challenge = 'not-the-challenge-for-this-verifier';
+  const exchanges = countRequests(page, 'POST', EXCHANGE);
+  await page.goto(callbackPath, { waitUntil: 'domcontentloaded' });
+
+  await expectErrorState(page);
+  expect(provider.exchanges.map((e) => e.status)).toEqual([400]);
+  // The error screen stays on this history entry, so the scrub alone keeps the code out.
+  expect(credentialUrls(await sessionHistoryUrls(page), [provider.code])).toEqual([]);
+  await exchanges.expectCount(0);
+  expect(await hasRefreshCookie(context)).toBe(false);
+  expect((await sessionItems(page, [PKCE_VERIFIER_KEY, PARKED.terms]))).toEqual({
+    [PKCE_VERIFIER_KEY]: null,
+    [PARKED.terms]: null,
+  });
+});

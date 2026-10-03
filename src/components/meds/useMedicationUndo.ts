@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { devError } from '@/constants/config';
-import { useConfirmMedication } from '@/hooks/useMedConfirmation';
+import { queryClient } from '@/lib/queryClient';
+import { todaysMedsKey, useConfirmMedication } from '@/hooks/useMedConfirmation';
+import { keepalivePost } from '@/lib/keepalivePost';
+import { queryKeys } from '@/lib/queryKeys';
 import type {
   ConfirmableStatus,
   TodaysMedication,
@@ -22,14 +25,17 @@ import type { MedicationConfirmSource } from '@/lib/analytics';
  *      closing the tab) inside the undo window drops a dose the UI already said
  *      was taken, and the reminder cron later auto-misses it.
  *
- *      THE UNLOAD FLUSH IS BEST-EFFORT, NOT A GUARANTEE. It is an ordinary
- *      `fetch` through the axios client with no `keepalive`, so a browser that
- *      tears the page down before the request leaves will drop it — exactly the
- *      case `pagehide` exists for. `visibilitychange` -> hidden is the half that
- *      usually saves it, because it fires while the page is still alive (tab
- *      switch, app switch, screen lock) and is the last reliable signal mobile
- *      Safari gives before the OS may reclaim the tab. The 5-second window is
- *      short for the same reason: the smaller it is, the less there is to lose.
+ *      THE PAGEHIDE / HIDDEN FLUSH USES `fetch(..., { keepalive: true })`
+ *      (PK11, lib/keepalivePost.ts) with the in-memory bearer token: the browser
+ *      finishes a keepalive request after the page is gone, which an axios XHR
+ *      is not. One request per dose, never two: the entry is marked `fired`
+ *      before it leaves, so the unmount flush and the other of pagehide /
+ *      visibilitychange skip it. If the keepalive request cannot be made (no
+ *      token, token about to expire, body over the 64 KB budget) or the page is
+ *      still alive and it fails, the ordinary axios path (with its refresh and
+ *      verify-before-alert) takes over. The UNMOUNT flush stays on axios: the
+ *      page is alive then. The 5-second window is short for the same reason:
+ *      the smaller it is, the less there is to lose.
  *
  * Pending state is keyed by event id, so answering dose B while dose A is
  * still counting down never disturbs A.
@@ -41,6 +47,13 @@ interface PendingEntry {
   med: TodaysMedication;
   status: ConfirmableStatus;
   scheduledTime: string;
+  /**
+   * The circle the dose was answered in, captured at `confirm`. EVERY send path
+   * (the timer, the unmount flush, the pagehide/hidden flush) posts to THIS
+   * circle and reports/invalidates for it — never the `circleId` being rendered
+   * when the send happens. See the note in `useMedicationUndo` below.
+   */
+  circleId: string;
   timer: ReturnType<typeof setTimeout>;
   /**
    * Set the instant the timer fires and the request goes out — BEFORE it
@@ -57,13 +70,19 @@ export interface UseMedicationUndoOptions {
   /** Which surface answered the dose — see Analytics.medicationConfirmed. */
   source: MedicationConfirmSource;
   /** The confirmation landed. Surfaces use it for the success toast. */
-  onConfirmed?: (status: ConfirmableStatus, med: TodaysMedication) => void;
+  onConfirmed?: (status: ConfirmableStatus, med: TodaysMedication, circleId: string) => void;
   /**
    * The POST failed. WITHOUT this the caregiver gets no feedback at all: the
    * row says "Taken", then silently reverts on the next refetch while the dose
    * stays unrecorded.
    */
-  onError?: (error: unknown, status: ConfirmableStatus, med: TodaysMedication) => void;
+  onError?: (
+    error: unknown,
+    status: ConfirmableStatus,
+    med: TodaysMedication,
+    /** The circle the POST was SENT to (the one the dose was answered in). */
+    circleId: string
+  ) => void;
 }
 
 export interface UseMedicationUndoResult {
@@ -80,10 +99,16 @@ export function useMedicationUndo({
   onConfirmed,
   onError,
 }: UseMedicationUndoOptions): UseMedicationUndoResult {
-  // `circleId` is captured once per mount rather than read through a ref: safe
-  // ONLY because `AppLayout` keys its route content on the pathname, so
-  // switching circles remounts this hook (and flushes anything pending) instead
-  // of leaving a live timer bound to the previous circle.
+  // THE CIRCLE IS STORED PER PENDING ENTRY, not read at send time. A dose
+  // answered in circle A goes to A even if this hook re-renders with circle B
+  // before its timer fires or a flush runs. Correctness must not depend on
+  // `AppLayout` keying its `<Outlet>` by pathname (which today happens to
+  // remount the page on a circle change): without the per-entry circle, a
+  // re-render with B would post A's dose to `/circles/B/...`, the backend's
+  // circle scoping would 404 it, and a dose the row already showed as taken
+  // would be lost. Mobile's useMedicationUndo was fixed the same way (plan
+  // mobile-e2e-parity, "P-H2 follow-up"). The hook-level `circleId` below is
+  // only the fallback for callers that send no per-call circle.
   const mutation = useConfirmMedication(circleId, source);
   const [pending, setPending] = useState<Record<string, ConfirmableStatus>>({});
 
@@ -111,12 +136,11 @@ export function useMedicationUndo({
     });
   }, []);
 
-  const send = useCallback(
+  // The ordinary send: axios through `useConfirmMedication` (refresh, verify,
+  // success toast, invalidation). `send` below decides whether to try the
+  // keepalive request first.
+  const sendViaMutation = useCallback(
     (entry: PendingEntry): void => {
-      // Marked fired BEFORE sending, by mutating the object already in the Map
-      // — synchronous, so a flush (or `undo`) running in the same tick sees it
-      // immediately, with no dependency on a state update having landed first.
-      entry.fired = true;
 
       // `mutateAsync`, NOT `mutate(vars, { onSuccess, onError })`.
       //
@@ -150,6 +174,13 @@ export function useMedicationUndo({
           event_id: entry.med.id,
           status: entry.status,
           scheduled_time: entry.scheduledTime,
+          circleId: entry.circleId,
+          // The dose's day, so an AMBIGUOUS rejection is verified against the
+          // server before anyone is told it failed (lib/confirmVerify.ts).
+          dose: {
+            scheduled_date: entry.med.scheduled_date,
+            parent_event_id: entry.med.parent_event_id ?? null,
+          },
         })
         // `.then(onSuccess, onError)` — TWO ARGUMENTS, never `.then().catch()`.
         // A trailing `.catch()` also catches whatever the SUCCESS handler
@@ -159,11 +190,11 @@ export function useMedicationUndo({
         .then(
           () => {
             clearEntry(entry.med.id);
-            onConfirmedRef.current?.(entry.status, entry.med);
+            onConfirmedRef.current?.(entry.status, entry.med, entry.circleId);
           },
           (error: unknown) => {
             clearEntry(entry.med.id);
-            onErrorRef.current?.(error, entry.status, entry.med);
+            onErrorRef.current?.(error, entry.status, entry.med, entry.circleId);
           }
         )
         // A throw inside EITHER handler above lands here — logged in dev, never
@@ -172,6 +203,53 @@ export function useMedicationUndo({
         .catch(devError);
     },
     [clearEntry]
+  );
+
+  const send = useCallback(
+    (entry: PendingEntry, viaKeepalive = false): void => {
+      // Marked fired BEFORE sending, by mutating the object already in the Map
+      // — synchronous, so a flush (or `undo`) running in the same tick sees it
+      // immediately, with no dependency on a state update having landed first.
+      entry.fired = true;
+
+      // PK11: pagehide / hidden. One keepalive request per dose. The body is
+      // exactly the one the axios path sends (no circleId, no `dose`).
+      const request = viaKeepalive
+        ? keepalivePost(`/circles/${entry.circleId}/medications/confirm`, {
+            event_id: entry.med.id,
+            status: entry.status,
+            scheduled_time: entry.scheduledTime,
+          })
+        : null;
+      if (!request) {
+        sendViaMutation(entry);
+        return;
+      }
+      request.then(
+        (response) => {
+          if (!response.ok) {
+            // Refused or failed while the page is still alive (hidden tab):
+            // the ordinary path raises the proper toast / verifies the day.
+            sendViaMutation(entry);
+            return;
+          }
+          // Landed. No success toast (the page is going away); refresh what the
+          // rows read in case the tab comes back instead.
+          const qc = queryClient;
+          const sent = entry.circleId;
+          void qc.invalidateQueries({ queryKey: todaysMedsKey(sent) });
+          void qc.invalidateQueries({ queryKey: queryKeys.calendarEvents(sent) });
+          void qc.invalidateQueries({ queryKey: queryKeys.medicationConfirmations(sent) });
+          void qc.invalidateQueries({ queryKey: queryKeys.medicationTodaySummary(sent) });
+          void qc.invalidateQueries({ queryKey: queryKeys.activityFeed(sent) });
+          clearEntry(entry.med.id);
+        },
+        // The request never left (page torn down mid-flight shows no handler at
+        // all; a live page lands here): take the ordinary path.
+        () => sendViaMutation(entry)
+      );
+    },
+    [clearEntry, sendViaMutation]
   );
 
   const confirm = useCallback(
@@ -185,6 +263,7 @@ export function useMedicationUndo({
         med,
         status,
         scheduledTime: med.scheduled_time,
+        circleId,
         fired: false,
         timer: setTimeout(() => {
           const live = entriesRef.current.get(med.id);
@@ -194,7 +273,7 @@ export function useMedicationUndo({
       entriesRef.current.set(med.id, entry);
       setPending((current) => ({ ...current, [med.id]: status }));
     },
-    [send]
+    [send, circleId]
   );
 
   const undo = useCallback(
@@ -214,11 +293,11 @@ export function useMedicationUndo({
     mountedRef.current = true;
     const entries = entriesRef.current;
 
-    const flush = (): void => {
+    const flush = (viaKeepalive = false): void => {
       for (const entry of entries.values()) {
         if (entry.fired) continue;
         clearTimeout(entry.timer);
-        send(entry);
+        send(entry, viaKeepalive);
       }
     };
 
@@ -229,13 +308,14 @@ export function useMedicationUndo({
     // reclaim the tab without another event. Together they are the web
     // counterpart of mobile's AppState flush, and the same pair
     // `hooks/useTaskCompletion.ts` uses for the task grace window.
+    const onPageHide = (): void => flush(true);
     const onVisibility = (): void => {
-      if (document.visibilityState === 'hidden') flush();
+      if (document.visibilityState === 'hidden') flush(true);
     };
-    window.addEventListener('pagehide', flush);
+    window.addEventListener('pagehide', onPageHide);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('pagehide', onPageHide);
       document.removeEventListener('visibilitychange', onVisibility);
       mountedRef.current = false;
       flush();

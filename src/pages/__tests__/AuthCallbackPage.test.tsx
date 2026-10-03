@@ -10,10 +10,14 @@ import { setPendingAnalyticsConsent } from '@/lib/pendingAnalyticsConsent';
 import { Analytics } from '@/lib/analytics';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/lib/supabase';
+import { PKCE_VERIFIER_KEY } from '@/lib/pkceVerifierStorage';
 
-// Task 45b (page half) — AuthCallbackPage: tokens read from the URL fragment,
-// scrubbed via history.replaceState BEFORE any network call, exchanged through
-// POST /auth/oauth-session, and never written to any JS-readable storage.
+// Task 45b (page half) — AuthCallbackPage, PKCE flow (2026-10-01): a one-time
+// `?code=` read from the URL, scrubbed via history.replaceState BEFORE any
+// network call, traded for a session with the tab's parked verifier
+// (`exchangeCodeForSession`), handed to POST /auth/oauth-session, and never
+// written to any JS-readable storage.
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -22,6 +26,27 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockedPost = vi.mocked(apiClient.post);
+const mockedExchange = vi.mocked(supabase.auth.exchangeCodeForSession);
+
+/**
+ * Simulate the provider return of a handshake THIS tab started: the verifier
+ * auth-js parked at signInWithOAuth is in sessionStorage, the URL carries only
+ * `?code=`, and the (mocked) PKCE exchange answers with a provider session.
+ */
+function arriveWithCode(
+  code = 'oauth-code',
+  tokens: { access_token: string; refresh_token: string } = {
+    access_token: 'oauth-access',
+    refresh_token: 'oauth-refresh',
+  }
+): void {
+  sessionStorage.setItem(PKCE_VERIFIER_KEY, 'parked-verifier');
+  window.history.replaceState(null, '', `/auth/callback?code=${code}`);
+  mockedExchange.mockResolvedValueOnce({
+    data: { session: { ...tokens, token_type: 'bearer', expires_in: 3600 }, user: { id: 'user-1' } },
+    error: null,
+  } as never);
+}
 
 const sessionEnvelope = {
   success: true,
@@ -43,6 +68,7 @@ describe('AuthCallbackPage', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
     mockedPost.mockReset();
+    mockedExchange.mockReset();
     tokenAccessor.clear();
     localStorage.clear();
     sessionStorage.clear();
@@ -54,31 +80,38 @@ describe('AuthCallbackPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('scrubs tokens from the URL BEFORE the network call, exchanges them, and navigates', async () => {
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-    );
+  it('scrubs the code from the URL BEFORE any network call, redeems it, hands off, and navigates', async () => {
+    arriveWithCode();
     const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
 
     renderCallback();
 
-    // Scrub happened, and strictly before the oauth-session POST. Scrubbed to
-    // '/', never back to '/auth/callback' — the bare callback URL lingered in
-    // browser history and re-opening it read as a failed sign-in.
+    // Scrub happened synchronously on mount, before the code exchange. Scrubbed
+    // to '/', never back to '/auth/callback' — the bare callback URL lingered
+    // in browser history and re-opening it read as a failed sign-in.
     expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/');
-    expect(replaceStateSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      mockedPost.mock.invocationCallOrder[0]
-    );
+    expect(window.location.search).toBe('');
     expect(window.location.hash).toBe('');
     expect(window.location.pathname).toBe('/');
+    expect(window.location.href).not.toContain('code=');
 
-    expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
-      access_token: 'oauth-access',
-      refresh_token: 'oauth-refresh',
-    });
+    await waitFor(() =>
+      expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
+        access_token: 'oauth-access',
+        refresh_token: 'oauth-refresh',
+      })
+    );
+    // The code is redeemed exactly once, with the code from the URL, and the
+    // scrub precedes BOTH network calls.
+    expect(mockedExchange).toHaveBeenCalledTimes(1);
+    expect(mockedExchange).toHaveBeenCalledWith('oauth-code');
+    expect(replaceStateSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedExchange.mock.invocationCallOrder[0]
+    );
+    expect(mockedExchange.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedPost.mock.invocationCallOrder[0]
+    );
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
 
@@ -91,11 +124,7 @@ describe('AuthCallbackPage', () => {
 
   it('scrubs the URL strictly BEFORE any analytics event fires', async () => {
     const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-    );
+    arriveWithCode();
     const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
 
@@ -114,11 +143,7 @@ describe('AuthCallbackPage', () => {
   it('fires login_completed with the persisted provider exactly once on a successful exchange', async () => {
     const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
     setPendingAuthMethod('google');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-    );
+    arriveWithCode();
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
 
     renderCallback();
@@ -132,11 +157,7 @@ describe('AuthCallbackPage', () => {
 
   it("falls back to the generic 'oauth' method when no provider was persisted", async () => {
     const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-    );
+    arriveWithCode();
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
 
     renderCallback();
@@ -149,11 +170,7 @@ describe('AuthCallbackPage', () => {
   it('does NOT fire any completion event when the exchange fails', async () => {
     const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
     setPendingAuthMethod('apple');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
-    );
+    arriveWithCode();
     mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
 
     renderCallback();
@@ -166,11 +183,7 @@ describe('AuthCallbackPage', () => {
     // SignUpPage parks this before its OAuth redirect (checkbox state cannot
     // survive the full-page navigation).
     setPendingTermsConsent();
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-    );
+    arriveWithCode();
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
 
     renderCallback();
@@ -186,11 +199,7 @@ describe('AuthCallbackPage', () => {
   });
 
   it('sends NO termsAccepted field when nothing was parked (LoginPage-initiated OAuth)', async () => {
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-    );
+    arriveWithCode();
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
 
     renderCallback();
@@ -204,11 +213,7 @@ describe('AuthCallbackPage', () => {
 
   it('resumes a pending invite handoff: PEEKS the parked code (does not consume) and lands on /invite/CODE', async () => {
     setPendingInviteCode('ABC234');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
-    );
+    arriveWithCode();
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
 
     renderCallback();
@@ -226,11 +231,7 @@ describe('AuthCallbackPage', () => {
 
   it('leaves the pending invite code parked when the exchange fails (retry via /login)', async () => {
     setPendingInviteCode('ABC234');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
-    );
+    arriveWithCode();
     mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
 
     renderCallback();
@@ -289,11 +290,7 @@ describe('AuthCallbackPage', () => {
   });
 
   it('shows the error state when the oauth-session exchange fails, leaving storage empty', async () => {
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
-    );
+    arriveWithCode();
     mockedPost.mockRejectedValueOnce({
       success: false,
       error: { code: 'INVALID_TOKEN' },
@@ -318,10 +315,13 @@ describe('AuthCallbackPage', () => {
   it('reports OAUTH_PROVIDER_ERROR with the parked provider, never the provider prose', async () => {
     const loginFailed = vi.spyOn(Analytics, 'loginFailed');
     setPendingAuthMethod('google');
+    // The verifier parked at the start of this handshake must not survive to
+    // pair with a later code.
+    sessionStorage.setItem(PKCE_VERIFIER_KEY, 'parked-verifier');
     window.history.replaceState(
       null,
       '',
-      '/auth/callback#error=server_error&error_description=Account+pat@example.com+is+blocked'
+      '/auth/callback?error=server_error&error_description=Account+pat@example.com+is+blocked'
     );
 
     renderCallback();
@@ -332,8 +332,11 @@ describe('AuthCallbackPage', () => {
     const [, reason] = loginFailed.mock.calls[0];
     expect(reason).not.toContain('pat@example.com');
     expect(reason).not.toContain('blocked');
-    // Read-and-clear: the parked provider cannot be attributed to a later sign-in.
+    // Read-and-clear: the parked provider (and verifier) cannot be attributed
+    // to a later sign-in.
     expect(sessionStorage.length).toBe(0);
+    expect(mockedExchange).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('');
   });
 
   it('reports OAUTH_NO_TOKENS with the parked provider when a started handshake returns no tokens', async () => {
@@ -347,17 +350,80 @@ describe('AuthCallbackPage', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
-  it("reports OAUTH_NO_TOKENS under the generic 'oauth' method for a half-filled fragment", async () => {
-    // Something DID come back (an access token without its refresh token), so
-    // this is not a stale re-visit even though no provider was parked.
+  it('reports OAUTH_NO_VERIFIER and never redeems a code this tab did not start', async () => {
+    // A provider was parked (a handshake really started) but the verifier is
+    // gone (cleared storage / code opened in another tab): the code cannot be
+    // redeemed here, so no request is spent on it.
     const loginFailed = vi.spyOn(Analytics, 'loginFailed');
-    window.history.replaceState(null, '', '/auth/callback#access_token=oauth-access');
+    setPendingAuthMethod('google');
+    window.history.replaceState(null, '', '/auth/callback?code=orphan-code');
 
     renderCallback();
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_NO_TOKENS');
+    expect(loginFailed).toHaveBeenCalledWith('google', 'OAUTH_NO_VERIFIER');
+    expect(mockedExchange).not.toHaveBeenCalled();
     expect(mockedPost).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('');
+  });
+
+  it('reports OAUTH_CODE_EXCHANGE_FAILED (never GoTrue prose) when the code is rejected; no backend call, verifier cleared', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
+    setPendingAuthMethod('apple');
+    setPendingTermsConsent();
+    sessionStorage.setItem(PKCE_VERIFIER_KEY, 'parked-verifier');
+    window.history.replaceState(null, '', '/auth/callback?code=spent-code');
+    mockedExchange.mockResolvedValueOnce({
+      data: { session: null, user: null },
+      error: { name: 'AuthApiError', message: 'invalid flow state, pat@example.com', status: 400 },
+    } as never);
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(mockedExchange).toHaveBeenCalledWith('spent-code');
+    expect(loginFailed).toHaveBeenCalledWith('apple', 'OAUTH_CODE_EXCHANGE_FAILED');
+    expect(loginCompleted).not.toHaveBeenCalled();
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(tokenAccessor.getAuthToken()).toBeNull();
+    // Verifier, provider and parked terms all cleared — nothing survives.
+    expect(sessionStorage.length).toBe(0);
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('a thrown exchange (network) is the same stable failure', async () => {
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    sessionStorage.setItem(PKCE_VERIFIER_KEY, 'parked-verifier');
+    window.history.replaceState(null, '', '/auth/callback?code=c');
+    mockedExchange.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('oauth', 'OAUTH_CODE_EXCHANGE_FAILED');
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(PKCE_VERIFIER_KEY)).toBeNull();
+  });
+
+  it('never forwards implicit-flow fragment tokens to the backend (the implicit path is gone)', async () => {
+    // A legacy `#access_token=…` return for a handshake this tab started must
+    // fail closed, not be exchanged.
+    const loginFailed = vi.spyOn(Analytics, 'loginFailed');
+    setPendingAuthMethod('google');
+    window.history.replaceState(
+      null,
+      '',
+      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh&token_type=bearer'
+    );
+
+    renderCallback();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(loginFailed).toHaveBeenCalledWith('google', 'OAUTH_NO_TOKENS');
+    expect(mockedExchange).not.toHaveBeenCalled();
+    expect(mockedPost).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe('');
   });
 
   it('reports NO failure event when the user cancels, but still clears the parked provider', async () => {
@@ -379,11 +445,7 @@ describe('AuthCallbackPage', () => {
   it("reports the backend's own error code when the token exchange is rejected", async () => {
     const loginFailed = vi.spyOn(Analytics, 'loginFailed');
     setPendingAuthMethod('apple');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
-    );
+    arriveWithCode();
     mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
 
     renderCallback();
@@ -394,11 +456,7 @@ describe('AuthCallbackPage', () => {
 
   it('falls back to OAUTH_SESSION_FAILED when the exchange never reached the backend', async () => {
     const loginFailed = vi.spyOn(Analytics, 'loginFailed');
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=oauth-access&refresh_token=oauth-refresh'
-    );
+    arriveWithCode();
     // A raw network rejection: no envelope, so no `err.error.code` to report.
     mockedPost.mockRejectedValueOnce({ code: 'ERR_NETWORK', isAxiosError: true });
 
@@ -421,6 +479,7 @@ describe('AuthCallbackPage — parked terms acceptance never survives a failed c
   beforeEach(() => {
     mockNavigate.mockReset();
     mockedPost.mockReset();
+    mockedExchange.mockReset();
     tokenAccessor.clear();
     localStorage.clear();
     sessionStorage.clear();
@@ -466,7 +525,7 @@ describe('AuthCallbackPage — parked terms acceptance never survives a failed c
   });
 
   it('oauth-session rejection: clears the parked terms', async () => {
-    window.history.replaceState(null, '', '/auth/callback#access_token=a&refresh_token=r');
+    arriveWithCode('c', { access_token: 'a', refresh_token: 'r' });
     mockedPost.mockRejectedValueOnce({ success: false, error: { code: 'INVALID_TOKEN' } });
     renderCallback();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
@@ -474,7 +533,7 @@ describe('AuthCallbackPage — parked terms acceptance never survives a failed c
   });
 
   it('exchange that never reached the backend (catch): clears the parked terms', async () => {
-    window.history.replaceState(null, '', '/auth/callback#access_token=a&refresh_token=r');
+    arriveWithCode('c', { access_token: 'a', refresh_token: 'r' });
     mockedPost.mockRejectedValueOnce(new Error('Network Error'));
     renderCallback();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
@@ -488,11 +547,7 @@ describe('AuthCallbackPage — parked terms acceptance never survives a failed c
     first.unmount();
 
     // Second handshake: a LOGIN, nothing parked by the login page.
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback#access_token=login-access&refresh_token=login-refresh&token_type=bearer'
-    );
+    arriveWithCode('login-code', { access_token: 'login-access', refresh_token: 'login-refresh' });
     mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
     renderCallback();
 
@@ -516,6 +571,7 @@ describe('AuthCallbackPage — stale visit (bare /auth/callback re-opened)', () 
   beforeEach(() => {
     mockNavigate.mockReset();
     mockedPost.mockReset();
+    mockedExchange.mockReset();
     tokenAccessor.clear();
     localStorage.clear();
     sessionStorage.clear();

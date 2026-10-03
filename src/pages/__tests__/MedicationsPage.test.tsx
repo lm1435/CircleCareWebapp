@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import '@/i18n';
+import i18n from '@/i18n';
 import MedicationsPage from '../MedicationsPage';
 import type { CalendarEvent } from '@/api/calendarEvents';
 
@@ -67,9 +67,11 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
   ),
 }));
 vi.mock('@/components/calendar/DeleteEventDialog', () => ({
-  DeleteEventDialog: ({ event }: { event: CalendarEvent }) => (
+  // `doseScoped` is echoed so the card-delete wiring (audit #1) is asserted:
+  // `undefined` would mean the dialog's default (true → dose picker).
+  DeleteEventDialog: ({ event, doseScoped }: { event: CalendarEvent; doseScoped?: boolean }) => (
     <div role="dialog" aria-label="delete-event-dialog">
-      deleting-{event.id}
+      deleting-{event.id}-doseScoped-{String(doseScoped)}
     </div>
   ),
 }));
@@ -362,7 +364,22 @@ describe('MedicationsPage', () => {
 
     await chooseAction(user, 'Metformin', 'Delete');
     const dialog = screen.getByRole('dialog', { name: 'delete-event-dialog' });
-    expect(dialog).toHaveTextContent('deleting-active-1');
+    // A CARD delete is whole-medication: doseScoped=false, so the dialog never
+    // raises the dose picker anchored on the representative's start date
+    // (test-gap audit #1; mobile parity).
+    expect(dialog).toHaveTextContent('deleting-active-1-doseScoped-false');
+  });
+
+  it('Delete from the detail sheet is also whole-medication (doseScoped=false)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^View details for Metformin/ }));
+    const sheet = await screen.findByRole('dialog');
+    await user.click(within(sheet).getByRole('button', { name: /more/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog', { name: 'delete-event-dialog' });
+    expect(dialog).toHaveTextContent('deleting-active-1-doseScoped-false');
   });
 
   it('hides ALL write affordances when canEdit is false', () => {
@@ -381,6 +398,32 @@ describe('MedicationsPage', () => {
     mockUseMedicationRoster.mockReturnValue(rosterResult([]));
     renderPage();
     expect(screen.getByText('No medications yet')).toBeInTheDocument();
+  });
+
+  // A circle READ that fails (a removed member's 403, a 5xx) leaves `timezone` null with no
+  // circle to wait for. The skeleton is only for "still loading": it must not spin forever.
+  it('shows the error card with a working Retry when the CIRCLE read failed (timezone stays null)', async () => {
+    const refetchCircle = vi.fn();
+    mockUseCircle.mockReturnValue({
+      canEdit: false,
+      timezone: null,
+      isLoading: false,
+      isError: true,
+      refetch: refetchCircle,
+    });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([]));
+    renderPage();
+    expect(screen.getByText("Couldn't load medications")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchCircle).toHaveBeenCalledTimes(1);
+  });
+
+  it('still shows the skeleton (no error card) while the circle is merely loading', () => {
+    mockUseCircle.mockReturnValue({ canEdit: false, timezone: null, isLoading: true, isError: false, refetch: vi.fn() });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([]));
+    const { container } = renderPage();
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText("Couldn't load medications")).not.toBeInTheDocument();
   });
 
   // Medication-surface proof for the device-aware clock. The schedule line is
@@ -843,5 +886,372 @@ describe('MedicationsPage', () => {
     });
     // The trigger's positioning wrapper is what carries the sizing classes.
     expect((menu.parentElement as HTMLElement).className).toMatch(/\bshrink-0\b/);
+  });
+});
+
+// ── A series ENDED by its own end date is Inactive ("Ended <date>") ─────────
+//
+// docs/plans/meds-roster-ended-series.md. "This & future" on a recurring med
+// writes `recurrence_end_date = cutoff - 1` and leaves `discontinued_at` null,
+// and the roster used to bucket by `discontinued_at` alone — so a stopped med
+// sat under Active until its last dose left the window, and then vanished.
+// "Ended" is the Care Summary PDF's own definition (the shared
+// `isMedicationSeriesEnded`), so the roster and the printout agree.
+describe('MedicationsPage — ended series', () => {
+  /** Naive YYYY-MM-DD n days from today in America/Denver (the circle zone below). */
+  // Resolve TODAY in Denver first, then shift the date STRING — never shift
+  // the instant with device-local `setDate`: a device-zone DST change inside
+  // the shift makes it 23h/25h, which near Denver midnight lands on the wrong
+  // Denver date (project timezone rule: resolve-then-shift).
+  const day = (n: number) => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+    const d = new Date(`${today}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+
+  beforeEach(() => {
+    mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/Denver' });
+  });
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  const activeRegion = () => screen.queryByRole('region', { name: 'Active' });
+  const inactiveRegion = () => screen.getByRole('region', { name: 'Inactive / Past medications' });
+
+  // PORTED PROOF (scratchpad MedicationsPage.endedSeries.test.tsx): the EXACT
+  // shape the live local backend returned after DELETE ?deleteScope=future on a
+  // daily med started today-25 — four VIRTUAL rows today-14..today-11,
+  // discontinued_at null, recurrence_end_date today-11, nothing on/after today.
+  it('does not list a daily med whose recurrence_end_date is 11 days ago under Active', () => {
+    const rootId = '723e58b4-d1b2-4bce-b97b-0cd0de766b08';
+    const end = day(-11);
+    const rows = [-14, -13, -12, -11].map((n) =>
+      makeMed({
+        id: `${rootId}_${day(n)}`,
+        parent_event_id: rootId,
+        is_virtual: true,
+        scheduled_date: day(n),
+        scheduled_time: '09:00:00',
+        recurrence_end_date: end,
+      } as Partial<CalendarEvent>)
+    );
+    mockUseMedicationRoster.mockReturnValue(rosterResult(rows));
+    renderPage();
+
+    const active = activeRegion();
+    expect(active ? within(active).queryByText('Metformin') : null).toBeNull();
+    expect(within(inactiveRegion()).getByText('Metformin')).toBeInTheDocument();
+  });
+
+  const endedRoot = makeMed({
+    id: 'ended-1',
+    scheduled_date: '2025-11-01',
+    recurrence_end_date: '2026-01-05',
+  });
+
+  it('labels an ended med "Ended <date>" under Inactive, in English', () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([endedRoot]));
+    renderPage();
+
+    const inactive = inactiveRegion();
+    expect(within(inactive).getByText('Ended Jan 5, 2026')).toBeInTheDocument();
+    // The discontinued wording is not reused for an end date.
+    expect(within(inactive).queryByText('Inactive')).toBeNull();
+  });
+
+  it('labels an ended med "Finalizó el <date>" in Spanish', async () => {
+    await i18n.changeLanguage('es');
+    mockUseMedicationRoster.mockReturnValue(rosterResult([endedRoot]));
+    renderPage();
+
+    expect(screen.getByText('Finalizó el 5 ene 2026')).toBeInTheDocument();
+  });
+
+  it('folds the Ended label into the card’s accessible name', () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([endedRoot]));
+    renderPage();
+
+    expect(
+      screen.getByRole('button', {
+        name: 'View details for Metformin, Ended Jan 5, 2026',
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('offers neither Reactivate nor Discontinue on an ended med — Edit and Delete stay', async () => {
+    const user = userEvent.setup();
+    mockUseMedicationRoster.mockReturnValue(rosterResult([endedRoot]));
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Metformin' }));
+    expect(screen.queryByRole('menuitem', { name: 'Reactivate' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Discontinue' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+  });
+
+  it('Edit on an ENDED med opens the editor directly — no reactivate-first prompt', async () => {
+    // Reactivating an ended series is a no-op; the guard would promise
+    // "Reactivated" and leave the editor closed (mobile keys its guard on
+    // discontinued_at too).
+    const user = userEvent.setup();
+    mockUseMedicationRoster.mockReturnValue(rosterResult([endedRoot]));
+    renderPage();
+
+    await chooseAction(user, 'Metformin', 'Edit');
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveTextContent(
+      'editing-ended-1'
+    );
+    expect(
+      screen.queryByText('This medication is inactive. Reactivate it to make changes.')
+    ).toBeNull();
+    expect(mockStatusMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('the detail sheet of an ended med shows the Ended badge, Edit + Delete, no status action', async () => {
+    const user = userEvent.setup();
+    mockUseMedicationRoster.mockReturnValue(rosterResult([endedRoot]));
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^View details for Metformin/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Ended Jan 5, 2026')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: /more/i }));
+    expect(screen.queryByRole('menuitem', { name: 'Reactivate' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Discontinue' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+  });
+
+  it('orders Inactive by MOST RECENT STOP first; the discontinue day is read in the recipient zone', () => {
+    const named = (id: string, name: string, extra: Partial<CalendarEvent>) =>
+      makeMed({ id, title: name, medication_name: name, medication_dosage: '1 mg', ...extra });
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        named('a', 'Alpha', { recurrence_end_date: '2026-01-01' }),
+        // 03:00Z on May 2 is still MAY 1 in America/Denver — ties with Charlie,
+        // and a tie keeps arrival order (Bravo arrived first).
+        named('c', 'Charlie', { recurrence_end_date: '2026-05-01' }),
+        named('b', 'Bravo', { discontinued_at: '2026-05-02T03:00:00Z' }),
+        named('d', 'Delta', { discontinued_at: '2026-03-10T18:00:00Z' }),
+      ])
+    );
+    renderPage();
+
+    const names = within(inactiveRegion())
+      .getAllByRole('button', { name: /^View details for / })
+      .map((b) => b.textContent);
+    expect(names).toEqual(['Charlie', 'Bravo', 'Delta', 'Alpha']);
+  });
+
+  it('a DISCONTINUED med keeps its "Inactive" badge and its Reactivate action', async () => {
+    const user = userEvent.setup();
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        // Discontinued AND ended: discontinued wins — Reactivate does something.
+        makeMed({
+          id: 'disc-1',
+          discontinued_at: '2026-01-02T15:00:00Z',
+          recurrence_end_date: '2026-01-05',
+        }),
+      ])
+    );
+    renderPage();
+
+    const inactive = inactiveRegion();
+    expect(within(inactive).getByText('Inactive')).toBeInTheDocument();
+    expect(within(inactive).queryByText(/^Ended/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'More actions for Metformin' }));
+    expect(screen.getByRole('menuitem', { name: 'Reactivate' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+  });
+
+  it('a two-series med with ONE series ended stays Active (8am ended, 8pm live)', async () => {
+    const user = userEvent.setup();
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        // The ended series' root is listed FIRST, so it is also the first
+        // representative candidate — the live root must still win.
+        makeMed({ id: 'am-ended', scheduled_time: '08:00:00', recurrence_end_date: day(-3) }),
+        makeMed({ id: 'pm-live', scheduled_time: '20:00:00' }),
+      ])
+    );
+    renderPage();
+
+    const active = activeRegion();
+    expect(active).not.toBeNull();
+    expect(within(active as HTMLElement).getByText('Metformin')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Inactive / Past medications' })).toBeNull();
+    expect(screen.queryByText(/^Ended/)).toBeNull();
+    // Discontinue targets the LIVE root (representativeScore treats ended as inactive).
+    await chooseAction(user, 'Metformin', 'Discontinue');
+    expect(screen.getByRole('dialog', { name: 'discontinue-med-dialog' })).toHaveTextContent(
+      'status-pm-live-'
+    );
+  });
+
+  it('lists a root-only med that ended 40 days ago (outside the window) under Inactive', () => {
+    // The shape `includeInactiveRoots=true` adds: the series ROOT alone, no
+    // window rows, discontinued_at null.
+    const end = day(-40);
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        makeMed({
+          id: 'old-root',
+          title: 'Prednisone',
+          medication_name: 'Prednisone',
+          medication_dosage: '5 mg',
+          scheduled_date: day(-70),
+          recurrence_end_date: end,
+        }),
+      ])
+    );
+    renderPage();
+
+    const expected = new Date(end + 'T12:00:00Z').toLocaleDateString('en', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+    expect(within(inactiveRegion()).getByText('Prednisone')).toBeInTheDocument();
+    expect(within(inactiveRegion()).getByText(`Ended ${expected}`)).toBeInTheDocument();
+  });
+
+  it('a MATERIALIZED child of an ended series joins it under Inactive (end date lives on the root)', () => {
+    // "This & future" writes recurrence_end_date on the ROOT only; a child that
+    // was materialized earlier (confirmed dose) carries no rule and no end date.
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        makeMed({ id: 'root-e', scheduled_date: day(-30), recurrence_end_date: day(-12) }),
+        makeMed({
+          id: 'child-e',
+          parent_event_id: 'root-e',
+          recurrence_rule: null,
+          recurrence_end_date: null,
+          scheduled_date: day(-13),
+        } as Partial<CalendarEvent>),
+      ])
+    );
+    renderPage();
+
+    expect(activeRegion()).toBeNull();
+    expect(within(inactiveRegion()).getByText('Metformin')).toBeInTheDocument();
+  });
+
+  it('a med whose series ALL ended shows the LATEST end date', () => {
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        makeMed({ id: 'am-e', scheduled_time: '08:00:00', recurrence_end_date: '2026-01-05' }),
+        makeMed({ id: 'pm-e', scheduled_time: '20:00:00', recurrence_end_date: '2026-02-10' }),
+      ])
+    );
+    renderPage();
+
+    expect(within(inactiveRegion()).getByText('Ended Feb 10, 2026')).toBeInTheDocument();
+  });
+
+  // The `includeInactiveRoots` payload when the window holds ONLY confirmed
+  // physical children of a stopped series: the root (dated outside the window)
+  // carries the stamp, the children carry none. Status is PER SERIES.
+  const stoppedSeriesPayload = (rootStamp: Partial<CalendarEvent>) => [
+    makeMed({
+      id: 'root-90',
+      scheduled_date: day(-90),
+      quantity_remaining: 3,
+      pills_per_day: 1,
+      ...rootStamp,
+    }),
+    ...[-14, -13, -12, -11, -10].map((n) =>
+      makeMed({
+        id: `child${n}`,
+        parent_event_id: 'root-90',
+        recurrence_rule: null,
+        recurrence_end_date: null,
+        discontinued_at: null,
+        scheduled_date: day(n),
+        confirmation: { status: 'taken' },
+      } as unknown as Partial<CalendarEvent>)
+    ),
+  ];
+
+  it('root + confirmed children of an ENDED series: one Inactive card, Ended, no status action, no stock', async () => {
+    const user = userEvent.setup();
+    const end = day(-10);
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult(stoppedSeriesPayload({ recurrence_end_date: end }))
+    );
+    renderPage();
+
+    expect(activeRegion()).toBeNull();
+    const cards = within(inactiveRegion()).getAllByRole('listitem');
+    expect(cards).toHaveLength(1);
+    const expected = new Date(end + 'T12:00:00Z').toLocaleDateString('en', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+    expect(within(cards[0]).getByText(`Ended ${expected}`)).toBeInTheDocument();
+    expect(screen.queryByText(/days? left/)).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'More actions for Metformin' }));
+    expect(screen.queryByRole('menuitem', { name: 'Reactivate' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Discontinue' })).toBeNull();
+    await user.keyboard('{Escape}');
+
+    // The detail sheet shows no refill figure for it either.
+    await user.click(screen.getByRole('button', { name: /^View details for Metformin/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText(/days? left/)).toBeNull();
+  });
+
+  it('root + confirmed children of a DISCONTINUED series: one Inactive card, "Inactive", Reactivate', async () => {
+    const user = userEvent.setup();
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult(stoppedSeriesPayload({ discontinued_at: `${day(-10)}T18:00:00Z` }))
+    );
+    renderPage();
+
+    expect(activeRegion()).toBeNull();
+    const cards = within(inactiveRegion()).getAllByRole('listitem');
+    expect(cards).toHaveLength(1);
+    expect(within(cards[0]).getByText('Inactive')).toBeInTheDocument();
+    expect(within(cards[0]).queryByText(/^Ended/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'More actions for Metformin' }));
+    expect(screen.getByRole('menuitem', { name: 'Reactivate' })).toBeInTheDocument();
+  });
+
+  it('a series whose end date is TODAY or later is still Active', () => {
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([makeMed({ id: 'ends-soon', recurrence_end_date: day(5) })])
+    );
+    renderPage();
+
+    expect(within(activeRegion() as HTMLElement).getByText('Metformin')).toBeInTheDocument();
+  });
+
+  it('ignores an ENDED series’ frozen counter when a live one shares the card', () => {
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        makeMed({
+          id: 'am-ended',
+          recurrence_end_date: day(-3),
+          quantity_remaining: 4,
+          pills_per_day: 1,
+        }),
+        makeMed({
+          id: 'pm-live',
+          scheduled_time: '20:00:00',
+          quantity_remaining: 90,
+          pills_per_day: 1,
+        }),
+      ])
+    );
+    renderPage();
+
+    expect(screen.queryByText(/Low stock/)).toBeNull();
   });
 });

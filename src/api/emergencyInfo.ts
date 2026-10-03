@@ -82,11 +82,18 @@ export interface EmergencyInfo {
 
   created_at: string;
   updated_at: string;
+
+  /**
+   * PK5: per-field version hashes from `GET data.versions`, attached client-side so
+   * they travel with the snapshot the editor was seeded from. Absent against a
+   * backend that predates PK5 (then saves send no `if_match`: last-write-wins).
+   */
+  versions?: Record<string, string>;
 }
 
 interface EmergencyInfoEnvelope {
   success: boolean;
-  data: { emergency_info: EmergencyInfo | null };
+  data: { emergency_info: EmergencyInfo | null; versions?: Record<string, string> };
 }
 
 /**
@@ -97,7 +104,9 @@ export async function getEmergencyInfo(circleId: string): Promise<EmergencyInfo 
   const response = (await apiClient.get(
     `/circles/${circleId}/emergency-info`
   )) as unknown as EmergencyInfoEnvelope;
-  return response.data.emergency_info;
+  const info = response.data.emergency_info;
+  const versions = response.data.versions;
+  return info && versions ? { ...info, versions } : info;
 }
 
 // ============================================================================
@@ -197,7 +206,14 @@ export const updateEmergencyInfoSchema = z.object({
  * field; send the full replacement array for any of the three array sections).
  * Type-equivalent to the Zod schema above.
  */
-export type UpdateEmergencyInfoRequest = z.infer<typeof updateEmergencyInfoSchema>;
+export type UpdateEmergencyInfoRequest = z.infer<typeof updateEmergencyInfoSchema> & {
+  /**
+   * PK5 precondition: field -> version hash (from the GET the editor was seeded
+   * from) for EXACTLY the fields in this body. A mismatch is a 409
+   * `EMERGENCY_INFO_CHANGED`. Never a column; omitted = last-write-wins.
+   */
+  if_match?: Record<string, string>;
+};
 
 /**
  * PUT /circles/:circleId/emergency-info — partial merge. Sends only the keys in

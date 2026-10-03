@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Avatar, ConfirmDialog, Icon, Skeleton } from '@/components/ui';
 import type { IconName } from '@/components/ui';
 import { useCircles } from '@/hooks/useCircles';
+import { useMyAvatarColor } from '@/hooks/useMyAvatarColor';
 import { useAuthStore, type AuthUser } from '@/store/authStore';
 import { useMenu } from '@/hooks/useMenu';
 import { Wordmark } from './Wordmark';
@@ -53,9 +54,12 @@ const MENU_PANEL_CLASS =
 const MENU_ITEM_CLASS =
   'flex min-h-[44px] w-full items-center gap-2 rounded-md px-3 text-left text-md text-ink transition-colors hover:bg-bg-2';
 
+/** Standalone hairline row shared by both menus (identity / items / Sign out). */
+const MENU_DIVIDER_CLASS = 'mx-2 my-1 border-t border-line-2';
+
 /** Spec §5.1: 44 min-height, r-full, 1px line, bg fill, spring press. */
 const SWITCHER_TRIGGER_CLASS =
-  'flex min-h-[44px] min-w-0 items-center gap-2 rounded-full border border-line bg-bg px-4 text-md text-ink transition-[background-color,transform] duration-fast ease-spring hover:bg-bg-2 active:scale-[0.97]';
+  'flex min-h-[44px] min-w-0 max-w-full items-center gap-2 rounded-full border border-line bg-bg px-4 text-md text-ink transition-[background-color,transform] duration-fast ease-spring hover:bg-bg-2 active:scale-[0.97]';
 
 /** Same shell as the trigger, for the no-circles-yet fallback link. */
 const SWITCHER_LINK_CLASS = `${SWITCHER_TRIGGER_CLASS} no-underline`;
@@ -128,8 +132,11 @@ function CircleSwitcher(): ReactElement {
     navigate(section ? `/circles/${id}/${section}` : `/circles/${id}`);
   };
 
+  // `min-w-0` + `max-w-full` let the trigger give up width at 320px (the
+  // name truncates further) instead of pushing the header past the viewport
+  // (WCAG 1.4.10 — see AppLayout's grid column).
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <button
         ref={menu.buttonRef}
         type="button"
@@ -142,7 +149,7 @@ function CircleSwitcher(): ReactElement {
         }
         className={SWITCHER_TRIGGER_CLASS}
       >
-        <span className="max-w-[7rem] truncate sm:max-w-40">
+        <span className="min-w-0 max-w-[7rem] truncate sm:max-w-40">
           {current?.name ?? t('header.switchCircle')}
         </span>
         <Icon name="chevron-down" size="inline" />
@@ -170,7 +177,7 @@ function CircleSwitcher(): ReactElement {
               )}
             </button>
           ))}
-          <div role="presentation" className="mx-2 my-1 border-t border-line-2" />
+          <div role="presentation" className={MENU_DIVIDER_CLASS} />
           <button
             type="button"
             role="menuitem"
@@ -211,6 +218,8 @@ export function UserMenu(): ReactElement {
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  // The member's chosen avatar colour lives on `users`, not in the auth store.
+  const avatarColor = useMyAvatarColor();
   const menu = useMenu();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
@@ -245,7 +254,12 @@ export function UserMenu(): ReactElement {
       >
         {/* Spec §5.1 puts the account avatar at 32; `xs` is 28, so the size is
             forced here (the established convention at this call site). */}
-        <Avatar size="xs" className="h-8! w-8!" name={displayName(user)} />
+        <Avatar
+          size="xs"
+          className="h-8! w-8!"
+          name={displayName(user)}
+          colorKey={avatarColor}
+        />
         <span className="hidden max-w-32 truncate text-md text-ink md:block">
           {displayName(user)}
         </span>
@@ -261,10 +275,13 @@ export function UserMenu(): ReactElement {
           className={MENU_PANEL_CLASS}
         >
           {user && (
-            <div className="border-b border-line-2 px-3 pb-2 pt-1">
-              <p className="m-0 truncate text-sm font-medium text-ink">{displayName(user)}</p>
-              <p className="m-0 truncate text-xs text-ink-3">{user.email}</p>
-            </div>
+            <>
+              <div className="px-3 pb-3 pt-2">
+                <p className="m-0 truncate text-md font-semibold text-ink">{displayName(user)}</p>
+                <p className="m-0 truncate text-sm text-ink-3">{user.email}</p>
+              </div>
+              <div role="presentation" className={MENU_DIVIDER_CLASS} />
+            </>
           )}
           <button
             type="button"
@@ -290,6 +307,7 @@ export function UserMenu(): ReactElement {
             <Icon name="help-circle-outline" size="row" />
             {t('nav.help')}
           </button>
+          <div role="presentation" className={MENU_DIVIDER_CLASS} />
           <button
             type="button"
             role="menuitem"

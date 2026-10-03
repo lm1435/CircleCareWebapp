@@ -1,18 +1,67 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
   type KeyboardEvent,
   type ReactElement,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, TextField } from '@/components/ui';
 import { DRUG_SEARCH_MIN_CHARS, searchDrugs, type DrugSearchResult } from '@/api/drugs';
 
 /** Mobile `DrugAutocomplete` waits 300ms after the last keystroke; same here. */
 const SEARCH_DEBOUNCE_MS = 300;
+
+/** Gap between the field and its list, and to the edge of the room it may use. */
+const LIST_GAP = 4;
+/** `max-h-64` — the list's own ceiling; a longer result set scrolls inside it. */
+const LIST_MAX_HEIGHT = 256;
+/** Below this much room under the field the list opens above it instead (three 44px rows). */
+const MIN_ROOM_BELOW = 132;
+
+interface ListPlacement {
+  left: number;
+  width: number;
+  maxHeight: number;
+  /** Exactly one of these is set: hang below the field, or sit on top of it. */
+  top?: number;
+  bottom?: number;
+}
+
+/**
+ * Where the suggestion list may go. The list is portalled to `document.body`
+ * (see the render), so it is positioned with fixed coordinates from the
+ * field's rect and confined to the DIALOG it belongs to: never past the
+ * footer's top edge (the wizard's Continue / Back live there) and never above
+ * the dialog's top. Same rules as `ui/pickerPopover.tsx`.
+ */
+function placeList(anchor: HTMLElement): ListPlacement {
+  const rect = anchor.getBoundingClientRect();
+  const dialog = anchor.closest('[role="dialog"]');
+  const footer = dialog?.querySelector('[data-modal-footer]');
+  const footerRect = footer?.getBoundingClientRect();
+  const floor =
+    footerRect && footerRect.height > 0
+      ? Math.min(window.innerHeight, footerRect.top)
+      : window.innerHeight;
+  const dialogRect = dialog?.getBoundingClientRect();
+  const ceiling = dialogRect && dialogRect.height > 0 ? Math.max(0, dialogRect.top) : 0;
+  const roomBelow = floor - rect.bottom - LIST_GAP * 2;
+  const roomAbove = rect.top - ceiling - LIST_GAP * 2;
+  const base = { left: rect.left, width: rect.width };
+  if (roomBelow >= MIN_ROOM_BELOW || roomBelow >= roomAbove) {
+    return { ...base, top: rect.bottom + LIST_GAP, maxHeight: Math.max(0, Math.min(LIST_MAX_HEIGHT, roomBelow)) };
+  }
+  return {
+    ...base,
+    bottom: window.innerHeight - rect.top + LIST_GAP,
+    maxHeight: Math.max(0, Math.min(LIST_MAX_HEIGHT, roomAbove)),
+  };
+}
 
 export interface DrugAutocompleteProps {
   id: string;
@@ -78,6 +127,32 @@ export function DrugAutocomplete({
   // (an edit, a wizard hand-off), which would pop a list over a field nobody
   // is looking at.
   const userTypedRef = useRef(false);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  const [placement, setPlacement] = useState<ListPlacement | null>(null);
+
+  // THE LIST IS PORTALLED, not `absolute`. Every host is a `Modal`, whose
+  // scrolling body clips an absolutely positioned child: in the first-run
+  // wizard (a short body over a tall footer) the list showed ~2.5 rows and the
+  // rest sat under the footer, so a caregiver could not pick a suggestion.
+  // A portal to `document.body` has no clipping ancestor; the price is
+  // repositioning, since a fixed box does not follow a scrolling ancestor.
+  const listVisible = open && suggestions.length > 0;
+  useLayoutEffect(() => {
+    if (!listVisible) {
+      setPlacement(null);
+      return;
+    }
+    const update = (): void => {
+      if (anchorRef.current) setPlacement(placeList(anchorRef.current));
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [listVisible, suggestions.length]);
 
   const cancelPending = (): void => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -190,7 +265,7 @@ export function DrugAutocomplete({
   const activeId = activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined;
 
   return (
-    <div className="relative">
+    <div ref={anchorRef} className="relative">
       <TextField
         id={id}
         label={label}
@@ -229,12 +304,23 @@ export function DrugAutocomplete({
         {open ? t('addEvent.drugSearch.resultCount', { count: suggestions.length }) : ''}
       </span>
 
-      {open && suggestions.length > 0 && (
+      {listVisible &&
+        placement &&
+        createPortal(
         <ul
           id={listboxId}
           role="listbox"
           aria-label={t('addEvent.drugSearch.suggestionsLabel')}
-          className="absolute left-0 right-0 z-20 m-0 mt-1 max-h-64 list-none overflow-y-auto rounded-lg bg-cream p-1 shadow-lg ring-1 ring-line"
+          // z-[60]: the portal makes the list a SIBLING of Modal's z-50 backdrop.
+          style={{
+            position: 'fixed',
+            left: placement.left,
+            width: placement.width,
+            top: placement.top,
+            bottom: placement.bottom,
+            maxHeight: placement.maxHeight,
+          }}
+          className="z-[60] m-0 list-none overflow-y-auto rounded-lg bg-cream p-1 shadow-lg ring-1 ring-line"
         >
           {suggestions.map((drug, index) => {
             const active = index === activeIndex;
@@ -260,8 +346,9 @@ export function DrugAutocomplete({
               </li>
             );
           })}
-        </ul>
-      )}
+        </ul>,
+        document.body
+        )}
     </div>
   );
 }

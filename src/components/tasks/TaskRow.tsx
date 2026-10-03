@@ -106,10 +106,22 @@ export function TaskRow({
   const isDone = Boolean(task.completed_at) || isPendingComplete;
   const hasDueDate = Boolean(task.scheduled_date);
 
-  const assignee = useMemo(
-    () => (task.assigned_to ? members.find((m) => m.id === task.assigned_to) : undefined),
-    [members, task.assigned_to]
-  );
+  // Embedded `assigned_to_user` first, roster second — the same order as
+  // EventDetailModal and mobile's TaskRow. A COMPLETED task keeps its original
+  // assignee after that member is removed from the circle (backend keeps it
+  // "for historical record"), so the current roster alone reads "Unassigned".
+  const assigneeName = useMemo(() => {
+    const embedded = task.assigned_to_user;
+    if (embedded) {
+      const name = [embedded.first_name, embedded.last_name].filter(Boolean).join(' ');
+      if (name) return name;
+      if (embedded.email) return embedded.email;
+    }
+    const member = task.assigned_to
+      ? members.find((m) => m.id === task.assigned_to)
+      : undefined;
+    return member ? memberDisplayName(member) : null;
+  }, [members, task.assigned_to, task.assigned_to_user]);
 
   const isOverdue =
     !!today &&
@@ -183,8 +195,8 @@ export function TaskRow({
   // into (and duplicating) the button's aria-label.
   const metaRow = (
     <div id={metaRowId} className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-2">
-      {assignee ? (
-        <span>{memberDisplayName(assignee)}</span>
+      {assigneeName ? (
+        <span>{assigneeName}</span>
       ) : (
         <span className="italic text-ink-3">{t('row.unassigned')}</span>
       )}

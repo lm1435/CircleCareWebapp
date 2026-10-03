@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import CalendarPage from '../CalendarPage';
 import { ToastProvider } from '@/components/ui';
@@ -41,9 +41,16 @@ vi.mock('@/api/circles', () => ({
 // The stub prints the event id it was handed: that id is the modal's SUBJECT,
 // and it is otherwise invisible — a swapped subject with the same title reads
 // identically on screen.
+// The heading id below (`event-notes-heading`) mirrors the REAL
+// EventNotesPanel's `aria-labelledby` target — the `?panel=notes` deep link
+// (Task 26) scrolls to it, so the stub must carry it too or that assertion
+// would pass against a heading that doesn't exist in production.
 vi.mock('@/components/calendar/EventNotesPanel', () => ({
   EventNotesPanel: ({ eventId }: { eventId: string }) => (
-    <span data-testid="event-notes-subject">{eventId}</span>
+    <div>
+      <span data-testid="event-notes-subject">{eventId}</span>
+      <h3 id="event-notes-heading">Notes</h3>
+    </div>
   ),
 }));
 // The GettingStartedChecklist (rendered on the landing) reads emergency info; stub
@@ -153,34 +160,23 @@ const EVENTS: CalendarEvent[] = [
   }),
 ];
 
-function renderPage() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/circles/circle-1/calendar']}>
-        <Routes>
-          <Route path="/circles/:circleId/calendar" element={<CalendarPage />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>
-  );
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location-search">{location.search}</div>;
 }
 
-/**
- * Same page with edit access + a ToastProvider, for the write flows that mount
- * EventDetailActions / ConfirmMedDialog (both call useToast). The caller must
- * also give `mockGetMembersCircleDetail` a `can_edit: true` detail.
- */
-function renderEditablePage() {
+// CalendarPage now calls useToast() unconditionally (Task 26's `?date=`
+// deep-link miss toasts), so every render needs a ToastProvider — not just
+// the write-flow one below.
+function renderPage(initialPath = '/circles/circle-1/calendar') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <MemoryRouter initialEntries={['/circles/circle-1/calendar']}>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <LocationProbe />
           <Routes>
             <Route path="/circles/:circleId/calendar" element={<CalendarPage />} />
           </Routes>
@@ -188,6 +184,16 @@ function renderEditablePage() {
       </ToastProvider>
     </QueryClientProvider>
   );
+}
+
+/**
+ * Same page with edit access, for the write flows that mount
+ * EventDetailActions / ConfirmMedDialog, and for the `?date&eventId&panel`
+ * deep link (Task 26). The caller must also give `mockGetMembersCircleDetail`
+ * a `can_edit: true` detail for the write-flow tests specifically.
+ */
+function renderEditablePage(initialPath = '/circles/circle-1/calendar') {
+  return renderPage(initialPath);
 }
 
 beforeAll(() => {
@@ -230,6 +236,9 @@ beforeEach(() => {
   mockGetMembersCircleDetail.mockResolvedValue(MEMBERS_DETAIL);
   mockGetCircles.mockResolvedValue([]);
   mockGetEvents.mockResolvedValue(EVENTS);
+  // jsdom has no layout, so scrollIntoView doesn't exist — stub it so the
+  // `?panel=notes` deep-link scroll (Task 26) doesn't throw.
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 describe('CalendarPage', () => {
@@ -782,5 +791,89 @@ describe('CalendarPage', () => {
       expect(within(detail).queryByText('Row created by the completion request')).toBeNull();
       expect(within(detail).queryByRole('button', { name: 'Mark complete' })).toBeNull();
     });
+  });
+});
+
+// ============================================================================
+// Notes-first-class (docs/plans/notes-first-class.md, Slice 2, Task 26): a
+// `?date=&eventId=&panel=` deep link from an Activity note row moves the view
+// to that date's week, opens the matching event's detail modal, scrolls to
+// its notes panel when `panel=notes`, and clears the params afterward. A
+// miss (nothing on that date matches the id) toasts instead of opening
+// anything.
+// ============================================================================
+describe('CalendarPage — note deep link (Task 26)', () => {
+  it('opens the detail modal for a non-recurring event on its own date, scrolls to notes, and clears the params', async () => {
+    renderEditablePage('/circles/circle-1/calendar?date=2026-06-12&eventId=ev-appt&panel=notes');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: /Dr\. Smith/ })).toBeInTheDocument();
+
+    await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled());
+    const notesHeading = document.getElementById('event-notes-heading');
+    expect(notesHeading).not.toBeNull();
+    expect(
+      (Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>).mock.instances
+    ).toContain(notesHeading);
+
+    // Params scrubbed (replace) so a re-render never re-opens the modal.
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
+  });
+
+  it('opens the modal for a recurring series’ virtual occurrence, addressed by the SERIES ROOT id + that date', async () => {
+    // The activity feed's `note_target.event_id` is always the series ROOT
+    // (parent_event_id ?? id) — never the virtual/physical instance the note
+    // itself lives on — so the match must be root-on-its-date OR
+    // child/virtual-whose-parent-is-the-root on that date, never bare id
+    // equality against the instance.
+    const virtual = makeEvent({
+      id: 'parent-1_2026-06-19',
+      parent_event_id: 'parent-1',
+      is_virtual: true,
+      event_type: 'task',
+      title: 'Water the plants',
+      recurrence_rule: 'daily',
+      scheduled_date: '2026-06-19',
+      scheduled_time: null,
+    });
+    mockGetEvents.mockResolvedValue([virtual]);
+
+    renderEditablePage('/circles/circle-1/calendar?date=2026-06-19&eventId=parent-1&panel=notes');
+
+    // The view moved to the week containing 2026-06-19 (Jun 14 - Jun 20).
+    expect(
+      await screen.findByRole('heading', { name: 'Jun 14 – Jun 20, 2026' })
+    ).toBeInTheDocument();
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: /Water the plants/ })).toBeInTheDocument();
+    // The notes panel was opened for the VIRTUAL instance (its own date), not
+    // the bare root id — same instance-scoping rule EventDetailModal already
+    // applies to a click from the grid.
+    expect(within(dialog).getByTestId('event-notes-subject')).toHaveTextContent(
+      'parent-1_2026-06-19'
+    );
+
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
+  });
+
+  it('toasts and opens no modal when nothing on that date matches the id', async () => {
+    renderEditablePage(
+      '/circles/circle-1/calendar?date=2026-06-12&eventId=does-not-exist&panel=notes'
+    );
+
+    expect(
+      await screen.findByText('That note is no longer available.')
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
+  });
+
+  it('ignores a deep link with no `date`/`eventId` — page renders normally, no toast', async () => {
+    renderEditablePage('/circles/circle-1/calendar');
+    await screen.findByRole('grid', { name: 'Week view calendar' });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('That note is no longer available.')).not.toBeInTheDocument();
   });
 });

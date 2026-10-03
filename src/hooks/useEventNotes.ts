@@ -7,11 +7,14 @@ import {
 } from '@tanstack/react-query';
 import {
   getEventNotes,
+  getEventNotesInRange,
   createNote,
   updateNote,
   deleteNote,
   splitEventId,
   type EventNote,
+  type EventNoteRangeItem,
+  type GetEventNotesInRangeParams,
 } from '@/api/eventNotes';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
@@ -44,6 +47,27 @@ export function useEventNotes(
     queryKey: queryKeys.eventNotes(circleId ?? '', split?.eventId ?? '', split?.scheduledDate),
     queryFn: () => getEventNotes(circleId!, split!.eventId, split!.scheduledDate),
     enabled: !!circleId && !!eventId,
+  });
+}
+
+/**
+ * Event notes over a DATE RANGE (task 30 — the care summary share sheet's
+ * "visit notes" source). A separate query family from `useEventNotes` above
+ * (per-event thread) — different endpoint, different shape, different key
+ * root (`queryKeys.eventNotesRange`).
+ *
+ * `params` is `undefined` while the caller doesn't know its window yet (e.g.
+ * the recipient timezone hasn't resolved) — the query stays disabled rather
+ * than firing with a garbage range, mirroring `useCareNotes`'s enabled gate.
+ */
+export function useEventNotesRange(
+  circleId: string,
+  params: GetEventNotesInRangeParams | undefined
+): UseQueryResult<EventNoteRangeItem[]> {
+  return useQuery({
+    queryKey: queryKeys.eventNotesRange(circleId, params ?? { from: '', to: '' }),
+    queryFn: () => getEventNotesInRange(circleId, params!),
+    enabled: !!circleId && !!params,
   });
 }
 
@@ -116,6 +140,7 @@ export function useCreateNote(): UseMutationResult<EventNote, unknown, CreateNot
       createNote(circleId, eventId, { body, scheduled_date: scheduledDate }),
     onSuccess: (_note, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId, variables.scheduledDate);
+      Analytics.eventNoteAdded(variables.circleId);
     },
     onError: (error, variables) =>
       refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
@@ -130,6 +155,7 @@ export function useUpdateNote(): UseMutationResult<EventNote, unknown, UpdateNot
       updateNote(circleId, eventId, noteId, { body }),
     onSuccess: (_note, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId);
+      Analytics.eventNoteUpdated(variables.circleId);
     },
     onError: (error, variables) =>
       refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
@@ -144,6 +170,7 @@ export function useDeleteNote(): UseMutationResult<void, unknown, DeleteNoteVari
       deleteNote(circleId, eventId, noteId),
     onSuccess: (_void, variables) => {
       invalidateNotes(queryClient, variables.circleId, variables.eventId);
+      Analytics.eventNoteDeleted(variables.circleId);
     },
     onError: (error, variables) =>
       refreshFlagsOnPermissionError(queryClient, variables.circleId, error),

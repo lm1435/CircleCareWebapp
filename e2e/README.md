@@ -425,6 +425,24 @@ have neither.
 | `coarse-pointer.spec.ts` | The touch PRESENTATION: on `devices['iPhone 13']` (WebKit) and `devices['Pixel 5']` the pickers render a trigger, open our sheet from a tap on the input, make that input `readOnly` (the only thing that stops WebKit summoning its own picker from focus), fetch the panel chunk and pass axe — and the suppression class's width effect is pinned per engine, which is the EVIDENCE that `readOnly` is required. Backend-free. Read its header for what WebKit-on-macOS does **not** prove about iOS Safari. |
 | `harness/` | Not part of the app: Vite-served pages that mount ONE `TimeField`/`DateField` (real layout for the geometry spec) and four bare `<input>`s (the indicator-width probe). |
 | `flows/*.spec.ts` | Critical-path create/edit/delete flows (see below). |
+| `security/write-gate.spec.ts` | The O5 database write gate, ARMED (see "Write gate" below). Skipped unless `PW_WRITE_GATE_ARMED=1`. |
+
+## Write gate (`security/write-gate.spec.ts`)
+
+Proves, in a real signed-in browser, that once `app_settings` holds an `api_write_gate_sha256*` row
+(migration `20261001120000_api_write_gate.sql`): the user's own token + the public anon key cannot
+write the gated tables through `/rest/v1` (403 `cc_api_write_gate`, rows unchanged); the same actions
+through the UI succeed; a backend with the WRONG `API_WRITE_GATE_KEY` fails every save with an
+error message, keeps the input and writes nothing, and the retry through the right backend lands once;
+rotation (`api_write_gate_sha256_next`) lets either key write; deleting the rows disarms on the next
+statement and re-arming refuses again, with no restart.
+
+Needs: the DB armed with sha256 of the MAIN backend's key, `PW_WRITE_GATE_ARMED=1`,
+`PW_WRITE_GATE_ALT_API_URL` (a second backend on the same DB with a DIFFERENT key, same `WEB_ORIGIN`)
+and `PW_WRITE_GATE_ALT_KEY_FILE` (that key, read only to hash it for the rotation row). Tests 4 and 5
+rewrite the GLOBAL arm rows and restore them: run the file alone with `--workers=1`, never inside a
+full-suite run, and never against a shared database other people are using. Falsifier: the same run
+against an UNARMED DB turns tests 0, 1, 3, 4 and 5 red and leaves 2 green.
 
 ## Flows (`flows/`)
 
@@ -453,6 +471,13 @@ multiple series per card, so UI-click deletion races card re-grouping/remounts.
 | `documents-controls` | Category filter chips. |
 | `activity-controls` | "Load more" pagination (grows the feed; annotates a skip if the demo has a single page). |
 | `empty-states` | Empty tasks ("No open tasks" + a11y), vitals/documents states + a11y, the calendar add-CTA from an empty circle, and the meds empty state (its add CTA opens the create modal). |
+| `emergency-arrays` | Contacts / doctors / insurance: add a 3rd keeps the others, rename in place, delete the middle keeps the rest (API read-back after every step; `PW_FALSIFY=emergency-arrays`). |
+| `medication-edit-history` | Time + dosage edit of a started med older than 15 days, and daily → weekly: taken doses keep their values + confirmations, the future moves (`PW_FALSIFY=med-edit-time-dosage,med-edit-frequency`). |
+| `invite-signup` | Signing UP from an invite link and with a pending email invite → verify → joined, 0 owned circles. **Needs its own backend started with `EMAIL_BLOCKED_DOMAINS=circlecare.test`** (checked; fails naming it). `PW_FALSIFY=invite-signup-link,invite-signup-pending`. |
+| `task-removed-assignee` | A completed task whose assignee was then removed still shows their name in the Tasks > Completed row (embed first, roster second; TaskRow.tsx). `PW_FALSIFY=task-removed-assignee` leaves the member in the roster and fails the negative control. |
+| `write-persist-notes-prefs` | Event note edit/delete, vital delete, email digest (on/day/off), the five notification switches, circle date of birth: each written through the UI, then the DB row and a reload/API read (`PW_FALSIFY=write-persist-notes-prefs[:<step>]`). |
+| `write-persist-events` | Recurring task "this and all future" delete, one-off appointment/medication delete (hard vs PK3 soft delete), refill decrement on a Home confirm, task completion keepalive on navigation: DB + reload/API (`PW_FALSIFY=write-persist-events[:<name>]`). |
+| `write-persist-members-account` | Cancel / resend invite, document rename + delete, keep-one-circle downgrade selection, account deletion (auth user gone, `public.users` anonymised, owned circle deleted, login refused): DB + reload/API (`PW_FALSIFY=write-persist-members-account[:<name>]`). |
 
 **Empty states:** `empty-states.spec.ts` **stubs each list
 endpoint to an empty envelope** (`page.route` on `/api/circles/*/{tasks,vitals,documents,events}`)

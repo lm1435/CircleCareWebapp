@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { UndoBadge } from '../UndoBadge';
 
 describe('UndoBadge', () => {
@@ -90,5 +91,52 @@ describe('UndoBadge', () => {
     expect(screen.getByText('Skipped').className).toContain('text-ink-2');
     const bar = container.querySelector('[aria-hidden]:last-child') as HTMLElement;
     expect(bar.className).toContain('bg-ink-3');
+  });
+
+  // WCAG 2.4.3 — the badge replaces the pressed Confirm/Skip/Done button, so
+  // without this focus drops to <body> (a11y audit 2026-09-29).
+  describe('keyboard focus', () => {
+    let rects: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      // jsdom lays nothing out; give every element one client rect ("visible").
+      rects = vi
+        .spyOn(HTMLElement.prototype, 'getClientRects')
+        .mockReturnValue([{}] as unknown as DOMRectList);
+    });
+    afterEach(() => rects.mockRestore());
+
+    it('moves focus to Undo when the pressed button was removed (focus on body)', () => {
+      (document.activeElement as HTMLElement | null)?.blur();
+      render(<UndoBadge kind="taken" label="Taken" undoLabel="Undo" itemLabel="Aspirin" onUndo={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Undo Aspirin' })).toHaveFocus();
+    });
+
+    it('does not steal focus from a control that still has it', () => {
+      render(<button type="button">Elsewhere</button>);
+      screen.getByRole('button', { name: 'Elsewhere' }).focus();
+      render(<UndoBadge kind="taken" label="Taken" undoLabel="Undo" onUndo={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Elsewhere' })).toHaveFocus();
+    });
+
+    it('returns focus to its row when it unmounts holding focus', async () => {
+      function Row({ pending }: { pending: boolean }): ReactElement {
+        return (
+          <ul>
+            <li>
+              {pending ? (
+                <UndoBadge kind="taken" label="Taken" undoLabel="Undo" onUndo={() => {}} />
+              ) : (
+                <button type="button">Confirm</button>
+              )}
+            </li>
+          </ul>
+        );
+      }
+      (document.activeElement as HTMLElement | null)?.blur();
+      const { rerender } = render(<Row pending />);
+      expect(screen.getByRole('button', { name: 'Undo' })).toHaveFocus();
+      rerender(<Row pending={false} />);
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus());
+    });
   });
 });

@@ -1,6 +1,7 @@
-import { render, screen, renderHook, act } from '@testing-library/react';
+import { render, screen, renderHook, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
+import { afterEach, vi } from 'vitest';
 import { Accordion, useAccordionGroup } from '../Accordion';
 
 // A tiny controlled host so we can exercise the disclosure pattern end-to-end.
@@ -136,6 +137,101 @@ describe('Accordion', () => {
 
     await user.click(screen.getByRole('button', { name: /Doctors/ }));
     expect(panel.hasAttribute('inert')).toBe(false);
+  });
+});
+
+// The inner collapse wrapper clips only while closed or animating: on a fully
+// open panel `overflow-hidden` clipped nothing but popovers — a Vitals row's
+// MoreMenu in a one-reading group was painted cut off and unclickable. (jsdom
+// has no layout, so the geometry itself is proved in e2e/flows/vitals.spec.ts;
+// this covers the state machine that decides the class.)
+describe('Accordion clip-while-moving', () => {
+  const inner = () => document.getElementById('sec-accordion-panel')!.firstElementChild as HTMLElement;
+  const panel = () => document.getElementById('sec-accordion-panel')!;
+  const clipped = () => inner().className.split(/\s+/).includes('overflow-hidden');
+  const toggle = () => fireEvent.click(screen.getByRole('button', { name: /Doctors/ }));
+
+  /** Make the panel report a real 300ms transition (jsdom computes none). */
+  function withTransition(duration = '0.3s', delay = '0s') {
+    const real = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) => {
+      const style = real(el, pseudo);
+      if ((el as HTMLElement).id !== 'sec-accordion-panel') return style;
+      return { ...style, transitionDuration: duration, transitionDelay: delay } as CSSStyleDeclaration;
+    });
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('does not clip a panel that mounts open (nothing is animating)', () => {
+    render(<Host />);
+    expect(clipped()).toBe(false);
+    expect(inner().className).toContain('min-h-0');
+  });
+
+  it('clips a panel that mounts closed', () => {
+    render(<Host initialOpen={false} />);
+    expect(clipped()).toBe(true);
+  });
+
+  it('re-clips in the same render that starts the collapse', () => {
+    withTransition();
+    render(<Host />);
+    expect(clipped()).toBe(false);
+    toggle();
+    expect(clipped()).toBe(true);
+  });
+
+  it('keeps clipping while opening, and unclips on its OWN grid-template-rows transitionend', () => {
+    withTransition();
+    render(<Host initialOpen={false} />);
+    toggle();
+    expect(screen.getByRole('button', { name: /Doctors/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(clipped()).toBe(true);
+
+    // A bubbled transitionend from a descendant (a row's hover colour) is ignored.
+    fireEvent.transitionEnd(screen.getByText('panel body'), { propertyName: 'grid-template-rows' });
+    expect(clipped()).toBe(true);
+    // So is another property finishing on the panel itself.
+    fireEvent.transitionEnd(panel(), { propertyName: 'opacity' });
+    expect(clipped()).toBe(true);
+
+    fireEvent.transitionEnd(panel(), { propertyName: 'grid-template-rows' });
+    expect(clipped()).toBe(false);
+  });
+
+  it('ignores a late transitionend once the panel is closing again', () => {
+    withTransition();
+    render(<Host initialOpen={false} />);
+    toggle(); // open
+    toggle(); // close before the open finished
+    fireEvent.transitionEnd(panel(), { propertyName: 'grid-template-rows' });
+    expect(clipped()).toBe(true);
+  });
+
+  it('falls back to a timer (duration + delay + slack) when transitionend never fires', () => {
+    vi.useFakeTimers();
+    withTransition('300ms', '0.05s');
+    render(<Host initialOpen={false} />);
+    toggle();
+    act(() => {
+      vi.advanceTimersByTime(349);
+    });
+    expect(clipped()).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(101);
+    });
+    expect(clipped()).toBe(false);
+  });
+
+  it('unclips immediately when the open has no transition (reduced motion)', () => {
+    withTransition('0s');
+    render(<Host initialOpen={false} />);
+    toggle();
+    expect(clipped()).toBe(false);
   });
 });
 

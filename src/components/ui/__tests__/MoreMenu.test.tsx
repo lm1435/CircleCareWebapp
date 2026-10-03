@@ -908,3 +908,31 @@ describe('MoreMenu', () => {
     });
   });
 });
+
+// a11y audit 2026-09-29 (WCAG 4.1.2 / 2.4.6): the panel is named by the control
+// that opened it, not a generic "More actions" — the Tasks sort menu used to
+// announce as "More actions".
+describe('MoreMenu panel name', () => {
+  const entries: MoreMenuEntry[] = [{ id: 'a', label: 'Due date', onSelect: () => {} }];
+
+  it('takes the default trigger label', async () => {
+    render(<MoreMenu items={entries} label="More actions for Aspirin" />);
+    await userEvent.click(screen.getByRole('button', { name: 'More actions for Aspirin' }));
+    expect(screen.getByRole('menu', { name: 'More actions for Aspirin' })).toBeInTheDocument();
+  });
+
+  it('takes a custom trigger’s visible text', async () => {
+    render(
+      <MoreMenu
+        items={entries}
+        renderTrigger={(p) => (
+          <button {...p} type="button">
+            Sort: Due date
+          </button>
+        )}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Sort: Due date' }));
+    expect(screen.getByRole('menu', { name: 'Sort: Due date' })).toBeInTheDocument();
+  });
+});

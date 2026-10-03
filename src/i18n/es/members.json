@@ -146,8 +146,6 @@
     "invitedYou": "{{inviter}} te invitó a ayudar a cuidar a {{recipient}}",
     "accept": "Aceptar",
     "accepting": "Uniéndote…",
-    "accepted": "Te uniste a {{circle}}.",
-    "openCircle": "Abrir círculo",
     "ignoreHint": "¿No quieres unirte todavía? Puedes dejar la invitación aquí; no pasa nada hasta que aceptes.",
     "emptyTitle": "No hay invitaciones pendientes",
     "emptyBody": "Cuando alguien te invite a un círculo de cuidado, aparecerá aquí.",

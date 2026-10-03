@@ -18,6 +18,7 @@ import { Button } from './Button';
 import { Icon } from './Icon';
 import { EXIT_FALLBACK_MS, prefersReducedMotion, waitForExitAnimation } from './motion';
 import { Text } from './Text';
+import { captureSessionGuard } from '@/lib/forcedSignOut';
 
 export type ToastType = 'info' | 'success' | 'error';
 
@@ -390,5 +391,19 @@ export function useToast(): ToastContextValue {
   if (!context) {
     throw new Error('useToast must be used within a ToastProvider');
   }
-  return context;
+  // Captured at mount: a toast requested by a consumer that was mounted BEFORE a
+  // forced sign-out (an in-flight save failing with the 401 that ended the
+  // session) is dropped instead of appearing over /login. See lib/forcedSignOut.
+  const guardRef = useRef<(() => boolean) | null>(null);
+  if (!guardRef.current) guardRef.current = captureSessionGuard();
+  const suppressed = guardRef.current;
+  return useMemo<ToastContextValue>(
+    () => ({
+      showToast: (message, type, action) => {
+        if (suppressed()) return;
+        context.showToast(message, type, action);
+      },
+    }),
+    [context, suppressed]
+  );
 }

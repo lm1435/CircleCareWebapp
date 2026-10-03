@@ -50,7 +50,7 @@ describe('Select', () => {
     expect(control.className).toContain('appearance-none');
     const shell = shellOf(control);
     expect(shell.className).toContain('min-h-[44px]');
-    expect(shell.className).toContain('focus-within:border-moss-light');
+    expect(shell.className).toContain('focus-within:border-moss');
     expect(shell.querySelector('[data-icon="chevron-down"]')).toBeInTheDocument();
   });
 
@@ -67,7 +67,7 @@ describe('Select', () => {
     );
     const shell = shellOf(screen.getByLabelText('Repeat'));
     expect(shell.className).toContain('border-terracotta');
-    expect(shell.className).not.toContain('moss-light');
+    expect(shell.className).not.toContain('focus-within:border-moss');
     expect(document.querySelector('[data-icon="alert-circle-outline"]')).toBeInTheDocument();
     expect(screen.getByLabelText('Repeat')).toHaveAttribute('aria-invalid', 'true');
   });

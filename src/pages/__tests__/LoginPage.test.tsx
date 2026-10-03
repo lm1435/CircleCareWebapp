@@ -143,7 +143,9 @@ describe('LoginPage', () => {
     await fillAndSubmit();
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Invalid email or password.');
+    expect(alert).toHaveTextContent(
+      "We couldn't sign you in. Check your password, or reset it."
+    );
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(tokenAccessor.getAuthToken()).toBeNull();
   });
@@ -162,6 +164,20 @@ describe('LoginPage', () => {
     );
     expect(alert).not.toHaveTextContent("We couldn't sign you in. Please try again.");
     expect(alert).not.toHaveTextContent('Invalid email or password.');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('a transient failure (503) shows the transient copy, not the credentials copy (PK2)', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'SERVICE_UNAVAILABLE', message: 'Service temporarily unavailable' },
+    });
+
+    await fillAndSubmit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent("We couldn't sign you in. Please try again.");
+    expect(alert).not.toHaveTextContent('Check your password');
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
@@ -193,6 +209,14 @@ describe('LoginPage', () => {
       })
     );
     expect(screen.queryByText(/72 characters/)).not.toBeInTheDocument();
+  });
+
+  it('marks the email field as the credential USERNAME (type stays email) and the password as current-password', () => {
+    renderLogin();
+    const email = document.getElementById('login-email');
+    expect(email).toHaveAttribute('autocomplete', 'username');
+    expect(email).toHaveAttribute('type', 'email');
+    expect(document.querySelector('input[type="password"]')).toHaveAttribute('autocomplete', 'current-password');
   });
 
   it('renders both provider buttons with a brand glyph and an accessible name', () => {

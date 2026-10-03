@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api';
 import {
+  getEmergencyInfo,
   updateEmergencyInfo,
   updateEmergencyInfoSchema,
   type UpdateEmergencyInfoRequest,
@@ -84,5 +85,21 @@ describe('updateEmergencyInfoSchema (mirrors backend updateEmergencyInfoSchema)'
         allergies: Array.from({ length: 101 }, () => 'peanuts'),
       }).success
     ).toBe(false);
+  });
+});
+
+describe('getEmergencyInfo (PK5 versions)', () => {
+  it('merges data.versions into the snapshot; old-backend responses are untouched', async () => {
+    const get = vi.mocked(apiClient.get);
+    const row = { id: 'e', circle_id: CIRCLE_ID };
+    get.mockResolvedValueOnce({
+      success: true,
+      data: { emergency_info: row, versions: { allergies: 'h1' } },
+    } as never);
+    expect(await getEmergencyInfo(CIRCLE_ID)).toEqual({ ...row, versions: { allergies: 'h1' } });
+    get.mockResolvedValueOnce({ success: true, data: { emergency_info: row } } as never);
+    expect(await getEmergencyInfo(CIRCLE_ID)).toEqual(row);
+    get.mockResolvedValueOnce({ success: true, data: { emergency_info: null, versions: {} } } as never);
+    expect(await getEmergencyInfo(CIRCLE_ID)).toBeNull();
   });
 });

@@ -45,7 +45,7 @@ export function StandalonePageLayout(): ReactElement {
         // reliably move DOM focus, so this focuses the (now-focusable, see
         // `tabIndex={-1}` below) landmark directly.
         onClick={() => document.getElementById('main')?.focus()}
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cream focus:px-5 focus:py-3 focus:text-sm focus:text-ink focus:shadow-lg"
       >
         {t('skipToContent')}
       </a>

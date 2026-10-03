@@ -102,6 +102,19 @@ export function isPermissionDeniedError(err: unknown): boolean {
 }
 
 /**
+ * True for the PK5 409 `EMERGENCY_INFO_CHANGED` refusal: another caregiver changed
+ * the section being saved. `fields` are the conflicting top-level field names.
+ */
+export function getEmergencyInfoConflict(err: unknown): { fields: string[] } | null {
+  if (errorCode(err) !== 'EMERGENCY_INFO_CHANGED') return null;
+  const details = (err as ApiErrorEnvelope).error?.details as { fields?: unknown } | undefined;
+  const fields = Array.isArray(details?.fields)
+    ? details.fields.filter((f): f is string => typeof f === 'string')
+    : [];
+  return { fields };
+}
+
+/**
  * True for a 402 `SUBSCRIPTION_REQUIRED` / `PAYMENT_REQUIRED` rejection — the
  * write is premium-gated and the user must upgrade. Web shows "open the app to
  * upgrade" (no web purchase flow).
@@ -228,10 +241,16 @@ export function getPendingInviteSeat(err: unknown): { email: string | null } | n
  *     child dose; edit history is immutable, so the time can't move.
  *   - `MEDICATION_DISCONTINUED` — a confirm targeted an inactive medication;
  *     it must be reactivated before doses can be logged.
- * Both are state conflicts, not failures — the caller shows a specific message
+ *   - `OCCURRENCE_REMOVED` — a confirm / note targeted a single dose that was
+ *     removed from the schedule; it can never be logged.
+ * All are state conflicts, not failures — the caller shows a specific message
  * instead of the generic "try again" retry copy.
  */
-export const CONFLICT_ERROR_CODES = new Set(['DOSE_ALREADY_LOGGED', 'MEDICATION_DISCONTINUED']);
+export const CONFLICT_ERROR_CODES = new Set([
+  'DOSE_ALREADY_LOGGED',
+  'MEDICATION_DISCONTINUED',
+  'OCCURRENCE_REMOVED',
+]);
 
 /**
  * True for any 409 medication-state conflict. Prefer the specific helpers when
@@ -261,6 +280,14 @@ export function isMedicationDiscontinuedError(err: unknown): boolean {
 }
 
 /**
+ * True for a 409 `OCCURRENCE_REMOVED` rejection — a confirm or note targeted a
+ * single dose that was removed from the schedule. Not retryable.
+ */
+export function isOccurrenceRemovedError(err: unknown): boolean {
+  return errorCode(err) === 'OCCURRENCE_REMOVED';
+}
+
+/**
  * 400 `INVALID_OCCURRENCE_DATE` — the `scheduled_date` posted alongside a
  * series root is not an occurrence of that series
  * (`backend/src/routes/calendarEvents.ts`, the complete route's on-pattern
@@ -274,6 +301,18 @@ export function isMedicationDiscontinuedError(err: unknown): boolean {
  */
 export function isInvalidOccurrenceDateError(err: unknown): boolean {
   return errorCode(err) === 'INVALID_OCCURRENCE_DATE';
+}
+
+/**
+ * 400 `RECURRENCE_DAYS_EXCLUDE_START` — a PATCH set `recurrence_days` on a
+ * weekly series without the weekday of its (post-edit) start date. The backend
+ * refuses it because an off-pattern anchor makes the WHOLE series invisible and
+ * inert in the reminder crons. The event form locks that weekday's chip, so this
+ * should be unreachable from the UI; it still gets its own copy rather than a
+ * "try again" that can never succeed.
+ */
+export function isRecurrenceDaysExcludeStartError(err: unknown): boolean {
+  return errorCode(err) === 'RECURRENCE_DAYS_EXCLUDE_START';
 }
 
 /**
@@ -322,6 +361,26 @@ export function isRateLimitError(err: unknown): boolean {
 export function isStorageFullError(err: unknown): boolean {
   const code = errorCode(err);
   return code !== undefined && STORAGE_FULL_ERROR_CODES.has(code);
+}
+
+/**
+ * PK19: the document-upload 400s (code VALIDATION_ERROR) that mean "this
+ * file's type is unsupported or its bytes are damaged". The backend names them
+ * in `error.details.reason` (additive; routes/documents.ts). Same set on mobile.
+ */
+export const UNSUPPORTED_UPLOAD_REASONS = new Set([
+  'UNSUPPORTED_TYPE',
+  'INVALID_EXTENSION',
+  'CONTENT_MISMATCH',
+]);
+
+export function isUnsupportedUploadError(err: unknown): boolean {
+  const details = (err as ApiErrorEnvelope | null)?.error?.details as
+    | { reason?: unknown }
+    | null
+    | undefined;
+  const reason = details?.reason;
+  return typeof reason === 'string' && UNSUPPORTED_UPLOAD_REASONS.has(reason);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,13 +1,19 @@
-import { useState, type FormEvent, type ReactElement } from 'react';
+import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import type { EmergencyInfo, InsurancePlan } from '@/api/emergencyInfo';
 import {
+  relocateIndex,
   toRequestPlans,
   upsertWithPrimaryExclusivity,
+  useEmergencyEditSeed,
   useUpdateEmergencyInfo,
+  withIfMatch,
 } from '@/hooks/useEmergencyInfo';
+import { getEmergencyInfoConflict } from '@/lib/apiErrors';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { initialPhoneValue } from '@/lib/phone';
+import { INSURANCE_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, Modal, TextField, Toggle } from '@/components/ui';
 import { PhoneField } from './PhoneField';
 
@@ -27,13 +33,18 @@ const EMPTY_PLAN: InsurancePlan = { carrier: '' };
  * existing OCR rx_* fields round-trip untouched. Mirrors mobile
  * EditInsuranceScreen.
  */
-type EditInsuranceModalPropsLoaded = Omit<EditInsuranceModalProps, 'info'> & { info: EmergencyInfo };
+type EditInsuranceModalPropsLoaded = Omit<EditInsuranceModalProps, 'info'> & {
+  info: EmergencyInfo;
+  /** PK5: the save was refused 409; the wrapper re-seeds this form from the server. */
+  onConflict: () => void;
+};
 
 function EditInsuranceModalForm({
   circleId,
   info,
   index,
   onClose,
+  onConflict,
 }: EditInsuranceModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
@@ -63,6 +74,28 @@ function EditInsuranceModalForm({
   const [isPrimary, setIsPrimary] = useState(existing.is_primary ?? false);
   const [error, setError] = useState<string | undefined>(undefined);
 
+  // PK9: survives a forced sign-out (sessionStorage, same user, 30 min); only
+  // saved when the form differs from what it opened with.
+  //
+  // KEYED BY THE PLAN, NOT ITS INDEX: another member deleting an earlier plan
+  // while the draft is parked would otherwise hand it to whichever plan took the
+  // slot (see EditContactModal).
+  const draftId = emergencyEntryDraftId(info?.insurance_plans, index, INSURANCE_DRAFT_FIELDS);
+  const planSnapshot = { label, carrier, policyNumber, groupNumber, phoneValue, isPrimary };
+  const planBaseline = useRef(JSON.stringify(planSnapshot));
+  useSessionDraft<typeof planSnapshot>(
+    draftId ? `emergency:insurance:${circleId}:${draftId}` : null,
+    () => (JSON.stringify(planSnapshot) === planBaseline.current ? null : planSnapshot),
+    (d) => {
+      setLabel(d.label);
+      setCarrier(d.carrier);
+      setPolicyNumber(d.policyNumber);
+      setGroupNumber(d.groupNumber);
+      setPhoneValue(d.phoneValue);
+      setIsPrimary(d.isPrimary);
+    }
+  );
+
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
     if (!carrier.trim()) {
@@ -89,10 +122,13 @@ function EditInsuranceModalForm({
     };
     const next = upsertWithPrimaryExclusivity(info?.insurance_plans ?? [], plan, index);
 
-    update.mutate(
-      { insurance_plans: toRequestPlans(next) },
-      { onSuccess: onClose, onSettled: submitGuard.release }
-    );
+    update.mutate(withIfMatch(info, { insurance_plans: toRequestPlans(next) }), {
+      onSuccess: onClose,
+      onError: (err) => {
+        if (getEmergencyInfoConflict(err)) onConflict();
+      },
+      onSettled: submitGuard.release,
+    });
   };
 
   return (
@@ -183,6 +219,36 @@ function EditInsuranceModalForm({
  * a bad form. Mounting the form only once `info` exists avoids both.
  */
 export function EditInsuranceModal(props: EditInsuranceModalProps): ReactElement | null {
-  if (!props.info) return null;
-  return <EditInsuranceModalForm {...props} info={props.info} />;
+  const seed = useEmergencyEditSeed(props.circleId, props.info);
+  const [index, setIndex] = useState(props.index);
+  if (!seed.info) return null;
+  const onConflict = (): void => {
+    // Find the plan again in the fresh list; if the other caregiver removed or
+    // rewrote it there is nothing left to edit: close (toast already said why).
+    const fresh = seed.latest();
+    if (index !== undefined) {
+      const original = seed.info?.insurance_plans?.[index];
+      const at = relocateIndex(
+        fresh?.insurance_plans,
+        original,
+        index,
+        (a, b) => a.carrier === b.carrier
+      );
+      if (at < 0) {
+        props.onClose();
+        return;
+      }
+      setIndex(at);
+    }
+    seed.reseed();
+  };
+  return (
+    <EditInsuranceModalForm
+      key={seed.epoch}
+      {...props}
+      info={seed.info}
+      index={index}
+      onConflict={onConflict}
+    />
+  );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -18,7 +19,8 @@ import { useCircle } from '@/hooks/useCircle';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { useUnitPreferences } from '@/hooks/useUnitPreferences';
 import { useCreateVital, useUpdateVital } from '@/hooks/useVitals';
-import type { HealthVital, VitalType } from '@/api/vitals';
+import type { HealthVital, UpdateVitalRequest, VitalType } from '@/api/vitals';
+import { parseVitalNumber } from '@/lib/vitalNumber';
 import {
   DEFAULT_UNIT_PREFERENCES,
   buildCreateVitalRequest,
@@ -82,12 +84,18 @@ export interface VitalFormModalProps {
   onSaved?: () => void;
 }
 
-/** A number parsed from a free-text field, or null when blank / non-numeric. */
-function parseNumber(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const n = Number(trimmed);
-  return Number.isFinite(n) ? n : null;
+// PK15: value fields go through `parseVitalNumber` (one comma and no period =
+// decimal comma; null when blank / non-numeric); range checks run after it.
+const parseNumber = parseVitalNumber;
+
+interface VitalDraft {
+  vitalType: VitalType;
+  value1: string;
+  systolic: string;
+  diastolic: string;
+  dateStr: string;
+  timeStr: string;
+  notes: string;
 }
 
 export function VitalFormModal({
@@ -158,6 +166,25 @@ export function VitalFormModal({
   const [timeStr, setTimeStr] = useState(initialWall.time);
   const [notes, setNotes] = useState(vital?.notes ?? '');
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  // PK9: a NEW reading survives a forced sign-out (sessionStorage, same user,
+  // 30 min). Edits of a saved reading are not drafts and are not kept.
+  useSessionDraft<VitalDraft>(
+    isEditing ? null : `vitals:add:${circleId}`,
+    () =>
+      value1.trim() || systolic.trim() || diastolic.trim() || notes.trim()
+        ? { vitalType, value1, systolic, diastolic, dateStr, timeStr, notes }
+        : null,
+    (d) => {
+      setVitalType(d.vitalType);
+      setValue1(d.value1);
+      setSystolic(d.systolic);
+      setDiastolic(d.diastolic);
+      setDateStr(d.dateStr);
+      setTimeStr(d.timeStr);
+      setNotes(d.notes);
+    }
+  );
 
   /**
    * Resync the prefill when the EVENT being edited changes identity.
@@ -334,17 +361,37 @@ export function VitalFormModal({
     try {
       if (isEditing && vital) {
         const { value1: v1, value2: v2, unit, recorded_at, notes: noteVal } = built.values;
-        await updateVital.mutateAsync({
-          id: vital.id,
-          data: buildUpdateVitalRequest(vital.vital_type, {
-            value1: v1,
-            value2: v2,
-            unit,
-            recorded_at,
-            notes: noteVal,
-          }),
+        const full = buildUpdateVitalRequest(vital.vital_type, {
+          value1: v1,
+          value2: v2,
+          unit,
+          recorded_at,
+          notes: noteVal,
         });
-        showToast(t('toast.updated'), 'success');
+        // PK8: send only what the user changed. Re-sending an untouched value
+        // re-converts its ROUNDED display string (72.5 kg shown as "159.8" lb
+        // saves as 72.4844 kg) and re-sending recorded_at drops the seconds of
+        // a minutes-precision wall time. The backend PUT keeps omitted fields.
+        const valueChanged =
+          parseVitalNumber(isBloodPressure ? systolic : value1) !==
+            parseVitalNumber(initialValue1) ||
+          (isBloodPressure &&
+            parseVitalNumber(diastolic) !== parseVitalNumber(initialValue2));
+        const whenChanged = dateStr !== initialWall.date || timeStr !== initialWall.time;
+        const notesChanged = (notes.trim() || null) !== ((vital.notes ?? '').trim() || null);
+        const data: UpdateVitalRequest = {};
+        if (valueChanged) {
+          data.value1 = full.value1;
+          if (full.value2 !== undefined) data.value2 = full.value2;
+          data.unit = full.unit;
+        }
+        if (whenChanged) data.recorded_at = full.recorded_at;
+        if (notesChanged) data.notes = full.notes;
+        // Nothing changed: there is nothing to save, so no request at all.
+        if (Object.keys(data).length > 0) {
+          await updateVital.mutateAsync({ id: vital.id, data });
+          showToast(t('toast.updated'), 'success');
+        }
       } else {
         await createVital.mutateAsync(buildCreateVitalRequest(built.values));
         showToast(t('toast.added'), 'success');
@@ -435,7 +482,7 @@ export function VitalFormModal({
             <TextField
               id="value1"
               label={t('fields.systolic')}
-              type="number"
+              type="text"
               inputMode="numeric"
               value={systolic}
               placeholder="120"
@@ -449,7 +496,7 @@ export function VitalFormModal({
             <TextField
               id="value2"
               label={t('fields.diastolic')}
-              type="number"
+              type="text"
               inputMode="numeric"
               value={diastolic}
               placeholder="80"
@@ -465,7 +512,7 @@ export function VitalFormModal({
           <TextField
             id="value1"
             label={t(`types.${vitalType}`)}
-            type="number"
+            type="text"
             inputMode="decimal"
             value={value1}
             placeholder={value1Placeholder}

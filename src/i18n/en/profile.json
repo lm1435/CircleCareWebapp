@@ -16,6 +16,7 @@
     "lastName": "Last name",
     "timezone": "Time zone",
     "edit": "Edit",
+    "editNameLabel": "Edit name",
     "save": "Save",
     "cancel": "Cancel",
     "nameSuccess": "Name updated.",
@@ -54,8 +55,12 @@
     "taskAssignmentsDesc": "When a task is assigned to you.",
     "appointmentReminders": "Appointment reminders",
     "appointmentRemindersDesc": "Before upcoming appointments.",
-    "noteNudges": "Note reminders",
-    "noteNudgesDesc": "Gentle reminders to add a note.",
+    "eventNotes": "Notes on events",
+    "eventNotesDesc": "When someone adds a note to an appointment, task or dose",
+    "noteNudges": "After-visit reminders",
+    "noteNudgesDesc": "A reminder to add notes after an appointment",
+    "careNotes": "Daily care notes",
+    "careNotesDesc": "When someone adds a daily care note",
     "tipsAndSuggestions": "Tips & suggestions",
     "tipsAndSuggestionsDesc": "Helpful care tips and product updates.",
     "success": "Notification preferences updated."
@@ -155,5 +160,27 @@
     "error": "Couldn't send. Try again.",
     "thanks": "Thanks, this really helps.",
     "reassurance": "Got it. You keep full access until {{date}}."
+  },
+  "avatarColor": {
+    "label": "Your color",
+    "hint": "Shown behind your initial in member lists. Everyone in your circles sees it.",
+    "pickerTitle": "Choose your color",
+    "saved": "Color updated.",
+    "saveFailed": "We couldn't update your color. Please try again.",
+    "names": {
+      "moss": "Sage green",
+      "coral": "Coral",
+      "dusk": "Slate blue",
+      "clay": "Clay",
+      "forest": "Forest green",
+      "amber": "Amber"
+    },
+    "selected": "selected"
+  },
+  "timezoneImpact": {
+    "impactTitle": "Change your time zone?",
+    "impactMessage_one": "Dose times for {{names}} follow your time zone because they don't have their own account. Changing it to {{zone}} moves those reminders to the same clock time in {{zone}}.",
+    "impactMessage_other": "Dose times for {{names}} follow your time zone because they don't have their own account. Changing it to {{zone}} moves those reminders to the same clock time in {{zone}}.",
+    "impactConfirm": "Change time zone"
   }
 }

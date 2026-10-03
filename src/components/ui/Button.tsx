@@ -21,12 +21,12 @@ const BASE =
 
 const VARIANT = {
   primary: 'bg-moss text-cream shadow-md hover:bg-moss-mid',
-  // Cream fill + `border-line` (14% ink): the same resting treatment as an
+  // Cream fill + `border-line-strong` (WCAG 1.4.11 control edge): the same resting treatment as an
   // unselected chip, so a secondary button and a chip in one dialog read as
   // one family. The earlier `bg-bg-2` tan fill was 1.09:1 against the page
   // and 1.15:1 against a cream modal — no shape without the border, and a
   // muddy one with it. Hover borrows the chip's `bg-bg-2` too.
-  secondary: 'bg-cream text-ink border-[1.5px] border-line hover:bg-bg-2',
+  secondary: 'bg-cream text-ink border-[1.5px] border-line-strong hover:bg-bg-2',
   ghost: 'bg-transparent text-moss hover:bg-moss-soft',
   danger:
     'bg-terracotta-soft text-terracotta-deep hover:bg-[color-mix(in_oklab,var(--color-terracotta-soft),black_6%)]',

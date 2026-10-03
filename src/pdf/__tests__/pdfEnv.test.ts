@@ -36,6 +36,16 @@ describe('mapPdfKey', () => {
     expect(mapPdfKey('vitals.types.blood_pressure')).toBe('vitals:types.blood_pressure');
   });
 
+  // notes-first-class (task 30): the care summary template labels a Daily
+  // Care Note's mood with `notes.moods.<mood>` — the SAME flat mobile key the
+  // Notes tab / NotesPage already render from the `notes` namespace. Without
+  // this mapping `i18n.t('notes.moods.great')` resolves against the i18next
+  // DEFAULT namespace ('common'), which has no such key, and prints the raw
+  // key on the PDF instead of "Great day".
+  it('maps notes.* onto the notes namespace', () => {
+    expect(mapPdfKey('notes.moods.great')).toBe('notes:moods.great');
+  });
+
   it('passes every other key through untouched', () => {
     expect(mapPdfKey('calendar:recurrence.daily')).toBe('calendar:recurrence.daily');
     expect(mapPdfKey('common.ok')).toBe('common.ok');
@@ -59,6 +69,15 @@ describe('buildPdfEnv().t', () => {
       'Confidential: protected health information'
     );
     expect(env.t('vitals.types.blood_pressure')).toBe('Blood pressure');
+  });
+
+  it('resolves the visit/care note section headings and a mood label (task 30)', () => {
+    const env = buildPdfEnv();
+    expect(env.t('careSummary.sections.visitNotes')).toBe('Visit notes');
+    expect(env.t('careSummary.sections.careNotes')).toBe('Daily care notes');
+    expect(env.t('careSummary.fields.date')).toBe('Date');
+    expect(env.t('careSummary.fields.note')).toBe('Note');
+    expect(env.t('notes.moods.great')).toBe('Great day');
   });
 
   it('follows the active language', async () => {

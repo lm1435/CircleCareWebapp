@@ -33,6 +33,20 @@ export interface CancelPromptStatus {
   isSandbox: boolean;
 }
 
+/** What earned the ask. Mirrors the backend's `UpsellTrigger` (and mobile's). */
+export type UpsellTrigger = 'meds_confirmed' | 'invite_accepted';
+
+/**
+ * The server's decision about the earned upsell (backend services/upsellService.ts).
+ * Same shape mobile reads. `reason` is populated when `eligible` is false.
+ */
+export interface UpsellDecision {
+  eligible: boolean;
+  trigger: UpsellTrigger | null;
+  reason: string | null;
+  impressionNumber: number;
+}
+
 export interface SubscriptionStatus {
   tier: string; // 'free' | 'premium'
   needsCircleSelection: boolean;
@@ -42,6 +56,11 @@ export interface SubscriptionStatus {
   // rollout, or a client that hasn't refetched) degrades to "not eligible"
   // rather than a crash.
   cancelPrompt?: CancelPromptStatus | null;
+  /**
+   * Optional: a backend older than value-gating omits it, and the web then
+   * simply never raises the earned ask (never a crash).
+   */
+  upsell?: UpsellDecision;
 }
 
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
@@ -56,4 +75,22 @@ export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
  */
 export async function selectDowngradeCircle(circleId: string): Promise<void> {
   await apiClient.post('/subscription-status/select-downgrade-circle', { circleId });
+}
+
+/**
+ * POST /api/subscription-status/upsell-event — the server-side bookkeeping for
+ * the earned ask: `shown` starts the cooldown and advances the lifetime cap,
+ * `dismissed` durably silences that trigger. Fire-and-forget by contract: it
+ * NEVER throws, because a failed counter write must not surface an error to
+ * someone who just closed an upsell (same as mobile's `recordUpsellEvent`).
+ */
+export async function recordUpsellEvent(
+  event: 'shown' | 'dismissed',
+  trigger: UpsellTrigger
+): Promise<void> {
+  try {
+    await apiClient.post('/subscription-status/upsell-event', { event, trigger });
+  } catch {
+    // Intentionally swallowed — see above.
+  }
 }

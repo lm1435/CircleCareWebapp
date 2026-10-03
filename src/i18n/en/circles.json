@@ -134,5 +134,12 @@
     "discardMessage": "Nothing will be saved.",
     "discardConfirm": "Discard",
     "discardClose": "Close discard prompt"
+  },
+  "accessLost": {
+    "removedTitle": "Access removed",
+    "removedBody": "You no longer have access to this circle. The owner may have removed you or deleted the circle.",
+    "notFoundTitle": "Circle not found",
+    "notFoundBody": "This circle has been deleted or no longer exists.",
+    "returnToCircles": "Return to circles"
   }
 }

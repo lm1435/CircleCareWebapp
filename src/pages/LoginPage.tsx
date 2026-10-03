@@ -154,8 +154,9 @@ export default function LoginPage(): ReactElement {
       provider === 'google' ? t('login.errors.googleFailed') : t('login.errors.appleFailed');
     try {
       // Supabase is an OAuth handshake broker ONLY — the browser redirects to
-      // the provider and returns to /auth/callback, where the tokens are
-      // exchanged with our backend for an httpOnly cookie session.
+      // the provider and returns to /auth/callback?code=… (PKCE: the verifier
+      // is parked in this tab's sessionStorage here), where the code is traded
+      // for a session that is handed to our backend for an httpOnly cookie.
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -208,7 +209,10 @@ export default function LoginPage(): ReactElement {
           type="email"
           label={t('login.emailLabel')}
           placeholder={t('login.emailPlaceholder')}
-          autoComplete="email"
+          // "username", not "email" (decided 2026-09-29, same on mobile's
+          // textContentType): password managers key the saved credential on the
+          // field marked username; type=email keeps the keyboard and validation.
+          autoComplete="username"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}

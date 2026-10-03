@@ -35,7 +35,7 @@ function rx(value: string): RegExp {
 }
 
 /**
- * Preview/Download/Edit/Delete all live behind one trailing MoreMenu per row
+ * Open/Edit/Delete (mobile parity; Download lives in the viewer) sit behind one trailing MoreMenu per row
  * now (DocumentRow.tsx spec §6.6), named "Options for <document name>" — not
  * separate inline buttons. Opens it and returns the menu, so the caller only
  * needs to click the menuitem it wants.
@@ -88,7 +88,7 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
 
     // --- Preview (regression guard, see header) ---
     const previewMenu = await openDocMenu(page, name);
-    await previewMenu.getByRole('menuitem', { name: 'Preview', exact: true }).click();
+    await previewMenu.getByRole('menuitem', { name: 'Open', exact: true }).click();
     const previewDialog = page.getByRole('dialog');
     await expect(previewDialog).toBeVisible();
 
@@ -106,13 +106,10 @@ test('upload, rename, and delete a document', async ({ page, circleId }) => {
     expect(frameSrc).toContain('/storage/v1/object/sign/');
     expect(frameSrc).toContain('#navpanes=0');
 
-    // The fragment is a VIEWER-only concern: the new-tab escape hatch must stay
-    // the bare signed URL so it opens the file, not a parameterised view.
-    const newTabHref = await previewDialog
-      .getByRole('link', { name: 'Open in new tab' })
-      .getAttribute('href');
-    expect(newTabHref).not.toContain('#');
-    expect(frameSrc).toBe(`${newTabHref}#navpanes=0`);
+    // The new-tab escape hatch is a BUTTON that opens a blob: URL — never a
+    // link carrying the signed URL (documents-viewer.spec.ts asserts the tab).
+    await expect(previewDialog.getByRole('button', { name: 'Open in new tab' })).toBeVisible();
+    await expect(previewDialog.locator('a[href*="/storage/"]')).toHaveCount(0);
 
     await previewDialog.getByRole('button', { name: 'Close preview' }).click();
     await expect(previewDialog).toBeHidden({ timeout: 10_000 });

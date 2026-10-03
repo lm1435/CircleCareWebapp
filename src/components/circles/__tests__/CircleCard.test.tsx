@@ -143,6 +143,21 @@ describe('CircleCard', () => {
     expect(mockGetSummary).not.toHaveBeenCalled();
   });
 
+  // a11y audit 2026-09-29 (WCAG 1.4.3): the restricted card used to dim its
+  // whole body with `opacity-70`, taking the caption to 3.94:1 and the badge
+  // to 2.96:1. No text on the card may sit under an opacity < 100.
+  it('never dims a restricted card\'s text with opacity', async () => {
+    renderCard(makeCircle({ read_only: true, can_edit: false }));
+    const link = await screen.findByRole('link', { name: /Read-only/ });
+    for (const text of ['Read-only', 'Your subscription ended — view-only for now.', "Mom's Care"]) {
+      let el: HTMLElement | null = screen.getByText(text);
+      while (el && el !== link) {
+        expect(el.className, `ancestor of "${text}"`).not.toMatch(/(^|\s)opacity-(?!100)\d+/);
+        el = el.parentElement;
+      }
+    }
+  });
+
   it('shows the View-only badge and subtitle, and folds it into the label', async () => {
     renderCard(makeCircle({ role: 'member', view_only: true, can_edit: false }));
 
@@ -308,6 +323,23 @@ describe('CircleCard', () => {
       await screen.findByRole('link');
       expect(await screen.findByText(/Completed Task: Groceries/)).toBeInTheDocument();
       expect(screen.queryByText(/Created Care Circle/)).not.toBeInTheDocument();
+    });
+
+    // A note row whose note is gone comes back flagged (never dropped — see
+    // activityFeed.ts); the feed hides it, so it must not headline the card.
+    it('skips a note_missing row and takes the first real entry behind it', async () => {
+      mockGetActivity.mockResolvedValue({
+        activities: [
+          makeActivity({ id: 'a0', subject_type: 'care_note', description: 'ZZ orphaned note', note_preview: null, note_missing: true }),
+          makeActivity({ id: 'a1', action_type: 'task_completed', description: 'Completed Task: Groceries' }),
+        ],
+        hasMore: false,
+      });
+      renderCard(makeCircle());
+
+      await screen.findByRole('link');
+      expect(await screen.findByText(/Completed Task: Groceries/)).toBeInTheDocument();
+      expect(screen.queryByText(/ZZ orphaned note/)).not.toBeInTheDocument();
     });
 
     it('falls through to the empty line when every returned entry is circle_created', async () => {

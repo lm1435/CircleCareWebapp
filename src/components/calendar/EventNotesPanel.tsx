@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import {
   Button,
   ConfirmDialog,
@@ -12,6 +13,7 @@ import {
 import { formatRelativeTime } from '@/components/activity/activityFormat';
 import { useCircle } from '@/hooks/useCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
+import { isOccurrenceRemovedError } from '@/lib/apiErrors';
 import { useAuthStore } from '@/store/authStore';
 import { useCreateNote, useDeleteNote, useEventNotes, useUpdateNote } from '@/hooks/useEventNotes';
 import type { EventNote } from '@/api/eventNotes';
@@ -73,7 +75,7 @@ function NoteRow({
   const { t } = useTranslation(['calendar', 'activity', 'common']);
   const [draft, setDraft] = useState(note.body);
 
-  const authorName = `${note.author.first_name} ${note.author.last_name ?? ''}`.trim();
+  const authorName = `${note.author?.first_name ?? ''} ${note.author?.last_name ?? ''}`.trim();
   // created_at is a UTC ISO timestamp → relative time via the activity namespace.
   const timestamp = formatRelativeTime(note.created_at, (key, opts) =>
     t(`activity:${key}`, opts)
@@ -157,6 +159,12 @@ export function EventNotesPanel({
   const deleteNote = useDeleteNote();
 
   const [composer, setComposer] = useState('');
+  // PK9: survives a forced sign-out (sessionStorage, same user, 30 min).
+  useSessionDraft<string>(
+    `eventNote:${circleId}:${eventId}:${scheduledDate ?? ''}`,
+    () => (composer.trim() ? composer : null),
+    setComposer
+  );
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
@@ -186,7 +194,20 @@ export function EventNotesPanel({
       { circleId, eventId, body, scheduledDate },
       {
         onSuccess: () => setComposer(''),
-        onError: () => showToast(t('calendar:notes.errorSaving'), 'error'),
+        // 409 OCCURRENCE_REMOVED: another caregiver removed THIS occurrence
+        // ("This appointment only" / "This task only") after the modal was
+        // opened. No retry can ever succeed, so "Please try again" is wrong
+        // advice. Type-neutral copy: a visit is not a "dose". Mobile shows the
+        // same sentence (calendar.alerts.noteOccurrenceRemovedError).
+        onError: (error) =>
+          showToast(
+            t(
+              isOccurrenceRemovedError(error)
+                ? 'calendar:notes.errorOccurrenceRemoved'
+                : 'calendar:notes.errorSaving'
+            ),
+            'error'
+          ),
         onSettled: createGuard.release,
       }
     );

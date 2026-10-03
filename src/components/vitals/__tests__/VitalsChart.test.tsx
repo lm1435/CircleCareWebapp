@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { VitalsChart, catmullRomPath, type VitalsChartSeries } from '../VitalsChart';
+import { VitalsChart, catmullRomPath, straightPath, type VitalsChartSeries } from '../VitalsChart';
 
 // Task 21 — the pure-SVG vitals trend chart.
 //
@@ -51,31 +51,59 @@ describe('VitalsChart', () => {
     expect(second).toBeEmptyDOMElement();
   });
 
-  // ── Curve shape ───────────────────────────────────────────────────────────
+  // ── Line shape ────────────────────────────────────────────────────────────
+  //
+  // The component itself draws STRAIGHT segments (`straightPath`), not the
+  // Catmull-Rom curve `catmullRomPath` still produces as a pure function
+  // below. With uneven, time-scaled spacing (mobile-parity `xDomain`) a
+  // bezier between a close pair of points and a distant one visibly
+  // overshoots — see VitalsChart.tsx's "STRAIGHT SEGMENTS" file comment.
 
-  it('draws one M and n-1 cubic segments for n points', () => {
+  it('draws one M and n-1 straight line segments for n points, never a bezier', () => {
     for (const n of [2, 3, 5, 9]) {
       const { container, unmount } = renderChart([
         series(Array.from({ length: n }, (_, i) => 100 + i * 3)),
       ]);
       const d = linePaths(container)[0]!.getAttribute('d')!;
       expect(d.match(/M/g)).toHaveLength(1);
-      expect(d.match(/C/g)).toHaveLength(n - 1);
+      expect(d.match(/L/g)).toHaveLength(n - 1);
+      expect(d).not.toContain('C');
       unmount();
     }
   });
 
-  it('draws a bare M with no cubic segment for a single point', () => {
+  it('draws a bare M with no line segment for a single point', () => {
+    expect(straightPath([{ x: 10, y: 20 }])).toBe('M 10,20');
+  });
+
+  it('straightPath emits nothing for no points', () => {
+    expect(straightPath([])).toBe('');
+  });
+
+  it('straightPath passes THROUGH every data point, in order', () => {
+    const d = straightPath([
+      { x: 0, y: 0 },
+      { x: 10, y: 40 },
+      { x: 20, y: 10 },
+    ]);
+    expect(d).toBe('M 0,0 L 10,40 L 20,10');
+  });
+
+  // catmullRomPath is kept as a pure, unit-tested function even though the
+  // component no longer calls it — it is not implementation detail of this
+  // component's render, so its own contract still deserves direct coverage.
+
+  it('catmullRomPath draws a bare M with no cubic segment for a single point', () => {
     const d = catmullRomPath([{ x: 10, y: 20 }]);
     expect(d).toBe('M 10,20');
     expect(d).not.toContain('C');
   });
 
-  it('emits nothing for no points', () => {
+  it('catmullRomPath emits nothing for no points', () => {
     expect(catmullRomPath([])).toBe('');
   });
 
-  it('passes the curve THROUGH every data point', () => {
+  it('catmullRomPath passes the curve THROUGH every data point', () => {
     // Catmull-Rom interpolates (unlike a plain B-spline): each cubic segment
     // must END on the next sample, so a regression to a smoothing spline —
     // which would draw a line that misses its own readings — fails here.
@@ -212,5 +240,59 @@ describe('VitalsChart', () => {
     // "Jun 1" here, and printing both reads as "Jun 1 … Jun 1".
     renderChart([series([1, 2])], { xLabels: ['Jun 1', 'Jun 1'] });
     expect(screen.getAllByText('Jun 1')).toHaveLength(1);
+  });
+
+  // ── Range-window x domain (vitals web-parity task) ─────────────────────────
+
+  it('scales x positions against the given xDomain, not the data\'s own min/max', () => {
+    // Real readings only span the first 10% of the domain — a first-to-last
+    // scaling (the pre-port behavior) would stretch the last one all the way
+    // to the plot's right edge; the domain-aware scaling must not.
+    const pts = [
+      { x: 0, y: 100 },
+      { x: 50, y: 110 },
+      { x: 100, y: 90 },
+    ];
+    const { container } = renderChart([{ points: pts, color: 'moss' }], { xDomain: [0, 1000] });
+    const d = linePaths(container)[0]!.getAttribute('d')!;
+    const xCoords = [...d.matchAll(/(-?\d+(?:\.\d+)?),-?\d+(?:\.\d+)?/g)].map((m) => Number(m[1]));
+    // FALLBACK_WIDTH=320, MARGIN.left=36/right=8 => plotLeft=36, plotRight=312.
+    expect(xCoords[0]).toBeCloseTo(36, 1); // first point sits at the domain start.
+    expect(xCoords[2]).toBeLessThan(70); // third point (10% into the domain) — NOT 312.
+  });
+
+  it('falls back to the data\'s own min/max when no xDomain is given', () => {
+    const pts = [
+      { x: 0, y: 100 },
+      { x: 100, y: 90 },
+    ];
+    const { container } = renderChart([{ points: pts, color: 'moss' }]);
+    const d = linePaths(container)[0]!.getAttribute('d')!;
+    const xCoords = [...d.matchAll(/(-?\d+(?:\.\d+)?),-?\d+(?:\.\d+)?/g)].map((m) => Number(m[1]));
+    expect(xCoords[0]).toBeCloseTo(36, 1); // plotLeft
+    expect(xCoords[1]).toBeCloseTo(312, 1); // plotRight — the data IS the domain here.
+  });
+
+  // ── Three-tick axis row (mobile parity: start / midpoint / Today) ──────────
+
+  it('renders three axis labels (start, mid, end) when axisLabels is given', () => {
+    renderChart([series([1, 2, 3])], {
+      axisLabels: { start: 'Jun 1', mid: 'Jun 15', end: 'Today' },
+    });
+    expect(screen.getByText('Jun 1')).toBeInTheDocument();
+    expect(screen.getByText('Jun 15')).toBeInTheDocument();
+    expect(screen.getByText('Today')).toBeInTheDocument();
+  });
+
+  it('prefers axisLabels over the legacy first/last xLabels row when both are given', () => {
+    renderChart([series([1, 2, 3])], {
+      xLabels: ['A', 'B', 'C'],
+      axisLabels: { start: 'S', mid: 'Mid', end: 'E' },
+    });
+    expect(screen.queryByText('A')).not.toBeInTheDocument();
+    expect(screen.queryByText('C')).not.toBeInTheDocument();
+    expect(screen.getByText('S')).toBeInTheDocument();
+    expect(screen.getByText('Mid')).toBeInTheDocument();
+    expect(screen.getByText('E')).toBeInTheDocument();
   });
 });

@@ -95,7 +95,7 @@ describe('Button', () => {
       expect(cls).toContain('bg-cream');
       expect(cls).toContain('text-ink');
       expect(cls).toContain('border-[1.5px]');
-      expect(cls).toContain('border-line ');
+      expect(cls).toContain('border-line-strong ');
       expect(cls).not.toContain('border-line-2');
       expect(cls).toContain('hover:bg-bg-2');
     });

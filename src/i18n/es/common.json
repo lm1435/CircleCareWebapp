@@ -11,7 +11,6 @@
   "save": "Guardar",
   "close": "Cerrar",
   "more": "Más",
-  "moreActions": "Más acciones",
   "required": "(obligatorio)",
   "today": "Hoy",
   "expandAll": "Expandir todo",
@@ -102,7 +101,10 @@
     "action": "Mejorar",
     "ownerOnly": "Esta es una función Premium para este círculo. Solo el dueño del círculo puede actualizar el plan.",
     "ownerOnlyNamed": "Esta es una función Premium para este círculo. Solo {{ownerName}}, el dueño del círculo, puede actualizar el plan.",
-    "viewOnlySeat": "Este círculo tiene más cuidadores de los que permite el plan gratuito, así que tu acceso es de solo lectura. El dueño del círculo puede actualizar el plan para dar acceso completo a todos."
+    "viewOnlySeat": "Este círculo tiene más cuidadores de los que permite el plan gratuito, así que tu acceso es de solo lectura. El dueño del círculo puede actualizar el plan para dar acceso completo a todos.",
+    "lapsedOwner": "Tu suscripción terminó, así que este círculo es de solo lectura para todos. Tus datos están a salvo.",
+    "lapsedMember": "La suscripción del dueño del círculo ha terminado. Solo el dueño puede volver a suscribirse para restaurar el acceso.",
+    "lapsedMemberNamed": "La suscripción de {{ownerName}} ha terminado. Solo {{ownerName}} puede volver a suscribirse para restaurar el acceso."
   },
   "notFound": {
     "title": "No encontramos esa página",
@@ -164,5 +166,6 @@
     "appointmentShort": "Cita",
     "taskShort": "Tarea",
     "noteShort": "Nota"
-  }
+  },
+  "draftRestored": "Recuperamos tu borrador sin guardar."
 }

@@ -94,6 +94,41 @@ describe('ResetPasswordPage', () => {
     );
   });
 
+  // The usual way back from a rejected code: the boxes still hold it, the person clicks the first
+  // box and types the code again with one digit fixed. Every digit but one EQUALS the old one, and a
+  // keystroke equal to the box's own digit used to fire no change event, so the field stalled on
+  // the old code and the second submit re-sent the rejected one.
+  it('re-sends the corrected code when the rejected one is typed over in place', async () => {
+    mockedPost
+      .mockRejectedValueOnce({ success: false, error: { code: 'INVALID_CODE' } })
+      .mockResolvedValueOnce({ success: true, data: { message: 'ok' } } as never);
+    renderWithEmail();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText('Digit 1 of 6'));
+    await user.keyboard('123456');
+    await user.type(screen.getByLabelText(/^New Password/), 'Secret#123');
+    await user.type(screen.getByLabelText(/^Confirm Password/), 'Secret#123');
+    await user.click(screen.getByRole('button', { name: 'Reset password' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('Digit 1 of 6'));
+    await user.keyboard('123457');
+    for (const [n, digit] of [...'123457'].entries()) {
+      expect(screen.getByLabelText(`Digit ${n + 1} of 6`)).toHaveValue(digit);
+    }
+    await user.click(screen.getByRole('button', { name: 'Reset password' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Password reset' })
+    ).toBeInTheDocument();
+    expect(mockedPost).toHaveBeenNthCalledWith(2, '/auth/reset-password', {
+      email: 'pat@example.com',
+      otp: '123457',
+      new_password: 'Secret#123',
+    });
+  });
+
   // WCAG 3.3.1: an incomplete-OTP error must move focus, not just render text
   // that a screen-reader user submitting blind would never encounter.
   it('focuses the first OTP box when submitted with an incomplete code', async () => {

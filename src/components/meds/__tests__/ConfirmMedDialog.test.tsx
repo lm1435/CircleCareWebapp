@@ -149,6 +149,8 @@ describe('ConfirmMedDialog — 409 MEDICATION_DISCONTINUED', () => {
       event_id: 'med-1',
       status: 'taken',
       scheduled_time: '08:00:00',
+      // The dose's day, for verify-before-alert (lib/confirmVerify.ts).
+      dose: { scheduled_date: med.scheduled_date, parent_event_id: null },
     });
     expect(screen.queryByRole('alert')).toBeNull();
   });

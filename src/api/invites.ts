@@ -176,9 +176,52 @@ export async function resendInvite(inviteId: string): Promise<ResendInviteResult
   return response.data;
 }
 
-/** POST /invites/:inviteId/accept — accept an invite addressed to the user. */
-export async function acceptInvite(inviteId: string): Promise<void> {
-  await apiClient.post(`/invites/${inviteId}/accept`);
+/**
+ * The `care_circles` columns a client reads off an accept. The backend selects
+ * `*` from care_circles (backend/src/routes/invites.ts, both accept routes), so
+ * the row carries more — these are the ones the client relies on.
+ */
+export interface JoinedCircle {
+  id: string;
+  name: string;
+  recipient_name: string | null;
+  owner_id: string;
+}
+
+/**
+ * `data` of a successful accept — by id (POST /invites/:inviteId/accept) and by
+ * code (POST /invites/code/:code/accept) answer identically:
+ *   { success: true, data: { circle, view_only, message } }
+ * Mirrors mobile/src/api/invites.ts `AcceptInviteResponse`.
+ */
+export interface AcceptInviteResponse {
+  /**
+   * The circle the user joined. `null` only if the backend's post-join read of
+   * the circle failed (its `.single()` result is not checked) — the join itself
+   * still happened, so callers must still report success.
+   */
+  circle: JoinedCircle | null;
+  /** The joiner landed on a capped free circle and joined read-only. */
+  view_only: boolean;
+  message: string;
+}
+
+interface AcceptInviteEnvelope {
+  success: boolean;
+  data: AcceptInviteResponse;
+}
+
+/**
+ * POST /invites/:inviteId/accept — accept an invite addressed to the user.
+ * `apiClient` already resolves to the `{ success, data }` envelope (its response
+ * interceptor unwraps axios' `response.data`), so `.data` here is the backend's
+ * `data` — one unwrap, not two.
+ */
+export async function acceptInvite(inviteId: string): Promise<AcceptInviteResponse> {
+  const response = (await apiClient.post(
+    `/invites/${inviteId}/accept`
+  )) as unknown as AcceptInviteEnvelope;
+  return response.data;
 }
 
 /** A pending invite addressed to the current user (GET /invites/pending). */
@@ -220,7 +263,8 @@ export async function getPendingInvites(): Promise<PendingInvite[]> {
 //   - GET  /invites/code/:code        (requireAuth) →
 //       { success, data: { invite: InviteByCode } }
 //       errors: 404 INVITE_NOT_FOUND, 400 INVITE_ALREADY_USED, 400 INVITE_EXPIRED.
-//   - POST /invites/code/:code/accept (requireAuth) → { success, data: {...} }
+//   - POST /invites/code/:code/accept (requireAuth) →
+//       { success, data: AcceptInviteResponse }
 //       errors: 404 INVITE_NOT_FOUND/USER_NOT_FOUND, 400 INVITE_ALREADY_USED,
 //               400 INVITE_EXPIRED, 400 ALREADY_MEMBER.
 // The backend uses a code-possession trust model (no email match), matching
@@ -266,7 +310,14 @@ export async function lookupInviteByCode(code: string): Promise<InviteByCode> {
   return response.data.invite;
 }
 
-/** POST /invites/code/:code/accept — join a circle by code (authenticated). */
-export async function acceptInviteByCode(code: string): Promise<void> {
-  await apiClient.post(`/invites/code/${normalizeCode(code)}/accept`);
+/**
+ * POST /invites/code/:code/accept — join a circle by code (authenticated).
+ * Resolves to the backend's `data` (see `AcceptInviteResponse`); same single
+ * unwrap as `acceptInvite`.
+ */
+export async function acceptInviteByCode(code: string): Promise<AcceptInviteResponse> {
+  const response = (await apiClient.post(
+    `/invites/code/${normalizeCode(code)}/accept`
+  )) as unknown as AcceptInviteEnvelope;
+  return response.data;
 }

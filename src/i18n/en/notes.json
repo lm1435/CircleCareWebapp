@@ -45,5 +45,18 @@
   "deleteTitle": "Delete note?",
   "deleteConfirm": "This note will be removed for everyone in the circle.",
   "loadOlder": "Show earlier notes",
-  "postRequirementHint": "Write a note or pick a mood to post"
+  "postRequirementHint": "Write a note or pick a mood to post",
+  "moodStrip": {
+    "summary": "This week: {{list}}",
+    "empty": "No moods logged this week",
+    "dayA11y": "{{day}}: {{summary}}",
+    "count_great_one": "{{count}} great",
+    "count_great_other": "{{count}} great",
+    "count_good_one": "{{count}} good",
+    "count_good_other": "{{count}} good",
+    "count_okay_one": "{{count}} okay",
+    "count_okay_other": "{{count}} okay",
+    "count_tough_one": "{{count}} tough",
+    "count_tough_other": "{{count}} tough"
+  }
 }

@@ -16,6 +16,7 @@ vi.mock('@/api/invites', async (importOriginal) => {
 import {
   lookupInviteByCode,
   acceptInviteByCode,
+  type AcceptInviteResponse,
   type InviteByCode,
 } from '@/api/invites';
 import { queryKeys } from '@/lib/queryKeys';
@@ -33,6 +34,12 @@ const LOOKUP_RESULT: InviteByCode = {
   circle: { id: 'circle-1', name: "Rose's Circle", recipient_name: 'Rose Meza' },
   invited_by: { email: 'ada@example.com', first_name: 'Ada', last_name: null },
   expires_at: '2026-07-01T00:00:00Z',
+};
+
+const ACCEPT_RESULT: AcceptInviteResponse = {
+  circle: { id: 'circle-1', name: "Rose's Circle", recipient_name: 'Rose Meza', owner_id: 'o-1' },
+  view_only: false,
+  message: 'Successfully joined the circle',
 };
 
 function setup() {
@@ -78,13 +85,42 @@ describe('useLookupInviteByCode', () => {
 describe('useAcceptInviteByCode', () => {
   it('POSTs accept by code', async () => {
     const { wrapper } = setup();
-    mockAccept.mockResolvedValue(undefined);
+    mockAccept.mockResolvedValue(ACCEPT_RESULT);
 
     const { result } = renderHook(() => useAcceptInviteByCode(), { wrapper });
     result.current.mutate(CODE);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockAccept).toHaveBeenCalledWith(CODE);
+    // The joined circle reaches the caller (InviteLandingPage opens it).
+    expect(result.current.data).toEqual(ACCEPT_RESULT);
+  });
+
+  // The caller opens the joined circle as soon as the accept settles, so the
+  // circle-list refetch must be part of the mutation, not fire-and-forget.
+  it('settles only after the circles/invites invalidations resolve', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockAccept.mockResolvedValue(ACCEPT_RESULT);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    invalidateSpy.mockImplementation(() => gate);
+
+    const { result } = renderHook(() => useAcceptInviteByCode(), { wrapper });
+    let settled = false;
+    const pending = result.current.mutateAsync(CODE).then((data) => {
+      settled = true;
+      return data;
+    });
+
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+
+    release();
+    await expect(pending).resolves.toEqual(ACCEPT_RESULT);
+    expect(settled).toBe(true);
   });
 
   // WB5 REGRESSION — accept-by-code invalidated only `circles`, unlike
@@ -95,7 +131,7 @@ describe('useAcceptInviteByCode', () => {
   // `circles` assertion below passes; `invitesPending` never gets invalidated.
   it('invalidates invitesPending AND circles on success (matches useAcceptInvite)', async () => {
     const { invalidateSpy, wrapper } = setup();
-    mockAccept.mockResolvedValue(undefined);
+    mockAccept.mockResolvedValue(ACCEPT_RESULT);
 
     const { result } = renderHook(() => useAcceptInviteByCode(), { wrapper });
     result.current.mutate(CODE);

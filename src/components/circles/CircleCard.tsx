@@ -5,6 +5,7 @@ import { Avatar, Card, Icon, Skeleton, Text, type IconName } from '@/components/
 import type { Circle } from '@/api/circles';
 import { useMedicationTodaySummary } from '@/hooks/useMedConfirmation';
 import { useLatestActivity } from '@/hooks/useActivityFeed';
+import { isNoteMissing } from '@/components/activity/activityVisibility';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { getActivityIcon } from '@/components/activity/ActivityIcon';
 import { renderActivityDescription } from '@/components/activity/activityTranslation';
@@ -123,7 +124,11 @@ export function CircleCard({ circle }: CircleCardProps): ReactElement {
    * actually did.
    */
   const recentActivity =
-    latest?.activities.find((entry) => !NON_ACTIVITY_TYPES.has(entry.action_type)) ?? null;
+    latest?.activities.find(
+      // A note row whose note is gone (`note_missing`) is hidden from the feed,
+      // so it must not headline the card either. Mirrors mobile's CircleListScreen.
+      (entry) => !NON_ACTIVITY_TYPES.has(entry.action_type) && !isNoteMissing(entry)
+    ) ?? null;
   const activityLabel = recentActivity
     ? `${renderActivityDescription(recentActivity, tActivity, {
         hourCycle,
@@ -228,10 +233,14 @@ export function CircleCard({ circle }: CircleCardProps): ReactElement {
               : 'border-[1.5px] border-line-2'
           }
         >
-          <div className={`p-3${restricted ? ' opacity-70' : ''}`}>
+          {/* No `opacity-70` on this body (WCAG 1.4.3): it dimmed the card's
+              text to 3.94:1 and the "Read-only" badge to 2.96:1. The muted
+              look now comes from the dashed border + paper ground above and
+              a grayscale avatar (luminance, hence its initials' contrast, kept). */}
+          <div className="p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-3">
-                <div className="relative shrink-0">
+                <div className={`relative shrink-0${restricted ? ' grayscale' : ''}`}>
                   <Avatar
                     size="md"
                     bordered

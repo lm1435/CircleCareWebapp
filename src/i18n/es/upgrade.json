@@ -1,6 +1,13 @@
 {
   "eyebrow": "CircleCare Premium",
-  "title": "Cuídenlos juntos",
+  "headline": {
+    "onboarding": { "lead": "Mejor cuidado,", "accent": "juntos." },
+    "general": { "lead": "Desbloquea la", "accent": "experiencia completa." },
+    "capacity": { "lead": "Más personas,", "accent": "mejor cuidado." },
+    "feature": { "lead": "Aprovecha todo", "accent": "CircleCare." },
+    "earnedMeds": { "lead": "Vas por", "accent": "buen camino." },
+    "earnedInvite": { "lead": "Tu círculo está", "accent": "creciendo." }
+  },
   "subtitle": "Todo lo que tu familia necesita para coordinar el cuidado, en cada círculo del que formas parte.",
   "trialHook": "Comienza con una prueba gratis: hoy no pagas nada.",
   "benefits": {
@@ -85,7 +92,6 @@
     "year_other": "{{count}} años"
   },
   "onboarding": {
-    "title": "Mejor cuidado, juntos.",
     "subtitle": "Todo lo que tu familia necesita para coordinar el cuidado de quienes más importan.",
     "continueFree": "Continuar con plan gratuito",
     "continueFreeSub": "1 círculo, 2 cuidadores — mejora en cualquier momento",

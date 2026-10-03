@@ -1,15 +1,21 @@
-import { useState, type FormEvent, type ReactElement } from 'react';
+import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSessionDraft } from '@/hooks/useSessionDraft';
 import type { AdditionalDoctor, EmergencyInfo } from '@/api/emergencyInfo';
 import {
   appendItem,
+  relocateIndex,
   replaceAtIndex,
+  useEmergencyEditSeed,
   useUpdateEmergencyInfo,
+  withIfMatch,
   type UpdateEmergencyInfoRequest,
 } from '@/hooks/useEmergencyInfo';
+import { getEmergencyInfoConflict } from '@/lib/apiErrors';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { SPECIALTY_KEYS } from '@/lib/quickPicks';
 import { initialPhoneValue } from '@/lib/phone';
+import { DOCTOR_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, ChipSelect, Modal, TextArea, TextField } from '@/components/ui';
 import { PhoneField } from './PhoneField';
 
@@ -32,13 +38,18 @@ const EMPTY_DOCTOR: AdditionalDoctor = { name: '' };
  * (no array, no primary flag); ADDITIONAL doctors are a read-modify-write array.
  * Mirrors mobile EditDoctorScreen.
  */
-type EditDoctorModalPropsLoaded = Omit<EditDoctorModalProps, 'info'> & { info: EmergencyInfo };
+type EditDoctorModalPropsLoaded = Omit<EditDoctorModalProps, 'info'> & {
+  info: EmergencyInfo;
+  /** PK5: the save was refused 409; the wrapper re-seeds this form from the server. */
+  onConflict: () => void;
+};
 
 function EditDoctorModalForm({
   circleId,
   info,
   target,
   onClose,
+  onConflict,
 }: EditDoctorModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
   const update = useUpdateEmergencyInfo(circleId);
@@ -78,6 +89,28 @@ function EditDoctorModalForm({
   );
   const [address, setAddress] = useState(initial.address ?? '');
   const [nameError, setNameError] = useState<string | undefined>(undefined);
+
+  // PK9: survives a forced sign-out (sessionStorage, same user, 30 min); only
+  // saved when the form differs from what it opened with.
+  //
+  // KEYED BY THE DOCTOR, NOT ITS INDEX: another member deleting an earlier doctor
+  // while the draft is parked would otherwise hand it to whoever took the slot
+  // (see EditContactModal). The primary doctor is flat fields, not a list entry.
+  const draftId = isPrimary
+    ? 'primary'
+    : emergencyEntryDraftId(info?.additional_doctors, editIndex, DOCTOR_DRAFT_FIELDS);
+  const doctorSnapshot = { name, specialty, phoneValue, address };
+  const doctorBaseline = useRef(JSON.stringify(doctorSnapshot));
+  useSessionDraft<typeof doctorSnapshot>(
+    draftId ? `emergency:doctor:${circleId}:${draftId}` : null,
+    () => (JSON.stringify(doctorSnapshot) === doctorBaseline.current ? null : doctorSnapshot),
+    (d) => {
+      setName(d.name);
+      setSpecialty(d.specialty);
+      setPhoneValue(d.phoneValue);
+      setAddress(d.address);
+    }
+  );
 
   const handleSubmit = (event: FormEvent): void => {
     event.preventDefault();
@@ -122,7 +155,13 @@ function EditDoctorModalForm({
       partial = { additional_doctors: next };
     }
 
-    update.mutate(partial, { onSuccess: onClose, onSettled: submitGuard.release });
+    update.mutate(withIfMatch(info, partial), {
+      onSuccess: onClose,
+      onError: (err) => {
+        if (getEmergencyInfoConflict(err)) onConflict();
+      },
+      onSettled: submitGuard.release,
+    });
   };
 
   const title = isPrimary
@@ -221,6 +260,36 @@ function EditDoctorModalForm({
  * a bad form. Mounting the form only once `info` exists avoids both.
  */
 export function EditDoctorModal(props: EditDoctorModalProps): ReactElement | null {
-  if (!props.info) return null;
-  return <EditDoctorModalForm {...props} info={props.info} />;
+  const seed = useEmergencyEditSeed(props.circleId, props.info);
+  const [target, setTarget] = useState(props.target);
+  if (!seed.info) return null;
+  const onConflict = (): void => {
+    // Editing an ADDITIONAL doctor: find it again in the fresh list; if the other
+    // caregiver removed or rewrote it there is nothing left to edit: close.
+    if (typeof target === 'number') {
+      const fresh = seed.latest();
+      const original = seed.info?.additional_doctors?.[target];
+      const at = relocateIndex(
+        fresh?.additional_doctors,
+        original,
+        target,
+        (a, b) => a.name === b.name
+      );
+      if (at < 0) {
+        props.onClose();
+        return;
+      }
+      setTarget(at);
+    }
+    seed.reseed();
+  };
+  return (
+    <EditDoctorModalForm
+      key={seed.epoch}
+      {...props}
+      info={seed.info}
+      target={target}
+      onConflict={onConflict}
+    />
+  );
 }

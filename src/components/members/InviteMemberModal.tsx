@@ -92,6 +92,14 @@ export function InviteMemberModal({
     Analytics.inviteStarted(circleId);
   }, [circleId]);
 
+  // The cap card appearing is the limit moment. Keyed on the notice OBJECT:
+  // `handleSubmit` clears it before every attempt and `onError` sets a fresh
+  // one, so each 402 fires exactly once, and a re-render that leaves the same
+  // notice in place (typing, role change) fires nothing.
+  useEffect(() => {
+    if (capNotice) Analytics.inviteCapReached();
+  }, [capNotice]);
+
   const roleOptions = useMemo<RadioOption[]>(() => {
     const options: RadioOption[] = [
       { value: 'caregiver', label: t('roles.caregiver'), hint: t('invite.roleHints.caregiver') },
@@ -329,6 +337,12 @@ export function InviteMemberModal({
                   >
                     {copied ? t('invite.linkCopied') : t('invite.copyLink')}
                   </Button>
+                  {/* WCAG 4.1.3 (a11y audit 2026-09-29): the button's own
+                      label flipping to "Link copied" is not reliably spoken
+                      while it has focus; this live region is. */}
+                  <span role="status" className="sr-only">
+                    {copied ? t('invite.linkCopied') : ''}
+                  </span>
                   {canShare ? (
                     <Button
                       variant="ghost"
@@ -397,13 +411,13 @@ export function InviteMemberModal({
                     : t('invite.pendingSeatUnknown')}
               </p>
             </div>
-            {/* The seat cap is the CAPACITY context — see lib/paywallContext.ts.
+            {/* The seat cap is the INVITE_CAP context — see lib/paywallContext.ts.
                 Without the state, this entry point's conversions pool into
                 'general' and the seat-cap paywall becomes unmeasurable. */}
             {isWebBillingConfigured() ? (
               <Button
                 size="sm"
-                onClick={() => navigate('/upgrade', { state: { paywallContext: 'capacity' } })}
+                onClick={() => navigate('/upgrade', { state: { paywallContext: 'invite_cap' } })}
               >
                 {t('common:upgradeGate.action')}
               </Button>

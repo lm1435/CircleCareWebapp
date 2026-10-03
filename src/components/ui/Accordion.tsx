@@ -1,5 +1,37 @@
-import { useCallback, useMemo, useState, type ElementType, type ReactElement, type ReactNode } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ElementType,
+  type ReactElement,
+  type ReactNode,
+  type TransitionEvent,
+} from 'react';
 import { Icon } from './Icon';
+
+/**
+ * Longest `transition-duration + transition-delay` pair in a computed style,
+ * in ms. Both are comma lists (one entry per transitioned property); an empty
+ * or unparseable value — jsdom, `motion-reduce:transition-none` — is 0.
+ */
+function longestTransitionMs(style: CSSStyleDeclaration): number {
+  const toMs = (v: string): number => {
+    const n = parseFloat(v);
+    if (!Number.isFinite(n)) return 0;
+    return v.trim().endsWith('ms') ? n : n * 1000;
+  };
+  const durations = (style.transitionDuration || '').split(',').map(toMs);
+  const delays = (style.transitionDelay || '').split(',').map(toMs);
+  return durations.reduce((max, d, i) => Math.max(max, d + (delays[i % delays.length] ?? 0)), 0);
+}
+
+/**
+ * Slack added to the fallback timer past the computed transition length, so
+ * the real `transitionend` wins whenever it fires at all.
+ */
+const SETTLE_FALLBACK_SLACK_MS = 100;
 
 export interface AccordionProps {
   /**
@@ -46,6 +78,19 @@ export interface AccordionProps {
  * printed page, as `print:block` used to, and `inert` keeps the collapsed
  * panel's controls out of the tab order and the a11y tree the way the old
  * `display:none` did.
+ *
+ * CLIP ONLY WHILE MOVING. The inner div's `overflow-hidden` is what makes the
+ * collapse work, but on a fully OPEN panel it clips nothing but popovers: a
+ * row's `MoreMenu` panel is `absolute` inside it, so on a one-reading Vitals
+ * group the menu was painted cut off and "Edit" sat under the next section,
+ * unclickable. The clip is therefore applied while the panel is closed and
+ * while it animates in either direction, and dropped once the open transition
+ * has ENDED (`transitionend` on `grid-template-rows`, with a timer fallback in
+ * case the event never fires). A panel that starts open, or that opens with
+ * no transition at all (reduced motion), is unclipped immediately. Collapsing
+ * re-applies the clip in the same render that flips the row to `0fr`, so the
+ * content never spills while it shrinks. Visually an open panel is unchanged:
+ * its row is exactly its content's height, so there is nothing to clip.
  */
 export function Accordion({
   id,
@@ -60,6 +105,45 @@ export function Accordion({
   const titleId = `${id}-accordion-title`;
   const panelId = `${id}-accordion-panel`;
   const Heading = headingAs as ElementType;
+
+  // `settled` = open AND the open transition has finished. It starts true for
+  // a panel that mounts open (nothing animates on mount).
+  const [settled, setSettled] = useState(open);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(open);
+
+  // The clip comes back on in the very render that closes (`clip` below reads
+  // `open` directly); this effect only resets `settled` and schedules the
+  // unclip. Layout effect so a zero-duration open unclips before paint.
+  useLayoutEffect(() => {
+    const opening = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!open) {
+      setSettled(false);
+      return;
+    }
+    if (!opening) return;
+    const panel = panelRef.current;
+    const ms = panel ? longestTransitionMs(window.getComputedStyle(panel)) : 0;
+    if (ms <= 0) {
+      setSettled(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setSettled(true), ms + SETTLE_FALLBACK_SLACK_MS);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  // Only the panel's OWN row transition counts — `transitionend` bubbles, and
+  // every hover/colour transition inside the rows would otherwise unclip it
+  // mid-animation. (React 18 has no `onTransitionCancel`; an interrupted open
+  // is caught by the fallback timer above.)
+  const onPanelTransitionDone = (event: TransitionEvent<HTMLDivElement>): void => {
+    if (event.target !== event.currentTarget) return;
+    if (event.propertyName !== 'grid-template-rows') return;
+    if (open) setSettled(true);
+  };
+
+  const clip = !(open && settled);
 
   return (
     <section className="scroll-mt-28" id={id}>
@@ -88,6 +172,7 @@ export function Accordion({
       {/* Panel name comes from the title span ONLY (not the whole button), so the
           accessible region name excludes the chevron + meta count. */}
       <div
+        ref={panelRef}
         id={panelId}
         role="region"
         aria-labelledby={titleId}
@@ -105,13 +190,15 @@ export function Accordion({
         // boolean prop to `inert="false"` — which is still inert, per HTML's
         // boolean-attribute rules, and would collapse the open state too.
         {...(open ? {} : ({ inert: '' } as Record<string, string>))}
+        onTransitionEnd={onPanelTransitionDone}
         className={`grid transition-[grid-template-rows] duration-normal ease-spring motion-reduce:transition-none print:[grid-template-rows:1fr] ${
           open ? '[grid-template-rows:1fr]' : '[grid-template-rows:0fr]'
         }`}
       >
         {/* `min-h-0` defeats the grid item's `auto` minimum, without which the
-            row can never actually collapse to 0fr. */}
-        <div className="overflow-hidden min-h-0">
+            row can never actually collapse to 0fr. `overflow-hidden` only while
+            closed or animating — see CLIP ONLY WHILE MOVING above. */}
+        <div className={clip ? 'overflow-hidden min-h-0' : 'min-h-0'}>
           {/* Inner wrapper gives stacked panel items consistent vertical
               separation (e.g. multiple contact/doctor cards) instead of letting
               their borders touch. Single-child panels (a list with its own gap)

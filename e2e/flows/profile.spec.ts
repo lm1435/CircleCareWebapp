@@ -18,7 +18,7 @@ test('edit & restore first name and a notification toggle', async ({ page }) => 
   // ── First name: capture → change → save → reload & assert → restore ──────
   // Open the inline name editor and read the current first name so we can
   // restore it verbatim at the end.
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit name', exact: true }).click();
   const firstNameInput = page.locator('#profile-first-name');
   await expect(firstNameInput).toBeVisible({ timeout: 15_000 });
   const originalFirstName = await firstNameInput.inputValue();
@@ -40,7 +40,7 @@ test('edit & restore first name and a notification toggle', async ({ page }) => 
   });
 
   // Restore the original first name (cleanup).
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit name', exact: true }).click();
   const restoreInput = page.locator('#profile-first-name');
   await expect(restoreInput).toBeVisible({ timeout: 15_000 });
   await restoreInput.fill(originalFirstName);

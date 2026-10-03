@@ -30,8 +30,13 @@ vi.mock('@/components/ui', () => ({
   useToast: () => ({ showToast }),
 }));
 
+// PK18: an event write refused on a lapsed circle gets the LAPSED wording
+// (promptLapsed), never the "not included in the free plan" gate (promptUpgrade).
 const promptUpgrade = vi.fn();
-vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade }) }));
+const promptLapsed = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade, promptLapsed }),
+}));
 
 import {
   createEvent,
@@ -141,7 +146,7 @@ describe('useCreateEvent', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 
-  it('surfaces a 402 via the apiErrors helper (subscription toast)', async () => {
+  it('a lapsed-circle refusal gets the lapsed wording for THIS circle, never the free-plan gate (PK18)', async () => {
     const { wrapper } = setup();
     mockCreate.mockRejectedValue(SUBSCRIPTION_ENVELOPE);
 
@@ -149,7 +154,8 @@ describe('useCreateEvent', () => {
     result.current.mutate({ event_type: 'task', title: 'x', scheduled_date: '2026-07-02' });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(promptUpgrade).toHaveBeenCalled();
+    expect(promptLapsed).toHaveBeenCalledWith(CIRCLE_ID);
+    expect(promptUpgrade).not.toHaveBeenCalled();
   });
 
   // Error visibility (mobile parity): every failed event write is counted as
@@ -201,7 +207,7 @@ describe('useUpdateEvent', () => {
 describe('useDeleteEvent', () => {
   it('passes deleteScope + scheduledDate through for a scoped (recurring) delete', async () => {
     const { invalidateSpy, wrapper } = setup();
-    mockDelete.mockResolvedValue(undefined);
+    mockDelete.mockResolvedValue({ historyKept: false });
 
     const { result } = renderHook(() => useDeleteEvent(CIRCLE_ID), { wrapper });
     result.current.mutate({
@@ -221,7 +227,7 @@ describe('useDeleteEvent', () => {
 
   it('passes no scope params for a non-recurring delete', async () => {
     const { wrapper } = setup();
-    mockDelete.mockResolvedValue(undefined);
+    mockDelete.mockResolvedValue({ historyKept: false });
 
     const { result } = renderHook(() => useDeleteEvent(CIRCLE_ID), { wrapper });
     result.current.mutate({ eventId: EVENT_ID });
@@ -462,6 +468,7 @@ describe('useCompleteEvent — stale-snapshot rejections get their own copy', ()
     expect(showToast).toHaveBeenCalledWith('errors.invalidOccurrenceDate', 'error');
     expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
     expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
+    expect(invalidatedWith(invalidateSpy, queryKeys.tasks(CIRCLE_ID))).toBe(true);
   });
 
   it('NOT_FOUND says the event is gone, and refetches', async () => {
@@ -478,6 +485,9 @@ describe('useCompleteEvent — stale-snapshot rejections get their own copy', ()
     expect(showToast).toHaveBeenCalledWith('errors.eventNotFound', 'error');
     expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
     expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
+    // P12: the Tasks page / Open tasks card read `tasks` — a task deleted
+    // elsewhere must leave those lists too, not only the calendar.
+    expect(invalidatedWith(invalidateSpy, queryKeys.tasks(CIRCLE_ID))).toBe(true);
   });
 
   it('an unrecognised code still lands on the generic retry copy', async () => {
@@ -490,5 +500,35 @@ describe('useCompleteEvent — stale-snapshot rejections get their own copy', ()
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.saveFailed', 'error');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// RECURRENCE_DAYS_EXCLUDE_START (400, PATCH) — a day set that leaves out the
+// series' start weekday (docs/plans/weekly-days-of-week.md). The event form
+// locks that chip, so it should be unreachable; if it is reached anyway the
+// caregiver gets the rule it broke, never "try again" copy that cannot work.
+// ────────────────────────────────────────────────────────────────────────────
+describe('useUpdateEvent — RECURRENCE_DAYS_EXCLUDE_START', () => {
+  it('says the start day must stay selected, not the generic retry copy', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockUpdate.mockRejectedValue({
+      success: false,
+      error: {
+        code: 'RECURRENCE_DAYS_EXCLUDE_START',
+        message: "The start date's weekday must stay selected",
+      },
+    });
+
+    const { result } = renderHook(() => useUpdateEvent(CIRCLE_ID), { wrapper });
+    result.current.mutate({
+      eventId: 'parent-1',
+      data: { recurrence_rule: 'weekly', recurrence_days: [3, 5] },
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.recurrenceDaysExcludeStart', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+    expect(invalidatedWith(invalidateSpy, queryKeys.calendarEvents(CIRCLE_ID))).toBe(true);
   });
 });

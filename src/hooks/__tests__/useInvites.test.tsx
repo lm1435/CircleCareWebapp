@@ -32,8 +32,12 @@ vi.mock('@/components/ui', () => ({
 }));
 
 const promptUpgrade = vi.fn();
+// A vi.fn, not a bare arrow, so the CONTEXT each hook builds its gate with is
+// assertable: the seat cap must carry 'invite_cap', never the shared
+// 'capacity' (see lib/paywallContext.ts).
+const usePremiumGate = vi.fn((..._args: unknown[]) => ({ promptUpgrade }));
 vi.mock('@/hooks/usePremiumGate', () => ({
-  usePremiumGate: () => ({ promptUpgrade }),
+  usePremiumGate: (...args: unknown[]) => usePremiumGate(...args),
 }));
 
 import {
@@ -42,6 +46,7 @@ import {
   resendInvite,
   acceptInvite,
   getPendingInvites,
+  type AcceptInviteResponse,
   type CreateInviteResponse,
   type PendingInvite,
   type ResendInviteResult,
@@ -57,6 +62,11 @@ import {
 
 const CIRCLE_ID = 'circle-1';
 const INVITE_ID = 'invite-1';
+const ACCEPT_RESULT: AcceptInviteResponse = {
+  circle: { id: CIRCLE_ID, name: "Rose's Circle", recipient_name: 'Rose', owner_id: 'o-1' },
+  view_only: false,
+  message: 'Successfully joined the circle',
+};
 
 const mockCreate = vi.mocked(createInvite);
 const mockCancel = vi.mocked(cancelInvite);
@@ -186,6 +196,23 @@ describe('useCreateInvite', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(promptUpgrade).toHaveBeenCalled();
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+  });
+
+  // The seat cap is the one limit moment the invite funnel is read on. It was
+  // pooled under 'capacity' with eight other callers (circle cap, frozen gate,
+  // read-only banner...), so the invite paywall's conversion could not be
+  // isolated. The gate is owner-aware, so the circle id rides along.
+  it('gates a 402 with the invite_cap context, scoped to the circle', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(SUBSCRIPTION_ENVELOPE);
+
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(usePremiumGate).toHaveBeenCalledWith('invite_cap', { circleId: CIRCLE_ID });
+    expect(usePremiumGate).not.toHaveBeenCalledWith('capacity', expect.anything());
+    expect(promptUpgrade).toHaveBeenCalledTimes(1);
   });
 
   it('names the blocking invitee on a pending_invite_seat 402, and still offers the upgrade', async () => {
@@ -394,6 +421,20 @@ describe('useResendInvite', () => {
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
   });
 
+  // Same seat, same cap, same context: a resend past the cap must not read
+  // as a different paywall from a create past the cap.
+  it('gates a resend 402 with the invite_cap context, scoped to the circle', async () => {
+    const { wrapper } = setup();
+    mockResend.mockRejectedValue(SUBSCRIPTION_ENVELOPE);
+
+    const { result } = renderHook(() => useResendInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ inviteId: INVITE_ID });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(usePremiumGate).toHaveBeenCalledWith('invite_cap', { circleId: CIRCLE_ID });
+    expect(usePremiumGate).not.toHaveBeenCalledWith('capacity', expect.anything());
+  });
+
   // The headline case: an invite lapsed, the freed seat was spent on somebody
   // ELSE, and the owner then hit Resend on the old row. Cancelling the live
   // invite fixes it, so resend must read exactly like create here — an
@@ -459,7 +500,7 @@ describe('useResendInvite', () => {
 describe('useAcceptInvite', () => {
   it('POSTs accept by id and invalidates invitesPending + circles', async () => {
     const { invalidateSpy, wrapper } = setup();
-    mockAccept.mockResolvedValue(undefined);
+    mockAccept.mockResolvedValue(ACCEPT_RESULT);
 
     const { result } = renderHook(() => useAcceptInvite(), { wrapper });
     result.current.mutate({ inviteId: INVITE_ID });
@@ -468,6 +509,33 @@ describe('useAcceptInvite', () => {
     expect(mockAccept).toHaveBeenCalledWith(INVITE_ID);
     expect(invalidatedWith(invalidateSpy, queryKeys.invitesPending)).toBe(true);
     expect(invalidatedWith(invalidateSpy, queryKeys.circles)).toBe(true);
+    // The joined circle reaches the caller (PendingInvitesPage opens it).
+    expect(result.current.data).toEqual(ACCEPT_RESULT);
+  });
+
+  it('settles only after the circles/invites invalidations resolve', async () => {
+    const { invalidateSpy, wrapper } = setup();
+    mockAccept.mockResolvedValue(ACCEPT_RESULT);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    invalidateSpy.mockImplementation(() => gate);
+
+    const { result } = renderHook(() => useAcceptInvite(), { wrapper });
+    let settled = false;
+    const pending = result.current.mutateAsync({ inviteId: INVITE_ID }).then((data) => {
+      settled = true;
+      return data;
+    });
+
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+
+    release();
+    await expect(pending).resolves.toEqual(ACCEPT_RESULT);
+    expect(settled).toBe(true);
   });
 });
 

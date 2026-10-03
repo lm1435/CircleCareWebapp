@@ -9,6 +9,7 @@ import {
   INPUT_LABEL,
   INPUT_TEXT,
   fieldShell,
+  focusControlOnShellPress,
   INPUT_TRAILING,
 } from './inputStyles';
 
@@ -102,7 +103,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
           {required ? <RequiredMarker /> : null}
         </Text>
       </label>
-      <div className={shell}>
+      <div className={shell} onMouseDown={focusControlOnShellPress}>
         <input
           ref={ref}
           id={id}

@@ -30,8 +30,7 @@
     "medicalInfo": "Medical Information",
     "doctors": "Doctors",
     "contacts": "Emergency Contacts",
-    "insurance": "Insurance",
-    "directives": "Code Status"
+    "insurance": "Insurance"
   },
   "medicalInfo": {
     "bloodType": "Blood Type",
@@ -56,18 +55,11 @@
     "rxPcn": "Rx PCN",
     "rxGroup": "Rx Group"
   },
-  "directives": {
-    "dnrStatus": "DNR Status",
-    "dnrYes": "Yes",
-    "dnrNo": "No",
-    "details": "Advance Directives"
-  },
   "empty": {
     "medicalInfo": "Add blood type, allergies, and conditions so first responders know your loved one in seconds.",
     "doctors": "Add the doctors who care for your loved one so the circle can reach them fast.",
     "contacts": "Add the people to call first in an emergency so no one is left guessing.",
-    "insurance": "Add insurance details so coverage is ready when care can't wait.",
-    "directives": "Record your loved one's code status so their wishes are clear in a crisis."
+    "insurance": "Add insurance details so coverage is ready when care can't wait."
   },
   "edit": {
     "add": "Add",
@@ -149,12 +141,6 @@
       "medicationAllergiesPlaceholder": "Search or add a medication allergy…",
       "otherAllergiesPlaceholder": "Search or add an allergy…",
       "conditionsPlaceholder": "Search or add a condition…"
-    },
-    "directives": {
-      "title": "Code status",
-      "dnrLabel": "DNR (Do Not Resuscitate)",
-      "details": "Advance directives",
-      "detailsPlaceholder": "Notes about advance directives or wishes"
     }
   },
   "errors": {
@@ -267,11 +253,15 @@
       "healthcareProviders": "Healthcare providers",
       "insurance": "Insurance",
       "medicalInfo": "Medical information",
-      "stoppedMedications": "Recently stopped medications"
+      "stoppedMedications": "Recently stopped medications",
+      "visitNotes": "Visit notes",
+      "careNotes": "Daily care notes"
     },
     "fields": {
       "name": "Name",
       "dateOfBirth": "Date of birth",
+      "date": "Date",
+      "note": "Note",
       "conditions": "Known conditions",
       "relationship": "Relationship",
       "phone": "Phone",
@@ -290,9 +280,6 @@
       "medicalConditions": "Medical conditions",
       "stopped": "Stopped {{date}}",
       "stoppedOn": "Stopped",
-      "codeStatus": "Code status",
-      "dnrOnFile": "DNR on file",
-      "advanceDirectives": "Advance directives",
       "rxBin": "Rx BIN",
       "rxPcn": "Rx PCN",
       "rxGroup": "Rx Group"
@@ -301,6 +288,7 @@
       "daily": "Daily",
       "every_other_day": "Every other day",
       "weekly": "Weekly",
+      "weeklyOn": "Weekly on {{days}}",
       "custom": "Every {{days}} days",
       "monthly": "Monthly",
       "yearly": "Yearly",
@@ -332,6 +320,14 @@
       "dobAge": "DOB {{dob}} · Age {{age}}"
     }
   },
+  "shareSummary": {
+    "title": "Share care summary",
+    "includeVisitNotes": "Include visit notes",
+    "includeCareNotes": "Include daily care notes",
+    "countLine": "Includes {{visit}} visit notes and {{care}} daily care notes",
+    "counting": "Counting notes…",
+    "countError": "Couldn't load notes. The summary will be shared without them."
+  },
   "phone": {
     "countryLabel": "Country code",
     "invalid": "Enter a valid phone number",
@@ -360,5 +356,9 @@
       "ES": "Spain",
       "CU": "Cuba"
     }
+  },
+  "conflict": {
+    "title": "Someone else updated this",
+    "message": "Another caregiver changed this section while you were editing. We loaded the latest version. Review it and make your change again."
   }
 }

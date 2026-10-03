@@ -53,6 +53,10 @@ interface ModalCase {
 
 const BLOCKING_EMAIL = 'lucia.fernandez-arriaga@example.com';
 const plainGate = (lang: Lang) => ({ fault: { status: 402 }, text: tr(lang, 'common', 'upgradeGate.message') });
+// PK18 (approved-recs-2026-09-30, B9a/B9b): an event or vital write refused SUBSCRIPTION_REQUIRED can only mean
+// the circle's owner lapsed (requireCircleEditAccess, a 403); both dialogs now raise the lapse copy (owner: Upgrade
+// action), never the "not included in the free plan" gate. BV 2026-10-01: the longest real toast for them is that one.
+const lapseGate = (lang: Lang) => ({ fault: { status: 403, code: 'SUBSCRIPTION_REQUIRED' }, text: tr(lang, 'common', 'upgradeGate.lapsedOwner') });
 
 const MODALS: ModalCase[] = [
   {
@@ -67,7 +71,7 @@ const MODALS: ModalCase[] = [
       await dialog.locator('#title').fill(uniqueLabel('TOV'));
       await dialog.locator('#scheduled_date').fill(localDate(3));
     },
-    gate: plainGate,
+    gate: lapseGate,
   },
   {
     name: 'EditMedicalInfoModal',
@@ -120,7 +124,7 @@ const MODALS: ModalCase[] = [
       await dialog.locator('#value1').fill('72');
       await dialog.locator('#notes').fill(uniqueLabel('TOV'));
     },
-    gate: plainGate,
+    gate: lapseGate,
   },
 ];
 
@@ -349,7 +353,8 @@ test.describe('Spanish', () => {
           const message = toast.locator('[data-toast-message] > p');
           // The live region carries every character; nothing is cut from what is read out.
           expect(await message.textContent()).toBe(gate.text);
-          expect(gate.text.length, 'a genuinely long string').toBeGreaterThan(100);
+          // PK18's lapse copy is exactly 100 characters in ES (BV 2026-10-01), still well over two toast lines.
+          expect(gate.text.length, 'a genuinely long string').toBeGreaterThanOrEqual(100);
           const lines = await message.evaluate((p) => ({
             rendered: Math.round(p.getBoundingClientRect().height / parseFloat(getComputedStyle(p).lineHeight)),
             clipped: p.scrollHeight > p.clientHeight + 1,
