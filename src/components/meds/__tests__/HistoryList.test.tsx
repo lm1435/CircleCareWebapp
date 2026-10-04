@@ -139,24 +139,23 @@ describe('HistoryList', () => {
     expect(headings[2]).not.toMatch(/Today|Yesterday/);
   });
 
-  // The three recorded outcomes, each in its own pill. Mobile lumps `skipped`
-  // in with `missed` and calls both "Missed"; a caregiver who deliberately
+  // The recorded outcomes, each in its own pill. A caregiver who deliberately
   // skipped a dose (doctor's instruction, illness) is not the same record as
   // one nobody answered, and the clinician-facing report counts them apart.
-  it('gives taken, missed and skipped their own pills', () => {
+  it('gives taken, not-marked and skipped their own pills', () => {
     mockPage([TAKEN_TODAY, MISSED_YESTERDAY, SKIPPED_EARLIER]);
     renderList();
 
     expect(within(card('Metformin')).getByText('Taken')).toBeInTheDocument();
-    expect(within(card('Warfarin')).getByText('Missed')).toBeInTheDocument();
+    expect(within(card('Warfarin')).getByText('Not marked')).toBeInTheDocument();
     expect(within(card('Atorvastatin')).getByText('Skipped')).toBeInTheDocument();
   });
 
-  it('counts a late dose as taken', () => {
+  it('labels a late dose "Taken late"', () => {
     mockPage([makeConfirmation({ status: 'taken_late' })]);
     renderList();
 
-    expect(within(card('Metformin')).getByText('Taken')).toBeInTheDocument();
+    expect(within(card('Metformin')).getByText('Taken late')).toBeInTheDocument();
   });
 
   it('renders the scheduled and taken-at times in the circle timezone', () => {
@@ -182,17 +181,18 @@ describe('HistoryList', () => {
     expect(within(row).getByText('08:12')).toBeInTheDocument();
   });
 
-  // A dose nobody took has no "taken at". The column stays so every card is
-  // the same shape, and says nothing rather than passing the confirmation
-  // instant off as a dose time — that instant is when the CRON gave up.
-  it('leaves the taken-at column empty for a missed dose', () => {
+  // A dose nobody marked has no time and no actor: both cells are hidden, not
+  // dashed, and the confirmation instant is never passed off as a dose time.
+  it('hides the time and actor cells for a legacy missed dose', () => {
     mockPage([MISSED_YESTERDAY]);
     renderList();
 
     const row = card('Warfarin');
     expect(within(row).getByText('8:00 PM')).toBeInTheDocument();
-    expect(within(row).getByText('—')).toBeInTheDocument();
     expect(within(row).queryByText('10:00 PM')).toBeNull();
+    expect(within(row).queryByText('—')).toBeNull();
+    expect(within(row).queryByText(/Taken at|Skipped at|Taken by|Skipped by|Confirmed by/)).toBeNull();
+    expect(within(row).queryByText('Someone')).toBeNull();
   });
 
   it('names who confirmed, falling back to the email local part and then to Someone', () => {
@@ -324,5 +324,93 @@ describe('HistoryList', () => {
       expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3);
       expect(screen.getByText('Atorvastatin')).toBeInTheDocument();
     });
+  });
+});
+
+// ── Dose-status vocabulary (2026-10-04): one matrix, EN + ES ────────────────
+// status → badge, time label, actor label (null = cell hidden). The falsifier
+// is the `skipped` row: the old code showed "Taken at"/"Confirmed by" there.
+import i18n from '@/i18n';
+
+const MATRIX: Array<{
+  name: string;
+  row: Partial<HistoryConfirmation>;
+  en: [string, string | null, string | null];
+  es: [string, string | null, string | null];
+  tone: 'taken' | 'skipped' | 'overdue';
+}> = [
+  {
+    name: 'taken',
+    row: { status: 'taken' },
+    en: ['Taken', 'Taken at', 'Taken by'],
+    es: ['Tomado', 'Tomado a las', 'Tomado por'],
+    tone: 'taken',
+  },
+  {
+    name: 'taken_late',
+    row: { status: 'taken_late' },
+    en: ['Taken late', 'Taken at', 'Taken by'],
+    es: ['Tomado tarde', 'Tomado a las', 'Tomado por'],
+    tone: 'taken',
+  },
+  {
+    name: 'skipped',
+    row: { status: 'skipped' },
+    en: ['Skipped', 'Skipped at', 'Skipped by'],
+    es: ['Omitido', 'Omitido a las', 'Omitido por'],
+    tone: 'skipped',
+  },
+  {
+    name: 'legacy missed',
+    row: { status: 'missed' },
+    en: ['Not marked', null, null],
+    es: ['Sin marcar', null, null],
+    tone: 'overdue',
+  },
+];
+
+describe.each(['en', 'es'] as const)('dose-status vocabulary (%s)', (lang) => {
+  beforeEach(async () => {
+    await i18n.changeLanguage(lang);
+  });
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it.each(MATRIX)('$name: badge, time label and actor label', ({ row, en, es, tone }) => {
+    const [badge, timeLabel, actorLabel] = lang === 'en' ? en : es;
+    mockPage([makeConfirmation(row)]);
+    renderList();
+    const c = card('Metformin');
+
+    const pill = within(c).getByText(badge);
+    // Tone: neutral grey for skipped, never the terracotta alert tone.
+    if (tone === 'skipped') {
+      expect(pill.className).toContain('bg-line-2');
+      expect(pill.className).not.toContain('terracotta');
+    } else if (tone === 'taken') {
+      expect(pill.className).toContain('bg-moss-soft');
+    }
+
+    const all = lang === 'en' ? ['Taken at', 'Skipped at', 'Taken by', 'Skipped by'] : ['Tomado a las', 'Omitido a las', 'Tomado por', 'Omitido por'];
+    if (timeLabel) {
+      expect(within(c).getByText(timeLabel)).toBeInTheDocument();
+      expect(within(c).getByText(actorLabel as string)).toBeInTheDocument();
+    }
+    // Only the expected labels exist — a skipped dose must never say "Taken at".
+    for (const label of all) {
+      if (label !== timeLabel && label !== actorLabel) {
+        expect(within(c).queryByText(label)).toBeNull();
+      }
+    }
+    expect(within(c).queryByText(/Confirmed by|Confirmado por/)).toBeNull();
+    if (!timeLabel) expect(within(c).queryByText('Someone')).toBeNull();
+  });
+
+  it('a skipped dose shows the skip time under the Skipped label', () => {
+    mockPage([makeConfirmation({ status: 'skipped' })]);
+    renderList();
+    const c = card('Metformin');
+    expect(within(c).getByText(/8:12/)).toBeInTheDocument();
   });
 });

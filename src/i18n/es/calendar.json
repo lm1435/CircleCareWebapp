@@ -43,7 +43,7 @@
   },
   "status": {
     "taken": "Tomado",
-    "missed": "No tomado",
+    "missed": "Sin marcar",
     "skipped": "Omitido",
     "pending": "Pendiente"
   },
@@ -60,7 +60,7 @@
     "takenAt": "Tomado a las {{time}}",
     "takenLateAt": "Tomado tarde a las {{time}}",
     "skippedAt": "Omitido a las {{time}}",
-    "missed": "No tomado",
+    "missed": "Sin marcar",
     "markComplete": "Marcar como completada",
     "markTaken": "Marcar como tomada",
     "skipDose": "Omitir dosis",

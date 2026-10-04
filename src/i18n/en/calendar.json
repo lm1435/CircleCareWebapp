@@ -43,7 +43,7 @@
   },
   "status": {
     "taken": "Taken",
-    "missed": "Missed",
+    "missed": "Not marked",
     "skipped": "Skipped",
     "pending": "Pending"
   },
@@ -60,7 +60,7 @@
     "takenAt": "Taken at {{time}}",
     "takenLateAt": "Taken late at {{time}}",
     "skippedAt": "Skipped at {{time}}",
-    "missed": "Missed",
+    "missed": "Not marked",
     "markComplete": "Mark complete",
     "markTaken": "Mark taken",
     "skipDose": "Skip dose",

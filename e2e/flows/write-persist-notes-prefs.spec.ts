@@ -379,7 +379,7 @@ type Prefs = Record<string, unknown>;
 // New accounts start with every one of these keys true (users.notification_preferences default).
 const SWITCHES = [
   { key: 'medication_confirmations', name: 'Medication confirmations' },
-  { key: 'missed_medications', name: 'Missed medications' },
+  { key: 'missed_medications', name: 'Unmarked medications' },
   { key: 'task_assignments', name: 'Task assignments' },
   { key: 'appointment_reminders', name: 'Appointment reminders' },
   { key: 'tips_and_suggestions', name: 'Tips & suggestions' },

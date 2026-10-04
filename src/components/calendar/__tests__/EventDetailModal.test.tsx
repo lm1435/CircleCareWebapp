@@ -127,7 +127,7 @@ describe('EventDetailModal', () => {
     expect(screen.getByText('Weekly on Sun, Wed')).toBeInTheDocument();
   });
 
-  it('shows the missed status for unconfirmed past meds', () => {
+  it('shows Not marked for unconfirmed past meds', () => {
     render(
       <EventDetailModal
         event={makeEvent({ scheduled_date: '2020-01-01' })}
@@ -135,7 +135,7 @@ describe('EventDetailModal', () => {
         onClose={vi.fn()}
       />
     );
-    expect(screen.getByText('Missed')).toBeInTheDocument();
+    expect(screen.getByText('Not marked')).toBeInTheDocument();
   });
 
   it('renders the download-app CTA when canEdit is false', () => {
@@ -563,5 +563,54 @@ describe('EventDetailModal', () => {
         expect.objectContaining({ eventId: 'oneoff-1', scheduledDate: undefined })
       );
     });
+  });
+});
+
+// ── Dose-status vocabulary (2026-10-04): unanswered / legacy missed read "Not marked" ──
+describe('EventDetailModal dose-status wording', () => {
+  it.each([
+    ['en', 'Not marked'],
+    ['es', 'Sin marcar'],
+  ])('legacy missed row (%s) says %s, never Missed', async (lang, expected) => {
+    const i18n = (await import('@/i18n')).default;
+    await i18n.changeLanguage(lang);
+    try {
+      render(
+        <EventDetailModal
+          event={makeEvent({
+            confirmation: {
+              id: 'c1',
+              status: 'missed',
+              confirmed_at: '2026-06-12T10:00:00Z',
+              confirmed_by: 'u1',
+            } as CalendarEvent['confirmation'],
+          })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.getByText(expected)).toBeInTheDocument();
+      expect(screen.queryByText(/^Missed$|No tomado/)).toBeNull();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
+  it('skipped keeps "Skipped at <time>"', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({
+          confirmation: {
+            id: 'c1',
+            status: 'skipped',
+            confirmed_at: '2026-06-12T13:05:00Z',
+            confirmed_by: 'u1',
+          } as CalendarEvent['confirmation'],
+        })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/^Skipped at /)).toBeInTheDocument();
   });
 });

@@ -51,15 +51,20 @@ interface DayGroup {
  */
 function pillFor(
   status: string,
-  labels: { taken: string; skipped: string; missed: string }
+  labels: { taken: string; takenLate: string; skipped: string; notMarked: string }
 ): { className: string; label: string } {
-  if (status === 'taken' || status === 'taken_late') {
+  if (status === 'taken') {
     return { className: STATUS_PILL.taken, label: labels.taken };
   }
+  if (status === 'taken_late') {
+    return { className: STATUS_PILL.taken, label: labels.takenLate };
+  }
   if (status === 'skipped') {
+    // Neutral grey on purpose: a deliberate skip is an answer, not an alarm.
     return { className: STATUS_PILL.skipped, label: labels.skipped };
   }
-  return { className: STATUS_PILL.overdue, label: labels.missed };
+  // Legacy `missed` rows (auto-miss was removed): nobody marked the dose.
+  return { className: STATUS_PILL.overdue, label: labels.notMarked };
 }
 
 /** "Ana Ruiz" · "ana" · "Someone" — never a bare user id. */
@@ -140,8 +145,9 @@ function ConfirmationCard({
   const { t } = useTranslation('meds');
   const pill = pillFor(confirmation.status, {
     taken: t('history.statusTaken'),
+    takenLate: t('history.statusTakenLate'),
     skipped: t('history.statusSkipped'),
-    missed: t('history.statusMissed'),
+    notMarked: t('history.statusNotMarked'),
   });
   const name = confirmation.event?.medication_name || confirmation.event?.title || '';
   const dosage = confirmation.event?.medication_dosage;
@@ -155,14 +161,18 @@ function ConfirmationCard({
       )
     : t('history.notTaken');
 
-  // A skipped or missed dose has no "taken at" — the column stays, so every
-  // card has the same shape, and says so with an em dash rather than pretending
-  // the confirmation instant is a dose time.
+  // Per status: taken -> "Taken at / Taken by"; skipped -> "Skipped at /
+  // Skipped by"; legacy `missed` (nobody marked it) -> the time and actor cells
+  // are HIDDEN, because no one acted and `confirmed_at` is not a dose time.
   const wasTaken = confirmation.status === 'taken' || confirmation.status === 'taken_late';
-  const takenWallClock = wasTaken ? instantWallClock(confirmation.confirmed_at, timezone) : null;
-  const takenAt = takenWallClock
+  const wasSkipped = confirmation.status === 'skipped';
+  const wasAnswered = wasTaken || wasSkipped;
+  const answeredWallClock = wasAnswered
+    ? instantWallClock(confirmation.confirmed_at, timezone)
+    : null;
+  const answeredAt = answeredWallClock
     ? formatEventTimeCompact(
-        takenWallClock,
+        answeredWallClock,
         timezone,
         hourCycle,
         new Date(confirmation.confirmed_at)
@@ -188,20 +198,24 @@ function ConfirmationCard({
           </Text>
           <dd className="m-0 text-md text-ink">{scheduled}</dd>
         </div>
-        <div>
-          <Text variant="mono" as="dt">
-            {t('history.takenAtLabel')}
-          </Text>
-          <dd className="m-0 text-md text-ink">{takenAt}</dd>
-        </div>
-        <div className="col-span-2">
-          <Text variant="mono" as="dt">
-            {t('history.confirmedByLabel')}
-          </Text>
-          <dd className="m-0 text-md text-ink">
-            {confirmedByName(confirmation, t('history.someone'))}
-          </dd>
-        </div>
+        {wasAnswered && (
+          <>
+            <div>
+              <Text variant="mono" as="dt">
+                {wasSkipped ? t('history.skippedAtLabel') : t('history.takenAtLabel')}
+              </Text>
+              <dd className="m-0 text-md text-ink">{answeredAt}</dd>
+            </div>
+            <div className="col-span-2">
+              <Text variant="mono" as="dt">
+                {wasSkipped ? t('history.skippedByLabel') : t('history.takenByLabel')}
+              </Text>
+              <dd className="m-0 text-md text-ink">
+                {confirmedByName(confirmation, t('history.someone'))}
+              </dd>
+            </div>
+          </>
+        )}
       </dl>
     </Card>
   );

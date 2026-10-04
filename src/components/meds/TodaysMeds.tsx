@@ -413,14 +413,24 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
       // The pre-due badge splits the way mobile's pill does: "Due soon"
       // exactly when the Take/Skip pair is live, "Upcoming" while it is
       // still too early to answer. Every other status keeps its own label.
+      // During the optimistic undo window the pill follows the PENDING answer
+      // (what the UndoBadge already says), not the stale server status — else a
+      // just-taken dose reads "Not marked" beside a "Taken" badge.
+      const shownStatus: MedDisplayStatus = !pendingStatus
+        ? status
+        : pendingStatus === 'skipped'
+          ? 'skipped'
+          : 'taken';
       const statusLabel =
-        status === 'pending'
+        shownStatus === 'pending'
           ? confirmable
             ? t('calendar:dueSoon')
             : t('calendar:upcoming')
-          : t(`status.${status}`);
+          : t(`status.${shownStatus}`);
       const statusPill =
-        status === 'pending' && confirmable ? STATUS_PILL.dueSoon : STATUS_PILL_CLASS[status];
+        shownStatus === 'pending' && confirmable
+          ? STATUS_PILL.dueSoon
+          : STATUS_PILL_CLASS[shownStatus];
       const inactive = !!med.discontinued_at;
       // A pending answer reads as done immediately — that is the whole point of
       // the optimistic window.

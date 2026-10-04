@@ -133,7 +133,7 @@ const DEFAULT_MEDS: TodaysMedication[] = [
     scheduled_time: '09:00:00',
     confirmation: { status: 'skipped', confirmed_at: '2026-06-12T13:00:00Z', confirmed_by: 'u1' },
   }),
-  // 10:00 ET is before the pinned 12:00 ET "now" → past due, unconfirmed → Not confirmed
+  // 10:00 ET is before the pinned 12:00 ET "now" → past due, unconfirmed → Not marked
   makeMed({ id: 'med-3', medication_name: 'Atorvastatin', scheduled_time: '10:00:00' }),
   // 1:00 PM ET is one hour after the pinned 12:00 ET "now" — not yet due, but
   // INSIDE the 2h early-confirm window, so it is answerable and reads
@@ -280,7 +280,7 @@ describe('TodaysMeds', () => {
     // Status badges per state
     expect(within(medRow('Lisinopril')).getByText('Taken')).toBeInTheDocument();
     expect(within(medRow('Metformin')).getByText('Skipped')).toBeInTheDocument();
-    expect(within(medRow('Atorvastatin')).getByText('Not confirmed')).toBeInTheDocument();
+    expect(within(medRow('Atorvastatin')).getByText('Not marked')).toBeInTheDocument();
     expect(within(medRow('Levothyroxine')).getByText('Due soon')).toBeInTheDocument();
 
     // Scheduled time shown (care recipient TZ, same as pinned device TZ) — and
@@ -433,7 +433,7 @@ describe('TodaysMeds', () => {
 
       await screen.findByText('Atorvastatin');
       const row = medRow('Atorvastatin');
-      expect(within(row).getByText('Not confirmed')).toBeInTheDocument();
+      expect(within(row).getByText('Not marked')).toBeInTheDocument();
       expect(action(row, 'Confirm')).toBeInTheDocument();
     });
 
@@ -1206,6 +1206,29 @@ describe('TodaysMeds', () => {
         });
       });
       expect(await screen.findByText('Marked as taken')).toBeInTheDocument();
+    });
+
+    // W2: inside the undo window the pill follows the PENDING answer. Before the
+    // fix the pill read the server status, so a just-taken overdue dose sat
+    // beside a "Taken" UndoBadge still labelled "Not marked".
+    it('pill follows the pending answer during the undo window', async () => {
+      mockApi({
+        events: [makeMed({ id: 'late', medication_name: 'Atorvastatin', scheduled_time: '08:00:00' })],
+      });
+      renderWidget();
+
+      await screen.findByText('Atorvastatin');
+      const before = medRow('Atorvastatin');
+      expect(within(before).getByText('Not marked')).toBeInTheDocument();
+      answer(before, 'Skip');
+      const row = medRow('Atorvastatin');
+      // The pill itself (neutral grey), not just the UndoBadge beside it.
+      const pills = within(row)
+        .getAllByText('Skipped')
+        .filter((el) => el.className.includes('bg-line-2'));
+      expect(pills).toHaveLength(1);
+      expect(within(row).queryByText('Not marked')).toBeNull();
+      await runOutWindow();
     });
 
     it('skips a medication', async () => {

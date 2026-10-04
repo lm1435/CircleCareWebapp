@@ -13,10 +13,10 @@
   "showLess": "Show less",
   "status": {
     "taken": "Taken",
-    "missed": "Missed",
+    "missed": "Not marked",
     "pending": "Pending",
     "skipped": "Skipped",
-    "unconfirmed": "Not confirmed"
+    "unconfirmed": "Not marked"
   },
   "dialog": {
     "title": "Confirm medication",
@@ -106,10 +106,13 @@
     "someone": "Someone",
     "scheduledLabel": "Scheduled",
     "takenAtLabel": "Taken at",
-    "confirmedByLabel": "Confirmed by",
+    "skippedAtLabel": "Skipped at",
+    "takenByLabel": "Taken by",
+    "skippedByLabel": "Skipped by",
     "notTaken": "—",
     "statusTaken": "Taken",
-    "statusMissed": "Missed",
+    "statusTakenLate": "Taken late",
+    "statusNotMarked": "Not marked",
     "statusSkipped": "Skipped",
     "emptyTitle": "No medication history",
     "emptyHint": "Medication confirmations will appear here once recorded",

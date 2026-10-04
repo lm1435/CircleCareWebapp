@@ -13,10 +13,10 @@
   "showLess": "Ver menos",
   "status": {
     "taken": "Tomado",
-    "missed": "No tomado",
+    "missed": "Sin marcar",
     "pending": "Pendiente",
     "skipped": "Omitido",
-    "unconfirmed": "Sin confirmar"
+    "unconfirmed": "Sin marcar"
   },
   "dialog": {
     "title": "Confirmar medicamento",
@@ -106,10 +106,13 @@
     "someone": "Alguien",
     "scheduledLabel": "Programado",
     "takenAtLabel": "Tomado a las",
-    "confirmedByLabel": "Confirmado por",
+    "skippedAtLabel": "Omitido a las",
+    "takenByLabel": "Tomado por",
+    "skippedByLabel": "Omitido por",
     "notTaken": "—",
     "statusTaken": "Tomado",
-    "statusMissed": "No tomado",
+    "statusTakenLate": "Tomado tarde",
+    "statusNotMarked": "Sin marcar",
     "statusSkipped": "Omitido",
     "emptyTitle": "Sin historial de medicamentos",
     "emptyHint": "Las confirmaciones de medicamentos aparecerán aquí una vez registradas",
@@ -145,7 +148,7 @@
     "taken": "Tomados",
     "takenOnTime": "Tomados a tiempo",
     "takenLate": "Tomados tarde",
-    "notMarked": "No marcado",
+    "notMarked": "Sin marcar",
     "skipped": "Omitidos",
     "total": "Total",
     "adherenceRate": "Tasa de adherencia",
