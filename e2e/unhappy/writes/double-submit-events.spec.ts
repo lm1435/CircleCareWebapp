@@ -1,3 +1,4 @@
+import { gotoCalendarSettled } from '../../notesFirstClassShared';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { apiSession, countRequests, dbCount, holdRequest, sqlStr } from '../../unhappy';
@@ -25,8 +26,7 @@ test.use({ persona: 'premiumOwner' });
 const EVENTS = '/api/circles/:id/events';
 
 async function openNewEvent(page: Page, circleId: string): Promise<Locator> {
-  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+  await gotoCalendarSettled(page, circleId);
   await page.getByRole('button', { name: 'Add event' }).first().click();
   const dialog = page.getByRole('dialog', { name: 'New event' });
   await expect(dialog).toBeVisible();

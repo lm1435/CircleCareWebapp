@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { apiSession, dbQuery, sqlStr, type ApiSession } from '../unhappy';
 import { assertLocalDbTargets, sqlExec } from '../db';
+import { gotoCalendarSettled } from '../notesFirstClassShared';
 
 // docs/plans/notes-first-class.md, Slice 2 (feed previews + deep links) and
 // the web parts of Slice 4's task 34: end-to-end proof, against the real
@@ -78,11 +79,6 @@ async function deleteEvent(session: ApiSession, circleId: string, eventId: strin
 }
 
 // --- Calendar navigation / notes panel (medication-notes.spec.ts idiom) -----
-
-async function gotoCalendarSettled(page: Page, circleId: string): Promise<void> {
-  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 25_000 });
-}
 
 function dayCell(page: Page, date: string): Locator {
   return page.locator(`[role="gridcell"][data-date="${date}"]`);

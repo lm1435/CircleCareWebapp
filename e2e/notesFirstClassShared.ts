@@ -140,7 +140,14 @@ export function materializeRecurringInstances(): void {
 
 export async function gotoCalendarSettled(page: Page, circleId: string): Promise<void> {
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 25_000 });
+  // CalendarPage renders the grid only when the loaded week has >=1 event; an
+  // empty (loaded) week renders "No events this week" instead. A fresh circle's
+  // CURRENT week is empty whenever the seeded event sits in the next week
+  // (e.g. s.at(1) on a Saturday -> Sunday), so either outcome means "settled"
+  // (skeleton shows neither). Callers that need a grid step to the right week.
+  await expect(page.getByRole('grid').or(page.getByText('No events this week'))).toBeVisible({
+    timeout: 25_000,
+  });
 }
 
 const WEEK_RANGE_HEADING = /^[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}, \d{4}$/;

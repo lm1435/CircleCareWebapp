@@ -179,7 +179,10 @@ export default function SignUpPage(): ReactElement {
         first_name: result.data.first_name,
         last_name: result.data.last_name,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: i18n.language === 'es' ? 'es' : 'en',
+        // resolvedLanguage, not language: an es-MX/es-419 browser reports
+        // language 'es-MX' (UI still renders Spanish via the base bundle), so
+        // a strict === 'es' on `language` registered those users as 'en'.
+        language: (i18n.resolvedLanguage || i18n.language) === 'es' ? 'es' : 'en',
         termsAccepted: true,
       });
       // RECORD THE ANALYTICS ANSWER — either answer — and record it HERE:

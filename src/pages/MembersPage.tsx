@@ -22,6 +22,7 @@ import {
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { MemberRow } from '@/components/members/MemberRow';
 import { InviteMemberModal } from '@/components/members/InviteMemberModal';
+import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import { getInviteExpiryState, isPendingInviteExpired } from '@/api/circleMembers';
 import type { CircleMember, PendingCircleInvite } from '@/api/circleMembers';
@@ -131,6 +132,23 @@ export default function MembersPage(): ReactElement {
    * `disabled` only lands on the next render commit, so a double tap would fire
    * two resends. Errors are toasted by the hook's shared onError mapper.
    */
+  const handleCopyInviteLink = (invite: PendingCircleInvite): void => {
+    const url = invite.invite_url;
+    if (!url) return;
+    // Unlike the invite modal, the URL is not on screen here, so a clipboard
+    // failure must be surfaced rather than swallowed.
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        showToast(t('invite.copyFailed'), 'error');
+        return;
+      }
+      Analytics.inviteLinkCopied(circleId, invite.member_type ?? 'caregiver');
+      showToast(t('invite.linkCopied'), 'success');
+    })();
+  };
+
   const handleResendInvite = (invite: PendingCircleInvite): void => {
     // Guard THIS row only. Guarding on "any resend in flight" made a second
     // expired invite's button a silent dead click: the `disabled` prop is
@@ -295,6 +313,16 @@ export default function MembersPage(): ReactElement {
               // countdown informs; the button appears when it is actually needed.
               const canResend = isExpired;
               const menuItems: MoreMenuEntry[] = [];
+              // Owner-only `invite_url` (absent on older backends) — no URL, no
+              // item. Expired links are dead, so never offered for those.
+              if (!isExpired && invite.invite_url) {
+                menuItems.push({
+                  id: 'copy-link',
+                  label: t('invite.copyLink'),
+                  icon: 'copy-outline',
+                  onSelect: () => handleCopyInviteLink(invite),
+                });
+              }
               if (canResend) {
                 menuItems.push({
                   id: 'resend',

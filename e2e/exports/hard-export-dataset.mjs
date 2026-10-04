@@ -607,7 +607,7 @@ const LABELS = {
   },
   es: {
     sentence: (x) => `tomó ${x.taken} de ${x.total} dosis programadas \\(${x.rate}%\\)\\. ${x.taken_late} se tomaron tarde y ${x.not_marked} no se marcaron`,
-    tiles: ['Tasa de adherencia', 'Tomados a tiempo', 'Tomados tarde', 'No marcado', 'Omitidos', 'Total'],
+    tiles: ['Tasa de adherencia', 'Tomados a tiempo', 'Tomados tarde', 'Sin marcar', 'Omitidos', 'Total'],
     range: 'al',
     current: 'Medicamentos actuales',
     stopped: 'Medicamentos suspendidos recientemente',

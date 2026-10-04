@@ -51,6 +51,9 @@
     "readOnlyMemberSubtitle": "You can view but not edit this circle",
     "viewOnlySubtitle": "View-only — ask the circle owner if you need to make changes."
   },
+  "member": {
+    "notReceivingReminders": "Not receiving reminders"
+  },
   "list": {
     "heading": "Members",
     "subheadingReadOnly": "Everyone helping coordinate care in this circle.",
@@ -99,6 +102,7 @@
     "shareLink": "Share invite link",
     "copyLink": "Copy link",
     "linkCopied": "Link copied",
+    "copyFailed": "Couldn't copy the link",
     "shareMessage": "Join me on CircleCare to help coordinate care for {{recipientName}}. {{inviteUrl}}",
   "shareMessageSelfCare": "Join me on CircleCare to help keep track of my care. {{inviteUrl}}",
   "shareMessageRecipient": "I set up CircleCare to help keep track of your medications and appointments. Join me here: {{inviteUrl}}",

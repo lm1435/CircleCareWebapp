@@ -99,6 +99,11 @@ export function MemberRow({ member, actions }: MemberRowProps): ReactElement {
               {t('access.viewOnly')}
             </Badge>
           )}
+          {member.push_reachable === false && (
+            <Badge variant="warning" size="sm" icon="notifications-off-outline">
+              {t('member.notReceivingReminders')}
+            </Badge>
+          )}
         </div>
         <p className="m-0 mt-0.5 truncate text-sm text-ink-2">{subtitle}</p>
       </div>

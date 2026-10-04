@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { apiSession, dbQuery, sqlStr, type ApiSession } from '../unhappy';
 import { expandAllDayOverflow } from '../helpers';
+import { gotoCalendarSettled } from '../notesFirstClassShared';
 
 // Regression coverage for the event-note SERIES-LEAK bug (proven live
 // 2026-09-27; evidence: scratchpad case1*.json/.mjs).
@@ -167,11 +168,6 @@ async function pollNoteEventId(circleId: string, noteBody: string): Promise<stri
 }
 
 // --- Calendar navigation -----------------------------------------------------
-
-async function gotoCalendarSettled(page: Page, circleId: string): Promise<void> {
-  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 25_000 });
-}
 
 const WEEK_RANGE_HEADING = /^[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}, \d{4}$/;
 

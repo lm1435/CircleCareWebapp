@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import '@/i18n';
+import i18n from '@/i18n';
 import SignUpPage from '@/pages/SignUpPage';
 import { apiClient } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -280,6 +280,41 @@ describe('SignUpPage', () => {
 
     expect(mockedPost).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("registers an es-MX browser as language 'es', never 'en' (resolvedLanguage, not the raw tag)", async () => {
+    // nonExplicitSupportedLngs keeps `i18n.language` at the RAW tag ('es-MX')
+    // while the UI renders from the base 'es' bundle, so a strict
+    // `i18n.language === 'es'` silently registered LatAm users as 'en'
+    // (English emails + push for a user looking at a Spanish app).
+    mockedPost.mockResolvedValueOnce({
+      success: true,
+      data: {
+        user: { id: 'u1', email: VALID.email, first_name: 'Pat', last_name: 'Rivera' },
+        message: 'sent',
+      },
+    } as never);
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await i18n.changeLanguage('es-MX');
+    try {
+      // The trap this test pins: the raw tag is NOT 'es', only the resolved one is.
+      expect(i18n.language).toBe('es-MX');
+      expect(i18n.resolvedLanguage).toBe('es');
+
+      await user.click(screen.getByRole('button', { name: /Create account|Crear cuenta/ }));
+
+      await waitFor(() =>
+        expect(mockedPost).toHaveBeenCalledWith(
+          '/auth/signup',
+          expect.objectContaining({ language: 'es' })
+        )
+      );
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 
   it('signs up with the full body (timezone + language + termsAccepted) and routes to /verify-email with email in state', async () => {

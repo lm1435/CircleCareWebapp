@@ -2,6 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { dbQuery, sqlStr } from '../../unhappy';
 import { localDate, purgeEventsTitled } from './_helpers';
+import { gotoCalendarSettled } from '../../notesFirstClassShared';
 
 // THE "15 MINUTES BEFORE" DEFAULT IS OFF — checked against the SAVED ROW.
 //
@@ -15,8 +16,7 @@ import { localDate, purgeEventsTitled } from './_helpers';
 test.use({ persona: 'premiumOwner' });
 
 async function fillTimedEvent(page: Page, circleId: string, type: 'task' | 'appointment', title: string): Promise<Locator> {
-  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+  await gotoCalendarSettled(page, circleId);
   await page.getByRole('button', { name: 'Add event' }).first().click();
   const dialog = page.getByRole('dialog', { name: 'New event' });
   await expect(dialog).toBeVisible();

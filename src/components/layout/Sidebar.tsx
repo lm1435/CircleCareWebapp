@@ -122,6 +122,8 @@ export interface SidebarProps {
   onNavigate?: () => void;
   /** Opens the AI assistant modal (mounted by AppLayout). */
   onOpenAssistant?: () => void;
+  /** Access pending OR resolved-hidden: the entry renders dimmed + inert (nav parity). */
+  assistantDisabled?: boolean;
   /** Opens a create flow (modal mounted by AppLayout). When omitted, New is hidden. */
   onCreate?: (kind: AddMenuType) => void;
   /** Requester can create calendar/med/task/note items (editable circle). */
@@ -141,6 +143,7 @@ const DESKTOP_CLASS =
 export function Sidebar({
   onNavigate,
   onOpenAssistant,
+  assistantDisabled = false,
   onCreate,
   canCreate = false,
 }: SidebarProps = {}): ReactElement {
@@ -237,11 +240,16 @@ export function Sidebar({
               <li>
                 <button
                   type="button"
+                  disabled={assistantDisabled}
+                  aria-disabled={assistantDisabled}
                   onClick={() => {
+                    if (assistantDisabled) return;
                     onOpenAssistant();
                     onNavigate?.();
                   }}
-                  className={`${LINK_BASE} w-full border-0 bg-transparent text-left text-coral-deep hover:bg-bg-2`}
+                  className={`${LINK_BASE} w-full border-0 bg-transparent text-left hover:bg-bg-2 ${
+                    assistantDisabled ? 'text-ink-2 opacity-50' : 'text-coral-deep'
+                  }`}
                 >
                   <Icon name="sparkles-outline" size="row" />
                   {t('nav.assistant')}

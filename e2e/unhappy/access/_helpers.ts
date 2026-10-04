@@ -2,6 +2,7 @@ import type { APIRequestContext, APIResponse, Locator, Page } from '@playwright/
 import { expect, uniqueLabel, type PersonaHandle } from '../../fixtures';
 import { sqlExec } from '../../db';
 import { adminUpload } from '../../isolation';
+import { circleTimezone, dateInTz } from '../../notesFirstClassShared';
 import { apiSession, dbCount, dbQuery, errorCodeOf, pathMatcher, sqlStr, type HttpMethod, type PathPattern } from '../../unhappy';
 
 // ===========================================================================
@@ -713,7 +714,7 @@ export async function runWriteProbes(
   const base = `/api/circles/${h.circleId}`;
   const c = uuid(h.circleId);
   const tag = opts.tag ?? uniqueLabel('Probe');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateInTz(await circleTimezone(api, h.circleId), 0);
   const n = (sql: string) => String(dbCount(sql));
 
   const probes: WriteProbe[] = [

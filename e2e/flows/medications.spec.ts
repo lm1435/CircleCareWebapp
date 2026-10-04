@@ -2,6 +2,7 @@ import { request as apiRequest, type Locator, type Page } from '@playwright/test
 import { test, expect } from '../fixtures';
 import type { IsolatedAccount } from '../isolation';
 import { checkA11y, pinRecipientZoneToBrowser } from '../helpers';
+import { gotoCalendarSettled } from '../notesFirstClassShared';
 
 // Medication lifecycle flows (Medications page — /circles/:id/meds).
 //
@@ -147,19 +148,6 @@ async function createDailyMed(
 const WEEK_RANGE_HEADING = /^[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}, \d{4}$/;
 
 /**
- * The calendar grid, LOADED. This is a positive signal, not a settle-and-hope:
- * CalendarPage renders `role="grid"` (WeekView) only when the events query has
- * resolved AND returned at least one event — loading shows CalendarSkeleton
- * (no grid) and an empty range shows EmptyState (no grid). The isolated
- * account's cloned circle carries daily medications with no end date, so every
- * week has events and a visible grid always means "this week's data arrived".
- */
-async function gotoCalendarSettled(page: Page, circleId: string): Promise<void> {
-  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
-}
-
-/**
  * Step the (default) week view forward/back N weeks and wait for THAT week to
  * be loaded.
  *
@@ -170,7 +158,7 @@ async function gotoCalendarSettled(page: Page, circleId: string): Promise<void> 
  * either side removes the clock from the assertion completely.
  *
  * Each step waits for the range heading to CHANGE, and the final one for the
- * grid (see gotoCalendarSettled for why a visible grid means "loaded"). The
+ * grid (the isolated account's cloned circle carries daily medications, so every week has events). The
  * range change is what stops the grid check from being satisfied by the week
  * we just left.
  */

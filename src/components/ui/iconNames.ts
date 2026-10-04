@@ -45,6 +45,8 @@ import iconMailOutline from '../../../node_modules/ionicons/dist/svg/mail-outlin
 import iconTrendingUp from '../../../node_modules/ionicons/dist/svg/trending-up.svg?raw';
 import iconTrendingDown from '../../../node_modules/ionicons/dist/svg/trending-down.svg?raw';
 import iconEllipsisHorizontal from '../../../node_modules/ionicons/dist/svg/ellipsis-horizontal.svg?raw';
+import iconCopyOutline from '../../../node_modules/ionicons/dist/svg/copy-outline.svg?raw';
+import iconNotificationsOffOutline from '../../../node_modules/ionicons/dist/svg/notifications-off-outline.svg?raw';
 import iconNotificationsOutline from '../../../node_modules/ionicons/dist/svg/notifications-outline.svg?raw';
 import iconTrashOutline from '../../../node_modules/ionicons/dist/svg/trash-outline.svg?raw';
 import iconWaterOutline from '../../../node_modules/ionicons/dist/svg/water-outline.svg?raw';
@@ -108,6 +110,8 @@ export const ICON_NAMES = [
   'trending-down',
   'ellipsis-horizontal',
   'notifications-outline',
+  'copy-outline',
+  'notifications-off-outline',
   'trash-outline',
   'water-outline',
   'scale-outline',
@@ -170,6 +174,8 @@ export const ICON_FILES: Record<IconName, string> = {
   'trending-down': iconTrendingDown,
   'ellipsis-horizontal': iconEllipsisHorizontal,
   'notifications-outline': iconNotificationsOutline,
+  'copy-outline': iconCopyOutline,
+  'notifications-off-outline': iconNotificationsOffOutline,
   'trash-outline': iconTrashOutline,
   'water-outline': iconWaterOutline,
   'scale-outline': iconScaleOutline,

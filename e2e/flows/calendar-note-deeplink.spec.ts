@@ -86,13 +86,17 @@ test.describe('Calendar note deep link (?date & eventId & panel=notes)', () => {
     }
   });
 
-  test('(c) an unknown event id toasts "no longer available" and opens no modal', async ({ page, circleId }, testInfo) => {
-    const today = new Date().toISOString().slice(0, 10);
+  test('(c) an unknown event id toasts "no longer available" and opens no modal', async ({ page, request, circleId, account }, testInfo) => {
+    const session = await apiSession(request, account);
+    const today = dateInTz(await circleTimezone(session, circleId), 0);
     const bogusId = '00000000-0000-0000-0000-000000000000';
     await page.goto(`/circles/${circleId}/calendar?date=${today}&eventId=${bogusId}&panel=notes`, {
       waitUntil: 'domcontentloaded',
     });
-    await expect(page.getByRole('grid')).toBeVisible({ timeout: 25_000 });
+    // A fresh circle's week may be empty (no grid): either outcome means settled.
+    await expect(page.getByRole('grid').or(page.getByText('No events this week'))).toBeVisible({
+      timeout: 25_000,
+    });
     await expect(page.getByText('That note is no longer available.')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('dialog')).toHaveCount(0);
     // New UI state: the "note no longer available" toast over the calendar.

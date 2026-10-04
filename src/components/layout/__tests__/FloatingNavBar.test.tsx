@@ -23,7 +23,7 @@ function renderNav(
               // The AI cell is GATED (src/lib/aiAccess.ts) and the prop fails
               // closed, so the shown-AI case — what most of these tests
               // describe — has to say so. Individual tests override it.
-              canUseAssistant
+              assistantAccess="allowed"
               {...props}
             />
           }
@@ -188,7 +188,7 @@ describe('FloatingNavBar', () => {
                 addOpen={false}
                 onToggleAdd={vi.fn()}
                 onOpenAssistant={onOpenAssistant}
-                canUseAssistant
+                assistantAccess="allowed"
                 assistantOpen
               />
             }
@@ -210,34 +210,103 @@ describe('FloatingNavBar', () => {
     expect(hasActiveDot(ai)).toBe(true);
   });
 
-  // VIEW-ONLY GATING. A view-only member cannot change their own role, so the
-  // AI cell is absent rather than disabled — unlike NEW above, a dimmed cell
-  // would only advertise a door that is not theirs to open.
-  it('drops the AI cell entirely when the viewer has no assistant access', () => {
-    renderNav('/circles/c1', { canUseAssistant: false });
+  // RESOLVED HIDDEN (view-only member, non-owner of a free circle): the SAME
+  // dimmed, inert cell as pending — never absent, never a paywall, no handler.
+  it('hidden: renders the AI cell dimmed, disabled and inert (five cells)', async () => {
+    const onOpenAssistant = vi.fn();
+    renderNav('/circles/c1', { assistantAccess: 'hidden', onOpenAssistant });
 
-    expect(within(pill()).queryByRole('button', { name: 'AI' })).not.toBeInTheDocument();
+    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    expect(ai).toBeVisible();
+    expect(ai).toBeDisabled();
+    expect(ai).toHaveAttribute('aria-disabled', 'true');
+    expect(ai).toHaveClass('opacity-50');
+    expect(ai.className).toContain('flex-1');
+    expect(ai).not.toHaveAttribute('aria-describedby');
     expect(Array.from(pill().children).map((c) => c.textContent)).toEqual([
       'Home',
       'Care',
       'New',
       'Health',
+      'AI',
     ]);
+
+    await userEvent.click(ai);
+    expect(onOpenAssistant).not.toHaveBeenCalled();
   });
 
-  it('fails closed: no AI cell when the flag is not supplied at all', () => {
+  it('hidden: keyboard cannot activate it (not focusable, Enter/Space do nothing)', async () => {
+    const onOpenAssistant = vi.fn();
+    const user = userEvent.setup();
+    renderNav('/circles/c1', { assistantAccess: 'hidden', onOpenAssistant });
+    const ai = within(pill()).getByRole('button', { name: 'AI' });
+
+    for (let i = 0; i < 8; i += 1) await user.tab();
+    expect(ai).not.toHaveFocus();
+    ai.focus();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    expect(onOpenAssistant).not.toHaveBeenCalled();
+  });
+
+  it('hidden and pending are visually identical (no shift when pending resolves to hidden)', () => {
+    renderNav('/circles/c1', { assistantAccess: 'pending' });
+    const pendingCell = within(pill()).getByRole('button', { name: 'AI' });
+    const pendingClass = pendingCell.className;
+    const pendingIcon = pendingCell.innerHTML;
+    document.body.innerHTML = '';
+    renderNav('/circles/c1', { assistantAccess: 'hidden' });
+    const hiddenCell = within(pill()).getByRole('button', { name: 'AI' });
+    expect(hiddenCell.className).toBe(pendingClass);
+    expect(hiddenCell.innerHTML).toBe(pendingIcon);
+  });
+
+  // PENDING (mobile 'reserve'): visible, dimmed, inert, same name, same box.
+  it('renders the AI cell dimmed and inert while access is pending', async () => {
+    const onOpenAssistant = vi.fn();
+    renderNav('/circles/c1', { assistantAccess: 'pending', onOpenAssistant });
+
+    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    expect(ai).toBeVisible();
+    expect(ai).toBeDisabled();
+    expect(ai).toHaveAttribute('aria-disabled', 'true');
+    expect(ai).toHaveClass('opacity-50');
+    expect(ai.className).toContain('flex-1');
+
+    await userEvent.click(ai);
+    expect(onOpenAssistant).not.toHaveBeenCalled();
+    expect(Array.from(pill().children).map((c) => c.textContent)).toContain('AI');
+  });
+
+  it('allowed: the AI cell is enabled and opens the assistant', async () => {
+    const onOpenAssistant = vi.fn();
+    renderNav('/circles/c1', { assistantAccess: 'allowed', onOpenAssistant });
+
+    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    expect(ai).toBeEnabled();
+    expect(ai).toHaveAttribute('aria-disabled', 'false');
+    expect(ai).not.toHaveClass('opacity-50');
+    await userEvent.click(ai);
+    expect(onOpenAssistant).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed: the AI cell is inert (not absent) when the flag is not supplied', async () => {
+    const onOpenAssistant = vi.fn();
     render(
       <MemoryRouter initialEntries={['/circles/c1']}>
         <FloatingNavBar
           circleId="c1"
           addOpen={false}
           onToggleAdd={vi.fn()}
-          onOpenAssistant={vi.fn()}
+          onOpenAssistant={onOpenAssistant}
         />
       </MemoryRouter>
     );
 
-    expect(within(pill()).queryByRole('button', { name: 'AI' })).not.toBeInTheDocument();
+    const ai = within(pill()).getByRole('button', { name: 'AI' });
+    expect(ai).toBeDisabled();
+    await userEvent.click(ai);
+    expect(onOpenAssistant).not.toHaveBeenCalled();
   });
 
   it('publishes --nav-h while mounted and removes it on unmount', () => {

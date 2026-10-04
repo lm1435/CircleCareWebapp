@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import MembersPage from '@/pages/MembersPage';
+import { Analytics } from '@/lib/analytics';
 import type { CircleDetail, CircleMember, PendingCircleInvite } from '@/api/circleMembers';
 
 // Stage 5 Task 5.4/5.7 — owner-only member management wiring. The read-only
@@ -37,6 +38,11 @@ vi.mock('@/hooks/useInvites', () => ({
   // InviteMemberModal (rendered when "Invite member" is clicked) uses this.
   useCreateInvite: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+
+vi.mock('@/lib/analytics', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/analytics')>();
+  return { ...actual, Analytics: { ...actual.Analytics, inviteLinkCopied: vi.fn() } };
+});
 
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
@@ -605,5 +611,79 @@ describe('MembersPage — invites expiring soon', () => {
     renderPage();
 
     expect(screen.queryByText('Care is easier together')).not.toBeInTheDocument();
+  });
+});
+
+describe('MembersPage — copy invite link', () => {
+  const URL_ = 'https://app.example.com/invite/abc123';
+  const writeText = vi.fn();
+  beforeEach(() => {
+    writeText.mockReset();
+  });
+  // user-event's setup() installs its own clipboard stub, so ours goes in after it.
+  function setupUser(): ReturnType<typeof userEvent.setup> {
+    const user = userEvent.setup();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    return user;
+  }
+  function makeInvite(overrides: Partial<PendingCircleInvite> = {}): PendingCircleInvite {
+    return {
+      id: 'inv-1',
+      invited_email: 'lapsed@example.com',
+      created_at: '2026-06-01T00:00:00Z',
+      expires_at: inDays(6),
+      ...overrides,
+    };
+  }
+  const owner = (): CircleMember => makeMember({ id: 'u-owner', role: 'owner' });
+
+  it('offers Copy link first for a live invite with invite_url', async () => {
+    const user = setupUser();
+    setCircle([owner()], { pending_invites: [makeInvite({ is_expired: false, invite_url: URL_ })] });
+    renderPage();
+    await openInviteMenu(user, 'lapsed@example.com');
+    const items = screen.getAllByRole('menuitem');
+    expect(items[0]).toHaveAccessibleName('Copy link');
+  });
+
+  it('omits Copy link for an expired invite even when invite_url is present', async () => {
+    const user = setupUser();
+    setCircle([owner()], { pending_invites: [makeInvite({ is_expired: true, invite_url: URL_ })] });
+    renderPage();
+    await openInviteMenu(user, 'lapsed@example.com');
+    expect(screen.queryByRole('menuitem', { name: 'Copy link' })).not.toBeInTheDocument();
+  });
+
+  it('omits Copy link when invite_url is missing', async () => {
+    const user = setupUser();
+    setCircle([owner()], { pending_invites: [makeInvite({ is_expired: false })] });
+    renderPage();
+    await openInviteMenu(user, 'lapsed@example.com');
+    expect(screen.queryByRole('menuitem', { name: 'Copy link' })).not.toBeInTheDocument();
+  });
+
+  it('copies the URL, fires analytics and a success toast', async () => {
+    const user = setupUser();
+    writeText.mockResolvedValue(undefined);
+    setCircle([owner()], { pending_invites: [makeInvite({ is_expired: false, invite_url: URL_ })] });
+    renderPage();
+    await openInviteMenu(user, 'lapsed@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Copy link' }));
+    await vi.waitFor(() => expect(showToast).toHaveBeenCalledWith('Link copied', 'success'));
+    expect(writeText).toHaveBeenCalledWith(URL_);
+    expect(Analytics.inviteLinkCopied).toHaveBeenCalledWith('c1', 'caregiver');
+  });
+
+  it('shows an error toast (no analytics) when the clipboard write fails', async () => {
+    const user = setupUser();
+    writeText.mockImplementation(() => Promise.reject(new Error('denied')));
+    setCircle([owner()], { pending_invites: [makeInvite({ is_expired: false, invite_url: URL_ })] });
+    renderPage();
+    await openInviteMenu(user, 'lapsed@example.com');
+    await user.click(screen.getByRole('menuitem', { name: 'Copy link' }));
+    await vi.waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith("Couldn't copy the link", 'error')
+    );
+    expect(Analytics.inviteLinkCopied).not.toHaveBeenCalled();
   });
 });

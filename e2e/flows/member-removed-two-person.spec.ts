@@ -12,7 +12,7 @@ import {
   type ScopedAccount,
 } from '../unhappy/auth-invites/_helpers';
 import { apiCreateCareNote } from '../unhappy/writes/_helpers';
-import { createDailyMedication } from '../notesFirstClassShared';
+import { circleTimezone, createDailyMedication, dateInTz } from '../notesFirstClassShared';
 
 // PK14 (privacy), TWO REAL PEOPLE. The owner removes a caregiver through the real Members
 // UI while the caregiver's own browser (a second context, its own session) has the
@@ -77,7 +77,7 @@ async function scene(request: APIRequestContext): Promise<Scene> {
     emergency_contacts: [{ name: phi.contact, relationship: 'Daughter', phone: '5551234567', is_primary: true }],
   });
   expect(put.status(), await put.text()).toBe(200);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dateInTz(await circleTimezone(ownerSession, circleId), 0);
   await createDailyMedication(ownerSession, circleId, phi.med, today);
   await apiCreateCareNote(ownerSession, circleId, phi.note);
   return { owner, ownerSession, member, memberSession, circleId, memberName: `${MEMBER_FIRST} ${memberLast}`, phi };

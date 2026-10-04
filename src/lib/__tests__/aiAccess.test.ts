@@ -1,4 +1,4 @@
-import { resolveAiEntry } from '@/lib/aiAccess';
+import { resolveAiEntry, resolveAiNav } from '@/lib/aiAccess';
 
 /**
  * The product rule, stated once:
@@ -100,5 +100,18 @@ describe('resolveAiEntry', () => {
         'available'
       );
     });
+  });
+});
+
+describe('resolveAiNav', () => {
+  it.each([
+    ['available', true, 'pending'],
+    ['upgrade', true, 'pending'],
+    ['hidden', true, 'pending'],
+    ['available', false, 'allowed'],
+    ['upgrade', false, 'allowed'],
+    ['hidden', false, 'hidden'],
+  ] as const)('%s, pending=%s -> %s', (entry, pending, expected) => {
+    expect(resolveAiNav(entry, pending)).toBe(expected);
   });
 });

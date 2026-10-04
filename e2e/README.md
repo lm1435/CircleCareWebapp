@@ -51,6 +51,16 @@ cd webapp && PW_BASE_URL=http://localhost:5197 npx playwright test --reporter=li
 
 Stop only your own processes: `lsof -ti tcp:<port> -sTCP:LISTEN | xargs kill`.
 
+Start your own backend with `EMAIL_BLOCKED_DOMAINS=circlecare.test,example.com`
+(plus an invalid dummy `RESEND_API_KEY`, e.g. `re_invalid_local_dummy`, so nothing
+can really send). `flows/invite-signup.spec.ts` fails its precondition without
+`circlecare.test` blocked, and the blocked list is what keeps the suite's test
+addresses from emailing anyone.
+
+Caveat: `unhappy/auth-invites/signup.spec.ts` ("existing email" and "real backend 400") needs the OPPOSITE:
+with `circlecare.test` blocked, `POST /signup` fakes a 200 and both fail. Run that one file against a backend
+started with `EMAIL_BLOCKED_DOMAINS=example.com` (GoTrue's send_email hook is unreachable locally, so nothing sends).
+
 ## Requirements
 
 - Backend reachable at `VITE_API_URL` (see above).

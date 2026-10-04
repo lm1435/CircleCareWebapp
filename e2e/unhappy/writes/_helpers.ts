@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, type Request, type Route } from '@playwright/test';
 import { sqlExec } from '../../db';
 import { expandAllDayOverflow } from '../../helpers';
+import { gotoCalendarSettled } from '../../notesFirstClassShared';
 import {
   countRequests,
   fulfillFault,
@@ -189,17 +190,22 @@ export async function openCalendarEvent(
   date: string,
   title: string
 ): Promise<Locator> {
-  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+  await gotoCalendarSettled(page, circleId);
   const cells = page.locator('[data-date]');
-  await expect(cells.first()).toBeAttached({ timeout: 20_000 });
+  const range = page.getByRole('heading', { level: 2, name: /^[A-Z][a-z]{2} \d{1,2} – [A-Z][a-z]{2} \d{1,2}, \d{4}$/ });
+  const settled = page.getByRole('grid').or(page.getByText('No events this week'));
+  // An EMPTY loaded week renders no grid and no `[data-date]` cells (e.g. the
+  // event sits tomorrow and today is Saturday), so page forward on the week
+  // heading rather than on the cells.
   for (let step = 0; step < 3; step += 1) {
-    const last = await cells.last().getAttribute('data-date');
+    await expect(settled).toBeVisible({ timeout: 20_000 });
+    const last = await cells.last().getAttribute('data-date', { timeout: 1_000 }).catch(() => null);
     if (last && date <= last) break;
-    const first = await cells.first().getAttribute('data-date');
+    const from = (await range.textContent())?.trim() ?? '';
     await page.getByRole('button', { name: 'Next week' }).click();
-    await expect(cells.first()).not.toHaveAttribute('data-date', first ?? '', { timeout: 10_000 });
+    await expect(range, `week range moved off "${from}"`).not.toHaveText(from, { timeout: 10_000 });
   }
+  await expect(cells.first()).toBeAttached({ timeout: 20_000 });
   const cell = page.locator(`[data-date="${date}"]`).first();
   await expect(cell).toBeAttached({ timeout: 10_000 });
   await expandAllDayOverflow(page);

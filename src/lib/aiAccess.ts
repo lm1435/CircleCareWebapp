@@ -83,3 +83,25 @@ export function resolveAiEntry({ viewOnly, isPremiumCircle, isOwner }: AiEntryIn
   if (!isPremiumCircle) return isOwner ? 'upgrade' : 'hidden';
   return 'available';
 }
+
+/**
+ * What the NAV AI cell does, one step more than `AiEntryState`: access that is
+ * still RESOLVING is its own state. Mobile twin: the navbar's 'reserve' / 'none'
+ * slots. The nav cell is never absent (five cells always):
+ *
+ *   pending → visible, dimmed, `disabled` (same geometry as live)
+ *   allowed → live ('available' | 'upgrade')
+ *   hidden  → the SAME dimmed, `disabled`, non-interactive cell (no paywall,
+ *             no prompt, no handler — members are never sold a door that is
+ *             not theirs to open). Only the modal mount and entry stay gated.
+ *
+ * `pending` is the circle detail not having ANSWERED yet (loading, no data, no
+ * error). A failed or access-lost read is resolved, not pending: it stays
+ * `hidden` (fail closed: inert).
+ */
+export type AiNavState = 'pending' | 'allowed' | 'hidden';
+
+export function resolveAiNav(entry: AiEntryState, pending: boolean): AiNavState {
+  if (pending) return 'pending';
+  return entry === 'hidden' ? 'hidden' : 'allowed';
+}

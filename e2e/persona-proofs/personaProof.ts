@@ -172,8 +172,9 @@ export function definePersonaProof(persona: PersonaName): void {
       await expect(page.getByText(name).first()).toBeVisible({ timeout: 20_000 });
 
       const assistant = page.getByRole('button', { name: 'Assistant', exact: true });
-      if (exp.aiEntry === 'hidden') await expect(assistant).toHaveCount(0);
-      else await expect(assistant).toBeVisible();
+      // 'hidden' = rendered but greyed + inert (never absent, never a prompt).
+      await expect(assistant).toBeVisible();
+      if (exp.aiEntry === 'hidden') await expect(assistant).toBeDisabled();
 
       const banner = page.getByText(VIEW_ONLY_SHORT);
       if (exp.detail?.can_edit) await expect(banner).toHaveCount(0);

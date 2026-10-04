@@ -2,6 +2,7 @@ import { useEffect, type ReactElement } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '@/components/ui';
+import type { AiNavState } from '@/lib/aiAccess';
 
 /**
  * Mobile `FLOATING_NAVBAR_HEIGHT` (64 phone / 72 tablet). Published to the
@@ -69,16 +70,18 @@ export interface FloatingNavBarProps {
   assistantOpen?: boolean;
   onOpenAssistant: () => void;
   /**
-   * Whether this viewer gets the AI entry at all (`src/lib/aiAccess.ts`).
-   *
-   * NOT the `canCreate` treatment: NEW stays visible-but-inert because the
-   * action is one the viewer could regain, and the disabled affordance tells
-   * them the app has one. A view-only member cannot change their own role, so
-   * a dimmed AI cell would only advertise a door that is not theirs to open —
-   * the cell is not rendered at all. Defaults false, like `canCreate`: a gate
-   * that has not been told anything must fail closed.
+   * The AI cell's state (`resolveAiNav`, src/lib/aiAccess.ts). The cell is ALWAYS
+   * rendered (mobile parity: five cells, never absent):
+   *  - 'allowed': live.
+   *  - 'pending' (access still resolving) and 'hidden' (resolved: no access):
+   *    the SAME dimmed, inert cell — `disabled` + `aria-disabled`, same box and
+   *    same accessible name as live. No paywall, no "ask the owner" copy, no
+   *    handler: a member is never sold (or pointed at) a door that is not theirs
+   *    to open. `data-ai-state` keeps the two apart for tests only.
+   * Defaults 'hidden': a gate that has not been told anything fails closed
+   * (inert, not absent).
    */
-  canUseAssistant?: boolean;
+  assistantAccess?: AiNavState;
 }
 
 /**
@@ -100,12 +103,14 @@ export function FloatingNavBar({
   onToggleAdd,
   assistantOpen = false,
   onOpenAssistant,
-  canUseAssistant = false,
+  assistantAccess = 'hidden',
 }: FloatingNavBarProps): ReactElement {
   const { t } = useTranslation('common');
   const { pathname } = useLocation();
   const section = sectionOf(pathname);
   const base = `/circles/${circleId}`;
+  // Anything but 'allowed' is the same dimmed, non-interactive cell.
+  const inert = assistantAccess !== 'allowed';
 
   // Publish the bar's height so <main> can reserve it. jsdom ships no
   // `matchMedia`, so the phone height is the fallback rather than a crash.
@@ -174,27 +179,27 @@ export function FloatingNavBar({
           active match — its "active" state is the modal being open. The sparkle
           stays coral either way: the bar's one warm mark (mobile parity).
 
-          Absent, not disabled, when the viewer has no AI access — see
-          `canUseAssistant` above. The four remaining cells simply re-split the
-          bar (they are `flex-1`; NEW is content-sized either way). */}
-      {canUseAssistant && (
-        <button
-          type="button"
-          onClick={onOpenAssistant}
-          aria-expanded={assistantOpen}
-          className={CELL}
-        >
-          {assistantOpen && <span aria-hidden="true" className={ACTIVE_DOT} />}
-          <Icon
-            name={assistantOpen ? 'sparkles' : 'sparkles-outline'}
-            size="chrome"
-            className="text-coral-deep"
-          />
-          <span className={`${LABEL} ${assistantOpen ? 'text-ink' : 'text-ink-2'}`}>
-            {t('nav.aiShort')}
-          </span>
-        </button>
-      )}
+          Dimmed + inert (never absent) when the viewer has no AI access or access
+          is still resolving — see `assistantAccess` above. */}
+      <button
+        type="button"
+        onClick={inert ? undefined : onOpenAssistant}
+        aria-expanded={assistantOpen}
+        aria-disabled={inert}
+        disabled={inert}
+        data-ai-state={assistantAccess}
+        className={`${CELL}${inert ? ' opacity-50' : ''}`}
+      >
+        {assistantOpen && <span aria-hidden="true" className={ACTIVE_DOT} />}
+        <Icon
+          name={assistantOpen ? 'sparkles' : 'sparkles-outline'}
+          size="chrome"
+          className={inert ? 'text-ink-2' : 'text-coral-deep'}
+        />
+        <span className={`${LABEL} ${assistantOpen ? 'text-ink' : 'text-ink-2'}`}>
+          {t('nav.aiShort')}
+        </span>
+      </button>
     </nav>
   );
 }

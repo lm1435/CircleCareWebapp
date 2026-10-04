@@ -3,8 +3,9 @@ import { apiSession, errorCodeOf } from '../../unhappy';
 import { aiEntrySurface, gotoCirclePage, loadSurfaceData } from './_helpers';
 
 // ===========================================================================
-// FREE MEMBER — the AI entry is HIDDEN (resolveAiEntry: not premium, not the
-// owner), on whichever navigation this viewport renders:
+// FREE MEMBER — the AI entry is UNAVAILABLE (resolveAiEntry 'hidden': not premium,
+// not the owner): rendered greyed, disabled and inert — never absent, never a
+// paywall (owner-aware gates), on whichever navigation this viewport renders:
 //   >= 1024px  the desktop sidebar's "Assistant" button   (chromium project)
 //   <  1024px  the FloatingNavBar pill's "AI" cell         (mobile-chrome project)
 //
@@ -20,7 +21,7 @@ import { aiEntrySurface, gotoCirclePage, loadSurfaceData } from './_helpers';
 
 test.use({ persona: 'freeMember' });
 
-test('AI entry is absent from the navigation this viewport renders', async ({ page, personaHandle: h }) => {
+test('AI entry is greyed out and inert in the navigation this viewport renders', async ({ page, personaHandle: h }) => {
   const data = loadSurfaceData(h);
   await gotoCirclePage(page, h.circleId, 'notes');
   await expect(page.getByText(data.careNoteBody!).first()).toBeVisible({ timeout: 20_000 });
@@ -30,7 +31,11 @@ test('AI entry is absent from the navigation this viewport renders', async ({ pa
   // create control live — the same loaded state the premium control uses.
   await expect(surface.navSignal, `${surface.kind} navigation rendered`).toBeVisible();
   await expect(surface.navSignal).toBeEnabled();
-  await expect(surface.aiEntry, `${surface.kind} AI entry`).toHaveCount(0);
+  const entry = surface.aiEntry;
+  await expect(entry, `${surface.kind} AI entry`).toBeVisible();
+  await expect(entry).toBeDisabled();
+  await expect(entry).toHaveAttribute('aria-disabled', 'true');
+  await entry.click({ force: true });
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 

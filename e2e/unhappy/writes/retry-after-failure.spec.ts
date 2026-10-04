@@ -1,3 +1,4 @@
+import { gotoCalendarSettled } from '../../notesFirstClassShared';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { sqlExec } from '../../db';
@@ -81,8 +82,7 @@ const SURFACES: Surface[] = [
     path: '/api/circles/:id/events',
     toast: "Couldn't save your changes. Please try again.",
     async prepare({ page, circleId, label }) {
-      await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+      await gotoCalendarSettled(page, circleId);
       await page.getByRole('button', { name: 'Add event' }).first().click();
       const dialog = page.getByRole('dialog', { name: 'New event' });
       await expect(dialog).toBeVisible();
@@ -276,8 +276,7 @@ const SURFACES: Surface[] = [
     path: '/api/circles/:id/events',
     toast: "Couldn't save your changes. Please try again.",
     async prepare({ page, circleId, label }) {
-      await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+      await gotoCalendarSettled(page, circleId);
       await page.getByRole('button', { name: 'Add event' }).first().click();
       const dialog = page.getByRole('dialog', { name: 'New event' });
       await expect(dialog).toBeVisible();
@@ -307,8 +306,7 @@ const SURFACES: Surface[] = [
     path: '/api/circles/:id/events',
     toast: "Couldn't save your changes. Please try again.",
     async prepare({ page, circleId, label }) {
-      await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+      await gotoCalendarSettled(page, circleId);
       await page.getByRole('button', { name: 'Add event' }).first().click();
       const dialog = page.getByRole('dialog', { name: 'New event' });
       await expect(dialog).toBeVisible();

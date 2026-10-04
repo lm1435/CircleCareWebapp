@@ -27,6 +27,14 @@ export interface CircleMember {
    * backend adds it to the members select.
    */
   view_only?: boolean;
+  /**
+   * Whether this member can receive push reminders (has a registered push
+   * token). Returned by GET /circles/:circleId to the circle OWNER only.
+   * OPTIONAL for staged-rollout safety: older backends and non-owner
+   * requesters omit it, and `undefined` must render nothing — only an explicit
+   * `false` means "not receiving reminders".
+   */
+  push_reachable?: boolean;
 }
 
 /**
@@ -47,6 +55,18 @@ export interface PendingCircleInvite {
    * `isPendingInviteExpired()` rather than treating `undefined` as "live".
    */
   is_expired?: boolean;
+  /**
+   * Role the invitee will join as. OPTIONAL for the same staged-rollout
+   * reason: an older backend omits it, so consumers must fall back to
+   * 'caregiver' (the invite modal's default).
+   */
+  member_type?: 'care_recipient' | 'caregiver';
+  /**
+   * Shareable join link for this invite. Returned to the circle OWNER only by
+   * GET /circles/:circleId. OPTIONAL (older backend → absent): consumers must
+   * offer "Copy link" only when it is present.
+   */
+  invite_url?: string;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -11,10 +11,10 @@ import { expandAiEntryCases, type AiEntryScenario } from '@/__tests__/fixtures/a
 /**
  * VIEW-ONLY AI GATING (spec: the client half of the live backend gate).
  *
- *   view_only member         → HIDE the entry entirely. No prompt, no sale:
- *                              they cannot change their own role.
+ *   view_only member         → entry greyed + inert (rendered, disabled). No prompt,
+ *                              no sale: they cannot change their own role.
  *   frozen circle + owner    → SHOW; tapping raises the upgrade prompt.
- *   frozen circle + non-owner→ HIDE.
+ *   frozen circle + non-owner→ greyed + inert (same as view-only).
  *   otherwise                → SHOW; tapping opens the assistant.
  *
  * The entry has THREE surfaces and all three must agree: the sidebar's
@@ -162,6 +162,28 @@ function pillAssistant(): HTMLElement | null {
   return within(pill()).queryByRole('button', { name: 'AI' });
 }
 
+/**
+ * RESOLVED-HIDDEN contract (owner decision): the entry is RENDERED but greyed,
+ * disabled and aria-disabled on both surfaces — never absent, never a prompt,
+ * never a modal. Presses (pointer AND keyboard) must do nothing.
+ */
+async function expectInertEverywhere(): Promise<void> {
+  const user = userEvent.setup();
+  for (const el of [sidebarAssistant(), pillAssistant()]) {
+    expect(el).toBeInTheDocument();
+    expect(el).toBeDisabled();
+    expect(el).toHaveAttribute('aria-disabled', 'true');
+    expect(el).toHaveClass('opacity-50');
+    await user.click(el as HTMLElement);
+    (el as HTMLElement).focus();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+  }
+  expect(promptUpgrade).not.toHaveBeenCalled();
+  expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   useAuthStore.setState({
@@ -178,32 +200,31 @@ afterEach(() => {
 describe('AppLayout — AI gate, A: view-only member', () => {
   beforeEach(() => setCircle({ canEdit: false, viewOnly: true, isPremiumCircle: false }));
 
-  it('hides the sidebar Assistant entry', () => {
+  it('renders the sidebar Assistant entry greyed and inert', () => {
     renderLayout();
-    expect(sidebarAssistant()).not.toBeInTheDocument();
+    expect(sidebarAssistant()).toBeDisabled();
+    expect(sidebarAssistant()).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('hides the pill AI cell', () => {
+  it('renders the pill AI cell greyed and inert', () => {
     renderLayout();
-    expect(pillAssistant()).not.toBeInTheDocument();
+    expect(pillAssistant()).toBeDisabled();
+    expect(pillAssistant()).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('offers no upgrade prompt — a view-only seat cannot buy its way in', () => {
+  it('offers no upgrade prompt and opens nothing — a view-only seat cannot buy its way in', async () => {
     renderLayout();
-    // Anchored: "no prompt" is also true of a layout that never rendered.
-    expect(pillAssistant()).not.toBeInTheDocument();
-    expect(promptUpgrade).not.toHaveBeenCalled();
+    await expectInertEverywhere();
   });
 
   // A view-only member of a PREMIUM circle is the population the mobile bug
   // hits: the backend returns early before reading the owner's tier, so the
   // premium flag it reports is false and a premium-flag-first client sells
   // them a subscription that grants them nothing. `view_only` is read first.
-  it('hides the entry even when the circle is otherwise editable', () => {
+  it('stays inert even when the circle is otherwise editable', async () => {
     setCircle({ canEdit: true, viewOnly: true, isPremiumCircle: true });
     renderLayout();
-    expect(sidebarAssistant()).not.toBeInTheDocument();
-    expect(pillAssistant()).not.toBeInTheDocument();
+    await expectInertEverywhere();
   });
 });
 
@@ -258,16 +279,14 @@ describe('AppLayout — AI gate, C: frozen circle, viewer is NOT the owner', () 
     setCircle({ ownerId: OWNER_ID, canEdit: false, viewOnly: false, isPremiumCircle: false })
   );
 
-  it('hides the entry on both surfaces', () => {
+  it('renders the entry greyed and inert on both surfaces', async () => {
     renderLayout();
-    expect(sidebarAssistant()).not.toBeInTheDocument();
-    expect(pillAssistant()).not.toBeInTheDocument();
+    await expectInertEverywhere();
   });
 
-  it('offers no upgrade prompt — only the owner can lift the freeze', () => {
+  it('offers no upgrade prompt — only the owner can lift the freeze', async () => {
     renderLayout();
-    // Anchored: see the A-block sibling.
-    expect(pillAssistant()).not.toBeInTheDocument();
+    await expectInertEverywhere();
     expect(promptUpgrade).not.toHaveBeenCalled();
   });
 });
@@ -278,7 +297,9 @@ describe('AppLayout — AI gate, circle detail still loading', () => {
   // ABSENT and then appears, rather than flashing for someone who may not have
   // it. Pinned because the opposite — render it, then take it away — is the
   // failure mode this whole change exists to remove.
-  it('shows no entry until the flags resolve', () => {
+  // UPDATED (mobile 'reserve' parity): while unresolved the cells are RENDERED
+  // but dimmed + inert on both surfaces — never live, never a prompt.
+  it('shows an inert (disabled) entry until the flags resolve', async () => {
     vi.mocked(useCircle).mockReturnValue({
       circle: undefined,
       circleSummary: undefined,
@@ -296,9 +317,15 @@ describe('AppLayout — AI gate, circle detail still loading', () => {
 
     renderLayout();
 
-    expect(sidebarAssistant()).not.toBeInTheDocument();
-    expect(pillAssistant()).not.toBeInTheDocument();
+    for (const el of [sidebarAssistant(), pillAssistant()]) {
+      expect(el).toBeInTheDocument();
+      expect(el).toBeDisabled();
+      expect(el).toHaveAttribute('aria-disabled', 'true');
+    }
+    await userEvent.setup().click(pillAssistant() as HTMLElement);
+    await userEvent.setup().click(sidebarAssistant() as HTMLElement);
     expect(promptUpgrade).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
   });
 });
 
@@ -531,6 +558,10 @@ function failClosed(value: boolean | undefined): boolean {
   return value ?? false;
 }
 
+function circleResolved(scenario: AiEntryScenario): boolean {
+  return scenario.isOwner !== undefined;
+}
+
 function applyScenario(scenario: AiEntryScenario): void {
   const viewerIsOwner = scenario.isOwner === true;
   useAuthStore.setState({
@@ -573,11 +604,20 @@ describe('AppLayout — the shared case table (canonical: mobile fixtures/aiEntr
       // for a component that failed to render at all.
       expect(pill()).toBeInTheDocument();
 
-      if (scenario.expected === 'hidden') {
-        expect(sidebarAssistant()).not.toBeInTheDocument();
-        expect(pillAssistant()).not.toBeInTheDocument();
+      // Row 8 (no circle yet) is PENDING on the nav: rendered but inert, never
+      // live (the fixture's "nothing rendered" predates mobile's 'reserve').
+      if (scenario.expected === 'hidden' && !circleResolved(scenario)) {
+        for (const el of [sidebarAssistant(), pillAssistant()]) {
+          expect(el).toBeDisabled();
+          expect(el).toHaveAttribute('aria-disabled', 'true');
+        }
         expect(promptUpgrade).not.toHaveBeenCalled();
         expect(screen.queryByTestId('ai-chat-modal')).not.toBeInTheDocument();
+        return;
+      }
+
+      if (scenario.expected === 'hidden') {
+        await expectInertEverywhere();
         return;
       }
 

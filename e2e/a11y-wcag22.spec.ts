@@ -2,6 +2,15 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { AUTH_ROUTES, circleRoutes } from './routes';
 import { checkA11y, visitAndCheck } from './helpers';
+import {
+  apiSession,
+  circleTimezone,
+  createDailyMedication,
+  dateInTz,
+  deleteSeries,
+  escapeRegExp,
+  uniqueSuffix,
+} from './notesFirstClassShared';
 
 // ===========================================================================
 // WCAG 2.1 AA + 2.2 AA regression gate for the web companion
@@ -289,19 +298,44 @@ test.describe('keyboard', () => {
 
   // 2.4.3: Confirm is replaced by its Undo badge; focus must not fall to
   // <body>. Undo is pressed inside the 5s window, so nothing is recorded.
-  test('focus moves to Undo after Confirm, and back to the row after Undo', async ({ page, circleId }) => {
+  //
+  // Home only offers Confirm for a dose inside the 2h early-confirm window (or
+  // overdue) in the care recipient's zone (TodaysMeds isDoseConfirmable), so the
+  // demo seed's own doses (e.g. 20:00) are NOT confirmable for most of the day.
+  // This test therefore seeds its own daily dose at 00:01 starting YESTERDAY
+  // (recipient zone, naive date strings, never the runner's clock): today's
+  // 00:01 is always overdue-or-within-2h whenever it runs, including at 23:30 or
+  // just after midnight (a new day's 00:01 is then inside the window), and a
+  // start of TODAY would be rolled to tomorrow by the late-add rule.
+  test('focus moves to Undo after Confirm, and back to the row after Undo', async ({
+    page,
+    request,
+    account,
+    circleId,
+  }) => {
+    test.slow();
     await page.setViewportSize({ width: 1280, height: 800 });
-    await open(page, `/circles/${circleId}`);
-    const confirm = page.getByRole('button', { name: /^Confirm / }).first();
-    await expect(confirm, 'the seeded circle has a dose to confirm').toBeVisible();
-    const med = ((await confirm.getAttribute('aria-label')) ?? '').replace(/^Confirm /, '');
-    await confirm.focus();
-    await page.keyboard.press('Enter');
-    await expect(page.getByRole('button', { name: `Undo ${med}` }).first()).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect
-      .poll(() => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? ''))
-      .toMatch(new RegExp(`${med.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
+    const session = await apiSession(request, account);
+    const tz = await circleTimezone(session, circleId);
+    const med = `ZZ_E2E_A11YFOCUS_${uniqueSuffix()}`;
+    const root = await createDailyMedication(session, circleId, med, dateInTz(tz, -1), { time: '00:01' });
+    try {
+      await open(page, `/circles/${circleId}`);
+      // Started yesterday, so yesterday's unanswered 00:01 dose also sits in the
+      // nested Needs-attention list; scope to TODAY's list (as todays-meds-undo).
+      const today = page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
+      const confirm = today.getByRole('button', { name: `Confirm ${med}` });
+      await expect(confirm, 'the seeded 00:01 dose is confirmable').toBeVisible({ timeout: 30_000 });
+      await confirm.focus();
+      await page.keyboard.press('Enter');
+      await expect(today.getByRole('button', { name: `Undo ${med}` })).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect
+        .poll(() => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? ''))
+        .toMatch(new RegExp(`${escapeRegExp(med)}$`));
+    } finally {
+      await deleteSeries(session, circleId, root);
+    }
   });
 
   // 2.5.8 in its worst case: the busiest 8 AM slot at 320px.

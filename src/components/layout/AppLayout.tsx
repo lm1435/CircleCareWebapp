@@ -14,7 +14,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { useCircles } from '@/hooks/useCircles';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useAuthStore } from '@/store/authStore';
-import { resolveAiEntry } from '@/lib/aiAccess';
+import { resolveAiEntry, resolveAiNav } from '@/lib/aiAccess';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
 
 /**
@@ -75,7 +75,9 @@ export function AppLayout(): ReactElement {
 
   // Write actions need an editable circle. Resolved once here so the sidebar's
   // New button and the pill's NEW cell share one source of truth.
-  const { circle, canEdit, viewOnly, isPremiumCircle, accessLost } = useCircle(circleId ?? '');
+  const { circle, canEdit, viewOnly, isPremiumCircle, accessLost, isLoading, isError } = useCircle(
+    circleId ?? ''
+  );
 
   // ── AI Care Assistant gate ────────────────────────────────────────────────
   // The backend already refuses these callers (backend/src/routes/ai.ts); this
@@ -98,6 +100,11 @@ export function AppLayout(): ReactElement {
   const currentUserId = useAuthStore((s) => s.user?.id);
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
   const aiEntry = resolveAiEntry({ viewOnly, isPremiumCircle, isOwner });
+  // Access is PENDING until the circle detail answers (no data, still loading,
+  // not failed). The nav shows the AI cell dimmed + inert meanwhile (mobile's
+  // 'reserve'); `aiEntry` itself stays fail-closed, so the modal mount, the
+  // open handler and the reset effects are unchanged.
+  const aiNav = resolveAiNav(aiEntry, Boolean(circleId) && !circle && isLoading && !isError);
   // 'feature' (not the default): a premium-only SURFACE, which is how mobile
   // splits its paywall funnel. See usePremiumGate's `context` docs.
   // Circle-level: `aiEntry === 'upgrade'` already implies the owner, and the
@@ -143,6 +150,10 @@ export function AppLayout(): ReactElement {
   // rather than a chat window that can only fail; everyone else never sees an
   // entry to press (aiEntry === 'hidden').
   const openAssistant = (): void => {
+    // Defence in depth: the disabled cells never call this, but a path that did
+    // (a stale handler, a future caller) must not open anything for a viewer
+    // whose entry is 'hidden', nor sell them a paywall.
+    if (aiEntry === 'hidden') return;
     if (aiEntry === 'upgrade') {
       promptUpgrade();
       return;
@@ -206,9 +217,12 @@ export function AppLayout(): ReactElement {
       <div className="grid grid-cols-1 xl:grid-cols-[17rem_1fr]">
         <Sidebar
           variant="desktop"
-          // Sidebar renders its AI group only when this prop is present, so
-          // `undefined` IS the hidden state on that surface.
-          onOpenAssistant={aiEntry === 'hidden' ? undefined : openAssistant}
+          // Sidebar renders its AI group only when this prop is present: with no
+          // circle there is nothing to ask about. Inside a circle the entry is
+          // ALWAYS rendered; anything but 'allowed' (pending OR resolved hidden)
+          // is the same disabled, inert entry — no prompt, no handler.
+          onOpenAssistant={circleId ? openAssistant : undefined}
+          assistantDisabled={aiNav !== 'allowed'}
           onCreate={circleId ? openCreate : undefined}
           canCreate={canEdit}
         />
@@ -252,7 +266,7 @@ export function AppLayout(): ReactElement {
             onToggleAdd={() => setAddOpen((open) => !open)}
             assistantOpen={aiOpen}
             onOpenAssistant={openAssistant}
-            canUseAssistant={aiEntry !== 'hidden'}
+            assistantAccess={aiNav}
           />
           {/* Mounted here, not inside the pill: the sidebar's New button opens
               the same menu from its own anchor, and only one create flow may be

@@ -197,6 +197,24 @@ describe('Sidebar', () => {
     expect(onNavigate).toHaveBeenCalledTimes(1);
   });
 
+  it('assistantDisabled: renders the entry inert; click does nothing (no handler, no drawer close)', () => {
+    const onOpenAssistant = vi.fn();
+    const onNavigate = vi.fn();
+    renderSidebar('/circles/c1/calendar', {
+      onOpenAssistant,
+      onNavigate,
+      assistantDisabled: true,
+    });
+
+    const entry = screen.getByRole('button', { name: 'Assistant' });
+    expect(entry).toBeDisabled();
+    expect(entry).toHaveAttribute('aria-disabled', 'true');
+    expect(entry).toHaveClass('opacity-50');
+    fireEvent.click(entry);
+    expect(onOpenAssistant).not.toHaveBeenCalled();
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
   it('omits the Assistant entry when no handler is supplied', () => {
     renderSidebar();
     expect(screen.queryByRole('button', { name: 'Assistant' })).not.toBeInTheDocument();

@@ -121,7 +121,13 @@ const setName = (account: ScopedAccount, first: string, last: string) =>
       `where id = ${sqlStr(account.userId)}::uuid;`
   );
 
-/** An owner with a circle whose NAME differs from its recipient, so the preview shows both rows. */
+/**
+ * An owner with a circle. Since backend migration 20261002150000 a circle's `name` ALWAYS equals its
+ * recipient's name (a trigger copies it on every write), so this fixture can no longer make the two
+ * differ the way it used to (`PATCH {name}`): the modal's collapsed single "Caring for" row is now the
+ * only shape the invite preview can have. `circleName` stays in the return value because the rest of
+ * the spec asserts on it (preview row, success toast, switcher button); it is simply the stored name.
+ */
 async function ownerWithCircle(request: APIRequestContext, label: string) {
   const suffix = uniq('x').replace(/[^a-z0-9]/gi, '');
   const owner = await createScopedAccount(`${label}-owner`);
@@ -129,20 +135,16 @@ async function ownerWithCircle(request: APIRequestContext, label: string) {
   setName(owner, 'Ofelia', inviterLast);
   const session = await ownerApi(request, owner);
   const circleId = await createCircle(session, uniq(label));
-  const circleName = `Rivera Family ${suffix}`;
-  const patched = await session.patch(`/api/circles/${circleId}`, { name: circleName });
-  expect(patched.status(), await patched.text()).toBeLessThan(300);
-  const recipient = dbQuery<{ recipient_name: string; name: string }>(
+  const stored = dbQuery<{ recipient_name: string; name: string }>(
     `select recipient_name, name from care_circles where id = ${sqlStr(circleId)}::uuid`
   )[0];
-  expect(recipient.name, 'circle renamed').toBe(circleName);
-  expect(recipient.recipient_name, 'recipient differs from the circle name').not.toBe(circleName);
+  expect(stored.name, 'circle name follows the recipient (DB trigger)').toBe(stored.recipient_name);
   return {
     owner,
     session,
     circleId,
-    circleName,
-    recipientName: recipient.recipient_name,
+    circleName: stored.name,
+    recipientName: stored.recipient_name,
     inviterName: `Ofelia ${inviterLast}`,
   };
 }
@@ -229,7 +231,8 @@ test('join by code from the picker: a user with no circle enters the code and la
   await expect(find).toBeEnabled();
   await lookUp(dialog, 'en');
 
-  // Step 2: the preview names the circle, the person cared for, the inviter and the role.
+  // Step 2: the preview names the person cared for (the circle's name IS that name, so the modal shows one
+  // collapsed row, not a separate 'Circle' row), the inviter and the role.
   await expect(dialog.getByText(oc.circleName, { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(dialog.getByText(oc.recipientName, { exact: true })).toBeVisible();
   await expect(dialog.getByText(oc.inviterName, { exact: true })).toBeVisible();

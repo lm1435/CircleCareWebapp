@@ -53,7 +53,12 @@ test('members list renders, invite-email validation shows inline error, then can
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 });
 
-test('send an email invite (real) then cancel the pending invite', async ({ page, circleId }) => {
+test('send an email invite (real), copy its link, then cancel the pending invite', async ({
+  page,
+  circleId,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 20_000 });
 
@@ -82,9 +87,25 @@ test('send an email invite (real) then cancel the pending invite', async ({ page
   const inviteActions = page.getByRole('button', { name: `Actions for invite to ${email}` });
   await expect(inviteActions).toBeVisible({ timeout: 20_000 });
 
-  // --- Cancel the newly-added invite (cleanup → net-zero). ---
+  // Feature B: the backend derives `push_reachable` from registered push
+  // tokens (owner-only field). Seeded members have no device token, so the
+  // owner sees the warning badge on their rows.
+  await expect(page.getByText('Not receiving reminders').first()).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // --- Copy link (owner-only invite_url from GET /circles/:id) ---
   await inviteActions.click();
   const inviteMenu = page.getByRole('menu');
+  await expect(inviteMenu).toBeVisible();
+  await inviteMenu.getByRole('menuitem', { name: 'Copy link', exact: true }).click();
+  await expect(page.getByText('Link copied')).toBeVisible({ timeout: 10_000 });
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain('/invite/');
+
+  // --- Cancel the newly-added invite (cleanup → net-zero). ---
+  await expect(inviteMenu).toBeHidden({ timeout: 10_000 });
+  await inviteActions.click();
   await expect(inviteMenu).toBeVisible();
   await inviteMenu.getByRole('menuitem', { name: 'Cancel invite', exact: true }).click();
   const confirm = page.getByRole('dialog');

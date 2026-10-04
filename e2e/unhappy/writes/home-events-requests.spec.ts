@@ -2,6 +2,7 @@ import type { Page, Request } from '@playwright/test';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { apiSession } from '../../unhappy';
 import { apiCreateEvent, dateInZone, recipientTimezone } from './_helpers';
+import { gotoCalendarSettled } from '../../notesFirstClassShared';
 
 // HOME MUST NOT OVER-FETCH EVENTS.
 //
@@ -190,8 +191,7 @@ test('the Calendar page still prefetches the previous and next windows (prefetch
   test.setTimeout(60_000);
   const tz = await recipientTimezone(await apiSession(request, account), circleId);
   const rec = recordEventReads(page, circleId);
-  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('grid')).toBeVisible({ timeout: 20_000 });
+  await gotoCalendarSettled(page, circleId);
 
   const today = dayNumber(dateInZone(tz, 0));
   // A visible window containing today, with both same-span neighbours requested.
