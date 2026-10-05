@@ -32,7 +32,7 @@ export interface CircleMember {
    * token). Returned by GET /circles/:circleId to the circle OWNER only.
    * OPTIONAL for staged-rollout safety: older backends and non-owner
    * requesters omit it, and `undefined` must render nothing — only an explicit
-   * `false` means "not receiving reminders".
+   * `false` means "notifications off".
    */
   push_reachable?: boolean;
 }

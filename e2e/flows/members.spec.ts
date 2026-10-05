@@ -90,9 +90,16 @@ test('send an email invite (real), copy its link, then cancel the pending invite
   // Feature B: the backend derives `push_reachable` from registered push
   // tokens (owner-only field). Seeded members have no device token, so the
   // owner sees the warning badge on their rows.
-  await expect(page.getByText('Not receiving reminders').first()).toBeVisible({
-    timeout: 20_000,
-  });
+  const notificationsOff = page.getByRole('button', { name: 'Notifications off' }).first();
+  await expect(notificationsOff).toBeVisible({ timeout: 20_000 });
+  // Tooltip: hidden until asked, shown on click, one line of explanation.
+  const tip = page.getByRole('tooltip').first();
+  await expect(tip).toBeHidden();
+  await notificationsOff.click();
+  await expect(tip).toBeVisible();
+  await expect(tip).toContainText("so reminders won't reach their phone");
+  await page.keyboard.press('Escape');
+  await expect(tip).toBeHidden();
 
   // --- Copy link (owner-only invite_url from GET /circles/:id) ---
   await inviteActions.click();

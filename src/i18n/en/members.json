@@ -52,7 +52,9 @@
     "viewOnlySubtitle": "View-only — ask the circle owner if you need to make changes."
   },
   "member": {
-    "notReceivingReminders": "Not receiving reminders"
+    "notificationsOff": "Notifications off",
+    "notificationsOffExplain": "{{name}} hasn't turned on notifications in the CircleCare app, so reminders won't reach their phone.",
+    "notificationsOffExplainNoName": "This member hasn't turned on notifications in the CircleCare app, so reminders won't reach their phone."
   },
   "list": {
     "heading": "Members",

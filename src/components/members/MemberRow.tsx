@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Avatar, Badge, Icon, SheetRow, type BadgeVariant } from '@/components/ui';
 import type { CircleMember } from '@/api/circleMembers';
 import { useAuthStore } from '@/store/authStore';
+import { NotificationsOffBadge } from './NotificationsOffBadge';
 
 export interface MemberRowProps {
   member: CircleMember;
@@ -100,9 +101,7 @@ export function MemberRow({ member, actions }: MemberRowProps): ReactElement {
             </Badge>
           )}
           {member.push_reachable === false && (
-            <Badge variant="warning" size="sm" icon="notifications-off-outline">
-              {t('member.notReceivingReminders')}
-            </Badge>
+            <NotificationsOffBadge firstName={member.first_name} />
           )}
         </div>
         <p className="m-0 mt-0.5 truncate text-sm text-ink-2">{subtitle}</p>

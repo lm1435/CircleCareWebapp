@@ -52,7 +52,9 @@
     "viewOnlySubtitle": "Solo visualización: habla con el propietario si necesitas hacer cambios."
   },
   "member": {
-    "notReceivingReminders": "No recibe recordatorios"
+    "notificationsOff": "Notificaciones desactivadas",
+    "notificationsOffExplain": "{{name}} no activó las notificaciones en la app de CircleCare, así que los recordatorios no llegarán a su teléfono.",
+    "notificationsOffExplainNoName": "Este miembro no activó las notificaciones en la app de CircleCare, así que los recordatorios no llegarán a su teléfono."
   },
   "list": {
     "heading": "Miembros",
