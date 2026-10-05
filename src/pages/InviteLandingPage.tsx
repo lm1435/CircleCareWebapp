@@ -314,11 +314,16 @@ export default function InviteLandingPage(): ReactElement {
   const expiresOn = formatInviteExpiryDate(invite?.expires_at, i18n.language);
 
   const ogTitle = invite ? t('og.title', { inviterName }) : 'CircleCare';
+  // A care RECIPIENT's circle is about them (its name is their own name), so
+  // the caregiver framing ("X invited you to help care for <you>") reads wrong.
+  const isRecipientInvite = invite?.member_type === 'care_recipient';
   const ogDescription = invite
-    ? t('og.description', {
-        circleName: invite.circle.name,
-        recipientName: invite.circle.recipient_name,
-      })
+    ? isRecipientInvite
+      ? t('og.descriptionRecipient')
+      : t('og.description', {
+          circleName: invite.circle.name,
+          recipientName: invite.circle.recipient_name,
+        })
     : t('appDescription');
 
   return (
@@ -369,15 +374,23 @@ export default function InviteLandingPage(): ReactElement {
           <>
             <div className="flex flex-col items-center gap-3 text-center">
               <Text variant="h2" as="h1" className="text-balance">
-                {t('title', {
-                  inviterName,
-                  recipientName: invite.circle.recipient_name,
-                })}
+                {isRecipientInvite
+                  ? t('titleRecipient')
+                  : t('title', {
+                      inviterName,
+                      recipientName: invite.circle.recipient_name,
+                    })}
               </Text>
-              <p className="m-0 text-sm text-ink-2">
-                <Eyebrow as="span">{t('circleLabel')}</Eyebrow>{' '}
-                <span className="block text-base text-ink">{invite.circle.name}</span>
-              </p>
+              {isRecipientInvite ? (
+                <p className="m-0 text-base text-ink-2 text-balance">
+                  {t('invitedByRecipient', { inviterName })}
+                </p>
+              ) : (
+                <p className="m-0 text-sm text-ink-2">
+                  <Eyebrow as="span">{t('circleLabel')}</Eyebrow>{' '}
+                  <span className="block text-base text-ink">{invite.circle.name}</span>
+                </p>
+              )}
               <Badge variant={roleBadgeVariant[invite.member_type] ?? 'default'}>
                 {t(`roles.${invite.member_type}`)}
               </Badge>

@@ -33,6 +33,8 @@
     "lookingUp": "Buscando...",
     "circle": "Círculo",
     "caringFor": "Cuidando a",
+    "yourCareCircle": "Tu círculo de cuidado",
+    "setUpForYou": "{{inviter}} configuró CircleCare para ayudarte con tu cuidado",
     "invitedBy": "Invitado por",
     "yourRole": "Tu rol",
     "roleCaregiver": "Cuidador",

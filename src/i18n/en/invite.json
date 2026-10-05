@@ -1,6 +1,8 @@
 {
   "title": "{{inviterName}} invited you to help care for {{recipientName}}",
   "inviterFallback": "Someone",
+  "titleRecipient": "Your care circle",
+  "invitedByRecipient": "{{inviterName}} set up CircleCare to help with your care",
   "circleLabel": "Care circle",
   "appDescription": "CircleCare helps families coordinate medications, appointments, and everyday care together.",
   "roles": {
@@ -29,7 +31,8 @@
   },
   "og": {
     "title": "{{inviterName}} invited you to CircleCare",
-    "description": "Join {{circleName}} to help coordinate care for {{recipientName}}"
+    "description": "Join {{circleName}} to help coordinate care for {{recipientName}}",
+    "descriptionRecipient": "Join your care circle on CircleCare"
   },
   "errorUsed": {
     "title": "This invite has already been used",

@@ -1,6 +1,8 @@
 {
   "title": "{{inviterName}} te invitó a ayudar a cuidar a {{recipientName}}",
   "inviterFallback": "Alguien",
+  "titleRecipient": "Tu círculo de cuidado",
+  "invitedByRecipient": "{{inviterName}} configuró CircleCare para ayudarte con tu cuidado",
   "circleLabel": "Círculo de cuidado",
   "appDescription": "CircleCare ayuda a las familias a coordinar juntas los medicamentos, las citas y el cuidado diario.",
   "roles": {
@@ -29,7 +31,8 @@
   },
   "og": {
     "title": "{{inviterName}} te invitó a CircleCare",
-    "description": "Únete a {{circleName}} para ayudar a coordinar el cuidado de {{recipientName}}"
+    "description": "Únete a {{circleName}} para ayudar a coordinar el cuidado de {{recipientName}}",
+    "descriptionRecipient": "Únete a tu círculo de cuidado en CircleCare"
   },
   "errorUsed": {
     "title": "Esta invitación ya fue usada",

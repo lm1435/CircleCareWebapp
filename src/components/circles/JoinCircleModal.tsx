@@ -296,7 +296,20 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
             </p>
           ) : null}
           <Card variant="filled" className="flex flex-col gap-3 p-4">
-            {circleNameIsDistinct(invite) ? (
+            {invite.member_type === 'care_recipient' ? (
+              // The circle is ABOUT this person (its name is their own), so the
+              // caregiver rows ("Circle", "Caring for <you>", "Invited by") are
+              // replaced by one role-aware heading + sentence.
+              <div>
+                <Text variant="h2" as="p">
+                  {t('joinModal.yourCareCircle')}
+                </Text>
+                <p className="m-0 mt-1 text-ink-2">
+                  {t('joinModal.setUpForYou', { inviter: inviterName(invite) })}
+                </p>
+              </div>
+            ) : null}
+            {invite.member_type !== 'care_recipient' && circleNameIsDistinct(invite) ? (
               <div>
                 <Text variant="label" as="p">{t('joinModal.circle')}</Text>
                 <Text variant="h2" as="p">
@@ -304,16 +317,22 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
                 </Text>
               </div>
             ) : null}
-            <div
-              className={circleNameIsDistinct(invite) ? 'border-t border-line-2 pt-3' : undefined}
-            >
-              <Text variant="label" as="p">{t('joinModal.caringFor')}</Text>
-              <p className="m-0 font-medium text-ink">{invite.circle.recipient_name}</p>
-            </div>
-            <div className="border-t border-line-2 pt-3">
-              <Text variant="label" as="p">{t('joinModal.invitedBy')}</Text>
-              <p className="m-0 font-medium text-ink">{inviterName(invite)}</p>
-            </div>
+            {invite.member_type !== 'care_recipient' ? (
+              <>
+                <div
+                  className={
+                    circleNameIsDistinct(invite) ? 'border-t border-line-2 pt-3' : undefined
+                  }
+                >
+                  <Text variant="label" as="p">{t('joinModal.caringFor')}</Text>
+                  <p className="m-0 font-medium text-ink">{invite.circle.recipient_name}</p>
+                </div>
+                <div className="border-t border-line-2 pt-3">
+                  <Text variant="label" as="p">{t('joinModal.invitedBy')}</Text>
+                  <p className="m-0 font-medium text-ink">{inviterName(invite)}</p>
+                </div>
+              </>
+            ) : null}
             <div className="flex items-center justify-between gap-3 border-t border-line-2 pt-3">
               <Text variant="label" as="p">{t('joinModal.yourRole')}</Text>
               <Badge variant={invite.member_type === 'care_recipient' ? 'coral' : 'default'}>

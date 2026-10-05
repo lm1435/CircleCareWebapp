@@ -118,13 +118,18 @@ export default function PendingInvitesPage(): ReactElement {
             <Card as="li" key={invite.id} variant="outlined" padding="lg" className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
                 <p className="m-0 font-medium text-ink">
-                  {t('pending.invitedYou', {
-                    inviter: inviterName(invite),
-                    recipient: invite.circle.recipient_name,
-                  })}
+                  {invite.member_type === 'care_recipient'
+                    ? t('pending.invitedYouRecipient', { inviter: inviterName(invite) })
+                    : t('pending.invitedYou', {
+                        inviter: inviterName(invite),
+                        recipient: invite.circle.recipient_name,
+                      })}
                 </p>
                 <p className="m-0 text-sm text-ink-3">
-                  <Eyebrow>{t('invite.circleLabel')}</Eyebrow> {invite.circle.name}
+                  <Eyebrow>{t('invite.circleLabel')}</Eyebrow>{' '}
+                  {invite.member_type === 'care_recipient'
+                    ? t('pending.yourCareCircle')
+                    : invite.circle.name}
                 </p>
                 <Badge variant={invite.member_type === 'caregiver' ? 'primary' : 'coral'}>
                   {t(`roles.${invite.member_type === 'caregiver' ? 'caregiver' : 'careRecipient'}`)}

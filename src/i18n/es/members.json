@@ -148,6 +148,8 @@
     "heading": "Tus invitaciones",
     "subheading": "Círculos de cuidado que te han invitado a ayudar.",
     "invitedYou": "{{inviter}} te invitó a ayudar a cuidar a {{recipient}}",
+    "invitedYouRecipient": "{{inviter}} configuró CircleCare para ayudarte con tu cuidado",
+    "yourCareCircle": "Tu círculo de cuidado",
     "accept": "Aceptar",
     "accepting": "Uniéndote…",
     "ignoreHint": "¿No quieres unirte todavía? Puedes dejar la invitación aquí; no pasa nada hasta que aceptes.",
