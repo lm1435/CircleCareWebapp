@@ -38,7 +38,7 @@ import { openCalendarEvent } from '../unhappy/writes/_helpers';
 // a fake 2xx via page.route, so the UI behaves as if it saved but nothing
 // reaches the backend; PW_FALSIFY=write-persist-notes-prefs:<step> does it for
 // one step only (note-edit, note-delete, vital-delete, digest-on, digest-day,
-// digest-off, digest-on-again, notif-<key> / notif-<key>-back or just `notif`,
+// digest-off, digest-on-again, notif-<group> / notif-<group>-back or just `notif`,
 // dob-set, dob-change); the first dash-separated word (`digest`, `notif`)
 // selects a whole group. The DB
 // assertion that follows the write must go red.
@@ -376,17 +376,22 @@ test('profile email digest: enable, change the delivery day, disable and re-enab
 
 type Prefs = Record<string, unknown>;
 
-// New accounts start with every one of these keys true (users.notification_preferences default).
+// Notification settings are FOUR GROUPS over per-key storage
+// (docs/plans/notification-settings-4-groups.md). A group tap PATCHes every
+// child key; Tasks also pins event_notes (the backend note_nudges shim must not
+// fire). Absent key = ON (`!== false`); new accounts may lack the note keys.
 const SWITCHES = [
-  { key: 'medication_confirmations', name: 'Medication confirmations' },
-  { key: 'missed_medications', name: 'Unmarked medications' },
-  { key: 'task_assignments', name: 'Task assignments' },
-  { key: 'appointment_reminders', name: 'Appointment reminders' },
-  { key: 'tips_and_suggestions', name: 'Tips & suggestions' },
+  { group: 'medications', name: 'Medications', keys: ['medication_confirmations', 'missed_medications'], confirm: true },
+  { group: 'tasks', name: 'Tasks & appointments', keys: ['task_assignments', 'appointment_reminders', 'note_nudges'], confirm: false },
+  { group: 'notes', name: 'Notes', keys: ['event_notes', 'care_notes'], confirm: false },
+  { group: 'tips', name: 'Tips & suggestions', keys: ['tips_and_suggestions'], confirm: false },
 ] as const;
 
-for (const { key, name } of SWITCHES) {
-  test(`notification switch "${name}": off then on again is stored in users.notification_preferences.${key} and survives a reload`, async ({
+const groupKeys = (keys: readonly string[], value: boolean): Prefs =>
+  Object.fromEntries(keys.map((k) => [k, value]));
+
+for (const { group, name, keys, confirm } of SWITCHES) {
+  test(`notification group "${name}": off then on again is stored in users.notification_preferences (${keys.join(', ')}) and survives a reload`, async ({
     page,
     request,
     context,
@@ -397,21 +402,29 @@ for (const { key, name } of SWITCHES) {
     const prefs = () =>
       dbQuery<{ prefs: Prefs }>(`select notification_preferences as prefs from users where id = ${sqlStr(acct.userId)}::uuid`)[0].prefs;
     const start = prefs();
-    expect(start[key], `${key} starts on`).toBe(true);
+    for (const k of keys) expect(start[k] !== false, `${k} starts on`).toBe(true);
 
     const sw = () => page.getByRole('switch', { name, exact: true });
     const open = async () => {
       await page.goto('/profile', { waitUntil: 'domcontentloaded' });
       await expect(sw()).toBeVisible({ timeout: 20_000 });
     };
+    // Tasks pins event_notes to its stored value; every other preference is untouched.
+    const pin: Prefs = group === 'tasks' ? { event_notes: start.event_notes !== false } : {};
     const flip = async (to: boolean) => {
-      await write(page, to ? `notif-${key}-back` : `notif-${key}`, 'PATCH', NOTIF_PATH, { status: 200, body: { success: true, data: { user: {} } } }, () =>
-        sw().click()
-      );
-      // Only this key moved; every other preference is byte-identical.
+      await write(page, to ? `notif-${group}-back` : `notif-${group}`, 'PATCH', NOTIF_PATH, { status: 200, body: { success: true, data: { user: {} } } }, async () => {
+        await sw().click();
+        if (confirm && !to) {
+          // Medications off asks first; "Keep on" must leave the DB untouched.
+          const dialog = page.getByRole('dialog');
+          await expect(dialog).toBeVisible();
+          await dialog.getByText('Turn off', { exact: true }).click();
+        }
+      });
+      // Only this group's keys moved (+ the Tasks pin); everything else is byte-identical.
       await expect
-        .poll(() => prefs(), { timeout: 10_000, message: `users.notification_preferences after switching ${key} ${to ? 'on' : 'off'}` })
-        .toEqual({ ...start, [key]: to });
+        .poll(() => prefs(), { timeout: 10_000, message: `users.notification_preferences after switching ${group} ${to ? 'on' : 'off'}` })
+        .toEqual({ ...start, ...groupKeys(keys, to), ...pin });
       await open();
       await expect(sw()).toHaveAttribute('aria-checked', String(to));
     };
@@ -420,7 +433,11 @@ for (const { key, name } of SWITCHES) {
     await expect(sw()).toHaveAttribute('aria-checked', 'true');
     await flip(false);
     await flip(true);
-    expect(prefs(), 'restored to the starting preferences').toEqual(start);
+    const end = prefs();
+    for (const k of keys) expect(end[k] !== false, `${k} restored on`).toBe(true);
+    for (const k of Object.keys(start)) {
+      if (!keys.includes(k as never) && !(k in pin)) expect(end[k], `${k} untouched`).toBe(start[k]);
+    }
   });
 }
 

@@ -160,7 +160,7 @@ export function clockInZone(instant: Date, timezone: string): string {
  * hour) or none (the spring-forward gap). Neither resolution is "wrong" — which
  * is why the tests assert IDEMPOTENCE rather than an exact wall clock there.
  */
-function instantFromNaiveTimeInZone(
+export function instantFromNaiveTimeInZone(
   isoDay: string,
   hours: number,
   minutes: number,

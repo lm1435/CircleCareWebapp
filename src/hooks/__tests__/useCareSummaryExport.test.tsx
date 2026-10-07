@@ -191,6 +191,9 @@ describe('useCareSummaryExport', () => {
       // PK26: roster mode + roots of ended series, so an ended course reaches "Recently stopped".
       includeDiscontinued: true,
       includeInactiveRoots: true,
+      // As-needed (PRN) medications get their own bucket in the summary; the
+      // server hides them from a read that does not ask.
+      includeAsNeeded: true,
     });
   });
 

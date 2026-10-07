@@ -94,6 +94,20 @@ describe('useAiChat — request body', () => {
     expect(mockSend.mock.calls[0][1].language).toBe('es');
   });
 
+  // A language the registry does not ship collapses to 'en' (A10). The old
+  // `startsWith('es')` also mis-read 'est' (Estonian) as Spanish.
+  it.each(['fr-CA', 'est'])('sends en for the unshipped tag %s', async (tag) => {
+    mockLanguage = tag;
+    const { wrapper } = setup();
+    mockSend.mockResolvedValue(makeResponse());
+
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    act(() => result.current.mutation.mutate({ message: 'q' }));
+
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    expect(mockSend.mock.calls[0][1].language).toBe('en');
+  });
+
   it('threads the server conversation_id into the next request', async () => {
     const { wrapper } = setup();
     mockSend.mockResolvedValue(makeResponse({ conversation_id: 'conv-42' }));

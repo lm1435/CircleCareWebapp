@@ -26,6 +26,9 @@ afterAll(() => {
 const CIRCLE_ID = 'circle-1';
 const mutateCreate = vi.fn();
 
+// The quiet-hours note reads the current user over React Query; these suites have no
+// QueryClient and are not about it (see DoseQuietHoursNote.test.tsx).
+vi.mock('../DoseQuietHoursNote', () => ({ DoseQuietHoursNote: () => null }));
 vi.mock('@/api/drugs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/drugs')>();
   return { ...actual, searchDrugs: vi.fn().mockResolvedValue([]) };

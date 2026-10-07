@@ -50,6 +50,13 @@ export const queryKeys = {
       ? (['adherenceReport', circleId] as const)
       : (['adherenceReport', circleId, period] as const),
   weeklyAdherence: (circleId: string) => ['weeklyAdherence', circleId] as const,
+  // As-needed (PRN) medications. The summary map is one read per circle; the
+  // dose log is per medication. Both are invalidated by every dose write.
+  asNeededSummary: (circleId: string) => ['asNeededSummary', circleId] as const,
+  asNeededDoses: (circleId: string, eventId?: string) =>
+    eventId === undefined
+      ? (['asNeededDoses', circleId] as const)
+      : (['asNeededDoses', circleId, eventId] as const),
 
   // Activity
   activityFeed: (circleId: string, pageSize?: number) =>

@@ -102,6 +102,7 @@ const MUST_REFRESH_ACCESS_FLAGS = [
   // `resolveAiEntry(...)`, read from these very caches, so a stale flag does not
   // just leave a button on screen — it keeps a whole premium surface open to
   // someone the server has already refused.
+  'useAsNeeded.ts', // as-needed (PRN) dose log / remove
   'useAiChat.ts', // AI chat send
   'useAiSuggestions.ts', // AI suggestion chips (modal-open fetch)
 ];

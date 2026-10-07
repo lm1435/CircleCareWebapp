@@ -13,6 +13,7 @@ import { CancelReasonPrompt } from '@/components/subscription/CancelReasonPrompt
 import LoginPage from '@/pages/LoginPage';
 import SignUpPage from '@/pages/SignUpPage';
 import VerifyEmailPage from '@/pages/VerifyEmailPage';
+import VerifyRequestPage from '@/pages/VerifyRequestPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
@@ -68,6 +69,8 @@ export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <SignUpPage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
+  // "Have a verification code?" — email step before /verify-email.
+  { path: '/verify-email/start', element: <VerifyRequestPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },

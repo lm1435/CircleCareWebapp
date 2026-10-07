@@ -14,7 +14,7 @@ const VERIFY = '/api/auth/verify-otp';
 const RESEND = '/api/auth/resend-otp';
 const EXCHANGE = '/api/auth/oauth-session';
 const INVALID_CODE =
-  "That code didn't work. It may have expired — tap Resend Code below to get a fresh one.";
+  "That code didn't work. It may have expired — tap Send a new code below to get a fresh one.";
 
 async function expectVerifyPage(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible({ timeout: 20_000 });
@@ -88,7 +88,7 @@ test('resend is guarded (same-task double click → 1 request) and shows the coo
   const hold = await holdRequest(page, 'POST', RESEND);
   const resends = countRequests(page, 'POST', RESEND);
 
-  const resend = page.getByRole('button', { name: 'Resend Code' });
+  const resend = page.getByRole('button', { name: 'Send a new code' });
   await resend.evaluate((b: HTMLButtonElement) => {
     b.click();
     b.click();
@@ -99,13 +99,13 @@ test('resend is guarded (same-task double click → 1 request) and shows the coo
   await hold.release();
 
   await expect(page.getByRole('status')).toHaveText('A new verification code has been sent to your email.');
-  const cooldown = page.getByRole('button', { name: /^Resend in \d+s$/ });
+  const cooldown = page.getByRole('button', { name: /^Send a new code in \d+s$/ });
   await expect(cooldown).toBeVisible();
   await expect(cooldown).toBeDisabled();
   await resends.expectCount(1);
 });
 
-test('resend failure (real 429 EMAIL_RATE_LIMIT) shows the resend error, no cooldown', async ({ page }) => {
+test('resend hitting the real 429 EMAIL_RATE_LIMIT says "we just sent one" and arms the cooldown', async ({ page }) => {
   const email = runScopedEmail(uniq('signup-resend429'));
   await generateSignupOtp(email); // starts GoTrue's per-address send cooldown
 
@@ -114,11 +114,14 @@ test('resend failure (real 429 EMAIL_RATE_LIMIT) shows the resend error, no cool
   const resends = countRequests(page, 'POST', RESEND);
   const [res] = await Promise.all([
     page.waitForResponse((r) => new URL(r.url()).pathname === RESEND),
-    page.getByRole('button', { name: 'Resend Code' }).click(),
+    page.getByRole('button', { name: 'Send a new code' }).click(),
   ]);
   expect(res.status()).toBe(429);
-  await expect(page.getByRole('alert')).toHaveText("We couldn't resend the code. Please try again.");
-  await expect(page.getByRole('button', { name: 'Resend Code' })).toBeEnabled();
+  await expect(page.getByRole('status')).toHaveText(
+    'We just sent one — check your inbox (and spam). You can request another in a minute.'
+  );
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Send a new code in \d+s$/ })).toBeDisabled();
   await resends.expectCount(1);
 });
 

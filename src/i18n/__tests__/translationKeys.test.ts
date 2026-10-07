@@ -32,21 +32,36 @@
  *     that a silent skip cannot grow unnoticed.
  */
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { mapPdfKey } from '@/pdf/pdfEnv';
+import { LOCALE_REGISTRY, type LocaleEntry } from '../locales';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(HERE, '..', '..');
 const I18N_DIR = join(HERE, '..');
-const LOCALES = ['en', 'es'] as const;
-type Locale = (typeof LOCALES)[number];
+// The matrix follows the locale REGISTRY (src/i18n/locales.ts), not a literal
+// list: adding a locale there makes this whole audit demand it (and
+// `localeMatrix.test.ts` proves that with an injected fake locale).
+//   - BASE locales are held to full key coverage;
+//   - VARIANT locales (fr-CA...) are sparse override layers, validated by
+//     `localeMatrix.test.ts` (override keys must exist in the base).
+const LOCALES: readonly string[] = LOCALE_REGISTRY.map((l) => l.code);
+type Locale = string;
+const BASE_LOCALES: readonly string[] = LOCALE_REGISTRY.filter(
+  (l) => !(l as LocaleEntry).base
+).map((l) => l.code);
+const NON_EN_BASE_LOCALES: readonly string[] = BASE_LOCALES.filter((c) => c !== 'en');
 
-// i18next plural suffixes. A bare reference `foo` is satisfied by `foo_one` +
-// `foo_other`; both are then REQUIRED in both locales (a missing `_one` in ES
+// i18next plural suffixes, per locale from the registry's pluralCategories
+// (en/es: `_one` + `_other`). A bare reference `foo` is satisfied by its plural
+// forms; ALL of the locale's forms are then REQUIRED (a missing `_one` in ES
 // renders the raw key at runtime).
-const REQUIRED_PLURAL_SUFFIXES = ['_one', '_other'] as const;
+function requiredPluralSuffixes(locale: string): string[] {
+  const entry = LOCALE_REGISTRY.find((l) => l.code === locale);
+  return (entry ? [...entry.pluralCategories] : ['one', 'other']).map((c) => `_${c}`);
+}
 
 // ---------------------------------------------------------------------------
 // Locale resources
@@ -57,6 +72,7 @@ type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
 function loadLocale(locale: Locale): Record<string, Json> {
   const dir = join(I18N_DIR, locale);
   const out: Record<string, Json> = {};
+  if (!existsSync(dir)) return out; // a sparse variant may carry no files at all
   for (const file of readdirSync(dir)) {
     if (!file.endsWith('.json')) continue;
     out[file.replace(/\.json$/, '')] = JSON.parse(readFileSync(join(dir, file), 'utf8')) as Json;
@@ -64,10 +80,9 @@ function loadLocale(locale: Locale): Record<string, Json> {
   return out;
 }
 
-const resources: Record<Locale, Record<string, Json>> = {
-  en: loadLocale('en'),
-  es: loadLocale('es'),
-};
+const resources: Record<Locale, Record<string, Json>> = Object.fromEntries(
+  LOCALES.map((l) => [l, loadLocale(l)])
+);
 
 const ALL_NAMESPACES = Object.keys(resources.en).sort();
 
@@ -88,7 +103,7 @@ function lookup(locale: Locale, ns: string, path: string): Json | undefined {
  */
 function resolvedForms(locale: Locale, ns: string, path: string): string[] | null {
   if (lookup(locale, ns, path) !== undefined) return [path];
-  const plural = REQUIRED_PLURAL_SUFFIXES.map((s) => `${path}${s}`);
+  const plural = requiredPluralSuffixes(locale).map((s) => `${path}${s}`);
   if (plural.some((p) => lookup(locale, ns, p) !== undefined)) return plural;
   return null;
 }
@@ -230,8 +245,12 @@ const TRANS_KEY = /i18nKey=\s*(['"])([^'"\n]+)\1/g;
  * `UpgradePage.tsx` rendered `t(\`benefits.${key}\`)` over a key array; the
  * new title/subline pairs are LITERAL `t('benefits.*.title|sub')` calls, so
  * that template site is gone and every benefit key is resolved statically.
+ *
+ * 65 -> 63 (notification settings: 8 switches -> 4 groups): the
+ * `NOTIFICATION_KEYS` table rendered `t(label)` / `t(desc)` (2 dynamic sites);
+ * `ProfilePage.tsx` now calls literal `t('notifications.groups.*')`.
  */
-const EXPECTED_DYNAMIC_KEY_CALL_SITES = 65;
+const EXPECTED_DYNAMIC_KEY_CALL_SITES = 63;
 
 /**
  * Comments are stripped before scanning — a `t(key)` inside a JSDoc block is
@@ -317,7 +336,11 @@ for (const ref of references) {
   // The namespace i18next would land on, decided by EN (the source locale);
   // fall back to ES so an EN-only omission still names a concrete namespace.
   let ns = candidates.find((c) => resolvedForms('en', c, path) !== null);
-  if (ns === undefined) ns = candidates.find((c) => resolvedForms('es', c, path) !== null);
+  if (ns === undefined) {
+    ns = candidates.find((c) =>
+      NON_EN_BASE_LOCALES.some((l) => resolvedForms(l, c, path) !== null)
+    );
+  }
   if (ns === undefined) {
     missing.push({
       message: `${ref.key} -> missing from BOTH locales (tried ns: ${candidates.join(', ')})`,
@@ -327,29 +350,38 @@ for (const ref of references) {
   }
 
   // The exact concrete keys required — plural refs expand to _one + _other.
-  const forms = resolvedForms('en', ns, path) ?? resolvedForms('es', ns, path)!;
+  const forms =
+    resolvedForms('en', ns, path) ??
+    NON_EN_BASE_LOCALES.map((l) => resolvedForms(l, ns, path)).find((f) => f !== null)!;
 
-  for (const form of forms) {
-    for (const locale of LOCALES) {
+  for (const locale of BASE_LOCALES) {
+    // A plain key is required as-is; a plural ref expands to THIS locale's forms.
+    const localeForms = resolvedForms(locale, ns, path) ?? forms;
+    for (const form of localeForms) {
       if (lookup(locale, ns, form) === undefined) {
         missing.push({ message: `${ns}:${form} -> missing from "${locale}"`, site });
       }
     }
+  }
+  for (const form of forms) {
     const en = lookup('en', ns, form);
-    const es = lookup('es', ns, form);
-    if (en === undefined || es === undefined) continue;
-    const enVars = placeholders(en);
-    const esVars = placeholders(es);
-    const onlyEn = [...enVars].filter((v) => !esVars.has(v));
-    const onlyEs = [...esVars].filter((v) => !enVars.has(v));
-    if (onlyEn.length || onlyEs.length) {
-      placeholderMismatch.push({
-        message:
-          `${ns}:${form} -> placeholder mismatch` +
-          (onlyEn.length ? ` (en only: ${onlyEn.join(', ')})` : '') +
-          (onlyEs.length ? ` (es only: ${onlyEs.join(', ')})` : ''),
-        site,
-      });
+    if (en === undefined) continue;
+    for (const locale of NON_EN_BASE_LOCALES) {
+      const other = lookup(locale, ns, form);
+      if (other === undefined) continue;
+      const enVars = placeholders(en);
+      const otherVars = placeholders(other);
+      const onlyEn = [...enVars].filter((v) => !otherVars.has(v));
+      const onlyOther = [...otherVars].filter((v) => !enVars.has(v));
+      if (onlyEn.length || onlyOther.length) {
+        placeholderMismatch.push({
+          message:
+            `${ns}:${form} -> placeholder mismatch (${locale})` +
+            (onlyEn.length ? ` (en only: ${onlyEn.join(', ')})` : '') +
+            (onlyOther.length ? ` (${locale} only: ${onlyOther.join(', ')})` : ''),
+          site,
+        });
+      }
     }
   }
 }
@@ -740,9 +772,7 @@ describe('W5: string-constant translation keys used outside t()', () => {
   }
 
   function missingFrom(ns: string, keys: string[]): string[] {
-    return keys.filter(
-      (k) => lookup('en', ns, k) === undefined || lookup('es', ns, k) === undefined
-    );
+    return keys.filter((k) => BASE_LOCALES.some((l) => lookup(l, ns, k) === undefined));
   }
 
   it('validates RouteTitle.tsx page-title keys against both locales', () => {
@@ -797,7 +827,7 @@ describe('W5: string-constant translation keys used outside t()', () => {
    * label (English is "Med"), so the row it was meant to fit was never fitted.
    */
   it('keeps every addMenu short label no longer than its full label, and abbreviates the long one', () => {
-    for (const locale of ['en', 'es'] as const) {
+    for (const locale of BASE_LOCALES) {
       const addMenu = (resources[locale].common as { addMenu: Record<string, string> }).addMenu;
       for (const [key, full] of Object.entries(addMenu)) {
         if (key.endsWith('Short')) continue;

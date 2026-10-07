@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, normalizeLocale } from '@/i18n/locales';
+
 /**
  * Locale-aware links to the hosted legal pages.
  *
@@ -8,5 +10,8 @@
  */
 export function legalUrl(page: 'terms' | 'privacy', language: string | undefined): string {
   const base = 'https://circlecare.app';
-  return language?.startsWith('es') ? `${base}/es/${page}` : `${base}/${page}`;
+  const locale = normalizeLocale(language);
+  // English is the unprefixed default; every other registry locale lives under
+  // /<locale>/ (the marketing site must carry that mirror before a locale ships).
+  return locale === DEFAULT_LOCALE ? `${base}/${page}` : `${base}/${locale}/${page}`;
 }

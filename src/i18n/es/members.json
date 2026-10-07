@@ -53,6 +53,7 @@
   },
   "member": {
     "notificationsOff": "Notificaciones desactivadas",
+    "notificationsOffFor": "Notificaciones desactivadas para {{name}}",
     "notificationsOffExplain": "{{name}} no activó las notificaciones en la app de CircleCare, así que los recordatorios no llegarán a su teléfono.",
     "notificationsOffExplainNoName": "Este miembro no activó las notificaciones en la app de CircleCare, así que los recordatorios no llegarán a su teléfono."
   },

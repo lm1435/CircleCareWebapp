@@ -39,8 +39,14 @@ export interface PdfEnv {
   formatTimeOfDay(hours: number, minutes: number, tz: string): string;
   /** A real instant's wall-clock time in `tz`, same convention as above. */
   formatInstantTimeOfDay(instant: Date, tz: string): string;
-  /** The zone's display name ("Denver", "Ciudad de México"), '' when unknown. */
-  getTimezoneLabel(tz: string, lang: 'en' | 'es'): string;
+  /**
+   * The zone's display name ("Denver", "Ciudad de México"), '' when unknown.
+   * `lang` is the document locale's primary subtag exactly as the template saw
+   * it ('es', 'en', 'fr', ...). The shared folder cannot import an app's locale
+   * registry, so each ADAPTER resolves it through its registry
+   * (`baseLanguage(lang)`: registered -> that language, anything else -> 'en').
+   */
+  getTimezoneLabel(tz: string, lang: string): string;
   /**
    * The human label for an event's recurrence ("Daily", "Every 2 days"), or ''
    * when the event carries no rule. Takes the event-ish object rather than the

@@ -156,6 +156,7 @@
     "improving": "Mejorando",
     "declining": "Empeorando",
     "stable": "Estable",
+    "trendLegend": "Segunda mitad de este período comparada con la primera mitad.",
     "byMedication": "Por medicamento",
     "medication": "Medicamento",
     "dosage": "Dosis",
@@ -187,6 +188,103 @@
     "noExceptions": "Todas las dosis programadas se confirmaron en este período.",
     "scheduled": "Programadas",
     "dayCellTitle": "{{date}}: {{taken}} de {{total}}",
-    "notMarkedLegend": "Sin marcar: nadie confirmó esta dosis en la app. Puede haberse tomado o no."
+    "notMarkedLegend": "Sin marcar: nadie confirmó esta dosis en la app. Puede haberse tomado o no.",
+    "asNeededSection": "Medicamentos según se necesite (no cuentan en la adherencia)",
+    "asNeededGiven_one": "{{name}}: {{count}} dosis dada",
+    "asNeededGiven_other": "{{name}}: {{count}} dosis dadas",
+    "asNeededGivenBy": "Dada por",
+    "asNeededNote": "Nota"
+  },
+  "asNeeded": {
+    "section": {
+      "title": "Según se necesite",
+      "lastGivenEyebrow": "Última dosis {{time}}",
+      "noneYetEyebrow": "Sin dosis aún",
+      "more": "{{count}} más según se necesite",
+      "hint": "Sin horarios fijos. Registra cada dosis cuando se dé para que todos lo sepan."
+    },
+    "card": {
+      "badge": "Según se necesite",
+      "give": "Di una dosis",
+      "giveA11y": "Di una dosis de {{name}}",
+      "history": "Historial",
+      "historyA11y": "Historial de {{name}}",
+      "lastGivenPrefix": "Última dosis",
+      "byName": "por {{name}}",
+      "byYou": "por ti",
+      "notGivenYet": "Aún no se ha dado",
+      "forReason": "para {{reason}}",
+      "loggedBadge": "Registrada"
+    },
+    "log": {
+      "title": "¿Registrar una dosis de {{name}}?",
+      "titleSelf": "¿Tomaste {{name}}?",
+      "subtitleSelf": "Todos en tu círculo lo verán.",
+      "submitSelf": "Registrar que tomaste una dosis",
+      "subtitle": "Todos en el círculo lo verán.",
+      "given": "Dada",
+      "noteLabel": "Nota (opcional)",
+      "notePlaceholder": "Agrega una nota (opcional), p. ej., \"después de cenar\"",
+      "submit": "Registrar dosis",
+      "cancel": "Cancelar",
+      "chipNow": "Ahora",
+      "chipMinutes": "hace {{count}} min",
+      "chipHours": "hace {{count}} h"
+    },
+    "recent": {
+      "title": "{{name}} acaba de registrar una dosis",
+      "titleNoName": "Alguien acaba de registrar una dosis",
+      "body": "{{name}} registró {{medication}} {{ago}} (a las {{time}}). ¿Quieres registrar otra?",
+      "bodyNoName": "Otro miembro registró {{medication}} {{ago}} (a las {{time}}). ¿Quieres registrar otra?",
+      "another": "Registrar otra dosis",
+      "no": "No, era esa",
+      "justNow": "hace menos de un minuto",
+      "minutesAgo_one": "hace {{count}} minuto",
+      "minutesAgo_other": "hace {{count}} minutos"
+    },
+    "toast": {
+      "logged": "Dosis registrada",
+      "failed": "No se pudo registrar la dosis. Inténtalo de nuevo.",
+      "discontinued": "Este medicamento está inactivo. Reactívalo para registrar una dosis.",
+      "permissionDenied": "Tienes acceso de solo lectura, así que no puedes registrar dosis.",
+      "removed": "Dosis quitada",
+      "removeFailed": "No se pudo quitar la dosis. Inténtalo de nuevo.",
+      "alreadyRemoved": "Esta dosis ya se había quitado."
+    },
+    "history": {
+      "title": "Historial de dosis",
+      "subtitle": "Todas las dosis registradas de {{name}}, de la más reciente a la más antigua.",
+      "loading": "Cargando dosis…",
+      "error": "No se pudo cargar el historial de dosis",
+      "empty": "Aún no hay dosis registradas",
+      "emptyHint": "Las dosis aparecen aquí a medida que se registran.",
+      "givenBy": "Dada por {{name}}",
+      "given": "Dada",
+      "timeBy": "{{time}} · por {{name}}",
+      "rowLabel": "Dada · {{medication}} · por {{name}}",
+      "removedBy": "Quitada por {{name}}",
+      "someone": "alguien",
+      "loadMore": "Cargar más",
+      "close": "Cerrar"
+    },
+    "remove": {
+      "action": "Quitar esta dosis",
+      "actionA11y": "Quitar esta dosis, registrada a las {{time}}",
+      "title": "¿Quitar esta dosis?",
+      "body": "¿Quitar la dosis registrada a las {{time}} por {{name}}? Se avisará a todos que se quitó.",
+      "confirm": "Quitar"
+    },
+    "detail": {
+      "eyebrow": "Medicamento · Según se necesite",
+      "lastGiven": "Última dosis",
+      "reason": "Para qué es",
+      "reminders": "Recordatorios",
+      "remindersNone": "Ninguno · según se necesite"
+    },
+    "calendar": {
+      "cellHint": "dosis dada según se necesite",
+      "logged": "Dada según se necesite",
+      "openHistory": "Abrir historial de dosis"
+    }
   }
 }

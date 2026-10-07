@@ -47,22 +47,23 @@
   },
   "notifications": {
     "description": "Elige qué alertas quieres recibir.",
-    "medicationConfirmations": "Confirmaciones de medicamentos",
-    "medicationConfirmationsDesc": "Cuando un cuidador confirma una dosis.",
-    "missedMedications": "Medicamentos sin marcar",
-    "missedMedicationsDesc": "Cuando una dosis programada no se marca.",
-    "taskAssignments": "Asignación de tareas",
-    "taskAssignmentsDesc": "Cuando se te asigna una tarea.",
-    "appointmentReminders": "Recordatorios de citas",
-    "appointmentRemindersDesc": "Antes de las próximas citas.",
-    "eventNotes": "Notas en eventos",
-    "eventNotesDesc": "Cuando alguien agrega una nota a una cita, tarea o dosis",
-    "noteNudges": "Recordatorios después de citas",
-    "noteNudgesDesc": "Un recordatorio para agregar notas después de una cita",
-    "careNotes": "Notas de cuidado diarias",
-    "careNotesDesc": "Cuando alguien agrega una nota de cuidado diaria",
-    "tipsAndSuggestions": "Consejos y sugerencias",
-    "tipsAndSuggestionsDesc": "Consejos útiles de cuidado y novedades.",
+    "groups": {
+      "medications": "Medicamentos",
+      "medicationsDesc": "Dosis tomadas, omitidas o sin marcar",
+      "tasks": "Tareas y citas",
+      "tasksDesc": "Cuando te asignan algo y antes de que llegue la hora",
+      "notes": "Notas",
+      "notesDesc": "Cuando alguien agrega una nota",
+      "tips": "Consejos y sugerencias",
+      "tipsDesc": "Ayuda para configurar tu círculo"
+    },
+    "someTurnedOff": "Algunas desactivadas",
+    "confirmMedicationsOff": {
+      "title": "¿Desactivar alertas de medicamentos?",
+      "message": "No te avisaremos cuando una dosis quede sin marcar. ¿Desactivar de todos modos?",
+      "confirm": "Desactivar",
+      "cancel": "Mantener activadas"
+    },
     "success": "Preferencias de notificación actualizadas."
   },
   "quietHours": {
@@ -70,7 +71,8 @@
     "enable": "Activar horario sin interrupciones",
     "start": "Hora de inicio",
     "end": "Hora de fin",
-    "success": "Horario sin interrupciones actualizado."
+    "success": "Horario sin interrupciones actualizado.",
+    "almostAllDayWarning": "El horario sin interrupciones cubre casi todo el día, así que las notificaciones se retendrán hasta las {{endTime}}."
   },
   "units": {
     "description": "Elige cómo se muestran los valores de peso y glucosa.",

@@ -12,6 +12,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
+import { Analytics } from '@/lib/analytics';
 import { HistoryList } from '../HistoryList';
 import type { HistoryConfirmation } from '../historyQuery';
 
@@ -19,6 +20,11 @@ const mockUseMedicationConfirmations = vi.fn();
 vi.mock('@/hooks/useMedConfirmation', () => ({
   useMedicationConfirmations: (circleId: string, params: unknown) =>
     mockUseMedicationConfirmations(circleId, params),
+}));
+
+const mockCircleDoses = vi.fn((): { doses: unknown[] } => ({ doses: [] }));
+vi.mock('@/hooks/useAsNeeded', () => ({
+  useCircleAsNeededDoses: () => mockCircleDoses(),
 }));
 
 const mockUseHourCycle = vi.fn();
@@ -412,5 +418,165 @@ describe.each(['en', 'es'] as const)('dose-status vocabulary (%s)', (lang) => {
     renderList();
     const c = card('Metformin');
     expect(within(c).getByText(/8:12/)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// As-needed (PRN) doses merged into the same day groups (docs/plans/prn-medications.md §1).
+// ---------------------------------------------------------------------------
+
+function prnDose(id: string, given_at: string, over: Record<string, unknown> = {}) {
+  return {
+    id,
+    event_id: 'prn-1',
+    circle_id: 'circle-1',
+    given_at,
+    given_by: 'u1',
+    note: null,
+    client_request_id: `req-${id}`,
+    created_at: given_at,
+    removed_at: null,
+    removed_by: null,
+    given_by_user: { id: 'u1', first_name: 'Jennie', last_name: 'Ruiz' },
+    removed_by_user: null,
+    event: {
+      id: 'prn-1',
+      title: 'Ibuprofen',
+      medication_name: 'Ibuprofen',
+      medication_dosage: '200 mg',
+    },
+    ...over,
+  };
+}
+
+describe('HistoryList: as-needed doses', () => {
+  it('a logged dose renders in the right day: "Given", name + dosage, "{time} · by {name}", note', () => {
+    mockPage([TAKEN_TODAY]);
+    // 19:30Z = 1:30 PM Denver, today.
+    mockCircleDoses.mockReturnValue({ doses: [prnDose('d1', '2026-09-05T19:30:00Z', { note: 'after lunch' })] });
+    renderList();
+
+    const row = screen.getByTestId('history-dose-row');
+    expect(within(row).getByText('Given')).toBeInTheDocument();
+    expect(within(row).getByText('Ibuprofen')).toBeInTheDocument();
+    expect(within(row).getByText('200 mg')).toBeInTheDocument();
+    expect(within(row).getByText('1:30 PM · by Jennie Ruiz')).toBeInTheDocument();
+    expect(within(row).getByText('“after lunch”')).toBeInTheDocument();
+    expect(row).toHaveAttribute('aria-label', 'Given · Ibuprofen · by Jennie Ruiz');
+    // Under Today, after the scheduled row.
+    const section = row.closest('section') as HTMLElement;
+    expect(within(section).getByRole('heading', { level: 3 }).textContent).toBe('Today');
+    const items = within(section).getAllByRole('listitem');
+    expect(items[0]).toBe(card('Metformin'));
+    expect(items[1]).toBe(row);
+  });
+
+  it('FALSIFIER target: the day is the RECIPIENT\'s — 23:30 in Denver is the 4th even though it is already the 5th in UTC', () => {
+    mockPage([]);
+    // 2026-09-05T05:30Z = 23:30 MDT on the 4th = yesterday relative to NOW.
+    mockCircleDoses.mockReturnValue({ doses: [prnDose('d1', '2026-09-05T05:30:00Z')] });
+    renderList();
+    const section = screen.getByTestId('history-dose-row').closest('section') as HTMLElement;
+    expect(within(section).getByRole('heading', { level: 3 }).textContent).toBe('Yesterday');
+  });
+
+  it('only PRN doses: the empty state does NOT show', () => {
+    mockPage([]);
+    mockCircleDoses.mockReturnValue({ doses: [prnDose('d1', '2026-09-05T19:30:00Z')] });
+    renderList();
+    expect(screen.queryByText('No medication history')).toBeNull();
+    expect(screen.getByTestId('history-dose-row')).toBeInTheDocument();
+  });
+
+  it('a REMOVED dose is struck through and says who removed it', () => {
+    mockPage([]);
+    mockCircleDoses.mockReturnValue({
+      doses: [
+        prnDose('d1', '2026-09-05T19:30:00Z', {
+          note: 'oops',
+          removed_at: '2026-09-05T20:00:00Z',
+          removed_by: 'u2',
+          removed_by_user: { id: 'u2', first_name: 'Luis', last_name: null },
+        }),
+      ],
+    });
+    renderList();
+    const row = screen.getByTestId('history-dose-row');
+    expect(row).toHaveAttribute('data-removed', 'true');
+    expect(within(row).getByText('Removed by Luis')).toBeInTheDocument();
+    for (const text of ['Ibuprofen', '1:30 PM · by Jennie Ruiz', '“oops”']) {
+      const el = within(row).getByText(text);
+      expect((el.closest('p') as HTMLElement).className).toContain('line-through');
+    }
+    // The removal line itself is NOT struck.
+    expect((within(row).getByText('Removed by Luis') as HTMLElement).className).not.toContain(
+      'line-through'
+    );
+    expect(row.getAttribute('aria-label')).toContain('Removed by Luis');
+  });
+
+  it('a live dose is never struck through', () => {
+    mockPage([]);
+    mockCircleDoses.mockReturnValue({ doses: [prnDose('d1', '2026-09-05T19:30:00Z')] });
+    renderList();
+    const row = screen.getByTestId('history-dose-row');
+    expect(row.querySelector('.line-through')).toBeNull();
+    expect(within(row).queryByText(/Removed by/)).toBeNull();
+  });
+
+  it('the medication filter narrows the doses too', () => {
+    mockPage([TAKEN_TODAY]);
+    mockCircleDoses.mockReturnValue({
+      doses: [
+        prnDose('d1', '2026-09-05T19:30:00Z'),
+        prnDose('d2', '2026-09-05T19:40:00Z', {
+          event: { id: 'prn-2', title: 'Tylenol', medication_name: 'Tylenol', medication_dosage: null },
+        }),
+      ],
+    });
+    renderList('Tylenol');
+    const rows = screen.getAllByTestId('history-dose-row');
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]).getByText('Tylenol')).toBeInTheDocument();
+    expect(screen.queryByText('Metformin')).toBeNull();
+  });
+
+  it('SOFT-FAIL: no doses (the read failed) leaves the scheduled history intact', () => {
+    mockPage([TAKEN_TODAY]);
+    mockCircleDoses.mockReturnValue({ doses: [] });
+    renderList();
+    expect(within(card('Metformin')).getByText('Taken')).toBeInTheDocument();
+    expect(screen.queryByTestId('history-dose-row')).toBeNull();
+  });
+
+  it('Spanish: "Dada", "{time} · por {name}", and the row label', async () => {
+    const i18n = (await import('@/i18n')).default;
+    await i18n.changeLanguage('es');
+    try {
+      mockPage([]);
+      mockCircleDoses.mockReturnValue({ doses: [prnDose('d1', '2026-09-05T19:30:00Z')] });
+      renderList();
+      const row = screen.getByTestId('history-dose-row');
+      expect(within(row).getByText('Dada')).toBeInTheDocument();
+      expect(within(row).getByText(/^1:30 p\. m\. · por Jennie Ruiz$/)).toBeInTheDocument();
+      expect(row).toHaveAttribute('aria-label', 'Dada · Ibuprofen · por Jennie Ruiz');
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
+  it('reports the History view ONCE per visit, only when a PRN dose is on screen', () => {
+    const viewed = vi.spyOn(Analytics, 'asNeededHistoryViewed').mockImplementation(() => {});
+    mockPage([TAKEN_TODAY]);
+    mockCircleDoses.mockReturnValue({ doses: [] });
+    const { unmount } = renderList();
+    expect(viewed).not.toHaveBeenCalled();
+    unmount();
+
+    mockCircleDoses.mockReturnValue({ doses: [prnDose('d1', '2026-09-05T19:30:00Z')] });
+    const second = renderList();
+    second.rerender(<HistoryList circleId="circle-1" timezone={TZ} medicationName={null} />);
+    expect(viewed).toHaveBeenCalledTimes(1);
+    expect(viewed).toHaveBeenCalledWith({ scope: 'all' });
   });
 });

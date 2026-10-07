@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import '@/i18n';
 import LoginPage from '@/pages/LoginPage';
 import { apiClient } from '@/lib/api';
@@ -51,6 +51,54 @@ async function fillAndSubmit(email = 'pat@example.com', password = 'Secret#123',
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
   return user;
 }
+
+function StateProbe() {
+  return <div data-testid="probe">{JSON.stringify(useLocation().state)}</div>;
+}
+
+describe('LoginPage — "Have a verification code?" link', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+  });
+
+  it('is a real link to the email step, with a 44px target', () => {
+    renderLogin();
+    const link = screen.getByRole('link', { name: 'Have a verification code?' });
+    expect(link).toHaveAttribute('href', '/verify-email/start');
+    expect(link.className).toContain('min-h-[44px]');
+  });
+
+  it('carries a valid typed address into the email step through router state, not the URL', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/verify-email/start" element={<StateProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await user.type(screen.getByLabelText(/^Email/), 'pat@example.com');
+    await user.click(screen.getByRole('link', { name: 'Have a verification code?' }));
+    expect(await screen.findByTestId('probe')).toHaveTextContent('{"email":"pat@example.com"}');
+  });
+
+  it('does not carry a half-typed address', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/verify-email/start" element={<StateProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await user.type(screen.getByLabelText(/^Email/), 'pat@');
+    await user.click(screen.getByRole('link', { name: 'Have a verification code?' }));
+    expect(await screen.findByTestId('probe')).toHaveTextContent('null');
+  });
+});
 
 describe('LoginPage', () => {
   beforeEach(() => {

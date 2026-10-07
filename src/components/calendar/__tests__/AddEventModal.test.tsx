@@ -39,6 +39,9 @@ let cachedEventsMock: CalendarEvent[] = [];
 
 // RxNorm lookups never leave the test: `[]` keeps the medication-name field a
 // plain input for every existing case; the rxcui case below overrides it.
+// The quiet-hours note reads the current user over React Query; these suites have no
+// QueryClient and are not about it (see DoseQuietHoursNote.test.tsx).
+vi.mock('../DoseQuietHoursNote', () => ({ DoseQuietHoursNote: () => null }));
 vi.mock('@/api/drugs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/drugs')>();
   return { ...actual, searchDrugs: vi.fn().mockResolvedValue([]) };
@@ -994,7 +997,7 @@ describe('AddEventModal', () => {
       // fires), so without this the state had no honest description at all.
       expect(anchor).toHaveAttribute('aria-checked', 'false');
       expect(
-        screen.getByText(/the first alert would be the missed-dose follow-up/)
+        screen.getByText(/the first alert would be the follow-up that it hasn't been marked yet/)
       ).toBeInTheDocument();
       expect(
         screen.queryByText(/only the earlier reminders you pick below/)
@@ -1002,7 +1005,7 @@ describe('AddEventModal', () => {
       // Still inside the anchor's own description — not carried by color.
       const describedBy = anchor.getAttribute('aria-describedby');
       expect(document.getElementById(describedBy as string)).toContainElement(
-        screen.getByText(/the first alert would be the missed-dose follow-up/)
+        screen.getByText(/the first alert would be the follow-up that it hasn't been marked yet/)
       );
     });
 
@@ -1017,7 +1020,7 @@ describe('AddEventModal', () => {
         screen.getByText(/only the earlier reminders you pick below/)
       ).toBeInTheDocument();
       expect(
-        screen.queryByText(/the first alert would be the missed-dose follow-up/)
+        screen.queryByText(/the first alert would be the follow-up that it hasn't been marked yet/)
       ).not.toBeInTheDocument();
     });
 
@@ -1070,7 +1073,7 @@ describe('AddEventModal', () => {
       await user.click(master);
 
       const warning = screen.getByText(
-        "No one will be notified when this dose is due, and no one will be alerted if it's missed."
+        "No one will be notified when this dose is due, and no one will be alerted if it hasn't been marked."
       );
       // Not color-only: the consequence is inside the switch's own description.
       const describedBy = master.getAttribute('aria-describedby');

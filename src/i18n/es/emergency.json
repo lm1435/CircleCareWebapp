@@ -294,7 +294,9 @@
       "yearly": "Anual",
       "cycle": "{{on}} días activos, {{off}} días de descanso",
       "custom_unknown": "Horario personalizado",
-      "oneTime": "Una vez · {{date}}"
+      "oneTime": "Una vez · {{date}}",
+      "asNeeded": "Según se necesite",
+      "asNeededFor": "Según se necesite · {{reason}}"
     },
     "empty": {
       "noInfo": "Sin información agregada",

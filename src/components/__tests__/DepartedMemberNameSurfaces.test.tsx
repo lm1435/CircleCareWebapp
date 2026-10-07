@@ -37,6 +37,10 @@ vi.mock('@/store/authStore', () => ({
 }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 
+vi.mock('@/hooks/useAsNeeded', () => ({
+  useCircleAsNeededDoses: () => ({ doses: [] }),
+}));
+
 const mockUseMedicationConfirmations = vi.fn();
 vi.mock('@/hooks/useMedConfirmation', () => ({
   useMedicationConfirmations: (circleId: string, params: unknown) =>

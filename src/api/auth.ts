@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api';
+import type { SupportedLanguage } from '@/i18n/locales';
 
 // PORT of mobile/src/api/auth.ts adapted for the web cookie-mode contract
 // (backend/src/routes/auth.ts):
@@ -62,7 +63,7 @@ export interface SessionEstablishedEnvelope {
   success: boolean;
   data: {
     skipped: boolean;
-    language?: 'en' | 'es';
+    language?: SupportedLanguage;
     welcomeSent?: boolean;
   };
 }
@@ -102,7 +103,7 @@ export interface SignUpData {
   last_name: string;
   /** IANA timezone (e.g. America/New_York). Defaults backend-side when omitted. */
   timezone?: string;
-  /** UI language for the verification email — 'en' | 'es'. */
+  /** UI language for the verification email — a registry locale code. */
   language?: string;
   /**
    * Explicit ToS/Privacy consent from the required signup checkbox. The form
@@ -185,7 +186,7 @@ export const authApi = {
    * Safe to call on every sign-in: the endpoint short-circuits once the
    * language is determined and the welcome email has gone.
    */
-  sessionEstablished: async (language: 'en' | 'es'): Promise<SessionEstablishedEnvelope> => {
+  sessionEstablished: async (language: SupportedLanguage): Promise<SessionEstablishedEnvelope> => {
     return (await apiClient.post('/auth/session-established', {
       language,
     })) as unknown as SessionEstablishedEnvelope;

@@ -274,7 +274,14 @@ describe('TodaysMeds', () => {
 
     // Fetch uses "today" computed in the care recipient's timezone
     expect(mockedGet).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/events`, {
-      params: { start_date: TODAY, end_date: TODAY, event_type: 'medication' },
+      // `includeAsNeeded`: ONE read carries today's doses AND the circle's
+      // as-needed medications (no second request).
+      params: {
+        start_date: TODAY,
+        end_date: TODAY,
+        event_type: 'medication',
+        includeAsNeeded: 'true',
+      },
     });
 
     // Status badges per state

@@ -12,6 +12,7 @@ import i18n from 'i18next';
 import { getCurrentUser, updateProfile } from '../api/users';
 import { devLog, devError } from '../constants/config';
 import type { HourCycle } from './hourCycle';
+import { baseLanguage, type SupportedLanguage } from '../i18n/locales';
 
 // VERBATIM PORT of mobile/src/utils/timezone.ts (Intl-based — 20 timezone bugs
 // were fixed on mobile; web must not re-earn those scars).
@@ -181,15 +182,17 @@ const PLACE_NAMES_ES: Record<string, string> = {
   Sydney: 'Sídney',
 };
 
+/** Per-language city respellings. A language with no table keeps the IANA spelling. */
+const PLACE_NAMES: Partial<Record<TimeLanguage, Record<string, string>>> = { es: PLACE_NAMES_ES };
+
 /**
- * The language a time or zone is being RENDERED in.
+ * The language a time or zone is being RENDERED in — a registry BASE language.
  *
- * Local to this file on purpose: `src/i18n/index.ts` exports an identical
- * `SupportedLanguage`, but importing it would drag the i18n barrel (and its
- * `i18n.init()` side effect) onto this leaf util. See the `i18next` import at
- * the top of the file.
+ * Derived from `src/i18n/locales.ts` (pure, no i18n side effects) rather than
+ * the `src/i18n/index.ts` barrel, whose `i18n.init()` we must not drag onto
+ * this leaf util. See the `i18next` import at the top of the file.
  */
-export type TimeLanguage = 'en' | 'es';
+export type TimeLanguage = SupportedLanguage;
 
 /**
  * The 12-hour period marker, per language.
@@ -207,7 +210,7 @@ export type TimeLanguage = 'en' | 'es';
  * ("time.meridiem.pm") into every calendar row, and a well-meaning edit to `PM`
  * in a locale file would silently undo RAE compliance.
  */
-const MERIDIEM: Record<TimeLanguage, { am: string; pm: string }> = {
+export const MERIDIEM: Record<SupportedLanguage, { am: string; pm: string }> = {
   en: { am: 'AM', pm: 'PM' },
   es: { am: 'a. m.', pm: 'p. m.' },
 };
@@ -225,7 +228,7 @@ const MERIDIEM: Record<TimeLanguage, { am: string; pm: string }> = {
 function activeLanguage(): TimeLanguage {
   try {
     const lng = i18n?.resolvedLanguage || i18n?.language;
-    return typeof lng === 'string' && lng.toLowerCase().startsWith('es') ? 'es' : 'en';
+    return baseLanguage(typeof lng === 'string' ? lng : undefined);
   } catch {
     return 'en';
   }
@@ -266,7 +269,7 @@ function localizedPlaceName(timezone: string, language: TimeLanguage): string | 
   if (fixed) return fixed;
   const place = ianaPlaceName(timezone);
   if (!place) return null;
-  return language === 'es' ? PLACE_NAMES_ES[place] ?? place : place;
+  return PLACE_NAMES[language]?.[place] ?? place;
 }
 
 /**

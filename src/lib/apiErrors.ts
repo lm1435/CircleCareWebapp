@@ -344,6 +344,16 @@ export function isInvalidMessageError(err: unknown): boolean {
 export const RATE_LIMIT_ERROR_CODES = new Set(['RATE_LIMIT', 'RATE_LIMITED', 'TOO_MANY_REQUESTS']);
 
 /**
+ * True for the backend's `EMAIL_RATE_LIMIT` (429): Supabase's own per-address
+ * send cooldown on /signup and /resend-otp — NOT our limiter (that is
+ * `RATE_LIMIT`, see `isRateLimitError`). It means a code was sent to that address
+ * a moment ago, so the right move is "go enter it", not "try again".
+ */
+export function isEmailRateLimitError(err: unknown): boolean {
+  return errorCode(err) === 'EMAIL_RATE_LIMIT';
+}
+
+/**
  * True for a 429 rate-limit rejection — the user has exhausted a per-user or
  * per-IP quota and should retry later (the UI says when, per endpoint).
  */

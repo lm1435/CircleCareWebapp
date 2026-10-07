@@ -84,7 +84,8 @@
     "doseAlreadyLogged": "Esta dosis ya fue registrada; su hora no se puede cambiar.",
     "invalidOccurrenceDate": "Este evento ya no se repite ese día; se actualizó el calendario.",
     "eventNotFound": "Ese evento ya no existe. Es posible que alguien más lo haya eliminado.",
-    "recurrenceDaysExcludeStart": "El día de inicio debe seguir seleccionado."
+    "recurrenceDaysExcludeStart": "El día de inicio debe seguir seleccionado.",
+    "asNeededLocked": "Un medicamento no puede cambiar entre con horario y según se necesite. Suspéndelo y agrégalo de nuevo."
   },
   "addEvent": {
     "addEvent": "Agregar evento",
@@ -180,7 +181,9 @@
       "monthly": "Mensual",
       "yearly": "Anual",
       "cycle": "Ciclo (días activos / descanso)",
-      "daysOfWeek": "Días de la semana"
+      "daysOfWeek": "Días de la semana",
+      "asNeeded": "Según se necesite",
+      "asNeededHint": "Sin horarios fijos. Registra cada dosis cuando se dé."
     },
     "daysOfWeek": {
       "title": "Repetir los",
@@ -233,7 +236,8 @@
       "dosageTooLong": "La dosis debe tener 100 caracteres o menos.",
       "locationTooLong": "El lugar debe tener 250 caracteres o menos.",
       "descriptionTooLong": "Los detalles deben tener 850 caracteres o menos.",
-      "invalidRecurrenceRule": "Esa opción de repetición no es válida."
+      "invalidRecurrenceRule": "Esa opción de repetición no es válida.",
+      "reasonTooLong": "Para qué es debe tener 100 caracteres o menos."
     },
     "alerts": {
       "pastTimeTitle": "Comienza con la próxima dosis",
@@ -252,6 +256,7 @@
     },
     "dualTimezoneHint": "Tu hora / Hora de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Tu hora / Su hora ({{timezone}})",
+    "quietHoursDoseWarning": "Esta hora cae dentro de tu horario sin interrupciones, así que no se enviará ningún recordatorio. Puedes cambiar el horario sin interrupciones en Cuenta.",
     "dayOffsetNext": "+1 día",
     "dayOffsetPrevious": "-1 día",
     "timezoneUnresolvedNotice": "Aún se está cargando la zona horaria de este círculo. Se pausó el guardado para no registrar fechas en la zona equivocada.",
@@ -261,6 +266,15 @@
       "suggestionsLabel": "Sugerencias de medicamentos",
       "resultCount_one": "{{count}} sugerencia",
       "resultCount_other": "{{count}} sugerencias"
+    },
+    "asNeeded": {
+      "reason": "¿Para qué es?",
+      "reasonPlaceholder": "p. ej., dolor, náuseas",
+      "optional": "(opcional)",
+      "repeatHint": "Sin horarios fijos. La familia recibe un aviso cuando alguien registra una dosis.",
+      "lockedRepeat": "Según se necesite · no se puede cambiar. Para ponerle horario, suspéndelo y agrégalo de nuevo.",
+      "remindersNone": "Sin recordatorios. Los medicamentos según se necesite no tienen horario.",
+      "updateOldBackend": "Aún no se pudo agregar un medicamento según se necesite. Actualiza la app e inténtalo de nuevo."
     }
   },
   "deleteEvent": {

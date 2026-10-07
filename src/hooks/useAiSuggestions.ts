@@ -5,6 +5,7 @@ import { getAiSuggestions } from '@/api/ai';
 import { isAccessDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { queryKeys } from '@/lib/queryKeys';
+import { baseLanguage } from '@/i18n/locales';
 
 // Web port of the suggestions half of mobile/src/components/ai/AIChatModal.tsx
 // (mobile's `loadSuggestions`), reshaped as a React Query read hook per the web
@@ -25,15 +26,6 @@ import { queryKeys } from '@/lib/queryKeys';
  */
 function isTerminalSuggestionsError(err: unknown): boolean {
   return isSubscriptionRequiredError(err) || isAccessDeniedError(err);
-}
-
-/**
- * Normalize the i18n tag to the base language the backend understands. The
- * suggestions route coerces anything that is not exactly 'es' to 'en', so a
- * region-qualified tag like 'es-MX' would silently return English copy.
- */
-function baseLanguage(tag: string | undefined): 'en' | 'es' {
-  return tag?.toLowerCase().startsWith('es') ? 'es' : 'en';
 }
 
 /**

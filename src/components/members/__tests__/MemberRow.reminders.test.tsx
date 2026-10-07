@@ -38,9 +38,9 @@ describe('MemberRow notifications-off badge', () => {
   const EXPLAIN =
     "Fay hasn't turned on notifications in the CircleCare app, so reminders won't reach their phone.";
 
-  it('is a button named by the badge text, described by the tooltip, hidden until asked', () => {
+  it('is a button named by the badge text + member, described by the tooltip, hidden until asked', () => {
     render(<ul><MemberRow member={member({ push_reachable: false })} /></ul>);
-    const btn = screen.getByRole('button', { name: 'Notifications off' });
+    const btn = screen.getByRole('button', { name: 'Notifications off for Fay' });
     const tip = screen.getByRole('tooltip', { hidden: true });
     expect(btn).toHaveAttribute('aria-describedby', tip.id);
     expect(tip).toHaveTextContent(EXPLAIN);
@@ -50,7 +50,7 @@ describe('MemberRow notifications-off badge', () => {
   it('shows on hover, on focus, and pins on click; Escape dismisses', async () => {
     const user = userEvent.setup();
     render(<ul><MemberRow member={member({ push_reachable: false })} /></ul>);
-    const btn = screen.getByRole('button', { name: 'Notifications off' });
+    const btn = screen.getByRole('button', { name: 'Notifications off for Fay' });
     const tip = screen.getByRole('tooltip', { hidden: true });
     await user.hover(btn);
     expect(tip).toBeVisible();
@@ -66,6 +66,22 @@ describe('MemberRow notifications-off badge', () => {
     expect(btn).toHaveAttribute('aria-expanded', 'true');
     fireEvent.keyDown(btn, { key: 'Escape' });
     expect(tip).not.toBeVisible();
+  });
+
+  it('FALSIFIER: two flagged members get DISTINCT accessible names (a11y duplicate-label)', () => {
+    render(
+      <ul>
+        <MemberRow member={member({ push_reachable: false })} />
+        <MemberRow member={member({ id: 'u2', first_name: 'Gus', push_reachable: false })} />
+      </ul>
+    );
+    expect(screen.getByRole('button', { name: 'Notifications off for Fay' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Notifications off for Gus' })).toBeInTheDocument();
+  });
+
+  it('without a first name the button keeps the plain badge text as its name', () => {
+    render(<ul><MemberRow member={member({ push_reachable: false, first_name: null })} /></ul>);
+    expect(screen.getByRole('button', { name: 'Notifications off' })).toBeInTheDocument();
   });
 
   it('uses a neutral fallback when the first name is missing', () => {

@@ -36,6 +36,7 @@
     "login": "Iniciar sesión",
     "signup": "Crear cuenta",
     "verifyEmail": "Verificar correo",
+    "verifyRequest": "Termina de verificar tu correo",
     "forgotPassword": "Olvidé mi contraseña",
     "resetPassword": "Restablecer contraseña",
     "circlePicker": "Elegir un círculo",

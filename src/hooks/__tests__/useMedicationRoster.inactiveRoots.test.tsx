@@ -34,7 +34,12 @@ describe('includeInactiveRoots — roster request only', () => {
     await waitFor(() => expect(eventsCalls()).toHaveLength(1));
 
     expect(eventsCalls()[0][1]).toEqual({
-      params: { includeDiscontinued: 'true', includeInactiveRoots: 'true' },
+      // `includeAsNeeded`: the roster is where as-needed (PRN) medications live.
+      params: {
+        includeDiscontinued: 'true',
+        includeInactiveRoots: 'true',
+        includeAsNeeded: 'true',
+      },
     });
   });
 

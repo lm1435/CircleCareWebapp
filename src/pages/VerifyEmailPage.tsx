@@ -5,7 +5,7 @@ import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
-import { classifyFailureCode, isRateLimitError } from '@/lib/apiErrors';
+import { classifyFailureCode, isEmailRateLimitError, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -35,6 +35,12 @@ interface VerifyEmailState {
   email?: string;
   /** set by LoginPage on EMAIL_NOT_VERIFIED — shows the "we sent a new code" notice */
   notVerified?: boolean;
+  /**
+   * Set by VerifyRequestPage ("Have a verification code?") and by a signup that
+   * hit the per-address send cooldown. 'sent' = neutral "if that email has an
+   * account waiting, we sent a new code"; 'rateLimited' = "we just sent one".
+   */
+  notice?: 'sent' | 'rateLimited';
 }
 
 export default function VerifyEmailPage(): ReactElement {
@@ -55,11 +61,19 @@ export default function VerifyEmailPage(): ReactElement {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(
-    routerState?.notVerified ? t('verifyOtp.notVerifiedNotice') : null
+    routerState?.notice === 'rateLimited'
+      ? t('verifyOtp.noticeRateLimited')
+      : routerState?.notice === 'sent'
+        ? t('verifyOtp.noticeSent')
+        : routerState?.notVerified
+          ? t('verifyOtp.notVerifiedNotice')
+          : null
   );
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
+  // A code was just sent (or the send cooldown is active) when we arrive with a
+  // notice, so "Send a new code" starts behind the same 60 s cooldown as mobile.
+  const [cooldown, setCooldown] = useState(routerState?.notice ? RESEND_COOLDOWN_SECONDS : 0);
 
   const emailRef = useRef<HTMLInputElement>(null);
   const otpRef = useRef<OtpInputHandle>(null);
@@ -212,7 +226,15 @@ export default function VerifyEmailPage(): ReactElement {
       setOtp('');
       otpRef.current?.focus();
     } catch (err) {
-      setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.resendFailed'));
+      if (isEmailRateLimitError(err)) {
+        // Supabase's per-address cooldown: a code went out a moment ago. Say so,
+        // and hold the button behind a visible cooldown instead of inviting a
+        // retry that cannot succeed (mobile does the same).
+        setNotice(t('verifyOtp.noticeRateLimited'));
+        setCooldown(RESEND_COOLDOWN_SECONDS);
+      } else {
+        setError(isRateLimitError(err) ? t('rateLimited') : t('verifyOtp.errors.resendFailed'));
+      }
     } finally {
       setIsResending(false);
     }
@@ -289,7 +311,11 @@ export default function VerifyEmailPage(): ReactElement {
         </Button>
       </form>
 
-      <p className="m-0 mt-6 text-center text-sm text-ink-3">
+      <p id="verify-otp-hint" className="m-0 mt-4 text-center text-sm text-ink-3">
+        {t('verifyOtp.hint')}
+      </p>
+
+      <p className="m-0 mt-2 text-center text-sm text-ink-3">
         {t('verifyOtp.didntReceive')}{' '}
         <button
           type="button"

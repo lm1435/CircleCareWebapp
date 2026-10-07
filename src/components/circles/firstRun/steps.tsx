@@ -79,10 +79,16 @@ interface ActionOption {
 
 export interface ChooseActionStepProps {
   recipientName: string;
+  /** Self-care owner IS the recipient: address them as "you", not by name. */
+  isSelfCare?: boolean;
   onSelect: (action: FirstRunAction) => void;
 }
 
-export function ChooseActionStep({ recipientName, onSelect }: ChooseActionStepProps): ReactElement {
+export function ChooseActionStep({
+  recipientName,
+  isSelfCare,
+  onSelect,
+}: ChooseActionStepProps): ReactElement {
   const { t } = useTranslation('circles');
 
   // Copy comes from the EXISTING `quickWin.*` shape mobile uses — this is the
@@ -119,7 +125,9 @@ export function ChooseActionStep({ recipientName, onSelect }: ChooseActionStepPr
     <div className="flex flex-col gap-4">
       <StepHeading
         eyebrow={t('firstRun.steps.choose')}
-        title={t('quickWin.subtitle', { name: recipientName })}
+        title={
+          isSelfCare ? t('quickWin.subtitleSelf') : t('quickWin.subtitle', { name: recipientName })
+        }
       />
 
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -162,6 +170,8 @@ export function ChooseActionStep({ recipientName, onSelect }: ChooseActionStepPr
 
 export interface MedicationNameStepProps {
   recipientName: string;
+  /** Self-care owner IS the recipient: address them as "you", not by name. */
+  isSelfCare?: boolean;
   name: string;
   dosage: string;
   onChangeName: (next: string) => void;
@@ -182,6 +192,7 @@ export interface MedicationNameStepProps {
  */
 export function MedicationNameStep({
   recipientName,
+  isSelfCare,
   name,
   dosage,
   onChangeName,
@@ -196,7 +207,9 @@ export function MedicationNameStep({
     <div className="flex flex-col gap-4">
       <StepHeading
         eyebrow={t('firstRun.steps.what')}
-        title={t('firstRun.whatTitle', { name: recipientName })}
+        title={
+          isSelfCare ? t('firstRun.whatTitleSelf') : t('firstRun.whatTitle', { name: recipientName })
+        }
       />
 
       <DrugAutocomplete
@@ -235,6 +248,8 @@ export interface ScheduleSelection {
 
 export interface ScheduleStepProps {
   recipientName: string;
+  /** Self-care owner IS the recipient: address them as "you", not by name. */
+  isSelfCare?: boolean;
   presetKey: FirstRunPresetKey;
   customTime: string | null;
   onChange: (next: ScheduleSelection) => void;
@@ -256,6 +271,7 @@ export interface ScheduleStepProps {
  */
 export function ScheduleStep({
   recipientName,
+  isSelfCare,
   presetKey,
   customTime,
   onChange,
@@ -278,7 +294,9 @@ export function ScheduleStep({
     <div className="flex flex-col gap-4">
       <StepHeading
         eyebrow={t('firstRun.steps.when')}
-        title={t('firstRun.whenTitle', { name: recipientName })}
+        title={
+          isSelfCare ? t('firstRun.whenTitleSelf') : t('firstRun.whenTitle', { name: recipientName })
+        }
       />
 
       <div className="flex flex-col gap-1.5">

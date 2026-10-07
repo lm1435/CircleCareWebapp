@@ -928,3 +928,52 @@ describe('RxNorm lookup on step ② (mobile parity)', () => {
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ medication_name: 'Metformin', rxcui: '6809' });
   });
 });
+
+// A SELF-CARE owner IS the care recipient: never ask them "What does <their own
+// name> take?". Everyone else keeps the name. Mobile twin: firstRunWizardFlow
+// "recipient wording".
+describe('recipient wording', () => {
+  async function walk(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+  }
+
+  it('self-care owner reads you-copy on all three steps', async () => {
+    useCircleResult.circle = { ...useCircleResult.circle, is_self_care: true };
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    expect(screen.getByText('Your care circle is ready. What would you like to do first?')).toBeInTheDocument();
+    expect(screen.queryByText(/Rosa's care circle/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    expect(screen.getByText('What do you take?')).toBeInTheDocument();
+    expect(screen.queryByText(/What does Rosa take/)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByText('When do you take it?')).toBeInTheDocument();
+    expect(screen.queryByText(/When does Rosa take it/)).not.toBeInTheDocument();
+  });
+
+  it('caregiver owner of someone else keeps the name on all three steps', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    expect(screen.getByText("Rosa's care circle is ready. What would you like to do first?")).toBeInTheDocument();
+    await walk(user);
+    expect(screen.getByText('When does Rosa take it?')).toBeInTheDocument();
+    expect(screen.queryByText('When do you take it?')).not.toBeInTheDocument();
+  });
+
+  it('is Spanish (tú) for a self-care owner', async () => {
+    const i18n = (await import('@/i18n')).default;
+    await i18n.changeLanguage('es');
+    try {
+      useCircleResult.circle = { ...useCircleResult.circle, is_self_care: true };
+      renderWizard();
+      expect(screen.getByText('Tu círculo de cuidado está listo. ¿Qué te gustaría hacer primero?')).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+});

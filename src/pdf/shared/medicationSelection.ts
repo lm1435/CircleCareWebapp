@@ -38,6 +38,8 @@ export interface CareSummaryMedicationEvent {
   discontinued_at?: string | null;
   /** Naive `YYYY-MM-DD` in the care recipient's zone. */
   scheduled_date: string;
+  /** As-needed (PRN) medication: no schedule, so `scheduled_date` is only the day it was added. */
+  as_needed?: boolean | null;
 }
 
 /** How far back the summary looks for one-time and stopped medications. */
@@ -74,10 +76,17 @@ export interface SelectCareSummaryMedicationsOptions {
 
 export interface CareSummaryMedicationSelection<E extends CareSummaryMedicationEvent> {
   active: E[];
+  /**
+   * ACTIVE as-needed (PRN) medications, one row per row id, REGARDLESS of
+   * `scheduled_date` (it is just the day the medication was added, so a PRN row
+   * older than the lookback must not vanish). Never in `recent`; stopped PRN
+   * rows go to `stopped` like any other medication.
+   */
+  asNeeded: E[];
   recent: E[];
   stopped: StoppedMedication<E>[];
   /**
-   * The flat list the PDF receives: active, then recent, then stopped — with
+   * The flat list the PDF receives: active, as-needed, then recent, then stopped — with
    * each stopped event carrying `discontinued_at: stoppedAt` so the template
    * can label it from the event alone.
    */
@@ -187,10 +196,26 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
     return true;
   });
 
+  // Active as-needed medications: every PRN row that is not stopped, whatever
+  // its `scheduled_date`. A PRN row has no recurrence rule so the `active` walk
+  // above never sees it, and its date is when it was added, so the `recent`
+  // cutoff must not apply either.
+  const asNeededSeen = new Set<string>();
+  const asNeeded = list.filter((e) => {
+    if (e.event_type !== 'medication' || !e.as_needed) return false;
+    const key = seriesKey(e);
+    if (stoppedSeriesMap.has(key) || asNeededSeen.has(key)) return false;
+    asNeededSeen.add(key);
+    return true;
+  });
+
   // Recent one-time medications (within the lookback window).
   const recent = list.filter(
     (e) =>
       e.event_type === 'medication' &&
+      // An as-needed row has no rule and no parent, which is exactly what a
+      // one-time dose looks like; it is NOT one (see `asNeeded`).
+      !e.as_needed &&
       !e.recurrence_rule &&
       !e.parent_event_id &&
       // Stopped one-time meds are not dropped — they move to the stopped list
@@ -249,6 +274,7 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
   // rides along on the event, and the PDF labels it from that.
   const forExport: E[] = [
     ...active,
+    ...asNeeded,
     ...recent,
     // An ended course keeps NO `discontinued_at` (it was never discontinued): the
     // template recognises it by its `recurrence_end_date` and prints that date.
@@ -257,5 +283,5 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
     ),
   ];
 
-  return { active, recent, stopped, forExport, stoppedSeriesMap };
+  return { active, asNeeded, recent, stopped, forExport, stoppedSeriesMap };
 }

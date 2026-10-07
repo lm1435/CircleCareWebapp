@@ -9,7 +9,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // EN ships eagerly (below) — every session needs it (it's `fallbackLng`), and
 // it's the majority locale. ES is NOT statically imported here: that used to
 // pull ~22 KB gzip of Spanish strings into every session's initial bundle,
-// English-only visitors included. Instead `esBackend.read()` below dynamically
+// English-only visitors included. Instead `localeBackend.read()` (via the `localeLoaders` map) below dynamically
 // imports `./es/index` (one combined chunk covering every es namespace) only
 // when a session is actually detected as, or switches to, Spanish. react-i18next's
 // `useSuspense: true` default means a component reading a namespace that isn't
@@ -34,13 +34,13 @@ import enAi from './en/ai.json';
 import enHelp from './en/help.json';
 import enFreemium from './en/freemium.json';
 import enUpgrade from './en/upgrade.json';
+import { LOCALE_LABELS, SUPPORTED_LOCALES, type SupportedLanguage } from './locales';
 
-export const supportedLanguages = {
-  en: 'English',
-  es: 'Español', // Latin American Spanish
-} as const;
+// The shipped-language set lives in ./locales (the registry); this is its
+// display-name view for the language picker.
+export const supportedLanguages = LOCALE_LABELS;
 
-export type SupportedLanguage = keyof typeof supportedLanguages;
+export type { SupportedLanguage };
 
 export const namespaces = [
   'common',
@@ -91,10 +91,22 @@ const enResources: NamespaceResources = {
 };
 
 /**
- * Loads a single Spanish namespace on demand by dynamically importing the
- * combined `./es/index` chunk (cached by the module loader after the first
- * call, so all 19 `read()` calls i18next makes for a newly-needed `es` only
- * trigger one network fetch) and picking the requested namespace out of it.
+ * One lazy loader per NON-EN registry locale: each is its own combined chunk
+ * (every namespace of that locale, one dynamic `import()`), fetched only when a
+ * session is detected as, or switches to, that locale. Adding a locale =
+ * a registry entry + one line here (the `localeSplit` test fails if a non-EN
+ * registry locale has no loader, and if any non-EN locale is imported statically).
+ */
+type LocaleLoaders = Record<Exclude<SupportedLanguage, 'en'>, () => Promise<{ default: object }>>;
+const localeLoaders: LocaleLoaders = {
+  es: () => import('./es/index'),
+};
+
+/**
+ * Loads a single namespace of a non-EN locale on demand via its loader (cached
+ * by the module loader after the first call, so all 19 `read()` calls i18next
+ * makes for a newly-needed locale only trigger one network fetch) and picks the
+ * requested namespace out of it.
  *
  * This is an i18next `BackendModule` — the same extension point
  * `i18next-http-backend` uses — rather than a bespoke `changeLanguage`
@@ -103,17 +115,20 @@ const enResources: NamespaceResources = {
  * useProfile) are handled by ordinary i18next resource-loading, with no extra
  * plumbing needed at either call site.
  */
-const esBackend: BackendModule = {
+const localeBackend: BackendModule = {
   type: 'backend',
   init: () => {},
   read: (language: string, namespace: string, callback: ReadCallback) => {
-    if (language !== 'es') {
-      // We only ever ship en (bundled above) and es (this backend). Anything
-      // else i18next asks for (e.g. a fallback probe) has nothing to load.
+    const load = (localeLoaders as Record<string, (() => Promise<{ default: object }>) | undefined>)[
+      language
+    ];
+    if (!load) {
+      // We only ever ship en (bundled above) and the loader-map locales.
+      // Anything else i18next asks for (e.g. a fallback probe) has nothing to load.
       callback(null, {});
       return;
     }
-    import('./es/index')
+    load()
       .then((mod) => {
         const resources = mod.default as NamespaceResources;
         callback(null, resources[namespace as Namespace] ?? {});
@@ -129,7 +144,7 @@ const esBackend: BackendModule = {
 // `i18n.changeLanguage('es')` calls, exactly like this module worked before
 // the locale split. jsdom test runs aren't a real browser session someone
 // downloads a bundle for, so there's no size win in making them go through
-// `esBackend`'s dynamic import (and its `read()` is genuinely async — no
+// `localeBackend`'s dynamic import (and its `read()` is genuinely async — no
 // amount of awaiting in a test file, itself out of scope here, changes that
 // it resolves at least one microtask later than these tests need).
 //
@@ -138,26 +153,27 @@ const esBackend: BackendModule = {
 // dead-code-eliminates this whole branch — `./es/index` (and thus every
 // es/*.json namespace) never reaches a shipped bundle; only `vitest` (mode
 // `test`) actually takes it.
-let testOnlyEsResources: NamespaceResources | undefined;
+const testOnlyLocaleResources: Record<string, NamespaceResources> = {};
 if (import.meta.env.MODE === 'test') {
-  testOnlyEsResources = (await import('./es/index')).default;
+  for (const [code, load] of Object.entries(localeLoaders)) {
+    testOnlyLocaleResources[code] = (await load()).default as NamespaceResources;
+  }
 }
 
 void i18n
   .use(LanguageDetector)
-  .use(esBackend)
+  .use(localeBackend)
   .use(initReactI18next)
   .init({
-    resources: testOnlyEsResources
-      ? { en: enResources, es: testOnlyEsResources }
-      : { en: enResources },
+    resources: { en: enResources, ...testOnlyLocaleResources },
     // English (and, in tests only, Spanish — see above) is fully bundled;
-    // everything else is loaded exclusively through `esBackend`. Without this
+    // everything else is loaded exclusively through `localeBackend`. Without this
     // flag, passing ANY `resources` makes i18next assume every language is
     // bundled and skip the backend entirely.
     partialBundledLanguages: true,
     fallbackLng: 'en',
-    supportedLngs: Object.keys(supportedLanguages),
+    // Every registry code, variant tags (fr-CA...) included.
+    supportedLngs: [...SUPPORTED_LOCALES],
     nonExplicitSupportedLngs: true, // es-MX / es-419 → es
     ns: [...namespaces],
     defaultNS: 'common',

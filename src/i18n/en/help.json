@@ -45,7 +45,7 @@
         },
         {
           "question": "Can I set up medications that aren't daily?",
-          "answer": "Yes! You can set medications for daily, every other day, weekly (specific days), or custom intervals. You can also mark medications as 'as needed' for PRN medications."
+          "answer": "Yes! You can set medications for daily, every other day, weekly (specific days), monthly, or on/off cycles. For medications taken only when needed, choose 'As needed': there are no set times, and whoever gives a dose logs it so the whole circle sees when it was last given."
         }
       ]
     },
@@ -58,7 +58,7 @@
         },
         {
           "question": "What notifications will I receive?",
-          "answer": "You'll receive notifications for medication reminders (if you're the care recipient), medication confirmations, not-taken alerts, appointment reminders, and when family members join your circle."
+          "answer": "You'll receive alerts in four groups you can turn on or off in Profile: Medications (doses taken, skipped or not marked), Tasks & appointments (when something's assigned to you and before it's due), Notes (when someone adds a note) and Tips & suggestions. If you're the care recipient you also get your own dose reminders, which are always on."
         },
         {
           "question": "What are quiet hours?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "Can I turn off certain notifications?",
-          "answer": "Yes — go to Profile & settings and use the Notifications section to choose which types of notifications you receive."
+          "answer": "Yes. Go to Profile, then Notifications. Each of the four switches turns a whole group on or off for your account, in every circle you belong to. Turning off Medications means you won't be told when a dose isn't marked."
         }
       ]
     },

@@ -53,6 +53,7 @@
   },
   "member": {
     "notificationsOff": "Notifications off",
+    "notificationsOffFor": "Notifications off for {{name}}",
     "notificationsOffExplain": "{{name}} hasn't turned on notifications in the CircleCare app, so reminders won't reach their phone.",
     "notificationsOffExplainNoName": "This member hasn't turned on notifications in the CircleCare app, so reminders won't reach their phone."
   },

@@ -156,6 +156,7 @@
     "improving": "Improving",
     "declining": "Declining",
     "stable": "Stable",
+    "trendLegend": "Second half of this period compared with the first half.",
     "byMedication": "By medication",
     "medication": "Medication",
     "dosage": "Dosage",
@@ -183,10 +184,107 @@
     "legendHalf": "50–74%",
     "legendLow": "Below 50%",
     "legendNone": "Nothing scheduled",
-    "daysBelowFull": "Days with a missed or unmarked dose",
+    "daysBelowFull": "Days with a skipped or unmarked dose",
     "noExceptions": "Every scheduled dose was confirmed in this period.",
     "scheduled": "Scheduled",
     "dayCellTitle": "{{date}}: {{taken}} of {{total}}",
-    "notMarkedLegend": "Not marked: no one confirmed this dose in the app. It may or may not have been taken."
+    "notMarkedLegend": "Not marked: no one confirmed this dose in the app. It may or may not have been taken.",
+    "asNeededSection": "As-needed medications (not part of the adherence rate)",
+    "asNeededGiven_one": "{{name}}: {{count}} dose given",
+    "asNeededGiven_other": "{{name}}: {{count}} doses given",
+    "asNeededGivenBy": "Given by",
+    "asNeededNote": "Note"
+  },
+  "asNeeded": {
+    "section": {
+      "title": "As needed",
+      "lastGivenEyebrow": "Last given {{time}}",
+      "noneYetEyebrow": "No doses yet",
+      "more": "{{count}} more as needed",
+      "hint": "No set times. Log a dose when it is given so everyone knows."
+    },
+    "card": {
+      "badge": "As needed",
+      "give": "Gave a dose",
+      "giveA11y": "Gave a dose of {{name}}",
+      "history": "History",
+      "historyA11y": "History for {{name}}",
+      "lastGivenPrefix": "Last given",
+      "byName": "by {{name}}",
+      "byYou": "by you",
+      "notGivenYet": "Not given yet",
+      "forReason": "for {{reason}}",
+      "loggedBadge": "Logged"
+    },
+    "log": {
+      "title": "Log a dose of {{name}}?",
+      "titleSelf": "Did you take {{name}}?",
+      "subtitleSelf": "Everyone in your circle will see this.",
+      "submitSelf": "Log that you took a dose",
+      "subtitle": "Everyone in the circle will see this.",
+      "given": "Given",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "Add a note (optional), e.g. \"after dinner\"",
+      "submit": "Log dose",
+      "cancel": "Cancel",
+      "chipNow": "Now",
+      "chipMinutes": "{{count}} min ago",
+      "chipHours": "{{count}} h ago"
+    },
+    "recent": {
+      "title": "{{name}} just logged a dose",
+      "titleNoName": "Someone just logged a dose",
+      "body": "{{name}} logged {{medication}} {{ago}}, at {{time}}. Do you want to log another one?",
+      "bodyNoName": "Another member logged {{medication}} {{ago}}, at {{time}}. Do you want to log another one?",
+      "another": "Log another dose",
+      "no": "No, that was it",
+      "justNow": "less than a minute ago",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago"
+    },
+    "toast": {
+      "logged": "Dose logged",
+      "failed": "Couldn't log the dose. Please try again.",
+      "discontinued": "This medication is inactive. Reactivate it to log a dose.",
+      "permissionDenied": "You have view-only access, so you can't log doses.",
+      "removed": "Dose removed",
+      "removeFailed": "Couldn't remove the dose. Please try again.",
+      "alreadyRemoved": "This dose was already removed."
+    },
+    "history": {
+      "title": "Dose history",
+      "subtitle": "Every dose logged for {{name}}, newest first.",
+      "loading": "Loading doses…",
+      "error": "Couldn't load the dose history",
+      "empty": "No doses logged yet",
+      "emptyHint": "Doses appear here as they are logged.",
+      "givenBy": "Given by {{name}}",
+      "given": "Given",
+      "timeBy": "{{time}} · by {{name}}",
+      "rowLabel": "Given · {{medication}} · by {{name}}",
+      "removedBy": "Removed by {{name}}",
+      "someone": "someone",
+      "loadMore": "Load more",
+      "close": "Close"
+    },
+    "remove": {
+      "action": "Remove this dose",
+      "actionA11y": "Remove this dose, logged at {{time}}",
+      "title": "Remove this dose?",
+      "body": "Remove the dose logged at {{time}} by {{name}}? Everyone will be told it was removed.",
+      "confirm": "Remove"
+    },
+    "detail": {
+      "eyebrow": "Medication · As needed",
+      "lastGiven": "Last given",
+      "reason": "What it is for",
+      "reminders": "Reminders",
+      "remindersNone": "None · as needed"
+    },
+    "calendar": {
+      "cellHint": "as-needed dose given",
+      "logged": "Given as needed",
+      "openHistory": "Open dose history"
+    }
   }
 }

@@ -6,6 +6,8 @@ import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatEventTimeCompact, zoneReferenceInstant } from '@/utils/timezone';
 import { formatDateForDisplay, getWeekdayName, isSameMonth } from './dateMath';
 import { eventNoteCount } from './eventChipMeta';
+import { AsNeededDayRow, AsNeededRing } from './AsNeededDayRow';
+import type { AsNeededDayEntry } from './asNeededByDay';
 import {
   EVENT_TYPE_DOT_CLASS,
   getEventCardClass,
@@ -24,11 +26,15 @@ export interface MonthViewProps {
   /** Today's date string IN THE CARE RECIPIENT'S TIMEZONE. */
   todayStr: string;
   onEventClick: (event: CalendarEvent) => void;
+  /** Days with logged as-needed doses (recipient-zone days). Optional: no marker without it. */
+  asNeededByDay?: Map<string, AsNeededDayEntry[]>;
+  onAsNeededOpen?: (entry: AsNeededDayEntry) => void;
 }
 
 const MAX_DOTS = 3;
 const WEEKDAY_INDEXES = [0, 1, 2, 3, 4, 5, 6]; // 0=Sun..6=Sat
 const EMPTY_DAY_EVENTS: CalendarEvent[] = [];
+const EMPTY_AS_NEEDED: AsNeededDayEntry[] = [];
 
 /**
  * Month view (plan Task 19): classic 6-week grid. Day cells show event dots
@@ -43,8 +49,10 @@ export function MonthView({
   careRecipientTimezone,
   todayStr,
   onEventClick,
+  asNeededByDay,
+  onAsNeededOpen,
 }: MonthViewProps): ReactElement {
-  const { t } = useTranslation(['calendar', 'common']);
+  const { t } = useTranslation(['calendar', 'common', 'meds']);
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -52,6 +60,9 @@ export function MonthView({
   const selectedEvents = selectedDay
     ? (eventsByDay.get(selectedDay) ?? EMPTY_DAY_EVENTS)
     : EMPTY_DAY_EVENTS;
+  const selectedAsNeeded = selectedDay
+    ? (asNeededByDay?.get(selectedDay) ?? EMPTY_AS_NEEDED)
+    : EMPTY_AS_NEEDED;
 
   return (
     // Explicit single track below lg: an implicit `auto` track sizes to the
@@ -98,6 +109,7 @@ export function MonthView({
               const inMonth = isSameMonth(day, monthStart);
               const isToday = day === todayStr;
               const isSelected = day === selectedDay;
+              const hasAsNeeded = (asNeededByDay?.get(day)?.length ?? 0) > 0;
               return (
                 <div
                   key={day}
@@ -114,7 +126,9 @@ export function MonthView({
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',
-                    })}, ${t('calendar:eventCount', { count: events.length })}`}
+                    })}, ${t('calendar:eventCount', { count: events.length })}${
+                      hasAsNeeded ? `, ${t('meds:asNeeded.calendar.cellHint')}` : ''
+                    }`}
                     onClick={() => setSelectedDay(day)}
                     className={`flex h-full w-full flex-col items-center gap-1 rounded-lg p-1 text-center hover:bg-bg-2 ${
                       isSelected ? 'bg-bg-2 ring-1 ring-line' : ''
@@ -132,7 +146,7 @@ export function MonthView({
                     >
                       {formatDateForDisplay(day, { day: 'numeric' })}
                     </span>
-                    {events.length > 0 && (
+                    {(events.length > 0 || hasAsNeeded) && (
                       <span aria-hidden="true" className="flex items-center gap-1">
                         {events.slice(0, MAX_DOTS).map((event, dotIndex) => (
                           <span
@@ -140,6 +154,7 @@ export function MonthView({
                             className={`h-1.5 w-1.5 rounded-full ${EVENT_TYPE_DOT_CLASS[event.event_type]}`}
                           />
                         ))}
+                        {hasAsNeeded && <AsNeededRing />}
                         {events.length > MAX_DOTS && (
                           // Same inline mono-scale utilities as WeekView's
                           // all-day overflow control (review 2026-09-05), so
@@ -174,10 +189,15 @@ export function MonthView({
                 day: 'numeric',
               })}
             </h3>
-            {selectedEvents.length === 0 ? (
+            {selectedEvents.length === 0 && selectedAsNeeded.length === 0 ? (
               <p className="m-0 mt-3 text-sm text-ink-3">{t('calendar:noEventsDay')}</p>
             ) : (
               <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
+                {selectedAsNeeded.map((entry) => (
+                  <li key={`prn_${entry.eventId}`}>
+                    <AsNeededDayRow entry={entry} onOpen={(e) => onAsNeededOpen?.(e)} />
+                  </li>
+                ))}
                 {selectedEvents.map((event) => {
                   const status = getMedicationStatus(event, careRecipientTimezone);
                   const title = event.medication_name || event.title;

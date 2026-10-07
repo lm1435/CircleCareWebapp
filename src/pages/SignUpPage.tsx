@@ -15,7 +15,7 @@ import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
 import { setAnalyticsConsentOwner } from '@/lib/analyticsConsent';
 import { queueAnalyticsConsentForSignup } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
-import { isRateLimitError } from '@/lib/apiErrors';
+import { isEmailRateLimitError, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { utf8ByteLength } from '@/lib/utf8ByteLength';
 import { Button, Card, Icon, Text, TextField } from '@/components/ui';
@@ -27,6 +27,7 @@ import { AuthDivider } from '@/components/auth/AuthDivider';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { useAuthBack } from '@/components/auth/useAuthBack';
+import { normalizeLocale } from '@/i18n/locales';
 
 // Email/password sign-up (mirrors mobile SignUpScreen). The backend creates the
 // user and emails a 6-digit OTP but returns NO session, so on success we route
@@ -182,7 +183,8 @@ export default function SignUpPage(): ReactElement {
         // resolvedLanguage, not language: an es-MX/es-419 browser reports
         // language 'es-MX' (UI still renders Spanish via the base bundle), so
         // a strict === 'es' on `language` registered those users as 'en'.
-        language: (i18n.resolvedLanguage || i18n.language) === 'es' ? 'es' : 'en',
+        // normalizeLocale maps any tag onto the registry (es-MX -> es, fr-CA -> en).
+        language: normalizeLocale(i18n.resolvedLanguage || i18n.language),
         termsAccepted: true,
       });
       // RECORD THE ANALYTICS ANSWER — either answer — and record it HERE:
@@ -243,6 +245,16 @@ export default function SignUpPage(): ReactElement {
       // PHI-safe: only the backend error CODE (or a generic fallback), never the
       // email or the full error object.
       Analytics.signupFailed('email', apiError?.code ?? 'SIGNUP_FAILED');
+      // Supabase's per-address send cooldown: this address was sent a code a
+      // moment ago (a re-submitted signup, or one that is unverified). Dead-ending
+      // on "wait a few minutes" strands them; the code they need is already in
+      // their inbox, so take them to the code page (mobile does the same).
+      if (isEmailRateLimitError(err)) {
+        navigate('/verify-email', {
+          state: { email: result.data.email, notice: 'rateLimited' },
+        });
+        return;
+      }
       setFormError(
         isRateLimitError(err)
           ? t('rateLimited')

@@ -52,6 +52,33 @@ vi.mock('@/hooks/useHourCycle', () => ({
   useHourCycle: () => mockUseHourCycle(),
 }));
 
+// As-needed (PRN): the summary read and the give flow need a QueryClient; pinned
+// here the same way. Their own behaviour is covered by AsNeeded*.test.tsx.
+const mockSummaries = vi.fn();
+// The History tab's circle-wide dose read (PRN rows merged into the day groups).
+const mockCircleDoses = vi.fn(() => ({ doses: [] as unknown[] }));
+vi.mock('@/hooks/useAsNeeded', () => ({
+  useAsNeededSummaries: () => mockSummaries(),
+  useCircleAsNeededDoses: () => mockCircleDoses(),
+}));
+const mockRequestGive = vi.fn();
+vi.mock('@/components/meds/useAsNeededGive', () => ({
+  useAsNeededGive: () => ({
+    requestGive: mockRequestGive,
+    pending: {},
+    inFlight: {},
+    undo: vi.fn(),
+    dialogs: null,
+  }),
+}));
+vi.mock('@/components/meds/DoseHistoryModal', () => ({
+  DoseHistoryModal: ({ name }: { name: string }) => (
+    <div role="dialog" aria-label="dose-history-modal">
+      history-{name}
+    </div>
+  ),
+}));
+
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();
@@ -202,6 +229,7 @@ function historyPage(confirmations: ReturnType<typeof conf>[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseHourCycle.mockReturnValue('12h');
+  mockSummaries.mockReturnValue({ summaries: {}, isSuccess: true });
   mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/New_York' });
   mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, inactiveMed]));
   mockStatusMutateAsync.mockResolvedValue({ discontinued: false, affected_count: 1, series_count: 1 });
@@ -1253,5 +1281,127 @@ describe('MedicationsPage — ended series', () => {
     renderPage();
 
     expect(screen.queryByText(/Low stock/)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AS-NEEDED (PRN) medications on the roster. No limits, no counters: the card
+// says "Last given {time} by {name}" or "Not given yet". Gave a dose / History
+// are editor-only. The give flow itself is tested in AsNeededSection.test.tsx.
+// ---------------------------------------------------------------------------
+describe('MedicationsPage — as-needed medications', () => {
+  const prn = makeMed({
+    id: 'prn-1',
+    title: 'Ibuprofen',
+    medication_name: 'Ibuprofen',
+    medication_dosage: '200 mg',
+    scheduled_time: null,
+    recurrence_rule: null,
+    as_needed: true,
+    as_needed_reason: 'pain',
+  });
+  const lastDose = {
+    id: 'd1',
+    given_at: '2026-06-12T13:15:00Z',
+    given_by: { id: 'jennie', first_name: 'Jennie', last_name: null },
+    note: null,
+  };
+
+  it('lists active as-needed medications in their OWN "As needed" section, not among the dose-time cards', () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, prn]));
+    renderPage();
+    const asNeeded = screen.getByRole('region', { name: 'As needed' });
+    expect(within(asNeeded).getByText('Ibuprofen')).toBeInTheDocument();
+    const active = screen.getByRole('region', { name: 'Active' });
+    expect(within(active).queryByText('Ibuprofen')).toBeNull();
+    // No schedule line, no time.
+    expect(within(asNeeded).queryByText(/No scheduled time/)).toBeNull();
+    expect(within(asNeeded).getByText('for pain')).toBeInTheDocument();
+  });
+
+  it('a circle with ONLY an as-needed medication is not the empty state', () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
+    renderPage();
+    expect(screen.queryByText('No medications yet')).toBeNull();
+    expect(screen.getByRole('region', { name: 'As needed' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Active' })).toBeNull();
+  });
+
+  it('"1 tablet daily" and "extra as needed" of the same name and dose are TWO cards (D5)', () => {
+    const scheduled = makeMed({ id: 'sched', title: 'Ibuprofen', medication_name: 'Ibuprofen', medication_dosage: '200 mg' });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([scheduled, prn]));
+    renderPage();
+    expect(screen.getAllByText('Ibuprofen')).toHaveLength(2);
+  });
+
+  it('shows "Not given yet" until a dose exists, then "Last given … by …"', () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
+    renderPage();
+    expect(screen.getByTestId('as-needed-last-given')).toHaveTextContent('Not given yet');
+  });
+
+  it('with a summary: "Last given 9:15 AM (New York) by Jennie"; no counter text anywhere on the card', () => {
+    mockSummaries.mockReturnValue({ summaries: { 'prn-1': { last_dose: lastDose } }, isSuccess: true });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
+    renderPage();
+    const card = screen.getByText('Ibuprofen').closest('li') as HTMLElement;
+    expect(within(card).getByTestId('as-needed-last-given').textContent).toMatch(
+      /^Last given .*by Jennie$/
+    );
+    expect(card.textContent).not.toMatch(/\d+ of \d+|in 24 ?h|OK again|limit/i);
+  });
+
+  it('"Gave a dose" starts the shared flow for THAT medication', async () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
+    renderPage();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Gave a dose of Ibuprofen' }));
+    expect(mockRequestGive).toHaveBeenCalledWith({ id: 'prn-1', name: 'Ibuprofen', dosage: '200 mg' });
+  });
+
+  it('FALSIFIER — a view-only member sees the card and History, never "Gave a dose"', () => {
+    mockUseCircle.mockReturnValue({ canEdit: false, timezone: 'America/New_York' });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
+    renderPage();
+    expect(screen.queryByRole('button', { name: /Gave a dose/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'History for Ibuprofen' })).toBeInTheDocument();
+  });
+
+  it('History opens the dose log for that medication', async () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
+    renderPage();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'History for Ibuprofen' }));
+    expect(screen.getByRole('dialog', { name: 'dose-history-modal' })).toHaveTextContent('history-Ibuprofen');
+  });
+
+  it('an INACTIVE as-needed medication keeps History but offers no "Gave a dose"', () => {
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([{ ...prn, discontinued_at: '2026-07-01T12:00:00Z' } as CalendarEvent])
+    );
+    renderPage();
+    const inactive = screen.getByRole('region', { name: 'Inactive / Past medications' });
+    expect(within(inactive).getByText('Ibuprofen')).toBeInTheDocument();
+    expect(within(inactive).queryByRole('button', { name: /Gave a dose/ })).toBeNull();
+    expect(within(inactive).getByRole('button', { name: 'History for Ibuprofen' })).toBeInTheDocument();
+  });
+
+  it('the detail sheet says "Medication · As needed", drops Time and Repeat, offers Dose history and Gave a dose', async () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
+    renderPage();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'View details for Ibuprofen' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Ibuprofen' });
+    expect(within(dialog).getByText('Medication · As needed')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Time')).toBeNull();
+    expect(within(dialog).queryByText('Repeat')).toBeNull();
+    expect(within(dialog).getByText('None · as needed')).toBeInTheDocument();
+    expect(within(dialog).getByText('pain')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Gave a dose' }));
+    // The detail sheet's flow reports surface 'detail' (the roster card says 'meds_tab').
+    expect(mockRequestGive).toHaveBeenCalledWith({
+      id: 'prn-1',
+      name: 'Ibuprofen',
+      dosage: '200 mg',
+      surface: 'detail',
+    });
   });
 });

@@ -28,6 +28,10 @@ export interface PdfCalendarEvent {
   /** Naive `YYYY-MM-DD` (recipient frame) a course ended on via "This and future";
    *  with no `discontinued_at` it makes a recurring course "stopped" in the summary. */
   recurrence_end_date?: string | null;
+  /** As-needed (PRN) medication: listed with a blank Time and Frequency "As needed". */
+  as_needed?: boolean | null;
+  /** Optional plain note ("pain"); printed as "As needed · pain". No limits exist. */
+  as_needed_reason?: string | null;
 }
 
 export interface PdfEmergencyContact {
@@ -111,6 +115,24 @@ export interface PdfAdherenceReportTimeBreakdown {
   adherence_rate: number;
 }
 
+/** One logged as-needed (PRN) dose, as the report's as-needed section lists it. */
+export interface PdfAsNeededDose {
+  id?: string;
+  /** Real UTC instant (ISO) the dose was given. */
+  given_at: string;
+  given_by_name?: string | null;
+  note?: string | null;
+}
+
+/** One as-needed medication in the report's as-needed section. NOT part of any ratio. */
+export interface PdfAsNeededMedication {
+  event_id?: string;
+  medication_name: string;
+  medication_dosage?: string | null;
+  doses_given: number;
+  doses: PdfAsNeededDose[];
+}
+
 /** The adherence report as the report template reads it. */
 export interface PdfAdherenceReport {
   /** YYYY-MM-DD */
@@ -121,6 +143,8 @@ export interface PdfAdherenceReport {
   daily_breakdown: PdfAdherenceReportDaily[];
   by_medication: PdfAdherenceReportByMedication[];
   time_breakdown: PdfAdherenceReportTimeBreakdown[];
+  /** Plain record of as-needed doses in the window; `null`/absent = none (or soft-failed). */
+  as_needed?: { medications: PdfAsNeededMedication[] } | null;
 }
 
 /** One row of the report's Health Vitals table. */

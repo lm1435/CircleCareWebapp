@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { withInviteLocale } from '@/utils/inviteShareUrl';
+import { NON_EN_LOCALES } from '@/i18n/locales';
 
 /**
  * `withInviteLocale` decides what a shared invite link previews as. It runs on
@@ -122,5 +125,27 @@ describe('withInviteLocale — malformed input never throws', () => {
 
   it('does not throw on garbage that is not a URL at all', () => {
     expect(() => withInviteLocale('not a url ???', 'es')).not.toThrow();
+  });
+});
+
+/**
+ * Regression for the invite-preview class of bug ("?lang=es invites 404" /
+ * wrong-language card): the link the sender shares must carry the registry
+ * locale, AND the server rewrite that consumes it must exist for every non-EN
+ * registry locale. A locale added to the registry without its .htaccess rule
+ * would mint `?lang=xx` links that silently serve the English card.
+ */
+describe('invite share link <-> .htaccess rewrite (per registry locale)', () => {
+  // cwd is the webapp root under vitest (jsdom rewrites import.meta.url, so no URL-relative path).
+  const htaccess = readFileSync(resolve(process.cwd(), 'public/.htaccess'), 'utf8');
+
+  it('the es invite path still emits lang=es and keeps the fragment last', () => {
+    expect(withInviteLocale(URL_BASE, 'es-MX')).toBe(`${URL_BASE}?lang=es`);
+    expect(withInviteLocale(`${URL_BASE}?ref=a#x`, 'es')).toBe(`${URL_BASE}?ref=a&lang=es#x`);
+  });
+
+  it.each(NON_EN_LOCALES)('public/.htaccess routes lang=%s to index.%s.html', (code) => {
+    expect(htaccess).toMatch(new RegExp(`RewriteCond %\\{QUERY_STRING\\} \\(\\^\\|&\\)lang=${code}\\(\\$\\|&\\)`));
+    expect(htaccess).toContain(`index.${code}.html`);
   });
 });

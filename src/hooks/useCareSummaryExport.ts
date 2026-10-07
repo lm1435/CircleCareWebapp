@@ -57,6 +57,10 @@ export interface CareSummaryEventsWindow {
    *  "This and future" reaches "Recently stopped" (mobile sends the same two flags). */
   includeDiscontinued: true;
   includeInactiveRoots: true;
+  /** As-needed (PRN) medications live in their own bucket of the summary
+   *  (`selectCareSummaryMedications().asNeeded`); the server hides them from a
+   *  read that does not ask. */
+  includeAsNeeded: true;
 }
 
 /**
@@ -71,6 +75,7 @@ export function careSummaryEventsWindow(todayStr: string): CareSummaryEventsWind
     event_type: 'medication',
     includeDiscontinued: true,
     includeInactiveRoots: true,
+    includeAsNeeded: true,
   };
 }
 

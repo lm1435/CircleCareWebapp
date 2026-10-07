@@ -47,22 +47,23 @@
   },
   "notifications": {
     "description": "Choose which alerts you receive.",
-    "medicationConfirmations": "Medication confirmations",
-    "medicationConfirmationsDesc": "When a caregiver confirms a dose.",
-    "missedMedications": "Unmarked medications",
-    "missedMedicationsDesc": "When a scheduled dose isn't marked.",
-    "taskAssignments": "Task assignments",
-    "taskAssignmentsDesc": "When a task is assigned to you.",
-    "appointmentReminders": "Appointment reminders",
-    "appointmentRemindersDesc": "Before upcoming appointments.",
-    "eventNotes": "Notes on events",
-    "eventNotesDesc": "When someone adds a note to an appointment, task or dose",
-    "noteNudges": "After-visit reminders",
-    "noteNudgesDesc": "A reminder to add notes after an appointment",
-    "careNotes": "Daily care notes",
-    "careNotesDesc": "When someone adds a daily care note",
-    "tipsAndSuggestions": "Tips & suggestions",
-    "tipsAndSuggestionsDesc": "Helpful care tips and product updates.",
+    "groups": {
+      "medications": "Medications",
+      "medicationsDesc": "Doses taken, skipped or not marked",
+      "tasks": "Tasks & appointments",
+      "tasksDesc": "When something's assigned to you and before it's due",
+      "notes": "Notes",
+      "notesDesc": "When someone adds a note",
+      "tips": "Tips & suggestions",
+      "tipsDesc": "Helpful nudges to set up your circle"
+    },
+    "someTurnedOff": "Some turned off",
+    "confirmMedicationsOff": {
+      "title": "Turn off medication alerts?",
+      "message": "You won't be told when a dose isn't marked. Turn off anyway?",
+      "confirm": "Turn off",
+      "cancel": "Keep on"
+    },
     "success": "Notification preferences updated."
   },
   "quietHours": {
@@ -70,7 +71,8 @@
     "enable": "Enable quiet hours",
     "start": "Start time",
     "end": "End time",
-    "success": "Quiet hours updated."
+    "success": "Quiet hours updated.",
+    "almostAllDayWarning": "Quiet hours cover almost the whole day, so notifications will be held until {{endTime}}."
   },
   "units": {
     "description": "Choose how weight and glucose values are shown.",

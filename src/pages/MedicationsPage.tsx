@@ -40,6 +40,13 @@ import { getRosterMedKey, getSeriesRoot, indexSeriesContent } from '@/utils/medi
 // disagree about whether a medication is current.
 import { isMedicationSeriesEnded } from '@/pdf/shared/medicationSelection';
 import { MedicationDetailModal } from '@/components/meds/MedicationDetailModal';
+import { AsNeededActions, LastGivenLine } from '@/components/meds/AsNeededParts';
+import { DoseHistoryModal } from '@/components/meds/DoseHistoryModal';
+import { useAsNeededGive } from '@/components/meds/useAsNeededGive';
+import { useAsNeededSummaries, useCircleAsNeededDoses } from '@/hooks/useAsNeeded';
+import { mergedMedicationOptions } from '@/components/meds/historyMerge';
+import type { AsNeededSummary } from '@/api/medicationAsNeeded';
+import { useAuthStore } from '@/store/authStore';
 import { AdherenceHero } from '@/components/meds/AdherenceHero';
 import { HistoryList } from '@/components/meds/HistoryList';
 import { MedicationFilter } from '@/components/meds/MedicationFilter';
@@ -111,6 +118,14 @@ interface MedGroup {
    * `stockDaysLeft` and the reducer in `groupMedications`.
    */
   daysLeft: number | null;
+  /**
+   * AS-NEEDED (PRN) medication: no schedule, no times, no repeat. Keyed apart
+   * from a scheduled medication of the same name + dose (D5: "1 tablet daily"
+   * plus "extra as needed" are two entries, two cards).
+   */
+  asNeeded: boolean;
+  /** The optional plain "what is it for" note (as-needed only). */
+  reason: string | null;
 }
 
 /**
@@ -216,7 +231,9 @@ function groupMedications(
     // outside the window) — materialized children keep point-in-time values
     // after an edit (see indexSeriesContent).
     const source = seriesContent.get(getSeriesRoot(e)) ?? e;
-    const key = getRosterMedKey(e, seriesContent);
+    // An as-needed row has no series (no parent, no virtual instances): its key
+    // is its own, suffixed so it never merges into a scheduled card.
+    const key = getRosterMedKey(e, seriesContent) + (e.as_needed === true ? '|as_needed' : '');
     let group = groups.get(key);
     if (!group) {
       group = {
@@ -230,6 +247,8 @@ function groupMedications(
         endedOn: null,
         stopDay: '',
         daysLeft: null,
+        asNeeded: e.as_needed === true,
+        reason: e.as_needed === true ? (e.as_needed_reason ?? null) : null,
       };
       groups.set(key, group);
     }
@@ -371,6 +390,16 @@ interface MedCardProps {
   onToggleStatus: (group: MedGroup) => void;
   onDelete: (group: MedGroup) => void;
   onViewDetails: (group: MedGroup) => void;
+  /** As-needed cards only: the shared "Gave a dose" flow + the last-given read. */
+  asNeededFlow?: {
+    summary: AsNeededSummary | undefined;
+    myUserId: string | null;
+    pending: boolean;
+    inFlight: boolean;
+    onGive: (group: MedGroup) => void;
+    onHistory: (group: MedGroup) => void;
+    onUndo: (group: MedGroup) => void;
+  };
 }
 
 function MedCard({
@@ -382,10 +411,15 @@ function MedCard({
   onToggleStatus,
   onDelete,
   onViewDetails,
+  asNeededFlow,
 }: MedCardProps): ReactElement {
   const { t, i18n } = useTranslation(['meds', 'calendar']);
 
-  const meta = formatSchedule(group, timezone, t, i18n.language, hourCycle);
+  // An as-needed medication has no time and no repeat: the line says so, and the
+  // last-given status below it is the only "state" the card carries.
+  const meta = group.asNeeded
+    ? t('meds:asNeeded.card.badge')
+    : formatSchedule(group, timezone, t, i18n.language, hourCycle);
   const endedLabel = group.endedOn
     ? t('calendar:discontinueMed.endedOn', { date: formatNaiveDate(group.endedOn, i18n.language) })
     : null;
@@ -491,9 +525,27 @@ function MedCard({
 
           <p className={`m-0 ${careCardMeta}`}>
             <span>{meta}</span>
+            {group.asNeeded && group.reason ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{t('meds:asNeeded.card.forReason', { reason: group.reason })}</span>
+              </>
+            ) : null}
             {group.dosage ? <span aria-hidden="true">·</span> : null}
             {group.dosage && <span className={careCardMetaDetail}>{group.dosage}</span>}
           </p>
+
+          {/* AS-NEEDED STATUS: "Last given {time} by {name}" or "Not given yet" —
+              nothing else. No counter, no limit, no "OK again after". */}
+          {group.asNeeded && !group.inactive && asNeededFlow && (
+            <p className={`m-0 ${careCardMeta}`}>
+              <LastGivenLine
+                summary={asNeededFlow.summary}
+                timezone={timezone}
+                myUserId={asNeededFlow.myUserId}
+              />
+            </p>
+          )}
         </div>
 
         {canEdit && (
@@ -504,6 +556,19 @@ function MedCard({
           />
         )}
       </div>
+
+      {group.asNeeded && asNeededFlow && (
+        <AsNeededActions
+          name={group.name}
+          canEdit={canEdit}
+          inactive={group.inactive}
+          pending={asNeededFlow.pending}
+          inFlight={asNeededFlow.inFlight}
+          onGive={() => asNeededFlow.onGive(group)}
+          onHistory={() => asNeededFlow.onHistory(group)}
+          onUndo={() => asNeededFlow.onUndo(group)}
+        />
+      )}
     </li>
   );
 }
@@ -551,6 +616,40 @@ export default function MedicationsPage(): ReactElement {
     [events, timezone]
   );
 
+  // AS-NEEDED (PRN): one summary read for the circle ("last dose" per active
+  // as-needed medication), only when the roster has any. The give flow, the
+  // dose log and the card actions are the SAME ones Home uses.
+  const myUserId = useAuthStore((s) => s.user?.id ?? null);
+  const hasActiveAsNeeded = active.some((g) => g.asNeeded);
+  const { summaries: asNeededSummaries, isSuccess: asNeededSummariesLoaded } =
+    useAsNeededSummaries(circleId, { enabled: hasActiveAsNeeded });
+  const give = useAsNeededGive({
+    circleId,
+    timezone,
+    summaries: asNeededSummaries,
+    surface: 'meds_tab',
+  });
+  const [historyGroup, setHistoryGroup] = useState<MedGroup | null>(null);
+  const activeScheduled = useMemo(() => active.filter((g) => !g.asNeeded), [active]);
+  const activeAsNeeded = useMemo(() => active.filter((g) => g.asNeeded), [active]);
+  const asNeededFlowFor = (group: MedGroup): MedCardProps['asNeededFlow'] =>
+    group.asNeeded
+      ? {
+          // `undefined` until the read answers: the card must not say "Not given
+          // yet" off a read that has not come back.
+          summary: asNeededSummariesLoaded
+            ? (asNeededSummaries[group.event.id] ?? { last_dose: null })
+            : undefined,
+          myUserId,
+          pending: !!give.pending[group.event.id],
+          inFlight: !!give.inFlight[group.event.id],
+          onGive: (g) =>
+            give.requestGive({ id: g.event.id, name: g.name, dosage: g.dosage }),
+          onHistory: (g) => setHistoryGroup(g),
+          onUndo: (g) => give.undo(g.event.id),
+        }
+      : undefined;
+
   // The filter's options come from the SAME query HistoryList renders (React
   // Query dedupes the two calls onto one fetch), so the menu can never offer a
   // medication the list below it has no rows for.
@@ -565,9 +664,19 @@ export default function MedicationsPage(): ReactElement {
   const historyQuery = useMedicationConfirmations(circleId, historyWindow, {
     enabled: tab === 'history' && historyWindow !== undefined,
   });
+  // As-needed doses (same 30-day window, same query key as HistoryList's, so one
+  // fetch) add their medication names to the menu. Soft-fail: no doses, no names.
+  const { doses: historyDoses } = useCircleAsNeededDoses(circleId, historyWindow, {
+    includeRemoved: true,
+    enabled: tab === 'history',
+  });
   const filterOptions = useMemo(
-    () => medicationOptions((historyQuery.data?.confirmations ?? []) as HistoryConfirmation[]),
-    [historyQuery.data]
+    () =>
+      mergedMedicationOptions(
+        medicationOptions((historyQuery.data?.confirmations ?? []) as HistoryConfirmation[]),
+        historyDoses
+      ),
+    [historyQuery.data, historyDoses]
   );
 
   // A FILTER THAT AGES OUT MUST NOT STAY ON SILENTLY.
@@ -708,7 +817,7 @@ export default function MedicationsPage(): ReactElement {
   } else {
     roster = (
       <div className="flex flex-col gap-8">
-        {active.length > 0 && (
+        {activeScheduled.length > 0 && (
           <section aria-labelledby="meds-active-heading">
             <SectionHeader
               id="meds-active-heading"
@@ -717,7 +826,7 @@ export default function MedicationsPage(): ReactElement {
               headingLevel={2}
             />
             <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
-              {active.map((group) => (
+              {activeScheduled.map((group) => (
                 <MedCard
                   key={group.key}
                   group={group}
@@ -728,6 +837,37 @@ export default function MedicationsPage(): ReactElement {
                   onToggleStatus={setStatusGroup}
                   onDelete={(g) => setDeletingEvent(g.event)}
                   onViewDetails={openMedDetail}
+                  asNeededFlow={asNeededFlowFor(group)}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* AS NEEDED: active PRN medications, in their own section — they have no
+            schedule, so they never sit among the dose-time cards. */}
+        {activeAsNeeded.length > 0 && (
+          <section aria-labelledby="meds-as-needed-heading">
+            <SectionHeader
+              id="meds-as-needed-heading"
+              title={t('meds:asNeeded.section.title')}
+              tone="clay"
+              headingLevel={2}
+            />
+            <p className="m-0 mb-3 text-sm text-ink-3">{t('meds:asNeeded.section.hint')}</p>
+            <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
+              {activeAsNeeded.map((group) => (
+                <MedCard
+                  key={group.key}
+                  group={group}
+                  timezone={timezone}
+                  hourCycle={hourCycle}
+                  canEdit={canEdit}
+                  onEdit={handleEdit}
+                  onToggleStatus={setStatusGroup}
+                  onDelete={(g) => setDeletingEvent(g.event)}
+                  onViewDetails={openMedDetail}
+                  asNeededFlow={asNeededFlowFor(group)}
                 />
               ))}
             </ul>
@@ -756,6 +896,7 @@ export default function MedicationsPage(): ReactElement {
                   onToggleStatus={setStatusGroup}
                   onDelete={(g) => setDeletingEvent(g.event)}
                   onViewDetails={openMedDetail}
+                  asNeededFlow={asNeededFlowFor(group)}
                 />
               ))}
             </ul>
@@ -862,6 +1003,39 @@ export default function MedicationsPage(): ReactElement {
               : null
           }
           daysLeft={detailGroup.daysLeft}
+          asNeeded={
+            detailGroup.asNeeded
+              ? {
+                  reason: detailGroup.reason,
+                  lastGiven: (
+                    <LastGivenLine
+                      summary={
+                        asNeededSummariesLoaded
+                          ? (asNeededSummaries[detailGroup.event.id] ?? { last_dose: null })
+                          : undefined
+                      }
+                      timezone={timezone}
+                      myUserId={myUserId}
+                    />
+                  ),
+                  onGive: () => {
+                    const g = detailGroup;
+                    setDetailGroup(null);
+                    give.requestGive({
+                      id: g.event.id,
+                      name: g.name,
+                      dosage: g.dosage,
+                      surface: 'detail',
+                    });
+                  },
+                  onHistory: () => {
+                    const g = detailGroup;
+                    setDetailGroup(null);
+                    setHistoryGroup(g);
+                  },
+                }
+              : undefined
+          }
           lowStock={
             !detailGroup.inactive &&
             detailGroup.daysLeft !== null &&
@@ -896,6 +1070,19 @@ export default function MedicationsPage(): ReactElement {
           }}
         />
       )}
+
+      {historyGroup && timezone !== null && (
+        <DoseHistoryModal
+          circleId={circleId}
+          eventId={historyGroup.event.id}
+          name={historyGroup.name}
+          timezone={timezone}
+          canEdit={canEdit}
+          onClose={() => setHistoryGroup(null)}
+        />
+      )}
+
+      {give.dialogs}
 
       {deletingEvent && (
         <DeleteEventDialog

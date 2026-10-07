@@ -16,7 +16,18 @@ import { getAnalyticsConsent } from '@/lib/analyticsConsent';
 import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
 import { syncAnalyticsConsent } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
-import { normalizeTimeOfDay } from '@/utils/timezone';
+import {
+  NOTIFICATION_GROUP_ORDER,
+  groupMixed,
+  groupOn,
+  groupPatchBody,
+  type NotificationGroup,
+  type NotificationPrefs,
+} from '@/lib/notificationGroups';
+import { normalizeTimeOfDay, formatTimeOfDay } from '@/utils/timezone';
+import { quietHoursCoverAlmostAllDay } from '@/utils/quietHours';
+import { useHourCycle } from '@/hooks/useHourCycle';
+import type { HourCycle } from '@/utils/hourCycle';
 import { useAuthStore } from '@/store/authStore';
 import { supportedLanguages, type SupportedLanguage } from '@/i18n';
 import {
@@ -78,64 +89,9 @@ const TIMEZONE_VALUES = [
   'Australia/Sydney',
 ] as const;
 
-// The notification flags the mobile UI exposes (ProfileScreen.tsx ~line 851).
-// notes-first-class plan Decision 5: the single "note reminders" switch is
-// replaced by THREE: `event_notes` (notes on events), `note_nudges`
-// (relabelled — now ONLY the after-visit reminder), `care_notes` (daily care
-// notes, now exposed). All three, like `tips_and_suggestions`, default ON when
-// the key is absent from `notification_preferences` (backend returns raw
-// stored JSON; absent means true).
-const NOTIFICATION_KEYS: {
-  key: keyof NotificationPreferences;
-  label: string;
-  desc: string;
-  defaultOn?: boolean;
-}[] = [
-  {
-    key: 'medication_confirmations',
-    label: 'notifications.medicationConfirmations',
-    desc: 'notifications.medicationConfirmationsDesc',
-  },
-  {
-    key: 'missed_medications',
-    label: 'notifications.missedMedications',
-    desc: 'notifications.missedMedicationsDesc',
-  },
-  {
-    key: 'task_assignments',
-    label: 'notifications.taskAssignments',
-    desc: 'notifications.taskAssignmentsDesc',
-  },
-  {
-    key: 'appointment_reminders',
-    label: 'notifications.appointmentReminders',
-    desc: 'notifications.appointmentRemindersDesc',
-  },
-  {
-    key: 'event_notes',
-    label: 'notifications.eventNotes',
-    desc: 'notifications.eventNotesDesc',
-    defaultOn: true,
-  },
-  {
-    key: 'note_nudges',
-    label: 'notifications.noteNudges',
-    desc: 'notifications.noteNudgesDesc',
-    defaultOn: true,
-  },
-  {
-    key: 'care_notes',
-    label: 'notifications.careNotes',
-    desc: 'notifications.careNotesDesc',
-    defaultOn: true,
-  },
-  {
-    key: 'tips_and_suggestions',
-    label: 'notifications.tipsAndSuggestions',
-    desc: 'notifications.tipsAndSuggestionsDesc',
-    defaultOn: true,
-  },
-];
+// Notification settings are four GROUPS over the per-key stored prefs (spec:
+// docs/plans/notification-settings-4-groups.md). The pure group logic lives in
+// `@/lib/notificationGroups` (twin of mobile's utils/notificationGroups.ts).
 
 /** Card-shaped section (spec §6.7): editable, form-like settings. */
 function SettingsCard({
@@ -189,6 +145,12 @@ function SettingsSheetSection({
   );
 }
 
+/** "HH:MM" quiet-hours value -> the viewer's 12h/24h display string. */
+function formatQuietEnd(value: string, cycle: HourCycle): string {
+  const [h, m] = value.split(':');
+  return formatTimeOfDay(Number(h), Number(m), cycle);
+}
+
 export default function ProfilePage(): ReactElement {
   const { t } = useTranslation('profile');
   const navigate = useNavigate();
@@ -214,6 +176,7 @@ export default function ProfilePage(): ReactElement {
   const updateAvatarColor = useUpdateAvatarColor();
   const updateNotif = useUpdateNotificationPrefs();
   const updateQuiet = useUpdateQuietHours();
+  const hourCycle = useHourCycle();
   const updateUnits = useUpdateUnitPrefs();
   const updateDigest = useUpdateEmailDigest();
   const deleteAccount = useDeleteAccount();
@@ -253,6 +216,12 @@ export default function ProfilePage(): ReactElement {
   const [quietEnd, setQuietEnd] = useState('07:00');
 
   const [showDelete, setShowDelete] = useState(false);
+
+  // Medications ON -> OFF waits here for the confirm answer (hooks must stay
+  // above the loading early-return).
+  const [pendingMedicationsOff, setPendingMedicationsOff] = useState<{
+    wasMixed: boolean;
+  } | null>(null);
 
   // PK10: a time-zone change that would move dose times waits here for the
   // user's answer. `zone` is the zone they picked; `names` the recipients whose
@@ -384,20 +353,51 @@ export default function ProfilePage(): ReactElement {
     );
   };
 
-  const handleNotif = (key: keyof NotificationPreferences, next: boolean): void => {
-    const body: Partial<NotificationPreferences> = { [key]: next };
-    if (key === 'note_nudges') {
-      // Backend legacy shim (backend/src/routes/users.ts ~357-370): a request
-      // that sets `note_nudges` without an explicit `event_notes` mirrors
-      // note_nudges's value onto event_notes, for pre-1.3.0 clients that had
-      // a single "Note notifications" switch. Pin event_notes to its CURRENT
-      // displayed value here so flipping "After-visit reminders" cannot also
-      // flip "Notes on events" for this (new, three-switch) client.
-      body.event_notes = user.notification_preferences?.event_notes !== false;
-    }
-    updateNotif.mutate(body, {
+  // Spread: the `NotificationPreferences` interface has no index signature.
+  const savedPrefs = (): NotificationPrefs => ({ ...user.notification_preferences });
+
+  // `prefs` is the latest SAVED value: the React Query cache, which
+  // `useUpdateNotificationPrefs` updates on success (the Tasks pin reads it).
+  const writeNotifGroup = (group: NotificationGroup, next: boolean): void => {
+    const body = groupPatchBody(savedPrefs(), group, next);
+    updateNotif.mutate(body as Partial<NotificationPreferences>, {
       onSuccess: () => showToast(t('notifications.success'), 'success'),
     });
+  };
+
+  const handleNotifGroup = (group: NotificationGroup, next: boolean): void => {
+    const prefs = savedPrefs();
+    const wasMixed = groupMixed(prefs, group);
+    // Medications ON -> OFF (including from the mixed state) asks first,
+    // BEFORE any write. Turning on, and every other group, never asks.
+    if (group === 'medications' && !next) {
+      setPendingMedicationsOff({ wasMixed });
+      return;
+    }
+    Analytics.notificationGroupToggled({ group, enabled: next, was_mixed: wasMixed });
+    writeNotifGroup(group, next);
+  };
+
+  const confirmMedicationsOff = (): void => {
+    const wasMixed = pendingMedicationsOff?.wasMixed ?? false;
+    setPendingMedicationsOff(null);
+    Analytics.notificationGroupToggled({
+      group: 'medications',
+      enabled: false,
+      was_mixed: wasMixed,
+      confirmed: true,
+    });
+    writeNotifGroup('medications', false);
+  };
+
+  const cancelMedicationsOff = (): void => {
+    Analytics.notificationGroupToggled({
+      group: 'medications',
+      enabled: false,
+      was_mixed: pendingMedicationsOff?.wasMixed ?? false,
+      confirmed: false,
+    });
+    setPendingMedicationsOff(null);
   };
 
   const handleAnalyticsToggle = (next: boolean): void => {
@@ -661,18 +661,46 @@ export default function ProfilePage(): ReactElement {
         title={t('sections.notifications')}
         description={t('notifications.description')}
       >
-        {NOTIFICATION_KEYS.map(({ key, label, desc, defaultOn }) => {
-          const raw = user.notification_preferences?.[key];
-          const checked = defaultOn ? raw !== false : raw === true;
+        {NOTIFICATION_GROUP_ORDER.map((group) => {
+          const prefs = savedPrefs();
+          const mixed = groupMixed(prefs, group);
+          // Literal keys (not template strings) so the key-coverage scan can resolve them.
+          const copy: Record<NotificationGroup, { title: string; desc: string }> = {
+            medications: {
+              title: t('notifications.groups.medications'),
+              desc: t('notifications.groups.medicationsDesc'),
+            },
+            tasks: {
+              title: t('notifications.groups.tasks'),
+              desc: t('notifications.groups.tasksDesc'),
+            },
+            notes: {
+              title: t('notifications.groups.notes'),
+              desc: t('notifications.groups.notesDesc'),
+            },
+            tips: {
+              title: t('notifications.groups.tips'),
+              desc: t('notifications.groups.tipsDesc'),
+            },
+          };
           return (
-            <SheetRow key={key}>
+            <SheetRow key={group}>
               <div className="w-full">
                 <Toggle
-                  checked={checked}
-                  onChange={(next) => handleNotif(key, next)}
+                  checked={groupOn(prefs, group)}
+                  onChange={(next) => handleNotifGroup(group, next)}
                   disabled={updateNotif.isPending}
-                  label={t(label)}
-                  hint={t(desc)}
+                  label={copy[group].title}
+                  hint={
+                    <>
+                      {copy[group].desc}
+                      {mixed ? (
+                        <span className="mt-0.5 block font-medium">
+                          {t('notifications.someTurnedOff')}
+                        </span>
+                      ) : null}
+                    </>
+                  }
                 />
               </div>
             </SheetRow>
@@ -713,6 +741,17 @@ export default function ProfilePage(): ReactElement {
                 disabled={updateQuiet.isPending}
               />
             </div>
+          </SheetRow>
+        ) : null}
+        {quietEnabled && quietHoursCoverAlmostAllDay(quietStart, quietEnd) ? (
+          <SheetRow>
+            <p
+              role="alert"
+              data-testid="quiet-hours-almost-all-day-warning"
+              className="m-0 text-sm text-amber-deep text-balance"
+            >
+              {t('quietHours.almostAllDayWarning', { endTime: formatQuietEnd(quietEnd, hourCycle) })}
+            </p>
           </SheetRow>
         ) : null}
       </SettingsSheetSection>
@@ -821,6 +860,18 @@ export default function ProfilePage(): ReactElement {
           {t('delete.cta')}
         </Button>
       </Card>
+
+      {pendingMedicationsOff ? (
+        <ConfirmDialog
+          variant="confirm"
+          title={t('notifications.confirmMedicationsOff.title')}
+          message={t('notifications.confirmMedicationsOff.message')}
+          confirmLabel={t('notifications.confirmMedicationsOff.confirm')}
+          cancelLabel={t('notifications.confirmMedicationsOff.cancel')}
+          onConfirm={confirmMedicationsOff}
+          onCancel={cancelMedicationsOff}
+        />
+      ) : null}
 
       {pendingZone ? (
         <ConfirmDialog

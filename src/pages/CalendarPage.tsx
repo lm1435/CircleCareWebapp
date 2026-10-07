@@ -29,6 +29,9 @@ import { EVENT_TYPE_DOT_CLASS } from '@/components/calendar/eventStyles';
 import type { EventType } from '@/api/calendarEvents';
 import { useCalendarEvents, useCareRecipientTimezone } from '@/hooks/useCalendarEvents';
 import { Analytics } from '@/lib/analytics';
+import { useCircleAsNeededDoses } from '@/hooks/useAsNeeded';
+import { DoseHistoryModal } from '@/components/meds/DoseHistoryModal';
+import { groupDosesByDay, type AsNeededDayEntry } from '@/components/calendar/asNeededByDay';
 import { getDateInTimezone, getTimezoneLabel } from '@/utils/timezone';
 
 type CalendarView = 'week' | 'month';
@@ -202,6 +205,24 @@ export default function CalendarPage(): ReactElement {
     prefetchAdjacent: true,
   });
   const { events } = eventsQuery;
+
+  // AS-NEEDED doses are not events: the calendar's own query above never asks for
+  // them. This SEPARATE read (circle-wide dose log over the visible range, live
+  // doses only) only marks the days a dose was logged. FAIL-SOFT: on any error
+  // `doses` is empty — no marker, the calendar is unaffected.
+  const { doses: asNeededDoses } = useCircleAsNeededDoses(
+    circleId,
+    range ? { start_date: range.start, end_date: range.end } : undefined,
+    {
+      includeRemoved: false,
+      enabled: !!timezone,
+    }
+  );
+  const asNeededByDay = useMemo(
+    () => (timezone ? groupDosesByDay(asNeededDoses, timezone) : new Map<string, AsNeededDayEntry[]>()),
+    [asNeededDoses, timezone]
+  );
+  const [doseHistoryFor, setDoseHistoryFor] = useState<AsNeededDayEntry | null>(null);
 
   const eventsByDay = useMemo(() => {
     const byDay = new Map<string, CalendarEvent[]>();
@@ -417,7 +438,13 @@ export default function CalendarPage(): ReactElement {
             </Card>
           )}
 
-          {!isLoading && !isError && range && timezone && todayStr && events.length === 0 && (
+          {!isLoading &&
+            !isError &&
+            range &&
+            timezone &&
+            todayStr &&
+            events.length === 0 &&
+            asNeededByDay.size === 0 && (
             <Card variant="outlined" padding="lg">
               <EmptyState
                 tone="moss"
@@ -439,7 +466,7 @@ export default function CalendarPage(): ReactElement {
             range &&
             timezone &&
             todayStr &&
-            events.length > 0 &&
+            (events.length > 0 || asNeededByDay.size > 0) &&
             (view === 'week' ? (
               <WeekView
                 days={getWeekDays(range.start)}
@@ -447,6 +474,8 @@ export default function CalendarPage(): ReactElement {
                 careRecipientTimezone={timezone}
                 todayStr={todayStr}
                 onEventClick={handleEventClick}
+                asNeededByDay={asNeededByDay}
+                onAsNeededOpen={setDoseHistoryFor}
               />
             ) : (
               <MonthView
@@ -456,6 +485,8 @@ export default function CalendarPage(): ReactElement {
                 careRecipientTimezone={timezone}
                 todayStr={todayStr}
                 onEventClick={handleEventClick}
+                asNeededByDay={asNeededByDay}
+                onAsNeededOpen={setDoseHistoryFor}
               />
             ))}
         </div>
@@ -526,6 +557,17 @@ export default function CalendarPage(): ReactElement {
             />
           }
           onClose={() => setSelectedEvent(null)}
+        />
+      )}
+
+      {doseHistoryFor && timezone && (
+        <DoseHistoryModal
+          circleId={circleId}
+          eventId={doseHistoryFor.eventId}
+          name={doseHistoryFor.name}
+          timezone={timezone}
+          canEdit={canEdit}
+          onClose={() => setDoseHistoryFor(null)}
         />
       )}
 

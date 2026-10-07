@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -29,6 +29,7 @@ import { ReadOnlyCircleBanner } from '@/components/ReadOnlyCircleBanner';
 import { useCircles } from '@/hooks/useCircles';
 import { useCareRecipientTimezone, useEventsPresence } from '@/hooks/useCalendarEvents';
 import { useTodaysMeds, useMedsForDate } from '@/hooks/useMedConfirmation';
+import { AsNeededSection } from './AsNeededSection';
 import { doseNeedsAnswer } from '@/utils/medicationDose';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { isMedicationDiscontinuedError, isOccurrenceRemovedError } from '@/lib/apiErrors';
@@ -145,6 +146,26 @@ function getMedDisplayStatus(
     : 'pending';
 }
 
+const EMPTY_MEDS: TodaysMedication[] = [];
+
+/**
+ * Split Today's meds read into scheduled DOSES and the circle's ACTIVE
+ * as-needed medications. An as-needed row has no schedule: it is never a dose,
+ * so it must never reach `allAnswered`, "needs attention" or any count.
+ */
+function splitAsNeeded(rows: TodaysMedication[] | undefined): {
+  scheduledToday: TodaysMedication[];
+  asNeededToday: TodaysMedication[];
+} {
+  const list = rows ?? EMPTY_MEDS;
+  return {
+    scheduledToday: list.filter((m) => m.as_needed !== true),
+    asNeededToday: list
+      .filter((m) => m.as_needed === true && !m.discontinued_at)
+      .sort((a, b) => (a.medication_name || a.title).localeCompare(b.medication_name || b.title)),
+  };
+}
+
 export interface TodaysMedsProps {
   circleId?: string;
   /**
@@ -163,7 +184,11 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   // The care recipient's timezone is NOT on the circles list — it comes from
   // GET /circles/:circleId. All "today"/past-due math must use it.
   const { timezone } = useCareRecipientTimezone(circleId ?? '');
-  const medsQuery = useTodaysMeds(circleId, timezone ?? undefined);
+  // ONE read carries today's scheduled doses AND the circle's as-needed (PRN)
+  // medications (`includeAsNeeded`): the server returns PRN rows whole, whatever
+  // the window, so no second request is needed. They are split apart below.
+  const medsQuery = useTodaysMeds(circleId, timezone ?? undefined, { includeAsNeeded: true });
+  const { scheduledToday, asNeededToday } = useMemo(() => splitAsNeeded(medsQuery.data), [medsQuery.data]);
   // Yesterday's doses nobody answered. Mobile has surfaced these as "Needs
   // Attention" since it shipped; web had no equivalent, so an unanswered dose
   // simply stopped existing here at midnight — on the surface a caregiver is
@@ -187,7 +212,11 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
     presenceToday ? addDays(presenceToday, -30) : '',
     presenceToday ? addDays(presenceToday, 180) : ''
   );
-  const hasAnyMedication = presence.data?.medication === true;
+  // As-needed medications are NOT in the presence read (they are not events on
+  // a day), so a circle whose only medication is as-needed must not be told
+  // "No medications yet". They also never count toward `allAnswered` below:
+  // they have no dose to answer and live in their own section.
+  const hasAnyMedication = presence.data?.medication === true || asNeededToday.length > 0;
   const [showAdd, setShowAdd] = useState(false);
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
@@ -260,8 +289,10 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   // Yesterday's doses that still need a human answer. An auto-`missed` row is
   // the cron recording that nobody replied, NOT a reply — `doseNeedsAnswer`
   // keeps those asking, exactly as mobile does.
-  const needsAttention = (yesterdayQuery.data ?? []).filter((med) =>
-    doseNeedsAnswer(med.confirmation)
+  // An as-needed row is never a dose: a day cached while it WAS today carried
+  // them, and the same entry is read as yesterday after midnight.
+  const needsAttention = (yesterdayQuery.data ?? []).filter(
+    (med) => med.as_needed !== true && doseNeedsAnswer(med.confirmation)
   );
 
   function handleConfirm(med: TodaysMedication, status: ConfirmableStatus): void {
@@ -296,7 +327,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   // never reach the door. Presence and yesterday only decide the EMPTY copy, so
   // they gate that branch alone: doses that did load always render.
   const nothingListed =
-    medsQuery.isSuccess && medsQuery.data.length === 0 && needsAttention.length === 0;
+    medsQuery.isSuccess && scheduledToday.length === 0 && needsAttention.length === 0;
 
   // Yesterday's read FAILED while the card otherwise has something true to say
   // (doses, or "none today"). Its doses would silently vanish from Needs
@@ -566,8 +597,8 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
     // afford the record of the day, where a phone cannot) but they can never
     // displace one that is outstanding.
     const allMeds = [
-      ...medsQuery.data.filter((med) => doseNeedsAnswer(med.confirmation)),
-      ...medsQuery.data.filter((med) => !doseNeedsAnswer(med.confirmation)),
+      ...scheduledToday.filter((med) => doseNeedsAnswer(med.confirmation)),
+      ...scheduledToday.filter((med) => !doseNeedsAnswer(med.confirmation)),
     ];
     const collapsed = limit != null && !expanded && allMeds.length > limit;
     const visibleMeds = collapsed ? allMeds.slice(0, limit) : allMeds;
@@ -652,6 +683,8 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
         ) : null)}
 
       {body}
+
+      <AsNeededSection circleId={circleId} meds={asNeededToday} />
 
       {showAdd && (
         <AddEventModal

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -116,11 +116,13 @@ vi.mock('@/lib/analyticsConsentSync', () => ({
   syncAnalyticsConsent: (enabled: boolean, userId: string) => syncAnalyticsConsent(enabled, userId),
 }));
 
+const mockGroupToggled = vi.fn();
 const mockLanguageChanged = vi.fn();
 const mockTimezoneChanged = vi.fn();
 const mockAccountDeleted = vi.fn();
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
+    notificationGroupToggled: (...args: unknown[]) => mockGroupToggled(...args),
     languageChanged: (...args: unknown[]) => mockLanguageChanged(...args),
     timezoneChanged: (...args: unknown[]) => mockTimezoneChanged(...args),
     accountDeleted: (...args: unknown[]) => mockAccountDeleted(...args),
@@ -152,103 +154,233 @@ beforeEach(() => {
 });
 
 describe('ProfilePage', () => {
-  it('fires useUpdateNotificationPrefs when a notification toggle is flipped', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    // Wait for the user query to resolve so the toggles render.
-    const toggle = await screen.findByRole('switch', { name: /Medication confirmations/i });
-    await user.click(toggle);
-
-    expect(updateNotif).toHaveBeenCalledTimes(1);
-    // Was ON → flips to false.
-    expect(updateNotif.mock.calls[0][0]).toEqual({ medication_confirmations: false });
-  });
-
-  // notes-first-class plan Decision 5: the single "note reminders" switch is
-  // replaced by three: event_notes, note_nudges (relabelled), care_notes.
-  // USER's notification_preferences has no `event_notes`/`care_notes` key at
-  // all (absent) and an explicit `note_nudges: true` — all three must render
-  // ON, since the backend contract is "absent key means true".
-  it('renders the three note switches with the right labels, all ON', async () => {
-    renderPage();
-
-    const eventNotes = await screen.findByRole('switch', { name: /Notes on events/i });
-    const noteNudges = await screen.findByRole('switch', { name: /After-visit reminders/i });
-    const careNotes = await screen.findByRole('switch', { name: /Daily care notes/i });
-
-    expect(eventNotes).toHaveAttribute('aria-checked', 'true');
-    expect(noteNudges).toHaveAttribute('aria-checked', 'true');
-    expect(careNotes).toHaveAttribute('aria-checked', 'true');
-  });
-
-  it('toggling "Notes on events" sends exactly { event_notes: false }', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    const toggle = await screen.findByRole('switch', { name: /Notes on events/i });
-    await user.click(toggle);
-
-    expect(updateNotif).toHaveBeenCalledTimes(1);
-    expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false });
-  });
-
-  // BUG: the backend's legacy shim (backend/src/routes/users.ts ~357-370)
-  // mirrors `note_nudges` onto `event_notes` whenever a request sets the
-  // former without the latter — that shim exists for pre-1.3.0 clients with a
-  // single "Note notifications" switch. This (new, three-switch) client must
-  // pin `event_notes` to its current displayed value on every note_nudges
-  // PATCH so the shim can't cross-flip "Notes on events".
-  it('toggling "After-visit reminders" sends { note_nudges: false, event_notes: true } when event_notes is absent (defaults ON)', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    const toggle = await screen.findByRole('switch', { name: /After-visit reminders/i });
-    await user.click(toggle);
-
-    expect(updateNotif).toHaveBeenCalledTimes(1);
-    expect(updateNotif.mock.calls[0][0]).toEqual({ note_nudges: false, event_notes: true });
-  });
-
-  it('toggling "After-visit reminders" sends { note_nudges: false, event_notes: false } when event_notes is already off', async () => {
-    currentUser = {
-      ...USER,
-      notification_preferences: { ...USER.notification_preferences, event_notes: false },
+  // Notification settings: 8 per-key switches -> 4 groups
+  // (docs/plans/notification-settings-4-groups.md). Storage is unchanged; a
+  // group tap PATCHes every child key (+ the event_notes pin for Tasks).
+  describe('notification groups', () => {
+    const GROUP_NAMES = [
+      /^Medications/i,
+      /^Tasks & appointments/i,
+      /^Notes/i,
+      /^Tips & suggestions/i,
+    ];
+    const RETIRED = [
+      /Medication confirmations/i,
+      /Unmarked medications/i,
+      /Task assignments/i,
+      /Appointment reminders/i,
+      /Notes on events/i,
+      /After-visit reminders/i,
+      /Daily care notes/i,
+    ];
+    const seed = (prefs: Record<string, boolean>) => {
+      currentUser = {
+        ...USER,
+        notification_preferences: { ...USER.notification_preferences, ...prefs },
+      };
     };
-    const user = userEvent.setup();
-    renderPage();
 
-    const toggle = await screen.findByRole('switch', { name: /After-visit reminders/i });
-    await user.click(toggle);
+    it('renders exactly four group switches in order, and none of the retired labels', async () => {
+      renderPage();
+      await screen.findByRole('switch', { name: GROUP_NAMES[0] });
+      const names = screen
+        .getAllByRole('switch')
+        .map((el) => el.getAttribute('aria-labelledby'))
+        .map((id) => document.getElementById(id!)?.textContent ?? '');
+      // Quiet hours + analytics consent + email digest are other switches; the
+      // notification sheet is the first four.
+      expect(names.slice(0, 4)).toEqual([
+        'Medications',
+        'Tasks & appointments',
+        'Notes',
+        'Tips & suggestions',
+      ]);
+      for (const retired of RETIRED) {
+        expect(screen.queryByRole('switch', { name: retired })).toBeNull();
+      }
+    });
 
-    expect(updateNotif).toHaveBeenCalledTimes(1);
-    expect(updateNotif.mock.calls[0][0]).toEqual({ note_nudges: false, event_notes: false });
-  });
+    it('all four ON when keys are absent (!== false), with no status line', async () => {
+      seed({});
+      currentUser = {
+        ...USER,
+        notification_preferences: {
+          activity_updates: true,
+          chat_messages: true,
+        } as User['notification_preferences'],
+      };
+      renderPage();
+      for (const name of GROUP_NAMES) {
+        expect(await screen.findByRole('switch', { name })).toHaveAttribute('aria-checked', 'true');
+      }
+      expect(screen.queryByText('Some turned off')).toBeNull();
+    });
 
-  it('toggling "Notes on events" and "Daily care notes" still send only their own key (not mirrored onto note_nudges)', async () => {
-    const user = userEvent.setup();
-    renderPage();
+    it('a group is OFF only when every child is false (fixes the old raw === true read)', async () => {
+      seed({ event_notes: false, care_notes: false });
+      renderPage();
+      expect(await screen.findByRole('switch', { name: GROUP_NAMES[2] })).toHaveAttribute(
+        'aria-checked',
+        'false'
+      );
+      expect(screen.getByRole('switch', { name: GROUP_NAMES[1] })).toHaveAttribute(
+        'aria-checked',
+        'true'
+      );
+      expect(screen.queryByText('Some turned off')).toBeNull();
+    });
 
-    const eventNotesToggle = await screen.findByRole('switch', { name: /Notes on events/i });
-    await user.click(eventNotesToggle);
-    expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false });
+    it('mixed fixture: group ON, "Some turned off" visible and inside the accessible description', async () => {
+      seed({ missed_medications: false });
+      renderPage();
+      const meds = await screen.findByRole('switch', { name: GROUP_NAMES[0] });
+      expect(meds).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getAllByText('Some turned off')).toHaveLength(1);
+      expect(meds).toHaveAccessibleDescription(/Doses taken, skipped or not marked/);
+      expect(meds).toHaveAccessibleDescription(/Some turned off/);
+      expect(screen.getByRole('switch', { name: GROUP_NAMES[2] })).not.toHaveAccessibleDescription(
+        /Some turned off/
+      );
+    });
 
-    const careNotesToggle = await screen.findByRole('switch', { name: /Daily care notes/i });
-    await user.click(careNotesToggle);
-    expect(updateNotif.mock.calls[1][0]).toEqual({ care_notes: false });
+    it('Medications click opens the confirm; "Keep on" does not write and the switch stays ON', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const meds = await screen.findByRole('switch', { name: GROUP_NAMES[0] });
+      await user.click(meds);
 
-    expect(updateNotif).toHaveBeenCalledTimes(2);
-  });
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Turn off medication alerts?')).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("You won't be told when a dose isn't marked. Turn off anyway?")
+      ).toBeInTheDocument();
+      // The confirm comes BEFORE any write.
+      expect(updateNotif).not.toHaveBeenCalled();
 
-  it('toggling "Daily care notes" sends exactly { care_notes: false }', async () => {
-    const user = userEvent.setup();
-    renderPage();
+      // The Modal's close X carries the cancel label as its aria-label too; the
+      // footer button is the one with visible text.
+      await user.click(within(dialog).getByText('Keep on', { selector: 'button' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(updateNotif).not.toHaveBeenCalled();
+      expect(meds).toHaveAttribute('aria-checked', 'true');
+      expect(mockGroupToggled).toHaveBeenCalledWith({
+        group: 'medications',
+        enabled: false,
+        was_mixed: false,
+        confirmed: false,
+      });
+    });
 
-    const toggle = await screen.findByRole('switch', { name: /Daily care notes/i });
-    await user.click(toggle);
+    it('Medications "Turn off" writes both med keys false', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
 
-    expect(updateNotif).toHaveBeenCalledTimes(1);
-    expect(updateNotif.mock.calls[0][0]).toEqual({ care_notes: false });
+      expect(updateNotif).toHaveBeenCalledTimes(1);
+      expect(updateNotif.mock.calls[0][0]).toEqual({
+        medication_confirmations: false,
+        missed_medications: false,
+      });
+      expect(mockGroupToggled).toHaveBeenCalledWith({
+        group: 'medications',
+        enabled: false,
+        was_mixed: false,
+        confirmed: true,
+      });
+    });
+
+    it('Medications off from the mixed state also confirms first', async () => {
+      seed({ missed_medications: false });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
+      expect(updateNotif).not.toHaveBeenCalled();
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
+      expect(updateNotif.mock.calls[0][0]).toEqual({
+        medication_confirmations: false,
+        missed_medications: false,
+      });
+      expect(mockGroupToggled).toHaveBeenCalledWith(
+        expect.objectContaining({ was_mixed: true, confirmed: true })
+      );
+    });
+
+    it('turning Medications ON never opens the confirm', async () => {
+      seed({ medication_confirmations: false, missed_medications: false });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[0] }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(updateNotif.mock.calls[0][0]).toEqual({
+        medication_confirmations: true,
+        missed_medications: true,
+      });
+    });
+
+    it('Tasks off sends the 4-key body with event_notes pinned true (absent)', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[1] }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(updateNotif).toHaveBeenCalledTimes(1);
+      expect(updateNotif.mock.calls[0][0]).toEqual({
+        task_assignments: false,
+        appointment_reminders: false,
+        note_nudges: false,
+        event_notes: true,
+      });
+    });
+
+    it('Tasks off pins event_notes to its stored false', async () => {
+      seed({ event_notes: false, care_notes: false });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[1] }));
+      expect(updateNotif.mock.calls[0][0]).toEqual({
+        task_assignments: false,
+        appointment_reminders: false,
+        note_nudges: false,
+        event_notes: false,
+      });
+    });
+
+    it('Notes off sends exactly event_notes + care_notes, never note_nudges', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
+      expect(updateNotif).toHaveBeenCalledTimes(1);
+      expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false, care_notes: false });
+      expect(Object.keys(updateNotif.mock.calls[0][0])).not.toContain('note_nudges');
+    });
+
+    it('a mixed Notes group tap turns the whole group off', async () => {
+      seed({ care_notes: false });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[2] }));
+      expect(updateNotif.mock.calls[0][0]).toEqual({ event_notes: false, care_notes: false });
+      expect(mockGroupToggled).toHaveBeenCalledWith({
+        group: 'notes',
+        enabled: false,
+        was_mixed: true,
+      });
+    });
+
+    it('Tips sends exactly one key', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      expect(updateNotif.mock.calls[0][0]).toEqual({ tips_and_suggestions: false });
+    });
+
+    it('toasts success after a group write', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      act(() => updateNotif.mock.calls[0][1].onSuccess());
+      expect(showToast).toHaveBeenCalledWith('Notification preferences updated.', 'success');
+    });
   });
 
   it('fires useUpdateProfile({language}) when the language radio changes', async () => {
@@ -561,6 +693,69 @@ describe('ProfilePage quiet hours', () => {
     expect(updateQuiet.mock.calls[0][0]).toEqual({
       quiet_hours_start: '22:00',
       quiet_hours_end: '07:00',
+    });
+  });
+
+  // UI-time warning (owner: "it should be a warning at UI time"). Never blocks.
+  describe('almost-all-day warning', () => {
+    const WARNING = /Quiet hours cover almost the whole day/;
+
+    it('shows no warning for an ordinary overnight window (22:00 -> 07:00)', async () => {
+      currentUser = WITH_SECONDS;
+      renderPage();
+      await screen.findByLabelText('Start time');
+      expect(screen.queryByTestId('quiet-hours-almost-all-day-warning')).toBeNull();
+    });
+
+    it('warns at 22:00 -> 21:59 (23 h 59 m across midnight), in the viewer hour cycle, and still saves', async () => {
+      currentUser = WITH_SECONDS;
+      renderPage();
+      fireEvent.change(await screen.findByLabelText(/^End time/), { target: { value: '21:59' } });
+
+      const warning = await screen.findByTestId('quiet-hours-almost-all-day-warning');
+      expect(warning).toHaveTextContent(
+        'Quiet hours cover almost the whole day, so notifications will be held until 9:59 PM.'
+      );
+      expect(warning).toHaveAttribute('role', 'alert');
+      // Not blocked: the save went out.
+      expect(updateQuiet.mock.calls[0][0]).toEqual({
+        quiet_hours_start: '22:00',
+        quiet_hours_end: '21:59',
+      });
+    });
+
+    it('warns for a same-day window that leaves < 1 h outside (00:00 -> 23:30)', async () => {
+      currentUser = { ...USER, quiet_hours_start: '00:00:00', quiet_hours_end: '23:30:00' };
+      renderPage();
+      expect(await screen.findByText(WARNING)).toBeInTheDocument();
+    });
+
+    it('does NOT warn at exactly 1 h outside (22:00 -> 21:00) or at start == end (empty window on the server)', async () => {
+      currentUser = WITH_SECONDS;
+      renderPage();
+      const end = await screen.findByLabelText(/^End time/);
+      fireEvent.change(end, { target: { value: '21:00' } });
+      expect(screen.queryByText(WARNING)).toBeNull();
+      fireEvent.change(end, { target: { value: '22:00' } });
+      expect(screen.queryByText(WARNING)).toBeNull();
+    });
+
+    it('is Spanish (and clears when the window is widened back out)', async () => {
+      const i18n = (await import('@/i18n')).default;
+      await i18n.changeLanguage('es');
+      try {
+        currentUser = { ...WITH_SECONDS, language: 'es' };
+        renderPage();
+        const end = await screen.findByLabelText(/^Hora de fin/);
+        fireEvent.change(end, { target: { value: '21:59' } });
+        expect(await screen.findByTestId('quiet-hours-almost-all-day-warning')).toHaveTextContent(
+          /cubre casi todo el día.*retendrán hasta las/
+        );
+        fireEvent.change(end, { target: { value: '07:00' } });
+        expect(screen.queryByTestId('quiet-hours-almost-all-day-warning')).toBeNull();
+      } finally {
+        await i18n.changeLanguage('en');
+      }
     });
   });
 });

@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import type { DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from './DrugAutocomplete';
 import { NotificationInfoModal } from './NotificationInfoModal';
+import { DoseQuietHoursNote } from './DoseQuietHoursNote';
 import {
+  deleteEvent as deleteEventRequest,
   eventFormSchema,
   type CalendarEvent,
   type CreateEventRequest,
@@ -13,6 +15,9 @@ import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/u
 import { useCircle } from '@/hooks/useCircle';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
+import { queryClient } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/queryKeys';
+import { Analytics } from '@/lib/analytics';
 import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
 import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
 import {
@@ -161,7 +166,11 @@ type RecurrenceChoice =
   | 'cycle'
   // Not a stored rule: `weekly` + `recurrence_days`. LAST, after Cycle — the
   // same position as mobile's Repeat sheet tile.
-  | 'days_of_week';
+  | 'days_of_week'
+  // Not a stored rule either: the form's name for `as_needed: true` (a
+  // medication with NO schedule). Offered on a NEW medication only, and locked
+  // once saved (the server answers AS_NEEDED_IMMUTABLE to a flip either way).
+  | 'as_needed';
 
 const RECURRENCE_CHOICES: RecurrenceChoice[] = [
   'none',
@@ -172,6 +181,7 @@ const RECURRENCE_CHOICES: RecurrenceChoice[] = [
   'yearly',
   'cycle',
   'days_of_week',
+  'as_needed',
 ];
 
 /**
@@ -208,7 +218,7 @@ function parseRecurrence(
     const days = cleanRecurrenceDays(recurrenceDays);
     if (days.length > 0) return { choice: 'days_of_week', daysOn: '7', daysOff: '7', days };
   }
-  if (rule !== 'days_of_week' && (RECURRENCE_CHOICES as string[]).includes(rule)) {
+  if (rule !== 'days_of_week' && rule !== 'as_needed' && (RECURRENCE_CHOICES as string[]).includes(rule)) {
     return { choice: rule as RecurrenceChoice, daysOn: '7', daysOff: '7', days: [] };
   }
   return { choice: 'none', daysOn: '7', daysOff: '7', days: [] };
@@ -474,7 +484,14 @@ export function AddEventModal({
         scheduleSource ? scheduleSource.recurrence_days : null
       )
     : parseRecurrence(initialRecurrence);
-  const [recurrence, setRecurrence] = useState<RecurrenceChoice>(initialRecurrenceState.choice);
+  // AS NEEDED is a property of the row, not of a rule: an as-needed medication
+  // has none, so `parseRecurrence` would call it "Does not repeat". Opening one
+  // for edit starts (and stays) on `as_needed`; `isAsNeededEdit` locks it.
+  const isAsNeededEdit = isEditing && event.as_needed === true;
+  const [recurrence, setRecurrence] = useState<RecurrenceChoice>(
+    isAsNeededEdit ? 'as_needed' : initialRecurrenceState.choice
+  );
+  const [asNeededReason, setAsNeededReason] = useState(event?.as_needed_reason ?? '');
   const [daysOn, setDaysOn] = useState(initialRecurrenceState.daysOn);
   const [daysOff, setDaysOff] = useState(initialRecurrenceState.daysOff);
   /** The "Days of the week" selection, 0=Sun..6=Sat (used only in that mode). */
@@ -603,7 +620,8 @@ export function AddEventModal({
    * the same "a user who has chosen owns it" rule as the dates above.
    */
   useEffect(() => {
-    if (!event || !scheduleSource || recurrenceTouched.current) return;
+    // An as-needed row has no rule to re-derive: leave its locked choice alone.
+    if (!event || !scheduleSource || recurrenceTouched.current || event.as_needed === true) return;
     const parsed = parseRecurrence(scheduleSource.recurrence_rule, scheduleSource.recurrence_days);
     setRecurrence(parsed.choice);
     setDaysOn(parsed.daysOn);
@@ -644,6 +662,8 @@ export function AddEventModal({
   }, [assignedTo, members]);
 
   const isMedication = eventType === 'medication';
+  /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
+  const isAsNeeded = isMedication && recurrence === 'as_needed';
   const isPending = createEvent.isPending || updateEvent.isPending;
 
   // ── Reminder messaging (display only — never changes what gets saved) ──────
@@ -853,14 +873,19 @@ export function AddEventModal({
 
   const recurrenceOptions = useMemo(
     () =>
-      RECURRENCE_CHOICES.map((choice) => ({
+      // "As needed" is offered on a NEW medication only: it is locked after
+      // create, so an edit of a scheduled medication never lists it, and an
+      // as-needed one never reaches this Select (see the locked block below).
+      RECURRENCE_CHOICES.filter(
+        (choice) => choice !== 'as_needed' || (isMedication && !isEditing)
+      ).map((choice) => ({
         value: choice,
         label:
           choice === 'none'
             ? t('addEvent.recurrence.never')
             : t(`addEvent.recurrence.${recurrenceKey(choice)}`),
       })),
-    [t]
+    [t, isMedication, isEditing]
   );
 
   // ── Days of the week ─────────────────────────────────────────────────────
@@ -987,10 +1012,10 @@ export function AddEventModal({
           : 'addEvent.validation.titleRequired'
       );
     }
-    if (!dateStr) {
+    if (!dateStr && !isAsNeeded) {
       fieldErrors.scheduled_date = t('addEvent.validation.dateRequired');
     }
-    if (isMedication && !timeStr) {
+    if (isMedication && !timeStr && !isAsNeeded) {
       fieldErrors.scheduled_time = t('addEvent.validation.timeRequired');
     }
     if (recurrence === 'days_of_week' && selectedDays.length === 0) {
@@ -1104,6 +1129,33 @@ export function AddEventModal({
     };
     if (recurrence_days !== undefined) data.recurrence_days = recurrence_days;
 
+    // AS NEEDED: the SERVER pins the schedule (no time / repeat / end date /
+    // reminders; "added on" = today in the recipient's zone), so none of those
+    // are sent — and on an edit a null/echoed schedule field would only be
+    // dropped or refused (AS_NEEDED_UNSCHEDULED). Only `as_needed` (create only:
+    // it is locked afterwards) and the optional plain reason travel.
+    if (isAsNeeded) {
+      delete data.scheduled_time;
+      delete data.recurrence_rule;
+      delete data.recurrence_days;
+      delete data.recurrence_end_date;
+      delete data.duration_minutes;
+      delete data.reminder_at_due;
+      delete data.reminder_24h;
+      delete data.reminder_1h;
+      delete data.reminder_30m;
+      delete data.reminder_15m;
+      data.scheduled_date = getDateInTimezone(tz);
+      const reason = asNeededReason.trim();
+      if (isEditing) {
+        // null CLEARS a stored reason on PATCH.
+        data.as_needed_reason = reason ? reason : null;
+      } else {
+        data.as_needed = true;
+        if (reason) data.as_needed_reason = reason;
+      }
+    }
+
     if (isMedication) {
       data.medication_name = trimmedTitle;
       data.medication_dosage = dosage.trim() || undefined;
@@ -1137,7 +1189,26 @@ export function AddEventModal({
         await updateEvent.mutateAsync({ eventId: targetEventId, data });
         showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
       } else {
-        await createEvent.mutateAsync(data);
+        const created = await createEvent.mutateAsync(data);
+        // OLD-BACKEND GUARD. A backend that predates as-needed strips the
+        // unknown `as_needed` key and answers 200 with an ordinary one-time
+        // medication — a silent wrong record. Undo it and say so.
+        if (data.as_needed === true && created && created.as_needed !== true) {
+          try {
+            await deleteEventRequest(circleId, created.id);
+          } catch {
+            // Best effort: the explanation below still holds.
+          }
+          void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+          showToast(t('addEvent.asNeeded.updateOldBackend'), 'error');
+          return;
+        }
+        if (data.as_needed === true) {
+          Analytics.asNeededMedicationCreated({
+            source: 'form',
+            has_reason: !!data.as_needed_reason,
+          });
+        }
         showToast(t(createdToastKey(eventType)), 'success');
       }
       onSaved?.();
@@ -1175,6 +1246,7 @@ export function AddEventModal({
         'description',
         'assigned_to',
         'recurrence_rule',
+        'as_needed_reason',
         RECURRENCE_DAYS_ID,
         'recurrence_end_date',
       ]);
@@ -1268,6 +1340,8 @@ export function AddEventModal({
             const next = e.target.value as EventType;
             setEventType(next);
             if (next !== 'medication') setSelectedDrug(null);
+            // As needed only exists on a medication.
+            if (next !== 'medication' && recurrence === 'as_needed') setRecurrence('none');
             if (next !== 'task' && next !== 'appointment') setAssignedTo(null);
             if (next === 'medication') setEndTimeStr('');
           }}
@@ -1356,19 +1430,21 @@ export function AddEventModal({
           />
         )}
 
-        <DateField
-          id="scheduled_date"
-          label={t('addEvent.fields.date')}
-          required
-          value={dateStr}
-          error={errors.scheduled_date}
-          hint={showDualTimezone ? dualTimezoneLabel : undefined}
-          onChange={(e) => {
-            datesTouched.current = true;
-            setDateStr(e.target.value);
-            clearError('scheduled_date');
-          }}
-        />
+        {!isAsNeeded && (
+          <DateField
+            id="scheduled_date"
+            label={t('addEvent.fields.date')}
+            required
+            value={dateStr}
+            error={errors.scheduled_date}
+            hint={showDualTimezone ? dualTimezoneLabel : undefined}
+            onChange={(e) => {
+              datesTouched.current = true;
+              setDateStr(e.target.value);
+              clearError('scheduled_date');
+            }}
+          />
+        )}
 
         {/* Medication SCHEDULE presets (R6-2) — the ONE med chip strip: every
             chip sets a COMPLETE daily schedule (time + daily recurrence) in
@@ -1377,7 +1453,7 @@ export function AddEventModal({
             only — the save path below is untouched. (Web subset: the form has
             a single time field, so only the single-time presets are offered —
             see MED_SCHEDULE_PRESETS.) */}
-        {isMedication && (
+        {isMedication && !isAsNeeded && (
           <ChipSelect
             id="schedule-presets"
             label={t('addEvent.schedulePresets.label')}
@@ -1409,6 +1485,7 @@ export function AddEventModal({
           />
         )}
 
+        {!isAsNeeded && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TimeField
             id="scheduled_time"
@@ -1462,6 +1539,20 @@ export function AddEventModal({
             />
           )}
         </div>
+        )}
+
+        {/* Amber note when the dose time is inside the viewer's OWN quiet hours
+            and the viewer is the one who gets the at-due reminder. Never blocks
+            Save. Same rule + copy as mobile's DoseQuietHoursNote. */}
+        {!isAsNeeded && (
+          <DoseQuietHoursNote
+            applies={isMedication && notificationsEnabled && reminderAtDue}
+            dateStr={dateStr}
+            timeStr={timeStr}
+            members={members}
+            ownerId={circle?.owner_id}
+          />
+        )}
 
         {/* Duration presets — the chips cover the common spans; the end-time
             field above stays for anything else. */}
@@ -1519,14 +1610,51 @@ export function AddEventModal({
         />
 
         {/* Recurrence */}
-        <Select
-          id="recurrence_rule"
-          label={t('addEvent.fields.repeat')}
-          options={recurrenceOptions}
-          value={recurrence}
-          error={errors.recurrence_rule}
-          onChange={(e) => chooseRecurrence(e.target.value as RecurrenceChoice)}
-        />
+        {isAsNeededEdit ? (
+          // LOCKED: scheduled <-> as needed cannot change after create (the
+          // server refuses it, AS_NEEDED_IMMUTABLE), so the choice is shown, not
+          // offered. Same read-only treatment the Type selector gets on an edit.
+          <div className="flex flex-col gap-1" data-testid="as-needed-locked-repeat">
+            <span className="text-sm font-medium text-ink">{t('addEvent.fields.repeat')}</span>
+            <p className="m-0 rounded-xl bg-bg-2 px-4 py-3 text-sm text-ink-2">
+              {t('addEvent.asNeeded.lockedRepeat')}
+            </p>
+          </div>
+        ) : (
+          <Select
+            id="recurrence_rule"
+            label={t('addEvent.fields.repeat')}
+            options={recurrenceOptions}
+            value={recurrence}
+            error={errors.recurrence_rule}
+            hint={isAsNeeded ? t('addEvent.recurrence.asNeededHint') : undefined}
+            onChange={(e) => chooseRecurrence(e.target.value as RecurrenceChoice)}
+          />
+        )}
+
+        {/* AS NEEDED details: ONE optional plain note. No minimum interval, no
+            maximum per day — the family decides when a dose is right, the app
+            only records it. */}
+        {isAsNeeded && (
+          <TextField
+            id="as_needed_reason"
+            label={
+              <>
+                {t('addEvent.asNeeded.reason')}{' '}
+                <span className="font-normal text-ink-3">{t('addEvent.asNeeded.optional')}</span>
+              </>
+            }
+            value={asNeededReason}
+            maxLength={100}
+            error={errors.as_needed_reason}
+            placeholder={t('addEvent.asNeeded.reasonPlaceholder')}
+            hint={t('addEvent.asNeeded.repeatHint')}
+            onChange={(e) => {
+              setAsNeededReason(e.target.value);
+              clearError('as_needed_reason');
+            }}
+          />
+        )}
 
         {/* "Days of the week" — the chips reveal inline under the select, the
             way Cycle reveals its on/off inputs (mobile shows the same chips as
@@ -1603,7 +1731,7 @@ export function AddEventModal({
           </div>
         )}
 
-        {recurrence !== 'none' && (
+        {recurrence !== 'none' && recurrence !== 'as_needed' && (
           <DateField
             id="recurrence_end_date"
             label={t('addEvent.fields.endDate')}
@@ -1619,7 +1747,12 @@ export function AddEventModal({
         )}
 
         {/* Reminders — only once there is a time to fire against. */}
-        {remindersApply(eventType, timeStr) && (
+        {isAsNeeded && (
+          <p className="m-0 text-sm text-ink-3" data-testid="as-needed-no-reminders">
+            {t('addEvent.asNeeded.remindersNone')}
+          </p>
+        )}
+        {remindersApply(eventType, timeStr) && !isAsNeeded && (
         <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
           <Text variant="sectionTitle" as="legend" className="p-0">
             {t('addEvent.reminders.section')}
@@ -1855,6 +1988,8 @@ function recurrenceKey(choice: RecurrenceChoice): string {
       return 'everyOtherDay';
     case 'days_of_week':
       return 'daysOfWeek';
+    case 'as_needed':
+      return 'asNeeded';
     default:
       return choice;
   }

@@ -267,6 +267,18 @@ export default function LoginPage(): ReactElement {
         </Link>
       </p>
 
+      {/* Quiet way back to an unentered email code. Carries the typed address
+          in router state (never the query string) when it looks valid. */}
+      <p className="m-0 text-center">
+        <Link
+          to="/verify-email/start"
+          state={EMAIL_RE.test(email.trim()) ? { email: email.trim() } : undefined}
+          className="inline-flex min-h-[44px] items-center text-sm text-ink-3 underline"
+        >
+          {t('verifyRequest.link')}
+        </Link>
+      </p>
+
       <a
         href="https://circlecare.app/help/"
         className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center text-sm text-ink-3 underline"

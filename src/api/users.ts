@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiClient } from '@/lib/api';
+import { SUPPORTED_LOCALES } from '@/i18n/locales';
 import { AVATAR_COLOR_KEYS, type AvatarColorKey } from '@/components/ui/Avatar';
 
 // PORT of mobile/src/api/users.ts + mobile/src/hooks/useUnitPreferences.ts.
@@ -86,7 +87,7 @@ export const updateProfileSchema = z.object({
   first_name: z.string().min(1).max(50).optional(),
   last_name: z.string().max(50).optional(),
   timezone: z.string().optional(),
-  language: z.enum(['en', 'es']).optional(),
+  language: z.enum(SUPPORTED_LOCALES).optional(),
   // Palette key, never a hex (backend z.enum(AVATAR_COLOR_KEYS)); null resets.
   avatar_color: z.enum(AVATAR_COLOR_KEYS).nullable().optional(),
 });

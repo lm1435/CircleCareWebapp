@@ -68,7 +68,7 @@ const ARM_PREFIX = 'api_write_gate_sha256';
 const NEXT_ROW = 'api_write_gate_sha256_next';
 const GATED_TABLES = [
   'activity_feed', 'calendar_events', 'care_circles', 'care_notes', 'emergency_info',
-  'event_notes', 'health_vitals', 'invites', 'medication_confirmations',
+  'event_notes', 'health_vitals', 'invites', 'medication_as_needed_doses', 'medication_confirmations',
   'medication_pause_periods', 'push_tokens', 'user_color_preferences', 'users',
 ];
 

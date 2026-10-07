@@ -13,6 +13,7 @@ import { identifyAfterServerReconcile } from '@/lib/analyticsConsentServerReconc
 import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
 import { Analytics } from '@/lib/analytics';
 import i18n from '@/i18n';
+import { normalizeLocale } from '@/i18n/locales';
 
 // Web auth store (Task 9) — mirrors mobile/src/store/authStore.ts adapted to
 // the web threat model:
@@ -198,7 +199,7 @@ function reportSessionEstablished(): void {
   try {
     // i18n.language can be region-qualified ('es-MX'); the backend takes the
     // base 'en' | 'es' only.
-    const language = i18n.language?.toLowerCase().startsWith('es') ? 'es' : 'en';
+    const language = normalizeLocale(i18n.language);
     void authApi.sessionEstablished(language).catch(() => {
       // ignore — sign-in must never depend on this
     });

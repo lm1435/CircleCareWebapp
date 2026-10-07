@@ -15,6 +15,7 @@ import {
 } from '@/lib/apiErrors';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { Analytics, type AiChatFailureReason } from '@/lib/analytics';
+import { normalizeLocale } from '@/i18n/locales';
 
 // Web port of the send half of mobile/src/components/ai/AIChatModal.tsx's
 // handleSend. A mutation hook (mirrors useMedConfirmation's pattern) that POSTs
@@ -188,7 +189,7 @@ export function useAiChat(circleId: string): UseAiChatResult {
       // The backend chatSchema accepts only 'en' | 'es'. `i18n.language` can be a
       // region-qualified tag (e.g. 'en-US', 'es-MX'), so normalize to the base
       // language — otherwise the request 400s and the modal shows "sendFailed".
-      const language = i18n.language?.toLowerCase().startsWith('es') ? 'es' : 'en';
+      const language = normalizeLocale(i18n.language);
       return sendAiMessage(circleId, {
         message,
         conversation_id: conversationIdRef.current,

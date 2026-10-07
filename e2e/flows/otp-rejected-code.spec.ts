@@ -48,7 +48,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 const EMAIL = 'otp-rejected-code@example.com';
 const BAD_CODE_COPY =
-  "That code didn't work. It may have expired — tap Resend Code below to get a fresh one.";
+  "That code didn't work. It may have expired — tap Send a new code below to get a fresh one.";
 
 type Reply = 'reject' | 'accept' | 'abort' | 'unavailable';
 type ResendReply = 'ok' | 'abort' | 'rate';
@@ -325,7 +325,7 @@ async function keptCodeThenResend(page: Page, stub: Stubbed): Promise<void> {
   await expectBoxes(page, '123456');
   for (let n = 1; n <= 6; n += 1) await expect(box(page, n)).toBeEnabled();
   expect(stub.codes).toEqual(['123456']);
-  await page.getByRole('button', { name: 'Resend Code' }).click();
+  await page.getByRole('button', { name: 'Send a new code' }).click();
 }
 
 test('a successful Resend empties the boxes and focuses box 1; the new code typed from there is sent once', async ({
@@ -336,7 +336,7 @@ test('a successful Resend empties the boxes and focuses box 1; the new code type
 
   await expect(page.getByRole('status')).toHaveText(SENT_COPY);
   await expectEmptyAndFocused(page);
-  await expect(page.getByRole('button', { name: /^Resend in \d+s$/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /^Send a new code in \d+s$/ })).toBeDisabled();
   expect(stub.resends()).toBe(1);
   expect(stub.codes, 'a resend submits nothing').toEqual(['123456']);
 
@@ -377,7 +377,7 @@ for (const [name, reply, copy] of [
     await expect(page.getByRole('alert')).toHaveText(copy);
     await expectBoxes(page, '123456');
     // No cooldown was armed: Resend is still there to press again.
-    await expect(page.getByRole('button', { name: 'Resend Code' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Send a new code' })).toBeEnabled();
     expect(stub.resends()).toBe(1);
 
     // And the kept code still goes through with nothing retyped.

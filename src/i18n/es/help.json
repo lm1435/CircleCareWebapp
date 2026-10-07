@@ -45,7 +45,7 @@
         },
         {
           "question": "¿Puedo configurar medicamentos que no son diarios?",
-          "answer": "¡Sí! Puedes configurar medicamentos diarios, cada tercer día, semanales (días específicos) o con intervalos personalizados. También puedes marcar medicamentos como 'según necesidad' para medicamentos PRN."
+          "answer": "¡Sí! Puedes configurar medicamentos diarios, cada tercer día, semanales (días específicos), mensuales o en ciclos. Para medicamentos que se toman solo cuando hace falta, elige 'Según se necesite': no hay horarios fijos, y quien dé una dosis la registra para que todo el círculo vea cuándo fue la última."
         }
       ]
     },
@@ -58,7 +58,7 @@
         },
         {
           "question": "¿Qué notificaciones voy a recibir?",
-          "answer": "Recibirás notificaciones de recordatorios de medicamentos (si eres el receptor de cuidado), confirmaciones de medicamentos, medicamentos no tomados, recordatorios de citas y cuando familiares se unan a tu círculo."
+          "answer": "Recibirás avisos en cuatro grupos que puedes activar o desactivar en Perfil: Medicamentos (dosis tomadas, omitidas o sin marcar), Tareas y citas (cuando te asignan algo y antes de que llegue la hora), Notas (cuando alguien agrega una nota) y Consejos y sugerencias. Si eres el receptor de cuidado, también recibes tus propios recordatorios de dosis, que siempre están activos."
         },
         {
           "question": "¿Qué es el horario sin interrupciones?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "¿Puedo desactivar ciertas notificaciones?",
-          "answer": "Sí: ve a Perfil y ajustes y usa la sección Notificaciones para elegir qué tipos de notificaciones recibes."
+          "answer": "Sí. Ve a Perfil y luego a Notificaciones. Cada uno de los cuatro interruptores activa o desactiva un grupo completo para tu cuenta, en todos tus círculos. Si desactivas Medicamentos, no te avisaremos cuando una dosis quede sin marcar."
         }
       ]
     },

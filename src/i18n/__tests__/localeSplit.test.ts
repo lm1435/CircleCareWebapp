@@ -16,22 +16,43 @@
  * isn't eagerly imported at the top of the module graph.
  *
  * Mutation check: re-adding a static `import esX from './es/x.json'` line,
- * or removing the dynamic `import('./es/index')` backend, fails this test.
+ * or removing a locale's `localeLoaders` entry, fails this test. Generalized
+ * over the registry (A10): every non-EN registry locale must be a lazy chunk.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { namespaces } from '../index';
+import { LOCALE_REGISTRY, NON_EN_LOCALES } from '../locales';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const I18N_DIR = join(HERE, '..');
 
 const indexSource = readFileSync(join(I18N_DIR, 'index.ts'), 'utf8');
 
+/** The `localeLoaders` map literal, as written in the source. */
+function loaderMapBody(): string {
+  const m = indexSource.match(/const localeLoaders: LocaleLoaders = \{([\s\S]*?)\n\};/);
+  expect(m).not.toBeNull();
+  return m?.[1] ?? '';
+}
+
 describe('src/i18n/index.ts locale splitting', () => {
-  it('does not statically import any es/*.json namespace file', () => {
-    expect(indexSource).not.toMatch(/from\s+['"]\.\/es\//);
+  it('has a non-EN locale to guard (registry sanity)', () => {
+    expect(NON_EN_LOCALES.length).toBeGreaterThan(0);
+    expect(LOCALE_REGISTRY.map((l) => l.code)).toContain('en');
+  });
+
+  it.each(NON_EN_LOCALES)('does not statically import any %s/*.json namespace file', (code) => {
+    expect(indexSource).not.toMatch(new RegExp(`from\\s+['"]\\./${code}/`));
+    expect(indexSource).not.toMatch(new RegExp(`^\\s*import\\s+['"]\\./${code}/`, 'm'));
+  });
+
+  it('statically imports no directory that is not "en" (any registry code, variants included)', () => {
+    const staticLocaleImports = [...indexSource.matchAll(/^import\s[^;]*?from\s+['"]\.\/([^/'"]+)\//gm)]
+      .map((m) => m[1]);
+    expect([...new Set(staticLocaleImports)]).toEqual(['en']);
   });
 
   it('still statically imports every en/*.json namespace file (eager fast path)', () => {
@@ -41,46 +62,55 @@ describe('src/i18n/index.ts locale splitting', () => {
     }
   });
 
-  it('loads es on demand via a dynamic import of the combined ./es/index chunk', () => {
-    expect(indexSource).toMatch(/import\(\s*['"]\.\/es\/index['"]\s*\)/);
+  it.each(NON_EN_LOCALES)('has a lazy loader entry for registry locale %s', (code) => {
+    // `es: () => import('./es/index')` — a dynamic import of that locale's combined chunk.
+    expect(loaderMapBody()).toMatch(
+      new RegExp(`\\b${code}:\\s*\\(\\)\\s*=>\\s*import\\(\\s*['"]\\./${code}/index['"]\\s*\\)`)
+    );
+  });
+
+  it('has no loader entry for a locale the registry does not list', () => {
+    const keys = [...loaderMapBody().matchAll(/^\s*([\w'-]+):\s*\(\)/gm)].map((m) =>
+      (m[1] ?? '').replace(/'/g, '')
+    );
+    expect(keys.sort()).toEqual([...NON_EN_LOCALES].sort());
   });
 
   it('registers an i18next backend so both first-load and changeLanguage() trigger the lazy fetch', () => {
-    expect(indexSource).toMatch(/\.use\(\s*esBackend\s*\)/);
+    expect(indexSource).toMatch(/\.use\(\s*localeBackend\s*\)/);
     expect(indexSource).toMatch(/partialBundledLanguages:\s*true/);
   });
 
-  it('gates es in `resources` behind an import.meta.env.MODE === "test" check', () => {
-    // The only way `es` may reach the `resources` object passed to `.init()`
-    // is a variable populated INSIDE `if (import.meta.env.MODE === 'test')`
-    // — vitest's own escape hatch for the ~60 test files that read Spanish
-    // synchronously (see the comment above this block in the source). A real
-    // (non-test) Vite build resolves that condition to `false` at build time,
-    // so this whole branch — including the `./es/index` import — is
-    // dead-code-eliminated; `es` must never be unconditionally bundled.
+  it('gates non-EN locales in `resources` behind an import.meta.env.MODE === "test" check', () => {
+    // The only way a non-EN locale may reach the `resources` object passed to
+    // `.init()` is `testOnlyLocaleResources`, populated INSIDE
+    // `if (import.meta.env.MODE === 'test')` — vitest's own escape hatch for the
+    // ~60 test files that read Spanish synchronously. A real (non-test) Vite
+    // build resolves that condition to `false`, so the loop (and thus any eager
+    // reach into a locale chunk) is dead-code-eliminated.
     const gateMatch = indexSource.match(
-      /if\s*\(\s*import\.meta\.env\.MODE\s*===\s*['"]test['"]\s*\)\s*\{([^}]*)\}/s
+      /if\s*\(\s*import\.meta\.env\.MODE\s*===\s*['"]test['"]\s*\)\s*\{([\s\S]*?)\n\}/
     );
     expect(gateMatch).not.toBeNull();
-    const gateBody = gateMatch?.[1] ?? '';
-    expect(gateBody).toMatch(/import\(\s*['"]\.\/es\/index['"]\s*\)/);
+    expect(gateMatch?.[1] ?? '').toMatch(/testOnlyLocaleResources\[code\]\s*=/);
 
     const initCallSource = indexSource.slice(indexSource.indexOf('.init({'));
     expect(initCallSource).toMatch(/en:\s*enResources/);
-    // Whatever the test-mode gate assigns is the ONLY way `es:` appears here.
-    const esKeyMatches = [...initCallSource.matchAll(/\bes:\s*(\w+)/g)];
-    expect(esKeyMatches).toHaveLength(1);
-    expect(esKeyMatches[0]?.[1]).not.toBe('enResources');
+    expect(initCallSource).toMatch(/\.\.\.testOnlyLocaleResources/);
+    // No locale code is hand-listed as a resource key (that would be an eager import).
+    for (const code of NON_EN_LOCALES) {
+      expect(initCallSource).not.toMatch(new RegExp(`\\b${code}:\\s*\\w+Resources`));
+    }
   });
 });
 
-describe('src/i18n/es/index.ts (combined locale chunk)', () => {
-  it('statically imports every es/*.json namespace exactly once, so Vite emits one chunk', () => {
-    const esIndexSource = readFileSync(join(I18N_DIR, 'es', 'index.ts'), 'utf8');
+describe.each(NON_EN_LOCALES)('src/i18n/%s/index.ts (combined locale chunk)', (code) => {
+  it('statically imports every namespace JSON exactly once, so Vite emits one chunk', () => {
+    const chunkSource = readFileSync(join(I18N_DIR, code, 'index.ts'), 'utf8');
     for (const ns of namespaces) {
       const pattern = new RegExp(`from\\s+['"]\\./${ns}\\.json['"]`);
-      expect(esIndexSource).toMatch(pattern);
+      expect(chunkSource).toMatch(pattern);
     }
-    expect(esIndexSource).toMatch(/export default/);
+    expect(chunkSource).toMatch(/export default/);
   });
 });

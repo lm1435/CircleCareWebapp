@@ -1,4 +1,5 @@
-import { useMemo, type ReactElement } from 'react';
+import { baseLanguage } from '@/i18n/locales';
+import { useEffect, useMemo, useRef, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, EmptyState, Skeleton, Text, STATUS_PILL } from '@/components/ui';
 import { useMedicationConfirmations } from '@/hooks/useMedConfirmation';
@@ -11,7 +12,13 @@ import {
   getRelativeDateLabel,
   zoneReferenceInstant,
 } from '@/utils/timezone';
+import { Analytics } from '@/lib/analytics';
+import { fullNameOf, formatInstantClock } from '@/lib/asNeeded';
+import { useCircleAsNeededDoses } from '@/hooks/useAsNeeded';
+import type { AsNeededDoseWithEvent } from '@/api/medicationAsNeeded';
+import type { TimeLanguage } from '@/utils/timezone';
 import { historyParams, type HistoryConfirmation } from './historyQuery';
+import { doseMedicationName, mergeHistoryDays } from './historyMerge';
 
 /**
  * The History tab's list (spec §6.4; mobile `renderDateGroup` +
@@ -34,11 +41,6 @@ export interface HistoryListProps {
    * for why this is a name and not an `event_id`.
    */
   medicationName: string | null;
-}
-
-interface DayGroup {
-  date: string;
-  confirmations: HistoryConfirmation[];
 }
 
 /**
@@ -221,6 +223,63 @@ function ConfirmationCard({
   );
 }
 
+/**
+ * A logged as-needed dose: "Given" pill, medication + dosage, "{time} · by {name}"
+ * in the RECIPIENT's zone, the note. A removed dose is STRUCK THROUGH (muted) and
+ * says who removed it — the same tombstone the per-medication log shows.
+ */
+function DoseCard({
+  dose,
+  timezone,
+  hourCycle,
+}: {
+  dose: AsNeededDoseWithEvent;
+  timezone: string;
+  hourCycle: HourCycle;
+}): ReactElement {
+  const { t, i18n } = useTranslation('meds');
+  const language: TimeLanguage = baseLanguage(i18n.language);
+  const removed = !!dose.removed_at;
+  const name = doseMedicationName(dose);
+  const dosage = dose.event?.medication_dosage;
+  const by = fullNameOf(dose.given_by_user) ?? t('asNeeded.history.someone');
+  const time = formatInstantClock(new Date(dose.given_at), timezone, hourCycle, language);
+  const removedBy = removed
+    ? t('asNeeded.history.removedBy', {
+        name: fullNameOf(dose.removed_by_user) ?? t('asNeeded.history.someone'),
+      })
+    : null;
+  const strike = removed ? 'line-through' : '';
+  const label = [t('asNeeded.history.rowLabel', { medication: name, name: by }), removedBy]
+    .filter(Boolean)
+    .join(', ');
+
+  return (
+    <Card
+      as="li"
+      className="px-5 py-[18px]"
+      aria-label={label}
+      data-testid="history-dose-row"
+      data-removed={removed ? 'true' : 'false'}
+    >
+      <div className={`flex flex-col gap-1.5 ${removed ? 'opacity-70' : ''}`}>
+        <span className={`${STATUS_PILL.taken} self-start`}>{t('asNeeded.history.given')}</span>
+        <p className={`m-0 flex flex-wrap items-baseline gap-1.5 ${strike}`}>
+          <span className="text-md font-medium text-ink">{name}</span>
+          {dosage && <span className="text-sm text-ink-2">{dosage}</span>}
+        </p>
+        <p className={`m-0 text-sm text-ink ${strike}`}>
+          {t('asNeeded.history.timeBy', { time, name: by })}
+        </p>
+        {dose.note && (
+          <p className={`m-0 break-words text-sm text-ink-2 ${strike}`}>“{dose.note}”</p>
+        )}
+      </div>
+      {removedBy && <p className="m-0 mt-1.5 text-sm text-ink-2">{removedBy}</p>}
+    </Card>
+  );
+}
+
 export function HistoryList({
   circleId,
   timezone,
@@ -235,35 +294,26 @@ export function HistoryList({
     [query.data]
   );
 
-  const groups = useMemo<DayGroup[]>(() => {
-    const filtered = medicationName
-      ? confirmations.filter(
-          (c) => (c.event?.medication_name || c.event?.title) === medicationName
-        )
-      : confirmations;
+  // AS-NEEDED doses, same 30-day window, removed ones included (struck through).
+  // SOFT-FAIL: a failed dose read leaves `doses` empty, so the scheduled history
+  // still renders — it never blanks the tab.
+  const { doses } = useCircleAsNeededDoses(circleId, historyParams(timezone), {
+    includeRemoved: true,
+  });
 
-    const byDay = new Map<string, HistoryConfirmation[]>();
-    for (const confirmation of filtered) {
-      // The dose's OWN day when the join carries it; otherwise the day the
-      // confirmation landed, read in the recipient's zone (mobile parity).
-      const key =
-        confirmation.event?.scheduled_date ||
-        getDateInTimezone(timezone, new Date(confirmation.confirmed_at));
-      const bucket = byDay.get(key);
-      if (bucket) bucket.push(confirmation);
-      else byDay.set(key, [confirmation]);
-    }
+  const groups = useMemo(
+    () => mergeHistoryDays(confirmations, doses, timezone, medicationName),
+    [confirmations, doses, medicationName, timezone]
+  );
 
-    return [...byDay.keys()]
-      .sort((a, b) => b.localeCompare(a))
-      .map((date) => ({
-        date,
-        confirmations: byDay
-          .get(date)!
-          .slice()
-          .sort((a, b) => (a.scheduled_time || '').localeCompare(b.scheduled_time || '')),
-      }));
-  }, [confirmations, medicationName, timezone]);
+  // ONCE per visit (this list mounts with the tab) when PRN rows are on screen.
+  const viewedReported = useRef(false);
+  const showsDoses = groups.some((g) => g.doses.length > 0);
+  useEffect(() => {
+    if (!showsDoses || viewedReported.current) return;
+    viewedReported.current = true;
+    Analytics.asNeededHistoryViewed({ scope: 'all' });
+  }, [showsDoses]);
 
   if (query.isPending) {
     return (
@@ -317,6 +367,9 @@ export function HistoryList({
                 hourCycle={hourCycle}
                 dayKey={group.date}
               />
+            ))}
+            {group.doses.map((dose) => (
+              <DoseCard key={dose.id} dose={dose} timezone={timezone} hourCycle={hourCycle} />
             ))}
           </ul>
         </section>

@@ -629,11 +629,16 @@ export function FirstRunWizardModal({
         </div>
 
         {step === 'choose' && (
-          <ChooseActionStep recipientName={circleName} onSelect={handleAction} />
+          <ChooseActionStep
+            recipientName={circleName}
+            isSelfCare={circle?.is_self_care === true}
+            onSelect={handleAction}
+          />
         )}
         {step === 'what' && (
           <MedicationNameStep
             recipientName={circleName}
+            isSelfCare={circle?.is_self_care === true}
             name={name}
             dosage={dosage}
             onChangeName={handleChangeName}
@@ -646,6 +651,7 @@ export function FirstRunWizardModal({
         {step === 'when' && (
           <ScheduleStep
             recipientName={circleName}
+            isSelfCare={circle?.is_self_care === true}
             presetKey={schedule.presetKey}
             customTime={schedule.customTime}
             onChange={handleChangeSchedule}

@@ -58,10 +58,11 @@ export function todaysMedsKey(circleId: string): readonly [string, string] {
  */
 export function useTodaysMeds(
   circleId: string | undefined,
-  careRecipientTimezone: string | undefined
+  careRecipientTimezone: string | undefined,
+  options?: { includeAsNeeded?: boolean }
 ): UseQueryResult<TodaysMedication[]> {
   const dateStr = careRecipientTimezone ? getDateInTimezone(careRecipientTimezone) : undefined;
-  return useMedsForDate(circleId, dateStr);
+  return useMedsForDate(circleId, dateStr, options);
 }
 
 /**
@@ -78,11 +79,18 @@ export function useTodaysMeds(
  */
 export function useMedsForDate(
   circleId: string | undefined,
-  dateStr: string | undefined
+  dateStr: string | undefined,
+  options?: { includeAsNeeded?: boolean }
 ): UseQueryResult<TodaysMedication[]> {
+  const includeAsNeeded = options?.includeAsNeeded === true;
   return useQuery({
+    // The flag is deliberately NOT in the key (pinned shape; one reader per
+    // date). A cached day that DID carry as-needed rows can be read later as
+    // "yesterday" by a reader that did not ask — every consumer therefore treats
+    // an `as_needed` row as "not a dose" (TodaysMeds filters them out of Needs
+    // Attention).
     queryKey: [...todaysMedsKey(circleId ?? ''), dateStr ?? ''],
-    queryFn: () => getTodaysMedications(circleId!, dateStr!),
+    queryFn: () => getTodaysMedications(circleId!, dateStr!, { includeAsNeeded }),
     enabled: !!circleId && !!dateStr,
   });
 }

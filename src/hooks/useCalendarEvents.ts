@@ -41,6 +41,8 @@ import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { addDays, daysBetween } from '@/components/calendar/dateMath';
 import { Analytics } from '@/lib/analytics';
+import { todaysMedsKey } from '@/hooks/useMedConfirmation';
+import { isAsNeededImmutableError, isAsNeededUnscheduledError } from '@/api/medicationAsNeeded';
 
 // Module-level constant — never `?? []` inline in selectors/returns.
 const EMPTY_EVENTS: CalendarEvent[] = [];
@@ -240,12 +242,20 @@ export function useMedicationRoster(
   const query = useQuery({
     queryKey: [
       ...queryKeys.calendarEvents(circleId),
-      { includeDiscontinued: true, includeInactiveRoots: true },
+      { includeDiscontinued: true, includeInactiveRoots: true, includeAsNeeded: true },
     ],
     // `includeInactiveRoots`: series roots of discontinued/ended meds with no
     // row in the default window, so a med stopped long ago stays listed under
     // Inactive. THIS request only — see GetEventsParams.
-    queryFn: () => getEvents(circleId, { includeDiscontinued: true, includeInactiveRoots: true }),
+    // `includeAsNeeded`: the roster is where as-needed (PRN) medications live
+    // (active AND inactive, with `includeDiscontinued`). The server hides them
+    // from every other read, so the calendar can never draw one as a dose.
+    queryFn: () =>
+      getEvents(circleId, {
+        includeDiscontinued: true,
+        includeInactiveRoots: true,
+        includeAsNeeded: true,
+      }),
     enabled: !!circleId,
   });
   return { ...query, events: query.data ?? EMPTY_EVENTS };
@@ -342,6 +352,9 @@ function invalidateEventQueries(
   void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.medicationTodaySummary(circleId) });
+  // Home's Today's meds read now also carries the circle's as-needed medications
+  // (`includeAsNeeded`), so adding / editing / stopping one must refresh it too.
+  void queryClient.invalidateQueries({ queryKey: todaysMedsKey(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.circle(circleId) });
   return calendarRefreshed;
 }
@@ -450,6 +463,13 @@ function useEventMutationOnError(
       // 409 DOSE_ALREADY_LOGGED: the edit tried to move a confirmed dose's
       // time. Not retryable — say exactly why, then refetch the real state.
       showToast(t('errors.doseAlreadyLogged'), 'error');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+    } else if (isAsNeededImmutableError(error) || isAsNeededUnscheduledError(error)) {
+      // 400 AS_NEEDED_IMMUTABLE / AS_NEEDED_UNSCHEDULED: scheduled <-> as needed
+      // is locked after create, and an as-needed row takes no schedule. The form
+      // never offers either, so this is a stale tab or a second client — say what
+      // the rule is rather than "couldn't save, try again" (a retry cannot work).
+      showToast(t('errors.asNeededLocked'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
     } else {
       // Conflict / parallel-edit path: refetch current state.

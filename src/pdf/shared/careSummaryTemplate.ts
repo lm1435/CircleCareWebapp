@@ -66,6 +66,9 @@ interface MedicationGroup {
   /** True when this group is a discontinued series. Stopped medications print
    *  in their own table below the current ones, never mixed in. */
   stopped: boolean;
+  /** An as-needed (PRN) medication. Never merged with a scheduled entry of the
+   *  same name + dose (two entries, two rows) and printed with a blank Time. */
+  asNeeded: boolean;
 }
 
 /**
@@ -109,15 +112,16 @@ function groupMedications(medications: PdfCalendarEvent[]): MedicationGroup[] {
     const name = m.medication_name || m.title;
     const dosage = m.medication_dosage || null;
     const stopped = isStoppedMedication(m);
-    const key = `${stopped ? 'stopped' : 'active'} ${name} ${dosage ?? ''}`;
+    const asNeeded = Boolean(m.as_needed);
+    const key = `${stopped ? 'stopped' : 'active'} ${asNeeded ? 'prn' : 'sched'} ${name} ${dosage ?? ''}`;
 
     let group = groups.get(key);
     if (!group) {
-      group = { name, dosage, times: [], recurrenceSources: [], firstEvent: m, stopped };
+      group = { name, dosage, times: [], recurrenceSources: [], firstEvent: m, stopped, asNeeded };
       groups.set(key, group);
       order.push(key);
     }
-    if (m.scheduled_time && !group.times.includes(m.scheduled_time)) {
+    if (!asNeeded && m.scheduled_time && !group.times.includes(m.scheduled_time)) {
       group.times.push(m.scheduled_time);
     }
     if (
@@ -160,6 +164,7 @@ function formatGroupTimes(
   careRecipientTimezone: string,
   env: PdfEnv,
 ): string {
+  if (group.asNeeded) return '';
   return group.times.map((time) => formatTime(time, careRecipientTimezone, env)).join(', ');
 }
 
@@ -171,6 +176,14 @@ function formatGroupTimes(
  * different raw strings for the same one label.
  */
 function formatGroupFrequency(group: MedicationGroup, env: PdfEnv): string {
+  if (group.asNeeded) {
+    // The optional plain-text reason ("pain"). No limits, counts or intervals:
+    // the record states what the medication is, never how much is allowed.
+    const reason = (group.firstEvent.as_needed_reason ?? '').trim();
+    return reason
+      ? env.t('careSummary.frequency.asNeededFor', { reason })
+      : env.t('careSummary.frequency.asNeeded');
+  }
   const labels = group.recurrenceSources
     .map((event) => env.formatRecurrence(event))
     .filter((label): label is string => Boolean(label));
@@ -263,7 +276,7 @@ function formatTimestamp(timezone: string, env: PdfEnv): string {
   // export's own locale, not the ambient i18next language, matching the rest
   // of this file.
   const langCode = env.locale.split('-')[0];
-  const zone = env.getTimezoneLabel(timezone, langCode === 'es' ? 'es' : 'en');
+  const zone = env.getTimezoneLabel(timezone, langCode);
   const stamp = `${dateStr}, ${env.formatInstantTimeOfDay(now, timezone)}`;
   return zone ? `${stamp} (${zone})` : stamp;
 }
@@ -296,7 +309,7 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
   const { t, locale } = env;
 
   const langCode = locale.split('-')[0];
-  const tzLabel = env.getTimezoneLabel(careRecipientTimezone, langCode === 'es' ? 'es' : 'en');
+  const tzLabel = env.getTimezoneLabel(careRecipientTimezone, langCode);
   const dobFormatted = recipientDob ? formatDateForPdf(recipientDob, locale) : null;
   const age = recipientDob ? computeAge(recipientDob, careRecipientTimezone, env) : null;
   const dobAgeLine = dobFormatted && age != null
@@ -706,7 +719,7 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
       const time = formatGroupTimes(group, careRecipientTimezone, env);
       const freq = formatGroupFrequency(group, env);
       lines.push(
-        `${group.name}${dosage !== PLACEHOLDER_DISPLAY ? ` (${dosage})` : ''} — ${time}${freq ? ` — ${freq}` : ''}`
+        `${group.name}${dosage !== PLACEHOLDER_DISPLAY ? ` (${dosage})` : ''}${time ? ` — ${time}` : ''}${freq ? ` — ${freq}` : ''}`
       );
     });
   } else {

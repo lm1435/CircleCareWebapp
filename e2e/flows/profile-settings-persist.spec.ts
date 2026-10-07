@@ -1,5 +1,4 @@
 import { test, expect } from '../fixtures';
-import { sqlExec } from '../db';
 import { dbQuery, failRequest, sqlStr } from '../unhappy';
 import { setProfileLanguage } from '../notesFirstClassShared';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
@@ -79,10 +78,11 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
       baseURL,
     }) => {
       const acct = await createScopedAccount('prof-qh');
-      // New accounts start with quiet hours ON (DB default 22:00-07:00); start from OFF
-      // so the first assertion is the switch turning them on.
-      expect(userRow(acct.userId).quiet_hours_start, 'DB default').toBe('22:00:00');
-      sqlExec(`update users set quiet_hours_start = null, quiet_hours_end = null where id = ${sqlStr(acct.userId)}::uuid;`);
+      // New accounts start with quiet hours OFF (migration 20261005130000 dropped the
+      // 22:00-07:00 column default; NULL = off), so the first assertion is the switch
+      // turning them on. No SQL reset needed any more.
+      expect(userRow(acct.userId).quiet_hours_start, 'new account: quiet hours off').toBeNull();
+      expect(userRow(acct.userId).quiet_hours_end, 'new account: quiet hours off').toBeNull();
       await cookieLogin(context, acct, baseURL);
       await page.goto('/profile', { waitUntil: 'domcontentloaded' });
       const toggle = page.getByRole('switch', { name: 'Enable quiet hours' });

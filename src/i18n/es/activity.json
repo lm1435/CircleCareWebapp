@@ -41,7 +41,9 @@
       "caregiver": "{{name}} se unió al círculo como cuidador",
       "careRecipientUnknown": "Alguien se unió al círculo como receptor de cuidado",
       "caregiverUnknown": "Alguien se unió al círculo como cuidador"
-    }
+    },
+    "asNeededDoseLogged": "Dosis registrada: {{title}} a las {{time}}",
+    "asNeededDoseRemoved": "Dosis registrada quitada: {{title}} ({{time}})"
   },
   "phrases": {
     "confirmedMedication": "Medicamento confirmado:",
@@ -72,9 +74,11 @@
     "onDate": "el",
     "stoppedRecurrence": "Detuvo recurrencia de",
     "fromDate": "desde",
-    "importedAppointment": "Importó {{count}} cita del calendario",
-    "importedAppointments": "Importó {{count}} citas del calendario",
-    "changedAnswer": "(cambió la respuesta de otro cuidador)"
+    "importedAppointment_one": "Importó {{count}} cita del calendario",
+    "importedAppointment_other": "Importó {{count}} citas del calendario",
+    "changedAnswer": "(cambió la respuesta de otro cuidador)",
+    "loggedDose": "Dosis registrada:",
+    "removedLoggedDose": "Dosis registrada quitada:"
   },
   "sentences": {
     "memberLeft": "Un miembro salió del círculo",

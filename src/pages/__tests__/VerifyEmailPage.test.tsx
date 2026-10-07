@@ -386,7 +386,7 @@ describe('VerifyEmailPage — Resend code', () => {
   });
 
   const resendOk = { success: true, data: { message: 'Verification code sent.' } };
-  const resendButton = () => screen.getByRole('button', { name: /^Resend/ });
+  const resendButton = () => screen.getByRole('button', { name: /^Send a new code/ });
 
   /** verify-otp and the session exchange succeed; resend-otp answers with `resend`. */
   function mockWithResend(resend: () => Promise<unknown>) {
@@ -423,7 +423,7 @@ describe('VerifyEmailPage — Resend code', () => {
     expect(screen.getByRole('textbox', { name: 'Digit 1 of 6' })).toHaveFocus();
     expect(mockedPost).toHaveBeenCalledWith('/auth/resend-otp', { email: 'pat@example.com' });
     // The cooldown is armed as before.
-    expect(screen.getByRole('button', { name: /^Resend in \d+s$/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Send a new code in \d+s$/ })).toBeDisabled();
   });
 
   it('a partly typed code is emptied by a successful Resend too', async () => {
@@ -476,11 +476,6 @@ describe('VerifyEmailPage — Resend code', () => {
   const resendFails: [string, unknown, string][] = [
     ['a network failure', networkError(), "We couldn't resend the code. Please try again."],
     [
-      'the mail provider cooldown (EMAIL_RATE_LIMIT)',
-      { success: false, error: { code: 'EMAIL_RATE_LIMIT', message: 'Wait 60 seconds' } },
-      "We couldn't resend the code. Please try again.",
-    ],
-    [
       'our own rate limit (RATE_LIMIT)',
       { success: false, error: { code: 'RATE_LIMIT', message: 'Too many requests' } },
       'Too many attempts. Please wait a few minutes before trying again.',
@@ -497,8 +492,68 @@ describe('VerifyEmailPage — Resend code', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     expect(otpValue()).toBe('123456');
     // No cooldown was armed, so Resend is still there to press again.
-    expect(screen.getByRole('button', { name: 'Resend Code' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Send a new code' })).toBeEnabled();
     expect(verifyCodes()).toEqual(['123456']);
+  });
+});
+
+// "Have a verification code?" / signup-with-an-unverified-address arrivals, the expiry hint, and
+// the visible cooldown when the mail provider's per-address send window is open.
+describe('VerifyEmailPage — notices, hint and cooldown', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockedPost.mockReset();
+    tokenAccessor.clear();
+    sessionStorage.clear();
+    useAuthStore.setState({ user: null, isAuthenticated: false, isBootstrapping: false });
+  });
+
+  function renderWithState(state: Record<string, unknown>) {
+    return render(
+      <MemoryRouter initialEntries={[{ pathname: '/verify-email', state }]}>
+        <VerifyEmailPage />
+      </MemoryRouter>
+    );
+  }
+
+  it('always shows the expiry hint', () => {
+    renderVerify();
+    expect(screen.getByText('Codes expire — use the newest email.')).toBeInTheDocument();
+  });
+
+  it('a plain arrival (signup) shows no notice and offers the new-code action immediately', () => {
+    renderVerify();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send a new code' })).toBeEnabled();
+  });
+
+  it("notice 'sent' shows the neutral copy and starts behind the cooldown", () => {
+    renderWithState({ email: 'pat@example.com', notice: 'sent' });
+    expect(screen.getByRole('status')).toHaveTextContent(
+      "If that email has an account waiting for verification, we've sent a new code."
+    );
+    expect(screen.getByRole('button', { name: /^Send a new code in \d+s$/ })).toBeDisabled();
+  });
+
+  it("notice 'rateLimited' shows the \"we just sent one\" copy and starts behind the cooldown", () => {
+    renderWithState({ email: 'pat@example.com', notice: 'rateLimited' });
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'We just sent one — check your inbox (and spam). You can request another in a minute.'
+    );
+    expect(screen.getByRole('button', { name: /^Send a new code in \d+s$/ })).toBeDisabled();
+  });
+
+  it('a resend that hits EMAIL_RATE_LIMIT says so, arms the cooldown, and shows no error alert', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'EMAIL_RATE_LIMIT', message: 'Wait 60 seconds' },
+    });
+    renderVerify();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Send a new code' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('We just sent one');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: /^Send a new code in \d+s$/ })).toBeDisabled();
   });
 });
 
@@ -525,7 +580,7 @@ describe('VerifyEmailPage — double-submit guard', () => {
     mockedPost.mockImplementation((() => neverSettles()) as never);
     renderVerify();
 
-    await clickTwice(screen.getByRole('button', { name: 'Resend Code' }));
+    await clickTwice(screen.getByRole('button', { name: 'Send a new code' }));
 
     expect(mockedPost).toHaveBeenCalledTimes(1);
     expect(mockedPost).toHaveBeenCalledWith('/auth/resend-otp', { email: 'pat@example.com' });

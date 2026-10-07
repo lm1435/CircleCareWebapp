@@ -6,15 +6,15 @@ import '@/i18n';
 import ProfilePage from '@/pages/ProfilePage';
 import type { NotificationPreferences, User, UnitPreferences } from '@/api/users';
 
-// REGRESSION (e2e/flows/profile-note-switches.spec.ts, 2026-09-28): the
+// REGRESSION (e2e/flows/profile-notification-groups.spec.ts, formerly profile-note-switches, 2026-09-28): the
 // notification switches render straight from the currentUser query and are
 // disabled only while the PATCH is pending. `useUpdateNotificationPrefs` used
 // to ONLY invalidate on success, so between the PATCH resolving and the
 // currentUser refetch landing, every switch was re-ENABLED but still showed
 // its PRE-toggle value. A second click in that window re-sent the value just
-// saved (the switch could not be turned back), and the "After-visit
-// reminders" event_notes pin read the stale event_notes value (re-enabling
-// "Notes on events" a moment after the user turned it off).
+// saved (the switch could not be turned back), and the Tasks group's
+// event_notes pin read the stale event_notes value (re-enabling Notes a moment
+// after the user turned it off).
 //
 // Unlike ProfilePage.test.tsx, these tests run the REAL mutation hook against
 // a real QueryClient; only the network functions are mocked. The refetch that
@@ -92,6 +92,7 @@ vi.mock('@/lib/analyticsConsentSync', () => ({
 
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
+    notificationGroupToggled: vi.fn(),
     languageChanged: vi.fn(),
     timezoneChanged: vi.fn(),
     accountDeleted: vi.fn(),
@@ -119,43 +120,51 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe('ProfilePage notification switches — PATCH-resolved, refetch-pending gap', () => {
-  it('a switch shows the saved value once the PATCH resolves, so a second click turns it back', async () => {
+describe('ProfilePage notification groups — PATCH-resolved, refetch-pending gap', () => {
+  it('a group shows the saved value once the PATCH resolves, so a second click turns it back', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const careNotes = await screen.findByRole('switch', { name: /Daily care notes/i });
-    expect(careNotes).toHaveAttribute('aria-checked', 'true');
+    const tips = await screen.findByRole('switch', { name: /Tips & suggestions/i });
+    expect(tips).toHaveAttribute('aria-checked', 'true');
 
-    await user.click(careNotes);
+    await user.click(tips);
     // PATCH resolved, refetch still in flight: the switch is usable again and
     // must already show OFF.
-    await waitFor(() => expect(careNotes).not.toBeDisabled());
+    await waitFor(() => expect(tips).not.toBeDisabled());
     expect(getCalls).toBeGreaterThan(1); // the refetch really is pending
-    expect(careNotes).toHaveAttribute('aria-checked', 'false');
+    expect(tips).toHaveAttribute('aria-checked', 'false');
 
-    await user.click(careNotes);
+    await user.click(tips);
     await waitFor(() => expect(patchBodies).toHaveLength(2));
-    expect(patchBodies).toEqual([{ care_notes: false }, { care_notes: true }]);
-    await waitFor(() => expect(careNotes).toHaveAttribute('aria-checked', 'true'));
+    expect(patchBodies).toEqual([
+      { tips_and_suggestions: false },
+      { tips_and_suggestions: true },
+    ]);
+    await waitFor(() => expect(tips).toHaveAttribute('aria-checked', 'true'));
   });
 
-  it('"After-visit reminders" pins event_notes to the value just saved, not the stale one', async () => {
+  it('Notes off then Tasks off: the Tasks body pins event_notes to the value just saved, not the stale one', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    const eventNotes = await screen.findByRole('switch', { name: /Notes on events/i });
-    const noteNudges = screen.getByRole('switch', { name: /After-visit reminders/i });
+    const notes = await screen.findByRole('switch', { name: /^Notes/i });
+    const tasks = screen.getByRole('switch', { name: /Tasks & appointments/i });
 
-    await user.click(eventNotes);
-    await waitFor(() => expect(noteNudges).not.toBeDisabled());
+    await user.click(notes);
+    await waitFor(() => expect(tasks).not.toBeDisabled());
 
-    await user.click(noteNudges);
+    await user.click(tasks);
     await waitFor(() => expect(patchBodies).toHaveLength(2));
-    expect(patchBodies[0]).toEqual({ event_notes: false });
-    // Stale cache would pin event_notes: true here and silently re-enable
-    // "Notes on events".
-    expect(patchBodies[1]).toEqual({ note_nudges: false, event_notes: false });
+    expect(patchBodies[0]).toEqual({ event_notes: false, care_notes: false });
+    // A stale cache would pin event_notes: true here and silently re-enable
+    // Notes (the backend note_nudges shim is bypassed only by an explicit pin).
+    expect(patchBodies[1]).toEqual({
+      task_assignments: false,
+      appointment_reminders: false,
+      note_nudges: false,
+      event_notes: false,
+    });
     expect(serverPrefs.event_notes).toBe(false);
   });
 });

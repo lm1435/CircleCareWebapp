@@ -139,6 +139,17 @@ describe('authStore', () => {
     });
   });
 
+  it.each(['fr-CA', 'est'])('signIn reports en for the unshipped tag %s', async (tag) => {
+    mockI18n.language = tag;
+    const { api, useAuthStore } = await loadModules();
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+
+    expect(api.apiClient.post).toHaveBeenCalledWith('/auth/session-established', {
+      language: 'en',
+    });
+  });
+
   it('a failing session-established never breaks the sign-in', async () => {
     const { api, tokenAccessor, useAuthStore } = await loadModules();
     vi.mocked(api.apiClient.post).mockRejectedValue(new Error('network down'));

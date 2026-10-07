@@ -47,6 +47,8 @@ export function NotificationsOffBadge({ firstName }: NotificationsOffBadgeProps)
     >
       <button
         type="button"
+        // Name the member: two badges in one list must not share an accessible name.
+        aria-label={name ? t('member.notificationsOffFor', { name }) : undefined}
         aria-describedby={tipId}
         aria-expanded={open}
         onClick={() => setPinned((p) => !p)}

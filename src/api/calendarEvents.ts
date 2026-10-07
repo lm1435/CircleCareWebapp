@@ -60,6 +60,19 @@ export interface CalendarEvent {
    */
   discontinued_at?: string | null;
 
+  /**
+   * AS-NEEDED (PRN) medication (docs/plans/prn-medications.md). True = no
+   * schedule: no time, no repeat, no reminders; a person logging a dose is the
+   * event. Locked after create (a PATCH that flips it answers
+   * `AS_NEEDED_IMMUTABLE`). Absent/false on every scheduled row and on rows from
+   * a backend that predates the feature. These rows come back ONLY from a
+   * request that passes `includeAsNeeded` — their `scheduled_date` is the
+   * "added on" day, never a dose day.
+   */
+  as_needed?: boolean;
+  /** Plain optional note ("pain") — never a limit. ≤100 chars. */
+  as_needed_reason?: string | null;
+
   // Scheduling — naive local values in the care recipient's timezone
   scheduled_date: string; // YYYY-MM-DD
   scheduled_time?: string | null; // HH:MM:SS (null/undefined = all-day)
@@ -172,6 +185,13 @@ export interface GetEventsParams {
    * (docs/plans/meds-roster-ended-series.md Task 2; mirrors mobile).
    */
   includeInactiveRoots?: boolean;
+  /**
+   * Also return the as-needed (PRN) medication rows. The server omits them
+   * unless the literal `true` is sent, so a shipped client never renders one as
+   * a phantom one-time dose. The Medications roster and Home's as-needed
+   * section pass it; the calendar must not.
+   */
+  includeAsNeeded?: boolean;
 }
 
 interface EventsEnvelope {
@@ -194,6 +214,7 @@ export async function getEvents(
     if (params.event_type) requestParams.event_type = params.event_type;
     if (params.includeDiscontinued) requestParams.includeDiscontinued = 'true';
     if (params.includeInactiveRoots) requestParams.includeInactiveRoots = 'true';
+    if (params.includeAsNeeded) requestParams.includeAsNeeded = 'true';
   }
   // apiClient's response interceptor unwraps axios' response.data, so the
   // resolved value IS the `{ success, data }` envelope.
@@ -325,6 +346,15 @@ export interface CreateEventRequest {
   scheduled_time?: string; // HH:MM or HH:MM:SS
   duration_minutes?: number;
   location?: string;
+
+  /**
+   * AS-NEEDED medication (create only — locked afterwards). The server pins the
+   * schedule (no time/repeat/end date/reminders; "added on" = today in the
+   * recipient's zone), so a create sends none of those.
+   */
+  as_needed?: boolean;
+  /** Optional plain note, ≤100. Only valid with `as_needed`. `null` clears it on PATCH. */
+  as_needed_reason?: string | null;
 
   // Recurrence
   recurrence_rule?: string;
@@ -707,6 +737,10 @@ export const eventFormSchema = z.object({
   // = explicit "no specific days" (clears on PATCH).
   recurrence_days: z.array(z.number().int().min(0).max(6)).min(1).max(7).nullable().optional(),
   recurrence_end_date: z.string().max(10).optional(),
+
+  // As-needed (PRN) medication — mirrors the backend's eventSchema.
+  as_needed: z.boolean().optional(),
+  as_needed_reason: z.string().max(100, { message: 'reasonTooLong' }).nullable().optional(),
 
   // Task-specific
   assigned_to: z.string().uuid().nullable().optional(),

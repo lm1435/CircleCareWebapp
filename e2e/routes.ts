@@ -7,6 +7,7 @@ export const PUBLIC_ROUTES: string[] = [
   '/login',
   '/signup',
   '/verify-email',
+  '/verify-email/start',
   '/forgot-password',
   '/reset-password',
   // '/auth/callback' is an OAuth redirect handler (expects provider params) and

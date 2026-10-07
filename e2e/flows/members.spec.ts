@@ -90,7 +90,7 @@ test('send an email invite (real), copy its link, then cancel the pending invite
   // Feature B: the backend derives `push_reachable` from registered push
   // tokens (owner-only field). Seeded members have no device token, so the
   // owner sees the warning badge on their rows.
-  const notificationsOff = page.getByRole('button', { name: 'Notifications off' }).first();
+  const notificationsOff = page.getByRole('button', { name: /^Notifications off for / }).first();
   await expect(notificationsOff).toBeVisible({ timeout: 20_000 });
   // Tooltip: hidden until asked, shown on click, one line of explanation.
   const tip = page.getByRole('tooltip').first();

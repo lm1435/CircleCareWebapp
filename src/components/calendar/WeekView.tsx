@@ -19,6 +19,8 @@ import {
   isInactiveMedication,
 } from './eventStyles';
 import { overlapKey, resolveOverlaps, type OverlapInfo } from './overlap';
+import { AsNeededDayRow, AsNeededRing } from './AsNeededDayRow';
+import type { AsNeededDayEntry } from './asNeededByDay';
 
 export interface WeekViewProps {
   /** 7 YYYY-MM-DD strings (Sunday-first) in the care recipient's timezone. */
@@ -28,6 +30,9 @@ export interface WeekViewProps {
   /** Today's date string IN THE CARE RECIPIENT'S TIMEZONE (getDateInTimezone). */
   todayStr: string;
   onEventClick: (event: CalendarEvent) => void;
+  /** Days with logged as-needed doses (recipient-zone days). Optional: nothing shown without it. */
+  asNeededByDay?: Map<string, AsNeededDayEntry[]>;
+  onAsNeededOpen?: (entry: AsNeededDayEntry) => void;
 }
 
 // px per hour — matches mobile's WeekTimelineView HOUR_HEIGHT exactly. Also
@@ -92,8 +97,10 @@ export function WeekView({
   careRecipientTimezone,
   todayStr,
   onEventClick,
+  asNeededByDay,
+  onAsNeededOpen,
 }: WeekViewProps): ReactElement {
-  const { t } = useTranslation(['calendar', 'common']);
+  const { t } = useTranslation(['calendar', 'common', 'meds']);
   // Viewer's 12h/24h clock — every rendered time goes through it. (The hour-axis
   // labels below are Intl-locale-formatted, a separate concern.)
   const hourCycle = useHourCycle();
@@ -118,7 +125,10 @@ export function WeekView({
     (eventsByDay.get(day) ?? []).filter((event) => !!event.scheduled_time);
   const allDayEvents = (day: string): CalendarEvent[] =>
     (eventsByDay.get(day) ?? []).filter((event) => !event.scheduled_time);
-  const hasAllDayRow = days.some((day) => allDayEvents(day).length > 0);
+  const asNeededFor = (day: string): AsNeededDayEntry[] => asNeededByDay?.get(day) ?? [];
+  const hasAllDayRow = days.some(
+    (day) => allDayEvents(day).length > 0 || asNeededFor(day).length > 0
+  );
 
   // TARGET SIZE (WCAG 2.5.8). Overlapping timed events split the day column
   // into equal lanes, so five 8:00 AM doses in a phone's ~116px column were
@@ -395,6 +405,7 @@ export function WeekView({
             </div>
             {days.map((day) => {
               const count = (eventsByDay.get(day) ?? []).length;
+              const hasAsNeeded = asNeededFor(day).length > 0;
               const isToday = day === todayStr;
               return (
                 <div
@@ -404,7 +415,9 @@ export function WeekView({
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
-                  })}, ${t('calendar:eventCount', { count })}`}
+                  })}, ${t('calendar:eventCount', { count })}${
+                    hasAsNeeded ? `, ${t('meds:asNeeded.calendar.cellHint')}` : ''
+                  }`}
                   className="snap-start border-l border-line-2 p-1 text-center"
                 >
                   {/* Visible weekday-short + day-number now participate in
@@ -427,6 +440,11 @@ export function WeekView({
                       {formatDateForDisplay(day, { day: 'numeric' })}
                     </span>
                   </div>
+                  {hasAsNeeded && (
+                    <div className="mt-0.5 flex justify-center">
+                      <AsNeededRing />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -460,6 +478,13 @@ export function WeekView({
                     data-date={day}
                     className="snap-start flex flex-col gap-1 border-l border-line-2 p-1"
                   >
+                    {asNeededFor(day).map((entry) => (
+                      <AsNeededDayRow
+                        key={`prn_${entry.eventId}`}
+                        entry={entry}
+                        onOpen={(e) => onAsNeededOpen?.(e)}
+                      />
+                    ))}
                     {visible.map((event) => renderEventButton(event, false))}
                     {overflow > 0 && !isExpanded && (
                       <button

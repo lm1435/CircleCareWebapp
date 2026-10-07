@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api';
+import { SUPPORTED_LOCALES } from '@/i18n/locales';
 import {
   updateProfile,
   updateNotificationPrefs,
@@ -168,6 +169,17 @@ describe('exportUserData', () => {
 });
 
 describe('web Zod schemas mirror the backend route constraints', () => {
+  it('updateProfileSchema accepts exactly the registry languages and rejects the rest', () => {
+    // Expectation written from the registry, so a locale added there is
+    // accepted here with no edit — and an unshipped one ('fr') is not.
+    for (const code of SUPPORTED_LOCALES) {
+      expect(updateProfileSchema.safeParse({ language: code }).success).toBe(true);
+    }
+    expect(SUPPORTED_LOCALES).not.toContain('fr');
+    expect(updateProfileSchema.safeParse({ language: 'fr' }).success).toBe(false);
+    expect(updateProfileSchema.safeParse({ language: 'es-MX' }).success).toBe(false);
+  });
+
   it('updateProfileSchema enforces name length + language enum', () => {
     expect(updateProfileSchema.safeParse({ first_name: '' }).success).toBe(false);
     expect(updateProfileSchema.safeParse({ first_name: 'a'.repeat(51) }).success).toBe(false);

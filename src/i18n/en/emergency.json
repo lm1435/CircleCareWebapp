@@ -294,7 +294,9 @@
       "yearly": "Yearly",
       "cycle": "{{on}} days on, {{off}} days off",
       "custom_unknown": "Custom schedule",
-      "oneTime": "One time · {{date}}"
+      "oneTime": "One time · {{date}}",
+      "asNeeded": "As needed",
+      "asNeededFor": "As needed · {{reason}}"
     },
     "empty": {
       "noInfo": "No information added",

@@ -22,6 +22,7 @@ import {
   type TimeLanguage,
 } from '@/utils/timezone';
 import { resolveHourCycle, type HourCycle } from '@/utils/hourCycle';
+import { baseLanguage } from '@/i18n/locales';
 import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
@@ -59,10 +60,9 @@ function pdfT(key: string, opts?: Record<string, unknown>): string {
   return i18n.t(mapPdfKey(key), opts);
 }
 
-/** The active UI language, collapsed to the two the app ships. */
+/** The active UI language, collapsed to the registry base language. */
 function uiLanguage(): TimeLanguage {
-  const lng = i18n.resolvedLanguage || i18n.language || 'en';
-  return lng.toLowerCase().startsWith('es') ? 'es' : 'en';
+  return baseLanguage(i18n.resolvedLanguage || i18n.language);
 }
 
 /**
@@ -156,7 +156,7 @@ export function buildPdfEnv(): PdfEnv {
     getDateInTimezone: (tz, date) => getDateInTimezone(tz, date),
     formatTimeOfDay: (hours, minutes) => formatTimeOfDay(hours, minutes, cycle, language),
     formatInstantTimeOfDay: (instant, tz) => formatInstantTimeOfDay(instant, tz, cycle, language),
-    getTimezoneLabel: (tz, lang) => getTimezoneLabel(tz, lang),
+    getTimezoneLabel: (tz, lang) => getTimezoneLabel(tz, baseLanguage(lang)),
     formatRecurrence: (event) => formatRecurrenceLabel(event, t, locale) ?? '',
   };
 }

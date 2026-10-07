@@ -45,6 +45,23 @@ export interface MedicationDetailModalProps {
    * series and there is nothing left to discontinue. Edit and Delete stay.
    */
   endedLabel?: string | null;
+  /**
+   * AS-NEEDED medication: the sheet drops the Time and Repeat rows (there is no
+   * schedule), says "Medication · As needed", shows the last-given line and the
+   * reason, and offers "Dose history" + "Gave a dose" (the latter only to a
+   * writer, on an ACTIVE medication). No limits, no counters.
+   */
+  asNeeded?: {
+    reason: string | null;
+    /**
+     * The "Last given {time} by {name}" line, rendered by the CALLER (the page
+     * owns the summary read and the recipient zone). A node, not data: this
+     * modal stays free of the hour-cycle / i18n-bootstrap import chain.
+     */
+    lastGiven: ReactNode;
+    onGive: () => void;
+    onHistory: () => void;
+  };
   canEdit: boolean;
   onClose: () => void;
   onEdit: () => void;
@@ -147,6 +164,7 @@ export function MedicationDetailModal({
   repeat,
   daysLeft = null,
   lowStock = false,
+  asNeeded,
   inactive,
   endedLabel = null,
   canEdit,
@@ -198,7 +216,9 @@ export function MedicationDetailModal({
   const header = (
     <div className="flex min-w-0 flex-col">
       <div className="flex flex-wrap items-center gap-2">
-        <Eyebrow color="clay">{t('calendar:eventTypes.medication')}</Eyebrow>
+        <Eyebrow color="clay">
+          {asNeeded ? t('meds:asNeeded.detail.eyebrow') : t('calendar:eventTypes.medication')}
+        </Eyebrow>
         {inactive && (
           <Badge size="sm">{endedLabel ?? t('calendar:discontinueMed.inactiveBadge')}</Badge>
         )}
@@ -217,12 +237,22 @@ export function MedicationDetailModal({
       closeLabel={t('common:close')}
       size="md"
       footer={
-        canEdit ? (
+        canEdit || asNeeded ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <MoreMenu items={menuItems} />
-            <Button variant="secondary" onClick={onEdit}>
-              {t('meds:page.actions.edit')}
-            </Button>
+            {canEdit && <MoreMenu items={menuItems} />}
+            {canEdit && (
+              <Button variant="secondary" onClick={onEdit}>
+                {t('meds:page.actions.edit')}
+              </Button>
+            )}
+            {asNeeded && (
+              <Button variant="secondary" onClick={asNeeded.onHistory}>
+                {t('meds:asNeeded.card.history')}
+              </Button>
+            )}
+            {asNeeded && canEdit && !inactive && (
+              <Button onClick={asNeeded.onGive}>{t('meds:asNeeded.card.give')}</Button>
+            )}
           </div>
         ) : undefined
       }
@@ -245,10 +275,27 @@ export function MedicationDetailModal({
         )}
 
         <Sheet as="dl" padding="none" className="m-0 overflow-hidden">
-          <InfoRow icon="time-outline" label={t('meds:page.detail.time')}>
-            {times}
-          </InfoRow>
-          {repeat && (
+          {asNeeded && !inactive && (
+            <InfoRow icon="time-outline" label={t('meds:asNeeded.detail.lastGiven')}>
+              {asNeeded.lastGiven}
+            </InfoRow>
+          )}
+          {asNeeded?.reason && (
+            <InfoRow icon="medkit-outline" label={t('meds:asNeeded.detail.reason')}>
+              {asNeeded.reason}
+            </InfoRow>
+          )}
+          {asNeeded && (
+            <InfoRow icon="repeat-outline" label={t('meds:asNeeded.detail.reminders')}>
+              {t('meds:asNeeded.detail.remindersNone')}
+            </InfoRow>
+          )}
+          {!asNeeded && (
+            <InfoRow icon="time-outline" label={t('meds:page.detail.time')}>
+              {times}
+            </InfoRow>
+          )}
+          {!asNeeded && repeat && (
             <InfoRow icon="repeat-outline" label={t('meds:page.detail.repeat')}>
               {repeat}
             </InfoRow>

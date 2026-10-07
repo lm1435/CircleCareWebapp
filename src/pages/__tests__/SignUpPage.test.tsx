@@ -317,6 +317,34 @@ describe('SignUpPage', () => {
     }
   });
 
+  // A language the registry does not ship (fr-CA) must register as 'en': the UI
+  // falls back to English, and the payload must agree with what the user sees.
+  it("registers a fr-CA browser (not shipped) as language 'en'", async () => {
+    mockedPost.mockResolvedValueOnce({
+      success: true,
+      data: {
+        user: { id: 'u1', email: VALID.email, first_name: 'Pat', last_name: 'Rivera' },
+        message: 'sent',
+      },
+    } as never);
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await i18n.changeLanguage('fr-CA');
+    try {
+      await user.click(screen.getByRole('button', { name: /Create account|Crear cuenta/ }));
+      await waitFor(() =>
+        expect(mockedPost).toHaveBeenCalledWith(
+          '/auth/signup',
+          expect.objectContaining({ language: 'en' })
+        )
+      );
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
   it('signs up with the full body (timezone + language + termsAccepted) and routes to /verify-email with email in state', async () => {
     mockedPost.mockResolvedValueOnce({
       success: true,
@@ -364,6 +392,40 @@ describe('SignUpPage', () => {
     expect(alert).toHaveTextContent(
       'An account with this email already exists. Please sign in instead.'
     );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('EMAIL_RATE_LIMIT (address already sent a code: unverified / re-submitted signup) routes to the code page, not a dead end', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'EMAIL_RATE_LIMIT', message: 'Too many attempts.' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/verify-email', {
+        state: { email: VALID.email, notice: 'rateLimited' },
+      })
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('our own RATE_LIMIT still stays on the form with the wait copy (not routed)', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'RATE_LIMIT', message: 'Too many requests' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts');
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

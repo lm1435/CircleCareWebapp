@@ -97,6 +97,13 @@ export interface TodaysMedication {
    * is LABELLED ("Inactive", in text), never whether it can be answered.
    */
   discontinued_at?: string | null;
+  /**
+   * AS-NEEDED (PRN) medication row — present ONLY when the read asked for them
+   * (`getTodaysMedications(..., { includeAsNeeded: true })`). It has no schedule,
+   * so it is never a dose to answer; Home draws it in its own section.
+   */
+  as_needed?: boolean;
+  as_needed_reason?: string | null;
   confirmation?: {
     status: ConfirmationStatus;
     confirmed_at: string;
@@ -168,10 +175,25 @@ interface EventsEnvelope {
  */
 export async function getTodaysMedications(
   circleId: string,
-  dateStr: string
+  dateStr: string,
+  options?: {
+    /**
+     * Also return the circle's as-needed (PRN) medications, in the SAME request
+     * (they are fetched whole by the server, whatever the window). They come
+     * back as rows with `as_needed: true` and no time; callers split them from
+     * the scheduled doses. Left off, nothing changes (and the verify-before-alert
+     * re-read never asks).
+     */
+    includeAsNeeded?: boolean;
+  }
 ): Promise<TodaysMedication[]> {
   const response = (await apiClient.get(`/circles/${circleId}/events`, {
-    params: { start_date: dateStr, end_date: dateStr, event_type: 'medication' },
+    params: {
+      start_date: dateStr,
+      end_date: dateStr,
+      event_type: 'medication',
+      ...(options?.includeAsNeeded ? { includeAsNeeded: 'true' } : {}),
+    },
   })) as unknown as EventsEnvelope;
 
   // The backend returns this already ordered (backend/src/utils/eventOrder.ts:
@@ -181,7 +203,10 @@ export async function getTodaysMedications(
   // time — the five-dose 8:00 AM morning — would otherwise have their visibility
   // decided by response order.
   return (response.data.events ?? [])
-    .filter((event) => event.event_type === 'medication' && !!event.scheduled_time)
+    .filter(
+      (event) =>
+        event.event_type === 'medication' && (!!event.scheduled_time || event.as_needed === true)
+    )
     .sort((a, b) => {
       const at = a.scheduled_time ?? '';
       const bt = b.scheduled_time ?? '';
@@ -306,6 +331,21 @@ export interface AdherenceReport {
   daily_breakdown: AdherenceReportDaily[];
   by_medication: AdherenceReportByMedication[];
   time_breakdown: AdherenceReportTimeBreakdown[];
+  /**
+   * As-needed (PRN) medications, as PLAIN RECORDS appended after every
+   * scheduled-adherence number — never part of a ratio, count or sentence.
+   * `null` = the server soft-failed it; absent on an older server. Doses are the
+   * recipient's real instants (`given_at`), rendered in their zone by the PDF.
+   */
+  as_needed?: {
+    medications: {
+      event_id: string;
+      medication_name: string;
+      medication_dosage: string | null;
+      doses_given: number;
+      doses: { id: string; given_at: string; given_by_name: string | null; note: string | null }[];
+    }[];
+  } | null;
 }
 
 export async function getAdherenceReport(

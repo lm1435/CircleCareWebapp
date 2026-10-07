@@ -84,7 +84,8 @@
     "doseAlreadyLogged": "This dose was already logged — its time can't be changed.",
     "invalidOccurrenceDate": "This event no longer repeats on that day — the calendar has been refreshed.",
     "eventNotFound": "That event no longer exists. Someone else may have deleted it.",
-    "recurrenceDaysExcludeStart": "The start day must stay selected."
+    "recurrenceDaysExcludeStart": "The start day must stay selected.",
+    "asNeededLocked": "A medication can't be switched between scheduled and as needed. Discontinue it and add it again."
   },
   "addEvent": {
     "addEvent": "Add event",
@@ -180,7 +181,9 @@
       "monthly": "Monthly",
       "yearly": "Yearly",
       "cycle": "Cycle (days on / off)",
-      "daysOfWeek": "Days of the week"
+      "daysOfWeek": "Days of the week",
+      "asNeeded": "As needed",
+      "asNeededHint": "No set times. Log each dose when it is given."
     },
     "daysOfWeek": {
       "title": "Repeat on",
@@ -197,11 +200,11 @@
       "atTime": "At the scheduled time",
       "atTimeHint": "The main alert, sent when it's due.",
       "atTimeOff": "Nothing will be sent at the scheduled time — only the earlier reminders you pick below.",
-      "atTimeOffNoEarlier": "No reminder will be sent before this dose — the first alert would be the missed-dose follow-up, 15 minutes after it was due.",
+      "atTimeOffNoEarlier": "No reminder will be sent before this dose — the first alert would be the follow-up that it hasn't been marked yet, 15 minutes after it was due.",
       "additional": "Earlier reminders",
       "escalation": "If a dose isn't confirmed, we follow up: the care recipient after 15 minutes, caregivers after 30, the whole circle after an hour.",
       "escalationSelf": "If a dose isn't confirmed, we follow up: you after 15 minutes, caregivers after 30, the whole circle after an hour.",
-      "offMedication": "No one will be notified when this dose is due, and no one will be alerted if it's missed.",
+      "offMedication": "No one will be notified when this dose is due, and no one will be alerted if it hasn't been marked.",
       "offGeneric": "No one will be reminded about this — not you, and not anyone else in the circle.",
       "noneSelected": "Select at least one time, or no reminder will be sent.",
       "h24": "24 hours before",
@@ -233,7 +236,8 @@
       "dosageTooLong": "Dosage must be 100 characters or fewer.",
       "locationTooLong": "Location must be 250 characters or fewer.",
       "descriptionTooLong": "Details must be 850 characters or fewer.",
-      "invalidRecurrenceRule": "That repeat option isn't valid."
+      "invalidRecurrenceRule": "That repeat option isn't valid.",
+      "reasonTooLong": "What it is for must be 100 characters or fewer."
     },
     "alerts": {
       "pastTimeTitle": "Starts with the next dose",
@@ -252,6 +256,7 @@
     },
     "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
     "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
+    "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Account.",
     "dayOffsetNext": "+1 day",
     "dayOffsetPrevious": "-1 day",
     "timezoneUnresolvedNotice": "Still loading this circle's time zone. Saving is paused so dates aren't stored in the wrong one.",
@@ -261,6 +266,15 @@
       "suggestionsLabel": "Medication suggestions",
       "resultCount_one": "{{count}} suggestion",
       "resultCount_other": "{{count}} suggestions"
+    },
+    "asNeeded": {
+      "reason": "What is it for?",
+      "reasonPlaceholder": "e.g. pain, nausea",
+      "optional": "(optional)",
+      "repeatHint": "No set times. Family members are notified when someone logs a dose.",
+      "lockedRepeat": "As needed · can't be changed. To put this medication on a schedule, discontinue it and add it again.",
+      "remindersNone": "No reminders. As-needed medications don't have a schedule.",
+      "updateOldBackend": "Couldn't add an as-needed medication yet — please update the app and try again."
     }
   },
   "deleteEvent": {

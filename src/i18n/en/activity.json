@@ -41,7 +41,9 @@
       "caregiver": "{{name}} joined the circle as Caregiver",
       "careRecipientUnknown": "Someone joined the circle as care recipient",
       "caregiverUnknown": "Someone joined the circle as caregiver"
-    }
+    },
+    "asNeededDoseLogged": "Logged a dose: {{title}} at {{time}}",
+    "asNeededDoseRemoved": "Removed a logged dose: {{title}} ({{time}})"
   },
   "phrases": {
     "confirmedMedication": "Confirmed Medication:",
@@ -72,9 +74,11 @@
     "onDate": "on",
     "stoppedRecurrence": "Stopped recurrence for",
     "fromDate": "from",
-    "importedAppointment": "Imported {{count}} appointment from calendar",
-    "importedAppointments": "Imported {{count}} appointments from calendar",
-    "changedAnswer": "(changed another caregiver's answer)"
+    "importedAppointment_one": "Imported {{count}} appointment from calendar",
+    "importedAppointment_other": "Imported {{count}} appointments from calendar",
+    "changedAnswer": "(changed another caregiver's answer)",
+    "loggedDose": "Logged a dose:",
+    "removedLoggedDose": "Removed a logged dose:"
   },
   "sentences": {
     "memberLeft": "A member left the circle",

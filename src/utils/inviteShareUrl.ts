@@ -18,7 +18,7 @@
  * non-file route whose query string carries `lang=es`. This helper is the
  * client half — it stamps that marker onto the link the sender shares.
  *
- * WHY ONLY SPANISH GETS A PARAM
+ * WHY ONLY NON-ENGLISH GETS A PARAM
  * -----------------------------
  * English is the DEFAULT document. Every invite link ever sent — the ones
  * sitting in Messages threads and inboxes right now, the ones the backend
@@ -37,19 +37,21 @@
  * pick which prerendered document the SERVER hands to a crawler.
  */
 
-/** The parameter name and value the .htaccess rewrite matches on. */
+import { DEFAULT_LOCALE, normalizeLocale } from '@/i18n/locales';
+
+/** The parameter name the .htaccess rewrite matches on (value = a non-EN registry code). */
 const LOCALE_PARAM = 'lang';
-const SPANISH_VALUE = 'es';
 
 /**
- * True for the Spanish family in any form i18next or a browser might hand us:
- * 'es', 'es-419', 'es-MX', 'ES', and the underscore spellings some platforms
- * still emit ('es_419'). Anything else — including 'en', 'en-US', '' and
- * undefined-turned-empty — is not Spanish and gets no marker.
+ * The registry locale whose prerendered document this link should preview as,
+ * or null for English / anything the registry does not ship. Resolution is the
+ * registry's own (`normalizeLocale`): 'es', 'es-419', 'es-MX', 'ES' and the
+ * underscore spelling 'es_419' all give 'es'; 'en', 'en-US', '', 'pt-BR' and
+ * 'est' (a prefix of "es" but a different language) give null.
  */
-function isSpanish(language: string): boolean {
-  const normalized = language.trim().toLowerCase().replace(/_/g, '-');
-  return normalized === 'es' || normalized.startsWith('es-');
+function previewLocale(language: string): string | null {
+  const locale = normalizeLocale(language);
+  return locale === DEFAULT_LOCALE ? null : locale;
 }
 
 /**
@@ -76,7 +78,9 @@ function isSpanish(language: string): boolean {
 export function withInviteLocale(url: string, language: string): string {
   try {
     if (typeof url !== 'string' || url.trim().length === 0) return url;
-    if (typeof language !== 'string' || !isSpanish(language)) return url;
+    if (typeof language !== 'string') return url;
+    const locale = previewLocale(language);
+    if (locale === null) return url;
 
     // Split off the fragment first: everything after the first '#' is opaque
     // to the server and must stay at the very end. Later '#'s are literal
@@ -94,7 +98,7 @@ export function withInviteLocale(url: string, language: string): string {
       .some((pair) => pair === LOCALE_PARAM || pair.startsWith(`${LOCALE_PARAM}=`));
     if (alreadyMarked) return url;
 
-    const marker = `${LOCALE_PARAM}=${SPANISH_VALUE}`;
+    const marker = `${LOCALE_PARAM}=${locale}`;
     const nextQuery = query.length > 0 ? `${query}&${marker}` : marker;
     return `${path}?${nextQuery}${hash}`;
   } catch {

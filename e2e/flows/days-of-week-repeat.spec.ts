@@ -260,10 +260,11 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
   await medDialog.locator('#medication_dosage').fill('5 mg');
   await medDialog.locator('#scheduled_date').fill(monday);
   await medDialog.locator('#scheduled_time').fill('12:00');
-  // The option sits LAST in the Repeat select, after Cycle.
+  // The option sits after Cycle and just before "As needed" (the PRN option, medication-only, is LAST).
   const options = await medDialog.locator('#recurrence_rule option').allTextContents();
-  expect(options[options.length - 1]).toBe('Days of the week');
-  expect(options[options.length - 2]).toMatch(/^Cycle/);
+  expect(options[options.length - 1]).toBe('As needed');
+  expect(options[options.length - 2]).toBe('Days of the week');
+  expect(options[options.length - 3]).toMatch(/^Cycle/);
   await medDialog.locator('#recurrence_rule').selectOption('days_of_week');
 
   const medGroup = chipGroup(medDialog);
@@ -420,7 +421,8 @@ test.describe('Spanish', () => {
     await dialog.locator('#scheduled_date').fill(monday);
     await dialog.locator('#scheduled_time').fill('12:00');
     const options = await dialog.locator('#recurrence_rule option').allTextContents();
-    expect(options[options.length - 1]).toBe('Días de la semana');
+    // "As needed" (the PRN option) is last; "Días de la semana" sits just before it.
+    expect(options[options.length - 2]).toBe('Días de la semana');
     await dialog.locator('#recurrence_rule').selectOption('days_of_week');
 
     const group = chipGroup(dialog, 'Repetir los');

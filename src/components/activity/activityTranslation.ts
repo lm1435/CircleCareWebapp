@@ -9,6 +9,7 @@
 
 import i18n from '@/i18n';
 import { formatDateShort } from './activityFormat';
+import { baseLanguage } from '@/i18n/locales';
 import { formatTimeOfDay, getTimezoneSuffix, type TimeLanguage } from '@/utils/timezone';
 import type { HourCycle } from '@/utils/hourCycle';
 
@@ -209,6 +210,19 @@ const KEY_RENDERERS = new Map<string, KeyRenderer>(Object.entries({
     ctx.t('entries.eventNoteAdded', { title: p.title ?? '' }) },
   'entries.careNoteAdded': { requires: [], render: (_p, ctx) =>
     ctx.t('entries.careNoteAdded') },
+  // As-needed (PRN) doses. `time` is the dose's wall clock in the CARE
+  // RECIPIENT's zone ('HH:MM:SS'), so it renders (and zone-labels) like every
+  // other time here. NEW rows only — no existing key or phrase is touched.
+  'entries.asNeededDoseLogged': { requires: ['title', 'time'], render: (p, ctx) =>
+    ctx.t('entries.asNeededDoseLogged', {
+      title: p.title ?? '',
+      time: renderTime(p.time, ctx),
+    }) },
+  'entries.asNeededDoseRemoved': { requires: ['title', 'time'], render: (p, ctx) =>
+    ctx.t('entries.asNeededDoseRemoved', {
+      title: p.title ?? '',
+      time: renderTime(p.time, ctx),
+    }) },
 }));
 
 /**
@@ -281,7 +295,11 @@ export function renderActivityDescription(
         t,
         locale,
         hourCycle: options.hourCycle,
-        language: locale.startsWith('es') ? 'es' : 'en',
+        // Lazy: a name-free membership row never reads it, and the
+        // client-compat harness stubs the registry import to throw.
+        get language() {
+          return baseLanguage(locale);
+        },
         timezone,
         now: options.now ?? new Date(),
       });
@@ -435,6 +453,10 @@ export function translateActivityDescription(
     '(missed)': `(${t('phrases.missed')})`,
     '(not taken)': `(${t('phrases.skipped')})`,
     "(changed another caregiver's answer)": t('phrases.changedAnswer'),
+    // As-needed doses: a keyless/unknown-key row still reads in Spanish. Added
+    // at the END so no existing phrase's substitution order changes.
+    'Removed a logged dose:': t('phrases.removedLoggedDose'),
+    'Logged a dose:': t('phrases.loggedDose'),
   };
 
   let translated = description;
@@ -465,10 +487,8 @@ export function translateActivityDescription(
 
   // "Imported N appointment(s) from calendar"
   translated = translated.replace(/^Imported (\d+) appointments? from calendar$/, (_, count) => {
-    const n = parseInt(count, 10);
-    return n === 1
-      ? t('phrases.importedAppointment', { count: n })
-      : t('phrases.importedAppointments', { count: n });
+    // i18next picks `_one` / `_other` from the active locale's CLDR rules.
+    return t('phrases.importedAppointment', { count: parseInt(count, 10) });
   });
 
   return translated;

@@ -9,6 +9,7 @@ import type {
   PdfAdherenceReport,
   PdfAdherenceReportByMedication,
   PdfAdherenceReportDaily,
+  PdfAsNeededMedication,
   PdfVitalsSummary,
 } from './types';
 import { PDF_PALETTE as CC } from './palette';
@@ -165,7 +166,7 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
   // Inside the tables the per-row suffix still suppresses itself when the
   // exporter shares the zone. Named from the export's OWN locale rather than
   // the ambient i18next language, which is what the rest of this file does.
-  const tzLabel = env.getTimezoneLabel(careRecipientTimezone, langCode === 'es' ? 'es' : 'en');
+  const tzLabel = env.getTimezoneLabel(careRecipientTimezone, langCode);
   const startDateFormatted = formatDateForPdf(report.start_date, locale);
   const endDateFormatted = formatDateForPdf(report.end_date, locale);
   const preparedOnDate = formatDateOnly(new Date(), careRecipientTimezone, locale);
@@ -311,6 +312,48 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
     )
     .join('');
 
+  // As-needed (PRN) medications: a PLAIN RECORD of what was given, after every
+  // scheduled-adherence section and never part of any ratio, count or sentence
+  // above. Omitted entirely when the backend sent null or nothing was logged.
+  // Dates/times are the recipient's wall clock (a real instant resolved in their
+  // zone) — never the exporter's.
+  const asNeededMeds: PdfAsNeededMedication[] = (report.as_needed?.medications ?? []).filter(
+    (m) => m.doses_given > 0 || (m.doses?.length ?? 0) > 0
+  );
+  const asNeededSection = asNeededMeds.length > 0 ? `
+  <div class="section">
+    <div class="section-title">${t('medicationHistory.export.asNeededSection')}</div>
+    ${asNeededMeds.map((m) => {
+      const label = m.medication_dosage ? `${m.medication_name} (${m.medication_dosage})` : m.medication_name;
+      const rows = (m.doses ?? []).map((d) => {
+        const at = new Date(d.given_at);
+        const day = env.getDateInTimezone(careRecipientTimezone, at);
+        return `
+        <tr>
+          <td>${escapeHtml(formatDateForPdf(day, locale))}</td>
+          <td>${escapeHtml(env.formatInstantTimeOfDay(at, careRecipientTimezone))}</td>
+          <td>${escapeHtml(d.given_by_name ?? '')}</td>
+          <td>${escapeHtml(d.note ?? '')}</td>
+        </tr>`;
+      }).join('');
+      return `
+    <div class="subsection-title">${t('medicationHistory.export.asNeededGiven', { name: escapeHtml(label), count: m.doses_given })}</div>
+    <table role="table" aria-label="${escapeHtml(label)}">
+      <caption class="visually-hidden">${escapeHtml(label)}</caption>
+      <thead>
+        <tr>
+          <th scope="col">${t('medicationHistory.export.date')}</th>
+          <th scope="col">${t('medicationHistory.export.time')}</th>
+          <th scope="col">${t('medicationHistory.export.asNeededGivenBy')}</th>
+          <th scope="col">${t('medicationHistory.export.asNeededNote')}</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    }).join('')}
+  </div>
+  ` : '';
+
   const takenOnTime = summary.taken - summary.taken_late;
 
   return `<!DOCTYPE html>
@@ -370,11 +413,22 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
       min-width: 0;
       background: ${CC.paper};
       border-radius: 8px;
-      padding: 12px;
+      padding: 12px 6px;
       text-align: center;
     }
     .summary-box .value { font-size: 24px; font-weight: 700; }
-    .summary-box .label { font-size: 11px; color: ${CC.inkSoft}; text-transform: uppercase; letter-spacing: 0.5px; }
+    /* Sized for the iOS printable width (612pt − 54pt margins → ~65px of tile
+       interior), where the widest single label word — "ADHERENCIA" — must fit.
+       11px/0.5px spilled past the tile border there; Chrome's wider preview
+       never shows the spill. break-word is the last-resort guard for longer
+       locales: a wrapped word beats text outside the box. */
+    .summary-box .label {
+      font-size: 9px;
+      color: ${CC.inkSoft};
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      overflow-wrap: break-word;
+    }
     .adherence-highlight {
       background: ${CC.mossWash};
       border: 1px solid ${CC.mossLine};
@@ -441,10 +495,15 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
         <div class="label">${t('medicationHistory.export.total')}</div>
       </div>
     </div>
+    <!-- The badge alone ("↔ &hellip; (0%)") is a riddle to anyone who did not
+         build it — SAY what the delta compares. (Keep trend words out of this
+         comment: it ships even when the badge is hidden, and a test asserts
+         the hidden document carries no trend wording.) -->
     ${showTrend ? `<div style="margin-top:8px">
       <span class="trend-badge" style="color:${trendColor};background:${trendColor}15">
         ${trendArrow} ${trendLabel} (${summary.trend_change > 0 ? '+' : ''}${summary.trend_change}%)
       </span>
+      <span class="legend" style="margin-left:8px">${t('medicationHistory.export.trendLegend')}</span>
     </div>` : ''}
     <!-- Defines "not marked" where the term first appears, not in a footer
          two pages later. -->
@@ -527,6 +586,9 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
     </table>
   </div>
   ` : ''}
+
+  <!-- As-needed medications (not part of the adherence rate) -->
+  ${asNeededSection}
 
   <!-- Health Vitals -->
   ${vitalsData && vitalsData.length > 0 ? `

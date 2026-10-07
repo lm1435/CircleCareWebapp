@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { LOCALE_REGISTRY, type LocaleEntry } from '@/i18n/locales';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB_I18N = resolve(HERE, '..', '..', 'i18n');
@@ -23,6 +24,12 @@ if (!mobilePresent) {
 const describeIfMobile = mobilePresent ? describe : describe.skip;
 
 type Json = Record<string, unknown>;
+
+// Registry-driven (A9): every BASE locale is held to mobile parity; variants
+// (fr-CA...) are sparse overrides and carry no PDF subtree of their own.
+const PARITY_LOCALES: readonly string[] = LOCALE_REGISTRY.filter(
+  (l) => !(l as LocaleEntry).base
+).map((l) => l.code);
 
 function readJson(path: string): Json {
   return JSON.parse(readFileSync(path, 'utf8')) as Json;
@@ -55,7 +62,7 @@ const CASES: ReadonlyArray<{ webFile: string; webPath: string; mobilePath: strin
 ];
 
 describeIfMobile('web PDF strings mirror mobile', () => {
-  for (const lang of ['en', 'es'] as const) {
+  for (const lang of PARITY_LOCALES) {
     const mobile = mobilePresent ? readJson(resolve(MOBILE_LOCALES, `${lang}.json`)) : {};
     for (const { webFile, webPath, mobilePath } of CASES) {
       const web = readJson(resolve(WEB_I18N, lang, webFile));
@@ -74,7 +81,8 @@ describeIfMobile('web PDF strings mirror mobile', () => {
 describe('web-only masthead label', () => {
   it('emergency.exportPdf exists in both languages', () => {
     // The masthead action reuses the parity key (mobile's own label), no web-only key.
-    expect(readJson(resolve(WEB_I18N, 'en', 'emergency.json')).exportPdf).toBeUndefined();
-    expect(readJson(resolve(WEB_I18N, 'es', 'emergency.json')).exportPdf).toBeUndefined();
+    for (const lang of PARITY_LOCALES) {
+      expect(readJson(resolve(WEB_I18N, lang, 'emergency.json')).exportPdf).toBeUndefined();
+    }
   });
 });

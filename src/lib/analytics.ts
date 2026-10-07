@@ -270,6 +270,15 @@ export type PlanKey = 'monthly' | 'annual';
  */
 export type ExportFailureStage = 'print' | 'timeout';
 
+/** Coerce an unknown value to one of a fixed set; anything else gets the fallback. */
+function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
+}
+
+const AS_NEEDED_SURFACES = ['home', 'meds_tab', 'detail'] as const;
+
 export const Analytics = {
   // --- Auth ---
   signupStarted: (method: AuthMethod) => capture('signup_started', { method }),
@@ -595,6 +604,74 @@ export const Analytics = {
       is_discontinued: opts.isDiscontinued,
     }),
 
+  // -- As-needed (PRN) medications ----------------------------------------
+  //
+  // PHI-free by construction: every prop is an enum or a boolean, each coerced
+  // through a whitelist so an arbitrary string can never ride along. NEVER a
+  // circle id, dose/event id, medication name, note, reason or clock time.
+
+  /** An as-needed medication was created. Web only has the form. */
+  asNeededMedicationCreated: (opts: { source?: string; has_reason?: boolean }) =>
+    capture('as_needed_medication_created', {
+      source: pickEnum(opts.source, ['form', 'scan', 'voice'], 'form'),
+      has_reason: opts.has_reason === true,
+    }),
+
+  /** A dose was logged (POST succeeded and was not a replay). */
+  asNeededDoseLogged: (opts: {
+    surface?: string;
+    with_note?: boolean;
+    backdated_bucket?: string;
+    actor?: string;
+    after_recent_prompt?: boolean;
+    minutes_since_last_bucket?: string;
+  }) =>
+    capture('as_needed_dose_logged', {
+      surface: pickEnum(opts.surface, AS_NEEDED_SURFACES, 'home'),
+      with_note: opts.with_note === true,
+      backdated_bucket: pickEnum(
+        opts.backdated_bucket,
+        ['none', '<1h', '1-4h', '4-12h', '>12h'],
+        'none'
+      ),
+      actor: pickEnum(opts.actor, ['caregiver', 'recipient'], 'caregiver'),
+      after_recent_prompt: opts.after_recent_prompt === true,
+      minutes_since_last_bucket: pickEnum(
+        opts.minutes_since_last_bucket,
+        ['first', '<1h', '1-4h', '4-12h', '12-24h', '>24h'],
+        'first'
+      ),
+    }),
+
+  /** Undo cancelled a pending (not yet sent) dose. */
+  asNeededDoseUndone: (opts: { surface?: string }) =>
+    capture('as_needed_dose_undone', { surface: pickEnum(opts.surface, AS_NEEDED_SURFACES, 'home') }),
+
+  /** A logged dose was removed (tombstoned). */
+  asNeededDoseRemoved: (opts: { age_bucket?: string; own?: boolean }) =>
+    capture('as_needed_dose_removed', {
+      age_bucket: pickEnum(opts.age_bucket, ['<1h', '<24h', 'older'], 'older'),
+      own: opts.own === true,
+    }),
+
+  /** Logging a dose failed. */
+  asNeededDoseLogFailed: (opts: { reason?: string }) =>
+    capture('as_needed_dose_log_failed', {
+      reason: pickEnum(opts.reason, ['network', 'discontinued', 'permission', 'error'], 'error'),
+    }),
+
+  /** The user answered the "just logged by someone else" prompt. */
+  asNeededRecentConflict: (opts: { resolution?: string }) =>
+    capture('as_needed_recent_conflict', {
+      resolution: pickEnum(opts.resolution, ['logged_another', 'dismissed'], 'dismissed'),
+    }),
+
+  /** A dose history was opened. */
+  asNeededHistoryViewed: (opts: { scope?: string }) =>
+    capture('as_needed_history_viewed', {
+      scope: pickEnum(opts.scope, ['all', 'medication'], 'medication'),
+    }),
+
   /**
    * A medication was discontinued (inactivated).
    *
@@ -855,6 +932,14 @@ export const Analytics = {
   // --- Settings (web-new) ---
   languageChanged: (language: string) => capture('language_changed', { language }),
   timezoneChanged: (timezone: string) => capture('timezone_changed', { timezone }),
+  /** Profile > Notifications group switch. Enums/booleans only (no circle id,
+   *  no names). `confirmed` is present only for the Medications-off confirm. */
+  notificationGroupToggled: (props: {
+    group: 'medications' | 'tasks' | 'notes' | 'tips';
+    enabled: boolean;
+    was_mixed: boolean;
+    confirmed?: boolean;
+  }) => capture('notification_group_toggled', props),
 
   // --- Help (web-new) ---
   /** `itemKey` is the i18n key / stable id of the FAQ item — never its

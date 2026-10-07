@@ -62,6 +62,17 @@ describe('useAiSuggestions', () => {
     expect(mockGet).toHaveBeenCalledWith(CIRCLE_ID, 'es');
   });
 
+  it.each(['fr-CA', 'est'])('requests en for the unshipped tag %s', async (tag) => {
+    mockLanguage = tag;
+    mockGet.mockResolvedValue(SUGGESTIONS);
+    const { wrapper } = setup();
+
+    const { result } = renderHook(() => useAiSuggestions(CIRCLE_ID, true), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockGet).toHaveBeenCalledWith(CIRCLE_ID, 'en');
+  });
+
   it('keys by circle AND language so switching to Spanish refetches', async () => {
     mockGet.mockResolvedValue(SUGGESTIONS);
     const { wrapper, queryClient } = setup();
