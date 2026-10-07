@@ -1,0 +1,23 @@
+{
+  "quickAccess": {
+    "activityFeed": "Registo de atividades"
+  },
+  "tasks": {
+    "emptyFirstRun": "Coordene as tarefas que mantêm o cuidado em dia (compras, reposições, retornos) e partilhe com todos os que ajudam."
+  },
+  "team": {
+    "title": "Equipa de cuidado",
+    "myTitle": "A minha equipa de cuidado",
+    "you": "(Eu)",
+    "medManagerBadge": "Gere os lembretes de medicamentos"
+  },
+  "solo": {
+    "body": "Convide um familiar ou cuidador para ajudar a coordenar o cuidado de {{name}}: partilhem tarefas, consultas e atualizações para que ninguém carregue tudo sozinho.",
+    "bodySelfCare": "Convide um familiar ou cuidador para ajudar: partilhem tarefas, consultas e atualizações para que não carregue tudo sozinho.",
+    "cta": "Convidar o seu primeiro cuidador"
+  },
+  "settings": {
+    "title": "Gerir",
+    "deleteCircle": "Eliminar círculo"
+  }
+}

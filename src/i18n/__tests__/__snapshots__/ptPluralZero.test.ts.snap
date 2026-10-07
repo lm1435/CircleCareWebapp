@@ -1,0 +1,316 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: every plural key at 0 / 1 / 2 in both variants 1`] = `
+{
+  "pt activity:phrases.importedAppointment": [
+    "Consultas importadas do calendário: 0",
+    "Consultas importadas do calendário: 1",
+    "2 consultas importadas do calendário",
+  ],
+  "pt calendar:addEvent.alerts.someDoseTimesFailed": [
+    "Salvo, mas horários de dose não adicionados: 0 (08:00). Abra o medicamento e adicione novamente.",
+    "Salvo, mas horários de dose não adicionados: 1 (08:00). Abra o medicamento e adicione novamente.",
+    "Salvo, mas 2 horários de dose não puderam ser adicionados (08:00). Abra o medicamento e adicione-os novamente.",
+  ],
+  "pt calendar:addEvent.drugSearch.resultCount": [
+    "Sugestões: 0",
+    "Sugestões: 1",
+    "2 sugestões",
+  ],
+  "pt calendar:allDayMoreLabel": [
+    "Mais eventos de dia inteiro em seg.: 0",
+    "Mais eventos de dia inteiro em seg.: 1",
+    "Mais 2 eventos de dia inteiro em seg.",
+  ],
+  "pt calendar:eventCount": [
+    "Eventos: 0",
+    "Eventos: 1",
+    "2 eventos",
+  ],
+  "pt calendar:notes.noteCount": [
+    "Notas: 0",
+    "Notas: 1",
+    "2 notas",
+  ],
+  "pt calendar:recurrence.everyNDays": [
+    "Todos os dias",
+    "Todos os dias",
+    "A cada 2 dias",
+  ],
+  "pt documents:count": [
+    "Documentos: 0",
+    "Documentos: 1",
+    "2 documentos",
+  ],
+  "pt freemium:circleSelection.memberCount": [
+    "Membros: 0",
+    "Membros: 1",
+    "2 membros",
+  ],
+  "pt meds:asNeeded.recent.minutesAgo": [
+    "há 0 min",
+    "há 1 min",
+    "há 2 minutos",
+  ],
+  "pt meds:export.asNeededGiven": [
+    "Ana: doses dadas: 0",
+    "Ana: doses dadas: 1",
+    "Ana: 2 doses dadas",
+  ],
+  "pt meds:page.stock.daysLeft": [
+    "Dias restantes: 0",
+    "Dias restantes: 1",
+    "2 dias restantes",
+  ],
+  "pt members:manage.inviteExpiresIn": [
+    "Dias para expirar: 0",
+    "Dias para expirar: 1",
+    "Expira em 2 dias",
+  ],
+  "pt members:manage.inviteExpiresInLabel": [
+    "Convite para a@b.c, dias para expirar: 0",
+    "Convite para a@b.c, dias para expirar: 1",
+    "O convite para a@b.c expira em 2 dias",
+  ],
+  "pt members:pending.banner.count": [
+    "Você tem 1 convite pendente",
+    "Você tem 1 convite pendente",
+    "Há 2 convites pendentes",
+  ],
+  "pt members:picker.careCircleCount": [
+    "Círculos de cuidado: 0",
+    "Círculos de cuidado: 1",
+    "2 círculos de cuidado",
+  ],
+  "pt members:picker.caringWith": [
+    "Pessoas cuidando juntas: 0",
+    "Pessoas cuidando juntas: 1",
+    "Cuidando junto com 2 pessoas",
+  ],
+  "pt members:picker.memberCount": [
+    "Membros: 0",
+    "Membros: 1",
+    "2 membros",
+  ],
+  "pt members:picker.personHelping": [
+    "Pessoas ajudando a coordenar o cuidado: 0",
+    "Pessoas ajudando a coordenar o cuidado: 1",
+    "2 pessoas ajudando a coordenar o cuidado",
+  ],
+  "pt notes:moodStrip.count_good": [
+    "Bom: 0",
+    "Bom: 1",
+    "Bom: 2",
+  ],
+  "pt notes:moodStrip.count_great": [
+    "Ótimo: 0",
+    "Ótimo: 1",
+    "Ótimo: 2",
+  ],
+  "pt notes:moodStrip.count_okay": [
+    "Regular: 0",
+    "Regular: 1",
+    "Regular: 2",
+  ],
+  "pt notes:moodStrip.count_tough": [
+    "Difícil: 0",
+    "Difícil: 1",
+    "Difícil: 2",
+  ],
+  "pt overview:hero.andMore": [
+    "Mais 0",
+    "Mais 1",
+    "+2 mais",
+  ],
+  "pt overview:quickAccess.tasksNote": [
+    "Em aberto: 0",
+    "Em aberto: 1",
+    "2 em aberto",
+  ],
+  "pt overview:team.count": [
+    "Membros: 0",
+    "Membros: 1",
+    "2 membros",
+  ],
+  "pt profile:timezoneImpact.impactMessage": [
+    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
+    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
+    "Os horários das doses de Ana seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
+  ],
+  "pt upgrade:trialPeriod.day": [
+    "0 dia",
+    "1 dia",
+    "2 dias",
+  ],
+  "pt upgrade:trialPeriod.month": [
+    "0 mês",
+    "1 mês",
+    "2 meses",
+  ],
+  "pt upgrade:trialPeriod.week": [
+    "0 semana",
+    "1 semana",
+    "2 semanas",
+  ],
+  "pt upgrade:trialPeriod.year": [
+    "0 ano",
+    "1 ano",
+    "2 anos",
+  ],
+  "pt-PT activity:phrases.importedAppointment": [
+    "Consultas importadas do calendário: 0",
+    "Consultas importadas do calendário: 1",
+    "2 consultas importadas do calendário",
+  ],
+  "pt-PT calendar:addEvent.alerts.someDoseTimesFailed": [
+    "Guardado, mas 0 horários de dose não puderam ser adicionados (08:00). Abra o medicamento e adicione-os novamente.",
+    "Guardado, mas horários de dose não adicionados: 1 (08:00). Abra o medicamento e adicione novamente.",
+    "Guardado, mas 2 horários de dose não puderam ser adicionados (08:00). Abra o medicamento e adicione-os novamente.",
+  ],
+  "pt-PT calendar:addEvent.drugSearch.resultCount": [
+    "Sugestões: 0",
+    "Sugestões: 1",
+    "2 sugestões",
+  ],
+  "pt-PT calendar:allDayMoreLabel": [
+    "Mais eventos de dia inteiro em seg.: 0",
+    "Mais eventos de dia inteiro em seg.: 1",
+    "Mais 2 eventos de dia inteiro em seg.",
+  ],
+  "pt-PT calendar:eventCount": [
+    "Eventos: 0",
+    "Eventos: 1",
+    "2 eventos",
+  ],
+  "pt-PT calendar:notes.noteCount": [
+    "Notas: 0",
+    "Notas: 1",
+    "2 notas",
+  ],
+  "pt-PT calendar:recurrence.everyNDays": [
+    "Todos os dias",
+    "Todos os dias",
+    "A cada 2 dias",
+  ],
+  "pt-PT documents:count": [
+    "Documentos: 0",
+    "Documentos: 1",
+    "2 documentos",
+  ],
+  "pt-PT freemium:circleSelection.memberCount": [
+    "Membros: 0",
+    "Membros: 1",
+    "2 membros",
+  ],
+  "pt-PT meds:asNeeded.recent.minutesAgo": [
+    "há 0 min",
+    "há 1 min",
+    "há 2 minutos",
+  ],
+  "pt-PT meds:export.asNeededGiven": [
+    "Ana: doses dadas: 0",
+    "Ana: doses dadas: 1",
+    "Ana: 2 doses dadas",
+  ],
+  "pt-PT meds:page.stock.daysLeft": [
+    "Dias restantes: 0",
+    "Dias restantes: 1",
+    "2 dias restantes",
+  ],
+  "pt-PT members:manage.inviteExpiresIn": [
+    "Dias para expirar: 0",
+    "Dias para expirar: 1",
+    "Expira em 2 dias",
+  ],
+  "pt-PT members:manage.inviteExpiresInLabel": [
+    "Convite para a@b.c, dias para expirar: 0",
+    "Convite para a@b.c, dias para expirar: 1",
+    "O convite para a@b.c expira em 2 dias",
+  ],
+  "pt-PT members:pending.banner.count": [
+    "Você tem 1 convite pendente",
+    "Tem 1 convite pendente",
+    "Há 2 convites pendentes",
+  ],
+  "pt-PT members:picker.careCircleCount": [
+    "Círculos de cuidado: 0",
+    "Círculos de cuidado: 1",
+    "2 círculos de cuidado",
+  ],
+  "pt-PT members:picker.caringWith": [
+    "A cuidar em conjunto com 0 pessoas",
+    "Pessoas a cuidar em conjunto: 1",
+    "A cuidar em conjunto com 2 pessoas",
+  ],
+  "pt-PT members:picker.memberCount": [
+    "Membros: 0",
+    "Membros: 1",
+    "2 membros",
+  ],
+  "pt-PT members:picker.personHelping": [
+    "0 pessoas a ajudar a coordenar o cuidado",
+    "Pessoas a ajudar a coordenar o cuidado: 1",
+    "2 pessoas a ajudar a coordenar o cuidado",
+  ],
+  "pt-PT notes:moodStrip.count_good": [
+    "Bom: 0",
+    "Bom: 1",
+    "Bom: 2",
+  ],
+  "pt-PT notes:moodStrip.count_great": [
+    "Ótimo: 0",
+    "Ótimo: 1",
+    "Ótimo: 2",
+  ],
+  "pt-PT notes:moodStrip.count_okay": [
+    "Regular: 0",
+    "Regular: 1",
+    "Regular: 2",
+  ],
+  "pt-PT notes:moodStrip.count_tough": [
+    "Difícil: 0",
+    "Difícil: 1",
+    "Difícil: 2",
+  ],
+  "pt-PT overview:hero.andMore": [
+    "Mais 0",
+    "Mais 1",
+    "+2 mais",
+  ],
+  "pt-PT overview:quickAccess.tasksNote": [
+    "Em aberto: 0",
+    "Em aberto: 1",
+    "2 em aberto",
+  ],
+  "pt-PT overview:team.count": [
+    "Membros: 0",
+    "Membros: 1",
+    "2 membros",
+  ],
+  "pt-PT profile:timezoneImpact.impactMessage": [
+    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
+    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
+    "Os horários das doses de Ana seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
+  ],
+  "pt-PT upgrade:trialPeriod.day": [
+    "0 dia",
+    "1 dia",
+    "2 dias",
+  ],
+  "pt-PT upgrade:trialPeriod.month": [
+    "0 mês",
+    "1 mês",
+    "2 meses",
+  ],
+  "pt-PT upgrade:trialPeriod.week": [
+    "0 semana",
+    "1 semana",
+    "2 semanas",
+  ],
+  "pt-PT upgrade:trialPeriod.year": [
+    "0 ano",
+    "1 ano",
+    "2 anos",
+  ],
+}
+`;

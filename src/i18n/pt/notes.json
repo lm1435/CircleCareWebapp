@@ -1,0 +1,62 @@
+{
+  "title": "Notas",
+  "subtitle": "Um diário compartilhado de como foi cada dia, visível para todos no círculo.",
+  "loading": "Carregando notas",
+  "errorTitle": "Não foi possível carregar as notas",
+  "errorHint": "Verifique sua conexão e tente novamente.",
+  "empty": {
+    "title": "Nenhuma nota ainda",
+    "hint": "Anote como foi o dia: todos no círculo podem ver."
+  },
+  "composer": {
+    "label": "Adicionar uma nota",
+    "placeholder": "Como foi o dia?",
+    "moodLabel": "Humor",
+    "categoriesLabel": "Categorias",
+    "post": "Publicar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "errorPosting": "Não foi possível publicar sua nota. Ela continua aqui: tente novamente.",
+    "errorSaving": "Não foi possível salvar a nota. Tente novamente."
+  },
+  "moods": {
+    "great": "Dia ótimo",
+    "good": "Dia bom",
+    "okay": "Dia regular",
+    "tough": "Dia difícil"
+  },
+  "categories": {
+    "meal": "Refeição",
+    "medication": "Medicamento",
+    "visit": "Visita",
+    "incident": "Ocorrência"
+  },
+  "row": {
+    "edit": "Editar",
+    "delete": "Excluir",
+    "edited": "Editada",
+    "formerMember": "Ex-membro",
+    "actionsFor": "Ações para a nota de {{author}}"
+  },
+  "day": {
+    "today": "Hoje",
+    "yesterday": "Ontem"
+  },
+  "deleteTitle": "Excluir nota?",
+  "deleteConfirm": "Esta nota será removida para todos no círculo.",
+  "loadOlder": "Mostrar notas anteriores",
+  "postRequirementHint": "Escreva uma nota ou escolha um humor para publicar",
+  "moodStrip": {
+    "summary": "Esta semana: {{list}}",
+    "empty": "Nenhum humor registrado nesta semana",
+    "dayA11y": "{{day}}: {{summary}}",
+    "count_great_one": "Ótimo: {{count}}",
+    "count_great_other": "Ótimo: {{count}}",
+    "count_good_one": "Bom: {{count}}",
+    "count_good_other": "Bom: {{count}}",
+    "count_okay_one": "Regular: {{count}}",
+    "count_okay_other": "Regular: {{count}}",
+    "count_tough_one": "Difícil: {{count}}",
+    "count_tough_other": "Difícil: {{count}}"
+  }
+}

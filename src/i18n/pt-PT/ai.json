@@ -1,0 +1,13 @@
+{
+  "disclaimer": "As respostas da IA são apenas informativas. Consulte sempre profissionais de saúde. Os seus registos de saúde armazenados nunca são partilhados com o fornecedor de IA, apenas as mensagens que escreve.",
+  "inputLabel": "A sua mensagem",
+  "sending": "A enviar...",
+  "thinking": "A pensar...",
+  "errors": {
+    "viewOnly": "Tem acesso apenas de visualização a este círculo. Peça ao proprietário do círculo acesso completo para usar o Assistente de cuidado.",
+    "circleReadOnly": "Este círculo está apenas para leitura neste momento. O Assistente de cuidado volta a ficar disponível quando a subscrição do proprietário do círculo o incluir.",
+    "rateLimited": "Atingiu o limite de perguntas de hoje. O Assistente de cuidado estará disponível novamente amanhã.",
+    "unavailable": "O Assistente de cuidado não está disponível neste momento. Tente novamente mais tarde.",
+    "invalidMessage": "Não consegui processar essa mensagem. Tente reformular a sua pergunta sobre cuidados ou saúde."
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "headline": {
+    "earnedMeds": {
+      "lead": "Está a manter"
+    },
+    "earnedInvite": {
+      "lead": "O seu círculo está",
+      "accent": "a crescer."
+    }
+  },
+  "subtitle": "Tudo o que a sua família precisa para coordenar o cuidado, em cada círculo de que faz parte.",
+  "trialHook": "Comece com um período experimental gratuito: nada a pagar hoje.",
+  "benefits": {
+    "exports": {
+      "sub": "Partilhe o histórico de medicamentos com profissionais de saúde e importe consultas do seu calendário"
+    }
+  },
+  "plans": {
+    "savePercent": "Poupe {{percent}}%",
+    "trialIncluded": "Período experimental gratuito incluído",
+    "trialWithDuration": "Período experimental gratuito de {{period}}"
+  },
+  "subscribe": "Subscrever",
+  "startTrial": "Iniciar período experimental gratuito",
+  "subscribing": "A abrir o pagamento…",
+  "orUseApp": "Prefere a app? Também pode fazer o upgrade na app CircleCare e pagar através da loja de aplicações.",
+  "unavailable": "O pagamento online não está disponível neste momento. Também pode fazer o upgrade na app CircleCare.",
+  "storeOnly": {
+    "title": "Subscreva na app CircleCare",
+    "bodyMobile": "O CircleCare Premium está disponível na app. Transfira o CircleCare abaixo, inicie sessão com este mesmo e-mail e comece a sua subscrição a partir do seu perfil.",
+    "bodyDesktop": "O CircleCare Premium está disponível na app CircleCare, no seu telemóvel. Instale-a, inicie sessão com este mesmo e-mail e comece a sua subscrição a partir do seu perfil.",
+    "storesLabel": "Transfira a app CircleCare",
+    "helpCta": "Envie um e-mail à nossa equipa de suporte"
+  },
+  "countryError": {
+    "title": "Não foi possível carregar a sua conta",
+    "body": "Precisamos dos dados da sua conta para abrir o pagamento. Verifique a sua ligação e tente novamente."
+  },
+  "error": "Ocorreu um erro ao iniciar o pagamento. Tente novamente.",
+  "alreadyPremium": {
+    "title": "Já é Premium",
+    "body": "Tem acesso completo a todas as funcionalidades do CircleCare.",
+    "manage": "Gerir subscrição",
+    "manageInApp": "Faça a gestão da sua subscrição na app CircleCare onde a contratou."
+  },
+  "success": {
+    "body": "A sua subscrição está ativa. Aproveite o acesso completo em todos os seus círculos de cuidado."
+  },
+  "autoRenewNotice": "A sua subscrição é renovada automaticamente ao preço apresentado até cancelar. Cancele quando quiser a partir do seu perfil.",
+  "legalPrefix": "Ao subscrever, concorda com os nossos",
+  "legalJoin": "e a nossa",
+  "trialHookWithDuration": "Comece com um período experimental gratuito de {{period}}: nada a pagar hoje.",
+  "onboarding": {
+    "subtitle": "Tudo o que a sua família precisa para coordenar o cuidado de quem mais importa."
+  }
+}

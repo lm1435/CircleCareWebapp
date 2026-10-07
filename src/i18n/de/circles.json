@@ -1,0 +1,150 @@
+{
+  "create": {
+    "title": "Neuer Pflegekreis",
+    "subtitle": "Erstellen Sie einen Kreis, um die Pflege mit Familie und Pflegepersonen zu koordinieren.",
+    "recipientName": "Name der umsorgten Person",
+    "recipientNamePlaceholder": "Vollständiger Name",
+    "recipientDob": "Geburtsdatum",
+    "recipientDobHint": "Optional. Wird in den Notfallinfos angezeigt, damit Ärztinnen und Ärzte die Identität bestätigen können.",
+    "selfCareToggle": "Dieser Kreis ist für mich selbst",
+    "selfCareHint": "Sie sind die umsorgte Person. Laden Sie Familie oder Pflegepersonen ein, die Ihnen helfen.",
+    "selfCareDefaultName": "Meine Pflege",
+    "create": "Kreis erstellen",
+    "creating": "Wird erstellt …",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "success": "Kreis erstellt.",
+    "failed": "Wir konnten Ihren Kreis gerade nicht erstellen. Es ist nichts verloren gegangen – bitte versuchen Sie es erneut.",
+    "limitReached": "Sie haben die Höchstzahl von 5 Kreisen erreicht."
+  },
+  "join": {
+    "button": "Kreis beitreten",
+    "invitedPrompt": "Wurden Sie zu einem Kreis eingeladen?",
+    "withCode": "Mit Einladungscode beitreten",
+    "or": "oder"
+  },
+  "joinModal": {
+    "title": "Kreis beitreten",
+    "subtitle": "Geben Sie den 6-stelligen Code aus Ihrer Einladung ein.",
+    "codeLabel": "Einladungscode",
+    "pasteCode": "Code einfügen",
+    "pasteNoCode": "In Ihrer Zwischenablage wurde kein Einladungscode gefunden.",
+    "lookUpCode": "Kreis suchen",
+    "lookingUp": "Wird gesucht …",
+    "circle": "Kreis",
+    "caringFor": "Pflege von",
+    "yourCareCircle": "Ihr Pflegekreis",
+    "setUpForYou": "{{inviter}} hat CircleCare eingerichtet, um bei Ihrer Pflege zu helfen",
+    "invitedBy": "Eingeladen von",
+    "yourRole": "Ihre Rolle",
+    "roleCaregiver": "Pflegeperson",
+    "roleCareRecipient": "Umsorgte Person",
+    "joinCircle": "Kreis beitreten",
+    "joining": "Beitritt läuft …",
+    "enterDifferentCode": "Anderen Code eingeben",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "youveJoined": "Sie sind {{circleName}} beigetreten.",
+    "invalidCode": "Dieser Einladungscode wurde nicht gefunden. Prüfen Sie ihn und versuchen Sie es erneut.",
+    "expired": "Diese Einladung ist abgelaufen. Bitten Sie die Person, die Sie eingeladen hat, um eine neue.",
+    "alreadyUsed": "Diese Einladung wurde bereits verwendet. Bitten Sie die Person, die Sie eingeladen hat, Ihnen eine neue zu schicken.",
+    "alreadyMember": "Sie sind bereits Mitglied dieses Kreises.",
+    "joinFailed": "Der Beitritt zu diesem Kreis hat nicht geklappt. Bitte versuchen Sie es erneut.",
+    "circleArchived": "Dieser Kreis ist nicht mehr aktiv. Bitten Sie die Person, die Sie eingeladen hat, sich an den Kreis-Admin zu wenden.",
+    "careRecipientExists": "In diesem Kreis gibt es bereits eine umsorgte Person. Bitten Sie die Person, die Sie eingeladen hat, Ihnen stattdessen eine Einladung als Pflegeperson zu schicken."
+  },
+  "edit": {
+    "title": "Kreiseinstellungen",
+    "subtitle": "Aktualisieren Sie, für wen dieser Kreis sorgt.",
+    "loadingLabel": "Kreiseinstellungen werden geladen",
+    "errorTitle": "Dieser Kreis konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "ownerOnlyTitle": "Nur der Kreis-Admin kann dies bearbeiten",
+    "ownerOnlyMessage": "Bitten Sie den Kreis-Admin, diese Angaben zu aktualisieren.",
+    "recipientName": "Name der umsorgten Person",
+    "recipientNamePlaceholder": "Vollständiger Name",
+    "recipientDob": "Geburtsdatum",
+    "recipientDobHint": "Optional. Wird in den Notfallinfos angezeigt, damit Ärztinnen und Ärzte die Identität bestätigen können.",
+    "save": "Änderungen speichern",
+    "saving": "Wird gespeichert …",
+    "savedToast": "Kreis aktualisiert.",
+    "cancel": "Abbrechen",
+    "dangerZone": "Gefahrenbereich",
+    "deleteDescription": "Wenn Sie diesen Kreis löschen, wird er für alle entfernt. Dies kann nicht rückgängig gemacht werden.",
+    "deleteCircle": "Kreis löschen",
+    "deleting": "Wird gelöscht …",
+    "deleteConfirmTitle": "Diesen Kreis löschen?",
+    "deleteConfirmMessage": "Dadurch wird der Kreis von {{name}} für Sie und alle anderen darin entfernt – einschließlich der Medikamente, Termine, Aufgaben, Notizen, Vitalwerte, Dokumente und Notfallinformationen. Erinnerungen enden sofort, und die anderen Mitglieder werden nicht benachrichtigt – informieren Sie sie daher am besten vorher.",
+    "deleteConfirmWarning": "Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmPrompt": "Geben Sie zur Bestätigung {{keyword}} ein",
+    "deleteConfirmKeyword": "LÖSCHEN",
+    "deletedToast": "Kreis gelöscht."
+  },
+  "validation": {
+    "invalid": "Bitte prüfen Sie diesen Wert.",
+    "nameRequired": "Bitte geben Sie den Namen der umsorgten Person ein.",
+    "nameTooLong": "Der Name darf höchstens 100 Zeichen lang sein.",
+    "dobFormat": "Bitte wählen Sie ein gültiges Geburtsdatum aus.",
+    "dobInvalidDate": "Dieses Geburtsdatum ist kein gültiges Kalenderdatum."
+  },
+  "quickWin": {
+    "title": "Kreis erstellt",
+    "subtitle": "Der Pflegekreis von {{name}} ist bereit. Was möchten Sie als Erstes tun?",
+    "subtitleSelf": "Ihr Pflegekreis ist bereit. Was möchten Sie als Erstes tun?",
+    "recommended": "Empfohlen",
+    "skipForNow": "Vorerst überspringen",
+    "tip": "Sie können all das jederzeit später auf der Kreisseite erledigen.",
+    "medication": {
+      "title": "Medikament hinzufügen",
+      "description": "Erinnerungen für die täglichen Medikamente einrichten"
+    },
+    "appointment": {
+      "title": "Termin hinzufügen",
+      "description": "Den Überblick über anstehende Termine behalten"
+    },
+    "invite": {
+      "title": "Familienmitglied einladen",
+      "description": "Geschwister oder Pflegepersonen einbinden"
+    },
+    "emergency": {
+      "title": "Gesundheitsinfos hinzufügen",
+      "description": "Wichtige medizinische Angaben hinterlegen"
+    }
+  },
+  "firstRun": {
+    "steps": {
+      "choose": "Start",
+      "what": "Name",
+      "when": "Zeit",
+      "repeat": "Wiederholung"
+    },
+    "progressLabel": "Schritt {{current}} von {{total}}",
+    "whatTitle": "Was nimmt {{name}} ein?",
+    "whatTitleSelf": "Was nehmen Sie ein?",
+    "dosageLabel": "Dosierung (optional)",
+    "dosagePlaceholder": "z. B. 500 mg",
+    "whenTitle": "Wann nimmt {{name}} es ein?",
+    "whenTitleSelf": "Wann nehmen Sie es ein?",
+    "customTimeLabel": "Eigene Uhrzeit",
+    "customTimeHint": "Eine hier gewählte Uhrzeit ersetzt den oben gewählten Zeitplan.",
+    "repeatTitle": "Wiederholen?",
+    "back": "Zurück",
+    "continue": "Weiter",
+    "save": "Medikament hinzufügen",
+    "saving": "Wird hinzugefügt …",
+    "close": "Einrichtung schließen",
+    "fullDetails": "Stattdessen alle Angaben hinzufügen",
+    "savedToast": "Medikament hinzugefügt.",
+    "discardTitle": "Dieses Medikament verwerfen?",
+    "discardMessage": "Es wird nichts gespeichert.",
+    "discardConfirm": "Verwerfen",
+    "discardClose": "Verwerfen-Abfrage schließen"
+  },
+  "accessLost": {
+    "removedTitle": "Zugriff entzogen",
+    "removedBody": "Sie haben keinen Zugriff mehr auf diesen Kreis. Möglicherweise hat der Kreis-Admin Sie entfernt oder den Kreis gelöscht.",
+    "notFoundTitle": "Kreis nicht gefunden",
+    "notFoundBody": "Dieser Kreis wurde gelöscht oder existiert nicht mehr.",
+    "returnToCircles": "Zurück zu den Kreisen"
+  }
+}

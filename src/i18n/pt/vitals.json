@@ -1,0 +1,136 @@
+{
+  "title": "Sinais vitais",
+  "subtitle": "Acompanhe as medições de saúde do seu círculo: pressão arterial, frequência cardíaca, glicose e peso.",
+  "loading": "Carregando sinais vitais",
+  "errorTitle": "Não foi possível carregar os sinais vitais",
+  "errorHint": "Verifique sua conexão e tente novamente.",
+  "types": {
+    "blood_pressure": "Pressão arterial",
+    "heart_rate": "Frequência cardíaca",
+    "glucose": "Glicose",
+    "weight": "Peso"
+  },
+  "filter": {
+    "typeLabel": "Tipo",
+    "allTypes": "Todos os tipos",
+    "rangeLabel": "Período",
+    "range": {
+      "7d": "Últimos 7 dias",
+      "30d": "Últimos 30 dias",
+      "90d": "Últimos 90 dias"
+    }
+  },
+  "detail": {
+    "latest": "Mais recente",
+    "average": "Média",
+    "min": "Mais baixo",
+    "max": "Mais alto",
+    "system": "Sistema",
+    "trendStable": "Estável",
+    "trendUp": "Alta de {{pct}}% em relação ao período anterior",
+    "trendDown": "Queda de {{pct}}% em relação ao período anterior",
+    "chartTitle": "Tendência",
+    "chartSummary": "Gráfico de tendência. Mais baixo: {{min}}, mais alto: {{max}}, mais recente: {{latest}}.",
+    "chartToday": "Hoje",
+    "trendVs": {
+      "7d": "Média {{delta}} em relação aos 7 dias anteriores",
+      "30d": "Média {{delta}} em relação aos 30 dias anteriores",
+      "90d": "Média {{delta}} em relação aos 90 dias anteriores"
+    },
+    "trendSame": {
+      "7d": "Mesma média dos 7 dias anteriores",
+      "30d": "Mesma média dos 30 dias anteriores",
+      "90d": "Mesma média dos 90 dias anteriores"
+    }
+  },
+  "fields": {
+    "systolic": "Sistólica",
+    "diastolic": "Diastólica",
+    "unitSuffix": "em {{unit}}",
+    "date": "Data",
+    "time": "Hora",
+    "timesShownIn": "Horários exibidos em {{timezone}}",
+    "notes": "Notas",
+    "notesPlaceholder": "Adicione uma nota (opcional)",
+    "dualTimezoneHint": "Seu horário / horário de {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "Seu horário / horário da pessoa ({{timezone}})",
+    "dayOffsetNext": "+1 dia",
+    "dayOffsetPrevious": "-1 dia"
+  },
+  "add": {
+    "cta": "Adicionar medição",
+    "title": "Adicionar medição",
+    "typeLabel": "Tipo de medição",
+    "save": "Salvar medição"
+  },
+  "edit": {
+    "title": "Editar medição",
+    "save": "Salvar alterações"
+  },
+  "actions": {
+    "edit": "Editar",
+    "delete": "Excluir",
+    "menuLabel": "Ações para a medição {{value}}"
+  },
+  "delete": {
+    "title": "Excluir esta medição?",
+    "message": "Excluir a medição de {{type}} de {{date}}? Esta ação não pode ser desfeita."
+  },
+  "empty": {
+    "title": "Nenhuma medição ainda",
+    "hint": "Acompanhe os sinais vitais do seu ente querido ao longo do tempo (pressão arterial, peso e mais) para que todo o círculo veja as tendências.",
+    "hintReadOnly": "As medições registradas neste círculo aparecerão aqui para que todos acompanhem a saúde do seu ente querido ao longo do tempo.",
+    "cta": "Registrar uma medição"
+  },
+  "emptyState": {
+    "neverLogged": {
+      "title": {
+        "blood_pressure": "Nenhuma medição de pressão arterial ainda",
+        "heart_rate": "Nenhuma medição de frequência cardíaca ainda",
+        "glucose": "Nenhuma medição de glicose ainda",
+        "weight": "Nenhuma medição de peso ainda"
+      },
+      "description": "Registre medições ao longo do tempo para que o círculo perceba uma tendência antes da próxima consulta.",
+      "cta": {
+        "blood_pressure": "Registrar pressão arterial",
+        "heart_rate": "Registrar frequência cardíaca",
+        "glucose": "Registrar glicose",
+        "weight": "Registrar peso"
+      }
+    },
+    "outOfRange": {
+      "title": {
+        "7d": "Nenhuma medição nos últimos 7 dias",
+        "30d": "Nenhuma medição nos últimos 30 dias",
+        "90d": "Nenhuma medição nos últimos 90 dias"
+      },
+      "lastReading": "Última medição: {{value}} · {{date}}",
+      "show": {
+        "30d": "Mostrar os últimos 30 dias",
+        "90d": "Mostrar os últimos 90 dias"
+      }
+    }
+  },
+  "toast": {
+    "added": "Medição salva",
+    "updated": "Medição atualizada",
+    "deleted": "Medição excluída"
+  },
+  "validation": {
+    "invalid": "Verifique este valor.",
+    "valueRequired": "Informe um valor.",
+    "dateRequired": "Escolha uma data.",
+    "timeRequired": "Escolha uma hora.",
+    "valueOutOfRange": "Isso parece fora da faixa esperada. Confira o número.",
+    "diastolicRequired": "Informe o valor da diastólica.",
+    "value2NotAllowed": "Esta medição aceita um único valor.",
+    "invalidUnit": "Essa unidade não é válida para esta medição.",
+    "invalidDate": "Escolha uma data e uma hora válidas.",
+    "recordedAtFuture": "O horário da medição não pode estar no futuro.",
+    "notesTooLong": "As notas devem ter no máximo 500 caracteres."
+  },
+  "errors": {
+    "permissionDenied": "Você não tem permissão para fazer esta alteração.",
+    "saveFailed": "Não foi possível salvar suas alterações. Tente novamente."
+  }
+}

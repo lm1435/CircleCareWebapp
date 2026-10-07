@@ -1,0 +1,136 @@
+{
+  "title": "Parametri vitali",
+  "subtitle": "Tieni traccia delle misurazioni di salute della tua cerchia: pressione, battito, glicemia e peso.",
+  "loading": "Caricamento parametri vitali",
+  "errorTitle": "Non è stato possibile caricare i parametri vitali",
+  "errorHint": "Controlla la connessione e riprova.",
+  "types": {
+    "blood_pressure": "Pressione",
+    "heart_rate": "Battito",
+    "glucose": "Glicemia",
+    "weight": "Peso"
+  },
+  "filter": {
+    "typeLabel": "Tipo",
+    "allTypes": "Tutti i tipi",
+    "rangeLabel": "Periodo",
+    "range": {
+      "7d": "Ultimi 7 giorni",
+      "30d": "Ultimi 30 giorni",
+      "90d": "Ultimi 90 giorni"
+    }
+  },
+  "detail": {
+    "latest": "Ultima",
+    "average": "Media",
+    "min": "Minimo",
+    "max": "Massimo",
+    "system": "Sistema",
+    "trendStable": "Stabile",
+    "trendUp": "In aumento del {{pct}}% rispetto al periodo precedente",
+    "trendDown": "In calo del {{pct}}% rispetto al periodo precedente",
+    "chartTitle": "Andamento",
+    "chartSummary": "Grafico dell'andamento. Minimo {{min}}, massimo {{max}}, ultima {{latest}}.",
+    "chartToday": "Oggi",
+    "trendVs": {
+      "7d": "Media {{delta}} rispetto ai 7 giorni precedenti",
+      "30d": "Media {{delta}} rispetto ai 30 giorni precedenti",
+      "90d": "Media {{delta}} rispetto ai 90 giorni precedenti"
+    },
+    "trendSame": {
+      "7d": "Stessa media dei 7 giorni precedenti",
+      "30d": "Stessa media dei 30 giorni precedenti",
+      "90d": "Stessa media dei 90 giorni precedenti"
+    }
+  },
+  "fields": {
+    "systolic": "Sistolica",
+    "diastolic": "Diastolica",
+    "unitSuffix": "in {{unit}}",
+    "date": "Data",
+    "time": "Ora",
+    "timesShownIn": "Orari mostrati in {{timezone}}",
+    "notes": "Note",
+    "notesPlaceholder": "Aggiungi una nota (facoltativa)",
+    "dualTimezoneHint": "Il tuo orario / l'orario di {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "Il tuo orario / il suo orario ({{timezone}})",
+    "dayOffsetNext": "+1 giorno",
+    "dayOffsetPrevious": "-1 giorno"
+  },
+  "add": {
+    "cta": "Aggiungi misurazione",
+    "title": "Aggiungi misurazione",
+    "typeLabel": "Tipo di misurazione",
+    "save": "Salva misurazione"
+  },
+  "edit": {
+    "title": "Modifica misurazione",
+    "save": "Salva modifiche"
+  },
+  "actions": {
+    "edit": "Modifica",
+    "delete": "Elimina",
+    "menuLabel": "Azioni per la misurazione {{value}}"
+  },
+  "delete": {
+    "title": "Eliminare questa misurazione?",
+    "message": "Eliminare la misurazione di {{type}} del {{date}}? L'operazione non può essere annullata."
+  },
+  "empty": {
+    "title": "Ancora nessuna misurazione",
+    "hint": "Tieni traccia nel tempo dei parametri vitali della persona cara, come pressione e peso, così tutta la cerchia può seguirne l'andamento.",
+    "hintReadOnly": "Le misurazioni registrate per questa cerchia compariranno qui, così tutti possono seguire la salute della persona cara nel tempo.",
+    "cta": "Registra una misurazione"
+  },
+  "emptyState": {
+    "neverLogged": {
+      "title": {
+        "blood_pressure": "Ancora nessuna misurazione della pressione",
+        "heart_rate": "Ancora nessuna misurazione del battito",
+        "glucose": "Ancora nessuna misurazione della glicemia",
+        "weight": "Ancora nessuna misurazione del peso"
+      },
+      "description": "Registra le misurazioni nel tempo, così la cerchia può notare un andamento prima del prossimo appuntamento.",
+      "cta": {
+        "blood_pressure": "Registra la pressione",
+        "heart_rate": "Registra il battito",
+        "glucose": "Registra la glicemia",
+        "weight": "Registra il peso"
+      }
+    },
+    "outOfRange": {
+      "title": {
+        "7d": "Nessuna misurazione negli ultimi 7 giorni",
+        "30d": "Nessuna misurazione negli ultimi 30 giorni",
+        "90d": "Nessuna misurazione negli ultimi 90 giorni"
+      },
+      "lastReading": "Ultima misurazione: {{value}} · {{date}}",
+      "show": {
+        "30d": "Mostra gli ultimi 30 giorni",
+        "90d": "Mostra gli ultimi 90 giorni"
+      }
+    }
+  },
+  "toast": {
+    "added": "Misurazione salvata",
+    "updated": "Misurazione aggiornata",
+    "deleted": "Misurazione eliminata"
+  },
+  "validation": {
+    "invalid": "Controlla questo valore.",
+    "valueRequired": "Inserisci un valore.",
+    "dateRequired": "Scegli una data.",
+    "timeRequired": "Scegli un'ora.",
+    "valueOutOfRange": "Sembra fuori dall'intervallo previsto. Ricontrolla il numero.",
+    "diastolicRequired": "Inserisci il valore della diastolica.",
+    "value2NotAllowed": "Questa misurazione richiede un solo valore.",
+    "invalidUnit": "Questa unità non è valida per questa misurazione.",
+    "invalidDate": "Scegli una data e un'ora valide.",
+    "recordedAtFuture": "L'ora della misurazione non può essere nel futuro.",
+    "notesTooLong": "Le note possono contenere al massimo 500 caratteri."
+  },
+  "errors": {
+    "permissionDenied": "Non hai il permesso di fare questa modifica.",
+    "saveFailed": "Non è stato possibile salvare le modifiche. Riprova."
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "otpCharacter": "Carácter {{index}} de {{length}}",
+  "loading": "A carregar...",
+  "save": "Guardar",
+  "pageTitles": {
+    "login": "Iniciar sessão",
+    "signup": "Registar-se",
+    "forgotPassword": "Esqueceu-se da palavra-passe",
+    "resetPassword": "Redefinir palavra-passe"
+  },
+  "errorBoundary": {
+    "title": "Ocorreu um erro"
+  },
+  "nav": {
+    "settings": "Definições do círculo"
+  },
+  "errors": {
+    "saveFailed": "Não foi possível guardar as alterações. Tente novamente.",
+    "subscriptionRequired": "Este é um recurso Premium. Abra a app CircleCare para fazer upgrade e o desbloquear.",
+    "permissionDenied": "Não tem permissão para fazer esta alteração."
+  },
+  "upgradeGate": {
+    "ownerOnly": "Este é um recurso Premium para este círculo. Apenas o proprietário do círculo pode fazer upgrade.",
+    "ownerOnlyNamed": "Este é um recurso Premium para este círculo. Apenas {{ownerName}}, proprietário do círculo, pode fazer upgrade.",
+    "viewOnlySeat": "Este círculo tem mais cuidadores do que o plano gratuito permite, por isso o seu acesso é apenas de visualização. O proprietário do círculo pode fazer upgrade para dar acesso completo a todos.",
+    "lapsedOwner": "A sua subscrição terminou, por isso este círculo é apenas de leitura para todos. Os seus dados estão seguros.",
+    "lapsedMember": "A subscrição do proprietário do círculo terminou. Apenas o proprietário pode voltar a subscrever para restaurar o acesso.",
+    "lapsedMemberNamed": "A subscrição de {{ownerName}} terminou. Apenas {{ownerName}} pode voltar a subscrever para restaurar o acesso."
+  },
+  "notFound": {
+    "body": "A ligação pode ser antiga ou ter sido escrita incorretamente. Os seus círculos continuam exatamente onde estavam."
+  },
+  "header": {
+    "switchCircle": "Mudar de círculo",
+    "logout": "Terminar sessão",
+    "logoutConfirmTitle": "Terminar sessão",
+    "logoutConfirmBody": "Tem a certeza de que pretende terminar sessão?"
+  },
+  "downloadApp": {
+    "subtitle": "Transfira o CircleCare para iOS ou Android.",
+    "appStore": "Transferir na App Store",
+    "appStoreLead": "Transferir na"
+  },
+  "authHero": {
+    "tagline": "Um só lugar partilhado para medicamentos, consultas e quem está a tratar de quê, para que ninguém carregue isto sozinho.",
+    "valueProps": {
+      "accountability": "Saiba quem está a tratar de quê, sem precisar do grupo de mensagens"
+    },
+    "imageAlt1": "Família a rir junta à volta de uma mesa",
+    "imageAlt2": "Família de várias gerações a partilhar uma refeição ao ar livre",
+    "imageAlt3": "Família a ver um tablet junta no sofá"
+  },
+  "gettingStarted": {
+    "step3Desc": "Alergias, médicos e contactos prontos na hora em que forem necessários.",
+    "statusPending": "(por fazer)"
+  },
+  "draftRestored": "Restaurámos o seu rascunho não guardado."
+}

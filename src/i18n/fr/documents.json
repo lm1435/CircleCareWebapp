@@ -1,0 +1,127 @@
+{
+  "title": "Documents",
+  "subtitle": "Cartes d’assurance, dossiers et directives, au même endroit.",
+  "count_one": "{{count}} document",
+  "count_other": "{{count}} documents",
+  "filterLabel": "Filtrer par catégorie",
+  "categories": {
+    "all": "Tous",
+    "medical_records": "Dossiers médicaux",
+    "insurance": "Assurance",
+    "legal": "Juridique",
+    "prescriptions": "Ordonnances",
+    "other": "Autre"
+  },
+  "uploadCtaTitle": "Envie d’ajouter un document ?",
+  "uploadCta": "Seuls les membres ayant un accès en modification peuvent ajouter des documents à ce cercle. Demandez au propriétaire du cercle si vous avez besoin d’un ajout.",
+  "errorTitle": "Impossible de charger les documents",
+  "errorHint": "Vérifiez votre connexion et réessayez.",
+  "noDocuments": "Aucun document pour l’instant",
+  "noDocumentsHint": "Gardez les documents importants de votre proche au même endroit (cartes d’assurance, dossiers, directives) pour que toutes les personnes qui aident puissent les retrouver quand il le faut.",
+  "noDocumentsHintReadOnly": "Les documents partagés avec ce cercle apparaîtront ici, pour que toutes les personnes qui aident puissent les retrouver quand il le faut.",
+  "emptyCategory": {
+    "title": "Rien dans {{category}} pour l’instant.",
+    "action": "Afficher tous les documents"
+  },
+  "starter": {
+    "eyebrow": "Pour commencer",
+    "title": "Commencez par ces quatre",
+    "lede": "Toute personne qui aide peut les retrouver en quelques secondes, à la pharmacie, aux urgences, au téléphone avec une infirmière.",
+    "items": {
+      "insurance": {
+        "title": "Carte d’assurance",
+        "hint": "Ajoutez le recto, puis le verso"
+      },
+      "directive": {
+        "title": "Directives anticipées",
+        "hint": "Ordre de ne pas réanimer, personne de confiance, testament de vie"
+      },
+      "medications": {
+        "title": "Liste des médicaments",
+        "hint": "L’impression remise par la pharmacie"
+      },
+      "labs": {
+        "title": "Résultats d’analyses récents",
+        "hint": "Analyses de sang, imagerie, comptes rendus de sortie"
+      }
+    },
+    "other": "Importer autre chose"
+  },
+  "open": "Ouvrir",
+  "download": "Télécharger",
+  "downloadDocument": "Télécharger {{name}}",
+  "downloadFailed": "Échec du téléchargement. Veuillez réessayer.",
+  "closePreview": "Fermer l’aperçu",
+  "pdfFallbackHint": "Le PDF ne s’affiche pas ? Ouvrez-le dans un nouvel onglet ou téléchargez-le.",
+  "openInNewTab": "Ouvrir dans un nouvel onglet",
+  "viewer": {
+    "failedTitle": "Impossible d’ouvrir ce document",
+    "failedMessage": "Vérifiez votre connexion et réessayez.",
+    "unsupportedTitle": "Ce fichier ne peut pas être prévisualisé ici",
+    "unsupportedMessage": "Utilisez Télécharger pour l’enregistrer sur votre appareil.",
+    "downloadStarted": "Téléchargement lancé.",
+    "newTabBlocked": "Votre navigateur a bloqué le nouvel onglet : le fichier est téléchargé à la place.",
+    "newTabFailed": "Impossible d’ouvrir ce document dans un nouvel onglet. Veuillez réessayer."
+  },
+  "editAction": "Modifier",
+  "deleteAction": "Supprimer",
+  "actionsFor": "Options pour {{name}}",
+  "storage": {
+    "footnote": "{{used}} utilisés sur {{limit}}",
+    "used": "{{used}} utilisés",
+    "remaining": "{{remaining}} restants",
+    "full": "Stockage plein. Passez à Premium pour obtenir plus d’espace.",
+    "fullNonOwnerNamed": "Stockage plein. Seul le propriétaire du cercle, {{ownerName}}, peut passer à Premium pour obtenir plus d’espace.",
+    "fullNonOwner": "Stockage plein. Seul le propriétaire du cercle peut passer à Premium pour obtenir plus d’espace.",
+    "fullPremium": "Stockage plein. Supprimez les fichiers dont vous n’avez plus besoin pour libérer de l’espace.",
+    "upgrade": "Passer à Premium",
+    "trackLabel": "Stockage utilisé"
+  },
+  "upload": {
+    "openButton": "Importer un document",
+    "emptyButton": "Importer votre premier document",
+    "title": "Importer un document",
+    "submit": "Importer",
+    "success": "Document importé.",
+    "fileLabel": "Fichier",
+    "chooseFile": "Choisir un fichier",
+    "noFileChosen": "Aucun fichier choisi",
+    "fileHint": "JPG, PNG, HEIC ou PDF. {{max}} maximum.",
+    "storageRemaining": "{{remaining}} restants",
+    "storageFull": "Ce cercle a atteint sa limite de stockage. Libérez de l’espace ou passez à Premium pour en ajouter.",
+    "storageFullPremium": "Ce cercle a atteint sa limite de stockage de 1 Go. Libérez de l’espace pour en ajouter.",
+    "labelLabel": "Nom",
+    "categoryLabel": "Catégorie",
+    "noteLabel": "Note (facultatif)",
+    "noteHint": "Ajoutez du contexte pour les autres aidants.",
+    "errors": {
+      "fileRequired": "Choisissez un fichier à importer.",
+      "fileType": "Utilisez un fichier JPG, PNG, HEIC ou PDF.",
+      "fileTooLarge": "Ce fichier est trop volumineux. La limite est de {{max}}.",
+      "storageFull": "Ce fichier dépasserait la limite de stockage du cercle.",
+      "labelRequired": "Saisissez un nom pour ce document.",
+      "noteTooLong": "Les notes peuvent contenir jusqu’à 500 caractères."
+    },
+    "unsupportedOrDamaged": "Ce type de fichier n’est pas pris en charge, ou le fichier est endommagé. Essayez-en un autre."
+  },
+  "edit": {
+    "title": "Modifier le document",
+    "success": "Document mis à jour.",
+    "errors": {
+      "labelRequired": "Saisissez un nom pour ce document.",
+      "noteTooLong": "Les notes peuvent contenir jusqu’à 500 caractères."
+    }
+  },
+  "delete": {
+    "title": "Supprimer le document ?",
+    "message": "Supprimer « {{name}} » ? Cette action est irréversible.",
+    "confirm": "Supprimer",
+    "deleting": "Suppression…",
+    "success": "Document supprimé."
+  },
+  "errors": {
+    "storageFull": "Ce cercle a atteint sa limite de stockage. Libérez de l’espace pour ajouter des documents.",
+    "permissionDenied": "Vous n’avez pas l’autorisation d’effectuer cette action.",
+    "saveFailed": "Une erreur s’est produite. Veuillez réessayer."
+  }
+}

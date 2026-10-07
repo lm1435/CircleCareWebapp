@@ -1,0 +1,94 @@
+{
+  "skip": "Saltar",
+  "skipLabel": "Saltar {{name}}",
+  "status": {
+    "skipped": "Saltado"
+  },
+  "dialog": {
+    "skipped": "Saltado",
+    "submit": "Guardar",
+    "submitting": "A guardar...",
+    "successSkipped": "Marcado como saltado",
+    "error": "Não foi possível guardar. Tente novamente.",
+    "errorDiscontinued": "Esta dose não estava prevista antes de o medicamento ser suspenso, então não pode ser registada. Reative o medicamento para voltar a registar doses.",
+    "alreadyRecordedSkipped": "Já saltado por {{name}} às {{time}}.",
+    "alreadyRecordedSkippedNoName": "Já saltado por outro cuidador às {{time}}.",
+    "alreadyRecordedGeneric": "Outro cuidador já registou esta dose.",
+    "errorUnverified": "Não conseguimos verificar se {{medication}} foi registado. Confira o calendário quando voltar a ter ligação.",
+    "changeAnswerToSkipped": "{{name}} marcou esta dose como tomada às {{time}}. Alterar para saltada? Todos no círculo verão a alteração em Atividade.",
+    "changeAnswerToTaken": "{{name}} marcou esta dose como saltada às {{time}}. Alterar para tomada? Todos no círculo verão a alteração em Atividade.",
+    "changeAnswerToSkippedNoName": "Outro cuidador marcou esta dose como tomada às {{time}}. Alterar para saltada? Todos no círculo verão a alteração em Atividade.",
+    "changeAnswerToTakenNoName": "Outro cuidador marcou esta dose como saltada às {{time}}. Alterar para tomada? Todos no círculo verão a alteração em Atividade.",
+    "errorNotDue": "Ainda não é a hora desta dose, por isso não pode ser registada."
+  },
+  "permissionDenied": "Não tem permissão para confirmar medicamentos neste círculo.",
+  "page": {
+    "loading": "A carregar medicamentos…",
+    "errorHint": "Verifique a sua ligação e tente novamente.",
+    "stock": {
+      "lowStock": "Stock baixo"
+    },
+    "empty": {
+      "hintReadOnly": "Quando a equipa de cuidado adicionar medicamentos, eles aparecerão aqui."
+    },
+    "actions": {
+      "delete": "Eliminar"
+    }
+  },
+  "history": {
+    "loading": "A carregar histórico…",
+    "skippedAtLabel": "Saltado às",
+    "skippedByLabel": "Saltado por",
+    "statusSkipped": "Saltado",
+    "emptyHint": "As confirmações de medicamentos aparecerão aqui depois de registadas"
+  },
+  "adherence": {
+    "loading": "A carregar adesão…"
+  },
+  "export": {
+    "generating": "A gerar PDF...",
+    "skipped": "Saltado",
+    "dailyBreakdown": "Detalhe diário",
+    "timeBreakdown": "Detalhe por hora do dia",
+    "daysBelowFull": "Dias com dose saltada ou não marcada",
+    "notMarkedLegend": "Não marcado: ninguém confirmou esta dose na app. Pode ou não ter sido tomada."
+  },
+  "asNeeded": {
+    "section": {
+      "hint": "Sem horários fixos. Registe uma dose quando ela for dada, para que todos saibam."
+    },
+    "card": {
+      "byYou": "por si",
+      "loggedBadge": "Registada"
+    },
+    "log": {
+      "title": "Registar uma dose de {{name}}?",
+      "titleSelf": "Tomou {{name}}?",
+      "submitSelf": "Registar que tomou uma dose",
+      "submit": "Registar dose"
+    },
+    "recent": {
+      "title": "{{name}} acabou de registar uma dose",
+      "titleNoName": "Alguém acabou de registar uma dose",
+      "body": "{{name}} registou {{medication}} {{ago}}, às {{time}}. Quer registar outra dose?",
+      "bodyNoName": "Outro membro registou {{medication}} {{ago}}, às {{time}}. Quer registar outra?",
+      "another": "Registar outra dose"
+    },
+    "toast": {
+      "logged": "Dose registada",
+      "failed": "Não foi possível registar a dose. Tente novamente.",
+      "discontinued": "Este medicamento está suspenso. Reative-o para registar uma dose.",
+      "permissionDenied": "Tem acesso apenas de visualização, por isso não pode registar doses."
+    },
+    "history": {
+      "subtitle": "Todas as doses registadas de {{name}}, da mais recente para a mais antiga.",
+      "loading": "A carregar doses…",
+      "empty": "Nenhuma dose registada ainda",
+      "emptyHint": "As doses aparecem aqui conforme são registadas."
+    },
+    "remove": {
+      "actionA11y": "Remover esta dose, registada às {{time}}",
+      "body": "Remover a dose registada às {{time}} por {{name}}? Todos serão avisados de que ela foi removida."
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "picker": {
+    "caringFor": "A cuidar de {{name}}",
+    "caringWith_one": "Pessoas a cuidar em conjunto: {{count}}",
+    "caringWith_other": "A cuidar em conjunto com {{count}} pessoas",
+    "personHelping_one": "Pessoas a ajudar a coordenar o cuidado: {{count}}",
+    "personHelping_other": "{{count}} pessoas a ajudar a coordenar o cuidado",
+    "errorBody": "Verifique a sua ligação e tente novamente.",
+    "empty": {
+      "companion": "Prefere o telemóvel? Transfira a app complementar."
+    }
+  },
+  "med": {
+    "nothingTrackedYet": "Ainda nada registado"
+  },
+  "access": {
+    "readOnly": "Apenas leitura",
+    "viewOnly": "Apenas visualização",
+    "readOnlyOwnerSubtitle": "A sua subscrição terminou — apenas visualização por enquanto.",
+    "viewOnlySubtitle": "Apenas visualização — fale com o proprietário do círculo se precisar de fazer alterações."
+  },
+  "member": {
+    "notificationsOffExplain": "{{name}} não ativou as notificações na app CircleCare, por isso os lembretes não chegarão ao telemóvel dessa pessoa.",
+    "notificationsOffExplainNoName": "Este membro não ativou as notificações na app CircleCare, por isso os lembretes não chegarão ao telemóvel dessa pessoa."
+  },
+  "list": {
+    "you": "(eu)",
+    "errorBody": "Verifique a sua ligação e tente novamente.",
+    "soloBody": "Convide um familiar ou cuidador para ajudar a coordenar o cuidado do seu ente querido — partilhe tarefas, consultas e atualizações para que ninguém carregue isto sozinho.",
+    "soloCta": "Convidar o seu primeiro cuidador"
+  },
+  "errors": {
+    "permissionDenied": "Não tem permissão para fazer esta alteração.",
+    "saveFailed": "Ocorreu um erro. Tente novamente.",
+    "pendingInviteSeat": "Já utilizou o seu convite — a vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele esse convite para libertar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "pendingInviteSeatUnknown": "Já utilizou o seu convite — a vaga gratuita está ocupada por outro convite pendente. Cancele esse convite para libertar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "circleArchived": "Este círculo de cuidado já não está ativo, por isso os convites não podem ser enviados nem aceites."
+  },
+  "invite": {
+    "sending": "A enviar…",
+    "success": "Partilhe o link para que a pessoa possa entrar de imediato.",
+    "pendingSeat": "Já utilizou o seu convite — a vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele-o em Convites pendentes para libertar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "pendingSeatUnknown": "Já utilizou o seu convite — a vaga gratuita está ocupada por outro convite pendente. Cancele-o em Convites pendentes para libertar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "shareLink": "Partilhar ligação do convite",
+    "copyLink": "Copiar ligação",
+    "linkCopied": "Ligação copiada",
+    "copyFailed": "Não foi possível copiar a ligação",
+    "shareTitle": "Participe no nosso círculo de cuidado",
+    "shareMessageRecipient": "Configurei o CircleCare para ajudar a acompanhar os seus medicamentos e consultas. Junte-se a mim aqui: {{inviteUrl}}"
+  },
+  "manage": {
+    "subheading": "Todos neste círculo de cuidado. Convide, remova ou faça a gestão dos membros abaixo.",
+    "leaveSuccess": "Saiu do círculo."
+  },
+  "pending": {
+    "heading": "Os seus convites",
+    "yourCareCircle": "O seu círculo de cuidado",
+    "accepting": "A entrar…",
+    "errorBody": "Verifique a sua ligação e tente novamente.",
+    "banner": {
+      "count_one": "Tem 1 convite pendente"
+    }
+  }
+}

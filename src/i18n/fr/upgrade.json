@@ -1,0 +1,118 @@
+{
+  "eyebrow": "CircleCare Premium",
+  "headline": {
+    "onboarding": {
+      "lead": "Prendre soin,",
+      "accent": "ensemble."
+    },
+    "general": {
+      "lead": "Profitez de toute",
+      "accent": "l’expérience."
+    },
+    "capacity": {
+      "lead": "Plus de proches,",
+      "accent": "de meilleurs soins."
+    },
+    "feature": {
+      "lead": "Tirez davantage de",
+      "accent": "CircleCare."
+    },
+    "earnedMeds": {
+      "lead": "Vous gardez",
+      "accent": "le cap."
+    },
+    "earnedInvite": {
+      "lead": "Votre cercle",
+      "accent": "s’agrandit."
+    }
+  },
+  "subtitle": "Tout ce dont votre famille a besoin pour coordonner les soins, pour chaque cercle dont vous faites partie.",
+  "trialHook": "Commencez par un essai gratuit : rien à payer aujourd’hui.",
+  "benefits": {
+    "circles": {
+      "title": "Jusqu’à 5 cercles de soins",
+      "sub": "Un pour maman, papa ou toute la famille"
+    },
+    "caregivers": {
+      "title": "Aidants en nombre illimité",
+      "sub": "Invitez frères et sœurs, conjoints et professionnels"
+    },
+    "ai": {
+      "title": "Assistant de soins IA",
+      "sub": "Résume les visites et fait ressortir l’essentiel"
+    },
+    "exports": {
+      "title": "Rapports d’observance et import de calendrier",
+      "sub": "Partagez l’historique des médicaments avec les professionnels de santé, importez les rendez-vous depuis votre calendrier"
+    }
+  },
+  "plans": {
+    "monthly": "Mensuel",
+    "annual": "Annuel",
+    "perMonth": "par mois",
+    "perYear": "par an",
+    "bestValue": "Meilleur rapport qualité-prix",
+    "savePercent": "Économisez {{percent}} %",
+    "perMonthBilled": "{{price}}/mois, facturé annuellement",
+    "billedMonthly": "Facturé mensuellement",
+    "trialIncluded": "Essai gratuit inclus",
+    "monthlyPerk": "Résiliation possible à tout moment, sans engagement",
+    "trialWithDuration": "Essai gratuit de {{period}}"
+  },
+  "choosePlan": "Choisir une formule",
+  "freeBaseline": "La formule gratuite comprend un cercle de soins et deux aidants.",
+  "subscribe": "S’abonner",
+  "startTrial": "Commencer l’essai gratuit",
+  "subscribing": "Ouverture du paiement…",
+  "cancelAnytime": "Résiliation possible à tout moment.",
+  "securedByStripe": "Paiement sécurisé par Stripe.",
+  "orUseApp": "Vous préférez l’application ? Vous pouvez aussi passer à Premium dans l’application CircleCare et payer via votre boutique d’applications.",
+  "unavailable": "Le paiement en ligne n’est pas disponible pour le moment. Vous pouvez aussi passer à Premium dans l’application CircleCare.",
+  "storeOnly": {
+    "title": "Abonnez-vous dans l’application CircleCare",
+    "bodyMobile": "CircleCare Premium est disponible dans l’application. Téléchargez CircleCare ci-dessous, connectez-vous avec cette même adresse e-mail et démarrez votre abonnement depuis votre profil.",
+    "bodyDesktop": "CircleCare Premium est disponible dans l’application CircleCare sur votre téléphone. Installez-la, connectez-vous avec cette même adresse e-mail et démarrez votre abonnement depuis votre profil.",
+    "storesLabel": "Télécharger l’application CircleCare",
+    "helpPrefix": "Une question, ou pas de smartphone ?",
+    "helpCta": "Écrire à notre équipe d’assistance"
+  },
+  "countryError": {
+    "title": "Impossible de charger votre compte",
+    "body": "Nous avons besoin des informations de votre compte pour ouvrir le paiement. Vérifiez votre connexion et réessayez."
+  },
+  "error": "Un problème est survenu au démarrage du paiement. Veuillez réessayer.",
+  "back": "Retour au profil",
+  "alreadyPremium": {
+    "title": "Vous êtes déjà Premium",
+    "body": "Vous avez un accès complet à toutes les fonctionnalités de CircleCare.",
+    "manage": "Gérer l’abonnement",
+    "manageInApp": "Gérez votre abonnement dans l’application CircleCare, là où vous l’avez souscrit."
+  },
+  "success": {
+    "title": "Bienvenue dans Premium !",
+    "body": "Votre abonnement est actif. Profitez d’un accès complet à tous vos cercles de soins.",
+    "cta": "Continuer"
+  },
+  "autoRenewNotice": "Votre abonnement se renouvelle automatiquement au tarif indiqué jusqu’à sa résiliation. Vous pouvez résilier à tout moment depuis votre profil.",
+  "termsLink": "Conditions d’utilisation",
+  "privacyLink": "Politique de confidentialité",
+  "legalPrefix": "En vous abonnant, vous acceptez nos",
+  "legalJoin": "et notre",
+  "trialHookWithDuration": "Commencez par un essai gratuit de {{period}} : rien à payer aujourd’hui.",
+  "trialPeriod": {
+    "day_one": "{{count}} jour",
+    "day_other": "{{count}} jours",
+    "week_one": "{{count}} semaine",
+    "week_other": "{{count}} semaines",
+    "month_one": "{{count}} mois",
+    "month_other": "{{count}} mois",
+    "year_one": "{{count}} an",
+    "year_other": "{{count}} ans"
+  },
+  "onboarding": {
+    "subtitle": "Tout ce dont votre famille a besoin pour coordonner les soins des personnes qui comptent le plus.",
+    "continueFree": "Continuer avec la formule gratuite",
+    "continueFreeSub": "1 cercle, 2 aidants : passez à Premium quand vous voulez",
+    "notNow": "Pas maintenant"
+  }
+}

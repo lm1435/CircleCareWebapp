@@ -1,0 +1,14 @@
+{
+  "picker": {
+    "empty": {
+      "invitedHintPrefix": "Une invitation reçue par courriel ?"
+    }
+  },
+  "invite": {
+    "subtitle": "Nous lui enverrons par courriel une invitation à rejoindre ce cercle de soins.",
+    "emailLabel": "Adresse courriel",
+    "errors": {
+      "emailInvalid": "Saisissez une adresse courriel valide."
+    }
+  }
+}

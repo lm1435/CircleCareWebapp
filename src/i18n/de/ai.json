@@ -1,0 +1,24 @@
+{
+  "title": "Pflegeassistent",
+  "subtitle": "Fragen zu Pflege, Medikamenten oder Gesundheit stellen",
+  "intro": "Stellen Sie mir Fragen zu Pflege, Medikamenten oder Gesundheitsmanagement. Ich kann bei Terminen, Medikamenten, Einnahmetreue und aktuellen Aktivitäten helfen.",
+  "disclaimer": "Antworten der KI dienen nur zur Information. Wenden Sie sich immer an medizinisches Fachpersonal. Ihre gespeicherten Gesundheitsdaten werden nie an den KI-Anbieter weitergegeben – nur die Nachrichten, die Sie selbst eingeben.",
+  "inputPlaceholder": "Frage stellen …",
+  "inputLabel": "Ihre Nachricht",
+  "send": "Senden",
+  "sending": "Wird gesendet …",
+  "thinking": "Denkt nach …",
+  "emptyTitle": "Wie kann ich helfen?",
+  "suggestedQuestions": "Vorgeschlagene Fragen",
+  "remainingCount": "Heute noch {{count}}",
+  "newChat": "Neuer Chat",
+  "errors": {
+    "subscriptionRequired": "Der Pflegeassistent ist eine Premium-Funktion. Upgraden Sie auf Premium, um ihn zu nutzen.",
+    "viewOnly": "Sie haben nur Lesezugriff auf diesen Kreis. Bitten Sie den Kreis-Admin um vollen Zugriff, um den Pflegeassistenten zu nutzen.",
+    "circleReadOnly": "Dieser Kreis ist derzeit nur lesbar. Der Pflegeassistent ist wieder verfügbar, sobald das Abo des Kreis-Admins ihn enthält.",
+    "rateLimited": "Sie haben das heutige Fragenlimit erreicht. Der Pflegeassistent ist morgen wieder für Sie da.",
+    "unavailable": "Der Pflegeassistent ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.",
+    "sendFailed": "Entschuldigung, es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "invalidMessage": "Diese Nachricht konnte ich nicht verarbeiten. Formulieren Sie Ihre Frage zu Pflege oder Gesundheit bitte um."
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "title": "Hilfe & FAQ",
+  "subtitle": "Antworten auf häufige Fragen",
+  "sections": {
+    "gettingStarted": {
+      "title": "Erste Schritte",
+      "items": [
+        {
+          "question": "Was ist ein Pflegekreis?",
+          "answer": "Ein Pflegekreis ist eine private Gruppe, in der die Pflege einer Person (zum Beispiel eines Elternteils oder Großelternteils) gemeinsam organisiert wird. Familienmitglieder treten dem Kreis bei, um sich auszutauschen, Medikamente im Blick zu behalten und in Verbindung zu bleiben."
+        },
+        {
+          "question": "Wie viele Kreise kann ich erstellen?",
+          "answer": "Im kostenlosen Tarif kann jede Person einen Pflegekreis erstellen. Premium-Abonnenten können bis zu 5 Kreise erstellen – hilfreich für größere Familien, die mehrere Angehörige umsorgen."
+        },
+        {
+          "question": "Muss ich bezahlen, um dem Kreis einer anderen Person beizutreten?",
+          "answer": "Nein – die Einladung in den Kreis einer anderen Person ist immer kostenlos, und im kostenlosen Tarif kann jede Person einen eigenen Kreis erstellen. Ein Abo ist nur für zusätzliche Kreise, weitere Pflegepersonen und Premium-Funktionen nötig."
+        }
+      ]
+    },
+    "roles": {
+      "title": "Kreise & Rollen",
+      "items": [
+        {
+          "question": "Was ist der Unterschied zwischen Kreis-Admin, Pflegeperson und umsorgter Person?",
+          "answer": "Der Kreis-Admin erstellt den Kreis und kann Mitglieder einladen, Einstellungen verwalten und den Kreis löschen. Pflegepersonen sind Familienmitglieder, die bei der Organisation der Pflege helfen – sie können Informationen ansehen und aktualisieren. Die umsorgte Person ist die Person, um die man sich kümmert – sie erhält Medikamenten-Erinnerungen und kann bestätigen, wenn sie ein Medikament eingenommen hat."
+        },
+        {
+          "question": "Kann ich in mehreren Kreisen sein?",
+          "answer": "Ja! Sie können Mitglied in mehreren Kreisen sein. Zum Beispiel können Sie Admin des Kreises für Ihre Mutter sein und Pflegeperson im Kreis für Ihren Vater, den ein Geschwisterteil erstellt hat."
+        }
+      ]
+    },
+    "medications": {
+      "title": "Medikamente im Blick",
+      "items": [
+        {
+          "question": "Wie funktionieren Medikamenten-Erinnerungen?",
+          "answer": "Wenn Sie ein Medikament hinzufügen, erhält die umsorgte Person zur geplanten Zeit eine Push-Benachrichtigung. Mit „Ich habe es eingenommen“ bestätigt sie die Einnahme, und alle Familienmitglieder im Kreis werden benachrichtigt. Wird die Dosis innerhalb von 15 Minuten nicht bestätigt, erhält die umsorgte Person eine sanfte Erinnerung. Nach 30 Minuten werden alle Pflegepersonen im Kreis benachrichtigt. Nach 1 Stunde werden alle im Kreis informiert. Nichts wird automatisch eingetragen: Solange niemand die Dosis als Eingenommen oder Ausgelassen markiert, wird sie einfach als Noch nicht eingetragen angezeigt."
+        },
+        {
+          "question": "Was passiert, wenn eine Dosis nicht eingetragen wird?",
+          "answer": "Ist eine Dosis nach 1 Stunde noch nicht eingetragen, erfahren alle im Kreis, dass sie noch nicht eingetragen wurde. Die Dosis wird als Noch nicht eingetragen angezeigt, bis jemand sie als Eingenommen oder Ausgelassen markiert; wird sie nach Ablauf ihres Zeitfensters eingetragen, erscheint sie als Verspätet eingenommen. Im Medikamentenverlauf sehen Sie Muster im Zeitverlauf, darunter die Einnahmetreue und welche Dosen am häufigsten nicht eingetragen werden."
+        },
+        {
+          "question": "Kann ich Medikamente einrichten, die nicht täglich genommen werden?",
+          "answer": "Ja! Sie können Medikamente täglich, jeden zweiten Tag, wöchentlich (an bestimmten Tagen), monatlich oder in Zyklen mit Einnahme- und Pausenzeiten einrichten. Für Medikamente, die nur bei Bedarf genommen werden, wählen Sie „Bei Bedarf“: Es gibt keine festen Zeiten, und wer eine Dosis gibt, trägt sie ein, damit der ganze Kreis sieht, wann sie zuletzt gegeben wurde."
+        }
+      ]
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "items": [
+        {
+          "question": "Wo erhalte ich Benachrichtigungen?",
+          "answer": "Erinnerungen und Hinweise werden als Push-Benachrichtigungen über die mobile CircleCare-App zugestellt. Ihre Benachrichtigungseinstellungen können Sie hier im Web verwalten. Um Erinnerungen tatsächlich zu erhalten, installieren Sie jedoch die App auf Ihrem Smartphone und schalten Sie Benachrichtigungen ein."
+        },
+        {
+          "question": "Welche Benachrichtigungen erhalte ich?",
+          "answer": "Sie erhalten Hinweise in vier Gruppen, die Sie im Profil ein- oder ausschalten können: Medikamente (Dosen eingenommen, ausgelassen oder noch nicht eingetragen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor es fällig ist), Notizen (wenn jemand eine Notiz hinzufügt) und Tipps & Vorschläge. Sind Sie selbst die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
+        },
+        {
+          "question": "Was sind Ruhezeiten?",
+          "answer": "Während der Ruhezeiten, die Sie festlegen (zum Beispiel nachts von 22 bis 7 Uhr), werden Benachrichtigungen pausiert. Ihre Ruhezeiten richten Sie unter Profil & Einstellungen ein."
+        },
+        {
+          "question": "Kann ich bestimmte Benachrichtigungen ausschalten?",
+          "answer": "Ja. Gehen Sie zu Profil und dann zu Benachrichtigungen. Jeder der vier Schalter schaltet eine ganze Gruppe für Ihr Konto ein oder aus, in jedem Kreis, dem Sie angehören. Wenn Sie Medikamente ausschalten, erfahren Sie nicht mehr, wenn eine Dosis noch nicht eingetragen ist."
+        }
+      ]
+    },
+    "premium": {
+      "title": "Premium-Funktionen",
+      "items": [
+        {
+          "question": "Was ist in Premium enthalten?",
+          "answer": "CircleCare Premium umfasst bis zu 5 Pflegekreise, unbegrenzt viele Pflegepersonen pro Kreis, den Pflegeassistenten und die wöchentliche Pflegezusammenfassung per E-Mail. Aktuelle Preise finden Sie auf der Upgrade-Seite."
+        },
+        {
+          "question": "Kann ich es vor dem Kauf ausprobieren?",
+          "answer": "Ja! CircleCare ist zum Start kostenlos – mit einem Pflegekreis und zwei Pflegepersonen. Wenn Sie mehr Kreise, unbegrenzt viele Pflegepersonen oder Premium-Funktionen wie KI möchten, upgraden Sie einfach."
+        },
+        {
+          "question": "Wie stelle ich meine Käufe wieder her?",
+          "answer": "Gehen Sie in der mobilen CircleCare-App zu Profil > Abo > Käufe wiederherstellen. Das ist nützlich, wenn Sie die App neu installieren oder das Smartphone wechseln. Wenn Sie hier im Web abonniert haben, folgt Ihr Abo automatisch Ihrem Konto."
+        },
+        {
+          "question": "Wie kündige ich mein Abo?",
+          "answer": "Öffnen Sie Ihr Profil und wählen Sie „Abo verwalten“ – wenn Sie auf dieser Website abonniert haben, gelangen Sie direkt zu Ihrem Abrechnungsportal, wo Sie mit wenigen Klicks kündigen können. Wenn Sie in der mobilen App abonniert haben, kündigen Sie über Ihr Smartphone: Einstellungen > Abonnements auf dem iPhone oder Play Store > Zahlungen & Abos auf Android. In beiden Fällen behalten Sie Premium bis zum Ende des bereits bezahlten Zeitraums, und Sie müssen sich zum Kündigen nie an den Support wenden."
+        }
+      ]
+    }
+  },
+  "contact": {
+    "title": "Noch Fragen?",
+    "body": "Schreiben Sie unserem Support-Team, wir melden uns bei Ihnen.",
+    "email": "support@circlecare.app",
+    "cta": "Support per E-Mail kontaktieren"
+  },
+  "download": {
+    "title": "Das volle Erlebnis",
+    "body": "Laden Sie CircleCare auf Ihr Smartphone herunter – für Erinnerungen, KI-Hilfe und mehr."
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "title": "Notizen",
+  "subtitle": "Ein gemeinsames Tagebuch darüber, wie jeder Tag verlaufen ist – für alle im Kreis sichtbar.",
+  "loading": "Notizen werden geladen",
+  "errorTitle": "Notizen konnten nicht geladen werden",
+  "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+  "empty": {
+    "title": "Noch keine Notizen",
+    "hint": "Halten Sie fest, wie der Tag verlaufen ist – alle im Kreis können es sehen."
+  },
+  "composer": {
+    "label": "Notiz hinzufügen",
+    "placeholder": "Wie war der Tag?",
+    "moodLabel": "Stimmung",
+    "categoriesLabel": "Kategorien",
+    "post": "Veröffentlichen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "errorPosting": "Ihre Notiz konnte nicht veröffentlicht werden. Sie ist noch hier – versuchen Sie es erneut.",
+    "errorSaving": "Die Notiz konnte nicht gespeichert werden. Versuchen Sie es erneut."
+  },
+  "moods": {
+    "great": "Toller Tag",
+    "good": "Guter Tag",
+    "okay": "Okay",
+    "tough": "Schwerer Tag"
+  },
+  "categories": {
+    "meal": "Mahlzeit",
+    "medication": "Medikament",
+    "visit": "Besuch",
+    "incident": "Vorfall"
+  },
+  "row": {
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "edited": "Bearbeitet",
+    "formerMember": "Ehemaliges Mitglied",
+    "actionsFor": "Aktionen für die Notiz von {{author}}"
+  },
+  "day": {
+    "today": "Heute",
+    "yesterday": "Gestern"
+  },
+  "deleteTitle": "Notiz löschen?",
+  "deleteConfirm": "Diese Notiz wird für alle im Kreis entfernt.",
+  "loadOlder": "Frühere Notizen anzeigen",
+  "postRequirementHint": "Schreiben Sie eine Notiz oder wählen Sie eine Stimmung, um zu veröffentlichen",
+  "moodStrip": {
+    "summary": "Diese Woche: {{list}}",
+    "empty": "Diese Woche keine Stimmungen eingetragen",
+    "dayA11y": "{{day}}: {{summary}}",
+    "count_great_one": "{{count}} toll",
+    "count_great_other": "{{count}} toll",
+    "count_good_one": "{{count}} gut",
+    "count_good_other": "{{count}} gut",
+    "count_okay_one": "{{count}} okay",
+    "count_okay_other": "{{count}} okay",
+    "count_tough_one": "{{count}} schwer",
+    "count_tough_other": "{{count}} schwer"
+  }
+}

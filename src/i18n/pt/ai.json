@@ -1,0 +1,24 @@
+{
+  "title": "Assistente de cuidado",
+  "subtitle": "Pergunte sobre cuidados, medicamentos ou saúde",
+  "intro": "Faça perguntas sobre cuidados, medicamentos ou gestão da saúde. Posso ajudar com consultas, medicamentos, adesão e atividades recentes.",
+  "disclaimer": "As respostas da IA são apenas informativas. Consulte sempre profissionais de saúde. Seus registros de saúde armazenados nunca são compartilhados com o provedor de IA, apenas as mensagens que você digita.",
+  "inputPlaceholder": "Faça uma pergunta...",
+  "inputLabel": "Sua mensagem",
+  "send": "Enviar",
+  "sending": "Enviando...",
+  "thinking": "Pensando...",
+  "emptyTitle": "Em que posso ajudar?",
+  "suggestedQuestions": "Perguntas sugeridas",
+  "remainingCount": "Restantes hoje: {{count}}",
+  "newChat": "Nova conversa",
+  "errors": {
+    "subscriptionRequired": "O Assistente de cuidado é um recurso Premium. Faça upgrade para o Premium para usá-lo.",
+    "viewOnly": "Você tem acesso somente de visualização a este círculo. Peça ao proprietário do círculo acesso completo para usar o Assistente de cuidado.",
+    "circleReadOnly": "Este círculo está somente para leitura no momento. O Assistente de cuidado volta a ficar disponível quando a assinatura do proprietário do círculo o incluir.",
+    "rateLimited": "Você atingiu o limite de perguntas de hoje. O Assistente de cuidado estará disponível novamente amanhã.",
+    "unavailable": "O Assistente de cuidado não está disponível no momento. Tente novamente mais tarde.",
+    "sendFailed": "Desculpe, ocorreu um erro. Tente novamente.",
+    "invalidMessage": "Não consegui processar essa mensagem. Tente reformular sua pergunta sobre cuidados ou saúde."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "title": "Assistant de soins",
+  "subtitle": "Posez vos questions sur les soins, les médicaments ou la santé",
+  "intro": "Posez-moi vos questions sur les soins, les médicaments ou la gestion de la santé. Je peux vous aider pour les rendez-vous, les médicaments, l’observance et l’activité récente.",
+  "disclaimer": "Les réponses de l’IA sont données à titre informatif uniquement. Consultez toujours un professionnel de santé. Vos dossiers de santé enregistrés ne sont jamais partagés avec le fournisseur d’IA : seuls les messages que vous saisissez le sont.",
+  "inputPlaceholder": "Posez une question…",
+  "inputLabel": "Votre message",
+  "send": "Envoyer",
+  "sending": "Envoi…",
+  "thinking": "Réflexion…",
+  "emptyTitle": "Comment puis-je vous aider ?",
+  "suggestedQuestions": "Questions suggérées",
+  "remainingCount": "Restant aujourd’hui : {{count}}",
+  "newChat": "Nouvelle discussion",
+  "errors": {
+    "subscriptionRequired": "L’assistant de soins est une fonctionnalité Premium. Passez à Premium pour l’utiliser.",
+    "viewOnly": "Vous avez un accès en lecture seule à ce cercle. Demandez un accès complet au propriétaire du cercle pour utiliser l’assistant de soins.",
+    "circleReadOnly": "Ce cercle est actuellement en lecture seule. L’assistant de soins sera de nouveau disponible dès que l’abonnement du propriétaire du cercle l’inclura.",
+    "rateLimited": "Vous avez atteint la limite de questions d’aujourd’hui. L’assistant de soins sera de nouveau disponible demain.",
+    "unavailable": "L’assistant de soins est indisponible pour le moment. Réessayez plus tard.",
+    "sendFailed": "Désolé, une erreur s’est produite. Réessayez.",
+    "invalidMessage": "Je n’ai pas pu traiter ce message. Essayez de reformuler votre question sur les soins ou la santé."
+  }
+}

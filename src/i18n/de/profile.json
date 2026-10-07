@@ -1,0 +1,188 @@
+{
+  "heading": "Profil & Einstellungen",
+  "subheading": "Verwalten Sie Ihr Konto, Benachrichtigungen und Präferenzen.",
+  "sections": {
+    "account": "Konto",
+    "language": "Sprache",
+    "notifications": "Benachrichtigungen",
+    "quietHours": "Ruhezeiten",
+    "units": "Maßeinheiten",
+    "emailDigest": "Wöchentliche Pflegezusammenfassung",
+    "privacy": "Datenschutz"
+  },
+  "account": {
+    "email": "E-Mail",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "timezone": "Zeitzone",
+    "edit": "Bearbeiten",
+    "editNameLabel": "Namen bearbeiten",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "nameSuccess": "Name aktualisiert.",
+    "timezoneSuccess": "Zeitzone aktualisiert.",
+    "namePlaceholder": "Namen hinzufügen",
+    "changePasswordHint": "Um Ihr Passwort zu ändern, melden Sie sich ab und wählen Sie auf der Anmeldeseite „Passwort vergessen?“."
+  },
+  "timezones": {
+    "America/New_York": "Ostküstenzeit (ET)",
+    "America/Chicago": "Zentralzeit (CT)",
+    "America/Denver": "Rocky-Mountain-Zeit (MT)",
+    "America/Los_Angeles": "Pazifische Zeit (PT)",
+    "America/Phoenix": "Arizona (keine Sommerzeit)",
+    "America/Anchorage": "Alaska-Zeit (AKT)",
+    "Pacific/Honolulu": "Hawaii-Zeit (HST)",
+    "Europe/London": "London (GMT/BST)",
+    "Europe/Paris": "Mitteleuropäische Zeit (MEZ)",
+    "Asia/Tokyo": "Japan (JST)",
+    "Australia/Sydney": "Sydney (AEST)"
+  },
+  "language": {
+    "description": "Wählen Sie die Sprache für die gesamte App.",
+    "success": "Sprache aktualisiert.",
+    "names": {
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "notifications": {
+    "description": "Legen Sie fest, welche Benachrichtigungen Sie erhalten.",
+    "groups": {
+      "medications": "Medikamente",
+      "medicationsDesc": "Dosen eingenommen, ausgelassen oder noch nicht eingetragen",
+      "tasks": "Aufgaben & Termine",
+      "tasksDesc": "Wenn Ihnen etwas zugewiesen wird und bevor es fällig ist",
+      "notes": "Notizen",
+      "notesDesc": "Wenn jemand eine Notiz hinzufügt",
+      "tips": "Tipps & Vorschläge",
+      "tipsDesc": "Hilfreiche Hinweise zum Einrichten Ihres Kreises"
+    },
+    "someTurnedOff": "Teilweise ausgeschaltet",
+    "confirmMedicationsOff": {
+      "title": "Medikamenten-Benachrichtigungen ausschalten?",
+      "message": "Sie erfahren dann nicht mehr, wenn eine Dosis noch nicht eingetragen ist. Trotzdem ausschalten?",
+      "confirm": "Ausschalten",
+      "cancel": "Eingeschaltet lassen"
+    },
+    "success": "Benachrichtigungseinstellungen aktualisiert."
+  },
+  "quietHours": {
+    "description": "Nicht dringende Benachrichtigungen in diesem Zeitraum pausieren.",
+    "enable": "Ruhezeiten aktivieren",
+    "start": "Beginn",
+    "end": "Ende",
+    "success": "Ruhezeiten aktualisiert.",
+    "almostAllDayWarning": "Die Ruhezeiten umfassen fast den ganzen Tag, daher werden Benachrichtigungen bis {{endTime}} zurückgehalten."
+  },
+  "units": {
+    "description": "Legen Sie fest, wie Gewicht und Blutzuckerwerte angezeigt werden.",
+    "weight": "Gewicht",
+    "glucose": "Blutzucker",
+    "lbs": "Pfund (lbs)",
+    "kg": "Kilogramm (kg)",
+    "mgdl": "mg/dL",
+    "mmoll": "mmol/L",
+    "success": "Einheiten aktualisiert."
+  },
+  "emailDigest": {
+    "description": "Eine wöchentliche Zusammenfassung der Pflegeaktivität per E-Mail.",
+    "enable": "Wöchentliche Zusammenfassung senden",
+    "day": "Versandtag",
+    "premiumNote": "Im Premium-Abo enthalten.",
+    "success": "E-Mail-Zusammenfassung aktualisiert.",
+    "days": {
+      "0": "Sonntag",
+      "1": "Montag",
+      "2": "Dienstag",
+      "3": "Mittwoch",
+      "4": "Donnerstag",
+      "5": "Freitag",
+      "6": "Samstag"
+    }
+  },
+  "subscription": {
+    "title": "Abo",
+    "premium": "CircleCare Premium",
+    "premiumDescription": "Sie haben vollen Zugriff auf alle Funktionen von CircleCare.",
+    "freeTitle": "Kostenloser Tarif",
+    "upgradeInApp": "Upgrade auf Premium in der CircleCare-App.",
+    "upgradeBenefit": "Alles, was Ihre Familie braucht, um die Pflege gemeinsam zu organisieren – für jeden Kreis, in dem Sie Mitglied sind.",
+    "upgradeCta": "Auf Premium upgraden",
+    "orInApp": "Oder upgraden Sie in der CircleCare-App.",
+    "manageSubscription": "Abo verwalten",
+    "manageInApp": "Sie haben auf Ihrem Smartphone abonniert, daher läuft die Kündigung über den App Store. Öffnen Sie auf dem iPhone Einstellungen > Abonnements, auf Android Play Store > Zahlungen & Abos. Sie können auch in der CircleCare-App auf „Verwalten“ tippen.",
+    "manageExisting": "Bereits abonniert? Verwalten oder kündigen"
+  },
+  "dataExport": {
+    "title": "Ihre Daten",
+    "description": "Laden Sie eine Kopie der Informationen, die CircleCare über Sie speichert, als JSON-Datei herunter.",
+    "cta": "Meine Daten herunterladen",
+    "preparing": "Ihr Export wird vorbereitet …",
+    "success": "Ihr Datenexport wurde heruntergeladen.",
+    "rateLimited": "Sie haben das heutige Exportlimit erreicht. Bitte versuchen Sie es morgen erneut.",
+    "error": "Wir konnten Ihren Export nicht vorbereiten. Bitte versuchen Sie es erneut."
+  },
+  "delete": {
+    "title": "Konto löschen",
+    "description": "Löschen Sie Ihr Konto und alle Pflegekreise, deren Admin Sie sind, endgültig. Dies kann nicht rückgängig gemacht werden. Möchten Sie vorher eine Kopie Ihrer Daten? Nutzen Sie oben „Meine Daten herunterladen“.",
+    "cta": "Mein Konto löschen",
+    "confirmTitle": "Konto löschen?",
+    "confirmBody": "Dadurch werden Ihr Konto und alle Pflegekreise, deren Admin Sie sind, endgültig gelöscht – einschließlich aller darin enthaltenen Medikamente, Termine, Aufgaben, Notizen, Vitalwerte, Dokumente und Notfallinfos. Alle anderen Mitglieder dieser Kreise verlieren den Zugriff und werden darüber benachrichtigt. Kreise, in denen Sie Mitglied, aber nicht Admin sind, werden nicht gelöscht; Sie werden lediglich daraus entfernt. Dies kann nicht rückgängig gemacht werden.",
+    "confirm": "Konto löschen",
+    "keep": "Mein Konto behalten",
+    "success": "Ihr Konto wurde gelöscht.",
+    "error": "Wir konnten Ihr Konto nicht löschen. Ihr Konto ist unverändert – bitte versuchen Sie es erneut oder schreiben Sie an support@circlecare.app."
+  },
+  "analytics": {
+    "description": "Legen Sie fest, welche Nutzungsdaten Sie mit uns teilen.",
+    "enable": "Nutzungsdaten teilen",
+    "hint": "Mit Ihrem Konto verknüpft. Hilft uns, CircleCare zu verbessern – enthält niemals Ihre Messwerte, Medikamentennamen oder Nachrichteninhalte. Wenn dies ausgeschaltet ist, erfassen wir weiterhin anonyme, nur sitzungsbezogene Nutzungs- und Absturzdaten, die nie mit Ihnen verknüpft werden."
+  },
+  "footer": {
+    "version": "WEB · v{{version}}"
+  },
+  "cancelReason": {
+    "headlineActive": "Ihr Premium bleibt bis {{date}} aktiv.",
+    "headlineExpired": "Ihr Premium ist am {{date}} abgelaufen.",
+    "body": "Würden Sie uns verraten, warum Sie die Verlängerung ausgeschaltet haben? Das hilft uns, besser zu werden.",
+    "reasons": {
+      "autoCharge": "Ich wollte nur nicht automatisch belastet werden",
+      "tooExpensive": "Zu teuer",
+      "somethingBroken": "Etwas hat nicht funktioniert",
+      "missingFeature": "Eine Funktion, die ich brauche, fehlt",
+      "notNeeded": "Ich habe es nicht gebraucht",
+      "other": "Sonstiges"
+    },
+    "commentLabel": "Kommentar hinzufügen (optional)",
+    "placeholderBroken": "Was ist passiert?",
+    "placeholderMissing": "Wonach haben Sie gesucht?",
+    "placeholderDefault": "Noch etwas? (optional)",
+    "send": "Senden",
+    "notNow": "Nicht jetzt",
+    "error": "Senden fehlgeschlagen. Versuchen Sie es erneut.",
+    "thanks": "Danke, das hilft uns wirklich.",
+    "reassurance": "Verstanden. Sie behalten bis {{date}} vollen Zugriff."
+  },
+  "avatarColor": {
+    "label": "Ihre Farbe",
+    "hint": "Wird in Mitgliederlisten hinter Ihrem Anfangsbuchstaben angezeigt. Alle in Ihren Kreisen sehen sie.",
+    "pickerTitle": "Farbe auswählen",
+    "saved": "Farbe aktualisiert.",
+    "saveFailed": "Wir konnten Ihre Farbe nicht aktualisieren. Bitte versuchen Sie es erneut.",
+    "names": {
+      "moss": "Salbeigrün",
+      "coral": "Koralle",
+      "dusk": "Schieferblau",
+      "clay": "Ton",
+      "forest": "Waldgrün",
+      "amber": "Bernstein"
+    },
+    "selected": "ausgewählt"
+  },
+  "timezoneImpact": {
+    "impactTitle": "Zeitzone ändern?",
+    "impactMessage_one": "Die Dosiszeiten für {{names}} richten sich nach Ihrer Zeitzone, da diese Person kein eigenes Konto hat. Wenn Sie auf {{zone}} wechseln, werden diese Erinnerungen auf dieselbe Uhrzeit in {{zone}} verschoben.",
+    "impactMessage_other": "Die Dosiszeiten für {{names}} richten sich nach Ihrer Zeitzone, da diese Personen kein eigenes Konto haben. Wenn Sie auf {{zone}} wechseln, werden diese Erinnerungen auf dieselbe Uhrzeit in {{zone}} verschoben.",
+    "impactConfirm": "Zeitzone ändern"
+  }
+}

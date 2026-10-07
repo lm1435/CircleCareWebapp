@@ -1,0 +1,171 @@
+{
+  "picker": {
+    "heading": "Meus círculos",
+    "greeting": {
+      "morning": "Bom dia",
+      "afternoon": "Boa tarde",
+      "evening": "Boa noite"
+    },
+    "careCircleCount_one": "Círculos de cuidado: {{count}}",
+    "careCircleCount_other": "{{count}} círculos de cuidado",
+    "open": "Abrir {{name}}",
+    "openWithRole": "Abrir {{name}} ({{role}})",
+    "openWithRoleOverdue": "Abrir {{name}} ({{role}}) — {{status}}",
+    "caringFor": "Cuidando de {{name}}",
+    "caringWith_one": "Pessoas cuidando juntas: {{count}}",
+    "caringWith_other": "Cuidando junto com {{count}} pessoas",
+    "personHelping_one": "Pessoas ajudando a coordenar o cuidado: {{count}}",
+    "personHelping_other": "{{count}} pessoas ajudando a coordenar o cuidado",
+    "memberCount_one": "Membros: {{count}}",
+    "memberCount_other": "{{count}} membros",
+    "errorTitle": "Não foi possível carregar os círculos",
+    "errorBody": "Verifique sua conexão e tente novamente.",
+    "empty": {
+      "title": "Vamos configurar o seu círculo de cuidado",
+      "body": "Um círculo é um espaço privado onde familiares e cuidadores se reúnem para cuidar de uma pessoa querida — medicamentos, consultas e tarefas, tudo em um só lugar.",
+      "howItWorksTitle": "Como o CircleCare funciona",
+      "step1": "Crie um círculo para o seu ente querido.",
+      "step2": "Convide familiares e cuidadores para dividir a carga.",
+      "step3": "Todos veem o mesmo calendário — medicamentos, consultas e tarefas em um só lugar.",
+      "learnMore": "Saiba mais",
+      "invitedHintPrefix": "Recebeu um convite por e-mail?",
+      "invitedHintLink": "Ver os seus convites",
+      "companion": "Prefere o celular? Baixe o app complementar."
+    }
+  },
+  "med": {
+    "nothingTrackedYet": "Nada registrado ainda",
+    "allTaken": "Todos os medicamentos tomados",
+    "takenToday": "{{taken}}/{{total}} tomados hoje",
+    "takenOverdue": "{{taken}}/{{total}} tomados · {{overdue}} em atraso"
+  },
+  "roles": {
+    "owner": "Proprietário",
+    "caregiver": "Cuidador",
+    "careRecipient": "Pessoa cuidada"
+  },
+  "access": {
+    "readOnly": "Somente leitura",
+    "viewOnly": "Somente visualização",
+    "readOnlyOwnerSubtitle": "Sua assinatura terminou — somente visualização por enquanto.",
+    "readOnlyMemberSubtitle": "É possível visualizar, mas não editar este círculo",
+    "viewOnlySubtitle": "Somente visualização — fale com o proprietário do círculo se precisar fazer alterações."
+  },
+  "member": {
+    "notificationsOff": "Notificações desativadas",
+    "notificationsOffFor": "Notificações desativadas para {{name}}",
+    "notificationsOffExplain": "{{name}} não ativou as notificações no app CircleCare, então os lembretes não chegarão ao celular dessa pessoa.",
+    "notificationsOffExplainNoName": "Este membro não ativou as notificações no app CircleCare, então os lembretes não chegarão ao celular dessa pessoa."
+  },
+  "list": {
+    "heading": "Membros",
+    "subheadingReadOnly": "Todos que ajudam a coordenar o cuidado neste círculo.",
+    "joined": "Entrou em {{date}}",
+    "you": "(você)",
+    "medResponsible": "É responsável pelos lembretes de medicamentos",
+    "errorTitle": "Não foi possível carregar os membros",
+    "errorBody": "Verifique sua conexão e tente novamente.",
+    "empty": "Ainda não há membros neste círculo.",
+    "soloTitle": "O cuidado é mais fácil em conjunto",
+    "soloBody": "Convide um familiar ou cuidador para ajudar a coordenar o cuidado do seu ente querido — compartilhe tarefas, consultas e atualizações para que ninguém carregue isso sozinho.",
+    "soloCta": "Convidar seu primeiro cuidador"
+  },
+  "errors": {
+    "permissionDenied": "Você não tem permissão para fazer esta alteração.",
+    "saveFailed": "Algo deu errado. Tente novamente.",
+    "alreadyMember": "Esta pessoa já é membro deste círculo.",
+    "pendingInvite": "Esta pessoa já tem um convite pendente.",
+    "pendingInviteSeat": "Você já usou o seu convite — a vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele esse convite para liberar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "pendingInviteSeatUnknown": "Você já usou o seu convite — a vaga gratuita está ocupada por outro convite pendente. Cancele esse convite para liberar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "circleArchived": "Este círculo de cuidado não está mais ativo, então convites não podem ser enviados nem aceitos.",
+    "careRecipientExists": "Este círculo já tem uma pessoa cuidada."
+  },
+  "invite": {
+    "cta": "Convidar membro",
+    "title": "Convidar um membro",
+    "subtitle": "Enviaremos um convite por e-mail para participar deste círculo de cuidado.",
+    "emailLabel": "Endereço de e-mail",
+    "emailPlaceholder": "nome@exemplo.com",
+    "roleLabel": "Função da pessoa",
+    "roleHints": {
+      "caregiver": "Pode visualizar e ajudar a coordenar o cuidado.",
+      "careRecipient": "A pessoa que recebe os cuidados."
+    },
+    "circleLabel": "Círculo de cuidado",
+    "send": "Enviar convite",
+    "sending": "Enviando…",
+    "success": "Compartilhe o link para que a pessoa possa entrar agora mesmo.",
+    "capReached": "Círculos gratuitos incluem até dois cuidadores. Faça upgrade para o Premium para adicionar mais.",
+    "pendingSeat": "Você já usou o seu convite — a vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele-o em Convites pendentes para liberar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "pendingSeatUnknown": "Você já usou o seu convite — a vaga gratuita está ocupada por outro convite pendente. Cancele-o em Convites pendentes para liberar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
+    "errors": {
+      "emailInvalid": "Insira um endereço de e-mail válido.",
+      "roleRequired": "Escolha uma função."
+    },
+    "shareLink": "Compartilhar link do convite",
+    "copyLink": "Copiar link",
+    "linkCopied": "Link copiado",
+    "copyFailed": "Não foi possível copiar o link",
+    "shareMessage": "Junte-se a mim no CircleCare para ajudar a coordenar o cuidado de {{recipientName}}. {{inviteUrl}}",
+    "shareMessageSelfCare": "Junte-se a mim no CircleCare para ajudar a acompanhar o meu cuidado. {{inviteUrl}}",
+    "shareMessageRecipient": "Configurei o CircleCare para ajudar a acompanhar seus medicamentos e consultas. Participe comigo aqui: {{inviteUrl}}",
+    "shareTitle": "Participe do nosso círculo de cuidado",
+    "sentTitle": "Convite enviado",
+    "emailNote": "Também enviamos para {{email}} instruções para participar como {{role}}.",
+    "sendAnother": "Convidar outra pessoa"
+  },
+  "manage": {
+    "subheading": "Todos neste círculo de cuidado. Convide, remova ou gerencie membros abaixo.",
+    "remove": "Remover",
+    "removeMemberLabel": "Remover {{name}}",
+    "memberActionsLabel": "Ações para {{name}}",
+    "inviteActionsLabel": "Ações para o convite de {{email}}",
+    "removeConfirmTitle": "Remover membro?",
+    "removeConfirmBody": "{{name}} perderá o acesso a este círculo de cuidado. Será possível convidar a pessoa novamente depois.",
+    "removeSuccess": "{{name}} não faz mais parte deste círculo.",
+    "setMedResponsible": "Definir como responsável pelos medicamentos",
+    "clearMedResponsible": "Remover responsável pelos medicamentos",
+    "medResponsibleSet": "{{name}} agora é responsável pelos lembretes de medicamentos.",
+    "medResponsibleCleared": "Responsável pelos medicamentos removido.",
+    "pendingHeading": "Convites pendentes",
+    "cancelInvite": "Cancelar convite",
+    "cancelInviteSuccess": "Convite cancelado.",
+    "cancelInviteConfirmTitle": "Cancelar este convite?",
+    "cancelInviteConfirmBody": "{{email}} não poderá mais participar com este convite.",
+    "cancelInviteConfirm": "Cancelar convite",
+    "keepInvite": "Manter convite",
+    "inviteExpired": "Expirado",
+    "inviteExpiresIn_one": "Dias para expirar: {{count}}",
+    "inviteExpiresIn_other": "Expira em {{count}} dias",
+    "inviteExpiresInLabel_one": "Convite para {{email}}, dias para expirar: {{count}}",
+    "inviteExpiresInLabel_other": "O convite para {{email}} expira em {{count}} dias",
+    "resendInvite": "Reenviar",
+    "resendInviteSuccess": "Convite reenviado para {{email}}.",
+    "resendInviteFailed": "Não foi possível reenviar esse convite. Tente novamente.",
+    "leave": "Sair do círculo",
+    "leaveConfirmTitle": "Sair deste círculo?",
+    "leaveConfirmBody": "Perderá o acesso a este círculo de cuidado. O proprietário poderá convidar novamente depois.",
+    "leaveSuccess": "Você saiu do círculo."
+  },
+  "pending": {
+    "heading": "Seus convites",
+    "subheading": "Círculos de cuidado que pediram a sua ajuda.",
+    "invitedYou": "Convite de {{inviter}} para ajudar a cuidar de {{recipient}}",
+    "invitedYouRecipient": "{{inviter}} configurou o CircleCare para ajudar no seu cuidado",
+    "yourCareCircle": "Seu círculo de cuidado",
+    "accept": "Aceitar",
+    "accepting": "Entrando…",
+    "ignoreHint": "Ainda não quer participar? É só deixar o convite aqui — nada acontece até aceitar.",
+    "emptyTitle": "Nenhum convite pendente",
+    "emptyBody": "Quando alguém fizer um convite para um círculo de cuidado, ele aparecerá aqui.",
+    "errorTitle": "Não foi possível carregar os convites",
+    "errorBody": "Verifique sua conexão e tente novamente.",
+    "banner": {
+      "count_one": "Você tem 1 convite pendente",
+      "count_other": "Há {{count}} convites pendentes",
+      "review": "Ver convite",
+      "reviewPlural": "Ver convites"
+    },
+    "expiresLabel": "Expira"
+  }
+}

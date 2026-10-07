@@ -1,0 +1,28 @@
+{
+  "viewOnly": {
+    "banner": "Sie haben nur Lesezugriff – kostenlose Kreise enthalten zwei Pflegepersonen mit Bearbeitungsrechten. Wenn Sie etwas ändern möchten, fragen Sie {{ownerName}} nach einem Upgrade.",
+    "bannerShort": "Nur Lesezugriff – Sie sehen alles, aber Änderungen sind deaktiviert."
+  },
+  "readOnly": {
+    "ownerBanner": "Ihr Abo ist beendet, daher ist dieser Kreis vorerst nur lesbar. Alles ist gespeichert – erneuern Sie das Abo, um dort weiterzumachen, wo Sie aufgehört haben.",
+    "ownerUpgradeCta": "Abo erneuern",
+    "memberBanner": "Dieser Kreis ist derzeit nur lesbar, weil das Abo des Kreis-Admins beendet ist. Alles ist weiterhin einsehbar, und das Bearbeiten ist wieder möglich, sobald der Kreis-Admin das Abo erneuert."
+  },
+  "circleSelection": {
+    "banner": "Ihr Abo ist beendet. Wählen Sie, welchen Kreis Sie kostenlos behalten möchten.",
+    "choose": "Kreis wählen",
+    "title": "Einen Kreis zum Behalten wählen",
+    "pickLabel": "Kreis zum Behalten wählen",
+    "subtitle": "Ihr Abo ist beendet. Wählen Sie, welchen Kreis Sie kostenlos behalten möchten. Ihre anderen Kreise sind nur noch lesbar, bis Sie das Abo erneuern.",
+    "memberCount_one": "{{count}} Mitglied",
+    "memberCount_other": "{{count}} Mitglieder",
+    "confirmButton": "Auswahl bestätigen",
+    "confirmTitle": "Diesen Kreis behalten?",
+    "confirmMessage": "Diese Wahl können Sie nur einmal treffen – Sie können später nicht wechseln, welcher Kreis kostenlos bleibt. Es wird nichts gelöscht: Ihre anderen Kreise bleiben sicher gespeichert, nur lesbar, und mit einem erneuerten Abo haben Sie jederzeit wieder vollen Zugriff auf alle.",
+    "confirmKeep": "Diesen Kreis behalten",
+    "cancel": "Abbrechen",
+    "back": "Zurück",
+    "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "close": "Schließen"
+  }
+}

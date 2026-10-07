@@ -1,0 +1,188 @@
+{
+  "heading": "Perfil e configurações",
+  "subheading": "Gerencie a sua conta, as notificações e as preferências.",
+  "sections": {
+    "account": "Conta",
+    "language": "Idioma",
+    "notifications": "Notificações",
+    "quietHours": "Horário de silêncio",
+    "units": "Unidades de medida",
+    "emailDigest": "Resumo semanal por e-mail",
+    "privacy": "Privacidade"
+  },
+  "account": {
+    "email": "E-mail",
+    "firstName": "Nome",
+    "lastName": "Sobrenome",
+    "timezone": "Fuso horário",
+    "edit": "Editar",
+    "editNameLabel": "Editar nome",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "nameSuccess": "Nome atualizado.",
+    "timezoneSuccess": "Fuso horário atualizado.",
+    "namePlaceholder": "Adicione seu nome",
+    "changePasswordHint": "Para alterar a sua senha, saia da conta e escolha 'Esqueceu a senha?' na página de login."
+  },
+  "timezones": {
+    "America/New_York": "Horário do Leste (ET)",
+    "America/Chicago": "Horário Central (CT)",
+    "America/Denver": "Horário das Montanhas (MT)",
+    "America/Los_Angeles": "Horário do Pacífico (PT)",
+    "America/Phoenix": "Arizona (sem horário de verão)",
+    "America/Anchorage": "Horário do Alasca (AKT)",
+    "Pacific/Honolulu": "Horário do Havaí (HST)",
+    "Europe/London": "Londres (GMT/BST)",
+    "Europe/Paris": "Europa Central (CET)",
+    "Asia/Tokyo": "Japão (JST)",
+    "Australia/Sydney": "Sydney (AEST)"
+  },
+  "language": {
+    "description": "Escolha o idioma usado em todo o app.",
+    "success": "Idioma atualizado.",
+    "names": {
+      "en": "Inglês",
+      "es": "Espanhol"
+    }
+  },
+  "notifications": {
+    "description": "Escolha quais alertas receber.",
+    "groups": {
+      "medications": "Medicamentos",
+      "medicationsDesc": "Doses tomadas, puladas ou não marcadas",
+      "tasks": "Tarefas e consultas",
+      "tasksDesc": "Quando algo for atribuído a você e antes do prazo",
+      "notes": "Notas",
+      "notesDesc": "Quando alguém adiciona uma nota",
+      "tips": "Dicas e sugestões",
+      "tipsDesc": "Lembretes úteis para configurar seu círculo"
+    },
+    "someTurnedOff": "Algumas desativadas",
+    "confirmMedicationsOff": {
+      "title": "Desativar alertas de medicamentos?",
+      "message": "Você não será avisado quando uma dose não for marcada. Desativar mesmo assim?",
+      "confirm": "Desativar",
+      "cancel": "Manter ativado"
+    },
+    "success": "Preferências de notificação atualizadas."
+  },
+  "quietHours": {
+    "description": "Pause as notificações não urgentes durante estes horários.",
+    "enable": "Ativar horário de silêncio",
+    "start": "Horário de início",
+    "end": "Horário de término",
+    "success": "Horário de silêncio atualizado.",
+    "almostAllDayWarning": "O horário de silêncio cobre quase o dia inteiro, então as notificações ficarão retidas até {{endTime}}."
+  },
+  "units": {
+    "description": "Escolha como os valores de peso e glicose são exibidos.",
+    "weight": "Peso",
+    "glucose": "Glicose no sangue",
+    "lbs": "Libras (lbs)",
+    "kg": "Quilogramas (kg)",
+    "mgdl": "mg/dL",
+    "mmoll": "mmol/L",
+    "success": "Unidades atualizadas."
+  },
+  "emailDigest": {
+    "description": "Um resumo semanal da atividade de cuidado enviado para o seu e-mail.",
+    "enable": "Enviar um resumo semanal para mim",
+    "day": "Dia de envio",
+    "premiumNote": "Incluído no Premium.",
+    "success": "Resumo por e-mail atualizado.",
+    "days": {
+      "0": "Domingo",
+      "1": "Segunda-feira",
+      "2": "Terça-feira",
+      "3": "Quarta-feira",
+      "4": "Quinta-feira",
+      "5": "Sexta-feira",
+      "6": "Sábado"
+    }
+  },
+  "subscription": {
+    "title": "Assinatura",
+    "premium": "CircleCare Premium",
+    "premiumDescription": "Você tem acesso completo a todos os recursos do CircleCare.",
+    "freeTitle": "Plano gratuito",
+    "upgradeInApp": "Faça upgrade para o Premium no app CircleCare.",
+    "upgradeBenefit": "Tudo o que a sua família precisa para coordenar o cuidado, em todos os círculos de que faz parte.",
+    "upgradeCta": "Fazer upgrade para o Premium",
+    "orInApp": "Ou faça upgrade no app CircleCare.",
+    "manageSubscription": "Gerenciar assinatura",
+    "manageInApp": "A assinatura foi feita pelo celular, então o cancelamento é feito pela loja de aplicativos. Abra Ajustes > Assinaturas no iPhone ou Play Store > Pagamentos e assinaturas no Android. Também é possível tocar em Gerenciar no app CircleCare.",
+    "manageExisting": "Já assinou? Gerencie ou cancele"
+  },
+  "dataExport": {
+    "title": "Seus dados",
+    "description": "Baixe uma cópia das informações que o CircleCare armazena sobre você em um arquivo JSON.",
+    "cta": "Baixar meus dados",
+    "preparing": "Preparando sua exportação…",
+    "success": "A exportação dos seus dados foi baixada.",
+    "rateLimited": "Você atingiu o limite de exportações de hoje. Tente novamente amanhã.",
+    "error": "Não conseguimos preparar sua exportação. Tente novamente."
+  },
+  "delete": {
+    "title": "Excluir conta",
+    "description": "Exclua permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário. Esta ação não pode ser desfeita. Quer uma cópia das suas informações antes? Use 'Baixar meus dados' acima.",
+    "cta": "Excluir minha conta",
+    "confirmTitle": "Excluir sua conta?",
+    "confirmBody": "Isso exclui permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário — incluindo todos os medicamentos, consultas, tarefas, notas, sinais vitais, documentos e informações de emergência neles. Todas as outras pessoas desses círculos perdem o acesso e serão notificadas. Os círculos dos quais faz parte, mas que não são seus, não são excluídos; apenas deixa de fazer parte deles. Esta ação não pode ser desfeita.",
+    "confirm": "Excluir conta",
+    "keep": "Manter minha conta",
+    "success": "A sua conta foi excluída.",
+    "error": "Não foi possível excluir a sua conta. A sua conta não foi alterada — tente novamente ou envie um e-mail para support@circlecare.app."
+  },
+  "analytics": {
+    "description": "Controle quais dados de uso compartilha conosco.",
+    "enable": "Compartilhar dados de uso",
+    "hint": "Vinculado à sua conta. Ajuda a melhorar o CircleCare — nunca inclui as suas leituras, os nomes dos medicamentos nem o conteúdo das mensagens. Com esta opção desativada, ainda coletamos dados anônimos de uso e de falhas, apenas da sessão, que nunca são vinculados a você."
+  },
+  "footer": {
+    "version": "WEB · v{{version}}"
+  },
+  "cancelReason": {
+    "headlineActive": "Seu Premium continua ativo até {{date}}.",
+    "headlineExpired": "Seu Premium terminou em {{date}}.",
+    "body": "Pode nos contar por que você desativou a renovação? Isso nos ajuda a melhorar.",
+    "reasons": {
+      "autoCharge": "Só não quis ser cobrado automaticamente",
+      "tooExpensive": "Caro demais",
+      "somethingBroken": "Algo não funcionou",
+      "missingFeature": "Falta um recurso de que preciso",
+      "notNeeded": "Eu não precisava",
+      "other": "Outro"
+    },
+    "commentLabel": "Adicionar um comentário (opcional)",
+    "placeholderBroken": "O que aconteceu?",
+    "placeholderMissing": "O que você estava procurando?",
+    "placeholderDefault": "Mais alguma coisa? (opcional)",
+    "send": "Enviar",
+    "notNow": "Agora não",
+    "error": "Não foi possível enviar. Tente novamente.",
+    "thanks": "Obrigado, isso ajuda muito.",
+    "reassurance": "Entendi. Você mantém o acesso total até {{date}}."
+  },
+  "avatarColor": {
+    "label": "Sua cor",
+    "hint": "Aparece atrás da sua inicial nas listas de membros. Todos nos seus círculos a veem.",
+    "pickerTitle": "Escolha sua cor",
+    "saved": "Cor atualizada.",
+    "saveFailed": "Não conseguimos atualizar sua cor. Tente novamente.",
+    "names": {
+      "moss": "Verde-sálvia",
+      "coral": "Coral",
+      "dusk": "Azul-ardósia",
+      "clay": "Argila",
+      "forest": "Verde-floresta",
+      "amber": "Âmbar"
+    },
+    "selected": "selecionada"
+  },
+  "timezoneImpact": {
+    "impactTitle": "Alterar seu fuso horário?",
+    "impactMessage_one": "Os horários das doses de {{names}} seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para {{zone}} move esses lembretes para o mesmo horário em {{zone}}.",
+    "impactMessage_other": "Os horários das doses de {{names}} seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para {{zone}} move esses lembretes para o mesmo horário em {{zone}}.",
+    "impactConfirm": "Alterar fuso horário"
+  }
+}

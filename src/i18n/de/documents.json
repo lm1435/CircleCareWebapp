@@ -1,0 +1,127 @@
+{
+  "title": "Dokumente",
+  "subtitle": "Versicherungskarten, Unterlagen und Verfügungen an einem Ort.",
+  "count_one": "{{count}} Dokument",
+  "count_other": "{{count}} Dokumente",
+  "filterLabel": "Nach Kategorie filtern",
+  "categories": {
+    "all": "Alle",
+    "medical_records": "Medizinische Unterlagen",
+    "insurance": "Versicherung",
+    "legal": "Rechtliches",
+    "prescriptions": "Rezepte",
+    "other": "Sonstiges"
+  },
+  "uploadCtaTitle": "Möchten Sie ein Dokument hinzufügen?",
+  "uploadCta": "Nur Mitglieder mit Bearbeitungsrechten können Dokumente zu diesem Kreis hinzufügen. Fragen Sie den Kreis-Admin, wenn etwas ergänzt werden soll.",
+  "errorTitle": "Dokumente konnten nicht geladen werden",
+  "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+  "noDocuments": "Noch keine Dokumente",
+  "noDocumentsHint": "Bewahren Sie die wichtigen Dokumente Ihrer Angehörigen oder Ihres Angehörigen an einem Ort auf – Versicherungskarten, Unterlagen, Verfügungen –, damit alle, die helfen, sie im Ernstfall finden.",
+  "noDocumentsHintReadOnly": "Mit diesem Kreis geteilte Dokumente erscheinen hier, damit alle, die helfen, sie im Ernstfall finden.",
+  "emptyCategory": {
+    "title": "In „{{category}}“ ist noch nichts.",
+    "action": "Alle Dokumente anzeigen"
+  },
+  "starter": {
+    "eyebrow": "Hier beginnen",
+    "title": "Beginnen Sie mit diesen vier",
+    "lede": "Wer gerade hilft, kann sie in Sekunden aufrufen – in der Apotheke, in der Notaufnahme, am Telefon mit einer Pflegekraft.",
+    "items": {
+      "insurance": {
+        "title": "Versicherungskarte",
+        "hint": "Erst die Vorderseite, dann die Rückseite hinzufügen"
+      },
+      "directive": {
+        "title": "Patientenverfügung",
+        "hint": "DNR (keine Wiederbelebung), Vorsorgevollmacht, Patientenverfügung"
+      },
+      "medications": {
+        "title": "Medikamentenliste",
+        "hint": "Der Ausdruck aus der Apotheke"
+      },
+      "labs": {
+        "title": "Aktuelle Laborergebnisse",
+        "hint": "Blutwerte, Bildgebung, Entlassungsberichte"
+      }
+    },
+    "other": "Etwas anderes hochladen"
+  },
+  "open": "Öffnen",
+  "download": "Herunterladen",
+  "downloadDocument": "{{name}} herunterladen",
+  "downloadFailed": "Der Download ist fehlgeschlagen. Bitte versuchen Sie es erneut.",
+  "closePreview": "Vorschau schließen",
+  "pdfFallbackHint": "PDF wird nicht angezeigt? Öffnen Sie es in einem neuen Tab oder laden Sie es herunter.",
+  "openInNewTab": "In neuem Tab öffnen",
+  "viewer": {
+    "failedTitle": "Dieses Dokument konnte nicht geöffnet werden",
+    "failedMessage": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    "unsupportedTitle": "Diese Datei kann hier nicht angezeigt werden",
+    "unsupportedMessage": "Mit „Herunterladen“ speichern Sie sie auf Ihrem Gerät.",
+    "downloadStarted": "Download gestartet.",
+    "newTabBlocked": "Ihr Browser hat den neuen Tab blockiert, deshalb wird die Datei stattdessen heruntergeladen.",
+    "newTabFailed": "Dieses Dokument konnte nicht in einem neuen Tab geöffnet werden. Bitte versuchen Sie es erneut."
+  },
+  "editAction": "Bearbeiten",
+  "deleteAction": "Löschen",
+  "actionsFor": "Optionen für {{name}}",
+  "storage": {
+    "footnote": "{{used}} von {{limit}} belegt",
+    "used": "{{used}} belegt",
+    "remaining": "{{remaining}} frei",
+    "full": "Speicher voll. Führen Sie ein Upgrade für mehr Platz durch.",
+    "fullNonOwnerNamed": "Speicher voll. Nur {{ownerName}}, der Kreis-Admin, kann für mehr Platz ein Upgrade durchführen.",
+    "fullNonOwner": "Speicher voll. Nur der Kreis-Admin kann für mehr Platz ein Upgrade durchführen.",
+    "fullPremium": "Speicher voll. Löschen Sie nicht mehr benötigte Dateien, um Platz zu schaffen.",
+    "upgrade": "Upgrade",
+    "trackLabel": "Belegter Speicher"
+  },
+  "upload": {
+    "openButton": "Dokument hochladen",
+    "emptyButton": "Erstes Dokument hochladen",
+    "title": "Dokument hochladen",
+    "submit": "Hochladen",
+    "success": "Dokument hochgeladen.",
+    "fileLabel": "Datei",
+    "chooseFile": "Datei auswählen",
+    "noFileChosen": "Keine Datei ausgewählt",
+    "fileHint": "JPG, PNG, HEIC oder PDF. Bis zu {{max}}.",
+    "storageRemaining": "{{remaining}} frei",
+    "storageFull": "Dieser Kreis hat sein Speicherlimit erreicht. Schaffen Sie Platz oder wechseln Sie zu Premium, um mehr hinzuzufügen.",
+    "storageFullPremium": "Dieser Kreis hat sein Speicherlimit von 1 GB erreicht. Schaffen Sie Platz, um mehr hinzuzufügen.",
+    "labelLabel": "Name",
+    "categoryLabel": "Kategorie",
+    "noteLabel": "Notiz (optional)",
+    "noteHint": "Ergänzen Sie Hinweise für andere Pflegepersonen.",
+    "errors": {
+      "fileRequired": "Wählen Sie eine Datei zum Hochladen aus.",
+      "fileType": "Verwenden Sie eine JPG-, PNG-, HEIC- oder PDF-Datei.",
+      "fileTooLarge": "Diese Datei ist zu groß. Das Limit beträgt {{max}}.",
+      "storageFull": "Diese Datei würde das Speicherlimit des Kreises überschreiten.",
+      "labelRequired": "Geben Sie einen Namen für dieses Dokument ein.",
+      "noteTooLong": "Notizen dürfen bis zu 500 Zeichen lang sein."
+    },
+    "unsupportedOrDamaged": "Dieser Dateityp wird nicht unterstützt oder die Datei ist beschädigt. Versuchen Sie es mit einer anderen Datei."
+  },
+  "edit": {
+    "title": "Dokument bearbeiten",
+    "success": "Dokument aktualisiert.",
+    "errors": {
+      "labelRequired": "Geben Sie einen Namen für dieses Dokument ein.",
+      "noteTooLong": "Notizen dürfen bis zu 500 Zeichen lang sein."
+    }
+  },
+  "delete": {
+    "title": "Dokument löschen?",
+    "message": "„{{name}}“ löschen? Das kann nicht rückgängig gemacht werden.",
+    "confirm": "Löschen",
+    "deleting": "Wird gelöscht …",
+    "success": "Dokument gelöscht."
+  },
+  "errors": {
+    "storageFull": "Dieser Kreis hat sein Speicherlimit erreicht. Schaffen Sie Platz, um weitere Dokumente hinzuzufügen.",
+    "permissionDenied": "Dafür haben Sie keine Berechtigung.",
+    "saveFailed": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "subtitle": "Cartões de seguro, registos médicos e diretivas, num só lugar.",
+  "categories": {
+    "medical_records": "Registos médicos"
+  },
+  "uploadCta": "Apenas membros com permissão de edição podem adicionar documentos a este círculo. Peça ao proprietário do círculo se precisar que algo seja adicionado.",
+  "errorHint": "Verifique a sua ligação e tente novamente.",
+  "noDocumentsHint": "Guarde os documentos importantes do seu ente querido num só lugar (cartões de seguro, registos, diretivas) para que todos os que ajudam os possam encontrar quando for preciso.",
+  "noDocumentsHintReadOnly": "Os documentos partilhados com este círculo aparecerão aqui para que todos os que ajudam os possam encontrar quando for preciso.",
+  "starter": {
+    "lede": "Quem estiver a ajudar pode aceder-lhes em segundos: na farmácia, nas urgências, ao telefone com uma enfermeira.",
+    "items": {
+      "insurance": {
+        "title": "Cartão do seguro de saúde"
+      },
+      "directive": {
+        "hint": "DNR, procuração, testamento vital"
+      },
+      "labs": {
+        "title": "Resultados de análises recentes",
+        "hint": "Análises ao sangue, imagens, notas de alta"
+      }
+    },
+    "other": "Carregar outro documento"
+  },
+  "download": "Transferir",
+  "downloadDocument": "Transferir {{name}}",
+  "downloadFailed": "Falha ao transferir. Tente novamente.",
+  "pdfFallbackHint": "O PDF não aparece? Abra num novo separador ou transfira o ficheiro.",
+  "openInNewTab": "Abrir num novo separador",
+  "viewer": {
+    "failedMessage": "Verifique a sua ligação e tente novamente.",
+    "unsupportedTitle": "Este ficheiro não pode ser visualizado aqui",
+    "unsupportedMessage": "Use Transferir para o guardar no seu dispositivo.",
+    "downloadStarted": "Transferência iniciada.",
+    "newTabBlocked": "O seu navegador bloqueou o novo separador, por isso o ficheiro está a ser transferido.",
+    "newTabFailed": "Não foi possível abrir este documento num novo separador. Tente novamente."
+  },
+  "deleteAction": "Eliminar",
+  "storage": {
+    "fullPremium": "Armazenamento cheio. Elimine os ficheiros de que já não precisa para libertar espaço.",
+    "fullNonOwnerNamed": "Armazenamento cheio. Apenas {{ownerName}}, proprietário do círculo, pode fazer upgrade para ter mais espaço."
+  },
+  "upload": {
+    "openButton": "Carregar documento",
+    "emptyButton": "Carregue o seu primeiro documento",
+    "title": "Carregar um documento",
+    "submit": "Carregar",
+    "success": "Documento carregado.",
+    "fileLabel": "Ficheiro",
+    "chooseFile": "Escolher ficheiro",
+    "noFileChosen": "Nenhum ficheiro escolhido",
+    "storageFull": "Este círculo atingiu o limite de armazenamento. Liberte espaço ou faça upgrade para o Premium para adicionar mais.",
+    "storageFullPremium": "Este círculo atingiu o limite de armazenamento de 1 GB. Liberte espaço para adicionar mais.",
+    "errors": {
+      "fileRequired": "Escolha um ficheiro para carregar.",
+      "fileType": "Use um ficheiro JPG, PNG, HEIC ou PDF.",
+      "fileTooLarge": "Este ficheiro é demasiado grande. O limite é {{max}}.",
+      "labelRequired": "Introduza um nome para este documento.",
+      "storageFull": "Este ficheiro excederia o limite de armazenamento do círculo."
+    },
+    "unsupportedOrDamaged": "Este tipo de ficheiro não é compatível ou o ficheiro está danificado. Tente outro ficheiro."
+  },
+  "edit": {
+    "errors": {
+      "labelRequired": "Introduza um nome para este documento."
+    }
+  },
+  "delete": {
+    "title": "Eliminar documento?",
+    "message": "Eliminar \"{{name}}\"? Esta ação não pode ser desfeita.",
+    "confirm": "Eliminar",
+    "deleting": "A eliminar...",
+    "success": "Documento eliminado."
+  },
+  "errors": {
+    "storageFull": "Este círculo atingiu o limite de armazenamento. Liberte espaço para adicionar mais documentos.",
+    "permissionDenied": "Não tem permissão para fazer isso.",
+    "saveFailed": "Ocorreu um erro. Tente novamente."
+  }
+}

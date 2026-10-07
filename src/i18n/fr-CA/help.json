@@ -1,0 +1,24 @@
+{
+  "sections": {
+    "premium": {
+      "items": [
+        {
+          "question": "Que comprend Premium ?",
+          "answer": "CircleCare Premium comprend jusqu’à 5 cercles de soins, un nombre illimité d’aidants par cercle, l’assistant de soins et le récapitulatif hebdomadaire par courriel. Consultez la page de passage à Premium pour connaître les tarifs en vigueur."
+        },
+        {
+          "question": "Puis-je essayer avant d’acheter ?",
+          "answer": "Oui ! CircleCare est gratuit pour commencer, avec un cercle de soins et deux aidants. Quand vous aurez besoin de plus de cercles, d’aidants en nombre illimité ou de fonctionnalités Premium comme l’IA, il vous suffira de passer à Premium."
+        },
+        {
+          "question": "Comment restaurer mes achats ?",
+          "answer": "Dans l’application mobile CircleCare, allez dans Profil > Abonnement > Restaurer les achats. C’est utile si vous réinstallez l’application ou changez de téléphone. Si vous vous êtes abonné ici, sur le web, votre abonnement suit automatiquement votre compte."
+        },
+        {
+          "question": "Comment résilier mon abonnement ?",
+          "answer": "Ouvrez votre Profil et choisissez Gérer l’abonnement : si vous vous êtes abonné sur ce site, vous accédez directement à votre espace de facturation, où vous pouvez résilier en quelques clics. Si vous vous êtes abonné dans l’application mobile, résiliez depuis votre téléphone : Réglages > Abonnements sur iPhone, ou Play Store > Paiements et abonnements sur Android. Dans les deux cas, vous gardez Premium jusqu’à la fin de la période déjà payée, et vous n’avez jamais besoin de contacter l’assistance pour résilier."
+        }
+      ]
+    }
+  }
+}

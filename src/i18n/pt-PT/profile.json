@@ -1,0 +1,71 @@
+{
+  "heading": "Perfil e definições",
+  "subheading": "Faça a gestão da sua conta, das notificações e das preferências.",
+  "account": {
+    "lastName": "Apelido",
+    "save": "Guardar",
+    "changePasswordHint": "Para alterar a sua palavra-passe, termine a sessão e escolha 'Esqueceu-se da palavra-passe?' na página de início de sessão.",
+    "namePlaceholder": "Adicione o seu nome"
+  },
+  "language": {
+    "description": "Escolha o idioma usado em toda a app."
+  },
+  "subscription": {
+    "title": "Subscrição",
+    "premiumDescription": "Tem acesso completo a todos os recursos do CircleCare.",
+    "upgradeInApp": "Faça upgrade para o Premium na app CircleCare.",
+    "orInApp": "Ou faça upgrade na app CircleCare.",
+    "manageSubscription": "Gerir subscrição",
+    "manageInApp": "A subscrição foi feita pelo telemóvel, por isso o cancelamento é feito pela loja de aplicações. Abra Definições > Subscrições no iPhone ou Play Store > Pagamentos e subscrições no Android. Também pode tocar em Gerir na app CircleCare.",
+    "manageExisting": "Já subscreveu? Gerir ou cancelar"
+  },
+  "dataExport": {
+    "title": "Os seus dados",
+    "description": "Transfira uma cópia das informações que o CircleCare guarda sobre si num ficheiro JSON.",
+    "cta": "Transferir os meus dados",
+    "preparing": "A preparar a sua exportação…",
+    "success": "A exportação dos seus dados foi transferida.",
+    "rateLimited": "Atingiu o limite de exportações de hoje. Tente novamente amanhã.",
+    "error": "Não conseguimos preparar a sua exportação. Tente novamente."
+  },
+  "delete": {
+    "title": "Eliminar conta",
+    "description": "Elimine permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário. Esta ação não pode ser desfeita. Quer uma cópia das suas informações antes? Use 'Transferir os meus dados' acima.",
+    "cta": "Eliminar a minha conta",
+    "confirmTitle": "Eliminar a sua conta?",
+    "confirmBody": "Isto elimina permanentemente a sua conta e todos os círculos de cuidado dos quais é proprietário — incluindo todos os medicamentos, consultas, tarefas, notas, sinais vitais, documentos e informações de emergência neles. Todas as outras pessoas desses círculos perdem o acesso e serão notificadas. Os círculos dos quais faz parte, mas que não são seus, não são eliminados; apenas deixa de fazer parte deles. Esta ação não pode ser desfeita.",
+    "confirm": "Eliminar conta",
+    "keep": "Manter a minha conta",
+    "success": "A sua conta foi eliminada.",
+    "error": "Não foi possível eliminar a sua conta. A sua conta não foi alterada — tente novamente ou envie um e-mail para support@circlecare.app."
+  },
+  "analytics": {
+    "description": "Controle quais dados de utilização partilha connosco.",
+    "enable": "Partilhar dados de utilização",
+    "hint": "Associado à sua conta. Ajuda a melhorar o CircleCare — nunca inclui as suas leituras, os nomes dos medicamentos nem o conteúdo das mensagens. Com esta opção desativada, continuamos a recolher dados anónimos de utilização e de falhas, apenas da sessão, que nunca são associados a si."
+  },
+  "cancelReason": {
+    "body": "Pode dizer-nos por que motivo desativou a renovação? Ajuda-nos a melhorar.",
+    "placeholderMissing": "O que estava a procurar?",
+    "reassurance": "Percebi. Mantém o acesso total até {{date}}.",
+    "headlineActive": "O seu Premium continua ativo até {{date}}.",
+    "headlineExpired": "O seu Premium terminou em {{date}}."
+  },
+  "avatarColor": {
+    "label": "A sua cor",
+    "pickerTitle": "Escolha a sua cor",
+    "saveFailed": "Não conseguimos atualizar a sua cor. Tente novamente."
+  },
+  "notifications": {
+    "groups": {
+      "tasksDesc": "Quando algo lhe for atribuído e antes do prazo",
+      "tipsDesc": "Lembretes úteis para configurar o seu círculo"
+    },
+    "confirmMedicationsOff": {
+      "message": "Não será avisado quando uma dose não for marcada. Desativar mesmo assim?"
+    }
+  },
+  "timezoneImpact": {
+    "impactTitle": "Alterar o seu fuso horário?"
+  }
+}

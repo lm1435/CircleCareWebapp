@@ -1,0 +1,28 @@
+{
+  "viewOnly": {
+    "banner": "Vous avez un accès en lecture seule : les cercles gratuits comptent deux aidants pouvant modifier. Pour effectuer des modifications, demandez à {{ownerName}} de passer à Premium.",
+    "bannerShort": "Lecture seule : vous pouvez tout voir, mais les modifications sont désactivées."
+  },
+  "readOnly": {
+    "ownerBanner": "Votre abonnement a pris fin : ce cercle est donc en lecture seule pour le moment. Tout est enregistré : réabonnez-vous pour reprendre là où vous en étiez.",
+    "ownerUpgradeCta": "Se réabonner",
+    "memberBanner": "Ce cercle est en lecture seule pour le moment, car l’abonnement du propriétaire a pris fin. Tout est toujours consultable, et les modifications reviendront si le propriétaire se réabonne."
+  },
+  "circleSelection": {
+    "banner": "Votre abonnement a pris fin. Choisissez le cercle à conserver avec l’accès gratuit.",
+    "choose": "Choisir un cercle",
+    "title": "Choisissez un cercle à conserver",
+    "pickLabel": "Choisir un cercle à conserver",
+    "subtitle": "Votre abonnement a pris fin. Choisissez le cercle à conserver avec l’accès gratuit. Vos autres cercles passeront en lecture seule jusqu’à votre réabonnement.",
+    "memberCount_one": "{{count}} membre",
+    "memberCount_other": "{{count}} membres",
+    "confirmButton": "Confirmer la sélection",
+    "confirmTitle": "Conserver ce cercle ?",
+    "confirmMessage": "Vous ne pouvez faire ce choix qu’une seule fois : vous ne pourrez pas changer le cercle qui reste gratuit. Rien n’est supprimé : vos autres cercles restent en sécurité en lecture seule, et vous pouvez vous réabonner à tout moment pour retrouver l’accès complet à chacun d’eux.",
+    "confirmKeep": "Conserver ce cercle",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "error": "Un problème est survenu. Veuillez réessayer.",
+    "close": "Fermer"
+  }
+}

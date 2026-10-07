@@ -1,0 +1,17 @@
+{
+  "viewOnly": {
+    "banner": "Tem acesso apenas de visualização: os círculos gratuitos incluem dois cuidadores com permissão de edição. Se precisar de fazer alterações, fale com {{ownerName}} sobre o upgrade.",
+    "bannerShort": "Apenas visualização: pode ver tudo, mas as alterações estão desativadas."
+  },
+  "readOnly": {
+    "ownerBanner": "A sua subscrição terminou, por isso este círculo está apenas para visualização por agora. Tudo está guardado: subscreva novamente para continuar de onde parou.",
+    "ownerUpgradeCta": "Subscrever novamente",
+    "memberBanner": "Este círculo está apenas para visualização neste momento porque a subscrição do proprietário terminou. Tudo continua aqui para consulta, e a edição volta se o proprietário subscrever novamente."
+  },
+  "circleSelection": {
+    "banner": "A sua subscrição terminou. Escolha qual círculo manter com acesso gratuito.",
+    "subtitle": "A sua subscrição terminou. Escolha qual círculo manter com acesso gratuito. Os seus outros círculos ficarão apenas para leitura até subscrever novamente.",
+    "confirmMessage": "Só pode fazer esta escolha uma vez: não será possível trocar o círculo que continua gratuito. Nada é eliminado: os seus outros círculos ficam seguros, apenas para leitura, e subscrever novamente a qualquer momento restaura o acesso completo a todos eles.",
+    "error": "Ocorreu um erro. Tente novamente."
+  }
+}

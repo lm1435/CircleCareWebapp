@@ -1,0 +1,65 @@
+{
+  "hero": {
+    "bornAge": "Naissance : {{date}} · {{age}} ans",
+    "caredForBy": "Entouré par",
+    "andMore_one": "+{{count}} autre",
+    "andMore_other": "+{{count}} autres"
+  },
+  "adherence": {
+    "eyebrow": "7 derniers jours",
+    "label": "Médicaments pris à l’heure",
+    "chartSummary": "Observance quotidienne des 7 derniers jours : {{values}}"
+  },
+  "quickAccess": {
+    "title": "Accès rapide",
+    "notes": "Notes",
+    "calendar": "Calendrier",
+    "medications": "Médic.",
+    "tasks": "Tâches",
+    "tasksNote_one": "{{count}} ouverte",
+    "tasksNote_other": "{{count}} ouvertes",
+    "vitals": "Constantes",
+    "activityFeed": "Fil d’activité",
+    "careInfo": "Infos de soins"
+  },
+  "appointments": {
+    "title": "Prochains rendez-vous",
+    "today": "Aujourd’hui",
+    "tomorrow": "Demain",
+    "viewAll": "Tout voir"
+  },
+  "tasks": {
+    "title": "Tâches ouvertes",
+    "empty": "Vous êtes à jour : aucune tâche ouverte.",
+    "emptyFirstRun": "Coordonnez les tâches qui font avancer les soins (courses, renouvellements, suivis) et partagez-les avec tous ceux qui aident.",
+    "addFirst": "Ajouter votre première tâche",
+    "loadError": "Impossible de charger les tâches ouvertes",
+    "showAll": "Tout afficher ({{count}})",
+    "viewAll": "Voir toutes les tâches"
+  },
+  "team": {
+    "title": "Équipe d’aidants",
+    "myTitle": "Mon équipe d’aidants",
+    "count_one": "{{count}} membre",
+    "count_other": "{{count}} membres",
+    "invite": "Inviter un membre",
+    "careRecipient": "Personne aidée",
+    "circleAdmin": "Admin du cercle",
+    "familyMember": "Membre de la famille",
+    "you": "(Vous)",
+    "recipientBadge": "Personne aidée",
+    "medManagerBadge": "Gère les rappels de médicaments"
+  },
+  "solo": {
+    "title": "Prendre soin à plusieurs, c’est plus simple",
+    "body": "Invitez un proche ou un aidant à coordonner les soins pour {{name}} : partagez tâches, rendez-vous et nouvelles pour que personne ne porte tout seul.",
+    "bodySelfCare": "Invitez un proche ou un aidant à vous aider : partagez tâches, rendez-vous et nouvelles pour ne pas porter tout seul.",
+    "cta": "Inviter votre premier aidant"
+  },
+  "settings": {
+    "title": "Gérer",
+    "editCircle": "Modifier le cercle",
+    "members": "Membres",
+    "deleteCircle": "Supprimer le cercle"
+  }
+}

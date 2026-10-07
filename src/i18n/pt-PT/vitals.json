@@ -1,0 +1,48 @@
+{
+  "errorHint": "Verifique a sua ligação e tente novamente.",
+  "fields": {
+    "timesShownIn": "Horários apresentados em {{timezone}}",
+    "dualTimezoneHint": "O seu horário / horário de {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})"
+  },
+  "add": {
+    "save": "Guardar medição"
+  },
+  "edit": {
+    "save": "Guardar alterações"
+  },
+  "actions": {
+    "delete": "Eliminar"
+  },
+  "delete": {
+    "title": "Eliminar esta medição?",
+    "message": "Eliminar a medição de {{type}} de {{date}}? Esta ação não pode ser desfeita."
+  },
+  "empty": {
+    "hintReadOnly": "As medições registadas neste círculo aparecerão aqui para que todos acompanhem a saúde do seu ente querido ao longo do tempo.",
+    "cta": "Registar uma medição"
+  },
+  "emptyState": {
+    "neverLogged": {
+      "description": "Registe medições ao longo do tempo para que o círculo perceba uma tendência antes da próxima consulta.",
+      "cta": {
+        "blood_pressure": "Registar pressão arterial",
+        "heart_rate": "Registar frequência cardíaca",
+        "glucose": "Registar glicose",
+        "weight": "Registar peso"
+      }
+    }
+  },
+  "toast": {
+    "deleted": "Medição eliminada"
+  },
+  "validation": {
+    "valueRequired": "Introduza um valor.",
+    "diastolicRequired": "Introduza o valor da diastólica."
+  },
+  "errors": {
+    "permissionDenied": "Não tem permissão para fazer esta alteração.",
+    "saveFailed": "Não foi possível guardar as alterações. Tente novamente."
+  },
+  "loading": "A carregar sinais vitais"
+}

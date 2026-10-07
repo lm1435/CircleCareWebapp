@@ -1,0 +1,127 @@
+{
+  "title": "Documenti",
+  "subtitle": "Tessere assicurative, cartelle cliniche e direttive, tutto in un unico posto.",
+  "count_one": "{{count}} documento",
+  "count_other": "{{count}} documenti",
+  "filterLabel": "Filtra per categoria",
+  "categories": {
+    "all": "Tutti",
+    "medical_records": "Cartelle cliniche",
+    "insurance": "Assicurazione",
+    "legal": "Documenti legali",
+    "prescriptions": "Prescrizioni",
+    "other": "Altro"
+  },
+  "uploadCtaTitle": "Vuoi aggiungere un documento?",
+  "uploadCta": "Solo i membri con accesso in modifica possono aggiungere documenti a questa cerchia. Se ti serve qualcosa in più, chiedi al titolare della cerchia.",
+  "errorTitle": "Non è stato possibile caricare i documenti",
+  "errorHint": "Controlla la connessione e riprova.",
+  "noDocuments": "Ancora nessun documento",
+  "noDocumentsHint": "Tieni i documenti importanti della persona cara in un unico posto, come tessere assicurative, cartelle cliniche e direttive, così chi aiuta può trovarli quando serve.",
+  "noDocumentsHintReadOnly": "I documenti condivisi con questa cerchia compariranno qui, così chi aiuta può trovarli quando serve.",
+  "emptyCategory": {
+    "title": "Ancora niente in {{category}}.",
+    "action": "Mostra tutti i documenti"
+  },
+  "starter": {
+    "eyebrow": "Da dove iniziare",
+    "title": "Inizia da questi quattro",
+    "lede": "Chiunque dia una mano può trovarli in pochi secondi: in farmacia, al pronto soccorso, al telefono con un infermiere.",
+    "items": {
+      "insurance": {
+        "title": "Tessera assicurativa",
+        "hint": "Aggiungi prima il fronte, poi il retro"
+      },
+      "directive": {
+        "title": "Direttive anticipate",
+        "hint": "DNR, procura, testamento biologico"
+      },
+      "medications": {
+        "title": "Elenco dei farmaci",
+        "hint": "Il foglio stampato dalla farmacia"
+      },
+      "labs": {
+        "title": "Ultimi esami",
+        "hint": "Analisi del sangue, diagnostica per immagini, lettere di dimissione"
+      }
+    },
+    "other": "Carica qualcos'altro"
+  },
+  "open": "Apri",
+  "download": "Scarica",
+  "downloadDocument": "Scarica {{name}}",
+  "downloadFailed": "Download non riuscito. Riprova.",
+  "closePreview": "Chiudi anteprima",
+  "pdfFallbackHint": "Il PDF non si vede? Aprilo in una nuova scheda o scaricalo.",
+  "openInNewTab": "Apri in una nuova scheda",
+  "viewer": {
+    "failedTitle": "Non è stato possibile aprire questo documento",
+    "failedMessage": "Controlla la connessione e riprova.",
+    "unsupportedTitle": "Questo file non può essere visualizzato qui",
+    "unsupportedMessage": "Usa Scarica per salvarlo sul tuo dispositivo.",
+    "downloadStarted": "Download avviato.",
+    "newTabBlocked": "Il browser ha bloccato la nuova scheda, quindi il file viene scaricato.",
+    "newTabFailed": "Non è stato possibile aprire questo documento in una nuova scheda. Riprova."
+  },
+  "editAction": "Modifica",
+  "deleteAction": "Elimina",
+  "actionsFor": "Opzioni per {{name}}",
+  "storage": {
+    "footnote": "{{used}} di {{limit}} usati",
+    "used": "{{used}} usati",
+    "remaining": "{{remaining}} rimanenti",
+    "full": "Spazio esaurito. Passa a Premium per averne di più.",
+    "fullNonOwnerNamed": "Spazio esaurito. Solo {{ownerName}}, titolare della cerchia, può passare a Premium per averne di più.",
+    "fullNonOwner": "Spazio esaurito. Solo il titolare della cerchia può passare a Premium per averne di più.",
+    "fullPremium": "Spazio esaurito. Elimina i file che non ti servono più per liberare spazio.",
+    "upgrade": "Passa a Premium",
+    "trackLabel": "Spazio usato"
+  },
+  "upload": {
+    "openButton": "Carica documento",
+    "emptyButton": "Carica il tuo primo documento",
+    "title": "Carica un documento",
+    "submit": "Carica",
+    "success": "Documento caricato.",
+    "fileLabel": "File",
+    "chooseFile": "Scegli file",
+    "noFileChosen": "Nessun file scelto",
+    "fileHint": "JPG, PNG, HEIC o PDF. Fino a {{max}}.",
+    "storageRemaining": "{{remaining}} rimanenti",
+    "storageFull": "Questa cerchia ha raggiunto il limite di spazio. Libera spazio o passa a Premium per aggiungere altro.",
+    "storageFullPremium": "Questa cerchia ha raggiunto il limite di spazio di 1 GB. Libera spazio per aggiungere altro.",
+    "labelLabel": "Nome",
+    "categoryLabel": "Categoria",
+    "noteLabel": "Nota (facoltativa)",
+    "noteHint": "Aggiungi un po' di contesto per gli altri caregiver.",
+    "errors": {
+      "fileRequired": "Scegli un file da caricare.",
+      "fileType": "Usa un file JPG, PNG, HEIC o PDF.",
+      "fileTooLarge": "Questo file è troppo grande. Il limite è {{max}}.",
+      "storageFull": "Questo file supererebbe il limite di spazio della cerchia.",
+      "labelRequired": "Inserisci un nome per questo documento.",
+      "noteTooLong": "Le note possono contenere fino a 500 caratteri."
+    },
+    "unsupportedOrDamaged": "Questo tipo di file non è supportato oppure il file è danneggiato. Prova con un altro file."
+  },
+  "edit": {
+    "title": "Modifica documento",
+    "success": "Documento aggiornato.",
+    "errors": {
+      "labelRequired": "Inserisci un nome per questo documento.",
+      "noteTooLong": "Le note possono contenere fino a 500 caratteri."
+    }
+  },
+  "delete": {
+    "title": "Eliminare il documento?",
+    "message": "Eliminare \"{{name}}\"? L'operazione non può essere annullata.",
+    "confirm": "Elimina",
+    "deleting": "Eliminazione...",
+    "success": "Documento eliminato."
+  },
+  "errors": {
+    "storageFull": "Questa cerchia ha raggiunto il limite di spazio. Libera spazio per aggiungere altri documenti.",
+    "permissionDenied": "Non hai il permesso di farlo.",
+    "saveFailed": "Qualcosa è andato storto. Riprova."
+  }
+}

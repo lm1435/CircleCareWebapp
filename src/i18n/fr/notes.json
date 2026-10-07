@@ -1,0 +1,62 @@
+{
+  "title": "Notes",
+  "subtitle": "Un journal partagé de chaque journée, visible par tout le cercle.",
+  "loading": "Chargement des notes",
+  "errorTitle": "Impossible de charger les notes",
+  "errorHint": "Vérifiez votre connexion et réessayez.",
+  "empty": {
+    "title": "Aucune note pour l’instant",
+    "hint": "Notez comment s’est passée la journée : tout le cercle peut la voir."
+  },
+  "composer": {
+    "label": "Ajouter une note",
+    "placeholder": "Comment s’est passée la journée ?",
+    "moodLabel": "Humeur",
+    "categoriesLabel": "Catégories",
+    "post": "Publier",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "errorPosting": "Impossible de publier votre note. Elle est toujours là : réessayez.",
+    "errorSaving": "Impossible d’enregistrer la note. Réessayez."
+  },
+  "moods": {
+    "great": "Excellente journée",
+    "good": "Bonne journée",
+    "okay": "Correcte",
+    "tough": "Journée difficile"
+  },
+  "categories": {
+    "meal": "Repas",
+    "medication": "Médicament",
+    "visit": "Visite",
+    "incident": "Incident"
+  },
+  "row": {
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "edited": "Modifiée",
+    "formerMember": "Ancien membre",
+    "actionsFor": "Actions pour la note : {{author}}"
+  },
+  "day": {
+    "today": "Aujourd’hui",
+    "yesterday": "Hier"
+  },
+  "deleteTitle": "Supprimer la note ?",
+  "deleteConfirm": "Cette note sera supprimée pour tout le cercle.",
+  "loadOlder": "Afficher les notes plus anciennes",
+  "postRequirementHint": "Écrivez une note ou choisissez une humeur pour publier",
+  "moodStrip": {
+    "summary": "Cette semaine : {{list}}",
+    "empty": "Aucune humeur notée cette semaine",
+    "dayA11y": "{{day}} : {{summary}}",
+    "count_great_one": "{{count}} excellente",
+    "count_great_other": "{{count}} excellentes",
+    "count_good_one": "{{count}} bonne",
+    "count_good_other": "{{count}} bonnes",
+    "count_okay_one": "{{count}} correcte",
+    "count_okay_other": "{{count}} correctes",
+    "count_tough_one": "{{count}} difficile",
+    "count_tough_other": "{{count}} difficiles"
+  }
+}

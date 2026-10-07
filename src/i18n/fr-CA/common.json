@@ -1,0 +1,10 @@
+{
+  "pageTitles": {
+    "verifyEmail": "Vérifier le courriel",
+    "verifyRequest": "Terminez la vérification de votre courriel",
+    "vitals": "Signes vitaux"
+  },
+  "nav": {
+    "vitals": "Signes vitaux"
+  }
+}

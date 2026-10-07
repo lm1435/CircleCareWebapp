@@ -1,0 +1,28 @@
+{
+  "viewOnly": {
+    "banner": "Hai accesso in sola lettura: le cerchie gratuite includono due caregiver che possono modificare. Se hai bisogno di fare modifiche, chiedi a {{ownerName}} di passare a Premium.",
+    "bannerShort": "Sola lettura: puoi vedere tutto, ma le modifiche sono disattivate."
+  },
+  "readOnly": {
+    "ownerBanner": "Il tuo abbonamento è terminato, quindi per ora questa cerchia è in sola lettura. È tutto salvato: riabbonati per ripartire da dove avevi lasciato.",
+    "ownerUpgradeCta": "Riabbonati",
+    "memberBanner": "Al momento questa cerchia è in sola lettura perché l'abbonamento del titolare è terminato. È ancora tutto qui da vedere e la modifica torna disponibile se il titolare si riabbona."
+  },
+  "circleSelection": {
+    "banner": "Il tuo abbonamento è terminato. Scegli quale cerchia mantenere con l'accesso gratuito.",
+    "choose": "Scegli la cerchia",
+    "title": "Scegli una cerchia da mantenere",
+    "pickLabel": "Scegli una cerchia da mantenere",
+    "subtitle": "Il tuo abbonamento è terminato. Scegli quale cerchia mantenere con l'accesso gratuito. Le altre tue cerchie resteranno in sola lettura finché non ti riabboni.",
+    "memberCount_one": "{{count}} membro",
+    "memberCount_other": "{{count}} membri",
+    "confirmButton": "Conferma la scelta",
+    "confirmTitle": "Mantenere questa cerchia?",
+    "confirmMessage": "Puoi fare questa scelta una sola volta: non potrai cambiare la cerchia che resta gratuita. Non viene eliminato nulla: le tue altre cerchie restano al sicuro in sola lettura e, riabbonandoti in qualsiasi momento, torni ad avere accesso completo a tutte.",
+    "confirmKeep": "Mantieni questa cerchia",
+    "cancel": "Annulla",
+    "back": "Indietro",
+    "error": "Qualcosa è andato storto. Riprova.",
+    "close": "Chiudi"
+  }
+}

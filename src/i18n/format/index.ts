@@ -16,23 +16,35 @@
 import { localeChain } from '../locales';
 import type { LocaleFormat, LocaleFormatOverride } from './types';
 // slot: de (import)
+import { format as de } from './de';
 import { format as en } from './en';
 import { format as es } from './es';
 // slot: fr (import)
+import { format as fr } from './fr';
 // slot: fr-CA (import)
+import { format as frCA } from './fr-CA';
 // slot: it (import)
+import { format as it } from './it';
 // slot: pt (import)
+import { format as pt } from './pt';
 // slot: pt-PT (import)
+import { format as ptPT } from './pt-PT';
 
 export const LOCALE_FORMATS: Record<string, LocaleFormat | LocaleFormatOverride> = {
   // slot: de (entry)
+  de,
   en,
   es,
   // slot: fr (entry)
+  fr,
   // slot: fr-CA (entry)
+  'fr-CA': frCA,
   // slot: it (entry)
+  it,
   // slot: pt (entry)
+  pt,
   // slot: pt-PT (entry)
+  'pt-PT': ptPT,
 };
 
 /** Meridiem for a locale: variant -> base -> en (a variant may omit it). */

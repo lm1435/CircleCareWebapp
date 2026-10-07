@@ -1,0 +1,56 @@
+{
+  "title": "Tâches",
+  "subtitle": "Ce qu’il y a à faire pour votre cercle : confiez, suivez et cochez.",
+  "addTask": "Ajouter une tâche",
+  "loading": "Chargement des tâches",
+  "filter": {
+    "statusPillLabel": "Statut : {{value}}",
+    "status": {
+      "open": "Ouvertes",
+      "completed": "Terminées",
+      "all": "Toutes"
+    },
+    "sortPillLabel": "Tri : {{value}}",
+    "sort": {
+      "due_date": "Échéance",
+      "assignee": "Responsable",
+      "created_at": "Ajoutées récemment"
+    }
+  },
+  "row": {
+    "completeLabel": "Marquer « {{title}} » comme terminée",
+    "undoLabel": "Marquer « {{title}} » comme non terminée",
+    "unassigned": "Non attribuée",
+    "noDueDate": "Sans échéance",
+    "allDay": "Toute la journée",
+    "editLabel": "Modifier « {{title}} »",
+    "completedOn": "Terminée {{date}}",
+    "completing": "Finalisation…",
+    "undo": "Annuler",
+    "done": "Terminée",
+    "statusDone": "(terminée)",
+    "statusPending": "(non terminée)",
+    "viewDetailsLabel": "Voir les détails de « {{title}} »",
+    "overdue": "En retard"
+  },
+  "due": {
+    "today": "Aujourd’hui",
+    "yesterday": "Hier"
+  },
+  "empty": {
+    "open": "Aucune tâche ouverte",
+    "openHint": "Coordonnez les tâches qui font avancer les soins de votre proche : courses, renouvellements, suivis, partagés avec tous ceux qui aident.",
+    "openHintReadOnly": "Les tâches ajoutées par l’équipe d’aidants apparaîtront ici.",
+    "completed": "Aucune tâche terminée pour l’instant",
+    "completedHint": "Les tâches terminées par le cercle apparaîtront ici pour que chacun voie ce qui a été fait.",
+    "all": "Aucune tâche pour l’instant",
+    "allHint": "Coordonnez les tâches qui font avancer les soins de votre proche : courses, renouvellements, suivis, partagés avec tous ceux qui aident.",
+    "cta": "Ajouter une tâche"
+  },
+  "errorTitle": "Impossible de charger les tâches",
+  "errorHint": "Vérifiez votre connexion et réessayez.",
+  "toast": {
+    "completed": "Tâche terminée",
+    "reopened": "Tâche rouverte"
+  }
+}

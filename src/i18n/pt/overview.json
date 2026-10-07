@@ -1,0 +1,65 @@
+{
+  "hero": {
+    "bornAge": "Nascimento: {{date}} · idade {{age}}",
+    "caredForBy": "Cuidado por",
+    "andMore_one": "Mais {{count}}",
+    "andMore_other": "+{{count}} mais"
+  },
+  "adherence": {
+    "eyebrow": "Últimos 7 dias",
+    "label": "Medicamentos em dia",
+    "chartSummary": "Adesão diária nos últimos 7 dias: {{values}}"
+  },
+  "quickAccess": {
+    "title": "Acesso rápido",
+    "notes": "Notas",
+    "calendar": "Calendário",
+    "medications": "Medicamentos",
+    "tasks": "Tarefas",
+    "tasksNote_one": "Em aberto: {{count}}",
+    "tasksNote_other": "{{count}} em aberto",
+    "vitals": "Sinais vitais",
+    "activityFeed": "Feed de atividades",
+    "careInfo": "Informações de cuidado"
+  },
+  "appointments": {
+    "title": "Próximas consultas",
+    "today": "Hoje",
+    "tomorrow": "Amanhã",
+    "viewAll": "Ver todas"
+  },
+  "tasks": {
+    "title": "Tarefas em aberto",
+    "empty": "Tudo em dia: nenhuma tarefa em aberto.",
+    "emptyFirstRun": "Coordene as tarefas que mantêm o cuidado em dia (compras, reposições, retornos) e compartilhe com todos que ajudam.",
+    "addFirst": "Adicione sua primeira tarefa",
+    "loadError": "Não foi possível carregar as tarefas em aberto",
+    "showAll": "Mostrar todas ({{count}})",
+    "viewAll": "Ver todas as tarefas"
+  },
+  "team": {
+    "title": "Equipe de cuidado",
+    "myTitle": "Minha equipe de cuidado",
+    "count_one": "Membros: {{count}}",
+    "count_other": "{{count}} membros",
+    "invite": "Convidar membro",
+    "careRecipient": "Pessoa cuidada",
+    "circleAdmin": "Administrador do círculo",
+    "familyMember": "Familiar",
+    "you": "(Você)",
+    "recipientBadge": "Pessoa cuidada",
+    "medManagerBadge": "Gerencia os lembretes de medicamentos"
+  },
+  "solo": {
+    "title": "O cuidado é mais fácil em conjunto",
+    "body": "Convide um familiar ou cuidador para ajudar a coordenar o cuidado de {{name}}: compartilhem tarefas, consultas e atualizações para que ninguém carregue tudo sozinho.",
+    "bodySelfCare": "Convide um familiar ou cuidador para ajudar: compartilhem tarefas, consultas e atualizações para que você não carregue tudo sozinho.",
+    "cta": "Convidar seu primeiro cuidador"
+  },
+  "settings": {
+    "title": "Gerenciar",
+    "editCircle": "Editar círculo",
+    "members": "Membros",
+    "deleteCircle": "Excluir círculo"
+  }
+}

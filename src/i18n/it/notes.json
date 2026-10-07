@@ -1,0 +1,62 @@
+{
+  "title": "Note",
+  "subtitle": "Un diario condiviso di com'è andata ogni giornata, visibile a tutta la cerchia.",
+  "loading": "Caricamento note",
+  "errorTitle": "Non è stato possibile caricare le note",
+  "errorHint": "Controlla la connessione e riprova.",
+  "empty": {
+    "title": "Ancora nessuna nota",
+    "hint": "Annota com'è andata la giornata: tutti nella cerchia possono vederla."
+  },
+  "composer": {
+    "label": "Aggiungi una nota",
+    "placeholder": "Com'è andata la giornata?",
+    "moodLabel": "Umore",
+    "categoriesLabel": "Categorie",
+    "post": "Pubblica",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "errorPosting": "Non è stato possibile pubblicare la nota. La nota è ancora qui: riprova.",
+    "errorSaving": "Non è stato possibile salvare la nota. Riprova."
+  },
+  "moods": {
+    "great": "Giornata ottima",
+    "good": "Giornata buona",
+    "okay": "Così così",
+    "tough": "Giornata difficile"
+  },
+  "categories": {
+    "meal": "Pasto",
+    "medication": "Farmaco",
+    "visit": "Visita",
+    "incident": "Incidente"
+  },
+  "row": {
+    "edit": "Modifica",
+    "delete": "Elimina",
+    "edited": "Modificata",
+    "formerMember": "Ex membro",
+    "actionsFor": "Azioni per la nota di {{author}}"
+  },
+  "day": {
+    "today": "Oggi",
+    "yesterday": "Ieri"
+  },
+  "deleteTitle": "Eliminare la nota?",
+  "deleteConfirm": "Questa nota verrà rimossa per tutti nella cerchia.",
+  "loadOlder": "Mostra note precedenti",
+  "postRequirementHint": "Scrivi una nota o scegli un umore per pubblicare",
+  "moodStrip": {
+    "summary": "Questa settimana: {{list}}",
+    "empty": "Nessun umore registrato questa settimana",
+    "dayA11y": "{{day}}: {{summary}}",
+    "count_great_one": "{{count}} ottima",
+    "count_great_other": "{{count}} ottime",
+    "count_good_one": "{{count}} buona",
+    "count_good_other": "{{count}} buone",
+    "count_okay_one": "{{count}} così così",
+    "count_okay_other": "{{count}} così così",
+    "count_tough_one": "{{count}} difficile",
+    "count_tough_other": "{{count}} difficili"
+  }
+}

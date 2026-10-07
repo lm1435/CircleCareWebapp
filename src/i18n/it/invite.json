@@ -1,0 +1,54 @@
+{
+  "title": "Hai ricevuto un invito da {{inviterName}} per prenderti cura di {{recipientName}}",
+  "inviterFallback": "Qualcuno",
+  "titleRecipient": "La tua cerchia di cura",
+  "invitedByRecipient": "{{inviterName}} ha configurato CircleCare per aiutarti nella tua cura",
+  "circleLabel": "Cerchia di cura",
+  "appDescription": "CircleCare aiuta le famiglie a coordinare insieme farmaci, appuntamenti e cura quotidiana.",
+  "roles": {
+    "caregiver": "Caregiver",
+    "care_recipient": "Persona assistita"
+  },
+  "accept": "Accetta l'invito",
+  "accepting": "Ingresso in corso…",
+  "acceptSuccess": "Ora fai parte della cerchia.",
+  "acceptFailed": "Al momento non siamo riusciti ad aggiungerti alla cerchia. Riprova e, se il problema continua, chiedi un nuovo invito.",
+  "createAccountToAccept": "Crea un account per entrare",
+  "signInInstead": "Ho già un account",
+  "downloadPromptValid": "Scarica l'app CircleCare per l'esperienza completa",
+  "downloadPromptError": "Intanto scarica l'app, così tutto sarà pronto quando arriverà un nuovo invito",
+  "appStore": "Scarica su App Store",
+  "googlePlay": "Disponibile su Google Play",
+  "codeLabel": "Il tuo codice di invito:",
+  "copyCode": "Copia il codice di invito",
+  "copied": "Copiato",
+  "codeCopied": "Codice di invito copiato negli appunti",
+  "copyFailed": "Non è stato possibile copiare: il codice è mostrato qui sopra.",
+  "loading": "Caricamento del tuo invito",
+  "error": {
+    "title": "Questo invito è scaduto o non è valido",
+    "suggestion": "Chiedi a chi ti ha invitato di mandarti un nuovo invito. Nel frattempo puoi scaricare l'app ed entrare appena arriva il nuovo invito."
+  },
+  "og": {
+    "title": "Invito di {{inviterName}} su CircleCare",
+    "description": "Unisciti a {{circleName}} per aiutare a coordinare la cura di {{recipientName}}",
+    "descriptionRecipient": "Unisciti alla tua cerchia di cura su CircleCare"
+  },
+  "errorUsed": {
+    "title": "Questo invito è già stato usato",
+    "suggestion": "Se hai già fatto ingresso nella cerchia, accedi e troverai la cerchia di cura nell'elenco delle tue cerchie. Altrimenti chiedi a chi ti ha invitato di mandarti un nuovo invito."
+  },
+  "expiresLabel": "Scade",
+  "acceptArchived": "Questa cerchia non è più attiva, quindi l'invito non può essere usato. Chiedi a chi ti ha invitato di sentire il titolare della cerchia.",
+  "acceptRecipientExists": "Questa cerchia ha già una persona assistita, quindi questo invito non può essere usato. Chiedi a chi ti ha invitato di mandarti invece un invito come caregiver.",
+  "errorArchived": {
+    "title": "Questa cerchia di cura non è più attiva",
+    "suggestion": "La cerchia è stata eliminata dopo l'invio del tuo invito, quindi non può essere usato. Il tuo codice è corretto: chiedi a chi ti ha invitato di sentire il titolare della cerchia."
+  },
+  "errorRecipientExists": {
+    "title": "Questa cerchia ha già una persona assistita",
+    "suggestion": "In una cerchia può esserci una sola persona assistita, quindi questo invito non può essere usato. Chiedi a chi ti ha invitato di mandarti invece un invito come caregiver."
+  },
+  "acceptExpired": "Questo invito è scaduto. Chiedi a chi ti ha invitato di mandartene uno nuovo.",
+  "acceptAlreadyUsed": "Questo invito è già stato usato."
+}

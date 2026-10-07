@@ -1,0 +1,54 @@
+{
+  "title": "{{inviterName}} convidou você para ajudar a cuidar de {{recipientName}}",
+  "inviterFallback": "Alguém",
+  "titleRecipient": "Seu círculo de cuidado",
+  "invitedByRecipient": "{{inviterName}} configurou o CircleCare para ajudar no seu cuidado",
+  "circleLabel": "Círculo de cuidado",
+  "appDescription": "O CircleCare ajuda as famílias a coordenar medicamentos, consultas e o cuidado do dia a dia, em conjunto.",
+  "roles": {
+    "caregiver": "Cuidador",
+    "care_recipient": "Pessoa cuidada"
+  },
+  "accept": "Aceitar convite",
+  "accepting": "Entrando…",
+  "acceptSuccess": "Você entrou no círculo.",
+  "acceptFailed": "Não foi possível adicionar você ao círculo agora. Tente novamente e, se continuar sem funcionar, peça um novo convite.",
+  "createAccountToAccept": "Crie uma conta para participar",
+  "signInInstead": "Já tenho uma conta",
+  "downloadPromptValid": "Baixe o app CircleCare para ter a experiência completa",
+  "downloadPromptError": "Enquanto isso, baixe o app para estar pronto quando um novo convite chegar",
+  "appStore": "Baixe na App Store",
+  "googlePlay": "Disponível no Google Play",
+  "codeLabel": "Seu código de convite:",
+  "copyCode": "Copiar código de convite",
+  "copied": "Copiado",
+  "codeCopied": "Código de convite copiado para a área de transferência",
+  "copyFailed": "Não foi possível copiar: o código está exibido acima.",
+  "loading": "Carregando seu convite",
+  "error": {
+    "title": "Este convite expirou ou é inválido",
+    "suggestion": "Peça a quem convidou você que envie um novo convite. Enquanto isso, você pode baixar o app e entrar assim que o novo convite chegar."
+  },
+  "og": {
+    "title": "{{inviterName}} convidou você para o CircleCare",
+    "description": "Participe de {{circleName}} para ajudar a coordenar o cuidado de {{recipientName}}",
+    "descriptionRecipient": "Participe do seu círculo de cuidado no CircleCare"
+  },
+  "errorUsed": {
+    "title": "Este convite já foi usado",
+    "suggestion": "Se você já entrou, faça login e o círculo de cuidado estará na sua lista de círculos. Caso contrário, peça a quem convidou você que envie um novo convite."
+  },
+  "expiresLabel": "Expira em",
+  "acceptArchived": "Este círculo não está mais ativo, então o convite não pode ser usado. Peça a quem convidou você que fale com o proprietário do círculo.",
+  "acceptRecipientExists": "Este círculo já tem uma pessoa cuidada, então este convite não pode ser usado. Peça a quem convidou você que envie um convite de cuidador.",
+  "errorArchived": {
+    "title": "Este círculo de cuidado não está mais ativo",
+    "suggestion": "O círculo foi excluído depois que seu convite foi enviado, então este convite não pode ser usado. Não há nada de errado com o seu código: peça a quem convidou você que fale com o proprietário do círculo."
+  },
+  "errorRecipientExists": {
+    "title": "Este círculo já tem uma pessoa cuidada",
+    "suggestion": "Apenas uma pessoa pode ser a pessoa cuidada em um círculo, então este convite não pode ser usado. Peça a quem convidou você que envie um convite de cuidador."
+  },
+  "acceptExpired": "Este convite expirou. Peça a quem convidou você que envie um novo.",
+  "acceptAlreadyUsed": "Este convite já foi usado."
+}

@@ -1,0 +1,171 @@
+{
+  "picker": {
+    "heading": "Mes cercles",
+    "greeting": {
+      "morning": "Bonjour",
+      "afternoon": "Bon après-midi",
+      "evening": "Bonsoir"
+    },
+    "careCircleCount_one": "{{count}} cercle de soins",
+    "careCircleCount_other": "{{count}} cercles de soins",
+    "open": "Ouvrir {{name}}",
+    "openWithRole": "Ouvrir {{name}} ({{role}})",
+    "openWithRoleOverdue": "Ouvrir {{name}} ({{role}}) — {{status}}",
+    "caringFor": "Pour {{name}}",
+    "caringWith_one": "Soins partagés avec {{count}} personne",
+    "caringWith_other": "Soins partagés avec {{count}} personnes",
+    "personHelping_one": "{{count}} personne aide à coordonner les soins",
+    "personHelping_other": "{{count}} personnes aident à coordonner les soins",
+    "memberCount_one": "{{count}} membre",
+    "memberCount_other": "{{count}} membres",
+    "errorTitle": "Impossible de charger les cercles",
+    "errorBody": "Vérifiez votre connexion et réessayez.",
+    "empty": {
+      "title": "Configurons votre cercle de soins",
+      "body": "Un cercle est un espace privé où la famille et les aidants se réunissent pour prendre soin d’un proche : médicaments, rendez-vous et tâches, tout au même endroit.",
+      "howItWorksTitle": "Comment fonctionne CircleCare",
+      "step1": "Créez un cercle pour votre proche.",
+      "step2": "Invitez la famille et les aidants à partager la charge.",
+      "step3": "Tout le monde voit le même calendrier : médicaments, rendez-vous et tâches au même endroit.",
+      "learnMore": "En savoir plus",
+      "invitedHintPrefix": "Une invitation reçue par e-mail ?",
+      "invitedHintLink": "Consultez vos invitations",
+      "companion": "Vous préférez votre téléphone ? Téléchargez l’application mobile."
+    }
+  },
+  "med": {
+    "nothingTrackedYet": "Rien n’est encore suivi",
+    "allTaken": "Tous les médicaments sont pris",
+    "takenToday": "{{taken}}/{{total}} prises aujourd’hui",
+    "takenOverdue": "{{taken}}/{{total}} prises · {{overdue}} en retard"
+  },
+  "roles": {
+    "owner": "Propriétaire",
+    "caregiver": "Aidant",
+    "careRecipient": "Personne aidée"
+  },
+  "access": {
+    "readOnly": "Lecture seule",
+    "viewOnly": "Lecture seule",
+    "readOnlyOwnerSubtitle": "Votre abonnement est terminé : lecture seule pour l’instant.",
+    "readOnlyMemberSubtitle": "Vous pouvez consulter ce cercle, mais pas le modifier",
+    "viewOnlySubtitle": "Lecture seule : demandez au propriétaire du cercle si vous devez faire des modifications."
+  },
+  "member": {
+    "notificationsOff": "Notifications désactivées",
+    "notificationsOffFor": "Notifications désactivées pour {{name}}",
+    "notificationsOffExplain": "{{name}} n’a pas activé les notifications dans l’application CircleCare : les rappels n’arriveront donc pas sur son téléphone.",
+    "notificationsOffExplainNoName": "Ce membre n’a pas activé les notifications dans l’application CircleCare : les rappels n’arriveront donc pas sur son téléphone."
+  },
+  "list": {
+    "heading": "Membres",
+    "subheadingReadOnly": "Toutes les personnes qui aident à coordonner les soins dans ce cercle.",
+    "joined": "Dans le cercle depuis le {{date}}",
+    "you": "(vous)",
+    "medResponsible": "Gère les rappels de médicaments",
+    "errorTitle": "Impossible de charger les membres",
+    "errorBody": "Vérifiez votre connexion et réessayez.",
+    "empty": "Aucun membre dans ce cercle pour l’instant.",
+    "soloTitle": "Prendre soin est plus simple à plusieurs",
+    "soloBody": "Invitez un proche ou un autre aidant pour coordonner les soins de votre proche : partagez tâches, rendez-vous et nouvelles pour que personne ne porte tout seul.",
+    "soloCta": "Inviter votre premier aidant"
+  },
+  "errors": {
+    "permissionDenied": "Vous n’avez pas l’autorisation d’effectuer cette modification.",
+    "saveFailed": "Une erreur s’est produite. Réessayez.",
+    "alreadyMember": "Cette personne fait déjà partie de ce cercle.",
+    "pendingInvite": "Cette personne a déjà une invitation en attente.",
+    "pendingInviteSeat": "Votre invitation gratuite est déjà utilisée : la place est réservée par une invitation en attente pour {{email}}. Annulez cette invitation pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "pendingInviteSeatUnknown": "Votre invitation gratuite est déjà utilisée : la place est réservée par une autre invitation en attente. Annulez cette invitation pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "circleArchived": "Ce cercle de soins n’est plus actif : les invitations ne peuvent donc plus être envoyées ni acceptées.",
+    "careRecipientExists": "Ce cercle a déjà une personne aidée."
+  },
+  "invite": {
+    "cta": "Inviter un membre",
+    "title": "Inviter un membre",
+    "subtitle": "Nous lui enverrons par e-mail une invitation à rejoindre ce cercle de soins.",
+    "emailLabel": "Adresse e-mail",
+    "emailPlaceholder": "nom@exemple.com",
+    "roleLabel": "Son rôle",
+    "roleHints": {
+      "caregiver": "Peut consulter et aider à coordonner les soins.",
+      "careRecipient": "La personne qui reçoit les soins."
+    },
+    "circleLabel": "Cercle de soins",
+    "send": "Envoyer l’invitation",
+    "sending": "Envoi…",
+    "success": "Partagez le lien pour que cette personne puisse rejoindre le cercle tout de suite.",
+    "capReached": "Les cercles gratuits incluent jusqu’à deux aidants. Passez à Premium pour en ajouter d’autres.",
+    "pendingSeat": "Votre invitation gratuite est déjà utilisée : la place est réservée par une invitation en attente pour {{email}}. Annulez-la dans Invitations en attente pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "pendingSeatUnknown": "Votre invitation gratuite est déjà utilisée : la place est réservée par une autre invitation en attente. Annulez-la dans Invitations en attente pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
+    "errors": {
+      "emailInvalid": "Saisissez une adresse e-mail valide.",
+      "roleRequired": "Choisissez un rôle."
+    },
+    "shareLink": "Partager le lien d’invitation",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié",
+    "copyFailed": "Impossible de copier le lien",
+    "shareMessage": "Rejoignez-moi sur CircleCare pour coordonner les soins pour {{recipientName}}. {{inviteUrl}}",
+    "shareMessageSelfCare": "Rejoignez-moi sur CircleCare pour m’aider à suivre mes soins. {{inviteUrl}}",
+    "shareMessageRecipient": "J’ai configuré CircleCare pour suivre vos médicaments et vos rendez-vous. Rejoignez-moi ici : {{inviteUrl}}",
+    "shareTitle": "Rejoignez notre cercle de soins",
+    "sentTitle": "Invitation envoyée",
+    "emailNote": "Nous avons aussi envoyé à {{email}} les instructions pour rejoindre le cercle avec le rôle « {{role}} ».",
+    "sendAnother": "Inviter quelqu’un d’autre"
+  },
+  "manage": {
+    "subheading": "Toutes les personnes de ce cercle de soins. Invitez, retirez ou gérez les membres ci-dessous.",
+    "remove": "Retirer",
+    "removeMemberLabel": "Retirer {{name}}",
+    "memberActionsLabel": "Actions pour {{name}}",
+    "inviteActionsLabel": "Actions pour l’invitation envoyée à {{email}}",
+    "removeConfirmTitle": "Retirer ce membre ?",
+    "removeConfirmBody": "{{name}} perdra l’accès à ce cercle de soins. Vous pourrez l’inviter à nouveau plus tard.",
+    "removeSuccess": "{{name}} ne fait plus partie du cercle.",
+    "setMedResponsible": "Désigner responsable des rappels",
+    "clearMedResponsible": "Retirer le responsable des rappels",
+    "medResponsibleSet": "{{name}} gère désormais les rappels de médicaments.",
+    "medResponsibleCleared": "Responsable des rappels retiré.",
+    "pendingHeading": "Invitations en attente",
+    "cancelInvite": "Annuler l’invitation",
+    "cancelInviteSuccess": "Invitation annulée.",
+    "cancelInviteConfirmTitle": "Annuler cette invitation ?",
+    "cancelInviteConfirmBody": "{{email}} ne pourra plus rejoindre le cercle avec cette invitation.",
+    "cancelInviteConfirm": "Annuler l’invitation",
+    "keepInvite": "Conserver l’invitation",
+    "inviteExpired": "Expirée",
+    "inviteExpiresIn_one": "Expire dans {{count}} jour",
+    "inviteExpiresIn_other": "Expire dans {{count}} jours",
+    "inviteExpiresInLabel_one": "L’invitation envoyée à {{email}} expire dans {{count}} jour",
+    "inviteExpiresInLabel_other": "L’invitation envoyée à {{email}} expire dans {{count}} jours",
+    "resendInvite": "Renvoyer",
+    "resendInviteSuccess": "Invitation renvoyée à {{email}}.",
+    "resendInviteFailed": "Nous n’avons pas pu renvoyer cette invitation. Réessayez.",
+    "leave": "Quitter le cercle",
+    "leaveConfirmTitle": "Quitter ce cercle ?",
+    "leaveConfirmBody": "Vous perdrez l’accès à ce cercle de soins. Le propriétaire pourra vous inviter à nouveau plus tard.",
+    "leaveSuccess": "Vous avez quitté le cercle."
+  },
+  "pending": {
+    "heading": "Vos invitations",
+    "subheading": "Les cercles de soins qui font appel à votre aide.",
+    "invitedYou": "{{inviter}} vous invite à rejoindre le cercle de soins pour {{recipient}}",
+    "invitedYouRecipient": "{{inviter}} a configuré CircleCare pour vous aider dans vos soins",
+    "yourCareCircle": "Votre cercle de soins",
+    "accept": "Accepter",
+    "accepting": "Connexion au cercle…",
+    "ignoreHint": "Vous hésitez à rejoindre le cercle ? Laissez simplement l’invitation ici : rien ne se passe tant que vous n’acceptez pas.",
+    "emptyTitle": "Aucune invitation en attente",
+    "emptyBody": "Quand quelqu’un vous invite dans un cercle de soins, l’invitation apparaît ici.",
+    "errorTitle": "Impossible de charger les invitations",
+    "errorBody": "Vérifiez votre connexion et réessayez.",
+    "banner": {
+      "count_one": "Vous avez 1 invitation en attente",
+      "count_other": "Vous avez {{count}} invitations en attente",
+      "review": "Consulter l’invitation",
+      "reviewPlural": "Consulter les invitations"
+    },
+    "expiresLabel": "Expiration"
+  }
+}

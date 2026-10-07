@@ -1,0 +1,105 @@
+{
+  "title": "Aide et FAQ",
+  "subtitle": "Trouvez des réponses aux questions courantes",
+  "sections": {
+    "gettingStarted": {
+      "title": "Pour commencer",
+      "items": [
+        {
+          "question": "Qu’est-ce qu’un cercle de soins ?",
+          "answer": "Un cercle de soins est un groupe privé pour coordonner les soins d’une personne (un parent ou un grand-parent, par exemple). Les membres de la famille rejoignent le cercle pour partager des nouvelles, suivre les médicaments et rester en contact."
+        },
+        {
+          "question": "Combien de cercles puis-je créer ?",
+          "answer": "Chacun peut créer un cercle de soins avec la formule gratuite. Les abonnés Premium peuvent en créer jusqu’à 5, ce qui est pratique pour les familles qui accompagnent plusieurs proches."
+        },
+        {
+          "question": "Dois-je payer pour rejoindre le cercle de quelqu’un ?",
+          "answer": "Non : être invité dans le cercle de quelqu’un est toujours gratuit, et chacun peut créer un cercle personnel avec la formule gratuite. Un abonnement n’est nécessaire que pour des cercles supplémentaires, davantage d’aidants et les fonctionnalités Premium."
+        }
+      ]
+    },
+    "roles": {
+      "title": "Cercles et rôles",
+      "items": [
+        {
+          "question": "Quelle est la différence entre propriétaire, aidant et personne aidée ?",
+          "answer": "Le propriétaire crée le cercle ; il peut inviter des membres, gérer les paramètres et supprimer le cercle. Les aidants sont des proches qui aident à coordonner les soins : ils peuvent consulter et mettre à jour les informations. La personne aidée est celle dont on prend soin : elle reçoit les rappels de médicaments et peut confirmer qu’elle les a pris."
+        },
+        {
+          "question": "Puis-je faire partie de plusieurs cercles ?",
+          "answer": "Oui ! Vous pouvez être membre de plusieurs cercles. Par exemple, vous pouvez être propriétaire du cercle de votre mère et aidant dans le cercle de votre père, créé par un frère ou une sœur."
+        }
+      ]
+    },
+    "medications": {
+      "title": "Suivi des médicaments",
+      "items": [
+        {
+          "question": "Comment fonctionnent les rappels de médicaments ?",
+          "answer": "Lorsque vous ajoutez un médicament, la personne aidée reçoit une notification push à l’heure prévue. Elle appuie sur « Je l’ai pris » pour confirmer, et tous les membres de la famille du cercle en sont informés. Si la dose n’est pas confirmée au bout de 15 minutes, votre proche reçoit un rappel discret. Au bout de 30 minutes, tous les aidants du cercle sont prévenus. Au bout d’1 heure, tout le cercle est alerté. Rien n’est enregistré automatiquement : tant que personne ne l’indique comme Prise ou Sautée, la dose apparaît simplement comme Non renseignée."
+        },
+        {
+          "question": "Que se passe-t-il si une dose n’est pas renseignée ?",
+          "answer": "Si une dose n’a pas été renseignée au bout d’1 heure, tout le cercle est prévenu qu’elle n’a pas encore été renseignée. La dose reste Non renseignée tant que personne ne l’indique comme Prise ou Sautée, et une dose renseignée après sa plage horaire apparaît comme Prise en retard. Vous pouvez consulter l’historique du médicament pour repérer des tendances au fil du temps, notamment l’observance et les doses les plus souvent non renseignées."
+        },
+        {
+          "question": "Puis-je programmer des médicaments qui ne se prennent pas tous les jours ?",
+          "answer": "Oui ! Vous pouvez programmer des médicaments quotidiens, un jour sur deux, hebdomadaires (jours précis), mensuels ou par cycles d’activation et de pause. Pour les médicaments pris uniquement en cas de besoin, choisissez « Si besoin » : il n’y a pas d’horaires fixes, et la personne qui donne une dose l’enregistre pour que tout le cercle voie quand elle a été donnée pour la dernière fois."
+        }
+      ]
+    },
+    "notifications": {
+      "title": "Notifications",
+      "items": [
+        {
+          "question": "Où vais-je recevoir les notifications ?",
+          "answer": "Les rappels et les alertes sont envoyés sous forme de notifications push via l’application mobile CircleCare. Vous pouvez gérer vos préférences de notification ici sur le web, mais pour recevoir réellement les rappels, installez l’application sur votre téléphone et activez les notifications."
+        },
+        {
+          "question": "Quelles notifications vais-je recevoir ?",
+          "answer": "Vous recevrez des alertes réparties en quatre groupes que vous pouvez activer ou désactiver dans Profil : Médicaments (doses prises, sautées ou non renseignées), Tâches et rendez-vous (lorsqu’un élément vous est attribué et avant son échéance), Notes (lorsque quelqu’un ajoute une note) et Conseils et suggestions. Si vous êtes la personne aidée, vous recevez aussi vos propres rappels de dose, toujours activés."
+        },
+        {
+          "question": "Que sont les heures de silence ?",
+          "answer": "Les heures de silence suspendent les notifications pendant les plages que vous définissez (par exemple la nuit, de 22 h à 7 h). Allez dans Profil et paramètres pour configurer vos heures de silence."
+        },
+        {
+          "question": "Puis-je désactiver certaines notifications ?",
+          "answer": "Oui. Allez dans Profil, puis Notifications. Chacun des quatre interrupteurs active ou désactive un groupe entier pour votre compte, dans tous les cercles dont vous faites partie. Si vous désactivez Médicaments, vous ne serez pas prévenu lorsqu’une dose n’est pas renseignée."
+        }
+      ]
+    },
+    "premium": {
+      "title": "Fonctionnalités Premium",
+      "items": [
+        {
+          "question": "Que comprend Premium ?",
+          "answer": "CircleCare Premium comprend jusqu’à 5 cercles de soins, un nombre illimité d’aidants par cercle, l’assistant de soins et le récapitulatif hebdomadaire par e-mail. Consultez la page de passage à Premium pour connaître les tarifs en vigueur."
+        },
+        {
+          "question": "Puis-je essayer avant d’acheter ?",
+          "answer": "Oui ! CircleCare est gratuit pour commencer, avec un cercle de soins et deux aidants. Quand vous aurez besoin de plus de cercles, d’aidants en nombre illimité ou de fonctionnalités Premium comme l’IA, il vous suffira de passer à Premium."
+        },
+        {
+          "question": "Comment restaurer mes achats ?",
+          "answer": "Dans l’application mobile CircleCare, allez dans Profil > Abonnement > Restaurer les achats. C’est utile si vous réinstallez l’application ou changez de téléphone. Si vous vous êtes abonné ici, sur le web, votre abonnement suit automatiquement votre compte."
+        },
+        {
+          "question": "Comment résilier mon abonnement ?",
+          "answer": "Ouvrez votre Profil et choisissez Gérer l’abonnement : si vous vous êtes abonné sur ce site, vous accédez directement à votre espace de facturation, où vous pouvez résilier en quelques clics. Si vous vous êtes abonné dans l’application mobile, résiliez depuis votre téléphone : Réglages > Abonnements sur iPhone, ou Play Store > Paiements et abonnements sur Android. Dans les deux cas, vous gardez Premium jusqu’à la fin de la période déjà payée, et vous n’avez jamais besoin de contacter l’assistance pour résilier."
+        }
+      ]
+    }
+  },
+  "contact": {
+    "title": "Besoin d’aide supplémentaire ?",
+    "body": "Contactez notre équipe d’assistance et nous vous répondrons.",
+    "email": "support@circlecare.app",
+    "cta": "Écrire à l’assistance"
+  },
+  "download": {
+    "title": "Profitez de l’expérience complète",
+    "body": "Téléchargez CircleCare sur votre téléphone pour les rappels, l’aide de l’IA et bien plus."
+  }
+}

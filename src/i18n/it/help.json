@@ -1,0 +1,105 @@
+{
+  "title": "Aiuto e domande frequenti",
+  "subtitle": "Trova le risposte alle domande più comuni",
+  "sections": {
+    "gettingStarted": {
+      "title": "Per iniziare",
+      "items": [
+        {
+          "question": "Che cos'è una cerchia di cura?",
+          "answer": "Una cerchia di cura è un gruppo privato per coordinare la cura di una persona (come un genitore o un nonno). I familiari entrano nella cerchia per condividere aggiornamenti, monitorare i farmaci e restare in contatto."
+        },
+        {
+          "question": "Quante cerchie posso creare?",
+          "answer": "Con il piano gratuito ognuno può creare una cerchia di cura. Chi ha Premium può crearne fino a 5: utile per le famiglie allargate che si prendono cura di più persone care."
+        },
+        {
+          "question": "Devo pagare per entrare nella cerchia di qualcuno?",
+          "answer": "No: ricevere un invito nella cerchia di qualcuno è sempre gratuito, e con il piano gratuito ognuno può creare una cerchia tutta sua. L'abbonamento serve solo per altre cerchie, più caregiver e le funzioni Premium."
+        }
+      ]
+    },
+    "roles": {
+      "title": "Cerchie e ruoli",
+      "items": [
+        {
+          "question": "Qual è la differenza tra Titolare, Caregiver e Persona assistita?",
+          "answer": "Il Titolare crea la cerchia e può invitare membri, gestire le impostazioni ed eliminare la cerchia. I Caregiver sono familiari che aiutano a coordinare la cura: possono visualizzare e aggiornare le informazioni. La Persona assistita è la persona di cui ci si prende cura: riceve i promemoria dei farmaci e può confermare quando li ha presi."
+        },
+        {
+          "question": "Posso far parte di più cerchie?",
+          "answer": "Sì! Puoi far parte di più cerchie. Ad esempio, puoi essere titolare della cerchia di tua madre e caregiver in quella di tuo padre, creata da un fratello o una sorella."
+        }
+      ]
+    },
+    "medications": {
+      "title": "Monitoraggio dei farmaci",
+      "items": [
+        {
+          "question": "Come funzionano i promemoria dei farmaci?",
+          "answer": "Quando aggiungi un farmaco, la persona assistita riceve una notifica all'ora programmata. Tocca 'L'ho presa' per confermare, e tutti i familiari della cerchia vengono avvisati. Se la dose non viene confermata entro 15 minuti, la tua persona cara riceve un promemoria gentile. Dopo 30 minuti vengono avvisati tutti i caregiver della cerchia. Dopo 1 ora viene avvisata l'intera cerchia. Nulla viene registrato in automatico: finché qualcuno non la segna come Presa o Saltata, la dose risulta semplicemente Non segnata."
+        },
+        {
+          "question": "Cosa succede se una dose non viene segnata?",
+          "answer": "Se dopo 1 ora una dose non è stata segnata, tutta la cerchia riceve una notifica che non è ancora stata segnata. La dose resta Non segnata finché qualcuno non la segna come Presa o Saltata, e una dose segnata dopo la sua fascia oraria risulta Presa in ritardo. Puoi consultare la cronologia dei farmaci per vedere l'andamento nel tempo, compresa l'aderenza e quali dosi restano più spesso non segnate."
+        },
+        {
+          "question": "Posso impostare farmaci non giornalieri?",
+          "answer": "Sì! Puoi impostare farmaci giornalieri, a giorni alterni, settimanali (in giorni specifici), mensili o a cicli di assunzione e pausa. Per i farmaci da prendere solo quando serve, scegli 'Al bisogno': non ci sono orari fissi e chi somministra una dose la registra, così tutta la cerchia vede quando è stata data l'ultima volta."
+        }
+      ]
+    },
+    "notifications": {
+      "title": "Notifiche",
+      "items": [
+        {
+          "question": "Dove ricevo le notifiche?",
+          "answer": "I promemoria e gli avvisi arrivano come notifiche push tramite l'app mobile di CircleCare. Puoi gestire le preferenze di notifica qui sul web, ma per ricevere davvero i promemoria devi installare l'app sul telefono e attivare le notifiche."
+        },
+        {
+          "question": "Quali notifiche riceverò?",
+          "answer": "Riceverai avvisi in quattro gruppi che puoi attivare o disattivare nel Profilo: Farmaci (dosi prese, saltate o non segnate), Incarichi e appuntamenti (quando ti viene assegnato qualcosa e prima della scadenza), Note (quando qualcuno aggiunge una nota) e Consigli e suggerimenti. Se sei la persona assistita ricevi anche i tuoi promemoria delle dosi, sempre attivi."
+        },
+        {
+          "question": "Cosa sono le ore di silenzio?",
+          "answer": "Le ore di silenzio mettono in pausa le notifiche negli orari che scegli (ad esempio di notte, dalle 22 alle 7). Vai su Profilo e impostazioni per configurarle."
+        },
+        {
+          "question": "Posso disattivare alcune notifiche?",
+          "answer": "Sì. Vai su Profilo, poi Notifiche. Ognuno dei quattro interruttori attiva o disattiva un intero gruppo per il tuo account, in ogni cerchia di cui fai parte. Se disattivi Farmaci, non ti avviseremo quando una dose non viene segnata."
+        }
+      ]
+    },
+    "premium": {
+      "title": "Funzioni Premium",
+      "items": [
+        {
+          "question": "Cosa include Premium?",
+          "answer": "CircleCare Premium include fino a 5 cerchie di cura, caregiver illimitati per ogni cerchia, l'Assistente di cura e il riepilogo settimanale via email. Consulta la pagina di upgrade per i prezzi aggiornati."
+        },
+        {
+          "question": "Posso provare prima di acquistare?",
+          "answer": "Sì! CircleCare è gratuito per iniziare, con una cerchia di cura e due caregiver. Quando ti servono più cerchie, caregiver illimitati o funzioni Premium come l'IA, ti basta passare a Premium."
+        },
+        {
+          "question": "Come ripristino i miei acquisti?",
+          "answer": "Nell'app mobile di CircleCare, vai su Profilo > Abbonamento > Ripristina acquisti. Serve se reinstalli l'app o cambi telefono. Se ti sei abbonato qui sul web, l'abbonamento segue automaticamente il tuo account."
+        },
+        {
+          "question": "Come disdico l'abbonamento?",
+          "answer": "Apri il tuo Profilo e scegli Gestisci abbonamento: se ti sei abbonato su questo sito, ti porta direttamente al portale di fatturazione, dove puoi disdire in un paio di clic. Se ti sei abbonato nell'app mobile, disdici dal telefono: Impostazioni > Abbonamenti su iPhone, oppure Play Store > Pagamenti e abbonamenti su Android. In entrambi i casi mantieni Premium fino alla fine del periodo già pagato e non devi mai contattare l'assistenza per disdire."
+        }
+      ]
+    }
+  },
+  "contact": {
+    "title": "Ti serve ancora aiuto?",
+    "body": "Scrivi al nostro team di assistenza e ti risponderemo.",
+    "email": "support@circlecare.app",
+    "cta": "Scrivi all'assistenza"
+  },
+  "download": {
+    "title": "Scopri l'esperienza completa",
+    "body": "Scarica CircleCare sul telefono per promemoria, aiuto dell'IA e molto altro."
+  }
+}

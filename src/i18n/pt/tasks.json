@@ -1,0 +1,56 @@
+{
+  "title": "Tarefas",
+  "subtitle": "O que precisa ser feito pelo seu círculo: atribua, acompanhe e marque como concluído.",
+  "addTask": "Adicionar tarefa",
+  "loading": "Carregando tarefas",
+  "filter": {
+    "statusPillLabel": "Status: {{value}}",
+    "status": {
+      "open": "Em aberto",
+      "completed": "Concluídas",
+      "all": "Todas"
+    },
+    "sortPillLabel": "Ordenar por: {{value}}",
+    "sort": {
+      "due_date": "Prazo",
+      "assignee": "Responsável",
+      "created_at": "Adicionadas recentemente"
+    }
+  },
+  "row": {
+    "completeLabel": "Marcar \"{{title}}\" como concluída",
+    "undoLabel": "Marcar \"{{title}}\" como não concluída",
+    "unassigned": "Sem responsável",
+    "noDueDate": "Sem data de vencimento",
+    "allDay": "O dia todo",
+    "editLabel": "Editar \"{{title}}\"",
+    "completedOn": "Concluída em {{date}}",
+    "completing": "Concluindo…",
+    "undo": "Desfazer",
+    "done": "Concluída",
+    "statusDone": "(concluída)",
+    "statusPending": "(não concluída)",
+    "viewDetailsLabel": "Ver detalhes de \"{{title}}\"",
+    "overdue": "Atrasada"
+  },
+  "due": {
+    "today": "Hoje",
+    "yesterday": "Ontem"
+  },
+  "empty": {
+    "open": "Nenhuma tarefa em aberto",
+    "openHint": "Coordene as tarefas que mantêm o cuidado do seu ente querido em dia (compras, reposições, retornos) e compartilhe com todos que ajudam.",
+    "openHintReadOnly": "As tarefas adicionadas pela equipe de cuidado aparecerão aqui.",
+    "completed": "Nenhuma tarefa concluída ainda",
+    "completedHint": "As tarefas que o círculo concluir aparecerão aqui para que todos vejam o que já foi resolvido.",
+    "all": "Nenhuma tarefa ainda",
+    "allHint": "Coordene as tarefas que mantêm o cuidado do seu ente querido em dia (compras, reposições, retornos) e compartilhe com todos que ajudam.",
+    "cta": "Adicionar tarefa"
+  },
+  "errorTitle": "Não foi possível carregar as tarefas",
+  "errorHint": "Verifique sua conexão e tente novamente.",
+  "toast": {
+    "completed": "Tarefa concluída",
+    "reopened": "Tarefa reaberta"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "empty": {
+    "hintReadOnly": "Quando a equipa de cuidado adicionar medicamentos ou consultas, eles aparecerão aqui."
+  },
+  "errorHint": "Verifique a sua ligação e tente novamente.",
+  "status": {
+    "skipped": "Saltado"
+  },
+  "eventDetail": {
+    "skippedAt": "Saltado às {{time}}",
+    "skipDose": "Saltar dose"
+  },
+  "errors": {
+    "permissionDenied": "Não tem permissão para fazer alterações neste círculo.",
+    "saveFailed": "Não foi possível guardar as suas alterações. Tente novamente.",
+    "eventNotFound": "Esse evento já não existe. Outra pessoa pode tê-lo eliminado.",
+    "doseAlreadyLogged": "Esta dose já foi registada: a hora não pode ser alterada."
+  },
+  "addEvent": {
+    "saveChanges": "Guardar alterações",
+    "creating": "A guardar…",
+    "updated": "Alterações guardadas",
+    "recurringEditNotice": "Este evento repete-se. As alterações que guardar aqui valerão para a série inteira.",
+    "viewOnly": "Apenas visualização",
+    "recurrence": {
+      "asNeededHint": "Sem horários fixos. Registe cada dose quando ela for dada."
+    },
+    "reminders": {
+      "atTimeOff": "Nada será enviado no horário agendado, apenas os lembretes antecipados que escolher abaixo.",
+      "escalationSelf": "Se uma dose não for confirmada, avisamos novamente: a própria pessoa após 15 minutos, os cuidadores após 30 e todo o círculo após uma hora.",
+      "offGeneric": "Ninguém será lembrado disto: nem a própria pessoa, nem qualquer outra pessoa do círculo.",
+      "webDelivery": "Os lembretes são entregues na app CircleCare do telemóvel.",
+      "howItWorks": {
+        "scheduledBody": "Uma notificação é enviada no horário agendado, para a app CircleCare do telemóvel."
+      }
+    },
+    "alerts": {
+      "someDoseTimesFailed_one": "Guardado, mas horários de dose não adicionados: {{count}} ({{times}}). Abra o medicamento e adicione novamente.",
+      "someDoseTimesFailed_other": "Guardado, mas {{count}} horários de dose não puderam ser adicionados ({{times}}). Abra o medicamento e adicione-os novamente.",
+      "pastTimeMessage": "Esta hora já passou hoje, por isso nada será registado para hoje. Este medicamento começará na próxima dose agendada."
+    },
+    "dualTimezoneHint": "O seu horário / horário de {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})",
+    "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Conta.",
+    "timezoneUnresolvedNotice": "A carregar o fuso horário deste círculo. A gravação está em pausa para que as datas não sejam guardadas no fuso errado.",
+    "drugSearch": {
+      "searching": "A pesquisar medicamentos"
+    },
+    "asNeeded": {
+      "repeatHint": "Sem horários fixos. Os familiares são notificados quando alguém regista uma dose.",
+      "updateOldBackend": "Ainda não foi possível adicionar um medicamento se necessário — atualize a app e tente novamente."
+    }
+  },
+  "deleteEvent": {
+    "title": "Eliminar evento",
+    "close": "Fechar caixa de eliminação",
+    "confirmMessage": "Eliminar \"{{title}}\"? Isto não pode ser desfeito.",
+    "recurringMessage": "\"{{title}}\" repete-se. Escolha o que eliminar. Isto não pode ser desfeito.",
+    "scopeLabel": "O que deve ser eliminado?",
+    "delete": "Eliminar",
+    "deleting": "A eliminar…",
+    "deleted": "Evento eliminado"
+  },
+  "deleteMedication": {
+    "title": "Eliminar medicamento",
+    "deleted": "Medicamento eliminado",
+    "wholeMessage": "Eliminar \"{{title}}\"? Ele será removido da sua lista de medicamentos e os lembretes serão interrompidos. As doses já registadas continuam nos relatórios de adesão. Esta ação não pode ser desfeita."
+  },
+  "deleteTask": {
+    "title": "Eliminar tarefa",
+    "deleted": "Tarefa eliminada"
+  },
+  "deleteAppointment": {
+    "title": "Eliminar consulta",
+    "deleted": "Consulta eliminada"
+  },
+  "discontinueMed": {
+    "confirmMessage": "Suspender \"{{title}}\"? Isto interrompe o medicamento inteiro agora: todas as próximas doses saem do calendário e ele passa para Inativos. O histórico anterior é mantido. Pode reativá-lo quando quiser.",
+    "working": "A guardar…",
+    "inactiveCalendarNote": "Este medicamento está inativo. As doses de antes da suspensão continuam no calendário e ainda pode marcar uma como tomada ou saltada: uma dose que foi realmente dada deve ser registada. Reative o medicamento para alterar os detalhes ou retomar os lembretes."
+  },
+  "notes": {
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "deleteTitle": "Eliminar nota",
+    "deleteConfirm": "Eliminar esta nota? Isto não pode ser desfeito.",
+    "errorSaving": "Não foi possível guardar a sua nota. Tente novamente."
+  },
+  "permissionDenied": "Não tem permissão para fazer alterações neste círculo."
+}

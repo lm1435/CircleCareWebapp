@@ -1,0 +1,12 @@
+{
+  "row": {
+    "completing": "A concluir…"
+  },
+  "empty": {
+    "openHint": "Coordene as tarefas que mantêm o cuidado do seu ente querido em dia (compras, reposições, retornos) e partilhe com todos os que ajudam.",
+    "openHintReadOnly": "As tarefas adicionadas pela equipa de cuidado aparecerão aqui.",
+    "allHint": "Coordene as tarefas que mantêm o cuidado do seu ente querido em dia (compras, reposições, retornos) e partilhe com todos os que ajudam."
+  },
+  "errorHint": "Verifique a sua ligação e tente novamente.",
+  "loading": "A carregar tarefas"
+}

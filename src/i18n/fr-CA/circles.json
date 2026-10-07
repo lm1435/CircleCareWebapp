@@ -1,0 +1,5 @@
+{
+  "edit": {
+    "deleteConfirmMessage": "Le cercle pour {{name}} sera supprimé pour vous et pour toutes les personnes qui en font partie, avec les médicaments, rendez-vous, tâches, notes, signes vitaux, documents et informations d’urgence qu’il contient. Les rappels s’arrêtent immédiatement et les autres membres ne sont pas prévenus ; vous voudrez peut-être les en informer d’abord."
+  }
+}

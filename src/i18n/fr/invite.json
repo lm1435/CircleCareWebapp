@@ -1,0 +1,54 @@
+{
+  "title": "{{inviterName}} vous invite à rejoindre le cercle de soins pour {{recipientName}}",
+  "inviterFallback": "Quelqu’un",
+  "titleRecipient": "Votre cercle de soins",
+  "invitedByRecipient": "{{inviterName}} a configuré CircleCare pour vous aider dans vos soins",
+  "circleLabel": "Cercle de soins",
+  "appDescription": "CircleCare aide les familles à coordonner ensemble les médicaments, les rendez-vous et les soins du quotidien.",
+  "roles": {
+    "caregiver": "Aidant",
+    "care_recipient": "Personne aidée"
+  },
+  "accept": "Accepter l’invitation",
+  "accepting": "Connexion au cercle…",
+  "acceptSuccess": "Vous avez rejoint le cercle.",
+  "acceptFailed": "Nous n’avons pas pu vous ajouter au cercle pour le moment. Réessayez ; si le problème persiste, demandez une nouvelle invitation.",
+  "createAccountToAccept": "Créer un compte pour rejoindre le cercle",
+  "signInInstead": "J’ai déjà un compte",
+  "downloadPromptValid": "Téléchargez l’application CircleCare pour profiter de toutes les fonctionnalités",
+  "downloadPromptError": "En attendant, téléchargez l’application pour pouvoir rejoindre le cercle dès l’arrivée d’une nouvelle invitation",
+  "appStore": "Télécharger dans l’App Store",
+  "googlePlay": "Disponible sur Google Play",
+  "codeLabel": "Votre code d’invitation :",
+  "copyCode": "Copier le code d’invitation",
+  "copied": "Copié",
+  "codeCopied": "Code d’invitation copié dans le presse-papiers",
+  "copyFailed": "Copie impossible — le code est affiché ci-dessus.",
+  "loading": "Chargement de votre invitation",
+  "error": {
+    "title": "Cette invitation a expiré ou n’est pas valide",
+    "suggestion": "Demandez à la personne à l’origine de l’invitation de vous en envoyer une nouvelle. En attendant, vous pouvez télécharger l’application et rejoindre le cercle dès l’arrivée de votre nouvelle invitation."
+  },
+  "og": {
+    "title": "{{inviterName}} vous invite sur CircleCare",
+    "description": "Rejoignez le cercle « {{circleName}} » pour coordonner les soins pour {{recipientName}}",
+    "descriptionRecipient": "Rejoignez votre cercle de soins sur CircleCare"
+  },
+  "errorUsed": {
+    "title": "Cette invitation a déjà été utilisée",
+    "suggestion": "Si vous avez déjà rejoint le cercle, connectez-vous : le cercle de soins se trouve dans votre liste de cercles. Sinon, demandez à la personne à l’origine de l’invitation de vous en envoyer une nouvelle."
+  },
+  "expiresLabel": "Expiration",
+  "acceptArchived": "Ce cercle n’est plus actif : l’invitation ne peut donc pas être utilisée. Demandez à la personne à l’origine de l’invitation de se renseigner auprès du propriétaire du cercle.",
+  "acceptRecipientExists": "Ce cercle a déjà une personne aidée : cette invitation ne peut donc pas être utilisée. Demandez à la personne à l’origine de l’invitation de vous envoyer plutôt une invitation d’aidant.",
+  "errorArchived": {
+    "title": "Ce cercle de soins n’est plus actif",
+    "suggestion": "Le cercle a été supprimé après l’envoi de votre invitation : elle ne peut donc plus être utilisée. Votre code n’est pas en cause — demandez à la personne à l’origine de l’invitation de se renseigner auprès du propriétaire du cercle."
+  },
+  "errorRecipientExists": {
+    "title": "Ce cercle a déjà une personne aidée",
+    "suggestion": "Un cercle ne peut avoir qu’une seule personne aidée : cette invitation ne peut donc pas être utilisée. Demandez à la personne à l’origine de l’invitation de vous envoyer plutôt une invitation d’aidant."
+  },
+  "acceptExpired": "Cette invitation a expiré. Demandez à la personne à l’origine de l’invitation de vous en envoyer une nouvelle.",
+  "acceptAlreadyUsed": "Cette invitation a déjà été utilisée."
+}

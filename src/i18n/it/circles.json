@@ -1,0 +1,150 @@
+{
+  "create": {
+    "title": "Nuova cerchia di cura",
+    "subtitle": "Crea una cerchia per coordinare la cura con familiari e caregiver.",
+    "recipientName": "Nome della persona assistita",
+    "recipientNamePlaceholder": "Nome e cognome",
+    "recipientDob": "Data di nascita",
+    "recipientDobHint": "Facoltativa. Compare nelle sue informazioni di emergenza, così i medici possono confermarne l'identità.",
+    "selfCareToggle": "Questa cerchia è per me",
+    "selfCareHint": "Sarai tu la persona assistita. Invita familiari o caregiver ad aiutarti.",
+    "selfCareDefaultName": "La mia cura",
+    "create": "Crea cerchia",
+    "creating": "Creazione in corso...",
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "success": "Cerchia creata.",
+    "failed": "Al momento non siamo riusciti a creare la tua cerchia. Non è andato perso nulla: riprova.",
+    "limitReached": "Hai raggiunto il massimo di 5 cerchie."
+  },
+  "join": {
+    "button": "Unisciti a una cerchia",
+    "invitedPrompt": "Hai ricevuto un invito a una cerchia?",
+    "withCode": "Entra con un codice di invito",
+    "or": "oppure"
+  },
+  "joinModal": {
+    "title": "Unisciti a una cerchia",
+    "subtitle": "Inserisci il codice di 6 caratteri del tuo invito.",
+    "codeLabel": "Codice di invito",
+    "pasteCode": "Incolla il codice",
+    "pasteNoCode": "Non abbiamo trovato un codice di invito negli appunti.",
+    "lookUpCode": "Trova la cerchia",
+    "lookingUp": "Ricerca in corso...",
+    "circle": "Cerchia",
+    "caringFor": "Ti prendi cura di",
+    "yourCareCircle": "La tua cerchia di cura",
+    "setUpForYou": "{{inviter}} ha configurato CircleCare per aiutarti nella tua cura",
+    "invitedBy": "Invito di",
+    "yourRole": "Il tuo ruolo",
+    "roleCaregiver": "Caregiver",
+    "roleCareRecipient": "Persona assistita",
+    "joinCircle": "Unisciti alla cerchia",
+    "joining": "Ingresso in corso...",
+    "enterDifferentCode": "Inserisci un altro codice",
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "youveJoined": "Ora fai parte di {{circleName}}.",
+    "invalidCode": "Non abbiamo trovato questo codice di invito. Ricontrollalo e riprova.",
+    "expired": "Questo invito è scaduto. Chiedi un nuovo invito a chi te lo ha mandato.",
+    "alreadyUsed": "Questo invito è già stato usato. Chiedi a chi te lo ha mandato di inviartene uno nuovo.",
+    "alreadyMember": "Fai già parte di questa cerchia.",
+    "joinFailed": "Non siamo riusciti a farti entrare in questa cerchia. Riprova.",
+    "circleArchived": "Questa cerchia non è più attiva. Chiedi a chi ti ha invitato di sentire il titolare della cerchia.",
+    "careRecipientExists": "Questa cerchia ha già una persona assistita. Chiedi a chi ti ha invitato di mandarti invece un invito come caregiver."
+  },
+  "edit": {
+    "title": "Impostazioni della cerchia",
+    "subtitle": "Aggiorna i dati della persona di cui si prende cura questa cerchia.",
+    "loadingLabel": "Caricamento delle impostazioni della cerchia",
+    "errorTitle": "Impossibile caricare questa cerchia.",
+    "retry": "Riprova",
+    "ownerOnlyTitle": "Solo il titolare della cerchia può modificarla",
+    "ownerOnlyMessage": "Chiedi al titolare della cerchia di aggiornare questi dati.",
+    "recipientName": "Nome della persona assistita",
+    "recipientNamePlaceholder": "Nome e cognome",
+    "recipientDob": "Data di nascita",
+    "recipientDobHint": "Facoltativa. Compare nelle sue informazioni di emergenza, così i medici possono confermarne l'identità.",
+    "save": "Salva modifiche",
+    "saving": "Salvataggio in corso...",
+    "savedToast": "Cerchia aggiornata.",
+    "cancel": "Annulla",
+    "dangerZone": "Zona di pericolo",
+    "deleteDescription": "Eliminando questa cerchia la rimuovi per tutti. Questa azione non può essere annullata.",
+    "deleteCircle": "Elimina cerchia",
+    "deleting": "Eliminazione in corso...",
+    "deleteConfirmTitle": "Eliminare questa cerchia?",
+    "deleteConfirmMessage": "Così elimini la cerchia di {{name}} per te e per tutte le altre persone che ne fanno parte, insieme a farmaci, appuntamenti, incarichi, note, parametri vitali, documenti e informazioni di emergenza che contiene. I promemoria si fermano subito e gli altri membri non ricevono alcuna notifica, quindi potresti volerli avvisare prima.",
+    "deleteConfirmWarning": "Questa azione non può essere annullata.",
+    "deleteConfirmPrompt": "Digita {{keyword}} per confermare",
+    "deleteConfirmKeyword": "ELIMINA",
+    "deletedToast": "Cerchia eliminata."
+  },
+  "validation": {
+    "invalid": "Controlla questo valore.",
+    "nameRequired": "Inserisci il nome della persona assistita.",
+    "nameTooLong": "Il nome può contenere al massimo 100 caratteri.",
+    "dobFormat": "Scegli una data di nascita valida.",
+    "dobInvalidDate": "Questa data di nascita non esiste nel calendario."
+  },
+  "quickWin": {
+    "title": "Cerchia creata",
+    "subtitle": "La cerchia di cura di {{name}} è pronta. Cosa vuoi fare per prima cosa?",
+    "subtitleSelf": "La tua cerchia di cura è pronta. Cosa vuoi fare per prima cosa?",
+    "recommended": "Consigliato",
+    "skipForNow": "Salta per ora",
+    "tip": "Potrai sempre farlo più tardi dalla pagina della cerchia.",
+    "medication": {
+      "title": "Aggiungi un farmaco",
+      "description": "Imposta i promemoria per i farmaci di ogni giorno"
+    },
+    "appointment": {
+      "title": "Aggiungi un appuntamento",
+      "description": "Tieni traccia dei prossimi appuntamenti"
+    },
+    "invite": {
+      "title": "Invita un familiare",
+      "description": "Coinvolgi fratelli, sorelle o caregiver"
+    },
+    "emergency": {
+      "title": "Aggiungi informazioni sulla salute",
+      "description": "Conserva i dati medici importanti"
+    }
+  },
+  "firstRun": {
+    "steps": {
+      "choose": "Inizio",
+      "what": "Nome",
+      "when": "Ora",
+      "repeat": "Ripeti"
+    },
+    "progressLabel": "Passaggio {{current}} di {{total}}",
+    "whatTitle": "Cosa prende {{name}}?",
+    "whatTitleSelf": "Cosa prendi?",
+    "dosageLabel": "Dosaggio (facoltativo)",
+    "dosagePlaceholder": "es. 500 mg",
+    "whenTitle": "Quando lo prende {{name}}?",
+    "whenTitleSelf": "Quando lo prendi?",
+    "customTimeLabel": "Orario personalizzato",
+    "customTimeHint": "Scegliendo un orario qui, sostituisci la programmazione qui sopra.",
+    "repeatTitle": "Ripetizione?",
+    "back": "Indietro",
+    "continue": "Continua",
+    "save": "Aggiungi farmaco",
+    "saving": "Aggiunta in corso...",
+    "close": "Chiudi la configurazione",
+    "fullDetails": "Aggiungi invece tutti i dettagli",
+    "savedToast": "Farmaco aggiunto.",
+    "discardTitle": "Scartare questo farmaco?",
+    "discardMessage": "Non verrà salvato nulla.",
+    "discardConfirm": "Scarta",
+    "discardClose": "Chiudi l'avviso di scarto"
+  },
+  "accessLost": {
+    "removedTitle": "Accesso rimosso",
+    "removedBody": "Non hai più accesso a questa cerchia. Il titolare potrebbe averti rimosso o aver eliminato la cerchia.",
+    "notFoundTitle": "Cerchia non trovata",
+    "notFoundBody": "Questa cerchia è stata eliminata o non esiste più.",
+    "returnToCircles": "Torna alle cerchie"
+  }
+}

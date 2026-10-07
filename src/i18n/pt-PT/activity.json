@@ -1,0 +1,26 @@
+{
+  "noActivityHint": "As atividades aparecerão aqui conforme a equipa de cuidado agir. Em conjunto fica melhor: convide familiares e cuidadores para que todos vejam o que já foi resolvido.",
+  "loading": "A carregar atividades...",
+  "errorTitle": "Não foi possível carregar o registo de atividades",
+  "errorHint": "Verifique a sua ligação e tente novamente.",
+  "loadingMore": "A carregar mais...",
+  "endOfFeed": "Está em dia.",
+  "entries": {
+    "medicationNotTaken": "Dose saltada: {{title}} ({{date}})",
+    "asNeededDoseLogged": "Registou uma dose: {{title}} às {{time}}",
+    "asNeededDoseRemoved": "Removeu uma dose registada: {{title}} ({{time}})"
+  },
+  "phrases": {
+    "deletedMedication": "Medicamento eliminado:",
+    "deletedAppointment": "Consulta eliminada:",
+    "deletedTask": "Tarefa eliminada:",
+    "skipped": "saltado",
+    "skippedEvent": "Dose saltada:",
+    "loggedDose": "Registou uma dose:",
+    "removedLoggedDose": "Removeu uma dose registada:"
+  },
+  "sentences": {
+    "memberLeftAccountDeleted": "Um membro saiu do círculo (conta eliminada)",
+    "memberLeftNamedAccountDeleted": "{{name}} saiu do círculo (conta eliminada)"
+  }
+}

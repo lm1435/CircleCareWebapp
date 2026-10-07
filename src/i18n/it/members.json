@@ -1,0 +1,171 @@
+{
+  "picker": {
+    "heading": "Le mie cerchie",
+    "greeting": {
+      "morning": "Buongiorno",
+      "afternoon": "Buon pomeriggio",
+      "evening": "Buonasera"
+    },
+    "careCircleCount_one": "{{count}} cerchia di cura",
+    "careCircleCount_other": "{{count}} cerchie di cura",
+    "open": "Apri {{name}}",
+    "openWithRole": "Apri {{name}} ({{role}})",
+    "openWithRoleOverdue": "Apri {{name}} ({{role}}) — {{status}}",
+    "caringFor": "Ti prendi cura di {{name}}",
+    "caringWith_one": "Cura condivisa con {{count}} persona",
+    "caringWith_other": "Cura condivisa con {{count}} persone",
+    "personHelping_one": "{{count}} persona aiuta a coordinare la cura",
+    "personHelping_other": "{{count}} persone aiutano a coordinare la cura",
+    "memberCount_one": "{{count}} membro",
+    "memberCount_other": "{{count}} membri",
+    "errorTitle": "Impossibile caricare le cerchie",
+    "errorBody": "Controlla la connessione e riprova.",
+    "empty": {
+      "title": "Creiamo la tua cerchia di cura",
+      "body": "Una cerchia è uno spazio privato dove familiari e caregiver si ritrovano per prendersi cura di una persona cara: farmaci, appuntamenti e incarichi, tutto in un unico posto.",
+      "howItWorksTitle": "Come funziona CircleCare",
+      "step1": "Crea una cerchia per la tua persona cara.",
+      "step2": "Invita familiari e caregiver a condividere il carico.",
+      "step3": "Tutti vedono lo stesso calendario: farmaci, appuntamenti e incarichi in un unico posto.",
+      "learnMore": "Scopri di più",
+      "invitedHintPrefix": "Hai già ricevuto un invito via email?",
+      "invitedHintLink": "Controlla i tuoi inviti",
+      "companion": "Preferisci il telefono? Scarica l'app di CircleCare."
+    }
+  },
+  "med": {
+    "nothingTrackedYet": "Ancora niente da monitorare",
+    "allTaken": "Tutti i farmaci presi",
+    "takenToday": "{{taken}}/{{total}} prese oggi",
+    "takenOverdue": "{{taken}}/{{total}} prese · {{overdue}} in ritardo"
+  },
+  "roles": {
+    "owner": "Titolare",
+    "caregiver": "Caregiver",
+    "careRecipient": "Persona assistita"
+  },
+  "access": {
+    "readOnly": "Sola lettura",
+    "viewOnly": "Sola lettura",
+    "readOnlyOwnerSubtitle": "Il tuo abbonamento è terminato: per ora puoi solo visualizzare.",
+    "readOnlyMemberSubtitle": "Puoi visualizzare questa cerchia ma non modificarla",
+    "viewOnlySubtitle": "Sola lettura: chiedi al titolare della cerchia se devi fare modifiche."
+  },
+  "member": {
+    "notificationsOff": "Notifiche disattivate",
+    "notificationsOffFor": "Notifiche disattivate per {{name}}",
+    "notificationsOffExplain": "{{name}} non ha attivato le notifiche nell'app CircleCare, quindi i promemoria non arriveranno sul suo telefono.",
+    "notificationsOffExplainNoName": "Questo membro non ha attivato le notifiche nell'app CircleCare, quindi i promemoria non arriveranno sul suo telefono."
+  },
+  "list": {
+    "heading": "Membri",
+    "subheadingReadOnly": "Tutte le persone che aiutano a coordinare la cura in questa cerchia.",
+    "joined": "Nella cerchia dal {{date}}",
+    "you": "(tu)",
+    "medResponsible": "Gestisce i promemoria dei farmaci",
+    "errorTitle": "Impossibile caricare i membri",
+    "errorBody": "Controlla la connessione e riprova.",
+    "empty": "Ancora nessun membro in questa cerchia.",
+    "soloTitle": "Insieme è più facile prendersi cura",
+    "soloBody": "Invita un familiare o un caregiver ad aiutarti a coordinare la cura della tua persona cara: condividete incarichi, appuntamenti e aggiornamenti, così nessuno porta il peso da solo.",
+    "soloCta": "Invita il tuo primo caregiver"
+  },
+  "errors": {
+    "permissionDenied": "Non hai il permesso di fare questa modifica.",
+    "saveFailed": "Qualcosa è andato storto. Riprova.",
+    "alreadyMember": "Questa persona fa già parte della cerchia.",
+    "pendingInvite": "Questa persona ha già un invito in sospeso.",
+    "pendingInviteSeat": "Hai già usato il tuo invito: il posto gratuito è occupato da un invito in sospeso per {{email}}. Annulla quell'invito per liberarlo, oppure passa a Premium per aggiungere altri caregiver.",
+    "pendingInviteSeatUnknown": "Hai già usato il tuo invito: il posto gratuito è occupato da un altro invito in sospeso. Annulla quell'invito per liberarlo, oppure passa a Premium per aggiungere altri caregiver.",
+    "circleArchived": "Questa cerchia di cura non è più attiva, quindi non è possibile inviare né accettare inviti.",
+    "careRecipientExists": "Questa cerchia ha già una persona assistita."
+  },
+  "invite": {
+    "cta": "Invita un membro",
+    "title": "Invita un membro",
+    "subtitle": "Gli invieremo via email un invito a entrare in questa cerchia di cura.",
+    "emailLabel": "Indirizzo email",
+    "emailPlaceholder": "nome@esempio.com",
+    "roleLabel": "Il suo ruolo",
+    "roleHints": {
+      "caregiver": "Può visualizzare e aiutare a coordinare la cura.",
+      "careRecipient": "La persona che riceve assistenza."
+    },
+    "circleLabel": "Cerchia di cura",
+    "send": "Invia invito",
+    "sending": "Invio in corso…",
+    "success": "Condividi il link così potrà entrare subito.",
+    "capReached": "Le cerchie gratuite includono fino a due caregiver. Passa a Premium per aggiungerne altri.",
+    "pendingSeat": "Hai già usato il tuo invito: il posto gratuito è occupato da un invito in sospeso per {{email}}. Annullalo in Inviti in sospeso per liberare il posto, oppure passa a Premium per aggiungere altri caregiver.",
+    "pendingSeatUnknown": "Hai già usato il tuo invito: il posto gratuito è occupato da un altro invito in sospeso. Annullalo in Inviti in sospeso per liberare il posto, oppure passa a Premium per aggiungere altri caregiver.",
+    "errors": {
+      "emailInvalid": "Inserisci un indirizzo email valido.",
+      "roleRequired": "Scegli un ruolo."
+    },
+    "shareLink": "Condividi il link di invito",
+    "copyLink": "Copia link",
+    "linkCopied": "Link copiato",
+    "copyFailed": "Non è stato possibile copiare il link",
+    "shareMessage": "Unisciti a me su CircleCare per aiutare a coordinare la cura di {{recipientName}}. {{inviteUrl}}",
+    "shareMessageSelfCare": "Unisciti a me su CircleCare per aiutarmi a tenere traccia della mia cura. {{inviteUrl}}",
+    "shareMessageRecipient": "Ho configurato CircleCare per aiutarti a tenere traccia dei tuoi farmaci e appuntamenti. Unisciti a me qui: {{inviteUrl}}",
+    "shareTitle": "Unisciti alla nostra cerchia di cura",
+    "sentTitle": "Invito inviato",
+    "emailNote": "Abbiamo inviato anche a {{email}} le istruzioni per entrare come {{role}}.",
+    "sendAnother": "Invita un'altra persona"
+  },
+  "manage": {
+    "subheading": "Tutte le persone di questa cerchia di cura. Qui sotto puoi invitare, rimuovere o gestire i membri.",
+    "remove": "Rimuovi",
+    "removeMemberLabel": "Rimuovi {{name}}",
+    "memberActionsLabel": "Azioni per {{name}}",
+    "inviteActionsLabel": "Azioni per l'invito a {{email}}",
+    "removeConfirmTitle": "Rimuovere il membro?",
+    "removeConfirmBody": "{{name}} perderà l'accesso a questa cerchia di cura. Potrai invitare di nuovo questa persona in seguito.",
+    "removeSuccess": "{{name}} non fa più parte di questa cerchia.",
+    "setMedResponsible": "Nomina responsabile dei farmaci",
+    "clearMedResponsible": "Rimuovi responsabile dei farmaci",
+    "medResponsibleSet": "{{name}} ora gestisce i promemoria dei farmaci.",
+    "medResponsibleCleared": "Responsabile dei farmaci rimosso.",
+    "pendingHeading": "Inviti in sospeso",
+    "cancelInvite": "Annulla invito",
+    "cancelInviteSuccess": "Invito annullato.",
+    "cancelInviteConfirmTitle": "Annullare questo invito?",
+    "cancelInviteConfirmBody": "{{email}} non potrà più entrare con questo invito.",
+    "cancelInviteConfirm": "Annulla invito",
+    "keepInvite": "Mantieni invito",
+    "inviteExpired": "Scaduto",
+    "inviteExpiresIn_one": "Scade tra {{count}} giorno",
+    "inviteExpiresIn_other": "Scade tra {{count}} giorni",
+    "inviteExpiresInLabel_one": "L'invito per {{email}} scade tra {{count}} giorno",
+    "inviteExpiresInLabel_other": "L'invito per {{email}} scade tra {{count}} giorni",
+    "resendInvite": "Invia di nuovo",
+    "resendInviteSuccess": "Invito inviato di nuovo a {{email}}.",
+    "resendInviteFailed": "Non siamo riusciti a inviare di nuovo l'invito. Riprova.",
+    "leave": "Esci dalla cerchia",
+    "leaveConfirmTitle": "Vuoi uscire da questa cerchia?",
+    "leaveConfirmBody": "Perderai l'accesso a questa cerchia di cura. Il titolare potrà invitarti di nuovo in seguito.",
+    "leaveSuccess": "Hai lasciato la cerchia."
+  },
+  "pending": {
+    "heading": "I tuoi inviti",
+    "subheading": "Le cerchie di cura che ti hanno chiesto di dare una mano.",
+    "invitedYou": "{{inviter}} ti ha mandato un invito per aiutare nella cura di {{recipient}}",
+    "invitedYouRecipient": "{{inviter}} ha configurato CircleCare per aiutarti nella tua cura",
+    "yourCareCircle": "La tua cerchia di cura",
+    "accept": "Accetta",
+    "accepting": "Ingresso in corso…",
+    "ignoreHint": "Non vuoi entrare adesso? Puoi lasciare l'invito qui: non succede nulla finché non lo accetti.",
+    "emptyTitle": "Nessun invito in sospeso",
+    "emptyBody": "Quando qualcuno ti inviterà in una cerchia di cura, lo vedrai qui.",
+    "errorTitle": "Impossibile caricare gli inviti",
+    "errorBody": "Controlla la connessione e riprova.",
+    "banner": {
+      "count_one": "Hai 1 invito in sospeso",
+      "count_other": "Hai {{count}} inviti in sospeso",
+      "review": "Rivedi l'invito",
+      "reviewPlural": "Rivedi gli inviti"
+    },
+    "expiresLabel": "Scade"
+  }
+}

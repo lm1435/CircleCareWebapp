@@ -1,0 +1,150 @@
+{
+  "create": {
+    "title": "Nouveau cercle de soins",
+    "subtitle": "Créez un cercle pour coordonner les soins avec la famille et les aidants.",
+    "recipientName": "Nom de la personne aidée",
+    "recipientNamePlaceholder": "Nom complet",
+    "recipientDob": "Date de naissance",
+    "recipientDobHint": "Facultatif. Affichée dans ses infos d’urgence pour que les médecins puissent confirmer son identité.",
+    "selfCareToggle": "Ce cercle est pour moi",
+    "selfCareHint": "La personne aidée, c’est vous. Invitez des proches ou des aidants à vous aider.",
+    "selfCareDefaultName": "Mes soins",
+    "create": "Créer le cercle",
+    "creating": "Création…",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "success": "Cercle créé.",
+    "failed": "Nous n’avons pas pu créer votre cercle pour le moment. Rien n’a été perdu — réessayez.",
+    "limitReached": "Vous avez atteint le maximum de 5 cercles."
+  },
+  "join": {
+    "button": "Rejoindre un cercle",
+    "invitedPrompt": "Vous avez reçu une invitation à un cercle ?",
+    "withCode": "Rejoindre avec un code d’invitation",
+    "or": "ou"
+  },
+  "joinModal": {
+    "title": "Rejoindre un cercle",
+    "subtitle": "Saisissez le code à 6 caractères figurant dans votre invitation.",
+    "codeLabel": "Code d’invitation",
+    "pasteCode": "Coller le code",
+    "pasteNoCode": "Nous n’avons trouvé aucun code d’invitation dans votre presse-papiers.",
+    "lookUpCode": "Trouver le cercle",
+    "lookingUp": "Recherche…",
+    "circle": "Cercle",
+    "caringFor": "Personne aidée",
+    "yourCareCircle": "Votre cercle de soins",
+    "setUpForYou": "{{inviter}} a configuré CircleCare pour vous aider dans vos soins",
+    "invitedBy": "Invitation de",
+    "yourRole": "Votre rôle",
+    "roleCaregiver": "Aidant",
+    "roleCareRecipient": "Personne aidée",
+    "joinCircle": "Rejoindre le cercle",
+    "joining": "Connexion au cercle…",
+    "enterDifferentCode": "Saisir un autre code",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "youveJoined": "Vous avez rejoint le cercle « {{circleName}} ».",
+    "invalidCode": "Nous n’avons pas trouvé ce code d’invitation. Vérifiez-le et réessayez.",
+    "expired": "Cette invitation a expiré. Demandez à la personne à l’origine de l’invitation de vous en envoyer une nouvelle.",
+    "alreadyUsed": "Cette invitation a déjà été utilisée. Demandez à la personne à l’origine de l’invitation de vous en envoyer une nouvelle.",
+    "alreadyMember": "Vous faites déjà partie de ce cercle.",
+    "joinFailed": "Nous n’avons pas pu rejoindre ce cercle. Réessayez.",
+    "circleArchived": "Ce cercle n’est plus actif. Demandez à la personne à l’origine de l’invitation de se renseigner auprès du propriétaire du cercle.",
+    "careRecipientExists": "Ce cercle a déjà une personne aidée. Demandez à la personne à l’origine de l’invitation de vous envoyer plutôt une invitation d’aidant."
+  },
+  "edit": {
+    "title": "Paramètres du cercle",
+    "subtitle": "Mettez à jour les informations de la personne aidée.",
+    "loadingLabel": "Chargement des paramètres du cercle",
+    "errorTitle": "Impossible de charger ce cercle.",
+    "retry": "Réessayer",
+    "ownerOnlyTitle": "Seul le propriétaire du cercle peut modifier ceci",
+    "ownerOnlyMessage": "Demandez au propriétaire du cercle de mettre à jour ces informations.",
+    "recipientName": "Nom de la personne aidée",
+    "recipientNamePlaceholder": "Nom complet",
+    "recipientDob": "Date de naissance",
+    "recipientDobHint": "Facultatif. Affichée dans ses infos d’urgence pour que les médecins puissent confirmer son identité.",
+    "save": "Enregistrer les modifications",
+    "saving": "Enregistrement…",
+    "savedToast": "Cercle mis à jour.",
+    "cancel": "Annuler",
+    "dangerZone": "Zone sensible",
+    "deleteDescription": "La suppression de ce cercle le retire pour tout le monde. Cette action est irréversible.",
+    "deleteCircle": "Supprimer le cercle",
+    "deleting": "Suppression…",
+    "deleteConfirmTitle": "Supprimer ce cercle ?",
+    "deleteConfirmMessage": "Le cercle pour {{name}} sera supprimé pour vous et pour toutes les personnes qui en font partie, avec les médicaments, rendez-vous, tâches, notes, constantes, documents et informations d’urgence qu’il contient. Les rappels s’arrêtent immédiatement et les autres membres ne sont pas prévenus ; vous voudrez peut-être les en informer d’abord.",
+    "deleteConfirmWarning": "Cette action est irréversible.",
+    "deleteConfirmPrompt": "Saisissez {{keyword}} pour confirmer",
+    "deleteConfirmKeyword": "SUPPRIMER",
+    "deletedToast": "Cercle supprimé."
+  },
+  "validation": {
+    "invalid": "Vérifiez cette valeur.",
+    "nameRequired": "Saisissez le nom de la personne aidée.",
+    "nameTooLong": "Le nom ne doit pas dépasser 100 caractères.",
+    "dobFormat": "Choisissez une date de naissance valide.",
+    "dobInvalidDate": "Cette date de naissance n’existe pas dans le calendrier."
+  },
+  "quickWin": {
+    "title": "Cercle créé",
+    "subtitle": "Le cercle de soins pour {{name}} est prêt. Que souhaitez-vous faire en premier ?",
+    "subtitleSelf": "Votre cercle de soins est prêt. Que souhaitez-vous faire en premier ?",
+    "recommended": "Recommandé",
+    "skipForNow": "Passer pour l’instant",
+    "tip": "Vous pourrez toujours le faire plus tard depuis la page du cercle.",
+    "medication": {
+      "title": "Ajouter un médicament",
+      "description": "Programmez des rappels pour ses médicaments quotidiens"
+    },
+    "appointment": {
+      "title": "Ajouter un rendez-vous",
+      "description": "Suivez les prochains rendez-vous"
+    },
+    "invite": {
+      "title": "Inviter un membre de la famille",
+      "description": "Impliquez frères, sœurs ou autres aidants"
+    },
+    "emergency": {
+      "title": "Ajouter des infos de santé",
+      "description": "Conservez les informations médicales importantes"
+    }
+  },
+  "firstRun": {
+    "steps": {
+      "choose": "Début",
+      "what": "Nom",
+      "when": "Heure",
+      "repeat": "Répétition"
+    },
+    "progressLabel": "Étape {{current}} sur {{total}}",
+    "whatTitle": "Que prend {{name}} ?",
+    "whatTitleSelf": "Que prenez-vous ?",
+    "dosageLabel": "Dosage (facultatif)",
+    "dosagePlaceholder": "p. ex. 500 mg",
+    "whenTitle": "À quel moment {{name}} le prend-il ?",
+    "whenTitleSelf": "À quel moment le prenez-vous ?",
+    "customTimeLabel": "Heure personnalisée",
+    "customTimeHint": "Choisir une heure ici remplace l’horaire ci-dessus.",
+    "repeatTitle": "Répéter ?",
+    "back": "Retour",
+    "continue": "Continuer",
+    "save": "Ajouter le médicament",
+    "saving": "Ajout…",
+    "close": "Fermer la configuration",
+    "fullDetails": "Saisir tous les détails à la place",
+    "savedToast": "Médicament ajouté.",
+    "discardTitle": "Abandonner ce médicament ?",
+    "discardMessage": "Rien ne sera enregistré.",
+    "discardConfirm": "Abandonner",
+    "discardClose": "Fermer la confirmation d’abandon"
+  },
+  "accessLost": {
+    "removedTitle": "Accès retiré",
+    "removedBody": "Vous n’avez plus accès à ce cercle. Le propriétaire a peut-être mis fin à votre accès ou supprimé le cercle.",
+    "notFoundTitle": "Cercle introuvable",
+    "notFoundBody": "Ce cercle a été supprimé ou n’existe plus.",
+    "returnToCircles": "Retour aux cercles"
+  }
+}

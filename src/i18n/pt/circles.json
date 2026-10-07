@@ -1,0 +1,150 @@
+{
+  "create": {
+    "title": "Novo círculo de cuidado",
+    "subtitle": "Crie um círculo para coordenar o cuidado com familiares e cuidadores.",
+    "recipientName": "Nome da pessoa cuidada",
+    "recipientNamePlaceholder": "Nome completo",
+    "recipientDob": "Data de nascimento",
+    "recipientDobHint": "Opcional. Aparece nas informações de emergência para que os médicos possam confirmar quem é a pessoa.",
+    "selfCareToggle": "Este círculo é para mim",
+    "selfCareHint": "Será a pessoa cuidada. Convide familiares ou cuidadores para ajudar.",
+    "selfCareDefaultName": "Meu cuidado",
+    "create": "Criar círculo",
+    "creating": "Criando...",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "success": "Círculo criado.",
+    "failed": "Não foi possível criar o círculo agora. Nada foi perdido — tente novamente.",
+    "limitReached": "O máximo de 5 círculos foi atingido."
+  },
+  "join": {
+    "button": "Participar de um círculo",
+    "invitedPrompt": "Recebeu um convite para um círculo?",
+    "withCode": "Participar com um código de convite",
+    "or": "ou"
+  },
+  "joinModal": {
+    "title": "Participar de um círculo",
+    "subtitle": "Digite o código de 6 caracteres do seu convite.",
+    "codeLabel": "Código do convite",
+    "pasteCode": "Colar código",
+    "pasteNoCode": "Não encontramos um código de convite na área de transferência.",
+    "lookUpCode": "Buscar círculo",
+    "lookingUp": "Buscando...",
+    "circle": "Círculo",
+    "caringFor": "Cuidando de",
+    "yourCareCircle": "Seu círculo de cuidado",
+    "setUpForYou": "{{inviter}} configurou o CircleCare para ajudar no seu cuidado",
+    "invitedBy": "Convite de",
+    "yourRole": "Sua função",
+    "roleCaregiver": "Cuidador",
+    "roleCareRecipient": "Pessoa cuidada",
+    "joinCircle": "Entrar no círculo",
+    "joining": "Entrando...",
+    "enterDifferentCode": "Digitar outro código",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "youveJoined": "Você entrou em {{circleName}}.",
+    "invalidCode": "Não encontramos esse código de convite. Confira-o e tente novamente.",
+    "expired": "Este convite expirou. Peça a quem convidou você que envie um novo.",
+    "alreadyUsed": "Este convite já foi usado. Peça a quem convidou você que envie um novo.",
+    "alreadyMember": "Você já é membro deste círculo.",
+    "joinFailed": "Não foi possível entrar neste círculo. Tente novamente.",
+    "circleArchived": "Este círculo não está mais ativo. Peça a quem convidou você que fale com o proprietário do círculo.",
+    "careRecipientExists": "Este círculo já tem uma pessoa cuidada. Peça a quem convidou você que envie um convite de cuidador."
+  },
+  "edit": {
+    "title": "Configurações do círculo",
+    "subtitle": "Atualize os dados da pessoa cuidada neste círculo.",
+    "loadingLabel": "Carregando configurações do círculo",
+    "errorTitle": "Não foi possível carregar este círculo.",
+    "retry": "Tentar novamente",
+    "ownerOnlyTitle": "Somente o proprietário do círculo pode editar isto",
+    "ownerOnlyMessage": "Peça ao proprietário do círculo para atualizar estes dados.",
+    "recipientName": "Nome da pessoa cuidada",
+    "recipientNamePlaceholder": "Nome completo",
+    "recipientDob": "Data de nascimento",
+    "recipientDobHint": "Opcional. Aparece nas informações de emergência para que os médicos possam confirmar quem é a pessoa.",
+    "save": "Salvar alterações",
+    "saving": "Salvando...",
+    "savedToast": "Círculo atualizado.",
+    "cancel": "Cancelar",
+    "dangerZone": "Zona de perigo",
+    "deleteDescription": "Excluir este círculo o remove para todos. Esta ação não pode ser desfeita.",
+    "deleteCircle": "Excluir círculo",
+    "deleting": "Excluindo...",
+    "deleteConfirmTitle": "Excluir este círculo?",
+    "deleteConfirmMessage": "Isso remove o círculo de {{name}} para todos os que fazem parte dele — os medicamentos, consultas, tarefas, notas, sinais vitais, documentos e informações de emergência que ele contém. Os lembretes param imediatamente e os outros membros não são notificados, então talvez seja melhor avisá-los antes.",
+    "deleteConfirmWarning": "Esta ação não pode ser desfeita.",
+    "deleteConfirmPrompt": "Digite {{keyword}} para confirmar",
+    "deleteConfirmKeyword": "EXCLUIR",
+    "deletedToast": "Círculo excluído."
+  },
+  "validation": {
+    "invalid": "Verifique este valor.",
+    "nameRequired": "Digite o nome da pessoa cuidada.",
+    "nameTooLong": "O nome deve ter no máximo 100 caracteres.",
+    "dobFormat": "Escolha uma data de nascimento válida.",
+    "dobInvalidDate": "Essa data de nascimento não é uma data real do calendário."
+  },
+  "quickWin": {
+    "title": "Círculo criado",
+    "subtitle": "O círculo de cuidado de {{name}} está pronto. O que você gostaria de fazer primeiro?",
+    "subtitleSelf": "Seu círculo de cuidado está pronto. O que você gostaria de fazer primeiro?",
+    "recommended": "Recomendado",
+    "skipForNow": "Pular por enquanto",
+    "tip": "Tudo isso pode ser feito depois, na página do círculo.",
+    "medication": {
+      "title": "Adicionar um medicamento",
+      "description": "Configure lembretes para os medicamentos diários"
+    },
+    "appointment": {
+      "title": "Adicionar uma consulta",
+      "description": "Acompanhe as próximas consultas"
+    },
+    "invite": {
+      "title": "Convidar um familiar",
+      "description": "Envolva irmãos ou cuidadores"
+    },
+    "emergency": {
+      "title": "Adicionar informações de saúde",
+      "description": "Guarde detalhes médicos importantes"
+    }
+  },
+  "firstRun": {
+    "steps": {
+      "choose": "Início",
+      "what": "Nome",
+      "when": "Horário",
+      "repeat": "Repetição"
+    },
+    "progressLabel": "Etapa {{current}} de {{total}}",
+    "whatTitle": "O que {{name}} toma?",
+    "whatTitleSelf": "O que você toma?",
+    "dosageLabel": "Dosagem (opcional)",
+    "dosagePlaceholder": "ex.: 500 mg",
+    "whenTitle": "Quando {{name}} toma?",
+    "whenTitleSelf": "Quando você toma?",
+    "customTimeLabel": "Horário personalizado",
+    "customTimeHint": "Escolher um horário aqui substitui a programação acima.",
+    "repeatTitle": "Repetir?",
+    "back": "Voltar",
+    "continue": "Continuar",
+    "save": "Adicionar medicamento",
+    "saving": "Adicionando...",
+    "close": "Fechar configuração",
+    "fullDetails": "Adicionar todos os detalhes",
+    "savedToast": "Medicamento adicionado.",
+    "discardTitle": "Descartar este medicamento?",
+    "discardMessage": "Nada será salvo.",
+    "discardConfirm": "Descartar",
+    "discardClose": "Fechar aviso de descarte"
+  },
+  "accessLost": {
+    "removedTitle": "Acesso removido",
+    "removedBody": "Você não tem mais acesso a este círculo. O proprietário pode ter removido você ou excluído o círculo.",
+    "notFoundTitle": "Círculo não encontrado",
+    "notFoundBody": "Este círculo foi excluído ou não existe mais.",
+    "returnToCircles": "Voltar aos círculos"
+  }
+}

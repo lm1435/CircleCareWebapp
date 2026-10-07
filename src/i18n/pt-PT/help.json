@@ -1,0 +1,95 @@
+{
+  "sections": {
+    "gettingStarted": {
+      "items": [
+        {
+          "question": "O que é um círculo de cuidado?",
+          "answer": "Um círculo de cuidado é um grupo privado para coordenar o cuidado de uma pessoa (como um pai, uma mãe ou um avô). Os familiares entram no círculo para partilhar novidades, acompanhar medicamentos e manter-se em contacto."
+        },
+        {
+          "question": "Quantos círculos posso criar?",
+          "answer": "Todos podem criar um círculo de cuidado no plano gratuito. Quem subscreve o Premium pode criar até 5 círculos, o que ajuda famílias grandes que cuidam de vários entes queridos."
+        },
+        {
+          "question": "Preciso de pagar para entrar no círculo de outra pessoa?",
+          "answer": "Não. Ser convidado para o círculo de alguém é sempre gratuito, e todos podem criar um círculo próprio no plano gratuito. A subscrição só é necessária para círculos extra, mais cuidadores e funcionalidades Premium."
+        }
+      ]
+    },
+    "roles": {
+      "items": [
+        {
+          "question": "Qual é a diferença entre Proprietário, Cuidador e Pessoa cuidada?",
+          "answer": "O Proprietário cria o círculo e pode convidar membros, gerir as definições e eliminar o círculo. Os Cuidadores são familiares que ajudam a coordenar o cuidado e podem ver e atualizar as informações. A Pessoa cuidada é quem recebe o cuidado: recebe lembretes de medicamentos e pode confirmar quando os tomou."
+        },
+        {
+          "question": "Posso participar em vários círculos?",
+          "answer": "Sim! Pode ser membro de vários círculos. Por exemplo, pode ser proprietário do círculo da sua mãe e cuidador no círculo do seu pai, criado por um irmão."
+        }
+      ]
+    },
+    "medications": {
+      "items": [
+        {
+          "question": "Como funcionam os lembretes de medicamentos?",
+          "answer": "Quando adiciona um medicamento, a pessoa cuidada recebe uma notificação push no horário programado. Ela toca em 'Tomei' para confirmar, e todos os familiares do círculo são notificados. Se a dose não for confirmada em 15 minutos, o seu ente querido recebe um lembrete gentil. Após 30 minutos, todos os cuidadores do círculo são notificados. Após 1 hora, todos no círculo são avisados. Nada é registado automaticamente: até que alguém marque a dose como Tomado ou Saltado, ela aparece como Não marcado."
+        },
+        {
+          "question": "O que acontece se uma dose não for marcada?",
+          "answer": "Se uma dose não for marcada após 1 hora, todos no círculo são avisados de que ela ainda não foi marcada. A dose aparece como Não marcado até que alguém a marque como Tomado ou Saltado, e uma dose marcada depois da sua janela aparece como Tomado com atraso. Pode ver o histórico do medicamento para observar padrões ao longo do tempo, incluindo as taxas de adesão e quais as doses que ficam mais vezes sem marcação."
+        },
+        {
+          "question": "Posso configurar medicamentos que não são diários?",
+          "answer": "Sim! Pode configurar medicamentos diários, em dias alternados, semanais (em dias específicos), mensais ou em ciclos de toma e pausa. Para medicamentos tomados só quando necessário, escolha 'Se necessário': não há horários fixos, e quem der uma dose regista-a para que todo o círculo veja quando foi a última."
+        }
+      ]
+    },
+    "notifications": {
+      "items": [
+        {
+          "question": "Onde recebo as notificações?",
+          "answer": "Lembretes e alertas são enviados como notificações push pela app móvel CircleCare. Pode gerir as suas preferências de notificação aqui na web, mas, para receber os lembretes, instale a app no seu telemóvel e ative as notificações."
+        },
+        {
+          "question": "Que notificações vou receber?",
+          "answer": "Receberá alertas em quatro grupos que pode ativar ou desativar em Perfil: Medicamentos (doses tomadas, saltadas ou não marcadas), Tarefas e consultas (quando algo lhe é atribuído e antes do prazo), Notas (quando alguém adiciona uma nota) e Dicas e sugestões. Se for a pessoa cuidada, também recebe os seus próprios lembretes de dose, que ficam sempre ativados."
+        },
+        {
+          "question": "O que são horários de silêncio?",
+          "answer": "Os horários de silêncio pausam as notificações nos períodos que definir (por exemplo, durante a noite, das 22h às 7h). Vá a Perfil e definições para configurar os seus horários de silêncio."
+        },
+        {
+          "question": "Posso desativar certas notificações?",
+          "answer": "Sim. Vá a Perfil e depois a Notificações. Cada um dos quatro interruptores ativa ou desativa um grupo inteiro na sua conta, em todos os círculos de que faz parte. Desativar Medicamentos significa que não será avisado quando uma dose não for marcada."
+        }
+      ]
+    },
+    "premium": {
+      "title": "Funcionalidades Premium",
+      "items": [
+        {
+          "question": "O que o Premium inclui?",
+          "answer": "O CircleCare Premium inclui até 5 círculos de cuidado, cuidadores ilimitados por círculo, o Assistente de cuidado e o resumo semanal por e-mail. Veja os preços atuais na página de upgrade."
+        },
+        {
+          "question": "Posso experimentar antes de subscrever?",
+          "answer": "Sim! O CircleCare é gratuito para começar, com um círculo de cuidado e dois cuidadores. Quando quiser mais círculos, cuidadores ilimitados ou funcionalidades Premium como a IA, basta fazer o upgrade."
+        },
+        {
+          "question": "Como restauro as minhas compras?",
+          "answer": "Na app móvel CircleCare, vá a Perfil > Subscrição > Restaurar compras. Isto é útil se reinstalar a app ou mudar de telemóvel. Se subscreveu aqui na web, a sua subscrição acompanha a sua conta automaticamente."
+        },
+        {
+          "question": "Como cancelo a minha subscrição?",
+          "answer": "Abra o seu Perfil e escolha Gerir subscrição. Se subscreveu neste site, isso leva-o diretamente ao seu portal de faturação, onde pode cancelar com poucos cliques. Se subscreveu na app móvel, cancele a partir do telemóvel: Definições > Subscrições no iPhone, ou Play Store > Pagamentos e subscrições no Android. Em qualquer dos casos, mantém o Premium até ao fim do período já pago e nunca precisa de contactar o suporte para cancelar."
+        }
+      ]
+    }
+  },
+  "contact": {
+    "body": "Fale com a nossa equipa de suporte e entraremos em contacto."
+  },
+  "download": {
+    "body": "Transfira o CircleCare no seu telemóvel para ter lembretes, ajuda da IA e muito mais."
+  }
+}

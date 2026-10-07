@@ -1,0 +1,100 @@
+{
+  "eyebrow": "CircleCare Premium",
+  "headline": {
+    "onboarding": { "lead": "Una cura migliore,", "accent": "insieme." },
+    "general": { "lead": "Sblocca l'esperienza", "accent": "completa." },
+    "capacity": { "lead": "Più persone,", "accent": "cura migliore." },
+    "feature": { "lead": "Ottieni di più da", "accent": "CircleCare." },
+    "earnedMeds": { "lead": "Stai seguendo", "accent": "il programma." },
+    "earnedInvite": { "lead": "La tua cerchia", "accent": "sta crescendo." }
+  },
+  "subtitle": "Tutto ciò che serve alla tua famiglia per coordinare la cura, per ogni cerchia di cui fai parte.",
+  "trialHook": "Inizia con una prova gratuita: oggi non paghi nulla.",
+  "benefits": {
+    "circles": {
+      "title": "Fino a 5 cerchie di cura",
+      "sub": "Una per la mamma, per il papà o per tutta la famiglia"
+    },
+    "caregivers": {
+      "title": "Caregiver illimitati",
+      "sub": "Invita fratelli, sorelle, partner e professionisti"
+    },
+    "ai": {
+      "title": "Assistente di cura con IA",
+      "sub": "Riassume le visite e mette in evidenza ciò che conta"
+    },
+    "exports": {
+      "title": "Report sull'aderenza e importazione del calendario",
+      "sub": "Condividi la cronologia dei farmaci con i professionisti sanitari e importa gli appuntamenti dal tuo calendario"
+    }
+  },
+  "plans": {
+    "monthly": "Mensile",
+    "annual": "Annuale",
+    "perMonth": "al mese",
+    "perYear": "all'anno",
+    "bestValue": "Più conveniente",
+    "savePercent": "Risparmia il {{percent}}%",
+    "perMonthBilled": "{{price}}/mese, addebitato annualmente",
+    "billedMonthly": "Addebitato ogni mese",
+    "trialIncluded": "Prova gratuita inclusa",
+    "monthlyPerk": "Annulli quando vuoi, senza impegno",
+    "trialWithDuration": "Prova gratuita di {{period}}"
+  },
+  "choosePlan": "Scegli un piano",
+  "freeBaseline": "Il piano gratuito include una cerchia di cura e due caregiver.",
+  "subscribe": "Abbonati",
+  "startTrial": "Inizia la prova gratuita",
+  "subscribing": "Apertura del pagamento…",
+  "cancelAnytime": "Puoi annullare quando vuoi.",
+  "securedByStripe": "Pagamento sicuro con Stripe.",
+  "orUseApp": "Preferisci l'app? Puoi anche passare a Premium nell'app CircleCare e pagare tramite lo store del tuo dispositivo.",
+  "unavailable": "Il pagamento online non è disponibile al momento. Puoi anche passare a Premium nell'app CircleCare.",
+  "storeOnly": {
+    "title": "Abbonati nell'app CircleCare",
+    "bodyMobile": "CircleCare Premium è disponibile nell'app. Scarica CircleCare qui sotto, accedi con questa stessa email e avvia l'abbonamento dal tuo profilo.",
+    "bodyDesktop": "CircleCare Premium è disponibile nell'app CircleCare sul tuo telefono. Installala, accedi con questa stessa email e avvia l'abbonamento dal tuo profilo.",
+    "storesLabel": "Scarica l'app CircleCare",
+    "helpPrefix": "Hai domande o non hai uno smartphone?",
+    "helpCta": "Scrivi al nostro supporto"
+  },
+  "countryError": {
+    "title": "Non siamo riusciti a caricare il tuo account",
+    "body": "Ci servono i dati del tuo account prima di aprire il pagamento. Controlla la connessione e riprova."
+  },
+  "error": "Qualcosa è andato storto nell'avvio del pagamento. Riprova.",
+  "back": "Torna al profilo",
+  "alreadyPremium": {
+    "title": "Hai già Premium",
+    "body": "Hai accesso completo a tutte le funzioni di CircleCare.",
+    "manage": "Gestisci l'abbonamento",
+    "manageInApp": "Gestisci l'abbonamento nell'app CircleCare in cui l'hai acquistato."
+  },
+  "success": {
+    "title": "Ti diamo il benvenuto in Premium!",
+    "body": "Il tuo abbonamento è attivo. Goditi l'accesso completo a tutte le tue cerchie di cura.",
+    "cta": "Continua"
+  },
+  "autoRenewNotice": "Il tuo abbonamento si rinnova automaticamente al prezzo indicato finché non lo annulli. Puoi annullarlo in qualsiasi momento dal tuo profilo.",
+  "termsLink": "Termini di servizio",
+  "privacyLink": "Informativa sulla privacy",
+  "legalPrefix": "Abbonandoti accetti i nostri",
+  "legalJoin": "e la nostra",
+  "trialHookWithDuration": "Inizia con una prova gratuita di {{period}}: oggi non paghi nulla.",
+  "trialPeriod": {
+    "day_one": "{{count}} giorno",
+    "day_other": "{{count}} giorni",
+    "week_one": "{{count}} settimana",
+    "week_other": "{{count}} settimane",
+    "month_one": "{{count}} mese",
+    "month_other": "{{count}} mesi",
+    "year_one": "{{count}} anno",
+    "year_other": "{{count}} anni"
+  },
+  "onboarding": {
+    "subtitle": "Tutto ciò che serve alla tua famiglia per coordinare la cura delle persone più importanti.",
+    "continueFree": "Continua con il piano gratuito",
+    "continueFreeSub": "1 cerchia, 2 caregiver: puoi passare a Premium quando vuoi",
+    "notNow": "Non ora"
+  }
+}

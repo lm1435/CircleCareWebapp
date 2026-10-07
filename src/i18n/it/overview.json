@@ -1,0 +1,65 @@
+{
+  "hero": {
+    "bornAge": "Nascita: {{date}} · età {{age}}",
+    "caredForBy": "Se ne prendono cura",
+    "andMore_one": "+{{count}} altro",
+    "andMore_other": "+{{count}} altri"
+  },
+  "adherence": {
+    "eyebrow": "Ultimi 7 giorni",
+    "label": "Farmaci presi come da programma",
+    "chartSummary": "Aderenza giornaliera degli ultimi 7 giorni: {{values}}"
+  },
+  "quickAccess": {
+    "title": "Accesso rapido",
+    "notes": "Note",
+    "calendar": "Calendario",
+    "medications": "Farmaci",
+    "tasks": "Incarichi",
+    "tasksNote_one": "{{count}} aperto",
+    "tasksNote_other": "{{count}} aperti",
+    "vitals": "Parametri vitali",
+    "activityFeed": "Attività recenti",
+    "careInfo": "Info di cura"
+  },
+  "appointments": {
+    "title": "Prossimi appuntamenti",
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "viewAll": "Vedi tutti"
+  },
+  "tasks": {
+    "title": "Incarichi aperti",
+    "empty": "Sei al passo con tutto: nessun incarico aperto.",
+    "emptyFirstRun": "Coordina le cose da fare che tengono la cura in ordine, come commissioni, rifornimenti e controlli, e condividile con tutti quelli che aiutano.",
+    "addFirst": "Aggiungi il tuo primo incarico",
+    "loadError": "Non è stato possibile caricare gli incarichi aperti",
+    "showAll": "Mostra tutti ({{count}})",
+    "viewAll": "Vedi tutti gli incarichi"
+  },
+  "team": {
+    "title": "Team di cura",
+    "myTitle": "Il mio team di cura",
+    "count_one": "{{count}} membro",
+    "count_other": "{{count}} membri",
+    "invite": "Invita un membro",
+    "careRecipient": "Persona assistita",
+    "circleAdmin": "Amministrazione della cerchia",
+    "familyMember": "Familiare",
+    "you": "(Tu)",
+    "recipientBadge": "Persona assistita",
+    "medManagerBadge": "Gestisce i promemoria dei farmaci"
+  },
+  "solo": {
+    "title": "La cura è più leggera insieme",
+    "body": "Invita un familiare o un caregiver ad aiutarti a coordinare la cura di {{name}}: condividete incarichi, appuntamenti e aggiornamenti, così nessuno porta il peso da solo.",
+    "bodySelfCare": "Invita un familiare o un caregiver ad aiutarti: condividete incarichi, appuntamenti e aggiornamenti, così il peso non ricade tutto su di te.",
+    "cta": "Invita il tuo primo caregiver"
+  },
+  "settings": {
+    "title": "Gestisci",
+    "editCircle": "Modifica cerchia",
+    "members": "Membri",
+    "deleteCircle": "Elimina cerchia"
+  }
+}

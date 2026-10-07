@@ -1,0 +1,16 @@
+{
+  "subtitle": "Um diário partilhado de como foi cada dia, visível para todos no círculo.",
+  "errorHint": "Verifique a sua ligação e tente novamente.",
+  "composer": {
+    "save": "Guardar",
+    "errorSaving": "Não foi possível guardar a nota. Tente novamente."
+  },
+  "row": {
+    "delete": "Eliminar"
+  },
+  "deleteTitle": "Eliminar nota?",
+  "loading": "A carregar notas",
+  "moodStrip": {
+    "empty": "Nenhum humor registado nesta semana"
+  }
+}

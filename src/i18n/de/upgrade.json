@@ -1,0 +1,118 @@
+{
+  "eyebrow": "CircleCare Premium",
+  "headline": {
+    "onboarding": {
+      "lead": "Bessere Pflege,",
+      "accent": "gemeinsam."
+    },
+    "general": {
+      "lead": "Entdecken Sie den vollen",
+      "accent": "Funktionsumfang."
+    },
+    "capacity": {
+      "lead": "Mehr Menschen,",
+      "accent": "bessere Pflege."
+    },
+    "feature": {
+      "lead": "Holen Sie mehr aus",
+      "accent": "CircleCare heraus."
+    },
+    "earnedMeds": {
+      "lead": "Sie bleiben",
+      "accent": "am Ball."
+    },
+    "earnedInvite": {
+      "lead": "Ihr Kreis",
+      "accent": "wächst."
+    }
+  },
+  "subtitle": "Alles, was Ihre Familie braucht, um die Pflege zu koordinieren – für jeden Kreis, in dem Sie dabei sind.",
+  "trialHook": "Starten Sie mit einem kostenlosen Testzeitraum – heute fällt keine Zahlung an.",
+  "benefits": {
+    "circles": {
+      "title": "Bis zu 5 Pflegekreise",
+      "sub": "Einer für Mama, Papa oder die ganze Familie"
+    },
+    "caregivers": {
+      "title": "Unbegrenzt viele Pflegepersonen",
+      "sub": "Laden Sie Geschwister, Partner/innen und Fachkräfte ein"
+    },
+    "ai": {
+      "title": "KI-Pflegeassistent",
+      "sub": "Fasst Besuche zusammen und hebt hervor, was wichtig ist"
+    },
+    "exports": {
+      "title": "Einnahmetreue-Berichte & Kalenderimport",
+      "sub": "Medikamentenverlauf mit Behandelnden teilen, Termine aus Ihrem Kalender importieren"
+    }
+  },
+  "plans": {
+    "monthly": "Monatlich",
+    "annual": "Jährlich",
+    "perMonth": "pro Monat",
+    "perYear": "pro Jahr",
+    "bestValue": "Bestes Preis-Leistungs-Verhältnis",
+    "savePercent": "{{percent}} % sparen",
+    "perMonthBilled": "{{price}}/Monat, jährliche Abrechnung",
+    "billedMonthly": "Monatliche Abrechnung",
+    "trialIncluded": "Kostenloser Testzeitraum inklusive",
+    "monthlyPerk": "Jederzeit kündbar, keine Bindung",
+    "trialWithDuration": "Kostenloser Testzeitraum: {{period}}"
+  },
+  "choosePlan": "Tarif wählen",
+  "freeBaseline": "Der kostenlose Tarif umfasst einen Pflegekreis und zwei Pflegepersonen.",
+  "subscribe": "Abonnieren",
+  "startTrial": "Kostenlosen Testzeitraum starten",
+  "subscribing": "Kasse wird geöffnet …",
+  "cancelAnytime": "Jederzeit kündbar.",
+  "securedByStripe": "Sichere Bezahlung über Stripe.",
+  "orUseApp": "Lieber in der App? Sie können auch in der CircleCare-App upgraden und über Ihren App-Store bezahlen.",
+  "unavailable": "Die Online-Bezahlung ist derzeit nicht verfügbar. Sie können auch in der CircleCare-App upgraden.",
+  "storeOnly": {
+    "title": "In der CircleCare-App abonnieren",
+    "bodyMobile": "CircleCare Premium ist in der App erhältlich. Laden Sie CircleCare unten herunter, melden Sie sich mit derselben E-Mail-Adresse an und starten Sie Ihr Abonnement über Ihr Profil.",
+    "bodyDesktop": "CircleCare Premium ist in der CircleCare-App auf Ihrem Telefon erhältlich. Installieren Sie sie, melden Sie sich mit derselben E-Mail-Adresse an und starten Sie Ihr Abonnement über Ihr Profil.",
+    "storesLabel": "CircleCare-App laden",
+    "helpPrefix": "Fragen oder kein Smartphone?",
+    "helpCta": "Schreiben Sie unserem Support-Team"
+  },
+  "countryError": {
+    "title": "Ihr Konto konnte nicht geladen werden",
+    "body": "Wir benötigen Ihre Kontodaten, bevor wir die Bezahlung öffnen können. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut."
+  },
+  "error": "Beim Starten der Bezahlung ist etwas schiefgelaufen. Bitte versuchen Sie es erneut.",
+  "back": "Zurück zum Profil",
+  "alreadyPremium": {
+    "title": "Sie haben bereits Premium",
+    "body": "Sie haben vollen Zugriff auf alle Funktionen von CircleCare.",
+    "manage": "Abonnement verwalten",
+    "manageInApp": "Verwalten Sie Ihr Abonnement in der CircleCare-App, in der Sie es abgeschlossen haben."
+  },
+  "success": {
+    "title": "Willkommen bei Premium!",
+    "body": "Ihr Abonnement ist aktiv. Genießen Sie vollen Zugriff auf alle Ihre Pflegekreise.",
+    "cta": "Weiter"
+  },
+  "autoRenewNotice": "Ihr Abonnement verlängert sich automatisch zum angezeigten Preis, bis Sie kündigen. Sie können jederzeit über Ihr Profil kündigen.",
+  "termsLink": "Nutzungsbedingungen",
+  "privacyLink": "Datenschutzerklärung",
+  "legalPrefix": "Mit dem Abschluss des Abonnements akzeptieren Sie unsere",
+  "legalJoin": "und unsere",
+  "trialHookWithDuration": "Starten Sie mit einem kostenlosen Testzeitraum ({{period}}) – heute fällt keine Zahlung an.",
+  "trialPeriod": {
+    "day_one": "{{count}} Tag",
+    "day_other": "{{count}} Tage",
+    "week_one": "{{count}} Woche",
+    "week_other": "{{count}} Wochen",
+    "month_one": "{{count}} Monat",
+    "month_other": "{{count}} Monate",
+    "year_one": "{{count}} Jahr",
+    "year_other": "{{count}} Jahre"
+  },
+  "onboarding": {
+    "subtitle": "Alles, was Ihre Familie braucht, um die Pflege der Menschen zu koordinieren, die Ihnen am meisten bedeuten.",
+    "continueFree": "Mit dem kostenlosen Tarif fortfahren",
+    "continueFreeSub": "1 Kreis, 2 Pflegepersonen – jederzeit upgraden",
+    "notNow": "Nicht jetzt"
+  }
+}

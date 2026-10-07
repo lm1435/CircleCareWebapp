@@ -1,0 +1,56 @@
+{
+  "title": "Incarichi",
+  "subtitle": "Le cose da fare per la tua cerchia: assegnale, seguile e spuntale.",
+  "addTask": "Aggiungi incarico",
+  "loading": "Caricamento incarichi",
+  "filter": {
+    "statusPillLabel": "Stato: {{value}}",
+    "status": {
+      "open": "Aperti",
+      "completed": "Completati",
+      "all": "Tutti"
+    },
+    "sortPillLabel": "Ordina: {{value}}",
+    "sort": {
+      "due_date": "Scadenza",
+      "assignee": "Assegnatario",
+      "created_at": "Aggiunti di recente"
+    }
+  },
+  "row": {
+    "completeLabel": "Segna \"{{title}}\" come completato",
+    "undoLabel": "Segna \"{{title}}\" come non completato",
+    "unassigned": "Non assegnato",
+    "noDueDate": "Nessuna scadenza",
+    "allDay": "Tutto il giorno",
+    "editLabel": "Modifica \"{{title}}\"",
+    "completedOn": "Completato il {{date}}",
+    "completing": "Completamento…",
+    "undo": "Annulla",
+    "done": "Fatto",
+    "statusDone": "(fatto)",
+    "statusPending": "(da fare)",
+    "viewDetailsLabel": "Vedi i dettagli di \"{{title}}\"",
+    "overdue": "Scaduto"
+  },
+  "due": {
+    "today": "Oggi",
+    "yesterday": "Ieri"
+  },
+  "empty": {
+    "open": "Nessun incarico aperto",
+    "openHint": "Coordina le cose da fare che tengono in ordine la cura della persona cara, come commissioni, rifornimenti e controlli, e condividile con tutti quelli che aiutano.",
+    "openHintReadOnly": "Gli incarichi aggiunti dal team di cura compariranno qui.",
+    "completed": "Ancora nessun incarico completato",
+    "completedHint": "Gli incarichi portati a termine dalla cerchia compariranno qui, così tutti possono vedere cosa è già stato fatto.",
+    "all": "Ancora nessun incarico",
+    "allHint": "Coordina le cose da fare che tengono in ordine la cura della persona cara, come commissioni, rifornimenti e controlli, e condividile con tutti quelli che aiutano.",
+    "cta": "Aggiungi incarico"
+  },
+  "errorTitle": "Non è stato possibile caricare gli incarichi",
+  "errorHint": "Controlla la connessione e riprova.",
+  "toast": {
+    "completed": "Incarico completato",
+    "reopened": "Incarico riaperto"
+  }
+}

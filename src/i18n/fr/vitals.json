@@ -1,0 +1,136 @@
+{
+  "title": "Constantes",
+  "subtitle": "Suivez les mesures de santé de votre cercle : tension artérielle, fréquence cardiaque, glycémie et poids.",
+  "loading": "Chargement des constantes",
+  "errorTitle": "Impossible de charger les constantes",
+  "errorHint": "Vérifiez votre connexion et réessayez.",
+  "types": {
+    "blood_pressure": "Tension artérielle",
+    "heart_rate": "Fréquence cardiaque",
+    "glucose": "Glycémie",
+    "weight": "Poids"
+  },
+  "filter": {
+    "typeLabel": "Type",
+    "allTypes": "Tous les types",
+    "rangeLabel": "Période",
+    "range": {
+      "7d": "7 derniers jours",
+      "30d": "30 derniers jours",
+      "90d": "90 derniers jours"
+    }
+  },
+  "detail": {
+    "latest": "Dernière",
+    "average": "Moyenne",
+    "min": "Plus basse",
+    "max": "Plus haute",
+    "system": "Système",
+    "trendStable": "Stable",
+    "trendUp": "En hausse de {{pct}} % par rapport à la période précédente",
+    "trendDown": "En baisse de {{pct}} % par rapport à la période précédente",
+    "chartTitle": "Tendance",
+    "chartSummary": "Graphique de tendance. Plus basse : {{min}}, plus haute : {{max}}, dernière : {{latest}}.",
+    "chartToday": "Aujourd’hui",
+    "trendVs": {
+      "7d": "Moyenne : {{delta}} par rapport aux 7 jours précédents",
+      "30d": "Moyenne : {{delta}} par rapport aux 30 jours précédents",
+      "90d": "Moyenne : {{delta}} par rapport aux 90 jours précédents"
+    },
+    "trendSame": {
+      "7d": "Même moyenne que les 7 jours précédents",
+      "30d": "Même moyenne que les 30 jours précédents",
+      "90d": "Même moyenne que les 90 jours précédents"
+    }
+  },
+  "fields": {
+    "systolic": "Systolique",
+    "diastolic": "Diastolique",
+    "unitSuffix": "en {{unit}}",
+    "date": "Date",
+    "time": "Heure",
+    "timesShownIn": "Heures affichées dans le fuseau {{timezone}}",
+    "notes": "Notes",
+    "notesPlaceholder": "Ajouter une note (facultatif)",
+    "dualTimezoneHint": "Votre heure / heure pour {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "Votre heure / heure de la personne aidée ({{timezone}})",
+    "dayOffsetNext": "+1 jour",
+    "dayOffsetPrevious": "-1 jour"
+  },
+  "add": {
+    "cta": "Ajouter une mesure",
+    "title": "Ajouter une mesure",
+    "typeLabel": "Type de mesure",
+    "save": "Enregistrer la mesure"
+  },
+  "edit": {
+    "title": "Modifier la mesure",
+    "save": "Enregistrer les modifications"
+  },
+  "actions": {
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "menuLabel": "Actions pour la mesure {{value}}"
+  },
+  "delete": {
+    "title": "Supprimer cette mesure ?",
+    "message": "Supprimer cette mesure : {{type}}, {{date}} ? Cette action est irréversible."
+  },
+  "empty": {
+    "title": "Aucune mesure pour l’instant",
+    "hint": "Suivez les constantes de votre proche dans le temps — tension artérielle, poids et plus — pour que tout le cercle voie les tendances.",
+    "hintReadOnly": "Les mesures enregistrées pour ce cercle apparaîtront ici afin que chacun suive l’évolution de la santé de votre proche.",
+    "cta": "Enregistrer une mesure"
+  },
+  "emptyState": {
+    "neverLogged": {
+      "title": {
+        "blood_pressure": "Aucune mesure de tension artérielle pour l’instant",
+        "heart_rate": "Aucune mesure de fréquence cardiaque pour l’instant",
+        "glucose": "Aucune mesure de glycémie pour l’instant",
+        "weight": "Aucune mesure de poids pour l’instant"
+      },
+      "description": "Enregistrez des mesures au fil du temps pour que le cercle repère une tendance avant le prochain rendez-vous.",
+      "cta": {
+        "blood_pressure": "Enregistrer la tension artérielle",
+        "heart_rate": "Enregistrer la fréquence cardiaque",
+        "glucose": "Enregistrer la glycémie",
+        "weight": "Enregistrer le poids"
+      }
+    },
+    "outOfRange": {
+      "title": {
+        "7d": "Aucune mesure au cours des 7 derniers jours",
+        "30d": "Aucune mesure au cours des 30 derniers jours",
+        "90d": "Aucune mesure au cours des 90 derniers jours"
+      },
+      "lastReading": "Dernière mesure : {{value}} · {{date}}",
+      "show": {
+        "30d": "Afficher les 30 derniers jours",
+        "90d": "Afficher les 90 derniers jours"
+      }
+    }
+  },
+  "toast": {
+    "added": "Mesure enregistrée",
+    "updated": "Mesure mise à jour",
+    "deleted": "Mesure supprimée"
+  },
+  "validation": {
+    "invalid": "Vérifiez cette valeur.",
+    "valueRequired": "Saisissez une valeur.",
+    "dateRequired": "Choisissez une date.",
+    "timeRequired": "Choisissez une heure.",
+    "valueOutOfRange": "Cette valeur semble hors de la plage attendue. Vérifiez le nombre.",
+    "diastolicRequired": "Saisissez la valeur diastolique.",
+    "value2NotAllowed": "Cette mesure n’accepte qu’une seule valeur.",
+    "invalidUnit": "Cette unité n’est pas valide pour cette mesure.",
+    "invalidDate": "Choisissez une date et une heure valides.",
+    "recordedAtFuture": "L’heure de la mesure ne peut pas être dans le futur.",
+    "notesTooLong": "Les notes ne peuvent pas dépasser 500 caractères."
+  },
+  "errors": {
+    "permissionDenied": "Vous n’avez pas l’autorisation d’effectuer cette modification.",
+    "saveFailed": "Impossible d’enregistrer vos modifications. Réessayez."
+  }
+}

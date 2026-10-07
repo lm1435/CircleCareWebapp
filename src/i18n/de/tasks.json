@@ -1,0 +1,56 @@
+{
+  "title": "Aufgaben",
+  "subtitle": "Was für Ihren Kreis zu tun ist – zuweisen, verfolgen und abhaken.",
+  "addTask": "Aufgabe hinzufügen",
+  "loading": "Aufgaben werden geladen",
+  "filter": {
+    "statusPillLabel": "Status: {{value}}",
+    "status": {
+      "open": "Offen",
+      "completed": "Erledigt",
+      "all": "Alle"
+    },
+    "sortPillLabel": "Sortierung: {{value}}",
+    "sort": {
+      "due_date": "Fälligkeitsdatum",
+      "assignee": "Zuständig",
+      "created_at": "Zuletzt hinzugefügt"
+    }
+  },
+  "row": {
+    "completeLabel": "„{{title}}“ als erledigt markieren",
+    "undoLabel": "„{{title}}“ als nicht erledigt markieren",
+    "unassigned": "Nicht zugewiesen",
+    "noDueDate": "Kein Fälligkeitsdatum",
+    "allDay": "Ganztägig",
+    "editLabel": "„{{title}}“ bearbeiten",
+    "completedOn": "Erledigt {{date}}",
+    "completing": "Wird erledigt …",
+    "undo": "Rückgängig",
+    "done": "Erledigt",
+    "statusDone": "(erledigt)",
+    "statusPending": "(nicht erledigt)",
+    "viewDetailsLabel": "Details zu „{{title}}“ anzeigen",
+    "overdue": "Überfällig"
+  },
+  "due": {
+    "today": "Heute",
+    "yesterday": "Gestern"
+  },
+  "empty": {
+    "open": "Keine offenen Aufgaben",
+    "openHint": "Koordinieren Sie die Aufgaben, die die Pflege Ihrer Angehörigen am Laufen halten – Besorgungen, Nachschub, Nachfragen – und teilen Sie sie mit allen, die helfen.",
+    "openHintReadOnly": "Aufgaben, die das Pflegeteam hinzufügt, erscheinen hier.",
+    "completed": "Noch keine erledigten Aufgaben",
+    "completedHint": "Aufgaben, die der Kreis erledigt, erscheinen hier, damit alle sehen, was schon geschafft ist.",
+    "all": "Noch keine Aufgaben",
+    "allHint": "Koordinieren Sie die Aufgaben, die die Pflege Ihrer Angehörigen am Laufen halten – Besorgungen, Nachschub, Nachfragen – und teilen Sie sie mit allen, die helfen.",
+    "cta": "Aufgabe hinzufügen"
+  },
+  "errorTitle": "Aufgaben konnten nicht geladen werden",
+  "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+  "toast": {
+    "completed": "Aufgabe erledigt",
+    "reopened": "Aufgabe wieder geöffnet"
+  }
+}

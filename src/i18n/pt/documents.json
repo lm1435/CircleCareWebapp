@@ -1,0 +1,127 @@
+{
+  "title": "Documentos",
+  "subtitle": "Cartões de seguro, registros médicos e diretivas, em um só lugar.",
+  "count_one": "Documentos: {{count}}",
+  "count_other": "{{count}} documentos",
+  "filterLabel": "Filtrar por categoria",
+  "categories": {
+    "all": "Todos",
+    "medical_records": "Registros médicos",
+    "insurance": "Seguro",
+    "legal": "Jurídico",
+    "prescriptions": "Receitas",
+    "other": "Outros"
+  },
+  "uploadCtaTitle": "Quer adicionar um documento?",
+  "uploadCta": "Somente membros com permissão de edição podem adicionar documentos a este círculo. Peça ao proprietário do círculo se precisar que algo seja adicionado.",
+  "errorTitle": "Não foi possível carregar os documentos",
+  "errorHint": "Verifique sua conexão e tente novamente.",
+  "noDocuments": "Nenhum documento ainda",
+  "noDocumentsHint": "Guarde os documentos importantes do seu ente querido em um só lugar (cartões de seguro, registros, diretivas) para que todos que ajudam possam encontrá-los quando for preciso.",
+  "noDocumentsHintReadOnly": "Os documentos compartilhados com este círculo aparecerão aqui para que todos que ajudam possam encontrá-los quando for preciso.",
+  "emptyCategory": {
+    "title": "Nada em {{category}} ainda.",
+    "action": "Mostrar todos os documentos"
+  },
+  "starter": {
+    "eyebrow": "Comece por aqui",
+    "title": "Comece com estes quatro",
+    "lede": "Quem estiver ajudando pode acessá-los em segundos: na farmácia, no pronto-socorro, ao telefone com uma enfermeira.",
+    "items": {
+      "insurance": {
+        "title": "Cartão do plano de saúde",
+        "hint": "Adicione a frente e depois o verso"
+      },
+      "directive": {
+        "title": "Diretiva antecipada",
+        "hint": "ONR, procuração, testamento vital"
+      },
+      "medications": {
+        "title": "Lista de medicamentos",
+        "hint": "A impressão fornecida pela farmácia"
+      },
+      "labs": {
+        "title": "Resultados de exames recentes",
+        "hint": "Exames de sangue, imagens, relatórios de alta"
+      }
+    },
+    "other": "Enviar outro documento"
+  },
+  "open": "Abrir",
+  "download": "Baixar",
+  "downloadDocument": "Baixar {{name}}",
+  "downloadFailed": "Falha ao baixar. Tente novamente.",
+  "closePreview": "Fechar visualização",
+  "pdfFallbackHint": "O PDF não aparece? Abra em uma nova aba ou baixe o arquivo.",
+  "openInNewTab": "Abrir em nova aba",
+  "viewer": {
+    "failedTitle": "Não foi possível abrir este documento",
+    "failedMessage": "Verifique sua conexão e tente novamente.",
+    "unsupportedTitle": "Este arquivo não pode ser visualizado aqui",
+    "unsupportedMessage": "Use Baixar para salvá-lo no seu dispositivo.",
+    "downloadStarted": "Download iniciado.",
+    "newTabBlocked": "Seu navegador bloqueou a nova aba, então o arquivo está sendo baixado.",
+    "newTabFailed": "Não foi possível abrir este documento em uma nova aba. Tente novamente."
+  },
+  "editAction": "Editar",
+  "deleteAction": "Excluir",
+  "actionsFor": "Opções para {{name}}",
+  "storage": {
+    "footnote": "{{used}} de {{limit}} usados",
+    "used": "{{used}} usados",
+    "remaining": "{{remaining}} restantes",
+    "full": "Armazenamento cheio. Faça upgrade para ter mais espaço.",
+    "fullNonOwnerNamed": "Armazenamento cheio. Somente {{ownerName}}, proprietário do círculo, pode fazer upgrade para ter mais espaço.",
+    "fullNonOwner": "Armazenamento cheio. Somente o proprietário do círculo pode fazer upgrade para ter mais espaço.",
+    "fullPremium": "Armazenamento cheio. Exclua os arquivos de que não precisa mais para liberar espaço.",
+    "upgrade": "Fazer upgrade",
+    "trackLabel": "Armazenamento usado"
+  },
+  "upload": {
+    "openButton": "Enviar documento",
+    "emptyButton": "Envie seu primeiro documento",
+    "title": "Enviar um documento",
+    "submit": "Enviar",
+    "success": "Documento enviado.",
+    "fileLabel": "Arquivo",
+    "chooseFile": "Escolher arquivo",
+    "noFileChosen": "Nenhum arquivo escolhido",
+    "fileHint": "JPG, PNG, HEIC ou PDF. Até {{max}}.",
+    "storageRemaining": "{{remaining}} restantes",
+    "storageFull": "Este círculo atingiu o limite de armazenamento. Libere espaço ou faça upgrade para o Premium para adicionar mais.",
+    "storageFullPremium": "Este círculo atingiu o limite de armazenamento de 1 GB. Libere espaço para adicionar mais.",
+    "labelLabel": "Nome",
+    "categoryLabel": "Categoria",
+    "noteLabel": "Nota (opcional)",
+    "noteHint": "Adicione contexto para os outros cuidadores.",
+    "errors": {
+      "fileRequired": "Escolha um arquivo para enviar.",
+      "fileType": "Use um arquivo JPG, PNG, HEIC ou PDF.",
+      "fileTooLarge": "Este arquivo é grande demais. O limite é {{max}}.",
+      "storageFull": "Este arquivo excederia o limite de armazenamento do círculo.",
+      "labelRequired": "Informe um nome para este documento.",
+      "noteTooLong": "As notas podem ter até 500 caracteres."
+    },
+    "unsupportedOrDamaged": "Este tipo de arquivo não é compatível ou o arquivo está danificado. Tente outro arquivo."
+  },
+  "edit": {
+    "title": "Editar documento",
+    "success": "Documento atualizado.",
+    "errors": {
+      "labelRequired": "Informe um nome para este documento.",
+      "noteTooLong": "As notas podem ter até 500 caracteres."
+    }
+  },
+  "delete": {
+    "title": "Excluir documento?",
+    "message": "Excluir \"{{name}}\"? Esta ação não pode ser desfeita.",
+    "confirm": "Excluir",
+    "deleting": "Excluindo...",
+    "success": "Documento excluído."
+  },
+  "errors": {
+    "storageFull": "Este círculo atingiu o limite de armazenamento. Libere espaço para adicionar mais documentos.",
+    "permissionDenied": "Você não tem permissão para fazer isso.",
+    "saveFailed": "Algo deu errado. Tente novamente."
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "title": "Signes vitaux",
+  "loading": "Chargement des signes vitaux",
+  "errorTitle": "Impossible de charger les signes vitaux",
+  "empty": {
+    "hint": "Suivez les signes vitaux de votre proche dans le temps — tension artérielle, poids et plus — pour que tout le cercle voie les tendances."
+  }
+}

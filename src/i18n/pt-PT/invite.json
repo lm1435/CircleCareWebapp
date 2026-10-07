@@ -1,0 +1,33 @@
+{
+  "title": "{{inviterName}} fez-lhe um convite para ajudar a cuidar de {{recipientName}}",
+  "titleRecipient": "O seu círculo de cuidado",
+  "accepting": "A entrar…",
+  "acceptSuccess": "Entrou no círculo.",
+  "acceptFailed": "Não foi possível concluir a sua entrada no círculo neste momento. Tente novamente e, se continuar sem funcionar, peça um novo convite.",
+  "downloadPromptValid": "Transfira a app CircleCare para ter a experiência completa",
+  "downloadPromptError": "Entretanto, transfira a app para ter tudo pronto quando um novo convite chegar",
+  "appStore": "Transfira na App Store",
+  "codeLabel": "O seu código de convite:",
+  "loading": "A carregar o seu convite",
+  "error": {
+    "suggestion": "Peça a quem fez o convite que envie um novo convite. Entretanto, pode transferir a app e entrar assim que o novo convite chegar."
+  },
+  "og": {
+    "title": "{{inviterName}} fez-lhe um convite para o CircleCare",
+    "description": "Participe em {{circleName}} para ajudar a coordenar o cuidado de {{recipientName}}",
+    "descriptionRecipient": "Participe no seu círculo de cuidado no CircleCare"
+  },
+  "errorUsed": {
+    "suggestion": "Se já entrou, inicie sessão e encontrará o círculo de cuidado na sua lista de círculos. Caso contrário, peça a quem fez o convite que envie um novo convite."
+  },
+  "acceptArchived": "Este círculo já não está ativo, por isso o convite não pode ser usado. Peça a quem fez o convite que fale com o proprietário do círculo.",
+  "acceptRecipientExists": "Este círculo já tem uma pessoa cuidada, por isso este convite não pode ser usado. Peça a quem fez o convite que envie um convite de cuidador.",
+  "errorArchived": {
+    "title": "Este círculo de cuidado já não está ativo",
+    "suggestion": "O círculo foi eliminado depois de o convite ter sido enviado, por isso este convite não pode ser usado. Não há nada de errado com o seu código: peça a quem fez o convite que fale com o proprietário do círculo."
+  },
+  "errorRecipientExists": {
+    "suggestion": "Apenas uma pessoa pode ser a pessoa cuidada num círculo, por isso este convite não pode ser usado. Peça a quem fez o convite que envie um convite de cuidador."
+  },
+  "acceptExpired": "Este convite expirou. Peça a quem fez o convite que envie um novo."
+}

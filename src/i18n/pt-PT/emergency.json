@@ -1,0 +1,125 @@
+{
+  "subtitle": "Partilhe com socorristas ou profissionais de saúde.",
+  "loadingLabel": "A carregar informações de emergência",
+  "readOnlyNotice": "Esta página é apenas de leitura.",
+  "downloadToEdit": "Transfira a app CircleCare para adicionar ou editar estas informações.",
+  "downloadCta": "Transferir a app",
+  "emptyHint": "Deixe num só lugar os dados de que os socorristas precisam para o seu ente querido: alergias, médicos, seguro de saúde e a quem ligar. Adicione-os na app CircleCare e eles aparecerão aqui.",
+  "atAGlance": {
+    "primaryContact": "Contacto de emergência"
+  },
+  "sections": {
+    "contacts": "Contactos de emergência",
+    "insurance": "Seguro de saúde"
+  },
+  "doctors": {
+    "address": "Morada"
+  },
+  "insurance": {
+    "policyNumber": "N.º da apólice",
+    "groupNumber": "N.º do grupo"
+  },
+  "empty": {
+    "medicalInfo": "Adicione tipo sanguíneo, alergias e condições de saúde para que os socorristas conheçam o seu ente querido em segundos.",
+    "doctors": "Adicione os médicos que cuidam do seu ente querido para que o círculo possa contactá-los rapidamente.",
+    "insurance": "Adicione os dados do seguro de saúde para que a cobertura esteja pronta quando o cuidado não puder esperar."
+  },
+  "edit": {
+    "delete": "Eliminar",
+    "save": "Guardar",
+    "saving": "A guardar…",
+    "addContact": "Adicionar contacto",
+    "addInsurance": "Adicionar seguro de saúde",
+    "deleteDoctorAria": "Eliminar médico {{name}}",
+    "editContactAria": "Editar contacto {{name}}",
+    "deleteContactAria": "Eliminar contacto {{name}}",
+    "editInsuranceAria": "Editar seguro de saúde {{name}}",
+    "deleteInsuranceAria": "Eliminar seguro de saúde {{name}}",
+    "doctor": {
+      "addressPlaceholder": "Rua, localidade, código postal",
+      "removeMessage": "Isto remove este médico da ficha de emergência.",
+      "removePrimaryMessage": "Isto limpa o médico principal da ficha de emergência."
+    },
+    "contact": {
+      "addTitle": "Adicionar contacto de emergência",
+      "editTitle": "Editar contacto de emergência",
+      "primary": "Contacto principal",
+      "primaryHint": "Apresentado primeiro aos socorristas. Apenas um contacto pode ser o principal.",
+      "removeTitle": "Remover contacto",
+      "removeMessage": "Isto remove este contacto de emergência da ficha."
+    },
+    "insurance": {
+      "addTitle": "Adicionar seguro de saúde",
+      "editTitle": "Editar seguro de saúde",
+      "labelPlaceholder": "Saúde, Dentário…",
+      "carrier": "Seguradora",
+      "carrierPlaceholder": "Medis",
+      "primary": "Seguro de saúde principal",
+      "primaryHint": "Apenas um seguro pode ser o principal.",
+      "carrierRequired": "Indique a seguradora do seguro de saúde.",
+      "removeTitle": "Remover seguro de saúde",
+      "removeMessage": "Isto remove este seguro de saúde da ficha."
+    }
+  },
+  "errors": {
+    "permissionDenied": "Não tem permissão para editar este círculo.",
+    "saveFailed": "Não foi possível guardar as suas alterações. Tente novamente."
+  },
+  "specialties": {
+    "primaryCare": "Medicina geral e familiar",
+    "podiatrist": "Podologista"
+  },
+  "tagInput": {
+    "clearInput": "Limpar pesquisa"
+  },
+  "medicalTags": {
+    "conditions": {
+      "chronicKidneyDisease": "Doença renal crónica",
+      "coronaryArteryDisease": "Doença arterial coronária",
+      "atrialFibrillation": "Fibrilação auricular",
+      "cancer": "Cancro",
+      "highCholesterol": "Colesterol elevado",
+      "thyroidDisease": "Doença da tiroide",
+      "chronicPain": "Dor crónica"
+    },
+    "medicationAllergies": {
+      "sulfaDrugs": "Medicamentos com sulfamidas"
+    },
+    "otherAllergies": {
+      "shellfish": "Marisco",
+      "dairy": "Lacticínios"
+    }
+  },
+  "careSummary": {
+    "share": "Partilhar",
+    "shareTitle": "Partilhar resumo de cuidado",
+    "shareAsPdf": "Partilhar como PDF",
+    "shareAsText": "Partilhar como texto",
+    "generating": "A gerar...",
+    "sections": {
+      "emergencyContacts": "Contactos de emergência",
+      "insurance": "Seguro de saúde"
+    },
+    "fields": {
+      "carrier": "Seguradora",
+      "policyNumber": "N.º da apólice",
+      "groupNumber": "N.º do grupo"
+    },
+    "empty": {
+      "noContacts": "Nenhum contacto de emergência adicionado",
+      "noAllergies": "Nenhuma alergia conhecida registada"
+    },
+    "privacy": {
+      "title": "Partilhar informações de saúde?",
+      "message": "Este resumo contém informações de saúde sensíveis, incluindo medicamentos, alergias e dados do seguro. Partilhe apenas com pessoas de confiança.\n\nAo partilhar, confirma que tem permissão para partilhar as informações de saúde desta pessoa.",
+      "confirm": "Partilhar"
+    }
+  },
+  "shareSummary": {
+    "title": "Partilhar resumo de cuidado",
+    "countError": "Não foi possível carregar as notas. O resumo será partilhado sem elas."
+  },
+  "conflict": {
+    "message": "Outro cuidador alterou esta secção enquanto editava. Carregámos a versão mais recente. Reveja-a e faça novamente a sua alteração."
+  }
+}

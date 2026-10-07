@@ -1,0 +1,24 @@
+{
+  "title": "Assistente di cura",
+  "subtitle": "Chiedi di cura, farmaci o salute",
+  "intro": "Fammi domande sulla cura, sui farmaci o sulla gestione della salute. Posso aiutarti con appuntamenti, farmaci, aderenza e attività recenti.",
+  "disclaimer": "Le risposte dell'IA hanno solo scopo informativo. Rivolgiti sempre a professionisti sanitari. I tuoi dati sanitari salvati non vengono mai condivisi con il fornitore dell'IA, solo i messaggi che scrivi.",
+  "inputPlaceholder": "Fai una domanda...",
+  "inputLabel": "Il tuo messaggio",
+  "send": "Invia",
+  "sending": "Invio...",
+  "thinking": "Sto pensando...",
+  "emptyTitle": "Come posso aiutarti?",
+  "suggestedQuestions": "Domande suggerite",
+  "remainingCount": "Domande rimaste oggi: {{count}}",
+  "newChat": "Nuova chat",
+  "errors": {
+    "subscriptionRequired": "L'Assistente di cura è una funzione Premium. Passa a Premium per usarlo.",
+    "viewOnly": "Hai accesso in sola lettura a questa cerchia. Chiedi al titolare della cerchia l'accesso completo per usare l'Assistente di cura.",
+    "circleReadOnly": "Al momento questa cerchia è in sola lettura. L'Assistente di cura torna disponibile quando l'abbonamento del titolare della cerchia lo include.",
+    "rateLimited": "Hai raggiunto il limite di domande di oggi. L'Assistente di cura sarà di nuovo disponibile domani.",
+    "unavailable": "L'Assistente di cura non è disponibile al momento. Riprova più tardi.",
+    "sendFailed": "Scusa, si è verificato un errore. Riprova.",
+    "invalidMessage": "Non è stato possibile elaborare quel messaggio. Prova a riformulare la domanda su cura o salute."
+  }
+}

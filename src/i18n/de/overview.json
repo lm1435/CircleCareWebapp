@@ -1,0 +1,65 @@
+{
+  "hero": {
+    "bornAge": "Geboren am {{date}} · Alter {{age}}",
+    "caredForBy": "Umsorgt von",
+    "andMore_one": "+{{count}} weitere Person",
+    "andMore_other": "+{{count}} weitere Personen"
+  },
+  "adherence": {
+    "eyebrow": "Letzte 7 Tage",
+    "label": "Medikamente nach Plan",
+    "chartSummary": "Tägliche Einnahmetreue der letzten 7 Tage: {{values}}"
+  },
+  "quickAccess": {
+    "title": "Schnellzugriff",
+    "notes": "Notizen",
+    "calendar": "Kalender",
+    "medications": "Medikamente",
+    "tasks": "Aufgaben",
+    "tasksNote_one": "{{count}} offen",
+    "tasksNote_other": "{{count}} offen",
+    "vitals": "Vitalwerte",
+    "activityFeed": "Aktivitätsverlauf",
+    "careInfo": "Pflegeinfos"
+  },
+  "appointments": {
+    "title": "Anstehende Termine",
+    "today": "Heute",
+    "tomorrow": "Morgen",
+    "viewAll": "Alle anzeigen"
+  },
+  "tasks": {
+    "title": "Offene Aufgaben",
+    "empty": "Alles erledigt – keine offenen Aufgaben.",
+    "emptyFirstRun": "Koordinieren Sie die Aufgaben, die die Pflege am Laufen halten – Besorgungen, Nachschub, Nachfragen – und teilen Sie sie mit allen, die helfen.",
+    "addFirst": "Erste Aufgabe hinzufügen",
+    "loadError": "Offene Aufgaben konnten nicht geladen werden",
+    "showAll": "Alle {{count}} anzeigen",
+    "viewAll": "Alle Aufgaben anzeigen"
+  },
+  "team": {
+    "title": "Pflegeteam",
+    "myTitle": "Mein Pflegeteam",
+    "count_one": "{{count}} Mitglied",
+    "count_other": "{{count}} Mitglieder",
+    "invite": "Mitglied einladen",
+    "careRecipient": "Umsorgte Person",
+    "circleAdmin": "Kreis-Admin",
+    "familyMember": "Familienmitglied",
+    "you": "(Sie)",
+    "recipientBadge": "Umsorgte Person",
+    "medManagerBadge": "Verwaltet Medikamentenerinnerungen"
+  },
+  "solo": {
+    "title": "Gemeinsam ist Pflege leichter",
+    "body": "Laden Sie ein Familienmitglied oder eine Pflegeperson ein, die Pflege von {{name}} mitzukoordinieren: Teilen Sie Aufgaben, Termine und Neuigkeiten, damit niemand alles allein tragen muss.",
+    "bodySelfCare": "Laden Sie ein Familienmitglied oder eine Pflegeperson ein, zu helfen: Teilen Sie Aufgaben, Termine und Neuigkeiten, damit Sie nicht alles allein tragen müssen.",
+    "cta": "Erste Pflegeperson einladen"
+  },
+  "settings": {
+    "title": "Verwalten",
+    "editCircle": "Kreis bearbeiten",
+    "members": "Mitglieder",
+    "deleteCircle": "Kreis löschen"
+  }
+}

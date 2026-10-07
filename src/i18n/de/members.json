@@ -1,0 +1,171 @@
+{
+  "picker": {
+    "heading": "Meine Kreise",
+    "greeting": {
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Tag",
+      "evening": "Guten Abend"
+    },
+    "careCircleCount_one": "{{count}} Pflegekreis",
+    "careCircleCount_other": "{{count}} Pflegekreise",
+    "open": "{{name}} öffnen",
+    "openWithRole": "{{name}} öffnen ({{role}})",
+    "openWithRoleOverdue": "{{name}} öffnen ({{role}}) – {{status}}",
+    "caringFor": "Pflege von {{name}}",
+    "caringWith_one": "Gemeinsam mit {{count}} Person im Einsatz",
+    "caringWith_other": "Gemeinsam mit {{count}} Personen im Einsatz",
+    "personHelping_one": "{{count}} Person hilft, die Pflege zu koordinieren",
+    "personHelping_other": "{{count}} Personen helfen, die Pflege zu koordinieren",
+    "memberCount_one": "{{count}} Mitglied",
+    "memberCount_other": "{{count}} Mitglieder",
+    "errorTitle": "Kreise konnten nicht geladen werden",
+    "errorBody": "Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    "empty": {
+      "title": "Richten wir Ihren Pflegekreis ein",
+      "body": "Ein Kreis ist ein privater Raum, in dem Familie und Pflegepersonen gemeinsam für einen geliebten Menschen sorgen – Medikamente, Termine und Aufgaben an einem Ort.",
+      "howItWorksTitle": "So funktioniert CircleCare",
+      "step1": "Erstellen Sie einen Kreis für Ihre Angehörige oder Ihren Angehörigen.",
+      "step2": "Laden Sie Familie und Pflegepersonen ein, damit die Last auf mehrere Schultern verteilt wird.",
+      "step3": "Alle sehen denselben Kalender – Medikamente, Termine und Aufgaben an einem Ort.",
+      "learnMore": "Mehr erfahren",
+      "invitedHintPrefix": "Schon per E-Mail eingeladen?",
+      "invitedHintLink": "Einladungen ansehen",
+      "companion": "Lieber mit dem Smartphone? Laden Sie die Begleit-App."
+    }
+  },
+  "med": {
+    "nothingTrackedYet": "Noch nichts erfasst",
+    "allTaken": "Alle Medikamente eingenommen",
+    "takenToday": "{{taken}}/{{total}} heute eingenommen",
+    "takenOverdue": "{{taken}}/{{total}} eingenommen · {{overdue}} überfällig"
+  },
+  "roles": {
+    "owner": "Kreis-Admin",
+    "caregiver": "Pflegeperson",
+    "careRecipient": "Umsorgte Person"
+  },
+  "access": {
+    "readOnly": "Nur Lesen",
+    "viewOnly": "Nur Ansicht",
+    "readOnlyOwnerSubtitle": "Ihr Abonnement ist beendet – vorerst nur Lesezugriff.",
+    "readOnlyMemberSubtitle": "Sie können diesen Kreis ansehen, aber nicht bearbeiten",
+    "viewOnlySubtitle": "Nur Ansicht – wenden Sie sich an den Kreis-Admin, wenn Sie Änderungen vornehmen möchten."
+  },
+  "member": {
+    "notificationsOff": "Benachrichtigungen aus",
+    "notificationsOffFor": "Benachrichtigungen aus für {{name}}",
+    "notificationsOffExplain": "{{name}} hat Benachrichtigungen in der CircleCare-App nicht aktiviert, daher erreichen Erinnerungen das Telefon nicht.",
+    "notificationsOffExplainNoName": "Dieses Mitglied hat Benachrichtigungen in der CircleCare-App nicht aktiviert, daher erreichen Erinnerungen das Telefon nicht."
+  },
+  "list": {
+    "heading": "Mitglieder",
+    "subheadingReadOnly": "Alle, die in diesem Kreis bei der Koordination der Pflege helfen.",
+    "joined": "Beigetreten am {{date}}",
+    "you": "(Sie)",
+    "medResponsible": "Verwaltet Medikamentenerinnerungen",
+    "errorTitle": "Mitglieder konnten nicht geladen werden",
+    "errorBody": "Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    "empty": "In diesem Kreis gibt es noch keine Mitglieder.",
+    "soloTitle": "Gemeinsam ist Pflege leichter",
+    "soloBody": "Laden Sie ein Familienmitglied oder eine Pflegeperson ein, die Pflege Ihrer Angehörigen mitzukoordinieren – teilen Sie Aufgaben, Termine und Neuigkeiten, damit niemand alles allein tragen muss.",
+    "soloCta": "Erste Pflegeperson einladen"
+  },
+  "errors": {
+    "permissionDenied": "Sie haben keine Berechtigung für diese Änderung.",
+    "saveFailed": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "alreadyMember": "Diese Person ist bereits Mitglied dieses Kreises.",
+    "pendingInvite": "Für diese Person liegt bereits eine ausstehende Einladung vor.",
+    "pendingInviteSeat": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
+    "pendingInviteSeatUnknown": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
+    "circleArchived": "Dieser Pflegekreis ist nicht mehr aktiv, daher können Einladungen weder gesendet noch angenommen werden.",
+    "careRecipientExists": "In diesem Kreis gibt es bereits eine umsorgte Person."
+  },
+  "invite": {
+    "cta": "Mitglied einladen",
+    "title": "Mitglied einladen",
+    "subtitle": "Wir senden eine Einladung per E-Mail, damit die Person diesem Pflegekreis beitreten kann.",
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "name@example.com",
+    "roleLabel": "Rolle der Person",
+    "roleHints": {
+      "caregiver": "Kann ansehen und bei der Koordination der Pflege helfen.",
+      "careRecipient": "Die Person, die gepflegt wird."
+    },
+    "circleLabel": "Pflegekreis",
+    "send": "Einladung senden",
+    "sending": "Wird gesendet …",
+    "success": "Teilen Sie den Link, damit die Person sofort beitreten kann.",
+    "capReached": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Wechseln Sie zu Premium, um weitere hinzuzufügen.",
+    "pendingSeat": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
+    "pendingSeatUnknown": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
+    "errors": {
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "roleRequired": "Bitte wählen Sie eine Rolle aus."
+    },
+    "shareLink": "Einladungslink teilen",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "copyFailed": "Der Link konnte nicht kopiert werden",
+    "shareMessage": "Treten Sie CircleCare bei und helfen Sie mit, die Pflege von {{recipientName}} zu koordinieren. {{inviteUrl}}",
+    "shareMessageSelfCare": "Treten Sie CircleCare bei und helfen Sie mir, den Überblick über meine Pflege zu behalten. {{inviteUrl}}",
+    "shareMessageRecipient": "Ich habe CircleCare eingerichtet, um den Überblick über Ihre Medikamente und Termine zu behalten. Treten Sie hier bei: {{inviteUrl}}",
+    "shareTitle": "Treten Sie unserem Pflegekreis bei",
+    "sentTitle": "Einladung gesendet",
+    "emailNote": "Wir haben {{email}} außerdem per E-Mail eine Anleitung zum Beitritt als {{role}} geschickt.",
+    "sendAnother": "Weitere Person einladen"
+  },
+  "manage": {
+    "subheading": "Alle in diesem Pflegekreis. Laden Sie unten Mitglieder ein, entfernen Sie sie oder verwalten Sie sie.",
+    "remove": "Entfernen",
+    "removeMemberLabel": "{{name}} entfernen",
+    "memberActionsLabel": "Aktionen für {{name}}",
+    "inviteActionsLabel": "Aktionen für die Einladung an {{email}}",
+    "removeConfirmTitle": "Mitglied entfernen?",
+    "removeConfirmBody": "{{name}} verliert den Zugriff auf diesen Pflegekreis. Sie können die Person später erneut einladen.",
+    "removeSuccess": "{{name}} wurde aus diesem Kreis entfernt.",
+    "setMedResponsible": "Zur Medikamentenverantwortung machen",
+    "clearMedResponsible": "Medikamentenverantwortung entziehen",
+    "medResponsibleSet": "{{name}} verwaltet jetzt die Medikamentenerinnerungen.",
+    "medResponsibleCleared": "Medikamentenverantwortung entzogen.",
+    "pendingHeading": "Ausstehende Einladungen",
+    "cancelInvite": "Einladung zurückziehen",
+    "cancelInviteSuccess": "Einladung zurückgezogen.",
+    "cancelInviteConfirmTitle": "Diese Einladung zurückziehen?",
+    "cancelInviteConfirmBody": "{{email}} kann mit dieser Einladung nicht mehr beitreten.",
+    "cancelInviteConfirm": "Einladung zurückziehen",
+    "keepInvite": "Einladung behalten",
+    "inviteExpired": "Abgelaufen",
+    "inviteExpiresIn_one": "Läuft in {{count}} Tag ab",
+    "inviteExpiresIn_other": "Läuft in {{count}} Tagen ab",
+    "inviteExpiresInLabel_one": "Die Einladung für {{email}} läuft in {{count}} Tag ab",
+    "inviteExpiresInLabel_other": "Die Einladung für {{email}} läuft in {{count}} Tagen ab",
+    "resendInvite": "Erneut senden",
+    "resendInviteSuccess": "Einladung erneut an {{email}} gesendet.",
+    "resendInviteFailed": "Die Einladung konnte nicht erneut gesendet werden. Bitte versuchen Sie es erneut.",
+    "leave": "Kreis verlassen",
+    "leaveConfirmTitle": "Diesen Kreis verlassen?",
+    "leaveConfirmBody": "Sie verlieren den Zugriff auf diesen Pflegekreis. Der Kreis-Admin kann Sie später erneut einladen.",
+    "leaveSuccess": "Sie haben den Kreis verlassen."
+  },
+  "pending": {
+    "heading": "Ihre Einladungen",
+    "subheading": "Pflegekreise, die Sie zur Mithilfe eingeladen haben.",
+    "invitedYou": "{{inviter}} hat Sie eingeladen, bei der Pflege von {{recipient}} zu helfen",
+    "invitedYouRecipient": "{{inviter}} hat CircleCare eingerichtet, um bei Ihrer Pflege zu helfen",
+    "yourCareCircle": "Ihr Pflegekreis",
+    "accept": "Annehmen",
+    "accepting": "Beitritt läuft …",
+    "ignoreHint": "Noch nicht bereit beizutreten? Lassen Sie die Einladung einfach hier – es passiert nichts, bis Sie sie annehmen.",
+    "emptyTitle": "Keine ausstehenden Einladungen",
+    "emptyBody": "Wenn Sie jemand in einen Pflegekreis einlädt, erscheint die Einladung hier.",
+    "errorTitle": "Einladungen konnten nicht geladen werden",
+    "errorBody": "Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    "banner": {
+      "count_one": "Sie haben 1 ausstehende Einladung",
+      "count_other": "Sie haben {{count}} ausstehende Einladungen",
+      "review": "Einladung ansehen",
+      "reviewPlural": "Einladungen ansehen"
+    },
+    "expiresLabel": "Läuft ab"
+  }
+}

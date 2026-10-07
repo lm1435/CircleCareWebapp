@@ -1,0 +1,54 @@
+{
+  "title": "{{inviterName}} hat Sie eingeladen, bei der Pflege von {{recipientName}} zu helfen",
+  "inviterFallback": "Jemand",
+  "titleRecipient": "Ihr Pflegekreis",
+  "invitedByRecipient": "{{inviterName}} hat CircleCare eingerichtet, um bei Ihrer Pflege zu helfen",
+  "circleLabel": "Pflegekreis",
+  "appDescription": "CircleCare hilft Familien, Medikamente, Termine und den Pflegealltag gemeinsam zu koordinieren.",
+  "roles": {
+    "caregiver": "Pflegeperson",
+    "care_recipient": "Umsorgte Person"
+  },
+  "accept": "Einladung annehmen",
+  "accepting": "Beitritt läuft …",
+  "acceptSuccess": "Sie sind dem Kreis beigetreten.",
+  "acceptFailed": "Wir konnten Sie gerade nicht zum Kreis hinzufügen. Versuchen Sie es erneut – und falls es weiterhin nicht klappt, bitten Sie um eine neue Einladung.",
+  "createAccountToAccept": "Konto erstellen und beitreten",
+  "signInInstead": "Ich habe bereits ein Konto",
+  "downloadPromptValid": "Laden Sie die CircleCare-App für das volle Erlebnis herunter",
+  "downloadPromptError": "Laden Sie in der Zwischenzeit die App herunter, damit Sie bereit sind, wenn eine neue Einladung eintrifft",
+  "appStore": "Laden im App Store",
+  "googlePlay": "Jetzt bei Google Play",
+  "codeLabel": "Ihr Einladungscode:",
+  "copyCode": "Einladungscode kopieren",
+  "copied": "Kopiert",
+  "codeCopied": "Einladungscode in die Zwischenablage kopiert",
+  "copyFailed": "Kopieren nicht möglich – der Code wird oben angezeigt.",
+  "loading": "Ihre Einladung wird geladen",
+  "error": {
+    "title": "Diese Einladung ist abgelaufen oder ungültig",
+    "suggestion": "Bitten Sie die Person, die Sie eingeladen hat, Ihnen eine neue Einladung zu schicken. In der Zwischenzeit können Sie die App herunterladen und beitreten, sobald Ihre neue Einladung eintrifft."
+  },
+  "og": {
+    "title": "{{inviterName}} hat Sie zu CircleCare eingeladen",
+    "description": "Treten Sie {{circleName}} bei, um die Pflege von {{recipientName}} mitzukoordinieren",
+    "descriptionRecipient": "Treten Sie Ihrem Pflegekreis bei CircleCare bei"
+  },
+  "errorUsed": {
+    "title": "Diese Einladung wurde bereits verwendet",
+    "suggestion": "Wenn Sie bereits beigetreten sind, melden Sie sich an – den Pflegekreis finden Sie dann in Ihrer Kreisliste. Andernfalls bitten Sie die Person, die Sie eingeladen hat, eine neue Einladung zu schicken."
+  },
+  "expiresLabel": "Läuft ab",
+  "acceptArchived": "Dieser Kreis ist nicht mehr aktiv, daher kann die Einladung nicht verwendet werden. Bitten Sie die Person, die Sie eingeladen hat, beim Kreis-Admin nachzufragen.",
+  "acceptRecipientExists": "In diesem Kreis gibt es bereits eine umsorgte Person, daher kann diese Einladung nicht verwendet werden. Bitten Sie die Person, die Sie eingeladen hat, stattdessen eine Einladung als Pflegeperson zu schicken.",
+  "errorArchived": {
+    "title": "Dieser Pflegekreis ist nicht mehr aktiv",
+    "suggestion": "Der Kreis wurde gelöscht, nachdem Ihre Einladung gesendet wurde, daher kann diese Einladung nicht verwendet werden. Mit Ihrem Code ist alles in Ordnung – bitten Sie die Person, die Sie eingeladen hat, beim Kreis-Admin nachzufragen."
+  },
+  "errorRecipientExists": {
+    "title": "In diesem Kreis gibt es bereits eine umsorgte Person",
+    "suggestion": "In einem Kreis kann es nur eine umsorgte Person geben, daher kann diese Einladung nicht verwendet werden. Bitten Sie die Person, die Sie eingeladen hat, stattdessen eine Einladung als Pflegeperson zu schicken."
+  },
+  "acceptExpired": "Diese Einladung ist abgelaufen. Bitten Sie die Person, die Sie eingeladen hat, Ihnen eine neue zu schicken.",
+  "acceptAlreadyUsed": "Diese Einladung wurde bereits verwendet."
+}

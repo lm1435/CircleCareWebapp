@@ -1,0 +1,57 @@
+{
+  "create": {
+    "creating": "A criar..."
+  },
+  "joinModal": {
+    "pasteNoCode": "Não encontrámos um código de convite na área de transferência.",
+    "lookUpCode": "Procurar círculo",
+    "lookingUp": "A procurar...",
+    "yourCareCircle": "O seu círculo de cuidado",
+    "yourRole": "A sua função",
+    "joining": "A entrar...",
+    "invalidCode": "Não encontrámos esse código de convite. Verifique-o e tente novamente.",
+    "circleArchived": "Este círculo já não está ativo. Peça a quem o convidou que fale com o proprietário do círculo.",
+    "title": "Participar num círculo",
+    "subtitle": "Introduza o código de 6 caracteres do seu convite.",
+    "expired": "Este convite expirou. Peça a quem o convidou que envie um novo.",
+    "alreadyUsed": "Este convite já foi usado. Peça a quem o convidou que envie um novo.",
+    "alreadyMember": "Já é membro deste círculo.",
+    "careRecipientExists": "Este círculo já tem uma pessoa cuidada. Peça a quem o convidou que envie um convite de cuidador."
+  },
+  "edit": {
+    "title": "Definições do círculo",
+    "loadingLabel": "A carregar definições do círculo",
+    "ownerOnlyTitle": "Apenas o proprietário do círculo pode editar isto",
+    "save": "Guardar alterações",
+    "saving": "A guardar...",
+    "deleteDescription": "Eliminar este círculo remove-o para todos. Esta ação não pode ser desfeita.",
+    "deleteCircle": "Eliminar círculo",
+    "deleting": "A eliminar...",
+    "deleteConfirmTitle": "Eliminar este círculo?",
+    "deleteConfirmMessage": "Isto remove o círculo de {{name}} para todos os que fazem parte dele — os medicamentos, consultas, tarefas, notas, sinais vitais, documentos e informações de emergência que contém. Os lembretes param de imediato e os outros membros não são notificados, por isso talvez seja melhor avisá-los antes.",
+    "deleteConfirmKeyword": "ELIMINAR",
+    "deletedToast": "Círculo eliminado.",
+    "deleteConfirmPrompt": "Escreva {{keyword}} para confirmar"
+  },
+  "validation": {
+    "nameRequired": "Introduza o nome da pessoa cuidada."
+  },
+  "quickWin": {
+    "skipForNow": "Saltar por agora",
+    "subtitle": "O círculo de cuidado de {{name}} está pronto. O que gostaria de fazer primeiro?",
+    "subtitleSelf": "O seu círculo de cuidado está pronto. O que gostaria de fazer primeiro?"
+  },
+  "firstRun": {
+    "whatTitleSelf": "O que toma?",
+    "whenTitleSelf": "Quando toma?",
+    "saving": "A adicionar...",
+    "discardMessage": "Nada será guardado."
+  },
+  "accessLost": {
+    "removedBody": "Já não tem acesso a este círculo. O proprietário pode tê-lo removido ou eliminado o círculo.",
+    "notFoundBody": "Este círculo foi eliminado ou já não existe."
+  },
+  "join": {
+    "button": "Participar num círculo"
+  }
+}

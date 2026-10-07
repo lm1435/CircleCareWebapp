@@ -1,0 +1,136 @@
+{
+  "title": "Vitalwerte",
+  "subtitle": "Behalten Sie die Messwerte Ihres Kreises im Blick – Blutdruck, Herzfrequenz, Blutzucker und Gewicht.",
+  "loading": "Vitalwerte werden geladen",
+  "errorTitle": "Vitalwerte konnten nicht geladen werden",
+  "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+  "types": {
+    "blood_pressure": "Blutdruck",
+    "heart_rate": "Herzfrequenz",
+    "glucose": "Blutzucker",
+    "weight": "Gewicht"
+  },
+  "filter": {
+    "typeLabel": "Typ",
+    "allTypes": "Alle Typen",
+    "rangeLabel": "Zeitraum",
+    "range": {
+      "7d": "Letzte 7 Tage",
+      "30d": "Letzte 30 Tage",
+      "90d": "Letzte 90 Tage"
+    }
+  },
+  "detail": {
+    "latest": "Aktuell",
+    "average": "Durchschnitt",
+    "min": "Niedrigster",
+    "max": "Höchster",
+    "system": "Systolisch",
+    "trendStable": "Stabil",
+    "trendUp": "{{pct}} % höher als im vorherigen Zeitraum",
+    "trendDown": "{{pct}} % niedriger als im vorherigen Zeitraum",
+    "chartTitle": "Verlauf",
+    "chartSummary": "Verlaufsdiagramm. Niedrigster Wert {{min}}, höchster Wert {{max}}, aktuell {{latest}}.",
+    "chartToday": "Heute",
+    "trendVs": {
+      "7d": "Durchschnitt {{delta}} gegenüber den vorherigen 7 Tagen",
+      "30d": "Durchschnitt {{delta}} gegenüber den vorherigen 30 Tagen",
+      "90d": "Durchschnitt {{delta}} gegenüber den vorherigen 90 Tagen"
+    },
+    "trendSame": {
+      "7d": "Gleicher Durchschnitt wie in den vorherigen 7 Tagen",
+      "30d": "Gleicher Durchschnitt wie in den vorherigen 30 Tagen",
+      "90d": "Gleicher Durchschnitt wie in den vorherigen 90 Tagen"
+    }
+  },
+  "fields": {
+    "systolic": "Systolisch",
+    "diastolic": "Diastolisch",
+    "unitSuffix": "in {{unit}}",
+    "date": "Datum",
+    "time": "Uhrzeit",
+    "timesShownIn": "Uhrzeiten in {{timezone}}",
+    "notes": "Notizen",
+    "notesPlaceholder": "Notiz hinzufügen (optional)",
+    "dualTimezoneHint": "Ihre Zeit / Zeit von {{name}} ({{timezone}})",
+    "dualTimezoneHintGeneric": "Ihre Zeit / deren Zeit ({{timezone}})",
+    "dayOffsetNext": "+1 Tag",
+    "dayOffsetPrevious": "-1 Tag"
+  },
+  "add": {
+    "cta": "Messwert hinzufügen",
+    "title": "Messwert hinzufügen",
+    "typeLabel": "Messwerttyp",
+    "save": "Messwert speichern"
+  },
+  "edit": {
+    "title": "Messwert bearbeiten",
+    "save": "Änderungen speichern"
+  },
+  "actions": {
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "menuLabel": "Aktionen für Messwert {{value}}"
+  },
+  "delete": {
+    "title": "Diesen Messwert löschen?",
+    "message": "Messwert „{{type}}“ vom {{date}} löschen? Dies kann nicht rückgängig gemacht werden."
+  },
+  "empty": {
+    "title": "Noch keine Messwerte",
+    "hint": "Erfassen Sie die Vitalwerte der umsorgten Person im Zeitverlauf – Blutdruck, Gewicht und mehr –, damit der ganze Kreis Entwicklungen verfolgen kann.",
+    "hintReadOnly": "Für diesen Kreis eingetragene Messwerte erscheinen hier, damit alle die Gesundheit der umsorgten Person im Zeitverlauf verfolgen können.",
+    "cta": "Messwert eintragen"
+  },
+  "emptyState": {
+    "neverLogged": {
+      "title": {
+        "blood_pressure": "Noch keine Blutdruckwerte",
+        "heart_rate": "Noch keine Herzfrequenzwerte",
+        "glucose": "Noch keine Blutzuckerwerte",
+        "weight": "Noch keine Gewichtswerte"
+      },
+      "description": "Tragen Sie Messwerte im Zeitverlauf ein, damit der Kreis vor dem nächsten Termin eine Entwicklung erkennen kann.",
+      "cta": {
+        "blood_pressure": "Blutdruck eintragen",
+        "heart_rate": "Herzfrequenz eintragen",
+        "glucose": "Blutzucker eintragen",
+        "weight": "Gewicht eintragen"
+      }
+    },
+    "outOfRange": {
+      "title": {
+        "7d": "Keine Messwerte in den letzten 7 Tagen",
+        "30d": "Keine Messwerte in den letzten 30 Tagen",
+        "90d": "Keine Messwerte in den letzten 90 Tagen"
+      },
+      "lastReading": "Letzter Messwert: {{value}} · {{date}}",
+      "show": {
+        "30d": "Letzte 30 Tage anzeigen",
+        "90d": "Letzte 90 Tage anzeigen"
+      }
+    }
+  },
+  "toast": {
+    "added": "Messwert gespeichert",
+    "updated": "Messwert aktualisiert",
+    "deleted": "Messwert gelöscht"
+  },
+  "validation": {
+    "invalid": "Bitte prüfen Sie diesen Wert.",
+    "valueRequired": "Bitte geben Sie einen Wert ein.",
+    "dateRequired": "Bitte wählen Sie ein Datum.",
+    "timeRequired": "Bitte wählen Sie eine Uhrzeit.",
+    "valueOutOfRange": "Das liegt außerhalb des erwarteten Bereichs. Prüfen Sie die Zahl noch einmal.",
+    "diastolicRequired": "Bitte geben Sie den diastolischen Wert ein.",
+    "value2NotAllowed": "Dieser Messwert besteht aus nur einem Wert.",
+    "invalidUnit": "Diese Einheit ist für diesen Messwert nicht gültig.",
+    "invalidDate": "Bitte wählen Sie ein gültiges Datum und eine gültige Uhrzeit.",
+    "recordedAtFuture": "Die Uhrzeit des Messwerts darf nicht in der Zukunft liegen.",
+    "notesTooLong": "Notizen dürfen höchstens 500 Zeichen lang sein."
+  },
+  "errors": {
+    "permissionDenied": "Sie haben keine Berechtigung für diese Änderung.",
+    "saveFailed": "Ihre Änderungen konnten nicht gespeichert werden. Bitte versuchen Sie es erneut."
+  }
+}
