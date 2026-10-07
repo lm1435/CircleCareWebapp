@@ -21,8 +21,8 @@ exports[`activity word order (it) > KEY_RENDERERS 12h 1`] = `
   "not taken Jan 15": "Evento saltato: Aspirin il 15 gen",
   "not taken non-ISO date raw": "Evento saltato: Aspirin il June 10",
   "not taken old": "Evento saltato: Aspirin il 10 giu",
-  "not taken today": "Evento saltato: Aspirin il Oggi",
-  "not taken yesterday": "Evento saltato: Aspirin il Ieri",
+  "not taken today": "Evento saltato: Aspirin oggi",
+  "not taken yesterday": "Evento saltato: Aspirin ieri",
   "prn logged": "Dose registrata: Tylenol alle 2:30 PM",
   "prn removed": "Dose registrata rimossa: Tylenol (2:30 PM)",
   "recurrence stopped": "Ripetizione interrotta per Aspirin dal 10 giu",
@@ -77,7 +77,7 @@ exports[`activity word order (it) > Today/Yesterday in the recipient frame (Toky
   "not taken Jan 15": "Evento saltato: Aspirin il 15 gen",
   "not taken non-ISO date raw": "Evento saltato: Aspirin il June 10",
   "not taken old": "Evento saltato: Aspirin il 10 giu",
-  "not taken today": "Evento saltato: Aspirin il Ieri",
+  "not taken today": "Evento saltato: Aspirin ieri",
   "not taken yesterday": "Evento saltato: Aspirin il 5 ott",
 }
 `;
@@ -90,14 +90,14 @@ exports[`activity word order (it) > dated / regex forms 1`] = `
   "imported 2": "Ha importato 2 appuntamenti dal calendario",
   "imported 25": "Ha importato 25 appuntamenti dal calendario",
   "not taken (new) old date": "Evento saltato: Aspirin il 10 giu",
-  "not taken (new) today": "Evento saltato: Aspirin il Oggi",
-  "not taken (new) yesterday": "Evento saltato: Aspirin il Ieri",
+  "not taken (new) today": "Evento saltato: Aspirin oggi",
+  "not taken (new) yesterday": "Evento saltato: Aspirin ieri",
   "not taken Jan 15": "Evento saltato: Aspirin il 15 gen",
   "skipped (legacy) Jan 15": "Evento saltato: Aspirin il 15 gen",
   "skipped (legacy) old date": "Evento saltato: Aspirin il 10 giu",
   "stopped recurrence": "Ripetizione interrotta per Aspirin dal 10 giu",
   "stopped recurrence Jan 15": "Ripetizione interrotta per Aspirin dal 15 gen",
-  "stopped recurrence today": "Ripetizione interrotta per Aspirin dal Oggi",
+  "stopped recurrence today": "Ripetizione interrotta per Aspirin da oggi",
   "title with " on "": "Evento saltato: Visit on call il 10 giu",
 }
 `;

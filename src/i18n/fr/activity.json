@@ -74,6 +74,7 @@
     "onDate": "—",
     "stoppedRecurrence": "Répétition arrêtée :",
     "fromDate": "— date d’arrêt :",
+    "fromRelativeDate": "— date d’arrêt :",
     "importedAppointment_one": "{{count}} rendez-vous importé depuis le calendrier",
     "importedAppointment_other": "{{count}} rendez-vous importés depuis le calendrier",
     "changedAnswer": "(a modifié la réponse d’un autre aidant)",

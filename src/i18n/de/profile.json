@@ -42,7 +42,13 @@
     "success": "Sprache aktualisiert.",
     "names": {
       "en": "English",
-      "es": "Español"
+      "es": "Español",
+      "fr": "Français",
+      "fr-CA": "Français (Canada)",
+      "de": "Deutsch",
+      "it": "Italiano",
+      "pt": "Português (Brasil)",
+      "pt-PT": "Português (Portugal)"
     }
   },
   "notifications": {

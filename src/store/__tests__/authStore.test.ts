@@ -139,7 +139,7 @@ describe('authStore', () => {
     });
   });
 
-  it.each(['fr-CA', 'est'])('signIn reports en for the unshipped tag %s', async (tag) => {
+  it.each(['ja-JP', 'est'])('signIn reports en for the unshipped tag %s', async (tag) => {
     mockI18n.language = tag;
     const { api, useAuthStore } = await loadModules();
 
@@ -147,6 +147,21 @@ describe('authStore', () => {
 
     expect(api.apiClient.post).toHaveBeenCalledWith('/auth/session-established', {
       language: 'en',
+    });
+  });
+
+  it.each([
+    ['fr-CA', 'fr-CA'],
+    ['fr-BE', 'fr'],
+    ['pt-BR', 'pt'],
+  ])('signIn reports the registry code for %s (%s)', async (tag, code) => {
+    mockI18n.language = tag;
+    const { api, useAuthStore } = await loadModules();
+
+    useAuthStore.getState().signIn({ access_token: 'tok-123' }, testUser);
+
+    expect(api.apiClient.post).toHaveBeenCalledWith('/auth/session-established', {
+      language: code,
     });
   });
 

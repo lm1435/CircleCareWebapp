@@ -74,6 +74,7 @@
     "onDate": "el",
     "stoppedRecurrence": "Detuvo recurrencia de",
     "fromDate": "desde",
+    "fromRelativeDate": "desde",
     "importedAppointment_one": "Importó {{count}} cita del calendario",
     "importedAppointment_other": "Importó {{count}} citas del calendario",
     "changedAnswer": "(cambió la respuesta de otro cuidador)",

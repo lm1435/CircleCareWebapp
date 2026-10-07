@@ -142,20 +142,25 @@ describe('date value arithmetic', () => {
    * Spanish weeks start Monday and English (US) weeks start Sunday, which is
    * the whole reason this is a lookup and not a constant.
    *
-   * `es-MX` is the case that proves it is CLDR being read and not a rule being
-   * invented: Mexico starts its weeks on SUNDAY, so a "Spanish means Monday"
-   * shortcut would be wrong for the very audience this app writes Latin
-   * American Spanish for. The app sets the bare `es`, which is Monday-first —
-   * but if it ever narrows the tag, the calendar follows the region instead of
-   * arguing with it.
+   * Read through the REGISTERED locale (normalizeLocale), like mobile
+   * `utils/weekStart.ts`: es-MX is Monday-first like the bare `es` the app speaks
+   * (CLDR alone would start it on Sunday and disagree with mobile), while a
+   * registered variant keeps its own CLDR convention (fr-CA Sunday, fr Monday).
    */
-  it('takes the first day of the week from the locale, region and all', () => {
+  it('takes the first day of the week from the REGISTERED locale (mobile parity)', () => {
     expect(firstDayOfWeek('en')).toBe(0);
     expect(firstDayOfWeek('en-US')).toBe(0);
+    expect(firstDayOfWeek('en-GB')).toBe(0); // registry en, not CLDR GB
     expect(firstDayOfWeek('es')).toBe(1);
-    expect(firstDayOfWeek('es-MX')).toBe(0);
-    // An unparseable tag must not blank the calendar.
-    expect(firstDayOfWeek('not a locale')).toBe(1);
+    expect(firstDayOfWeek('es-MX')).toBe(1); // registry es, same as mobile weekStart.ts
+    // 1.2.2: a registered variant keeps its own convention.
+    expect(firstDayOfWeek('fr')).toBe(1);
+    expect(firstDayOfWeek('fr-BE')).toBe(1);
+    expect(firstDayOfWeek('fr-CA')).toBe(0);
+    expect(firstDayOfWeek('de')).toBe(1);
+    expect(firstDayOfWeek('it')).toBe(1);
+    // An unparseable tag must not blank the calendar (it normalizes to en).
+    expect(firstDayOfWeek('not a locale')).toBe(0);
   });
 });
 

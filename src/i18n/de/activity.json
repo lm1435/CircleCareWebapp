@@ -74,6 +74,7 @@
     "onDate": "am",
     "stoppedRecurrence": "Wiederholung beendet für",
     "fromDate": "ab",
+    "fromRelativeDate": "ab",
     "importedAppointment_one": "{{count}} Termin aus dem Kalender importiert",
     "importedAppointment_other": "{{count}} Termine aus dem Kalender importiert",
     "changedAnswer": "(hat die Antwort einer anderen Pflegeperson geändert)",

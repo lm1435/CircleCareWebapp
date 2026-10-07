@@ -1,3 +1,4 @@
+import { normalizeLocale } from '@/i18n/locales';
 // Display formatting for an invite's `expires_at`.
 //
 // Web port of the deadline line mobile shows on its invite preview
@@ -26,7 +27,11 @@
  */
 function getFormattingLocale(i18nLanguage: string): string {
   const browserLocale = typeof navigator !== 'undefined' ? navigator.language : '';
-  if (browserLocale && browserLocale.startsWith(i18nLanguage)) return browserLocale;
+  // Registry-code match, not a raw prefix: a pt-PT browser must not format a
+  // Brazilian-Portuguese UI ('pt-PT'.startsWith('pt') was true).
+  if (browserLocale && normalizeLocale(browserLocale) === normalizeLocale(i18nLanguage)) {
+    return browserLocale;
+  }
   return i18nLanguage;
 }
 

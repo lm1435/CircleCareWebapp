@@ -21,8 +21,8 @@ exports[`activity word order (es) > KEY_RENDERERS 12h 1`] = `
   "not taken Jan 15": "Omitido: Aspirin el 15 ene",
   "not taken non-ISO date raw": "Omitido: Aspirin el June 10",
   "not taken old": "Omitido: Aspirin el 10 jun",
-  "not taken today": "Omitido: Aspirin el Hoy",
-  "not taken yesterday": "Omitido: Aspirin el Ayer",
+  "not taken today": "Omitido: Aspirin hoy",
+  "not taken yesterday": "Omitido: Aspirin ayer",
   "prn logged": "Dosis registrada: Tylenol a las 2:30 p. m.",
   "prn removed": "Dosis registrada quitada: Tylenol (2:30 p. m.)",
   "recurrence stopped": "Detuvo recurrencia de Aspirin desde 10 jun",
@@ -77,7 +77,7 @@ exports[`activity word order (es) > Today/Yesterday in the recipient frame (Toky
   "not taken Jan 15": "Omitido: Aspirin el 15 ene",
   "not taken non-ISO date raw": "Omitido: Aspirin el June 10",
   "not taken old": "Omitido: Aspirin el 10 jun",
-  "not taken today": "Omitido: Aspirin el Ayer",
+  "not taken today": "Omitido: Aspirin ayer",
   "not taken yesterday": "Omitido: Aspirin el 5 oct",
 }
 `;
@@ -90,14 +90,14 @@ exports[`activity word order (es) > dated / regex forms 1`] = `
   "imported 2": "Importó 2 citas del calendario",
   "imported 25": "Importó 25 citas del calendario",
   "not taken (new) old date": "Omitido: Aspirin el 10 jun",
-  "not taken (new) today": "Omitido: Aspirin el Hoy",
-  "not taken (new) yesterday": "Omitido: Aspirin el Ayer",
+  "not taken (new) today": "Omitido: Aspirin hoy",
+  "not taken (new) yesterday": "Omitido: Aspirin ayer",
   "not taken Jan 15": "Omitido: Aspirin el 15 ene",
   "skipped (legacy) Jan 15": "Omitido: Aspirin el 15 ene",
   "skipped (legacy) old date": "Omitido: Aspirin el 10 jun",
   "stopped recurrence": "Detuvo recurrencia de Aspirin desde 10 jun",
   "stopped recurrence Jan 15": "Detuvo recurrencia de Aspirin desde 15 ene",
-  "stopped recurrence today": "Detuvo recurrencia de Aspirin desde Hoy",
+  "stopped recurrence today": "Detuvo recurrencia de Aspirin desde hoy",
   "title with " on "": "Omitido: Visit on call el 10 jun",
 }
 `;

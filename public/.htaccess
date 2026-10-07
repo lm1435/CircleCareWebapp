@@ -52,6 +52,24 @@ Options -Indexes
   RewriteCond %{QUERY_STRING} (^|&)lang=es($|&)
   RewriteRule ^ index.es.html [L]
 
+  # One rule per further registry locale (1.2.2 flip). Same anchoring, so
+  # `lang=fr` never matches `lang=fr-CA` (and vice versa), nor `lang=pt` match
+  # `lang=pt-PT`: `($|&)` requires the value to end right after the code. The
+  # value is exactly the registry code the clients send (normalizeLocale output,
+  # case as registered). og images for these locales are English placeholders.
+  RewriteCond %{QUERY_STRING} (^|&)lang=fr($|&)
+  RewriteRule ^ index.fr.html [L]
+  RewriteCond %{QUERY_STRING} (^|&)lang=fr-CA($|&)
+  RewriteRule ^ index.fr-CA.html [L]
+  RewriteCond %{QUERY_STRING} (^|&)lang=de($|&)
+  RewriteRule ^ index.de.html [L]
+  RewriteCond %{QUERY_STRING} (^|&)lang=it($|&)
+  RewriteRule ^ index.it.html [L]
+  RewriteCond %{QUERY_STRING} (^|&)lang=pt($|&)
+  RewriteRule ^ index.pt.html [L]
+  RewriteCond %{QUERY_STRING} (^|&)lang=pt-PT($|&)
+  RewriteRule ^ index.pt-PT.html [L]
+
   # Everything else -> index.html (SPA client-side routing)
   RewriteRule ^ index.html [L]
 </IfModule>
@@ -78,9 +96,10 @@ Options -Indexes
   # document must be revalidated on every request; only the hashed assets they
   # reference may be immutable.
   #
-  # `^index(\.[a-z]{2})?\.html$` covers index.html plus any two-letter locale
-  # variant, so adding index.pt.html later needs no change here.
-  <FilesMatch "^index(\.[a-z]{2})?\.html$">
+  # `^index(\.[a-z]{2}(-[A-Z]{2})?)?\.html$` covers index.html plus every locale
+  # document, region variants included (index.fr-CA.html, index.pt-PT.html: the
+  # old two-letter-only pattern let those fall out of the never-cache rule).
+  <FilesMatch "^index(\.[a-z]{2}(-[A-Z]{2})?)?\.html$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
   </FilesMatch>
 

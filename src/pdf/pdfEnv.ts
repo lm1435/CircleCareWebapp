@@ -22,7 +22,7 @@ import {
   type TimeLanguage,
 } from '@/utils/timezone';
 import { resolveHourCycle, type HourCycle } from '@/utils/hourCycle';
-import { baseLanguage } from '@/i18n/locales';
+import { normalizeLocale } from '@/i18n/locales';
 import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
@@ -60,9 +60,13 @@ function pdfT(key: string, opts?: Record<string, unknown>): string {
   return i18n.t(mapPdfKey(key), opts);
 }
 
-/** The active UI language, collapsed to the registry base language. */
+/**
+ * The active UI language as a REGISTRY code. normalizeLocale, NOT baseLanguage:
+ * a variant (fr-CA, pt-PT) keeps its own meridiem and place-name rows, which the
+ * format helpers resolve through the chain variant -> base -> en.
+ */
 function uiLanguage(): TimeLanguage {
-  return baseLanguage(i18n.resolvedLanguage || i18n.language);
+  return normalizeLocale(i18n.resolvedLanguage || i18n.language);
 }
 
 /**
@@ -76,7 +80,10 @@ function uiLanguage(): TimeLanguage {
  */
 function formattingLocale(language: TimeLanguage): string {
   const browserLocale = typeof navigator !== 'undefined' ? navigator.language : '';
-  if (browserLocale && browserLocale.toLowerCase().startsWith(language)) return browserLocale;
+  // Same registry code (es-MX -> es, fr-BE -> fr, fr-CA -> fr-CA), never a raw
+  // prefix test: a pt-PT browser must not format a Brazilian-Portuguese UI, and a
+  // lowercased 'fr-ca' never started with 'fr-CA'.
+  if (browserLocale && normalizeLocale(browserLocale) === language) return browserLocale;
   return language;
 }
 
@@ -156,7 +163,7 @@ export function buildPdfEnv(): PdfEnv {
     getDateInTimezone: (tz, date) => getDateInTimezone(tz, date),
     formatTimeOfDay: (hours, minutes) => formatTimeOfDay(hours, minutes, cycle, language),
     formatInstantTimeOfDay: (instant, tz) => formatInstantTimeOfDay(instant, tz, cycle, language),
-    getTimezoneLabel: (tz, lang) => getTimezoneLabel(tz, baseLanguage(lang)),
+    getTimezoneLabel: (tz, lang) => getTimezoneLabel(tz, normalizeLocale(lang)),
     formatRecurrence: (event) => formatRecurrenceLabel(event, t, locale) ?? '',
   };
 }

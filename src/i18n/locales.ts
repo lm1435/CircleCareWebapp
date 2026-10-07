@@ -27,6 +27,12 @@ export interface LocaleEntry {
 export const LOCALE_REGISTRY = [
   { code: 'en', pluralCategories: ['one', 'other'] },
   { code: 'es', pluralCategories: ['one', 'other'] }, // Latin American Spanish
+  { code: 'fr', pluralCategories: ['one', 'other'] }, // France conventions; 0 and 1 are "one"
+  { code: 'fr-CA', base: 'fr', pluralCategories: ['one', 'other'] },
+  { code: 'de', pluralCategories: ['one', 'other'] }, // one locale for DE/AT/CH
+  { code: 'it', pluralCategories: ['one', 'other'] },
+  { code: 'pt', pluralCategories: ['one', 'other'] }, // Brazilian conventions; 0 and 1 are "one"
+  { code: 'pt-PT', base: 'pt', pluralCategories: ['one', 'other'] }, // 0 is "other"
 ] as const satisfies readonly LocaleEntry[];
 
 export type SupportedLanguage = (typeof LOCALE_REGISTRY)[number]['code'];
@@ -43,6 +49,12 @@ export const SUPPORTED_LOCALES = LOCALE_REGISTRY.map((l) => l.code) as unknown a
 export const LOCALE_LABELS: Record<SupportedLanguage, string> = {
   en: 'English',
   es: 'Español', // Latin American Spanish
+  fr: 'Français',
+  'fr-CA': 'Français (Canada)',
+  de: 'Deutsch',
+  it: 'Italiano',
+  pt: 'Português (Brasil)',
+  'pt-PT': 'Português (Portugal)',
 };
 
 export interface LocaleHelpers {

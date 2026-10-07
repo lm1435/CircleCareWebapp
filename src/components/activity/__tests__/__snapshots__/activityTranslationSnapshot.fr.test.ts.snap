@@ -21,8 +21,8 @@ exports[`activity word order (fr) > KEY_RENDERERS 12h 1`] = `
   "not taken Jan 15": "Dose sautée : Aspirin — 15 janv.",
   "not taken non-ISO date raw": "Dose sautée : Aspirin — June 10",
   "not taken old": "Dose sautée : Aspirin — 10 juin",
-  "not taken today": "Dose sautée : Aspirin — Aujourd’hui",
-  "not taken yesterday": "Dose sautée : Aspirin — Hier",
+  "not taken today": "Dose sautée : Aspirin aujourd’hui",
+  "not taken yesterday": "Dose sautée : Aspirin hier",
   "prn logged": "Dose enregistrée : Tylenol à 2:30 PM",
   "prn removed": "Dose enregistrée supprimée : Tylenol (2:30 PM)",
   "recurrence stopped": "Répétition arrêtée : Aspirin — date d’arrêt : 10 juin",
@@ -77,7 +77,7 @@ exports[`activity word order (fr) > Today/Yesterday in the recipient frame (Toky
   "not taken Jan 15": "Dose sautée : Aspirin — 15 janv.",
   "not taken non-ISO date raw": "Dose sautée : Aspirin — June 10",
   "not taken old": "Dose sautée : Aspirin — 10 juin",
-  "not taken today": "Dose sautée : Aspirin — Hier",
+  "not taken today": "Dose sautée : Aspirin hier",
   "not taken yesterday": "Dose sautée : Aspirin — 5 oct.",
 }
 `;
@@ -90,14 +90,14 @@ exports[`activity word order (fr) > dated / regex forms 1`] = `
   "imported 2": "2 rendez-vous importés depuis le calendrier",
   "imported 25": "25 rendez-vous importés depuis le calendrier",
   "not taken (new) old date": "Dose sautée : Aspirin — 10 juin",
-  "not taken (new) today": "Dose sautée : Aspirin — Aujourd’hui",
-  "not taken (new) yesterday": "Dose sautée : Aspirin — Hier",
+  "not taken (new) today": "Dose sautée : Aspirin aujourd’hui",
+  "not taken (new) yesterday": "Dose sautée : Aspirin hier",
   "not taken Jan 15": "Dose sautée : Aspirin — 15 janv.",
   "skipped (legacy) Jan 15": "Dose sautée : Aspirin — 15 janv.",
   "skipped (legacy) old date": "Dose sautée : Aspirin — 10 juin",
   "stopped recurrence": "Répétition arrêtée : Aspirin — date d’arrêt : 10 juin",
   "stopped recurrence Jan 15": "Répétition arrêtée : Aspirin — date d’arrêt : 15 janv.",
-  "stopped recurrence today": "Répétition arrêtée : Aspirin — date d’arrêt : Aujourd’hui",
+  "stopped recurrence today": "Répétition arrêtée : Aspirin — date d’arrêt : aujourd’hui",
   "title with " on "": "Dose sautée : Visit on call — 10 juin",
 }
 `;

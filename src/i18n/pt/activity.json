@@ -74,6 +74,7 @@
     "onDate": "em",
     "stoppedRecurrence": "Interrompeu a repetição de",
     "fromDate": "a partir de",
+    "fromRelativeDate": "a partir de",
     "importedAppointment_one": "Consultas importadas do calendário: {{count}}",
     "importedAppointment_other": "{{count}} consultas importadas do calendário",
     "changedAnswer": "(alterou a resposta de outro cuidador)",

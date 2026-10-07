@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures';
+import { expectLanguagePicker } from '../languagePicker';
 import type { Page } from '@playwright/test';
 
 // ITALIAN twin of i18n-spanish.spec.ts (lane: it). Executed by the FLIP stage only:
@@ -174,5 +175,6 @@ test('profile language selector is in Italian and reflects the active language',
   // Language options render in their native spelling; the page being Italian proves "it" is active.
   // (The flip adds 'Italiano' to every bundle's language.names; assert it here once wired.)
   await expect(page.getByText('Español', { exact: true })).toBeVisible();
-  await expect(page.getByText('English', { exact: true })).toBeVisible();
+  await expect(page.getByText('English', { exact: true })).toBeVisible();  // 1.2.2 flip: all eight languages, picker order, endonyms, the active one checked.
+  await expectLanguagePicker(page, 'Lingua', 'Italiano');
 });

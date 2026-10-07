@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures';
+import { expectLanguagePicker } from '../languagePicker';
 import type { Page } from '@playwright/test';
 
 // German (de) twin of i18n-spanish.spec.ts, written by the DE language lane.
@@ -173,5 +174,6 @@ test('profile language selector is in German and reflects the active language', 
   // The language options render (names per profile.language.names, completed by the
   // flip); the page being German proves "de" is active.
   await expect(page.getByText('Español', { exact: true })).toBeVisible();
-  await expect(page.getByText('English', { exact: true })).toBeVisible();
+  await expect(page.getByText('English', { exact: true })).toBeVisible();  // 1.2.2 flip: all eight languages, picker order, endonyms, the active one checked.
+  await expectLanguagePicker(page, 'Sprache', 'Deutsch');
 });

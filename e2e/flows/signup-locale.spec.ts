@@ -75,8 +75,33 @@ test.describe('browser locale es-MX', () => {
   });
 });
 
-test.describe('browser locale fr-CA (not shipped)', () => {
-  test.use({ locale: 'fr-CA' });
+// 1.2.2: the six Stage 1 locales are registered. A registered VARIANT is sent as
+// itself (fr-CA, pt-PT); any other region of a registered language is sent as its
+// base (fr-BE -> fr, pt-BR -> pt, de-AT -> de). Variant selection follows the tag only.
+for (const [locale, expected] of [
+  ['fr-CA', 'fr-CA'],
+  ['fr-BE', 'fr'],
+  ['de-AT', 'de'],
+  ['it-IT', 'it'],
+  ['pt-BR', 'pt'],
+  ['pt-PT', 'pt-PT'],
+] as const) {
+  test.describe(`browser locale ${locale}`, () => {
+    test.use({ locale });
+
+    test(`renders ${expected} and sends language "${expected}"`, async ({ page }) => {
+      const captured = await captureSignup(page);
+      await submitSignup(page);
+
+      await expect.poll(() => captured()?.language, { timeout: 15_000 }).toBe(expected);
+      const primary = expected.split('-')[0] as string;
+      await expect(page.locator('html')).toHaveAttribute('lang', new RegExp(`^${primary}`));
+    });
+  });
+}
+
+test.describe('browser locale ja-JP (not shipped)', () => {
+  test.use({ locale: 'ja-JP' });
 
   test('falls back to English and sends language "en"', async ({ page }) => {
     const captured = await captureSignup(page);

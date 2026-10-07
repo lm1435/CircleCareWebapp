@@ -17,7 +17,7 @@ import { NON_EN_LOCALES } from '@/i18n/locales';
 const URL_BASE = 'https://my.circlecare.app/invite/ABC123';
 
 describe('withInviteLocale — English and other languages are untouched', () => {
-  it.each(['en', 'en-US', 'en-GB', 'EN', 'pt-BR', 'fr', ''])(
+  it.each(['en', 'en-US', 'en-GB', 'EN', 'xx-YY', 'ja', ''])(
     'returns the URL unchanged for %j',
     (language) => {
       expect(withInviteLocale(URL_BASE, language)).toBe(URL_BASE);
@@ -32,6 +32,24 @@ describe('withInviteLocale — English and other languages are untouched', () =>
 
   it('leaves an existing query string alone for English', () => {
     expect(withInviteLocale(`${URL_BASE}?ref=email`, 'en')).toBe(`${URL_BASE}?ref=email`);
+  });
+});
+
+describe('withInviteLocale — every other registry locale gets its exact code', () => {
+  it.each([
+    ['fr', 'fr'],
+    ['fr-FR', 'fr'],
+    ['fr-BE', 'fr'],
+    ['fr-CA', 'fr-CA'],
+    ['fr_ca', 'fr-CA'],
+    ['de', 'de'],
+    ['de-AT', 'de'],
+    ['it-IT', 'it'],
+    ['pt', 'pt'],
+    ['pt-BR', 'pt'],
+    ['pt-PT', 'pt-PT'],
+  ])('%j -> lang=%s', (language, code) => {
+    expect(withInviteLocale(URL_BASE, language)).toBe(`${URL_BASE}?lang=${code}`);
   });
 });
 
@@ -147,5 +165,14 @@ describe('invite share link <-> .htaccess rewrite (per registry locale)', () => 
   it.each(NON_EN_LOCALES)('public/.htaccess routes lang=%s to index.%s.html', (code) => {
     expect(htaccess).toMatch(new RegExp(`RewriteCond %\\{QUERY_STRING\\} \\(\\^\\|&\\)lang=${code}\\(\\$\\|&\\)`));
     expect(htaccess).toContain(`index.${code}.html`);
+  });
+
+  it.each(NON_EN_LOCALES)('index.%s.html falls under the never-cache FilesMatch', (code) => {
+    const m = /<FilesMatch "(\^index[^"]*)">\s*\n\s*Header set Cache-Control "no-cache/.exec(htaccess);
+    expect(m).not.toBeNull();
+    const re = new RegExp(m![1] as string);
+    expect(re.test(`index.${code}.html`)).toBe(true);
+    expect(re.test('index.html')).toBe(true);
+    expect(re.test('index-abc123.js')).toBe(false);
   });
 });

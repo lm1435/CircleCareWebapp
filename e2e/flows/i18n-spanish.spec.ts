@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures';
+import { expectLanguagePicker } from '../languagePicker';
 import type { Page } from '@playwright/test';
 
 // Runs the whole app in Spanish and asserts the UI is actually translated as we
@@ -170,5 +171,6 @@ test('profile language selector is in Spanish and reflects the active language',
   });
   // Both language options render; the page being Spanish proves "es" is active.
   await expect(page.getByText('Español', { exact: true })).toBeVisible();
-  await expect(page.getByText('English', { exact: true })).toBeVisible();
+  await expect(page.getByText('English', { exact: true })).toBeVisible();  // 1.2.2 flip: all eight languages, picker order, endonyms, the active one checked.
+  await expectLanguagePicker(page, 'Idioma', 'Español');
 });

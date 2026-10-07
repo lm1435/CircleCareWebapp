@@ -100,6 +100,12 @@ const enResources: NamespaceResources = {
 type LocaleLoaders = Record<Exclude<SupportedLanguage, 'en'>, () => Promise<{ default: object }>>;
 const localeLoaders: LocaleLoaders = {
   es: () => import('./es/index'),
+  fr: () => import('./fr/index'),
+  'fr-CA': () => import('./fr-CA/index'),
+  de: () => import('./de/index'),
+  it: () => import('./it/index'),
+  pt: () => import('./pt/index'),
+  'pt-PT': () => import('./pt-PT/index'),
 };
 
 /**

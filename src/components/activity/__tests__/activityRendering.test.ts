@@ -493,7 +493,8 @@ describe('renderDate resolves Today/Yesterday in the RECIPIENT frame', () => {
       hourCycle: '12h',
       locale: 'en',
     });
-    expect(out).toContain('Today');
+    // In-sentence relative day: lowercase, no "on" (1.2.2 relative-date fix).
+    expect(out).toBe('Skipped: Metformin today');
     expect(out).not.toContain('Aug 26');
   });
 
@@ -504,8 +505,8 @@ describe('renderDate resolves Today/Yesterday in the RECIPIENT frame', () => {
       hourCycle: '12h',
       locale: 'en',
     });
-    expect(out).toContain('Yesterday');
-    expect(out).not.toContain('Today');
+    expect(out).toBe('Skipped: Metformin yesterday');
+    expect(out).not.toMatch(/today/i);
   });
 });
 

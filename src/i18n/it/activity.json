@@ -74,6 +74,7 @@
     "onDate": "il",
     "stoppedRecurrence": "Ripetizione interrotta per",
     "fromDate": "dal",
+    "fromRelativeDate": "da",
     "importedAppointment_one": "Ha importato {{count}} appuntamento dal calendario",
     "importedAppointment_other": "Ha importato {{count}} appuntamenti dal calendario",
     "changedAnswer": "(ha modificato la risposta di un altro caregiver)",

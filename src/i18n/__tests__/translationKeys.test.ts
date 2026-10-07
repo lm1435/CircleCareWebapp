@@ -842,10 +842,14 @@ describe('W5: string-constant translation keys used outside t()', () => {
       // short label is fine for them. `medication` is the long one everywhere
       // and is the reason the short variants exist at all — if it is not
       // abbreviated, nothing is.
-      expect(
-        addMenu.medicationShort.length,
-        `${locale} addMenu.medicationShort ("${addMenu.medicationShort}")`
-      ).toBeLessThan(addMenu.medication.length);
+      // A full label that is already as short as "Farmaco" (it, 7 letters) needs no
+      // abbreviation; every longer one ("Medikament", "Médicament") must be abbreviated.
+      if (addMenu.medication.length > 7) {
+        expect(
+          addMenu.medicationShort.length,
+          `${locale} addMenu.medicationShort ("${addMenu.medicationShort}")`
+        ).toBeLessThan(addMenu.medication.length);
+      }
     }
   });
 });

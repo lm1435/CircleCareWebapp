@@ -65,7 +65,11 @@ describe('src/i18n/index.ts locale splitting', () => {
   it.each(NON_EN_LOCALES)('has a lazy loader entry for registry locale %s', (code) => {
     // `es: () => import('./es/index')` — a dynamic import of that locale's combined chunk.
     expect(loaderMapBody()).toMatch(
-      new RegExp(`\\b${code}:\\s*\\(\\)\\s*=>\\s*import\\(\\s*['"]\\./${code}/index['"]\\s*\\)`)
+      // A hyphenated code is a quoted key (`'fr-CA': () => import('./fr-CA/index')`).
+      new RegExp(
+        `(^|[\\s{,])'?${code}'?:\\s*\\(\\)\\s*=>\\s*import\\(\\s*['"]\\./${code}/index['"]\\s*\\)`,
+        'm'
+      )
     );
   });
 

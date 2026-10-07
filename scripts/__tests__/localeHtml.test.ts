@@ -33,14 +33,15 @@ describe('parseRegistryCodes', () => {
 });
 
 describe('checkLocaleTable', () => {
-  it('passes for the real registry: only es is built, its assets exist', () => {
+  it('passes for the real registry: every non-EN locale is built, its assets exist', () => {
     expect(checkLocaleTable(parseRegistryCodes(localesSource), LOCALE_DOCS, realAssetExists)).toEqual(
-      ['es']
+      ['es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT']
     );
   });
 
   it('fails naming a registry locale with no table entry (en is never built)', () => {
-    expect(() => checkLocaleTable(['en', 'es', 'fr'], LOCALE_DOCS, () => true)).toThrow(
+    const withoutFr = Object.fromEntries(Object.entries(LOCALE_DOCS).filter(([c]) => c !== 'fr'));
+    expect(() => checkLocaleTable(['en', 'es', 'fr'], withoutFr, () => true)).toThrow(
       /no LOCALE_DOCS entry for registry locale "fr"/
     );
   });

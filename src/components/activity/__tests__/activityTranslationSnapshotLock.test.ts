@@ -384,12 +384,12 @@ describe('dated / regex forms (legacy path)', () => {
           "es": "Omitido: Aspirin el 10 jun",
         },
         "not taken (new) today": {
-          "en": "Skipped: Aspirin on Today",
-          "es": "Omitido: Aspirin el Hoy",
+          "en": "Skipped: Aspirin today",
+          "es": "Omitido: Aspirin hoy",
         },
         "not taken (new) yesterday": {
-          "en": "Skipped: Aspirin on Yesterday",
-          "es": "Omitido: Aspirin el Ayer",
+          "en": "Skipped: Aspirin yesterday",
+          "es": "Omitido: Aspirin ayer",
         },
         "not taken Jan 15": {
           "en": "Skipped: Aspirin on Jan 15",
@@ -412,8 +412,8 @@ describe('dated / regex forms (legacy path)', () => {
           "es": "Detuvo recurrencia de Aspirin desde 15 ene",
         },
         "stopped recurrence today": {
-          "en": "Stopped recurrence for Aspirin from Today",
-          "es": "Detuvo recurrencia de Aspirin desde Hoy",
+          "en": "Stopped recurrence for Aspirin from today",
+          "es": "Detuvo recurrencia de Aspirin desde hoy",
         },
         "title with " on "": {
           "en": "Skipped: Visit on call on Jun 10",
@@ -541,12 +541,12 @@ describe('KEY_RENDERERS (parameterized rows)', () => {
           "es": "Omitido: Aspirin el 10 jun",
         },
         "not taken today": {
-          "en": "Skipped: Aspirin on Today",
-          "es": "Omitido: Aspirin el Hoy",
+          "en": "Skipped: Aspirin today",
+          "es": "Omitido: Aspirin hoy",
         },
         "not taken yesterday": {
-          "en": "Skipped: Aspirin on Yesterday",
-          "es": "Omitido: Aspirin el Ayer",
+          "en": "Skipped: Aspirin yesterday",
+          "es": "Omitido: Aspirin ayer",
         },
         "prn logged": {
           "en": "Logged a dose: Tylenol at 2:30 PM",
@@ -693,8 +693,8 @@ describe('KEY_RENDERERS (parameterized rows)', () => {
           "es": "Omitido: Aspirin el 10 jun",
         },
         "not taken today": {
-          "en": "Skipped: Aspirin on Yesterday",
-          "es": "Omitido: Aspirin el Ayer",
+          "en": "Skipped: Aspirin yesterday",
+          "es": "Omitido: Aspirin ayer",
         },
         "not taken yesterday": {
           "en": "Skipped: Aspirin on Oct 5",

@@ -171,19 +171,23 @@ describe('exportUserData', () => {
 describe('web Zod schemas mirror the backend route constraints', () => {
   it('updateProfileSchema accepts exactly the registry languages and rejects the rest', () => {
     // Expectation written from the registry, so a locale added there is
-    // accepted here with no edit — and an unshipped one ('fr') is not.
+    // accepted here with no edit — and an unshipped one ('ja') is not.
     for (const code of SUPPORTED_LOCALES) {
       expect(updateProfileSchema.safeParse({ language: code }).success).toBe(true);
     }
-    expect(SUPPORTED_LOCALES).not.toContain('fr');
-    expect(updateProfileSchema.safeParse({ language: 'fr' }).success).toBe(false);
+    expect(SUPPORTED_LOCALES).toEqual(['en', 'es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT']);
+    expect(SUPPORTED_LOCALES).not.toContain('ja');
+    expect(updateProfileSchema.safeParse({ language: 'ja' }).success).toBe(false);
+    // Exact registry codes only: region tags are normalized by the caller.
     expect(updateProfileSchema.safeParse({ language: 'es-MX' }).success).toBe(false);
+    expect(updateProfileSchema.safeParse({ language: 'fr-BE' }).success).toBe(false);
+    expect(updateProfileSchema.safeParse({ language: 'fr-ca' }).success).toBe(false);
   });
 
   it('updateProfileSchema enforces name length + language enum', () => {
     expect(updateProfileSchema.safeParse({ first_name: '' }).success).toBe(false);
     expect(updateProfileSchema.safeParse({ first_name: 'a'.repeat(51) }).success).toBe(false);
-    expect(updateProfileSchema.safeParse({ language: 'fr' }).success).toBe(false);
+    expect(updateProfileSchema.safeParse({ language: 'ja' }).success).toBe(false);
     expect(updateProfileSchema.safeParse({ language: 'es', first_name: 'Sam' }).success).toBe(
       true
     );

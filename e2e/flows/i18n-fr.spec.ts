@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures';
+import { expectLanguagePicker } from '../languagePicker';
 import type { Page } from '@playwright/test';
 
 // FRENCH twin of i18n-spanish.spec.ts (FR lane, 1.2.2; executed by the flip stage).
@@ -170,5 +171,6 @@ test('profile language selector is in French and reflects the active language', 
   });
   // Both language options render (the flip adds Français to the picker; en/es always exist).
   await expect(page.getByText('Español', { exact: true })).toBeVisible();
-  await expect(page.getByText('English', { exact: true })).toBeVisible();
+  await expect(page.getByText('English', { exact: true })).toBeVisible();  // 1.2.2 flip: all eight languages, picker order, endonyms, the active one checked.
+  await expectLanguagePicker(page, 'Langue', 'Français');
 });

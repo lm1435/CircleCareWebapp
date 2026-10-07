@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import i18n from '@/i18n';
+import { isSupportedLocale } from '@/i18n/locales';
 import { translateActivityDescription } from '@/components/activity/activityTranslation';
 import {
   DATED_CASES,
@@ -58,8 +59,24 @@ export function loadActivityBundle(code: string): Bundle {
     : read(code);
 }
 
-/** A fixed `t` for `code`, registered under the (possibly unregistered) tag. */
+/**
+ * A fixed `t` for `code`.
+ *
+ * A REGISTERED locale (every Stage 1 code since the 1.2.2 flip) renders through the
+ * app's real i18n instance: the bundle the loader map ships and the real fallback
+ * chain (fr-CA -> fr -> en), so the snapshot is what a user sees, and the time
+ * helpers (meridiem, place names) resolve the variant's own rows instead of the
+ * English fallback an unregistered tag got. The bundle is asserted equal to the
+ * on-disk file first, so a loader serving the wrong chunk fails here. Only an
+ * UNREGISTERED tag (a future lane, pre-flip) is still injected from disk.
+ */
 export function activityTFor(code: string) {
+  if (isSupportedLocale(code)) {
+    const live = i18n.getResourceBundle(code, 'activity') as Bundle | undefined;
+    const own = JSON.parse(readFileSync(join(I18N_DIR, code, 'activity.json'), 'utf8')) as Bundle;
+    expect(live, `${code} activity bundle is not loaded from its locale chunk`).toEqual(own);
+    return i18n.getFixedT(code, 'activity');
+  }
   i18n.addResourceBundle(code, 'activity', loadActivityBundle(code), true, true);
   return i18n.getFixedT(code, 'activity');
 }

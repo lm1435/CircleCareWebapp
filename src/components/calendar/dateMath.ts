@@ -1,3 +1,4 @@
+import { normalizeLocale } from '@/i18n/locales';
 import i18n from '@/i18n';
 import { formatTimeOfDay, getTimezoneSuffix } from '@/utils/timezone';
 import type { HourCycle } from '@/utils/hourCycle';
@@ -61,7 +62,12 @@ export function getDayOfWeek(dateStr: string): number {
  */
 export function firstDayOfWeek(language: string): number {
   try {
-    const locale = new Intl.Locale(language) as Intl.Locale & {
+    // The REGISTERED locale (normalizeLocale: exact registry code, else its base,
+    // else en), matching mobile `utils/weekStart.ts`: every es tag starts Monday and
+    // every en tag Sunday, whatever CLDR says for the region (es-MX, en-GB), so the
+    // two platforms agree. A registered VARIANT keeps its own convention: fr-CA
+    // starts Sunday (CLDR CA), fr Monday.
+    const locale = new Intl.Locale(normalizeLocale(language)) as Intl.Locale & {
       getWeekInfo?: () => { firstDay: number };
       weekInfo?: { firstDay: number };
     };
@@ -70,20 +76,20 @@ export function firstDayOfWeek(language: string): number {
   } catch {
     // An unparseable language tag is not worth a blank calendar.
   }
-  return language.toLowerCase().startsWith('en') ? 0 : 1;
+  return normalizeLocale(language) === 'en' ? 0 : 1;
 }
 
 /**
  * The seven weekday indexes (0=Sun..6=Sat, the `recurrence_days` convention —
  * NEVER Sunday as 7) in the locale's week order: `es` → [1..6, 0], `en` → [0..6].
  *
- * Ordered by the BASE language, not the full tag: the care-summary PDF formats
- * with the browser's regional locale (`es-MX`, which CLDR starts on Sunday)
- * while the app UI speaks bare `es`, and a day list must read the same in both
- * — and the same as mobile, which orders by the base app language too.
+ * Ordered by the REGISTERED locale, not the raw tag (see `firstDayOfWeek`): the
+ * care-summary PDF formats with the browser's regional locale (`es-MX`, which CLDR
+ * starts on Sunday) while the app UI speaks bare `es`, and a day list must read the
+ * same in both and the same as mobile; a registered variant (fr-CA) keeps its own.
  */
 export function orderedWeekdays(language: string): number[] {
-  const first = firstDayOfWeek(language.split('-')[0] || language);
+  const first = firstDayOfWeek(language);
   return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
 }
 

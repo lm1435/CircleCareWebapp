@@ -41,8 +41,14 @@
     "description": "Escolha o idioma usado em todo o app.",
     "success": "Idioma atualizado.",
     "names": {
-      "en": "Inglês",
-      "es": "Espanhol"
+      "en": "English",
+      "es": "Español",
+      "fr": "Français",
+      "fr-CA": "Français (Canada)",
+      "de": "Deutsch",
+      "it": "Italiano",
+      "pt": "Português (Brasil)",
+      "pt-PT": "Português (Portugal)"
     }
   },
   "notifications": {

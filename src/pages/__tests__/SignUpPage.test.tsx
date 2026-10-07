@@ -317,9 +317,9 @@ describe('SignUpPage', () => {
     }
   });
 
-  // A language the registry does not ship (fr-CA) must register as 'en': the UI
+  // A language the registry does not ship (ja) must register as 'en': the UI
   // falls back to English, and the payload must agree with what the user sees.
-  it("registers a fr-CA browser (not shipped) as language 'en'", async () => {
+  it("registers a ja browser (not shipped) as language 'en'", async () => {
     mockedPost.mockResolvedValueOnce({
       success: true,
       data: {
@@ -331,13 +331,42 @@ describe('SignUpPage', () => {
     const user = userEvent.setup();
     renderSignUp();
     await fillValidForm(user);
-    await i18n.changeLanguage('fr-CA');
+    await i18n.changeLanguage('ja');
     try {
       await user.click(screen.getByRole('button', { name: /Create account|Crear cuenta/ }));
       await waitFor(() =>
         expect(mockedPost).toHaveBeenCalledWith(
           '/auth/signup',
           expect.objectContaining({ language: 'en' })
+        )
+      );
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
+  // A registered VARIANT registers as itself (1.2.2): a fr-CA browser is 'fr-CA', not
+  // its base fr and not 'en'.
+  it("registers a fr-CA browser as language 'fr-CA'", async () => {
+    mockedPost.mockResolvedValueOnce({
+      success: true,
+      data: {
+        user: { id: 'u1', email: VALID.email, first_name: 'Pat', last_name: 'Rivera' },
+        message: 'sent',
+      },
+    } as never);
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    const submit = screen.getByRole('button', { name: /Create account|Crear cuenta/ });
+    await i18n.changeLanguage('fr-CA');
+    try {
+      await user.click(submit);
+      await waitFor(() =>
+        expect(mockedPost).toHaveBeenCalledWith(
+          '/auth/signup',
+          expect.objectContaining({ language: 'fr-CA' })
         )
       );
     } finally {

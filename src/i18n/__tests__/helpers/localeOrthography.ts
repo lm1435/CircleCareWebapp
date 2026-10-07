@@ -88,8 +88,12 @@ export function describeLocaleOrthography(code: string, cfg: OrthographyConfig =
       expect(bad).toEqual([]);
     });
 
+    // `profile.language.names.*` are ENDONYMS by webapp convention ("Español" in every
+    // bundle): they are other languages' own spelling, never this locale's prose, so a
+    // foreign-orthography rule (e.g. pt "no ñ") must not flag them.
+    const prose = entries.filter(([k]) => !k.startsWith('profile.language.names.'));
     it.each(cfg.forbidden ?? [])('no string contains %s', (_label, pattern) => {
-      expect(entries.filter(([, v]) => pattern.test(v)).map(([k]) => k)).toEqual([]);
+      expect(prose.filter(([, v]) => pattern.test(v)).map(([k]) => k)).toEqual([]);
     });
 
     it.each(Object.entries(cfg.required ?? {}))('%s matches its required wording', (key, pattern) => {

@@ -38,7 +38,10 @@ for (const s of SURFACES) {
     const task = await apiCreateEvent(api, circleId, {
       event_type: 'task',
       title,
-      scheduled_date: dateInZone(tz, 0),
+      // Dated well in the PAST: Home's Open tasks card shows only the 3 oldest open
+      // tasks, so a task dated today fell off it once the persona seed's own open
+      // tasks aged into overdue (a date bomb, not an app change). Oldest sorts first.
+      scheduled_date: dateInZone(tz, -30),
     });
     try {
       await page.goto(s.path(circleId), { waitUntil: 'domcontentloaded' });

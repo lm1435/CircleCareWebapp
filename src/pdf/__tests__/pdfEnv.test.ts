@@ -134,6 +134,38 @@ describe('buildPdfEnv() clock', () => {
   });
 });
 
+describe('buildPdfEnv() keeps a regional variant\'s own format rows (1.2.2)', () => {
+  const twelveHour = () =>
+    queryClient.setQueryData(queryKeys.currentUser, {
+      id: 'u1',
+      email: 'u@example.com',
+      uses_24h_clock: false,
+      notification_preferences: {},
+    });
+
+  // normalizeLocale, not baseLanguage: collapsing fr-CA to fr (or pt-PT to pt) would
+  // print the base's "PM" / "Moscou" in a Canadian / European document.
+  it.each([
+    ['fr', '2:05 PM'],
+    ['fr-CA', '2:05 p.m.'],
+    ['pt', '2:05 PM'],
+    ['pt-PT', '2:05 p.m.'],
+  ])('%s meridiem -> %s', async (lng, expected) => {
+    await i18n.changeLanguage(lng);
+    twelveHour();
+    expect(buildPdfEnv().formatTimeOfDay(14, 5, DENVER)).toBe(expected);
+  });
+
+  it('pt-PT place names override the Brazilian base', async () => {
+    await i18n.changeLanguage('pt-PT');
+    const env = buildPdfEnv();
+    expect(env.getTimezoneLabel('Europe/Moscow', 'pt-PT')).toBe('Moscovo');
+    expect(env.getTimezoneLabel('Europe/Moscow', 'pt')).toBe('Moscou');
+    // Untouched rows resolve through the base.
+    expect(env.getTimezoneLabel('Asia/Tokyo', 'pt-PT')).toBe('Tóquio');
+  });
+});
+
 describe('buildPdfEnv() helpers', () => {
   it('formatRecurrence is "" for an event with no rule, and a label otherwise', () => {
     const env = buildPdfEnv();

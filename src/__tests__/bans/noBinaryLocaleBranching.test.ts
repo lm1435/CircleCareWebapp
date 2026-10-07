@@ -31,11 +31,12 @@ export const ALLOWLIST: AllowEntry[] = [
   },
   {
     file: 'components/calendar/dateMath.ts',
-    contains: "startsWith('en') ? 0 : 1",
+    contains: "normalizeLocale(language) === 'en' ? 0 : 1",
     reason:
-      'Week-start FALLBACK only, reached when Intl.Locale cannot resolve weekInfo. English = ' +
-      'Sunday (0), every other shipped/planned locale (es, fr, pt) = Monday (1); a per-locale ' +
-      'week-start table belongs here if a Sunday-start locale ever ships.',
+      'Week-start FALLBACK only, reached when Intl.Locale cannot resolve weekInfo (every ' +
+      'supported browser can). English = Sunday (0), else Monday (1). Known gap: fr-CA, pt and ' +
+      'pt-PT are Sunday-first in CLDR, so a runtime WITHOUT weekInfo would start them on Monday; ' +
+      'mobile carries a per-locale `firstDayFallback` table for that, web would need the same.',
   },
 ];
 

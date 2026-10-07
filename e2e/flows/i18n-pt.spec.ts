@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures';
+import { expectLanguagePicker } from '../languagePicker';
 import type { Page } from '@playwright/test';
 
 // Twin of i18n-spanish.spec.ts written by the pt lane; EXECUTED BY THE FLIP STAGE (needs
@@ -170,5 +171,6 @@ test('profile language selector is in Portuguese', async ({ page }) => {
   });
   // The option labels (`language.names.*`) are added to every bundle by the flip stage,
   // whose picker test owns them. Here: the heading is Portuguese, no English one leaked.
-  await expect(page.getByText('Language', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Language', { exact: true })).toHaveCount(0);  // 1.2.2 flip: all eight languages, picker order, endonyms, the active one checked.
+  await expectLanguagePicker(page, 'Idioma', 'Português (Brasil)');
 });

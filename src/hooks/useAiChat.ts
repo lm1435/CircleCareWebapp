@@ -186,9 +186,9 @@ export function useAiChat(circleId: string): UseAiChatResult {
         messageLength: message.length,
         usedSuggestion: usedSuggestion ?? false,
       });
-      // The backend chatSchema accepts only 'en' | 'es'. `i18n.language` can be a
-      // region-qualified tag (e.g. 'en-US', 'es-MX'), so normalize to the base
-      // language — otherwise the request 400s and the modal shows "sendFailed".
+      // The backend chatSchema accepts only registry codes. `i18n.language` can be a
+      // region-qualified tag (e.g. 'en-US', 'es-MX', 'fr-BE'), so normalize it through
+      // the registry — otherwise the request 400s and the modal shows "sendFailed".
       const language = normalizeLocale(i18n.language);
       return sendAiMessage(circleId, {
         message,

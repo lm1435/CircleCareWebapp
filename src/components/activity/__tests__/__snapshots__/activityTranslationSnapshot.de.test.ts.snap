@@ -21,8 +21,8 @@ exports[`activity word order (de) > KEY_RENDERERS 12h 1`] = `
   "not taken Jan 15": "Ausgelassen: Aspirin am 15. Jan.",
   "not taken non-ISO date raw": "Ausgelassen: Aspirin am June 10",
   "not taken old": "Ausgelassen: Aspirin am 10. Juni",
-  "not taken today": "Ausgelassen: Aspirin am Heute",
-  "not taken yesterday": "Ausgelassen: Aspirin am Gestern",
+  "not taken today": "Ausgelassen: Aspirin heute",
+  "not taken yesterday": "Ausgelassen: Aspirin gestern",
   "prn logged": "Dosis eingetragen: Tylenol um 2:30 PM",
   "prn removed": "Eingetragene Dosis entfernt: Tylenol (2:30 PM)",
   "recurrence stopped": "Wiederholung beendet für Aspirin ab 10. Juni",
@@ -77,7 +77,7 @@ exports[`activity word order (de) > Today/Yesterday in the recipient frame (Toky
   "not taken Jan 15": "Ausgelassen: Aspirin am 15. Jan.",
   "not taken non-ISO date raw": "Ausgelassen: Aspirin am June 10",
   "not taken old": "Ausgelassen: Aspirin am 10. Juni",
-  "not taken today": "Ausgelassen: Aspirin am Gestern",
+  "not taken today": "Ausgelassen: Aspirin gestern",
   "not taken yesterday": "Ausgelassen: Aspirin am 5. Okt.",
 }
 `;
@@ -90,14 +90,14 @@ exports[`activity word order (de) > dated / regex forms 1`] = `
   "imported 2": "2 Termine aus dem Kalender importiert",
   "imported 25": "25 Termine aus dem Kalender importiert",
   "not taken (new) old date": "Ausgelassen: Aspirin am 10. Juni",
-  "not taken (new) today": "Ausgelassen: Aspirin am Heute",
-  "not taken (new) yesterday": "Ausgelassen: Aspirin am Gestern",
+  "not taken (new) today": "Ausgelassen: Aspirin heute",
+  "not taken (new) yesterday": "Ausgelassen: Aspirin gestern",
   "not taken Jan 15": "Ausgelassen: Aspirin am 15. Jan.",
   "skipped (legacy) Jan 15": "Ausgelassen: Aspirin am 15. Jan.",
   "skipped (legacy) old date": "Ausgelassen: Aspirin am 10. Juni",
   "stopped recurrence": "Wiederholung beendet für Aspirin ab 10. Juni",
   "stopped recurrence Jan 15": "Wiederholung beendet für Aspirin ab 15. Jan.",
-  "stopped recurrence today": "Wiederholung beendet für Aspirin ab Heute",
+  "stopped recurrence today": "Wiederholung beendet für Aspirin ab heute",
   "title with " on "": "Ausgelassen: Visit on call am 10. Juni",
 }
 `;
@@ -152,12 +152,12 @@ exports[`activity word order (de) > phrase dates (formatDateShort) and the stopp
 
 exports[`activity word order (de) > zone-labelled time, recipient zone differs (Tokyo) 1`] = `
 {
-  "prn logged": "Dosis eingetragen: Tylenol um 2:30 PM (Tokyo)",
-  "prn removed": "Eingetragene Dosis entfernt: Tylenol (2:30 PM (Tokyo))",
-  "rescheduled": "Medikament verschoben: Metformin auf 8:00 PM (Tokyo)",
-  "rescheduled midnight": "Medikament verschoben: Metformin auf 12:00 AM (Tokyo)",
-  "rescheduled morning HH:MM": "Medikament verschoben: Metformin auf 8:05 AM (Tokyo)",
-  "rescheduled noon": "Medikament verschoben: Metformin auf 12:00 PM (Tokyo)",
+  "prn logged": "Dosis eingetragen: Tylenol um 2:30 PM (Tokio)",
+  "prn removed": "Eingetragene Dosis entfernt: Tylenol (2:30 PM (Tokio))",
+  "rescheduled": "Medikament verschoben: Metformin auf 8:00 PM (Tokio)",
+  "rescheduled midnight": "Medikament verschoben: Metformin auf 12:00 AM (Tokio)",
+  "rescheduled morning HH:MM": "Medikament verschoben: Metformin auf 8:05 AM (Tokio)",
+  "rescheduled noon": "Medikament verschoben: Metformin auf 12:00 PM (Tokio)",
   "rescheduled out-of-range raw": "Medikament verschoben: Metformin auf 25:00:00",
   "rescheduled unparseable raw": "Medikament verschoben: Metformin auf evening",
 }

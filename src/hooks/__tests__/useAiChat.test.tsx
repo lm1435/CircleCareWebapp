@@ -96,7 +96,7 @@ describe('useAiChat — request body', () => {
 
   // A language the registry does not ship collapses to 'en' (A10). The old
   // `startsWith('es')` also mis-read 'est' (Estonian) as Spanish.
-  it.each(['fr-CA', 'est'])('sends en for the unshipped tag %s', async (tag) => {
+  it.each(['ja-JP', 'est'])('sends en for the unshipped tag %s', async (tag) => {
     mockLanguage = tag;
     const { wrapper } = setup();
     mockSend.mockResolvedValue(makeResponse());
@@ -106,6 +106,25 @@ describe('useAiChat — request body', () => {
 
     await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
     expect(mockSend.mock.calls[0][1].language).toBe('en');
+  });
+
+  // 1.2.2 registry: a registered variant is sent as itself, a region of a base as the base.
+  it.each([
+    ['fr-CA', 'fr-CA'],
+    ['fr-BE', 'fr'],
+    ['pt-BR', 'pt'],
+    ['pt-PT', 'pt-PT'],
+    ['de-AT', 'de'],
+  ])('sends the registry code for %s (%s)', async (tag, code) => {
+    mockLanguage = tag;
+    const { wrapper } = setup();
+    mockSend.mockResolvedValue(makeResponse());
+
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    act(() => result.current.mutation.mutate({ message: 'q' }));
+
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    expect(mockSend.mock.calls[0][1].language).toBe(code);
   });
 
   it('threads the server conversation_id into the next request', async () => {

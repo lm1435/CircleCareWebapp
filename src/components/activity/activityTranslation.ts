@@ -9,7 +9,7 @@
 
 import i18n from '@/i18n';
 import { formatDateShort } from './activityFormat';
-import { baseLanguage } from '@/i18n/locales';
+import { normalizeLocale } from '@/i18n/locales';
 import { formatTimeOfDay, getTimezoneSuffix, type TimeLanguage } from '@/utils/timezone';
 import type { HourCycle } from '@/utils/hourCycle';
 
@@ -112,6 +112,65 @@ function renderDate(raw: unknown, ctx: RenderContext): string {
 }
 
 /**
+ * RELATIVE DAYS INSIDE A SENTENCE (all locales, en/es included).
+ *
+ * `today` / `yesterday` are capitalised standalone labels ("Today" heads a feed
+ * group). Spliced after the date preposition they read "Skipped: X on Today",
+ * "el Hoy", "am Heute", "il Oggi". A relative day is an ADVERB: the on-date
+ * preposition is dropped and the word starts lowercase ("Skipped: X today",
+ * "Omitido: X hoy", "Ausgelassen: X heute"). The from-date preposition is kept but
+ * swapped for `phrases.fromRelativeDate` (Italian "dal 15 gen" but "da oggi").
+ *
+ * Render-only: the stored English `description` (a wire contract) is untouched.
+ * KEEP IN SYNC with mobile/src/utils/activityTranslation.ts and
+ * backend/src/utils/activityDescription.ts (same rule, same keys).
+ */
+const DATE_SLOT = '\uE000';
+
+/** Only the FIRST character lowercased, in the reader's locale. */
+export function lowerFirst(word: string, locale: string): string {
+  if (!word) return word;
+  let first: string;
+  try {
+    first = word.charAt(0).toLocaleLowerCase(locale);
+  } catch {
+    first = word.charAt(0).toLowerCase();
+  }
+  return first + word.slice(1);
+}
+
+/** The lowercase relative word when `rendered` is the Today/Yesterday label, else null. */
+function relativeWord(rendered: string, t: TFn, locale: string): string | null {
+  if (rendered === t('today') || rendered === t('yesterday')) return lowerFirst(rendered, locale);
+  return null;
+}
+
+/**
+ * Fill a `{{date}}` template (`render` interpolates it). A calendar date fills it as
+ * before; for a relative day, the whole-word preposition `prep.phrase` right before the
+ * slot is dropped (`prep.relative === null`, the on-date case) or swapped for
+ * `prep.relative` (the from-date case, `phrases.fromRelativeDate`). Keys stay static
+ * literals at the call sites so the key-coverage scan can resolve them.
+ */
+function fillDateTemplate(
+  render: (date: string) => string,
+  date: string,
+  prep: { phrase: string; relative: string | null },
+  t: TFn,
+  locale: string
+): string {
+  const word = relativeWord(date, t, locale);
+  if (word === null) return render(date);
+  let out = render(DATE_SLOT);
+  const before = ` ${prep.phrase} ${DATE_SLOT}`;
+  if (prep.phrase && out.includes(before)) {
+    const replacement = prep.relative === null ? ` ${DATE_SLOT}` : ` ${prep.relative} ${DATE_SLOT}`;
+    out = out.replace(before, () => replacement);
+  }
+  return out.replace(DATE_SLOT, () => word);
+}
+
+/**
  * THE EXPLICIT KEY ALLOW-LIST.
  *
  * A LOOKUP, not `t(key)`. This is the whole safety property of a partial
@@ -156,30 +215,45 @@ const KEY_RENDERERS = new Map<string, KeyRenderer>(Object.entries({
       time: renderTime(p.scheduledTime, ctx),
     }) },
   'entries.medicationNotTaken': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
-    ctx.t('entries.medicationNotTaken', {
-      title: p.title ?? '',
-      date: renderDate(p.scheduledDate, ctx),
-    }) },
+    fillDateTemplate(
+      (date) => ctx.t('entries.medicationNotTaken', { title: p.title ?? '', date }),
+      renderDate(p.scheduledDate, ctx),
+      { phrase: ctx.t('phrases.onDate'), relative: null },
+      ctx.t,
+      ctx.locale
+    ) },
   'entries.medicationOccurrenceRemoved': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
-    ctx.t('entries.medicationOccurrenceRemoved', {
-      title: p.title ?? '',
-      date: renderDate(p.scheduledDate, ctx),
-    }) },
+    fillDateTemplate(
+      (date) => ctx.t('entries.medicationOccurrenceRemoved', { title: p.title ?? '', date }),
+      renderDate(p.scheduledDate, ctx),
+      { phrase: ctx.t('phrases.onDate'), relative: null },
+      ctx.t,
+      ctx.locale
+    ) },
   'entries.appointmentOccurrenceRemoved': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
-    ctx.t('entries.appointmentOccurrenceRemoved', {
-      title: p.title ?? '',
-      date: renderDate(p.scheduledDate, ctx),
-    }) },
+    fillDateTemplate(
+      (date) => ctx.t('entries.appointmentOccurrenceRemoved', { title: p.title ?? '', date }),
+      renderDate(p.scheduledDate, ctx),
+      { phrase: ctx.t('phrases.onDate'), relative: null },
+      ctx.t,
+      ctx.locale
+    ) },
   'entries.taskOccurrenceRemoved': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
-    ctx.t('entries.taskOccurrenceRemoved', {
-      title: p.title ?? '',
-      date: renderDate(p.scheduledDate, ctx),
-    }) },
+    fillDateTemplate(
+      (date) => ctx.t('entries.taskOccurrenceRemoved', { title: p.title ?? '', date }),
+      renderDate(p.scheduledDate, ctx),
+      { phrase: ctx.t('phrases.onDate'), relative: null },
+      ctx.t,
+      ctx.locale
+    ) },
   'entries.recurrenceStopped': { requires: ['title', 'scheduledDate'], render: (p, ctx) =>
-    ctx.t('entries.recurrenceStopped', {
-      title: p.title ?? '',
-      date: renderDate(p.scheduledDate, ctx),
-    }) },
+    fillDateTemplate(
+      (date) => ctx.t('entries.recurrenceStopped', { title: p.title ?? '', date }),
+      renderDate(p.scheduledDate, ctx),
+      { phrase: ctx.t('phrases.fromDate'), relative: ctx.t('phrases.fromRelativeDate') },
+      ctx.t,
+      ctx.locale
+    ) },
   'entries.memberInvited.careRecipient': { requires: ['email'], render: (p, ctx) =>
     ctx.t('entries.memberInvited.careRecipient', { email: p.email ?? '' }) },
   'entries.memberInvited.caregiver': { requires: ['email'], render: (p, ctx) =>
@@ -297,8 +371,10 @@ export function renderActivityDescription(
         hourCycle: options.hourCycle,
         // Lazy: a name-free membership row never reads it, and the
         // client-compat harness stubs the registry import to throw.
+        // normalizeLocale, NOT baseLanguage: a variant (fr-CA, pt-PT) keeps its own
+        // meridiem / place-name rows (resolved variant -> base -> en downstream).
         get language() {
-          return baseLanguage(locale);
+          return normalizeLocale(locale);
         },
         timezone,
         now: options.now ?? new Date(),
@@ -459,30 +535,48 @@ export function translateActivityDescription(
     'Logged a dose:': t('phrases.loggedDose'),
   };
 
+  // Legacy "Logged a dose: X at 2:30 PM" (a time-bearing as-needed row): the whole
+  // sentence goes through the localized template, so no English "at" survives the
+  // prefix swap. The stored time is shown as stored (no raw value to re-render).
+  const logged = /^Logged a dose: (.+) at (\d{1,2}:\d{2}(?:\s?[AaPp]\.?\s?[Mm]\.?)?)$/.exec(description);
+  if (logged) return t('entries.asNeededDoseLogged', { title: logged[1], time: logged[2] });
+
   let translated = description;
   for (const [english, localized] of Object.entries(replacements)) {
     translated = translated.replace(english, localized);
   }
+
+  // A relative day drops the on-date preposition and reads lowercase (see fillDateTemplate).
+  const skippedOn = (title: string, date: string): string => {
+    const shown = formatDateShort(date, t, locale);
+    const word = relativeWord(shown, t, locale);
+    return word === null
+      ? `${t('phrases.skippedEvent')} ${title} ${t('phrases.onDate')} ${shown}`
+      : `${t('phrases.skippedEvent')} ${title} ${word}`;
+  };
 
   // Handle complex patterns with regex
 
   // "Not taken: {title} on {YYYY-MM-DD}" (new format) and "Skipped {title} on {YYYY-MM-DD}" (legacy)
   translated = translated.replace(
     /^Not taken: (.+) on (\d{4}-\d{2}-\d{2})$/,
-    (_match, title: string, date: string) =>
-      `${t('phrases.skippedEvent')} ${title} ${t('phrases.onDate')} ${formatDateShort(date, t, locale)}`
+    (_match, title: string, date: string) => skippedOn(title, date)
   );
   translated = translated.replace(
     /^Skipped (.+) on (\d{4}-\d{2}-\d{2})$/,
-    (_match, title: string, date: string) =>
-      `${t('phrases.skippedEvent')} ${title} ${t('phrases.onDate')} ${formatDateShort(date, t, locale)}`
+    (_match, title: string, date: string) => skippedOn(title, date)
   );
 
   // "Stopped recurrence for {title} from {YYYY-MM-DD}"
   translated = translated.replace(
     /^Stopped recurrence for (.+) from (\d{4}-\d{2}-\d{2})$/,
-    (_match, title: string, date: string) =>
-      `${t('phrases.stoppedRecurrence')} ${title} ${t('phrases.fromDate')} ${formatDateShort(date, t, locale)}`
+    (_match, title: string, date: string) => {
+      const shown = formatDateShort(date, t, locale);
+      const word = relativeWord(shown, t, locale);
+      return word === null
+        ? `${t('phrases.stoppedRecurrence')} ${title} ${t('phrases.fromDate')} ${shown}`
+        : `${t('phrases.stoppedRecurrence')} ${title} ${t('phrases.fromRelativeDate')} ${word}`;
+    }
   );
 
   // "Imported N appointment(s) from calendar"

@@ -37,10 +37,20 @@ function probePluralCategories(code: string): string[] {
 }
 
 describe('LOCALE_REGISTRY shape', () => {
-  it('ships exactly en + es today', () => {
-    expect(LOCALE_REGISTRY.map((l) => l.code)).toEqual(['en', 'es']);
-    expect([...SUPPORTED_LOCALES]).toEqual(['en', 'es']);
-    expect(NON_EN_LOCALES).toEqual(['es']);
+  it('ships the 1.2.2 set in picker order', () => {
+    expect(LOCALE_REGISTRY.map((l) => l.code)).toEqual(['en', 'es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT']);
+    expect([...SUPPORTED_LOCALES]).toEqual(['en', 'es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT']);
+    expect(NON_EN_LOCALES).toEqual(['es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT']);
+  });
+
+  it('variants declare their base; native picker labels', () => {
+    expect(LOCALE_REGISTRY.map((l) => (l as LocaleEntry).base ?? null)).toEqual([
+      null, null, null, 'fr', null, null, null, 'pt',
+    ]);
+    expect(Object.values(LOCALE_LABELS)).toEqual([
+      'English', 'Español', 'Français', 'Français (Canada)', 'Deutsch', 'Italiano',
+      'Português (Brasil)', 'Português (Portugal)',
+    ]);
   });
 
   it.each(LOCALE_REGISTRY.map((l) => [l.code, l.pluralCategories] as const))(
@@ -66,8 +76,6 @@ describe('normalizeLocale / baseLanguage / localeChain (shipped registry)', () =
     ['es-419', 'es'],
     ['es_419', 'es'],
     ['  ES-mx ', 'es'],
-    ['fr-CA', 'en'],
-    ['pt', 'en'],
     ['xx-YY', 'en'],
     ['est', 'en'], // starts with "es" but is Estonian: whole-subtag match, not a prefix
     ['esperanto', 'en'],
@@ -79,10 +87,31 @@ describe('normalizeLocale / baseLanguage / localeChain (shipped registry)', () =
     expect(baseLanguage(tag as string | null | undefined)).toBe(expected);
   });
 
+  // Variant selection follows the LANGUAGE TAG only: exact variant, else the base.
+  it.each([
+    ['fr-CA', 'fr-CA', 'fr'],
+    ['fr-ca', 'fr-CA', 'fr'],
+    ['fr-BE', 'fr', 'fr'],
+    ['fr-FR', 'fr', 'fr'],
+    ['pt', 'pt', 'pt'],
+    ['pt-BR', 'pt', 'pt'],
+    ['pt-PT', 'pt-PT', 'pt'],
+    ['pt-AO', 'pt', 'pt'],
+    ['de-AT', 'de', 'de'],
+    ['de-CH', 'de', 'de'],
+    ['it-IT', 'it', 'it'],
+  ])('%j -> normalize %s, base %s', (tag, norm, base) => {
+    expect(normalizeLocale(tag)).toBe(norm);
+    expect(baseLanguage(tag)).toBe(base);
+  });
+
   it('chains and support checks', () => {
     expect(localeChain('es-MX')).toEqual(['es', 'en']);
     expect(localeChain('xx')).toEqual(['en']);
+    expect(localeChain('fr-CA')).toEqual(['fr-CA', 'fr', 'en']);
+    expect(localeChain('pt-PT')).toEqual(['pt-PT', 'pt', 'en']);
     expect(baseLocale('es')).toBe('es');
+    expect(isSupportedLocale('fr-CA')).toBe(true);
     expect(isSupportedLocale('es')).toBe(true);
     expect(isSupportedLocale('es-MX')).toBe(false);
     expect(isSupportedLocale(42)).toBe(false);
@@ -131,7 +160,7 @@ describe('lockstep parity with backend/src/i18n/locales.ts (canonical)', () => {
   // Canonical list. When the backend file is present (monorepo checkout) it is
   // parsed and compared; the literal is the fallback for a webapp-only checkout
   // and must be updated together with the backend registry.
-  const CANONICAL_FALLBACK = ['en', 'es'];
+  const CANONICAL_FALLBACK = ['en', 'es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'];
 
   function backendEntries(): { code: string; base?: string }[] | null {
     if (!existsSync(BACKEND_LOCALES)) return null;

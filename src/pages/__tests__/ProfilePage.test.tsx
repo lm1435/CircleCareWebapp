@@ -383,6 +383,31 @@ describe('ProfilePage', () => {
     });
   });
 
+  it('offers all eight registry languages in picker order, each as its endonym', async () => {
+    renderPage();
+    const group = await screen.findByRole('radiogroup', { name: 'Language' });
+    const names = within(group)
+      .getAllByRole('radio')
+      .map((r) => r.getAttribute('aria-label') ?? r.closest('label')?.textContent?.trim() ?? '');
+    expect(names).toEqual([
+      'English',
+      'Español',
+      'Français',
+      'Français (Canada)',
+      'Deutsch',
+      'Italiano',
+      'Português (Brasil)',
+      'Português (Portugal)',
+    ]);
+  });
+
+  it('picking Français (Canada) saves the exact variant code', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('radio', { name: 'Français (Canada)' }));
+    expect(updateProfile.mock.calls[0][0]).toEqual({ language: 'fr-CA' });
+  });
+
   it('fires useUpdateProfile({language}) when the language radio changes', async () => {
     const user = userEvent.setup();
     renderPage();

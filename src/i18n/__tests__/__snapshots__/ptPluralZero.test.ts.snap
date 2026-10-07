@@ -53,9 +53,9 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "há 2 minutos",
   ],
   "pt meds:export.asNeededGiven": [
-    "Ana: doses dadas: 0",
-    "Ana: doses dadas: 1",
-    "Ana: 2 doses dadas",
+    "Doses administradas (Ana): 0",
+    "Doses administradas (Ana): 1",
+    "Ana: 2 doses administradas",
   ],
   "pt meds:page.stock.daysLeft": [
     "Dias restantes: 0",
@@ -208,9 +208,9 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "há 2 minutos",
   ],
   "pt-PT meds:export.asNeededGiven": [
-    "Ana: doses dadas: 0",
-    "Ana: doses dadas: 1",
-    "Ana: 2 doses dadas",
+    "Doses administradas (Ana): 0",
+    "Doses administradas (Ana): 1",
+    "Ana: 2 doses administradas",
   ],
   "pt-PT meds:page.stock.daysLeft": [
     "Dias restantes: 0",

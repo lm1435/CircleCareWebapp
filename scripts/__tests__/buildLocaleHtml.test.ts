@@ -48,6 +48,12 @@ function fixtureHtml(): string {
     '    <meta property="og:image:alt" content="Invitation to a care circle — free for you, no download needed. The CircleCare activity feed shown on a phone." />',
     '    <meta property="og:locale" content="en_US" />',
     '    <meta property="og:locale:alternate" content="es_419" />',
+    '    <meta property="og:locale:alternate" content="fr_FR" />',
+    '    <meta property="og:locale:alternate" content="fr_CA" />',
+    '    <meta property="og:locale:alternate" content="de_DE" />',
+    '    <meta property="og:locale:alternate" content="it_IT" />',
+    '    <meta property="og:locale:alternate" content="pt_BR" />',
+    '    <meta property="og:locale:alternate" content="pt_PT" />',
     `    <meta name="twitter:title" content="${EN_TITLE}" />`,
     `    <meta name="twitter:description" content="${EN_DESCRIPTION}" />`,
     '    <meta name="twitter:image" content="https://my.circlecare.app/og-invite-en.jpg" />',
@@ -71,9 +77,11 @@ afterEach(() => {
 
 function run(html: string) {
   const source = join(workDir, 'index.html');
+  // Every non-EN registry locale is built, so the override carries `{code}`.
+  const template = join(workDir, 'index.{code}.html');
   const output = join(workDir, 'index.es.html');
   writeFileSync(source, html, 'utf8');
-  const result = spawnSync(process.execPath, [scriptPath, source, output], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [scriptPath, source, template], { encoding: 'utf8' });
   return { ...result, output };
 }
 
@@ -103,6 +111,19 @@ describe('build-locale-html — the happy path', () => {
    * the ES page must reference the exact same hashed chunks, or it is a second
    * bundle that can drift from the first.
    */
+  it('writes one document per non-EN registry locale, each in its own language', () => {
+    const { status } = run(fixtureHtml());
+    expect(status).toBe(0);
+    // pt is Brazilian conventions, so its document declares pt-BR.
+    const htmlLang: Record<string, string> = { pt: 'pt-BR' };
+    for (const code of ['es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT']) {
+      const doc = readFileSync(join(workDir, `index.${code}.html`), 'utf8');
+      expect(doc, code).toContain(`<html lang="${htmlLang[code] ?? code}">`);
+      expect(doc, code).not.toContain(EN_TITLE);
+      expect(doc, code).toContain(`og-invite-${code}.jpg`);
+    }
+  });
+
   it('keeps the hashed asset references byte-identical', () => {
     const { output } = run(fixtureHtml());
     expect(readFileSync(output, 'utf8')).toContain('/assets/index-DEADBEEF.js');

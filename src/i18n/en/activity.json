@@ -74,6 +74,7 @@
     "onDate": "on",
     "stoppedRecurrence": "Stopped recurrence for",
     "fromDate": "from",
+    "fromRelativeDate": "from",
     "importedAppointment_one": "Imported {{count}} appointment from calendar",
     "importedAppointment_other": "Imported {{count}} appointments from calendar",
     "changedAnswer": "(changed another caregiver's answer)",
