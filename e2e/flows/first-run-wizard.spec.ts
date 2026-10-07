@@ -255,4 +255,37 @@ test.describe('first-run wizard', () => {
       expect(g.hitIsOption, 'the last option is what a click at its centre would hit').toBe(true);
     });
   }
+
+  // Owner decision 2026-10-06: the drug directory (RxNorm) is US-only, so a local brand name
+  // outside the US is quietly kept as typed. The web has no "Check names" step and no unmatched
+  // warning in any region; this pins that a non-US browser with an EMPTY directory answer saves
+  // the typed name (no rxcui) without ever being told it was "not found".
+  test.describe('non-US browser, name the directory does not know', () => {
+    test.use({ locale: 'fr-FR', timezoneId: 'Europe/Paris' });
+
+    test('Doliprane saves as typed, no warning, no rxcui', async ({ page }) => {
+      await stubJson(page, 'GET', '/api/drugs/search', { body: { success: true, data: { drugs: [] } } });
+      const recipient = uniq('wizfr');
+      const circleId = await createFirstCircle(page, 'en', recipient);
+      const c = COPY.en;
+      const wizard = page.getByRole('dialog', { name: c.wizardName });
+      await wizard.getByRole('button', { name: c.addMed }).click();
+      await page.getByLabel(c.nameLabel).pressSequentially('Doliprane', { delay: 20 });
+      // Let the debounced lookup answer (empty) before judging the screen.
+      await page.waitForResponse((r) => r.url().includes('/api/drugs/search'), { timeout: 10_000 });
+      await expect(wizard.getByText(/not found|not recogni[sz]ed|check (the )?spelling|couldn.t find/i)).toHaveCount(0);
+      await wizard.getByRole('button', { name: c.next }).click();
+      await wizard.getByRole('button', { name: c.next }).click();
+      await wizard.getByRole('button', { name: c.save }).click();
+      await acceptPastTimeNotice(page, 'Starts with the next dose', c.next, c.savedToast);
+      await expect(page.getByText(c.savedToast).first()).toBeVisible({ timeout: 20_000 });
+      expect(
+        dbQuery(
+          `select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid
+              and event_type = 'medication' and medication_name = 'Doliprane' and rxcui is null
+              and parent_event_id is null`
+        )
+      ).toHaveLength(1);
+    });
+  });
 });

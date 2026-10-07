@@ -1,0 +1,20 @@
+/**
+ * TEMPLATE. A language lane copies this to `src/i18n/__tests__/<code>Orthography.test.ts`
+ * and fills the three lists. Runs against `src/i18n/<code>/*.json` on disk, so it works
+ * before the registry flip. Edits NO shared file. See helpers/localeOrthography.ts.
+ */
+// @vitest-environment node
+import { describeLocaleOrthography } from './helpers/localeOrthography';
+
+describeLocaleOrthography('<code>', {
+  forbidden: [
+    // ['retired word', /\bword\b/i],
+  ],
+  required: {
+    // Dose vocabulary: never "taken at" on a skip; leave vs remove wording:
+    // 'activity.phrases.skipped': /.../,
+  },
+  diacritics: [
+    // [/\bbare spelling\b/i, 'word needs its accent'],
+  ],
+});

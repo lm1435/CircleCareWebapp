@@ -21,19 +21,8 @@ const EN_IMAGE_ALT =
  * `ogImageFile` are files under public/ (og-invite-<code>.jpg = the invite
  * preview card, og-image-<code>.jpg = the site share image).
  */
-export const LOCALE_DOCS = {
-  es: {
-    htmlLang: 'es',
-    ogLocale: 'es_419',
-    title: 'CircleCare — Cuídenlos juntos',
-    description:
-      'CircleCare reúne a la familia para coordinar el cuidado: un calendario compartido, medicamentos que todos pueden confirmar y quién se encarga de qué. Para que nadie cargue con todo solo.',
-    imageAlt:
-      'Te invitaron a un círculo de cuidado — gratis para ti, sin descargar nada. El historial de actividad de CircleCare en un teléfono.',
-    invitePreviewImage: 'og-invite-es.jpg',
-    ogImageFile: 'og-image-es.jpg',
-  },
-};
+import { LOCALE_DOCS } from './localeDocs/index.mjs';
+export { LOCALE_DOCS };
 
 const REQUIRED_FIELDS = [
   'htmlLang',

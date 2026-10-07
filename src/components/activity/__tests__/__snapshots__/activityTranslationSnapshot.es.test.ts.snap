@@ -1,0 +1,164 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`activity word order (es) > KEY_RENDERERS 12h 1`] = `
+{
+  "appt occurrence removed": "Cita eliminada: Cardiology el 10 jun",
+  "care note added": "Agregó una nota de cuidado diaria",
+  "event note added": "Agregó una nota a Dr. Lee visit",
+  "fallback blank name": "STORED ENGLISH FALLBACK",
+  "fallback empty params": "STORED ENGLISH FALLBACK",
+  "fallback null params": "STORED ENGLISH FALLBACK",
+  "fallback numeric time": "STORED ENGLISH FALLBACK",
+  "fallback prototype key": "STORED ENGLISH FALLBACK",
+  "fallback unknown key": "STORED ENGLISH FALLBACK",
+  "invited care recipient": "Invitó a alicia.smith@example.org a unirse como receptor de cuidado",
+  "invited caregiver": "Invitó a alicia.smith@example.org a unirse como cuidador",
+  "joined care recipient": "Alicia Smith se unió al círculo como receptor de cuidado",
+  "joined care recipient unknown": "Alguien se unió al círculo como receptor de cuidado",
+  "joined caregiver": "Alicia Smith se unió al círculo como cuidador",
+  "joined caregiver unknown": "Alguien se unió al círculo como cuidador",
+  "med occurrence removed": "Dosis eliminada: Aspirin el 10 jun",
+  "not taken Jan 15": "Omitido: Aspirin el 15 ene",
+  "not taken non-ISO date raw": "Omitido: Aspirin el June 10",
+  "not taken old": "Omitido: Aspirin el 10 jun",
+  "not taken today": "Omitido: Aspirin el Hoy",
+  "not taken yesterday": "Omitido: Aspirin el Ayer",
+  "prn logged": "Dosis registrada: Tylenol a las 2:30 p. m.",
+  "prn removed": "Dosis registrada quitada: Tylenol (2:30 p. m.)",
+  "recurrence stopped": "Detuvo recurrencia de Aspirin desde 10 jun",
+  "rescheduled": "Medicamento reprogramado: Metformin a las 8:00 p. m.",
+  "rescheduled midnight": "Medicamento reprogramado: Metformin a las 12:00 a. m.",
+  "rescheduled morning HH:MM": "Medicamento reprogramado: Metformin a las 8:05 a. m.",
+  "rescheduled noon": "Medicamento reprogramado: Metformin a las 12:00 p. m.",
+  "rescheduled out-of-range raw": "Medicamento reprogramado: Metformin a las 25:00:00",
+  "rescheduled unparseable raw": "Medicamento reprogramado: Metformin a las evening",
+  "task occurrence removed": "Tarea eliminada: Buy milk el 10 jun",
+}
+`;
+
+exports[`activity word order (es) > KEY_RENDERERS 24h 1`] = `
+{
+  "prn logged": "Dosis registrada: Tylenol a las 14:30",
+  "prn removed": "Dosis registrada quitada: Tylenol (14:30)",
+  "rescheduled": "Medicamento reprogramado: Metformin a las 20:00",
+  "rescheduled midnight": "Medicamento reprogramado: Metformin a las 00:00",
+  "rescheduled morning HH:MM": "Medicamento reprogramado: Metformin a las 08:05",
+  "rescheduled noon": "Medicamento reprogramado: Metformin a las 12:00",
+  "rescheduled out-of-range raw": "Medicamento reprogramado: Metformin a las 25:00:00",
+  "rescheduled unparseable raw": "Medicamento reprogramado: Metformin a las evening",
+}
+`;
+
+exports[`activity word order (es) > SENTENCE_RULES 1`] = `
+{
+  "added notes": "Agregó notas a Dr. Lee visit",
+  "anchor: junk after discontinued": "Added notes to",
+  "discontinued med": "Medicamento suspendido: Metformin 500mg",
+  "gate: left text under task_added": "Mom left the circle",
+  "gate: no action type": "Alicia Smith left the circle",
+  "invited scrubbed": "Se invitó a un miembro al círculo",
+  "joined scrubbed": "Un miembro se unió al círculo",
+  "left email": "alicia.smith@example.org salió del círculo",
+  "left named": "Alicia Smith salió del círculo",
+  "left named account deleted": "Alicia Smith salió del círculo (cuenta eliminada)",
+  "left nameless": "Un miembro salió del círculo",
+  "left nameless account deleted": "Un miembro salió del círculo (cuenta eliminada)",
+  "reactivated med": "Medicamento reactivado: Metformin 500mg",
+  "removed named": "Se eliminó a Alicia Smith del círculo",
+  "removed nameless": "Se eliminó a un miembro del círculo",
+  "rescheduled med legacy": "Medicamento reprogramado: Metformin a las 20:00",
+  "rescheduled med legacy 1-digit hour": "Medicamento reprogramado: Metformin a las 8:05",
+  "self-care circle": "Círculo de autocuidado creado para Alicia Smith",
+}
+`;
+
+exports[`activity word order (es) > Today/Yesterday in the recipient frame (Tokyo) 1`] = `
+{
+  "not taken Jan 15": "Omitido: Aspirin el 15 ene",
+  "not taken non-ISO date raw": "Omitido: Aspirin el June 10",
+  "not taken old": "Omitido: Aspirin el 10 jun",
+  "not taken today": "Omitido: Aspirin el Ayer",
+  "not taken yesterday": "Omitido: Aspirin el 5 oct",
+}
+`;
+
+exports[`activity word order (es) > dated / regex forms 1`] = `
+{
+  "dated no match (not anchored)": "Not taken: Aspirin on June 10",
+  "imported 0": "Importó 0 citas del calendario",
+  "imported 1": "Importó 1 cita del calendario",
+  "imported 2": "Importó 2 citas del calendario",
+  "imported 25": "Importó 25 citas del calendario",
+  "not taken (new) old date": "Omitido: Aspirin el 10 jun",
+  "not taken (new) today": "Omitido: Aspirin el Hoy",
+  "not taken (new) yesterday": "Omitido: Aspirin el Ayer",
+  "not taken Jan 15": "Omitido: Aspirin el 15 ene",
+  "skipped (legacy) Jan 15": "Omitido: Aspirin el 15 ene",
+  "skipped (legacy) old date": "Omitido: Aspirin el 10 jun",
+  "stopped recurrence": "Detuvo recurrencia de Aspirin desde 10 jun",
+  "stopped recurrence Jan 15": "Detuvo recurrencia de Aspirin desde 15 ene",
+  "stopped recurrence today": "Detuvo recurrencia de Aspirin desde Hoy",
+  "title with " on "": "Omitido: Visit on call el 10 jun",
+}
+`;
+
+exports[`activity word order (es) > legacy phrase substitution 1`] = `
+{
+  "added appt": "Cita agregada: Cardiology",
+  "added med": "Medicamento agregado: Aspirin",
+  "added task": "Tarea agregada: Buy milk",
+  "completed appt": "Cita completada: Cardiology",
+  "completed med": "Medicamento completado: Aspirin",
+  "completed task": "Tarea completada: Buy milk",
+  "confirmed missed": "Medicamento confirmado: Aspirin (no tomado)",
+  "confirmed not taken": "Medicamento confirmado: Aspirin (omitido)",
+  "confirmed overwrite": "Medicamento confirmado: Aspirin (omitido) (cambió la respuesta de otro cuidador)",
+  "confirmed skipped": "Medicamento confirmado: Aspirin (omitido)",
+  "confirmed taken": "Medicamento confirmado: Aspirin (tomado)",
+  "confirmed taken late": "Medicamento confirmado: Aspirin (tomado tarde)",
+  "created care circle": "Círculo de cuidado creado para Alicia Smith",
+  "deleted appt": "Cita eliminada: Cardiology",
+  "deleted med": "Medicamento eliminado: Aspirin",
+  "deleted task": "Tarea eliminada: Buy milk",
+  "emergency info": "Actualizó la información de emergencia",
+  "empty": "",
+  "invited care recipient": "Invitó a alicia.smith@example.org a unirse como receptor de cuidado",
+  "invited caregiver": "Invitó a alicia.smith@example.org a unirse como cuidador",
+  "joined as care recipient": "Alicia Smith se unió al círculo como receptor de cuidado",
+  "joined as caregiver": "Alicia Smith se unió al círculo como cuidador",
+  "joined as family member": "Alicia Smith se unió al círculo como cuidador",
+  "no match passthrough": "Something the backend invented",
+  "prn logged": "Dosis registrada: Tylenol",
+  "prn removed": "Dosis registrada quitada: Tylenol",
+  "updated appt": "Cita actualizada: Cardiology",
+  "updated med": "Medicamento actualizado: Aspirin",
+  "updated task": "Tarea actualizada: Buy milk",
+}
+`;
+
+exports[`activity word order (es) > null timezone fallback 1`] = `
+{
+  "joined caregiver": "STORED ENGLISH FALLBACK",
+  "rescheduled": "STORED ENGLISH FALLBACK",
+}
+`;
+
+exports[`activity word order (es) > phrase dates (formatDateShort) and the stopped-recurrence concat site 1`] = `
+[
+  "Omitido: Aspirin el 15 ene",
+  "Detuvo recurrencia de Aspirin desde 15 ene",
+]
+`;
+
+exports[`activity word order (es) > zone-labelled time, recipient zone differs (Tokyo) 1`] = `
+{
+  "prn logged": "Dosis registrada: Tylenol a las 2:30 p. m. (Tokio)",
+  "prn removed": "Dosis registrada quitada: Tylenol (2:30 p. m. (Tokio))",
+  "rescheduled": "Medicamento reprogramado: Metformin a las 8:00 p. m. (Tokio)",
+  "rescheduled midnight": "Medicamento reprogramado: Metformin a las 12:00 a. m. (Tokio)",
+  "rescheduled morning HH:MM": "Medicamento reprogramado: Metformin a las 8:05 a. m. (Tokio)",
+  "rescheduled noon": "Medicamento reprogramado: Metformin a las 12:00 p. m. (Tokio)",
+  "rescheduled out-of-range raw": "Medicamento reprogramado: Metformin a las 25:00:00",
+  "rescheduled unparseable raw": "Medicamento reprogramado: Metformin a las evening",
+}
+`;

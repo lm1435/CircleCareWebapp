@@ -1,0 +1,14 @@
+/**
+ * TEMPLATE. A language lane copies this to `activityTranslationSnapshot.<code>.test.ts`
+ * (same folder), sets LOCALE, runs `npx vitest run <that file>` once to WRITE its own
+ * snapshot, then reviews every line of the generated
+ * `__snapshots__/activityTranslationSnapshot.<code>.test.ts.snap` against the word-order
+ * concatenation sites in activityTranslation.ts (skippedEvent + title + onDate + date,
+ * stoppedRecurrence + title + fromDate + date, prefix phrases + English-order remainder,
+ * parenthesised markers). Works before the registry flip: it reads src/i18n/<code>/activity.json.
+ * Edits NO shared file.
+ */
+import { defineActivityLocaleTwin } from './helpers/activityLocaleTwin';
+
+const LOCALE = '<code>'; // e.g. 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'
+defineActivityLocaleTwin(LOCALE);

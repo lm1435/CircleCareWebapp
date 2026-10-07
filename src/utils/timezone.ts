@@ -12,7 +12,13 @@ import i18n from 'i18next';
 import { getCurrentUser, updateProfile } from '../api/users';
 import { devLog, devError } from '../constants/config';
 import type { HourCycle } from './hourCycle';
-import { baseLanguage, type SupportedLanguage } from '../i18n/locales';
+import {
+  SUPPORTED_LOCALES,
+  localeChain,
+  normalizeLocale,
+  type SupportedLanguage,
+} from '../i18n/locales';
+import { LOCALE_FORMATS, resolveMeridiem } from '../i18n/format';
 
 // VERBATIM PORT of mobile/src/utils/timezone.ts (Intl-based — 20 timezone bugs
 // were fixed on mobile; web must not re-earn those scars).
@@ -119,71 +125,21 @@ const NON_PLACE_LABELS: Record<string, string> = {
 };
 
 /**
- * Spanish spellings for the place names an IANA id yields.
- *
- * An IANA id is ASCII by construction — `America/Mexico_City`, never
- * `America/Ciudad_de_México` — so the name derived from it is always the
- * English one. A Spanish reader deserves "Berlín", not "Berlin".
- *
- * THE ONE PLACE THE TWO LANGUAGES ARE MEANT TO DIFFER. Apple localises its
- * city names too — Settings reads "Londres" in Spanish and "London" in English
- * — so `getTimezoneLabel(z, 'en') !== getTimezoneLabel(z, 'es')` for any zone
- * with a row here is the DESIGN, not a bug.
- *
- * BOUNDED AND BEST-EFFORT, keyed by the derived English name. It covers this
- * app's own markets (US, Latin America, Spain) plus the largest cities
- * elsewhere; anything unlisted falls through to the IANA name, which is already
- * readable. A missing row costs an accent, never a broken label, so this list
- * may be extended freely and never has to be complete. Only names whose Spanish
- * DIFFERS are listed — "Madrid", "Lima" and "Denver" need no row.
+ * Per-language city respellings (an IANA id is ASCII, so the derived name is always the
+ * English one; "Berlín" for Spanish, "Londres", ...). The tables live one-per-locale in
+ * `src/i18n/format/<code>.ts` (`placeNames`); a language with no rows keeps the IANA
+ * spelling. THE ONE PLACE THE LANGUAGES ARE MEANT TO DIFFER:
+ * `getTimezoneLabel(z, 'en') !== getTimezoneLabel(z, 'es')` for any zone with a row.
+ * Bounded and best-effort: a missing row costs an accent, never a broken label.
+ * Variants (fr-CA, pt-PT) resolve variant -> base through {@link resolvePlaceName}.
  */
-const PLACE_NAMES_ES: Record<string, string> = {
-  // Americas
-  'Mexico City': 'Ciudad de México',
-  Cancun: 'Cancún',
-  Merida: 'Mérida',
-  Bogota: 'Bogotá',
-  Panama: 'Panamá',
-  Asuncion: 'Asunción',
-  'Sao Paulo': 'São Paulo',
-  Havana: 'La Habana',
-  'New York': 'Nueva York',
-  'Los Angeles': 'Los Ángeles',
-  // Europe
-  London: 'Londres',
-  Berlin: 'Berlín',
-  Paris: 'París',
-  Rome: 'Roma',
-  Lisbon: 'Lisboa',
-  Brussels: 'Bruselas',
-  Vienna: 'Viena',
-  Zurich: 'Zúrich',
-  Athens: 'Atenas',
-  Warsaw: 'Varsovia',
-  Prague: 'Praga',
-  Copenhagen: 'Copenhague',
-  Stockholm: 'Estocolmo',
-  Dublin: 'Dublín',
-  Moscow: 'Moscú',
-  Istanbul: 'Estambul',
-  // Africa & Middle East
-  Cairo: 'El Cairo',
-  Johannesburg: 'Johannesburgo',
-  Dubai: 'Dubái',
-  // Asia & Pacific
-  Tokyo: 'Tokio',
-  Seoul: 'Seúl',
-  Shanghai: 'Shanghái',
-  Singapore: 'Singapur',
-  Jakarta: 'Yakarta',
-  Kolkata: 'Calcuta',
-  Calcutta: 'Calcuta',
-  'New Delhi': 'Nueva Delhi',
-  Sydney: 'Sídney',
-};
-
-/** Per-language city respellings. A language with no table keeps the IANA spelling. */
-const PLACE_NAMES: Partial<Record<TimeLanguage, Record<string, string>>> = { es: PLACE_NAMES_ES };
+function resolvePlaceName(language: string, place: string): string | undefined {
+  for (const code of localeChain(language)) {
+    const hit = LOCALE_FORMATS[code]?.placeNames?.[place];
+    if (hit !== undefined) return hit;
+  }
+  return undefined;
+}
 
 /**
  * The language a time or zone is being RENDERED in — a registry BASE language.
@@ -210,10 +166,10 @@ export type TimeLanguage = SupportedLanguage;
  * ("time.meridiem.pm") into every calendar row, and a well-meaning edit to `PM`
  * in a locale file would silently undo RAE compliance.
  */
-export const MERIDIEM: Record<SupportedLanguage, { am: string; pm: string }> = {
-  en: { am: 'AM', pm: 'PM' },
-  es: { am: 'a. m.', pm: 'p. m.' },
-};
+export const MERIDIEM: Record<SupportedLanguage, { am: string; pm: string }> =
+  Object.fromEntries(
+    SUPPORTED_LOCALES.map((code) => [code, resolveMeridiem(code)])
+  ) as Record<SupportedLanguage, { am: string; pm: string }>;
 
 /**
  * The language i18next is currently rendering in, narrowed to what this file
@@ -228,7 +184,8 @@ export const MERIDIEM: Record<SupportedLanguage, { am: string; pm: string }> = {
 function activeLanguage(): TimeLanguage {
   try {
     const lng = i18n?.resolvedLanguage || i18n?.language;
-    return baseLanguage(typeof lng === 'string' ? lng : undefined);
+    // normalizeLocale (NOT baseLanguage): a variant (fr-CA) keeps its own meridiem/place rows.
+    return normalizeLocale(typeof lng === 'string' ? lng : undefined);
   } catch {
     return 'en';
   }
@@ -269,7 +226,7 @@ function localizedPlaceName(timezone: string, language: TimeLanguage): string | 
   if (fixed) return fixed;
   const place = ianaPlaceName(timezone);
   if (!place) return null;
-  return PLACE_NAMES[language]?.[place] ?? place;
+  return resolvePlaceName(language, place) ?? place;
 }
 
 /**
@@ -300,7 +257,7 @@ export function getDeviceTimezone(): string {
  * reason the abbreviation table was: Intl's long name is locale-dependent prose
  * ("Germany Time", "hora de Europa central"), not a name a product can commit
  * to. The city comes from the IANA id, so it needs no table to keep growing and
- * no key to keep translated — only the accents in {@link PLACE_NAMES_ES}.
+ * no key to keep translated — only the accents in `src/i18n/format/<code>.ts`.
  *
  * `language` is OPTIONAL and defaults to the active i18next language so the
  * existing call sites need no edit; pass it explicitly in tests, or when
@@ -599,7 +556,7 @@ export function formatTimeOfDay(
   if (cycle === '24h') {
     return `${normalisedHours.toString().padStart(2, '0')}:${mm}`;
   }
-  const meridiem = MERIDIEM[language] ?? MERIDIEM.en;
+  const meridiem = MERIDIEM[language] ?? resolveMeridiem(language);
   const period = normalisedHours >= 12 ? meridiem.pm : meridiem.am;
   const hour12 = normalisedHours % 12 || 12;
   return `${hour12}:${mm} ${period}`;

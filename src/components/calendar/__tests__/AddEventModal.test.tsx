@@ -1993,6 +1993,29 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ medication_name: 'Metformin', rxcui: '6809' });
   });
 
+  it('a name the directory does not know saves as typed with no warning (non-US brand names)', async () => {
+    const { searchDrugs } = await import('@/api/drugs');
+    vi.mocked(searchDrugs).mockResolvedValue([]);
+    const user = userEvent.setup();
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+
+    await user.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Doliprane');
+    await waitFor(() => expect(searchDrugs).toHaveBeenCalled());
+    expect(screen.queryByText(/not found|not recogni[sz]ed|check (the )?spelling|couldn.t find/i)).toBeNull();
+    expect(screen.queryByRole('listbox')).toBeNull();
+    const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
+    await user.clear(dateInput);
+    await user.type(dateInput, '2099-01-01');
+    const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
+    await user.clear(timeInput);
+    await user.type(timeInput, '09:00');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+    expect(mutateCreate.mock.calls[0][0]).toMatchObject({ medication_name: 'Doliprane' });
+    expect(mutateCreate.mock.calls[0][0]).not.toHaveProperty('rxcui');
+  });
+
   it('sends no rxcui for a typed name', async () => {
     const user = userEvent.setup();
     render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
