@@ -11,6 +11,7 @@ import { flushAnalyticsConsentSync } from '@/lib/analyticsConsentSync';
 import { reconcileAnalyticsConsentOwner } from '@/lib/analyticsConsent';
 import { identifyAfterServerReconcile } from '@/lib/analyticsConsentServerReconcile';
 import { clearPendingInviteCode } from '@/lib/pendingInviteCode';
+import { clearDailyUpdateStorage } from '@/lib/dailyUpdateStorage';
 import { Analytics } from '@/lib/analytics';
 import i18n from '@/i18n';
 import { normalizeLocale } from '@/i18n/locales';
@@ -162,6 +163,9 @@ function clearLocalSession(): void {
   // callback pages PEEK the code and forward to /invite/:code, which consumes
   // it on any authenticated arrival).
   clearPendingInviteCode();
+  // Daily-update dismiss / shown markers are per browser; the next account on
+  // a shared browser must not inherit them (docs/plans/daily-update.md §6).
+  clearDailyUpdateStorage();
   // PK9: saved form drafts survive ONLY a forced sign-out (the handler below
   // marks it); an explicit or cross-tab sign-out purges them here.
   onSessionEnded();

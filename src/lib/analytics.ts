@@ -424,6 +424,23 @@ export const Analytics = {
   homeEmptyCtaTapped: (section: 'medications' | 'tasks') =>
     capture('home_empty_cta_tapped', { section }),
 
+  // --- Daily update (docs/plans/daily-update.md §7) ---
+  // Booleans and enums ONLY: no circle_id (2026-09-04 decision), no names, no
+  // counts. Household questions are answered from Postgres. Web has no push, so
+  // `daily_update_push_opened` / `source: 'push'` are mobile-only.
+  /** The Home card rendered. Fired once per circle per recipient-day per browser. */
+  dailyUpdateCardShown: (props: { is_owner: boolean; is_solo: boolean; has_still_to_do: boolean }) =>
+    capture('daily_update_card_shown', props),
+  /** The full update / dated view opened. */
+  dailyUpdateOpened: (source: 'card' | 'link', dated: boolean) =>
+    capture('daily_update_opened', { source, dated }),
+  /** The card's X was pressed (hidden until the recipient's midnight). */
+  dailyUpdateDismissed: () => capture('daily_update_dismissed'),
+  /** The card's "Turn off" was confirmed and the preference saved. */
+  dailyUpdateTurnedOff: () => capture('daily_update_turned_off', { source: 'card' }),
+  /** The solo-owner "Invite someone to share this" line was pressed. */
+  dailyUpdateInviteTapped: () => capture('daily_update_invite_tapped'),
+
   // --- Members ---
   /** Owner removed a member. Deliberately NO removed-user id — that member's
    *  identity is not this event's business, only that a removal happened. */

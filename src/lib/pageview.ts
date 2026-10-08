@@ -23,6 +23,8 @@ const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const HEX_SEGMENT = /^[0-9a-f]{16,}$/i;
 /** Purely numeric segment (database ids). */
 const NUMERIC_SEGMENT = /^\d+$/;
+/** Calendar date (the daily update's dated view, /daily-update/2026-10-08). */
+const DATE_SEGMENT = /^\d{4}-\d{2}-\d{2}$/;
 /** Long url-safe token (base64url-ish invite/verification tokens). */
 const LONG_TOKEN_SEGMENT = /^[A-Za-z0-9_-]{20,}$/;
 
@@ -39,6 +41,7 @@ export function sanitizePath(pathname: string): string {
     if (segment === '') return segment;
     if (segments[index - 1] === 'invite') return '[code]';
     if (UUID_SEGMENT.test(segment)) return '[id]';
+    if (DATE_SEGMENT.test(segment)) return '[date]';
     if (NUMERIC_SEGMENT.test(segment) || HEX_SEGMENT.test(segment)) return '[id]';
     if (LONG_TOKEN_SEGMENT.test(segment)) return '[id]';
     return segment;

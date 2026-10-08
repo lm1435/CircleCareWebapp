@@ -66,6 +66,16 @@ describe('sanitizePath', () => {
     expect(sanitizePath('/circles/0BC0BD9E-1234-4ABC-9DEF-1234567890AB')).toBe('/circles/[id]');
   });
 
+  it('masks the daily update\'s dated segment as [date]', async () => {
+    const { sanitizePath } = await loadWithKey(undefined);
+    expect(
+      sanitizePath('/circles/0bc0bd9e-1234-4abc-9def-1234567890ab/daily-update/2026-10-08')
+    ).toBe('/circles/[id]/daily-update/[date]');
+    expect(sanitizePath('/circles/0bc0bd9e-1234-4abc-9def-1234567890ab/daily-update')).toBe(
+      '/circles/[id]/daily-update'
+    );
+  });
+
   it('masks UUIDs in nested routes while keeping static sub-segments', async () => {
     const { sanitizePath } = await loadWithKey(undefined);
     expect(sanitizePath('/circles/0bc0bd9e-1234-4abc-9def-1234567890ab/calendar')).toBe(

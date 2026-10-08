@@ -50,6 +50,9 @@ export const queryKeys = {
       ? (['adherenceReport', circleId] as const)
       : (['adherenceReport', circleId, period] as const),
   weeklyAdherence: (circleId: string) => ['weeklyAdherence', circleId] as const,
+  // Daily update (mobile: ['dailyUpdate', circleId, localDate]). `date` is the
+  // recipient-local YYYY-MM-DD, so the key rolls over at the recipient's midnight.
+  dailyUpdate: (circleId: string, date: string) => ['dailyUpdate', circleId, date] as const,
   // As-needed (PRN) medications. The summary map is one read per circle; the
   // dose log is per medication. Both are invalidated by every dose write.
   asNeededSummary: (circleId: string) => ['asNeededSummary', circleId] as const,
