@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
+import { clearPendingSignupEmail, peekPendingSignupEmail } from '@/lib/pendingSignupEmail';
 import { Analytics } from '@/lib/analytics';
 import { classifyFailureCode, isEmailRateLimitError, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
@@ -54,7 +55,12 @@ export default function VerifyEmailPage(): ReactElement {
   const { goBack } = useAuthBack('/login');
 
   const routerState = (location.state as VerifyEmailState | null) ?? undefined;
-  const stateEmail = routerState?.email?.trim() ?? '';
+  // Router state wins; with none (e.g. SignUpPage's browser-back redirect, a
+  // reload) fall back to the address a successful signup parked in
+  // sessionStorage. Peeked, not consumed: it is cleared only after a
+  // SUCCESSFUL verification (see `verify`), so a wrong code or a reload keeps
+  // the person on their own address.
+  const stateEmail = routerState?.email?.trim() || peekPendingSignupEmail() || '';
   const hasStateEmail = stateEmail.length > 0;
 
   const [email, setEmail] = useState(stateEmail);
@@ -132,6 +138,9 @@ export default function VerifyEmailPage(): ReactElement {
       const response = await authApi.verifyOtp({ email: email.trim(), otp: code });
       const { session, user } = response.data;
       Analytics.otpVerified();
+      // The address is verified — nothing left to protect from a re-submit, and
+      // leaving it parked would bounce a later /signup in this tab.
+      clearPendingSignupEmail();
       try {
         // verify-otp responds in body mode — exchange for a cookie session and
         // discard the refresh token (never stored client-side).

@@ -215,6 +215,19 @@ describe('LoginPage', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  it('AUTH_RATE_LIMITED (generic auth limiter) shows its own "try again in a moment" copy', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'AUTH_RATE_LIMITED', message: 'slow down' },
+    });
+
+    await fillAndSubmit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Too many requests right now. Please try again in a moment.');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('a transient failure (503) shows the transient copy, not the credentials copy (PK2)', async () => {
     mockedPost.mockRejectedValueOnce({
       success: false,

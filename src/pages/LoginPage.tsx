@@ -7,7 +7,7 @@ import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { supabase } from '@/lib/supabase';
 import { Analytics } from '@/lib/analytics';
-import { isRateLimitError } from '@/lib/apiErrors';
+import { isAuthRateLimitedError, isRateLimitError } from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { Button, Card, Text, TextField } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -125,7 +125,9 @@ export default function LoginPage(): ReactElement {
       // A 429 must say WAIT, not "try again": every retry during the limiter
       // window is another hit on the same bucket and extends the lockout.
       setFormError(
-        isRateLimitError(err)
+        isAuthRateLimitedError(err)
+          ? t('authRateLimited')
+          : isRateLimitError(err)
           ? t('rateLimited')
           : apiError?.code === 'LOGIN_FAILED'
             ? t('login.errors.invalidCredentials')

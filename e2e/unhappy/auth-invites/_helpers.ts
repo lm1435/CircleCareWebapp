@@ -38,6 +38,7 @@ export const PARKED = {
   analytics: 'cc_pending_analytics_consent',
   authMethod: 'cc_pending_auth_method',
   invite: 'cc_pending_invite_code',
+  signupEmail: 'cc_pending_signup_email',
 } as const;
 
 /** The durable analytics-consent record (src/lib/analyticsConsent.ts, analyticsConsentSync.ts). */

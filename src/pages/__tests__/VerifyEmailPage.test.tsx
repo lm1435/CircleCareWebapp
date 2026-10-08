@@ -5,6 +5,7 @@ import '@/i18n';
 import VerifyEmailPage from '@/pages/VerifyEmailPage';
 import { apiClient } from '@/lib/api';
 import { setPendingInviteCode } from '@/lib/pendingInviteCode';
+import { peekPendingSignupEmail, setPendingSignupEmail } from '@/lib/pendingSignupEmail';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { useAuthStore } from '@/store/authStore';
 import { clickTwice, neverSettles } from '@/test/doubleSubmit';
@@ -160,6 +161,61 @@ describe('VerifyEmailPage', () => {
       })
     );
     expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
+  });
+
+  describe('parked signup email', () => {
+    function renderVerifyNoState() {
+      return render(
+        <MemoryRouter initialEntries={['/verify-email']}>
+          <VerifyEmailPage />
+        </MemoryRouter>
+      );
+    }
+
+    it('uses the parked email when it arrives without router state (SignUpPage browser-back redirect / reload)', async () => {
+      setPendingSignupEmail('pat@example.com');
+      mockAuthEndpoints();
+      renderVerifyNoState();
+
+      // The address is known, so no email field is asked for.
+      expect(screen.queryByLabelText(/^Email/)).toBeNull();
+      expect(screen.getByText(/pat@example\.com/)).toBeInTheDocument();
+      await enterOtp();
+
+      expect(mockedPost).toHaveBeenCalledWith('/auth/verify-otp', {
+        email: 'pat@example.com',
+        otp: '123456',
+      });
+    });
+
+    it('router-state email wins over a parked one', async () => {
+      setPendingSignupEmail('other@example.com');
+      mockAuthEndpoints();
+      renderVerify();
+      await enterOtp();
+      expect(mockedPost).toHaveBeenCalledWith('/auth/verify-otp', {
+        email: 'pat@example.com',
+        otp: '123456',
+      });
+    });
+
+    it('clears the parked email after a SUCCESSFUL verification', async () => {
+      setPendingSignupEmail('pat@example.com');
+      mockAuthEndpoints();
+      renderVerify();
+      await enterOtp();
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+      expect(peekPendingSignupEmail()).toBeNull();
+    });
+
+    it('keeps the parked email when the code is rejected (so the person can retry)', async () => {
+      setPendingSignupEmail('pat@example.com');
+      mockedPost.mockRejectedValue(rejectedCode as never);
+      renderVerify();
+      await enterOtp();
+      await screen.findByRole('alert');
+      expect(peekPendingSignupEmail()).toBe('pat@example.com');
+    });
   });
 
   // WCAG 3.3.1: an incomplete-OTP error must move focus. Typing a full code

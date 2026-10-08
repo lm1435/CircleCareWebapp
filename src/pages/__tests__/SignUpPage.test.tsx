@@ -1,11 +1,12 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import SignUpPage from '@/pages/SignUpPage';
 import { apiClient } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { clickTwice, neverSettles, submitFormTwice } from '@/test/doubleSubmit';
+import { peekPendingSignupEmail, setPendingSignupEmail } from '@/lib/pendingSignupEmail';
 
 // Mirrors LoginPage.test.tsx mocking style: `@/lib/api` + `@/lib/supabase` are
 // mocked by the global setup; here we assert the page calls authApi.signup with
@@ -83,6 +84,8 @@ describe('SignUpPage', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
     mockedPost.mockReset();
+    // A successful signup parks the address; never let it leak into the next test.
+    sessionStorage.clear();
   });
 
   it('renders the consent checkbox UNCHECKED by default with submit and OAuth disabled', () => {
@@ -456,6 +459,138 @@ describe('SignUpPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts');
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('parks the address in sessionStorage on a successful signup', async () => {
+    mockedPost.mockResolvedValueOnce({
+      success: true,
+      data: { user: { id: 'u1', email: VALID.email }, message: 'sent' },
+    } as never);
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    expect(peekPendingSignupEmail()).toBeNull();
+    await user.click(submitButton());
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    expect(peekPendingSignupEmail()).toBe(VALID.email);
+  });
+
+  it('parks the address on EMAIL_RATE_LIMIT too (the account exists, a code is in the inbox)', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'EMAIL_RATE_LIMIT', message: 'Too many attempts.' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    expect(peekPendingSignupEmail()).toBe(VALID.email);
+  });
+
+  it('does NOT park the address when signup fails', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'SIGNUP_FAILED', message: 'nope' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    await screen.findByRole('alert');
+    expect(peekPendingSignupEmail()).toBeNull();
+  });
+
+  it('redirects to /verify-email (replace, parked email in state) on arrival by history when an email is parked, and renders no form', () => {
+    setPendingSignupEmail(VALID.email);
+    renderSignUp(); // MemoryRouter initial entry is a POP, like browser-back
+
+    expect(mockNavigate).toHaveBeenCalledWith('/verify-email', {
+      replace: true,
+      state: { email: VALID.email },
+    });
+    expect(screen.queryByLabelText(/^First Name/)).toBeNull();
+    expect(mockedPost).not.toHaveBeenCalled();
+  });
+
+  it('shows the normal form and does not redirect when nothing is parked', () => {
+    renderSignUp();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/^First Name/)).toBeInTheDocument();
+  });
+
+  it('does not redirect a deliberate in-app visit (PUSH), so a mistyped address can sign up again', async () => {
+    setPendingSignupEmail(VALID.email);
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Link to="/signup">go</Link>} />
+          <Route path="/signup" element={<SignUpPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await user.click(screen.getByRole('link', { name: 'go' }));
+
+    expect(await screen.findByLabelText(/^First Name/)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('EMAIL_QUOTA_EXCEEDED shows the "try again in a few minutes" copy, stays on the form, parks nothing', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'EMAIL_QUOTA_EXCEEDED', message: 'quota' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "We can't send a verification email right now. Please try again in a few minutes."
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(peekPendingSignupEmail()).toBeNull();
+  });
+
+  it('AUTH_RATE_LIMITED shows the generic "too many requests" copy and stays on the form', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'AUTH_RATE_LIMITED', message: 'slow down' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Too many requests right now. Please try again in a moment.'
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('an unknown error code still falls back to the generic failure copy', async () => {
+    mockedPost.mockRejectedValueOnce({
+      success: false,
+      error: { code: 'SOMETHING_NEW', message: 'x' },
+    });
+
+    const user = userEvent.setup();
+    renderSignUp();
+    await fillValidForm(user);
+    await user.click(submitButton());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "We couldn't create your account. Please try again."
+    );
   });
 
   it('SIGNUP_FAILED shows the neutral rejection copy (PK2+, mobile wording) and not "email exists"', async () => {

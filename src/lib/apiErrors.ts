@@ -354,6 +354,26 @@ export function isEmailRateLimitError(err: unknown): boolean {
 }
 
 /**
+ * True for the backend's `EMAIL_QUOTA_EXCEEDED` (429, signup): the project-wide
+ * hourly outbound-email quota is spent. No verification code was sent and
+ * nothing the user did caused it, so the copy says "try again in a few minutes".
+ * Deliberately NOT in RATE_LIMIT_ERROR_CODES — that set drives the generic
+ * "too many attempts" copy on every surface.
+ */
+export function isEmailQuotaExceededError(err: unknown): boolean {
+  return errorCode(err) === 'EMAIL_QUOTA_EXCEEDED';
+}
+
+/**
+ * True for the backend's `AUTH_RATE_LIMITED` (429, signup AND login): the
+ * generic auth rate limit. Kept out of RATE_LIMIT_ERROR_CODES so only the auth
+ * pages that opt in show its own copy; other surfaces are unchanged.
+ */
+export function isAuthRateLimitedError(err: unknown): boolean {
+  return errorCode(err) === 'AUTH_RATE_LIMITED';
+}
+
+/**
  * True for a 429 rate-limit rejection — the user has exhausted a per-user or
  * per-IP quota and should retry later (the UI says when, per endpoint).
  */

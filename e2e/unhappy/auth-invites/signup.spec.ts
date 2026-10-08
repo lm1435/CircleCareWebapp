@@ -241,3 +241,36 @@ test('successful signup (stubbed 201) → /verify-email with the email in router
   expect(authUser(email).email_confirmed_at).not.toBeNull();
   await expect.poll(() => withdraw.requests.length, { timeout: 10_000 }).toBe(1);
 });
+
+test('browser-back from /verify-email redirects straight back (no blank form, no second signup), parked email survives', async ({
+  page,
+}) => {
+  // Stub-only: nothing here needs the account to exist. The regression is the
+  // blank /signup a browser-back used to show, whose re-submit tripped
+  // Supabase's 60 s per-address cooldown (EMAIL_RATE_LIMIT).
+  const email = runScopedEmail(uniq('signup-back'));
+  await openSignup(page);
+  await stubJson(page, 'POST', SIGNUP, {
+    status: 201,
+    body: {
+      success: true,
+      data: {
+        user: { id: '00000000-0000-4000-8000-000000000001', email, first_name: 'Ada', last_name: 'Unhappy' },
+        message: 'Please check your email for a verification code.',
+      },
+    },
+  });
+  const posts = countRequests(page, 'POST', SIGNUP);
+  await fillSignup(page, { email });
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page).toHaveURL(/\/verify-email$/, { timeout: 20_000 });
+  expect(await sessionItems(page, [PARKED.signupEmail])).toEqual({ [PARKED.signupEmail]: email });
+
+  await page.goBack();
+
+  // Redirected back to the code page, address recovered from sessionStorage.
+  await expect(page).toHaveURL(/\/verify-email$/, { timeout: 20_000 });
+  await expect(page.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible();
+  await expect(page.locator('#first_name')).toHaveCount(0);
+  await posts.expectCount(1);
+});

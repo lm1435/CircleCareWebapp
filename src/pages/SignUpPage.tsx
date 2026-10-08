@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useNavigationType } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { legalUrl } from '@/lib/legalLinks';
 import { z } from 'zod';
 import { authApi, getApiError } from '@/api/auth';
 import { supabase } from '@/lib/supabase';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { peekPendingSignupEmail, setPendingSignupEmail } from '@/lib/pendingSignupEmail';
 import { setPendingTermsConsent, clearPendingTermsConsent } from '@/lib/pendingTermsConsent';
 import {
   setPendingAnalyticsConsent,
@@ -15,7 +16,12 @@ import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
 import { setAnalyticsConsentOwner } from '@/lib/analyticsConsent';
 import { queueAnalyticsConsentForSignup } from '@/lib/analyticsConsentSync';
 import { Analytics } from '@/lib/analytics';
-import { isEmailRateLimitError, isRateLimitError } from '@/lib/apiErrors';
+import {
+  isAuthRateLimitedError,
+  isEmailQuotaExceededError,
+  isEmailRateLimitError,
+  isRateLimitError,
+} from '@/lib/apiErrors';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { utf8ByteLength } from '@/lib/utf8ByteLength';
 import { Button, Card, Icon, Text, TextField } from '@/components/ui';
@@ -80,6 +86,25 @@ export default function SignUpPage(): ReactElement {
   // renders — history(-1) when there's somewhere to go back to (e.g. the
   // marketing site), '/login' when this is history entry 0.
   const { goBack } = useAuthBack('/login');
+
+  // BROWSER-BACK GATE. A signup that succeeded parked its address
+  // (lib/pendingSignupEmail); coming back to /signup by history (POP: the Back
+  // button, a reload, a typed URL) would show a blank form whose re-submit
+  // trips Supabase's 60 s per-address send cooldown, so send them to the code
+  // page instead. Read ONCE (lazy initial state) so the decision cannot flip
+  // mid-render, and render nothing while redirecting so the form never flashes.
+  // A deliberate in-app click on "Create account" (PUSH) is NOT redirected —
+  // otherwise someone who mistyped their address could never sign up again in
+  // this tab.
+  const navigationType = useNavigationType();
+  const [parkedEmail] = useState<string | null>(() =>
+    navigationType === 'POP' ? peekPendingSignupEmail() : null
+  );
+  useEffect(() => {
+    if (parkedEmail) navigate('/verify-email', { replace: true, state: { email: parkedEmail } });
+    // Mount-only: `parkedEmail` is fixed for the life of this page instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -233,6 +258,9 @@ export default function SignUpPage(): ReactElement {
         queueAnalyticsConsentForSignup(analyticsAccepted, newUserId);
       }
       Analytics.signupCompleted('email');
+      // Park the address too: router state dies with this history entry, and a
+      // browser-back to a blank /signup would otherwise invite a re-submit.
+      setPendingSignupEmail(result.data.email);
       // Email travels in router STATE, never in query params.
       navigate('/verify-email', { state: { email: result.data.email } });
     } catch (err) {
@@ -250,13 +278,22 @@ export default function SignUpPage(): ReactElement {
       // on "wait a few minutes" strands them; the code they need is already in
       // their inbox, so take them to the code page (mobile does the same).
       if (isEmailRateLimitError(err)) {
+        // The account exists and a code is in their inbox — park for the same
+        // back-nav reason as the success path.
+        setPendingSignupEmail(result.data.email);
         navigate('/verify-email', {
           state: { email: result.data.email, notice: 'rateLimited' },
         });
         return;
       }
       setFormError(
-        isRateLimitError(err)
+        isEmailQuotaExceededError(err)
+          ? // Project-wide hourly email quota: nothing the user did, and no code
+            // was sent — so no "check your inbox" and no routing.
+            t('signup.errors.emailQuotaExceeded')
+          : isAuthRateLimitedError(err)
+            ? t('authRateLimited')
+            : isRateLimitError(err)
           ? t('rateLimited')
           : apiError?.code === 'SIGNUP_FAILED'
             ? // PK2+: the backend's deliberately-neutral rejection; mobile's
@@ -351,6 +388,8 @@ export default function SignUpPage(): ReactElement {
   };
 
   const handleOAuth = useGuardedSubmit(startOAuth);
+
+  if (parkedEmail) return <></>;
 
   return (
     <AuthShell>
