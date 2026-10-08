@@ -148,12 +148,13 @@ describe('DailyUpdateCard', () => {
     expect(Array.from(lines).map((l) => l.textContent)).toEqual([
       '3 doses taken',
       '1 dose skipped',
-      '1 dose not marked yet',
       '2 tasks done',
       '1 note from Ana',
     ]);
     expect(within(card).getByText('9:00 PM · Metformin')).toBeInTheDocument();
+    // The unmarked dose is mentioned ONCE: as a "Still to do" item, not also as a count.
     expect(within(card).getByText('7:30 PM · Lisinopril · Not marked')).toBeInTheDocument();
+    expect(card.textContent).not.toMatch(/not marked yet/i);
     expect(card.textContent).not.toMatch(/taken late|missed/i);
     // The request is keyed on the RECIPIENT's date.
     expect(dailyCalls()[0][1]).toEqual({ params: { date: '2026-10-08' } });

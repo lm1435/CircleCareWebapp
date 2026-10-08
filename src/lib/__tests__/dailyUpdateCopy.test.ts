@@ -62,7 +62,6 @@ describe('buildSummaryLines', () => {
       '1 dose taken',
       '1 dose taken late',
       '1 dose skipped',
-      '1 dose not marked yet',
       '1 as-needed dose given',
       '1 task done',
       '1 appointment today',
@@ -79,7 +78,6 @@ describe('buildSummaryLines', () => {
       '3 doses taken',
       '2 doses taken late',
       '2 doses skipped',
-      '4 doses not marked yet',
       '2 as-needed doses given',
       '5 tasks done',
       '2 appointments today',
@@ -98,14 +96,20 @@ describe('buildSummaryLines', () => {
       '1 dosis tomada',
       '2 dosis tomadas tarde',
       '1 dosis omitida',
-      '2 dosis sin marcar',
       '2 tareas completadas',
       '1 cita hoy',
       '2 notas de Ana, Luis y 1 más',
     ]);
   });
 
-  it('a past day says "not marked" (not "yet") and "that day"', () => {
+  it('today never counts not-marked doses (they are "Still to do" items); a past day does', () => {
+    const d = make({ doses: { taken: 0, taken_late: 0, skipped: 0, not_marked: 2, upcoming: 0 } });
+    expect(texts(d)).toEqual([]);
+    expect(texts(d, es)).toEqual([]);
+    expect(texts(d, es, true)).toEqual(['2 dosis sin marcar']);
+  });
+
+  it('a past day counts "not marked" and says "that day"', () => {
     const d = make({
       is_today: false,
       doses: { taken: 0, taken_late: 0, skipped: 0, not_marked: 2, upcoming: 0 },

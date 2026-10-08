@@ -53,6 +53,8 @@ test.describe('daily update', () => {
     await expect(card.getByText('3 doses taken')).toBeVisible();
     await expect(card.getByText('1 dose skipped')).toBeVisible();
     await expect(card.getByText('7:30 PM · Lisinopril · Not marked')).toBeVisible();
+    // The unmarked dose is mentioned once (the item above), never also as a count.
+    await expect(card.getByText(/not marked/i)).toHaveCount(1);
     expect(asked).toContain(today);
 
     await checkA11y(page, `/circles/${circleId} (daily update card)`, testInfo);

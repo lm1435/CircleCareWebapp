@@ -15,8 +15,6 @@
     "takenLate_other": "{{count}} dosi prese in ritardo",
     "skipped_one": "{{count}} dose saltata",
     "skipped_other": "{{count}} dosi saltate",
-    "notMarked_one": "{{count}} dose non ancora segnata",
-    "notMarked_other": "{{count}} dosi non ancora segnate",
     "notMarkedPast_one": "{{count}} dose non segnata",
     "notMarkedPast_other": "{{count}} dosi non segnate"
   },

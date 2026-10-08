@@ -384,7 +384,7 @@ const SWITCHES = [
   { group: 'medications', name: 'Medications', keys: ['medication_confirmations', 'missed_medications'], confirm: true },
   { group: 'tasks', name: 'Tasks & appointments', keys: ['task_assignments', 'appointment_reminders', 'note_nudges'], confirm: false },
   { group: 'notes', name: 'Notes', keys: ['event_notes', 'care_notes'], confirm: false },
-  { group: 'tips', name: 'Tips & suggestions', keys: ['tips_and_suggestions'], confirm: false },
+  { group: 'tips', name: 'Daily update & tips', keys: ['tips_and_suggestions'], confirm: false },
 ] as const;
 
 const groupKeys = (keys: readonly string[], value: boolean): Prefs =>

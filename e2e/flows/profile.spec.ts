@@ -48,8 +48,8 @@ test('edit & restore first name and a notification toggle', async ({ page }) => 
   await expect(restoreInput).toBeHidden({ timeout: 20_000 });
 
   // ── Notification toggle: flip → assert → flip back → assert ──────────────
-  // "Tips & suggestions" is a safe notification preference (role="switch").
-  const tipsToggle = page.getByRole('switch', { name: 'Tips & suggestions' });
+  // "Daily update & tips" is a safe notification preference (role="switch").
+  const tipsToggle = page.getByRole('switch', { name: 'Daily update & tips' });
   await expect(tipsToggle).toBeVisible({ timeout: 15_000 });
   const originalChecked = (await tipsToggle.getAttribute('aria-checked')) === 'true';
 

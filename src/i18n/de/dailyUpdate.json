@@ -15,8 +15,6 @@
     "takenLate_other": "{{count}} Dosen verspätet eingenommen",
     "skipped_one": "{{count}} Dosis ausgelassen",
     "skipped_other": "{{count}} Dosen ausgelassen",
-    "notMarked_one": "{{count}} Dosis noch nicht eingetragen",
-    "notMarked_other": "{{count}} Dosen noch nicht eingetragen",
     "notMarkedPast_one": "{{count}} Dosis nicht eingetragen",
     "notMarkedPast_other": "{{count}} Dosen nicht eingetragen"
   },

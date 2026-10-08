@@ -15,8 +15,6 @@
     "takenLate_other": "{{count}} doses taken late",
     "skipped_one": "{{count}} dose skipped",
     "skipped_other": "{{count}} doses skipped",
-    "notMarked_one": "{{count}} dose not marked yet",
-    "notMarked_other": "{{count}} doses not marked yet",
     "notMarkedPast_one": "{{count}} dose not marked",
     "notMarkedPast_other": "{{count}} doses not marked"
   },

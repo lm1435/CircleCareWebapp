@@ -5,7 +5,7 @@ import { checkA11y } from '../helpers';
 import { setProfileLanguage } from '../notesFirstClassShared';
 
 // docs/plans/notification-settings-4-groups.md: the eight per-key switches are
-// four GROUPS (Medications, Tasks & appointments, Notes, Tips & suggestions).
+// four GROUPS (Medications, Tasks & appointments, Notes, Daily update & tips).
 // Storage is unchanged. A group is ON if ANY child is on (absent key = ON); a
 // tap sets every child. The Tasks write also pins `event_notes` to its stored
 // value so the backend's note_nudges -> event_notes legacy shim
@@ -56,7 +56,7 @@ test.describe('Profile: notification groups', () => {
       const meds = page.getByRole('switch', { name: 'Medications', exact: true });
       const tasks = page.getByRole('switch', { name: 'Tasks & appointments', exact: true });
       const notes = page.getByRole('switch', { name: 'Notes', exact: true });
-      const tips = page.getByRole('switch', { name: 'Tips & suggestions', exact: true });
+      const tips = page.getByRole('switch', { name: 'Daily update & tips', exact: true });
       await expect(meds).toBeVisible({ timeout: 15_000 });
 
       // The eight retired labels are gone.
@@ -207,7 +207,7 @@ test.describe('Profile: notification groups', () => {
       await expect(page.getByRole('switch', { name: 'Medicamentos', exact: true })).toBeVisible({ timeout: 15_000 });
       await expect(page.getByRole('switch', { name: 'Tareas y citas', exact: true })).toBeVisible();
       await expect(page.getByRole('switch', { name: 'Notas', exact: true })).toBeVisible();
-      await expect(page.getByRole('switch', { name: 'Consejos y sugerencias', exact: true })).toBeVisible();
+      await expect(page.getByRole('switch', { name: 'Resumen del día y consejos', exact: true })).toBeVisible();
       await expect(page.getByText('Algunas desactivadas')).toHaveCount(1);
       await expect(page.getByText('Dosis tomadas, omitidas o sin marcar')).toBeVisible();
     } finally {

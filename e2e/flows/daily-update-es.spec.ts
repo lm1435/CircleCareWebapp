@@ -53,6 +53,8 @@ test('la tarjeta y la vista por fecha en español', async ({ page, circleId }, t
   await expect(card.getByRole('heading', { name: 'Hoy hasta ahora' })).toBeVisible();
   await expect(card.getByRole('heading', { name: 'Falta por hacer' })).toBeVisible();
   await expect(card.getByText('1 dosis omitida')).toBeVisible();
+  // The unmarked dose appears once, as a "Falta por hacer" item, never also as a count.
+  await expect(card.getByText(/sin marcar/i)).toHaveCount(1);
   await expect(card.getByRole('button', { name: 'Ocultar hasta mañana' })).toBeVisible();
   await expect(card.getByRole('link', { name: 'Ver el resumen completo' })).toBeVisible();
   await checkA11y(page, `/circles/${circleId} (resumen del día)`, testInfo);

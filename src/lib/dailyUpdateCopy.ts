@@ -62,8 +62,9 @@ export function formatNoteAuthors(
 
 /**
  * The count lines of the first section ("Today so far" / "What happened").
- * `past` switches "not marked yet" to "not marked" and "appointments today" to
- * "appointments that day".
+ * `past` adds the "N doses not marked" count (today lists those doses under
+ * "Still to do" instead) and switches "appointments today" to "appointments
+ * that day".
  */
 export function buildSummaryLines(data: DailyUpdateData, t: T, past: boolean): DailyUpdateLine[] {
   const lines: DailyUpdateLine[] = [];
@@ -74,11 +75,14 @@ export function buildSummaryLines(data: DailyUpdateData, t: T, past: boolean): D
   add('taken', doses.taken, () => t('doses.taken', { count: doses.taken }));
   add('takenLate', doses.taken_late, () => t('doses.takenLate', { count: doses.taken_late }));
   add('skipped', doses.skipped, () => t('doses.skipped', { count: doses.skipped }));
-  add('notMarked', doses.not_marked, () =>
-    past
-      ? t('doses.notMarkedPast', { count: doses.not_marked })
-      : t('doses.notMarked', { count: doses.not_marked })
-  );
+  // Past day only. On TODAY's view a due-but-unmarked dose is listed as an
+  // item under "Still to do" ("7:30 PM · Lisinopril · Not marked"); a count
+  // here as well would mention the same dose twice.
+  if (past) {
+    add('notMarked', doses.not_marked, () =>
+      t('doses.notMarkedPast', { count: doses.not_marked })
+    );
+  }
   if (data.as_needed) {
     const given = data.as_needed.given;
     add('asNeeded', given, () => t('asNeeded.given', { count: given }));

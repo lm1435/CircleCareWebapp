@@ -52,11 +52,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 dose se necessário dada",
     "2 doses se necessário dadas",
   ],
-  "pt dailyUpdate:doses.notMarked": [
-    "0 dose ainda não marcada",
-    "1 dose ainda não marcada",
-    "2 doses ainda não marcadas",
-  ],
   "pt dailyUpdate:doses.notMarkedPast": [
     "0 dose não marcada",
     "1 dose não marcada",
@@ -261,11 +256,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 dose se necessário dada",
     "1 dose se necessário dada",
     "2 doses se necessário dadas",
-  ],
-  "pt-PT dailyUpdate:doses.notMarked": [
-    "0 dose ainda não marcada",
-    "1 dose ainda não marcada",
-    "2 doses ainda não marcadas",
   ],
   "pt-PT dailyUpdate:doses.notMarkedPast": [
     "0 dose não marcada",
