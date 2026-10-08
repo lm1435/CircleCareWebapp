@@ -1,11 +1,10 @@
 import { useEffect, useId, useState, type ReactElement } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getCurrentUser, type NotificationPreferences } from '@/api/users';
 import { isDailyUpdateEnabled } from '@/api/dailyUpdate';
-import { ConfirmDialog, Eyebrow, Icon, Sheet, Text, useToast } from '@/components/ui';
-import { DailyUpdateSections } from '@/components/dailyUpdate/DailyUpdateSections';
+import { ConfirmDialog, useToast } from '@/components/ui';
+import { DailyUpdateCardView } from '@/components/dailyUpdate/DailyUpdateCardView';
 import { useDailyUpdate, useDailyUpdateWindow } from '@/hooks/useDailyUpdate';
 import { useUpdateNotificationPrefs } from '@/hooks/useProfile';
 import { Analytics } from '@/lib/analytics';
@@ -113,8 +112,6 @@ export function DailyUpdateCard({
     return confirmOpen ? renderConfirm() : null;
   }
 
-  const name = data.recipient_name?.trim();
-  const heading = name ? t('heading', { name }) : t('headingSelfFallback');
   const base = `/circles/${circleId}`;
 
   function handleDismiss(): void {
@@ -159,61 +156,16 @@ export function DailyUpdateCard({
 
   return (
     <>
-      <Sheet
-        as="section"
-        aria-labelledby={headingId}
-        padding="none"
-        className="px-[22px] py-5"
-        data-testid="daily-update-card"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Eyebrow color="moss" deep>
-              {t('eyebrow')}
-            </Eyebrow>
-            <Text variant="h2" id={headingId} className="mt-1">
-              {heading}
-            </Text>
-          </div>
-          <button
-            type="button"
-            aria-label={t('dismissA11y')}
-            onClick={handleDismiss}
-            className="-mr-2 -mt-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-bg-2 hover:text-ink"
-          >
-            <Icon name="close-outline" size="chrome" />
-          </button>
-        </div>
-
-        <DailyUpdateSections data={data} past={false} headingLevel="h3" />
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line-2 pt-3">
-          <Link
-            to={`${base}/daily-update`}
-            state={{ dailyUpdateSource: 'card' }}
-            className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss-deep hover:underline"
-          >
-            {t('open')}
-          </Link>
-          {isSolo && isOwner ? (
-            <Link
-              to={`${base}/members`}
-              onClick={() => Analytics.dailyUpdateInviteTapped()}
-              className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss-deep hover:underline"
-            >
-              {t('soloInvite')}
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(true)}
-            disabled={prefs === null || updatePrefs.isPending}
-            className="ml-auto inline-flex min-h-[44px] items-center text-sm text-ink-2 underline underline-offset-2 hover:text-ink disabled:opacity-50"
-          >
-            {t('turnOff')}
-          </button>
-        </div>
-      </Sheet>
+      <DailyUpdateCardView
+        data={data}
+        headingId={headingId}
+        openTo={`${base}/daily-update`}
+        inviteTo={isSolo && isOwner ? `${base}/members` : null}
+        onInvite={() => Analytics.dailyUpdateInviteTapped()}
+        onDismiss={handleDismiss}
+        onTurnOff={() => setConfirmOpen(true)}
+        turnOffDisabled={prefs === null || updatePrefs.isPending}
+      />
       {confirmOpen ? renderConfirm() : null}
     </>
   );

@@ -2,9 +2,10 @@ import { useEffect, useRef, type ReactElement } from 'react';
 import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { isDailyUpdateEnabled } from '@/api/dailyUpdate';
-import { Button, Sheet, Skeleton } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { DailyUpdateSections } from '@/components/dailyUpdate/DailyUpdateSections';
+import { DAILY_UPDATE_ENTER, DAILY_UPDATE_SURFACE } from '@/components/dailyUpdate/surface';
 import { useCircle } from '@/hooks/useCircle';
 import {
   isDailyUpdateUnavailableError,
@@ -85,26 +86,32 @@ export default function DailyUpdatePage(): ReactElement {
   let body: ReactElement;
   if (loading) {
     body = (
-      <div role="status" aria-live="polite" className="pt-4">
+      <div role="status" aria-live="polite" className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-0">
         <span className="sr-only">{t('common:loading')}</span>
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="mt-3 h-4 w-2/3 max-w-80" />
-        <Skeleton className="mt-2 h-4 w-1/2 max-w-64" />
+        <div className="md:pr-6">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="mt-3 h-4 w-2/3 max-w-72" />
+          <Skeleton className="mt-2 h-4 w-1/2 max-w-56" />
+        </div>
+        <div className="md:pl-6">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="mt-3 h-4 w-3/4 max-w-80" />
+        </div>
       </div>
     );
   } else if (unavailable) {
-    body = <p className="m-0 pt-4 text-md text-ink-2">{t('dated.unavailable')}</p>;
+    body = <p className="m-0 text-md leading-normal text-ink-2">{t('dated.unavailable')}</p>;
   } else if (query.isError || data === null) {
     body = (
-      <div role="alert" className="flex flex-col items-start gap-3 pt-4">
-        <p className="m-0 text-md text-ink">{t('error')}</p>
+      <div role="alert" className="flex flex-col items-start gap-3">
+        <p className="m-0 text-md leading-normal text-ink">{t('error')}</p>
         <Button variant="secondary" size="sm" onClick={() => void query.refetch()}>
           {t('retry')}
         </Button>
       </div>
     );
   } else if (isPast && !data.has_activity && data.still_to_do.length === 0) {
-    body = <p className="m-0 pt-4 text-md text-ink-2">{t('dated.empty')}</p>;
+    body = <p className="m-0 text-md leading-normal text-ink-2">{t('dated.empty')}</p>;
   } else {
     body = <DailyUpdateSections data={data} past={!data.is_today} headingLevel="h2" />;
   }
@@ -118,9 +125,14 @@ export default function DailyUpdatePage(): ReactElement {
         backTo={`/circles/${circleId}`}
       />
       <div className="px-5">
-        <Sheet padding="none" className="px-[22px] pt-1 pb-5" data-testid="daily-update-page">
+        {/* The same moss-wash surface as the Home card: the page IS the card,
+            expanded (every item, no "+N more" cap). */}
+        <div
+          className={`${DAILY_UPDATE_SURFACE} px-5 py-5 ${DAILY_UPDATE_ENTER}`}
+          data-testid="daily-update-page"
+        >
           {body}
-        </Sheet>
+        </div>
       </div>
     </section>
   );
