@@ -15,6 +15,7 @@ import { QuickAccess } from '@/components/overview/QuickAccess';
 import { CareTeam } from '@/components/overview/CareTeam';
 import { SettingsRows } from '@/components/overview/SettingsRows';
 import { UpcomingAppointments } from '@/components/overview/UpcomingAppointments';
+import { DailyUpdateCard } from '@/components/overview/DailyUpdateCard';
 
 interface FirstRunLocationState {
   firstRun?: boolean;
@@ -85,6 +86,7 @@ export default function OverviewPage(): ReactElement {
 
   const { circle, members, isLoading, timezone } = useCircle(circleId);
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
+  const isRecipient = members.some((m) => m.is_care_recipient && m.id === currentUserId);
 
   // PK28(1): the earned upsell. Asked HERE (arriving on the circle is a natural
   // pause, never mid-care-action), only for the circle's OWNER (members never
@@ -107,6 +109,23 @@ export default function OverviewPage(): ReactElement {
           members={members}
         />
       )}
+
+      {/* Daily update — the first content block under the hero, both columns
+          (docs/plans/daily-update.md §6). GATED on the recipient's zone, like
+          UpcomingAppointments below: its date IS the query key, so a
+          placeholder zone would fetch one day and then another. Renders
+          nothing outside 19:00-24:00 recipient time or without activity, and
+          `empty:hidden` then drops the wrapper's spacing. */}
+      <div className="px-5 pb-6 empty:hidden">
+        {timezone !== null && (
+          <DailyUpdateCard
+            circleId={circleId}
+            timezone={timezone}
+            isOwner={isOwner}
+            isRecipient={isRecipient}
+          />
+        )}
+      </div>
 
       {/* Get-started checklist — spans both columns, above the grid.
           Self-hides once complete, dismissed, or when the viewer can't edit

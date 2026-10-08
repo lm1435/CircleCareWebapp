@@ -162,7 +162,7 @@ describe('ProfilePage', () => {
       /^Medications/i,
       /^Tasks & appointments/i,
       /^Notes/i,
-      /^Tips & suggestions/i,
+      /^Daily update & tips/i,
     ];
     const RETIRED = [
       /Medication confirmations/i,
@@ -171,6 +171,8 @@ describe('ProfilePage', () => {
       /Appointment reminders/i,
       /Notes on events/i,
       /After-visit reminders/i,
+      // Renamed for the daily update (plan §2.3): same key, new label.
+      /^Tips & suggestions/i,
       /Daily care notes/i,
     ];
     const seed = (prefs: Record<string, boolean>) => {
@@ -193,7 +195,7 @@ describe('ProfilePage', () => {
         'Medications',
         'Tasks & appointments',
         'Notes',
-        'Tips & suggestions',
+        'Daily update & tips',
       ]);
       for (const retired of RETIRED) {
         expect(screen.queryByRole('switch', { name: retired })).toBeNull();

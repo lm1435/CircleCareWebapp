@@ -67,9 +67,14 @@ vi.mock('react-i18next', async (importOriginal) => {
 
 const CIRCLE_ID = 'circle-1';
 
+// The daily-update line is gated on the server's rollout flag (one date-less read).
+let dailyUpdateOn = true;
+vi.mock('@/hooks/useDailyUpdate', () => ({ useDailyUpdateEnabled: () => dailyUpdateOn }));
+
 beforeEach(() => {
   vi.clearAllMocks();
   appLanguage = 'en';
+  dailyUpdateOn = true;
 });
 
 describe('InviteMemberModal — email-required', () => {
@@ -765,5 +770,63 @@ describe('InviteMemberModal — double-submit guard', () => {
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(mutate).toHaveBeenCalledTimes(2);
     expect(mutate.mock.calls[1][0]).toEqual({ email: 'ben@example.com', member_type: 'caregiver' });
+  });
+});
+
+describe('InviteMemberModal — daily update line (plan §2.3, D10)', () => {
+  it('tells the owner the people they invite get a daily update on the recipient', () => {
+    render(
+      <InviteMemberModal
+        circleId={CIRCLE_ID}
+        isSelfCare={false}
+        recipientName="Rose"
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('invite-daily-update-line')).toHaveTextContent(
+      'The people you invite get a daily update on Rose.'
+    );
+  });
+
+  it('self-care circles speak about the owner\'s own day', () => {
+    render(
+      <InviteMemberModal circleId={CIRCLE_ID} isSelfCare recipientName="Pat" onClose={vi.fn()} />
+    );
+    expect(screen.getByTestId('invite-daily-update-line')).toHaveTextContent(
+      'The people you invite get a daily update on your day.'
+    );
+  });
+
+  it('is absent while the server reports the feature switched off', () => {
+    dailyUpdateOn = false;
+    render(
+      <InviteMemberModal
+        circleId={CIRCLE_ID}
+        isSelfCare={false}
+        recipientName="Rose"
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByTestId('invite-daily-update-line')).toBeNull();
+  });
+
+  it('is in Spanish for a Spanish reader', async () => {
+    const i18n = (await import('@/i18n')).default;
+    await i18n.changeLanguage('es');
+    try {
+      render(
+        <InviteMemberModal
+          circleId={CIRCLE_ID}
+          isSelfCare={false}
+          recipientName="Rose"
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.getByTestId('invite-daily-update-line')).toHaveTextContent(
+        'Las personas que invites reciben un resumen diario de Rose.'
+      );
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

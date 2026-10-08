@@ -125,7 +125,7 @@ describe('ProfilePage notification groups — PATCH-resolved, refetch-pending ga
     const user = userEvent.setup();
     renderPage();
 
-    const tips = await screen.findByRole('switch', { name: /Tips & suggestions/i });
+    const tips = await screen.findByRole('switch', { name: /Daily update & tips/i });
     expect(tips).toHaveAttribute('aria-checked', 'true');
 
     await user.click(tips);

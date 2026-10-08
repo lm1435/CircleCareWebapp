@@ -69,6 +69,7 @@ const useCircleResult: {
   isError: false,
   refetch: vi.fn(),
 };
+vi.mock('@/hooks/useDailyUpdate', () => ({ useDailyUpdateEnabled: () => false }));
 vi.mock('@/hooks/useCircle', () => ({
   useCircle: () => useCircleResult,
 }));

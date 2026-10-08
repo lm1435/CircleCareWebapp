@@ -37,6 +37,7 @@ const CIRCLE_SUBTITLES: Record<string, string> = {
   vitals: 'pageTitles.vitals',
   members: 'pageTitles.members',
   settings: 'pageTitles.settings',
+  'daily-update': 'pageTitles.dailyUpdate',
 };
 
 function titleKeyForPath(pathname: string): string | null {
@@ -44,7 +45,10 @@ function titleKeyForPath(pathname: string): string | null {
     return STATIC_TITLES[pathname];
   }
   // /circles/:circleId  → overview;  /circles/:circleId/<sub> → sub page
-  const circleMatch = pathname.match(/^\/circles\/[^/]+(?:\/([^/]+))?\/?$/);
+  // The daily update also takes a trailing date segment (/daily-update/2026-10-08).
+  const circleMatch =
+    pathname.match(/^\/circles\/[^/]+(?:\/([^/]+))?\/?$/) ??
+    pathname.match(/^\/circles\/[^/]+\/(daily-update)\/\d{4}-\d{2}-\d{2}\/?$/);
   if (circleMatch) {
     const sub = circleMatch[1];
     if (!sub) {

@@ -35,6 +35,7 @@ const EmergencyInfoPage = lazy(() => import('@/pages/EmergencyInfoPage'));
 const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
 const MembersPage = lazy(() => import('@/pages/MembersPage'));
 const VitalsPage = lazy(() => import('@/pages/VitalsPage'));
+const DailyUpdatePage = lazy(() => import('@/pages/DailyUpdatePage'));
 const EditCirclePage = lazy(() => import('@/pages/EditCirclePage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const HelpPage = lazy(() => import('@/pages/HelpPage'));
@@ -121,6 +122,10 @@ export const router = createBrowserRouter([
           { path: 'vitals', element: <VitalsPage /> },
           { path: 'members', element: <MembersPage /> },
           { path: 'settings', element: <EditCirclePage /> },
+          // Daily update: today, or a dated view (`:date` or `?date=`) within
+          // the last 7 recipient-local days (docs/plans/daily-update.md §6).
+          { path: 'daily-update', element: <DailyUpdatePage /> },
+          { path: 'daily-update/:date', element: <DailyUpdatePage /> },
         ],
       },
     ],

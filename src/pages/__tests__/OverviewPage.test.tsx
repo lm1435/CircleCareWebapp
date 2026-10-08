@@ -80,6 +80,27 @@ vi.mock('@/components/overview/SettingsRows', () => ({
     <div data-testid="settings-rows" data-circle-id={circleId} data-owner={String(isOwner)} />
   ),
 }));
+vi.mock('@/components/overview/DailyUpdateCard', () => ({
+  DailyUpdateCard: ({
+    circleId,
+    timezone,
+    isOwner,
+    isRecipient,
+  }: {
+    circleId: string;
+    timezone: string;
+    isOwner: boolean;
+    isRecipient: boolean;
+  }) => (
+    <div
+      data-testid="daily-update-card"
+      data-circle-id={circleId}
+      data-timezone={timezone}
+      data-owner={String(isOwner)}
+      data-recipient={String(isRecipient)}
+    />
+  ),
+}));
 vi.mock('@/components/overview/UpcomingAppointments', () => ({
   UpcomingAppointments: ({ circleId, timezone }: { circleId: string; timezone: string }) => (
     <div data-testid="upcoming-appointments" data-circle-id={circleId} data-timezone={timezone} />
@@ -173,6 +194,7 @@ describe('OverviewPage', () => {
     setCircle();
     renderOverview();
     for (const id of [
+      'daily-update-card',
       'adherence-card',
       'quick-access',
       'care-team',
@@ -202,6 +224,38 @@ describe('OverviewPage', () => {
     );
   });
 
+  describe('daily update card (plan §6)', () => {
+    it('receives the recipient zone and the viewer\'s owner / recipient flags', () => {
+      setCircle();
+      renderOverview();
+      const card = screen.getByTestId('daily-update-card');
+      expect(card).toHaveAttribute('data-timezone', 'America/New_York');
+      expect(card).toHaveAttribute('data-owner', 'true');
+      expect(card).toHaveAttribute('data-recipient', 'false');
+    });
+
+    it('is not mounted until the recipient zone is known (no placeholder-zone fetch)', () => {
+      setCircle();
+      mockUseCircle.mockReturnValue({
+        ...(mockUseCircle('c1') as object),
+        timezone: null,
+      } as unknown as ReturnType<typeof useCircle>);
+      renderOverview();
+      expect(screen.queryByTestId('daily-update-card')).not.toBeInTheDocument();
+    });
+
+    it('tells the card when the viewer IS the care recipient', () => {
+      setCircle();
+      const base = mockUseCircle('c1') as unknown as { members: Array<{ id: string; is_care_recipient: boolean }> };
+      mockUseCircle.mockReturnValue({
+        ...(base as object),
+        members: base.members.map((m) => (m.id === 'u1' ? { ...m, is_care_recipient: true } : m)),
+      } as unknown as ReturnType<typeof useCircle>);
+      renderOverview();
+      expect(screen.getByTestId('daily-update-card')).toHaveAttribute('data-recipient', 'true');
+    });
+  });
+
   it('orders the sections as mobile does: left column, then right column', () => {
     setCircle();
     renderOverview();
@@ -209,6 +263,8 @@ describe('OverviewPage', () => {
       .map((el) => el.getAttribute('data-testid'))
       .filter((id): id is string => id !== null && id !== 'first-run-wizard');
     expect(ids).toEqual([
+      // Daily update: the first content block under the hero (plan §6).
+      'daily-update-card',
       'getting-started',
       'adherence-card',
       'quick-access',

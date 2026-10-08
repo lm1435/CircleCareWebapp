@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useDailyUpdateEnabled } from '@/hooks/useDailyUpdate';
 import { z } from 'zod';
 import type { InviteMemberType } from '@/api/invites';
 import { useCreateInvite } from '@/hooks/useInvites';
@@ -69,6 +70,7 @@ export function InviteMemberModal({
   recipientName,
 }: InviteMemberModalProps): ReactElement {
   const { t, i18n } = useTranslation('members');
+  const dailyUpdateOn = useDailyUpdateEnabled(circleId);
   const navigate = useNavigate();
   const createInvite = useCreateInvite(circleId);
   // POST /circles/:id/invites sits on `inviteRateLimit` (10/hour per IP) and
@@ -367,6 +369,19 @@ export function InviteMemberModal({
       ) : (
       <form id="invite-member-form" onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         <p className="m-0 text-sm text-ink-2">{t('invite.subtitle')}</p>
+        {/* Daily update line (docs/plans/daily-update.md §2.3, D10): what the
+            people you invite get. Self-care circles speak to the owner. Only
+            while the server reports the feature on for this viewer, so the
+            line never promises what rollout has switched off. */}
+        {dailyUpdateOn ? (
+        <p className="m-0 text-sm text-ink-2" data-testid="invite-daily-update-line">
+          {isSelfCare
+            ? t('invite.dailyUpdateLineSelfCare')
+            : t('invite.dailyUpdateLine', {
+                name: recipientName?.trim() || circleName?.trim() || '',
+              })}
+        </p>
+        ) : null}
 
         {/* Self-care circles only ever have caregivers — hide the role picker
             entirely when there is a single option to choose. */}
