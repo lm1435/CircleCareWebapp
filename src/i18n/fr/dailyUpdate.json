@@ -1,0 +1,75 @@
+{
+  "eyebrow": "Le point du jour",
+  "heading": "Le point sur {{name}}",
+  "headingSelfFallback": "Le point d’aujourd’hui",
+  "sections": {
+    "soFar": "Aujourd’hui jusqu’ici",
+    "stillToDo": "Reste à faire",
+    "happened": "Ce qui s’est passé",
+    "notDone": "Non fait ce jour-là"
+  },
+  "doses": {
+    "taken_one": "{{count}} dose prise",
+    "taken_other": "{{count}} doses prises",
+    "takenLate_one": "{{count}} dose prise en retard",
+    "takenLate_other": "{{count}} doses prises en retard",
+    "skipped_one": "{{count}} dose sautée",
+    "skipped_other": "{{count}} doses sautées",
+    "notMarked_one": "{{count}} dose pas encore renseignée",
+    "notMarked_other": "{{count}} doses pas encore renseignées",
+    "notMarkedPast_one": "{{count}} dose non renseignée",
+    "notMarkedPast_other": "{{count}} doses non renseignées"
+  },
+  "asNeeded": {
+    "given_one": "{{count}} dose « si besoin » donnée",
+    "given_other": "{{count}} doses « si besoin » données"
+  },
+  "tasks": {
+    "done_one": "{{count}} tâche terminée",
+    "done_other": "{{count}} tâches terminées"
+  },
+  "appointments": {
+    "today_one": "{{count}} rendez-vous aujourd’hui",
+    "today_other": "{{count}} rendez-vous aujourd’hui",
+    "thatDay_one": "{{count}} rendez-vous ce jour-là",
+    "thatDay_other": "{{count}} rendez-vous ce jour-là"
+  },
+  "notes": {
+    "added_one": "{{count}} note ajoutée par {{names}}",
+    "added_other": "{{count}} notes ajoutées par {{names}}"
+  },
+  "names": {
+    "two": "{{a}} et {{b}}",
+    "twoBeforeI": "{{a}} et {{b}}",
+    "many_one": "{{a}}, {{b}} et {{count}} autre",
+    "many_other": "{{a}}, {{b}} et {{count}} autres",
+    "former": "un ancien membre"
+  },
+  "item": {
+    "doseUpcoming": "{{time}} · {{medication}}",
+    "doseNotMarked": "{{time}} · {{medication}} · Non renseignée",
+    "task": "{{title}} · Pour aujourd’hui",
+    "appointment": "{{time}} · {{title}}",
+    "more": "+{{count}} de plus"
+  },
+  "nothingLeft": "Plus rien au programme aujourd’hui.",
+  "nothingLeftPast": "Tout ce qui était prévu a été fait.",
+  "open": "Voir le point complet",
+  "dismissA11y": "Masquer jusqu’à demain",
+  "turnOff": "Désactiver",
+  "turnOffConfirm": {
+    "title": "Désactiver le point du jour ?",
+    "body": "Les conseils seront aussi désactivés. Vous pouvez réactiver les deux dans Profil, sous Notifications.",
+    "confirm": "Désactiver",
+    "cancel": "Le garder"
+  },
+  "turnedOffToast": "Point du jour désactivé",
+  "soloInvite": "Invitez quelqu’un à le partager",
+  "dated": {
+    "eyebrow": "Le point sur {{name}}",
+    "empty": "Rien n’a été enregistré ce jour-là.",
+    "unavailable": "Ce point n’est plus disponible."
+  },
+  "error": "Impossible de charger le point. Réessayez.",
+  "retry": "Réessayer"
+}

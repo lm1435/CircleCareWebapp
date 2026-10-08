@@ -60,8 +60,8 @@
       "tasksDesc": "Quando ti viene assegnato qualcosa e prima della scadenza",
       "notes": "Note",
       "notesDesc": "Quando qualcuno aggiunge una nota",
-      "tips": "Consigli e suggerimenti",
-      "tipsDesc": "Piccoli spunti utili per configurare la tua cerchia"
+      "tips": "Riepilogo del giorno e consigli",
+      "tipsDesc": "Il tuo riepilogo del giorno e piccoli suggerimenti utili"
     },
     "someTurnedOff": "Alcune disattivate",
     "confirmMedicationsOff": {

@@ -112,7 +112,9 @@
     "shareTitle": "Rejoignez notre cercle de soins",
     "sentTitle": "Invitation envoyée",
     "emailNote": "Nous avons aussi envoyé à {{email}} les instructions pour rejoindre le cercle avec le rôle « {{role}} ».",
-    "sendAnother": "Inviter quelqu’un d’autre"
+    "sendAnother": "Inviter quelqu’un d’autre",
+    "dailyUpdateLine": "Les personnes que vous invitez reçoivent un point quotidien sur {{name}}.",
+    "dailyUpdateLineSelfCare": "Les personnes que vous invitez reçoivent un point quotidien sur votre journée."
   },
   "manage": {
     "subheading": "Toutes les personnes de ce cercle de soins. Invitez, retirez ou gérez les membres ci-dessous.",

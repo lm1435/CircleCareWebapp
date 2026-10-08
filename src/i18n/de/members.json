@@ -112,7 +112,9 @@
     "shareTitle": "Treten Sie unserem Pflegekreis bei",
     "sentTitle": "Einladung gesendet",
     "emailNote": "Wir haben {{email}} außerdem per E-Mail eine Anleitung zum Beitritt als {{role}} geschickt.",
-    "sendAnother": "Weitere Person einladen"
+    "sendAnother": "Weitere Person einladen",
+    "dailyUpdateLine": "Die Personen, die Sie einladen, erhalten eine tägliche Übersicht über {{name}}.",
+    "dailyUpdateLineSelfCare": "Die Personen, die Sie einladen, erhalten eine tägliche Übersicht über Ihren Tag."
   },
   "manage": {
     "subheading": "Alle in diesem Pflegekreis. Laden Sie unten Mitglieder ein, entfernen Sie sie oder verwalten Sie sie.",

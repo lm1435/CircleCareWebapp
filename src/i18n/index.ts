@@ -34,6 +34,7 @@ import enAi from './en/ai.json';
 import enHelp from './en/help.json';
 import enFreemium from './en/freemium.json';
 import enUpgrade from './en/upgrade.json';
+import enDailyUpdate from './en/dailyUpdate.json';
 import { LOCALE_LABELS, SUPPORTED_LOCALES, type SupportedLanguage } from './locales';
 
 // The shipped-language set lives in ./locales (the registry); this is its
@@ -62,6 +63,7 @@ export const namespaces = [
   'help',
   'freemium',
   'upgrade',
+  'dailyUpdate',
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];
@@ -88,6 +90,7 @@ const enResources: NamespaceResources = {
   help: enHelp,
   freemium: enFreemium,
   upgrade: enUpgrade,
+  dailyUpdate: enDailyUpdate,
 };
 
 /**

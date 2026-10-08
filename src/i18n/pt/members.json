@@ -112,7 +112,9 @@
     "shareTitle": "Participe do nosso círculo de cuidado",
     "sentTitle": "Convite enviado",
     "emailNote": "Também enviamos para {{email}} instruções para participar como {{role}}.",
-    "sendAnother": "Convidar outra pessoa"
+    "sendAnother": "Convidar outra pessoa",
+    "dailyUpdateLine": "As pessoas que você convidar recebem um resumo diário sobre {{name}}.",
+    "dailyUpdateLineSelfCare": "As pessoas que você convidar recebem um resumo diário sobre o seu dia."
   },
   "manage": {
     "subheading": "Todos neste círculo de cuidado. Convide, remova ou gerencie membros abaixo.",

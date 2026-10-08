@@ -23,6 +23,15 @@ const load = (code: string): Record<string, object> =>
 const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'members:pending.banner.count': 'PendingInvitesBanner returns null when count === 0',
 };
+/**
+ * Whole namespaces whose count lines are NEVER rendered at 0: the daily update omits a line
+ * whose count is 0 (plan §2.1) — `buildSummaryLines` filters `count > 0`, and `names.many`
+ * is only reached with count >= 1 (`formatNoteAuthors`). Both proven in
+ * src/lib/__tests__/dailyUpdateCopy.test.ts ("omits every zero count").
+ */
+const NAMESPACES_RENDERED_ONLY_ABOVE_ZERO = ['dailyUpdate:'];
+const neverAtZero = (key: string): boolean =>
+  NAMESPACES_RENDERED_ONLY_ABOVE_ZERO.some((ns) => key.startsWith(ns));
 // upgrade:trialPeriod.* is a store trial length spliced as "teste grátis de {{period}}" (UpgradePage):
 // the store never reports a 0-length trial, so its `_one` keeps the natural "{{count}} dia".
 const INVARIANT_AFTER_NUMBER = new Set(['min', 'h', 'mg', 'ml', 'em', 'de', 'do', 'da', 'para', 'por', 'a', 'e', 'mais']);
@@ -67,6 +76,7 @@ describe('pt / pt-PT plural keys read correctly at count 0', () => {
     const bad: string[] = [];
     for (const key of STEMS) {
       const out = t(key, { count: 0, ...VARS });
+      if (neverAtZero(key)) continue;
       if (/(^|[^\d{])1(\s|$)/.test(out) && !RENDERED_ONLY_ABOVE_ZERO[key]) bad.push(`${key}: "${out}" (hard-coded 1)`);
       const m = /(^|[^\d])0\s+([\p{L}]+)/u.exec(out);
       if (m && !INVARIANT_AFTER_NUMBER.has(m[2].toLowerCase()) && !/s$/i.test(m[2]) && !key.startsWith('upgrade:trialPeriod.')) {

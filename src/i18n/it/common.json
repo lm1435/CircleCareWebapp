@@ -55,7 +55,8 @@
     "vitals": "Parametri vitali",
     "members": "Membri",
     "settings": "Modifica cerchia",
-    "notFound": "Pagina non trovata"
+    "notFound": "Pagina non trovata",
+    "dailyUpdate": "Riepilogo del giorno"
   },
   "errorBoundary": {
     "title": "Qualcosa è andato storto",

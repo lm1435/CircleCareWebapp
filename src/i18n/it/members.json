@@ -112,7 +112,9 @@
     "shareTitle": "Unisciti alla nostra cerchia di cura",
     "sentTitle": "Invito inviato",
     "emailNote": "Abbiamo inviato anche a {{email}} le istruzioni per entrare come {{role}}.",
-    "sendAnother": "Invita un'altra persona"
+    "sendAnother": "Invita un'altra persona",
+    "dailyUpdateLine": "Le persone che inviti ricevono un riepilogo quotidiano su {{name}}.",
+    "dailyUpdateLineSelfCare": "Le persone che inviti ricevono un riepilogo quotidiano sulla tua giornata."
   },
   "manage": {
     "subheading": "Tutte le persone di questa cerchia di cura. Qui sotto puoi invitare, rimuovere o gestire i membri.",

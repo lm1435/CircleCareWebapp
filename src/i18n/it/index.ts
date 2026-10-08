@@ -25,6 +25,7 @@ import ai from './ai.json';
 import help from './help.json';
 import freemium from './freemium.json';
 import upgrade from './upgrade.json';
+import dailyUpdate from './dailyUpdate.json';
 
 const itResources = {
   common,
@@ -46,6 +47,7 @@ const itResources = {
   help,
   freemium,
   upgrade,
+  dailyUpdate,
 };
 
 export default itResources;

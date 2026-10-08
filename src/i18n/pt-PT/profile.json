@@ -59,7 +59,7 @@
   "notifications": {
     "groups": {
       "tasksDesc": "Quando algo lhe for atribuído e antes do prazo",
-      "tipsDesc": "Lembretes úteis para configurar o seu círculo"
+      "tipsDesc": "O seu resumo do dia e lembretes úteis"
     },
     "confirmMedicationsOff": {
       "message": "Não será avisado quando uma dose não for marcada. Desativar mesmo assim?"

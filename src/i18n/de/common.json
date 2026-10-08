@@ -55,7 +55,8 @@
     "vitals": "Vitalwerte",
     "members": "Mitglieder",
     "settings": "Kreis bearbeiten",
-    "notFound": "Seite nicht gefunden"
+    "notFound": "Seite nicht gefunden",
+    "dailyUpdate": "Tagesübersicht"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",

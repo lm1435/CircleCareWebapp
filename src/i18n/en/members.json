@@ -107,12 +107,14 @@
     "linkCopied": "Link copied",
     "copyFailed": "Couldn't copy the link",
     "shareMessage": "Join me on CircleCare to help coordinate care for {{recipientName}}. {{inviteUrl}}",
-  "shareMessageSelfCare": "Join me on CircleCare to help keep track of my care. {{inviteUrl}}",
-  "shareMessageRecipient": "I set up CircleCare to help keep track of your medications and appointments. Join me here: {{inviteUrl}}",
+    "shareMessageSelfCare": "Join me on CircleCare to help keep track of my care. {{inviteUrl}}",
+    "shareMessageRecipient": "I set up CircleCare to help keep track of your medications and appointments. Join me here: {{inviteUrl}}",
     "shareTitle": "Join our care circle",
     "sentTitle": "Invitation sent",
     "emailNote": "We also emailed {{email}} instructions to join as a {{role}}.",
-    "sendAnother": "Invite someone else"
+    "sendAnother": "Invite someone else",
+    "dailyUpdateLine": "The people you invite get a daily update on {{name}}.",
+    "dailyUpdateLineSelfCare": "The people you invite get a daily update on your day."
   },
   "manage": {
     "subheading": "Everyone in this care circle. Invite, remove, or manage members below.",

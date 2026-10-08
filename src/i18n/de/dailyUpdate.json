@@ -1,0 +1,75 @@
+{
+  "eyebrow": "Tagesübersicht",
+  "heading": "Der Tag von {{name}}",
+  "headingSelfFallback": "Die Übersicht für heute",
+  "sections": {
+    "soFar": "Heute bisher",
+    "stillToDo": "Noch zu erledigen",
+    "happened": "Was passiert ist",
+    "notDone": "An diesem Tag nicht erledigt"
+  },
+  "doses": {
+    "taken_one": "{{count}} Dosis eingenommen",
+    "taken_other": "{{count}} Dosen eingenommen",
+    "takenLate_one": "{{count}} Dosis verspätet eingenommen",
+    "takenLate_other": "{{count}} Dosen verspätet eingenommen",
+    "skipped_one": "{{count}} Dosis ausgelassen",
+    "skipped_other": "{{count}} Dosen ausgelassen",
+    "notMarked_one": "{{count}} Dosis noch nicht eingetragen",
+    "notMarked_other": "{{count}} Dosen noch nicht eingetragen",
+    "notMarkedPast_one": "{{count}} Dosis nicht eingetragen",
+    "notMarkedPast_other": "{{count}} Dosen nicht eingetragen"
+  },
+  "asNeeded": {
+    "given_one": "{{count}} Bedarfsdosis gegeben",
+    "given_other": "{{count}} Bedarfsdosen gegeben"
+  },
+  "tasks": {
+    "done_one": "{{count}} Aufgabe erledigt",
+    "done_other": "{{count}} Aufgaben erledigt"
+  },
+  "appointments": {
+    "today_one": "{{count}} Termin heute",
+    "today_other": "{{count}} Termine heute",
+    "thatDay_one": "{{count}} Termin an diesem Tag",
+    "thatDay_other": "{{count}} Termine an diesem Tag"
+  },
+  "notes": {
+    "added_one": "{{count}} Notiz von {{names}}",
+    "added_other": "{{count}} Notizen von {{names}}"
+  },
+  "names": {
+    "two": "{{a}} und {{b}}",
+    "twoBeforeI": "{{a}} und {{b}}",
+    "many_one": "{{a}}, {{b}} und {{count}} weiteren Person",
+    "many_other": "{{a}}, {{b}} und {{count}} weiteren",
+    "former": "einem ehemaligen Mitglied"
+  },
+  "item": {
+    "doseUpcoming": "{{time}} · {{medication}}",
+    "doseNotMarked": "{{time}} · {{medication}} · Nicht eingetragen",
+    "task": "{{title}} · Heute fällig",
+    "appointment": "{{time}} · {{title}}",
+    "more": "+{{count}} weitere"
+  },
+  "nothingLeft": "Heute steht nichts mehr an.",
+  "nothingLeftPast": "Alles Geplante wurde erledigt.",
+  "open": "Ganze Übersicht ansehen",
+  "dismissA11y": "Bis morgen ausblenden",
+  "turnOff": "Ausschalten",
+  "turnOffConfirm": {
+    "title": "Tagesübersicht ausschalten?",
+    "body": "Damit werden auch die Tipps ausgeschaltet. Sie können beides unter Profil > Benachrichtigungen wieder einschalten.",
+    "confirm": "Ausschalten",
+    "cancel": "Behalten"
+  },
+  "turnedOffToast": "Tagesübersicht ausgeschaltet",
+  "soloInvite": "Laden Sie jemanden ein, der sie mitliest",
+  "dated": {
+    "eyebrow": "Der Tag von {{name}}",
+    "empty": "An diesem Tag wurde nichts eingetragen.",
+    "unavailable": "Diese Übersicht ist nicht mehr verfügbar."
+  },
+  "error": "Die Übersicht konnte nicht geladen werden. Bitte erneut versuchen.",
+  "retry": "Erneut versuchen"
+}

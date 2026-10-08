@@ -1,0 +1,75 @@
+{
+  "eyebrow": "Resumen del día",
+  "heading": "El día de {{name}}",
+  "headingSelfFallback": "El resumen de hoy",
+  "sections": {
+    "soFar": "Hoy hasta ahora",
+    "stillToDo": "Falta por hacer",
+    "happened": "Lo que pasó",
+    "notDone": "Quedó pendiente ese día"
+  },
+  "doses": {
+    "taken_one": "{{count}} dosis tomada",
+    "taken_other": "{{count}} dosis tomadas",
+    "takenLate_one": "{{count}} dosis tomada tarde",
+    "takenLate_other": "{{count}} dosis tomadas tarde",
+    "skipped_one": "{{count}} dosis omitida",
+    "skipped_other": "{{count}} dosis omitidas",
+    "notMarked_one": "{{count}} dosis sin marcar",
+    "notMarked_other": "{{count}} dosis sin marcar",
+    "notMarkedPast_one": "{{count}} dosis sin marcar",
+    "notMarkedPast_other": "{{count}} dosis sin marcar"
+  },
+  "asNeeded": {
+    "given_one": "{{count}} dosis según se necesite",
+    "given_other": "{{count}} dosis según se necesite"
+  },
+  "tasks": {
+    "done_one": "{{count}} tarea completada",
+    "done_other": "{{count}} tareas completadas"
+  },
+  "appointments": {
+    "today_one": "{{count}} cita hoy",
+    "today_other": "{{count}} citas hoy",
+    "thatDay_one": "{{count}} cita ese día",
+    "thatDay_other": "{{count}} citas ese día"
+  },
+  "notes": {
+    "added_one": "{{count}} nota de {{names}}",
+    "added_other": "{{count}} notas de {{names}}"
+  },
+  "names": {
+    "two": "{{a}} y {{b}}",
+    "twoBeforeI": "{{a}} e {{b}}",
+    "many_one": "{{a}}, {{b}} y {{count}} más",
+    "many_other": "{{a}}, {{b}} y {{count}} más",
+    "former": "un exmiembro"
+  },
+  "item": {
+    "doseUpcoming": "{{time}} · {{medication}}",
+    "doseNotMarked": "{{time}} · {{medication}} · Sin marcar",
+    "task": "{{title}} · Para hoy",
+    "appointment": "{{time}} · {{title}}",
+    "more": "+{{count}} más"
+  },
+  "nothingLeft": "No queda nada más en la agenda de hoy.",
+  "nothingLeftPast": "Se hizo todo lo que estaba en la agenda.",
+  "open": "Ver el resumen completo",
+  "dismissA11y": "Ocultar hasta mañana",
+  "turnOff": "Desactivar",
+  "turnOffConfirm": {
+    "title": "¿Desactivar el resumen del día?",
+    "body": "También se desactivan los consejos. Puedes volver a activarlos en Perfil, en Notificaciones.",
+    "confirm": "Desactivar",
+    "cancel": "Mantener"
+  },
+  "turnedOffToast": "Resumen del día desactivado",
+  "soloInvite": "Invita a alguien para compartir esto",
+  "dated": {
+    "eyebrow": "El día de {{name}}",
+    "empty": "No se registró nada este día.",
+    "unavailable": "Este resumen ya no está disponible."
+  },
+  "error": "No pudimos cargar el resumen. Inténtalo de nuevo.",
+  "retry": "Reintentar"
+}

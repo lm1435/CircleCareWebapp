@@ -1,0 +1,75 @@
+{
+  "eyebrow": "Riepilogo del giorno",
+  "heading": "La giornata di {{name}}",
+  "headingSelfFallback": "Il riepilogo di oggi",
+  "sections": {
+    "soFar": "Oggi finora",
+    "stillToDo": "Ancora da fare",
+    "happened": "Cosa è successo",
+    "notDone": "Non fatto quel giorno"
+  },
+  "doses": {
+    "taken_one": "{{count}} dose presa",
+    "taken_other": "{{count}} dosi prese",
+    "takenLate_one": "{{count}} dose presa in ritardo",
+    "takenLate_other": "{{count}} dosi prese in ritardo",
+    "skipped_one": "{{count}} dose saltata",
+    "skipped_other": "{{count}} dosi saltate",
+    "notMarked_one": "{{count}} dose non ancora segnata",
+    "notMarked_other": "{{count}} dosi non ancora segnate",
+    "notMarkedPast_one": "{{count}} dose non segnata",
+    "notMarkedPast_other": "{{count}} dosi non segnate"
+  },
+  "asNeeded": {
+    "given_one": "{{count}} dose al bisogno data",
+    "given_other": "{{count}} dosi al bisogno date"
+  },
+  "tasks": {
+    "done_one": "{{count}} attività completata",
+    "done_other": "{{count}} attività completate"
+  },
+  "appointments": {
+    "today_one": "{{count}} appuntamento oggi",
+    "today_other": "{{count}} appuntamenti oggi",
+    "thatDay_one": "{{count}} appuntamento quel giorno",
+    "thatDay_other": "{{count}} appuntamenti quel giorno"
+  },
+  "notes": {
+    "added_one": "{{count}} nota di {{names}}",
+    "added_other": "{{count}} note di {{names}}"
+  },
+  "names": {
+    "two": "{{a}} e {{b}}",
+    "twoBeforeI": "{{a}} e {{b}}",
+    "many_one": "{{a}}, {{b}} e {{count}} altro",
+    "many_other": "{{a}}, {{b}} e altri {{count}}",
+    "former": "un ex membro"
+  },
+  "item": {
+    "doseUpcoming": "{{time}} · {{medication}}",
+    "doseNotMarked": "{{time}} · {{medication}} · Non segnata",
+    "task": "{{title}} · In scadenza oggi",
+    "appointment": "{{time}} · {{title}}",
+    "more": "+{{count}} altri"
+  },
+  "nothingLeft": "Nient’altro in programma oggi.",
+  "nothingLeftPast": "Tutto ciò che era in programma è stato fatto.",
+  "open": "Vedi il riepilogo completo",
+  "dismissA11y": "Nascondi fino a domani",
+  "turnOff": "Disattiva",
+  "turnOffConfirm": {
+    "title": "Disattivare il riepilogo del giorno?",
+    "body": "Verranno disattivati anche i consigli. Puoi riattivarli entrambi in Profilo, alla voce Notifiche.",
+    "confirm": "Disattiva",
+    "cancel": "Mantieni"
+  },
+  "turnedOffToast": "Riepilogo del giorno disattivato",
+  "soloInvite": "Invita qualcuno a condividerlo",
+  "dated": {
+    "eyebrow": "La giornata di {{name}}",
+    "empty": "Non è stato registrato nulla in questo giorno.",
+    "unavailable": "Questo riepilogo non è più disponibile."
+  },
+  "error": "Non è stato possibile caricare il riepilogo. Riprova.",
+  "retry": "Riprova"
+}

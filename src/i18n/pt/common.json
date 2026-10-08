@@ -55,7 +55,8 @@
     "vitals": "Sinais vitais",
     "members": "Membros",
     "settings": "Editar círculo",
-    "notFound": "Página não encontrada"
+    "notFound": "Página não encontrada",
+    "dailyUpdate": "Resumo do dia"
   },
   "errorBoundary": {
     "title": "Algo deu errado",

@@ -60,8 +60,8 @@
       "tasksDesc": "Quand quelque chose vous est confié, et avant l’échéance",
       "notes": "Notes",
       "notesDesc": "Quand quelqu’un ajoute une note",
-      "tips": "Conseils et suggestions",
-      "tipsDesc": "Petits rappels utiles pour configurer votre cercle"
+      "tips": "Point du jour et conseils",
+      "tipsDesc": "Votre point du jour et de petits rappels utiles"
     },
     "someTurnedOff": "Certaines désactivées",
     "confirmMedicationsOff": {

@@ -46,7 +46,9 @@
     "linkCopied": "Ligação copiada",
     "copyFailed": "Não foi possível copiar a ligação",
     "shareTitle": "Participe no nosso círculo de cuidado",
-    "shareMessageRecipient": "Configurei o CircleCare para ajudar a acompanhar os seus medicamentos e consultas. Junte-se a mim aqui: {{inviteUrl}}"
+    "shareMessageRecipient": "Configurei o CircleCare para ajudar a acompanhar os seus medicamentos e consultas. Junte-se a mim aqui: {{inviteUrl}}",
+    "dailyUpdateLine": "As pessoas que convidar recebem um resumo diário sobre {{name}}.",
+    "dailyUpdateLineSelfCare": "As pessoas que convidar recebem um resumo diário sobre o seu dia."
   },
   "manage": {
     "subheading": "Todos neste círculo de cuidado. Convide, remova ou faça a gestão dos membros abaixo.",

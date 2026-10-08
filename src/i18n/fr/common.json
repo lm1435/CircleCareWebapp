@@ -55,7 +55,8 @@
     "vitals": "Constantes",
     "members": "Membres",
     "settings": "Modifier le cercle",
-    "notFound": "Page introuvable"
+    "notFound": "Page introuvable",
+    "dailyUpdate": "Point du jour"
   },
   "errorBoundary": {
     "title": "Un problème est survenu",

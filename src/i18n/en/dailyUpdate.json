@@ -1,0 +1,75 @@
+{
+  "eyebrow": "Daily update",
+  "heading": "{{name}}'s day",
+  "headingSelfFallback": "Today's update",
+  "sections": {
+    "soFar": "Today so far",
+    "stillToDo": "Still to do",
+    "happened": "What happened",
+    "notDone": "Not done that day"
+  },
+  "doses": {
+    "taken_one": "{{count}} dose taken",
+    "taken_other": "{{count}} doses taken",
+    "takenLate_one": "{{count}} dose taken late",
+    "takenLate_other": "{{count}} doses taken late",
+    "skipped_one": "{{count}} dose skipped",
+    "skipped_other": "{{count}} doses skipped",
+    "notMarked_one": "{{count}} dose not marked yet",
+    "notMarked_other": "{{count}} doses not marked yet",
+    "notMarkedPast_one": "{{count}} dose not marked",
+    "notMarkedPast_other": "{{count}} doses not marked"
+  },
+  "asNeeded": {
+    "given_one": "{{count}} as-needed dose given",
+    "given_other": "{{count}} as-needed doses given"
+  },
+  "tasks": {
+    "done_one": "{{count}} task done",
+    "done_other": "{{count}} tasks done"
+  },
+  "appointments": {
+    "today_one": "{{count}} appointment today",
+    "today_other": "{{count}} appointments today",
+    "thatDay_one": "{{count}} appointment that day",
+    "thatDay_other": "{{count}} appointments that day"
+  },
+  "notes": {
+    "added_one": "{{count}} note from {{names}}",
+    "added_other": "{{count}} notes from {{names}}"
+  },
+  "names": {
+    "two": "{{a}} and {{b}}",
+    "twoBeforeI": "{{a}} and {{b}}",
+    "many_one": "{{a}}, {{b}} and {{count}} other",
+    "many_other": "{{a}}, {{b}} and {{count}} others",
+    "former": "a former member"
+  },
+  "item": {
+    "doseUpcoming": "{{time}} · {{medication}}",
+    "doseNotMarked": "{{time}} · {{medication}} · Not marked",
+    "task": "{{title}} · Due today",
+    "appointment": "{{time}} · {{title}}",
+    "more": "+{{count}} more"
+  },
+  "nothingLeft": "Nothing else on the schedule today.",
+  "nothingLeftPast": "Everything on the schedule was done.",
+  "open": "See the full update",
+  "dismissA11y": "Hide until tomorrow",
+  "turnOff": "Turn off",
+  "turnOffConfirm": {
+    "title": "Turn off the daily update?",
+    "body": "This also turns off tips. You can turn both back on in Profile, under Notifications.",
+    "confirm": "Turn off",
+    "cancel": "Keep it"
+  },
+  "turnedOffToast": "Daily update turned off",
+  "soloInvite": "Invite someone to share this",
+  "dated": {
+    "eyebrow": "{{name}}'s day",
+    "empty": "Nothing was recorded on this day.",
+    "unavailable": "This update is no longer available."
+  },
+  "error": "We couldn't load the update. Try again.",
+  "retry": "Try again"
+}

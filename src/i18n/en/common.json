@@ -55,7 +55,8 @@
     "vitals": "Vitals",
     "members": "Members",
     "settings": "Edit circle",
-    "notFound": "Page not found"
+    "notFound": "Page not found",
+    "dailyUpdate": "Daily update"
   },
   "errorBoundary": {
     "title": "Something went wrong",

@@ -37,6 +37,61 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Todos os dias",
     "A cada 2 dias",
   ],
+  "pt dailyUpdate:appointments.thatDay": [
+    "0 consulta nesse dia",
+    "1 consulta nesse dia",
+    "2 consultas nesse dia",
+  ],
+  "pt dailyUpdate:appointments.today": [
+    "0 consulta hoje",
+    "1 consulta hoje",
+    "2 consultas hoje",
+  ],
+  "pt dailyUpdate:asNeeded.given": [
+    "0 dose se necessário dada",
+    "1 dose se necessário dada",
+    "2 doses se necessário dadas",
+  ],
+  "pt dailyUpdate:doses.notMarked": [
+    "0 dose ainda não marcada",
+    "1 dose ainda não marcada",
+    "2 doses ainda não marcadas",
+  ],
+  "pt dailyUpdate:doses.notMarkedPast": [
+    "0 dose não marcada",
+    "1 dose não marcada",
+    "2 doses não marcadas",
+  ],
+  "pt dailyUpdate:doses.skipped": [
+    "0 dose pulada",
+    "1 dose pulada",
+    "2 doses puladas",
+  ],
+  "pt dailyUpdate:doses.taken": [
+    "0 dose tomada",
+    "1 dose tomada",
+    "2 doses tomadas",
+  ],
+  "pt dailyUpdate:doses.takenLate": [
+    "0 dose tomada com atraso",
+    "1 dose tomada com atraso",
+    "2 doses tomadas com atraso",
+  ],
+  "pt dailyUpdate:names.many": [
+    "{{a}}, {{b}} e mais 0",
+    "{{a}}, {{b}} e mais 1",
+    "{{a}}, {{b}} e mais 2",
+  ],
+  "pt dailyUpdate:notes.added": [
+    "0 nota de Ana",
+    "1 nota de Ana",
+    "2 notas de Ana",
+  ],
+  "pt dailyUpdate:tasks.done": [
+    "0 tarefa concluída",
+    "1 tarefa concluída",
+    "2 tarefas concluídas",
+  ],
   "pt documents:count": [
     "Documentos: 0",
     "Documentos: 1",
@@ -191,6 +246,61 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Todos os dias",
     "Todos os dias",
     "A cada 2 dias",
+  ],
+  "pt-PT dailyUpdate:appointments.thatDay": [
+    "0 consulta nesse dia",
+    "1 consulta nesse dia",
+    "2 consultas nesse dia",
+  ],
+  "pt-PT dailyUpdate:appointments.today": [
+    "0 consulta hoje",
+    "1 consulta hoje",
+    "2 consultas hoje",
+  ],
+  "pt-PT dailyUpdate:asNeeded.given": [
+    "0 dose se necessário dada",
+    "1 dose se necessário dada",
+    "2 doses se necessário dadas",
+  ],
+  "pt-PT dailyUpdate:doses.notMarked": [
+    "0 dose ainda não marcada",
+    "1 dose ainda não marcada",
+    "2 doses ainda não marcadas",
+  ],
+  "pt-PT dailyUpdate:doses.notMarkedPast": [
+    "0 dose não marcada",
+    "1 dose não marcada",
+    "2 doses não marcadas",
+  ],
+  "pt-PT dailyUpdate:doses.skipped": [
+    "0 doses saltadas",
+    "1 dose saltada",
+    "2 doses saltadas",
+  ],
+  "pt-PT dailyUpdate:doses.taken": [
+    "0 dose tomada",
+    "1 dose tomada",
+    "2 doses tomadas",
+  ],
+  "pt-PT dailyUpdate:doses.takenLate": [
+    "0 dose tomada com atraso",
+    "1 dose tomada com atraso",
+    "2 doses tomadas com atraso",
+  ],
+  "pt-PT dailyUpdate:names.many": [
+    "{{a}}, {{b}} e mais 0",
+    "{{a}}, {{b}} e mais 1",
+    "{{a}}, {{b}} e mais 2",
+  ],
+  "pt-PT dailyUpdate:notes.added": [
+    "0 nota de Ana",
+    "1 nota de Ana",
+    "2 notas de Ana",
+  ],
+  "pt-PT dailyUpdate:tasks.done": [
+    "0 tarefa concluída",
+    "1 tarefa concluída",
+    "2 tarefas concluídas",
   ],
   "pt-PT documents:count": [
     "Documentos: 0",

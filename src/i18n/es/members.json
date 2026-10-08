@@ -107,12 +107,14 @@
     "linkCopied": "Enlace copiado",
     "copyFailed": "No se pudo copiar el enlace",
     "shareMessage": "Te invito a CircleCare para coordinar juntos el cuidado de {{recipientName}}. {{inviteUrl}}",
-  "shareMessageSelfCare": "Te invito a CircleCare para que me ayudes a organizar mi cuidado. {{inviteUrl}}",
-  "shareMessageRecipient": "Configuré CircleCare para ayudarte a llevar el control de tus medicamentos y citas. Únete aquí: {{inviteUrl}}",
+    "shareMessageSelfCare": "Te invito a CircleCare para que me ayudes a organizar mi cuidado. {{inviteUrl}}",
+    "shareMessageRecipient": "Configuré CircleCare para ayudarte a llevar el control de tus medicamentos y citas. Únete aquí: {{inviteUrl}}",
     "shareTitle": "Únete a nuestro círculo de cuidado",
     "sentTitle": "Invitación enviada",
     "emailNote": "También enviamos a {{email}} las instrucciones para unirse como {{role}}.",
-    "sendAnother": "Invitar a alguien más"
+    "sendAnother": "Invitar a alguien más",
+    "dailyUpdateLine": "Las personas que invites reciben un resumen diario de {{name}}.",
+    "dailyUpdateLineSelfCare": "Las personas que invites reciben un resumen diario de tu día."
   },
   "manage": {
     "subheading": "Todos en este círculo de cuidado. Invita, elimina o administra miembros abajo.",
