@@ -737,13 +737,18 @@ describe('ProfilePage quiet hours', () => {
     it('warns at 22:00 -> 21:59 (23 h 59 m across midnight), in the viewer hour cycle, and still saves', async () => {
       currentUser = WITH_SECONDS;
       renderPage();
-      fireEvent.change(await screen.findByLabelText(/^End time/), { target: { value: '21:59' } });
+      const end = await screen.findByLabelText(/^End time/);
+      const region = screen.getByTestId('quiet-hours-almost-all-day-region');
+      expect(region).toHaveAttribute('role', 'status');
+      expect(region).toBeEmptyDOMElement();
+      fireEvent.change(end, { target: { value: '21:59' } });
 
       const warning = await screen.findByTestId('quiet-hours-almost-all-day-warning');
       expect(warning).toHaveTextContent(
         'Quiet hours cover almost the whole day, so notifications will be held until 9:59 PM.'
       );
-      expect(warning).toHaveAttribute('role', 'alert');
+      // Inside a live region that was already mounted before the text arrived.
+      expect(warning.closest('[role="status"]')).toBe(region);
       // Not blocked: the save went out.
       expect(updateQuiet.mock.calls[0][0]).toEqual({
         quiet_hours_start: '22:00',

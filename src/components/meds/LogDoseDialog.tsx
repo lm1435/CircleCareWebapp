@@ -128,7 +128,14 @@ export function LogDoseDialog({
             setMinutes(next === null ? 0 : Number(next));
           }}
         />
-        <p className="m-0 text-sm text-ink-3" data-testid="log-dose-when">
+        {/* Polite live region, mounted with the dialog and never re-created, so a
+            chip change ("2 h ago") announces the new time (WCAG 4.1.3). */}
+        <p
+          role="status"
+          aria-atomic="true"
+          className="m-0 text-sm text-ink-3"
+          data-testid="log-dose-when"
+        >
           {clock}
         </p>
 

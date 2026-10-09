@@ -508,6 +508,7 @@ export default function ProfilePage(): ReactElement {
   // ── Derived display values ─────────────────────────────────────────────
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
   const quietEnabled = Boolean(user.quiet_hours_start && user.quiet_hours_end);
+  const quietWarning = quietEnabled && quietHoursCoverAlmostAllDay(quietStart, quietEnd);
   const weightUnit = unitsQuery.data?.weight_unit ?? 'lbs';
   const glucoseUnit = unitsQuery.data?.glucose_unit ?? 'mg/dL';
 
@@ -744,17 +745,29 @@ export default function ProfilePage(): ReactElement {
             </div>
           </SheetRow>
         ) : null}
-        {quietEnabled && quietHoursCoverAlmostAllDay(quietStart, quietEnd) ? (
-          <SheetRow>
-            <p
-              role="alert"
-              data-testid="quiet-hours-almost-all-day-warning"
-              className="m-0 text-sm text-amber-deep text-balance"
-            >
-              {t('quietHours.almostAllDayWarning', { endTime: formatQuietEnd(quietEnd, hourCycle) })}
-            </p>
-          </SheetRow>
-        ) : null}
+        {/* The live region is ALWAYS mounted and only its content comes and goes:
+            a region inserted together with its text is often not announced
+            (WCAG 4.1.3). Polite: a non-blocking warning should not cut off the
+            time field's own announcement. The wrapper carries the row's divider,
+            since the row inside it is a first child and drops its own. */}
+        <div
+          role="status"
+          data-testid="quiet-hours-almost-all-day-region"
+          className={quietWarning ? 'border-t border-line-2' : undefined}
+        >
+          {quietWarning ? (
+            <SheetRow>
+              <p
+                data-testid="quiet-hours-almost-all-day-warning"
+                className="m-0 text-sm text-amber-deep text-balance"
+              >
+                {t('quietHours.almostAllDayWarning', {
+                  endTime: formatQuietEnd(quietEnd, hourCycle),
+                })}
+              </p>
+            </SheetRow>
+          ) : null}
+        </div>
       </SettingsSheetSection>
 
       {/* ── Units ─────────────────────────────────────────────────────── */}

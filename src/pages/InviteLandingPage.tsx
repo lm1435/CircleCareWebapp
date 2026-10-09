@@ -443,13 +443,13 @@ export default function InviteLandingPage(): ReactElement {
                 {copied ? t('copied') : t('copyCode')}
               </Button>
               {copyFailed ? (
-                <p role="status" className="m-0 text-sm text-ink-3 text-balance">
-                  {t('copyFailed')}
-                </p>
+                <p className="m-0 text-sm text-ink-3 text-balance">{t('copyFailed')}</p>
               ) : null}
-              {/* Announce copy success to screen readers */}
-              <span aria-live="polite" className="sr-only">
-                {copied ? t('codeCopied') : ''}
+              {/* Announces the copy outcome, success or failure. Always mounted:
+                  a live region inserted together with its text (the visible
+                  failure line above used to be one) is often not announced. */}
+              <span aria-live="polite" className="sr-only" data-testid="invite-copy-announcement">
+                {copied ? t('codeCopied') : copyFailed ? t('copyFailed') : ''}
               </span>
             </div>
 

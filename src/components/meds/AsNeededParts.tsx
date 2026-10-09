@@ -1,5 +1,5 @@
 import { baseLanguage } from '@/i18n/locales';
-import type { ReactElement } from 'react';
+import { useLayoutEffect, useRef, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, UndoBadge, STATUS_PILL } from '@/components/ui';
 import type { AsNeededSummary } from '@/api/medicationAsNeeded';
@@ -84,6 +84,23 @@ export function AsNeededActions({
   onUndo,
 }: AsNeededActionsProps): ReactElement {
   const { t } = useTranslation('meds');
+
+  // After Undo the badge (which held focus) is replaced by "Gave a dose" again.
+  // Put focus back on it, the control the keyboard user pressed in the first
+  // place. UndoBadge's own fallback would pick the row's FIRST focusable (the
+  // card's "View details"), which is the wrong place to resume (WCAG 2.4.3).
+  // Only when focus was lost to <body>: a user who moved on keeps their place.
+  const giveRef = useRef<HTMLButtonElement>(null);
+  const wasPending = useRef(pending);
+  useLayoutEffect(() => {
+    const was = wasPending.current;
+    wasPending.current = pending;
+    if (!was || pending) return;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    giveRef.current?.focus();
+  }, [pending]);
+
   return (
     <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
       <Button
@@ -109,7 +126,12 @@ export function AsNeededActions({
             />
           )
         ) : (
-          <Button size="md" onClick={onGive} aria-label={t('asNeeded.card.giveA11y', { name })}>
+          <Button
+            ref={giveRef}
+            size="md"
+            onClick={onGive}
+            aria-label={t('asNeeded.card.giveA11y', { name })}
+          >
             {t('asNeeded.card.give')}
           </Button>
         ))}

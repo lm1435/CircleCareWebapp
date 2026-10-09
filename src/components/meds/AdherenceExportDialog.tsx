@@ -105,11 +105,17 @@ export function AdherenceExportDialog({
           }}
           disabled={isExporting}
         />
-        {isExporting ? (
-          <Text variant="caption" as="p" role="status" className="mt-3">
-            {t('export.generating')}
-          </Text>
-        ) : null}
+        {/* Always mounted, text only while exporting: a status region inserted
+            together with its text is often not announced (WCAG 4.1.3). */}
+        <Text
+          variant="caption"
+          as="p"
+          role="status"
+          className={isExporting ? 'mt-3' : undefined}
+          data-testid="adherence-export-status"
+        >
+          {isExporting ? t('export.generating') : ''}
+        </Text>
       </div>
     </Modal>
   );

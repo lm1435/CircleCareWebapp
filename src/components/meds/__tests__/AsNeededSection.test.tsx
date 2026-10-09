@@ -438,6 +438,24 @@ describe('giving a dose', () => {
     expect(await screen.findByRole('button', { name: 'Gave a dose of Ibuprofen' })).toBeInTheDocument();
   });
 
+  it('Undo returns keyboard focus to "Gave a dose", not to the card\'s first control (WCAG 2.4.3)', async () => {
+    mockApi();
+    renderHome();
+    const user = userEvent.setup();
+    await openAndLog(user);
+
+    const undo = within(card()).getByRole('button', { name: 'Undo Ibuprofen' });
+    undo.focus();
+    fireEvent.click(undo);
+    const give = within(card()).getByRole('button', { name: 'Gave a dose of Ibuprofen' });
+    // Past UndoBadge's own setTimeout(0) fallback, which would otherwise win.
+    await act(async () => {
+      vi.advanceTimersByTime(30);
+    });
+    vi.useFakeTimers({ toFake: ['Date'], now: NOW });
+    expect(give).toHaveFocus();
+  });
+
   it('a second click while counting down never makes a second dose', async () => {
     mockApi();
     post.mockResolvedValue({ success: true, data: { dose: { id: 'd1' }, summary: { last_dose: null } } });
@@ -655,6 +673,19 @@ describe('the log dialog: "Given" presets (Now, 15/30 min, 1/2/4/8 h ago)', () =
     expect(labels).toEqual(['Now', '15 min ago', '30 min ago', '1 h ago', '2 h ago', '4 h ago', '8 h ago']);
     expect(within(dialog).getByTestId('log-dose-when')).toHaveTextContent('12:00 PM');
     expect(dialog).toHaveTextContent('200 mg · Everyone in the circle will see this.');
+  });
+
+  it('the given-at time is a polite live region that stays mounted as the chip changes', async () => {
+    mockApi();
+    renderHome();
+    const user = userEvent.setup();
+    const dialog = await openDialog(user);
+    const when = within(dialog).getByTestId('log-dose-when');
+    expect(when).toHaveAttribute('role', 'status');
+    await user.click(within(dialog).getByRole('radio', { name: '2 h ago' }));
+    // Same node, new text: an update a screen reader announces.
+    expect(within(dialog).getByTestId('log-dose-when')).toBe(when);
+    expect(when).toHaveTextContent('10:00 AM');
   });
 
   it('"2 h ago" sends the instant two hours back; "Now" omits given_at', async () => {

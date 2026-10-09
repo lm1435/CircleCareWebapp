@@ -379,6 +379,18 @@ describe('AdherenceHero — export report', () => {
     expect(within(dialog).getByRole('status')).toHaveTextContent('Generating PDF...');
   });
 
+  it('the export status region is mounted (empty) before the export starts, so the wait is announced', () => {
+    const { rerender } = render(
+      <AdherenceExportDialog open onClose={vi.fn()} exportPdf={mockExportPdf} isExporting={false} />
+    );
+    const region = within(screen.getByRole('dialog')).getByTestId('adherence-export-status');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+    rerender(<AdherenceExportDialog open onClose={vi.fn()} exportPdf={mockExportPdf} isExporting />);
+    expect(screen.getByTestId('adherence-export-status')).toBe(region);
+    expect(region).toHaveTextContent('Generating PDF...');
+  });
+
   it('shows no button (and no dialog) when nothing was ever scheduled', () => {
     mockUseAdherenceReport.mockReturnValue({
       ...report({ total_scheduled: 0, adherence_rate: 0 }),

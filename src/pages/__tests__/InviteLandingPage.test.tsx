@@ -200,7 +200,12 @@ describe('InviteLandingPage', () => {
     const copyButton = await screen.findByRole('button', { name: 'Copy invite code' });
     fireEvent.click(copyButton);
 
-    expect(await screen.findByText("Couldn't copy — the code is shown above.")).toBeInTheDocument();
+    const MSG = "Couldn't copy — the code is shown above.";
+    // Visible line, and the always-mounted polite region announces it (a region
+    // inserted together with its text is often not announced).
+    await waitFor(() => expect(screen.getAllByText(MSG)).toHaveLength(2));
+    expect(screen.getByTestId('invite-copy-announcement')).toHaveTextContent(MSG);
+    expect(screen.getByTestId('invite-copy-announcement')).toHaveAttribute('aria-live', 'polite');
     // The button never claims success
     expect(screen.queryByRole('button', { name: 'Copied' })).not.toBeInTheDocument();
   });
