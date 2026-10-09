@@ -239,6 +239,47 @@ test.describe('Spanish', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 3b) The six locales that shipped in 1.2.2 (a11y pass 2026-10-08): <html lang>
+//     follows the locale (3.1.1), axe on translated copy, and 320px reflow
+//     (1.4.10) — German and French compounds are the longest strings we ship.
+//     The Profile page also carries the language picker, whose endonyms are
+//     each marked with their own `lang` (3.1.2).
+// ---------------------------------------------------------------------------
+const NEW_LOCALES = ['fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'] as const;
+test.describe('1.2.2 locales at 320px', () => {
+  test.use({ viewport: { width: 320, height: 800 } });
+  for (const locale of NEW_LOCALES) {
+    test(`${locale} — lang + axe + reflow on Overview, Medications, Profile`, async ({ page, circleId }, testInfo) => {
+      await page.route('**/api/users/me', async (route) => {
+        if (route.request().method() !== 'GET') return route.continue();
+        try {
+          const res = await route.fetch();
+          const body = await res.json();
+          if (body?.data?.user) body.data.user.language = locale;
+          await route.fulfill({ response: res, json: body });
+        } catch {
+          await route.continue().catch(() => {});
+        }
+      });
+      for (const key of ['C', 'C/meds', '/profile']) {
+        const route = resolve(key, circleId);
+        await visitAndCheck(page, route);
+        await expect(page.locator('html')).toHaveAttribute('lang', locale, { timeout: 20_000 });
+        await expect(page.locator('h1').first()).toBeVisible({ timeout: 20_000 });
+        await expect(page).toHaveTitle(/ · CircleCare$/);
+        await checkA11y(page, `${route} (${locale}@320)`, testInfo, WCAG22);
+        await expectReflow(page, `${route} (${locale})`);
+      }
+      // Every picker option speaks in its own language, whatever the UI language.
+      const picker = page.getByRole('radiogroup').filter({ has: page.locator('input[value="de"]') });
+      for (const code of ['en', 'es', ...NEW_LOCALES]) {
+        await expect(picker.locator(`label:has(input[value="${code}"]) [lang="${code}"]`)).toHaveCount(1);
+      }
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // 4) What axe cannot see.
 // ---------------------------------------------------------------------------
 test.describe('keyboard', () => {

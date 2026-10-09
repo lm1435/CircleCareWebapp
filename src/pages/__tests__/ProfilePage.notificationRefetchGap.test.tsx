@@ -131,7 +131,7 @@ describe('ProfilePage notification groups — PATCH-resolved, refetch-pending ga
     await user.click(tips);
     // PATCH resolved, refetch still in flight: the switch is usable again and
     // must already show OFF.
-    await waitFor(() => expect(tips).not.toBeDisabled());
+    await waitFor(() => expect(tips).not.toHaveAttribute('aria-disabled'));
     expect(getCalls).toBeGreaterThan(1); // the refetch really is pending
     expect(tips).toHaveAttribute('aria-checked', 'false');
 
@@ -152,7 +152,7 @@ describe('ProfilePage notification groups — PATCH-resolved, refetch-pending ga
     const tasks = screen.getByRole('switch', { name: /Tasks & appointments/i });
 
     await user.click(notes);
-    await waitFor(() => expect(tasks).not.toBeDisabled());
+    await waitFor(() => expect(tasks).not.toHaveAttribute('aria-disabled'));
 
     await user.click(tasks);
     await waitFor(() => expect(patchBodies).toHaveLength(2));

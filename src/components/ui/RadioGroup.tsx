@@ -22,6 +22,12 @@ export interface RadioGroupProps {
   error?: string;
   hint?: ReactNode;
   disabled?: boolean;
+  /**
+   * A save is in flight: choices are ignored but the radios STAY focusable
+   * (`aria-disabled`). A native `disabled` on the focused radio drops keyboard
+   * focus to <body> (WCAG 2.4.3). Use `disabled` only when unavailable.
+   */
+  busy?: boolean;
   /** Shared name for the underlying radio inputs; auto-generated otherwise. */
   name?: string;
 }
@@ -39,6 +45,7 @@ export function RadioGroup({
   error,
   hint,
   disabled = false,
+  busy = false,
   name,
 }: RadioGroupProps): ReactNode {
   const generatedName = useId();
@@ -68,7 +75,7 @@ export function RadioGroup({
           const optionId = `${groupName}-${option.value}`;
           const optionDisabled = disabled || option.disabled;
           const selected = value === option.value;
-          const row = optionRow(selected, optionDisabled);
+          const row = optionRow(selected, optionDisabled || busy);
           return (
             <label key={option.value} htmlFor={optionId} className={row}>
               <input
@@ -78,7 +85,10 @@ export function RadioGroup({
                 value={option.value}
                 checked={selected}
                 disabled={optionDisabled}
-                onChange={() => onChange(option.value)}
+                aria-disabled={busy && !optionDisabled ? true : undefined}
+                onChange={() => {
+                  if (!busy) onChange(option.value);
+                }}
                 className="h-5 w-5 shrink-0 accent-ink"
               />
               <span className="min-w-0">

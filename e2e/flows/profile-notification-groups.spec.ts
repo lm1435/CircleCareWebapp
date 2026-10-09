@@ -197,6 +197,35 @@ test.describe('Profile: notification groups', () => {
     }
   });
 
+  test('keyboard: Space on a group saves it and focus stays on the switch (WCAG 2.4.3)', async ({
+    page,
+    account,
+  }) => {
+    const original = readPrefs(account.userId);
+    try {
+      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      const tips = page.getByRole('switch', { name: 'Daily update & tips' });
+      await expect(tips).toBeVisible({ timeout: 15_000 });
+      const before = await tips.getAttribute('aria-checked');
+      await tips.focus();
+      await page.keyboard.press('Space');
+      // The save runs (the switch is busy) and lands; focus never leaves it.
+      await expect
+        .poll(() => readPrefs(account.userId).tips_and_suggestions, { timeout: 10_000 })
+        .toBe(before !== 'true');
+      await expect(tips).not.toHaveAttribute('aria-disabled', 'true');
+      await expect(tips).toBeFocused();
+      // So the next Space turns it straight back.
+      await page.keyboard.press('Space');
+      await expect
+        .poll(() => readPrefs(account.userId).tips_and_suggestions, { timeout: 10_000 })
+        .toBe(before === 'true');
+      await expect(tips).toBeFocused();
+    } finally {
+      writePrefs(account.userId, original);
+    }
+  });
+
   test('Spanish: group names and "Algunas desactivadas" with a mixed seed', async ({ page, account }) => {
     test.slow();
     const original = readPrefs(account.userId);

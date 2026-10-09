@@ -123,4 +123,23 @@ describe('RadioGroup', () => {
     expect(row.className).toContain('cursor-pointer');
     expect(row.className).not.toContain('cursor-not-allowed');
   });
+
+  it('busy (a save in flight) keeps the focused radio focusable and ignores choices (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <RadioGroup label="Repeat" options={OPTIONS} value="daily" onChange={onChange} />
+    );
+    const daily = screen.getByRole('radio', { name: 'Daily' });
+    await user.click(daily);
+    expect(daily).toHaveFocus();
+    rerender(<RadioGroup label="Repeat" options={OPTIONS} value="daily" onChange={onChange} busy />);
+    expect(daily).toHaveFocus();
+    expect(daily).not.toBeDisabled();
+    expect(daily).toHaveAttribute('aria-disabled', 'true');
+    await user.click(screen.getByRole('radio', { name: /^Weekly/ }));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(daily).toBeChecked();
+  });
 });
+

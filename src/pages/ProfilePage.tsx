@@ -648,10 +648,11 @@ export default function ProfilePage(): ReactElement {
           label={t('sections.language')}
           value={(user.language as SupportedLanguage) ?? 'en'}
           onChange={handleLanguage}
-          disabled={updateProfile.isPending || saveName.isPending}
+          busy={updateProfile.isPending || saveName.isPending}
           options={(Object.keys(supportedLanguages) as SupportedLanguage[]).map((code) => ({
             value: code,
-            label: t(`language.names.${code}`),
+            // Endonyms ("Deutsch", "Français"): each is in its own language (WCAG 3.1.2).
+            label: <span lang={code}>{t(`language.names.${code}`)}</span>,
           }))}
         />
       </SettingsCard>
@@ -689,7 +690,7 @@ export default function ProfilePage(): ReactElement {
                 <Toggle
                   checked={groupOn(prefs, group)}
                   onChange={(next) => handleNotifGroup(group, next)}
-                  disabled={updateNotif.isPending}
+                  busy={updateNotif.isPending}
                   label={copy[group].title}
                   hint={
                     <>
@@ -718,7 +719,7 @@ export default function ProfilePage(): ReactElement {
             <Toggle
               checked={quietEnabled}
               onChange={handleQuietEnabledToggle}
-              disabled={updateQuiet.isPending}
+              busy={updateQuiet.isPending}
               label={t('quietHours.enable')}
             />
           </div>
@@ -762,7 +763,7 @@ export default function ProfilePage(): ReactElement {
           label={t('units.weight')}
           value={weightUnit}
           onChange={handleWeightUnit}
-          disabled={updateUnits.isPending}
+          busy={updateUnits.isPending}
           options={[
             { value: 'lbs', label: t('units.lbs') },
             { value: 'kg', label: t('units.kg') },
@@ -772,7 +773,7 @@ export default function ProfilePage(): ReactElement {
           label={t('units.glucose')}
           value={glucoseUnit}
           onChange={handleGlucoseUnit}
-          disabled={updateUnits.isPending}
+          busy={updateUnits.isPending}
           options={[
             { value: 'mg/dL', label: t('units.mgdl') },
             { value: 'mmol/L', label: t('units.mmoll') },
@@ -813,7 +814,7 @@ export default function ProfilePage(): ReactElement {
             <Toggle
               checked={Boolean(user.email_digest_enabled)}
               onChange={handleDigestEnabled}
-              disabled={updateDigest.isPending}
+              busy={updateDigest.isPending}
               label={t('emailDigest.enable')}
               // Premium users already have the digest — only free users need the note.
               hint={isPremium ? undefined : t('emailDigest.premiumNote')}

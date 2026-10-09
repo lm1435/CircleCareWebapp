@@ -11,6 +11,13 @@ export interface ToggleProps {
   /** Optional helper text below the label (referenced by aria-describedby). */
   hint?: ReactNode;
   disabled?: boolean;
+  /**
+   * A save is in flight: the switch ignores presses but STAYS focusable
+   * (`aria-disabled`, not `disabled`). A native `disabled` on the focused switch
+   * drops keyboard focus to <body>, so the next Tab restarts at the top of the
+   * page (WCAG 2.4.3). Use `disabled` only for a switch that is unavailable.
+   */
+  busy?: boolean;
   /** Optional explicit id; auto-generated otherwise. */
   id?: string;
 }
@@ -30,6 +37,7 @@ export function Toggle({
   label,
   hint,
   disabled = false,
+  busy = false,
   id,
 }: ToggleProps): ReactNode {
   const generatedId = useId();
@@ -43,7 +51,7 @@ export function Toggle({
         <label
           id={labelId}
           htmlFor={switchId}
-          className={disabled ? `block ${INPUT_SHELL_DISABLED}` : 'block'}
+          className={disabled || busy ? `block ${INPUT_SHELL_DISABLED}` : 'block'}
         >
           <Text variant="label" as="span">
             {label}
@@ -63,9 +71,12 @@ export function Toggle({
         aria-labelledby={labelId}
         aria-describedby={hint ? hintId : undefined}
         disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={`group inline-flex shrink-0 items-center rounded-full py-2.5 disabled:cursor-not-allowed ${
-          disabled ? INPUT_SHELL_DISABLED : ''
+        aria-disabled={busy && !disabled ? true : undefined}
+        onClick={() => {
+          if (!busy) onChange(!checked);
+        }}
+        className={`group inline-flex shrink-0 items-center rounded-full py-2.5 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed ${
+          disabled || busy ? INPUT_SHELL_DISABLED : ''
         }`}
       >
         {/* Transparent py-2.5 keeps a ≥44px touch target; the VISIBLE track is a

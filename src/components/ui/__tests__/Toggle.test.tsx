@@ -65,4 +65,24 @@ describe('Toggle', () => {
     expect(control).toBeDisabled();
     expect(control.className).toContain('opacity-50');
   });
+
+  it('busy (a save in flight) keeps focus on the switch and ignores presses (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(<Toggle checked onChange={onChange} label="Tips" />);
+    const control = screen.getByRole('switch', { name: 'Tips' });
+    await user.tab();
+    expect(control).toHaveFocus();
+    // The parent marks it busy while the PATCH runs: still focused, not `disabled`.
+    rerender(<Toggle checked onChange={onChange} label="Tips" busy />);
+    expect(control).toHaveFocus();
+    expect(control).not.toBeDisabled();
+    expect(control).toHaveAttribute('aria-disabled', 'true');
+    await user.keyboard(' ');
+    expect(onChange).not.toHaveBeenCalled();
+    rerender(<Toggle checked onChange={onChange} label="Tips" />);
+    expect(control).not.toHaveAttribute('aria-disabled');
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenCalledWith(false);
+  });
 });
