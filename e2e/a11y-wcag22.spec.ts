@@ -337,6 +337,29 @@ test.describe('keyboard', () => {
     await expect(page.locator('main#main')).toBeFocused();
   });
 
+  // 2.4.3: an in-content link unmounts with the page it was on. RouteFocus
+  // lands focus on the new page's <h1> (tabindex -1, out of the Tab order)
+  // instead of <body>, so the next Tab continues in the new page, not at the
+  // skip link. Any in-app link inside Overview's <main> (no #hash) will do.
+  test('an in-content link moves focus to the new page heading, not <body>', async ({ page, circleId }) => {
+    await open(page, `/circles/${circleId}`);
+    const link = page
+      .locator(`main a[href^="/circles/${circleId}/"]:not([href*="#"])`)
+      .filter({ visible: true })
+      .first();
+    await expect(link).toBeVisible({ timeout: 20_000 });
+    const href = await link.getAttribute('href');
+    await link.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new RegExp(`${href!.split('?')[0]}(\\?|$)`));
+    const heading = page.locator('main h1').first();
+    await expect(heading).toBeFocused({ timeout: 20_000 });
+    await expect(heading).toHaveAttribute('tabindex', '-1');
+    await page.keyboard.press('Tab');
+    const inMain = await page.evaluate(() => !!document.activeElement?.closest('main'));
+    expect(inMain, 'next Tab after the page change should stay in <main>').toBe(true);
+  });
+
   // 2.4.3: Confirm is replaced by its Undo badge; focus must not fall to
   // <body>. Undo is pressed inside the 5s window, so nothing is recorded.
   //

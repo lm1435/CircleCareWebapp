@@ -2,6 +2,7 @@ import { lazy, type ReactElement } from 'react';
 import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthGuard } from '@/components/AuthGuard';
 import { PageviewTracker } from '@/components/PageviewTracker';
+import { RouteFocus } from '@/components/RouteFocus';
 import { RouteTitle } from '@/components/RouteTitle';
 import { CircleRoute } from '@/components/layout/CircleRoute';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
@@ -54,13 +55,16 @@ function OpenRedirect(): ReactElement {
 }
 
 export const router = createBrowserRouter([
-  // Root layout: keeps the per-route document <title> (RouteTitle) in sync and
-  // fires sanitized $pageview events (PageviewTracker) for every path while
-  // leaving each page's own rendering untouched (WCAG 2.4.2).
+  // Root layout: keeps the per-route document <title> (RouteTitle) in sync,
+  // moves focus to the new page's heading after an in-app page change
+  // (RouteFocus, WCAG 2.4.3) and fires sanitized $pageview events
+  // (PageviewTracker) for every path while leaving each page's own rendering
+  // untouched (WCAG 2.4.2).
   {
     element: (
       <>
         <RouteTitle />
+        <RouteFocus />
         <PageviewTracker />
         <Outlet />
       </>
