@@ -311,17 +311,22 @@ export function WeekView({
             {title}
           </span>
           {(showTime || inactive) && (
-            <span className="flex shrink-0 items-baseline gap-1">
+            // The time can carry the recipient's zone ("1:00 PM (New York)"
+            // when the viewer is elsewhere), which is wider than a narrow lane.
+            // It truncates with an ellipsis instead of being cut off by the
+            // chip (WCAG 1.4.10, mobile numberOfLines={1} parity); the full
+            // time is always in the button's aria-label.
+            <span className="flex min-w-0 max-w-full items-baseline gap-1">
               {showTime && (
                 <span
-                  className={`shrink-0 font-normal tracking-wider text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
+                  className={`min-w-0 truncate font-normal tracking-wider text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
                 >
                   {timeLabel}
                 </span>
               )}
               {inactive && (
                 <span
-                  className={`shrink-0 font-normal tracking-wider text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
+                  className={`min-w-0 truncate font-normal tracking-wider text-[11px] leading-[14px] ${getEventTextClass(event, status)}`}
                 >
                   {inactiveLabel}
                 </span>

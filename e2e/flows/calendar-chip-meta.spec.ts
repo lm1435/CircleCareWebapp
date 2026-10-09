@@ -279,16 +279,44 @@ async function assertChipFits(c: Locator, label: string): Promise<{ chip: Box; p
   return boxes;
 }
 
+/**
+ * The chip's box relative to its own day cell, measured in ONE layout frame.
+ * The timed grid is its own scroller and `assertChipFits` scrolls each chip
+ * into view, so viewport rects of chips at different hours (the 1-lane group:
+ * single and short sit in different free slots, which depend on what the demo
+ * circle has on today) come from different scroll offsets and are not
+ * comparable. Cell-relative coordinates move with the scroller and are.
+ */
+async function chipInCell(c: Locator): Promise<{ box: Box; cellWidth: number }> {
+  return c.evaluate((el) => {
+    const cell = el.closest('[role="gridcell"]') as HTMLElement;
+    const r = el.getBoundingClientRect();
+    const cr = cell.getBoundingClientRect();
+    return {
+      box: {
+        x: r.left - cr.left,
+        y: r.top - cr.top,
+        w: r.width,
+        h: r.height,
+        tag: el.tagName,
+        testid: null,
+        text: '',
+        overflowX: false,
+        ellipsis: false,
+      },
+      cellWidth: cr.width,
+    };
+  });
+}
+
 async function assertLaneGroup(page: Page, date: string, titles: string[], label: string): Promise<void> {
-  const cell = await dayCell(page, date).last().boundingBox();
-  expect(cell).not.toBeNull();
   const boxes: Box[] = [];
   for (const title of titles) {
-    const b = (await assertChipFits(chip(page, date, title), `${label}/${title}`)).chip;
-    expect(b.x, `${label}: ${title} starts left of its day column`).toBeGreaterThanOrEqual(cell!.x - EPS);
-    expect(b.x + b.w, `${label}: ${title} runs past its day column`).toBeLessThanOrEqual(
-      cell!.x + cell!.width + EPS
-    );
+    const c = chip(page, date, title);
+    await assertChipFits(c, `${label}/${title}`);
+    const { box: b, cellWidth } = await chipInCell(c);
+    expect(b.x, `${label}: ${title} starts left of its day column`).toBeGreaterThanOrEqual(-EPS);
+    expect(b.x + b.w, `${label}: ${title} runs past its day column`).toBeLessThanOrEqual(cellWidth + EPS);
     boxes.push(b);
   }
   for (let i = 0; i < boxes.length; i++) {
@@ -470,6 +498,55 @@ test.describe('Week chip: assignee + note count (mobile TimelineEventBlock parit
       await deleteEventById(session, circleId, id);
     }
   });
+});
+
+// The viewer sits in a different zone from the recipient, so every time label
+// carries the recipient's zone ("1:00 PM (Denver)", or "(New York)" for a New
+// York circle). That suffix is wider than a 2-lane chip: before 2026-10-08 the
+// time span was shrink-0 and the chip's overflow-hidden cut it mid-word (WCAG
+// 1.4.10). It must now truncate with an ellipsis, inside the chip. The
+// calendar's "today" is the RECIPIENT's day, so the viewer zone cannot move
+// the week. Honolulu is no seeded circle's zone, so the suffix always shows.
+test.describe('Week chip time with the recipient zone suffix (viewer elsewhere)', () => {
+  test.use({ timezoneId: 'Pacific/Honolulu' });
+
+  for (const vp of [
+    { name: 'desktop', width: 1280, height: 900 },
+    { name: 'phone', width: 390, height: 844 },
+  ]) {
+    test(`zone-suffixed times truncate inside their chip at ${vp.name} width`, async ({
+      page,
+      request,
+      circleId,
+      account,
+    }) => {
+      test.slow();
+      const session = await apiSession(request, account);
+      const tz = await circleTimezone(session, circleId);
+      const today = dateInTz(tz, 0);
+      const owner = await me(session);
+      const seeded = await seedScenario(session, circleId, today, owner.id);
+      try {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        await gotoCalendarSettled(page, circleId);
+        const pairA = chip(page, today, seeded.pair[0]);
+        await expect(pairA).toBeVisible({ timeout: 20_000 });
+        // Non-vacuous: the suffix is really there (aria-label carries the full time).
+        await expect(pairA).toHaveAttribute('aria-label', /\d{1,2}:\d{2} [AP]M \([^)]+\)/);
+        const pb = await assertChipFits(pairA, `tz/${vp.name}/pairA`);
+        const time = pb.parts.find((p) => /^\d{1,2}:\d{2} [AP]M \(/.test(p.text));
+        expect(time, 'a time line is printed in the 2-lane chip').toBeTruthy();
+        expect(time!.overflowX, 'the zone-suffixed time is wider than a 2-lane chip').toBe(true);
+        await assertChipFits(chip(page, today, seeded.single), `tz/${vp.name}/single`);
+        await assertChipFits(chip(page, today, seeded.short), `tz/${vp.name}/short`);
+        await assertLaneGroup(page, today, seeded.pair, `tz/${vp.name}/2-lane`);
+        await assertLaneGroup(page, today, [seeded.single, seeded.short], `tz/${vp.name}/1-lane`);
+        await shotChip(pairA, `chip-${vp.name}-tz-2lane`);
+      } finally {
+        for (const id of seeded.ids) await deleteEventById(session, circleId, id);
+      }
+    });
+  }
 });
 
 test.describe('Week chip meta in Spanish', () => {

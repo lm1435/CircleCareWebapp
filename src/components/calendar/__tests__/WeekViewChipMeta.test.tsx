@@ -158,6 +158,17 @@ describe('WeekView chip: assignee + note count', () => {
     expect(within(chip).getByTestId('event-chip-notes').className).toMatch(/\bshrink-0\b/);
   });
 
+  it('a zone-suffixed time truncates instead of refusing to shrink (class contract; geometry is e2e)', () => {
+    renderWeek([appt('a')]);
+    const chip = chipFor('Appt a');
+    // The viewer (test process) is not in Chicago, so the time carries the zone.
+    const time = within(chip).getByText(/^10:00 AM \(/);
+    expect(time.className).toMatch(/\bmin-w-0\b.*\btruncate\b/);
+    expect(time.className).not.toMatch(/\bshrink-0\b/);
+    expect((time.parentElement as HTMLElement).className).not.toMatch(/\bshrink-0\b/);
+    expect(chip.getAttribute('aria-label')).toMatch(/10:00 AM \(/);
+  });
+
   it('meta text uses the chip text colour (cream on a pending block)', () => {
     renderWeek([appt('a')]);
     const chip = chipFor('Appt a');
