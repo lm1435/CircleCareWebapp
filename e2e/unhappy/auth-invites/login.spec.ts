@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
 import { generateSignupOtp, API_ERRORS, countRequests, failRequest, holdRequest } from '../../unhappy';
 import { runScopedEmail } from '../../isolation';
+import { checkA11y } from '../../helpers';
 import { captureJson, hasRefreshCookie, uniq } from './_helpers';
 
 // LOGIN unhappy paths (src/pages/LoginPage.tsx, backend POST /api/auth/login).
@@ -84,6 +85,23 @@ test('a 429 tells the user to wait, never the generic "try again" copy', async (
   await signInButton(page).click();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('alert')).toHaveText(RATE_LIMITED, { timeout: 2_000 });
+});
+
+test('AUTH_RATE_LIMITED (1.2.2 copy): announced alert, focus on it, passes axe', async ({ page, account }, testInfo) => {
+  await openLogin(page);
+  await failRequest(page, 'POST', LOGIN, {
+    status: 429,
+    code: 'AUTH_RATE_LIMITED',
+    message: 'Too many auth requests',
+  });
+  await page.locator('#login-email').fill(account.email);
+  await page.locator('#login-password').fill(account.password);
+  await signInButton(page).click();
+  const alert = page.getByRole('alert');
+  await expect(alert).toHaveText('Too many requests right now. Please try again in a moment.', { timeout: 2_000 });
+  // Keyboard and screen-reader users land on the message (WCAG 3.3.1 / 4.1.3).
+  await expect(alert).toBeFocused();
+  await checkA11y(page, '/login (AUTH_RATE_LIMITED)', testInfo, { wcag22: true });
 });
 
 for (const [label, fault] of [

@@ -23,6 +23,11 @@ export interface OtpInputProps {
   error?: string;
   /** id of the error message, wired to the group via aria-describedby. */
   errorId?: string;
+  /**
+   * Space-separated ids of other text that describes the code (a hint, a "we
+   * just sent one" notice), read with the group on entry, after the error.
+   */
+  describedBy?: string;
   disabled?: boolean;
   /** Autofocus the first box on mount. */
   autoFocus?: boolean;
@@ -78,6 +83,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
     label,
     error,
     errorId,
+    describedBy,
     disabled = false,
     autoFocus = false,
     alphanumeric = false,
@@ -199,7 +205,7 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
     <div
       role="group"
       aria-label={label}
-      aria-describedby={error ? groupErrorId : undefined}
+      aria-describedby={[error ? groupErrorId : null, describedBy || null].filter(Boolean).join(' ') || undefined}
       className="flex flex-col gap-1.5"
     >
       <div className="flex gap-2">

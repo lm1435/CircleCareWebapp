@@ -232,7 +232,7 @@ test('a rejected code empties the boxes and focuses box 1; the new code is sent 
   // is described by that same alert, and the focused box still carries its own label.
   const alertId = await page.getByRole('alert').getAttribute('id');
   expect(alertId).toBeTruthy();
-  await expect(page.getByRole('group', { name: '6-digit code' })).toHaveAttribute('aria-describedby', alertId!);
+  await expect(page.getByRole('group', { name: '6-digit code' })).toHaveAttribute('aria-describedby', `${alertId!} verify-otp-hint`);
   await expect(page.getByRole('textbox', { name: 'Digit 1 of 6' })).toBeFocused();
   for (let n = 1; n <= 6; n += 1) await expect(box(page, n)).toHaveAttribute('aria-invalid', 'true');
   for (let n = 1; n <= 6; n += 1) await expect(box(page, n)).toBeEnabled();

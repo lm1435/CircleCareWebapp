@@ -299,9 +299,10 @@ describe('VerifyEmailPage — a rejected code', () => {
     }
     // Screen readers: the alert is announced as it appears, the group still names itself and is
     // described by that same alert, and the focused box keeps its own label.
+    // (The error first, then the expiry hint.)
     expect(screen.getByRole('group', { name: '6-digit code' })).toHaveAttribute(
       'aria-describedby',
-      alert.id
+      `${alert.id} verify-otp-hint`
     );
     expect(screen.getByRole('textbox', { name: 'Digit 1 of 6' })).toHaveFocus();
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -577,9 +578,25 @@ describe('VerifyEmailPage — notices, hint and cooldown', () => {
     expect(screen.getByText('Codes expire — use the newest email.')).toBeInTheDocument();
   });
 
+  it('the code group is described by the expiry hint (WCAG 1.3.1 / 3.3.2)', () => {
+    renderVerify();
+    expect(screen.getByRole('group', { name: '6-digit code' })).toHaveAccessibleDescription(
+      'Codes expire — use the newest email.'
+    );
+  });
+
+  it('an arrival notice is read with the code group, which takes focus (WCAG 4.1.3)', () => {
+    renderWithState({ email: 'pat@example.com', notice: 'rateLimited' });
+    expect(screen.getByRole('group', { name: '6-digit code' })).toHaveAccessibleDescription(
+      'We just sent one — check your inbox (and spam). You can request another in a minute. ' +
+        'Codes expire — use the newest email.'
+    );
+  });
+
   it('a plain arrival (signup) shows no notice and offers the new-code action immediately', () => {
     renderVerify();
-    expect(screen.queryByRole('status')).toBeNull();
+    // The live region is always mounted (so a later notice is announced), but empty.
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
     expect(screen.getByRole('button', { name: 'Send a new code' })).toBeEnabled();
   });
 

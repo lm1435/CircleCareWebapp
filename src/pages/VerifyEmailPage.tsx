@@ -263,15 +263,20 @@ export default function VerifyEmailPage(): ReactElement {
         }
       />
 
-      {notice ? (
-        <div role="status" className="mb-4">
+      {/* Always mounted: a live region that appears together with its text is
+          often not announced, so the in-page "we just sent one" (resend hit the
+          send cooldown) went unheard. The notice and the expiry hint also
+          describe the code group (OtpInput `describedBy`), which takes focus on
+          arrival, so they are read even when the region is not. */}
+      <div role="status" id="verify-otp-notice" className={notice ? 'mb-4' : undefined}>
+        {notice ? (
           <Card variant="filled" padding="sm">
             <Text variant="caption" className="text-ink-2">
               {notice}
             </Text>
           </Card>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
       {error ? (
         <div id="verify-otp-error" role="alert" className="mb-4">
           <Card variant="filled" padding="sm">
@@ -310,6 +315,7 @@ export default function VerifyEmailPage(): ReactElement {
             label={t('verifyOtp.codeLabel')}
             error={error ?? undefined}
             errorId={otpErrorId}
+            describedBy={notice ? 'verify-otp-notice verify-otp-hint' : 'verify-otp-hint'}
             disabled={isVerifying}
             autoFocus={hasStateEmail}
           />
