@@ -206,7 +206,7 @@
     "card": {
       "badge": "Bei Bedarf",
       "give": "Dosis gegeben",
-      "giveA11y": "Dosis von {{name}} gegeben",
+      "giveA11y": "Dosis gegeben: {{name}}",
       "history": "Verlauf",
       "historyA11y": "Verlauf für {{name}}",
       "lastGivenPrefix": "Zuletzt gegeben",

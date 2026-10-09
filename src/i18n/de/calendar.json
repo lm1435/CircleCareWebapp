@@ -15,7 +15,7 @@
   "allDayMoreLabel_one": "{{count}} weiterer ganztägiger Eintrag am {{day}}",
   "allDayMoreLabel_other": "{{count}} weitere ganztägige Einträge am {{day}}",
   "allDayShowFewer": "Weniger anzeigen",
-  "allDayShowFewerLabel": "Weniger ganztägige Einträge am {{day}} anzeigen",
+  "allDayShowFewerLabel": "Weniger anzeigen: ganztägige Einträge am {{day}}",
   "upcoming": "Anstehend",
   "dueSoon": "Bald fällig",
   "noEventsWeek": "Keine Einträge in dieser Woche",
