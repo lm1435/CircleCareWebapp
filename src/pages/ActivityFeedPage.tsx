@@ -6,10 +6,11 @@ import { lastPageAllHidden, visibleActivities } from '@/components/activity/acti
 import { ActivityItem } from '@/components/activity/ActivityItem';
 import { LatestHero } from '@/components/activity/LatestHero';
 import { formatDayLabel, getLocalDateKey } from '@/components/activity/activityFormat';
-import { Button, Card, EmptyState, Skeleton, Text } from '@/components/ui';
+import { Button, Card, EmptyState, Icon, Skeleton, Text } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
 import { useCircle } from '@/hooks/useCircle';
+import { useLatestDailyUpdatePath } from '@/hooks/useDailyUpdate';
 import { Analytics } from '@/lib/analytics';
 
 // Activity feed page (Task 17, web mobile-parity wave; mirrors mobile's
@@ -26,7 +27,8 @@ interface DayGroup {
 
 export default function ActivityFeedPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
-  const { t } = useTranslation(['activity', 'common']);
+  const { t } = useTranslation(['activity', 'common', 'dailyUpdate']);
+  const dailyUpdatePath = useLatestDailyUpdatePath(circleId);
   // `canEdit` gates the empty-state invite CTA — view-only members can't invite.
   //
   // The timezone is null until the circle detail lands; parameterized rows fall
@@ -126,6 +128,24 @@ export default function ActivityFeedPage(): ReactElement {
         title={t('activity:title')}
         subtitle={t('activity:subtitle')}
       />
+
+      {/* The way back to the daily updates (docs/plans/daily-update.md "Design
+          v2 B2"): opens the latest one; hidden while the feature is off for
+          this viewer or the viewer is the care recipient. */}
+      {dailyUpdatePath ? (
+        <div className="px-5 pb-4">
+          <Link
+            to={dailyUpdatePath}
+            data-testid="activity-daily-updates-link"
+            className="flex min-h-11 items-center gap-3 border-b border-line-2 py-2.5 no-underline hover:underline underline-offset-2"
+          >
+            <span className="min-w-0 flex-1 text-md font-semibold leading-6 text-moss-deep">
+              {t('dailyUpdate:entry')}
+            </span>
+            <Icon name="chevron-forward" size="inline" className="text-ink-3" />
+          </Link>
+        </div>
+      ) : null}
 
       {showLoading && (
         <div role="status" aria-live="polite" className="px-5">

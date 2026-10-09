@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -126,6 +126,11 @@ interface MedGroup {
   asNeeded: boolean;
   /** The optional plain "what is it for" note (as-needed only). */
   reason: string | null;
+  /**
+   * Every row id and series-root id in this group: the `?medication=<id>`
+   * deep link (a daily-update dose row) opens the group holding that id.
+   */
+  ids: Set<string>;
 }
 
 /**
@@ -249,9 +254,12 @@ function groupMedications(
         daysLeft: null,
         asNeeded: e.as_needed === true,
         reason: e.as_needed === true ? (e.as_needed_reason ?? null) : null,
+        ids: new Set<string>(),
       };
       groups.set(key, group);
     }
+    group.ids.add(e.id);
+    group.ids.add(getSeriesRoot(e));
 
     // Prefer an ACTIVE series-root row as the representative (Edit/Delete/
     // Discontinue target it) — see representativeScore above.
@@ -615,6 +623,25 @@ export default function MedicationsPage(): ReactElement {
     () => groupMedications(events, timezone),
     [events, timezone]
   );
+
+  // `?medication=<id>` deep link (the daily update's dose rows): open that
+  // medication's detail once the roster has loaded, then drop the param so a
+  // reload or Back does not reopen it. Captured once, like the calendar's
+  // `?eventId=` link. An id that matches nothing (deleted) gets a gentle
+  // "This item is no longer available." toast instead.
+  const [pendingMedication] = useState<string | null>(() => searchParams.get('medication'));
+  const medicationLinkHandled = useRef(false);
+  useEffect(() => {
+    if (!pendingMedication || medicationLinkHandled.current) return;
+    if (rosterQuery.isLoading || timezone === null) return;
+    medicationLinkHandled.current = true;
+    const match = [...active, ...inactive].find((g) => g.ids.has(pendingMedication));
+    if (match) setDetailGroup(match);
+    else showToast(t('dailyUpdate:itemUnavailable'), 'info');
+    const next = new URLSearchParams(searchParams);
+    next.delete('medication');
+    setSearchParams(next, { replace: true });
+  }, [pendingMedication, rosterQuery.isLoading, timezone, active, inactive, searchParams, setSearchParams, showToast, t]);
 
   // AS-NEEDED (PRN): one summary read for the circle ("last dose" per active
   // as-needed medication), only when the roster has any. The give flow, the

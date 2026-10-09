@@ -1,22 +1,11 @@
 {
   "eyebrow": "Le point du jour",
-  "heading": "Le point sur {{name}}",
-  "headingSelfFallback": "Le point d’aujourd’hui",
   "sections": {
-    "soFar": "Aujourd’hui jusqu’ici",
     "stillToDo": "Reste à faire",
-    "happened": "Ce qui s’est passé",
-    "notDone": "Non fait ce jour-là"
-  },
-  "doses": {
-    "taken_one": "{{count}} dose prise",
-    "taken_other": "{{count}} doses prises",
-    "takenLate_one": "{{count}} dose prise en retard",
-    "takenLate_other": "{{count}} doses prises en retard",
-    "skipped_one": "{{count}} dose sautée",
-    "skipped_other": "{{count}} doses sautées",
-    "notMarkedPast_one": "{{count}} dose non renseignée",
-    "notMarkedPast_other": "{{count}} doses non renseignées"
+    "medications": "Médicaments",
+    "tasks": "Tâches",
+    "appointments": "Rendez-vous",
+    "notes": "Notes"
   },
   "asNeeded": {
     "given_one": "{{count}} dose « si besoin » donnée",
@@ -26,32 +15,19 @@
     "done_one": "{{count}} tâche terminée",
     "done_other": "{{count}} tâches terminées"
   },
-  "appointments": {
-    "today_one": "{{count}} rendez-vous aujourd’hui",
-    "today_other": "{{count}} rendez-vous aujourd’hui",
-    "thatDay_one": "{{count}} rendez-vous ce jour-là",
-    "thatDay_other": "{{count}} rendez-vous ce jour-là"
-  },
-  "notes": {
-    "added_one": "{{count}} note ajoutée par {{names}}",
-    "added_other": "{{count}} notes ajoutées par {{names}}"
-  },
   "names": {
     "two": "{{a}} et {{b}}",
     "twoBeforeI": "{{a}} et {{b}}",
     "many_one": "{{a}}, {{b}} et {{count}} autre",
     "many_other": "{{a}}, {{b}} et {{count}} autres",
-    "former": "un ancien membre"
+    "former": "un ancien membre",
+    "someone": "quelqu’un",
+    "formerTitle": "Un ancien membre",
+    "lovedOne": "votre proche"
   },
   "item": {
-    "doseUpcoming": "{{time}} · {{medication}}",
-    "doseNotMarked": "{{time}} · {{medication}} · Non renseignée",
-    "task": "{{title}} · Pour aujourd’hui",
-    "appointment": "{{time}} · {{title}}",
     "more": "+{{count}} de plus"
   },
-  "nothingLeft": "Plus rien au programme aujourd’hui.",
-  "nothingLeftPast": "Tout ce qui était prévu a été fait.",
   "open": "Voir le point complet",
   "dismissA11y": "Masquer jusqu’à demain",
   "turnOff": "Désactiver",
@@ -64,10 +40,64 @@
   "turnedOffToast": "Point du jour désactivé",
   "soloInvite": "Invitez quelqu’un à le partager",
   "dated": {
-    "eyebrow": "Le point sur {{name}}",
-    "empty": "Rien n’a été enregistré ce jour-là.",
     "unavailable": "Ce point n’est plus disponible."
   },
   "error": "Impossible de charger le point. Réessayez.",
-  "retry": "Réessayer"
+  "retry": "Réessayer",
+  "entry": "Points du jour",
+  "card": {
+    "eyebrow": "Ce soir",
+    "noteFrom": "Une note de {{name}}"
+  },
+  "lead": {
+    "nothingToday": "Rien pour {{name}} aujourd’hui, pour l’instant.",
+    "nothingPast": "Rien n’a été noté pour {{name}}.",
+    "quietToday": "Une journée calme pour {{name}} jusqu’ici.",
+    "quietPast": "Une journée calme pour {{name}}.",
+    "smooth": "Une journée sans accroc pour {{name}}.",
+    "steady": "Une journée régulière pour {{name}}.",
+    "mixed": "Une journée en demi-teinte pour {{name}}."
+  },
+  "clause": {
+    "allOnTime": "toutes les doses à l’heure",
+    "everyTaken": "toutes les doses prises",
+    "mostOnTime": "presque toutes les doses à l’heure",
+    "mostTaken": "presque toutes les doses prises",
+    "ofDue_one": "{{ok}} sur {{count}} dose prise",
+    "ofDue_other": "{{ok}} sur {{count}} doses prises",
+    "notMarked_one": "{{count}} non marquée",
+    "notMarked_other": "{{count}} non marquées",
+    "appointments_one": "un rendez-vous",
+    "appointments_other": "{{count}} rendez-vous",
+    "notesOne_one": "{{names}} a laissé une note",
+    "notesOne_other": "{{names}} a laissé {{count}} notes",
+    "notesMany": "{{names}} ont laissé des notes"
+  },
+  "glance": {
+    "ofDue_one": "{{ok}} sur {{count}} dose prise",
+    "ofDue_other": "{{ok}} sur {{count}} doses prises",
+    "ofDueSoFar_one": "{{ok}} sur {{count}} dose prise jusqu’ici",
+    "ofDueSoFar_other": "{{ok}} sur {{count}} doses prises jusqu’ici",
+    "skipped_one": "{{count}} sautée",
+    "skipped_other": "{{count}} sautées",
+    "toCome_one": "{{count}} à venir",
+    "toCome_other": "{{count}} à venir"
+  },
+  "status": {
+    "takenBy": "Prise, notée par {{name}}",
+    "takenLate": "Prise un peu en retard, notée par {{name}}",
+    "takenLateAt": "Prise à {{time}}, un peu en retard, notée par {{name}}",
+    "skippedBy": "Sautée, notée par {{name}}",
+    "notMarked": "Non marquée",
+    "upcoming": "À venir",
+    "doneBy": "Terminée par {{name}}",
+    "openTask": "Tâche à faire"
+  },
+  "page": {
+    "today": "Aujourd’hui",
+    "prevA11y": "Jour précédent, {{date}}",
+    "nextA11y": "Jour suivant, {{date}}",
+    "navLabel": "Autres jours"
+  },
+  "itemUnavailable": "Cet élément n’est plus disponible. Quelqu’un l’a peut-être supprimé."
 }

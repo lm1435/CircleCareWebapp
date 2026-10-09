@@ -1,22 +1,11 @@
 {
   "eyebrow": "Resumo do dia",
-  "heading": "O dia de {{name}}",
-  "headingSelfFallback": "O resumo de hoje",
   "sections": {
-    "soFar": "Hoje até agora",
     "stillToDo": "Falta fazer",
-    "happened": "O que aconteceu",
-    "notDone": "Ficou pendente nesse dia"
-  },
-  "doses": {
-    "taken_one": "{{count}} dose tomada",
-    "taken_other": "{{count}} doses tomadas",
-    "takenLate_one": "{{count}} dose tomada com atraso",
-    "takenLate_other": "{{count}} doses tomadas com atraso",
-    "skipped_one": "{{count}} dose pulada",
-    "skipped_other": "{{count}} doses puladas",
-    "notMarkedPast_one": "{{count}} dose não marcada",
-    "notMarkedPast_other": "{{count}} doses não marcadas"
+    "medications": "Medicamentos",
+    "tasks": "Tarefas",
+    "appointments": "Consultas",
+    "notes": "Notas"
   },
   "asNeeded": {
     "given_one": "{{count}} dose se necessário dada",
@@ -26,32 +15,19 @@
     "done_one": "{{count}} tarefa concluída",
     "done_other": "{{count}} tarefas concluídas"
   },
-  "appointments": {
-    "today_one": "{{count}} consulta hoje",
-    "today_other": "{{count}} consultas hoje",
-    "thatDay_one": "{{count}} consulta nesse dia",
-    "thatDay_other": "{{count}} consultas nesse dia"
-  },
-  "notes": {
-    "added_one": "{{count}} nota de {{names}}",
-    "added_other": "{{count}} notas de {{names}}"
-  },
   "names": {
     "two": "{{a}} e {{b}}",
     "twoBeforeI": "{{a}} e {{b}}",
     "many_one": "{{a}}, {{b}} e mais {{count}}",
     "many_other": "{{a}}, {{b}} e mais {{count}}",
-    "former": "um ex-membro"
+    "former": "um ex-membro",
+    "someone": "alguém",
+    "formerTitle": "Um ex-membro",
+    "lovedOne": "seu ente querido"
   },
   "item": {
-    "doseUpcoming": "{{time}} · {{medication}}",
-    "doseNotMarked": "{{time}} · {{medication}} · Não marcada",
-    "task": "{{title}} · Para hoje",
-    "appointment": "{{time}} · {{title}}",
     "more": "+{{count}} mais"
   },
-  "nothingLeft": "Nada mais na agenda de hoje.",
-  "nothingLeftPast": "Tudo o que estava na agenda foi feito.",
   "open": "Ver o resumo completo",
   "dismissA11y": "Ocultar até amanhã",
   "turnOff": "Desativar",
@@ -64,10 +40,64 @@
   "turnedOffToast": "Resumo do dia desativado",
   "soloInvite": "Convide alguém para compartilhar isto",
   "dated": {
-    "eyebrow": "O dia de {{name}}",
-    "empty": "Nada foi registrado neste dia.",
     "unavailable": "Este resumo não está mais disponível."
   },
   "error": "Não conseguimos carregar o resumo. Tente de novo.",
-  "retry": "Tentar de novo"
+  "retry": "Tentar de novo",
+  "entry": "Resumos do dia",
+  "card": {
+    "eyebrow": "Esta noite",
+    "noteFrom": "Uma nota de {{name}}"
+  },
+  "lead": {
+    "nothingToday": "Nada registrado para {{name}} hoje ainda.",
+    "nothingPast": "Nada foi registrado para {{name}}.",
+    "quietToday": "Um dia calmo para {{name}} até agora.",
+    "quietPast": "Um dia calmo para {{name}}.",
+    "smooth": "Um dia tranquilo para {{name}}.",
+    "steady": "Um dia estável para {{name}}.",
+    "mixed": "Um dia irregular para {{name}}."
+  },
+  "clause": {
+    "allOnTime": "todas as doses no horário",
+    "everyTaken": "todas as doses tomadas",
+    "mostOnTime": "quase todas as doses no horário",
+    "mostTaken": "quase todas as doses tomadas",
+    "ofDue_one": "{{ok}} de {{count}} dose tomada",
+    "ofDue_other": "{{ok}} de {{count}} doses tomadas",
+    "notMarked_one": "{{count}} não marcada",
+    "notMarked_other": "{{count}} não marcadas",
+    "appointments_one": "uma consulta",
+    "appointments_other": "{{count}} consultas",
+    "notesOne_one": "{{names}} deixou uma nota",
+    "notesOne_other": "{{names}} deixou {{count}} notas",
+    "notesMany": "{{names}} deixaram notas"
+  },
+  "glance": {
+    "ofDue_one": "{{ok}} de {{count}} dose tomada",
+    "ofDue_other": "{{ok}} de {{count}} doses tomadas",
+    "ofDueSoFar_one": "{{ok}} de {{count}} dose tomada até agora",
+    "ofDueSoFar_other": "{{ok}} de {{count}} doses tomadas até agora",
+    "skipped_one": "{{count}} pulada",
+    "skipped_other": "{{count}} puladas",
+    "toCome_one": "{{count}} por vir",
+    "toCome_other": "{{count}} por vir"
+  },
+  "status": {
+    "takenBy": "Tomada, marcada por {{name}}",
+    "takenLate": "Tomada um pouco atrasada, marcada por {{name}}",
+    "takenLateAt": "Tomada às {{time}}, um pouco atrasada, marcada por {{name}}",
+    "skippedBy": "Pulada, marcada por {{name}}",
+    "notMarked": "Não marcada",
+    "upcoming": "Em breve",
+    "doneBy": "Feita por {{name}}",
+    "openTask": "Tarefa aberta"
+  },
+  "page": {
+    "today": "Hoje",
+    "prevA11y": "Dia anterior, {{date}}",
+    "nextA11y": "Dia seguinte, {{date}}",
+    "navLabel": "Outros dias"
+  },
+  "itemUnavailable": "Este item não está mais disponível. Alguém pode tê-lo excluído."
 }

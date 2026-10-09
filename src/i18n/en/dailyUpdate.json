@@ -1,22 +1,11 @@
 {
   "eyebrow": "Daily update",
-  "heading": "{{name}}'s day",
-  "headingSelfFallback": "Today's update",
   "sections": {
-    "soFar": "Today so far",
     "stillToDo": "Still to do",
-    "happened": "What happened",
-    "notDone": "Not done that day"
-  },
-  "doses": {
-    "taken_one": "{{count}} dose taken",
-    "taken_other": "{{count}} doses taken",
-    "takenLate_one": "{{count}} dose taken late",
-    "takenLate_other": "{{count}} doses taken late",
-    "skipped_one": "{{count}} dose skipped",
-    "skipped_other": "{{count}} doses skipped",
-    "notMarkedPast_one": "{{count}} dose not marked",
-    "notMarkedPast_other": "{{count}} doses not marked"
+    "medications": "Medications",
+    "tasks": "Tasks",
+    "appointments": "Appointments",
+    "notes": "Notes"
   },
   "asNeeded": {
     "given_one": "{{count}} as-needed dose given",
@@ -26,32 +15,19 @@
     "done_one": "{{count}} task done",
     "done_other": "{{count}} tasks done"
   },
-  "appointments": {
-    "today_one": "{{count}} appointment today",
-    "today_other": "{{count}} appointments today",
-    "thatDay_one": "{{count}} appointment that day",
-    "thatDay_other": "{{count}} appointments that day"
-  },
-  "notes": {
-    "added_one": "{{count}} note from {{names}}",
-    "added_other": "{{count}} notes from {{names}}"
-  },
   "names": {
     "two": "{{a}} and {{b}}",
     "twoBeforeI": "{{a}} and {{b}}",
     "many_one": "{{a}}, {{b}} and {{count}} other",
     "many_other": "{{a}}, {{b}} and {{count}} others",
-    "former": "a former member"
+    "former": "a former member",
+    "someone": "someone",
+    "formerTitle": "A former member",
+    "lovedOne": "your loved one"
   },
   "item": {
-    "doseUpcoming": "{{time}} · {{medication}}",
-    "doseNotMarked": "{{time}} · {{medication}} · Not marked",
-    "task": "{{title}} · Due today",
-    "appointment": "{{time}} · {{title}}",
     "more": "+{{count}} more"
   },
-  "nothingLeft": "Nothing else on the schedule today.",
-  "nothingLeftPast": "Everything on the schedule was done.",
   "open": "See the full update",
   "dismissA11y": "Hide until tomorrow",
   "turnOff": "Turn off",
@@ -64,10 +40,64 @@
   "turnedOffToast": "Daily update turned off",
   "soloInvite": "Invite someone to share this",
   "dated": {
-    "eyebrow": "{{name}}'s day",
-    "empty": "Nothing was recorded on this day.",
     "unavailable": "This update is no longer available."
   },
   "error": "We couldn't load the update. Try again.",
-  "retry": "Try again"
+  "retry": "Try again",
+  "entry": "Daily updates",
+  "card": {
+    "eyebrow": "This evening",
+    "noteFrom": "A note from {{name}}"
+  },
+  "lead": {
+    "nothingToday": "Nothing for {{name}} yet today.",
+    "nothingPast": "Nothing was recorded for {{name}}.",
+    "quietToday": "A quiet day for {{name}} so far.",
+    "quietPast": "A quiet day for {{name}}.",
+    "smooth": "A smooth day for {{name}}.",
+    "steady": "A steady day for {{name}}.",
+    "mixed": "A mixed day for {{name}}."
+  },
+  "clause": {
+    "allOnTime": "all doses on time",
+    "everyTaken": "every dose taken",
+    "mostOnTime": "most doses on time",
+    "mostTaken": "most doses taken",
+    "ofDue_one": "{{ok}} of {{count}} dose taken",
+    "ofDue_other": "{{ok}} of {{count}} doses taken",
+    "notMarked_one": "{{count}} not marked",
+    "notMarked_other": "{{count}} not marked",
+    "appointments_one": "an appointment",
+    "appointments_other": "{{count}} appointments",
+    "notesOne_one": "{{names}} left a note",
+    "notesOne_other": "{{names}} left {{count}} notes",
+    "notesMany": "{{names}} left notes"
+  },
+  "glance": {
+    "ofDue_one": "{{ok}} of {{count}} dose taken",
+    "ofDue_other": "{{ok}} of {{count}} doses taken",
+    "ofDueSoFar_one": "{{ok}} of {{count}} dose taken so far",
+    "ofDueSoFar_other": "{{ok}} of {{count}} doses taken so far",
+    "skipped_one": "{{count}} skipped",
+    "skipped_other": "{{count}} skipped",
+    "toCome_one": "{{count}} to come",
+    "toCome_other": "{{count}} to come"
+  },
+  "status": {
+    "takenBy": "Taken by {{name}}",
+    "takenLate": "Taken by {{name}}, a little late",
+    "takenLateAt": "Taken by {{name}} at {{time}}, a little late",
+    "skippedBy": "Skipped by {{name}}",
+    "notMarked": "Not marked",
+    "upcoming": "Coming up",
+    "doneBy": "Done by {{name}}",
+    "openTask": "Open task"
+  },
+  "page": {
+    "today": "Today",
+    "prevA11y": "Previous day, {{date}}",
+    "nextA11y": "Next day, {{date}}",
+    "navLabel": "Other days"
+  },
+  "itemUnavailable": "This item is no longer available. Someone may have deleted it."
 }

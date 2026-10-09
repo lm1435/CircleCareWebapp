@@ -1,22 +1,11 @@
 {
   "eyebrow": "Riepilogo del giorno",
-  "heading": "La giornata di {{name}}",
-  "headingSelfFallback": "Il riepilogo di oggi",
   "sections": {
-    "soFar": "Oggi finora",
     "stillToDo": "Ancora da fare",
-    "happened": "Cosa è successo",
-    "notDone": "Non fatto quel giorno"
-  },
-  "doses": {
-    "taken_one": "{{count}} dose presa",
-    "taken_other": "{{count}} dosi prese",
-    "takenLate_one": "{{count}} dose presa in ritardo",
-    "takenLate_other": "{{count}} dosi prese in ritardo",
-    "skipped_one": "{{count}} dose saltata",
-    "skipped_other": "{{count}} dosi saltate",
-    "notMarkedPast_one": "{{count}} dose non segnata",
-    "notMarkedPast_other": "{{count}} dosi non segnate"
+    "medications": "Farmaci",
+    "tasks": "Attività",
+    "appointments": "Appuntamenti",
+    "notes": "Note"
   },
   "asNeeded": {
     "given_one": "{{count}} dose al bisogno data",
@@ -26,32 +15,19 @@
     "done_one": "{{count}} attività completata",
     "done_other": "{{count}} attività completate"
   },
-  "appointments": {
-    "today_one": "{{count}} appuntamento oggi",
-    "today_other": "{{count}} appuntamenti oggi",
-    "thatDay_one": "{{count}} appuntamento quel giorno",
-    "thatDay_other": "{{count}} appuntamenti quel giorno"
-  },
-  "notes": {
-    "added_one": "{{count}} nota di {{names}}",
-    "added_other": "{{count}} note di {{names}}"
-  },
   "names": {
     "two": "{{a}} e {{b}}",
     "twoBeforeI": "{{a}} e {{b}}",
     "many_one": "{{a}}, {{b}} e {{count}} altro",
     "many_other": "{{a}}, {{b}} e altri {{count}}",
-    "former": "un ex membro"
+    "former": "un ex membro",
+    "someone": "qualcuno",
+    "formerTitle": "Un ex membro",
+    "lovedOne": "la persona cara"
   },
   "item": {
-    "doseUpcoming": "{{time}} · {{medication}}",
-    "doseNotMarked": "{{time}} · {{medication}} · Non segnata",
-    "task": "{{title}} · In scadenza oggi",
-    "appointment": "{{time}} · {{title}}",
     "more": "+{{count}} altri"
   },
-  "nothingLeft": "Nient’altro in programma oggi.",
-  "nothingLeftPast": "Tutto ciò che era in programma è stato fatto.",
   "open": "Vedi il riepilogo completo",
   "dismissA11y": "Nascondi fino a domani",
   "turnOff": "Disattiva",
@@ -64,10 +40,64 @@
   "turnedOffToast": "Riepilogo del giorno disattivato",
   "soloInvite": "Invita qualcuno a condividerlo",
   "dated": {
-    "eyebrow": "La giornata di {{name}}",
-    "empty": "Non è stato registrato nulla in questo giorno.",
     "unavailable": "Questo riepilogo non è più disponibile."
   },
   "error": "Non è stato possibile caricare il riepilogo. Riprova.",
-  "retry": "Riprova"
+  "retry": "Riprova",
+  "entry": "Riepiloghi del giorno",
+  "card": {
+    "eyebrow": "Stasera",
+    "noteFrom": "Una nota di {{name}}"
+  },
+  "lead": {
+    "nothingToday": "Ancora niente per {{name}} oggi.",
+    "nothingPast": "Non è stato registrato niente per {{name}}.",
+    "quietToday": "Una giornata tranquilla per {{name}}, finora.",
+    "quietPast": "Una giornata tranquilla per {{name}}.",
+    "smooth": "Una giornata serena per {{name}}.",
+    "steady": "Una giornata regolare per {{name}}.",
+    "mixed": "Una giornata altalenante per {{name}}."
+  },
+  "clause": {
+    "allOnTime": "tutte le dosi in orario",
+    "everyTaken": "ogni dose presa",
+    "mostOnTime": "quasi tutte le dosi in orario",
+    "mostTaken": "quasi tutte le dosi prese",
+    "ofDue_one": "{{ok}} su {{count}} dose presa",
+    "ofDue_other": "{{ok}} su {{count}} dosi prese",
+    "notMarked_one": "{{count}} non segnata",
+    "notMarked_other": "{{count}} non segnate",
+    "appointments_one": "un appuntamento",
+    "appointments_other": "{{count}} appuntamenti",
+    "notesOne_one": "{{names}} ha lasciato una nota",
+    "notesOne_other": "{{names}} ha lasciato {{count}} note",
+    "notesMany": "{{names}} hanno lasciato delle note"
+  },
+  "glance": {
+    "ofDue_one": "{{ok}} su {{count}} dose presa",
+    "ofDue_other": "{{ok}} su {{count}} dosi prese",
+    "ofDueSoFar_one": "{{ok}} su {{count}} dose presa finora",
+    "ofDueSoFar_other": "{{ok}} su {{count}} dosi prese finora",
+    "skipped_one": "{{count}} saltata",
+    "skipped_other": "{{count}} saltate",
+    "toCome_one": "{{count}} ancora da prendere",
+    "toCome_other": "{{count}} ancora da prendere"
+  },
+  "status": {
+    "takenBy": "Presa, segnata da {{name}}",
+    "takenLate": "Presa un po' in ritardo, segnata da {{name}}",
+    "takenLateAt": "Presa alle {{time}}, un po' in ritardo, segnata da {{name}}",
+    "skippedBy": "Saltata, segnata da {{name}}",
+    "notMarked": "Non segnata",
+    "upcoming": "In arrivo",
+    "doneBy": "Completata da {{name}}",
+    "openTask": "Attività da fare"
+  },
+  "page": {
+    "today": "Oggi",
+    "prevA11y": "Giorno precedente, {{date}}",
+    "nextA11y": "Giorno successivo, {{date}}",
+    "navLabel": "Altri giorni"
+  },
+  "itemUnavailable": "Questo elemento non è più disponibile. Forse qualcuno lo ha eliminato."
 }

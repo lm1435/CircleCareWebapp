@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { CalendarEvent } from '@/api/calendarEvents';
+import { getSeriesRoot as fetchEventRow, type CalendarEvent } from '@/api/calendarEvents';
 import { Button, Card, CircleButton, EmptyState, Icon, SegmentedControl, useToast } from '@/components/ui';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { PageMasthead } from '@/components/layout/PageMasthead';
@@ -114,7 +114,7 @@ export default function CalendarPage(): ReactElement {
   // effect below scrubs it from the URL. An incomplete/malformed pair (no
   // `date`, no `eventId`, or a non-YYYY-MM-DD date) is dropped right here; the
   // page then renders exactly as it would with no params at all.
-  const [pendingNoteLink] = useState<PendingNoteLink | null>(() => {
+  const [datedLink] = useState<PendingNoteLink | null>(() => {
     const date = searchParams.get('date');
     const eventId = searchParams.get('eventId');
     if (date && DATE_PARAM_RE.test(date) && eventId) {
@@ -122,7 +122,20 @@ export default function CalendarPage(): ReactElement {
     }
     return null;
   });
+  // `?eventId=` ALONE (a daily update's completed-task row): the row's own
+  // date is not in the link — a task can be completed on another day than
+  // its schedule — so it is read from GET /events/:id first, then handled
+  // exactly like a dated link. A 404 (deleted) reads "This item is no longer
+  // available." instead of an error.
+  const [idOnlyLink] = useState<string | null>(() => {
+    const date = searchParams.get('date');
+    const eventId = searchParams.get('eventId');
+    return !date && eventId ? eventId : null;
+  });
+  const [resolvedLink, setResolvedLink] = useState<PendingNoteLink | null>(null);
+  const pendingNoteLink = datedLink ?? resolvedLink;
   const noteLinkHandledRef = useRef(false);
+  const idOnlyStartedRef = useRef(false);
   // Set once the deep link's match is found and `panel=notes` — consumed by
   // the effect below to scroll to the notes panel once the modal is open.
   const scrollToNotesRef = useRef(false);
@@ -281,6 +294,28 @@ export default function CalendarPage(): ReactElement {
   // what stops a second pass, because the params are cleared as part of the
   // SAME effect run that found (or missed) the match.
   useEffect(() => {
+    if (!idOnlyLink || idOnlyStartedRef.current || !circleId) return;
+    idOnlyStartedRef.current = true;
+    fetchEventRow(circleId, idOnlyLink)
+      .then((row) => {
+        setAnchorOverride(row.scheduled_date);
+        setResolvedLink({
+          date: row.scheduled_date,
+          eventId: idOnlyLink,
+          panel: searchParams.get('panel'),
+        });
+      })
+      .catch(() => {
+        noteLinkHandledRef.current = true;
+        showToast(t('dailyUpdate:itemUnavailable'), 'info');
+        const next = new URLSearchParams(searchParams);
+        next.delete('eventId');
+        next.delete('panel');
+        setSearchParams(next, { replace: true });
+      });
+  }, [idOnlyLink, circleId, searchParams, setSearchParams, showToast, t]);
+
+  useEffect(() => {
     if (!pendingNoteLink || noteLinkHandledRef.current) return;
     if (isLoading || eventsQuery.isFetching) return;
 
@@ -292,7 +327,12 @@ export default function CalendarPage(): ReactElement {
     } else {
       // Edge case (plan): "Web deep link to an event that no longer exists:
       // calendar opens at the date with no modal and a toast."
-      showToast(t('calendar:noteLinkMissing'), 'info');
+      showToast(
+        pendingNoteLink.panel === 'notes'
+          ? t('calendar:noteLinkMissing')
+          : t('dailyUpdate:itemUnavailable'),
+        'info'
+      );
     }
 
     const next = new URLSearchParams(searchParams);

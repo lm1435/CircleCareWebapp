@@ -1,22 +1,11 @@
 {
   "eyebrow": "Tagesübersicht",
-  "heading": "Der Tag von {{name}}",
-  "headingSelfFallback": "Die Übersicht für heute",
   "sections": {
-    "soFar": "Heute bisher",
     "stillToDo": "Noch zu erledigen",
-    "happened": "Was passiert ist",
-    "notDone": "An diesem Tag nicht erledigt"
-  },
-  "doses": {
-    "taken_one": "{{count}} Dosis eingenommen",
-    "taken_other": "{{count}} Dosen eingenommen",
-    "takenLate_one": "{{count}} Dosis verspätet eingenommen",
-    "takenLate_other": "{{count}} Dosen verspätet eingenommen",
-    "skipped_one": "{{count}} Dosis ausgelassen",
-    "skipped_other": "{{count}} Dosen ausgelassen",
-    "notMarkedPast_one": "{{count}} Dosis nicht eingetragen",
-    "notMarkedPast_other": "{{count}} Dosen nicht eingetragen"
+    "medications": "Medikamente",
+    "tasks": "Aufgaben",
+    "appointments": "Termine",
+    "notes": "Notizen"
   },
   "asNeeded": {
     "given_one": "{{count}} Bedarfsdosis gegeben",
@@ -26,32 +15,19 @@
     "done_one": "{{count}} Aufgabe erledigt",
     "done_other": "{{count}} Aufgaben erledigt"
   },
-  "appointments": {
-    "today_one": "{{count}} Termin heute",
-    "today_other": "{{count}} Termine heute",
-    "thatDay_one": "{{count}} Termin an diesem Tag",
-    "thatDay_other": "{{count}} Termine an diesem Tag"
-  },
-  "notes": {
-    "added_one": "{{count}} Notiz von {{names}}",
-    "added_other": "{{count}} Notizen von {{names}}"
-  },
   "names": {
     "two": "{{a}} und {{b}}",
     "twoBeforeI": "{{a}} und {{b}}",
     "many_one": "{{a}}, {{b}} und {{count}} weiteren Person",
     "many_other": "{{a}}, {{b}} und {{count}} weiteren",
-    "former": "einem ehemaligen Mitglied"
+    "former": "einem ehemaligen Mitglied",
+    "someone": "jemandem",
+    "formerTitle": "Ein ehemaliges Mitglied",
+    "lovedOne": "Ihre Angehörigen"
   },
   "item": {
-    "doseUpcoming": "{{time}} · {{medication}}",
-    "doseNotMarked": "{{time}} · {{medication}} · Nicht eingetragen",
-    "task": "{{title}} · Heute fällig",
-    "appointment": "{{time}} · {{title}}",
     "more": "+{{count}} weitere"
   },
-  "nothingLeft": "Heute steht nichts mehr an.",
-  "nothingLeftPast": "Alles Geplante wurde erledigt.",
   "open": "Ganze Übersicht ansehen",
   "dismissA11y": "Bis morgen ausblenden",
   "turnOff": "Ausschalten",
@@ -64,10 +40,64 @@
   "turnedOffToast": "Tagesübersicht ausgeschaltet",
   "soloInvite": "Laden Sie jemanden ein, der sie mitliest",
   "dated": {
-    "eyebrow": "Der Tag von {{name}}",
-    "empty": "An diesem Tag wurde nichts eingetragen.",
     "unavailable": "Diese Übersicht ist nicht mehr verfügbar."
   },
   "error": "Die Übersicht konnte nicht geladen werden. Bitte erneut versuchen.",
-  "retry": "Erneut versuchen"
+  "retry": "Erneut versuchen",
+  "entry": "Tagesübersichten",
+  "card": {
+    "eyebrow": "Heute Abend",
+    "noteFrom": "Eine Notiz von {{name}}"
+  },
+  "lead": {
+    "nothingToday": "Heute noch nichts für {{name}}.",
+    "nothingPast": "Für {{name}} wurde nichts eingetragen.",
+    "quietToday": "Bisher ein ruhiger Tag für {{name}}.",
+    "quietPast": "Ein ruhiger Tag für {{name}}.",
+    "smooth": "Ein reibungsloser Tag für {{name}}.",
+    "steady": "Ein stabiler Tag für {{name}}.",
+    "mixed": "Ein durchwachsener Tag für {{name}}."
+  },
+  "clause": {
+    "allOnTime": "alle Dosen pünktlich",
+    "everyTaken": "jede Dosis eingenommen",
+    "mostOnTime": "die meisten Dosen pünktlich",
+    "mostTaken": "die meisten Dosen eingenommen",
+    "ofDue_one": "{{ok}} von {{count}} Dosis eingenommen",
+    "ofDue_other": "{{ok}} von {{count}} Dosen eingenommen",
+    "notMarked_one": "{{count}} nicht markiert",
+    "notMarked_other": "{{count}} nicht markiert",
+    "appointments_one": "ein Termin",
+    "appointments_other": "{{count}} Termine",
+    "notesOne_one": "{{names}} hat eine Notiz hinterlassen",
+    "notesOne_other": "{{names}} hat {{count}} Notizen hinterlassen",
+    "notesMany": "{{names}} haben Notizen hinterlassen"
+  },
+  "glance": {
+    "ofDue_one": "{{ok}} von {{count}} Dosis eingenommen",
+    "ofDue_other": "{{ok}} von {{count}} Dosen eingenommen",
+    "ofDueSoFar_one": "{{ok}} von {{count}} Dosis bisher eingenommen",
+    "ofDueSoFar_other": "{{ok}} von {{count}} Dosen bisher eingenommen",
+    "skipped_one": "{{count}} ausgelassen",
+    "skipped_other": "{{count}} ausgelassen",
+    "toCome_one": "{{count}} steht noch an",
+    "toCome_other": "{{count}} stehen noch an"
+  },
+  "status": {
+    "takenBy": "Eingenommen, markiert von {{name}}",
+    "takenLate": "Etwas verspätet eingenommen, markiert von {{name}}",
+    "takenLateAt": "Um {{time}} eingenommen, etwas verspätet, markiert von {{name}}",
+    "skippedBy": "Ausgelassen, markiert von {{name}}",
+    "notMarked": "Nicht markiert",
+    "upcoming": "Steht noch an",
+    "doneBy": "Erledigt von {{name}}",
+    "openTask": "Offene Aufgabe"
+  },
+  "page": {
+    "today": "Heute",
+    "prevA11y": "Vorheriger Tag, {{date}}",
+    "nextA11y": "Nächster Tag, {{date}}",
+    "navLabel": "Andere Tage"
+  },
+  "itemUnavailable": "Dieser Eintrag ist nicht mehr verfügbar. Vielleicht hat ihn jemand gelöscht."
 }

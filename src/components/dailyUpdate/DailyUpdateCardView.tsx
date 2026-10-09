@@ -2,107 +2,181 @@ import type { ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { DailyUpdateData } from '@/api/dailyUpdate';
-import { Eyebrow, Icon, Text } from '@/components/ui';
-import { DailyUpdateSections } from './DailyUpdateSections';
+import { Eyebrow, Icon, Sheet } from '@/components/ui';
+import { useHourCycle } from '@/hooks/useHourCycle';
+import { buildDetailLine, buildLead, formatItemTime, noteFromLine } from '@/lib/dailyUpdateCopy';
 import {
-  DAILY_UPDATE_ENTER,
-  DAILY_UPDATE_HAIRLINE,
-  DAILY_UPDATE_LINK,
-  DAILY_UPDATE_QUIET,
-  DAILY_UPDATE_SURFACE,
-} from './surface';
+  appointmentTarget,
+  dailyUpdatePagePath,
+  noteTarget,
+  tasksRowTarget,
+} from '@/lib/dailyUpdateLinks';
 
 export interface DailyUpdateCardViewProps {
   data: DailyUpdateData;
+  circleId: string;
   /** `id` of the heading, for the region's `aria-labelledby`. */
   headingId: string;
-  /** `/circles/:id/daily-update` */
-  openTo: string;
-  /** `/circles/:id/members` — rendered only for a solo owner (D10). */
+  /** `/circles/:id/members` — rendered only for a solo owner. */
   inviteTo: string | null;
   onDismiss: () => void;
   onInvite?: () => void;
   onTurnOff: () => void;
   turnOffDisabled?: boolean;
-  /** Skip the entrance (the harness takes still screenshots). */
-  animate?: boolean;
+}
+
+/** Marks a navigation as coming from the card (daily_update_opened source). */
+const FROM_CARD = { dailyUpdateSource: 'card' } as const;
+
+/**
+ * One short row: a title, an optional quiet second line, a chevron. A row
+ * with no target (the item no longer exists) is plain text with no chevron.
+ */
+function CardRow({
+  to,
+  title,
+  sub,
+  strong = false,
+  onClick,
+  testId,
+}: {
+  to: string | null;
+  title: string;
+  sub?: string | null;
+  strong?: boolean;
+  onClick?: () => void;
+  testId?: string;
+}): ReactElement {
+  const body = (
+    <span className="min-w-0 flex-1">
+      <span
+        className={`block text-md leading-6 ${strong ? 'font-semibold text-moss-deep' : 'text-ink'}`}
+      >
+        {title}
+      </span>
+      {sub ? <span className="block truncate text-sm leading-5 text-ink-2">{sub}</span> : null}
+    </span>
+  );
+  return (
+    <li className="border-t border-line-2" data-testid={testId}>
+      {to ? (
+        <Link
+          to={to}
+          state={FROM_CARD}
+          onClick={onClick}
+          className="-mx-2 flex min-h-11 items-center justify-between gap-3 rounded-md px-2 py-1.5 no-underline transition-colors duration-fast hover:bg-bg"
+        >
+          {body}
+          <Icon
+            name="chevron-forward"
+            size="inline"
+            className={strong ? 'text-moss-deep' : 'text-ink-3'}
+          />
+        </Link>
+      ) : (
+        <div className="flex min-h-11 items-center py-1.5">{body}</div>
+      )}
+    </li>
+  );
 }
 
 /**
- * The Home card, drawn (docs/plans/daily-update.md "Design (Fable)").
+ * The Home card, design v2 "B2" (docs/plans/daily-update.md). A white Sheet
+ * like Home's other cards: eyebrow "This evening", the code-built sentence as
+ * its heading, one muted line of clauses, then rows only for what happened —
+ * tasks done, the first appointment, the first note — and always "See the
+ * full update". No dose list: Home's Medications card right below is that.
  *
- * Pure presentation: `DailyUpdateCard` decides WHETHER it shows and wires
- * the preferences, storage and analytics; this draws it. Split so the e2e
- * harness can mount the exact production markup on fixture data.
- *
- * Reading order: eyebrow → heading → dismiss → "Today so far" → "Still to do"
- * → See the full update → (Invite someone) → Turn off. The X is the only
- * icon on the card and it is a labelled 44px button; every row is plain text.
+ * Pure presentation: `DailyUpdateCard` decides whether it shows and wires
+ * storage, preferences and analytics. Split so the e2e harness can mount the
+ * exact production markup on fixture data.
  */
 export function DailyUpdateCardView({
   data,
+  circleId,
   headingId,
-  openTo,
   inviteTo,
   onDismiss,
   onInvite,
   onTurnOff,
   turnOffDisabled = false,
-  animate = true,
 }: DailyUpdateCardViewProps): ReactElement {
-  const { t } = useTranslation('dailyUpdate');
-  const name = data.recipient_name?.trim();
-  const heading = name ? t('heading', { name }) : t('headingSelfFallback');
+  const { t, i18n } = useTranslation('dailyUpdate');
+  const cycle = useHourCycle();
+  const lead = buildLead(data, t, false);
+  const detail = buildDetailLine(data, t, i18n.language);
+  const time = (v: string | null): string | null =>
+    formatItemTime(v, data.timezone, cycle, i18n.language);
+
+  const tasks = data.tasks_done_detail ?? [];
+  const appointment = data.appointments_detail?.[0] ?? null;
+  const note = data.notes_detail?.[0] ?? null;
 
   return (
-    <section
+    <Sheet
+      as="section"
+      padding="none"
       aria-labelledby={headingId}
       data-testid="daily-update-card"
-      className={`${DAILY_UPDATE_SURFACE} px-5 py-5 ${animate ? DAILY_UPDATE_ENTER : ''}`}
+      className="px-5 pt-4 pb-2"
     >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <Eyebrow color="moss" deep dot>
-            {t('eyebrow')}
-          </Eyebrow>
-          <Text variant="h2" id={headingId} className="mt-1">
-            {heading}
-          </Text>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 pt-1">
+          <Eyebrow color="ink-3">{t('card.eyebrow')}</Eyebrow>
+          <h2 id={headingId} className="m-0 mt-1 text-base font-semibold leading-7 text-ink">
+            {lead}
+          </h2>
         </div>
         <button
           type="button"
           aria-label={t('dismissA11y')}
           onClick={onDismiss}
-          className="-mr-2 -mt-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-fast hover:bg-moss-soft hover:text-ink"
+          className="-mr-3 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-fast hover:bg-bg-2 hover:text-ink"
         >
           <Icon name="close-outline" size="chrome" />
         </button>
       </div>
+      {detail ? <p className="m-0 mt-1 text-md leading-6 text-ink-2">{detail}</p> : null}
 
-      <div className="mt-5">
-        <DailyUpdateSections data={data} past={false} headingLevel="h3" />
-      </div>
-
-      <div
-        className={`mt-4 flex flex-wrap items-center gap-x-5 border-t ${DAILY_UPDATE_HAIRLINE} pt-2`}
-      >
-        <Link to={openTo} state={{ dailyUpdateSource: 'card' }} className={DAILY_UPDATE_LINK}>
-          {t('open')}
-        </Link>
-        {inviteTo ? (
-          <Link to={inviteTo} onClick={onInvite} className={DAILY_UPDATE_LINK}>
-            {t('soloInvite')}
-          </Link>
+      <ul className="m-0 mt-3 list-none p-0">
+        {data.tasks.done > 0 ? (
+          <CardRow
+            testId="daily-update-card-tasks"
+            to={tasksRowTarget(circleId, data)}
+            title={t('tasks.done', { count: data.tasks.done })}
+            sub={tasks.length > 0 ? tasks.map((x) => x.title).join(', ') : null}
+          />
         ) : null}
+        {appointment ? (
+          <CardRow
+            testId="daily-update-card-appointment"
+            to={appointmentTarget(circleId, data.date, appointment)}
+            title={appointment.title}
+            sub={time(appointment.time)}
+          />
+        ) : null}
+        {note ? (
+          <CardRow
+            testId="daily-update-card-note"
+            to={noteTarget(circleId, data.date, note)}
+            title={noteFromLine(note.author_name, t)}
+            sub={note.excerpt}
+          />
+        ) : null}
+        <CardRow to={dailyUpdatePagePath(circleId, null)} title={t('open')} strong />
+        {inviteTo ? <CardRow to={inviteTo} title={t('soloInvite')} onClick={onInvite} /> : null}
+      </ul>
+
+      <div className="border-t border-line-2">
         <button
           type="button"
           onClick={onTurnOff}
           disabled={turnOffDisabled}
-          className={DAILY_UPDATE_QUIET}
+          className="inline-flex min-h-11 items-center text-sm text-ink-2 underline underline-offset-2 hover:text-ink disabled:opacity-50"
         >
           {t('turnOff')}
         </button>
       </div>
-    </section>
+    </Sheet>
   );
 }

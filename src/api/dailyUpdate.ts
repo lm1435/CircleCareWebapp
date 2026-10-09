@@ -31,6 +31,52 @@ export interface DailyUpdateData {
   notes: { count: number; authors: string[]; more_authors: number };
   still_to_do: DailyUpdateStillToDoItem[];
   still_to_do_more: number;
+  // ---- Contract v2 (ADDITIVE, docs/plans/daily-update.md "Design v2 B2").
+  // Optional on purpose: an older backend omits them and the UI falls back to
+  // the counts above (no item rows, no item sections).
+  doses_detail?: DailyUpdateDoseDetail[];
+  tasks_done_detail?: DailyUpdateTaskDetail[];
+  appointments_detail?: DailyUpdateAppointmentDetail[];
+  notes_detail?: DailyUpdateNoteDetail[];
+  nav?: { prev_date: string | null; next_date: string | null };
+}
+
+/** Recipient-local naive times ('HH:MM'); names are first names, null = departed/unknown. */
+export interface DailyUpdateDoseDetail {
+  /** NOT unique: an as-needed dose carries its medication's id, so repeats share it. */
+  event_id: string;
+  /** The medication series (root) id — the Medications page's detail target. */
+  medication_id: string | null;
+  medication_name: string;
+  dosage: string | null;
+  time: string | null;
+  status: 'taken' | 'taken_late' | 'skipped' | 'not_marked' | 'upcoming';
+  marked_by_name: string | null;
+  marked_at: string | null;
+}
+
+export interface DailyUpdateTaskDetail {
+  event_id: string | null;
+  title: string;
+  completed_by_name: string | null;
+  completed_at: string | null;
+}
+
+export interface DailyUpdateAppointmentDetail {
+  event_id: string | null;
+  title: string;
+  time: string | null;
+  location: string | null;
+}
+
+export interface DailyUpdateNoteDetail {
+  note_id: string;
+  kind: 'care' | 'event';
+  event_id: string | null;
+  author_name: string | null;
+  created_at: string;
+  /** '' for a mood-only care note: no excerpt line is shown. */
+  excerpt: string;
 }
 
 /**

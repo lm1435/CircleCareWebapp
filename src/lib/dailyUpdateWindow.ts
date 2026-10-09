@@ -86,3 +86,17 @@ export function formatDailyUpdateDate(date: string, locale: string): string {
     return date;
   }
 }
+
+/** "Wed, Oct 7" for the day arrows (same UTC-noon parsing as above). */
+export function formatDailyUpdateShortDate(date: string, locale: string): string {
+  try {
+    return getCachedDateTimeFormat(locale, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    }).format(new Date(`${date}T12:00:00Z`));
+  } catch {
+    return date;
+  }
+}

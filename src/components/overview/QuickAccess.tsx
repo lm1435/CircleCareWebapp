@@ -4,14 +4,16 @@ import { Icon, IconTile, SectionHeader, Sheet, SheetRowPressable } from '@/compo
 import type { IconName } from '@/components/ui';
 import type { IconTileTone } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
+import { useLatestDailyUpdatePath } from '@/hooks/useDailyUpdate';
 import { Analytics } from '@/lib/analytics';
 
 // Spec §6.3.4 — port of mobile's Quick Access list
 // (CircleDetailScreen.tsx:890-1019 + `utils/quickAccessTabs.ts`).
 //
 // Order is mobile's, in mobile's two groups: the Care destinations first
-// (Notes, Calendar, Meds, Tasks, Vitals) and then the two that have no other
-// way in (Activity feed, Care info). Web draws one continuous list, exactly
+// (Notes, Calendar, Meds, Tasks, Vitals) and then the ones that have no other
+// way in (Daily updates — only while that feature is on for the viewer —,
+// Activity feed, Care info). Web draws one continuous list, exactly
 // as mobile does — mobile's two `<View>` groups exist only so its hairline
 // logic can run per group, and it deliberately keeps the rule between them.
 
@@ -23,6 +25,13 @@ interface QuickAccessRow {
   tone: IconTileTone;
   /** Path segment under `/circles/:circleId`. */
   segment: string;
+  /**
+   * The daily-update row: its path is the LATEST update (today's from 19:00
+   * recipient time when today has activity, else yesterday's), and it is
+   * omitted entirely while that entry is hidden (rollout off, the viewer is
+   * the care recipient, zone unknown). docs/plans/daily-update.md "Design v2 B2".
+   */
+  dailyUpdate?: true;
 }
 
 /**
@@ -41,6 +50,8 @@ export const QUICK_ACCESS_ROWS: readonly QuickAccessRow[] = [
   { id: 'medications', labelKey: 'quickAccess.medications', icon: 'medkit-outline', tone: 'clay', segment: 'meds' },
   { id: 'tasks', labelKey: 'quickAccess.tasks', icon: 'checkbox-outline', tone: 'dusk', segment: 'tasks' },
   { id: 'vitals', labelKey: 'quickAccess.vitals', icon: 'heart-outline', tone: 'moss', segment: 'vitals' },
+  // Between Vitals and Activity feed (mobile's Quick access order, B2).
+  { id: 'dailyUpdates', labelKey: 'dailyUpdate:entry', icon: 'time-outline', tone: 'moss', segment: 'daily-update', dailyUpdate: true },
   { id: 'activityFeed', labelKey: 'quickAccess.activityFeed', icon: 'pulse-outline', tone: 'dusk', segment: 'activity' },
   { id: 'careInfo', labelKey: 'quickAccess.careInfo', icon: 'medical-outline', tone: 'terracotta', segment: 'emergency' },
 ] as const;
@@ -50,7 +61,7 @@ export interface QuickAccessProps {
 }
 
 /**
- * The seven-row navigation Sheet under the adherence card.
+ * The seven-row (eight with Daily updates) navigation Sheet under the adherence card.
  *
  * The open-task count is the ONE live datum in this block (mobile dropped the
  * per-row note lines in 2026-08 because six of the seven merely restated their
@@ -68,7 +79,8 @@ export interface QuickAccessProps {
  * in practice.
  */
 export function QuickAccess({ circleId }: QuickAccessProps): ReactElement {
-  const { t } = useTranslation('overview');
+  const { t } = useTranslation(['overview', 'dailyUpdate']);
+  const dailyUpdatePath = useLatestDailyUpdatePath(circleId);
   const tasksQuery = useTasks(circleId, { status: 'open', limit: 1 });
   const openTaskCount = tasksQuery.data?.total ?? tasksQuery.data?.tasks.length ?? 0;
 
@@ -81,12 +93,14 @@ export function QuickAccess({ circleId }: QuickAccessProps): ReactElement {
           row "first" and erase every rule between them. */}
       <Sheet as="nav" padding="none" className="overflow-hidden" aria-labelledby="quick-access-heading">
         {QUICK_ACCESS_ROWS.map((row) => {
+          if (row.dailyUpdate && dailyUpdatePath === null) return null;
+          const to = row.dailyUpdate && dailyUpdatePath ? dailyUpdatePath : `/circles/${circleId}/${row.segment}`;
           const label = t(row.labelKey);
           const badge = row.id === 'tasks' && openTaskCount > 0 ? openTaskCount : null;
           return (
             <SheetRowPressable
               key={row.id}
-              to={`/circles/${circleId}/${row.segment}`}
+              to={to}
               // Same event + destination id as mobile's `quick_access_tapped`,
               // so one PostHog insight covers both surfaces. The Link still
               // navigates; this only observes the press.

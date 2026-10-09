@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { getDailyUpdate, type DailyUpdateResponse } from '@/api/dailyUpdate';
+import {
+  getDailyUpdate,
+  isDailyUpdateEnabled,
+  type DailyUpdateResponse,
+} from '@/api/dailyUpdate';
+import { useCircle } from '@/hooks/useCircle';
+import { latestDailyUpdatePath } from '@/lib/dailyUpdateLinks';
+import { useAuthStore } from '@/store/authStore';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   evaluateDailyUpdateWindow,
@@ -70,12 +77,11 @@ export function isDailyUpdateUnavailableError(err: unknown): boolean {
 }
 
 /**
- * Whether the rollout switch is on for this viewer (mobile `useDailyUpdateEnabled`):
- * the invite line must never promise a daily update that rollout has turned off.
- * One date-less read per circle, same key as mobile.
+ * The date-less read (the recipient's today), shared by the invite line and
+ * the way-back links: one request per circle, same key as mobile.
  */
-export function useDailyUpdateEnabled(circleId: string): boolean {
-  const query = useQuery({
+function useTodayDailyUpdate(circleId: string): UseQueryResult<DailyUpdateResponse> {
+  return useQuery({
     queryKey: ['dailyUpdate', circleId, 'enabled'] as const,
     queryFn: () => getDailyUpdate(circleId),
     enabled: Boolean(circleId),
@@ -85,9 +91,34 @@ export function useDailyUpdateEnabled(circleId: string): boolean {
       if (typeof code === 'string') return false;
       return count < 1;
     },
-    select: (r: DailyUpdateResponse) => r?.enabled === true,
   });
-  return query.data === true;
+}
+
+/**
+ * Whether the rollout switch is on for this viewer (mobile `useDailyUpdateEnabled`):
+ * the invite line must never promise a daily update that rollout has turned off.
+ */
+export function useDailyUpdateEnabled(circleId: string): boolean {
+  return useTodayDailyUpdate(circleId).data?.enabled === true;
+}
+
+/**
+ * The way back to the updates ("Daily updates" in Quick access and atop the
+ * Activity feed; docs/plans/daily-update.md "Design v2 B2"). The path of the
+ * LATEST update — today's page from 19:00 recipient time when today has
+ * activity, otherwise yesterday's — or null when the entry must not show:
+ * rollout off for this viewer, the viewer is the care recipient (`eligible`
+ * is false for them too), or the recipient's zone is not known yet.
+ */
+export function useLatestDailyUpdatePath(circleId: string): string | null {
+  const { timezone, members } = useCircle(circleId);
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const isRecipient = members.some((m) => m.is_care_recipient && m.id === currentUserId);
+  const win = useDailyUpdateWindow(timezone);
+  const query = useTodayDailyUpdate(circleId);
+  const data = isDailyUpdateEnabled(query.data) ? query.data : null;
+  if (isRecipient || win === null || data === null || !data.eligible) return null;
+  return latestDailyUpdatePath(circleId, win.localDate, win.inWindow, data.has_activity);
 }
 
 /** GET /circles/:circleId/daily-update?date= — keyed per recipient-local date. */

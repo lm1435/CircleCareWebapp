@@ -158,8 +158,8 @@ export function DailyUpdateCard({
     <>
       <DailyUpdateCardView
         data={data}
+        circleId={circleId}
         headingId={headingId}
-        openTo={`${base}/daily-update`}
         inviteTo={isSolo && isOwner ? `${base}/members` : null}
         onInvite={() => Analytics.dailyUpdateInviteTapped()}
         onDismiss={handleDismiss}

@@ -1,25 +1,21 @@
 import type { TFunction } from 'i18next';
-import type { DailyUpdateData, DailyUpdateStillToDoItem } from '@/api/dailyUpdate';
+import type { DailyUpdateData, DailyUpdateDoseDetail } from '@/api/dailyUpdate';
 import type { HourCycle } from '@/utils/hourCycle';
 import { formatTimeOfDay, getCachedDateTimeFormat, type TimeLanguage } from '@/utils/timezone';
 
 /**
- * Sentence building for the daily update (docs/plans/daily-update.md §2.1, P7).
- * The server sends counts and items; every word on screen comes from the
- * `dailyUpdate` namespace here, so plurals follow each locale's rules.
+ * Sentence building for the daily update, design v2 "B2"
+ * (docs/plans/daily-update.md, "Design v2 B2"; prototype
+ * e2e/harness/dailyUpdateDirections.tsx `buildSummary()` / `clausesOf()`).
+ * Built by code from the server's COUNTS, never by a model; every word comes
+ * from the `dailyUpdate` namespace so plurals follow each locale's rules.
  *
- * Rules that the tests pin:
- * - A count of 0 is NEVER rendered: the line is omitted (this is also what
- *   keeps pt, where 0 selects `_one`, from ever reading "0 dose tomada").
- * - Skipped is its own line, never folded into taken, never "Taken at".
+ * Rules the tests pin:
+ * - A zero count is never rendered (also keeps pt, where 0 selects `_one`,
+ *   from ever reading "0 dose tomada").
+ * - Skipped is its own clause, never folded into taken, never "Taken at".
  * - Nothing says "missed".
  */
-export interface DailyUpdateLine {
-  /** Stable id for React keys and tests. */
-  id: string;
-  text: string;
-}
-
 type T = TFunction<'dailyUpdate'>;
 
 /**
@@ -37,65 +33,6 @@ export function startsWithISound(name: string): boolean {
     .toLowerCase();
   if (/^hi[aeou]/.test(n)) return false;
   return /^(i|hi)/.test(n);
-}
-
-/** "Ana", "Ana and Luis", "Ana, Luis and 2 others", or "a former member". */
-export function formatNoteAuthors(
-  notes: DailyUpdateData['notes'],
-  t: T
-): string {
-  const authors = notes.authors.filter((a) => a.trim().length > 0);
-  const more = Math.max(0, notes.more_authors);
-  const two = (a: string, b: string): string =>
-    startsWithISound(b) ? t('names.twoBeforeI', { a, b }) : t('names.two', { a, b });
-
-  if (authors.length === 0) return t('names.former');
-  if (authors.length === 1) {
-    if (more === 0) return authors[0];
-    // One resolvable name; the rest could not be named.
-    if (more === 1) return two(authors[0], t('names.former'));
-    return t('names.many', { a: authors[0], b: t('names.former'), count: more - 1 });
-  }
-  if (more === 0) return two(authors[0], authors[1]);
-  return t('names.many', { a: authors[0], b: authors[1], count: more });
-}
-
-/**
- * The count lines of the first section ("Today so far" / "What happened").
- * `past` adds the "N doses not marked" count (today lists those doses under
- * "Still to do" instead) and switches "appointments today" to "appointments
- * that day".
- */
-export function buildSummaryLines(data: DailyUpdateData, t: T, past: boolean): DailyUpdateLine[] {
-  const lines: DailyUpdateLine[] = [];
-  const add = (id: string, count: number, text: () => string): void => {
-    if (count > 0) lines.push({ id, text: text() });
-  };
-  const { doses } = data;
-  add('taken', doses.taken, () => t('doses.taken', { count: doses.taken }));
-  add('takenLate', doses.taken_late, () => t('doses.takenLate', { count: doses.taken_late }));
-  add('skipped', doses.skipped, () => t('doses.skipped', { count: doses.skipped }));
-  // Past day only. On TODAY's view a due-but-unmarked dose is listed as an
-  // item under "Still to do" ("7:30 PM · Lisinopril · Not marked"); a count
-  // here as well would mention the same dose twice.
-  if (past) {
-    add('notMarked', doses.not_marked, () =>
-      t('doses.notMarkedPast', { count: doses.not_marked })
-    );
-  }
-  if (data.as_needed) {
-    const given = data.as_needed.given;
-    add('asNeeded', given, () => t('asNeeded.given', { count: given }));
-  }
-  add('tasksDone', data.tasks.done, () => t('tasks.done', { count: data.tasks.done }));
-  const appts = data.appointments.past_count;
-  add('appointments', appts, () =>
-    past ? t('appointments.thatDay', { count: appts }) : t('appointments.today', { count: appts })
-  );
-  add('notes', data.notes.count, () =>
-    t('notes.added', { count: data.notes.count, names: formatNoteAuthors(data.notes, t) })
-  );
-  return lines;
 }
 
 /**
@@ -133,24 +70,226 @@ export function formatItemTime(
   }
 }
 
-/** One "Still to do" / "Not done that day" row. */
-export function formatStillToDoItem(
-  item: DailyUpdateStillToDoItem,
+// ---------------------------------------------------------------------------
+// B2: counts → lead sentence, detail clauses, page glance line.
+// Same keys, order and fallbacks as mobile `src/utils/dailyUpdate.ts`, so the
+// two platforms say exactly the same thing.
+// ---------------------------------------------------------------------------
+
+export interface DailyUpdateCounts {
+  taken: number;
+  late: number;
+  skipped: number;
+  notMarked: number;
+  upcoming: number;
+  given: number;
+  tasksDone: number;
+  appointments: number;
+  notes: number;
+  /** Resolvable note authors (first names), in first-note order. */
+  authors: string[];
+  /** Further distinct authors, including ones whose name could not be resolved. */
+  moreAuthors: number;
+}
+
+const n0 = (v: unknown): number =>
+  typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+
+export function countsOf(data: DailyUpdateData): DailyUpdateCounts {
+  return {
+    taken: n0(data.doses?.taken),
+    late: n0(data.doses?.taken_late),
+    skipped: n0(data.doses?.skipped),
+    notMarked: n0(data.doses?.not_marked),
+    upcoming: n0(data.doses?.upcoming),
+    given: data.as_needed ? n0(data.as_needed.given) : 0,
+    tasksDone: n0(data.tasks?.done),
+    appointments: n0(data.appointments?.past_count),
+    notes: n0(data.notes?.count),
+    authors: Array.isArray(data.notes?.authors) ? data.notes.authors : [],
+    moreAuthors: n0(data.notes?.more_authors),
+  };
+}
+
+/** Doses that were due so far: taken (on time or late), skipped, not marked. */
+export function dueOf(c: DailyUpdateCounts): number {
+  return c.taken + c.late + c.skipped + c.notMarked;
+}
+
+export type DailyUpdateLeadKind = 'nothing' | 'quiet' | 'smooth' | 'steady' | 'mixed';
+
+/**
+ * Which lead sentence (the "was today OK?" moment):
+ *   nothing recorded at all          nothing (today: "yet today" / past)
+ *   no dose was due (tasks/notes)    quiet   (today: "so far" / past)
+ *   nothing skipped/unmarked/late    smooth
+ *   taken (+late) ≥ 2/3 of due       steady
+ *   otherwise                        mixed
+ */
+export function leadKindOf(c: DailyUpdateCounts): DailyUpdateLeadKind {
+  const due = dueOf(c);
+  const anything = due + c.given + c.tasksDone + c.appointments + c.notes > 0;
+  if (!anything) return 'nothing';
+  if (due === 0) return 'quiet';
+  if (c.skipped + c.notMarked === 0 && c.late === 0) return 'smooth';
+  if ((c.taken + c.late) / due >= 2 / 3) return 'steady';
+  return 'mixed';
+}
+
+/** The recipient's name as the sentences use it (trimmed), or "your loved one". */
+export function recipientNameFor(data: Pick<DailyUpdateData, 'recipient_name'>, t: T): string {
+  const name = data.recipient_name?.trim();
+  return name ? name : t('names.lovedOne');
+}
+
+export function buildLead(data: DailyUpdateData, t: T, past: boolean): string {
+  const name = recipientNameFor(data, t);
+  // Literal keys (no `lead.${kind}`): the translation-key scanner checks each.
+  switch (leadKindOf(countsOf(data))) {
+    case 'nothing':
+      return past ? t('lead.nothingPast', { name }) : t('lead.nothingToday', { name });
+    case 'quiet':
+      return past ? t('lead.quietPast', { name }) : t('lead.quietToday', { name });
+    case 'smooth':
+      return t('lead.smooth', { name });
+    case 'steady':
+      return t('lead.steady', { name });
+    default:
+      return t('lead.mixed', { name });
+  }
+}
+
+/**
+ * "Ana", "Ana and Luis", "Ana, Luis and 2 others". `authors` lists up to two
+ * NAMED authors; an unnamed (departed) one is counted in `moreAuthors`, so with
+ * fewer than two names the first of the "more" fills the slot as "a former member".
+ */
+export function formatNoteAuthors(authors: string[], moreAuthors: number, t: T): string {
+  const former = t('names.former');
+  const names = authors.map((a) => (a && a.trim() ? a.trim() : former)).slice(0, 2);
+  let more = Math.max(0, Math.floor(moreAuthors || 0));
+  while (names.length < 2 && more > 0) {
+    names.push(former);
+    more -= 1;
+  }
+  if (names.length === 0) return former;
+  if (names.length === 1) return names[0];
+  const [a, b] = names;
+  if (more === 0) {
+    return startsWithISound(b) ? t('names.twoBeforeI', { a, b }) : t('names.two', { a, b });
+  }
+  return t('names.many', { a, b, count: more });
+}
+
+/**
+ * The detail clauses, in order: doses, not marked, as-needed, tasks,
+ * appointments, notes. Zero counts are dropped.
+ */
+export function buildClauses(data: DailyUpdateData, t: T): string[] {
+  const c = countsOf(data);
+  const due = dueOf(c);
+  const out: string[] = [];
+  if (due > 0) {
+    const ok = c.taken + c.late;
+    if (c.skipped + c.notMarked === 0 && c.late === 0) out.push(t('clause.allOnTime'));
+    else if (c.skipped + c.notMarked === 0) out.push(t('clause.everyTaken'));
+    else if (ok / due >= 2 / 3) {
+      out.push(c.late === 0 ? t('clause.mostOnTime') : t('clause.mostTaken'));
+    } else out.push(t('clause.ofDue', { ok, count: due }));
+    if (c.notMarked > 0) out.push(t('clause.notMarked', { count: c.notMarked }));
+  }
+  if (c.given > 0) out.push(t('asNeeded.given', { count: c.given }));
+  if (c.tasksDone > 0) out.push(t('tasks.done', { count: c.tasksDone }));
+  if (c.appointments > 0) out.push(t('clause.appointments', { count: c.appointments }));
+  if (c.notes > 0) {
+    const names = formatNoteAuthors(c.authors, c.moreAuthors, t);
+    const people = Math.max(1, c.authors.length + c.moreAuthors);
+    out.push(
+      people === 1
+        ? t('clause.notesOne', { names, count: c.notes })
+        : t('clause.notesMany', { names })
+    );
+  }
+  return out;
+}
+
+/** Upper-case the first letter, in the reader's language. */
+export function capitalizeFirst(text: string, language?: string): string {
+  if (!text) return text;
+  const first = text.charAt(0);
+  let upper = first.toUpperCase();
+  try {
+    if (language) upper = first.toLocaleUpperCase(language);
+  } catch {
+    // An unknown tag falls back to the default casing.
+  }
+  return upper + text.slice(1);
+}
+
+/** The card's muted detail line: clauses joined " · ", first letter capitalized. null when empty. */
+export function buildDetailLine(data: DailyUpdateData, t: T, language?: string): string | null {
+  const clauses = buildClauses(data, t);
+  if (clauses.length === 0) return null;
+  return capitalizeFirst(clauses.join(' · '), language);
+}
+
+/**
+ * The full page's one plain summary line:
+ * "2 of 3 doses taken so far · 1 skipped · 1 to come" (a past day: no "so
+ * far"; "1 not marked"). Zero parts omitted; null when there is nothing to say.
+ */
+export function buildGlance(data: DailyUpdateData, t: T, past: boolean): string | null {
+  const c = countsOf(data);
+  const due = dueOf(c);
+  const parts: string[] = [];
+  if (due > 0) {
+    const ok = c.taken + c.late;
+    parts.push(past ? t('glance.ofDue', { ok, count: due }) : t('glance.ofDueSoFar', { ok, count: due }));
+  }
+  if (c.skipped > 0) parts.push(t('glance.skipped', { count: c.skipped }));
+  if (c.notMarked > 0) parts.push(t('clause.notMarked', { count: c.notMarked }));
+  if (!past && c.upcoming > 0) parts.push(t('glance.toCome', { count: c.upcoming }));
+  if (c.given > 0) parts.push(t('asNeeded.given', { count: c.given }));
+  return parts.length ? parts.join(' · ') : null;
+}
+
+const nameOr = (name: string | null | undefined, fallback: string): string =>
+  name && name.trim() ? name.trim() : fallback;
+
+/** A dose row's second line: "Taken by Ana" / "Taken by Luis at 2:10 PM, a little late" / ... */
+export function doseStatusLine(
+  dose: DailyUpdateDoseDetail,
   t: T,
-  opts: { timezone: string; cycle: HourCycle; past: boolean; language?: string }
+  formatTime: (time: string | null) => string | null
 ): string {
-  const time = formatItemTime(item.time, opts.timezone, opts.cycle, opts.language);
-  if (item.kind === 'dose') {
-    // A scheduled dose always has a time; the bare title is only a safety net.
-    if (!time) return item.title;
-    return item.status === 'not_marked'
-      ? t('item.doseNotMarked', { time, medication: item.title })
-      : t('item.doseUpcoming', { time, medication: item.title });
+  const name = nameOr(dose.marked_by_name, t('names.someone'));
+  switch (dose.status) {
+    case 'taken':
+      return t('status.takenBy', { name });
+    case 'taken_late': {
+      const time = formatTime(dose.marked_at);
+      return time ? t('status.takenLateAt', { name, time }) : t('status.takenLate', { name });
+    }
+    case 'skipped':
+      return t('status.skippedBy', { name });
+    case 'not_marked':
+      return t('status.notMarked');
+    default:
+      return t('status.upcoming');
   }
-  if (item.kind === 'task') {
-    // "Due today" is wrong on a past day's view; the section heading
-    // ("Not done that day") already says it.
-    return opts.past ? item.title : t('item.task', { title: item.title });
-  }
-  return time ? t('item.appointment', { time, title: item.title }) : item.title;
+}
+
+/** "Done by Ana" (a departed completer: "Done by someone"). */
+export function taskDoneLine(completedBy: string | null, t: T): string {
+  return t('status.doneBy', { name: nameOr(completedBy, t('names.someone')) });
+}
+
+/** The page's note title: the author, or "A former member". */
+export function noteAuthorTitle(author: string | null, t: T): string {
+  return nameOr(author, t('names.formerTitle'));
+}
+
+/** The card's note row: "A note from Ana" / "A note from a former member". */
+export function noteFromLine(author: string | null, t: T): string {
+  return t('card.noteFrom', { name: nameOr(author, t('names.former')) });
 }

@@ -1,10 +1,5 @@
 {
-  "doses": {
-    "skipped_one": "{{count}} dose saltada",
-    "skipped_other": "{{count}} doses saltadas"
-  },
   "dated": {
-    "empty": "Nada foi registado neste dia.",
     "unavailable": "Este resumo já não está disponível."
   },
   "turnOffConfirm": {
@@ -12,5 +7,24 @@
   },
   "soloInvite": "Convide alguém para partilhar isto",
   "error": "Não foi possível carregar o resumo. Tente novamente.",
-  "retry": "Tentar novamente"
+  "retry": "Tentar novamente",
+  "lead": {
+    "nothingToday": "Nada registado para {{name}} hoje ainda.",
+    "nothingPast": "Nada foi registado para {{name}}."
+  },
+  "clause": {
+    "allOnTime": "todas as doses à hora certa",
+    "mostOnTime": "quase todas as doses à hora certa"
+  },
+  "glance": {
+    "skipped_one": "{{count}} saltada",
+    "skipped_other": "{{count}} saltadas"
+  },
+  "status": {
+    "skippedBy": "Saltada, marcada por {{name}}"
+  },
+  "names": {
+    "lovedOne": "o seu familiar"
+  },
+  "itemUnavailable": "Este item já não está disponível. Alguém pode tê-lo eliminado."
 }

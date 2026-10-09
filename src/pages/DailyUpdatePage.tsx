@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { isDailyUpdateEnabled } from '@/api/dailyUpdate';
 import { Button, Skeleton } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
-import { DailyUpdateSections } from '@/components/dailyUpdate/DailyUpdateSections';
-import { DAILY_UPDATE_ENTER, DAILY_UPDATE_SURFACE } from '@/components/dailyUpdate/surface';
+import {
+  DailyUpdateDayArrows,
+  DailyUpdateDayView,
+} from '@/components/dailyUpdate/DailyUpdateDayView';
 import { useCircle } from '@/hooks/useCircle';
 import {
   isDailyUpdateUnavailableError,
@@ -13,6 +15,8 @@ import {
   useDailyUpdateWindow,
 } from '@/hooks/useDailyUpdate';
 import { Analytics } from '@/lib/analytics';
+import { capitalizeFirst } from '@/lib/dailyUpdateCopy';
+import { dayNav } from '@/lib/dailyUpdateLinks';
 import { formatDailyUpdateDate, isDateInDailyUpdateRange } from '@/lib/dailyUpdateWindow';
 import { useAuthStore } from '@/store/authStore';
 
@@ -21,27 +25,24 @@ interface DailyUpdateLocationState {
 }
 
 /**
- * Full daily update / dated view (docs/plans/daily-update.md §5.4, §6).
+ * Full daily update, design v2 "B2" (docs/plans/daily-update.md):
  *
  *   /circles/:circleId/daily-update              → today (recipient-local)
  *   /circles/:circleId/daily-update/:date        → that day
  *   /circles/:circleId/daily-update?date=YYYY-MM-DD
+ *   …#tasks                                      → scrolled to (and focused on) that section
  *
- * `date` must lie within the last 7 recipient-local days; anything else shows
- * "This update is no longer available." without a request (the server
- * enforces the same bound with 400 DATE_OUT_OF_RANGE).
- *
- * Today: heading "{{name}}'s day", sections "Today so far" / "Still to do".
- * Past day: heading = the formatted date, eyebrow "{{name}}'s day", sections
- * "What happened" / "Not done that day"; nothing at all → "Nothing was
- * recorded on this day."
+ * Eyebrow "Daily update", title = the date ("Thursday, Oct 8"), day arrows
+ * within the last 7 recipient-local days, the sentence, one summary line, then
+ * the section cards. `date` outside the range shows "This update is no longer
+ * available." without a request (the server enforces the same bound).
  */
 export default function DailyUpdatePage(): ReactElement {
   const { circleId = '', date: pathDate } = useParams<{ circleId: string; date?: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { t, i18n } = useTranslation(['dailyUpdate', 'common']);
-  const { circle, timezone, members } = useCircle(circleId);
+  const { timezone, members } = useCircle(circleId);
   const win = useDailyUpdateWindow(timezone);
   const today = win?.localDate ?? null;
 
@@ -63,17 +64,6 @@ export default function DailyUpdatePage(): ReactElement {
     Analytics.dailyUpdateOpened(source === 'card' ? 'card' : 'link', date !== today);
   }, [date, today, source]);
 
-  const recipientName = (data?.recipient_name ?? circle?.recipient_name ?? '').trim();
-  const nameHeading = recipientName
-    ? t('heading', { name: recipientName })
-    : t('headingSelfFallback');
-  const title = isPast && date ? formatDailyUpdateDate(date, i18n.language) : nameHeading;
-  const eyebrow = isPast
-    ? recipientName
-      ? t('dated.eyebrow', { name: recipientName })
-      : t('eyebrow')
-    : t('eyebrow');
-
   const currentUserId = useAuthStore((s) => s.user?.id);
   const viewerIsRecipient = members.some((m) => m.is_care_recipient && m.id === currentUserId);
   const loading = timezone === null || (inRange && query.isLoading);
@@ -82,21 +72,34 @@ export default function DailyUpdatePage(): ReactElement {
     (query.isError && isDailyUpdateUnavailableError(query.error)) ||
     (query.data !== undefined && (data === null || !data.eligible)) ||
     viewerIsRecipient;
+  const ready = !loading && !unavailable && !query.isError && data !== null;
+
+  // `#tasks` (the card's "2 tasks done" row): once the sections exist, bring
+  // that section into view and move focus to its heading, so keyboard and
+  // screen-reader users land where sighted users do. Once per hash.
+  const hash = location.hash.replace(/^#/, '');
+  const scrolledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready || !hash || scrolledFor.current === `${date}#${hash}`) return;
+    const section = document.getElementById(hash);
+    if (!section) return;
+    scrolledFor.current = `${date}#${hash}`;
+    section.scrollIntoView?.({ block: 'start' });
+    document.getElementById(`${hash}-heading`)?.focus({ preventScroll: true });
+  }, [ready, hash, date]);
+
+  const title =
+    date !== null ? capitalizeFirst(formatDailyUpdateDate(date, i18n.language), i18n.language) : '';
+  const nav = date !== null && today !== null && inRange ? dayNav(date, today, data?.nav) : null;
 
   let body: ReactElement;
   if (loading) {
     body = (
-      <div role="status" aria-live="polite" className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-0">
+      <div role="status" aria-live="polite">
         <span className="sr-only">{t('common:loading')}</span>
-        <div className="md:pr-6">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="mt-3 h-4 w-2/3 max-w-72" />
-          <Skeleton className="mt-2 h-4 w-1/2 max-w-56" />
-        </div>
-        <div className="md:pl-6">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="mt-3 h-4 w-3/4 max-w-80" />
-        </div>
+        <Skeleton className="h-6 w-3/4 max-w-80" />
+        <Skeleton className="mt-3 h-4 w-2/3 max-w-72" />
+        <Skeleton className="mt-5 h-32 w-full rounded-xl" />
       </div>
     );
   } else if (unavailable) {
@@ -110,30 +113,30 @@ export default function DailyUpdatePage(): ReactElement {
         </Button>
       </div>
     );
-  } else if (isPast && !data.has_activity && data.still_to_do.length === 0) {
-    body = <p className="m-0 text-md leading-normal text-ink-2">{t('dated.empty')}</p>;
   } else {
-    body = <DailyUpdateSections data={data} past={!data.is_today} headingLevel="h2" />;
+    body = <DailyUpdateDayView data={data} circleId={circleId} past={!data.is_today} />;
   }
 
   return (
-    <section className="mx-auto max-w-5xl pb-8">
+    <section className="mx-auto max-w-3xl pb-10" data-testid="daily-update-page">
       <PageMasthead
-        section={eyebrow}
+        section={t('eyebrow')}
         tone="moss"
         title={title}
         backTo={`/circles/${circleId}`}
+        compact
       />
-      <div className="px-5">
-        {/* The same moss-wash surface as the Home card: the page IS the card,
-            expanded (every item, no "+N more" cap). */}
-        <div
-          className={`${DAILY_UPDATE_SURFACE} px-5 py-5 ${DAILY_UPDATE_ENTER}`}
-          data-testid="daily-update-page"
-        >
-          {body}
+      {nav && !viewerIsRecipient ? (
+        <div className="px-5 pb-1">
+          <DailyUpdateDayArrows
+            circleId={circleId}
+            prev={nav.prev}
+            next={nav.next}
+            isToday={!isPast}
+          />
         </div>
-      </div>
+      ) : null}
+      <div className="px-5 pt-2">{body}</div>
     </section>
   );
 }
