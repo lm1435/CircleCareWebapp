@@ -162,8 +162,21 @@ describe('EventNotesPanel', () => {
 
     expect(screen.queryByLabelText('Add a note')).not.toBeInTheDocument();
     // No edit/delete affordances when the user can't edit the circle.
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Edit/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Delete/ })).not.toBeInTheDocument();
+  });
+
+  it('each note’s Edit and Delete name the author and time, so two notes never share a name (WCAG 2.4.6)', () => {
+    notesData = [
+      makeNote({ id: 'note-1', created_at: new Date(Date.now() - 5 * 60_000).toISOString() }),
+      makeNote({ id: 'note-2', created_at: new Date(Date.now() - 3 * 3_600_000).toISOString() }),
+    ];
+    renderPanel();
+    const edits = screen.getAllByRole('button', { name: /^Edit, Ana Lopez, / });
+    const deletes = screen.getAllByRole('button', { name: /^Delete, Ana Lopez, / });
+    expect(edits).toHaveLength(2);
+    expect(deletes).toHaveLength(2);
+    expect(edits[0]).not.toHaveAccessibleName(edits[1].getAttribute('aria-label')!);
   });
 
   it('offers edit + delete on the user’s OWN note and saves an edit', async () => {
@@ -171,7 +184,7 @@ describe('EventNotesPanel', () => {
     notesData = [makeNote({ author_id: 'user-1' })];
     renderPanel();
 
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: /^Edit, / }));
     const editBox = screen.getByLabelText('Edit note');
     await user.clear(editBox);
     await user.type(editBox, 'Updated body');
@@ -192,8 +205,8 @@ describe('EventNotesPanel', () => {
     notesData = [makeNote({ author_id: 'someone-else' })];
     renderPanel();
 
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Edit, / })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Delete, / })).toBeInTheDocument();
   });
 
   it('does NOT offer edit OR delete on another member’s note for a non-owner', () => {
@@ -201,8 +214,8 @@ describe('EventNotesPanel', () => {
     notesData = [makeNote({ author_id: 'someone-else' })];
     renderPanel();
 
-    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Edit, / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Delete, / })).not.toBeInTheDocument();
   });
 
   it('deletes a note only after confirming in the dialog', async () => {
@@ -210,7 +223,7 @@ describe('EventNotesPanel', () => {
     notesData = [makeNote({ author_id: 'user-1' })];
     renderPanel();
 
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: /^Delete, / }));
 
     // Confirm dialog appears; deletion fires only on confirm.
     const dialog = screen.getByRole('dialog');
@@ -291,7 +304,7 @@ describe('EventNotesPanel', () => {
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
-      await user.click(screen.getByRole('button', { name: 'Edit' }));
+      await user.click(screen.getByRole('button', { name: /^Edit, / }));
       const editBox = screen.getByLabelText('Edit note');
       await user.clear(editBox);
       await user.type(editBox, 'Updated body');
@@ -309,7 +322,7 @@ describe('EventNotesPanel', () => {
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
-      await user.click(screen.getByRole('button', { name: 'Edit' }));
+      await user.click(screen.getByRole('button', { name: /^Edit, / }));
       await user.type(screen.getByLabelText('Edit note'), ' again');
       await clickTwice(screen.getByRole('button', { name: 'Save' }));
       expect(mockUpdate).toHaveBeenCalledTimes(1);
@@ -340,7 +353,7 @@ describe('EventNotesPanel', () => {
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
-      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      await user.click(screen.getByRole('button', { name: /^Delete, / }));
       const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' });
 
       await act(async () => {
@@ -361,7 +374,7 @@ describe('EventNotesPanel', () => {
       notesData = [makeNote({ author_id: 'user-1' })];
       renderPanel();
 
-      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      await user.click(screen.getByRole('button', { name: /^Delete, / }));
       await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
       expect(mockDelete).toHaveBeenCalledTimes(1);
 
@@ -372,7 +385,7 @@ describe('EventNotesPanel', () => {
       });
       expect(screen.queryByRole('dialog')).toBeNull();
 
-      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      await user.click(screen.getByRole('button', { name: /^Delete, / }));
       await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
       expect(mockDelete).toHaveBeenCalledTimes(2);
     });

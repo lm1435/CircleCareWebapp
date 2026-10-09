@@ -122,6 +122,8 @@ export function MonthView({
                     type="button"
                     data-date={day}
                     aria-pressed={isSelected}
+                    // Today is a filled circle on screen; say it too (WCAG 1.3.1 / 1.4.1).
+                    aria-current={isToday ? 'date' : undefined}
                     aria-label={`${formatDateForDisplay(day, {
                       weekday: 'long',
                       month: 'long',

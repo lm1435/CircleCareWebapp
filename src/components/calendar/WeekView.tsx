@@ -411,6 +411,7 @@ export function WeekView({
                 <div
                   key={day}
                   role="columnheader"
+                  aria-current={isToday ? 'date' : undefined}
                   aria-label={`${formatDateForDisplay(day, {
                     weekday: 'long',
                     month: 'long',

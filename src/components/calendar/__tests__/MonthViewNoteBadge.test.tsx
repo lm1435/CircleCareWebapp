@@ -97,4 +97,10 @@ describe('MonthView day panel: note badge', () => {
     const panel = await openDay([appt('a')]);
     expect((panel.parentElement as HTMLElement).className).toContain('grid-cols-[minmax(0,1fr)]');
   });
+
+  it('today is marked aria-current="date", not by its filled circle alone (WCAG 1.3.1)', async () => {
+    await openDay([]);
+    expect(document.querySelector('button[data-date="2026-03-17"]')).toHaveAttribute('aria-current', 'date');
+    expect(document.querySelectorAll('[aria-current="date"]')).toHaveLength(1);
+  });
 });

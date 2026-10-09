@@ -121,12 +121,23 @@ function NoteRow({
       {(canEditOwn || canDelete) && (
         <div className="mt-2 flex justify-end gap-2">
           {canEditOwn && (
-            <Button variant="ghost" size="sm" onClick={onStartEdit}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onStartEdit}
+              // Every note has an Edit: name whose, and when (WCAG 2.4.6).
+              aria-label={[t('calendar:notes.edit'), authorName, timestamp].filter(Boolean).join(', ')}
+            >
               {t('calendar:notes.edit')}
             </Button>
           )}
           {canDelete && (
-            <Button variant="ghost" size="sm" onClick={onDelete}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              aria-label={[t('calendar:notes.delete'), authorName, timestamp].filter(Boolean).join(', ')}
+            >
               {t('calendar:notes.delete')}
             </Button>
           )}

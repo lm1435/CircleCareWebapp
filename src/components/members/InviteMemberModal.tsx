@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDailyUpdateEnabled } from '@/hooks/useDailyUpdate';
@@ -123,6 +123,13 @@ export function InviteMemberModal({
     memberType === 'care_recipient' ? t('roles.careRecipient') : t('roles.caregiver');
 
   const [sentInvite, setSentInvite] = useState<{ email: string; url: string | null } | null>(null);
+  // The form (and its focused Send button) unmounts when the invite is sent.
+  // Focus the "Invitation sent" heading so a screen reader announces the
+  // outcome and the keyboard does not fall to <body> (WCAG 4.1.3 / 2.4.3).
+  const sentHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (sentInvite) sentHeadingRef.current?.focus();
+  }, [sentInvite]);
   const [copied, setCopied] = useState(false);
 
   /**
@@ -307,7 +314,13 @@ export function InviteMemberModal({
           <div className="flex items-start gap-3">
             <IconTile tone="moss" size={44} name="checkmark-circle" />
             <div className="min-w-0">
-              <p className="m-0 text-base font-semibold text-ink">{t('invite.sentTitle')}</p>
+              <h3
+                ref={sentHeadingRef}
+                tabIndex={-1}
+                className="m-0 text-base font-semibold text-ink focus:outline-none"
+              >
+                {t('invite.sentTitle')}
+              </h3>
               <p className="m-0 mt-1 text-sm text-ink-2">
                 {shareUrl ? t('invite.success') : t('invite.emailNote', { email: sentInvite.email, role: roleLabel })}
               </p>

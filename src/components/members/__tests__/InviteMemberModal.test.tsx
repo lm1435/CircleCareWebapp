@@ -136,6 +136,17 @@ describe('InviteMemberModal — email-required', () => {
   // The Modal's × already closes the dialog and there is no unsaved state
   // left to protect once the invite has sent, so Done is gone — Send
   // another is the only footer action, and closing goes through the ×.
+  it('the sent step is announced: its title is a heading and takes focus (WCAG 4.1.3 / 2.4.3)', async () => {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) =>
+      opts?.onSuccess?.({ invite: { invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' } })
+    );
+    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    expect(screen.getByRole('heading', { name: 'Invitation sent' })).toHaveFocus();
+  });
+
   it('drops Done from the sent step — Send another only, closes via the ×', async () => {
     const user = userEvent.setup();
     mutate.mockImplementation((_vars, opts) =>

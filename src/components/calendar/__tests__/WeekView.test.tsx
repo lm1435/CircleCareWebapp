@@ -53,6 +53,13 @@ function renderWeek() {
 }
 
 describe('WeekView', () => {
+  it('today\'s column header is aria-current="date" (WCAG 1.3.1)', () => {
+    renderWeek();
+    const current = screen.getAllByRole('columnheader').filter((h) => h.getAttribute('aria-current') === 'date');
+    expect(current).toHaveLength(1);
+    expect(current[0].getAttribute('aria-label')).toMatch(/^Tuesday, March 17/);
+  });
+
   // The today marker is ink — interactive state (decision 2026-09-04) — the
   // same treatment as MonthView's `bg-ink text-cream` today cell, so "today"
   // reads identically across both calendar views.

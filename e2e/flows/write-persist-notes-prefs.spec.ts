@@ -179,7 +179,8 @@ test('event note EDIT: the new body is in event_notes.body, in a fresh API read 
   const dialog = await openCalendarEvent(page, circleId, date, title);
   const item = dialog.locator('li', { hasText: original });
   await expect(item).toBeVisible({ timeout: 15_000 });
-  await item.getByRole('button', { name: 'Edit', exact: true }).click();
+  // Each note's action names its author and time (a11y pass 2026-10-08).
+  await item.getByRole('button', { name: /^Edit, / }).click();
   const box = dialog.locator(`#note-edit-${noteId}`);
   await expect(box).toHaveValue(original);
   await box.fill(edited);
@@ -221,7 +222,8 @@ test('event note DELETE: the row is gone from event_notes and from the reopened 
   const dialog = await openCalendarEvent(page, circleId, date, title);
   const item = dialog.locator('li', { hasText: doomed });
   await expect(item).toBeVisible({ timeout: 15_000 });
-  await item.getByRole('button', { name: 'Delete', exact: true }).click();
+  // Each note's action names its author and time (a11y pass 2026-10-08).
+  await item.getByRole('button', { name: /^Delete, / }).click();
   const confirm = page.getByRole('dialog', { name: 'Delete note' });
   await expect(confirm).toBeVisible({ timeout: 10_000 });
 
