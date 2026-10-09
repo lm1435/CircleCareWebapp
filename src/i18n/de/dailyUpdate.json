@@ -18,9 +18,10 @@
   "names": {
     "two": "{{a}} und {{b}}",
     "twoBeforeI": "{{a}} und {{b}}",
-    "many_one": "{{a}}, {{b}} und {{count}} weiteren Person",
-    "many_other": "{{a}}, {{b}} und {{count}} weiteren",
+    "many_one": "{{a}}, {{b}} und {{count}} weitere Person",
+    "many_other": "{{a}}, {{b}} und {{count}} weitere",
     "former": "einem ehemaligen Mitglied",
+    "formerSubject": "ein ehemaliges Mitglied",
     "someone": "jemandem",
     "formerTitle": "Ein ehemaliges Mitglied",
     "lovedOne": "Ihre Angehörigen"

@@ -165,7 +165,9 @@ export function buildLead(data: DailyUpdateData, t: T, past: boolean): string {
  * fewer than two names the first of the "more" fills the slot as "a former member".
  */
 export function formatNoteAuthors(authors: string[], moreAuthors: number, t: T): string {
-  const former = t('names.former');
+  // The list is always the SUBJECT of the notes clause, so the departed fallback
+  // takes its subject form (de: "ein ehemaliges Mitglied", not the dative "einem").
+  const former = t('names.formerSubject');
   const names = authors.map((a) => (a && a.trim() ? a.trim() : former)).slice(0, 2);
   let more = Math.max(0, Math.floor(moreAuthors || 0));
   while (names.length < 2 && more > 0) {

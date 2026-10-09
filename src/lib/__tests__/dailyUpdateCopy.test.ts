@@ -12,6 +12,7 @@ import {
   formatItemTime,
   leadKindOf,
   countsOf,
+  noteFromLine,
   startsWithISound,
 } from '../dailyUpdateCopy';
 
@@ -195,6 +196,28 @@ describe('detail clauses (card line, joined " · ")', () => {
     expect(
       buildClauses(make({ notes: { count: 2, authors: ['Ana', 'Luis'], more_authors: 0 } }), es)[0]
     ).toBe('Ana y Luis dejaron notas');
+  });
+
+  // The author list is the SUBJECT of the notes clause; "from X" takes the object form.
+  // German is where the two differ (nominative "ein ehemaliges Mitglied" vs dative "einem").
+  it('departed author: subject form in the notes clause, object form after "from"/"von"', () => {
+    const line = (lng: string, authors: string[], more: number, count = 1) =>
+      buildDetailLine(make({ notes: { count, authors, more_authors: more } }), tFor(lng));
+    expect(line('de', [], 1)).toBe('Ein ehemaliges Mitglied hat eine Notiz hinterlassen');
+    expect(line('de', ['Ana'], 1, 2)).toBe('Ana und ein ehemaliges Mitglied haben Notizen hinterlassen');
+    expect(line('de', ['Ana', 'Luis'], 2, 4)).toBe('Ana, Luis und 2 weitere haben Notizen hinterlassen');
+    expect(line('de', ['Ana', 'Luis'], 1, 3)).toBe('Ana, Luis und 1 weitere Person haben Notizen hinterlassen');
+    expect(line('es', [], 1)).toBe('Un exmiembro dejó una nota');
+    expect(line('en', [], 1)).toBe('A former member left a note');
+    expect(line('fr', [], 1)).toBe('Un ancien membre a laissé une note');
+    expect(line('it', [], 1)).toBe('Un ex membro ha lasciato una nota');
+    expect(line('pt', [], 1)).toBe('Um ex-membro deixou uma nota');
+    // After "von" the dative stays.
+    expect(noteFromLine(null, tFor('de'))).toBe('Eine Notiz von einem ehemaligen Mitglied');
+    expect(noteFromLine(null, en)).toBe('A note from a former member');
+    // French never splices a name after "de" (no "de Anne"; glossary elision rule).
+    expect(noteFromLine('Anne', tFor('fr'))).toBe('Une note laissée par Anne');
+    expect(noteFromLine(null, tFor('fr-CA'))).toBe('Une note laissée par un ancien membre');
   });
 
   it('omits every zero count and is null when empty', () => {

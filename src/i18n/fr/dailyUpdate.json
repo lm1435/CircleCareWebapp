@@ -21,6 +21,7 @@
     "many_one": "{{a}}, {{b}} et {{count}} autre",
     "many_other": "{{a}}, {{b}} et {{count}} autres",
     "former": "un ancien membre",
+    "formerSubject": "un ancien membre",
     "someone": "quelqu’un",
     "formerTitle": "Un ancien membre",
     "lovedOne": "votre proche"
@@ -47,7 +48,7 @@
   "entry": "Points du jour",
   "card": {
     "eyebrow": "Ce soir",
-    "noteFrom": "Une note de {{name}}"
+    "noteFrom": "Une note laissée par {{name}}"
   },
   "lead": {
     "nothingToday": "Rien pour {{name}} aujourd’hui, pour l’instant.",

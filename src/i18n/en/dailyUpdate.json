@@ -21,6 +21,7 @@
     "many_one": "{{a}}, {{b}} and {{count}} other",
     "many_other": "{{a}}, {{b}} and {{count}} others",
     "former": "a former member",
+    "formerSubject": "a former member",
     "someone": "someone",
     "formerTitle": "A former member",
     "lovedOne": "your loved one"
