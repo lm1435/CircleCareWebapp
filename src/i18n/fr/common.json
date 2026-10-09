@@ -145,7 +145,10 @@
   },
   "gettingStarted": {
     "title": "Pour commencer",
-    "subtitle": "Quelques étapes rapides pour configurer ce cercle pour tout le monde.",
+    "introOwner": "Vous avez créé un cercle de soins pour {{name}}. Voici ce que vous pouvez faire :",
+    "introSelfCare": "Vous avez configuré votre cercle de soins personnel. Voici ce que vous pouvez faire :",
+    "introJoined": "Vous avez rejoint le cercle de soins de {{name}}. Voici ce que vous pouvez faire :",
+    "introJoinedRecipient": "Vous avez rejoint votre cercle de soins. Voici ce que vous pouvez faire :",
     "progress": "{{done}} sur {{total}} terminées",
     "step1Label": "Ajouter un médicament",
     "step1Desc": "Tout le monde reçoit le rappel : personne n’a à être celui qui y pense.",

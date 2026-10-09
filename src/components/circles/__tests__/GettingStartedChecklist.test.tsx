@@ -105,6 +105,10 @@ interface Signals {
   canEdit?: boolean;
   /** ISO creation date — informational only; the checklist has no age gate. */
   createdAt?: string;
+  recipientName?: string;
+  isSelfCare?: boolean;
+  /** Membership-level view-only seat (separate from `canEdit`). */
+  viewOnly?: boolean;
 }
 
 /** Points the mocked hooks at a given set of signals. Does not render. */
@@ -113,6 +117,9 @@ function configure(s: Signals = {}): void {
     circle: {
       owner_id: s.ownerId ?? CURRENT_USER_ID,
       pending_invites: s.pendingInvites ?? [],
+      recipient_name: s.recipientName ?? 'Rosa',
+      is_self_care: s.isSelfCare ?? false,
+      view_only: s.viewOnly ?? false,
     },
     circleSummary: { created_at: s.createdAt ?? new Date().toISOString() },
     members: s.members ?? [{ id: CURRENT_USER_ID }],
@@ -557,5 +564,66 @@ describe('GettingStartedChecklist', () => {
     expect(navigate).toHaveBeenCalledWith('/circles/circle-1/emergency');
     expect(gettingStartedStepTapped).toHaveBeenCalledWith('emergency');
     expect(gettingStartedStepTapped).toHaveBeenCalledTimes(3);
+  });
+
+  // Only the circle's OWNER created it. An invited caregiver used to be told
+  // "You've created a care circle for …" — the intro is role-aware now, with
+  // the same four sentences mobile uses.
+  describe('role-aware intro', () => {
+    const OWNER_INTRO = "You've created a care circle for Rosa. Here's what you can do:";
+    const JOINED_INTRO = "You've joined Rosa's care circle. Here's what you can do:";
+
+    it('tells the owner they created the circle', () => {
+      setup();
+      expect(screen.getByText(OWNER_INTRO)).toBeInTheDocument();
+      expect(screen.queryByText(JOINED_INTRO)).not.toBeInTheDocument();
+    });
+
+    it('tells an invited caregiver they joined — never that they created it', () => {
+      setup({ ownerId: 'someone-else', members: [{ id: 'someone-else' }, { id: CURRENT_USER_ID }] });
+      expect(screen.getByText(JOINED_INTRO)).toBeInTheDocument();
+      expect(screen.queryByText(/created/i)).not.toBeInTheDocument();
+      // Owner-only action withheld: no invite step for a member.
+      expect(screen.queryByText('Invite family & caregivers')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Invite/ })).not.toBeInTheDocument();
+    });
+
+    it('tells a non-owner care recipient they joined THEIR care circle', () => {
+      setup({
+        ownerId: 'someone-else',
+        members: [{ id: 'someone-else' }, { id: CURRENT_USER_ID, is_care_recipient: true }],
+      });
+      expect(screen.getByText("You've joined your care circle. Here's what you can do:")).toBeInTheDocument();
+    });
+
+    it('uses the self-care wording for the owner of a self-care circle', () => {
+      setup({ isSelfCare: true });
+      expect(screen.getByText("You've set up your self-care circle. Here's what you can do:")).toBeInTheDocument();
+    });
+
+    it('tells a caregiver invited into a self-care circle they joined that person’s circle', () => {
+      setup({ isSelfCare: true, ownerId: 'rosa', recipientName: 'Rosa' });
+      expect(screen.getByText(JOINED_INTRO)).toBeInTheDocument();
+      expect(screen.queryByText(/self-care/i)).not.toBeInTheDocument();
+    });
+
+    it('shows a view-only seat nothing to act on, even if can_edit says yes', () => {
+      setup({ ownerId: 'someone-else', canEdit: true, viewOnly: true });
+      expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^(Add|Invite)/ })).not.toBeInTheDocument();
+    });
+
+    it('renders the Spanish role copy', async () => {
+      const i18n = (await import('@/i18n')).default;
+      await i18n.changeLanguage('es');
+      try {
+        setup({ ownerId: 'someone-else' });
+        expect(
+          screen.getByText('Te uniste al círculo de cuidado de Rosa. Esto es lo que puedes hacer:')
+        ).toBeInTheDocument();
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    });
   });
 });

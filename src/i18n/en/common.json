@@ -145,7 +145,10 @@
   },
   "gettingStarted": {
     "title": "Get started",
-    "subtitle": "A few quick steps to set up this circle for everyone.",
+    "introOwner": "You've created a care circle for {{name}}. Here's what you can do:",
+    "introSelfCare": "You've set up your self-care circle. Here's what you can do:",
+    "introJoined": "You've joined {{name}}'s care circle. Here's what you can do:",
+    "introJoinedRecipient": "You've joined your care circle. Here's what you can do:",
     "progress": "{{done}} of {{total}} done",
     "step1Label": "Add a medication",
     "step1Desc": "Everyone gets the reminder, so no one has to be the one who remembers.",

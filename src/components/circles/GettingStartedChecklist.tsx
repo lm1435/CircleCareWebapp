@@ -151,6 +151,21 @@ export function GettingStartedChecklist({
   // decides whether the `invite` step is offered, not whether the card renders.
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
 
+  // The intro sentence is ROLE-AWARE (mobile CircleDetailScreen uses the same
+  // four strings). Only the owner created the circle; a member who joined
+  // through an invite was told "You've created a care circle for …". A
+  // self-care circle is owned by its own recipient. A non-owner who IS the care
+  // recipient joined a circle about themselves, so it is "your" circle.
+  const isCareRecipientMember =
+    !isOwner && members.some((m) => m.id === currentUserId && m.is_care_recipient);
+  const intro = isOwner
+    ? circle?.is_self_care
+      ? t('gettingStarted.introSelfCare')
+      : t('gettingStarted.introOwner', { name: circle?.recipient_name ?? '' })
+    : isCareRecipientMember
+      ? t('gettingStarted.introJoinedRecipient')
+      : t('gettingStarted.introJoined', { name: circle?.recipient_name ?? '' });
+
   // An EXPIRED invite does NOT count as "you invited someone" — nobody can join
   // through it, and resend/cancel exist precisely because it lapsed. Ticking the
   // step green off a dead invite would permanently stop nudging a solo owner
@@ -239,7 +254,9 @@ export function GettingStartedChecklist({
   // act on, so guidance would only nag. Ownership is NOT the gate — a non-owner
   // caregiver who can write still gets the card. Circle age is deliberately not
   // a gate either — see the docstring.
-  if (!canEdit) return <>{fallback ?? null}</>;
+  // `view_only` is folded in on its own (the client rule everywhere else, and
+  // mobile's gate for this card): a view-only seat must never be offered an Add.
+  if (!canEdit || circle?.view_only === true) return <>{fallback ?? null}</>;
   // Complete or dismissed: hand the slot back to the host's empty state.
   if (dismissed || allDone) return <>{fallback ?? null}</>;
 
@@ -275,7 +292,7 @@ export function GettingStartedChecklist({
           {t('gettingStarted.title')}
         </Text>
         <Text variant="caption" className="mt-1.5 max-w-md">
-          {t('gettingStarted.subtitle')}
+          {intro}
         </Text>
       </div>
 

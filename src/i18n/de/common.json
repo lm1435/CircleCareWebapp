@@ -145,7 +145,10 @@
   },
   "gettingStarted": {
     "title": "Erste Schritte",
-    "subtitle": "Ein paar kurze Schritte, um diesen Kreis für alle einzurichten.",
+    "introOwner": "Sie haben einen Pflegekreis für {{name}} erstellt. Das können Sie jetzt tun:",
+    "introSelfCare": "Sie haben Ihren Kreis für die eigene Pflege eingerichtet. Das können Sie jetzt tun:",
+    "introJoined": "Sie sind dem Pflegekreis von {{name}} beigetreten. Das können Sie jetzt tun:",
+    "introJoinedRecipient": "Sie sind Ihrem Pflegekreis beigetreten. Das können Sie jetzt tun:",
     "progress": "{{done}} von {{total}} erledigt",
     "step1Label": "Medikament hinzufügen",
     "step1Desc": "Alle erhalten die Erinnerung, sodass niemand allein daran denken muss.",

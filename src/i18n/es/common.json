@@ -145,7 +145,10 @@
   },
   "gettingStarted": {
     "title": "Empezar",
-    "subtitle": "Unos pasos rápidos para configurar este círculo para todos.",
+    "introOwner": "Has creado un círculo de cuidado para {{name}}. Esto es lo que puedes hacer:",
+    "introSelfCare": "Has configurado tu círculo de autocuidado. Esto es lo que puedes hacer:",
+    "introJoined": "Te uniste al círculo de cuidado de {{name}}. Esto es lo que puedes hacer:",
+    "introJoinedRecipient": "Te uniste a tu círculo de cuidado. Esto es lo que puedes hacer:",
     "progress": "{{done}} de {{total}} listo",
     "step1Label": "Agrega un medicamento",
     "step1Desc": "Todos reciben el recordatorio, para que nadie tenga que ser quien se acuerde.",

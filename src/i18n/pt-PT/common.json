@@ -52,7 +52,11 @@
   },
   "gettingStarted": {
     "step3Desc": "Alergias, médicos e contactos prontos na hora em que forem necessários.",
-    "statusPending": "(por fazer)"
+    "statusPending": "(por fazer)",
+    "introOwner": "Criou um círculo de cuidado para {{name}}. Veja o que pode fazer:",
+    "introSelfCare": "Configurou o seu círculo de autocuidado. Veja o que pode fazer:",
+    "introJoined": "Juntou-se ao círculo de cuidado de {{name}}. Veja o que pode fazer:",
+    "introJoinedRecipient": "Juntou-se ao seu círculo de cuidado. Veja o que pode fazer:"
   },
   "draftRestored": "Restaurámos o seu rascunho não guardado.",
   "undoCap": {

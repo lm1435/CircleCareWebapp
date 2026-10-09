@@ -145,7 +145,10 @@
   },
   "gettingStarted": {
     "title": "Per iniziare",
-    "subtitle": "Pochi passaggi rapidi per preparare questa cerchia per tutti.",
+    "introOwner": "Hai creato una cerchia di cura per {{name}}. Ecco cosa puoi fare:",
+    "introSelfCare": "Hai creato la tua cerchia personale. Ecco cosa puoi fare:",
+    "introJoined": "Fai parte della cerchia di cura di {{name}}. Ecco cosa puoi fare:",
+    "introJoinedRecipient": "Fai parte della tua cerchia di cura. Ecco cosa puoi fare:",
     "progress": "{{done}} di {{total}} completati",
     "step1Label": "Aggiungi un farmaco",
     "step1Desc": "Tutti ricevono il promemoria, così nessuno deve essere l'unico a ricordarsene.",
