@@ -504,6 +504,38 @@ describe('OpenTasksCard', () => {
     }
   });
 
+  // WCAG 2.2.1: hovering the badge pauses the window (TaskRow onHoldUndo ->
+  // useTaskCompletion.handleHoldUndo); leaving resumes it with the time left.
+  it('pauses the undo window while the badge is hovered, then commits on the time left', () => {
+    vi.useFakeTimers();
+    try {
+      renderCard();
+
+      fireEvent.click(action('Mark "Pick up groceries" complete'));
+      const badge = action(/Undo.*Pick up groceries/).closest('[role="status"]') as HTMLElement;
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      fireEvent.pointerMove(badge);
+      act(() => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(mockMutate).not.toHaveBeenCalled();
+
+      fireEvent.pointerLeave(badge);
+      act(() => {
+        vi.advanceTimersByTime(3999);
+      });
+      expect(mockMutate).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // NO `scheduledDate` FROM THIS SURFACE, and that is a decision rather than an
   // oversight. GET /circles/:id/tasks reads PHYSICAL calendar_events rows and
   // never expands a recurrence (backend/src/routes/tasks.ts), so a recurring

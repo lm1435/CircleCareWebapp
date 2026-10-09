@@ -422,6 +422,43 @@ describe('giving a dose', () => {
     expect(await screen.findByText('Dose logged')).toBeInTheDocument();
   });
 
+  // WCAG 2.2.1: hovering the badge pauses the window (AsNeededActions onHoldUndo
+  // -> useAsNeededGive.hold -> useAsNeededUndo.hold); leaving resumes it with
+  // the time left, and the dose is sent only when that runs out.
+  it('hovering the badge pauses the window; leaving resumes it with the time left', async () => {
+    mockApi();
+    post.mockResolvedValue({
+      success: true,
+      data: { dose: { id: 'd1' }, summary: { last_dose: lastDose({ id: 'd1' }) } },
+    });
+    renderHome();
+    const user = userEvent.setup();
+
+    await openAndLog(user);
+    const badge = within(card())
+      .getByRole('button', { name: 'Undo Ibuprofen' })
+      .closest('[role="status"]') as HTMLElement;
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    fireEvent.pointerMove(badge);
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+    });
+    expect(post).not.toHaveBeenCalled();
+
+    fireEvent.pointerLeave(badge);
+    await act(async () => {
+      vi.advanceTimersByTime(MEDICATION_UNDO_DELAY_MS - 1000 - 1);
+    });
+    expect(post).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    vi.useFakeTimers({ toFake: ['Date'], now: NOW });
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+  });
+
   it('Undo inside the window: no POST, ever; "Gave a dose" returns', async () => {
     mockApi();
     renderHome();

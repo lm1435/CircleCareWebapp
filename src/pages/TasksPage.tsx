@@ -81,7 +81,8 @@ export default function TasksPage(): ReactElement {
   // Shared with the Overview "Open tasks" card via useTaskCompletion rather than
   // kept as a second copy: the hook owns the pending ids, their commit timers,
   // and the unmount / pagehide / visibilitychange flushes.
-  const { pendingIds, handleComplete, handleUndo, flushPending } = useTaskCompletion(circleId);
+  const { pendingIds, handleComplete, handleUndo, handleHoldUndo, flushPending } =
+    useTaskCompletion(circleId);
 
   const tasks = tasksQuery.data?.tasks ?? [];
   // The resolved care-recipient timezone + "today" come back on the response.
@@ -176,6 +177,7 @@ export default function TasksPage(): ReactElement {
             members={members}
             onComplete={handleComplete}
             onUndo={handleUndo}
+            onHoldUndo={handleHoldUndo}
             onEdit={setEditingTask}
             onViewDetails={setViewingTask}
             isPendingComplete={pendingIds.has(task.id)}

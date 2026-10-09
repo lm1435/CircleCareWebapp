@@ -5,6 +5,7 @@ import { useCompleteEvent } from '@/hooks/useCalendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
 import { withRefetchCap } from '@/lib/refetchCap';
 import { keepalivePost } from '@/lib/keepalivePost';
+import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
 
 // Shared task-completion orchestration — the undo grace period every task
 // surface uses. Extracted from TasksPage so the Overview "Open tasks" card gets
@@ -21,7 +22,8 @@ export const UNDO_DELAY_MS = 5000;
 
 /** One task inside its undo window. */
 interface PendingCompletion {
-  timer: ReturnType<typeof setTimeout>;
+  /** Holdable: paused while the badge is hovered / focused (`lib/undoTimer`). */
+  timer: UndoTimer;
   /** The circle the tap was made in — every send path uses THIS, never the
    * circle being rendered when the commit happens. */
   circleId: string;
@@ -34,6 +36,12 @@ export interface UseTaskCompletionResult {
   handleComplete: (task: CalendarEvent) => void;
   /** Cancel a pending completion — nothing is committed. */
   handleUndo: (eventId: string) => void;
+  /**
+   * Pause (`true`) or resume (`false`) a pending completion's countdown — the
+   * badge calls it while the pointer is over it or keyboard focus is inside it
+   * (WCAG 2.2.1). No-op once the completion has been sent.
+   */
+  handleHoldUndo: (eventId: string, held: boolean) => void;
   /** Commit every still-pending completion now (e.g. before a list teardown). */
   flushPending: (viaKeepalive?: boolean) => void;
 }
@@ -88,7 +96,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
     // naturally and is mid-flight toward its own onSettled cleanup.
     const flushedIds = Array.from(timers.keys());
     timers.forEach(({ timer, circleId: sentCircleId }, eventId) => {
-      clearTimeout(timer);
+      timer.clear();
       const request = keepalive
         ? keepalivePost(`/circles/${sentCircleId}/events/${eventId}/complete`)
         : null;
@@ -179,11 +187,11 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
     // the same distinction.
     const eventId = task.id;
     const existing = timersRef.current.get(eventId);
-    if (existing) clearTimeout(existing.timer);
+    if (existing) existing.timer.clear();
     // The circle this tap was made in — see `circleIdRef`.
     const sentCircleId = circleIdRef.current;
 
-    const timerId = setTimeout(() => {
+    const timer = startUndoTimer(() => {
       timersRef.current.delete(eventId);
       completeMutationRef.current.mutate({ eventId, circleId: sentCircleId }, {
         // SUCCESS: hold the pending id until the TASK ROWS THEMSELVES have
@@ -233,7 +241,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
       });
     }, UNDO_DELAY_MS);
 
-    timersRef.current.set(eventId, { timer: timerId, circleId: sentCircleId });
+    timersRef.current.set(eventId, { timer, circleId: sentCircleId });
     setPendingIds((prev) => {
       const next = new Set(prev);
       next.add(eventId);
@@ -244,7 +252,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
   // Cancel the pending completion — nothing is committed.
   const handleUndo = useCallback((eventId: string): void => {
     const entry = timersRef.current.get(eventId);
-    if (entry) clearTimeout(entry.timer);
+    if (entry) entry.timer.clear();
     timersRef.current.delete(eventId);
     setPendingIds((prev) => {
       if (!prev.has(eventId)) return prev;
@@ -254,5 +262,9 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
     });
   }, []);
 
-  return { pendingIds, handleComplete, handleUndo, flushPending };
+  const handleHoldUndo = useCallback((eventId: string, held: boolean): void => {
+    timersRef.current.get(eventId)?.timer.hold(held);
+  }, []);
+
+  return { pendingIds, handleComplete, handleUndo, handleHoldUndo, flushPending };
 }

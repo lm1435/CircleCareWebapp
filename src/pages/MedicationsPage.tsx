@@ -407,6 +407,7 @@ interface MedCardProps {
     onGive: (group: MedGroup) => void;
     onHistory: (group: MedGroup) => void;
     onUndo: (group: MedGroup) => void;
+    onHoldUndo: (group: MedGroup, held: boolean) => void;
   };
 }
 
@@ -575,6 +576,7 @@ function MedCard({
           onGive={() => asNeededFlow.onGive(group)}
           onHistory={() => asNeededFlow.onHistory(group)}
           onUndo={() => asNeededFlow.onUndo(group)}
+          onHoldUndo={(held) => asNeededFlow.onHoldUndo(group, held)}
         />
       )}
     </li>
@@ -674,6 +676,7 @@ export default function MedicationsPage(): ReactElement {
             give.requestGive({ id: g.event.id, name: g.name, dosage: g.dosage }),
           onHistory: (g) => setHistoryGroup(g),
           onUndo: (g) => give.undo(g.event.id),
+          onHoldUndo: (g, held) => give.hold(g.event.id, held),
         }
       : undefined;
 

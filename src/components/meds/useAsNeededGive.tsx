@@ -81,6 +81,8 @@ export interface UseAsNeededGiveResult {
   pending: Record<string, true>;
   inFlight: Record<string, true>;
   undo: (eventId: string) => void;
+  /** Pause / resume a pending dose's countdown while its badge is hovered or keyboard-focused. */
+  hold: (eventId: string, held: boolean) => void;
   /** Render ONCE, anywhere in the tree: the Log dialog and the "log another?" prompt. */
   dialogs: ReactElement | null;
 }
@@ -286,6 +288,7 @@ export function useAsNeededGive({
         Analytics.asNeededDoseUndone({ surface });
       }
     },
+    hold: flow.hold,
     dialogs: renderDialogs(),
   };
 }

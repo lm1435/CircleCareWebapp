@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { devError } from '@/constants/config';
 import { keepalivePost } from '@/lib/keepalivePost';
+import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
 import { useLogAsNeededDose } from '@/hooks/useAsNeeded';
 import {
   asNeededRecentlyLogged,
@@ -45,7 +46,8 @@ export interface AsNeededLogEntry {
 }
 
 interface PendingEntry extends AsNeededLogEntry {
-  timer: ReturnType<typeof setTimeout> | null;
+  /** Holdable: paused while the badge is hovered / focused (`lib/undoTimer`). */
+  timer: UndoTimer | null;
   fired: boolean;
 }
 
@@ -67,6 +69,12 @@ export interface UseAsNeededUndoResult {
   logNow: (entry: AsNeededLogEntry) => void;
   /** `true` when it actually cancelled; `false` once the request is away. */
   undo: (eventId: string) => boolean;
+  /**
+   * Pause (`true`) or resume (`false`) this item's countdown — the badge calls
+   * it while the pointer is over it or keyboard focus is inside it (WCAG 2.2.1).
+   * No-op once the request is away or the item is gone.
+   */
+  hold: (eventId: string, held: boolean) => void;
 }
 
 export function useAsNeededUndo({
@@ -184,7 +192,7 @@ export function useAsNeededUndo({
         ...input,
         circleId,
         fired: false,
-        timer: setTimeout(() => {
+        timer: startUndoTimer(() => {
           const live = entriesRef.current.get(input.eventId);
           if (live) send(live);
         }, MEDICATION_UNDO_DELAY_MS),
@@ -210,7 +218,7 @@ export function useAsNeededUndo({
     (eventId: string): boolean => {
       const entry = entriesRef.current.get(eventId);
       if (!entry || entry.fired) return false;
-      if (entry.timer) clearTimeout(entry.timer);
+      entry.timer?.clear();
       clearEntry(eventId);
       return true;
     },
@@ -223,7 +231,7 @@ export function useAsNeededUndo({
     const flush = (viaKeepalive = false): void => {
       for (const entry of entries.values()) {
         if (entry.fired) continue;
-        if (entry.timer) clearTimeout(entry.timer);
+        entry.timer?.clear();
         send(entry, viaKeepalive);
       }
     };
@@ -241,5 +249,11 @@ export function useAsNeededUndo({
     };
   }, [send]);
 
-  return { pending, inFlight, log, logNow, undo };
+  const hold = useCallback((eventId: string, held: boolean): void => {
+    const entry = entriesRef.current.get(eventId);
+    if (!entry || entry.fired) return;
+    entry.timer?.hold(held);
+  }, []);
+
+  return { pending, inFlight, log, logNow, undo, hold };
 }

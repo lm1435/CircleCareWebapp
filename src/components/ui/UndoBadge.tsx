@@ -1,4 +1,12 @@
-import { useLayoutEffect, useRef, type ReactElement } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FocusEvent,
+  type PointerEvent,
+  type ReactElement,
+} from 'react';
 
 export type UndoBadgeKind = 'taken' | 'skipped' | 'done';
 
@@ -28,7 +36,32 @@ export interface UndoBadgeProps {
    * `cc-countdown` keyframe's own doc comment says.
    */
   durationMs?: number;
+  /**
+   * WCAG 2.2.1 Timing Adjustable. Called with `true` when the pointer moves
+   * over the badge or KEYBOARD focus lands inside it, and with `false` once
+   * both have left (or the badge unmounts while held). The caller pauses its
+   * commit timer for that long (`lib/undoTimer`), and the bar below pauses with
+   * it, so what is drawn is what is left. Focus that only followed a mouse
+   * click (not `:focus-visible`) and touch contact do not hold: otherwise every
+   * mouse click on Take would park the write until the next click elsewhere.
+   * For the same reason hover starts on pointer MOVEMENT over the badge, not on
+   * `pointerenter`: the badge replaces the button just clicked, so it appears
+   * under a resting cursor and Chrome reports it hovered with no one hovering
+   * it. Any movement over it (reaching for Undo, a magnifier following the
+   * cursor) holds; leaving releases.
+   */
+  onHoldChange?: (held: boolean) => void;
   className?: string;
+}
+
+/** Keyboard focus, as the browser itself judges it for focus rings. */
+function isKeyboardFocus(el: Element): boolean {
+  try {
+    return el.matches(':focus-visible');
+  } catch {
+    // No `:focus-visible` support: hold on any focus (the safe side for 2.2.1).
+    return true;
+  }
 }
 
 const DEFAULT_DURATION_MS = 5000;
@@ -49,11 +82,46 @@ export function UndoBadge({
   itemLabel,
   onUndo,
   durationMs = DEFAULT_DURATION_MS,
+  onHoldChange,
   className = '',
 }: UndoBadgeProps): ReactElement {
   const isTaken = kind === 'taken' || kind === 'done';
   const rootRef = useRef<HTMLDivElement>(null);
   const undoRef = useRef<HTMLButtonElement>(null);
+
+  // HOLD (WCAG 2.2.1): hovered OR keyboard-focused pauses the countdown; it
+  // resumes with the time left once BOTH have gone.
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const held = hovered || focused;
+  const onHoldChangeRef = useRef(onHoldChange);
+  onHoldChangeRef.current = onHoldChange;
+  const reportedHeldRef = useRef(false);
+  useEffect(() => {
+    if (held === reportedHeldRef.current) return;
+    reportedHeldRef.current = held;
+    onHoldChangeRef.current?.(held);
+  }, [held]);
+  // Unmounted while held (a re-render that swaps the row, not Undo / commit):
+  // release, or the write would stay paused with no badge left to resume it.
+  useEffect(
+    () => () => {
+      if (reportedHeldRef.current) onHoldChangeRef.current?.(false);
+    },
+    []
+  );
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>): void => {
+    if (e.pointerType !== 'touch') setHovered(true);
+  };
+  const onPointerLeave = (): void => setHovered(false);
+  const onFocus = (e: FocusEvent<HTMLDivElement>): void => {
+    setFocused(isKeyboardFocus(e.target));
+  };
+  const onBlur = (e: FocusEvent<HTMLDivElement>): void => {
+    const next = e.relatedTarget;
+    if (next instanceof Node && rootRef.current?.contains(next)) return;
+    setFocused(false);
+  };
 
   // KEYBOARD FOCUS (WCAG 2.4.3). The badge REPLACES the button that was just
   // pressed (Confirm / Skip / Done), so that button leaves the DOM with focus
@@ -108,6 +176,11 @@ export function UndoBadge({
       role="status"
       aria-live="polite"
       className={`inline-flex flex-col rounded-full overflow-hidden ${className}`}
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      data-held={held ? 'true' : undefined}
     >
       <div
         className={`flex items-center gap-[5px] px-3 py-2 ${
@@ -133,7 +206,12 @@ export function UndoBadge({
         className={`block h-[2.5px] origin-left motion-reduce:animate-none ${
           isTaken ? 'bg-moss-light' : 'bg-ink-3'
         }`}
-        style={{ animation: `cc-countdown ${durationMs}ms linear forwards` }}
+        // Play-state inside the shorthand (not a separate longhand React would
+        // warn about mixing): only the NAME restarts a CSS animation, so
+        // toggling paused/running resumes the bar where it stopped.
+        style={{
+          animation: `cc-countdown ${durationMs}ms linear forwards ${held ? 'paused' : 'running'}`,
+        }}
       />
     </div>
   );

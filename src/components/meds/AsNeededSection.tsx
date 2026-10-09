@@ -127,6 +127,7 @@ export function AsNeededSection({ circleId, meds }: AsNeededSectionProps): React
                 onGive={() => give.requestGive({ id: med.id, name, dosage: med.medication_dosage })}
                 onHistory={() => setHistoryFor({ id: med.id, name })}
                 onUndo={() => give.undo(med.id)}
+                onHoldUndo={(held) => give.hold(med.id, held)}
               />
             </li>
           );

@@ -63,6 +63,8 @@ export interface TaskRowProps {
   members: CircleMember[];
   onComplete: (task: CalendarEvent) => void;
   onUndo: (taskId: string) => void;
+  /** Pause (`true`) / resume (`false`) the undo countdown — see UndoBadge `onHoldChange`. */
+  onHoldUndo?: (taskId: string, held: boolean) => void;
   onEdit: (task: CalendarEvent) => void;
   /**
    * Open the READ-ONLY detail for a task whose completion has persisted.
@@ -93,6 +95,7 @@ export function TaskRow({
   members,
   onComplete,
   onUndo,
+  onHoldUndo,
   onEdit,
   onViewDetails,
   isPendingComplete,
@@ -226,6 +229,7 @@ export function TaskRow({
           undoLabel={t('row.undo')}
           itemLabel={task.title}
           onUndo={() => onUndo(task.id)}
+          onHoldChange={onHoldUndo ? (held) => onHoldUndo(task.id, held) : undefined}
           durationMs={UNDO_DELAY_MS}
         />
       );

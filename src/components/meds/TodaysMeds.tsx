@@ -575,6 +575,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
                       undoLabel={t('undo')}
                       itemLabel={medName}
                       onUndo={() => undoFlow.undo(med.id)}
+                      onHoldChange={(held) => undoFlow.hold(med.id, held)}
                     />
                   </span>
                 )}

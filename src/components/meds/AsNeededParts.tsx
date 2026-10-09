@@ -71,6 +71,8 @@ export interface AsNeededActionsProps {
   onGive: () => void;
   onHistory: () => void;
   onUndo: () => void;
+  /** Pause (`true`) / resume (`false`) the undo countdown — see UndoBadge `onHoldChange`. */
+  onHoldUndo?: (held: boolean) => void;
 }
 
 export function AsNeededActions({
@@ -82,6 +84,7 @@ export function AsNeededActions({
   onGive,
   onHistory,
   onUndo,
+  onHoldUndo,
 }: AsNeededActionsProps): ReactElement {
   const { t } = useTranslation('meds');
 
@@ -123,6 +126,7 @@ export function AsNeededActions({
               undoLabel={t('undo')}
               itemLabel={name}
               onUndo={onUndo}
+              onHoldChange={onHoldUndo}
             />
           )
         ) : (

@@ -3,6 +3,7 @@ import { devError } from '@/constants/config';
 import { queryClient } from '@/lib/queryClient';
 import { todaysMedsKey, useConfirmMedication } from '@/hooks/useMedConfirmation';
 import { keepalivePost } from '@/lib/keepalivePost';
+import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
 import { queryKeys } from '@/lib/queryKeys';
 import type {
   ConfirmableStatus,
@@ -54,7 +55,8 @@ interface PendingEntry {
    * when the send happens. See the note in `useMedicationUndo` below.
    */
   circleId: string;
-  timer: ReturnType<typeof setTimeout>;
+  /** Holdable: paused while the badge is hovered / focused (`lib/undoTimer`). */
+  timer: UndoTimer;
   /**
    * Set the instant the timer fires and the request goes out — BEFORE it
    * settles. It separates "still counting down" (undoable, flushable) from
@@ -91,6 +93,12 @@ export interface UseMedicationUndoResult {
   confirm: (med: TodaysMedication, status: ConfirmableStatus) => void;
   /** `true` when it actually cancelled — `false` once the request is away. */
   undo: (eventId: string) => boolean;
+  /**
+   * Pause (`true`) or resume (`false`) this item's countdown — the badge calls
+   * it while the pointer is over it or keyboard focus is inside it (WCAG 2.2.1).
+   * No-op once the request is away or the item is gone.
+   */
+  hold: (eventId: string, held: boolean) => void;
 }
 
 export function useMedicationUndo({
@@ -265,7 +273,7 @@ export function useMedicationUndo({
         scheduledTime: med.scheduled_time,
         circleId,
         fired: false,
-        timer: setTimeout(() => {
+        timer: startUndoTimer(() => {
           const live = entriesRef.current.get(med.id);
           if (live) send(live);
         }, MEDICATION_UNDO_DELAY_MS),
@@ -282,7 +290,7 @@ export function useMedicationUndo({
       // Past the window the request is already away; the badge stays until it
       // settles rather than lying about a dose the server is recording.
       if (!entry || entry.fired) return false;
-      clearTimeout(entry.timer);
+      entry.timer.clear();
       clearEntry(eventId);
       return true;
     },
@@ -296,7 +304,7 @@ export function useMedicationUndo({
     const flush = (viaKeepalive = false): void => {
       for (const entry of entries.values()) {
         if (entry.fired) continue;
-        clearTimeout(entry.timer);
+        entry.timer.clear();
         send(entry, viaKeepalive);
       }
     };
@@ -322,5 +330,11 @@ export function useMedicationUndo({
     };
   }, [send]);
 
-  return { pending, confirm, undo };
+  const hold = useCallback((eventId: string, held: boolean): void => {
+    const entry = entriesRef.current.get(eventId);
+    if (!entry || entry.fired) return;
+    entry.timer.hold(held);
+  }, []);
+
+  return { pending, confirm, undo, hold };
 }

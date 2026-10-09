@@ -372,6 +372,45 @@ describe('TasksPage', () => {
     }
   });
 
+  // WCAG 2.2.1: keyboard focus inside the badge pauses the window (TaskRow
+  // onHoldUndo -> useTaskCompletion.handleHoldUndo); moving it away resumes it.
+  it('pauses the undo window while keyboard focus is on Undo, then commits on the time left', () => {
+    vi.useFakeTimers();
+    const realMatches = Element.prototype.matches;
+    const spy = vi.spyOn(Element.prototype, 'matches').mockImplementation(function (
+      this: Element,
+      selector: string
+    ) {
+      return selector === ':focus-visible' ? true : realMatches.call(this, selector);
+    });
+    try {
+      renderPage();
+
+      fireEvent.click(action('Mark "Pick up groceries" complete'));
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      act(() => action(/Undo.*Pick up groceries/).focus());
+      act(() => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(mockMutate).not.toHaveBeenCalled();
+
+      act(() => (document.activeElement as HTMLElement).blur());
+      act(() => {
+        vi.advanceTimersByTime(3999);
+      });
+      expect(mockMutate).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it('commits via useCompleteEvent after the undo window elapses', () => {
     vi.useFakeTimers();
     try {

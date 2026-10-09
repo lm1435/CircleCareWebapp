@@ -1279,6 +1279,46 @@ describe('TodaysMeds', () => {
       expect(action(medRow('Levothyroxine'), 'Confirm')).toBeInTheDocument();
     });
 
+    // WCAG 2.2.1: the countdown PAUSES while the pointer is over the badge and
+    // resumes with the time left once it leaves (the row's real wiring:
+    // UndoBadge onHoldChange -> useMedicationUndo.hold).
+    it('pauses the window while the badge is hovered, then commits on the time left', async () => {
+      mockApi();
+      mockedPost.mockResolvedValue({
+        success: true,
+        data: { confirmation: { id: 'conf-h', event_id: 'med-4', status: 'taken' } },
+      });
+      renderWidget();
+
+      await screen.findByText('Levothyroxine');
+      answer(medRow('Levothyroxine'), 'Confirm');
+      const badge = within(medRow('Levothyroxine'))
+        .getByRole('button', { name: 'Undo Levothyroxine' })
+        .closest('[role="status"]') as HTMLElement;
+
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      fireEvent.pointerMove(badge);
+      await act(async () => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(mockedPost).not.toHaveBeenCalled();
+
+      fireEvent.pointerLeave(badge);
+      await act(async () => {
+        vi.advanceTimersByTime(MEDICATION_UNDO_DELAY_MS - 1000 - 1);
+      });
+      expect(mockedPost).not.toHaveBeenCalled();
+      await act(async () => {
+        vi.advanceTimersByTime(1);
+      });
+      vi.useFakeTimers({ toFake: ['Date'], now: NOW });
+      await waitFor(() => {
+        expect(mockedPost).toHaveBeenCalledTimes(1);
+      });
+    });
+
     // Leaving the page inside the window must not silently drop the answer:
     // the UI already said "Taken", and an unsent confirmation is later
     // auto-missed by the reminder cron.
