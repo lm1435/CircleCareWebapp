@@ -580,3 +580,67 @@ describe('HistoryList: as-needed doses', () => {
     expect(viewed).toHaveBeenCalledWith({ scope: 'all' });
   });
 });
+
+describe('HistoryList: a row opens its medication\'s history', () => {
+  beforeEach(() => {
+    mockCircleDoses.mockReturnValue({ doses: [] });
+  });
+
+  it('a scheduled row offers "View history for <med>" and reports the NAME', async () => {
+    const user = userEvent.setup({ advanceTimers: () => {} });
+    const onOpenMedication = vi.fn();
+    mockPage([TAKEN_TODAY]);
+    render(
+      <HistoryList
+        circleId="circle-1"
+        timezone={TZ}
+        medicationName={null}
+        onOpenMedication={onOpenMedication}
+      />
+    );
+    const row = card('Metformin');
+    await user.click(within(row).getByRole('button', { name: 'View history for Metformin' }));
+    expect(onOpenMedication).toHaveBeenCalledWith('Metformin');
+    // The button does not swallow the card: its content is still readable.
+    expect(within(row).getByText('Taken by')).toBeInTheDocument();
+    expect(within(row).getByText('Ana Ruiz')).toBeInTheDocument();
+  });
+
+  it('no "View history" on a row when the list already shows only that medication', () => {
+    mockPage([TAKEN_TODAY]);
+    render(
+      <HistoryList
+        circleId="circle-1"
+        timezone={TZ}
+        medicationName="Metformin"
+        onOpenMedication={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /View history for/ })).toBeNull();
+  });
+
+  it('an as-needed dose row offers "View history for <med>" and reports the dose', async () => {
+    const user = userEvent.setup({ advanceTimers: () => {} });
+    const onOpenAsNeeded = vi.fn();
+    mockPage([]);
+    const d = prnDose('d1', '2026-09-05T19:30:00Z');
+    mockCircleDoses.mockReturnValue({ doses: [d] });
+    render(
+      <HistoryList
+        circleId="circle-1"
+        timezone={TZ}
+        medicationName={null}
+        onOpenAsNeeded={onOpenAsNeeded}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'View history for Ibuprofen' }));
+    expect(onOpenAsNeeded).toHaveBeenCalledWith(d);
+  });
+
+  it('without handlers the rows stay plain (no buttons)', () => {
+    mockPage([TAKEN_TODAY]);
+    mockCircleDoses.mockReturnValue({ doses: [prnDose('d1', '2026-09-05T19:30:00Z')] });
+    renderList();
+    expect(screen.queryByRole('button', { name: /View history for/ })).toBeNull();
+  });
+});

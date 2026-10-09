@@ -40,7 +40,9 @@
     "skippedAtLabel": "Saltado às",
     "skippedByLabel": "Saltado por",
     "statusSkipped": "Saltado",
-    "emptyHint": "As confirmações de medicamentos aparecerão aqui depois de registadas"
+    "emptyHint": "As confirmações de medicamentos aparecerão aqui depois de registadas",
+    "backToAllHistory": "Voltar a todo o histórico",
+    "showingMedication": "A mostrar: {{name}}"
   },
   "adherence": {
     "loading": "A carregar adesão…"

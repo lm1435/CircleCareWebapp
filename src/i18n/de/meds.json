@@ -119,7 +119,10 @@
     "errorTitle": "Der Medikamentenverlauf konnte nicht geladen werden",
     "filterAll": "Alle Medikamente",
     "filterByLabel": "Filtern nach: {{label}}",
-    "loadMore": "Mehr laden"
+    "loadMore": "Mehr laden",
+    "viewHistoryFor": "Verlauf für {{name}} anzeigen",
+    "backToAllHistory": "Zurück zum gesamten Verlauf",
+    "showingMedication": "Anzeige: {{name}}"
   },
   "adherence": {
     "eyebrow": "Einnahmetreue · 30 Tage",

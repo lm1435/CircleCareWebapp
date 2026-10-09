@@ -44,7 +44,7 @@ import { AsNeededActions, LastGivenLine } from '@/components/meds/AsNeededParts'
 import { DoseHistoryModal } from '@/components/meds/DoseHistoryModal';
 import { useAsNeededGive } from '@/components/meds/useAsNeededGive';
 import { useAsNeededSummaries, useCircleAsNeededDoses } from '@/hooks/useAsNeeded';
-import { mergedMedicationOptions } from '@/components/meds/historyMerge';
+import { doseMedicationName, mergedMedicationOptions } from '@/components/meds/historyMerge';
 import type { AsNeededSummary } from '@/api/medicationAsNeeded';
 import { useAuthStore } from '@/store/authStore';
 import { AdherenceHero } from '@/components/meds/AdherenceHero';
@@ -659,6 +659,14 @@ export default function MedicationsPage(): ReactElement {
     surface: 'meds_tab',
   });
   const [historyGroup, setHistoryGroup] = useState<MedGroup | null>(null);
+  // The same dose log, opened from a History-tab row: the dose names its
+  // medication (id + name), which may no longer be on the roster.
+  const [historyDoseMed, setHistoryDoseMed] = useState<{ eventId: string; name: string } | null>(
+    null
+  );
+  const doseHistoryTarget = historyGroup
+    ? { eventId: historyGroup.event.id, name: historyGroup.name }
+    : historyDoseMed;
   const activeScheduled = useMemo(() => active.filter((g) => !g.asNeeded), [active]);
   const activeAsNeeded = useMemo(() => active.filter((g) => g.asNeeded), [active]);
   const asNeededFlowFor = (group: MedGroup): MedCardProps['asNeededFlow'] =>
@@ -727,6 +735,14 @@ export default function MedicationsPage(): ReactElement {
     if (!historyFilter || filterOptions.length === 0) return;
     if (!filterOptions.some((option) => option.id === historyFilter)) setHistoryFilter(null);
   }, [historyFilter, filterOptions]);
+
+  // A scheduled dose tapped in History: narrow the list to that medication and
+  // bring the "Showing: <name>" filter (and its "Back to all history") into view.
+  const historyFilterRef = useRef<HTMLDivElement>(null);
+  function openMedicationHistory(name: string): void {
+    setHistoryFilter(name);
+    historyFilterRef.current?.scrollIntoView?.({ block: 'start' });
+  }
 
   /**
    * Open a medication's detail modal — the read view for this page.
@@ -986,16 +1002,26 @@ export default function MedicationsPage(): ReactElement {
             {t('meds:history.title')}
           </Text>
           <AdherenceHero circleId={circleId} />
-          <MedicationFilter
-            options={filterOptions}
-            value={historyFilter}
-            onChange={setHistoryFilter}
-          />
+          <div ref={historyFilterRef} className="scroll-mt-4">
+            <MedicationFilter
+              options={filterOptions}
+              value={historyFilter}
+              onChange={setHistoryFilter}
+            />
+          </div>
           {/* GATED: HistoryList derives its own 30-day window (and its day
               groupings) from this zone, so it must not mount on a guess — it
               would fetch one window, then a second under a different key. */}
           {timezone !== null && (
-            <HistoryList circleId={circleId} timezone={timezone} medicationName={historyFilter} />
+            <HistoryList
+              circleId={circleId}
+              timezone={timezone}
+              medicationName={historyFilter}
+              onOpenMedication={openMedicationHistory}
+              onOpenAsNeeded={(dose) =>
+                setHistoryDoseMed({ eventId: dose.event_id, name: doseMedicationName(dose) })
+              }
+            />
           )}
         </div>
       )}
@@ -1101,14 +1127,17 @@ export default function MedicationsPage(): ReactElement {
         />
       )}
 
-      {historyGroup && timezone !== null && (
+      {doseHistoryTarget && timezone !== null && (
         <DoseHistoryModal
           circleId={circleId}
-          eventId={historyGroup.event.id}
-          name={historyGroup.name}
+          eventId={doseHistoryTarget.eventId}
+          name={doseHistoryTarget.name}
           timezone={timezone}
           canEdit={canEdit}
-          onClose={() => setHistoryGroup(null)}
+          onClose={() => {
+            setHistoryGroup(null);
+            setHistoryDoseMed(null);
+          }}
         />
       )}
 

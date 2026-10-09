@@ -53,6 +53,24 @@ describe('MedicationFilter', () => {
     expect(onChange).toHaveBeenCalledWith(null);
   });
 
+  it('narrowed: the trigger reads "Showing: <name>" and a 44px "Back to all history" clears it', async () => {
+    const user = userEvent.setup();
+    const onChange = renderFilter('Warfarin');
+    expect(screen.getByRole('button', { name: 'Filter by: Warfarin' })).toHaveTextContent(
+      'Showing: Warfarin'
+    );
+    const clear = screen.getByRole('button', { name: 'Back to all history' });
+    expect(clear.className).toContain('h-11');
+    expect(clear.className).toContain('w-11');
+    await user.click(clear);
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it('no clear control while showing every medication', () => {
+    renderFilter(null);
+    expect(screen.queryByRole('button', { name: 'Back to all history' })).toBeNull();
+  });
+
   it('keeps the trigger at the 44px minimum target', () => {
     renderFilter(null);
     expect(

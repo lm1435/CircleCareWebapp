@@ -1,7 +1,7 @@
 import { baseLanguage } from '@/i18n/locales';
 import { useEffect, useMemo, useRef, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, EmptyState, Skeleton, Text, STATUS_PILL } from '@/components/ui';
+import { Button, Card, EmptyState, Icon, Skeleton, Text, STATUS_PILL } from '@/components/ui';
 import { useMedicationConfirmations } from '@/hooks/useMedConfirmation';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
@@ -41,6 +41,49 @@ export interface HistoryListProps {
    * for why this is a name and not an `event_id`.
    */
   medicationName: string | null;
+  /**
+   * Tapping a SCHEDULED dose opens that medication's history: the list
+   * narrowed to it (there is no separate per-medication view for a scheduled
+   * medication). Receives the medication NAME, the filter's own currency.
+   */
+  onOpenMedication?: (name: string) => void;
+  /** Tapping an AS-NEEDED dose opens that medication's dose log. */
+  onOpenAsNeeded?: (dose: AsNeededDoseWithEvent) => void;
+}
+
+/**
+ * The whole card opens the medication's history, as a STRETCHED button laid
+ * over the card rather than a button wrapping it: a button's accessible name
+ * replaces its contents, so wrapping would hide the status, times and "taken
+ * by" from screen readers (and a <dl> is not allowed inside a <button>). The
+ * card's own content stays readable; the button adds the action.
+ */
+function OpenHistoryOverlay({
+  name,
+  onOpen,
+  testId,
+}: {
+  name: string;
+  onOpen: () => void;
+  testId: string;
+}): ReactElement {
+  const { t } = useTranslation('meds');
+  return (
+    <>
+      <Icon
+        name="chevron-forward"
+        size="inline"
+        className="pointer-events-none absolute right-4 top-[22px] text-ink-3"
+      />
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={t('history.viewHistoryFor', { name })}
+        data-testid={testId}
+        className="absolute inset-0 cursor-pointer rounded-[inherit] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+      />
+    </>
+  );
 }
 
 /**
@@ -138,11 +181,13 @@ function ConfirmationCard({
   timezone,
   hourCycle,
   dayKey,
+  onOpen,
 }: {
   confirmation: HistoryConfirmation;
   timezone: string;
   hourCycle: HourCycle;
   dayKey: string;
+  onOpen?: () => void;
 }): ReactElement {
   const { t } = useTranslation('meds');
   const pill = pillFor(confirmation.status, {
@@ -182,7 +227,7 @@ function ConfirmationCard({
     : t('history.notTaken');
 
   return (
-    <Card as="li" className="px-5 py-[18px]">
+    <Card as="li" className="relative px-5 py-[18px]" data-testid="history-confirmation-row">
       <div className="flex flex-col gap-1.5">
         <span className={`${pill.className} self-start`}>{pill.label}</span>
         <p className="m-0 flex flex-wrap items-baseline gap-1.5">
@@ -219,6 +264,9 @@ function ConfirmationCard({
           </>
         )}
       </dl>
+      {onOpen && name && (
+        <OpenHistoryOverlay name={name} onOpen={onOpen} testId="history-open-medication" />
+      )}
     </Card>
   );
 }
@@ -232,10 +280,12 @@ function DoseCard({
   dose,
   timezone,
   hourCycle,
+  onOpen,
 }: {
   dose: AsNeededDoseWithEvent;
   timezone: string;
   hourCycle: HourCycle;
+  onOpen?: () => void;
 }): ReactElement {
   const { t, i18n } = useTranslation('meds');
   const language: TimeLanguage = baseLanguage(i18n.language);
@@ -257,7 +307,7 @@ function DoseCard({
   return (
     <Card
       as="li"
-      className="px-5 py-[18px]"
+      className="relative px-5 py-[18px]"
       aria-label={label}
       data-testid="history-dose-row"
       data-removed={removed ? 'true' : 'false'}
@@ -278,6 +328,9 @@ function DoseCard({
         )}
       </div>
       {removedBy && <p className="m-0 mt-1.5 text-sm text-ink-2">{removedBy}</p>}
+      {onOpen && name && (
+        <OpenHistoryOverlay name={name} onOpen={onOpen} testId="history-open-as-needed" />
+      )}
     </Card>
   );
 }
@@ -286,6 +339,8 @@ export function HistoryList({
   circleId,
   timezone,
   medicationName,
+  onOpenMedication,
+  onOpenAsNeeded,
 }: HistoryListProps): ReactElement {
   const { t, i18n } = useTranslation(['meds', 'common']);
   const hourCycle = useHourCycle();
@@ -350,6 +405,14 @@ export function HistoryList({
     );
   }
 
+  // A scheduled row opens its medication's history unless the list already
+  // shows only that medication.
+  const openMedicationFor = (confirmation: HistoryConfirmation): (() => void) | undefined => {
+    const name = confirmation.event?.medication_name || confirmation.event?.title;
+    if (!onOpenMedication || !name || name === medicationName) return undefined;
+    return () => onOpenMedication(name);
+  };
+
   const today = getDateInTimezone(timezone);
   const dayLabels = { today: t('meds:history.today'), yesterday: t('meds:history.yesterday') };
 
@@ -368,10 +431,17 @@ export function HistoryList({
                 timezone={timezone}
                 hourCycle={hourCycle}
                 dayKey={group.date}
+                onOpen={openMedicationFor(confirmation)}
               />
             ))}
             {group.doses.map((dose) => (
-              <DoseCard key={dose.id} dose={dose} timezone={timezone} hourCycle={hourCycle} />
+              <DoseCard
+                key={dose.id}
+                dose={dose}
+                timezone={timezone}
+                hourCycle={hourCycle}
+                onOpen={onOpenAsNeeded ? () => onOpenAsNeeded(dose) : undefined}
+              />
             ))}
           </ul>
         </section>

@@ -119,7 +119,10 @@
     "errorTitle": "Impossibile caricare la cronologia dei farmaci",
     "filterAll": "Tutti i farmaci",
     "filterByLabel": "Filtra per: {{label}}",
-    "loadMore": "Carica altro"
+    "loadMore": "Carica altro",
+    "viewHistoryFor": "Vedi la cronologia di {{name}}",
+    "backToAllHistory": "Torna a tutta la cronologia",
+    "showingMedication": "Visualizzazione: {{name}}"
   },
   "adherence": {
     "eyebrow": "Aderenza · 30 giorni",

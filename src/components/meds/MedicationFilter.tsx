@@ -59,8 +59,13 @@ export function MedicationFilter({
     })),
   ];
 
-  return (
-    <Sheet padding="none">
+  const selectedName = value ? options.find((o) => o.id === value)?.name : undefined;
+  const triggerText = selectedName
+    ? t('history.showingMedication', { name: selectedName })
+    : allLabel;
+
+  const menu = (
+    <Sheet padding="none" className={selectedName ? 'min-w-0 flex-1' : undefined}>
       <MoreMenu
         items={items}
         align="left"
@@ -72,11 +77,30 @@ export function MedicationFilter({
             className="flex min-h-[44px] w-full items-center gap-2.5 px-3.5 py-3 text-left"
           >
             <Icon name="options-outline" size="row" className="text-ink-2" />
-            <span className="flex-1 truncate text-sm text-ink">{selectedLabel}</span>
+            <span className="flex-1 truncate text-sm text-ink">{triggerText}</span>
             <Icon name="chevron-down" size="inline" className="text-ink-3" />
           </button>
         )}
       />
     </Sheet>
+  );
+
+  if (!selectedName) return menu;
+
+  // Narrowed to one medication (from the menu or by tapping one of its doses):
+  // a clear, labelled way back to every medication, 44px like the trigger.
+  return (
+    <div className="flex items-center gap-2">
+      {menu}
+      <button
+        type="button"
+        onClick={() => onChange(null)}
+        aria-label={t('history.backToAllHistory')}
+        data-testid="history-filter-clear"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-bg-2 text-ink-2 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+      >
+        <Icon name="close-outline" size="row" />
+      </button>
+    </div>
   );
 }

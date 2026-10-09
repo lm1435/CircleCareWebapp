@@ -119,7 +119,10 @@
     "errorTitle": "Couldn't load medication history",
     "filterAll": "All medications",
     "filterByLabel": "Filter by: {{label}}",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "viewHistoryFor": "View history for {{name}}",
+    "backToAllHistory": "Back to all history",
+    "showingMedication": "Showing: {{name}}"
   },
   "adherence": {
     "eyebrow": "Adherence · 30 days",

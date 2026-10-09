@@ -752,6 +752,61 @@ describe('MedicationsPage', () => {
   // 30-day history. When a medication scrolls out of that window the name is
   // still selected with no option to match it, so the trigger falls back to
   // "All medications" while the list is STILL filtering by the vanished name —
+  // Tapping a dose in History opens THAT medication's history (mobile parity):
+  // as-needed -> its dose log; scheduled -> the list narrowed to it.
+  describe('History rows open their medication\'s history', () => {
+    const prn = {
+      id: 'd1',
+      event_id: 'prn-1',
+      circle_id: 'circle-1',
+      given_at: '2026-09-05T15:00:00Z',
+      given_by: 'u1',
+      note: null,
+      created_at: '2026-09-05T15:00:00Z',
+      removed_at: null,
+      removed_by: null,
+      given_by_user: { id: 'u1', first_name: 'Jennie', last_name: null },
+      removed_by_user: null,
+      event: { id: 'prn-1', title: 'Ibuprofen', medication_name: 'Ibuprofen', medication_dosage: '200 mg' },
+    };
+    // A return value outlives vi.clearAllMocks: put the empty dose read back.
+    afterEach(() => {
+      mockCircleDoses.mockReturnValue({ doses: [] });
+    });
+
+    it('an as-needed dose opens its dose history, even off the roster', async () => {
+      const user = userEvent.setup();
+      mockUseMedicationConfirmations.mockReturnValue(historyPage([conf('c1', 'Metformin')]));
+      mockCircleDoses.mockReturnValue({ doses: [prn] });
+      renderPage('/circles/circle-1/meds?tab=history');
+
+      await user.click(screen.getByRole('button', { name: 'View history for Ibuprofen' }));
+      expect(screen.getByRole('dialog', { name: 'dose-history-modal' })).toHaveTextContent(
+        'history-Ibuprofen'
+      );
+    });
+
+    it('a scheduled dose narrows History to that medication; "Back to all history" clears it', async () => {
+      const user = userEvent.setup();
+      mockUseMedicationConfirmations.mockReturnValue(
+        historyPage([conf('c1', 'Metformin'), conf('c2', 'Warfarin')])
+      );
+      renderPage('/circles/circle-1/meds?tab=history');
+
+      await user.click(screen.getByRole('button', { name: 'View history for Warfarin' }));
+      expect(screen.getByRole('button', { name: 'Filter by: Warfarin' })).toHaveTextContent(
+        'Showing: Warfarin'
+      );
+      expect(screen.queryByText('Metformin')).toBeNull();
+      // Already narrowed to Warfarin: its row no longer offers to go there.
+      expect(screen.queryByRole('button', { name: 'View history for Warfarin' })).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: 'Back to all history' }));
+      expect(screen.getByRole('button', { name: 'Filter by: All medications' })).toBeInTheDocument();
+      expect(screen.getByText('Metformin')).toBeInTheDocument();
+    });
+  });
+
   // an empty history under a control that says nothing is filtered.
   describe('a filter whose medication ages out', () => {
     it('resets to All medications, and the list stops filtering', async () => {

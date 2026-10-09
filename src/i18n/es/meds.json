@@ -119,7 +119,10 @@
     "errorTitle": "No se pudo cargar el historial de medicamentos",
     "filterAll": "Todos los medicamentos",
     "filterByLabel": "Filtrar por: {{label}}",
-    "loadMore": "Cargar más"
+    "loadMore": "Cargar más",
+    "viewHistoryFor": "Ver historial de {{name}}",
+    "backToAllHistory": "Volver a todo el historial",
+    "showingMedication": "Mostrando: {{name}}"
   },
   "adherence": {
     "eyebrow": "Adherencia · 30 días",
