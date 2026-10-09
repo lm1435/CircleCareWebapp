@@ -9,6 +9,7 @@ import {
   uniq,
   type ScopedAccount,
 } from '../unhappy/auth-invites/_helpers';
+import { circleTimezone, dateInTz } from '../notesFirstClassShared';
 
 // Quiet hours OFF by default (migration 20261005130000) + the dose-time note.
 //
@@ -19,6 +20,11 @@ import {
 //
 // The viewer's profile timezone is set to the browser context's timezone so the
 // instant is judged in the zone the form was typed in. Run-scoped accounts only.
+//
+// Clock-independent: the saved dose is dated TWO days ahead in the recipient's
+// zone. A 10:30 PM dose dated "today" hit the "time has already passed" notice
+// (and never reached "Medication added") whenever the suite ran after 10:30 PM
+// recipient time — a date bomb, not a quiet-hours signal.
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.setTimeout(120_000);
@@ -67,6 +73,7 @@ test('with quiet hours ON the note shows for a 10 PM dose, not a 9 AM one, and n
   const owner = await createScopedAccount('qh-on');
   const session = await apiSession(request, owner);
   const circleId = await createCircle(session, `qh ${uniq('c').slice(-6)}`);
+  const futureDate = dateInTz(await circleTimezone(session, circleId), 2);
   sqlExec(
     `update users set timezone = ${sqlStr(TZ)}, quiet_hours_start = '22:00', quiet_hours_end = '07:00' where id = ${sqlStr(owner.userId)}::uuid;`
   );
@@ -85,6 +92,9 @@ test('with quiet hours ON the note shows for a 10 PM dose, not a 9 AM one, and n
     await expect(form.getByTestId('dose-quiet-hours-note')).toBeVisible();
     await form.getByLabel(/Medication name/i).fill(`Metformin ${uniq('x').slice(-6)}`);
     await form.getByLabel(/Dosage/i).fill('500 mg');
+    await form.getByLabel(/^Date/).fill(futureDate);
+    await expect(form.getByLabel(/^Date/)).toHaveValue(futureDate);
+    await expect(form.getByTestId('dose-quiet-hours-note')).toBeVisible();
     await form.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByText('Medication added')).toBeVisible({ timeout: 20_000 });
   } finally {
