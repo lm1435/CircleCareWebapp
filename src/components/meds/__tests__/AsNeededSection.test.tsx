@@ -288,6 +288,19 @@ describe('Home: the As needed section', () => {
 });
 
 describe('card states: "Last given {time} by {name}"', () => {
+  it('the "No set times" hint shows before any dose is logged', async () => {
+    mockApi();
+    renderHome();
+    expect(await screen.findByTestId('as-needed-hint')).toBeInTheDocument();
+  });
+
+  it('the hint is gone once a dose has been logged', async () => {
+    mockApi({ summaries: { [MED]: { last_dose: lastDose() } } });
+    renderHome();
+    expect(await screen.findByTestId('as-needed-eyebrow')).toHaveTextContent(/Last given/);
+    expect(screen.queryByTestId('as-needed-hint')).toBeNull();
+  });
+
   it('another member: "Last given 9:15 AM by Jennie" in the RECIPIENT zone', async () => {
     mockApi({ summaries: { [MED]: { last_dose: lastDose() } } });
     renderHome();

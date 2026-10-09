@@ -94,7 +94,13 @@ export function AsNeededSection({ circleId, meds }: AsNeededSectionProps): React
       <h3 id="as-needed-heading" className="m-0 text-sm font-semibold text-ink">
         {t('asNeeded.section.title')}
       </h3>
-      <p className="m-0 text-xs text-ink-3">{t('asNeeded.section.hint')}</p>
+      {/* First-time explainer only: once a dose is logged the eyebrow and the
+          card already say what this group is. */}
+      {summariesLoaded && !latest && (
+        <p className="m-0 text-xs text-ink-3" data-testid="as-needed-hint">
+          {t('asNeeded.section.hint')}
+        </p>
+      )}
       <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
         {visible.map((med) => {
           const name = med.medication_name || med.title;
