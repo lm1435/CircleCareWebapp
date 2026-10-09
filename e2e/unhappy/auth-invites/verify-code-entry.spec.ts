@@ -10,7 +10,8 @@ import { authUser, hasRefreshCookie, stubJson, typeOtp, uniq } from './_helpers'
 // Codes come from generateSignupOtp (admin generate_link: a REAL unconfirmed user,
 // no mail). That call also opens GoTrue's per-address send cooldown, so a real
 // POST /resend-otp for the same address answers 429 EMAIL_RATE_LIMIT — the
-// deterministic "we just sent one" path. A successful resend needs the (unreachable
+// "we just sent one" path. Locally that cooldown is only 1s, so the code is
+// generated immediately before the resend (see the test). A successful resend needs the (unreachable
 // locally) send-email hook, so that one answer is stubbed, like verify-email.spec.ts.
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -31,7 +32,6 @@ test('Sign in link -> email step (prefilled) -> real 429 "we just sent one" -> c
   context,
 }) => {
   const email = runScopedEmail(uniq('verify-entry'));
-  const otp = await generateSignupOtp(email);
 
   await openLogin(page);
   await page.locator('#login-email').fill(email);
@@ -45,6 +45,13 @@ test('Sign in link -> email step (prefilled) -> real 429 "we just sent one" -> c
   await expect(page.locator('#verify-request-email')).toHaveValue(email);
   expect(page.url()).not.toContain(encodeURIComponent(email));
 
+  // Generated HERE, right before the resend: the local GoTrue cooldown is
+  // backend/supabase/config.toml `[auth.email] max_frequency = "1s"` (60s in
+  // production). Generated before a cold page load, the cooldown had already
+  // lapsed, GoTrue tried to send, the unreachable local send-email hook failed
+  // ("Failed to reach hook after maximum retries") and the backend correctly
+  // answered 400 RESEND_FAILED instead of 429.
+  const otp = await generateSignupOtp(email);
   const resends = countRequests(page, 'POST', RESEND);
   const [res] = await Promise.all([
     page.waitForResponse((r) => new URL(r.url()).pathname === RESEND),
