@@ -51,6 +51,14 @@ type ButtonOwnProps = {
   size?: ButtonSize;
   /** Swaps the label for a Spinner, sets `aria-busy`, and disables the control. */
   loading?: boolean;
+  /**
+   * An action is in flight: presses are ignored but the button STAYS
+   * focusable (`aria-disabled`, no native `disabled`). A native `disabled` on
+   * the focused button drops keyboard focus to <body> (WCAG 2.4.3). With
+   * `loading` it keeps the spinner and `aria-busy` but not the native disable.
+   * Use `disabled` only when the action is unavailable.
+   */
+  busy?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   fullWidth?: boolean;
@@ -99,6 +107,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
     variant = 'primary',
     size = 'md',
     loading = false,
+    busy = false,
     leftIcon,
     rightIcon,
     fullWidth = false,
@@ -108,6 +117,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
     disabled,
     type,
     'aria-busy': ariaBusy,
+    onClick,
     // Everything the caller passed for the underlying element (onClick, href,
     // `to`, aria-*, form, …). The cast only widens the rest bucket — the
     // declared props above keep their real types.
@@ -116,7 +126,9 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
 
   const Component = (as ?? 'button') as ElementType;
   const isNativeButton = Component === 'button';
-  const isDisabled = Boolean(disabled) || loading;
+  // `busy` swaps the native disable for aria-disabled so focus survives.
+  const isDisabled = Boolean(disabled) || (loading && !busy);
+  const isBusy = busy && !disabled;
 
   const classes = [
     BASE,
@@ -129,6 +141,9 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
     // `:disabled` never matches an <a>, so a disabled link needs the dim and
     // the pointer-event kill applied unconditionally instead.
     !isNativeButton && isDisabled ? 'opacity-50 pointer-events-none' : null,
+    // A busy button without its spinner dims like a disabled one (it is one,
+    // to assistive tech) but keeps pointer events so focus is not stolen.
+    isBusy && !loading ? 'opacity-50 cursor-not-allowed' : null,
     className,
   ]
     .filter(Boolean)
@@ -141,13 +156,23 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
       ? { 'aria-disabled': true as const, tabIndex: -1 }
       : {};
 
+  const handleClick = isBusy
+    ? (event: { preventDefault: () => void }) => {
+        // Ignored while busy; preventDefault also stops a submit button
+        // from submitting its form.
+        event.preventDefault();
+      }
+    : (onClick as ((...args: unknown[]) => unknown) | undefined);
+
   return (
     <Component
       ref={ref}
       className={classes}
       aria-busy={loading ? true : ariaBusy}
       {...elementProps}
+      {...(isBusy ? { 'aria-disabled': true as const } : {})}
       {...rest}
+      onClick={handleClick}
     >
       {loading ? (
         <>

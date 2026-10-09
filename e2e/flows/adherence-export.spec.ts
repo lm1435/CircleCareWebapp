@@ -7,7 +7,7 @@ import {
   dateInTz,
   uniqueSuffix,
 } from '../notesFirstClassShared';
-import { countRequests, failRequest } from '../unhappy';
+import { countRequests, failRequest, holdRequest } from '../unhappy';
 import { errorToast } from '../unhappy/writes/_helpers';
 import {
   cookieLogin,
@@ -221,6 +221,58 @@ test.describe('adherence report export', () => {
     // there is no button to press and no document to print.
     await expect(page.getByRole('button', { name: 'Export report' })).toHaveCount(0);
     await expect(printIframes(page)).toHaveCount(0);
+  });
+
+  // WCAG 2.4.3: pressing Export used to natively disable Export, Cancel and the
+  // radios, so keyboard focus fell to <body> for the whole wait. They are now
+  // BUSY (aria-disabled, presses ignored) and focus stays on Export.
+  test('while generating, keyboard focus stays on Export and nothing can change the export', async ({ page }) => {
+    await armPrintCapture(page);
+    await openExport(page, circleId);
+    const hold = await holdRequest(page, 'GET', '/api/circles/:id/medications/adherence-report');
+    const reports = countRequests(page, 'GET', '/api/circles/:id/medications/adherence-report');
+    try {
+      await page.getByRole('button', { name: 'Export report' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Adherence report' });
+      await expect(dialog).toBeVisible({ timeout: 10_000 });
+      await dialog.getByRole('radio', { name: 'Last 7 days' }).check();
+      const confirm = dialog.getByRole('button', { name: 'Export report' });
+      await confirm.focus();
+      await page.keyboard.press('Enter');
+      await hold.waitForHeld(1, { timeoutMs: 15_000 });
+
+      await expect(dialog.getByRole('status')).toHaveText('Generating PDF...');
+      await expect(confirm).toBeFocused();
+      await expect(confirm).toHaveAttribute('aria-busy', 'true');
+      await expect(confirm).toHaveAttribute('aria-disabled', 'true');
+      const cancel = dialog.getByRole('button', { name: 'Cancel' });
+      await expect(cancel).toHaveAttribute('aria-disabled', 'true');
+      for (const radio of await dialog.getByRole('radio').all()) {
+        await expect(radio).toHaveAttribute('aria-disabled', 'true');
+      }
+      // Still focused a beat later (a late native disable would blur it).
+      await page.waitForTimeout(300);
+      await expect(confirm).toBeFocused();
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+
+      // Busy means inert: Enter again, Cancel, a radio and Escape change nothing.
+      await page.keyboard.press('Enter');
+      // force: Playwright waits for aria-disabled controls to become enabled.
+      await cancel.click({ force: true });
+      await dialog.getByRole('radio', { name: 'All time' }).click({ force: true });
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('radio', { name: 'All time' })).not.toBeChecked();
+      await expect(dialog.getByRole('radio', { name: 'Last 7 days' })).toBeChecked();
+
+      await hold.release();
+      await readPrinted(page);
+      await expect(dialog).toHaveCount(0, { timeout: 15_000 });
+      // One report fetch: the second Enter while busy started no second export.
+      expect(reports.count).toBe(1);
+    } finally {
+      await hold.dispose();
+    }
   });
 
   test('report fetch failure: error toast, dialog stays open, nothing printed', async ({ page }) => {

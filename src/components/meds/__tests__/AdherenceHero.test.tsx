@@ -365,18 +365,57 @@ describe('AdherenceHero — export report', () => {
     expect(within(dialog).getByRole('radio', { name: 'Last 90 days' })).toBeChecked();
   });
 
-  it('while exporting: confirm is busy, radios are disabled, and the wait is announced', () => {
-    render(
-      <AdherenceExportDialog open onClose={vi.fn()} exportPdf={mockExportPdf} isExporting />
-    );
+  // WCAG 2.4.3: a native `disabled` on the pressed Export button dropped
+  // keyboard focus to <body>. Everything is BUSY instead: aria-disabled, still
+  // focusable, presses ignored.
+  it('while exporting: confirm, Cancel and radios are busy (focusable, inert) and the wait is announced', async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<AdherenceExportDialog open onClose={onClose} exportPdf={mockExportPdf} isExporting />);
     const dialog = screen.getByRole('dialog');
 
     const confirm = within(dialog).getByRole('button', { name: 'Export report' });
     expect(confirm).toHaveAttribute('aria-busy', 'true');
-    expect(confirm).toBeDisabled();
-    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    for (const radio of within(dialog).getAllByRole('radio')) expect(radio).toBeDisabled();
+    expect(confirm).toHaveAttribute('aria-disabled', 'true');
+    expect(confirm).not.toBeDisabled();
+    const cancel = within(dialog).getByRole('button', { name: 'Cancel' });
+    expect(cancel).toHaveAttribute('aria-disabled', 'true');
+    expect(cancel).not.toBeDisabled();
+    for (const radio of within(dialog).getAllByRole('radio')) {
+      expect(radio).toHaveAttribute('aria-disabled', 'true');
+      expect(radio).not.toBeDisabled();
+    }
     expect(within(dialog).getByRole('status')).toHaveTextContent('Generating PDF...');
+
+    confirm.focus();
+    expect(confirm).toHaveFocus();
+    await user.click(confirm);
+    await user.click(cancel);
+    await user.click(within(dialog).getByRole('radio', { name: 'All time' }));
+    expect(mockExportPdf).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole('radio', { name: 'Last 30 days' })).toBeChecked();
+  });
+
+  it('pressing Export keeps focus on it while the export runs', async () => {
+    let resolve!: (ok: boolean) => void;
+    mockExportPdf.mockImplementation(() => new Promise<boolean>((r) => (resolve = r)));
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <AdherenceExportDialog open onClose={onClose} exportPdf={mockExportPdf} isExporting={false} />
+    );
+    const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: 'Export report' });
+    confirm.focus();
+    await user.keyboard('{Enter}');
+    expect(mockExportPdf).toHaveBeenCalledWith('30d');
+    rerender(<AdherenceExportDialog open onClose={onClose} exportPdf={mockExportPdf} isExporting />);
+    const busy = within(screen.getByRole('dialog')).getByRole('button', { name: 'Export report' });
+    expect(busy).toBe(confirm);
+    expect(busy).not.toBeDisabled();
+    expect(busy).toHaveFocus();
+    resolve(true);
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
   it('the export status region is mounted (empty) before the export starts, so the wait is announced', () => {

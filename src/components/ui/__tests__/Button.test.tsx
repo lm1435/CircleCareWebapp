@@ -195,6 +195,65 @@ describe('Button', () => {
     });
   });
 
+  // WCAG 2.4.3: a native `disabled` on the focused button drops keyboard focus
+  // to <body>. `busy` keeps it focusable and ignores presses instead.
+  describe('busy', () => {
+    it('with loading: spinner and aria-busy, but aria-disabled instead of native disabled', () => {
+      const { container } = render(
+        <Button loading busy>
+          Save
+        </Button>
+      );
+      const b = btn(container);
+      expect(b.querySelector('.animate-spin')).not.toBeNull();
+      expect(b).toHaveAttribute('aria-busy', 'true');
+      expect(b).toHaveAttribute('aria-disabled', 'true');
+      expect(b).not.toBeDisabled();
+    });
+
+    it('keeps focus and ignores clicks and Enter', async () => {
+      const { default: userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+      const onClick = vi.fn();
+      const { container, rerender } = render(<Button onClick={onClick}>Save</Button>);
+      const b = btn(container);
+      b.focus();
+      rerender(
+        <Button onClick={onClick} loading busy>
+          Save
+        </Button>
+      );
+      expect(b).toHaveFocus();
+      await user.click(b);
+      await user.keyboard('{Enter}');
+      expect(onClick).not.toHaveBeenCalled();
+    });
+
+    it('does not submit its form while busy', async () => {
+      const { default: userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+      const onSubmit = vi.fn((e: { preventDefault: () => void }) => e.preventDefault());
+      const { container } = render(
+        <form onSubmit={onSubmit}>
+          <Button type="submit" busy>
+            Save
+          </Button>
+        </form>
+      );
+      await user.click(btn(container));
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('without busy, a press still calls onClick', async () => {
+      const { default: userEvent } = await import('@testing-library/user-event');
+      const user = userEvent.setup();
+      const onClick = vi.fn();
+      const { container } = render(<Button onClick={onClick}>Save</Button>);
+      await user.click(btn(container));
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('loading', () => {
     it('renders a Spinner, sets aria-busy and disables the button', () => {
       const { container } = render(<Button loading>Save</Button>);

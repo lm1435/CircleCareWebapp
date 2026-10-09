@@ -16,9 +16,12 @@ import type { AdherencePeriod } from '@/api/medicationConfirmations';
  * "try again" should be one click, not three.
  *
  * WHILE EXPORTING the dialog is not dismissible (Escape, backdrop and × are
- * all inert), the radios are disabled and the confirm button carries the
- * spinner + `aria-busy`; a `role="status"` line reads "Generating PDF…" to
- * assistive tech so the wait is announced, not just drawn.
+ * all inert), the radios and Cancel are BUSY (aria-disabled, presses ignored)
+ * and the confirm button carries the spinner + `aria-busy`; a `role="status"`
+ * line reads "Generating PDF…" to assistive tech so the wait is announced, not
+ * just drawn. None of them is natively disabled: a native `disabled` on the
+ * pressed Export button dropped keyboard focus to <body> (WCAG 2.4.3), so focus
+ * now stays on Export for the whole wait (same `busy` pattern as Profile).
  */
 
 export const ADHERENCE_EXPORT_PERIODS: readonly AdherencePeriod[] = [
@@ -86,10 +89,10 @@ export function AdherenceExportDialog({
       dismissible={!isExporting}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={isExporting}>
+          <Button variant="secondary" onClick={onClose} busy={isExporting}>
             {t('export.cancel')}
           </Button>
-          <Button variant="primary" onClick={handleConfirm} loading={isExporting}>
+          <Button variant="primary" onClick={handleConfirm} loading={isExporting} busy={isExporting}>
             {t('export.button')}
           </Button>
         </>
@@ -103,7 +106,7 @@ export function AdherenceExportDialog({
           onChange={(value) => {
             if (isAdherencePeriod(value)) setPeriod(value);
           }}
-          disabled={isExporting}
+          busy={isExporting}
         />
         {/* Always mounted, text only while exporting: a status region inserted
             together with its text is often not announced (WCAG 4.1.3). */}
