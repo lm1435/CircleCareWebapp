@@ -262,7 +262,9 @@ function DoseCard({
       data-testid="history-dose-row"
       data-removed={removed ? 'true' : 'false'}
     >
-      <div className={`flex flex-col gap-1.5 ${removed ? 'opacity-70' : ''}`}>
+      {/* No opacity wash on a removed dose: it dropped the dosage, the note and the
+          pill below AA (4.04:1). The strike-through and "Removed by" say it. */}
+      <div className="flex flex-col gap-1.5">
         <span className={`${STATUS_PILL.taken} self-start`}>{t('asNeeded.history.given')}</span>
         <p className={`m-0 flex flex-wrap items-baseline gap-1.5 ${strike}`}>
           <span className="text-md font-medium text-ink">{name}</span>

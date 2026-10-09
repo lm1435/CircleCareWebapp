@@ -108,7 +108,7 @@ test('add a PRN medication in the form: As needed hides the schedule, saves the 
   browser,
   request,
   baseURL,
-}) => {
+}, testInfo) => {
   const s = await scene(request);
   const ctx = await newCtx(browser, baseURL, s.owner);
   try {
@@ -126,6 +126,10 @@ test('add a PRN medication in the form: As needed hides the schedule, saves the 
     await expect(form.getByLabel(/^Date/)).toHaveCount(0);
     await expect(form.getByText("No reminders. As-needed medications don't have a schedule.")).toBeVisible();
     await expect(form.getByLabel(/minimum|maximum|interval/i)).toHaveCount(0);
+    // The Repeat hint is tied to the select (read with it, WCAG 1.3.1), and the
+    // As-needed state of the open dialog passes axe.
+    await expect(form.getByLabel('Repeat')).toHaveAccessibleDescription("No set times. Log each dose when it's given.");
+    await checkA11y(page, 'add medication dialog (Repeat: As needed)', testInfo, { wcag22: true });
     await form.getByLabel(/What is it for\?/).fill('back pain');
     await form.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByText('Medication added')).toBeVisible({ timeout: 20_000 });
@@ -190,6 +194,7 @@ test('give a dose: Undo sends NOTHING; the second try writes ONE row with a clie
     await gotoMeds(page, s.circleId);
     const card = cardOf(page, name);
     await expect(card.getByTestId('as-needed-last-given')).toHaveText('Not given yet');
+    await checkA11y(page, '/meds (as-needed card)', testInfo, { wcag22: true });
 
     const posts = countRequests(page, 'POST', '/api/circles/:id/medications/:id/as-needed-doses');
 
@@ -343,7 +348,7 @@ test('Home: the As needed section is its own list and never makes "all done"; Sp
   browser,
   request,
   baseURL,
-}) => {
+}, testInfo) => {
   const s = await scene(request);
   const name = `Ibuprofeno ${uniq('x').slice(-6)}`;
   await createPrn(s.ownerSession, s.circleId, name, 'dolor');
@@ -357,6 +362,8 @@ test('Home: the As needed section is its own list and never makes "all done"; Sp
     await expect(page.getByText(/No medications yet/)).toHaveCount(0);
     await expect(page.getByText('All medications answered for today')).toHaveCount(0);
     await expect(section.getByRole('button', { name: /^Confirm|^Skip/ })).toHaveCount(0);
+    // Overview with the As needed section: headings, names, contrast.
+    await checkA11y(page, `/circles/${s.circleId} (As needed section)`, testInfo, { wcag22: true });
 
     // Spanish.
     sqlExec(`update public.users set language = 'es' where id = ${sqlStr(s.owner.userId)}::uuid;`);
@@ -418,7 +425,7 @@ test('History tab: PRN doses sit in their RECIPIENT-zone day group; a removed do
   browser,
   request,
   baseURL,
-}) => {
+}, testInfo) => {
   const s = await scene(request);
   const name = `Ibuprofen ${uniq('x').slice(-6)}`;
   const medId = await createPrn(s.ownerSession, s.circleId, name);
@@ -470,6 +477,12 @@ test('History tab: PRN doses sit in their RECIPIENT-zone day group; a removed do
     expect(
       await removed.getByText(name, { exact: true }).evaluate((el) => getComputedStyle(el.closest('p')!).textDecorationLine)
     ).toContain('line-through');
+    // Struck through is how "removed" reads; the text itself keeps AA contrast
+    // (a11y pass 2026-10-08: an opacity-70 wash put the dosage and the note at
+    // 4.04:1 and the "Given" pill below 4.5:1).
+    await checkA11y(page, 'meds history (removed as-needed dose)', testInfo, {
+      include: '[data-testid="history-dose-row"][data-removed="true"]',
+    });
 
     // The filter offers the as-needed medication's NAME.
     await page.getByRole('button', { name: /Filter by:/ }).click();
