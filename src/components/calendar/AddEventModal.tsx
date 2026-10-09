@@ -485,7 +485,7 @@ export function AddEventModal({
       )
     : parseRecurrence(initialRecurrence);
   // AS NEEDED is a property of the row, not of a rule: an as-needed medication
-  // has none, so `parseRecurrence` would call it "Does not repeat". Opening one
+  // has none, so `parseRecurrence` would call it "Never". Opening one
   // for edit starts (and stays) on `as_needed`; `isAsNeededEdit` locks it.
   const isAsNeededEdit = isEditing && event.as_needed === true;
   const [recurrence, setRecurrence] = useState<RecurrenceChoice>(

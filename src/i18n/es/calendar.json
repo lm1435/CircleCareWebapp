@@ -174,7 +174,7 @@
     },
     "anyone": "Cualquiera",
     "recurrence": {
-      "never": "No se repite",
+      "never": "Nunca",
       "daily": "Diario",
       "everyOtherDay": "Cada 2 días",
       "weekly": "Semanal",

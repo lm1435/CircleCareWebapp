@@ -162,7 +162,7 @@ describe('buildFirstRunMedication', () => {
    * `eventSchema.partial()`: absent means "leave unchanged", null means "remove
    * it". Hand-building `recurrence_rule: null` on a create would diverge from
    * the form, which leaves a `let recurrence_rule: string | undefined`
-   * undefined for "Does not repeat".
+   * undefined for "Never".
    */
   it('leaves recurrence_rule undefined for "none", never sending daily or null', () => {
     const { primary } = buildFirstRunMedication({

@@ -174,7 +174,7 @@
     },
     "anyone": "Anyone",
     "recurrence": {
-      "never": "Does not repeat",
+      "never": "Never",
       "daily": "Daily",
       "everyOtherDay": "Every other day",
       "weekly": "Weekly",
@@ -183,7 +183,7 @@
       "cycle": "Cycle (days on / off)",
       "daysOfWeek": "Days of the week",
       "asNeeded": "As needed",
-      "asNeededHint": "No set times. Log each dose when it is given."
+      "asNeededHint": "No set times. Log each dose when it's given."
     },
     "daysOfWeek": {
       "title": "Repeat on",

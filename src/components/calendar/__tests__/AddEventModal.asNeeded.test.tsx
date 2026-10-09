@@ -104,6 +104,34 @@ describe('creating: Repeat -> As needed', () => {
     expect(options[options.length - 1]).toBe('As needed');
   });
 
+  it('the As needed option keeps its title, and once chosen the select is described by the hint (EN)', async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    const select = screen.getByLabelText('Repeat') as HTMLSelectElement;
+    // Same order as the mobile Repeat sheet: As needed last, its title as the option's text.
+    expect(Array.from(select.options).map((o) => o.value)).toEqual([
+      'none', 'daily', 'every_other_day', 'weekly', 'monthly', 'yearly', 'cycle', 'days_of_week', 'as_needed',
+    ]);
+    expect(select.options[select.options.length - 1].textContent).toBe('As needed');
+    expect(select).not.toHaveAccessibleDescription(/No set times/);
+    await chooseAsNeeded(user);
+    expect(select.options[select.selectedIndex].textContent).toBe('As needed');
+    expect(select).toHaveAccessibleDescription("No set times. Log each dose when it's given.");
+    expect(screen.getByText("No set times. Log each dose when it's given.")).toBeVisible();
+  });
+
+  it.each(['medication', 'appointment', 'task'] as const)(
+    'the %s Repeat field has a VISIBLE "Repeat" label and reads "Never" by default',
+    (initialType) => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType={initialType} onClose={onClose} />);
+      const select = screen.getByRole('combobox', { name: 'Repeat' }) as HTMLSelectElement;
+      const label = document.querySelector(`label[for="${select.id}"]`);
+      expect(label).toHaveTextContent(/^Repeat$/);
+      expect(label).toBeVisible();
+      expect(select.options[select.selectedIndex].textContent).toBe('Never');
+    }
+  );
+
   it('does not offer it for an appointment or task', async () => {
     render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={onClose} />);
     const options = Array.from(
@@ -267,6 +295,9 @@ describe('creating: Repeat -> As needed', () => {
       'Sin recordatorios. Los medicamentos según se necesite no tienen horario.'
     );
     expect(screen.getByLabelText(/¿Para qué es\?/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Repetir')).toHaveAccessibleDescription(
+      'Sin horarios fijos. Registra cada dosis cuando se dé.'
+    );
   });
 });
 
