@@ -128,14 +128,25 @@ export function DrugAutocomplete({
   // is looking at.
   const userTypedRef = useRef(false);
   const anchorRef = useRef<HTMLDivElement | null>(null);
+  // Whether the field has focus right now. A debounced response that lands
+  // after the caregiver has moved on (typed a name, tabbed to Dosage) must not
+  // pop the list open over a field nobody is in: it stayed open there, outside
+  // any focus, until the dialog closed.
+  const focusedRef = useRef(false);
   const [placement, setPlacement] = useState<ListPlacement | null>(null);
 
   // THE LIST IS PORTALLED, not `absolute`. Every host is a `Modal`, whose
   // scrolling body clips an absolutely positioned child: in the first-run
   // wizard (a short body over a tall footer) the list showed ~2.5 rows and the
   // rest sat under the footer, so a caregiver could not pick a suggestion.
-  // A portal to `document.body` has no clipping ancestor; the price is
-  // repositioning, since a fixed box does not follow a scrolling ancestor.
+  // The portal goes to the DIALOG element itself, not `document.body`: a
+  // `position: fixed` box is not clipped by the dialog's scrolling body, and
+  // staying inside the `aria-modal` dialog keeps the options reachable for a
+  // screen reader (which treats everything outside a modal as inert, so
+  // `aria-activedescendant` pointed at nothing) and inside a landmark (axe
+  // `region` failed on a body-level list). `document.body` is only the
+  // fallback for a host that is not in a dialog. The price is repositioning,
+  // since a fixed box does not follow a scrolling ancestor.
   const listVisible = open && suggestions.length > 0;
   useLayoutEffect(() => {
     if (!listVisible) {
@@ -182,7 +193,8 @@ export function DrugAutocomplete({
           if (seq !== requestSeq.current) return;
           setSuggestions(results);
           setActiveIndex(-1);
-          setOpen(results.length > 0);
+          // Kept either way, so focusing the field again shows them.
+          setOpen(results.length > 0 && focusedRef.current);
         })
         .catch(() => {
           // Aborted, offline, or rate limited: the field still works as a
@@ -229,9 +241,13 @@ export function DrugAutocomplete({
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (!open || suggestions.length === 0) {
-      if (event.key === 'Escape' && value.length > 0) {
-        // Nothing to close: leave Escape to the dialog.
-        return;
+      // Closed (Escape, or picked and edited back): Down / Alt+Down reopens
+      // the suggestions already fetched for this text. Anything else —
+      // Escape included — is left to the field and the dialog.
+      if (event.key === 'ArrowDown' && suggestions.length > 0 && !selectedDrug) {
+        event.preventDefault();
+        setOpen(true);
+        if (!event.altKey) setActiveIndex(0);
       }
       return;
     }
@@ -244,6 +260,14 @@ export function DrugAutocomplete({
         event.preventDefault();
         setActiveIndex((index) => (index <= 0 ? suggestions.length - 1 : index - 1));
         break;
+      case 'Home':
+      case 'End':
+        // Only once an option is highlighted: before that the caret owns them.
+        if (activeIndex >= 0) {
+          event.preventDefault();
+          setActiveIndex(event.key === 'Home' ? 0 : suggestions.length - 1);
+        }
+        break;
       case 'Enter':
         if (activeIndex >= 0) {
           event.preventDefault();
@@ -255,6 +279,7 @@ export function DrugAutocomplete({
         event.preventDefault();
         event.stopPropagation();
         setOpen(false);
+        setActiveIndex(-1);
         break;
       case 'Tab':
         setOpen(false);
@@ -262,7 +287,9 @@ export function DrugAutocomplete({
     }
   };
 
-  const activeId = activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined;
+  const activeId = listVisible && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined;
+  const portalTarget: HTMLElement =
+    anchorRef.current?.closest<HTMLElement>('[role="dialog"]') ?? document.body;
 
   return (
     <div ref={anchorRef} className="relative">
@@ -280,15 +307,20 @@ export function DrugAutocomplete({
         spellCheck={false}
         role="combobox"
         aria-autocomplete="list"
-        aria-expanded={open}
-        aria-controls={open ? listboxId : undefined}
+        aria-expanded={listVisible}
+        aria-controls={listVisible ? listboxId : undefined}
         aria-activedescendant={activeId}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onFocus={() => {
+          focusedRef.current = true;
           if (suggestions.length > 0 && !selectedDrug) setOpen(true);
         }}
-        onBlur={() => setOpen(false)}
+        onBlur={() => {
+          focusedRef.current = false;
+          setOpen(false);
+          setActiveIndex(-1);
+        }}
         // "Searching…" rides in the hint slot (already wired to
         // aria-describedby) rather than as a spinner glyph: `rightIcon` takes
         // an icon NAME, and a status line is the more honest signal anyway.
@@ -301,7 +333,7 @@ export function DrugAutocomplete({
       {/* Result count for screen readers — the visible list is a listbox the
           combobox already announces, this says how many arrived. */}
       <span aria-live="polite" className="sr-only">
-        {open ? t('addEvent.drugSearch.resultCount', { count: suggestions.length }) : ''}
+        {listVisible ? t('addEvent.drugSearch.resultCount', { count: suggestions.length }) : ''}
       </span>
 
       {listVisible &&
@@ -347,7 +379,7 @@ export function DrugAutocomplete({
             );
           })}
         </ul>,
-        document.body
+        portalTarget
         )}
     </div>
   );

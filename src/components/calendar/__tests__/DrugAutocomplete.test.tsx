@@ -119,6 +119,105 @@ describe('DrugAutocomplete', () => {
     expect(onDialogKey).not.toHaveBeenCalled();
   });
 
+  it('wires the combobox to its listbox: controls, activedescendant, selected option', async () => {
+    const user = userEvent.setup();
+    render(<Host onSelectDrug={vi.fn()} />);
+
+    const input = screen.getByRole('combobox', { name: /Medication name/ });
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-controls');
+    expect(input).toHaveAttribute('aria-autocomplete', 'list');
+
+    await user.type(input, 'me');
+    const listbox = await screen.findByRole('listbox', { name: 'Medication suggestions' });
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveAttribute('aria-controls', listbox.id);
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    await user.keyboard('{ArrowDown}');
+    const first = screen.getByRole('option', { name: 'Metformin' });
+    expect(input).toHaveAttribute('aria-activedescendant', first.id);
+    expect(first).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('option', { name: 'Methotrexate' })).toHaveAttribute('aria-selected', 'false');
+    // Focus never leaves the field.
+    expect(input).toHaveFocus();
+
+    // Up from the first wraps to the last; Home / End jump.
+    await user.keyboard('{ArrowUp}');
+    expect(input).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Methotrexate' }).id);
+    await user.keyboard('{Home}');
+    expect(input).toHaveAttribute('aria-activedescendant', first.id);
+    await user.keyboard('{End}');
+    expect(input).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Methotrexate' }).id);
+  });
+
+  it('Escape closes and clears the highlight; ArrowDown reopens the same suggestions', async () => {
+    const user = userEvent.setup();
+    render(<Host onSelectDrug={vi.fn()} />);
+
+    const input = screen.getByRole('combobox', { name: /Medication name/ });
+    await user.type(input, 'me');
+    await screen.findByRole('option', { name: 'Metformin' });
+    await user.keyboard('{ArrowDown}{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-controls');
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Metformin' }).id);
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on selection and stays closed (a picked name does not reopen it)', async () => {
+    const user = userEvent.setup();
+    render(<Host onSelectDrug={vi.fn()} />);
+
+    const input = screen.getByRole('combobox', { name: /Medication name/ });
+    await user.type(input, 'me');
+    await screen.findByRole('option', { name: 'Metformin' });
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    await user.keyboard('{ArrowDown}');
+    await user.tab();
+    await user.click(input);
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+
+  // The e2e axe failure: name typed, focus moved to the next field, and the
+  // debounced response landed afterwards and opened the list over a field no
+  // one was in — it stayed open until the dialog closed.
+  it('a response that lands after the field lost focus does not open the list', async () => {
+    let resolve: (rows: DrugSearchResult[]) => void = () => {};
+    search.mockImplementation(() => new Promise((r) => (resolve = r)));
+    const user = userEvent.setup();
+    render(
+      <>
+        <Host onSelectDrug={vi.fn()} />
+        <input aria-label="Dosage" />
+      </>
+    );
+
+    const input = screen.getByRole('combobox', { name: /Medication name/ });
+    await user.type(input, 'me');
+    await waitFor(() => expect(search).toHaveBeenCalled());
+    await user.click(screen.getByLabelText('Dosage'));
+    resolve([METFORMIN, METHOTREXATE]);
+    await waitFor(() => expect(screen.queryByText('Searching medications')).toBeNull());
+
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    // Coming back to the field shows what was found, without a new request.
+    await user.click(input);
+    expect(await screen.findByRole('option', { name: 'Metformin' })).toBeInTheDocument();
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+
   it('the clear control empties the field and the pick', async () => {
     const user = userEvent.setup();
     const onSelectDrug = vi.fn();
@@ -169,15 +268,25 @@ describe('DrugAutocomplete', () => {
       );
     }
 
-    it('renders the list in document.body, fixed, above the modal backdrop', async () => {
+    // Inside the dialog, not document.body: outside an aria-modal dialog the
+    // options are inert to a screen reader and outside every landmark (axe
+    // `region`). Fixed positioning is what escapes the scrolling body's clip.
+    it('renders the list inside the dialog element itself, fixed, above the modal backdrop', async () => {
       const user = userEvent.setup();
-      const { container } = renderInDialog(150, 500);
+      renderInDialog(150, 500);
       await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'me');
       const listbox = await screen.findByRole('listbox');
-      expect(container.contains(listbox)).toBe(false);
-      expect(listbox.parentElement).toBe(document.body);
+      expect(listbox.parentElement).toBe(screen.getByRole('dialog', { name: 'wizard' }));
       expect(listbox.style.position).toBe('fixed');
       expect(listbox).toHaveClass('z-[60]');
+    });
+
+    it('falls back to document.body when the field is not in a dialog', async () => {
+      const user = userEvent.setup();
+      render(<Host onSelectDrug={vi.fn()} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'me');
+      const listbox = await screen.findByRole('listbox');
+      expect(listbox.parentElement).toBe(document.body);
     });
 
     it('opens BELOW the field when there is room above the footer', async () => {

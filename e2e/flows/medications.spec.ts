@@ -494,3 +494,98 @@ test.describe('medication lifecycle', () => {
     // Cleanup: afterEach API sweep (both series roots).
   });
 });
+
+// The medication-name combobox (DrugAutocomplete). axe flagged its suggestion
+// list (`region`) when a debounced RxNorm response landed AFTER the caregiver
+// had moved to Dosage: the list opened over a field nobody was in, portalled to
+// <body> outside the aria-modal dialog, and stayed there. RxNorm is external,
+// so the search is the only stubbed call.
+test.describe('medication name suggestions', () => {
+  const DRUGS = [
+    { rxcui: '5640', name: 'Ibuprofen 200 MG Oral Tablet', strength: null, dosageForm: null },
+    { rxcui: '5641', name: 'Ibuprofen 400 MG Oral Tablet', strength: null, dosageForm: null },
+    { rxcui: '5642', name: 'Ibuprofen 600 MG Oral Tablet', strength: null, dosageForm: null },
+  ];
+  const body = JSON.stringify({ success: true, data: { drugs: DRUGS } });
+
+  async function openAddMedication(page: Page, circleId: string): Promise<Locator> {
+    await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1, name: 'Medications' })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole('button', { name: 'Add medication' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    return dialog;
+  }
+
+  test('combobox: the open list lives in the dialog and passes axe; keyboard pick closes it', async ({
+    page,
+    circleId,
+  }, testInfo) => {
+    await page.route('**/api/drugs/search**', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body })
+    );
+    const dialog = await openAddMedication(page, circleId);
+    const name = dialog.getByRole('combobox', { name: /Medication name/i });
+    await name.fill('ibu');
+
+    const list = page.getByRole('listbox', { name: 'Medication suggestions' });
+    await expect(list.getByRole('option')).toHaveCount(3);
+    await expect(name).toHaveAttribute('aria-expanded', 'true');
+    await expect(name).toHaveAttribute('aria-controls', (await list.getAttribute('id')) ?? 'missing');
+    // Inside the aria-modal dialog, so a screen reader can reach the options.
+    expect(await list.evaluate((el) => el.parentElement?.getAttribute('role'))).toBe('dialog');
+
+    await name.press('ArrowDown');
+    await name.press('ArrowDown');
+    const second = list.getByRole('option', { name: DRUGS[1].name });
+    await expect(second).toHaveAttribute('aria-selected', 'true');
+    await expect(name).toHaveAttribute('aria-activedescendant', (await second.getAttribute('id')) ?? 'missing');
+    await expect(name).toBeFocused();
+    await checkA11y(page, 'add medication dialog (name suggestions open)', testInfo, { wcag22: true });
+
+    await name.press('Enter');
+    await expect(list).toHaveCount(0);
+    await expect(name).toHaveValue(DRUGS[1].name);
+    await expect(name).toHaveAttribute('aria-expanded', 'false');
+    await expect(dialog).toBeVisible(); // Enter picked; it did not submit the form
+
+    // Escape closes an open list without closing the dialog.
+    await name.fill('ibup');
+    await expect(list.getByRole('option')).toHaveCount(3);
+    await name.press('Escape');
+    await expect(list).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(name).toHaveValue('ibup');
+  });
+
+  test('a search answer that arrives after focus moved on does not open the list', async ({
+    page,
+    circleId,
+  }, testInfo) => {
+    let release: () => void = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    let answered = 0;
+    await page.route('**/api/drugs/search**', async (route) => {
+      await held;
+      answered += 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', body });
+    });
+    const dialog = await openAddMedication(page, circleId);
+    const name = dialog.getByRole('combobox', { name: /Medication name/i });
+    const request = page.waitForRequest('**/api/drugs/search**');
+    await name.fill('ibu');
+    await request;
+    await dialog.getByLabel(/Dosage/i).fill('200 mg');
+    release();
+    await expect.poll(() => answered).toBe(1);
+    await expect(dialog.getByText('Searching medications')).toHaveCount(0);
+
+    await expect(page.getByRole('listbox', { name: 'Medication suggestions' })).toHaveCount(0);
+    await expect(name).toHaveAttribute('aria-expanded', 'false');
+    await checkA11y(page, 'add medication dialog (focus moved past the name)', testInfo, { wcag22: true });
+
+    // Back in the field, the answer is there without another request.
+    await name.focus();
+    await expect(page.getByRole('listbox', { name: 'Medication suggestions' }).getByRole('option')).toHaveCount(3);
+  });
+});
