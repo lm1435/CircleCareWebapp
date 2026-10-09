@@ -25,6 +25,12 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   hint?: ReactNode;
   /** Optional leading placeholder option (e.g. "Choose…"). Empty value. */
   placeholder?: string;
+  /**
+   * A save is in flight: choices are ignored but the select STAYS focusable
+   * (`aria-disabled`). A native `disabled` on the focused select drops keyboard
+   * focus to <body> (WCAG 2.4.3). Use `disabled` only when unavailable.
+   */
+  busy?: boolean;
 }
 
 /**
@@ -34,7 +40,20 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * Options + placeholder come from props (no copy).
  */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { id, label, options, error, hint, placeholder, className, disabled, required, ...rest },
+  {
+    id,
+    label,
+    options,
+    error,
+    hint,
+    placeholder,
+    className,
+    disabled,
+    required,
+    busy = false,
+    onChange,
+    ...rest
+  },
   ref
 ) {
   const errorId = `${id}-error`;
@@ -42,9 +61,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   const describedBy =
     [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
 
-  const shell = fieldShell({ error: Boolean(error), disabled });
+  const shell = fieldShell({ error: Boolean(error), disabled: disabled || busy });
 
-  const control = `${INPUT_TEXT} appearance-none cursor-pointer`;
+  const control = `${INPUT_TEXT} appearance-none ${busy ? 'cursor-not-allowed' : 'cursor-pointer'}`;
 
   return (
     <div>
@@ -63,8 +82,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
           aria-required={required ? true : undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
+          aria-disabled={busy && !disabled ? true : undefined}
           className={className ? `${control} ${className}` : control}
           {...rest}
+          // Busy: the change is dropped, so React puts the controlled value back.
+          onChange={(event) => {
+            if (!busy) onChange?.(event);
+          }}
         >
           {placeholder !== undefined ? (
             <option value="" disabled>

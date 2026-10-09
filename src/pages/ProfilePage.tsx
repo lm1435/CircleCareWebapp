@@ -608,7 +608,7 @@ export default function ProfilePage(): ReactElement {
           options={timezoneOptions}
           value={user.timezone ?? 'America/New_York'}
           onChange={(e) => void handleTimezone(e.target.value)}
-          disabled={updateProfile.isPending || saveName.isPending}
+          busy={updateProfile.isPending || saveName.isPending}
         />
 
         {/* Password changes happen through the sign-in reset flow — point there. */}
@@ -630,7 +630,7 @@ export default function ProfilePage(): ReactElement {
               setColorSaved(false);
               updateAvatarColor.mutate(key, { onSuccess: () => setColorSaved(true) });
             }}
-            disabled={updateAvatarColor.isPending}
+            busy={updateAvatarColor.isPending}
           />
         </div>
         <p
@@ -732,14 +732,14 @@ export default function ProfilePage(): ReactElement {
                 label={t('quietHours.start')}
                 value={quietStart}
                 onChange={(e) => handleQuietTime(e.target.value, quietEnd)}
-                disabled={updateQuiet.isPending}
+                busy={updateQuiet.isPending}
               />
               <TimeField
                 id="profile-quiet-end"
                 label={t('quietHours.end')}
                 value={quietEnd}
                 onChange={(e) => handleQuietTime(quietStart, e.target.value)}
-                disabled={updateQuiet.isPending}
+                busy={updateQuiet.isPending}
               />
             </div>
           </SheetRow>
@@ -830,7 +830,7 @@ export default function ProfilePage(): ReactElement {
                 options={dayOptions}
                 value={String(user.email_digest_day ?? 0)}
                 onChange={(e) => handleDigestDay(Number(e.target.value))}
-                disabled={updateDigest.isPending}
+                busy={updateDigest.isPending}
               />
             </div>
           </SheetRow>

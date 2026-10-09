@@ -76,8 +76,33 @@ describe('AvatarColorPicker', () => {
     expect(onChange).toHaveBeenCalledWith('amber');
   });
 
-  it('is inert while saving', () => {
+  it('disabled: every swatch is natively disabled', () => {
     render(<AvatarColorPicker value={null} onChange={vi.fn()} disabled />);
     screen.getAllByRole('radio').forEach((r) => expect(r).toBeDisabled());
+  });
+
+  it('busy (a save in flight) keeps focus on the chosen swatch and ignores presses (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(<AvatarColorPicker value="coral" onChange={onChange} />);
+    const coral = screen.getByRole('radio', { name: 'Coral' });
+    await user.tab();
+    expect(coral).toHaveFocus();
+    rerender(<AvatarColorPicker value="coral" onChange={onChange} busy />);
+    expect(coral).toHaveFocus();
+    screen.getAllByRole('radio').forEach((r) => {
+      expect(r).not.toBeDisabled();
+      expect(r).toHaveAttribute('aria-disabled', 'true');
+    });
+    // Arrows still move focus; Space does not save.
+    await user.keyboard('{ArrowRight}');
+    const dusk = screen.getByRole('radio', { name: 'Slate blue' });
+    expect(dusk).toHaveFocus();
+    await user.keyboard(' ');
+    expect(onChange).not.toHaveBeenCalled();
+    rerender(<AvatarColorPicker value="coral" onChange={onChange} />);
+    expect(dusk).not.toHaveAttribute('aria-disabled');
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenCalledWith('dusk');
   });
 });

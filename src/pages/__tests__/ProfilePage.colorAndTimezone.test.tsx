@@ -79,13 +79,15 @@ const deleteAccount = vi.fn();
 const deleteReset = vi.fn();
 // Mutable so the delete-failure test can flip the mutation into its error state.
 let deleteAccountState: { isError: boolean } = { isError: false };
+// Which saves are "in flight" (isPending) — the busy-focus tests flip these.
+let pending: { profile?: boolean; color?: boolean; quiet?: boolean; digest?: boolean } = {};
 vi.mock('@/hooks/useProfile', () => ({
-  useUpdateProfile: () => ({ mutate: updateProfile, isPending: false }),
-  useUpdateAvatarColor: () => ({ mutate: updateAvatarColor, isPending: false }),
+  useUpdateProfile: () => ({ mutate: updateProfile, isPending: Boolean(pending.profile) }),
+  useUpdateAvatarColor: () => ({ mutate: updateAvatarColor, isPending: Boolean(pending.color) }),
   useUpdateNotificationPrefs: () => ({ mutate: updateNotif, isPending: false }),
-  useUpdateQuietHours: () => ({ mutate: updateQuiet, isPending: false }),
+  useUpdateQuietHours: () => ({ mutate: updateQuiet, isPending: Boolean(pending.quiet) }),
   useUpdateUnitPrefs: () => ({ mutate: updateUnits, isPending: false }),
-  useUpdateEmailDigest: () => ({ mutate: updateDigest, isPending: false }),
+  useUpdateEmailDigest: () => ({ mutate: updateDigest, isPending: Boolean(pending.digest) }),
   useDeleteAccount: () => ({
     mutate: deleteAccount,
     isPending: false,
@@ -163,6 +165,7 @@ beforeEach(() => {
   deleteAccountState = { isError: false };
   subscriptionTier = 'free';
   currentUser = { ...USER, avatar_color: 'moss' };
+  pending = {};
   mockDependent.mockResolvedValue([]);
   updateAvatarColor.mockReset();
   updateProfile.mockReset();
@@ -277,5 +280,61 @@ describe('ProfilePage member colour', () => {
     renderPage();
     await user.click(await screen.findByRole('radio', { name: 'Coral' }));
     expect(screen.getByTestId('avatar-color-saved')).toBeEmptyDOMElement();
+  });
+});
+
+// WCAG 2.4.3: a native `disabled` on the control the keyboard user just changed
+// drops focus to <body> while the save runs. These controls go `aria-disabled`
+// instead: still focusable, changes ignored until the save settles.
+describe('ProfilePage saves in flight keep keyboard focus', () => {
+  function expectBusyButFocusable(control: HTMLElement) {
+    control.focus();
+    expect(control).toHaveFocus();
+    expect(control).not.toBeDisabled();
+    expect(control).toHaveAttribute('aria-disabled', 'true');
+  }
+
+  it('time zone select', async () => {
+    pending = { profile: true };
+    renderPage();
+    const select = await screen.findByLabelText('Time zone');
+    expectBusyButFocusable(select);
+    await userEvent.setup().selectOptions(select, 'America/Chicago');
+    expect(select).toHaveValue('America/Denver');
+    expect(mockDependent).not.toHaveBeenCalled();
+    expect(updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('digest delivery-day select', async () => {
+    currentUser = { ...USER, email_digest_enabled: true, email_digest_day: 1 };
+    pending = { digest: true };
+    renderPage();
+    const select = await screen.findByLabelText('Delivery day');
+    expectBusyButFocusable(select);
+    await userEvent.setup().selectOptions(select, '3');
+    expect(select).toHaveValue('1');
+    expect(updateDigest).not.toHaveBeenCalled();
+  });
+
+  it('quiet-hours start and end fields', async () => {
+    currentUser = { ...USER, quiet_hours_start: '22:00', quiet_hours_end: '07:00' };
+    pending = { quiet: true };
+    renderPage();
+    for (const name of [/^Start time/, /^End time/]) {
+      const field = await screen.findByLabelText(name);
+      expectBusyButFocusable(field);
+      expect(field).toHaveAttribute('readonly');
+    }
+    expect(updateQuiet).not.toHaveBeenCalled();
+  });
+
+  it('avatar colour swatches', async () => {
+    pending = { color: true };
+    const user = userEvent.setup();
+    renderPage();
+    const coral = await screen.findByRole('radio', { name: 'Coral' });
+    expectBusyButFocusable(coral);
+    await user.click(coral);
+    expect(updateAvatarColor).not.toHaveBeenCalled();
   });
 });

@@ -89,4 +89,27 @@ describe('Select', () => {
     expect(control.className).toContain('self-stretch');
     expect(control.className).toContain('py-3');
   });
+
+  it('busy (a save in flight) keeps focus on the select and ignores changes (WCAG 2.4.3)', () => {
+    const onChange = vi.fn();
+    const props = { id: 'tz', label: 'Time zone', options: OPTIONS, value: 'daily', onChange };
+    const { rerender } = render(<Select {...props} />);
+    const control = screen.getByLabelText('Time zone');
+    control.focus();
+    expect(control).toHaveFocus();
+    // The parent marks it busy while the PATCH runs: still focused, not `disabled`.
+    rerender(<Select {...props} busy />);
+    expect(control).toHaveFocus();
+    expect(control).not.toBeDisabled();
+    expect(control).toHaveAttribute('aria-disabled', 'true');
+    expect(shellOf(control).className).toContain('opacity-50');
+    fireEvent.change(control, { target: { value: 'weekly' } });
+    expect(onChange).not.toHaveBeenCalled();
+    // The controlled value is put back.
+    expect(control).toHaveValue('daily');
+    rerender(<Select {...props} />);
+    expect(control).not.toHaveAttribute('aria-disabled');
+    fireEvent.change(control, { target: { value: 'weekly' } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
 });

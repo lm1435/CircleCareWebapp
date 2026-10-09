@@ -13,6 +13,12 @@ export interface AvatarColorPickerProps {
   value?: string | null;
   onChange: (key: AvatarColorKey) => void;
   disabled?: boolean;
+  /**
+   * A save is in flight: presses are ignored but the swatches STAY focusable
+   * (`aria-disabled`). A native `disabled` on the focused swatch drops keyboard
+   * focus to <body> (WCAG 2.4.3). Use `disabled` only when unavailable.
+   */
+  busy?: boolean;
 }
 
 /**
@@ -30,6 +36,7 @@ export function AvatarColorPicker({
   value,
   onChange,
   disabled = false,
+  busy = false,
 }: AvatarColorPickerProps): ReactElement {
   const { t } = useTranslation('profile');
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -79,10 +86,13 @@ export function AvatarColorPicker({
             aria-label={names[key]}
             data-testid={`avatar-color-${key}`}
             disabled={disabled}
+            aria-disabled={busy && !disabled ? true : undefined}
             tabIndex={index === tabbable ? 0 : -1}
-            onClick={() => onChange(key)}
+            onClick={() => {
+              if (!busy) onChange(key);
+            }}
             onKeyDown={(event) => onKeyDown(index, event)}
-            className={`inline-flex h-11 w-11 items-center justify-center rounded-full border-2 bg-transparent p-0 transition-colors duration-fast ${
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-full border-2 bg-transparent p-0 transition-colors duration-fast aria-disabled:cursor-not-allowed ${
               selected ? 'border-ink' : 'border-transparent'
             }`}
           >

@@ -92,4 +92,31 @@ describe('TimeField', () => {
     expect(control.className).toContain('self-stretch');
     expect(control.className).toContain('py-3');
   });
+
+  it('busy (a save in flight) keeps focus on the field, ignores edits, keeps the picker shut (WCAG 2.4.3)', () => {
+    const onChange = vi.fn();
+    const props = { id: 'at', label: 'Start', value: '22:00', onChange };
+    const { rerender } = render(<TimeField {...props} />);
+    const control = screen.getByLabelText(/^Start/);
+    const trigger = screen.getByRole('button');
+    control.focus();
+    rerender(<TimeField {...props} busy />);
+    expect(control).toHaveFocus();
+    expect(control).not.toBeDisabled();
+    expect(control).toHaveAttribute('aria-disabled', 'true');
+    expect(control).toHaveAttribute('readonly');
+    expect(trigger).not.toBeDisabled();
+    expect(trigger).toHaveAttribute('aria-disabled', 'true');
+    expect(shellOf(control).className).toContain('opacity-50');
+    fireEvent.change(control, { target: { value: '23:00' } });
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    rerender(<TimeField {...props} />);
+    expect(control).not.toHaveAttribute('aria-disabled');
+    expect(control).not.toHaveAttribute('readonly');
+    fireEvent.change(control, { target: { value: '23:00' } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
 });
+

@@ -43,6 +43,13 @@ export interface TimeFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   label: ReactNode;
   error?: string;
   hint?: ReactNode;
+  /**
+   * A save is in flight: the field ignores edits and will not open its picker,
+   * but STAYS focusable (`aria-disabled` + `readOnly`, not `disabled`). A native
+   * `disabled` on the focused field drops keyboard focus to <body> (WCAG 2.4.3).
+   * Use `disabled` only when the field is unavailable.
+   */
+  busy?: boolean;
 }
 
 /**
@@ -92,7 +99,7 @@ export interface TimeFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
  * The value is an `HH:MM` string — callers own timezone-correct formatting.
  */
 export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function TimeField(
-  { id, label, error, hint, className, disabled, required, readOnly, ...rest },
+  { id, label, error, hint, className, disabled, required, readOnly, busy = false, ...rest },
   ref
 ) {
   const { t } = useTranslation();
@@ -121,7 +128,7 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
   const describedBy =
     [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
 
-  const shell = fieldShell({ error: Boolean(error), disabled, extra: 'relative' });
+  const shell = fieldShell({ error: Boolean(error), disabled: disabled || busy, extra: 'relative' });
 
   // UNCONDITIONAL NOW. The overlay bargain (keep the indicator alive but
   // transparent, so the browser's own wheel stays reachable) was the right
@@ -131,9 +138,13 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
   // removes WebKit's focus route, which is the one this class cannot touch.
   const control = `${INPUT_TEXT} appearance-none ${PICKER_INDICATOR_HIDDEN}`;
 
-  const handlePick = useCallback((next: string): void => {
-    if (inputRef.current) emitNativeChange(inputRef.current, next);
-  }, []);
+  const handlePick = useCallback(
+    (next: string): void => {
+      if (busy) return;
+      if (inputRef.current) emitNativeChange(inputRef.current, next);
+    },
+    [busy]
+  );
 
   /**
    * WHERE THE POPOVER WAS OPENED FROM, because that is where focus has to go
@@ -179,13 +190,13 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
    */
   const handleInputClick = useCallback(
     (event: ReactMouseEvent<HTMLInputElement>): void => {
-      if (coarse && !disabled && !menu.open) {
+      if (coarse && !disabled && !busy && !menu.open) {
         openedFromInput.current = true;
         menu.toggle();
       }
       rest.onClick?.(event);
     },
-    [coarse, disabled, menu, rest]
+    [coarse, disabled, busy, menu, rest]
   );
 
   // Alt+ArrowDown / F4 is the keyboard route into the native wheel, which
@@ -197,7 +208,7 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
     (event: KeyboardEvent<HTMLInputElement>): void => {
       if (opensNativePicker(event)) {
         event.preventDefault();
-        if (!menu.open) {
+        if (!menu.open && !busy) {
           openedFromInput.current = true;
           menu.toggle();
         }
@@ -222,7 +233,7 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
       }
       rest.onKeyDown?.(event);
     },
-    [menu, rest, handleDismiss]
+    [menu, rest, handleDismiss, busy]
   );
 
   // The trigger's two open gestures, both of which mean "focus belongs on the
@@ -230,16 +241,18 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
   // focus is inside the panel and neither of these can fire again until it has
   // closed.
   const handleTriggerClick = useCallback((): void => {
+    if (busy) return;
     openedFromInput.current = false;
     menu.toggle();
-  }, [menu]);
+  }, [menu, busy]);
 
   const handleTriggerKeyDown = useCallback(
     (event: KeyboardEvent<HTMLButtonElement>): void => {
+      if (busy && !menu.open) return;
       openedFromInput.current = false;
       menu.onButtonKeyDown(event);
     },
-    [menu]
+    [menu, busy]
   );
 
   /*
@@ -271,12 +284,16 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
           // TOUCH CANNOT TYPE HERE, ON PURPOSE — see the header. This is the
           // only thing that stops WebKit opening its own wheel from the focused
           // input, which `PICKER_INDICATOR_HIDDEN` provably cannot.
-          readOnly={coarse || readOnly}
+          readOnly={coarse || readOnly || busy}
           aria-required={required ? true : undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
+          aria-disabled={busy && !disabled ? true : undefined}
           className={className ? `${control} ${className}` : control}
           {...rest}
+          onChange={(event) => {
+            if (!busy) rest.onChange?.(event);
+          }}
           onClick={handleInputClick}
           onKeyDown={handleInputKeyDown}
         />
@@ -298,9 +315,10 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
           // dangling idref is invalid ARIA (the point `MoreMenu` documents).
           aria-controls={menu.open ? panelId : undefined}
           disabled={disabled}
+          aria-disabled={busy && !disabled ? true : undefined}
           onClick={handleTriggerClick}
           onKeyDown={handleTriggerKeyDown}
-          className={`${INPUT_TRAILING} rounded-md transition-colors hover:text-ink disabled:cursor-not-allowed`}
+          className={`${INPUT_TRAILING} rounded-md transition-colors hover:text-ink disabled:cursor-not-allowed aria-disabled:cursor-not-allowed`}
         >
           <Icon name="time-outline" size="inline" />
         </button>
