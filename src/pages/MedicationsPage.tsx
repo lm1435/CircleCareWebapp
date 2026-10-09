@@ -900,7 +900,6 @@ export default function MedicationsPage(): ReactElement {
               tone="clay"
               headingLevel={2}
             />
-            <p className="m-0 mb-3 text-sm text-ink-3">{t('meds:asNeeded.section.hint')}</p>
             <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
               {activeAsNeeded.map((group) => (
                 <MedCard
