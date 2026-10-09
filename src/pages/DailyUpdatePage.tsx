@@ -133,6 +133,7 @@ export default function DailyUpdatePage(): ReactElement {
             prev={nav.prev}
             next={nav.next}
             isToday={!isPast}
+            dateLabel={title}
           />
         </div>
       ) : null}

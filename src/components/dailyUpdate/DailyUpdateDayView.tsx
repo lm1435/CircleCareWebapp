@@ -1,6 +1,6 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import type { TFunction } from 'i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { DailyUpdateData, DailyUpdateStillToDoItem } from '@/api/dailyUpdate';
 import { Icon, Sheet } from '@/components/ui';
@@ -116,6 +116,8 @@ export interface DailyUpdateDayArrowsProps {
   next: string | null;
   /** The shown date is the recipient's today: the right end reads "Today". */
   isToday: boolean;
+  /** The page title (the shown date), announced after an arrow press. */
+  dateLabel?: string;
 }
 
 /** "‹ Wed, Oct 7" … "Today" / "Thu, Oct 9 ›" — an arrow is absent at the range edge. */
@@ -124,17 +126,58 @@ export function DailyUpdateDayArrows({
   prev,
   next,
   isToday,
+  dateLabel,
 }: DailyUpdateDayArrowsProps): ReactElement {
   const { t, i18n } = useTranslation('dailyUpdate');
   const link =
     'inline-flex min-h-11 items-center gap-1 text-md font-medium text-moss-deep no-underline hover:underline underline-offset-2';
   const prevLabel = prev ? formatDailyUpdateShortDate(prev, i18n.language) : null;
   const nextLabel = next ? formatDailyUpdateShortDate(next, i18n.language) : null;
+
+  // Each day is its own route, and the page remounts on a path change, so the
+  // arrow that was just pressed is gone and focus would fall to <body> (the
+  // next Tab restarting at the skip link). An arrow press carries its direction
+  // in router state; land focus back on that arrow, or on the other one when
+  // this day is the range edge ("Today", or today - 7). WCAG 2.4.3.
+  const location = useLocation();
+  const navRef = useRef<HTMLElement>(null);
+  const focusedFor = useRef<string | null>(null);
+  const arrow = (location.state as { dailyUpdateArrow?: 'prev' | 'next' } | null)
+    ?.dailyUpdateArrow;
+  useEffect(() => {
+    if (!arrow || focusedFor.current === location.key || !navRef.current) return;
+    focusedFor.current = location.key;
+    const other = arrow === 'prev' ? 'next' : 'prev';
+    const target =
+      navRef.current.querySelector<HTMLElement>(`[data-arrow="${arrow}"]`) ??
+      navRef.current.querySelector<HTMLElement>(`[data-arrow="${other}"]`);
+    target?.focus();
+  }, [arrow, location.key, prev, next]);
+
+  // Focus stays on an arrow, whose name is the NEIGHBOURING day, so say which day
+  // is now shown (WCAG 4.1.3). The region mounts empty and is filled a beat later:
+  // a live region that appears together with its text is often not announced.
+  const [announced, setAnnounced] = useState('');
+  useEffect(() => {
+    if (!arrow || !dateLabel) return;
+    const timer = window.setTimeout(() => setAnnounced(dateLabel), 150);
+    return () => window.clearTimeout(timer);
+  }, [arrow, dateLabel]);
+
   return (
-    <nav aria-label={t('page.navLabel')} className="flex items-center justify-between gap-3">
+    <nav
+      ref={navRef}
+      aria-label={t('page.navLabel')}
+      className="flex items-center justify-between gap-3"
+    >
+      <p role="status" className="sr-only" data-testid="daily-update-day-announcement">
+        {announced}
+      </p>
       {prev && prevLabel ? (
         <Link
           to={`/circles/${circleId}/daily-update/${prev}`}
+          state={{ dailyUpdateArrow: 'prev' }}
+          data-arrow="prev"
           aria-label={t('page.prevA11y', { date: prevLabel })}
           className={link}
           data-testid="daily-update-prev"
@@ -150,6 +193,8 @@ export function DailyUpdateDayArrows({
       ) : next && nextLabel ? (
         <Link
           to={`/circles/${circleId}/daily-update/${next}`}
+          state={{ dailyUpdateArrow: 'next' }}
+          data-arrow="next"
           aria-label={t('page.nextA11y', { date: nextLabel })}
           className={link}
           data-testid="daily-update-next"

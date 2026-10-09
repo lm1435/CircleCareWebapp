@@ -237,7 +237,7 @@ test.describe('daily update', () => {
   test('way back: Quick access and the Activity feed open the latest update', async ({
     page,
     circleId,
-  }) => {
+  }, testInfo) => {
     // Daytime: the latest update is yesterday's.
     const at = mostRecentWallTime('12:00', TZ);
     const today = localDateOf(at, TZ);
@@ -257,6 +257,7 @@ test.describe('daily update', () => {
       'Activity feed',
       'Care info',
     ]);
+    await checkA11y(page, `/circles/${circleId} (Quick access with Daily updates)`, testInfo);
     await row.click();
     await expect(page).toHaveURL(
       new RegExp(`/circles/${circleId}/daily-update/${addDays(today, -1)}$`)
@@ -269,6 +270,7 @@ test.describe('daily update', () => {
       `/circles/${circleId}/daily-update/${addDays(today, -1)}`,
       { timeout: NAV_TIMEOUT }
     );
+    await checkA11y(page, `/circles/${circleId}/activity (Daily updates link)`, testInfo);
   });
 
   test('way back is hidden while rollout is off', async ({ page, circleId }) => {
@@ -282,6 +284,43 @@ test.describe('daily update', () => {
     await page.goto(`/circles/${circleId}/activity`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: NAV_TIMEOUT });
     await expect(page.getByTestId('activity-daily-updates-link')).toHaveCount(0);
+  });
+
+  test('keyboard: an arrow press keeps focus on the arrows (also at both range edges) and announces the day (WCAG 2.4.3, 4.1.3)', async ({
+    page,
+    circleId,
+  }) => {
+    const at = mostRecentWallTime('20:00', TZ);
+    const today = localDateOf(at, TZ);
+    await mockDailyUpdate(page, TZ, today);
+    await page.clock.install({ time: at });
+    const focused = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? 'body');
+
+    // Mid-range: Previous day lands on the new page's Previous day arrow.
+    await page.goto(`/circles/${circleId}/daily-update/${addDays(today, -2)}`, { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('daily-update-prev').focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new RegExp(`/daily-update/${addDays(today, -3)}$`));
+    await expect.poll(focused, { timeout: NAV_TIMEOUT }).toBe('daily-update-prev');
+    // Focus sits on the arrow (named for the NEXT day back), so the shown day is
+    // announced through a status region: the page's own title (WCAG 4.1.3).
+    const title = (await page.locator('h1').first().innerText()).trim();
+    await expect(page.getByTestId('daily-update-day-announcement')).toHaveText(title);
+    await expect(page.getByTestId('daily-update-day-announcement')).toHaveAttribute('role', 'status');
+
+    // Next day into today: "Today" replaces the next arrow, so focus takes the previous one.
+    await page.goto(`/circles/${circleId}/daily-update/${addDays(today, -1)}`, { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('daily-update-next').focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new RegExp(`/daily-update/${today}$`));
+    await expect.poll(focused, { timeout: NAV_TIMEOUT }).toBe('daily-update-prev');
+
+    // Previous day onto the oldest day (today - 7): no previous arrow, focus takes the next one.
+    await page.goto(`/circles/${circleId}/daily-update/${addDays(today, -6)}`, { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('daily-update-prev').focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new RegExp(`/daily-update/${addDays(today, -7)}$`));
+    await expect.poll(focused, { timeout: NAV_TIMEOUT }).toBe('daily-update-next');
   });
 
   test('phone width (390): card and full page fit without horizontal scroll', async ({ page, circleId }) => {
@@ -302,13 +341,16 @@ test.describe('daily update', () => {
   test('invite modal carries the daily update line while the feature is on', async ({
     page,
     circleId,
-  }) => {
+  }, testInfo) => {
     await mockDailyUpdate(page, TZ, localDateOf(new Date(), TZ));
     await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Invite member' }).first().click({ timeout: NAV_TIMEOUT });
     await expect(page.getByTestId('invite-daily-update-line')).toContainText(
       /The people you invite get a daily update on (your day|.+)\./
     );
+    await checkA11y(page, `/circles/${circleId}/members [Invite member open, daily update line]`, testInfo, {
+      wcag22: true,
+    });
   });
 
   test('invite modal omits the line while rollout is off', async ({ page, circleId }) => {
