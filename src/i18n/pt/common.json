@@ -169,5 +169,8 @@
     "taskShort": "Tarefa",
     "noteShort": "Nota"
   },
-  "draftRestored": "Restauramos seu rascunho não salvo."
+  "draftRestored": "Restauramos seu rascunho não salvo.",
+  "undoCap": {
+    "savingSoon": "Salvando em 10 segundos."
+  }
 }

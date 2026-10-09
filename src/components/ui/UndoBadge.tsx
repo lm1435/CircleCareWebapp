@@ -7,6 +7,8 @@ import {
   type PointerEvent,
   type ReactElement,
 } from 'react';
+import { useTranslation } from 'react-i18next';
+import { UNDO_HOLD_CAP_MS } from '@/lib/undoTimer';
 
 export type UndoBadgeKind = 'taken' | 'skipped' | 'done';
 
@@ -65,6 +67,8 @@ function isKeyboardFocus(el: Element): boolean {
 }
 
 const DEFAULT_DURATION_MS = 5000;
+/** How long before the hold cap the badge says the write is about to happen. */
+export const UNDO_CAP_WARNING_MS = 10_000;
 
 /**
  * Replaces a care item's Take/Skip (or Done) pair for a 5s undo window after
@@ -110,6 +114,17 @@ export function UndoBadge({
     },
     []
   );
+  // THE HOLD CAP (lib/undoTimer UNDO_HOLD_CAP_MS): however long it is held, the
+  // write commits 60 s after the press. Ten seconds before that, a held badge
+  // says so through its own polite live region. Measured from mount, which is
+  // the press (the badge replaces the pressed button in the same commit).
+  const { t } = useTranslation('common');
+  const [capSoon, setCapSoon] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setCapSoon(true), UNDO_HOLD_CAP_MS - UNDO_CAP_WARNING_MS);
+    return () => window.clearTimeout(id);
+  }, []);
+
   const onPointerMove = (e: PointerEvent<HTMLDivElement>): void => {
     if (e.pointerType !== 'touch') setHovered(true);
   };
@@ -191,6 +206,9 @@ export function UndoBadge({
           {label}
         </span>
         <span aria-hidden className="w-px h-3.5 bg-moss-muted mx-0.5" />
+        {held && capSoon ? (
+          <span className="sr-only">{t('undoCap.savingSoon')}</span>
+        ) : null}
         <button
           ref={undoRef}
           type="button"

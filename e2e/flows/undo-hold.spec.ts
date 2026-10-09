@@ -119,3 +119,43 @@ test('keyboard focus on Undo pauses the window; tabbing away resumes it', async 
     purgeEventsTitled(circleId, title);
   }
 });
+
+// THE SAFETY CAP (lib/undoTimer UNDO_HOLD_CAP_MS). Focus lands on Undo after a
+// keyboard Done, so a page left open and visible would otherwise never save.
+// However long it is held, the write commits 60 s after the press, and the held
+// badge says so ~10 s before. Playwright's clock runs the minute forward.
+test('a hold that never releases still commits 60 s after the press, announced 10 s before', async ({
+  page,
+  request,
+  account,
+  circleId,
+}) => {
+  await page.clock.install();
+  const { title, done } = await openTask(page, request, account, circleId);
+  try {
+    const posts = countRequests(page, 'POST', COMPLETE);
+    await done.focus();
+    await page.keyboard.press('Enter');
+    const undo = page.getByRole('button', { name: `Undo ${title}` }).first();
+    await expect(undo).toBeFocused();
+    const badge = page.getByRole('status').filter({ has: undo });
+
+    await page.clock.runFor(30_000);
+    expect(posts.count, 'still held at 30 s: nothing sent').toBe(0);
+    await expect(badge.getByText('Saving in 10 seconds.')).toHaveCount(0);
+
+    await page.clock.runFor(21_000); // t = 51 s
+    await expect(badge.getByText('Saving in 10 seconds.')).toBeAttached();
+    expect(posts.count).toBe(0);
+
+    const answered = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && COMPLETE.test(new URL(r.url()).pathname),
+      { timeout: 15_000 }
+    );
+    await page.clock.runFor(10_000); // t = 61 s, focus never left Undo
+    await answered;
+    expect(posts.count).toBe(1);
+  } finally {
+    purgeEventsTitled(circleId, title);
+  }
+});

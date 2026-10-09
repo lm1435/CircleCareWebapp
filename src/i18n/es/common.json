@@ -169,5 +169,8 @@
     "taskShort": "Tarea",
     "noteShort": "Nota"
   },
-  "draftRestored": "Recuperamos tu borrador sin guardar."
+  "draftRestored": "Recuperamos tu borrador sin guardar.",
+  "undoCap": {
+    "savingSoon": "Se guardará en 10 segundos."
+  }
 }

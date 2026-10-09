@@ -169,5 +169,8 @@
     "taskShort": "Task",
     "noteShort": "Note"
   },
-  "draftRestored": "We restored your unsaved draft."
+  "draftRestored": "We restored your unsaved draft.",
+  "undoCap": {
+    "savingSoon": "Saving in 10 seconds."
+  }
 }

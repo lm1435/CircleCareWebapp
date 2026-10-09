@@ -169,5 +169,8 @@
     "taskShort": "Tâche",
     "noteShort": "Note"
   },
-  "draftRestored": "Nous avons restauré votre brouillon non enregistré."
+  "draftRestored": "Nous avons restauré votre brouillon non enregistré.",
+  "undoCap": {
+    "savingSoon": "Enregistrement dans 10 secondes."
+  }
 }

@@ -169,5 +169,8 @@
     "taskShort": "Incarico",
     "noteShort": "Nota"
   },
-  "draftRestored": "Abbiamo ripristinato la bozza non salvata."
+  "draftRestored": "Abbiamo ripristinato la bozza non salvata.",
+  "undoCap": {
+    "savingSoon": "Salvataggio tra 10 secondi."
+  }
 }

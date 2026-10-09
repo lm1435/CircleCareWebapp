@@ -169,5 +169,8 @@
     "taskShort": "Aufgabe",
     "noteShort": "Notiz"
   },
-  "draftRestored": "Wir haben Ihren nicht gespeicherten Entwurf wiederhergestellt."
+  "draftRestored": "Wir haben Ihren nicht gespeicherten Entwurf wiederhergestellt.",
+  "undoCap": {
+    "savingSoon": "Wird in 10 Sekunden gespeichert."
+  }
 }

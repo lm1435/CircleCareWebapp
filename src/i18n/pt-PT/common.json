@@ -54,5 +54,8 @@
     "step3Desc": "Alergias, médicos e contactos prontos na hora em que forem necessários.",
     "statusPending": "(por fazer)"
   },
-  "draftRestored": "Restaurámos o seu rascunho não guardado."
+  "draftRestored": "Restaurámos o seu rascunho não guardado.",
+  "undoCap": {
+    "savingSoon": "A guardar dentro de 10 segundos."
+  }
 }

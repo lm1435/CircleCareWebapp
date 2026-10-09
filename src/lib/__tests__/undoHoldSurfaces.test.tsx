@@ -16,6 +16,7 @@ import { ToastProvider } from '@/components/ui';
 import { MEDICATION_UNDO_DELAY_MS, useMedicationUndo } from '@/components/meds/useMedicationUndo';
 import { useAsNeededUndo } from '@/components/meds/useAsNeededUndo';
 import { UNDO_DELAY_MS, useTaskCompletion } from '@/hooks/useTaskCompletion';
+import { UNDO_HOLD_CAP_MS } from '@/lib/undoTimer';
 import type { TodaysMedication } from '@/api/medicationConfirmations';
 import type { CalendarEvent } from '@/api/calendarEvents';
 
@@ -139,7 +140,7 @@ describe.each(SURFACES)('$name', (surface) => {
     act(() => surface.start(result.current));
     await advance(2000);
     act(() => surface.hold(result.current, true));
-    await advance(60000);
+    await advance(30000); // well past 5 s, inside the 60 s cap
     expect(sent()).toBe(0);
     act(() => surface.hold(result.current, false));
     await advance(2999);
@@ -156,6 +157,30 @@ describe.each(SURFACES)('$name', (surface) => {
     act(() => surface.undo(result.current));
     act(() => surface.hold(result.current, false));
     await advance(60000);
+    expect(sent()).toBe(0);
+  });
+
+  it('a hold that never releases still commits at 60 s from the press (safety cap)', async () => {
+    const { result } = surface.mount();
+    act(() => surface.start(result.current));
+    await advance(1000);
+    act(() => surface.hold(result.current, true));
+    await advance(UNDO_HOLD_CAP_MS - 1000 - 1);
+    expect(sent()).toBe(0);
+    await advance(1);
+    expect(sent()).toBe(1);
+    act(() => surface.hold(result.current, false));
+    await advance(60000);
+    expect(sent()).toBe(1);
+  });
+
+  it('Undo at 59 s while held cancels: the cap sends nothing', async () => {
+    const { result } = surface.mount();
+    act(() => surface.start(result.current));
+    act(() => surface.hold(result.current, true));
+    await advance(59000);
+    act(() => surface.undo(result.current));
+    await advance(120000);
     expect(sent()).toBe(0);
   });
 

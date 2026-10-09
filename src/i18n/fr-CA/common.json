@@ -6,5 +6,8 @@
   },
   "nav": {
     "vitals": "Signes vitaux"
+  },
+  "undoCap": {
+    "savingSoon": "Enregistrement dans 10 secondes."
   }
 }

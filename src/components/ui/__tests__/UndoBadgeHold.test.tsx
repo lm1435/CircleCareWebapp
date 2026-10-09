@@ -7,7 +7,9 @@
 // selector.
 
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { UndoBadge } from '../UndoBadge';
+import '@/i18n';
+import { UndoBadge, UNDO_CAP_WARNING_MS } from '../UndoBadge';
+import { UNDO_HOLD_CAP_MS } from '@/lib/undoTimer';
 
 let keyboardFocus = true;
 const realMatches = Element.prototype.matches;
@@ -112,5 +114,34 @@ describe('UndoBadge hold', () => {
     fireEvent.pointerMove(badge);
     unmount();
     expect(onHoldChange).toHaveBeenLastCalledWith(false);
+  });
+
+  describe('the 60 s hold cap warning', () => {
+    const SOON = 'Saving in 10 seconds.';
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('a HELD badge says, inside its polite live region, that it saves in 10 s', () => {
+      const { badge, undo } = renderBadge();
+      act(() => undo.focus());
+      act(() => {
+        vi.advanceTimersByTime(UNDO_HOLD_CAP_MS - UNDO_CAP_WARNING_MS - 1);
+      });
+      expect(screen.queryByText(SOON)).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      const msg = screen.getByText(SOON);
+      expect(badge).toContainElement(msg);
+      expect(badge).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('says nothing when not held (the ordinary 5 s window never gets near the cap)', () => {
+      renderBadge();
+      act(() => {
+        vi.advanceTimersByTime(UNDO_HOLD_CAP_MS);
+      });
+      expect(screen.queryByText(SOON)).toBeNull();
+    });
   });
 });
