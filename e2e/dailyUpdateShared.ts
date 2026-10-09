@@ -67,6 +67,9 @@ export function mostRecentWallTime(time: string, tz: string, now: Date = new Dat
     : zonedInstant(addDays(today, -1), time, tz);
 }
 
+/** How `mockDailyUpdate` records the date-less read (the recipient's today). */
+export const DATELESS = '(dateless)';
+
 export interface DailyUpdateFixture {
   recipient_name?: string | null;
   is_solo?: boolean;
@@ -91,12 +94,17 @@ export async function mockDailyUpdate(
   await page.route(/\/api\/circles\/[^/]+\/daily-update(\?.*)?$/, async (route: Route) => {
     const url = new URL(route.request().url());
     const date = url.searchParams.get('date') ?? today;
-    asked.push(date);
+    // The date-less read (rollout check / the way back) is recorded as DATELESS,
+    // so "the card asked for no date" stays assertable.
+    asked.push(url.searchParams.get('date') ?? DATELESS);
     if (fixture.enabled === false) {
       await route.fulfill({ json: { success: true, data: { enabled: false } } });
       return;
     }
     const isToday = date === today;
+    const earliest = addDays(today, -7);
+    const prev = addDays(date, -1);
+    const next = addDays(date, 1);
     await route.fulfill({
       json: {
         success: true,
@@ -113,23 +121,81 @@ export async function mockDailyUpdate(
           has_activity: fixture.has_activity ?? true,
           recipient_name: fixture.recipient_name === undefined ? 'Rose' : fixture.recipient_name,
           is_solo: fixture.is_solo ?? false,
-          doses: { taken: 3, taken_late: 0, skipped: 1, not_marked: 1, upcoming: 1 },
+          // The B2 evening: 1 on time, 1 late, 1 skipped (+1 to come today) → "A steady day".
+          doses: isToday
+            ? { taken: 1, taken_late: 1, skipped: 1, not_marked: 0, upcoming: 1 }
+            : { taken: 2, taken_late: 0, skipped: 0, not_marked: 1, upcoming: 0 },
           as_needed: null,
           tasks: { done: 2 },
-          appointments: { past_count: 0 },
+          appointments: { past_count: 1 },
           notes: { count: 1, authors: ['Ana'], more_authors: 0 },
           still_to_do: isToday
             ? [
-                { kind: 'dose', id: 'e1', title: 'Metformin', time: '21:00:00', status: 'upcoming' },
-                { kind: 'dose', id: 'e2', title: 'Lisinopril', time: '19:30:00', status: 'not_marked' },
+                { kind: 'dose', id: 'e9', title: 'Escitalopram', time: '21:00', status: 'upcoming' },
+                { kind: 'task', id: 't9', title: 'Call the pharmacy', time: null, status: 'open' },
               ]
-            : [{ kind: 'task', id: 't1', title: 'Groceries', time: null, status: 'open' }],
+            : [],
           still_to_do_more: 0,
+          // Contract v2 detail (ids that do not exist in the real circle: the
+          // links land on the "no longer available" path, which is the point).
+          doses_detail: isToday
+            ? [
+                dose('d1', 'Sertraline', '08:00', 'taken', 'Ana', '08:05'),
+                dose('d2', 'Metformin', '13:00', 'taken_late', 'Luis', '14:10'),
+                dose('d3', 'Vitamin D', '13:00', 'skipped', 'Luis', '13:20'),
+                dose('d4', 'Escitalopram', '21:00', 'upcoming', null, null),
+              ]
+            : [
+                dose('d1', 'Sertraline', '08:00', 'taken', 'Ana', '08:05'),
+                dose('d2', 'Metformin', '13:00', 'taken', 'Luis', '13:02'),
+                dose('d4', 'Escitalopram', '21:00', 'not_marked', null, null),
+              ],
+          tasks_done_detail: [
+            { event_id: 'k1', title: 'Groceries', completed_by_name: 'Luis', completed_at: '11:20' },
+            { event_id: 'k2', title: 'Pick up the refill', completed_by_name: 'Ana', completed_at: '16:05' },
+          ],
+          appointments_detail: [
+            { event_id: 'a1', title: 'Dr. Patel, cardiology follow-up', time: '10:30', location: null },
+          ],
+          notes_detail: [
+            {
+              note_id: 'n1',
+              kind: 'care',
+              event_id: null,
+              author_name: 'Ana',
+              created_at: '16:10',
+              excerpt: 'Rose ate well at lunch and walked to the corner and back.',
+            },
+          ],
+          nav: {
+            prev_date: prev >= earliest ? prev : null,
+            next_date: next <= today ? next : null,
+          },
         },
       },
     });
   });
   return asked;
+}
+
+function dose(
+  id: string,
+  name: string,
+  time: string,
+  status: string,
+  by: string | null,
+  at: string | null
+) {
+  return {
+    event_id: id,
+    medication_id: `med-${id}`,
+    medication_name: name,
+    dosage: null,
+    time,
+    status,
+    marked_by_name: by,
+    marked_at: at,
+  };
 }
 
 /** Set the account's "Daily update & tips" preference directly (stored input, not a derived flag). */

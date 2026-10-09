@@ -7,6 +7,12 @@ import { useTasks } from '@/hooks/useTasks';
 
 vi.mock('@/hooks/useTasks', () => ({ useTasks: vi.fn() }));
 const mockUseTasks = vi.mocked(useTasks);
+// The way back to the daily updates: the hook decides visibility and target
+// (its own tests cover rollout/recipient/window); null = row hidden.
+let latestDailyUpdate: string | null = null;
+vi.mock('@/hooks/useDailyUpdate', () => ({
+  useLatestDailyUpdatePath: () => latestDailyUpdate,
+}));
 
 // Home had no instrumentation on web; each row press now mirrors mobile's
 // `quick_access_tapped` with the row id as `destination`.
@@ -39,15 +45,52 @@ describe('QuickAccess', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setOpenTasks(0);
+    latestDailyUpdate = null;
   });
 
-  it('lists mobile\'s seven destinations in mobile\'s order', () => {
+  it('Daily updates: between Vitals and Activity feed, opening the latest update', () => {
+    latestDailyUpdate = '/circles/c1/daily-update/2026-10-07';
+    renderQuickAccess();
+    const links = screen.getAllByRole('link');
+    expect(links.map((a) => a.textContent)).toEqual([
+      'Notes',
+      'Calendar',
+      'Meds',
+      'Tasks',
+      'Vitals',
+      'Daily updates',
+      'Activity feed',
+      'Care info',
+    ]);
+    expect(screen.getByRole('link', { name: 'Daily updates' })).toHaveAttribute(
+      'href',
+      '/circles/c1/daily-update/2026-10-07'
+    );
+  });
+
+  it('Daily updates is absent while the entry is hidden (rollout off / care recipient)', () => {
+    renderQuickAccess();
+    expect(screen.queryByRole('link', { name: 'Daily updates' })).toBeNull();
+    expect(screen.getAllByRole('link')).toHaveLength(7);
+  });
+
+  it('Daily updates reads "Resúmenes del día" in Spanish', async () => {
+    latestDailyUpdate = '/circles/c1/daily-update';
+    const { default: i18n } = await import('@/i18n');
+    await i18n.changeLanguage('es');
+    renderQuickAccess();
+    expect(screen.getByRole('link', { name: 'Resúmenes del día' })).toBeInTheDocument();
+    await i18n.changeLanguage('en');
+  });
+
+  it('lists mobile\'s destinations in mobile\'s order (Daily updates between Vitals and Activity feed)', () => {
     expect(QUICK_ACCESS_ROWS.map((r) => r.id)).toEqual([
       'notes',
       'calendar',
       'medications',
       'tasks',
       'vitals',
+      'dailyUpdates',
       'activityFeed',
       'careInfo',
     ]);

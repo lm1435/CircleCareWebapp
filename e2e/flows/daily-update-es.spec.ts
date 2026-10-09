@@ -47,14 +47,14 @@ test('la tarjeta y la vista por fecha en español', async ({ page, circleId }, t
   await page.clock.install({ time: at });
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-  const card = page.getByRole('region', { name: 'El día de Rose' });
+  const card = page.getByRole('region', { name: 'Un día estable para Rose.' });
   await expect(card).toBeVisible({ timeout: NAV_TIMEOUT });
-  await expect(card.getByText('Resumen del día')).toBeVisible();
-  await expect(card.getByRole('heading', { name: 'Hoy hasta ahora' })).toBeVisible();
-  await expect(card.getByRole('heading', { name: 'Falta por hacer' })).toBeVisible();
-  await expect(card.getByText('1 dosis omitida')).toBeVisible();
-  // The unmarked dose appears once, as a "Falta por hacer" item, never also as a count.
-  await expect(card.getByText(/sin marcar/i)).toHaveCount(1);
+  await expect(card.getByText('Esta noche')).toBeVisible();
+  await expect(
+    card.getByText('Casi todas las dosis tomadas · 2 tareas hechas · una cita · Ana dejó una nota')
+  ).toBeVisible();
+  await expect(card.getByRole('link', { name: /^2 tareas hechas/ })).toBeVisible();
+  await expect(card.getByRole('link', { name: /^Una nota de Ana/ })).toBeVisible();
   await expect(card.getByRole('button', { name: 'Ocultar hasta mañana' })).toBeVisible();
   await expect(card.getByRole('link', { name: 'Ver el resumen completo' })).toBeVisible();
   await checkA11y(page, `/circles/${circleId} (resumen del día)`, testInfo);
@@ -62,8 +62,25 @@ test('la tarjeta y la vista por fecha en español', async ({ page, circleId }, t
   await page.goto(`/circles/${circleId}/daily-update/${addDays(today, -1)}`, {
     waitUntil: 'domcontentloaded',
   });
-  await expect(page.getByRole('heading', { name: 'Lo que pasó' })).toBeVisible({
+  await expect(page.getByTestId('daily-update-glance')).toHaveText(
+    '2 de 3 dosis tomadas · 1 sin marcar',
+    { timeout: NAV_TIMEOUT }
+  );
+  await expect(page.getByRole('heading', { level: 2, name: 'Medicamentos' })).toBeVisible();
+  await expect(page.getByText('Tomada, marcó Ana')).toBeVisible();
+  await expect(page.getByText('Hecha por Luis')).toBeVisible();
+  await expect(
+    page.getByRole('navigation', { name: 'Otros días' }).getByRole('link', { name: /^Día siguiente/ })
+  ).toBeVisible();
+  await checkA11y(page, `/circles/${circleId}/daily-update/<ayer> (es)`, testInfo);
+});
+
+test('acceso rápido: "Resúmenes del día"', async ({ page, circleId }) => {
+  const at = mostRecentWallTime('12:00', TZ);
+  await mockDailyUpdate(page, TZ, localDateOf(at, TZ));
+  await page.clock.install({ time: at });
+  await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('link', { name: 'Resúmenes del día' })).toBeVisible({
     timeout: NAV_TIMEOUT,
   });
-  await expect(page.getByRole('heading', { name: 'Quedó pendiente ese día' })).toBeVisible();
 });

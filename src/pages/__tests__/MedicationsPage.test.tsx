@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
@@ -925,6 +925,27 @@ describe('MedicationsPage', () => {
 // sat under Active until its last dose left the window, and then vanished.
 // "Ended" is the Care Summary PDF's own definition (the shared
 // `isMedicationSeriesEnded`), so the roster and the printout agree.
+// Daily update dose rows open a medication by `?medication=<series root id>`
+// (docs/plans/daily-update.md "Design v2 B2").
+describe('MedicationsPage — ?medication= deep link', () => {
+  it('opens that medication\'s detail (a child row\'s root id matches its card)', async () => {
+    const child = makeMed({ id: 'child-9', parent_event_id: 'active-1', scheduled_date: '2026-07-30' });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, child, inactiveMed]));
+    renderPage('/circles/circle-1/meds?medication=active-1');
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getAllByText('Metformin').length).toBeGreaterThan(0);
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('an id that matches nothing: a gentle toast, no detail', async () => {
+    renderPage('/circles/circle-1/meds?medication=deleted-med');
+    await waitFor(() =>
+      expect(showToast).toHaveBeenCalledWith('This item is no longer available. Someone may have deleted it.', 'info')
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
 describe('MedicationsPage — ended series', () => {
   /** Naive YYYY-MM-DD n days from today in America/Denver (the circle zone below). */
   // Resolve TODAY in Denver first, then shift the date STRING — never shift

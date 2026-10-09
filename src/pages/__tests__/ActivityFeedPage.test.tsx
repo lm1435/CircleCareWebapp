@@ -9,6 +9,12 @@ import { getActivityFeed, type ActivityFeedItem, type ActivityFeedPage as Page }
 // Tasks 25-27 — feed grouped by viewer-local day with "Load more" pagination.
 // `getActivityFeed` is mocked; the hook + page wiring stays real.
 
+// The way back to the daily updates (hook covered by useLatestDailyUpdatePath.test).
+let latestDailyUpdate: string | null = null;
+vi.mock('@/hooks/useDailyUpdate', () => ({
+  useLatestDailyUpdatePath: () => latestDailyUpdate,
+}));
+
 vi.mock('@/api/activityFeed', async () => {
   const actual = await vi.importActual<typeof import('@/api/activityFeed')>('@/api/activityFeed');
   return { ...actual, getActivityFeed: vi.fn() };
@@ -71,6 +77,7 @@ function renderPage() {
 describe('ActivityFeedPage', () => {
   beforeEach(() => {
     mockedGetActivityFeed.mockReset();
+    latestDailyUpdate = null;
     // Pin "now" to a deterministic mid-afternoon NY instant so Today/Yesterday
     // grouping never depends on the real wall clock (it previously flaked
     // between ~midnight–1am ET). Fake ONLY Date — real setTimeout/microtasks
@@ -409,6 +416,24 @@ describe('ActivityFeedPage', () => {
 
     expect((await screen.findAllByText('Completed Task: Groceries')).length).toBeGreaterThanOrEqual(1);
     expect(mockedGetActivityFeed.mock.calls.map(([, opts]) => opts?.offset)).toEqual([0, 1, 2, 3]);
+  });
+
+  it('links to the latest daily update at the top, only while that entry is shown', async () => {
+    latestDailyUpdate = '/circles/circle-1/daily-update/2026-06-14';
+    mockedGetActivityFeed.mockResolvedValueOnce({ activities: [], hasMore: false });
+    renderPage();
+    const link = await screen.findByRole('link', { name: 'Daily updates' });
+    expect(link).toHaveAttribute('href', '/circles/circle-1/daily-update/2026-06-14');
+    // Above the feed content (here: the empty state).
+    const empty = await screen.findByText('No Activity Yet');
+    expect(link.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('has no daily-updates link while the entry is hidden', async () => {
+    mockedGetActivityFeed.mockResolvedValueOnce({ activities: [], hasMore: false });
+    renderPage();
+    await screen.findByText('No Activity Yet');
+    expect(screen.queryByRole('link', { name: 'Daily updates' })).toBeNull();
   });
 
   it('renders the empty state when the circle has no activity', async () => {

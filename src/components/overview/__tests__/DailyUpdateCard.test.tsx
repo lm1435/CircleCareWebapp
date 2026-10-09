@@ -52,6 +52,23 @@ function payload(over: Partial<DailyUpdateData> = {}): DailyUpdateData {
       { kind: 'dose', id: 'e2', title: 'Lisinopril', time: '19:30:00', status: 'not_marked' },
     ],
     still_to_do_more: 0,
+    doses_detail: [],
+    tasks_done_detail: [
+      { event_id: 'k1', title: 'Groceries', completed_by_name: 'Luis', completed_at: '11:20' },
+      { event_id: 'k2', title: 'Pick up the refill', completed_by_name: 'Ana', completed_at: '16:05' },
+    ],
+    appointments_detail: [],
+    notes_detail: [
+      {
+        note_id: 'n1',
+        kind: 'care',
+        event_id: null,
+        author_name: 'Ana',
+        created_at: '16:10',
+        excerpt: 'Rose ate well at lunch.',
+      },
+    ],
+    nav: { prev_date: '2026-10-07', next_date: null },
     ...over,
   };
 }
@@ -135,39 +152,147 @@ describe('DailyUpdateCard', () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it('shows at 20:00 recipient time with both sections, zero counts omitted', async () => {
+  it('shows at 20:00 recipient time: eyebrow, sentence, clause line and the rows (B2)', async () => {
     renderCard();
     const card = await screen.findByTestId('daily-update-card');
-    expect(within(card).getByRole('heading', { level: 2, name: "Rose's day" })).toBeInTheDocument();
-    expect(within(card).getByText('Daily update')).toBeInTheDocument();
-    expect(within(card).getByRole('heading', { name: 'Today so far' })).toBeInTheDocument();
-    expect(within(card).getByRole('heading', { name: 'Still to do' })).toBeInTheDocument();
-    const lines = within(card)
-      .getByTestId('daily-update-summary')
-      .querySelectorAll('li');
-    expect(Array.from(lines).map((l) => l.textContent)).toEqual([
-      '3 doses taken',
-      '1 dose skipped',
-      '2 tasks done',
-      '1 note from Ana',
+    expect(within(card).getByText('This evening')).toBeInTheDocument();
+    // 3 taken, 1 skipped, 1 not marked → 3/5 < 2/3 → mixed.
+    expect(
+      within(card).getByRole('heading', { level: 2, name: 'A mixed day for Rose.' })
+    ).toBeInTheDocument();
+    expect(
+      within(card).getByText('3 of 5 doses taken · 1 not marked · 2 tasks done · Ana left a note')
+    ).toBeInTheDocument();
+    const links = within(card).getAllByRole('link');
+    expect(links.map((l) => l.textContent)).toEqual([
+      '2 tasks doneGroceries, Pick up the refill',
+      'A note from AnaRose ate well at lunch.',
+      'See the full update',
     ]);
-    expect(within(card).getByText('9:00 PM · Metformin')).toBeInTheDocument();
-    // The unmarked dose is mentioned ONCE: as a "Still to do" item, not also as a count.
-    expect(within(card).getByText('7:30 PM · Lisinopril · Not marked')).toBeInTheDocument();
-    expect(card.textContent).not.toMatch(/not marked yet/i);
-    expect(card.textContent).not.toMatch(/taken late|missed/i);
+    // No dose list on the card: Home's Medications card is that.
+    expect(card.textContent).not.toMatch(/Metformin|Lisinopril/);
+    expect(card.textContent).not.toMatch(/missed/i);
     // The request is keyed on the RECIPIENT's date.
     expect(dailyCalls()[0][1]).toEqual({ params: { date: '2026-10-08' } });
   });
 
-  it('is a labelled region with a named dismiss button', async () => {
+  it('is a region named by its sentence, with a named dismiss button', async () => {
     renderCard();
-    const region = await screen.findByRole('region', { name: "Rose's day" });
+    const region = await screen.findByRole('region', { name: 'A mixed day for Rose.' });
     expect(within(region).getByRole('button', { name: 'Hide until tomorrow' })).toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'See the full update' })).toHaveAttribute(
       'href',
       '/circles/c1/daily-update'
     );
+  });
+
+  describe('row targets', () => {
+    it('2+ tasks → the full update at Tasks; a care note → that day on Notes', async () => {
+      renderCard();
+      const card = await screen.findByTestId('daily-update-card');
+      expect(within(card).getByRole('link', { name: /^2 tasks done/ })).toHaveAttribute(
+        'href',
+        '/circles/c1/daily-update#tasks'
+      );
+      expect(within(card).getByRole('link', { name: /^A note from Ana/ })).toHaveAttribute(
+        'href',
+        '/circles/c1/notes?date=2026-10-08'
+      );
+    });
+
+    it('exactly 1 task → that task; the first appointment → its detail; an event note → its event', async () => {
+      dailyResponse = {
+        success: true,
+        data: payload({
+          tasks: { done: 1 },
+          tasks_done_detail: [
+            { event_id: 'k1', title: 'Groceries', completed_by_name: 'Luis', completed_at: '11:20' },
+          ],
+          appointments: { past_count: 2 },
+          appointments_detail: [
+            { event_id: 'a1', title: 'Dr. Patel', time: '10:30', location: null },
+            { event_id: 'a2', title: 'Dentist', time: '15:00', location: null },
+          ],
+          notes_detail: [
+            {
+              note_id: 'n9',
+              kind: 'event',
+              event_id: 'a1',
+              author_name: null,
+              created_at: '11:00',
+              excerpt: 'BP 120/80',
+            },
+          ],
+        }),
+      };
+      renderCard();
+      const card = await screen.findByTestId('daily-update-card');
+      expect(within(card).getByRole('link', { name: /^1 task done/ })).toHaveAttribute(
+        'href',
+        '/circles/c1/calendar?eventId=k1'
+      );
+      const appt = within(card).getByRole('link', { name: /^Dr\. Patel/ });
+      expect(appt).toHaveAttribute('href', '/circles/c1/calendar?date=2026-10-08&eventId=a1');
+      expect(appt).toHaveTextContent('10:30 AM');
+      // Only the FIRST appointment gets a row.
+      expect(within(card).queryByText('Dentist')).toBeNull();
+      // A departed author reads "a former member".
+      expect(
+        within(card).getByRole('link', { name: /^A note from a former member/ })
+      ).toHaveAttribute('href', '/circles/c1/calendar?eventId=a1&panel=notes');
+    });
+
+    it('a mood-only care note (empty excerpt) has no excerpt line', async () => {
+      dailyResponse = {
+        success: true,
+        data: payload({
+          notes_detail: [
+            { note_id: 'n1', kind: 'care', event_id: null, author_name: 'Ana', created_at: '16:10', excerpt: '' },
+          ],
+        }),
+      };
+      renderCard();
+      const card = await screen.findByTestId('daily-update-card');
+      expect(within(card).getByRole('link', { name: /^A note from Ana/ })).toHaveTextContent(
+        /^A note from Ana$/
+      );
+    });
+
+    it('a row whose target is gone is plain text, not a link', async () => {
+      dailyResponse = {
+        success: true,
+        data: payload({
+          appointments: { past_count: 1 },
+          appointments_detail: [{ event_id: null, title: 'Dr. Patel', time: '10:30', location: null }],
+        }),
+      };
+      renderCard();
+      const card = await screen.findByTestId('daily-update-card');
+      expect(within(card).getByText('Dr. Patel')).toBeInTheDocument();
+      expect(within(card).queryByRole('link', { name: /Dr\. Patel/ })).toBeNull();
+    });
+
+    it('an older backend (counts only): the clause line, the tasks row and See the full update', async () => {
+      const {
+        doses_detail: _d,
+        tasks_done_detail: _t,
+        appointments_detail: _a,
+        notes_detail: _n,
+        nav: _v,
+        ...countsOnly
+      } = payload();
+      dailyResponse = { success: true, data: countsOnly };
+      renderCard();
+      const card = await screen.findByTestId('daily-update-card');
+      expect(within(card).getAllByRole('link').map((l) => l.textContent)).toEqual([
+        '2 tasks done',
+        'See the full update',
+      ]);
+      expect(within(card).getByRole('link', { name: '2 tasks done' })).toHaveAttribute(
+        'href',
+        '/circles/c1/daily-update'
+      );
+    });
   });
 
   it('is hidden before 19:00 and makes no request', async () => {
@@ -246,22 +371,12 @@ describe('DailyUpdateCard', () => {
     expect(screen.queryByTestId('daily-update-card')).not.toBeInTheDocument();
   });
 
-  it('falls back to "Today\'s update" when the recipient has no name', async () => {
+  it('falls back to "your loved one" when the recipient has no name', async () => {
     dailyResponse = { success: true, data: payload({ recipient_name: null }) };
     renderCard();
-    expect(await screen.findByRole('heading', { name: "Today's update" })).toBeInTheDocument();
-  });
-
-  it('shows "Nothing else on the schedule today." when nothing is left', async () => {
-    dailyResponse = { success: true, data: payload({ still_to_do: [] }) };
-    renderCard();
-    expect(await screen.findByText('Nothing else on the schedule today.')).toBeInTheDocument();
-  });
-
-  it('renders "+N more" after the items', async () => {
-    dailyResponse = { success: true, data: payload({ still_to_do_more: 3 }) };
-    renderCard();
-    expect(await screen.findByText('+3 more')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'A mixed day for your loved one.' })
+    ).toBeInTheDocument();
   });
 
   describe('card_shown analytics', () => {
@@ -395,11 +510,17 @@ describe('DailyUpdateCard', () => {
     };
     renderCard();
     const card = await screen.findByTestId('daily-update-card');
-    expect(within(card).getByRole('heading', { level: 2, name: 'El día de Rose' })).toBeInTheDocument();
-    expect(within(card).getByText('Hoy hasta ahora')).toBeInTheDocument();
-    expect(within(card).getByText('Falta por hacer')).toBeInTheDocument();
-    expect(within(card).getByText('1 dosis omitida')).toBeInTheDocument();
-    expect(within(card).getByText('2 notas de Ana e Isabel')).toBeInTheDocument();
+    expect(within(card).getByText('Esta noche')).toBeInTheDocument();
+    expect(
+      within(card).getByRole('heading', { level: 2, name: 'Un día irregular para Rose.' })
+    ).toBeInTheDocument();
+    expect(
+      within(card).getByText(
+        '3 de 5 dosis tomadas · 1 sin marcar · 2 tareas hechas · Ana e Isabel dejaron notas'
+      )
+    ).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: /^Una nota de Ana/ })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Ver el resumen completo' })).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'Ocultar hasta mañana' })).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'Desactivar' })).toBeInTheDocument();
     await i18n.changeLanguage('en');

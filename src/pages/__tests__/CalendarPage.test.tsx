@@ -1,3 +1,4 @@
+import { apiClient } from '@/lib/api';
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -867,6 +868,40 @@ describe('CalendarPage — note deep link (Task 26)', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
+  });
+
+  // Daily update (docs/plans/daily-update.md "Design v2 B2"): a completed
+  // task is opened BY ID — its date is read from GET /events/:id, never from
+  // the update page — and a deleted one reads "This item is no longer available.".
+  it('`?eventId=` alone: reads the row\'s date, moves to its week and opens it', async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
+      if (url === '/circles/circle-1/events/ev-task') {
+        return { success: true, data: { event: { id: 'ev-task', scheduled_date: '2026-06-10' } } } as never;
+      }
+      return undefined as never;
+    });
+    renderEditablePage('/circles/circle-1/calendar?eventId=ev-task');
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: /Pick up groceries/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
+  });
+
+  it('`?eventId=` alone for a deleted row: a gentle toast, no modal', async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
+      if (url === '/circles/circle-1/events/gone') {
+        throw { success: false, error: { code: 'NOT_FOUND', message: 'x' } };
+      }
+      return undefined as never;
+    });
+    renderEditablePage('/circles/circle-1/calendar?eventId=gone');
+    expect(await screen.findByText('This item is no longer available. Someone may have deleted it.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
+  });
+
+  it('a missed non-note link says "This item…", not "That note…"', async () => {
+    renderEditablePage('/circles/circle-1/calendar?date=2026-06-12&eventId=does-not-exist');
+    expect(await screen.findByText('This item is no longer available. Someone may have deleted it.')).toBeInTheDocument();
   });
 
   it('ignores a deep link with no `date`/`eventId` — page renders normally, no toast', async () => {
