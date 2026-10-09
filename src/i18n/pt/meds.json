@@ -227,7 +227,7 @@
       "subtitle": "Todos no círculo verão isto.",
       "given": "Dada",
       "noteLabel": "Nota (opcional)",
-      "notePlaceholder": "Adicione uma nota (opcional), ex.: \"após o jantar\"",
+      "notePlaceholder": "ex.: após o jantar",
       "submit": "Registrar dose",
       "cancel": "Cancelar",
       "chipNow": "Agora",

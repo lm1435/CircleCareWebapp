@@ -227,7 +227,7 @@
       "subtitle": "Everyone in the circle will see this.",
       "given": "Given",
       "noteLabel": "Note (optional)",
-      "notePlaceholder": "Add a note (optional), e.g. \"after dinner\"",
+      "notePlaceholder": "e.g. after dinner",
       "submit": "Log dose",
       "cancel": "Cancel",
       "chipNow": "Now",
