@@ -9,13 +9,13 @@ import { DEFAULT_LOCALE, normalizeLocale } from '@/i18n/locales';
  * policy.
  */
 /**
- * Locales the MARKETING SITE (CircleCareWeb) actually mirrors under /<locale>/.
- * Only Spanish today: there is no /fr, /fr-CA, /de, /it, /pt or /pt-PT page, so those
- * app languages link the ENGLISH legal page rather than a 404. Add a code here only
- * once circlecare.app serves /<code>/terms and /<code>/privacy (mobile twin:
- * `mobile/src/utils/legalLinks.ts`, same list).
+ * Locales the MARKETING SITE (CircleCareWeb) mirrors under /<locale>/terms and
+ * /<locale>/privacy: Spanish, plus French, Canadian French, German, Italian,
+ * Brazilian and European Portuguese since 2026-10-10. Deploy CircleCareWeb BEFORE
+ * this webapp, or these links 404. Unlisted locales link the ENGLISH page (mobile
+ * twin: `mobile/src/utils/legalLinks.ts`, same list).
  */
-export const LEGAL_MIRROR_LOCALES: readonly string[] = ['es'];
+export const LEGAL_MIRROR_LOCALES: readonly string[] = ['es', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'];
 
 export function legalUrl(page: 'terms' | 'privacy', language: string | undefined): string {
   const base = 'https://circlecare.app';

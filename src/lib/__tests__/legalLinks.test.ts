@@ -6,14 +6,18 @@ describe('legalUrl', () => {
     ['en-US', 'https://circlecare.app/terms'],
     [undefined, 'https://circlecare.app/terms'],
     ['', 'https://circlecare.app/terms'],
-    // Registered app languages WITHOUT a marketing mirror link the English page (never a 404).
-    ['fr', 'https://circlecare.app/terms'],
-    ['fr-CA', 'https://circlecare.app/terms'],
-    ['fr-BE', 'https://circlecare.app/terms'],
-    ['de', 'https://circlecare.app/terms'],
-    ['it', 'https://circlecare.app/terms'],
-    ['pt', 'https://circlecare.app/terms'],
-    ['pt-PT', 'https://circlecare.app/terms'],
+    // Every app language has a marketing mirror (since 2026-10-10); regional variants
+    // fall back to their base language's page.
+    ['fr', 'https://circlecare.app/fr/terms'],
+    ['fr-CA', 'https://circlecare.app/fr-CA/terms'],
+    ['fr-BE', 'https://circlecare.app/fr/terms'],
+    ['de', 'https://circlecare.app/de/terms'],
+    ['de-AT', 'https://circlecare.app/de/terms'],
+    ['it', 'https://circlecare.app/it/terms'],
+    ['pt', 'https://circlecare.app/pt/terms'],
+    ['pt-BR', 'https://circlecare.app/pt/terms'],
+    ['pt-PT', 'https://circlecare.app/pt-PT/terms'],
+    ['nl', 'https://circlecare.app/terms'], // not an app language -> English
     ['est', 'https://circlecare.app/terms'], // "es" prefix is not Spanish
     ['es', 'https://circlecare.app/es/terms'],
     ['es-MX', 'https://circlecare.app/es/terms'],
@@ -26,7 +30,7 @@ describe('legalUrl', () => {
   it('privacy mirrors the same rule', () => {
     expect(legalUrl('privacy', 'es')).toBe('https://circlecare.app/es/privacy');
     expect(legalUrl('privacy', 'en')).toBe('https://circlecare.app/privacy');
-    expect(legalUrl('privacy', 'de')).toBe('https://circlecare.app/privacy');
+    expect(legalUrl('privacy', 'de')).toBe('https://circlecare.app/de/privacy');
   });
 
   it('every mirror locale is a registry code (a typo would silently send users to English)', async () => {
