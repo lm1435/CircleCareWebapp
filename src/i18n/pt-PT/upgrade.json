@@ -11,8 +11,17 @@
   "subtitle": "Tudo o que a sua família precisa para coordenar o cuidado, em cada círculo de que faz parte.",
   "trialHook": "Comece com um período experimental gratuito: nada a pagar hoje.",
   "benefits": {
+    "caregivers": {
+      "sub": "Todos os que ajudam, num só círculo. Só uma pessoa paga."
+    },
+    "voice": {
+      "sub": "Diga um medicamento, uma tarefa ou uma consulta e nós preenchemos o formulário. Em telemóveis compatíveis."
+    },
     "exports": {
       "sub": "Partilhe o histórico de medicamentos com profissionais de saúde e importe consultas do seu calendário"
+    },
+    "storage": {
+      "sub": "Espaço para processos clínicos, fotografias e papéis"
     }
   },
   "plans": {
@@ -20,6 +29,7 @@
     "trialIncluded": "Período experimental gratuito incluído",
     "trialWithDuration": "Período experimental gratuito de {{period}}"
   },
+  "freeBaseline": "O plano gratuito inclui um círculo de cuidado, si + 1 cuidador e lembretes de medicamentos gratuitos.",
   "subscribe": "Subscrever",
   "startTrial": "Iniciar período experimental gratuito",
   "subscribing": "A abrir o pagamento…",

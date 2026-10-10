@@ -29,21 +29,29 @@
   "subtitle": "Tout ce dont votre famille a besoin pour coordonner les soins, pour chaque cercle dont vous faites partie.",
   "trialHook": "Commencez par un essai gratuit : rien à payer aujourd’hui.",
   "benefits": {
-    "circles": {
-      "title": "Jusqu’à 5 cercles de soins",
-      "sub": "Un pour maman, papa ou toute la famille"
-    },
     "caregivers": {
-      "title": "Aidants en nombre illimité",
-      "sub": "Invitez frères et sœurs, conjoints et professionnels"
+      "title": "Membres de la famille en nombre illimité",
+      "sub": "Tous ceux qui aident, dans un seul cercle. Une seule personne paie."
+    },
+    "voice": {
+      "title": "Ajouter à la voix",
+      "sub": "Dites un médicament, une tâche ou un rendez-vous et nous remplissons le formulaire. Sur les téléphones compatibles."
+    },
+    "exports": {
+      "title": "Rapports d’observance et import de calendrier",
+      "sub": "Partagez l’historique des médicaments avec les professionnels de santé, importez les rendez-vous depuis votre calendrier"
+    },
+    "storage": {
+      "title": "1 Go de documents par cercle",
+      "sub": "De la place pour dossiers, photos et papiers"
     },
     "ai": {
       "title": "Assistant de soins IA",
       "sub": "Résume les visites et fait ressortir l’essentiel"
     },
-    "exports": {
-      "title": "Rapports d’observance et import de calendrier",
-      "sub": "Partagez l’historique des médicaments avec les professionnels de santé, importez les rendez-vous depuis votre calendrier"
+    "circles": {
+      "title": "Jusqu’à 5 cercles de soins",
+      "sub": "Un pour maman, papa ou toute la famille"
     }
   },
   "plans": {
@@ -60,7 +68,7 @@
     "trialWithDuration": "Essai gratuit de {{period}}"
   },
   "choosePlan": "Choisir une formule",
-  "freeBaseline": "La formule gratuite comprend un cercle de soins et deux aidants.",
+  "freeBaseline": "La formule gratuite comprend un cercle de soins, vous + 1 aidant et des rappels de médicaments gratuits.",
   "subscribe": "S’abonner",
   "startTrial": "Commencer l’essai gratuit",
   "subscribing": "Ouverture du paiement…",

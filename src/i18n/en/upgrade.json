@@ -11,21 +11,29 @@
   "subtitle": "Everything your family needs to coordinate care, for every circle you're part of.",
   "trialHook": "Start with a free trial — nothing due today.",
   "benefits": {
-    "circles": {
-      "title": "Up to 5 care circles",
-      "sub": "One for Mom, Dad, or the whole family"
-    },
     "caregivers": {
-      "title": "Unlimited caregivers",
-      "sub": "Invite siblings, partners, and professionals"
+      "title": "Unlimited family members",
+      "sub": "Everyone who helps, in one circle. One person pays."
+    },
+    "voice": {
+      "title": "Add by voice",
+      "sub": "Say a medication, task or appointment and we fill in the form. On supported phones."
+    },
+    "exports": {
+      "title": "Adherence reports & calendar import",
+      "sub": "Share medication history with providers, import appointments from your calendar"
+    },
+    "storage": {
+      "title": "1GB of documents per circle",
+      "sub": "Room for records, photos, and paperwork"
     },
     "ai": {
       "title": "AI care assistant",
       "sub": "Summarizes visits and surfaces what matters"
     },
-    "exports": {
-      "title": "Adherence reports & calendar import",
-      "sub": "Share medication history with providers, import appointments from your calendar"
+    "circles": {
+      "title": "Up to 5 care circles",
+      "sub": "One for Mom, Dad, or the whole family"
     }
   },
   "plans": {
@@ -42,7 +50,7 @@
     "trialWithDuration": "{{period}} free trial"
   },
   "choosePlan": "Choose a plan",
-  "freeBaseline": "The free plan includes one care circle and two caregivers.",
+  "freeBaseline": "The free plan includes one care circle, you + 1 caregiver, and free medication reminders.",
   "subscribe": "Subscribe",
   "startTrial": "Start free trial",
   "subscribing": "Opening checkout…",

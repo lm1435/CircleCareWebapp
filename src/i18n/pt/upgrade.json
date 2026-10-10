@@ -29,21 +29,29 @@
   "subtitle": "Tudo o que sua família precisa para coordenar o cuidado, em cada círculo de que você participa.",
   "trialHook": "Comece com um teste grátis: nada a pagar hoje.",
   "benefits": {
-    "circles": {
-      "title": "Até 5 círculos de cuidado",
-      "sub": "Um para a mãe, o pai ou a família toda"
-    },
     "caregivers": {
-      "title": "Cuidadores ilimitados",
-      "sub": "Convide irmãos, parceiros e profissionais"
+      "title": "Familiares ilimitados",
+      "sub": "Todos que ajudam, em um só círculo. Só uma pessoa paga."
+    },
+    "voice": {
+      "title": "Adicionar por voz",
+      "sub": "Fale um medicamento, uma tarefa ou uma consulta e nós preenchemos o formulário. Em celulares compatíveis."
+    },
+    "exports": {
+      "title": "Relatórios de adesão e importação de calendário",
+      "sub": "Compartilhe o histórico de medicamentos com profissionais de saúde e importe consultas do seu calendário"
+    },
+    "storage": {
+      "title": "1GB de documentos por círculo",
+      "sub": "Espaço para prontuários, fotos e papéis"
     },
     "ai": {
       "title": "Assistente de cuidado com IA",
       "sub": "Resume consultas e destaca o que importa"
     },
-    "exports": {
-      "title": "Relatórios de adesão e importação de calendário",
-      "sub": "Compartilhe o histórico de medicamentos com profissionais de saúde e importe consultas do seu calendário"
+    "circles": {
+      "title": "Até 5 círculos de cuidado",
+      "sub": "Um para a mãe, o pai ou a família toda"
     }
   },
   "plans": {
@@ -60,7 +68,7 @@
     "trialWithDuration": "Teste grátis de {{period}}"
   },
   "choosePlan": "Escolha um plano",
-  "freeBaseline": "O plano gratuito inclui um círculo de cuidado e dois cuidadores.",
+  "freeBaseline": "O plano gratuito inclui um círculo de cuidado, você + 1 cuidador e lembretes de medicamentos grátis.",
   "subscribe": "Assinar",
   "startTrial": "Começar teste grátis",
   "subscribing": "Abrindo o pagamento…",

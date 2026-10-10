@@ -657,22 +657,28 @@ function PlansView({
         </Badge>
       )}
 
-      {/* What Premium ADDS -- the same four benefits (title + subline) mobile's
-          paywall lists (planSelection.feature*Title/Sub). Literal keys so the
-          static key audit resolves each one. */}
+      {/* What Premium ADDS -- the same benefits, in the same order, with the
+          same title + subline as mobile's paywall (PlanSelectionScreen
+          PREMIUM_FEATURES / planSelection.feature*Title/Sub). ORDER IS
+          DELIBERATE (owner-approved 2026-10-10): lead with what people pay for
+          (more people in one circle), the circle-count cap LAST. Voice is
+          generic Premium copy; its sub carries the "on supported phones"
+          caveat. Literal keys so the static key audit resolves each one. */}
       <ul
         data-benefits=""
         className="mx-auto mt-8 grid w-full max-w-2xl list-none grid-cols-1 gap-x-6 gap-y-3 p-0 text-left sm:grid-cols-2"
       >
         {[
-          { id: 'circles', title: t('benefits.circles.title'), sub: t('benefits.circles.sub') },
           {
             id: 'caregivers',
             title: t('benefits.caregivers.title'),
             sub: t('benefits.caregivers.sub'),
           },
-          { id: 'ai', title: t('benefits.ai.title'), sub: t('benefits.ai.sub') },
+          { id: 'voice', title: t('benefits.voice.title'), sub: t('benefits.voice.sub') },
           { id: 'exports', title: t('benefits.exports.title'), sub: t('benefits.exports.sub') },
+          { id: 'storage', title: t('benefits.storage.title'), sub: t('benefits.storage.sub') },
+          { id: 'ai', title: t('benefits.ai.title'), sub: t('benefits.ai.sub') },
+          { id: 'circles', title: t('benefits.circles.title'), sub: t('benefits.circles.sub') },
         ].map((benefit) => (
           <li key={benefit.id} className="flex items-start gap-2 text-sm">
             <Icon name="checkmark" size="inline" className="mt-0.5 shrink-0 text-moss" />

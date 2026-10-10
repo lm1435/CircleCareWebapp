@@ -29,21 +29,29 @@
   "subtitle": "Alles, was Ihre Familie braucht, um die Pflege zu koordinieren – für jeden Kreis, in dem Sie dabei sind.",
   "trialHook": "Starten Sie mit einem kostenlosen Testzeitraum – heute fällt keine Zahlung an.",
   "benefits": {
-    "circles": {
-      "title": "Bis zu 5 Pflegekreise",
-      "sub": "Einer für Mama, Papa oder die ganze Familie"
-    },
     "caregivers": {
-      "title": "Unbegrenzt viele Pflegepersonen",
-      "sub": "Laden Sie Geschwister, Partner/innen und Fachkräfte ein"
+      "title": "Unbegrenzt viele Familienmitglieder",
+      "sub": "Alle, die helfen, in einem Kreis. Nur eine Person zahlt."
+    },
+    "voice": {
+      "title": "Per Sprache hinzufügen",
+      "sub": "Sagen Sie ein Medikament, eine Aufgabe oder einen Termin, und wir füllen das Formular aus. Auf unterstützten Smartphones."
+    },
+    "exports": {
+      "title": "Einnahmetreue-Berichte und Kalenderimport",
+      "sub": "Teilen Sie den Medikamentenverlauf mit Ärztinnen und Ärzten und importieren Sie Termine aus Ihrem Kalender"
+    },
+    "storage": {
+      "title": "1 GB für Dokumente pro Kreis",
+      "sub": "Platz für Unterlagen, Fotos und Papiere"
     },
     "ai": {
       "title": "KI-Pflegeassistent",
       "sub": "Fasst Besuche zusammen und hebt hervor, was wichtig ist"
     },
-    "exports": {
-      "title": "Einnahmetreue-Berichte & Kalenderimport",
-      "sub": "Medikamentenverlauf mit Behandelnden teilen, Termine aus Ihrem Kalender importieren"
+    "circles": {
+      "title": "Bis zu 5 Pflegekreise",
+      "sub": "Einer für Mama, Papa oder die ganze Familie"
     }
   },
   "plans": {
@@ -60,7 +68,7 @@
     "trialWithDuration": "Kostenloser Testzeitraum: {{period}}"
   },
   "choosePlan": "Tarif wählen",
-  "freeBaseline": "Der kostenlose Tarif umfasst einen Pflegekreis und zwei Pflegepersonen.",
+  "freeBaseline": "Der kostenlose Tarif umfasst einen Pflegekreis, Sie + 1 Pflegeperson und kostenlose Medikamentenerinnerungen.",
   "subscribe": "Abonnieren",
   "startTrial": "Kostenlosen Testzeitraum starten",
   "subscribing": "Kasse wird geöffnet …",

@@ -11,21 +11,29 @@
   "subtitle": "Tutto ciò che serve alla tua famiglia per coordinare la cura, per ogni cerchia di cui fai parte.",
   "trialHook": "Inizia con una prova gratuita: oggi non paghi nulla.",
   "benefits": {
-    "circles": {
-      "title": "Fino a 5 cerchie di cura",
-      "sub": "Una per la mamma, per il papà o per tutta la famiglia"
-    },
     "caregivers": {
-      "title": "Caregiver illimitati",
-      "sub": "Invita fratelli, sorelle, partner e professionisti"
+      "title": "Familiari illimitati",
+      "sub": "Tutti quelli che aiutano, in un’unica cerchia. Paga una sola persona."
+    },
+    "voice": {
+      "title": "Aggiungi a voce",
+      "sub": "Di’ un farmaco, un incarico o un appuntamento e compiliamo noi il modulo. Sui telefoni compatibili."
+    },
+    "exports": {
+      "title": "Report sull'aderenza e importazione del calendario",
+      "sub": "Condividi la cronologia dei farmaci con i medici, importa gli appuntamenti dal tuo calendario"
+    },
+    "storage": {
+      "title": "1GB di documenti per cerchia",
+      "sub": "Spazio per cartelle cliniche, foto e carte"
     },
     "ai": {
       "title": "Assistente di cura con IA",
       "sub": "Riassume le visite e mette in evidenza ciò che conta"
     },
-    "exports": {
-      "title": "Report sull'aderenza e importazione del calendario",
-      "sub": "Condividi la cronologia dei farmaci con i professionisti sanitari e importa gli appuntamenti dal tuo calendario"
+    "circles": {
+      "title": "Fino a 5 cerchie di cura",
+      "sub": "Una per la mamma, per il papà o per tutta la famiglia"
     }
   },
   "plans": {
@@ -42,7 +50,7 @@
     "trialWithDuration": "Prova gratuita di {{period}}"
   },
   "choosePlan": "Scegli un piano",
-  "freeBaseline": "Il piano gratuito include una cerchia di cura e due caregiver.",
+  "freeBaseline": "Il piano gratuito include una cerchia di cura, tu + 1 caregiver e promemoria dei farmaci gratuiti.",
   "subscribe": "Abbonati",
   "startTrial": "Inizia la prova gratuita",
   "subscribing": "Apertura del pagamento…",

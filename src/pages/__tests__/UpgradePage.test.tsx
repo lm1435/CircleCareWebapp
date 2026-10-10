@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
-import '@/i18n';
+import i18n from '@/i18n';
 import { ToastProvider } from '@/components/ui';
 
 vi.mock('@/hooks/useWebBilling', () => ({
@@ -163,19 +163,55 @@ beforeEach(() => {
 });
 
 describe('UpgradePage', () => {
-  // The benefits are what Premium ADDS, the four mobile's paywall lists
-  // (planSelection.feature*). The old "Full access to the calendar, tasks,
-  // medications, documents, and vitals" overclaimed: free users have all of it.
-  it('lists the four Premium benefits mobile lists, each with its subline', () => {
+  // The benefits are what Premium ADDS, the same six, in the same order and
+  // wording, as mobile's paywall (planSelection.feature*). ORDER IS THE POINT
+  // (owner-approved 2026-10-10): people pay for more people in ONE circle (the
+  // capacity paywall converts 2x onboarding), so unlimited family members lead
+  // and the circle-count cap is LAST. The old "Full access to the calendar,
+  // tasks, medications, documents, and vitals" overclaimed: free users have it.
+  it('lists the six Premium benefits mobile lists, family members first, circles last', () => {
     renderPage();
     const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
     expect(items.map((li) => li.textContent)).toEqual([
-      'Up to 5 care circlesOne for Mom, Dad, or the whole family',
-      'Unlimited caregiversInvite siblings, partners, and professionals',
-      'AI care assistantSummarizes visits and surfaces what matters',
+      'Unlimited family membersEveryone who helps, in one circle. One person pays.',
+      'Add by voiceSay a medication, task or appointment and we fill in the form. On supported phones.',
       'Adherence reports & calendar importShare medication history with providers, import appointments from your calendar',
+      '1GB of documents per circleRoom for records, photos, and paperwork',
+      'AI care assistantSummarizes visits and surfaces what matters',
+      'Up to 5 care circlesOne for Mom, Dad, or the whole family',
     ]);
     expect(screen.queryByText(/Full access to the calendar/)).toBeNull();
+  });
+
+  it('lists the same order in Spanish', async () => {
+    await i18n.changeLanguage('es');
+    try {
+      renderPage();
+      const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
+      const titles = items.map((li) => li.querySelector('.font-medium')?.textContent);
+      expect(titles).toEqual([
+        'Familiares ilimitados',
+        'Agregar por voz',
+        'Informes de adherencia e importación de calendario',
+        '1GB de documentos por círculo',
+        'Asistente de IA',
+        'Hasta 5 círculos de cuidado',
+      ]);
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
+  // The free baseline must match the free plan everywhere else: owner + 1
+  // caregiver (it said "two caregivers"), and reminders are never paywalled.
+  it('states the free plan truthfully: you + 1 caregiver, free medication reminders', () => {
+    renderPage();
+    expect(
+      screen.getByText(
+        'The free plan includes one care circle, you + 1 caregiver, and free medication reminders.'
+      )
+    ).toBeTruthy();
+    expect(screen.queryByText(/two caregivers/)).toBeNull();
   });
 
   // At 390px the ES pill ("Comienza con una prueba gratis de 1 semana: hoy no
