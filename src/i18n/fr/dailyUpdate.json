@@ -31,14 +31,6 @@
   },
   "open": "Voir le point complet",
   "dismissA11y": "Masquer jusqu’à demain",
-  "turnOff": "Désactiver",
-  "turnOffConfirm": {
-    "title": "Désactiver le point du jour ?",
-    "body": "Les conseils seront aussi désactivés. Vous pouvez réactiver les deux dans Profil, sous Notifications.",
-    "confirm": "Désactiver",
-    "cancel": "Le garder"
-  },
-  "turnedOffToast": "Point du jour désactivé",
   "soloInvite": "Invitez quelqu’un à le partager",
   "dated": {
     "unavailable": "Ce point n’est plus disponible."

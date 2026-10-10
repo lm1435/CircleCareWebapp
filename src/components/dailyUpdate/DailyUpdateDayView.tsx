@@ -14,6 +14,7 @@ import {
   taskDoneLine,
 } from '@/lib/dailyUpdateCopy';
 import { appointmentTarget, doseTarget, noteTarget, taskTarget } from '@/lib/dailyUpdateLinks';
+import { Analytics } from '@/lib/analytics';
 import { formatDailyUpdateShortDate } from '@/lib/dailyUpdateWindow';
 
 /** Section anchors (the card's "2 tasks done" row opens `#tasks`). */
@@ -66,6 +67,7 @@ function Row({
   to,
   clampSub = 0,
   muted = false,
+  onClick,
 }: {
   time: string | null;
   title: string;
@@ -73,6 +75,7 @@ function Row({
   to?: string | null;
   clampSub?: 0 | 3;
   muted?: boolean;
+  onClick?: () => void;
 }): ReactElement {
   const inner = (
     <>
@@ -98,6 +101,7 @@ function Row({
       {to ? (
         <Link
           to={to}
+          onClick={onClick}
           className="-mx-2 flex min-h-11 items-start gap-3 rounded-md px-2 py-[7px] no-underline transition-colors duration-fast hover:bg-bg"
         >
           {inner}
@@ -303,6 +307,7 @@ export function DailyUpdateDayView({ data, circleId, past }: DailyUpdateDayViewP
                 title={task.title}
                 sub={taskDoneLine(task.completed_by_name, t)}
                 to={taskTarget(circleId, task)}
+                onClick={() => Analytics.dailyUpdateRowTapped('tasks', 'page')}
               />
             ))}
           </Section>
@@ -317,6 +322,7 @@ export function DailyUpdateDayView({ data, circleId, past }: DailyUpdateDayViewP
                 title={a.title}
                 sub={a.location}
                 to={appointmentTarget(circleId, data.date, a)}
+                onClick={() => Analytics.dailyUpdateRowTapped('appointment', 'page')}
               />
             ))}
           </Section>
@@ -332,6 +338,7 @@ export function DailyUpdateDayView({ data, circleId, past }: DailyUpdateDayViewP
                 sub={n.excerpt}
                 clampSub={3}
                 to={noteTarget(circleId, data.date, n)}
+                onClick={() => Analytics.dailyUpdateRowTapped('note', 'page')}
               />
             ))}
           </Section>

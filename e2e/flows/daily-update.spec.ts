@@ -128,7 +128,7 @@ test.describe('daily update', () => {
     await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
   });
 
-  test('Turn off: confirm, preference saved off, Profile shows the renamed group off', async ({
+  test('no Turn off on the card; the Profile "Daily update & tips" switch hides and restores it', async ({
     page,
     circleId,
     account,
@@ -138,24 +138,34 @@ test.describe('daily update', () => {
     await page.clock.install({ time: at });
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-    await page.getByRole('button', { name: 'Turn off' }).click({ timeout: NAV_TIMEOUT });
-    const dialog = page.getByRole('dialog');
-    await expect(
-      dialog.getByText(
-        'This also turns off tips. You can turn both back on in Profile, under Notifications.'
-      )
-    ).toBeVisible();
-    await dialog.getByRole('button', { name: 'Turn off' }).click();
-    await expect(page.getByText('Daily update turned off')).toBeVisible();
-    await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
-    await expect.poll(() => readTipsPref(account.userId)).toBe(false);
+    const card = page.getByTestId('daily-update-card');
+    await expect(card).toBeVisible({ timeout: NAV_TIMEOUT });
+    // The card's "Turn off" link was removed (owner, 2026-10-09): the X and
+    // Profile's switch are the only controls.
+    await expect(card.getByRole('button', { name: 'Turn off' })).toHaveCount(0);
+    await expect(card.getByText('Turn off')).toHaveCount(0);
+    await expect(card.getByRole('button', { name: 'Hide until tomorrow' })).toBeVisible();
 
     await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('switch', { name: /^Daily update & tips/ })).toHaveAttribute(
-      'aria-checked',
-      'false',
-      { timeout: NAV_TIMEOUT }
-    );
+    const tipsSwitch = page.getByRole('switch', { name: /^Daily update & tips/ });
+    await expect(tipsSwitch).toHaveAttribute('aria-checked', 'true', { timeout: NAV_TIMEOUT });
+    await tipsSwitch.click();
+    await expect(tipsSwitch).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(() => readTipsPref(account.userId)).toBe(false);
+
+    await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Quick access' })).toBeVisible({
+      timeout: NAV_TIMEOUT,
+    });
+    await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
+
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    await expect(tipsSwitch).toHaveAttribute('aria-checked', 'false', { timeout: NAV_TIMEOUT });
+    await tipsSwitch.click();
+    await expect.poll(() => readTipsPref(account.userId)).toBe(true);
+
+    await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('daily-update-card')).toBeVisible({ timeout: NAV_TIMEOUT });
   });
 
   test('full update: date title, arrows across the 7-day range, sections, axe', async ({
@@ -299,11 +309,14 @@ test.describe('daily update', () => {
     // Mid-range: Previous day lands on the new page's Previous day arrow.
     await page.goto(`/circles/${circleId}/daily-update/${addDays(today, -2)}`, { waitUntil: 'domcontentloaded' });
     await page.getByTestId('daily-update-prev').focus();
+    const before = (await page.locator('h1').first().innerText()).trim();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(new RegExp(`/daily-update/${addDays(today, -3)}$`));
     await expect.poll(focused, { timeout: NAV_TIMEOUT }).toBe('daily-update-prev');
     // Focus sits on the arrow (named for the NEXT day back), so the shown day is
     // announced through a status region: the page's own title (WCAG 4.1.3).
+    // Read the title only once it shows the new day (it can lag the URL by a render).
+    await expect(page.locator('h1').first()).not.toHaveText(before);
     const title = (await page.locator('h1').first().innerText()).trim();
     await expect(page.getByTestId('daily-update-day-announcement')).toHaveText(title);
     await expect(page.getByTestId('daily-update-day-announcement')).toHaveAttribute('role', 'status');

@@ -2,9 +2,6 @@
   "dated": {
     "unavailable": "Este resumo já não está disponível."
   },
-  "turnOffConfirm": {
-    "body": "Isto também desativa as dicas. Pode voltar a ativar ambos em Perfil, em Notificações."
-  },
   "soloInvite": "Convide alguém para partilhar isto",
   "error": "Não foi possível carregar o resumo. Tente novamente.",
   "retry": "Tentar novamente",

@@ -21,9 +21,11 @@ export interface DailyUpdateCardViewProps {
   inviteTo: string | null;
   onDismiss: () => void;
   onInvite?: () => void;
-  onTurnOff: () => void;
-  turnOffDisabled?: boolean;
+  /** A content row was clicked (`daily_update_row_tapped`); the invite row uses `onInvite`. */
+  onRowTap?: (row: DailyUpdateCardRowKind) => void;
 }
+
+export type DailyUpdateCardRowKind = 'tasks' | 'appointment' | 'note' | 'full_update';
 
 /** Marks a navigation as coming from the card (daily_update_opened source). */
 const FROM_CARD = { dailyUpdateSource: 'card' } as const;
@@ -98,8 +100,7 @@ export function DailyUpdateCardView({
   inviteTo,
   onDismiss,
   onInvite,
-  onTurnOff,
-  turnOffDisabled = false,
+  onRowTap,
 }: DailyUpdateCardViewProps): ReactElement {
   const { t, i18n } = useTranslation('dailyUpdate');
   const cycle = useHourCycle();
@@ -143,6 +144,7 @@ export function DailyUpdateCardView({
           <CardRow
             testId="daily-update-card-tasks"
             to={tasksRowTarget(circleId, data)}
+            onClick={() => onRowTap?.('tasks')}
             title={t('tasks.done', { count: data.tasks.done })}
             sub={tasks.length > 0 ? tasks.map((x) => x.title).join(', ') : null}
           />
@@ -151,6 +153,7 @@ export function DailyUpdateCardView({
           <CardRow
             testId="daily-update-card-appointment"
             to={appointmentTarget(circleId, data.date, appointment)}
+            onClick={() => onRowTap?.('appointment')}
             title={appointment.title}
             sub={time(appointment.time)}
           />
@@ -159,24 +162,19 @@ export function DailyUpdateCardView({
           <CardRow
             testId="daily-update-card-note"
             to={noteTarget(circleId, data.date, note)}
+            onClick={() => onRowTap?.('note')}
             title={noteFromLine(note.author_name, t)}
             sub={note.excerpt}
           />
         ) : null}
-        <CardRow to={dailyUpdatePagePath(circleId, null)} title={t('open')} strong />
+        <CardRow
+          to={dailyUpdatePagePath(circleId, null)}
+          title={t('open')}
+          strong
+          onClick={() => onRowTap?.('full_update')}
+        />
         {inviteTo ? <CardRow to={inviteTo} title={t('soloInvite')} onClick={onInvite} /> : null}
       </ul>
-
-      <div className="border-t border-line-2">
-        <button
-          type="button"
-          onClick={onTurnOff}
-          disabled={turnOffDisabled}
-          className="inline-flex min-h-11 items-center text-sm text-ink-2 underline underline-offset-2 hover:text-ink disabled:opacity-50"
-        >
-          {t('turnOff')}
-        </button>
-      </div>
     </Sheet>
   );
 }

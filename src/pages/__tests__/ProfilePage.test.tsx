@@ -376,6 +376,23 @@ describe('ProfilePage', () => {
       expect(updateNotif.mock.calls[0][0]).toEqual({ tips_and_suggestions: false });
     });
 
+    it('Daily update & tips off reports notification_group_toggled with group=tips, enabled=false (no confirm)', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(mockGroupToggled).toHaveBeenCalledTimes(1);
+      expect(mockGroupToggled).toHaveBeenCalledWith({ group: 'tips', enabled: false, was_mixed: false });
+    });
+
+    it('Daily update & tips back on reports enabled=true', async () => {
+      seed({ tips_and_suggestions: false });
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('switch', { name: GROUP_NAMES[3] }));
+      expect(mockGroupToggled).toHaveBeenCalledWith({ group: 'tips', enabled: true, was_mixed: false });
+    });
+
     it('toasts success after a group write', async () => {
       const user = userEvent.setup();
       renderPage();

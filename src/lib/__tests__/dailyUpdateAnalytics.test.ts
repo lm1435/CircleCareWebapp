@@ -49,8 +49,9 @@ function fireAll(A: Awaited<ReturnType<typeof load>>): void {
   A.dailyUpdateOpened('card', false);
   A.dailyUpdateOpened('link', true);
   A.dailyUpdateDismissed();
-  A.dailyUpdateTurnedOff();
   A.dailyUpdateInviteTapped();
+  A.dailyUpdateRowTapped('tasks', 'card');
+  A.dailyUpdateRowTapped('note', 'page');
 }
 
 describe('daily update analytics', () => {
@@ -62,8 +63,9 @@ describe('daily update analytics', () => {
       ['daily_update_opened', { source: 'card', dated: false }],
       ['daily_update_opened', { source: 'link', dated: true }],
       ['daily_update_dismissed', undefined],
-      ['daily_update_turned_off', { source: 'card' }],
       ['daily_update_invite_tapped', undefined],
+      ['daily_update_row_tapped', { row: 'tasks', source: 'card' }],
+      ['daily_update_row_tapped', { row: 'note', source: 'page' }],
     ]);
     for (const [, props] of capture.mock.calls) {
       for (const [k, v] of Object.entries((props ?? {}) as Record<string, unknown>)) {
@@ -71,6 +73,24 @@ describe('daily update analytics', () => {
         expect(typeof v === 'boolean' || typeof v === 'string').toBe(true);
       }
     }
+  });
+
+  it('daily_update_row_tapped: every row enum passes; an id or free text is coerced, never sent', async () => {
+    const A = await load();
+    for (const row of ['tasks', 'appointment', 'note', 'full_update', 'invite'] as const) {
+      A.dailyUpdateRowTapped(row, 'page');
+    }
+    A.dailyUpdateRowTapped('550e8400-e29b-41d4-a716-446655440001' as never, 'Rosa' as never);
+    A.dailyUpdateRowTapped('BP 120/80' as never, 'card');
+    expect(capture.mock.calls).toEqual([
+      ['daily_update_row_tapped', { row: 'tasks', source: 'page' }],
+      ['daily_update_row_tapped', { row: 'appointment', source: 'page' }],
+      ['daily_update_row_tapped', { row: 'note', source: 'page' }],
+      ['daily_update_row_tapped', { row: 'full_update', source: 'page' }],
+      ['daily_update_row_tapped', { row: 'invite', source: 'page' }],
+      ['daily_update_row_tapped', { row: 'full_update', source: 'card' }],
+      ['daily_update_row_tapped', { row: 'full_update', source: 'card' }],
+    ]);
   });
 
   it('consent gate: nothing is captured when collection is not allowed', async () => {

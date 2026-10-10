@@ -20,7 +20,7 @@ vi.mock('@/lib/analytics', () => ({
     dailyUpdateCardShown: vi.fn(),
     dailyUpdateOpened: vi.fn(),
     dailyUpdateDismissed: vi.fn(),
-    dailyUpdateTurnedOff: vi.fn(),
+    dailyUpdateRowTapped: vi.fn(),
     dailyUpdateInviteTapped: vi.fn(),
     // The prefs mutation's onError reports through this.
     errorOccurred: vi.fn(),
@@ -431,50 +431,53 @@ describe('DailyUpdateCard', () => {
     });
   });
 
-  describe('Turn off', () => {
-    it('confirms (noting tips stop too), writes tips_and_suggestions:false, hides and toasts', async () => {
-      patch.mockResolvedValue({
-        success: true,
-        data: { user: { id: 'u1', notification_preferences: { tips_and_suggestions: false } } },
-      } as never);
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderCard();
-      await user.click(await screen.findByRole('button', { name: 'Turn off' }));
-      const dialog = await screen.findByRole('dialog');
-      expect(within(dialog).getByText('Turn off the daily update?')).toBeInTheDocument();
-      expect(
-        within(dialog).getByText(
-          'This also turns off tips. You can turn both back on in Profile, under Notifications.'
-        )
-      ).toBeInTheDocument();
-      await user.click(within(dialog).getByRole('button', { name: 'Turn off' }));
-
-      expect(patch).toHaveBeenCalledWith('/users/me/notification-preferences', {
-        tips_and_suggestions: false,
-      });
-      expect(screen.queryByTestId('daily-update-card')).not.toBeInTheDocument();
-      expect(await screen.findByText('Daily update turned off')).toBeInTheDocument();
-      expect(Analytics.dailyUpdateTurnedOff).toHaveBeenCalledTimes(1);
-    });
-
-    it('"Keep it" changes nothing', async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      renderCard();
-      await user.click(await screen.findByRole('button', { name: 'Turn off' }));
-      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Keep it' }));
+  describe('no "Turn off" on the card (owner, 2026-10-09)', () => {
+    it('renders no Turn off control and never writes preferences; the X stays', async () => {
+      renderCard({ isOwner: true });
+      const card = await screen.findByTestId('daily-update-card');
+      expect(within(card).queryByRole('button', { name: 'Turn off' })).toBeNull();
+      expect(within(card).queryByText('Turn off')).toBeNull();
+      expect(within(card).getByRole('button', { name: 'Hide until tomorrow' })).toBeInTheDocument();
       expect(patch).not.toHaveBeenCalled();
-      expect(screen.getByTestId('daily-update-card')).toBeInTheDocument();
-      expect(Analytics.dailyUpdateTurnedOff).not.toHaveBeenCalled();
     });
+  });
 
-    it('brings the card back when the save fails', async () => {
-      patch.mockRejectedValue({ success: false, error: { code: 'INTERNAL', message: 'x' } });
+  describe('daily_update_row_tapped', () => {
+    const withAppointment = () =>
+      payload({
+        appointments: { past_count: 1 },
+        appointments_detail: [{ event_id: 'a1', title: 'Dr. Patel', time: '10:30', location: null }],
+      });
+
+    it.each([
+      [/tasks done/, 'tasks'],
+      [/^Dr\. Patel/, 'appointment'],
+      [/^A note from/, 'note'],
+      [/^See the full update/, 'full_update'],
+    ] as const)('a click on %s reports row=%s, source=card (enums only)', async (name, row) => {
+      dailyResponse = { success: true, data: withAppointment() };
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       renderCard();
-      await user.click(await screen.findByRole('button', { name: 'Turn off' }));
-      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Turn off' }));
-      expect(await screen.findByTestId('daily-update-card')).toBeInTheDocument();
-      expect(Analytics.dailyUpdateTurnedOff).not.toHaveBeenCalled();
+      const card = await screen.findByTestId('daily-update-card');
+      await user.click(within(card).getByRole('link', { name }));
+      expect(Analytics.dailyUpdateRowTapped).toHaveBeenCalledTimes(1);
+      expect(Analytics.dailyUpdateRowTapped).toHaveBeenCalledWith(row, 'card');
+    });
+
+    it('the solo invite row reports row=invite alongside daily_update_invite_tapped', async () => {
+      dailyResponse = { success: true, data: payload({ is_solo: true }) };
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderCard({ isOwner: true });
+      await user.click(await screen.findByRole('link', { name: 'Invite someone to share this' }));
+      expect(Analytics.dailyUpdateRowTapped).toHaveBeenCalledWith('invite', 'card');
+      expect(Analytics.dailyUpdateInviteTapped).toHaveBeenCalledTimes(1);
+    });
+
+    it('the X does not report a row tap', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      renderCard();
+      await user.click(await screen.findByRole('button', { name: 'Hide until tomorrow' }));
+      expect(Analytics.dailyUpdateRowTapped).not.toHaveBeenCalled();
     });
   });
 
@@ -522,7 +525,7 @@ describe('DailyUpdateCard', () => {
     expect(within(card).getByRole('link', { name: /^Una nota de Ana/ })).toBeInTheDocument();
     expect(within(card).getByRole('link', { name: 'Ver el resumen completo' })).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'Ocultar hasta mañana' })).toBeInTheDocument();
-    expect(within(card).getByRole('button', { name: 'Desactivar' })).toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: 'Desactivar' })).toBeNull();
     await i18n.changeLanguage('en');
   });
 });

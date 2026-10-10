@@ -31,14 +31,6 @@
   },
   "open": "Vedi il riepilogo completo",
   "dismissA11y": "Nascondi fino a domani",
-  "turnOff": "Disattiva",
-  "turnOffConfirm": {
-    "title": "Disattivare il riepilogo del giorno?",
-    "body": "Verranno disattivati anche i consigli. Puoi riattivarli entrambi in Profilo, alla voce Notifiche.",
-    "confirm": "Disattiva",
-    "cancel": "Mantieni"
-  },
-  "turnedOffToast": "Riepilogo del giorno disattivato",
   "soloInvite": "Invita qualcuno a condividerlo",
   "dated": {
     "unavailable": "Questo riepilogo non è più disponibile."

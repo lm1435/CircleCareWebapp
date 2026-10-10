@@ -279,6 +279,10 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
 
 const AS_NEEDED_SURFACES = ['home', 'meds_tab', 'detail'] as const;
 
+/** `daily_update_row_tapped.row`: which Daily update row (card or page) was tapped. */
+const DAILY_UPDATE_ROWS = ['tasks', 'appointment', 'note', 'full_update', 'invite'] as const;
+export type DailyUpdateRow = (typeof DAILY_UPDATE_ROWS)[number];
+
 export const Analytics = {
   // --- Auth ---
   signupStarted: (method: AuthMethod) => capture('signup_started', { method }),
@@ -436,8 +440,12 @@ export const Analytics = {
     capture('daily_update_opened', { source, dated }),
   /** The card's X was pressed (hidden until the recipient's midnight). */
   dailyUpdateDismissed: () => capture('daily_update_dismissed'),
-  /** The card's "Turn off" was confirmed and the preference saved. */
-  dailyUpdateTurnedOff: () => capture('daily_update_turned_off', { source: 'card' }),
+  /** A tappable row on the card or the full page. Enums only: which row, and where. */
+  dailyUpdateRowTapped: (row: DailyUpdateRow, source: 'card' | 'page') =>
+    capture('daily_update_row_tapped', {
+      row: pickEnum(row, DAILY_UPDATE_ROWS, 'full_update'),
+      source: pickEnum(source, ['card', 'page'], 'card'),
+    }),
   /** The solo-owner "Invite someone to share this" line was pressed. */
   dailyUpdateInviteTapped: () => capture('daily_update_invite_tapped'),
 

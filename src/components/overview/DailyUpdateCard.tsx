@@ -1,12 +1,9 @@
 import { useEffect, useId, useState, type ReactElement } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { getCurrentUser, type NotificationPreferences } from '@/api/users';
+import { getCurrentUser } from '@/api/users';
 import { isDailyUpdateEnabled } from '@/api/dailyUpdate';
-import { ConfirmDialog, useToast } from '@/components/ui';
 import { DailyUpdateCardView } from '@/components/dailyUpdate/DailyUpdateCardView';
 import { useDailyUpdate, useDailyUpdateWindow } from '@/hooks/useDailyUpdate';
-import { useUpdateNotificationPrefs } from '@/hooks/useProfile';
 import { Analytics } from '@/lib/analytics';
 import {
   isDailyUpdateDismissed,
@@ -14,7 +11,7 @@ import {
   markDailyUpdateShown,
   wasDailyUpdateShown,
 } from '@/lib/dailyUpdateStorage';
-import { groupPatchBody, groupOn, type NotificationPrefs } from '@/lib/notificationGroups';
+import { groupOn, type NotificationPrefs } from '@/lib/notificationGroups';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuthStore } from '@/store/authStore';
 
@@ -34,7 +31,8 @@ export interface DailyUpdateCardProps {
  *   - 19:00 ≤ recipient wall time < 24:00 (re-evaluated at the boundaries and
  *     whenever the tab comes back, see `useDailyUpdateWindow`);
  *   - the server says enabled + eligible + has_activity for TODAY's date;
- *   - the viewer's "Daily update & tips" preference is on;
+ *   - the viewer's "Daily update & tips" preference is on (Profile's switch is
+ *     the only way to turn it off; the card has no "Turn off" link);
  *   - it was not dismissed on this browser for this recipient-day.
  *
  * View-only members see it (P3); the recipient never does (P2).
@@ -45,8 +43,6 @@ export function DailyUpdateCard({
   isOwner,
   isRecipient,
 }: DailyUpdateCardProps): ReactElement | null {
-  const { t } = useTranslation(['dailyUpdate', 'common']);
-  const { showToast } = useToast();
   const headingId = useId();
   const win = useDailyUpdateWindow(timezone);
 
@@ -69,9 +65,6 @@ export function DailyUpdateCard({
   );
 
   const [dismissedDate, setDismissedDate] = useState<string | null>(null);
-  const [turnedOff, setTurnedOff] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const updatePrefs = useUpdateNotificationPrefs();
 
   const data = isDailyUpdateEnabled(query.data) ? query.data : null;
   const dismissed =
@@ -83,7 +76,6 @@ export function DailyUpdateCard({
     win.inWindow &&
     tipsOn &&
     !isRecipient &&
-    !turnedOff &&
     !dismissed &&
     data !== null &&
     data.eligible &&
@@ -109,7 +101,7 @@ export function DailyUpdateCard({
   }, [visible, circleId, localDate, isOwner, isSolo, hasStillToDo]);
 
   if (!visible || data === null || localDate === null) {
-    return confirmOpen ? renderConfirm() : null;
+    return null;
   }
 
   const base = `/circles/${circleId}`;
@@ -124,50 +116,19 @@ export function DailyUpdateCard({
     document.getElementById('main')?.focus();
   }
 
-  function handleTurnOff(): void {
-    if (prefs === null) return;
-    setConfirmOpen(false);
-    // Optimistic: hide now, restore if the save fails (the mutation's own
-    // onError shows the "couldn't save" toast).
-    setTurnedOff(true);
-    updatePrefs.mutate(groupPatchBody(prefs, 'tips', false) as Partial<NotificationPreferences>, {
-      onSuccess: () => {
-        Analytics.dailyUpdateTurnedOff();
-        showToast(t('turnedOffToast'), 'success');
-      },
-      onError: () => setTurnedOff(false),
-    });
-    document.getElementById('main')?.focus();
-  }
-
-  function renderConfirm(): ReactElement {
-    return (
-      <ConfirmDialog
-        title={t('turnOffConfirm.title')}
-        message={t('turnOffConfirm.body')}
-        confirmLabel={t('turnOffConfirm.confirm')}
-        cancelLabel={t('turnOffConfirm.cancel')}
-        closeLabel={t('common:close')}
-        onConfirm={handleTurnOff}
-        onCancel={() => setConfirmOpen(false)}
-      />
-    );
-  }
-
   return (
-    <>
-      <DailyUpdateCardView
-        data={data}
-        circleId={circleId}
-        headingId={headingId}
-        inviteTo={isSolo && isOwner ? `${base}/members` : null}
-        onInvite={() => Analytics.dailyUpdateInviteTapped()}
-        onDismiss={handleDismiss}
-        onTurnOff={() => setConfirmOpen(true)}
-        turnOffDisabled={prefs === null || updatePrefs.isPending}
-      />
-      {confirmOpen ? renderConfirm() : null}
-    </>
+    <DailyUpdateCardView
+      data={data}
+      circleId={circleId}
+      headingId={headingId}
+      inviteTo={isSolo && isOwner ? `${base}/members` : null}
+      onInvite={() => {
+        Analytics.dailyUpdateInviteTapped();
+        Analytics.dailyUpdateRowTapped('invite', 'card');
+      }}
+      onRowTap={(row) => Analytics.dailyUpdateRowTapped(row, 'card')}
+      onDismiss={handleDismiss}
+    />
   );
 }
 

@@ -14,7 +14,9 @@ import DailyUpdatePage from '../DailyUpdatePage';
  * Full update / dated view (plan §5.4, §6, §8.3). The route takes `:date` or `?date=`
  * within the last 7 recipient-local days.
  */
-vi.mock('@/lib/analytics', () => ({ Analytics: { dailyUpdateOpened: vi.fn() } }));
+vi.mock('@/lib/analytics', () => ({
+  Analytics: { dailyUpdateOpened: vi.fn(), dailyUpdateRowTapped: vi.fn() },
+}));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/components/layout/PageMasthead', () => ({
   PageMasthead: ({ section, title, backTo }: { section: string; title: string; backTo?: string }) => (
@@ -231,6 +233,30 @@ describe('DailyUpdatePage', () => {
       'href',
       '/circles/c1/calendar?eventId=a1&panel=notes'
     );
+  });
+
+  it.each([
+    ['Tasks', /Groceries/, 'tasks'],
+    ['Appointments', /Dr\. Patel/, 'appointment'],
+    ['Notes', /A former member/, 'note'],
+  ] as const)('a %s row (%s) click reports daily_update_row_tapped row=%s, source=page', async (region, name, row) => {
+    respond = (date) => ({ success: true, data: full(date) });
+    const user = userEvent.setup();
+    renderAt('/circles/c1/daily-update');
+    await screen.findByText('A steady day for Rose.');
+    await user.click(within(screen.getByRole('region', { name: region })).getByRole('link', { name }));
+    expect(Analytics.dailyUpdateRowTapped).toHaveBeenCalledTimes(1);
+    expect(Analytics.dailyUpdateRowTapped).toHaveBeenCalledWith(row, 'page');
+  });
+
+  it('a dose row is not one of the row_tapped enums: no event', async () => {
+    respond = (date) => ({ success: true, data: full(date) });
+    const user = userEvent.setup();
+    renderAt('/circles/c1/daily-update');
+    await screen.findByText('A steady day for Rose.');
+    const meds = screen.getByRole('region', { name: 'Medications' });
+    await user.click(within(meds).getByRole('link', { name: /Sertraline/ }));
+    expect(Analytics.dailyUpdateRowTapped).not.toHaveBeenCalled();
   });
 
   it('#tasks lands on the Tasks section and focuses its heading', async () => {

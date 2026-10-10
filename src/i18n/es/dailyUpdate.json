@@ -31,14 +31,6 @@
   },
   "open": "Ver el resumen completo",
   "dismissA11y": "Ocultar hasta mañana",
-  "turnOff": "Desactivar",
-  "turnOffConfirm": {
-    "title": "¿Desactivar el resumen del día?",
-    "body": "También se desactivan los consejos. Puedes volver a activarlos en Perfil, en Notificaciones.",
-    "confirm": "Desactivar",
-    "cancel": "Mantener"
-  },
-  "turnedOffToast": "Resumen del día desactivado",
   "soloInvite": "Invita a alguien para compartir esto",
   "dated": {
     "unavailable": "Este resumen ya no está disponible."

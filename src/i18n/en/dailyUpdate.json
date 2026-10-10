@@ -31,14 +31,6 @@
   },
   "open": "See the full update",
   "dismissA11y": "Hide until tomorrow",
-  "turnOff": "Turn off",
-  "turnOffConfirm": {
-    "title": "Turn off the daily update?",
-    "body": "This also turns off tips. You can turn both back on in Profile, under Notifications.",
-    "confirm": "Turn off",
-    "cancel": "Keep it"
-  },
-  "turnedOffToast": "Daily update turned off",
   "soloInvite": "Invite someone to share this",
   "dated": {
     "unavailable": "This update is no longer available."

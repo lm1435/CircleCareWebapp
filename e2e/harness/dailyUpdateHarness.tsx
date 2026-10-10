@@ -152,7 +152,6 @@ function App(): ReactElement {
             headingId="du-heading"
             inviteTo={solo ? '/circles/c1/members' : null}
             onDismiss={() => undefined}
-            onTurnOff={() => undefined}
           />
         </div>
       </main>

@@ -360,8 +360,15 @@ describe('dailyUpdate namespace wording (every locale on disk)', () => {
     }
   );
 
-  it('the turn-off confirm says it also turns off tips (EN + ES)', () => {
-    expect(en('turnOffConfirm.body')).toMatch(/also turns off tips/);
-    expect(es('turnOffConfirm.body')).toMatch(/desactivan los consejos/);
+  it('the removed card "Turn off" keys stay gone in every locale (owner, 2026-10-09)', () => {
+    const dir = join(__dirname, '../../i18n');
+    const locales = readdirSync(dir).filter((l) => /^[a-z]{2}(-[A-Z]{2})?$/.test(l));
+    expect(locales.length).toBeGreaterThanOrEqual(8);
+    for (const l of locales) {
+      const json = JSON.parse(readFileSync(join(dir, l, 'dailyUpdate.json'), 'utf8'));
+      for (const k of ['turnOff', 'turnOffConfirm', 'turnedOffToast']) {
+        expect([l, k, k in json]).toEqual([l, k, false]);
+      }
+    }
   });
 });

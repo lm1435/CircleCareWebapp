@@ -31,14 +31,6 @@
   },
   "open": "Ganze Übersicht ansehen",
   "dismissA11y": "Bis morgen ausblenden",
-  "turnOff": "Ausschalten",
-  "turnOffConfirm": {
-    "title": "Tagesübersicht ausschalten?",
-    "body": "Damit werden auch die Tipps ausgeschaltet. Sie können beides unter Profil > Benachrichtigungen wieder einschalten.",
-    "confirm": "Ausschalten",
-    "cancel": "Behalten"
-  },
-  "turnedOffToast": "Tagesübersicht ausgeschaltet",
   "soloInvite": "Laden Sie jemanden ein, der sie mitliest",
   "dated": {
     "unavailable": "Diese Übersicht ist nicht mehr verfügbar."
