@@ -7,9 +7,11 @@ import { DoseQuietHoursNote } from './DoseQuietHoursNote';
 import {
   deleteEvent as deleteEventRequest,
   eventFormSchema,
+  SERIES_ROOT_CONTENT_FIELDS,
   type CalendarEvent,
   type CreateEventRequest,
   type EventType,
+  type SeriesRoot,
 } from '@/api/calendarEvents';
 import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
@@ -44,6 +46,7 @@ import {
   Icon,
   Modal,
   Select,
+  Spinner,
   Text,
   TextArea,
   TextField,
@@ -357,7 +360,77 @@ interface AddEventDraft {
   assignedTo: string | null;
 }
 
-export function AddEventModal({
+/**
+ * The occurrence the user opened, with its SERIES CONTENT (title, notes,
+ * location, assignee, reminders — `SERIES_ROOT_CONTENT_FIELDS`) replaced by the
+ * root's. Identity, dates and completion stay the occurrence's own: the form
+ * still knows which row was opened, and the schedule hydrates from the root
+ * separately (`useSeriesRoot` inside the form).
+ *
+ * Why: a completed or past occurrence can be its own frozen child row that
+ * KEEPS the values it had on that day. Edits always save to the ROOT, so
+ * hydrating the form from that snapshot would push the day's stale title (etc.)
+ * back onto every upcoming occurrence.
+ *
+ * A root without content (an older narrowed shape) contributes nothing. A
+ * field the root leaves `undefined` keeps the occurrence's value; an explicit
+ * `null` is the root's real answer and wins.
+ */
+export function withSeriesContent(
+  event: CalendarEvent,
+  root: SeriesRoot | CalendarEvent
+): CalendarEvent {
+  if (root === event || !('title' in root) || root.title === undefined) return event;
+  const merged: CalendarEvent = { ...event };
+  const target = merged as unknown as Record<string, unknown>;
+  const source = root as unknown as Record<string, unknown>;
+  for (const field of SERIES_ROOT_CONTENT_FIELDS) {
+    if (source[field] !== undefined) target[field] = source[field];
+  }
+  return merged;
+}
+
+/**
+ * HYDRATION GATE for editing a series from one of its occurrences.
+ *
+ * The form's fields are one-shot `useState` initializers, so they must be
+ * seeded from the ROOT on first render — never rendered from the occurrence
+ * and swapped later. While an occurrence's root is still resolving
+ * (`useSeriesRoot` → `undefined`) this renders a loading modal and no form at
+ * all, so there is nothing to type into or save. A failed root fetch resolves
+ * to the occurrence itself (the hook's documented fallback) rather than
+ * locking the user out.
+ */
+export function AddEventModal(props: AddEventModalProps): ReactElement | null {
+  const { circleId, event, onClose } = props;
+  const { t } = useTranslation(['calendar', 'common']);
+  const { canEdit } = useCircle(circleId);
+  const cachedEvents = useCachedCircleEvents(circleId);
+  const { root } = useSeriesRoot(circleId, event, cachedEvents);
+  const formEvent = useMemo(
+    () => (event && root ? withSeriesContent(event, root) : event),
+    [event, root]
+  );
+
+  if (!canEdit) return null;
+  if (event && root === undefined) {
+    return (
+      <Modal
+        title={t('addEvent.editTitle')}
+        onClose={onClose}
+        closeLabel={t('addEvent.close')}
+        size="lg"
+      >
+        <div className="flex justify-center py-8" data-testid="series-root-loading">
+          <Spinner size={28} />
+        </div>
+      </Modal>
+    );
+  }
+  return <AddEventForm {...props} event={formEvent} />;
+}
+
+function AddEventForm({
   circleId,
   event,
   initialType,
@@ -380,6 +453,10 @@ export function AddEventModal({
   const targetEventId = isEditing ? event.parent_event_id || event.id : undefined;
   // Editing any instance of a recurring event rewrites the whole series — warn.
   const isRecurringEdit = isEditing && (!!event.parent_event_id || !!event.recurrence_rule);
+  // A recurring TASK can be edited from ANY occurrence, completed and past ones
+  // included (owner decision 2026-10-10). The save rewrites the series but the
+  // backend leaves completed/past days as they were — say so, calmly.
+  const showSeriesEditNote = isRecurringEdit && event.event_type === 'task';
 
   // History-based title quick-fill source (QP6) — and the first place the
   // series root is looked for, below. Cache read only, no fetching.
@@ -1321,12 +1398,23 @@ export function AddEventModal({
         </>
       }
     >
-      <form id="add-event-form" onSubmit={guardedSubmit} className="flex flex-col gap-4" noValidate>
+      <form
+        id="add-event-form"
+        onSubmit={guardedSubmit}
+        className="flex flex-col gap-4"
+        noValidate
+        aria-describedby={showSeriesEditNote ? 'series-edit-note' : undefined}
+      >
         {/* Recurring edits rewrite the whole series — keep the warning visible. */}
         {isRecurringEdit && (
           <Card variant="filled" padding="sm" as="p" role="note" className="m-0 text-sm text-ink-2">
             {t('addEvent.recurringEditNotice')}
           </Card>
+        )}
+        {showSeriesEditNote && (
+          <Text variant="caption" id="series-edit-note" data-testid="series-edit-note">
+            {t('addEvent.seriesEditNote')}
+          </Text>
         )}
 
         {/* Type selector — locked in edit mode, like mobile. */}

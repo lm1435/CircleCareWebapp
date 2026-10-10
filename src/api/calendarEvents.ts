@@ -417,7 +417,9 @@ interface SingleEventEnvelope {
 
 /**
  * The fields of a series ROOT the event form needs to edit that series: its
- * anchor (`scheduled_date`), clock, and recurrence pattern.
+ * anchor (`scheduled_date`), clock, and recurrence pattern — plus its CONTENT
+ * (`SeriesRootContentField`), optional only so a narrowed root built without
+ * them (older call sites, test fixtures) still type-checks.
  */
 export type SeriesRoot = Pick<
   CalendarEvent,
@@ -428,7 +430,32 @@ export type SeriesRoot = Pick<
   | 'recurrence_rule'
   | 'recurrence_days'
   | 'recurrence_end_date'
->;
+> &
+  Partial<Pick<CalendarEvent, SeriesRootContentField>>;
+
+/**
+ * The SERIES-LEVEL content the event form hydrates from the root, never from
+ * the tapped occurrence. A completed or past occurrence can be frozen into its
+ * own child row that KEEPS the title/description/assignee/reminders it had on
+ * that day; hydrating from it and saving would push that day's stale values
+ * back onto the whole series. See `AddEventModal`.
+ */
+export const SERIES_ROOT_CONTENT_FIELDS = [
+  'title',
+  'description',
+  'location',
+  'assigned_to',
+  'medication_name',
+  'medication_dosage',
+  'as_needed_reason',
+  'notifications_enabled',
+  'reminder_at_due',
+  'reminder_24h',
+  'reminder_1h',
+  'reminder_30m',
+  'reminder_15m',
+] as const;
+export type SeriesRootContentField = (typeof SERIES_ROOT_CONTENT_FIELDS)[number];
 
 /**
  * GET /circles/:circleId/events/:eventId, NARROWED to `SeriesRoot`.
@@ -441,7 +468,8 @@ export type SeriesRoot = Pick<
  *
  * Narrowed on purpose: the detail response carries a SIGNED photo URL, and
  * signed URLs must never sit in the React Query cache (see
- * `getMedicationPhotoUrl` below). Only the scheduling fields are kept.
+ * `getMedicationPhotoUrl` below). Only the scheduling fields and the series
+ * content (`SERIES_ROOT_CONTENT_FIELDS`) are kept.
  */
 export async function getSeriesRoot(circleId: string, eventId: string): Promise<SeriesRoot> {
   const response = (await apiClient.get(
@@ -456,6 +484,21 @@ export async function getSeriesRoot(circleId: string, eventId: string): Promise<
     recurrence_rule: event.recurrence_rule ?? null,
     recurrence_days: event.recurrence_days ?? null,
     recurrence_end_date: event.recurrence_end_date ?? null,
+    // Series CONTENT (never the signed photo URL). Explicit keys, nulls
+    // included, so "the root has no description" is told apart from "unknown".
+    title: event.title,
+    description: event.description ?? null,
+    location: event.location ?? null,
+    assigned_to: event.assigned_to ?? null,
+    medication_name: event.medication_name ?? null,
+    medication_dosage: event.medication_dosage ?? null,
+    as_needed_reason: event.as_needed_reason ?? null,
+    notifications_enabled: event.notifications_enabled,
+    reminder_at_due: event.reminder_at_due,
+    reminder_24h: event.reminder_24h,
+    reminder_1h: event.reminder_1h,
+    reminder_30m: event.reminder_30m,
+    reminder_15m: event.reminder_15m,
   };
 }
 

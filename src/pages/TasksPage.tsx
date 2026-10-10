@@ -67,7 +67,8 @@ export default function TasksPage(): ReactElement {
   const [sort, setSort] = useState<TaskSort>('due_date');
   const [showCreate, setShowCreate] = useState(false);
   const [editingTask, setEditingTask] = useState<CalendarEvent | null>(null);
-  // A COMPLETED task opens the read-only detail instead — never the editor.
+  // A COMPLETED task opens the detail instead. Its Edit (recurring tasks only;
+  // a completed one-off is locked) hands off to `editingTask` below.
   // `deletingTask` is owned here (not by the detail modal) so the destructive
   // confirm replaces the detail rather than stacking on top of it, exactly as
   // CalendarPage does with EventDetailModal / DeleteEventDialog.
@@ -278,10 +279,15 @@ export default function TasksPage(): ReactElement {
               circleId={circleId}
               event={viewingTask}
               careRecipientTimezone={timezone}
-              // COMPLETED TASKS ARE LOCKED (founder directive) — EventDetailActions
-              // itself hides Edit once `event.completed_at` is set, so this is
-              // never actually reachable; it exists only to satisfy the prop.
-              onEdit={() => {}}
+              // A completed ONE-OFF task is locked: EventDetailActions hides
+              // Edit for it. A completed RECURRING task keeps Edit (owner
+              // decision 2026-10-10), which edits the whole SERIES — the form
+              // saves to the root and hydrates from it, never from this
+              // completed snapshot.
+              onEdit={() => {
+                setEditingTask(viewingTask);
+                setViewingTask(null);
+              }}
               onDelete={() => {
                 setDeletingTask(viewingTask);
                 setViewingTask(null);

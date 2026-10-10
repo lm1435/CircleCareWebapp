@@ -102,6 +102,7 @@
     "updated": "Änderungen gespeichert",
     "updatedSeries": "Serie aktualisiert",
     "recurringEditNotice": "Dieser Eintrag wiederholt sich. Änderungen, die Sie hier speichern, gelten für die gesamte Serie.",
+    "seriesEditNote": "Änderungen gelten für kommende Aufgaben. Erledigte und vergangene bleiben unverändert.",
     "viewOnly": "Nur Ansicht",
     "types": {
       "medication": "Medikament",

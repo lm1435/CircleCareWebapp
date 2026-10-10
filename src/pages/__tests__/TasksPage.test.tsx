@@ -97,6 +97,7 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
   }) => (
     <div role="dialog" aria-label="add-event-modal">
       <span>{event ? 'edit-mode' : 'create-mode'}</span>
+      <span data-testid="edit-event-id">{event?.id ?? ''}</span>
       <span>{initialType ?? 'no-initial-type'}</span>
       <span>{initialTitle ?? 'no-initial-title'}</span>
       <button type="button" onClick={onClose}>
@@ -767,6 +768,43 @@ describe('TasksPage', () => {
     expect(within(dialog).queryByRole('button', { name: /edit/i })).toBeNull();
     expect(screen.queryByRole('dialog', { name: 'add-event-modal' })).toBeNull();
   });
+
+  // OWNER DECISION 2026-10-10 — a completed occurrence of a RECURRING task
+  // offers Edit (the whole series) from its detail; the one-off above stays
+  // locked. The editor gets the occurrence and resolves + hydrates from the
+  // series root itself (AddEventModal).
+  it.each([
+    ['a materialized child', { parent_event_id: 'root-1', recurrence_rule: null }],
+    ['the series root (day one)', { parent_event_id: null, recurrence_rule: 'daily' }],
+  ] as const)(
+    'a completed RECURRING task (%s) offers Edit in its detail, which opens the editor',
+    async (_label, recurrence) => {
+      mockUseTasks.mockReturnValue(
+        tasksResult([
+          makeTask({
+            id: 'task-2',
+            title: 'Call pharmacy',
+            completed_at: '2026-03-16T01:05:00Z',
+            completed_by: 'u-assignee',
+            ...recurrence,
+          }),
+        ])
+      );
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(screen.getByRole('button', { name: COMPLETED_ROW_NAME }));
+      const dialog = screen.getByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: 'More' }));
+      await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
+
+      const editor = screen.getByRole('dialog', { name: 'add-event-modal' });
+      expect(editor).toHaveTextContent('edit-mode');
+      expect(within(editor).getByTestId('edit-event-id')).toHaveTextContent('task-2');
+      // The detail is replaced, not stacked under the editor.
+      expect(screen.getAllByRole('dialog')).toEqual([editor]);
+    }
+  );
 
   it('Delete in the completed detail raises the delete dialog and replaces the detail', async () => {
     withCompletedTask();

@@ -102,6 +102,7 @@
     "updated": "Cambios guardados",
     "updatedSeries": "Serie actualizada",
     "recurringEditNotice": "Este evento se repite. Los cambios que guardes se aplicarán a toda la serie.",
+    "seriesEditNote": "Los cambios se aplican a las próximas tareas. Las completadas y las pasadas quedan como estaban.",
     "viewOnly": "Solo visualización",
     "types": {
       "medication": "Medicamento",

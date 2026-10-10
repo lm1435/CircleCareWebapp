@@ -102,6 +102,7 @@
     "updated": "Alterações salvas",
     "updatedSeries": "Série atualizada",
     "recurringEditNotice": "Este evento se repete. As alterações que você salvar aqui valerão para a série inteira.",
+    "seriesEditNote": "As alterações valem para as próximas tarefas. As concluídas e as passadas ficam como estavam.",
     "viewOnly": "Somente visualização",
     "types": {
       "medication": "Medicamento",

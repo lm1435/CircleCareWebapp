@@ -21,6 +21,7 @@
     "creating": "A guardar…",
     "updated": "Alterações guardadas",
     "recurringEditNotice": "Este evento repete-se. As alterações que guardar aqui valerão para a série inteira.",
+    "seriesEditNote": "As alterações aplicam-se às próximas tarefas. As concluídas e as passadas ficam como estavam.",
     "viewOnly": "Apenas visualização",
     "recurrence": {
       "asNeededHint": "Sem horários fixos. Registe cada dose quando ela for dada."

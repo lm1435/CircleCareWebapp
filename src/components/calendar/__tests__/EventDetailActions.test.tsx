@@ -463,6 +463,83 @@ describe('EventDetailActions', () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
+  // OWNER DECISION 2026-10-10 — a RECURRING task keeps Edit on EVERY
+  // occurrence, completed and past ones included (Edit edits the series). Only
+  // a completed ONE-OFF task stays locked (the test above). "Recurring" is
+  // `recurrence_rule || parent_event_id`: the root carries the rule (and is its
+  // own start-date occurrence — the original bug: completing day one locked
+  // the series), a materialized child carries only the parent id.
+  describe('a COMPLETED occurrence of a RECURRING task keeps Edit', () => {
+    const completedOccurrence = (overrides: Partial<CalendarEvent>): CalendarEvent =>
+      makeMed({
+        id: 't-occ',
+        event_type: 'task',
+        title: 'Water the plants',
+        medication_name: null,
+        medication_dosage: null,
+        completed_at: '2026-07-29T15:00:00Z',
+        ...overrides,
+      });
+
+    it.each([
+      ['the ROOT (its own start-date occurrence)', { recurrence_rule: 'daily', parent_event_id: null }],
+      ['a materialized CHILD', { recurrence_rule: null, parent_event_id: 'root-1' }],
+      [
+        'a VIRTUAL occurrence',
+        { id: 'root-1_2026-07-29', recurrence_rule: 'daily', parent_event_id: 'root-1', is_virtual: true },
+      ],
+    ] as const)('%s: Edit is offered and opens the editor', async (_label, overrides) => {
+      const user = userEvent.setup();
+      const onEdit = vi.fn();
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={completedOccurrence(overrides)}
+          onEdit={onEdit}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      // Completed: no Mark complete. Edit + Delete → the overflow menu.
+      expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull();
+      await openMore(user);
+      await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+
+    it('completing a recurring occurrence in place leaves its Edit live', async () => {
+      const user = userEvent.setup();
+      completeMutateAsync.mockResolvedValue({
+        ...completedOccurrence({ recurrence_rule: 'daily', parent_event_id: null }),
+      });
+      render(
+        <EventDetailActions
+          circleId="circle-1"
+          careRecipientTimezone="America/New_York"
+          onConfirmDose={vi.fn()}
+          event={completedOccurrence({
+            recurrence_rule: 'daily',
+            parent_event_id: null,
+            completed_at: null,
+          })}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onDiscontinue={vi.fn()}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Mark complete' }));
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Mark complete' })).toBeNull()
+      );
+      await openMore(user);
+      expect(screen.getByRole('menuitem', { name: 'Edit event' })).toBeInTheDocument();
+    });
+  });
+
   // ──────────────────────────────────────────────────────────────────────────
   // WHICH OCCURRENCE IS BEING COMPLETED
   //

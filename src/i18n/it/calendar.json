@@ -102,6 +102,7 @@
     "updated": "Modifiche salvate",
     "updatedSeries": "Serie aggiornata",
     "recurringEditNotice": "Questo evento si ripete. Le modifiche che salvi qui varranno per l'intera serie.",
+    "seriesEditNote": "Le modifiche valgono per i prossimi incarichi. Quelli completati e passati restano come erano.",
     "viewOnly": "Sola lettura",
     "types": {
       "medication": "Farmaco",

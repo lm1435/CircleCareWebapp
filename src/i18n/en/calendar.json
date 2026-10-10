@@ -102,6 +102,7 @@
     "updated": "Changes saved",
     "updatedSeries": "Series updated",
     "recurringEditNotice": "This event repeats. Changes you save here will apply to the whole series.",
+    "seriesEditNote": "Changes apply to upcoming tasks. Completed and past ones stay as they were.",
     "viewOnly": "View only",
     "types": {
       "medication": "Medication",

@@ -102,6 +102,7 @@
     "updated": "Modifications enregistrées",
     "updatedSeries": "Série mise à jour",
     "recurringEditNotice": "Cet événement se répète. Les modifications enregistrées ici s’appliqueront à toute la série.",
+    "seriesEditNote": "Les modifications s’appliquent aux prochaines tâches. Les tâches terminées et passées restent inchangées.",
     "viewOnly": "Lecture seule",
     "types": {
       "medication": "Médicament",

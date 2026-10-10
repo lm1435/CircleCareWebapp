@@ -240,13 +240,20 @@ export function EventDetailActions({
   const canComplete =
     (event.event_type === 'task' || event.event_type === 'appointment') && !completedAt;
 
-  // COMPLETED TASKS ARE LOCKED (founder directive): once a task's completion
-  // has persisted, its Edit affordance is hidden — same shape as canComplete
-  // disappearing above, and mirrors the TasksPage row and mobile's calendar
-  // detail modal. Keyed on completed_at alone so a task that were re-opened
-  // becomes editable again. Delete is deliberately unchanged. Scoped to
+  // COMPLETED ONE-OFF TASKS ARE LOCKED (founder directive): once a single
+  // task's completion has persisted, its Edit affordance is hidden — same shape
+  // as canComplete disappearing above, and mirrors mobile's calendar detail
+  // modal. Keyed on completed_at so a task that were re-opened becomes
+  // editable again. Delete is deliberately unchanged. Scoped to
   // event_type === 'task' — completed appointments remain editable.
-  const isCompletedTask = event.event_type === 'task' && !!completedAt;
+  //
+  // A RECURRING task keeps Edit on EVERY occurrence, completed and past ones
+  // included (owner decision 2026-10-10, mobile parity): Edit always edits the
+  // SERIES (AddEventModal saves to the root, hydrated from the root), and the
+  // backend leaves completed/past days as they were. Without this, completing
+  // day one — whose row IS the root — locked the whole series out of editing.
+  const isRecurringTask = !!(event.recurrence_rule || event.parent_event_id);
+  const isLockedCompletedTask = event.event_type === 'task' && !!completedAt && !isRecurringTask;
 
   const isMedication = event.event_type === 'medication';
   const isDiscontinued = !locallyReactivated && !!event.discontinued_at;
@@ -399,7 +406,7 @@ export function EventDetailActions({
   // the "only one left" case below can render it inline without duplicating
   // any handler.
   const overflowItems: MoreMenuItem[] = [];
-  if (!isCompletedTask) {
+  if (!isLockedCompletedTask) {
     overflowItems.push({ id: 'edit', label: t('addEvent.editTitle'), onSelect: handleEditClick });
   }
   if (isMedication) {

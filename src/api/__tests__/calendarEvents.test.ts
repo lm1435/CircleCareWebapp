@@ -5,6 +5,7 @@ import {
   deleteEvent,
   completeEvent,
   eventFormSchema,
+  getSeriesRoot,
   type CreateEventRequest,
 } from '@/api/calendarEvents';
 
@@ -14,6 +15,7 @@ import {
 const mockPost = vi.mocked(apiClient.post);
 const mockPatch = vi.mocked(apiClient.patch);
 const mockDelete = vi.mocked(apiClient.delete);
+const mockGet = vi.mocked(apiClient.get);
 
 const CIRCLE_ID = 'circle-1';
 const EVENT_ID = 'event-1';
@@ -45,6 +47,54 @@ describe('updateEvent', () => {
     expect(mockPatch).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/events/parent-1`, {
       title: 'Renamed',
     });
+  });
+});
+
+describe('getSeriesRoot', () => {
+  it('keeps the schedule AND the series content, never the signed photo URL', async () => {
+    mockGet.mockResolvedValue({
+      success: true,
+      data: {
+        event: {
+          id: 'root-1',
+          circle_id: CIRCLE_ID,
+          event_type: 'task',
+          title: 'Water the plants',
+          description: null,
+          location: 'Home',
+          assigned_to: 'u-1',
+          scheduled_date: '2026-06-15',
+          scheduled_time: '09:00:00',
+          duration_minutes: null,
+          recurrence_rule: 'daily',
+          recurrence_days: null,
+          recurrence_end_date: null,
+          notifications_enabled: true,
+          reminder_at_due: true,
+          reminder_24h: false,
+          reminder_1h: true,
+          reminder_30m: false,
+          reminder_15m: false,
+          medication_photo_url: 'https://signed.example/photo?token=secret',
+          completed_at: '2026-06-15T12:00:00Z',
+        },
+      },
+    } as never);
+
+    const root = await getSeriesRoot(CIRCLE_ID, 'root-1');
+    expect(mockGet).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/events/root-1`);
+    expect(root).toMatchObject({
+      id: 'root-1',
+      title: 'Water the plants',
+      description: null,
+      location: 'Home',
+      assigned_to: 'u-1',
+      scheduled_time: '09:00:00',
+      recurrence_rule: 'daily',
+      reminder_1h: true,
+    });
+    expect(root).not.toHaveProperty('medication_photo_url');
+    expect(root).not.toHaveProperty('completed_at');
   });
 });
 

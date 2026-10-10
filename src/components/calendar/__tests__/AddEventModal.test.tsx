@@ -2374,9 +2374,13 @@ describe('AddEventModal — days of the week', () => {
         />
       );
 
-      // Empty rather than the occurrence's date standing in for the root's.
-      expect(screen.getByLabelText(/^Date/)).toHaveValue('');
-      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      // HYDRATION GATE: no form at all while the root resolves — so neither
+      // the occurrence's date nor its (possibly stale) title can be shown,
+      // typed over, or saved onto the series.
+      expect(screen.getByTestId('series-root-loading')).toBeInTheDocument();
+      expect(screen.queryByLabelText(/^Date/)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull();
+      await user.keyboard('{Enter}');
       expect(mutateUpdate).not.toHaveBeenCalled();
     });
   });
@@ -2567,5 +2571,206 @@ describe('PK23: the weekday chips name the recipient zone only when it differs',
     const group = await openDays();
     expect(screen.queryByText(/^Days are in /)).not.toBeInTheDocument();
     expect(group.getAttribute('aria-describedby')).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OWNER DECISION 2026-10-10 — a recurring task is editable from EVERY
+// occurrence, completed and past ones included, and the edit is always to the
+// SERIES. The backend freezes a completed/past occurrence into its own row that
+// KEEPS that day's title/time, so the form must hydrate from the ROOT: an
+// occurrence snapshot saved back would push the day's stale values onto the
+// whole series. What the client controls is asserted here: the PATCH targets
+// the root id (never the occurrence), carries the root's values, and never
+// carries completion state.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('AddEventModal — editing a recurring TASK series from any occurrence', () => {
+  // The series as it stands NOW (renamed and re-timed after day one).
+  const ROOT = {
+    id: 'root-1',
+    circle_id: CIRCLE_ID,
+    event_type: 'task' as const,
+    title: 'Water the plants',
+    description: 'Both balconies',
+    location: 'Home',
+    assigned_to: null,
+    notifications_enabled: true,
+    reminder_at_due: true,
+    reminder_24h: false,
+    reminder_1h: true,
+    reminder_30m: false,
+    reminder_15m: false,
+    scheduled_date: '2026-06-15',
+    scheduled_time: '09:00:00',
+    duration_minutes: null,
+    recurrence_rule: 'daily',
+    recurrence_days: null,
+    recurrence_end_date: null,
+  };
+
+  // Day one, COMPLETED, frozen with the values it had then.
+  const completedOccurrence = makeEvent({
+    id: 'child-0615',
+    parent_event_id: 'root-1',
+    event_type: 'task',
+    title: 'Old title',
+    description: 'Old notes',
+    location: 'Old place',
+    scheduled_date: '2026-06-15',
+    scheduled_time: '07:00:00',
+    recurrence_rule: null,
+    reminder_1h: false,
+    completed_at: '2026-06-15T12:00:00Z',
+    completed_by: 'u-1',
+  });
+
+  // Tomorrow, NOT completed — a virtual occurrence of the current series.
+  const upcomingOccurrence = makeEvent({
+    id: 'root-1_2026-06-16',
+    parent_event_id: 'root-1',
+    is_virtual: true,
+    event_type: 'task',
+    title: 'Water the plants',
+    description: 'Both balconies',
+    location: 'Home',
+    scheduled_date: '2026-06-16',
+    scheduled_time: '09:00:00',
+    recurrence_rule: 'daily',
+    completed_at: null,
+  });
+
+  const titleInput = (): HTMLInputElement =>
+    screen.getByLabelText(/^Title( \* \(required\))?$/) as HTMLInputElement;
+
+  describe.each([
+    ['A — from an UPCOMING (not completed) occurrence', upcomingOccurrence],
+    ['B — from a COMPLETED occurrence', completedOccurrence],
+  ] as const)('Scenario %s', (_label, occurrence) => {
+    it('hydrates from the ROOT, shows the series note, and saves the edit to the ROOT', async () => {
+      seriesRootOverride = { root: ROOT };
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} event={occurrence} onClose={vi.fn()} />);
+
+      // The SERIES' values, never the occurrence's snapshot.
+      expect(titleInput()).toHaveValue('Water the plants');
+      expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-06-15');
+      const note = screen.getByTestId('series-edit-note');
+      expect(note).toHaveTextContent(
+        'Changes apply to upcoming tasks. Completed and past ones stay as they were.'
+      );
+      expect(document.getElementById('add-event-form')).toHaveAttribute(
+        'aria-describedby',
+        note.id
+      );
+
+      await user.clear(titleInput());
+      await user.type(titleInput(), 'Water the garden');
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      const { eventId, data } = mutateUpdate.mock.calls[0][0];
+      expect(eventId).toBe('root-1');
+      expect(eventId).not.toBe(occurrence.id);
+      expect(data.title).toBe('Water the garden');
+      // Untouched fields are the ROOT's, round-tripped unchanged.
+      expect(data.description).toBe('Both balconies');
+      expect(data.location).toBe('Home');
+      expect(data.scheduled_date).toBe('2026-06-15');
+      expect(data.scheduled_time).toBe('09:00');
+      expect(data.recurrence_rule).toBe('daily');
+      expect(data.reminder_1h).toBe(true);
+      // An edit never writes completion state.
+      expect(data).not.toHaveProperty('completed_at');
+      expect(data).not.toHaveProperty('completed_by');
+      expect(showToast).toHaveBeenCalledWith('Series updated', 'success');
+    });
+
+    it('an UNTOUCHED save writes the root back as it is — never the occurrence values', async () => {
+      seriesRootOverride = { root: ROOT };
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} event={occurrence} onClose={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      const { eventId, data } = mutateUpdate.mock.calls[0][0];
+      expect(eventId).toBe('root-1');
+      expect(data.title).toBe('Water the plants');
+      expect(data.title).not.toBe('Old title');
+      expect(data.description).toBe('Both balconies');
+      expect(data.scheduled_time).toBe('09:00');
+    });
+  });
+
+  it('a completed ROOT (day one IS the root) is edited as the series itself', async () => {
+    const completedRoot = makeEvent({ ...ROOT, completed_at: '2026-06-15T12:00:00Z' });
+    const user = userEvent.setup();
+    render(<AddEventModal circleId={CIRCLE_ID} event={completedRoot} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('series-edit-note')).toBeInTheDocument();
+    await user.clear(titleInput());
+    await user.type(titleInput(), 'Water the garden');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+    const { eventId, data } = mutateUpdate.mock.calls[0][0];
+    expect(eventId).toBe('root-1');
+    expect(data.title).toBe('Water the garden');
+    expect(data).not.toHaveProperty('completed_at');
+  });
+
+  it('a failed root fetch falls back to the occurrence (never locks the user out)', () => {
+    // The real hook resolves a failed fetch to the occurrence itself.
+    seriesRootOverride = { root: upcomingOccurrence };
+    render(<AddEventModal circleId={CIRCLE_ID} event={upcomingOccurrence} onClose={vi.fn()} />);
+    expect(titleInput()).toHaveValue('Water the plants');
+  });
+
+  describe('the series note is for recurring TASK edits only', () => {
+    it('absent on a one-off task edit', () => {
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeEvent({ event_type: 'task', title: 'Call pharmacy' })}
+          onClose={vi.fn()}
+        />
+      );
+      expect(titleInput()).toHaveValue('Call pharmacy');
+      expect(screen.queryByTestId('series-edit-note')).toBeNull();
+      expect(document.getElementById('add-event-form')).not.toHaveAttribute('aria-describedby');
+    });
+
+    it('absent on a recurring APPOINTMENT edit', () => {
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeEvent({ event_type: 'appointment', recurrence_rule: 'weekly' })}
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.getByLabelText(/^Date/)).toBeInTheDocument();
+      expect(screen.queryByTestId('series-edit-note')).toBeNull();
+    });
+
+    it('absent on a recurring MEDICATION edit', () => {
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeEvent({
+            event_type: 'medication',
+            title: 'Metformin',
+            medication_name: 'Metformin',
+            recurrence_rule: 'daily',
+          })}
+          onClose={vi.fn()}
+        />
+      );
+      expect(screen.getByLabelText(/^Date/)).toBeInTheDocument();
+      expect(screen.queryByTestId('series-edit-note')).toBeNull();
+    });
+
+    it('absent when creating a task', () => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      expect(titleInput()).toBeInTheDocument();
+      expect(screen.queryByTestId('series-edit-note')).toBeNull();
+    });
   });
 });

@@ -277,10 +277,11 @@ export function TaskRow({
 
         <div className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">
           {/* Title — the ONLY pressable part of the row. Press intent:
-              open → edit; completed → the read-only detail. A COMPLETED TASK
-              IS NOT EDITABLE (founder directive): the gate keys on
-              `completed_at` alone, so a task that were ever re-opened becomes
-              editable again. */}
+              open → edit; completed → the detail. A completed ONE-OFF task
+              is not editable (founder directive); a completed RECURRING task
+              offers Edit (the whole series) from inside that detail —
+              EventDetailActions owns that gate. Keyed on `completed_at`, so a
+              task that were ever re-opened presses straight into edit again. */}
           {canEdit && !task.completed_at && !isPendingComplete ? (
             <button
               type="button"
