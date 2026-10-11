@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import VerifyRequestPage from '@/pages/VerifyRequestPage';
 import { apiClient } from '@/lib/api';
+import { Analytics } from '@/lib/analytics';
 import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 
 // VerifyRequestPage — the email step of "Have a verification code?". Mobile twin:
@@ -41,6 +42,15 @@ describe('VerifyRequestPage', () => {
   beforeEach(() => {
     mockNavigate.mockReset();
     mockedPost.mockReset();
+  });
+
+  it('opening the page is tracked once, with no properties', async () => {
+    const opened = vi.spyOn(Analytics, 'verifyRequestOpened').mockImplementation(() => {});
+    renderPage();
+    await userEvent.type(screen.getByRole('textbox'), 'a@example.com');
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(opened).toHaveBeenCalledWith();
+    opened.mockRestore();
   });
 
   it('shows the heading, an email field and a send button', () => {

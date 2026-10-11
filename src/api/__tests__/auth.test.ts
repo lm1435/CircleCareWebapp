@@ -43,3 +43,41 @@ describe('sessionEstablished', () => {
     });
   });
 });
+
+describe('signup attribution payload', () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('signup sends signup_source + detail alongside the form data', async () => {
+    mockPost.mockResolvedValue({ success: true, data: {} } as never);
+    sessionStorage.setItem(
+      'cc_signup_attribution',
+      JSON.stringify({ utm_source: 'fb', src: 'welcome' })
+    );
+    await authApi.signup({
+      email: 'a@b.co',
+      password: 'pw',
+      first_name: 'A',
+      last_name: 'B',
+      termsAccepted: true,
+    });
+    expect(mockPost).toHaveBeenCalledWith(
+      '/auth/signup',
+      expect.objectContaining({
+        email: 'a@b.co',
+        signup_source: 'email',
+        signup_source_detail: { utm_source: 'fb', src: 'welcome' },
+      })
+    );
+  });
+
+  it('oauthSession defaults to web with empty detail and keeps tokens', async () => {
+    mockPost.mockResolvedValue({ success: true, data: {} } as never);
+    await authApi.oauthSession({ access_token: 'a', refresh_token: 'r' });
+    expect(mockPost).toHaveBeenCalledWith('/auth/oauth-session', {
+      access_token: 'a',
+      refresh_token: 'r',
+      signup_source: 'web',
+      signup_source_detail: {},
+    });
+  });
+});

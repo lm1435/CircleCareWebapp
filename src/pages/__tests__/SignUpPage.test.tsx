@@ -400,6 +400,8 @@ describe('SignUpPage', () => {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         language: 'en',
         termsAccepted: true,
+        signup_source: 'web',
+        signup_source_detail: {},
       })
     );
     await waitFor(() =>

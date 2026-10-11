@@ -16,6 +16,7 @@ import '@/styles/globals.css';
 import '@/i18n'; // Initialize i18n (side effect)
 import { initAnalytics } from '@/lib/posthog';
 import { installBootErrorBuffer } from '@/lib/bootErrorBuffer';
+import { captureSignupAttribution } from '@/lib/signupAttribution';
 import App from '@/App';
 
 // FIRST statement, before the render and before analytics is even scheduled:
@@ -26,6 +27,9 @@ import App from '@/App';
 // lib/bootErrorBuffer.ts. Errors thrown while the imports ABOVE evaluate are
 // still out of reach (ESM hoists them ahead of this line) — accepted.
 installBootErrorBuffer();
+
+// First-touch signup attribution (utm_*/src/ref/invite presence) -> sessionStorage.
+captureSignupAttribution();
 
 // Deferred to AFTER first paint so the (lazily fetched) posthog-js chunk never
 // competes with the initial render for bandwidth/main-thread time, and never

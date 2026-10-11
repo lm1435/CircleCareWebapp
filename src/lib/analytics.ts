@@ -1,6 +1,7 @@
 import { env } from './env';
 import { analyticsCollectionAllowed } from './analyticsMode';
 import { withPosthog } from './posthogLoader';
+import { getSignupAttributionProps } from './signupAttribution';
 import { DEFAULT_PAYWALL_CONTEXT, type PaywallContext } from './paywallContext';
 
 /**
@@ -286,7 +287,8 @@ export type DailyUpdateRow = (typeof DAILY_UPDATE_ROWS)[number];
 export const Analytics = {
   // --- Auth ---
   signupStarted: (method: AuthMethod) => capture('signup_started', { method }),
-  signupCompleted: (method: AuthMethod) => capture('signup_completed', { method }),
+  signupCompleted: (method: AuthMethod) =>
+    capture('signup_completed', { method, ...getSignupAttributionProps() }),
   // `error` is expected to be a stable backend CODE; `sanitizeErrorText` is a
   // guard for future call sites that pass a raw message (see its doc comment).
   signupFailed: (method: AuthMethod, error: string) =>
@@ -317,6 +319,8 @@ export const Analytics = {
   passwordResetFailed: () => capture('password_reset_failed'),
   otpVerified: () => capture('otp_verified'),
   otpFailed: () => capture('otp_failed'),
+  /** The "Have a verification code?" email step was opened. No properties. */
+  verifyRequestOpened: () => capture('verify_request_opened'),
   otpResent: () => capture('otp_resent'),
 
   // --- Onboarding funnel (R4-5) ---

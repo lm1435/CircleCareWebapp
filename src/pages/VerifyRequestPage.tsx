@@ -42,6 +42,11 @@ export default function VerifyRequestPage(): ReactElement {
   const emailRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
 
+  // Once per visit: how many people reach for the way back to their code.
+  useEffect(() => {
+    Analytics.verifyRequestOpened();
+  }, []);
+
   // Move focus to the inline error when it appears (mirrors ForgotPasswordPage).
   useEffect(() => {
     if (formError) errorRef.current?.focus();

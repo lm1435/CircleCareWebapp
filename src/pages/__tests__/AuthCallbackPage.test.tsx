@@ -100,6 +100,8 @@ describe('AuthCallbackPage', () => {
       expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
         access_token: 'oauth-access',
         refresh_token: 'oauth-refresh',
+        signup_source: 'web',
+        signup_source_detail: {},
       })
     );
     // The code is redeemed exactly once, with the code from the URL, and the
@@ -193,6 +195,8 @@ describe('AuthCallbackPage', () => {
       access_token: 'oauth-access',
       refresh_token: 'oauth-refresh',
       termsAccepted: true,
+      signup_source: 'web',
+      signup_source_detail: {},
     });
     // Consumed — a later, unrelated OAuth login must not inherit the consent flag.
     expect(sessionStorage.getItem('cc_pending_terms_consent')).toBeNull();
@@ -208,6 +212,8 @@ describe('AuthCallbackPage', () => {
     expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
       access_token: 'oauth-access',
       refresh_token: 'oauth-refresh',
+      signup_source: 'web',
+      signup_source_detail: {},
     });
   });
 
@@ -555,7 +561,15 @@ describe('AuthCallbackPage — parked terms acceptance never survives a failed c
     // signIn's own side effects may POST elsewhere; only the exchange matters.
     const exchanges = mockedPost.mock.calls.filter(([url]) => url === '/auth/oauth-session');
     expect(exchanges).toEqual([
-      ['/auth/oauth-session', { access_token: 'login-access', refresh_token: 'login-refresh' }],
+      [
+        '/auth/oauth-session',
+        {
+          access_token: 'login-access',
+          refresh_token: 'login-refresh',
+          signup_source: 'web',
+          signup_source_detail: {},
+        },
+      ],
     ]);
   });
 });

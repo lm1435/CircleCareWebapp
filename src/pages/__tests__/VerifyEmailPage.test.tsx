@@ -112,6 +112,8 @@ describe('VerifyEmailPage', () => {
       expect(mockedPost).toHaveBeenCalledWith('/auth/oauth-session', {
         access_token: 'body-access',
         refresh_token: 'body-refresh',
+        signup_source: 'web',
+        signup_source_detail: {},
       })
     );
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));

@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api';
+import { getSignupAttribution } from '@/lib/signupAttribution';
 import type { SupportedLanguage } from '@/i18n/locales';
 
 // PORT of mobile/src/api/auth.ts adapted for the web cookie-mode contract
@@ -161,7 +162,10 @@ export const authApi = {
    * returns NO session — the caller routes to /verify-email to finish sign-up.
    */
   signup: async (data: SignUpData): Promise<SignUpEnvelope> => {
-    return (await apiClient.post('/auth/signup', data)) as unknown as SignUpEnvelope;
+    return (await apiClient.post('/auth/signup', {
+      ...data,
+      ...getSignupAttribution(),
+    })) as unknown as SignUpEnvelope;
   },
 
   /** Cookie mode: Set-Cookie cc_refresh (httpOnly); body has NO refresh_token. */
@@ -174,7 +178,11 @@ export const authApi = {
    * The refresh token passed here is discarded client-side afterwards.
    */
   oauthSession: async (data: OAuthSessionData): Promise<SessionEnvelope> => {
-    return (await apiClient.post('/auth/oauth-session', data)) as unknown as SessionEnvelope;
+    // Fill-only + 7-day guarded backend-side, so sending on every exchange is safe.
+    return (await apiClient.post('/auth/oauth-session', {
+      ...data,
+      ...getSignupAttribution(),
+    })) as unknown as SessionEnvelope;
   },
 
   /**

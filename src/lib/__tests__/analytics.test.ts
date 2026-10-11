@@ -161,6 +161,31 @@ describe('analytics wrapper — active path (key set)', () => {
     });
   });
 
+  it('signup_completed carries method + attribution source/utm/src only (no code, no ref)', async () => {
+    sessionStorage.clear();
+    sessionStorage.setItem(
+      'cc_signup_attribution',
+      JSON.stringify({ utm_source: 'fb', utm_medium: 'cpc', src: 'welcome', ref: 'zz', invite: true })
+    );
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.signupCompleted('email');
+    expect(capture).toHaveBeenCalledWith('signup_completed', {
+      method: 'email',
+      source: 'invite',
+      utm_source: 'fb',
+      utm_medium: 'cpc',
+      src: 'welcome',
+    });
+    sessionStorage.clear();
+  });
+
+  it('signup_completed with no attribution defaults source to web', async () => {
+    sessionStorage.clear();
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.signupCompleted('google');
+    expect(capture).toHaveBeenCalledWith('signup_completed', { method: 'google', source: 'web' });
+  });
+
   it('signup_failed carries method + error code only', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.signupFailed('email', 'USER_EXISTS');
