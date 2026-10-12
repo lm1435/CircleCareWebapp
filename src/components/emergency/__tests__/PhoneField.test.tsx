@@ -1,13 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { useState, type ReactElement } from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { createRef, useState, type ReactElement } from 'react';
 import i18n from '@/i18n';
-import { PhoneField } from '@/components/emergency/PhoneField';
+import { PhoneField, type PhoneFieldHandle } from '@/components/emergency/PhoneField';
 
 function country(): HTMLSelectElement {
   return screen.getByLabelText('Country code') as HTMLSelectElement;
 }
 function phone(): HTMLInputElement {
-  return screen.getByLabelText('Phone') as HTMLInputElement;
+  // /^Phone/: a required field's label carries the required marker too.
+  return screen.getByLabelText(/^Phone/) as HTMLInputElement;
 }
 
 function field(
@@ -22,6 +23,20 @@ function field(
       value={value}
       countryCode={countryCode}
       onChange={onChange}
+    />
+  );
+}
+
+/** A REQUIRED field (EditContactModal's), which the user cannot clear. */
+function requiredField(value: string, countryCode: string | null | undefined): ReactElement {
+  return (
+    <PhoneField
+      id="p"
+      label="Phone"
+      required
+      value={value}
+      countryCode={countryCode}
+      onChange={vi.fn()}
     />
   );
 }
@@ -83,7 +98,7 @@ describe('PhoneField', () => {
     expect(onChange).toHaveBeenLastCalledWith('55 1234 5678', '+52');
   });
 
-  it('shows the invalid hint only after blur, and never blocks', () => {
+  it('shows the invalid error for a typed number only after blur', () => {
     render(field('', null));
     fireEvent.change(phone(), { target: { value: '12' } });
     expect(screen.queryByText('Enter a valid phone number')).toBeNull();
@@ -104,8 +119,18 @@ describe('PhoneField', () => {
       expect(phone()).not.toHaveAttribute('aria-invalid');
     });
 
-    it('is NOT shown for an untouched pre-filled SHORT number either (only user edits count)', () => {
+    // The check blocks Save now, so a STORED number that fails it is flagged
+    // the moment the form opens: the user must never meet the refusal cold.
+    it('IS shown at once for an untouched pre-filled SHORT number on an optional field', () => {
       render(field('555-1234', '+1'));
+      expect(screen.getByText(HINT)).toBeInTheDocument();
+      expect(phone()).toHaveAttribute('aria-invalid', 'true');
+      expect(phone()).toHaveAttribute('aria-describedby', 'p-error');
+      expect(document.getElementById('p-error')).toHaveTextContent(HINT);
+    });
+
+    it('is NOT shown for an untouched pre-filled SHORT number on a REQUIRED field (it cannot be cleared)', () => {
+      render(requiredField('555-1234', '+1'));
       fireEvent.blur(phone());
       expect(screen.queryByText(HINT)).toBeNull();
     });
@@ -128,23 +153,43 @@ describe('PhoneField', () => {
       expect(screen.queryByText(HINT)).toBeNull();
     });
 
-    it('edit-then-restore of a seeded value that is itself too short shows nothing', () => {
-      render(field('555-1234', '+1'));
+    it('REQUIRED: edit-then-restore of a seeded value that is itself too short shows nothing', () => {
+      render(requiredField('555-1234', '+1'));
       fireEvent.change(phone(), { target: { value: '55512345' } });
       fireEvent.change(phone(), { target: { value: '5551234' } });
       fireEvent.blur(phone());
       expect(screen.queryByText(HINT)).toBeNull();
     });
 
-    it('focus + blur on an untouched SHORT seeded value (+52, 8 digits) shows nothing', () => {
+    it('optional: edit-then-restore of a too-short seeded value shows the error again', () => {
+      render(field('555-1234', '+1'));
+      fireEvent.change(phone(), { target: { value: '55512345' } });
+      expect(screen.queryByText(HINT)).toBeNull();
+      fireEvent.change(phone(), { target: { value: '5551234' } });
+      expect(screen.getByText(HINT)).toBeInTheDocument();
+    });
+
+    it('REQUIRED: focus + blur on an untouched SHORT seeded value (+52, 8 digits) shows nothing', () => {
+      render(requiredField('5512 3456', '+52'));
+      fireEvent.focus(phone());
+      fireEvent.blur(phone());
+      expect(screen.queryByText(HINT)).toBeNull();
+    });
+
+    it('optional: an untouched SHORT seeded value (+52, 8 digits) is flagged without a blur', () => {
       render(field('5512 3456', '+52'));
+      expect(screen.getByText(HINT)).toBeInTheDocument();
+    });
+
+    it('a stored number of a country the picker does not offer ("+44 …") is never flagged', () => {
+      render(field('+44 20 7946 0958', null));
       fireEvent.focus(phone());
       fireEvent.blur(phone());
       expect(screen.queryByText(HINT)).toBeNull();
     });
 
     it('changing ONLY the country counts as a change (seeded US number → Mexico, wrong length)', () => {
-      render(field('(555) 111-222', '+1'));
+      render(requiredField('(555) 111-222', '+1'));
       fireEvent.blur(phone());
       expect(screen.queryByText(HINT)).toBeNull();
       fireEvent.change(country(), { target: { value: 'MX' } });
@@ -168,6 +213,99 @@ describe('PhoneField', () => {
       expect(screen.queryByText(HINT)).toBeNull();
       fireEvent.blur(phone());
       expect(screen.getByText(HINT)).toBeInTheDocument();
+    });
+  });
+
+  // THE SAVE GATE: what the three emergency modals ask before they write.
+  describe('validateForSave (the save gate)', () => {
+    const HINT = 'Enter a valid phone number';
+
+    function gated(
+      value: string,
+      countryCode: string | null | undefined,
+      required = false
+    ): { current: PhoneFieldHandle | null } {
+      const ref = createRef<PhoneFieldHandle>();
+      render(
+        <PhoneField
+          ref={ref}
+          id="p"
+          label="Phone"
+          required={required}
+          value={value}
+          countryCode={countryCode}
+          onChange={vi.fn()}
+        />
+      );
+      return ref;
+    }
+    const verdict = (ref: { current: PhoneFieldHandle | null }): boolean => {
+      let ok = true;
+      act(() => {
+        ok = ref.current!.validateForSave();
+      });
+      return ok;
+    };
+
+    it('empty passes (required-ness is the form\'s rule)', () => {
+      const ref = gated('', null);
+      expect(verdict(ref)).toBe(true);
+      expect(screen.queryByText(HINT)).toBeNull();
+    });
+
+    it('a valid US number passes', () => {
+      const ref = gated('', null);
+      fireEvent.change(phone(), { target: { value: '3035551234' } });
+      expect(verdict(ref)).toBe(true);
+    });
+
+    it('a valid non-US number passes', () => {
+      const ref = gated('', '+52');
+      fireEvent.change(phone(), { target: { value: '5512345678' } });
+      expect(verdict(ref)).toBe(true);
+    });
+
+    it('too long fails MID-TYPING (no blur yet): error forced visible, input focused, aria wired', () => {
+      const ref = gated('', null);
+      fireEvent.change(phone(), { target: { value: '5121548191566' } });
+      expect(screen.queryByText(HINT)).toBeNull();
+      expect(verdict(ref)).toBe(false);
+      expect(screen.getByText(HINT)).toBeInTheDocument();
+      expect(phone()).toHaveFocus();
+      expect(phone()).toHaveAttribute('aria-invalid', 'true');
+      expect(phone()).toHaveAttribute('aria-describedby', 'p-error');
+    });
+
+    it('too short fails', () => {
+      const ref = gated('', null);
+      fireEvent.change(phone(), { target: { value: '5551234' } });
+      expect(verdict(ref)).toBe(false);
+    });
+
+    it('a STORED invalid number on an optional field fails until corrected or cleared', () => {
+      const ref = gated('555-123-4567 ext 4', '+1');
+      expect(verdict(ref)).toBe(false);
+      expect(phone()).toHaveFocus();
+      fireEvent.change(phone(), { target: { value: '5551234567' } });
+      expect(verdict(ref)).toBe(true);
+      fireEvent.change(phone(), { target: { value: '55512' } });
+      expect(verdict(ref)).toBe(false);
+      fireEvent.change(phone(), { target: { value: '' } });
+      expect(verdict(ref)).toBe(true);
+    });
+
+    it('a STORED invalid number on a REQUIRED field passes untouched, fails once changed to another bad one', () => {
+      const ref = gated('555-1234', '+1', true);
+      expect(verdict(ref)).toBe(true);
+      fireEvent.change(phone(), { target: { value: '55512' } });
+      expect(verdict(ref)).toBe(false);
+    });
+
+    it('a stored number of an un-offered country passes untouched, fails once edited to a bad length', () => {
+      const ref = gated('+44 20 7946 0958', null);
+      expect(verdict(ref)).toBe(true);
+      fireEvent.change(phone(), { target: { value: '44207946095' } });
+      expect(verdict(ref)).toBe(false);
     });
   });
 

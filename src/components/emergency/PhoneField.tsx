@@ -1,4 +1,10 @@
-import { useState, type ChangeEvent, type ReactElement, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { CountryCode } from 'libphonenumber-js/min';
@@ -9,7 +15,8 @@ import {
   digitsOf,
   findPhoneCountryByIso2,
   formatNational,
-  isPossibleForCountry,
+  isUnofferedInternationalNumber,
+  phoneNumberBlocksSave,
   resolveSeed,
   storedPhone,
 } from '@/lib/phone';
@@ -27,6 +34,21 @@ export interface PhoneFieldProps {
   required?: boolean;
   /** Caller-owned error (e.g. "required"); wins over the format hint. */
   error?: string;
+}
+
+export interface PhoneFieldHandle {
+  /**
+   * THE SAVE GATE (owner decision, iOS build 31: a too-long doctor number
+   * showed "Enter a valid phone number" and saved anyway). `true` = the form
+   * may save. `false` = it must not: the inline error is forced visible
+   * (`aria-invalid` + `aria-describedby` via TextField) and focus moves to the
+   * number, scrolled into view — a screen reader reads the field with its
+   * error. The verdict is the SAME check the inline error uses
+   * (`phoneNumberBlocksSave`), on the field's own state. Empty is always
+   * `true`: whether a phone is required is the form's rule, not this one's.
+   * Mobile twin: `PhoneInputHandle` in components/common/PhoneInput.tsx.
+   */
+  validateForSave: () => boolean;
 }
 
 /**
@@ -81,38 +103,38 @@ function countryName(t: TFunction<'emergency'>, iso2: string): string {
  * owns its state; props echoed back from `onChange` never fight typing.
  * Seeding never calls `onChange`.
  *
- * Format is a HINT, never a save blocker — same as mobile: a possible-LENGTH
- * check for the selected country, shown only once the (number, country) pair
- * DIFFERS from the seeded one and the user has left the field — focus + blur on
- * a pre-filled value never shows it.
+ * Format is a SAVE BLOCKER — same as mobile: a possible-LENGTH check for the
+ * selected country (`phoneNumberBlocksSave`), enforced by the form through
+ * {@link PhoneFieldHandle}. The error shows as soon as the form opens for a
+ * stored number that fails it, after blur / a country pick for one the user
+ * changed, and always after a refused Save.
  */
-export function PhoneField({
-  id,
-  label,
-  value,
-  countryCode,
-  onChange,
-  required,
-  error,
-}: PhoneFieldProps): ReactElement {
+export const PhoneField = forwardRef<PhoneFieldHandle, PhoneFieldProps>(function PhoneField(
+  { id, label, value, countryCode, onChange, required, error },
+  ref
+) {
   const { t } = useTranslation('emergency');
   const defaultIso2 = DEFAULT_PHONE_COUNTRY_ISO2;
 
   const [initialSeed] = useState(() => resolveSeed(value, countryCode, defaultIso2));
   const [iso2, setIso2] = useState<CountryCode>(initialSeed.iso2 ?? defaultIso2);
   const [nationalDigits, setNationalDigits] = useState(initialSeed.digits);
-  // THE HINT'S "TOUCHED" IS "CHANGED", NOT "VISITED". Focus + blur on a
-  // pre-filled number must never judge it (the user didn't write it and may
-  // not be here to fix it). The hint needs BOTH: the (digits, country) pair
-  // differs from what the field was SEEDED with — so editing and then
-  // restoring the original shows nothing — and the user has committed the
-  // edit (left the number, or picked a country). The next keystroke disarms it
-  // again, so a user mid-correction isn't nagged while typing.
+  // WHEN THE ERROR SHOWS. It is a save blocker now (see `PhoneFieldHandle`),
+  // so it is never hidden from a user who is about to be refused:
+  // - a number still exactly as it was SEEDED (the stored record) is judged the
+  //   moment the form opens — no blur needed — unless it is exempt (required
+  //   field / un-offered country, see `phoneNumberBlocksSave`);
+  // - a number the user has CHANGED is judged once they commit the edit (leave
+  //   the number, or pick a country). The next keystroke disarms it again, so a
+  //   user mid-correction isn't nagged while typing;
+  // - a refused Save (`validateForSave`) forces it visible either way.
   const [seeded, setSeeded] = useState(() => ({
     digits: initialSeed.digits,
     iso2: initialSeed.iso2 ?? defaultIso2,
+    unoffered: isUnofferedInternationalNumber(value, countryCode),
   }));
   const [hintArmed, setHintArmed] = useState(false);
+  const [saveRefused, setSaveRefused] = useState(false);
 
   // The one exception to seed-once: a record arriving while pristine + empty.
   // Adjusted during render (React's "state from changed props" pattern), not
@@ -127,7 +149,11 @@ export function PhoneField({
       const seed = resolveSeed(value, countryCode, defaultIso2);
       if (seed.iso2) setIso2(seed.iso2);
       setNationalDigits(seed.digits);
-      setSeeded({ digits: seed.digits, iso2: seed.iso2 ?? iso2 });
+      setSeeded({
+        digits: seed.digits,
+        iso2: seed.iso2 ?? iso2,
+        unoffered: isUnofferedInternationalNumber(value, countryCode),
+      });
     }
   }
 
@@ -138,6 +164,7 @@ export function PhoneField({
     const text = event.target.value;
     setUserEdited(true);
     setHintArmed(false);
+    setSaveRefused(false);
 
     // A pasted international number ("+52 55 1234 5678") picks its own
     // country when it is one the picker offers.
@@ -173,14 +200,35 @@ export function PhoneField({
     onChange(storedPhone(nationalDigits, next.iso2), next.callingCode);
   };
 
-  // A LENGTH check (`isPossibleForCountry`), not `isValid` — see its doc.
+  // The inline error AND the save gate share one verdict — a LENGTH check
+  // (`isPossibleForCountry`), not `isValid`; see its doc.
   const changed = nationalDigits !== seeded.digits || iso2 !== seeded.iso2;
-  const showInvalid =
-    hintArmed &&
-    changed &&
-    nationalDigits.length > 0 &&
-    !isPossibleForCountry(nationalDigits, iso2);
+  const blocksSave = phoneNumberBlocksSave({
+    digits: nationalDigits,
+    iso2,
+    changed,
+    required: Boolean(required),
+    seededUnoffered: seeded.unoffered,
+  });
+  const showInvalid = blocksSave && (!changed || hintArmed || saveRefused);
   const fieldError = error ?? (showInvalid ? t('phone.invalid') : undefined);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      validateForSave: () => {
+        if (!blocksSave) return true;
+        setSaveRefused(true);
+        const input = document.getElementById(id);
+        input?.focus();
+        // `focus()` only scrolls as far as it must; centre it so the error line
+        // under the input is on screen too. Optional call: jsdom has none.
+        input?.scrollIntoView?.({ block: 'center' });
+        return false;
+      },
+    }),
+    [blocksSave, id]
+  );
 
   return (
     // WRAP, NOT A BREAKPOINT. Country and number sit side by side only when
@@ -232,4 +280,4 @@ export function PhoneField({
       </div>
     </div>
   );
-}
+});

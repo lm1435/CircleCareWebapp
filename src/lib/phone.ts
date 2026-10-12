@@ -108,6 +108,64 @@ export function isPossibleForCountry(digits: string, iso2: CountryCode): boolean
   return !!parsed && parsed.isPossible();
 }
 
+/**
+ * A STORED number of a country the picker does not offer ("+44 20 7946 0958",
+ * or digits with `country_code: "+44"`) that is a possible number THERE. The
+ * field can only show it as digits under the default country, where it reads
+ * as the wrong length — but the stored value is correct and `initialPhoneValue`
+ * saves it verbatim while untouched, so it must not block a save (nor could the
+ * user "fix" it: there is no United Kingdom to pick). Mobile twin: same name in
+ * components/common/PhoneInput.tsx.
+ */
+export function isUnofferedInternationalNumber(
+  value: string | null | undefined,
+  countryCode: string | null | undefined
+): boolean {
+  const trimmed = (value || '').trim();
+  if (!trimmed || !PHONE_CHARS_RE.test(trimmed)) return false;
+  if (findPhoneCountryByCallingCode(countryCode)) return false;
+  const cc = (countryCode || '').trim();
+  const text = trimmed.startsWith('+')
+    ? trimmed
+    : /^\+\d{1,4}$/.test(cc)
+      ? `${cc}${digitsOf(trimmed)}`
+      : '';
+  if (!text) return false;
+  const parsed = parsePhoneNumberFromString(text);
+  if (!parsed || !parsed.isPossible()) return false;
+  return !PHONE_COUNTRIES.some((c) => c.callingCode === `+${parsed.countryCallingCode}`);
+}
+
+/**
+ * THE ONE VERDICT behind both the inline error and the save gate.
+ *
+ * - empty → never blocks (required-ness is the calling form's rule);
+ * - a possible length for the country → never blocks;
+ * - otherwise it blocks, EXCEPT a number still exactly as it was STORED when
+ *   either the field is required (the user cannot clear it, so an old bad
+ *   number must not lock them out of renaming the contact) or the stored
+ *   number belongs to a country the picker does not offer (see
+ *   {@link isUnofferedInternationalNumber}). The moment the user changes the
+ *   number or the country, the exception is gone.
+ *
+ * Mobile twin: `phoneNumberBlocksSave` in components/common/PhoneInput.tsx —
+ * keep in step.
+ */
+export function phoneNumberBlocksSave(input: {
+  digits: string;
+  iso2: CountryCode;
+  /** (digits, country) differs from what the field was seeded with. */
+  changed: boolean;
+  required: boolean;
+  /** The seeded value is a possible number of an un-offered country. */
+  seededUnoffered: boolean;
+}): boolean {
+  if (!input.digits) return false;
+  if (isPossibleForCountry(input.digits, input.iso2)) return false;
+  if (!input.changed && (input.required || input.seededUnoffered)) return false;
+  return true;
+}
+
 export function formatNational(digits: string, iso2: CountryCode): string {
   if (!digits) return '';
   return new AsYouType(iso2).input(digits);

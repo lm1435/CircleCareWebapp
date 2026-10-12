@@ -17,7 +17,7 @@ import { SPECIALTY_KEYS } from '@/lib/quickPicks';
 import { initialPhoneValue } from '@/lib/phone';
 import { DOCTOR_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, ChipSelect, Modal, TextArea, TextField } from '@/components/ui';
-import { PhoneField } from './PhoneField';
+import { PhoneField, type PhoneFieldHandle } from './PhoneField';
 
 export interface EditDoctorModalProps {
   circleId: string;
@@ -64,6 +64,7 @@ function EditDoctorModalForm({
   // `isPending` first, then the ref (`useSubmitGuard`); released in
   // `onSettled`, since `mutate` returns immediately.
   const submitGuard = useSubmitGuard();
+  const phoneRef = useRef<PhoneFieldHandle>(null);
 
   const isPrimary = target === 'primary';
   const editIndex = typeof target === 'number' ? target : undefined;
@@ -119,6 +120,11 @@ function EditDoctorModalForm({
       document.getElementById('doctor-name')?.focus();
       return;
     }
+
+    // THE PHONE SAVE GATE (owner decision: an invalid number must not be
+    // stored). The field owns the verdict and the feedback: inline error,
+    // focus, scrolled into view. Before the claim, like every validity gate.
+    if (phoneRef.current && !phoneRef.current.validateForSave()) return;
 
     // Claimed AFTER the validity gate, so a claim is never taken (and then
     // abandoned) on a submit that was going to bail out anyway.
@@ -225,6 +231,7 @@ function EditDoctorModalForm({
           onChange={(next) => setSpecialty(next ?? '')}
         />
         <PhoneField
+          ref={phoneRef}
           id="doctor-phone"
           label={t('edit.doctor.phone')}
           value={phoneValue.phone}

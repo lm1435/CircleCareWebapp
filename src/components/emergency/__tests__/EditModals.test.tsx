@@ -36,7 +36,7 @@ const baseInfo: EmergencyInfo = {
   insurance_plans: [],
   primary_doctor_name: null,
   additional_doctors: [
-    { name: 'Dr. Patel', specialty: 'Neurology', phone: '555-0102' },
+    { name: 'Dr. Patel', specialty: 'Neurology', phone: '(303) 555-0102' },
   ],
   allergies: ['Peanuts'],
   medication_allergies: ['Penicillin'],

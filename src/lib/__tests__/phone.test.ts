@@ -7,6 +7,8 @@ import {
   formatNational,
   initialPhoneValue,
   isPossibleForCountry,
+  isUnofferedInternationalNumber,
+  phoneNumberBlocksSave,
   resolveSeed,
 } from '@/lib/phone';
 
@@ -170,5 +172,78 @@ describe('isPossibleForCountry — the hint check', () => {
 
   it('empty is not flagged', () => {
     expect(isPossibleForCountry('', 'US')).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// THE SAVE GATE. An invalid phone number is no longer stored (owner decision,
+// iOS build 31). This table is SHARED WITH MOBILE, row for row —
+// mobile/src/__tests__/components/PhoneInput.saveGate.test.tsx carries the same
+// rows and must give the same verdicts. Change one, change both.
+// [what the user typed, country, may it be saved?]
+// ────────────────────────────────────────────────────────────────────────────
+const PHONE_SAVE_CASES: ReadonlyArray<readonly [string, string, 'US' | 'MX' | 'ES' | 'GT', boolean]> = [
+  ['empty', '', 'US', true],
+  ['valid US', '3035551234', 'US', true],
+  ['valid US, typed formatted', '(303) 555-1234', 'US', true],
+  ['fictional 555 US (possible length)', '5551112222', 'US', true],
+  ['US with the leading 1', '15551234567', 'US', true],
+  ['too long (the number from the bug report)', '5121548191566', 'US', false],
+  ['too long by one digit', '30355512345', 'US', false],
+  ['too short (7-digit local number)', '5551234', 'US', false],
+  ['valid non-US (Mexico)', '5512345678', 'MX', true],
+  ['valid non-US (Spain)', '612345678', 'ES', true],
+  ['valid non-US (Guatemala, 8 digits)', '22345678', 'GT', true],
+  ['too short for Mexico', '55123456', 'MX', false],
+  ['a US-length number under Spain', '3035551234', 'ES', false],
+  ['extension-like junk', '555-123-4567 ext 4', 'US', false],
+  ['extension-like junk, x-style', '(303) 555-1234 x12', 'US', false],
+];
+
+describe('the phone save gate — shared table (mobile gives the same verdicts)', () => {
+  it.each(PHONE_SAVE_CASES)('%s: "%s" in %s → savable %s', (_label, typed, iso2, savable) => {
+    const digits = typed.replace(/\D/g, '');
+    expect(isPossibleForCountry(digits, iso2)).toBe(savable);
+    expect(
+      phoneNumberBlocksSave({ digits, iso2, changed: true, required: false, seededUnoffered: false })
+    ).toBe(!savable);
+  });
+});
+
+describe('phoneNumberBlocksSave — the stored-number exceptions', () => {
+  const bad = { digits: '5551234', iso2: 'US' as const };
+
+  it('a stored bad number on an OPTIONAL field blocks, changed or not', () => {
+    expect(phoneNumberBlocksSave({ ...bad, changed: false, required: false, seededUnoffered: false })).toBe(true);
+    expect(phoneNumberBlocksSave({ ...bad, changed: true, required: false, seededUnoffered: false })).toBe(true);
+  });
+
+  it('a stored bad number on a REQUIRED field does not block while untouched (it cannot be cleared)', () => {
+    expect(phoneNumberBlocksSave({ ...bad, changed: false, required: true, seededUnoffered: false })).toBe(false);
+    expect(phoneNumberBlocksSave({ ...bad, changed: true, required: true, seededUnoffered: false })).toBe(true);
+  });
+
+  it('a stored number of an un-offered country does not block while untouched', () => {
+    const uk = { digits: '442079460958', iso2: 'US' as const };
+    expect(phoneNumberBlocksSave({ ...uk, changed: false, required: false, seededUnoffered: true })).toBe(false);
+    expect(phoneNumberBlocksSave({ ...uk, changed: true, required: false, seededUnoffered: true })).toBe(true);
+  });
+});
+
+// Same rows as mobile's PhoneInput.saveGate.test.tsx.
+describe('isUnofferedInternationalNumber', () => {
+  it.each([
+    ['+44 20 7946 0958', null, true],
+    ['020 7946 0958', '+44', true],
+    ['+49 30 123456', undefined, true],
+    ['+44 20 79', null, false], // not a possible UK number
+    ['+52 55 1234 5678', null, false], // Mexico is offered
+    ['55 1234 5678', '+52', false],
+    ['(303) 555-1234', '+1', false],
+    ['(303) 555-1234', null, false], // no "+" and no code: nothing says it is foreign
+    ['+44 20 7946 0958 ext 4', null, false], // non-phone text
+    ['', '+44', false],
+  ] as const)('%s / %s → %s', (value, countryCode, expected) => {
+    expect(isUnofferedInternationalNumber(value, countryCode)).toBe(expected);
   });
 });

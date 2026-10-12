@@ -15,7 +15,7 @@ import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { initialPhoneValue } from '@/lib/phone';
 import { INSURANCE_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, Modal, TextField, Toggle } from '@/components/ui';
-import { PhoneField } from './PhoneField';
+import { PhoneField, type PhoneFieldHandle } from './PhoneField';
 
 export interface EditInsuranceModalProps {
   circleId: string;
@@ -59,6 +59,7 @@ function EditInsuranceModalForm({
   // `isPending` first, then the ref (`useSubmitGuard`); released in
   // `onSettled`, since `mutate` returns immediately.
   const submitGuard = useSubmitGuard();
+  const phoneRef = useRef<PhoneFieldHandle>(null);
 
   const existing =
     index !== undefined ? (info?.insurance_plans?.[index] ?? EMPTY_PLAN) : EMPTY_PLAN;
@@ -103,6 +104,11 @@ function EditInsuranceModalForm({
       document.getElementById('insurance-carrier')?.focus();
       return;
     }
+
+    // THE PHONE SAVE GATE (owner decision: an invalid number must not be
+    // stored). The field owns the verdict and the feedback: inline error,
+    // focus, scrolled into view. Before the claim, like every validity gate.
+    if (phoneRef.current && !phoneRef.current.validateForSave()) return;
 
     // Claimed AFTER the validity gate, so a claim is never taken (and then
     // abandoned) on a submit that was going to bail out anyway.
@@ -187,6 +193,7 @@ function EditInsuranceModalForm({
           onChange={(e) => setGroupNumber(e.target.value)}
         />
         <PhoneField
+          ref={phoneRef}
           id="insurance-phone"
           label={t('edit.insurance.phone')}
           value={phoneValue.phone}

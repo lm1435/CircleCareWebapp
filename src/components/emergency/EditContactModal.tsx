@@ -16,7 +16,7 @@ import { RELATIONSHIP_KEYS } from '@/lib/quickPicks';
 import { initialPhoneValue } from '@/lib/phone';
 import { CONTACT_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, ChipSelect, Modal, TextField, Toggle } from '@/components/ui';
-import { PhoneField } from './PhoneField';
+import { PhoneField, type PhoneFieldHandle } from './PhoneField';
 
 export interface EditContactModalProps {
   circleId: string;
@@ -59,6 +59,7 @@ function EditContactModalForm({
   // `isPending` first, then the ref (`useSubmitGuard`); released in
   // `onSettled`, since `mutate` returns immediately.
   const submitGuard = useSubmitGuard();
+  const phoneRef = useRef<PhoneFieldHandle>(null);
 
   const existing =
     index !== undefined ? (info?.emergency_contacts?.[index] ?? EMPTY_CONTACT) : EMPTY_CONTACT;
@@ -101,6 +102,11 @@ function EditContactModalForm({
       setError(t('edit.contact.requiredFields'));
       return;
     }
+
+    // THE PHONE SAVE GATE (owner decision: an invalid number must not be
+    // stored). The field owns the verdict and the feedback: inline error,
+    // focus, scrolled into view. Before the claim, like every validity gate.
+    if (phoneRef.current && !phoneRef.current.validateForSave()) return;
 
     // Claimed AFTER the validity gate, so a claim is never taken (and then
     // abandoned) on a submit that was going to bail out anyway.
@@ -187,6 +193,7 @@ function EditContactModalForm({
           }}
         />
         <PhoneField
+          ref={phoneRef}
           id="contact-phone"
           label={t('edit.contact.phone')}
           required
