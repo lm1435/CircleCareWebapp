@@ -10,6 +10,7 @@ export interface DoctorCardProps {
   specialty?: string | null;
   phone?: string | null;
   countryCode?: string | null;
+  extension?: string | null;
   address?: string | null;
   isPrimary?: boolean;
   /** When set (canEdit), renders the Edit action. */
@@ -24,6 +25,7 @@ export function DoctorCard({
   specialty,
   phone,
   countryCode,
+  extension,
   address,
   isPrimary = false,
   onEdit,
@@ -42,6 +44,7 @@ export function DoctorCard({
         <PhoneLink
           phone={phone}
           countryCode={countryCode}
+          extension={extension}
           ariaLabel={t('callAria', { name })}
         />
       ),

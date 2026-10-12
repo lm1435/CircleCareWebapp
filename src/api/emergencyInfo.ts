@@ -30,6 +30,8 @@ export interface AdditionalDoctor {
   specialty?: string | null;
   phone?: string | null;
   country_code?: string | null;
+  /** 1-10 digits. Absent from an older backend's response: treat as none. */
+  phone_extension?: string | null;
   address?: string | null;
 }
 
@@ -40,6 +42,8 @@ export interface InsurancePlan {
   group_number?: string | null;
   phone?: string | null;
   country_code?: string | null;
+  /** 1-10 digits. Absent from an older backend's response: treat as none. */
+  phone_extension?: string | null;
   photo_url?: string | null;
   is_primary?: boolean;
 
@@ -61,6 +65,7 @@ export interface EmergencyInfo {
   primary_doctor_specialty?: string | null;
   primary_doctor_phone?: string | null;
   primary_doctor_country_code?: string | null;
+  primary_doctor_phone_extension?: string | null;
   primary_doctor_address?: string | null;
 
   // Additional doctors
@@ -128,6 +133,9 @@ export async function getEmergencyInfo(circleId: string): Promise<EmergencyInfo 
 // analytics events.
 // ============================================================================
 
+/** Phone extension: 1-10 digits (null/absent = none). Mirror of backend. */
+const extensionSchema = z.string().regex(/^\d{1,10}$/);
+
 /** Mirror of backend `emergencyContactSchema`. */
 export const emergencyContactSchema = z.object({
   name: z.string().max(100),
@@ -143,6 +151,7 @@ export const additionalDoctorSchema = z.object({
   specialty: z.string().max(100).nullable().optional(),
   phone: z.string().max(20).nullable().optional(),
   country_code: z.string().max(5).nullable().optional(),
+  phone_extension: extensionSchema.nullable().optional(),
   address: z.string().max(1000).nullable().optional(),
 });
 
@@ -154,6 +163,7 @@ export const insurancePlanSchema = z.object({
   group_number: z.string().max(100).optional(),
   phone: z.string().max(20).optional(),
   country_code: z.string().max(5).optional(),
+  phone_extension: extensionSchema.nullable().optional(),
   photo_url: z.string().max(2048).optional(),
   is_primary: z.boolean().optional(),
   // OCR scan fields (extracted from insurance card; web never writes these,
@@ -184,6 +194,7 @@ export const updateEmergencyInfoSchema = z.object({
   primary_doctor_specialty: z.string().max(100).nullable().optional(),
   primary_doctor_phone: z.string().max(20).nullable().optional(),
   primary_doctor_country_code: z.string().max(5).nullable().optional(),
+  primary_doctor_phone_extension: extensionSchema.nullable().optional(),
   primary_doctor_address: z.string().max(1000).nullable().optional(),
 
   additional_doctors: z.array(additionalDoctorSchema).max(50).optional(),

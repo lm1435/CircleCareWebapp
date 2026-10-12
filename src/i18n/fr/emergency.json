@@ -314,6 +314,7 @@
       "cancel": "Annuler"
     },
     "pdf": {
+      "phoneWithExtension": "{{phone}} poste {{extension}}",
       "confidentiality": "Confidentiel : contient des informations de santé personnelles",
       "generatedBy": "Généré par CircleCare",
       "primary": "Principal",
@@ -333,6 +334,11 @@
   "phone": {
     "countryLabel": "Indicatif du pays",
     "invalid": "Saisissez un numéro de téléphone valide",
+    "extension": "Poste",
+    "extensionHint": "Facultatif",
+    "extensionNeedsPhone": "Saisissez d’abord un numéro de téléphone",
+    "extensionShort": "poste {{ext}}",
+    "extensionAria": "poste {{ext}}",
     "countries": {
       "US": "États-Unis",
       "CA": "Canada",

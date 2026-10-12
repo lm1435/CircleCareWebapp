@@ -634,6 +634,7 @@ describe('emergency modals — phone country_code', () => {
       specialty: 'Cardiology',
       phone: '55 8765 4321',
       country_code: '+52',
+      phone_extension: null,
       address: null,
     });
   });

@@ -75,6 +75,25 @@ export function digitsOf(text: string): string {
   return text.replace(/\D/g, '');
 }
 
+/** Contract: `phone_extension` is 1-10 digits (or null). */
+export const EXTENSION_MAX_LENGTH = 10;
+
+/** Typed or pasted text -> the digits that fit (strips everything else, caps at 10). */
+export function sanitizeExtension(text: string): string {
+  return digitsOf(text).slice(0, EXTENSION_MAX_LENGTH);
+}
+
+/**
+ * The value to SEND for a doctor / insurance save: the digits, or null when the
+ * field is empty or there is no phone number (an extension without a number is
+ * dropped, never an error). The key is always sent, never omitted.
+ */
+export function extensionToSave(extension: string, phone: string): string | null {
+  if (!phone.trim()) return null;
+  const digits = sanitizeExtension(extension);
+  return digits || null;
+}
+
 function stripLeadingCallingCode(digits: string, callingCode: string): string {
   const cc = digitsOf(callingCode);
   if (cc && digits.length > cc.length && digits.startsWith(cc)) return digits.slice(cc.length);

@@ -91,6 +91,9 @@
     }
   },
   "careSummary": {
+    "pdf": {
+      "phoneWithExtension": "{{phone}} ext. {{extension}}"
+    },
     "share": "Partilhar",
     "shareTitle": "Partilhar resumo de cuidado",
     "shareAsPdf": "Partilhar como PDF",
@@ -118,6 +121,12 @@
   "shareSummary": {
     "title": "Partilhar resumo de cuidado",
     "countError": "Não foi possível carregar as notas. O resumo será partilhado sem elas."
+  },
+  "phone": {
+    "extension": "Extensão",
+    "extensionNeedsPhone": "Introduza primeiro um número de telefone",
+    "extensionShort": "ext. {{ext}}",
+    "extensionAria": "extensão {{ext}}"
   },
   "conflict": {
     "message": "Outro cuidador alterou esta secção enquanto editava. Carregámos a versão mais recente. Reveja-a e faça novamente a sua alteração."

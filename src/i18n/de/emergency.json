@@ -314,6 +314,7 @@
       "cancel": "Abbrechen"
     },
     "pdf": {
+      "phoneWithExtension": "{{phone}} Durchw. {{extension}}",
       "confidentiality": "Vertraulich: enthält persönliche Gesundheitsdaten",
       "generatedBy": "Erstellt mit CircleCare",
       "primary": "Hauptkontakt",
@@ -333,6 +334,11 @@
   "phone": {
     "countryLabel": "Ländervorwahl",
     "invalid": "Geben Sie eine gültige Telefonnummer ein",
+    "extension": "Durchwahl",
+    "extensionHint": "Optional",
+    "extensionNeedsPhone": "Geben Sie zuerst eine Telefonnummer ein",
+    "extensionShort": "Durchw. {{ext}}",
+    "extensionAria": "Durchwahl {{ext}}",
     "countries": {
       "US": "Vereinigte Staaten",
       "CA": "Kanada",

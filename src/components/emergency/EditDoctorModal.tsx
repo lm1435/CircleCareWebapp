@@ -14,9 +14,10 @@ import {
 import { getEmergencyInfoConflict } from '@/lib/apiErrors';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { SPECIALTY_KEYS } from '@/lib/quickPicks';
-import { initialPhoneValue } from '@/lib/phone';
+import { extensionToSave, initialPhoneValue, sanitizeExtension } from '@/lib/phone';
 import { DOCTOR_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, ChipSelect, Modal, TextArea, TextField } from '@/components/ui';
+import { ExtensionField } from './ExtensionField';
 import { PhoneField, type PhoneFieldHandle } from './PhoneField';
 
 export interface EditDoctorModalProps {
@@ -75,6 +76,7 @@ function EditDoctorModalForm({
         specialty: info?.primary_doctor_specialty ?? '',
         phone: info?.primary_doctor_phone ?? '',
         country_code: info?.primary_doctor_country_code ?? '',
+        phone_extension: info?.primary_doctor_phone_extension ?? '',
         address: info?.primary_doctor_address ?? '',
       }
     : editIndex !== undefined
@@ -88,6 +90,8 @@ function EditDoctorModalForm({
   const [phoneValue, setPhoneValue] = useState(() =>
     initialPhoneValue(initial.phone, initial.country_code)
   );
+  // Digits only. Empty when the backend predates the field (key absent).
+  const [extension, setExtension] = useState(sanitizeExtension(initial.phone_extension ?? ''));
   const [address, setAddress] = useState(initial.address ?? '');
   const [nameError, setNameError] = useState<string | undefined>(undefined);
 
@@ -100,7 +104,7 @@ function EditDoctorModalForm({
   const draftId = isPrimary
     ? 'primary'
     : emergencyEntryDraftId(info?.additional_doctors, editIndex, DOCTOR_DRAFT_FIELDS);
-  const doctorSnapshot = { name, specialty, phoneValue, address };
+  const doctorSnapshot = { name, specialty, phoneValue, extension, address };
   const doctorBaseline = useRef(JSON.stringify(doctorSnapshot));
   useSessionDraft<typeof doctorSnapshot>(
     draftId ? `emergency:doctor:${circleId}:${draftId}` : null,
@@ -109,6 +113,8 @@ function EditDoctorModalForm({
       setName(d.name);
       setSpecialty(d.specialty);
       setPhoneValue(d.phoneValue);
+      // Drafts saved before the field existed have no `extension`.
+      setExtension(sanitizeExtension(d.extension ?? ''));
       setAddress(d.address);
     }
   );
@@ -132,6 +138,9 @@ function EditDoctorModalForm({
 
     const phone = phoneValue.phone.trim();
     const countryCode = phone ? phoneValue.countryCode : null;
+    // ALWAYS sent (digits or null): an absent key tells the server "old app, keep
+    // what is stored", which would resurrect an extension the user just cleared.
+    const phoneExtension = extensionToSave(extension, phone);
 
     let partial: UpdateEmergencyInfoRequest;
     if (isPrimary) {
@@ -140,6 +149,7 @@ function EditDoctorModalForm({
         primary_doctor_specialty: specialty.trim() || null,
         primary_doctor_phone: phone || null,
         primary_doctor_country_code: countryCode,
+        primary_doctor_phone_extension: phoneExtension,
         primary_doctor_address: address.trim() || null,
       };
     } else {
@@ -151,6 +161,7 @@ function EditDoctorModalForm({
         specialty: specialty.trim() || null,
         phone: phone || null,
         country_code: countryCode,
+        phone_extension: phoneExtension,
         address: address.trim() || null,
       };
       const current = info?.additional_doctors ?? [];
@@ -237,6 +248,12 @@ function EditDoctorModalForm({
           value={phoneValue.phone}
           countryCode={phoneValue.countryCode}
           onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
+        />
+        <ExtensionField
+          id="doctor-phone-extension"
+          value={extension}
+          onChange={setExtension}
+          hasPhone={phoneValue.phone.trim() !== ''}
         />
         <TextArea
           id="doctor-address"

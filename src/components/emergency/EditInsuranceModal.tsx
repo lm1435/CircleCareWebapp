@@ -12,9 +12,10 @@ import {
 } from '@/hooks/useEmergencyInfo';
 import { getEmergencyInfoConflict } from '@/lib/apiErrors';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
-import { initialPhoneValue } from '@/lib/phone';
+import { extensionToSave, initialPhoneValue, sanitizeExtension } from '@/lib/phone';
 import { INSURANCE_DRAFT_FIELDS, emergencyEntryDraftId } from '@/lib/emergencyDraftKey';
 import { Button, Modal, TextField, Toggle } from '@/components/ui';
+import { ExtensionField } from './ExtensionField';
 import { PhoneField, type PhoneFieldHandle } from './PhoneField';
 
 export interface EditInsuranceModalProps {
@@ -72,6 +73,8 @@ function EditInsuranceModalForm({
   const [phoneValue, setPhoneValue] = useState(() =>
     initialPhoneValue(existing.phone, existing.country_code)
   );
+  // Digits only. Empty when the backend predates the field (key absent).
+  const [extension, setExtension] = useState(sanitizeExtension(existing.phone_extension ?? ''));
   const [isPrimary, setIsPrimary] = useState(existing.is_primary ?? false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -82,7 +85,7 @@ function EditInsuranceModalForm({
   // while the draft is parked would otherwise hand it to whichever plan took the
   // slot (see EditContactModal).
   const draftId = emergencyEntryDraftId(info?.insurance_plans, index, INSURANCE_DRAFT_FIELDS);
-  const planSnapshot = { label, carrier, policyNumber, groupNumber, phoneValue, isPrimary };
+  const planSnapshot = { label, carrier, policyNumber, groupNumber, phoneValue, extension, isPrimary };
   const planBaseline = useRef(JSON.stringify(planSnapshot));
   useSessionDraft<typeof planSnapshot>(
     draftId ? `emergency:insurance:${circleId}:${draftId}` : null,
@@ -93,6 +96,8 @@ function EditInsuranceModalForm({
       setPolicyNumber(d.policyNumber);
       setGroupNumber(d.groupNumber);
       setPhoneValue(d.phoneValue);
+      // Drafts saved before the field existed have no `extension`.
+      setExtension(sanitizeExtension(d.extension ?? ''));
       setIsPrimary(d.isPrimary);
     }
   );
@@ -124,6 +129,8 @@ function EditInsuranceModalForm({
       group_number: groupNumber.trim() || undefined,
       phone: phoneValue.phone.trim() || undefined,
       country_code: (phoneValue.phone.trim() && phoneValue.countryCode) || undefined,
+      // ALWAYS sent (digits or null); see EditDoctorModal.
+      phone_extension: extensionToSave(extension, phoneValue.phone),
       is_primary: isPrimary,
     };
     const next = upsertWithPrimaryExclusivity(info?.insurance_plans ?? [], plan, index);
@@ -199,6 +206,12 @@ function EditInsuranceModalForm({
           value={phoneValue.phone}
           countryCode={phoneValue.countryCode}
           onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
+        />
+        <ExtensionField
+          id="insurance-phone-extension"
+          value={extension}
+          onChange={setExtension}
+          hasPhone={phoneValue.phone.trim() !== ''}
         />
         <Toggle
           checked={isPrimary}

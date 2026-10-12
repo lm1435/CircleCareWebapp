@@ -281,6 +281,17 @@ function formatTimestamp(timezone: string, env: PdfEnv): string {
   return zone ? `${stamp} (${zone})` : stamp;
 }
 
+/** "<phone> ext. <digits>" (i18n pattern, so languages can differ); the bare phone when there is
+ *  no extension. An extension without a phone is never printed. */
+function phoneWithExt(
+  t: PdfEnv['t'],
+  phone?: string | null,
+  ext?: string | null,
+): string {
+  const digits = (ext ?? '').replace(/\D/g, '');
+  return phone && digits ? t('careSummary.pdf.phoneWithExtension', { phone, extension: digits }) : (phone ?? '');
+}
+
 /**
  * A medication's naive `HH:MM`, already in the recipient's zone, rendered in
  * that ONE zone — no second clock appended.
@@ -360,17 +371,18 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
     : '';
 
   // Doctors rows
+  const withExt = (phone?: string | null, ext?: string | null) => phoneWithExt(t, phone, ext);
   const doctors: { name: string; specialty?: string | null; phone?: string | null; isPrimary?: boolean }[] = [];
   if (emergencyInfo?.primary_doctor_name) {
     doctors.push({
       name: emergencyInfo.primary_doctor_name,
       specialty: emergencyInfo.primary_doctor_specialty,
-      phone: emergencyInfo.primary_doctor_phone,
+      phone: withExt(emergencyInfo.primary_doctor_phone, emergencyInfo.primary_doctor_phone_extension),
       isPrimary: true,
     });
   }
   (emergencyInfo?.additional_doctors || []).forEach(d => {
-    doctors.push({ name: d.name, specialty: d.specialty, phone: d.phone });
+    doctors.push({ name: d.name, specialty: d.specialty, phone: withExt(d.phone, d.phone_extension) });
   });
   const doctorRows = doctors
     .map(d => `
@@ -406,7 +418,7 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
         <td>${escapeHtml(p.carrier)}${p.label ? ` <span class="badge-info">(${escapeHtml(p.label)})</span>` : ''}${rx ? `<span class="sub">${rx}</span>` : ''}</td>
         <td class="nowrap">${escapeHtml(displayValue(p.policy_number))}</td>
         <td class="nowrap">${escapeHtml(displayValue(p.group_number))}</td>
-        <td class="nowrap">${escapeHtml(displayValue(p.phone))}</td>
+        <td class="nowrap">${escapeHtml(displayValue(withExt(p.phone, p.phone_extension)))}</td>
       </tr>`;
     })
     .join('');
@@ -746,12 +758,12 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
     if (emergencyInfo?.primary_doctor_name) {
       const primary = `(${t('careSummary.pdf.primary')})`;
       const specialty = displayValue(emergencyInfo.primary_doctor_specialty);
-      const phone = displayValue(emergencyInfo.primary_doctor_phone);
+      const phone = displayValue(phoneWithExt(t, emergencyInfo.primary_doctor_phone, emergencyInfo.primary_doctor_phone_extension));
       lines.push(`${emergencyInfo.primary_doctor_name} ${primary}${specialty !== PLACEHOLDER_DISPLAY ? ` — ${specialty}` : ''}${phone !== PLACEHOLDER_DISPLAY ? ` — ${phone}` : ''}`);
     }
     emergencyInfo?.additional_doctors?.forEach(d => {
       const specialty = displayValue(d.specialty);
-      const phone = displayValue(d.phone);
+      const phone = displayValue(phoneWithExt(t, d.phone, d.phone_extension));
       lines.push(`${d.name}${specialty !== PLACEHOLDER_DISPLAY ? ` — ${specialty}` : ''}${phone !== PLACEHOLDER_DISPLAY ? ` — ${phone}` : ''}`);
     });
   } else {
@@ -766,7 +778,7 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
       lines.push(`${p.carrier}${p.label ? ` (${p.label})` : ''}`);
       const policyNumber = displayValue(p.policy_number);
       const groupNumber = displayValue(p.group_number);
-      const phone = displayValue(p.phone);
+      const phone = displayValue(phoneWithExt(t, p.phone, p.phone_extension));
       if (policyNumber !== PLACEHOLDER_DISPLAY) lines.push(`  ${t('careSummary.fields.policyNumber')}: ${policyNumber}`);
       if (groupNumber !== PLACEHOLDER_DISPLAY) lines.push(`  ${t('careSummary.fields.groupNumber')}: ${groupNumber}`);
       if (phone !== PLACEHOLDER_DISPLAY) lines.push(`  ${t('careSummary.fields.phone')}: ${phone}`);

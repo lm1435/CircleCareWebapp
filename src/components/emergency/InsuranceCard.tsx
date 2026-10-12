@@ -39,6 +39,7 @@ export function InsuranceCard({ plan, onEdit, onDelete }: InsuranceCardProps): R
         <PhoneLink
           phone={plan.phone}
           countryCode={plan.country_code}
+          extension={plan.phone_extension}
           ariaLabel={t('callAria', { name: plan.carrier })}
         />
       ),

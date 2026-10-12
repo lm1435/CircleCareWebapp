@@ -45,6 +45,8 @@ export interface PdfDoctor {
   name: string;
   specialty?: string | null;
   phone?: string | null;
+  /** 1-10 digits; printed after the phone ("ext. 42"). */
+  phone_extension?: string | null;
 }
 
 export interface PdfInsurancePlan {
@@ -53,6 +55,7 @@ export interface PdfInsurancePlan {
   policy_number?: string | null;
   group_number?: string | null;
   phone?: string | null;
+  phone_extension?: string | null;
   rx_bin?: string | null;
   rx_pcn?: string | null;
   rx_group?: string | null;
@@ -64,6 +67,7 @@ export interface PdfEmergencyInfo {
   primary_doctor_name?: string | null;
   primary_doctor_specialty?: string | null;
   primary_doctor_phone?: string | null;
+  primary_doctor_phone_extension?: string | null;
   additional_doctors?: PdfDoctor[] | null;
   allergies?: string[] | null;
   medication_allergies?: string[] | null;

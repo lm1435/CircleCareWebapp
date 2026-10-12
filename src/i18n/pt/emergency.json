@@ -314,6 +314,7 @@
       "cancel": "Cancelar"
     },
     "pdf": {
+      "phoneWithExtension": "{{phone}} ramal {{extension}}",
       "confidentiality": "Confidencial: contém informações pessoais de saúde",
       "generatedBy": "Gerado pelo CircleCare",
       "primary": "Principal",
@@ -333,6 +334,11 @@
   "phone": {
     "countryLabel": "Código do país",
     "invalid": "Insira um número de telefone válido",
+    "extension": "Ramal",
+    "extensionHint": "Opcional",
+    "extensionNeedsPhone": "Digite primeiro um número de telefone",
+    "extensionShort": "ramal {{ext}}",
+    "extensionAria": "ramal {{ext}}",
     "countries": {
       "US": "Estados Unidos",
       "CA": "Canadá",

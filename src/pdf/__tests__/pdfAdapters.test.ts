@@ -119,6 +119,34 @@ describe('generateCareSummaryHtml (web adapter)', () => {
     expect(html).not.toMatch(/careSummary\./);
   });
 
+  it('prints "<phone> ext. <digits>" beside each doctor and plan phone (HTML and text); none without a number', () => {
+    const withExt: EmergencyInfo = {
+      ...emergencyInfo,
+      primary_doctor_phone_extension: '204',
+      additional_doctors: [
+        { name: 'Dr. Ada', phone: '555-0111', phone_extension: '31' },
+        { name: 'Dr. NoPhone', phone: null, phone_extension: '99' },
+      ],
+      insurance_plans: [{ carrier: 'Blue Shield', phone: '555-0122', phone_extension: '7' }],
+    };
+    const base = {
+      recipientName: 'Ada Lovelace',
+      recipientDob: '1950-12-10',
+      recipientConditions: [],
+      medications: [],
+      careRecipientTimezone: DENVER,
+    };
+    const html = generateCareSummaryHtml({ ...base, emergencyInfo: withExt });
+    const text = generateCareSummaryText({ ...base, emergencyInfo: withExt });
+    for (const out of [html, text]) {
+      expect(out).toContain('555-0100 ext. 204');
+      expect(out).toContain('555-0111 ext. 31');
+      expect(out).toContain('555-0122 ext. 7');
+      expect(out).not.toContain('ext. 99');
+    }
+    expect(html).not.toMatch(/careSummary\./);
+  });
+
   it('renders the plain-text variant with the same anchors', () => {
     const text = generateCareSummaryText({
       recipientName: 'Ada Lovelace',

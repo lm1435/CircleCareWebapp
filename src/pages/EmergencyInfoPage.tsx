@@ -97,6 +97,7 @@ type DoctorRow =
       | 'primary_doctor_specialty'
       | 'primary_doctor_phone'
       | 'primary_doctor_country_code'
+      | 'primary_doctor_phone_extension'
       | 'primary_doctor_address'
     >)
   | { kind: 'additional'; index: number; doctor: AdditionalDoctor };
@@ -380,6 +381,7 @@ export default function EmergencyInfoPage(): ReactElement {
             primary_doctor_specialty: info.primary_doctor_specialty,
             primary_doctor_phone: info.primary_doctor_phone,
             primary_doctor_country_code: info.primary_doctor_country_code,
+            primary_doctor_phone_extension: info.primary_doctor_phone_extension,
             primary_doctor_address: info.primary_doctor_address,
           },
         ]
@@ -395,6 +397,7 @@ export default function EmergencyInfoPage(): ReactElement {
         specialty={row.primary_doctor_specialty}
         phone={row.primary_doctor_phone}
         countryCode={row.primary_doctor_country_code}
+        extension={row.primary_doctor_phone_extension}
         address={row.primary_doctor_address}
         isPrimary
         onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: 'primary' }) : undefined}
@@ -406,6 +409,7 @@ export default function EmergencyInfoPage(): ReactElement {
         specialty={row.doctor.specialty}
         phone={row.doctor.phone}
         countryCode={row.doctor.country_code}
+        extension={row.doctor.phone_extension}
         address={row.doctor.address}
         onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: row.index }) : undefined}
         onDelete={canEdit ? () => askDelete({ kind: 'doctor', index: row.index }) : undefined}
