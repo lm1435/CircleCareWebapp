@@ -175,5 +175,9 @@
   "draftRestored": "Nous avons restauré votre brouillon non enregistré.",
   "undoCap": {
     "savingSoon": "Enregistrement dans 10 secondes."
+  },
+  "maps": {
+    "openAria": "Ouvrir {{address}} dans Plans",
+    "newTab": "S’ouvre dans un nouvel onglet"
   }
 }

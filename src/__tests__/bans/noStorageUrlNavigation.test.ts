@@ -36,8 +36,8 @@ function walk(dir: string, out: string[] = []): string[] {
 /** Identifiers/literals that carry a signed Storage URL in this codebase. */
 const SENSITIVE = /signed|file_?url|fileUrl|photo_?url|photoUrl|storage|supabase/i;
 
-/** Public destinations a new tab may open. */
-const ALLOWED_BLANK_HREF = /^(legalUrl\(|APP_STORE_URL$|PLAY_STORE_URL$)/;
+/** Public destinations a new tab may open (mapsHref: a google/apple maps search, components/MapsLink.tsx). */
+const ALLOWED_BLANK_HREF = /^(legalUrl\(|APP_STORE_URL$|PLAY_STORE_URL$|mapsHref$)/;
 
 const FILES = walk(ROOT).map((file) => ({
   rel: file.slice(ROOT.length + 1),

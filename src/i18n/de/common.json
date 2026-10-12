@@ -175,5 +175,9 @@
   "draftRestored": "Wir haben Ihren nicht gespeicherten Entwurf wiederhergestellt.",
   "undoCap": {
     "savingSoon": "Wird in 10 Sekunden gespeichert."
+  },
+  "maps": {
+    "openAria": "{{address}} in Karten öffnen",
+    "newTab": "Wird in einem neuen Tab geöffnet"
   }
 }

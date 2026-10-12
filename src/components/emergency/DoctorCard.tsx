@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Card, Text } from '@/components/ui';
 import { CardActions } from './CardActions';
 import { FieldList, type Field } from './FieldList';
+import { MapsLink } from '@/components/MapsLink';
 import { PhoneLink } from './PhoneLink';
 
 export interface DoctorCardProps {
@@ -51,7 +52,7 @@ export function DoctorCard({
     });
   }
   if (address) {
-    fields.push({ label: t('doctors.address'), value: address });
+    fields.push({ label: t('doctors.address'), value: <MapsLink address={address} /> });
   }
 
   return (

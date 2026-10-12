@@ -175,5 +175,9 @@
   "draftRestored": "Recuperamos tu borrador sin guardar.",
   "undoCap": {
     "savingSoon": "Se guardará en 10 segundos."
+  },
+  "maps": {
+    "openAria": "Abrir {{address}} en Mapas",
+    "newTab": "Se abre en una pestaña nueva"
   }
 }

@@ -127,6 +127,46 @@ describe('EventDetailModal', () => {
     expect(screen.getByText('Weekly on Sun, Wed')).toBeInTheDocument();
   });
 
+  it('shows the appointment location as a maps link that opens in a new tab', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({
+          event_type: 'appointment',
+          title: 'Dr. Smith',
+          medication_name: null,
+          medication_dosage: null,
+          location: '5 Elm St, Denver',
+        })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    const link = screen.getByRole('link', { name: 'Open 5 Elm St, Denver in Maps' });
+    expect(link.getAttribute('href')).toMatch(
+      /^(https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=|https:\/\/maps\.apple\.com\/\?q=)5%20Elm%20St%2C%20Denver$/
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('renders a URL location as plain text, not a maps link', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({
+          event_type: 'appointment',
+          title: 'Telehealth',
+          medication_name: null,
+          medication_dosage: null,
+          location: 'https://zoom.us/j/1',
+        })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('link', { name: /in Maps/ })).toBeNull();
+    expect(screen.getByText('https://zoom.us/j/1')).toBeInTheDocument();
+  });
+
   it('shows Not marked for unconfirmed past meds', () => {
     render(
       <EventDetailModal

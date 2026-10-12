@@ -175,5 +175,9 @@
   "draftRestored": "Abbiamo ripristinato la bozza non salvata.",
   "undoCap": {
     "savingSoon": "Salvataggio tra 10 secondi."
+  },
+  "maps": {
+    "openAria": "Apri {{address}} in Mappe",
+    "newTab": "Si apre in una nuova scheda"
   }
 }

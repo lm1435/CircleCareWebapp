@@ -175,5 +175,9 @@
   "draftRestored": "Restauramos seu rascunho não salvo.",
   "undoCap": {
     "savingSoon": "Salvando em 10 segundos."
+  },
+  "maps": {
+    "openAria": "Abrir {{address}} no Mapas",
+    "newTab": "Abre em uma nova guia"
   }
 }

@@ -175,5 +175,9 @@
   "draftRestored": "We restored your unsaved draft.",
   "undoCap": {
     "savingSoon": "Saving in 10 seconds."
+  },
+  "maps": {
+    "openAria": "Open {{address}} in Maps",
+    "newTab": "Opens in a new tab"
   }
 }

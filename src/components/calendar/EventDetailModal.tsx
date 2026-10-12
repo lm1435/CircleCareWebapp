@@ -2,6 +2,7 @@ import { useMemo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
+import { MapsLink } from '@/components/MapsLink';
 import { Badge, Card, Eyebrow, Modal, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatEventTimeForDisplay, getDateInTimezone, zoneReferenceInstant } from '@/utils/timezone';
@@ -203,7 +204,7 @@ export function EventDetailModal({
     return member ? memberDisplayName(member) : null;
   }, [event.event_type, event.assigned_to_user, event.assigned_to, members]);
 
-  const rows: Array<{ key: string; label: string; value: string }> = [
+  const rows: Array<{ key: string; label: string; value: ReactNode }> = [
     { key: 'date', label: t('calendar:eventDetail.date'), value: dateLabel },
     { key: 'time', label: t('calendar:eventDetail.time'), value: timeLabel },
   ];
@@ -242,7 +243,7 @@ export function EventDetailModal({
     rows.push({
       key: 'location',
       label: t('calendar:eventDetail.location'),
-      value: event.location,
+      value: <MapsLink address={event.location} freeText />,
     });
   }
   if (recurrenceLabel) {
