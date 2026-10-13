@@ -43,6 +43,8 @@ import { AvatarColorPicker } from '@/components/profile/AvatarColorPicker';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import { DataExportSection } from '@/components/profile/DataExportSection';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { useCircles } from '@/hooks/useCircles';
+import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import {
   Avatar,
@@ -171,6 +173,15 @@ export default function ProfilePage(): ReactElement {
   // Same cached query SubscriptionSection reads — no extra request.
   const { data: subscription } = useSubscriptionStatus();
   const isPremium = subscription?.tier === 'premium';
+  // Weekly summary: same visibility rules as mobile (ProfileScreen). It is a Premium
+  // feature of circles you own or belong to, so a free member with no circle of their
+  // own never sees it (they cannot buy it), and a free owner sees an upgrade row
+  // instead of a switch the server would refuse (402).
+  const { data: circles } = useCircles();
+  const ownsAnyCircle = circles?.some((c) => c.role === 'owner') ?? false;
+  const inAnyPremiumCircle = circles?.some((c) => c.is_premium_circle) ?? false;
+  const showDigestSection = ownsAnyCircle || inAnyPremiumCircle;
+  const { promptUpgrade: promptDigestUpgrade } = usePremiumGate('feature');
 
   const updateProfile = useUpdateProfile();
   const updateAvatarColor = useUpdateAvatarColor();
@@ -817,23 +828,43 @@ export default function ProfilePage(): ReactElement {
         </SheetRow>
       </SettingsSheetSection>
 
+      {showDigestSection ? (
+      <>
       {/* ── Email digest ──────────────────────────────────────────────── */}
       <SettingsSheetSection
         title={t('sections.emailDigest')}
         description={t('emailDigest.description')}
       >
-        <SheetRow>
-          <div className="w-full">
-            <Toggle
-              checked={Boolean(user.email_digest_enabled)}
-              onChange={handleDigestEnabled}
-              busy={updateDigest.isPending}
-              label={t('emailDigest.enable')}
-              // Premium users already have the digest — only free users need the note.
-              hint={isPremium ? undefined : t('emailDigest.premiumNote')}
-            />
-          </div>
-        </SheetRow>
+        {/* Turning it OFF is always allowed, so an owner whose Premium lapsed with the
+            summary still on keeps the switch. */}
+        {ownsAnyCircle && !isPremium && !user.email_digest_enabled ? (
+          <SheetRow>
+            <div className="flex w-full items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <Text variant="label" as="p">
+                  {t('emailDigest.premiumFeature')}
+                </Text>
+                <Text variant="caption" className="mt-0.5">
+                  {t('emailDigest.premiumNote')}
+                </Text>
+              </div>
+              <Button variant="secondary" onClick={() => promptDigestUpgrade()}>
+                {t('emailDigest.upgrade')}
+              </Button>
+            </div>
+          </SheetRow>
+        ) : (
+          <SheetRow>
+            <div className="w-full">
+              <Toggle
+                checked={Boolean(user.email_digest_enabled)}
+                onChange={handleDigestEnabled}
+                busy={updateDigest.isPending}
+                label={t('emailDigest.enable')}
+              />
+            </div>
+          </SheetRow>
+        )}
         {user.email_digest_enabled ? (
           <SheetRow>
             <div className="w-full">
@@ -849,6 +880,8 @@ export default function ProfilePage(): ReactElement {
           </SheetRow>
         ) : null}
       </SettingsSheetSection>
+      </>
+      ) : null}
 
       {/* ── Your data (GDPR export) ───────────────────────────────────── */}
       <DataExportSection />

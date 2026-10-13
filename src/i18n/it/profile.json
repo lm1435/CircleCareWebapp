@@ -104,7 +104,9 @@
       "4": "Giovedì",
       "5": "Venerdì",
       "6": "Sabato"
-    }
+    },
+    "premiumFeature": "Riepilogo settimanale della cura",
+    "upgrade": "Passa a Premium"
   },
   "subscription": {
     "title": "Abbonamento",

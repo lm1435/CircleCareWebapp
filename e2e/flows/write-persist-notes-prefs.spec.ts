@@ -308,6 +308,21 @@ test('vital DELETE: the health_vitals row is gone and the reload no longer lists
 // Profile: weekly email digest
 // ---------------------------------------------------------------------------
 
+test('profile email digest: an account with no circle is not offered the weekly summary', async ({
+  page,
+  request,
+  context,
+  baseURL,
+}) => {
+  await signedIn('digest-none', request, context, baseURL);
+  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  // The page has loaded (the notification switches are there)...
+  await expect(page.getByRole('switch').first()).toBeVisible({ timeout: 20_000 });
+  // ...and it offers neither the switch nor an upgrade row for a feature this person cannot buy.
+  await expect(page.getByRole('switch', { name: 'Send me a weekly digest' })).toHaveCount(0);
+  await expect(page.getByText('Weekly care summary')).toHaveCount(0);
+});
+
 test('profile email digest: enable, change the delivery day, disable and re-enable are each stored in users and survive a reload', async ({
   page,
   request,
@@ -315,12 +330,19 @@ test('profile email digest: enable, change the delivery day, disable and re-enab
   baseURL,
 }) => {
   test.slow();
-  const { acct } = await signedIn('digest', request, context, baseURL);
+  const { acct, api } = await signedIn('digest', request, context, baseURL);
+  // The weekly summary is offered only to someone who owns a circle or belongs to a
+  // Premium one (same rule as mobile), so this account needs a circle of its own.
   const digest = () =>
     dbQuery<{ enabled: boolean; day: number }>(
       `select email_digest_enabled as enabled, email_digest_day as day from users where id = ${sqlStr(acct.userId)}::uuid`
     )[0];
   expect(digest(), 'a fresh account has the digest off').toEqual({ enabled: false, day: 0 });
+  await createCircle(api, uniq('digest'));
+  // Creating a first circle on a Premium account switches the summary on; start from off.
+  const off = await api.patch(DIGEST_PATH, { enabled: false });
+  expect(off.ok(), `digest off before the test: ${off.status()}`).toBe(true);
+  expect(digest(), 'the digest is off before the first step').toEqual({ enabled: false, day: 0 });
 
   const toggle = () => page.getByRole('switch', { name: 'Send me a weekly digest' });
   const daySelect = () => page.locator('#profile-digest-day');

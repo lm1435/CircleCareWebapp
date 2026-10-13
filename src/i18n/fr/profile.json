@@ -104,7 +104,9 @@
       "4": "Jeudi",
       "5": "Vendredi",
       "6": "Samedi"
-    }
+    },
+    "premiumFeature": "Récapitulatif hebdomadaire des soins",
+    "upgrade": "Passer à Premium"
   },
   "subscription": {
     "title": "Abonnement",

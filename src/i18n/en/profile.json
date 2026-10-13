@@ -104,7 +104,9 @@
       "4": "Thursday",
       "5": "Friday",
       "6": "Saturday"
-    }
+    },
+    "premiumFeature": "Weekly care summary",
+    "upgrade": "Upgrade"
   },
   "subscription": {
     "title": "Subscription",

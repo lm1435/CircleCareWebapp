@@ -102,6 +102,11 @@ vi.mock('@/hooks/useSubscriptionStatus', () => ({
   useSubscriptionStatus: () => ({ data: { tier: subscriptionTier } }),
 }));
 
+// The weekly-summary section only shows to circle owners / premium-circle members.
+vi.mock('@/hooks/useCircles', () => ({
+  useCircles: () => ({ data: [{ role: 'owner', is_premium_circle: false }] }),
+}));
+
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();

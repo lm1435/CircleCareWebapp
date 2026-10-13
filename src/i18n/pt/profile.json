@@ -104,7 +104,9 @@
       "4": "Quinta-feira",
       "5": "Sexta-feira",
       "6": "Sábado"
-    }
+    },
+    "premiumFeature": "Resumo semanal de cuidado",
+    "upgrade": "Upgrade"
   },
   "subscription": {
     "title": "Assinatura",

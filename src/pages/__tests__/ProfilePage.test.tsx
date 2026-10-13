@@ -96,6 +96,18 @@ vi.mock('@/hooks/useSubscriptionStatus', () => ({
   useSubscriptionStatus: () => ({ data: { tier: subscriptionTier } }),
 }));
 
+// Circles drive who sees the weekly-summary section (mobile parity).
+let mockCircles: Array<{ role: 'owner' | 'member'; is_premium_circle: boolean }> = [
+  { role: 'owner', is_premium_circle: false },
+];
+vi.mock('@/hooks/useCircles', () => ({
+  useCircles: () => ({ data: mockCircles }),
+}));
+const promptUpgrade = vi.fn();
+vi.mock('@/hooks/usePremiumGate', () => ({
+  usePremiumGate: () => ({ promptUpgrade, promptLapsed: vi.fn() }),
+}));
+
 const showToast = vi.fn();
 vi.mock('@/components/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>();
@@ -148,6 +160,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   deleteAccountState = { isError: false };
   subscriptionTier = 'free';
+  mockCircles = [{ role: 'owner', is_premium_circle: false }];
+  promptUpgrade.mockClear();
   currentUser = USER;
   localStorage.clear();
   __resetAnalyticsConsentCache();
@@ -511,16 +525,37 @@ describe('ProfilePage', () => {
     expect(signOut).not.toHaveBeenCalled();
   });
 
-  it('shows the email-digest premium note for free users and hides it for premium', async () => {
+  it('free owner: the weekly summary is an upgrade row, not a switch the server would refuse', async () => {
+    const user = userEvent.setup();
     renderPage();
-    expect(await screen.findByText('Included with Premium.')).toBeInTheDocument();
+    expect(await screen.findByText('Weekly care summary')).toBeInTheDocument();
+    expect(screen.getByText('Included with Premium.')).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /weekly digest/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Upgrade' }));
+    expect(promptUpgrade).toHaveBeenCalledTimes(1);
+    expect(updateDigest).not.toHaveBeenCalled();
   });
 
-  it('hides the email-digest premium note for premium users', async () => {
+  it('premium owner: the weekly summary switch shows, with no premium note', async () => {
     subscriptionTier = 'premium';
     renderPage();
     await screen.findByRole('switch', { name: /weekly digest/i });
     expect(screen.queryByText('Included with Premium.')).not.toBeInTheDocument();
+  });
+
+  it('free member who owns no circle and is in no premium circle: no weekly summary section at all', async () => {
+    mockCircles = [{ role: 'member', is_premium_circle: false }];
+    renderPage();
+    await screen.findByRole('button', { name: 'Delete my account' });
+    expect(screen.queryByRole('switch', { name: /weekly digest/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Weekly care summary')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).not.toBeInTheDocument();
+  });
+
+  it('member of a premium circle: the switch shows', async () => {
+    mockCircles = [{ role: 'member', is_premium_circle: true }];
+    renderPage();
+    expect(await screen.findByRole('switch', { name: /weekly digest/i })).toBeInTheDocument();
   });
 
   it('toggling analytics OFF calls syncAnalyticsConsent(false, <userId>)', async () => {

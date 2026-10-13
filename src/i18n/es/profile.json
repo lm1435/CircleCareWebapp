@@ -104,7 +104,9 @@
       "4": "Jueves",
       "5": "Viernes",
       "6": "Sábado"
-    }
+    },
+    "premiumFeature": "Resumen semanal de cuidado",
+    "upgrade": "Mejorar plan"
   },
   "subscription": {
     "title": "Suscripción",

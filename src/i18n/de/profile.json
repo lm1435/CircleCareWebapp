@@ -104,7 +104,9 @@
       "4": "Donnerstag",
       "5": "Freitag",
       "6": "Samstag"
-    }
+    },
+    "premiumFeature": "Wöchentliche Pflegezusammenfassung",
+    "upgrade": "Upgrade"
   },
   "subscription": {
     "title": "Abo",
