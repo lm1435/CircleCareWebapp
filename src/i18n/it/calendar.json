@@ -310,6 +310,9 @@
     "scopeFuture": "Questo e tutti i prossimi appuntamenti",
     "deleted": "Appuntamento eliminato"
   },
+  "entrySource": {
+    "addedByVoice": "Aggiunta a voce"
+  },
   "discontinueMed": {
     "title": "Interrompi farmaco",
     "reactivateTitle": "Riattiva farmaco",

@@ -310,6 +310,9 @@
     "scopeFuture": "Diesen und alle künftigen Termine",
     "deleted": "Termin gelöscht"
   },
+  "entrySource": {
+    "addedByVoice": "Per Sprache hinzugefügt"
+  },
   "discontinueMed": {
     "title": "Medikament absetzen",
     "reactivateTitle": "Medikament wieder aktivieren",

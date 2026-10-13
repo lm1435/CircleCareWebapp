@@ -61,6 +61,29 @@ describe('MedicationDetailModal', () => {
     getMedicationPhotoUrl.mockResolvedValue(null);
   });
 
+  // entry_source (1.2.3): a medication dictated on the phone says so here too.
+  // (`t` is the key-echo mock in this file; the copy itself is pinned in
+  // calendar/__tests__/EntrySourceNote.test.tsx.)
+  it('shows "Added by voice" for a medication saved by voice, and nothing otherwise', () => {
+    const voice = { ...(event as object), entry_source: 'voice' } as never;
+    const { unmount } = render(<MedicationDetailModal {...baseProps} event={voice} />);
+    expect(screen.getByTestId('entry-source-note')).toHaveTextContent('calendar:entrySource.addedByVoice');
+    unmount();
+
+    for (const value of ['form', 'scan', null, undefined]) {
+      const other = { ...(event as object), entry_source: value } as never;
+      const view = render(<MedicationDetailModal {...baseProps} event={other} />);
+      expect(screen.queryByTestId('entry-source-note')).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it('shows the note to a member who cannot edit too', () => {
+    const voice = { ...(event as object), entry_source: 'voice' } as never;
+    render(<MedicationDetailModal {...baseProps} canEdit={false} event={voice} />);
+    expect(screen.getByTestId('entry-source-note')).toBeInTheDocument();
+  });
+
   it('fetches the photo for the event it is showing', async () => {
     render(<MedicationDetailModal {...baseProps} />);
 

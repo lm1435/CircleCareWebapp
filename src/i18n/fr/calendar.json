@@ -310,6 +310,9 @@
     "scopeFuture": "Ce rendez-vous et tous les suivants",
     "deleted": "Rendez-vous supprimé"
   },
+  "entrySource": {
+    "addedByVoice": "Ajout à la voix"
+  },
   "discontinueMed": {
     "title": "Arrêter le médicament",
     "reactivateTitle": "Réactiver le médicament",

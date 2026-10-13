@@ -507,6 +507,37 @@ describe('AddEventModal', () => {
     });
   });
 
+  // ── entry_source (1.2.3): how the entry was added ──────────────────────────
+  //
+  // The web form is always typed (voice add and the label scan are mobile-only),
+  // so every create says 'form'. It is set once: an edit never sends it, even
+  // for an entry that was added by voice on the phone.
+  describe('entry_source', () => {
+    it.each(['appointment', 'task'] as const)('a new %s sends entry_source "form"', async (type) => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType={type} onClose={vi.fn()} />);
+      await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Eye exam');
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+      expect(mutateCreate.mock.calls[0][0].entry_source).toBe('form');
+    });
+
+    it('an EDIT never sends it, even for an entry that was added by voice', async () => {
+      const user = userEvent.setup();
+      render(
+        <AddEventModal
+          circleId={CIRCLE_ID}
+          event={makeEvent({ event_type: 'task', title: 'Refill Rx', scheduled_time: null, entry_source: 'voice' })}
+          onClose={vi.fn()}
+        />
+      );
+      await user.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+      expect(Object.keys(mutateUpdate.mock.calls[0][0].data)).not.toContain('entry_source');
+      expect(mutateCreate).not.toHaveBeenCalled();
+    });
+  });
+
   it('edit mode targets the PARENT series id and prefills', async () => {
     const user = userEvent.setup();
     render(

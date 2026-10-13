@@ -66,6 +66,56 @@ function makeEvent(overrides: Partial<CalendarEvent>): CalendarEvent {
   };
 }
 
+describe('EventDetailModal — "Added by voice" (entry_source, 1.2.3)', () => {
+  it.each(['medication', 'appointment', 'task'] as const)(
+    'shows the note on a %s that was saved by voice',
+    (event_type) => {
+      render(
+        <EventDetailModal
+          event={makeEvent({ event_type, entry_source: 'voice' })}
+          careRecipientTimezone={TZ}
+          onClose={vi.fn()}
+        />
+      );
+      const note = screen.getByText('Added by voice');
+      expect(note).toHaveAttribute('data-testid', 'entry-source-note');
+      // Plain text a screen reader reads: no icon, nothing hidden.
+      expect(note.tagName).toBe('P');
+      expect(note.querySelector('svg, img, ion-icon')).toBeNull();
+      expect(note.closest('[aria-hidden="true"]')).toBeNull();
+    }
+  );
+
+  it.each([['form'], ['scan'], [null], [undefined]] as const)('shows nothing for %s', (value) => {
+    render(
+      <EventDetailModal
+        event={makeEvent({ event_type: 'appointment', entry_source: value })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByText('Added by voice')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('entry-source-note')).not.toBeInTheDocument();
+  });
+
+  it('an occurrence of a series shows what the backend resolved for it (the series value)', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({
+          id: 'root-1_2026-06-13',
+          parent_event_id: 'root-1',
+          is_virtual: true,
+          recurrence_rule: 'daily',
+          entry_source: 'voice',
+        })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Added by voice')).toBeInTheDocument();
+  });
+});
+
 describe('EventDetailModal', () => {
   it('renders title, type badge, and date + time in the recipient timezone', () => {
     render(

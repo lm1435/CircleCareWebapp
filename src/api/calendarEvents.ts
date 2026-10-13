@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiClient } from '@/lib/api';
+import { ENTRY_SOURCES, type EntrySource } from '@/utils/entrySource';
 
 // PORT of mobile/src/api/calendarEvents.ts (read-only subset needed by the web
 // calendar). Verified against backend/src/routes/calendarEvents.ts:
@@ -72,6 +73,15 @@ export interface CalendarEvent {
   as_needed?: boolean;
   /** Plain optional note ("pain") — never a limit. ≤100 chars. */
   as_needed_reason?: string | null;
+
+  /**
+   * HOW THE ENTRY WAS ADDED (1.2.3): 'form' (typed), 'scan' (filled from a photo
+   * of a label, mobile only) or 'voice' (dictated, mobile only). Null/absent =
+   * unknown (saved before this was recorded). An occurrence of a series carries
+   * the series' value. The detail views show "Added by voice" for 'voice' and
+   * nothing for the rest (`EntrySourceNote`).
+   */
+  entry_source?: EntrySource | null;
 
   // Scheduling — naive local values in the care recipient's timezone
   scheduled_date: string; // YYYY-MM-DD
@@ -355,6 +365,14 @@ export interface CreateEventRequest {
   as_needed?: boolean;
   /** Optional plain note, ≤100. Only valid with `as_needed`. `null` clears it on PATCH. */
   as_needed_reason?: string | null;
+
+  /**
+   * How the entry is being added. CREATE ONLY: the backend stores it once and
+   * ignores it on an edit. The web app has no voice add and no label scan (both
+   * are mobile-only), so every web create sends 'form' (`WEB_ENTRY_SOURCE`,
+   * utils/entrySource.ts).
+   */
+  entry_source?: EntrySource;
 
   // Recurrence
   recurrence_rule?: string;
@@ -784,6 +802,9 @@ export const eventFormSchema = z.object({
   // As-needed (PRN) medication — mirrors the backend's eventSchema.
   as_needed: z.boolean().optional(),
   as_needed_reason: z.string().max(100, { message: 'reasonTooLong' }).nullable().optional(),
+
+  // How the entry was added — mirrors the backend's create schema.
+  entry_source: z.enum(ENTRY_SOURCES).optional(),
 
   // Task-specific
   assigned_to: z.string().uuid().nullable().optional(),

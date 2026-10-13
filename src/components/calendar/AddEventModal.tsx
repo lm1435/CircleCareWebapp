@@ -14,6 +14,7 @@ import {
   type SeriesRoot,
 } from '@/api/calendarEvents';
 import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
+import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
 import { useCircle } from '@/hooks/useCircle';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
@@ -1245,6 +1246,13 @@ function AddEventForm({
     const assignedToValue = assignedToForSave(eventType, assignedTo);
     if (assignedToValue !== undefined) {
       data.assigned_to = assignedToValue;
+    }
+
+    // How this entry was added, on a CREATE only (the backend ignores it on an
+    // edit). The web form is always typed: voice add and the label scan are
+    // mobile-only. Mobile shows "Added by voice" from the same field.
+    if (!isEditing) {
+      data.entry_source = WEB_ENTRY_SOURCE;
     }
 
     // Final guard: validate against the shared web Zod schema (mirrors backend).

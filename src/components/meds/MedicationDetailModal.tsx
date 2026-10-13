@@ -13,6 +13,7 @@ import {
   type MoreMenuItem,
 } from '@/components/ui';
 import { getMedicationPhotoUrl, type CalendarEvent } from '@/api/calendarEvents';
+import { EntrySourceNote } from '@/components/calendar/EntrySourceNote';
 
 export interface MedicationDetailModalProps {
   circleId: string;
@@ -311,6 +312,9 @@ export function MedicationDetailModal({
             </InfoRow>
           )}
         </Sheet>
+
+        {/* "Added by voice" — only for a medication saved by voice. */}
+        <EntrySourceNote event={event} />
       </div>
     </Modal>
   );

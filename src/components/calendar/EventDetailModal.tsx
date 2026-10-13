@@ -14,6 +14,7 @@ import {
 } from './eventStyles';
 import { formatRecurrenceLabel } from './recurrenceLabel';
 import { EventNotesPanel } from './EventNotesPanel';
+import { EntrySourceNote } from './EntrySourceNote';
 
 /** The section-color eyebrow accent per event type (matches `Eyebrow`'s palette). */
 const EVENT_TYPE_EYEBROW_COLOR = {
@@ -358,6 +359,10 @@ export function EventDetailModal({
           <p className="m-0 text-sm text-ink-2">{t('calendar:discontinueMed.inactiveCalendarNote')}</p>
         </Card>
       )}
+
+      {/* "Added by voice" — only for an entry saved by voice (mobile-only
+          feature; the note is shown on both platforms). */}
+      <EntrySourceNote event={event} className="mb-4 mt-3" />
 
       {/* Event-notes panel (Task 1.8) — instance-scoped. For ANY recurring row
           — a persisted child, a virtual instance, OR the series ROOT itself

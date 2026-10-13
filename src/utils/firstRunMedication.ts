@@ -1,4 +1,5 @@
 import type { CreateEventRequest } from '@/api/calendarEvents';
+import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
 import { eventDatesForApi } from '@/utils/recipientEventDate';
 import { getDateInTimezone, isEventPastDue } from '@/utils/timezone';
 
@@ -227,6 +228,9 @@ export function buildFirstRunMedication(input: FirstRunMedicationInput): FirstRu
     // module's job is to match the form's payload, not to coincide with a
     // default that can change independently.
     notifications_enabled: true,
+    // How the entry was added: the wizard is typed (the web has no voice add and
+    // no label scan). Sibling dose rows spread this payload, so they carry it too.
+    entry_source: WEB_ENTRY_SOURCE,
     // `track_refills` is DELIBERATELY ABSENT — the one field leaning on a column
     // default. The wizard asks nothing about refills and the default (false) is
     // what "not asked" means; sending `false` would claim the user answered a

@@ -310,6 +310,9 @@
     "scopeFuture": "Esta e todas as próximas consultas",
     "deleted": "Consulta excluída"
   },
+  "entrySource": {
+    "addedByVoice": "Adição por voz"
+  },
   "discontinueMed": {
     "title": "Suspender medicamento",
     "reactivateTitle": "Reativar medicamento",

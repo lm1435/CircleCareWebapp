@@ -48,6 +48,23 @@ function onTheWire(payload: CreateEventRequest): Record<string, unknown> {
 }
 
 describe('buildFirstRunMedication', () => {
+  // entry_source (1.2.3): the wizard is typed (the web has no voice add and no
+  // label scan), so every row it creates says 'form' — the primary AND each
+  // sibling dose row, which spreads the primary.
+  it('says the entry was typed: entry_source "form" on the primary and on every sibling dose', () => {
+    const { primary, additionalTimes } = buildFirstRunMedication(BASE);
+    expect(primary.entry_source).toBe('form');
+    expect(additionalTimes.length).toBeGreaterThan(0);
+    const siblings = buildSiblingDoseRequests({
+      primary,
+      additionalTimes,
+      timezone: BASE.timezone,
+      todayStr: BASE.todayStr,
+      refillGroupId: 'primary-id',
+    });
+    expect(siblings.map((s) => s.entry_source)).toEqual(additionalTimes.map(() => 'form'));
+  });
+
   // ── RULE 3 ────────────────────────────────────────────────────────────────
   it('sets title from the trimmed name, matching AddEventModal trimmedTitle', () => {
     const { primary } = buildFirstRunMedication(BASE);

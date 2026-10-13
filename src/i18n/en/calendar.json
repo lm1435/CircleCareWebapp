@@ -310,6 +310,9 @@
     "scopeFuture": "This and all future appointments",
     "deleted": "Appointment deleted"
   },
+  "entrySource": {
+    "addedByVoice": "Added by voice"
+  },
   "discontinueMed": {
     "title": "Discontinue medication",
     "reactivateTitle": "Reactivate medication",
