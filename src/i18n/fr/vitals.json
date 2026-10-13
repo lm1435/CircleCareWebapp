@@ -1,6 +1,6 @@
 {
   "title": "Constantes",
-  "subtitle": "Suivez les mesures de santé de votre cercle : tension artérielle, fréquence cardiaque, glycémie et poids.",
+  "subtitle": "Suivez les mesures de santé de votre cercle : tension artérielle, fréquence cardiaque, glycémie, poids, température et oxygène sanguin.",
   "loading": "Chargement des constantes",
   "errorTitle": "Impossible de charger les constantes",
   "errorHint": "Vérifiez votre connexion et réessayez.",
@@ -8,7 +8,9 @@
     "blood_pressure": "Tension artérielle",
     "heart_rate": "Fréquence cardiaque",
     "glucose": "Glycémie",
-    "weight": "Poids"
+    "weight": "Poids",
+    "temperature": "Température",
+    "oxygen_saturation": "Oxygène sanguin"
   },
   "filter": {
     "typeLabel": "Type",
@@ -88,14 +90,18 @@
         "blood_pressure": "Aucune mesure de tension artérielle pour l’instant",
         "heart_rate": "Aucune mesure de fréquence cardiaque pour l’instant",
         "glucose": "Aucune mesure de glycémie pour l’instant",
-        "weight": "Aucune mesure de poids pour l’instant"
+        "weight": "Aucune mesure de poids pour l’instant",
+        "temperature": "Aucune mesure de température pour l’instant",
+        "oxygen_saturation": "Aucune mesure d’oxygène sanguin pour l’instant"
       },
       "description": "Enregistrez des mesures au fil du temps pour que le cercle repère une tendance avant le prochain rendez-vous.",
       "cta": {
         "blood_pressure": "Enregistrer la tension artérielle",
         "heart_rate": "Enregistrer la fréquence cardiaque",
         "glucose": "Enregistrer la glycémie",
-        "weight": "Enregistrer le poids"
+        "weight": "Enregistrer le poids",
+        "temperature": "Enregistrer la température",
+        "oxygen_saturation": "Enregistrer l’oxygène sanguin"
       }
     },
     "outOfRange": {

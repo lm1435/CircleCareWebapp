@@ -195,6 +195,28 @@ describe('useAdherenceExport', () => {
     expect(html).not.toContain('vitals.types.blood_pressure');
   });
 
+  // 1.2.3: the list read now returns temperature / blood oxygen rows too
+  // (the API layer always sends `extraTypes`), so the report must label them.
+  it('premium: labels temperature and blood oxygen rows, never the raw type or key', async () => {
+    mockCircle.mockResolvedValue(circle({ is_premium_circle: true }));
+    mockVitals.mockResolvedValue([
+      { ...bloodPressure, id: 'v2', vital_type: 'temperature', value1: 37.2, value2: null, unit: '°C' },
+      { ...bloodPressure, id: 'v3', vital_type: 'oxygen_saturation', value1: 96, value2: null, unit: '%' },
+    ] as HealthVital[]);
+    const { result } = renderHook(() => useAdherenceExport({ circleId: CIRCLE_ID }));
+
+    await act(async () => {
+      await result.current.exportPdf('7d');
+    });
+
+    const html = printedHtml();
+    expect(html).toContain('<td>Temperature</td>');
+    expect(html).toContain('<td>Blood oxygen</td>');
+    expect(html).toContain('37.2');
+    expect(html).not.toContain('vitals.types.');
+    expect(html).not.toContain('oxygen_saturation');
+  });
+
   it('non-premium: never asks for vitals', async () => {
     mockCircle.mockResolvedValue(circle({ is_premium_circle: false }));
     const { result } = renderHook(() => useAdherenceExport({ circleId: CIRCLE_ID }));

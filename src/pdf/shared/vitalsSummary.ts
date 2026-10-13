@@ -8,13 +8,20 @@ import type { PdfHealthVital, PdfVitalsSummary } from './types';
 
 // Keys only — the labels are resolved through the report's own `t` so the
 // vitals section matches every other cell in the PDF, which already uses
-// medicationHistory.export.*. These four strings were the last English ones.
+// medicationHistory.export.*. These strings were the last English ones.
 export const VITAL_TYPE_LABEL_KEYS: Record<string, string> = {
   blood_pressure: 'vitals.types.blood_pressure',
   heart_rate: 'vitals.types.heart_rate',
   glucose: 'vitals.types.glucose',
   weight: 'vitals.types.weight',
+  temperature: 'vitals.types.temperature',
+  oxygen_saturation: 'vitals.types.oxygen_saturation',
 };
+
+// Readings are stored in ONE unit per type (kg, mmol/L, °C), so a value entered
+// in the other unit arrives as a long decimal (99.1 °F is 37.2777… °C). One
+// decimal place is what every in-app surface shows.
+const round1 = (value: number): number => Math.round(value * 10) / 10;
 
 /**
  * Collapse a period's recorded vitals into one row per vital type for the
@@ -44,15 +51,15 @@ export function computeVitalsSummary(
     );
     const latest = sorted[0];
     const values = entries.map((e) => e.value1);
-    const avg = Math.round((values.reduce((s, v) => s + v, 0) / values.length) * 10) / 10;
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const avg = round1(values.reduce((s, v) => s + v, 0) / values.length);
+    const min = round1(Math.min(...values));
+    const max = round1(Math.max(...values));
 
     result.push({
       type: VITAL_TYPE_LABEL_KEYS[type] ? t(VITAL_TYPE_LABEL_KEYS[type]) : type,
       latest: {
-        value1: latest.value1,
-        value2: latest.value2 ?? undefined,
+        value1: round1(latest.value1),
+        value2: latest.value2 != null ? round1(latest.value2) : undefined,
         unit: latest.unit,
       },
       average: avg,

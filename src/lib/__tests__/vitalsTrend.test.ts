@@ -86,4 +86,29 @@ describe('formatAverageDelta', () => {
     );
     expect(result).toEqual({ delta: '0 bpm', direction: 'same' });
   });
+
+  it('temperature — one decimal, with a space before the unit', () => {
+    const result = formatAverageDelta(
+      'temperature',
+      { avg: 99.04, avg2: null },
+      { avg: 98.6, avg2: null },
+      '°F'
+    );
+    expect(result).toEqual({ delta: '+0.4 °F', direction: 'up' });
+  });
+
+  it('blood oxygen — whole number, the sign against the number (no space)', () => {
+    expect(
+      formatAverageDelta('oxygen_saturation', { avg: 97.6, avg2: null }, { avg: 96, avg2: null }, '%')
+    ).toEqual({ delta: '+2%', direction: 'up' });
+    expect(
+      formatAverageDelta('oxygen_saturation', { avg: 95, avg2: null }, { avg: 96.2, avg2: null }, '%')
+    ).toEqual({ delta: '−1%', direction: 'down' });
+  });
+
+  it('blood oxygen — a sub-half-point move rounds to "same"', () => {
+    expect(
+      formatAverageDelta('oxygen_saturation', { avg: 96.4, avg2: null }, { avg: 96, avg2: null }, '%')
+    ).toEqual({ delta: '0%', direction: 'same' });
+  });
 });

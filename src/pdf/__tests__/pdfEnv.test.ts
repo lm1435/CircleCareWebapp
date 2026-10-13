@@ -71,6 +71,13 @@ describe('buildPdfEnv().t', () => {
     expect(env.t('vitals.types.blood_pressure')).toBe('Blood pressure');
   });
 
+  // 1.2.3: `shared/vitalsSummary.ts` labels the two newer types with these keys.
+  it('resolves the temperature and blood oxygen labels', () => {
+    const env = buildPdfEnv();
+    expect(env.t('vitals.types.temperature')).toBe('Temperature');
+    expect(env.t('vitals.types.oxygen_saturation')).toBe('Blood oxygen');
+  });
+
   it('resolves the visit/care note section headings and a mood label (task 30)', () => {
     const env = buildPdfEnv();
     expect(env.t('careSummary.sections.visitNotes')).toBe('Visit notes');

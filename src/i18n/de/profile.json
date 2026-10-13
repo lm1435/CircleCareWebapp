@@ -81,13 +81,16 @@
     "almostAllDayWarning": "Die Ruhezeiten umfassen fast den ganzen Tag, daher werden Benachrichtigungen bis {{endTime}} zurückgehalten."
   },
   "units": {
-    "description": "Legen Sie fest, wie Gewicht und Blutzuckerwerte angezeigt werden.",
+    "description": "Legen Sie fest, wie Gewicht, Blutzuckerwerte und Temperatur angezeigt werden.",
     "weight": "Gewicht",
     "glucose": "Blutzucker",
     "lbs": "Pfund (lbs)",
     "kg": "Kilogramm (kg)",
     "mgdl": "mg/dL",
     "mmoll": "mmol/L",
+    "temperature": "Temperatur",
+    "fahrenheit": "Fahrenheit (°F)",
+    "celsius": "Celsius (°C)",
     "success": "Einheiten aktualisiert."
   },
   "emailDigest": {

@@ -17,7 +17,10 @@ const mockUseVitals = vi.fn();
 const mockDeleteMutate = vi.fn();
 const mockUseCircle = vi.fn();
 const mockUseLatestVitals = vi.fn();
-const unitPrefs = { weight_unit: 'lbs', glucose_unit: 'mg/dL' };
+const unitPrefs: { weight_unit: string; glucose_unit: string; temperature_unit?: string } = {
+  weight_unit: 'lbs',
+  glucose_unit: 'mg/dL',
+};
 
 /** Every type null — the default "nothing has ever been logged" answer. */
 const EMPTY_LATEST = { blood_pressure: null, heart_rate: null, glucose: null, weight: null };
@@ -156,6 +159,8 @@ async function openRowMenu(user: ReturnType<typeof userEvent.setup>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  unitPrefs.weight_unit = 'lbs';
+  delete unitPrefs.temperature_unit;
   mockUseHourCycle.mockReturnValue('12h');
   mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/New_York' });
   mockUseLatestVitals.mockReturnValue({ data: EMPTY_LATEST, isLoading: false });
@@ -1018,5 +1023,176 @@ describe('VitalsPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Expand all' }));
     expect(screen.getByRole('button', { name: /Heart rate/i, expanded: true })).toBeInTheDocument();
+  });
+
+  // ── Temperature + blood oxygen (1.2.3) ────────────────────────────────────
+
+  describe('temperature and blood oxygen', () => {
+    const TEMP = makeVital({ id: 't-1', vital_type: 'temperature', value1: 37, unit: '°C' });
+    const O2 = makeVital({ id: 'o-1', vital_type: 'oxygen_saturation', value1: 96, unit: '%' });
+
+    it('lists the type chips in the agreed order, the two newer types last', () => {
+      renderPage();
+      const group = screen.getByRole('radiogroup', { name: 'Type' });
+      expect(within(group).getAllByRole('radio').map((chip) => chip.textContent)).toEqual([
+        'All types',
+        'Blood pressure',
+        'Heart rate',
+        'Glucose',
+        'Weight',
+        'Temperature',
+        'Blood oxygen',
+      ]);
+    });
+
+    it('renders a stored 37 °C as "98.6 °F" and blood oxygen as "96%" (no space)', () => {
+      serveVitals([TEMP, O2]);
+      renderPage();
+      expect(screen.getByText('98.6 °F')).toBeInTheDocument();
+      expect(screen.getByText('96%')).toBeInTheDocument();
+      expect(screen.queryByText('96 %')).not.toBeInTheDocument();
+    });
+
+    it('renders temperature in °C for a °C viewer', () => {
+      unitPrefs.temperature_unit = '°C';
+      serveVitals([TEMP]);
+      renderPage();
+      expect(screen.getByText('37 °C')).toBeInTheDocument();
+    });
+
+    it('with no saved temperature unit (older server) a kg viewer reads °C', () => {
+      unitPrefs.weight_unit = 'kg';
+      serveVitals([TEMP]);
+      renderPage();
+      expect(screen.getByText('37 °C')).toBeInTheDocument();
+    });
+
+    it('groups the two newer types after the original four under "All types"', () => {
+      serveVitals([
+        O2,
+        TEMP,
+        makeVital({ id: 'w-1', vital_type: 'weight', value1: 68, unit: 'kg' }),
+        makeVital({ id: 'hr-1' }),
+      ]);
+      renderPage();
+      const headers = screen
+        .getAllByRole('button', { expanded: true })
+        .map((b) => b.textContent ?? '')
+        .filter((text) => /Heart rate|Weight|Temperature|Blood oxygen/.test(text));
+      expect(headers.map((text) => text.replace(/\d+$/, '').trim())).toEqual([
+        'Heart rate',
+        'Weight',
+        'Temperature',
+        'Blood oxygen',
+      ]);
+    });
+
+    it('filters to Temperature, with the hero in the viewer unit', async () => {
+      const user = userEvent.setup();
+      serveVitals([TEMP, O2]);
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Temperature' }));
+
+      expect(lastCurrentParams()).toMatchObject({ type: 'temperature' });
+      expect(screen.getByText('98.6')).toBeInTheDocument(); // hero headline
+      expect(screen.getByText('98.6 °F')).toBeInTheDocument(); // list row
+      expect(screen.queryByText('96%')).not.toBeInTheDocument();
+    });
+
+    it('filters to Blood oxygen: hero number with its sign against it, and a "+2%" trend', async () => {
+      const user = userEvent.setup();
+      serveVitals(
+        [
+          makeVital({ id: 'o-2', vital_type: 'oxygen_saturation', value1: 98, unit: '%' }),
+          makeVital({
+            id: 'o-3',
+            vital_type: 'oxygen_saturation',
+            value1: 98,
+            unit: '%',
+            recorded_at: '2026-06-14T16:00:00.000Z',
+          }),
+        ],
+        [
+          makeVital({
+            id: 'o-0',
+            vital_type: 'oxygen_saturation',
+            value1: 96,
+            unit: '%',
+            recorded_at: '2026-05-14T16:00:00.000Z',
+          }),
+        ]
+      );
+      renderPage();
+      await user.click(screen.getByRole('radio', { name: 'Blood oxygen' }));
+
+      const unit = screen.getByText('%', { selector: 'span' });
+      expect(unit.parentElement).toHaveTextContent(/^98%$/);
+      expect(unit.className).not.toContain('ml-1');
+      expect(screen.getByText('Average +2% vs the previous 30 days')).toBeInTheDocument();
+      expect(
+        screen.getByRole('img', { name: 'Trend chart. Lowest 98%, highest 98%, latest 98%.' })
+      ).toBeInTheDocument();
+    });
+
+    it.each([
+      ['Temperature', 'No temperature readings yet', 'Log temperature'],
+      ['Blood oxygen', 'No blood oxygen readings yet', 'Log blood oxygen'],
+    ])('%s never logged: names the type and offers its CTA', async (chip, title, cta) => {
+      mockUseLatestVitals.mockReturnValue({
+        data: { ...EMPTY_LATEST, temperature: null, oxygen_saturation: null },
+        isLoading: false,
+      });
+      const user = userEvent.setup();
+      renderPage(); // only heart_rate is served
+      await user.click(screen.getByRole('radio', { name: chip }));
+
+      expect(screen.getByText(title)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: cta }));
+      expect(screen.getByRole('dialog', { name: 'add-vital-modal' })).toBeInTheDocument();
+    });
+
+    // An OLDER backend answers `latest` with only the four original keys.
+    it.each(['Temperature', 'Blood oxygen'])(
+      'a latest payload WITHOUT the newer keys reads %s as never logged, without crashing',
+      async (chip) => {
+        const user = userEvent.setup();
+        renderPage(); // default latest is EMPTY_LATEST: four keys only
+        await user.click(screen.getByRole('radio', { name: chip }));
+        expect(screen.getByText(`No ${chip.toLowerCase()} readings yet`)).toBeInTheDocument();
+      }
+    );
+
+    it('"All types" with a four-key latest payload and nothing in range does not crash', () => {
+      serveVitals([]);
+      mockUseLatestVitals.mockReturnValue({
+        data: { ...EMPTY_LATEST, heart_rate: makeVital({ recorded_at: '2020-01-01T00:00:00.000Z' }) },
+        isLoading: false,
+      });
+      renderPage();
+      expect(screen.getByText(/Last reading: 72 bpm/)).toBeInTheDocument();
+    });
+
+    it('"All types": an old temperature reading is named in the viewer unit', () => {
+      serveVitals([]);
+      mockUseLatestVitals.mockReturnValue({
+        data: {
+          ...EMPTY_LATEST,
+          temperature: makeVital({ ...TEMP, recorded_at: '2020-01-01T00:00:00.000Z' }),
+          oxygen_saturation: null,
+        },
+        isLoading: false,
+      });
+      renderPage();
+      expect(screen.getByText(/Last reading: 98\.6 °F/)).toBeInTheDocument();
+    });
+
+    it('names the type in the delete confirmation', async () => {
+      const user = userEvent.setup();
+      serveVitals([O2]);
+      renderPage();
+      const menu = await openRowMenu(user);
+      await user.click(within(menu).getByRole('menuitem', { name: 'Delete' }));
+      expect(screen.getByText(/Delete the blood oxygen reading from /)).toBeInTheDocument();
+    });
   });
 });

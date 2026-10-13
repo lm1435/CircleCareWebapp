@@ -1,6 +1,6 @@
 {
   "title": "Sinais vitais",
-  "subtitle": "Acompanhe as medições de saúde do seu círculo: pressão arterial, frequência cardíaca, glicose e peso.",
+  "subtitle": "Acompanhe as medições de saúde do seu círculo: pressão arterial, frequência cardíaca, glicose, peso, temperatura e oxigênio no sangue.",
   "loading": "Carregando sinais vitais",
   "errorTitle": "Não foi possível carregar os sinais vitais",
   "errorHint": "Verifique sua conexão e tente novamente.",
@@ -8,7 +8,9 @@
     "blood_pressure": "Pressão arterial",
     "heart_rate": "Frequência cardíaca",
     "glucose": "Glicose",
-    "weight": "Peso"
+    "weight": "Peso",
+    "temperature": "Temperatura",
+    "oxygen_saturation": "Oxigênio no sangue"
   },
   "filter": {
     "typeLabel": "Tipo",
@@ -88,14 +90,18 @@
         "blood_pressure": "Nenhuma medição de pressão arterial ainda",
         "heart_rate": "Nenhuma medição de frequência cardíaca ainda",
         "glucose": "Nenhuma medição de glicose ainda",
-        "weight": "Nenhuma medição de peso ainda"
+        "weight": "Nenhuma medição de peso ainda",
+        "temperature": "Nenhuma medição de temperatura ainda",
+        "oxygen_saturation": "Nenhuma medição de oxigênio no sangue ainda"
       },
       "description": "Registre medições ao longo do tempo para que o círculo perceba uma tendência antes da próxima consulta.",
       "cta": {
         "blood_pressure": "Registrar pressão arterial",
         "heart_rate": "Registrar frequência cardíaca",
         "glucose": "Registrar glicose",
-        "weight": "Registrar peso"
+        "weight": "Registrar peso",
+        "temperature": "Registrar temperatura",
+        "oxygen_saturation": "Registrar oxigênio no sangue"
       }
     },
     "outOfRange": {

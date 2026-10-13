@@ -81,13 +81,16 @@
     "almostAllDayWarning": "O horário de silêncio cobre quase o dia inteiro, então as notificações ficarão retidas até {{endTime}}."
   },
   "units": {
-    "description": "Escolha como os valores de peso e glicose são exibidos.",
+    "description": "Escolha como os valores de peso, glicose e temperatura são exibidos.",
     "weight": "Peso",
     "glucose": "Glicose no sangue",
     "lbs": "Libras (lbs)",
     "kg": "Quilogramas (kg)",
     "mgdl": "mg/dL",
     "mmoll": "mmol/L",
+    "temperature": "Temperatura",
+    "fahrenheit": "Fahrenheit (°F)",
+    "celsius": "Celsius (°C)",
     "success": "Unidades atualizadas."
   },
   "emailDigest": {

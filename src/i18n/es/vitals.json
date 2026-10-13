@@ -1,6 +1,6 @@
 {
   "title": "Signos vitales",
-  "subtitle": "Lleva el registro de las lecturas de salud de tu círculo: presión arterial, frecuencia cardíaca, glucosa y peso.",
+  "subtitle": "Lleva el registro de las lecturas de salud de tu círculo: presión arterial, frecuencia cardíaca, glucosa, peso, temperatura y oxígeno en sangre.",
   "loading": "Cargando signos vitales",
   "errorTitle": "No se pudieron cargar los signos vitales",
   "errorHint": "Revisa tu conexión e intenta de nuevo.",
@@ -8,7 +8,9 @@
     "blood_pressure": "Presión arterial",
     "heart_rate": "Frecuencia cardíaca",
     "glucose": "Glucosa",
-    "weight": "Peso"
+    "weight": "Peso",
+    "temperature": "Temperatura",
+    "oxygen_saturation": "Oxígeno en sangre"
   },
   "filter": {
     "typeLabel": "Tipo",
@@ -88,14 +90,18 @@
         "blood_pressure": "Aún no hay lecturas de presión arterial",
         "heart_rate": "Aún no hay lecturas de frecuencia cardíaca",
         "glucose": "Aún no hay lecturas de glucosa",
-        "weight": "Aún no hay lecturas de peso"
+        "weight": "Aún no hay lecturas de peso",
+        "temperature": "Aún no hay lecturas de temperatura",
+        "oxygen_saturation": "Aún no hay lecturas de oxígeno en sangre"
       },
       "description": "Registra lecturas con el tiempo para que el círculo note un cambio antes de la próxima cita.",
       "cta": {
         "blood_pressure": "Registrar presión arterial",
         "heart_rate": "Registrar frecuencia cardíaca",
         "glucose": "Registrar glucosa",
-        "weight": "Registrar peso"
+        "weight": "Registrar peso",
+        "temperature": "Registrar temperatura",
+        "oxygen_saturation": "Registrar oxígeno en sangre"
       }
     },
     "outOfRange": {

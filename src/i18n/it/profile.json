@@ -81,13 +81,16 @@
     "almostAllDayWarning": "Le ore di silenzio coprono quasi tutta la giornata, quindi le notifiche resteranno in attesa fino alle {{endTime}}."
   },
   "units": {
-    "description": "Scegli come mostrare i valori di peso e glicemia.",
+    "description": "Scegli come mostrare i valori di peso, glicemia e temperatura.",
     "weight": "Peso",
     "glucose": "Glicemia",
     "lbs": "Libbre (lbs)",
     "kg": "Chilogrammi (kg)",
     "mgdl": "mg/dL",
     "mmoll": "mmol/L",
+    "temperature": "Temperatura",
+    "fahrenheit": "Fahrenheit (°F)",
+    "celsius": "Celsius (°C)",
     "success": "Unità aggiornate."
   },
   "emailDigest": {

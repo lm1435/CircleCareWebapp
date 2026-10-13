@@ -26,7 +26,10 @@ vi.mock('@/hooks/useVitals', () => ({
   useUpdateVital: () => ({ mutateAsync: mutateUpdate, isPending: false }),
 }));
 
-const unitPrefs = { weight_unit: 'lbs', glucose_unit: 'mg/dL' };
+const unitPrefs: { weight_unit: string; glucose_unit: string; temperature_unit?: string } = {
+  weight_unit: 'lbs',
+  glucose_unit: 'mg/dL',
+};
 vi.mock('@/hooks/useUnitPreferences', () => ({
   useUnitPreferences: () => ({ data: unitPrefs }),
 }));
@@ -48,6 +51,7 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   unitPrefs.weight_unit = 'lbs';
   unitPrefs.glucose_unit = 'mg/dL';
+  delete unitPrefs.temperature_unit;
   mutateUpdate.mockResolvedValue({});
 });
 afterEach(() => {
@@ -250,5 +254,69 @@ describe('VitalFormModal edit: integer-valued types are exact', () => {
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
     expect(mutateUpdate.mock.calls[0][0].data).toEqual({ value1: 75, unit: 'bpm' });
+  });
+});
+
+describe('VitalFormModal edit: temperature (°C stored) and blood oxygen', () => {
+  const temp = (over: Partial<HealthVital> = {}): HealthVital =>
+    vital({ vital_type: 'temperature', value1: 37, unit: '°C', ...over });
+
+  it('shows the stored °C value in °F for a °F viewer', () => {
+    unitPrefs.temperature_unit = '°F';
+    render(<VitalFormModal circleId={CIRCLE_ID} vital={temp()} onClose={vi.fn()} />);
+    expect(screen.getByLabelText('Temperature')).toHaveValue('98.6');
+    expect(screen.getByText('in °F')).toBeInTheDocument();
+  });
+
+  it('shows the stored °C value as it is for a °C viewer', () => {
+    unitPrefs.temperature_unit = '°C';
+    render(<VitalFormModal circleId={CIRCLE_ID} vital={temp({ value1: 37.5 })} onClose={vi.fn()} />);
+    expect(screen.getByLabelText('Temperature')).toHaveValue('37.5');
+  });
+
+  it('PK8: a note-only edit sends exactly { notes } (the stored °C is never re-converted)', async () => {
+    unitPrefs.temperature_unit = '°F';
+    // 37.28 °C displays as "99.1" °F; re-sending that would store 37.2777… °C.
+    await saveNoteOnly(temp({ value1: 37.28 }));
+    expect(mutateUpdate.mock.calls[0][0].data).toEqual({ notes: 'changed note' });
+  });
+
+  it('a changed °F value is sent converted, with the canonical unit and nothing else', async () => {
+    unitPrefs.temperature_unit = '°F';
+    const user = userEvent.setup();
+    render(<VitalFormModal circleId={CIRCLE_ID} vital={temp()} onClose={vi.fn()} />);
+    const input = screen.getByLabelText('Temperature');
+    await user.clear(input);
+    await user.type(input, '212');
+    // Out of range: nothing is sent.
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(mutateUpdate).not.toHaveBeenCalled();
+
+    await user.clear(input);
+    await user.type(input, '100,4');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+    expect(mutateUpdate.mock.calls[0][0].data).toEqual({
+      value1: ((100.4 - 32) * 5) / 9,
+      unit: '°C',
+    });
+  });
+
+  it('blood oxygen: shows a whole number and sends a changed value in %', async () => {
+    const user = userEvent.setup();
+    render(
+      <VitalFormModal
+        circleId={CIRCLE_ID}
+        vital={vital({ vital_type: 'oxygen_saturation', value1: 96, unit: '%' })}
+        onClose={vi.fn()}
+      />
+    );
+    const input = screen.getByLabelText('Blood oxygen');
+    expect(input).toHaveValue('96');
+    await user.clear(input);
+    await user.type(input, '93');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
+    expect(mutateUpdate.mock.calls[0][0].data).toEqual({ value1: 93, unit: '%' });
   });
 });

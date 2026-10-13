@@ -81,13 +81,16 @@
     "almostAllDayWarning": "El horario sin interrupciones cubre casi todo el día, así que las notificaciones se retendrán hasta las {{endTime}}."
   },
   "units": {
-    "description": "Elige cómo se muestran los valores de peso y glucosa.",
+    "description": "Elige cómo se muestran los valores de peso, glucosa y temperatura.",
     "weight": "Peso",
     "glucose": "Glucosa en sangre",
     "lbs": "Libras (lbs)",
     "kg": "Kilogramos (kg)",
     "mgdl": "mg/dL",
     "mmoll": "mmol/L",
+    "temperature": "Temperatura",
+    "fahrenheit": "Fahrenheit (°F)",
+    "celsius": "Celsius (°C)",
     "success": "Unidades actualizadas."
   },
   "emailDigest": {

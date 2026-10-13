@@ -76,6 +76,11 @@ export interface User {
 export interface UnitPreferences {
   weight_unit: 'lbs' | 'kg';
   glucose_unit: 'mg/dL' | 'mmol/L';
+  /**
+   * Always resolved by a current backend; ABSENT from one that predates it.
+   * Never read this directly: go through `resolveTemperatureUnit` (lib/vitals).
+   */
+  temperature_unit?: '°F' | '°C';
 }
 
 // ---------------------------------------------------------------------------
@@ -138,6 +143,7 @@ export type UpdateQuietHoursRequest = z.infer<typeof updateQuietHoursSchema>;
 export const updateUnitPreferencesSchema = z.object({
   weight_unit: z.enum(['lbs', 'kg']).optional(),
   glucose_unit: z.enum(['mg/dL', 'mmol/L']).optional(),
+  temperature_unit: z.enum(['°F', '°C']).optional(),
 });
 export type UpdateUnitPreferencesRequest = z.infer<typeof updateUnitPreferencesSchema>;
 

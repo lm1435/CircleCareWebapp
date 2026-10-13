@@ -19,13 +19,15 @@ export interface VitalPeriodAverage {
 
 /**
  * Rounds a value to the same precision `formatVitalValue` (lib/vitals.ts) uses
- * for `type`: whole numbers for blood pressure and heart rate, one decimal
- * place for weight and glucose. Mirrors `formatVitalValue`'s own
+ * for `type`: whole numbers for blood pressure, heart rate and blood oxygen,
+ * one decimal place for weight, glucose and temperature. Mirrors `formatVitalValue`'s own
  * `Number(value.toFixed(1))` so a delta that lands on a whole number (e.g.
  * -2.0) prints as "2", not "2.0".
  */
 function roundForType(type: VitalType, value: number): number {
-  if (type === 'heart_rate' || type === 'blood_pressure') return Math.round(value);
+  if (type === 'heart_rate' || type === 'blood_pressure' || type === 'oxygen_saturation') {
+    return Math.round(value);
+  }
   return Number(value.toFixed(1));
 }
 
@@ -88,7 +90,8 @@ export function formatAverageDelta(
   }
 
   return {
-    delta: `${deltaText} ${unit}`,
+    // Blood oxygen takes its sign with no space ("+2%"), as `formatVitalValue` does.
+    delta: type === 'oxygen_saturation' ? `${deltaText}${unit}` : `${deltaText} ${unit}`,
     direction: directionFromComponents(components),
   };
 }

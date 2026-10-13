@@ -1,6 +1,6 @@
 {
   "title": "Vitals",
-  "subtitle": "Track health readings for your circle — blood pressure, heart rate, glucose, and weight.",
+  "subtitle": "Track health readings for your circle — blood pressure, heart rate, glucose, weight, temperature, and blood oxygen.",
   "loading": "Loading vitals",
   "errorTitle": "Couldn't load vitals",
   "errorHint": "Check your connection and try again.",
@@ -8,7 +8,9 @@
     "blood_pressure": "Blood pressure",
     "heart_rate": "Heart rate",
     "glucose": "Glucose",
-    "weight": "Weight"
+    "weight": "Weight",
+    "temperature": "Temperature",
+    "oxygen_saturation": "Blood oxygen"
   },
   "filter": {
     "typeLabel": "Type",
@@ -88,14 +90,18 @@
         "blood_pressure": "No blood pressure readings yet",
         "heart_rate": "No heart rate readings yet",
         "glucose": "No glucose readings yet",
-        "weight": "No weight readings yet"
+        "weight": "No weight readings yet",
+        "temperature": "No temperature readings yet",
+        "oxygen_saturation": "No blood oxygen readings yet"
       },
       "description": "Log readings over time so the circle can spot a trend before the next appointment.",
       "cta": {
         "blood_pressure": "Log blood pressure",
         "heart_rate": "Log heart rate",
         "glucose": "Log glucose",
-        "weight": "Log weight"
+        "weight": "Log weight",
+        "temperature": "Log temperature",
+        "oxygen_saturation": "Log blood oxygen"
       }
     },
     "outOfRange": {

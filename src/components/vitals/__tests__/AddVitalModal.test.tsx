@@ -34,7 +34,10 @@ vi.mock('@/hooks/useVitals', () => ({
   useUpdateVital: () => ({ mutateAsync: mutateUpdate, isPending: false }),
 }));
 
-const unitPrefs = { weight_unit: 'lbs', glucose_unit: 'mg/dL' };
+const unitPrefs: { weight_unit: string; glucose_unit: string; temperature_unit?: string } = {
+  weight_unit: 'lbs',
+  glucose_unit: 'mg/dL',
+};
 vi.mock('@/hooks/useUnitPreferences', () => ({
   useUnitPreferences: () => ({ data: unitPrefs }),
 }));
@@ -67,6 +70,7 @@ beforeEach(() => {
   useCircleResult.canEdit = true;
   unitPrefs.weight_unit = 'lbs';
   unitPrefs.glucose_unit = 'mg/dL';
+  delete unitPrefs.temperature_unit;
   mutateCreate.mockResolvedValue({});
 });
 
@@ -347,6 +351,154 @@ describe('AddVitalModal', () => {
       mutateCreate.mockResolvedValueOnce({});
       await submitFormTwice(vitalForm());
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(2));
+    });
+  });
+
+  // ── Temperature + blood oxygen (1.2.3) ────────────────────────────────────
+  //
+  // 09:00 on the caregiver's clock (Denver, MDT -6h) === 15:00 UTC, as above.
+  describe('temperature and blood oxygen', () => {
+    const RECORDED = '2026-06-15T15:00:00.000Z';
+
+    it('offers the six types in the agreed order', () => {
+      render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+      const options = Array.from(
+        (screen.getByLabelText('Reading type') as HTMLSelectElement).options
+      ).map((o) => o.textContent);
+      expect(options).toEqual([
+        'Blood pressure',
+        'Heart rate',
+        'Glucose',
+        'Weight',
+        'Temperature',
+        'Blood oxygen',
+      ]);
+    });
+
+    it('pick Temperature, type "37,5" in °C: sends exactly 37.5 °C', async () => {
+      unitPrefs.temperature_unit = '°C';
+      const user = userEvent.setup();
+      render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      await user.selectOptions(screen.getByLabelText('Reading type'), 'Temperature');
+      expect(screen.getByText('in °C')).toBeInTheDocument();
+      await user.type(screen.getByLabelText('Temperature'), '37,5');
+      await setRecordedTo(user, '2026-06-15', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+      expect(mutateCreate.mock.calls[0][0]).toEqual({
+        vital_type: 'temperature',
+        value1: 37.5,
+        value2: undefined,
+        unit: '°C',
+        recorded_at: RECORDED,
+        notes: undefined,
+      });
+    });
+
+    it('pick Temperature, type "99.1" in °F: converts to °C and sends the canonical unit', async () => {
+      unitPrefs.temperature_unit = '°F';
+      const user = userEvent.setup();
+      render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      await user.selectOptions(screen.getByLabelText('Reading type'), 'Temperature');
+      expect(screen.getByText('in °F')).toBeInTheDocument();
+      await user.type(screen.getByLabelText('Temperature'), '99.1');
+      await setRecordedTo(user, '2026-06-15', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+      const payload = mutateCreate.mock.calls[0][0];
+      expect(payload).toEqual({
+        vital_type: 'temperature',
+        value1: ((99.1 - 32) * 5) / 9,
+        value2: undefined,
+        unit: '°C',
+        recorded_at: RECORDED,
+        notes: undefined,
+      });
+      expect(payload.value1).toBeCloseTo(37.2778, 4);
+    });
+
+    it('with no saved temperature unit (older server) the unit follows the weight unit', async () => {
+      unitPrefs.weight_unit = 'kg';
+      const { unmount } = render(
+        <AddVitalModal circleId={CIRCLE_ID} initialType="temperature" onClose={vi.fn()} />
+      );
+      expect(screen.getByText('in °C')).toBeInTheDocument();
+      unmount();
+
+      unitPrefs.weight_unit = 'lbs';
+      render(<AddVitalModal circleId={CIRCLE_ID} initialType="temperature" onClose={vi.fn()} />);
+      expect(screen.getByText('in °F')).toBeInTheDocument();
+    });
+
+    it('a °F number typed while the unit is °C is refused with the range message', async () => {
+      unitPrefs.temperature_unit = '°C';
+      const user = userEvent.setup();
+      render(<AddVitalModal circleId={CIRCLE_ID} initialType="temperature" onClose={vi.fn()} />);
+
+      await user.type(screen.getByLabelText('Temperature'), '98.6');
+      await setRecordedTo(user, '2026-06-15', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+      expect(mutateCreate).not.toHaveBeenCalled();
+      expect(
+        screen.getByText('That looks outside the expected range. Double-check the number.')
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Temperature')).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('a temperature below the °F range is refused', async () => {
+      const user = userEvent.setup();
+      render(<AddVitalModal circleId={CIRCLE_ID} initialType="temperature" onClose={vi.fn()} />);
+
+      await user.type(screen.getByLabelText('Temperature'), '37');
+      await setRecordedTo(user, '2026-06-15', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+      expect(mutateCreate).not.toHaveBeenCalled();
+      expect(
+        screen.getByText('That looks outside the expected range. Double-check the number.')
+      ).toBeInTheDocument();
+    });
+
+    it('pick Blood oxygen, type 96: sends exactly 96 %', async () => {
+      const user = userEvent.setup();
+      render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+
+      await user.selectOptions(screen.getByLabelText('Reading type'), 'Blood oxygen');
+      expect(screen.getByText('in %')).toBeInTheDocument();
+      await user.type(screen.getByLabelText('Blood oxygen'), '96');
+      await setRecordedTo(user, '2026-06-15', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
+      expect(mutateCreate.mock.calls[0][0]).toEqual({
+        vital_type: 'oxygen_saturation',
+        value1: 96,
+        value2: undefined,
+        unit: '%',
+        recorded_at: RECORDED,
+        notes: undefined,
+      });
+    });
+
+    it.each(['101', '49'])('a blood oxygen of %s is refused with the range message', async (typed) => {
+      const user = userEvent.setup();
+      render(
+        <AddVitalModal circleId={CIRCLE_ID} initialType="oxygen_saturation" onClose={vi.fn()} />
+      );
+
+      await user.type(screen.getByLabelText('Blood oxygen'), typed);
+      await setRecordedTo(user, '2026-06-15', '09:00');
+      await user.click(screen.getByRole('button', { name: 'Save reading' }));
+
+      expect(mutateCreate).not.toHaveBeenCalled();
+      expect(
+        screen.getByText('That looks outside the expected range. Double-check the number.')
+      ).toBeInTheDocument();
     });
   });
 });

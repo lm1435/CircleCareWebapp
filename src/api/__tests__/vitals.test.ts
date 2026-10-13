@@ -2,6 +2,7 @@ import { apiClient } from '@/lib/api';
 import {
   createVital,
   deleteVital,
+  EXTRA_VITAL_TYPES,
   getVitals,
   getLatestVitals,
   updateVital,
@@ -86,7 +87,20 @@ describe('getVitals', () => {
   it('omits the type param when not given', async () => {
     mockGet.mockResolvedValue({ success: true, data: { vitals: [] } } as never);
     await getVitals(CIRCLE_ID, { from: 'a', to: 'b' });
-    expect(mockGet.mock.calls[0][0]).not.toContain('type=');
+    expect(mockGet.mock.calls[0][0]).not.toContain('&type=');
+    expect(mockGet.mock.calls[0][0]).not.toContain('?type=');
+  });
+
+  it.each([
+    ['with no type filter', undefined],
+    ['with an original type filter', 'glucose'],
+    ['with a newer type filter', 'temperature'],
+  ] as const)('always declares the two newer types on the list read (%s)', async (_label, type) => {
+    mockGet.mockResolvedValue({ success: true, data: { vitals: [] } } as never);
+    await getVitals(CIRCLE_ID, { type, from: 'a', to: 'b' });
+    const url = new URL(mockGet.mock.calls[0][0] as string, 'http://x');
+    expect(url.searchParams.get('extraTypes')).toBe('temperature,oxygen_saturation');
+    expect(url.searchParams.get('type')).toBe(type ?? null);
   });
 });
 
@@ -98,7 +112,19 @@ describe('getLatestVitals', () => {
     const result = await getLatestVitals(CIRCLE_ID);
 
     expect(result).toEqual(latest);
-    expect(mockGet).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/vitals/latest`);
+    expect(mockGet).toHaveBeenCalledWith(
+      `/circles/${CIRCLE_ID}/vitals/latest?extraTypes=temperature%2Coxygen_saturation`
+    );
+  });
+
+  // The server hides temperature / blood oxygen from a client that does not
+  // declare them, so BOTH reads must always send the flag.
+  it('always declares the two newer types on the latest read', async () => {
+    mockGet.mockResolvedValue({ success: true, data: { latest: {} } } as never);
+    await getLatestVitals(CIRCLE_ID);
+    const url = new URL(mockGet.mock.calls[0][0] as string, 'http://x');
+    expect(url.searchParams.get('extraTypes')).toBe('temperature,oxygen_saturation');
+    expect(EXTRA_VITAL_TYPES).toBe('temperature,oxygen_saturation');
   });
 });
 
@@ -161,11 +187,11 @@ describe('unit conversion', () => {
   });
 
   it('getDisplayUnit reflects the user preference for weight/glucose; fixed for BP/HR', () => {
-    expect(getDisplayUnit('blood_pressure', 'lbs', 'mg/dL')).toBe('mmHg');
-    expect(getDisplayUnit('heart_rate', 'lbs', 'mg/dL')).toBe('bpm');
-    expect(getDisplayUnit('weight', 'lbs', 'mg/dL')).toBe('lbs');
-    expect(getDisplayUnit('weight', 'kg', 'mg/dL')).toBe('kg');
-    expect(getDisplayUnit('glucose', 'kg', 'mmol/L')).toBe('mmol/L');
+    expect(getDisplayUnit('blood_pressure', 'lbs', 'mg/dL', '°F')).toBe('mmHg');
+    expect(getDisplayUnit('heart_rate', 'lbs', 'mg/dL', '°F')).toBe('bpm');
+    expect(getDisplayUnit('weight', 'lbs', 'mg/dL', '°F')).toBe('lbs');
+    expect(getDisplayUnit('weight', 'kg', 'mg/dL', '°F')).toBe('kg');
+    expect(getDisplayUnit('glucose', 'kg', 'mmol/L', '°F')).toBe('mmol/L');
   });
 });
 

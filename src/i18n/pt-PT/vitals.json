@@ -24,12 +24,17 @@
   },
   "emptyState": {
     "neverLogged": {
+      "title": {
+        "oxygen_saturation": "Nenhuma medição de oxigénio no sangue ainda"
+      },
       "description": "Registe medições ao longo do tempo para que o círculo perceba uma tendência antes da próxima consulta.",
       "cta": {
         "blood_pressure": "Registar pressão arterial",
         "heart_rate": "Registar frequência cardíaca",
         "glucose": "Registar glicose",
-        "weight": "Registar peso"
+        "weight": "Registar peso",
+        "temperature": "Registar temperatura",
+        "oxygen_saturation": "Registar oxigénio no sangue"
       }
     }
   },
@@ -44,5 +49,9 @@
     "permissionDenied": "Não tem permissão para fazer esta alteração.",
     "saveFailed": "Não foi possível guardar as alterações. Tente novamente."
   },
-  "loading": "A carregar sinais vitais"
+  "loading": "A carregar sinais vitais",
+  "subtitle": "Acompanhe as medições de saúde do seu círculo: pressão arterial, frequência cardíaca, glicose, peso, temperatura e oxigénio no sangue.",
+  "types": {
+    "oxygen_saturation": "Oxigénio no sangue"
+  }
 }

@@ -11,6 +11,7 @@ import {
   type UpdateProfileRequest,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
+import { resolveTemperatureUnit } from '@/lib/vitals';
 import { classifyFailureCode } from '@/lib/apiErrors';
 import { getAnalyticsConsent } from '@/lib/analyticsConsent';
 import { recordAnalyticsConsentDecision } from '@/lib/analyticsConsentDecision';
@@ -470,6 +471,13 @@ export default function ProfilePage(): ReactElement {
     );
   };
 
+  const handleTemperatureUnit = (value: string): void => {
+    updateUnits.mutate(
+      { temperature_unit: value as '°F' | '°C' },
+      { onSuccess: () => showToast(t('units.success'), 'success') }
+    );
+  };
+
   const handleGlucoseUnit = (value: string): void => {
     updateUnits.mutate(
       { glucose_unit: value as 'mg/dL' | 'mmol/L' },
@@ -522,6 +530,7 @@ export default function ProfilePage(): ReactElement {
   const quietWarning = quietEnabled && quietHoursCoverAlmostAllDay(quietStart, quietEnd);
   const weightUnit = unitsQuery.data?.weight_unit ?? 'lbs';
   const glucoseUnit = unitsQuery.data?.glucose_unit ?? 'mg/dL';
+  const temperatureUnit = resolveTemperatureUnit(unitsQuery.data);
 
   const timezoneOptions: SelectOption[] = TIMEZONE_VALUES.map((value) => ({
     value,
@@ -801,6 +810,16 @@ export default function ProfilePage(): ReactElement {
           options={[
             { value: 'mg/dL', label: t('units.mgdl') },
             { value: 'mmol/L', label: t('units.mmoll') },
+          ]}
+        />
+        <RadioGroup
+          label={t('units.temperature')}
+          value={temperatureUnit}
+          onChange={handleTemperatureUnit}
+          busy={updateUnits.isPending}
+          options={[
+            { value: '°F', label: t('units.fahrenheit') },
+            { value: '°C', label: t('units.celsius') },
           ]}
         />
       </SettingsCard>

@@ -1,6 +1,6 @@
 {
   "title": "Vitalwerte",
-  "subtitle": "Behalten Sie die Messwerte Ihres Kreises im Blick – Blutdruck, Herzfrequenz, Blutzucker und Gewicht.",
+  "subtitle": "Behalten Sie die Messwerte Ihres Kreises im Blick – Blutdruck, Herzfrequenz, Blutzucker, Gewicht, Temperatur und Blutsauerstoff.",
   "loading": "Vitalwerte werden geladen",
   "errorTitle": "Vitalwerte konnten nicht geladen werden",
   "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
@@ -8,7 +8,9 @@
     "blood_pressure": "Blutdruck",
     "heart_rate": "Herzfrequenz",
     "glucose": "Blutzucker",
-    "weight": "Gewicht"
+    "weight": "Gewicht",
+    "temperature": "Temperatur",
+    "oxygen_saturation": "Blutsauerstoff"
   },
   "filter": {
     "typeLabel": "Typ",
@@ -88,14 +90,18 @@
         "blood_pressure": "Noch keine Blutdruckwerte",
         "heart_rate": "Noch keine Herzfrequenzwerte",
         "glucose": "Noch keine Blutzuckerwerte",
-        "weight": "Noch keine Gewichtswerte"
+        "weight": "Noch keine Gewichtswerte",
+        "temperature": "Noch keine Temperaturwerte",
+        "oxygen_saturation": "Noch keine Blutsauerstoffwerte"
       },
       "description": "Tragen Sie Messwerte im Zeitverlauf ein, damit der Kreis vor dem nächsten Termin eine Entwicklung erkennen kann.",
       "cta": {
         "blood_pressure": "Blutdruck eintragen",
         "heart_rate": "Herzfrequenz eintragen",
         "glucose": "Blutzucker eintragen",
-        "weight": "Gewicht eintragen"
+        "weight": "Gewicht eintragen",
+        "temperature": "Temperatur eintragen",
+        "oxygen_saturation": "Blutsauerstoff eintragen"
       }
     },
     "outOfRange": {

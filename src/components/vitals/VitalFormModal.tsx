@@ -27,8 +27,10 @@ import {
   buildUpdateVitalRequest,
   fromCanonicalValue,
   getDisplayUnit,
+  resolveTemperatureUnit,
   vitalFormSchema,
   type GlucoseUnit,
+  type TemperatureUnit,
   type VitalFormValues,
   type WeightUnit,
 } from '@/lib/vitals';
@@ -71,7 +73,14 @@ import {
 // (formatInstantInTimezone). Where the reading is shown, the recipient's clock
 // is the useful frame; where it is typed, the viewer's is.
 
-const VITAL_TYPES: VitalType[] = ['blood_pressure', 'heart_rate', 'glucose', 'weight'];
+const VITAL_TYPES: VitalType[] = [
+  'blood_pressure',
+  'heart_rate',
+  'glucose',
+  'weight',
+  'temperature',
+  'oxygen_saturation',
+];
 
 export interface VitalFormModalProps {
   circleId: string;
@@ -113,6 +122,7 @@ export function VitalFormModal({
   const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? DEFAULT_UNIT_PREFERENCES.weight_unit;
   const glucoseUnit: GlucoseUnit =
     unitPrefs?.glucose_unit ?? DEFAULT_UNIT_PREFERENCES.glucose_unit;
+  const temperatureUnit: TemperatureUnit = resolveTemperatureUnit(unitPrefs);
 
   const isEditing = !!vital;
   const createVital = useCreateVital(circleId);
@@ -127,12 +137,16 @@ export function VitalFormModal({
   // ── Initial display values (edit) — canonical → display unit. ──
   const initialValue1 = useMemo(() => {
     if (!vital) return '';
-    const display = fromCanonicalValue(vital.vital_type, vital.value1, weightUnit, glucoseUnit);
-    if (vital.vital_type === 'blood_pressure' || vital.vital_type === 'heart_rate') {
+    const display = fromCanonicalValue(vital.vital_type, vital.value1, weightUnit, glucoseUnit, temperatureUnit);
+    if (
+      vital.vital_type === 'blood_pressure' ||
+      vital.vital_type === 'heart_rate' ||
+      vital.vital_type === 'oxygen_saturation'
+    ) {
       return String(Math.round(display));
     }
     return String(Number(display.toFixed(1)));
-  }, [vital, weightUnit, glucoseUnit]);
+  }, [vital, weightUnit, glucoseUnit, temperatureUnit]);
 
   const initialValue2 = useMemo(() => {
     if (!vital || vital.value2 == null) return '';
@@ -209,7 +223,7 @@ export function VitalFormModal({
   }, [initialWall]);
 
   const isBloodPressure = vitalType === 'blood_pressure';
-  const displayUnit = getDisplayUnit(vitalType, weightUnit, glucoseUnit);
+  const displayUnit = getDisplayUnit(vitalType, weightUnit, glucoseUnit, temperatureUnit);
   // ── Dual-timezone disclosure (same shape as AddEventModal) ────────────────
   //
   // The fields hold the VIEWER's clock, so the old
@@ -435,9 +449,15 @@ export function VitalFormModal({
         ? glucoseUnit === 'mg/dL'
           ? '100'
           : '5.6'
-        : weightUnit === 'lbs'
-          ? '150'
-          : '68';
+        : vitalType === 'temperature'
+          ? temperatureUnit === '°F'
+            ? '98.6'
+            : '37'
+          : vitalType === 'oxygen_saturation'
+            ? '98'
+            : weightUnit === 'lbs'
+              ? '150'
+              : '68';
 
   return (
     <Modal

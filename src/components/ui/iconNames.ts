@@ -17,6 +17,8 @@ import iconSquareOutline from '../../../node_modules/ionicons/dist/svg/square-ou
 import iconDocumentTextOutline from '../../../node_modules/ionicons/dist/svg/document-text-outline.svg?raw';
 import iconDocumentText from '../../../node_modules/ionicons/dist/svg/document-text.svg?raw';
 import iconPulseOutline from '../../../node_modules/ionicons/dist/svg/pulse-outline.svg?raw';
+import iconThermometerOutline from '../../../node_modules/ionicons/dist/svg/thermometer-outline.svg?raw';
+import iconFitnessOutline from '../../../node_modules/ionicons/dist/svg/fitness-outline.svg?raw';
 import iconHeartOutline from '../../../node_modules/ionicons/dist/svg/heart-outline.svg?raw';
 import iconPeopleOutline from '../../../node_modules/ionicons/dist/svg/people-outline.svg?raw';
 import iconSettingsOutline from '../../../node_modules/ionicons/dist/svg/settings-outline.svg?raw';
@@ -81,6 +83,8 @@ export const ICON_NAMES = [
   'document-text-outline',
   'document-text',
   'pulse-outline',
+  'thermometer-outline',
+  'fitness-outline',
   'heart-outline',
   'people-outline',
   'settings-outline',
@@ -145,6 +149,8 @@ export const ICON_FILES: Record<IconName, string> = {
   'document-text-outline': iconDocumentTextOutline,
   'document-text': iconDocumentText,
   'pulse-outline': iconPulseOutline,
+  'thermometer-outline': iconThermometerOutline,
+  'fitness-outline': iconFitnessOutline,
   'heart-outline': iconHeartOutline,
   'people-outline': iconPeopleOutline,
   'settings-outline': iconSettingsOutline,

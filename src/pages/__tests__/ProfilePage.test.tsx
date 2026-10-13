@@ -943,3 +943,66 @@ describe('ProfilePage — double-delete guard', () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login', { replace: true }));
   });
 });
+
+// ── Health units: temperature (1.2.3) ─────────────────────────────────────
+describe('ProfilePage — temperature unit', () => {
+  afterEach(() => {
+    UNITS.weight_unit = 'lbs';
+    delete UNITS.temperature_unit;
+  });
+
+  async function temperatureGroup() {
+    return screen.findByRole('radiogroup', { name: 'Temperature' });
+  }
+
+  it('offers °F and °C after weight and glucose, and says so in the description', async () => {
+    renderPage();
+    const group = await temperatureGroup();
+    expect(within(group).getAllByRole('radio')).toHaveLength(2);
+    expect(within(group).getByRole('radio', { name: 'Fahrenheit (°F)' })).toBeInTheDocument();
+    expect(within(group).getByRole('radio', { name: 'Celsius (°C)' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Choose how weight, glucose, and temperature values are shown.')
+    ).toBeInTheDocument();
+    const groups = screen.getAllByRole('radiogroup');
+    const weight = groups.indexOf(screen.getByRole('radiogroup', { name: 'Weight' }));
+    expect(groups[weight + 1]).toBe(screen.getByRole('radiogroup', { name: 'Blood glucose' }));
+    expect(groups[weight + 2]).toBe(group);
+  });
+
+  it('shows the saved unit as selected', async () => {
+    UNITS.temperature_unit = '°C';
+    renderPage();
+    const group = await temperatureGroup();
+    await waitFor(() =>
+      expect(within(group).getByRole('radio', { name: 'Celsius (°C)' })).toBeChecked()
+    );
+    expect(within(group).getByRole('radio', { name: 'Fahrenheit (°F)' })).not.toBeChecked();
+  });
+
+  it('with no saved unit (older server) it follows the weight unit', async () => {
+    UNITS.weight_unit = 'kg';
+    renderPage();
+    const group = await temperatureGroup();
+    await waitFor(() =>
+      expect(within(group).getByRole('radio', { name: 'Celsius (°C)' })).toBeChecked()
+    );
+  });
+
+  it('saves temperature_unit alone, with the real degree sign, and confirms', async () => {
+    updateUnits.mockImplementation((_vars, opts?: { onSuccess?: () => void }) => {
+      opts?.onSuccess?.();
+    });
+    const user = userEvent.setup();
+    renderPage();
+    const group = await temperatureGroup();
+    await waitFor(() =>
+      expect(within(group).getByRole('radio', { name: 'Fahrenheit (°F)' })).toBeChecked()
+    );
+    await user.click(within(group).getByRole('radio', { name: 'Celsius (°C)' }));
+
+    expect(updateUnits).toHaveBeenCalledTimes(1);
+    expect(updateUnits.mock.calls[0][0]).toEqual({ temperature_unit: '\u00B0C' });
+    expect(showToast).toHaveBeenCalledWith('Units updated.', 'success');
+  });
+});

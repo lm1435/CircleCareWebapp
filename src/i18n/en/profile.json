@@ -81,13 +81,16 @@
     "almostAllDayWarning": "Quiet hours cover almost the whole day, so notifications will be held until {{endTime}}."
   },
   "units": {
-    "description": "Choose how weight and glucose values are shown.",
+    "description": "Choose how weight, glucose, and temperature values are shown.",
     "weight": "Weight",
     "glucose": "Blood glucose",
     "lbs": "Pounds (lbs)",
     "kg": "Kilograms (kg)",
     "mgdl": "mg/dL",
     "mmoll": "mmol/L",
+    "temperature": "Temperature",
+    "fahrenheit": "Fahrenheit (°F)",
+    "celsius": "Celsius (°C)",
     "success": "Units updated."
   },
   "emailDigest": {

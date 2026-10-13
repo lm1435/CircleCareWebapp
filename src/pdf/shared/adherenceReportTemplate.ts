@@ -15,6 +15,11 @@ import type {
 import { PDF_PALETTE as CC } from './palette';
 import { getSharedPdfStyles, displayValue, computeAge, escapeHtml } from './pdfBranding';
 
+/** " mmHg", " kg", " °C" after a value; a percentage takes its sign with no space ("96%"). */
+function vitalUnitSuffix(unit: string): string {
+  return unit === '%' ? '%' : ` ${escapeHtml(unit)}`;
+}
+
 /**
  * Format a YYYY-MM-DD date string for PDF display.
  * Uses T12:00:00Z + timeZone: 'UTC' to avoid timezone date-shift.
@@ -608,10 +613,10 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
       <tbody>${vitalsData.map(v => `
         <tr>
           <td>${escapeHtml(v.type)}</td>
-          <td style="text-align:center">${v.latest.value2 != null ? `${v.latest.value1}/${v.latest.value2}` : `${v.latest.value1}`} ${escapeHtml(v.latest.unit)}</td>
-          <td style="text-align:center">${v.average} ${escapeHtml(v.latest.unit)}</td>
-          <td style="text-align:center">${v.min} ${escapeHtml(v.latest.unit)}</td>
-          <td style="text-align:center">${v.max} ${escapeHtml(v.latest.unit)}</td>
+          <td style="text-align:center">${v.latest.value2 != null ? `${v.latest.value1}/${v.latest.value2}` : `${v.latest.value1}`}${vitalUnitSuffix(v.latest.unit)}</td>
+          <td style="text-align:center">${v.average}${vitalUnitSuffix(v.latest.unit)}</td>
+          <td style="text-align:center">${v.min}${vitalUnitSuffix(v.latest.unit)}</td>
+          <td style="text-align:center">${v.max}${vitalUnitSuffix(v.latest.unit)}</td>
         </tr>`).join('')}
       </tbody>
     </table>

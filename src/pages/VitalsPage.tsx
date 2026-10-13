@@ -40,7 +40,9 @@ import {
   formatVitalValue,
   fromCanonicalValue,
   getDisplayUnit,
+  resolveTemperatureUnit,
   type GlucoseUnit,
+  type TemperatureUnit,
   type WeightUnit,
 } from '@/lib/vitals';
 import { formatAverageDelta } from '@/lib/vitalsTrend';
@@ -60,19 +62,29 @@ import { formatTimeOfDay } from '@/utils/timezone';
 // TIMEZONE: recorded_at is a UTC ISO timestamp; we render its date/time in the
 // care recipient's timezone (utcISOToRecipientWallTime) — never device-local.
 
-const VITAL_TYPES: VitalType[] = ['blood_pressure', 'heart_rate', 'glucose', 'weight'];
+const VITAL_TYPES: VitalType[] = [
+  'blood_pressure',
+  'heart_rate',
+  'glucose',
+  'weight',
+  'temperature',
+  'oxygen_saturation',
+];
 const TYPE_FILTERS: Array<VitalType | 'all'> = ['all', ...VITAL_TYPES];
 
 /**
  * Per-type glyph + tint, copied from mobile `TYPE_CONFIG` (VitalsDetailScreen
  * ~74-97): blood pressure clay, heart rate terracotta, glucose dusk, weight
- * moss.
+ * moss, temperature clay, blood oxygen dusk (the two newer types reuse
+ * existing tones).
  */
 const TYPE_CONFIG: Record<VitalType, { icon: IconName; tone: IconTileTone }> = {
   blood_pressure: { icon: 'heart-outline', tone: 'clay' },
   heart_rate: { icon: 'pulse-outline', tone: 'terracotta' },
   glucose: { icon: 'water-outline', tone: 'dusk' },
   weight: { icon: 'scale-outline', tone: 'moss' },
+  temperature: { icon: 'thermometer-outline', tone: 'clay' },
+  oxygen_saturation: { icon: 'fitness-outline', tone: 'dusk' },
 };
 
 /**
@@ -203,11 +215,12 @@ function computeStats(
   vitals: HealthVital[],
   type: VitalType,
   weightUnit: WeightUnit,
-  glucoseUnit: GlucoseUnit
+  glucoseUnit: GlucoseUnit,
+  temperatureUnit: TemperatureUnit
 ): VitalStats | null {
   if (vitals.length === 0) return null;
 
-  const values = vitals.map((v) => fromCanonicalValue(type, v.value1, weightUnit, glucoseUnit));
+  const values = vitals.map((v) => fromCanonicalValue(type, v.value1, weightUnit, glucoseUnit, temperatureUnit));
 
   let minIndex = 0;
   let maxIndex = 0;
@@ -222,7 +235,7 @@ function computeStats(
   if (type === 'blood_pressure') {
     const values2 = vitals
       .filter((v) => v.value2 != null)
-      .map((v) => fromCanonicalValue(type, v.value2 as number, weightUnit, glucoseUnit));
+      .map((v) => fromCanonicalValue(type, v.value2 as number, weightUnit, glucoseUnit, temperatureUnit));
     if (values2.length > 0) {
       avg2 = values2.reduce((a, b) => a + b, 0) / values2.length;
     }
@@ -230,11 +243,11 @@ function computeStats(
     const maxVital = vitals[maxIndex]!;
     min2 =
       minVital.value2 != null
-        ? fromCanonicalValue(type, minVital.value2, weightUnit, glucoseUnit)
+        ? fromCanonicalValue(type, minVital.value2, weightUnit, glucoseUnit, temperatureUnit)
         : null;
     max2 =
       maxVital.value2 != null
-        ? fromCanonicalValue(type, maxVital.value2, weightUnit, glucoseUnit)
+        ? fromCanonicalValue(type, maxVital.value2, weightUnit, glucoseUnit, temperatureUnit)
         : null;
   }
 
@@ -265,6 +278,7 @@ interface VitalRowProps {
   timezone: string;
   weightUnit: WeightUnit;
   glucoseUnit: GlucoseUnit;
+  temperatureUnit: TemperatureUnit;
   canEdit: boolean;
   onEdit: (vital: HealthVital) => void;
   onDelete: (vital: HealthVital) => void;
@@ -275,6 +289,7 @@ function VitalRow({
   timezone,
   weightUnit,
   glucoseUnit,
+  temperatureUnit,
   canEdit,
   onEdit,
   onDelete,
@@ -282,14 +297,14 @@ function VitalRow({
   const { t } = useTranslation('vitals');
   const hourCycle = useHourCycle();
 
-  const displayUnit = getDisplayUnit(vital.vital_type, weightUnit, glucoseUnit);
+  const displayUnit = getDisplayUnit(vital.vital_type, weightUnit, glucoseUnit, temperatureUnit);
   const config = TYPE_CONFIG[vital.vital_type];
 
   const displayValue = useMemo(() => {
-    const v1 = fromCanonicalValue(vital.vital_type, vital.value1, weightUnit, glucoseUnit);
+    const v1 = fromCanonicalValue(vital.vital_type, vital.value1, weightUnit, glucoseUnit, temperatureUnit);
     // value2 (BP diastolic) is canonical mmHg — pass through.
     return formatVitalValue(vital.vital_type, v1, vital.value2, displayUnit);
-  }, [vital, weightUnit, glucoseUnit, displayUnit]);
+  }, [vital, weightUnit, glucoseUnit, temperatureUnit, displayUnit]);
 
   const recordedLabel = useMemo(
     // DISPLAY locale is the APP language, not the browser's.
@@ -350,6 +365,7 @@ interface LatestVitalHeroProps {
   timezone: string;
   weightUnit: WeightUnit;
   glucoseUnit: GlucoseUnit;
+  temperatureUnit: TemperatureUnit;
 }
 
 /**
@@ -369,13 +385,14 @@ function LatestVitalHero({
   timezone,
   weightUnit,
   glucoseUnit,
+  temperatureUnit,
 }: LatestVitalHeroProps): ReactElement {
   const { t } = useTranslation('vitals');
   const hourCycle = useHourCycle();
 
   const latest = items[0]!;
-  const unit = getDisplayUnit(type, weightUnit, glucoseUnit);
-  const latestValue1 = fromCanonicalValue(type, latest.value1, weightUnit, glucoseUnit);
+  const unit = getDisplayUnit(type, weightUnit, glucoseUnit, temperatureUnit);
+  const latestValue1 = fromCanonicalValue(type, latest.value1, weightUnit, glucoseUnit, temperatureUnit);
 
   const recordedLabel = useMemo(
     () => formatRecordedStamp(latest.recorded_at, timezone, hourCycle),
@@ -396,7 +413,8 @@ function LatestVitalHero({
         <span className="text-xl font-semibold leading-[38px] text-ink">
           {formatVitalValue(type, latestValue1, latest.value2, unit, { unit: false })}
         </span>
-        <span className="ml-1 text-md text-ink-2">{unit}</span>
+        {/* Blood oxygen reads "96%": its sign sits against the number. */}
+        <span className={`${unit === '%' ? '' : 'ml-1 '}text-md text-ink-2`}>{unit}</span>
       </p>
       <Text variant="caption" className="mt-1">
         {recordedLabel} · {getLoggedByLabel(latest, t('detail.system'))}
@@ -452,6 +470,7 @@ export default function VitalsPage(): ReactElement {
   const { data: unitPrefs } = useUnitPreferences();
   const weightUnit: WeightUnit = unitPrefs?.weight_unit ?? DEFAULT_UNIT_PREFERENCES.weight_unit;
   const glucoseUnit: GlucoseUnit = unitPrefs?.glucose_unit ?? DEFAULT_UNIT_PREFERENCES.glucose_unit;
+  const temperatureUnit: TemperatureUnit = resolveTemperatureUnit(unitPrefs);
 
   const [typeFilter, setTypeFilter] = useState<VitalType | 'all'>('all');
   const [range, setRange] = useState<RangeChoice>('30d');
@@ -548,7 +567,8 @@ export default function VitalsPage(): ReactElement {
 
     if (selectedType) {
       const latestForType = latest[selectedType];
-      if (latestForType === null) return { kind: 'neverLogged', type: selectedType };
+      // `== null`: a backend that predates a type omits its key (undefined).
+      if (latestForType == null) return { kind: 'neverLogged', type: selectedType };
       if (Date.parse(latestForType.recorded_at) < Date.parse(from)) {
         return {
           kind: 'range',
@@ -565,7 +585,7 @@ export default function VitalsPage(): ReactElement {
 
     // "All types" — most recent reading ACROSS every type, if any exists.
     const everyLatest = VITAL_TYPES.map((ty) => latest[ty]).filter(
-      (v): v is HealthVital => v !== null
+      (v): v is HealthVital => v != null
     );
     if (everyLatest.length === 0) return { kind: 'generic' };
     const mostRecent = everyLatest.reduce((a, b) =>
@@ -580,15 +600,15 @@ export default function VitalsPage(): ReactElement {
 
   const heroStats = useMemo(
     () =>
-      selectedType ? computeStats(heroItems, selectedType, weightUnit, glucoseUnit) : null,
-    [heroItems, selectedType, weightUnit, glucoseUnit]
+      selectedType ? computeStats(heroItems, selectedType, weightUnit, glucoseUnit, temperatureUnit) : null,
+    [heroItems, selectedType, weightUnit, glucoseUnit, temperatureUnit]
   );
   const previousStats = useMemo(
     () =>
       selectedType
-        ? computeStats(previousQuery.data ?? [], selectedType, weightUnit, glucoseUnit)
+        ? computeStats(previousQuery.data ?? [], selectedType, weightUnit, glucoseUnit, temperatureUnit)
         : null,
-    [previousQuery.data, selectedType, weightUnit, glucoseUnit]
+    [previousQuery.data, selectedType, weightUnit, glucoseUnit, temperatureUnit]
   );
 
   // Literal `t('...')` calls only, one per range — mirrors mobile's
@@ -624,6 +644,8 @@ export default function VitalsPage(): ReactElement {
       heart_rate: t('emptyState.neverLogged.title.heart_rate'),
       glucose: t('emptyState.neverLogged.title.glucose'),
       weight: t('emptyState.neverLogged.title.weight'),
+      temperature: t('emptyState.neverLogged.title.temperature'),
+      oxygen_saturation: t('emptyState.neverLogged.title.oxygen_saturation'),
     }),
     [t]
   );
@@ -633,6 +655,8 @@ export default function VitalsPage(): ReactElement {
       heart_rate: t('emptyState.neverLogged.cta.heart_rate'),
       glucose: t('emptyState.neverLogged.cta.glucose'),
       weight: t('emptyState.neverLogged.cta.weight'),
+      temperature: t('emptyState.neverLogged.cta.temperature'),
+      oxygen_saturation: t('emptyState.neverLogged.cta.oxygen_saturation'),
     }),
     [t]
   );
@@ -662,7 +686,7 @@ export default function VitalsPage(): ReactElement {
    */
   const trend = useMemo<VitalTrend | null>(() => {
     if (!selectedType || !heroStats || !previousStats) return null;
-    const unit = getDisplayUnit(selectedType, weightUnit, glucoseUnit);
+    const unit = getDisplayUnit(selectedType, weightUnit, glucoseUnit, temperatureUnit);
     const { delta, direction } = formatAverageDelta(selectedType, heroStats, previousStats, unit);
     const text =
       direction === 'same' ? trendSameTexts[range] : trendVsTexts[range](delta);
@@ -677,7 +701,7 @@ export default function VitalsPage(): ReactElement {
             ? 'remove'
             : null;
     return { text, icon };
-  }, [selectedType, heroStats, previousStats, weightUnit, glucoseUnit, range, trendVsTexts, trendSameTexts]);
+  }, [selectedType, heroStats, previousStats, weightUnit, glucoseUnit, temperatureUnit, range, trendVsTexts, trendSameTexts]);
 
   const typeOptions = useMemo(
     () =>
@@ -706,7 +730,7 @@ export default function VitalsPage(): ReactElement {
       (a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
     );
     const conv = (value: number): number =>
-      fromCanonicalValue(selectedType, value, weightUnit, glucoseUnit);
+      fromCanonicalValue(selectedType, value, weightUnit, glucoseUnit, temperatureUnit);
 
     const primary: VitalsChartSeries = {
       points: sorted.map((v) => ({ x: new Date(v.recorded_at).getTime(), y: conv(v.value1) })),
@@ -730,9 +754,10 @@ export default function VitalsPage(): ReactElement {
         ? [primary, { points: diastolic, color: DIASTOLIC_COLOR }]
         : [primary];
 
-    const unit = getDisplayUnit(selectedType, weightUnit, glucoseUnit);
+    const unit = getDisplayUnit(selectedType, weightUnit, glucoseUnit, temperatureUnit);
+    // WITH the unit: formatVitalValue owns the spacing ("120/80 mmHg", "96%").
     const fmt = (v1: number, v2: number | null): string =>
-      formatVitalValue(selectedType, v1, v2, unit, { unit: false });
+      formatVitalValue(selectedType, v1, v2, unit);
 
     // X DOMAIN = the selected range window (the query's own `from`) through
     // "now", captured HERE rather than reused from a frozen query bound —
@@ -754,16 +779,16 @@ export default function VitalsPage(): ReactElement {
       yFormatter: (value: number): string =>
         formatVitalValue(selectedType, value, null, unit, { unit: false }),
       label: t('detail.chartSummary', {
-        min: `${fmt(heroStats.min, heroStats.min2)} ${unit}`,
-        max: `${fmt(heroStats.max, heroStats.max2)} ${unit}`,
-        latest: `${fmt(
-          fromCanonicalValue(selectedType, heroItems[0]!.value1, weightUnit, glucoseUnit),
+        min: fmt(heroStats.min, heroStats.min2),
+        max: fmt(heroStats.max, heroStats.max2),
+        latest: fmt(
+          fromCanonicalValue(selectedType, heroItems[0]!.value1, weightUnit, glucoseUnit, temperatureUnit),
           heroItems[0]!.value2
-        )} ${unit}`,
+        ),
       }),
       isBloodPressure: selectedType === 'blood_pressure' && diastolic.length > 0,
     };
-  }, [selectedType, heroItems, heroStats, weightUnit, glucoseUnit, timezone, t, from]);
+  }, [selectedType, heroItems, heroStats, weightUnit, glucoseUnit, temperatureUnit, timezone, t, from]);
 
   // One accordion per vital-type group. The group key set is the types present;
   // useAccordionGroup recomputes allOpen/anyOpen when the set changes.
@@ -794,6 +819,7 @@ export default function VitalsPage(): ReactElement {
         timezone={tz}
         weightUnit={weightUnit}
         glucoseUnit={glucoseUnit}
+        temperatureUnit={temperatureUnit}
         canEdit={canEdit}
         onEdit={setEditingVital}
         onDelete={setDeletingVital}
@@ -865,8 +891,8 @@ export default function VitalsPage(): ReactElement {
     // range would actually contain it (never for 90d, the widest).
     const { latest, jumpTo } = emptyState;
     const jumpLabel = jumpTo ? emptyRangeShowLabels[jumpTo] : undefined;
-    const latestUnit = getDisplayUnit(latest.vital_type, weightUnit, glucoseUnit);
-    const latestValue = fromCanonicalValue(latest.vital_type, latest.value1, weightUnit, glucoseUnit);
+    const latestUnit = getDisplayUnit(latest.vital_type, weightUnit, glucoseUnit, temperatureUnit);
+    const latestValue = fromCanonicalValue(latest.vital_type, latest.value1, weightUnit, glucoseUnit, temperatureUnit);
     body = (
       <Card padding="none">
         <EmptyState
@@ -1013,6 +1039,7 @@ export default function VitalsPage(): ReactElement {
             timezone={timezone}
             weightUnit={weightUnit}
             glucoseUnit={glucoseUnit}
+            temperatureUnit={temperatureUnit}
           />
         </div>
       )}

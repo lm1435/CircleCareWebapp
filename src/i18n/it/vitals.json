@@ -1,6 +1,6 @@
 {
   "title": "Parametri vitali",
-  "subtitle": "Tieni traccia delle misurazioni di salute della tua cerchia: pressione, battito, glicemia e peso.",
+  "subtitle": "Tieni traccia delle misurazioni di salute della tua cerchia: pressione, battito, glicemia, peso, temperatura e ossigeno nel sangue.",
   "loading": "Caricamento parametri vitali",
   "errorTitle": "Non è stato possibile caricare i parametri vitali",
   "errorHint": "Controlla la connessione e riprova.",
@@ -8,7 +8,9 @@
     "blood_pressure": "Pressione",
     "heart_rate": "Battito",
     "glucose": "Glicemia",
-    "weight": "Peso"
+    "weight": "Peso",
+    "temperature": "Temperatura",
+    "oxygen_saturation": "Ossigeno nel sangue"
   },
   "filter": {
     "typeLabel": "Tipo",
@@ -88,14 +90,18 @@
         "blood_pressure": "Ancora nessuna misurazione della pressione",
         "heart_rate": "Ancora nessuna misurazione del battito",
         "glucose": "Ancora nessuna misurazione della glicemia",
-        "weight": "Ancora nessuna misurazione del peso"
+        "weight": "Ancora nessuna misurazione del peso",
+        "temperature": "Ancora nessuna misurazione della temperatura",
+        "oxygen_saturation": "Ancora nessuna misurazione dell'ossigeno nel sangue"
       },
       "description": "Registra le misurazioni nel tempo, così la cerchia può notare un andamento prima del prossimo appuntamento.",
       "cta": {
         "blood_pressure": "Registra la pressione",
         "heart_rate": "Registra il battito",
         "glucose": "Registra la glicemia",
-        "weight": "Registra il peso"
+        "weight": "Registra il peso",
+        "temperature": "Registra la temperatura",
+        "oxygen_saturation": "Registra l'ossigeno nel sangue"
       }
     },
     "outOfRange": {
