@@ -88,12 +88,15 @@ test('temperature and blood oxygen: logged through the form, listed, filtered, a
   await expect(oxygenGroup.getByText('96%', { exact: true })).toBeVisible({ timeout: 20_000 });
 
   // Filter: each chip narrows the list to its own type.
+  // Scoped to the reading rows: with one type selected the latest-reading hero
+  // above the list shows the same value ("96" + "%"), which is a second match.
+  const rows = page.getByRole('listitem');
   await page.getByRole('radio', { name: 'Temperature', exact: true }).click();
-  await expect(page.getByText('99.1 °F', { exact: true })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText('96%', { exact: true })).toHaveCount(0);
+  await expect(rows.getByText('99.1 °F', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(rows.getByText('96%', { exact: true })).toHaveCount(0);
   await page.getByRole('radio', { name: 'Blood oxygen', exact: true }).click();
-  await expect(page.getByText('96%', { exact: true })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText('99.1 °F', { exact: true })).toHaveCount(0);
+  await expect(rows.getByText('96%', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(rows.getByText('99.1 °F', { exact: true })).toHaveCount(0);
 
   // Persisted: a fresh load reads both back from the server.
   await page.reload({ waitUntil: 'domcontentloaded' });
