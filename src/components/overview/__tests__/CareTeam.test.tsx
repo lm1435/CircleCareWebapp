@@ -53,6 +53,7 @@ function renderTeam(opts?: {
   circle?: CircleDetail;
   isOwner?: boolean;
   currentUserId?: string;
+  checklistStatus?: 'unknown' | 'active' | 'inactive';
 }): void {
   render(
     <MemoryRouter>
@@ -67,6 +68,9 @@ function renderTeam(opts?: {
         }
         currentUserId={opts?.currentUserId ?? OWNER}
         isOwner={opts?.isOwner ?? true}
+        // Default: the getting-started card is out of the way (finished or
+        // dismissed), which is the only time the solo card may show.
+        checklistStatus={opts?.checklistStatus ?? 'inactive'}
       />
     </MemoryRouter>
   );
@@ -253,6 +257,20 @@ describe('CareTeam', () => {
       });
       expect(screen.getByRole('heading', { name: 'Care is easier together' })).toBeInTheDocument();
     });
+
+    // One nudge card at a time: the checklist goes first.
+    it.each(['active', 'unknown'] as const)(
+      'waits while the getting-started checklist is %s',
+      (checklistStatus) => {
+        renderTeam({
+          members: [member({ id: OWNER, first_name: 'Pat', role: 'owner' })],
+          checklistStatus,
+        });
+        expect(
+          screen.queryByRole('heading', { name: 'Care is easier together' })
+        ).not.toBeInTheDocument();
+      }
+    );
 
     it('disappears once a live invite is out', () => {
       renderTeam({

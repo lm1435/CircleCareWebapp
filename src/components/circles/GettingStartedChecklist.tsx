@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Eyebrow, Icon, Sheet, Text } from '@/components/ui';
@@ -35,8 +35,31 @@ function writeDismissed(circleId: string): void {
   }
 }
 
+/**
+ * What the card is doing, for a host that shows other nudges beside it:
+ * `unknown` while its reads settle (or one failed), `active` while it is on
+ * screen with unfinished steps, `inactive` once it is finished, dismissed, or
+ * not offered to this viewer at all.
+ */
+export type GettingStartedStatus = 'unknown' | 'active' | 'inactive';
+
+/**
+ * The ONE step that gets the filled button: the first unfinished step after
+ * the latest finished one, wrapping to an earlier open step only when nothing
+ * later is open. A step the user passed over is therefore never nagged about
+ * while a later one remains. Derived from completion alone (mobile uses the
+ * same rule). Returns -1 when every step is done.
+ */
+export function nextStepIndex(done: boolean[]): number {
+  const lastDone = done.lastIndexOf(true);
+  const after = done.findIndex((isDone, index) => index > lastDone && !isDone);
+  return after !== -1 ? after : done.indexOf(false);
+}
+
 export interface GettingStartedChecklistProps {
   circleId: string;
+  /** Reports the card's state whenever it changes (see `GettingStartedStatus`). */
+  onStatusChange?: (status: GettingStartedStatus) => void;
   /**
    * Step 1's pending action. The step asks for a MEDICATION, so the host must
    * open the medication form (`AddEventModal` with `initialType="medication"`),
@@ -78,7 +101,7 @@ interface Step {
   /** One-line "why this matters" so the step explains itself. */
   desc: string;
   done: boolean;
-  /** Localized label for the pending CTA (e.g. "Add", "Invite"). */
+  /** Localized label for the highlighted step's button (e.g. "Add", "Invite"). */
   actionLabel: string;
   onAction: () => void;
 }
@@ -105,6 +128,7 @@ interface Step {
  */
 export function GettingStartedChecklist({
   circleId,
+  onStatusChange,
   onAddEvent,
   fallback,
 }: GettingStartedChecklistProps): ReactElement | null {
@@ -210,7 +234,7 @@ export function GettingStartedChecklist({
                 desc: t('gettingStarted.step2Desc'),
                 done: invited,
                 actionLabel: t('gettingStarted.actionInvite'),
-                onAction: () => navigate(`/circles/${circleId}/members`),
+                      onAction: () => navigate(`/circles/${circleId}/members`),
               },
             ]
           : []),
@@ -246,6 +270,17 @@ export function GettingStartedChecklist({
   const total = steps.length;
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === total;
+  const nextIndex = nextStepIndex(steps.map((s) => s.done));
+
+  const blocked = !canEdit || circle?.view_only === true;
+  const status: GettingStartedStatus = !signalsKnown
+    ? 'unknown'
+    : blocked || dismissed || allDone
+      ? 'inactive'
+      : 'active';
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [status, circleId, onStatusChange]);
 
   // While the checklist's own signals settle (or if one failed), render
   // nothing so the empty slot never flashes the fallback or a false step.
@@ -256,7 +291,7 @@ export function GettingStartedChecklist({
   // a gate either — see the docstring.
   // `view_only` is folded in on its own (the client rule everywhere else, and
   // mobile's gate for this card): a view-only seat must never be offered an Add.
-  if (!canEdit || circle?.view_only === true) return <>{fallback ?? null}</>;
+  if (blocked) return <>{fallback ?? null}</>;
   // Complete or dismissed: hand the slot back to the host's empty state.
   if (dismissed || allDone) return <>{fallback ?? null}</>;
 
@@ -298,9 +333,17 @@ export function GettingStartedChecklist({
 
       {/* Steps */}
       <ol className="m-0 mt-4 flex list-none flex-col p-0">
-        {steps.map((step) => (
-          <li key={step.key} className="border-t border-line-2 first:border-t-0">
-            <div className="flex items-center gap-3 py-3">
+        {steps.map((step, index) => {
+          const isNext = index === nextIndex;
+          // Fired BEFORE the action: step 1 opens a modal and the others
+          // navigate away, so this is the last moment the press is observable
+          // from here.
+          const handleAction = (): void => {
+            Analytics.gettingStartedStepTapped(step.key);
+            step.onAction();
+          };
+          const body = (
+            <>
               {/* Status marker — mobile `gsMarker`: 20px, moss-soft with a
                   checkmark when done, a 2px hairline ring when pending. */}
               {step.done ? (
@@ -318,9 +361,9 @@ export function GettingStartedChecklist({
               )}
 
               {/* Label + "why" + a11y status text */}
-              <div className="min-w-0 flex-1">
-                <p
-                  className={`m-0 text-md font-medium leading-snug ${
+              <span className="block min-w-0 flex-1">
+                <span
+                  className={`block text-md font-medium leading-snug ${
                     step.done ? 'text-ink-3 line-through' : 'text-ink'
                   }`}
                 >
@@ -329,30 +372,43 @@ export function GettingStartedChecklist({
                     {' '}
                     {step.done ? t('gettingStarted.statusDone') : t('gettingStarted.statusPending')}
                   </span>
-                </p>
-                <p className="m-0 mt-0.5 text-sm leading-snug text-ink-2">{step.desc}</p>
-              </div>
+                </span>
+                <span className="mt-0.5 block text-sm leading-snug text-ink-2">{step.desc}</span>
+              </span>
+            </>
+          );
 
-              {/* Pending action */}
-              {!step.done && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    // Fired BEFORE the action: step 1 opens a modal and the
-                    // others navigate away, so this is the last moment the
-                    // press is observable from here.
-                    Analytics.gettingStartedStepTapped(step.key);
-                    step.onAction();
-                  }}
-                  className="flex-none"
+          return (
+            <li
+              key={step.key}
+              className="border-t border-line-2 first:border-t-0"
+              data-testid={`getting-started-step-${step.key}`}
+              data-next={isNext ? 'true' : undefined}
+            >
+              {step.done || isNext ? (
+                <div className="flex items-center gap-3 py-3">
+                  {body}
+                  {/* The ONE filled action on the card — see `nextStepIndex`. */}
+                  {isNext && (
+                    <Button size="sm" onClick={handleAction} className="flex-none">
+                      {step.actionLabel}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                // Every other open step: a plain row, still pressable.
+                <button
+                  type="button"
+                  onClick={handleAction}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-md py-3 text-left transition-colors duration-fast hover:bg-bg-2"
                 >
-                  {step.actionLabel}
-                </Button>
+                  {body}
+                  <Icon name="chevron-forward" size="inline" className="flex-none text-ink-3" />
+                </button>
               )}
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ol>
     </Sheet>
   );

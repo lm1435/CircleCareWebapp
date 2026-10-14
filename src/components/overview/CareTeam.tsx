@@ -17,6 +17,8 @@ import { useRemoveMember, useSetMedicationResponsible } from '@/hooks/useCircleM
 import { isPendingInviteExpired } from '@/api/circleMembers';
 import { Analytics } from '@/lib/analytics';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
+import type { GettingStartedStatus } from '@/components/circles/GettingStartedChecklist';
+import { pickHomeNudge } from './homeNudge';
 
 // Spec §6.3.7 + §6.3.8 — port of mobile CircleDetailScreen's care-team Sheet
 // (CircleDetailScreen.tsx:1375-1520) and `components/circle/SoloInviteCard.tsx`.
@@ -43,9 +45,11 @@ export interface SoloInviteCardProps {
  * icon-tiled rows it can share a screen with, so the two never read as a
  * stutter.
  *
- * It is INDEPENDENT of the getting-started checklist on purpose (mobile's D2
- * note): a lone owner is the single biggest retention risk, so the nudge stays
- * even when the checklist is also on screen.
+ * It WAITS FOR the getting-started checklist: Home shows one nudge card at a
+ * time (`pickHomeNudge`), so this appears only once the checklist is finished
+ * or dismissed and the owner is still alone. It used to be independent of the
+ * checklist (mobile's D2 note); the owner reversed that, because the two cards
+ * asked for the same invite one above the other.
  */
 export function SoloInviteCard({
   circleName,
@@ -78,6 +82,8 @@ export interface CareTeamProps {
   /** The signed-in user's id — drives the "(You)" suffix and the action gate. */
   currentUserId: string | undefined;
   isOwner: boolean;
+  /** The getting-started card's state — the solo invite card waits its turn. */
+  checklistStatus: GettingStartedStatus;
 }
 
 /**
@@ -95,6 +101,7 @@ export function CareTeam({
   members,
   currentUserId,
   isOwner,
+  checklistStatus,
 }: CareTeamProps): ReactElement {
   const { t } = useTranslation(['overview', 'members', 'common']);
   const removeMember = useRemoveMember(circleId);
@@ -109,7 +116,8 @@ export function CareTeam({
   // An EXPIRED invite is not an outstanding one — nobody can act on it, so it
   // must not silence the nudge. Only LIVE invites hide the solo card.
   const liveInvites = (circle?.pending_invites ?? []).filter((i) => !isPendingInviteExpired(i));
-  const showSolo = isOwner && members.length === 1 && liveInvites.length === 0;
+  const soloEligible = isOwner && members.length === 1 && liveInvites.length === 0;
+  const showSolo = pickHomeNudge({ checklist: checklistStatus, soloEligible }) === 'soloInvite';
 
   const menuFor = (member: CircleMember): MoreMenuEntry[] => [
     {

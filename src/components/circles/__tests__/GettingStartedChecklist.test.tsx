@@ -1,12 +1,12 @@
 import { type ReactNode } from 'react';
-import { render, screen, type RenderResult } from '@testing-library/react';
+import { cleanup, render, screen, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import { useAuthStore } from '@/store/authStore';
 import { addDays } from '@/components/calendar/dateMath';
 import { getDateInTimezone } from '@/utils/timezone';
-import { GettingStartedChecklist } from '../GettingStartedChecklist';
+import { GettingStartedChecklist, nextStepIndex } from '../GettingStartedChecklist';
 
 // Focused unit test for the get-started checklist. The three data signals come
 // from useCircle / useCalendarEvents / useEmergencyInfo — all mocked so we drive
@@ -544,6 +544,121 @@ describe('GettingStartedChecklist', () => {
       expect(screen.getByText('Add a medication').className).toContain('line-through');
       expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: /Add/ })).toHaveLength(1);
+    });
+  });
+
+  // ONE highlighted step. Only the "next" step carries the filled button; the
+  // other open steps are plain pressable rows.
+  describe('the single highlighted next step', () => {
+    const filledButtons = (): HTMLElement[] =>
+      screen
+        .getAllByRole('button')
+        .filter((button) => button.className.split(/\s+/).includes('bg-moss'));
+    const nextStep = (): string | null =>
+      document.querySelector('[data-next="true"]')?.getAttribute('data-testid') ?? null;
+
+    it('fills only the first step on a brand-new circle; the rest are plain rows', () => {
+      setup();
+      expect(filledButtons()).toHaveLength(1);
+      expect(filledButtons()[0]).toHaveTextContent('Add');
+      expect(nextStep()).toBe('getting-started-step-event');
+      // Still pressable, as whole rows named by their step.
+      expect(screen.getByRole('button', { name: /Invite family & caregivers/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Add emergency info/ })).toBeInTheDocument();
+    });
+
+    it('moves on in order as steps complete', () => {
+      setup({ events: [{ id: 'e1', event_type: 'medication' }] });
+      expect(nextStep()).toBe('getting-started-step-invite');
+      expect(filledButtons()).toHaveLength(1);
+      expect(filledButtons()[0]).toHaveTextContent('Invite');
+    });
+
+    it('does not jump back to a step the user passed over while a later one is open', () => {
+      // Invited first, medication skipped: the highlight goes FORWARD to
+      // emergency info, not back to the medication.
+      setup({ members: [{ id: CURRENT_USER_ID }, { id: 'caregiver' }] });
+      expect(nextStep()).toBe('getting-started-step-emergency');
+      expect(filledButtons()).toHaveLength(1);
+      expect(screen.getByRole('button', { name: /Add a medication/ })).not.toBe(filledButtons()[0]);
+    });
+
+    it('wraps to an earlier open step only when nothing later is open', () => {
+      setup({ emergency: { blood_type: 'O+' } });
+      expect(nextStep()).toBe('getting-started-step-event');
+    });
+
+    it('a plain row still runs its step and reports the tap', async () => {
+      const user = userEvent.setup();
+      setup();
+      await user.click(screen.getByRole('button', { name: /Add emergency info/ }));
+      expect(navigate).toHaveBeenCalledWith('/circles/circle-1/emergency');
+      expect(gettingStartedStepTapped).toHaveBeenCalledWith('emergency');
+    });
+  });
+
+  describe('nextStepIndex', () => {
+    it.each([
+      [[false, false, false], 0],
+      [[true, false, false], 1],
+      [[true, true, false], 2],
+      [[false, true, false], 2],
+      [[false, false, true], 0],
+      [[true, false, true], 1],
+      [[false, true, true], 0],
+      [[true, true, true], -1],
+      [[false, false], 0],
+      [[false, true], 0],
+    ])('%j -> %i', (done, expected) => {
+      expect(nextStepIndex(done)).toBe(expected);
+    });
+  });
+
+  // The host shows one nudge card at a time and needs to know where this one is.
+  describe('onStatusChange', () => {
+    function statusFor(s: Signals): string | undefined {
+      const onStatusChange = vi.fn();
+      configure(s);
+      render(
+        <MemoryRouter>
+          <GettingStartedChecklist circleId="circle-1" onStatusChange={onStatusChange} />
+        </MemoryRouter>
+      );
+      return onStatusChange.mock.calls.at(-1)?.[0];
+    }
+
+    it('is "active" while steps are open', () => {
+      expect(statusFor({})).toBe('active');
+    });
+
+    it('is "unknown" while a signal is still loading, or failed', () => {
+      expect(statusFor({ eventsLoading: true })).toBe('unknown');
+      cleanup();
+      expect(statusFor({ emergencyPhase: 'error' })).toBe('unknown');
+    });
+
+    it('is "inactive" once every step is done', () => {
+      expect(
+        statusFor({
+          events: [{ id: 'e1', event_type: 'medication' }],
+          members: [{ id: CURRENT_USER_ID }, { id: 'caregiver' }],
+          emergency: { blood_type: 'O+' },
+        })
+      ).toBe('inactive');
+    });
+
+    it('turns "inactive" the moment it is dismissed', async () => {
+      const user = userEvent.setup();
+      const onStatusChange = vi.fn();
+      configure({});
+      render(
+        <MemoryRouter>
+          <GettingStartedChecklist circleId="circle-1" onStatusChange={onStatusChange} />
+        </MemoryRouter>
+      );
+      expect(onStatusChange).toHaveBeenLastCalledWith('active');
+      await user.click(screen.getByRole('button', { name: 'Dismiss the get started checklist' }));
+      expect(onStatusChange).toHaveBeenLastCalledWith('inactive');
     });
   });
 
