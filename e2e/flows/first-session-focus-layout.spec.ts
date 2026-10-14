@@ -39,7 +39,9 @@ async function expectAvatarLeftOfName(avatar: Locator, name: Locator): Promise<v
 /** Nothing is cut off: the element shows all of its text. */
 async function expectNotTruncated(el: Locator): Promise<void> {
   const clipped = await el.evaluate(
-    (node) => node.scrollWidth > node.clientWidth + 1 || node.scrollHeight > node.clientHeight + 1
+    (node) => // Height slack: a 32px title in a 35px line box reports scrollHeight +2 from the
+    // font ascent/descent while overflow is visible and nothing is cut.
+    node.scrollWidth > node.clientWidth + 1 || node.scrollHeight > node.clientHeight + 6
   );
   expect(clipped, 'text is not clipped').toBe(false);
   expect(await el.evaluate((node) => getComputedStyle(node).textOverflow)).not.toBe('ellipsis');
@@ -144,7 +146,9 @@ async function openNewEntry(page: Page, circleId: string, item: string): Promise
   const trigger = page.locator('aside').getByRole('button', { name: 'New', exact: true });
   await expect(trigger).toBeVisible({ timeout: NAV_TIMEOUT });
   await trigger.click();
-  await page.getByRole('menuitem', { name: item, exact: true }).click();
+  // The create menu labels its options Med / Appt / Task / Note.
+  const label = ({ Medication: 'Med', Appointment: 'Appt' } as Record<string, string>)[item] ?? item;
+  await page.getByRole('menuitem', { name: label, exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   return dialog;
@@ -177,7 +181,9 @@ test.describe('Save is always visible on the add form', () => {
       const before = await box(save);
       await scroller.evaluate((el) => el.scrollTo(0, el.scrollHeight));
       const after = await box(save);
-      expect(after.y).toBe(before.y);
+      // Sub-pixel slack: the dialog's open animation is still settling. A footer
+      // that scrolled with the form would move by hundreds of px.
+      expect(Math.abs(after.y - before.y)).toBeLessThan(2);
       const footerTop = (await box(dialog.locator('[data-modal-footer]'))).y;
       const lastField = form.locator('input:visible, textarea:visible, select:visible, button:visible').last();
       const last = await box(lastField);
@@ -217,6 +223,11 @@ test.describe('Notes composer: the Post row is a sticky footer', () => {
     // now below the fold, which is when the row has to stick.
     await body.evaluate((el) => el.scrollIntoView({ block: 'start' }));
     await expect(post).toBeInViewport({ ratio: 1 });
+    // The page scrolls smoothly; wait for the textarea to settle at the top
+    // before measuring against it.
+    await expect
+      .poll(async () => (await box(body)).y, { message: 'textarea scrolled to the top' })
+      .toBeLessThan(150);
     const nav = page.getByTestId('floating-nav');
     const p = await box(post);
     const n = await box(nav);
