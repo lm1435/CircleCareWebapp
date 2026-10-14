@@ -21,6 +21,33 @@ function member(overrides: Partial<CircleMember> & { id: string }): CircleMember
 }
 
 describe('Hero', () => {
+  // Compact: avatar LEFT of the name in one row; "Cared for by" under the name.
+  it('puts the avatar and the name in one row, with the caregivers under the name', () => {
+    render(
+      <Hero recipientName="Rose Meza" members={[member({ id: 'a', first_name: 'Pat' })]} />
+    );
+    const header = screen.getByTestId('overview-hero');
+    const classes = header.className.split(/\s+/);
+    expect(classes).toContain('flex');
+    expect(classes).not.toContain('flex-col');
+    const [avatarWrap, textColumn] = Array.from(header.children);
+    expect(header.children).toHaveLength(2);
+    expect(avatarWrap).not.toContainElement(screen.getByRole('heading', { name: 'Rose Meza' }));
+    const heading = screen.getByRole('heading', { name: 'Rose Meza' });
+    const caredFor = screen.getByText('Cared for by');
+    expect(textColumn).toContainElement(heading);
+    expect(textColumn).toContainElement(caredFor);
+    expect(heading.compareDocumentPosition(caredFor) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('never truncates a long name: it wraps instead', () => {
+    const long = 'Maria Guadalupe Hernandez-Villanueva de la Santisima Trinidad';
+    render(<Hero recipientName={long} members={[]} />);
+    const heading = screen.getByRole('heading', { name: long });
+    expect(heading.className).toContain('break-words');
+    expect(heading.className).not.toMatch(/truncate|line-clamp|whitespace-nowrap/);
+  });
+
   it('renders the recipient name as the page heading', () => {
     render(<Hero recipientName="Rose Meza" members={[]} />);
     expect(screen.getByRole('heading', { name: 'Rose Meza' })).toBeInTheDocument();

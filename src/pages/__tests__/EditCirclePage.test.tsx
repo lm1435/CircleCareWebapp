@@ -116,6 +116,27 @@ describe('EditCirclePage', () => {
     expect(screen.queryByRole('button', { name: 'Delete circle' })).not.toBeInTheDocument();
   });
 
+  // Compact header: the photo sits left of the title in one row, and the
+  // title names the recipient. No big centred avatar inside the form card.
+  it('folds the recipient into the title row: photo left, "Edit {{name}}"', () => {
+    mockCircleResult(makeCircle());
+    renderPage();
+
+    const heading = screen.getByRole('heading', { level: 1, name: 'Edit Rose Meza' });
+    const photo = screen.getByTestId('edit-circle-photo');
+    // Same row, photo first.
+    expect(photo.parentElement?.parentElement).toBe(heading.parentElement);
+    expect(photo.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The name is never truncated.
+    expect(heading.className).toContain('break-words');
+    expect(heading.className).not.toContain('truncate');
+    expect(
+      screen.getByLabelText(/Care recipient name/).closest('form')?.parentElement
+    ).not.toContainElement(photo);
+    // Web cannot change the recipient photo, so it offers no "Change photo".
+    expect(screen.queryByText('Change photo')).not.toBeInTheDocument();
+  });
+
   it('renders the form for the owner and saves name + DOB', async () => {
     const user = userEvent.setup();
     mockCircleResult(makeCircle());

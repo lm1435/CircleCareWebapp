@@ -33,13 +33,21 @@ vi.mock('@/components/circles/GettingStartedChecklist', () => ({
   GettingStartedChecklist: ({
     circleId,
     onAddEvent,
+    onStatusChange,
   }: {
     circleId: string;
     onAddEvent?: () => void;
+    onStatusChange?: (status: 'unknown' | 'active' | 'inactive') => void;
   }) => (
     <div data-testid="getting-started" data-circle-id={circleId}>
       <button type="button" onClick={onAddEvent}>
         checklist-add
+      </button>
+      <button type="button" onClick={() => onStatusChange?.('active')}>
+        checklist-active
+      </button>
+      <button type="button" onClick={() => onStatusChange?.('inactive')}>
+        checklist-inactive
       </button>
     </div>
   ),
@@ -71,8 +79,21 @@ vi.mock('@/components/overview/QuickAccess', () => ({
   ),
 }));
 vi.mock('@/components/overview/CareTeam', () => ({
-  CareTeam: ({ circleId, isOwner }: { circleId: string; isOwner: boolean }) => (
-    <div data-testid="care-team" data-circle-id={circleId} data-owner={String(isOwner)} />
+  CareTeam: ({
+    circleId,
+    isOwner,
+    checklistStatus,
+  }: {
+    circleId: string;
+    isOwner: boolean;
+    checklistStatus: string;
+  }) => (
+    <div
+      data-testid="care-team"
+      data-circle-id={circleId}
+      data-owner={String(isOwner)}
+      data-checklist={checklistStatus}
+    />
   ),
 }));
 vi.mock('@/components/overview/SettingsRows', () => ({
@@ -263,6 +284,7 @@ describe('OverviewPage', () => {
       .map((el) => el.getAttribute('data-testid'))
       .filter((id): id is string => id !== null && id !== 'first-run-wizard');
     expect(ids).toEqual([
+      'overview-hero',
       // Daily update: the first content block under the hero (plan §6).
       'daily-update-card',
       'getting-started',
@@ -274,6 +296,22 @@ describe('OverviewPage', () => {
       'upcoming-appointments',
       'open-tasks-card',
     ]);
+  });
+
+  // One nudge card at a time: the care team (which owns the solo invite card)
+  // is told where the getting-started checklist is, and assumes nothing until
+  // the checklist has said.
+  it('passes the checklist state on to the care team, starting from "unknown"', async () => {
+    const user = userEvent.setup();
+    setCircle();
+    renderOverview();
+    expect(screen.getByTestId('care-team')).toHaveAttribute('data-checklist', 'unknown');
+
+    await user.click(screen.getByRole('button', { name: 'checklist-active' }));
+    expect(screen.getByTestId('care-team')).toHaveAttribute('data-checklist', 'active');
+
+    await user.click(screen.getByRole('button', { name: 'checklist-inactive' }));
+    expect(screen.getByTestId('care-team')).toHaveAttribute('data-checklist', 'inactive');
   });
 
   it('lays the blocks out in two columns from 1024px up, hero spanning both', () => {

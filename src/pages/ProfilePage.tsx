@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -49,10 +49,12 @@ import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import {
   Avatar,
+  Badge,
   Button,
   Card,
   ConfirmDialog,
   Eyebrow,
+  Icon,
   RadioGroup,
   Select,
   Sheet,
@@ -196,6 +198,15 @@ export default function ProfilePage(): ReactElement {
 
   // ── Name (inline edit) ────────────────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
+  // The header pencil opens the name fields further down the page, so it also
+  // moves focus (and the viewport) to them; the Account card's own Edit button
+  // sits right beside the fields and leaves focus where it is.
+  const focusNameOnEdit = useRef(false);
+  useEffect(() => {
+    if (!editingName || !focusNameOnEdit.current) return;
+    focusNameOnEdit.current = false;
+    document.getElementById('profile-first-name')?.focus();
+  }, [editingName]);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   // A FAILED NAME SAVE IS SHOWN INLINE IN THE FORM, NOT AS A TOAST.
@@ -544,8 +555,49 @@ export default function ProfilePage(): ReactElement {
 
   return (
     <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
-      <Text variant="editorialTitle">{t('heading')}</Text>
-      <p className="mt-3.5 text-md font-medium text-ink">{t('subheading')}</p>
+      {/* Compact identity header (mobile ProfileScreen's): avatar LEFT, the
+          name with its edit pencil immediately beside it, the email under the
+          name, and — for Premium accounts only — a small labelled chip on its
+          own line, left-aligned with the name. The page's old title moves to
+          the eyebrow. The row is NOT one pressable: the pencil is its own
+          button, so nothing swallows it. */}
+      <header className="flex items-center gap-4" data-testid="profile-header">
+        <Avatar
+          size="lg"
+          name={fullName || user.email}
+          colorKey={user.avatar_color}
+          className="h-15! w-15!"
+        />
+        <div className="min-w-0 flex-1">
+          <Eyebrow as="p" className="mb-0.5">
+            {t('heading')}
+          </Eyebrow>
+          <div className="flex items-center gap-1">
+            <Text variant="heroName" className="min-w-0 break-words">
+              {fullName || t('account.namePlaceholder')}
+            </Text>
+            <button
+              type="button"
+              aria-label={t('account.editNameLabel')}
+              onClick={() => {
+                focusNameOnEdit.current = true;
+                setEditingName(true);
+              }}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-fast hover:bg-bg-2 hover:text-ink"
+            >
+              <Icon name="pencil-outline" size="row" />
+            </button>
+          </div>
+          <p className="m-0 break-all text-sm text-ink-2">{user.email}</p>
+          {isPremium ? (
+            <p className="m-0 mt-1.5" data-testid="profile-premium-chip">
+              <Badge variant="accent" size="sm" icon="star">
+                {t('header.premium')}
+              </Badge>
+            </p>
+          ) : null}
+        </div>
+      </header>
 
       {/* ── Subscription ──────────────────────────────────────────────── */}
       <SubscriptionSection />
@@ -557,6 +609,8 @@ export default function ProfilePage(): ReactElement {
           <p className="m-0 mt-1 text-base text-ink">{user.email}</p>
         </div>
 
+        {/* The name itself (and its edit pencil) lives in the page header; the
+            fields open here, under the email, when it is pressed. */}
         {editingName ? (
           <>
             <TextField
@@ -602,26 +656,7 @@ export default function ProfilePage(): ReactElement {
               </Button>
             </div>
           </>
-        ) : (
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="m-0 text-sm font-medium text-ink-2">{t('account.firstName')}</p>
-              <p className="m-0 mt-1 truncate text-base text-ink">
-                {fullName || t('account.namePlaceholder')}
-              </p>
-            </div>
-            {/* Named "Edit name", not a bare "Edit" (WCAG 2.4.6; mobile P5).
-                The visible word stays inside the name (2.5.3 Label in Name). */}
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={t('account.editNameLabel')}
-              onClick={() => setEditingName(true)}
-            >
-              {t('account.edit')}
-            </Button>
-          </div>
-        )}
+        ) : null}
 
         <Select
           id="profile-timezone"

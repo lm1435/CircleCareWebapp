@@ -11,9 +11,13 @@ function esc(s: string): string {
 
 test('edit & restore first name and a notification toggle', async ({ page }) => {
   await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Profile & settings' })).toBeVisible({
+  // The page heading is the person's name now (compact header); the old
+  // "Profile & settings" title is its eyebrow.
+  const header = page.getByTestId('profile-header');
+  await expect(header.getByText('Profile & settings', { exact: true })).toBeVisible({
     timeout: 15_000,
   });
+  await expect(header.getByRole('heading', { level: 1 })).toBeVisible();
 
   // ── First name: capture → change → save → reload & assert → restore ──────
   // Open the inline name editor and read the current first name so we can

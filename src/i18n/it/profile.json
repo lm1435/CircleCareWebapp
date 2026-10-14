@@ -1,6 +1,8 @@
 {
   "heading": "Profilo e impostazioni",
-  "subheading": "Gestisci il tuo account, le notifiche e le preferenze.",
+  "header": {
+    "premium": "Premium"
+  },
   "sections": {
     "account": "Account",
     "language": "Lingua",
@@ -15,7 +17,6 @@
     "firstName": "Nome",
     "lastName": "Cognome",
     "timezone": "Fuso orario",
-    "edit": "Modifica",
     "editNameLabel": "Modifica nome",
     "save": "Salva",
     "cancel": "Annulla",

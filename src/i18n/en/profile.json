@@ -1,6 +1,8 @@
 {
   "heading": "Profile & settings",
-  "subheading": "Manage your account, notifications, and preferences.",
+  "header": {
+    "premium": "Premium"
+  },
   "sections": {
     "account": "Account",
     "language": "Language",
@@ -15,7 +17,6 @@
     "firstName": "First name",
     "lastName": "Last name",
     "timezone": "Time zone",
-    "edit": "Edit",
     "editNameLabel": "Edit name",
     "save": "Save",
     "cancel": "Cancel",

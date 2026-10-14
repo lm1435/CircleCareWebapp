@@ -49,6 +49,12 @@ export interface PageMastheadProps {
   secondaryAction?: MastheadAction;
   /** 32/600 title instead of 42/600, for titles that would wrap to three lines. */
   compact?: boolean;
+  /**
+   * Rendered LEFT of the title, in the same row — the person's avatar on a
+   * page that is about one person (Circle settings, Profile). The title wraps
+   * beside it and is never truncated.
+   */
+  leading?: ReactNode;
   /** Rendered beneath the subtitle — the Care/Health `SegmentedControl`. */
   children?: ReactNode;
 }
@@ -87,6 +93,7 @@ export function PageMasthead({
   rightAction,
   secondaryAction: secondaryActionProp,
   compact = false,
+  leading,
   children,
 }: PageMastheadProps): ReactElement {
   const { t } = useTranslation('common');
@@ -156,7 +163,19 @@ export function PageMasthead({
           the title and the labelled action sat 8px inside the content edges. */}
       <div className="px-5 pb-5 pt-4">
         <div className="flex items-start justify-between gap-4">
-          <Text variant={compact ? 'editorialTitleCompact' : 'editorialTitle'}>{title}</Text>
+          {leading ? (
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="shrink-0">{leading}</span>
+              <Text
+                variant={compact ? 'editorialTitleCompact' : 'editorialTitle'}
+                className="min-w-0 break-words"
+              >
+                {title}
+              </Text>
+            </div>
+          ) : (
+            <Text variant={compact ? 'editorialTitleCompact' : 'editorialTitle'}>{title}</Text>
+          )}
           {/* Labelled desktop action. The `hidden` lives on a WRAPPER: on the Button
               itself it lost the cascade to Button's own `inline-flex` (Tailwind emits
               `.hidden` first), so both actions showed at phone width. */}

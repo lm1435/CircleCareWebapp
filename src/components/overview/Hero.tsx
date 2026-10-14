@@ -3,13 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Avatar, Eyebrow, Text } from '@/components/ui';
 import type { CircleMember } from '@/api/circleMembers';
 
-// Spec §6.3.1 — port of mobile CircleDetailScreen's hero
-// (`styles.hero` / `avatarWrapper` / `dobEyebrow` / `heroName` /
-// `caredForByRow`, CircleDetailScreen.tsx:1121-1157 + 1976-2037).
-//
-// Padding, ring, glow and the 12/6/6 vertical rhythm are mobile's numbers
-// verbatim; the only translation is px→Tailwind (pt-6 = 24, px-7 = 28,
-// pb-[18px] = 18, mb-3 = 12, mb-1.5 = 6).
+// Spec §6.3.1 — the circle Home hero, in mobile CircleDetailScreen's COMPACT
+// form: the avatar sits LEFT of the name in one row, with the DOB eyebrow
+// above the name and "Cared for by" under it, so the page's real content
+// starts higher. (It used to be a centred 96px avatar stacked over the name.)
 
 /**
  * Age in whole years from a YYYY-MM-DD date of birth, computed in UTC.
@@ -91,35 +88,43 @@ export function Hero({
   const overflow = caregiverNames.length - shown.length;
 
   return (
-    <header className="flex flex-col items-center px-7 pt-6 pb-[18px]">
+    <header className="flex items-center gap-4 px-5 pt-5 pb-4" data-testid="overview-hero">
       {/* 4px cream ring + moss glow, mobile `avatarWrapper`. The ring lives on
           the wrapper rather than the Avatar's own `bordered` (2px) because
-          mobile's is 4. */}
-      <div className="mb-3 rounded-full ring-4 ring-cream shadow-avatar-glow">
-        <Avatar size="xl" name={recipientName} photoUrl={recipientPhotoUrl ?? null} />
+          mobile's is 4. 60px: between Avatar's `md` and `lg`, hence the `!`. */}
+      <div className="shrink-0 rounded-full ring-4 ring-cream shadow-avatar-glow">
+        <Avatar
+          size="lg"
+          name={recipientName}
+          photoUrl={recipientPhotoUrl ?? null}
+          className="h-15! w-15!"
+        />
       </div>
 
-      {dobEyebrow ? (
-        <Eyebrow color="ink-2" className="mb-1.5">
-          {dobEyebrow}
-        </Eyebrow>
-      ) : null}
+      <div className="min-w-0 flex-1">
+        {dobEyebrow ? (
+          <Eyebrow color="ink-2" className="mb-0.5">
+            {dobEyebrow}
+          </Eyebrow>
+        ) : null}
 
-      <Text variant="heroName" className="mb-1.5">
-        {recipientName}
-      </Text>
+        {/* NEVER truncated: a long name wraps onto a second line instead. */}
+        <Text variant="heroName" className="break-words">
+          {recipientName}
+        </Text>
 
-      {shown.length > 0 ? (
-        <p className="m-0 flex flex-wrap justify-center gap-x-1 text-sm text-ink-2">
-          <span>{t('hero.caredForBy')}</span>
-          {shown.map((name, i) => (
-            <span key={name} className="font-semibold text-ink">
-              {i < shown.length - 1 ? `${name},` : name}
-            </span>
-          ))}
-          {overflow > 0 ? <span>{t('hero.andMore', { count: overflow })}</span> : null}
-        </p>
-      ) : null}
+        {shown.length > 0 ? (
+          <p className="m-0 mt-0.5 flex flex-wrap gap-x-1 text-sm text-ink-2">
+            <span>{t('hero.caredForBy')}</span>
+            {shown.map((name, i) => (
+              <span key={name} className="font-semibold text-ink">
+                {i < shown.length - 1 ? `${name},` : name}
+              </span>
+            ))}
+            {overflow > 0 ? <span>{t('hero.andMore', { count: overflow })}</span> : null}
+          </p>
+        ) : null}
+      </div>
     </header>
   );
 }

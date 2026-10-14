@@ -36,7 +36,8 @@ export const TEXT_CLASS: Record<TextVariant, string> = {
   editorialTitleCompact: 'text-[32px] font-semibold leading-[35px] tracking-[-1.2px] text-ink',
   display: 'text-2xl font-bold leading-tight tracking-tight text-ink',
   h1: 'text-xl font-bold leading-tight tracking-tight text-ink',
-  heroName: 'text-xl font-semibold leading-[40px] tracking-[-0.6px] text-ink text-center',
+  // The compact Home hero (avatar LEFT of the name): 26/600, left-aligned.
+  heroName: 'text-[26px] font-semibold leading-[31px] tracking-[-0.6px] text-ink',
   authTitle: 'text-[34px] font-semibold leading-[38px] tracking-tight text-ink',
   h2: 'text-lg font-semibold leading-tight text-ink',
   sectionTitle: 'text-lg font-semibold leading-[28px] text-ink',

@@ -640,6 +640,55 @@ describe('ProfilePage', () => {
 // straight back out of local state, so hydrating the raw value meant the
 // untouched field went to the API as "22:00:00" — which HH:MM-only validation
 // rejected ("editing only the end time fails to save, editing both works").
+// Compact identity header: avatar left, name + edit pencil, email under the
+// name, and a labelled Premium chip on its own line for Premium accounts only.
+describe('ProfilePage — compact header', () => {
+  afterEach(() => {
+    subscriptionTier = 'free';
+  });
+
+  it('shows the name as the page heading with the email under it', async () => {
+    renderPage();
+    const header = await screen.findByTestId('profile-header');
+    expect(within(header).getByRole('heading', { level: 1, name: 'Sam Doe' })).toBeInTheDocument();
+    expect(within(header).getByText('sam@example.com')).toBeInTheDocument();
+    expect(within(header).getByText('Profile & settings')).toBeInTheDocument();
+  });
+
+  it('the pencil beside the name is its own button and opens the name fields, focused', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const header = await screen.findByTestId('profile-header');
+    const pencil = within(header).getByRole('button', { name: 'Edit name' });
+    // Immediately beside the name: the heading and the pencil share one row.
+    expect(pencil.parentElement).toBe(
+      within(header).getByRole('heading', { level: 1 }).parentElement
+    );
+    await user.click(pencil);
+    expect(screen.getByLabelText(/^First name/)).toHaveFocus();
+    expect(screen.getByLabelText(/^First name/)).toHaveValue('Sam');
+  });
+
+  it('free account: no Premium line at all', async () => {
+    subscriptionTier = 'free';
+    renderPage();
+    await screen.findByTestId('profile-header');
+    expect(screen.queryByTestId('profile-premium-chip')).not.toBeInTheDocument();
+  });
+
+  it('premium account: a labelled Premium chip on its own line under the email', async () => {
+    subscriptionTier = 'premium';
+    renderPage();
+    const header = await screen.findByTestId('profile-header');
+    const chip = within(header).getByTestId('profile-premium-chip');
+    expect(chip).toHaveTextContent('Premium');
+    expect(chip.tagName).toBe('P');
+    const email = within(header).getByText('sam@example.com');
+    expect(email.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(chip.parentElement).toBe(email.parentElement);
+  });
+});
+
 describe('ProfilePage — name form', () => {
   async function openNameForm() {
     const user = userEvent.setup();

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
@@ -7,7 +7,10 @@ import { Skeleton } from '@/components/ui';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { TodaysMeds } from '@/components/meds/TodaysMeds';
 import { OpenTasksCard } from '@/components/tasks/OpenTasksCard';
-import { GettingStartedChecklist } from '@/components/circles/GettingStartedChecklist';
+import {
+  GettingStartedChecklist,
+  type GettingStartedStatus,
+} from '@/components/circles/GettingStartedChecklist';
 import { FirstRunWizardModal } from '@/components/circles/firstRun/FirstRunWizardModal';
 import { Hero } from '@/components/overview/Hero';
 import { AdherenceCard } from '@/components/overview/AdherenceCard';
@@ -30,7 +33,8 @@ interface FirstRunLocationState {
  * spanning both (spec §6.3's opening paragraph):
  *
  *   hero  ·  getting-started checklist (both columns)
- *   left:  adherence · quick access · care team (+ solo invite) · manage
+ *   left:  adherence · quick access · care team (+ solo invite, once the
+ *          checklist is finished or dismissed: one nudge card at a time) · manage
  *   right: today's medications · upcoming appointments · open tasks
  *
  * Below 1024px the grid collapses to one column, and the left column's blocks
@@ -84,6 +88,19 @@ export default function OverviewPage(): ReactElement {
   // the step off the moment the medication lands.
   const [showAddMed, setShowAddMed] = useState(false);
 
+  // One nudge card at a time: the checklist reports its state and the solo
+  // invite card (in CareTeam) waits for it. Held WITH the circle it describes,
+  // so switching circles cannot lend the new one the old one's answer.
+  const [checklist, setChecklist] = useState<{ circleId: string; status: GettingStartedStatus }>({
+    circleId,
+    status: 'unknown',
+  });
+  const checklistStatus = checklist.circleId === circleId ? checklist.status : 'unknown';
+  const handleChecklistStatus = useCallback(
+    (status: GettingStartedStatus) => setChecklist({ circleId, status }),
+    [circleId]
+  );
+
   const { circle, members, isLoading, timezone } = useCircle(circleId);
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
   const isRecipient = members.some((m) => m.is_care_recipient && m.id === currentUserId);
@@ -97,9 +114,9 @@ export default function OverviewPage(): ReactElement {
   return (
     <section className="mx-auto w-full max-w-5xl">
       {isLoading && !circle ? (
-        <div className="flex flex-col items-center px-7 pt-6 pb-[18px]" aria-hidden="true">
-          <Skeleton className="mb-3 h-24 w-24 rounded-full" />
-          <Skeleton className="h-10 w-56" />
+        <div className="flex items-center gap-4 px-5 pt-5 pb-4" aria-hidden="true">
+          <Skeleton className="h-15 w-15 rounded-full" />
+          <Skeleton className="h-8 w-56" />
         </div>
       ) : (
         <Hero
@@ -134,7 +151,11 @@ export default function OverviewPage(): ReactElement {
           docstring). `empty:hidden` drops this wrapper in those cases, so a
           hidden checklist leaves no stray gap above the grid. */}
       <div className="px-5 empty:hidden">
-        <GettingStartedChecklist circleId={circleId} onAddEvent={() => setShowAddMed(true)} />
+        <GettingStartedChecklist
+          circleId={circleId}
+          onStatusChange={handleChecklistStatus}
+          onAddEvent={() => setShowAddMed(true)}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 px-5 pb-6 xl:grid-cols-2">
@@ -147,6 +168,7 @@ export default function OverviewPage(): ReactElement {
             members={members}
             currentUserId={currentUserId}
             isOwner={isOwner}
+            checklistStatus={checklistStatus}
           />
           <SettingsRows circleId={circleId} isOwner={isOwner} />
         </div>

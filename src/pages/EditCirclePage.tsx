@@ -239,22 +239,25 @@ export default function EditCirclePage(): ReactElement {
 
   return (
     <section className="mx-auto max-w-2xl pb-8">
+      {/* Compact header: the recipient's photo sits LEFT of the title, in one
+          row, and the title names them ("Edit {{name}}"), so the form starts
+          higher. Mobile's row also carries a "Change photo" link and a camera
+          badge; web has neither because recipient photo upload is out of scope
+          here (see the note at the top of this file). */}
       <PageMasthead
         section={t('common:nav.settings')}
         tone="moss"
-        title={t('edit.title')}
-        subtitle={t('edit.subtitle')}
+        title={t('edit.titleNamed', { name: circle.recipient_name })}
+        compact
+        leading={
+          <span className="inline-flex rounded-full ring-4 ring-cream" data-testid="edit-circle-photo">
+            <Avatar size="lg" name={circle.recipient_name} photoUrl={circle.recipient_photo_url} />
+          </span>
+        }
         backTo={backTo}
       />
 
       <Card padding="lg" className="mx-5">
-        <div className="flex justify-center pb-2">
-          {/* ring-cream would be invisible here — the Card itself is cream —
-              so the ring uses bg-2 for contrast against the card surface. */}
-          <span className="inline-flex rounded-full ring-4 ring-bg-2">
-            <Avatar size="xl" name={circle.recipient_name} photoUrl={circle.recipient_photo_url} />
-          </span>
-        </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <TextField
             id="recipient_name"
