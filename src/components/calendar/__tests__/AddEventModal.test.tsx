@@ -210,6 +210,22 @@ describe('AddEventModal', () => {
       expect(save()).toBeEnabled();
     });
 
+    it('says which field holds Save back, and the disabled button points at it', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      const hint = () => screen.queryByTestId('add-event-save-missing');
+      expect(hint()).toHaveTextContent('Please enter a medication name.');
+      expect(hint()?.closest('[data-modal-footer]')).not.toBeNull();
+      expect(save()).toHaveAttribute('aria-describedby', 'add-event-save-missing');
+
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+      expect(hint()).toHaveTextContent('Medications need a scheduled time.');
+
+      fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '09:00' } });
+      expect(hint()).toBeNull();
+      expect(save()).not.toHaveAttribute('aria-describedby');
+    });
+
     it('edit: an existing entry opens with Save enabled', () => {
       render(
         <AddEventModal circleId={CIRCLE_ID} event={makeEvent()} onClose={vi.fn()} />
@@ -224,13 +240,13 @@ describe('AddEventModal', () => {
     // Save is disabled with the title empty, so this is the submit that does
     // not go through the button (a programmatic `requestSubmit`).
     fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
-    await screen.findByText('Please enter a title.');
+    // Twice: the field's own error, and the footer line beside the disabled Save.
+    await waitFor(() => expect(screen.getAllByText('Please enter a title.')).toHaveLength(2));
 
     expect(mutateCreate).not.toHaveBeenCalled();
     const titleInput = screen.getByLabelText(/^Title( \* \(required\))?$/);
     expect(titleInput).toHaveAttribute('aria-invalid', 'true');
     expect(titleInput).toHaveFocus();
-    expect(screen.getByText('Please enter a title.')).toBeInTheDocument();
   });
 
   it('builds a TZ-correct payload (recipient TZ differs → crosses midnight)', async () => {

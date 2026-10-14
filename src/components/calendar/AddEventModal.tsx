@@ -1397,6 +1397,16 @@ function AddEventForm({
     title.trim().length > 0 &&
     (isAsNeeded || dateStr !== '') &&
     (!isMedication || isAsNeeded || timeStr !== '');
+  // Which field is holding Save back, said in words beside the disabled button
+  // (mobile shows the same line above its pinned Save). A greyed button alone
+  // tells a screen reader nothing, so the button points at this line too.
+  const missingFieldMessage = requiredFilled
+    ? null
+    : title.trim().length === 0
+      ? t(isMedication ? 'addEvent.validation.medicationRequired' : 'addEvent.validation.titleRequired')
+      : !isAsNeeded && dateStr === ''
+        ? t('addEvent.validation.dateRequired')
+        : t('addEvent.validation.timeRequired');
 
   return (
     <>
@@ -1416,10 +1426,23 @@ function AddEventForm({
             form="add-event-form"
             loading={isPending}
             disabled={!requiredFilled}
+            aria-describedby={missingFieldMessage ? 'add-event-save-missing' : undefined}
             data-testid="add-event-save"
           >
             {isEditing ? t('addEvent.saveChanges') : t('addEvent.create')}
           </Button>
+          {/* Last in the DOM so the narrow stacked footer (column-reverse) puts
+              it above the buttons; wide screens move it to the left edge. */}
+          {missingFieldMessage && (
+            <Text
+              variant="caption"
+              id="add-event-save-missing"
+              data-testid="add-event-save-missing"
+              className="m-0 self-center min-[480px]:order-first min-[480px]:mr-auto"
+            >
+              {missingFieldMessage}
+            </Text>
+          )}
         </>
       }
     >
