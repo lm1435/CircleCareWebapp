@@ -199,6 +199,24 @@ describe('EventDetailModal', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
+  it('renders a location that is not a street address ("Mom\'s house") as plain text, not a maps link', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({
+          event_type: 'appointment',
+          title: 'Dr. Smith',
+          medication_name: null,
+          medication_dosage: null,
+          location: "Mom's house",
+        })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('link', { name: /in Maps/ })).toBeNull();
+    expect(screen.getByText("Mom's house")).toBeInTheDocument();
+  });
+
   it('renders a URL location as plain text, not a maps link', () => {
     render(
       <EventDetailModal

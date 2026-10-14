@@ -30,29 +30,37 @@ describe('MapsLink', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', 'https://maps.apple.com/?q=12%20Main%20St');
   });
 
-  it('renders nothing for an empty value and plain text for a virtual free-text location', () => {
+  it('renders nothing for an empty value and plain text for a virtual location', () => {
     const { container, rerender } = render(<MapsLink address="  " />);
     expect(container).toBeEmptyDOMElement();
-    rerender(<MapsLink address="https://zoom.us/j/1" freeText />);
+    rerender(<MapsLink address="https://zoom.us/j/1" />);
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText('https://zoom.us/j/1')).toBeInTheDocument();
   });
 });
 
 describe('DoctorCard address', () => {
-  it('shows the address as a maps link, and no address row when empty', () => {
+  it('shows a street address as a maps link, plain text otherwise, and no address row when empty', () => {
     const { rerender } = render(<DoctorCard name="Dr Chen" address="9 Oak Ave" />);
     expect(screen.getByRole('link', { name: 'Open 9 Oak Ave in Maps' })).toBeInTheDocument();
     rerender(<DoctorCard name="Dr Chen" address="" />);
     expect(screen.queryByRole('link')).toBeNull();
+    // Not a street address: still shown, as plain text.
+    rerender(<DoctorCard name="Dr Chen" address="Mom's house" />);
+    expect(screen.queryByRole('link', { name: /in Maps/ })).toBeNull();
+    expect(screen.getByText("Mom's house")).toBeInTheDocument();
   });
 });
 
-describe('MapsLink freeText', () => {
-  it('links "Room 3" and not "Zoom"', () => {
-    const { rerender } = render(<MapsLink address="Room 3" freeText />);
-    expect(screen.getByRole('link', { name: 'Open Room 3 in Maps' })).toBeInTheDocument();
-    rerender(<MapsLink address="Zoom" freeText />);
-    expect(screen.queryByRole('link')).toBeNull();
+describe('MapsLink: only a street address is a link', () => {
+  it('links "500 Elm, Denver"; "Room 3", "Mom\'s house" and "Zoom" stay plain text with no new-tab hint', () => {
+    const { rerender } = render(<MapsLink address="500 Elm, Denver" />);
+    expect(screen.getByRole('link', { name: 'Open 500 Elm, Denver in Maps' })).toBeInTheDocument();
+    for (const v of ['Room 3', "Mom's house", 'Zoom']) {
+      rerender(<MapsLink address={v} />);
+      expect(screen.queryByRole('link')).toBeNull();
+      expect(screen.getByText(v)).toBeInTheDocument();
+      expect(screen.queryByText('Opens in a new tab')).toBeNull();
+    }
   });
 });

@@ -244,7 +244,7 @@ export function EventDetailModal({
     rows.push({
       key: 'location',
       label: t('calendar:eventDetail.location'),
-      value: <MapsLink address={event.location} freeText />,
+      value: <MapsLink address={event.location} />,
     });
   }
   if (recurrenceLabel) {

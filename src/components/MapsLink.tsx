@@ -4,23 +4,18 @@ import { Icon } from '@/components/ui';
 import { isMapsOpenable, mapsUrl, singleLineAddress } from '@/lib/maps';
 
 /**
- * A saved address / appointment location shown read-only, as a link that opens
- * a maps site in a new tab (no geocoding, no embedded map). Renders plain text
- * when a free-text location looks virtual (URL, Zoom, phone call...), and nothing when it is empty.
+ * A saved address / appointment location shown read-only. When it looks like a real street
+ * address (isMapsOpenable: same rule as mobile, for address fields and locations alike) it is a
+ * link that opens a maps site in a new tab (no geocoding, no embedded map). Anything else
+ * ("Mom's house", "Room 3", a Zoom link) is plain text with no link role or new-tab hint;
+ * nothing when it is empty.
  * Styled like PhoneLink (terracotta-deep, medium weight, 44px target).
  */
-export function MapsLink({
-  address,
-  freeText = false,
-}: {
-  address?: string | null;
-  /** Appointment/task location (free text): virtual-looking values stay plain text. */
-  freeText?: boolean;
-}): ReactElement | null {
+export function MapsLink({ address }: { address?: string | null }): ReactElement | null {
   const { t } = useTranslation('common');
   const hintId = useId();
   if (!address || !address.trim()) return null;
-  const mapsHref = freeText && !isMapsOpenable(address) ? null : mapsUrl(address);
+  const mapsHref = isMapsOpenable(address) ? mapsUrl(address) : null;
   if (!mapsHref) return <span className="whitespace-pre-wrap break-words">{address}</span>;
   const line = singleLineAddress(address);
   return (
