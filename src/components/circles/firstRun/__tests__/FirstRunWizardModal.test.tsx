@@ -186,7 +186,7 @@ function renderWizard(onClose = vi.fn()) {
 
 /** ① → ② → ③ → ④, filling the name on the way. */
 async function walkToRepeat(user: ReturnType<typeof userEvent.setup>, name = 'Metformin') {
-  await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+  await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
   await user.type(screen.getByLabelText(/Medication name/i), name);
   await user.click(screen.getByRole('button', { name: 'Continue' }));
   await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -211,12 +211,119 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// ── Screen ①: one primary, three quiet rows ─────────────────────────────────
+
+describe('choose step: one primary', () => {
+  const isFilled = (button: HTMLElement): boolean =>
+    button.className.split(/\s+/).includes('bg-moss');
+
+  it('offers the first medication as the ONLY filled button, with its reason under it', () => {
+    renderWizard();
+    const dialog = screen.getByRole('dialog');
+    const filled = within(dialog).getAllByRole('button').filter(isFilled);
+    expect(filled).toHaveLength(1);
+    expect(filled[0]).toHaveTextContent('Add the first medication');
+    expect(filled[0]).toHaveAccessibleDescription('This is what sets up reminders.');
+  });
+
+  it('lists the other three starts as plain rows under "or start with", then Skip', () => {
+    renderWizard();
+    const group = screen.getByRole('list', { name: 'or start with' });
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'An appointment',
+      'Inviting someone',
+      'Emergency info',
+    ]);
+    expect(within(group).getAllByRole('button').filter(isFilled)).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close setup' })).toBeInTheDocument();
+    expect(screen.queryByText('Recommended')).not.toBeInTheDocument();
+  });
+});
+
+// ── After the save: the invite offer ────────────────────────────────────────
+
+describe('invite offer after the first medication saves', () => {
+  async function saveMedication(user: ReturnType<typeof userEvent.setup>) {
+    await walkToRepeat(user);
+    await user.click(screen.getByRole('button', { name: 'Add medication' }));
+    await screen.findByRole('heading', { name: 'Invite someone to help' });
+  }
+
+  it('shows inviting as the one primary action, with a plain "Not now" and no way back', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveMedication(user);
+
+    // One dialog — the offer replaces the questions, it is not stacked on them.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByText(/help coordinate Rosa's care/)).toBeInTheDocument();
+    const primary = screen.getByRole('button', { name: 'Invite your first caregiver' });
+    expect(primary.className.split(/\s+/)).toContain('bg-moss');
+    const notNow = screen.getByRole('button', { name: 'Not now' });
+    expect(notNow.className.split(/\s+/)).not.toContain('bg-moss');
+    // The save button and Back are gone: a second copy cannot be created.
+    expect(screen.queryByRole('button', { name: 'Add medication' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('"Not now" closes the wizard without a discard prompt', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const { onClose } = renderWizard();
+    await saveMedication(user);
+    await user.click(screen.getByRole('button', { name: 'Not now' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Discard this medication?')).not.toBeInTheDocument();
+  });
+
+  it('the close X closes it too, and is not counted as skipping the wizard', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const { onClose } = renderWizard();
+    await saveMedication(user);
+    await user.click(screen.getByRole('button', { name: 'Close setup' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Discard this medication?')).not.toBeInTheDocument();
+    expect(analytics.firstRunSkipped).not.toHaveBeenCalled();
+  });
+
+  it('the primary opens the invite form in place, and a sent invite closes the wizard', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const { onClose } = renderWizard();
+    await saveMedication(user);
+    await user.click(screen.getByRole('button', { name: 'Invite your first caregiver' }));
+
+    expect(screen.getByTestId('invite-modal')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Invite someone to help' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'stub-save' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mutateCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds no funnel noise: no fifth step view, no second action selection', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveMedication(user);
+    await user.click(screen.getByRole('button', { name: 'Invite your first caregiver' }));
+
+    expect(analytics.firstRunStepViewed.mock.calls.map((c) => c[1])).toEqual([
+      'choose',
+      'what',
+      'when',
+      'repeat',
+    ]);
+    expect(analytics.firstRunActionSelected.mock.calls.map((c) => c[1])).toEqual(['medication']);
+  });
+});
+
 // ── Step transitions ────────────────────────────────────────────────────────
 
 describe('step transitions', () => {
   it('opens on the choose step, with no medication fields yet', () => {
     renderWizard();
-    expect(screen.getByRole('button', { name: /Add a medication/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add the first medication/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Medication name/i)).not.toBeInTheDocument();
   });
 
@@ -224,7 +331,7 @@ describe('step transitions', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     expect(screen.getByLabelText(/Medication name/i)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
@@ -238,7 +345,7 @@ describe('step transitions', () => {
   it('blocks the name step while the name is blank', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
 
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     // Still on ②: the schedule strip has not appeared.
@@ -257,7 +364,7 @@ describe('step transitions', () => {
     expect(screen.getByLabelText(/Medication name/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByRole('button', { name: /Add a medication/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add the first medication/i })).toBeInTheDocument();
   });
 
   it('keeps the answers when the user steps back', async () => {
@@ -299,25 +406,24 @@ describe('modal footer convention', () => {
 
     // Advancing to a step with its own StepHeading — that h3 is the ONE
     // visible heading; the sr-only title above is not a second one.
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     expect(
       screen.getByRole('heading', { name: /What does Rosa take\?/i })
     ).toBeInTheDocument();
   });
 
   // DOCUMENTED EXCEPTION to "every footer keeps one filled primary": the
-  // choose step's four option cards ARE its primary actions (each selects AND
-  // advances in one tap), so a footer "Continue" would silently route the
-  // user to whichever action it happened to call and double-fire that
-  // action's funnel analytics. The footer here is ghost-only.
-  it('has no filled button on the choose step — only the ghost Skip', async () => {
+  // choose step's one filled primary ("Add the first medication") is in the
+  // BODY, above the three quieter rows — each selects AND advances in one tap,
+  // so a footer "Continue" would silently route the user to whichever action
+  // it happened to call and double-fire that action's funnel analytics. The
+  // footer here is ghost-only.
+  it('has no filled button in the choose step FOOTER — only the ghost Skip', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
 
-    // None of the choose-step option cards are `<button>` elements styled as
-    // the Button component's filled/primary variant (`bg-moss`) — they are
-    // the plain option-card buttons in ChooseActionStep, not footer actions,
-    // so this only inspects the FOOTER's own controls.
+    // This only inspects the FOOTER's own controls; the body's single filled
+    // button has its own test under "choose step: one primary".
     const footer = screen.getByRole('button', { name: 'Skip for now' })
       .parentElement as HTMLElement;
     // Exact token match, not a substring regex: a ghost button's
@@ -335,7 +441,7 @@ describe('modal footer convention', () => {
     // check and not vacuously true from a stale/renamed class. Advancing past
     // the choose step lands on a step whose footer keeps the documented "one
     // filled primary" (Continue), unlike the choose step's exception.
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     const nextFooter = screen.getByRole('button', { name: 'Back' }).parentElement as HTMLElement;
     const nextFilled = within(nextFooter).getAllByRole('button').filter(isFilled);
     expect(nextFilled).toHaveLength(1);
@@ -349,7 +455,7 @@ describe('choose-step actions', () => {
   it('hands appointment to the event form, pre-typed', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add an appointment/i }));
+    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
 
     expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-type', 'appointment');
     expect(analytics.firstRunActionSelected).toHaveBeenCalledWith(CIRCLE_ID, 'appointment');
@@ -358,7 +464,7 @@ describe('choose-step actions', () => {
   it('hands invite to the invite modal', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Invite a family member/i }));
+    await user.click(screen.getByRole('button', { name: /^Inviting someone$/i }));
 
     expect(screen.getByTestId('invite-modal')).toBeInTheDocument();
     expect(analytics.firstRunActionSelected).toHaveBeenCalledWith(CIRCLE_ID, 'invite');
@@ -367,18 +473,18 @@ describe('choose-step actions', () => {
   it('returns to the chooser when the appointment form is cancelled unsaved', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add an appointment/i }));
+    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
     await user.click(screen.getByRole('button', { name: 'stub-cancel' }));
 
     expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Add an appointment/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^An appointment$/i })).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('closes the wizard once the appointment form has saved', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add an appointment/i }));
+    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
     await user.click(screen.getByRole('button', { name: 'stub-save' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -387,18 +493,18 @@ describe('choose-step actions', () => {
   it('returns to the chooser when the invite modal is dismissed without sending', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Invite a family member/i }));
+    await user.click(screen.getByRole('button', { name: /^Inviting someone$/i }));
     await user.click(screen.getByRole('button', { name: 'stub-cancel' }));
 
     expect(screen.queryByTestId('invite-modal')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Invite a family member/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Inviting someone$/i })).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('closes the wizard once an invite has been sent', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Invite a family member/i }));
+    await user.click(screen.getByRole('button', { name: /^Inviting someone$/i }));
     await user.click(screen.getByRole('button', { name: 'stub-save' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -407,7 +513,7 @@ describe('choose-step actions', () => {
   it('navigates to emergency info, which is a page rather than a modal', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add health info/i }));
+    await user.click(screen.getByRole('button', { name: /^Emergency info$/i }));
 
     expect(navigate).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/emergency`);
     expect(onClose).toHaveBeenCalled();
@@ -416,9 +522,9 @@ describe('choose-step actions', () => {
   it('starts the medication funnel exactly once', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.click(screen.getByRole('button', { name: 'Back' }));
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
 
     // Re-arming would inflate the DENOMINATOR and push the completion rate down
     // — the same metric broken in the other direction.
@@ -454,7 +560,7 @@ describe('skip and close', () => {
   it('closes straight away from step ② while the name is still blank', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.click(screen.getByRole('button', { name: 'Close setup' }));
 
     expect(onClose).toHaveBeenCalled();
@@ -464,7 +570,7 @@ describe('skip and close', () => {
   it('asks before discarding answers the user has actually given', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.click(screen.getByRole('button', { name: 'Close setup' }));
 
@@ -478,7 +584,7 @@ describe('skip and close', () => {
   it('keeps the wizard open when the discard prompt is cancelled', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.click(screen.getByRole('button', { name: 'Close setup' }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -499,7 +605,7 @@ describe('skip and close', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
 
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
@@ -532,7 +638,9 @@ describe('saving', () => {
     await walkToRepeat(user);
     await user.click(screen.getByRole('button', { name: 'Add medication' }));
 
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    // The save lands on the invite offer, in the same dialog; it does not close.
+    expect(await screen.findByRole('heading', { name: 'Invite someone to help' })).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
     expect(mutateCreate).toHaveBeenCalledTimes(1);
     const payload = mutateCreate.mock.calls[0][0] as CreateEventRequest;
     expect(payload.medication_name).toBe('Metformin');
@@ -542,7 +650,7 @@ describe('saving', () => {
   it('creates SIBLING rows for a twice-daily preset, all on one bottle', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('radio', { name: /Twice daily/i }));
@@ -562,7 +670,7 @@ describe('saving', () => {
   it('reports the dose count the caregiver asked for', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('radio', { name: /Three times daily/i }));
@@ -582,7 +690,7 @@ describe('saving', () => {
   it('sends no medication name or dosage to analytics', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.type(screen.getByLabelText(/Dosage/i), '500mg');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -636,7 +744,7 @@ describe('saving', () => {
 
 describe('constraint 4 — multi-dose on a non-daily rule', () => {
   async function chooseTwiceDailyWeekly(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.type(screen.getByLabelText(/Dosage/i), '500mg');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -681,7 +789,7 @@ describe('constraint 4 — multi-dose on a non-daily rule', () => {
   it('does NOT gate a multi-dose preset on the daily rule', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('radio', { name: /Twice daily/i }));
@@ -695,7 +803,7 @@ describe('constraint 4 — multi-dose on a non-daily rule', () => {
   it('reaches the full form from the escape-hatch link too', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Aspirin');
     await user.click(screen.getByRole('button', { name: 'Add full details instead' }));
 
@@ -752,10 +860,10 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
     useCircleResult.circle = undefined;
     renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /Add an appointment/i }));
+    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
 
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Add a medication/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add the first medication/i })).toBeInTheDocument();
   });
 
   it('keeps the wizard on screen when full details is picked before the circle lands', async () => {
@@ -763,7 +871,7 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
     useCircleResult.circle = undefined;
     renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Aspirin');
     await user.click(screen.getByRole('button', { name: 'Add full details instead' }));
 
@@ -792,10 +900,10 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
     useCircleResult.canEdit = false;
     renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /Add an appointment/i }));
+    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
 
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Add a medication/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add the first medication/i })).toBeInTheDocument();
   });
 
   /**
@@ -815,7 +923,7 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
     renderWizard();
 
     // Ignored: nothing is writable yet, so this falls through to the wizard.
-    await user.click(screen.getByRole('button', { name: /Add an appointment/i }));
+    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
 
     // The user moves on. The circle lands while they are answering.
     useCircleResult.circle = {
@@ -826,7 +934,7 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
       care_recipient_timezone: RECIPIENT_TZ,
     };
     useCircleResult.canEdit = true;
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
 
     // Still the wizard, on the step the user actually asked for.
     expect(screen.getByLabelText(/Medication name/i)).toBeInTheDocument();
@@ -915,16 +1023,16 @@ describe('RxNorm lookup on step ② (mobile parity)', () => {
       { rxcui: '6809', name: 'Metformin', strength: null, dosageForm: null },
     ]);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const { onClose } = renderWizard();
+    renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByRole('combobox', { name: /Medication name/i }), 'metf');
     await user.click(await screen.findByRole('option', { name: 'Metformin' }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Add medication' }));
 
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    await screen.findByRole('heading', { name: 'Invite someone to help' });
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ medication_name: 'Metformin', rxcui: '6809' });
   });
 });
@@ -934,7 +1042,7 @@ describe('RxNorm lookup on step ② (mobile parity)', () => {
 // "recipient wording".
 describe('recipient wording', () => {
   async function walk(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
   }
@@ -946,7 +1054,7 @@ describe('recipient wording', () => {
     expect(screen.getByText('Your care circle is ready. What would you like to do first?')).toBeInTheDocument();
     expect(screen.queryByText(/Rosa's care circle/)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Add a medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     expect(screen.getByText('What do you take?')).toBeInTheDocument();
     expect(screen.queryByText(/What does Rosa take/)).not.toBeInTheDocument();
 

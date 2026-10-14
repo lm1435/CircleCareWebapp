@@ -50,7 +50,7 @@ const COPY: Record<'en' | 'es', Copy> = {
   en: {
     createBtn: 'Create circle',
     wizardName: 'Circle created',
-    addMed: 'Add a medication',
+    addMed: 'Add the first medication',
     skip: 'Skip for now',
     nameLabel: /Medication name/i,
     next: 'Continue',
@@ -61,7 +61,7 @@ const COPY: Record<'en' | 'es', Copy> = {
   es: {
     createBtn: 'Crear círculo',
     wizardName: 'Círculo creado',
-    addMed: 'Agregar un medicamento',
+    addMed: 'Agregar el primer medicamento',
     skip: 'Omitir por ahora',
     nameLabel: /Nombre del medicamento/i,
     next: 'Continuar',
@@ -193,6 +193,11 @@ test.describe('first-run wizard', () => {
     // The default 08:00 preset may already be past in the recipient's zone.
     await acceptPastTimeNotice(page, 'Starts with the next dose', 'Continue', COPY.en.savedToast);
     await expect(page.getByText('Medication added.').first()).toBeVisible({ timeout: 20_000 });
+    // The save lands on the invite offer; "Not now" closes the wizard.
+    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
     await expect(wizard).toHaveCount(0, { timeout: 15_000 });
 
     const rows = dbQuery<{ medication_name: string; rxcui: string | null }>(

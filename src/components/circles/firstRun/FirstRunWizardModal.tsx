@@ -28,6 +28,7 @@ import {
 import {
   ChooseActionStep,
   FullDetailsLink,
+  InviteAfterSaveStep,
   MedicationNameStep,
   RepeatStep,
   ScheduleStep,
@@ -53,10 +54,17 @@ import {
  * Mobile has to reset its stack to get the same guarantee.
  */
 
-type Step = 'choose' | 'what' | 'when' | 'repeat';
+/**
+ * `invite` is NOT one of the four questions: it is what the wizard offers once
+ * the medication has saved (inviting someone, as that step's one primary
+ * action). It has no Back — the save button behind it must stay unreachable —
+ * and it is outside `STEP_ORDER`, so it draws no progress rule.
+ */
+type Step = 'choose' | 'what' | 'when' | 'repeat' | 'invite';
+type QuestionStep = Exclude<Step, 'invite'>;
 
 /** Left to right, and the order Back walks in reverse. */
-const STEP_ORDER: Step[] = ['choose', 'what', 'when', 'repeat'];
+const STEP_ORDER: QuestionStep[] = ['choose', 'what', 'when', 'repeat'];
 
 export interface FirstRunWizardModalProps {
   circleId: string;
@@ -71,7 +79,7 @@ export function FirstRunWizardModal({
   circleName,
   onClose,
 }: FirstRunWizardModalProps): ReactElement {
-  const { t } = useTranslation(['circles', 'calendar', 'common']);
+  const { t } = useTranslation(['circles', 'calendar', 'common', 'overview']);
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { circle, canEdit } = useCircle(circleId);
@@ -166,6 +174,9 @@ export function FirstRunWizardModal({
   const scheduleSetTrackedRef = useRef(false);
 
   useEffect(() => {
+    // The four questions only: the post-save invite offer is not a step of
+    // the medication funnel this event measures.
+    if (step === 'invite') return;
     Analytics.firstRunStepViewed(circleId, step);
   }, [circleId, step]);
 
@@ -257,8 +268,17 @@ export function FirstRunWizardModal({
     setHandoff(null);
   };
 
+  /**
+   * The post-save step's primary action: the same hand-off screen ① uses.
+   * `first_run_action_selected` is NOT fired — that event counts the choice on
+   * screen ①, and this user already made theirs (medication).
+   */
+  const handleInviteAfterSave = (): void => {
+    setHandoff('invite');
+  };
+
   const handleBack = (): void => {
-    if (savingRef.current) return;
+    if (savingRef.current || step === 'invite') return;
     // Same reason as in `handleAction`: navigating the wizard by hand
     // supersedes a hand-off that never got to render.
     setHandoff(null);
@@ -325,6 +345,11 @@ export function FirstRunWizardModal({
    * name the user has answered no question yet either.
    */
   const handleClose = (): void => {
+    if (step === 'invite') {
+      // The medication is saved; there is nothing left to discard.
+      onClose();
+      return;
+    }
     if (savingRef.current) return;
     if (step === 'choose') {
       Analytics.firstRunSkipped(circleId, 'close');
@@ -395,10 +420,14 @@ export function FirstRunWizardModal({
         showToast(t('firstRun.savedToast'), 'success');
       }
 
-      // Either way the medication exists, so the wizard is the one place the
-      // user must not return to — returning to it for a medication that now
-      // exists invites a second copy of it.
-      onClose();
+      // Either way the medication exists, so the four questions are the one
+      // place the user must not return to — returning to them for a medication
+      // that now exists invites a second copy of it. What comes next is the
+      // invite offer, IN THIS SAME DIALOG (never a second modal on top): a
+      // terminal step with no Back, so the save button stays unreachable.
+      // `savingRef` is deliberately left claimed for the same reason.
+      setSaving(false);
+      setStep('invite');
     } catch {
       // The PRIMARY create failed, so nothing was saved. Stay on the wizard with
       // every answer intact — the retry is one click, and navigating away would
@@ -550,7 +579,8 @@ export function FirstRunWizardModal({
     );
   }
 
-  const stepIndex = STEP_ORDER.indexOf(step);
+  const isInviteStep = step === 'invite';
+  const stepIndex = isInviteStep ? STEP_ORDER.length - 1 : STEP_ORDER.indexOf(step);
   const isLastStep = step === 'repeat';
 
   return (
@@ -570,12 +600,21 @@ export function FirstRunWizardModal({
         // A stray backdrop click must not throw away three answers.
         closeOnBackdropClick={false}
         footer={
-          step === 'choose' ? (
+          isInviteStep ? (
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={onClose}>
+                {t('firstRun.inviteNext.notNow')}
+              </Button>
+              <Button onClick={handleInviteAfterSave} disabled={!circle}>
+                {t('overview:solo.cta')}
+              </Button>
+            </div>
+          ) : step === 'choose' ? (
             // DOCUMENTED EXCEPTION to "every footer keeps one filled primary":
-            // the four option cards in the body ARE this step's primary
-            // actions — each both selects AND advances in one tap. A footer
-            // "Continue" here would silently pick one of them on the user's
-            // behalf (which one is not obvious from the footer alone) and
+            // this step's one filled primary ("Add the first medication") is
+            // in the BODY, directly above the three quieter rows it outranks —
+            // each of them both selects AND advances in one tap. A footer
+            // "Continue" here would silently pick one on the user's behalf and
             // double-fire `firstRunActionSelected` /
             // `medicationCreationStarted` for whichever action it routed to.
             // Skip is the only footer-level action a pure-choice step needs.
@@ -608,6 +647,7 @@ export function FirstRunWizardModal({
       >
         {/* Progress as four rules that fill. The accessible name is the only
             thing that carries the position — the rules themselves are decorative. */}
+        {!isInviteStep && (
         <div
           role="progressbar"
           aria-valuemin={1}
@@ -627,7 +667,14 @@ export function FirstRunWizardModal({
             />
           ))}
         </div>
+        )}
 
+        {isInviteStep && (
+          <InviteAfterSaveStep
+            recipientName={circleName}
+            isSelfCare={circle?.is_self_care === true}
+          />
+        )}
         {step === 'choose' && (
           <ChooseActionStep
             recipientName={circleName}

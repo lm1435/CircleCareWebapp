@@ -55,7 +55,7 @@
   },
   "edit": {
     "title": "Paramètres du cercle",
-    "subtitle": "Mettez à jour les informations de la personne aidée.",
+    "titleNamed": "Modifier {{name}}",
     "loadingLabel": "Chargement des paramètres du cercle",
     "errorTitle": "Impossible de charger ce cercle.",
     "retry": "Réessayer",
@@ -91,25 +91,8 @@
     "title": "Cercle créé",
     "subtitle": "Le cercle de soins pour {{name}} est prêt. Que souhaitez-vous faire en premier ?",
     "subtitleSelf": "Votre cercle de soins est prêt. Que souhaitez-vous faire en premier ?",
-    "recommended": "Recommandé",
     "skipForNow": "Passer pour l’instant",
-    "tip": "Vous pourrez toujours le faire plus tard depuis la page du cercle.",
-    "medication": {
-      "title": "Ajouter un médicament",
-      "description": "Programmez des rappels pour ses médicaments quotidiens"
-    },
-    "appointment": {
-      "title": "Ajouter un rendez-vous",
-      "description": "Suivez les prochains rendez-vous"
-    },
-    "invite": {
-      "title": "Inviter un membre de la famille",
-      "description": "Impliquez frères, sœurs ou autres aidants"
-    },
-    "emergency": {
-      "title": "Ajouter des infos de santé",
-      "description": "Conservez les informations médicales importantes"
-    }
+    "tip": "Vous pourrez toujours le faire plus tard depuis la page du cercle."
   },
   "firstRun": {
     "steps": {
@@ -117,6 +100,18 @@
       "what": "Nom",
       "when": "Heure",
       "repeat": "Répétition"
+    },
+    "choose": {
+      "primary": "Ajouter le premier médicament",
+      "primaryHelper": "C’est ce qui met en place les rappels.",
+      "orStartWith": "ou commencez par",
+      "appointment": "Un rendez-vous",
+      "invite": "Inviter quelqu’un",
+      "emergency": "Infos d’urgence"
+    },
+    "inviteNext": {
+      "title": "Invitez quelqu’un pour vous aider",
+      "notNow": "Pas maintenant"
     },
     "progressLabel": "Étape {{current}} sur {{total}}",
     "whatTitle": "Que prend {{name}} ?",

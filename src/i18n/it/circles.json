@@ -55,7 +55,7 @@
   },
   "edit": {
     "title": "Impostazioni della cerchia",
-    "subtitle": "Aggiorna i dati della persona di cui si prende cura questa cerchia.",
+    "titleNamed": "Modifica {{name}}",
     "loadingLabel": "Caricamento delle impostazioni della cerchia",
     "errorTitle": "Impossibile caricare questa cerchia.",
     "retry": "Riprova",
@@ -91,25 +91,8 @@
     "title": "Cerchia creata",
     "subtitle": "La cerchia di cura di {{name}} è pronta. Cosa vuoi fare per prima cosa?",
     "subtitleSelf": "La tua cerchia di cura è pronta. Cosa vuoi fare per prima cosa?",
-    "recommended": "Consigliato",
     "skipForNow": "Salta per ora",
-    "tip": "Potrai sempre farlo più tardi dalla pagina della cerchia.",
-    "medication": {
-      "title": "Aggiungi un farmaco",
-      "description": "Imposta i promemoria per i farmaci di ogni giorno"
-    },
-    "appointment": {
-      "title": "Aggiungi un appuntamento",
-      "description": "Tieni traccia dei prossimi appuntamenti"
-    },
-    "invite": {
-      "title": "Invita un familiare",
-      "description": "Coinvolgi fratelli, sorelle o caregiver"
-    },
-    "emergency": {
-      "title": "Aggiungi informazioni sulla salute",
-      "description": "Conserva i dati medici importanti"
-    }
+    "tip": "Potrai sempre farlo più tardi dalla pagina della cerchia."
   },
   "firstRun": {
     "steps": {
@@ -117,6 +100,18 @@
       "what": "Nome",
       "when": "Ora",
       "repeat": "Ripeti"
+    },
+    "choose": {
+      "primary": "Aggiungi il primo farmaco",
+      "primaryHelper": "È ciò che attiva i promemoria.",
+      "orStartWith": "oppure inizia con",
+      "appointment": "Un appuntamento",
+      "invite": "Invitare qualcuno",
+      "emergency": "Info di emergenza"
+    },
+    "inviteNext": {
+      "title": "Invita qualcuno ad aiutarti",
+      "notNow": "Non ora"
     },
     "progressLabel": "Passaggio {{current}} di {{total}}",
     "whatTitle": "Cosa prende {{name}}?",

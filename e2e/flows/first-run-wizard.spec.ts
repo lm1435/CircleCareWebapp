@@ -48,7 +48,7 @@ const COPY: Record<'en' | 'es', Copy> = {
   en: {
     createBtn: 'Create circle',
     wizardName: 'Circle created',
-    addMed: 'Add a medication',
+    addMed: 'Add the first medication',
     skip: 'Skip for now',
     nameLabel: /Medication name/i,
     next: 'Continue',
@@ -59,7 +59,7 @@ const COPY: Record<'en' | 'es', Copy> = {
   es: {
     createBtn: 'Crear círculo',
     wizardName: 'Círculo creado',
-    addMed: 'Agregar un medicamento',
+    addMed: 'Agregar el primer medicamento',
     skip: 'Omitir por ahora',
     nameLabel: /Nombre del medicamento/i,
     next: 'Continuar',
@@ -191,6 +191,14 @@ test.describe('first-run wizard', () => {
     // The default 08:00 preset may already be past in the recipient's zone.
     await acceptPastTimeNotice(page, 'Starts with the next dose', 'Continue', COPY.en.savedToast);
     await expect(page.getByText('Medication added.').first()).toBeVisible({ timeout: 20_000 });
+    // The save lands on the invite offer (same dialog, one primary action);
+    // "Not now" is what closes the wizard.
+    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(wizard.getByRole('button', { name: 'Add medication' })).toHaveCount(0);
+    await expect(wizard.getByRole('button', { name: 'Invite your first caregiver' })).toBeVisible();
+    await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
     await expect(wizard).toHaveCount(0, { timeout: 15_000 });
 
     const rows = dbQuery<{ medication_name: string; rxcui: string | null }>(
@@ -204,6 +212,73 @@ test.describe('first-run wizard', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('dialog', { name: COPY.en.wizardName })).toHaveCount(0);
+  });
+
+  // 1.2.3 "first session focus", section A: ONE filled primary on screen ①.
+  test('choose step: one filled primary with its reason, three quiet rows, Skip and close stay', async ({
+    page,
+  }) => {
+    await createFirstCircle(page, 'en', uniq('wizone'));
+    const wizard = page.getByRole('dialog', { name: COPY.en.wizardName });
+
+    const primary = wizard.getByRole('button', { name: COPY.en.addMed, exact: true });
+    await expect(primary).toBeVisible();
+    await expect(wizard.getByText('This is what sets up reminders.', { exact: true })).toBeVisible();
+    await expect(wizard.getByText('Recommended', { exact: true })).toHaveCount(0);
+
+    const rows = wizard.getByRole('list', { name: 'or start with' }).getByRole('button');
+    await expect(rows).toHaveText(['An appointment', 'Inviting someone', 'Emergency info']);
+    await expect(wizard.getByRole('button', { name: COPY.en.skip, exact: true })).toBeVisible();
+    await expect(wizard.getByRole('button', { name: 'Close setup', exact: true })).toBeVisible();
+
+    // The primary is the only FILLED control: the rows have no background of
+    // their own, and each is at least a 44px target under the primary.
+    const filled = await primary.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const primaryBox = (await primary.boundingBox())!;
+    for (const row of await rows.all()) {
+      expect(await row.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(filled);
+      const box = (await row.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.y).toBeGreaterThan(primaryBox.y + primaryBox.height);
+    }
+
+    // Same destinations as before: the invite row swaps in the invite form,
+    // and cancelling it returns to the chooser.
+    await rows.nth(1).click();
+    const invite = page.getByRole('dialog', { name: 'Invite a member' });
+    await expect(invite).toBeVisible({ timeout: 10_000 });
+    await invite.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(wizard.getByRole('button', { name: COPY.en.addMed, exact: true })).toBeVisible();
+  });
+
+  // Sections B + C: after the wizard, Home shows ONE nudge card. The checklist
+  // goes first, with only its next step filled; the solo invite card waits
+  // until the checklist is finished or dismissed.
+  test('Home after Skip: the checklist alone, one filled step; dismissing it brings the solo invite card', async ({
+    page,
+  }) => {
+    await createFirstCircle(page, 'en', uniq('wiznudge'));
+    await page.getByRole('dialog', { name: COPY.en.wizardName }).getByRole('button', { name: COPY.en.skip }).click();
+
+    const checklist = page.getByRole('region', { name: 'Get started' });
+    await expect(checklist).toBeVisible({ timeout: 20_000 });
+    await expect(checklist.getByText('0 of 3 done')).toBeVisible();
+    const solo = page.getByRole('heading', { name: 'Care is easier together' });
+    await expect(solo).toHaveCount(0);
+
+    // Exactly one highlighted step — the medication — and it holds the only
+    // filled button; the other two are plain rows that are still buttons.
+    await expect(checklist.locator('[data-next="true"]')).toHaveCount(1);
+    const next = checklist.getByTestId('getting-started-step-event');
+    await expect(next).toHaveAttribute('data-next', 'true');
+    await expect(next.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
+    await expect(checklist.getByRole('button', { name: /Invite family & caregivers/ })).toBeVisible();
+    await expect(checklist.getByRole('button', { name: /Add emergency info/ })).toBeVisible();
+    await expect(checklist.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(0);
+
+    await checklist.getByRole('button', { name: 'Dismiss the get started checklist' }).click();
+    await expect(checklist).toHaveCount(0);
+    await expect(solo).toBeVisible({ timeout: 10_000 });
   });
 
   test('skip path: the ghost Skip closes the wizard and leaves no events', async ({ page }) => {

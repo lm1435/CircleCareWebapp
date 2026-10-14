@@ -55,7 +55,7 @@
   },
   "edit": {
     "title": "Circle settings",
-    "subtitle": "Update who this circle is caring for.",
+    "titleNamed": "Edit {{name}}",
     "loadingLabel": "Loading circle settings",
     "errorTitle": "Couldn't load this circle.",
     "retry": "Retry",
@@ -91,25 +91,8 @@
     "title": "Circle created",
     "subtitle": "{{name}}'s care circle is ready. What would you like to do first?",
     "subtitleSelf": "Your care circle is ready. What would you like to do first?",
-    "recommended": "Recommended",
     "skipForNow": "Skip for now",
-    "tip": "You can always do these later from the circle page.",
-    "medication": {
-      "title": "Add a medication",
-      "description": "Set up reminders for their daily meds"
-    },
-    "appointment": {
-      "title": "Add an appointment",
-      "description": "Keep track of upcoming appointments"
-    },
-    "invite": {
-      "title": "Invite a family member",
-      "description": "Get siblings or caregivers involved"
-    },
-    "emergency": {
-      "title": "Add health info",
-      "description": "Store important medical details"
-    }
+    "tip": "You can always do these later from the circle page."
   },
   "firstRun": {
     "steps": {
@@ -117,6 +100,18 @@
       "what": "Name",
       "when": "Time",
       "repeat": "Repeat"
+    },
+    "choose": {
+      "primary": "Add the first medication",
+      "primaryHelper": "This is what sets up reminders.",
+      "orStartWith": "or start with",
+      "appointment": "An appointment",
+      "invite": "Inviting someone",
+      "emergency": "Emergency info"
+    },
+    "inviteNext": {
+      "title": "Invite someone to help",
+      "notNow": "Not now"
     },
     "progressLabel": "Step {{current}} of {{total}}",
     "whatTitle": "What does {{name}} take?",

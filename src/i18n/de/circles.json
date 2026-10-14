@@ -55,7 +55,7 @@
   },
   "edit": {
     "title": "Kreiseinstellungen",
-    "subtitle": "Aktualisieren Sie, für wen dieser Kreis sorgt.",
+    "titleNamed": "{{name}} bearbeiten",
     "loadingLabel": "Kreiseinstellungen werden geladen",
     "errorTitle": "Dieser Kreis konnte nicht geladen werden.",
     "retry": "Erneut versuchen",
@@ -91,25 +91,8 @@
     "title": "Kreis erstellt",
     "subtitle": "Der Pflegekreis von {{name}} ist bereit. Was möchten Sie als Erstes tun?",
     "subtitleSelf": "Ihr Pflegekreis ist bereit. Was möchten Sie als Erstes tun?",
-    "recommended": "Empfohlen",
     "skipForNow": "Vorerst überspringen",
-    "tip": "Sie können all das jederzeit später auf der Kreisseite erledigen.",
-    "medication": {
-      "title": "Medikament hinzufügen",
-      "description": "Erinnerungen für die täglichen Medikamente einrichten"
-    },
-    "appointment": {
-      "title": "Termin hinzufügen",
-      "description": "Den Überblick über anstehende Termine behalten"
-    },
-    "invite": {
-      "title": "Familienmitglied einladen",
-      "description": "Geschwister oder Pflegepersonen einbinden"
-    },
-    "emergency": {
-      "title": "Gesundheitsinfos hinzufügen",
-      "description": "Wichtige medizinische Angaben hinterlegen"
-    }
+    "tip": "Sie können all das jederzeit später auf der Kreisseite erledigen."
   },
   "firstRun": {
     "steps": {
@@ -117,6 +100,18 @@
       "what": "Name",
       "when": "Zeit",
       "repeat": "Wiederholung"
+    },
+    "choose": {
+      "primary": "Erstes Medikament hinzufügen",
+      "primaryHelper": "Damit werden die Erinnerungen eingerichtet.",
+      "orStartWith": "oder beginnen Sie mit",
+      "appointment": "Einem Termin",
+      "invite": "Einer Einladung",
+      "emergency": "Notfallinfos"
+    },
+    "inviteNext": {
+      "title": "Jemanden zur Unterstützung einladen",
+      "notNow": "Nicht jetzt"
     },
     "progressLabel": "Schritt {{current}} von {{total}}",
     "whatTitle": "Was nimmt {{name}} ein?",

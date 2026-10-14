@@ -55,7 +55,7 @@
   },
   "edit": {
     "title": "Configurações do círculo",
-    "subtitle": "Atualize os dados da pessoa cuidada neste círculo.",
+    "titleNamed": "Editar {{name}}",
     "loadingLabel": "Carregando configurações do círculo",
     "errorTitle": "Não foi possível carregar este círculo.",
     "retry": "Tentar novamente",
@@ -91,25 +91,8 @@
     "title": "Círculo criado",
     "subtitle": "O círculo de cuidado de {{name}} está pronto. O que você gostaria de fazer primeiro?",
     "subtitleSelf": "Seu círculo de cuidado está pronto. O que você gostaria de fazer primeiro?",
-    "recommended": "Recomendado",
     "skipForNow": "Pular por enquanto",
-    "tip": "Tudo isso pode ser feito depois, na página do círculo.",
-    "medication": {
-      "title": "Adicionar um medicamento",
-      "description": "Configure lembretes para os medicamentos diários"
-    },
-    "appointment": {
-      "title": "Adicionar uma consulta",
-      "description": "Acompanhe as próximas consultas"
-    },
-    "invite": {
-      "title": "Convidar um familiar",
-      "description": "Envolva irmãos ou cuidadores"
-    },
-    "emergency": {
-      "title": "Adicionar informações de saúde",
-      "description": "Guarde detalhes médicos importantes"
-    }
+    "tip": "Tudo isso pode ser feito depois, na página do círculo."
   },
   "firstRun": {
     "steps": {
@@ -117,6 +100,18 @@
       "what": "Nome",
       "when": "Horário",
       "repeat": "Repetição"
+    },
+    "choose": {
+      "primary": "Adicionar o primeiro medicamento",
+      "primaryHelper": "É isso que configura os lembretes.",
+      "orStartWith": "ou comece por",
+      "appointment": "Uma consulta",
+      "invite": "Convidar alguém",
+      "emergency": "Informações de emergência"
+    },
+    "inviteNext": {
+      "title": "Convide alguém para ajudar",
+      "notNow": "Agora não"
     },
     "progressLabel": "Etapa {{current}} de {{total}}",
     "whatTitle": "O que {{name}} toma?",

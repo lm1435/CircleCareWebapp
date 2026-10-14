@@ -1,7 +1,6 @@
 import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, ChipSelect, Eyebrow, IconTile, Text, TextField, TimeField } from '@/components/ui';
-import type { IconName } from '@/components/ui';
+import { Button, ChipSelect, Eyebrow, Icon, Text, TextField, TimeField } from '@/components/ui';
 import {
   FIRST_RUN_PRESET_ORDER,
   FIRST_RUN_REPEAT_ORDER,
@@ -13,7 +12,7 @@ import type { DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from '@/components/calendar/DrugAutocomplete';
 
 /**
- * The four wizard screens, rebuilt in this repo's own idiom.
+ * The wizard screens, rebuilt in this repo's own idiom.
  *
  * The DECISION LOGIC is not here — it lives in `utils/firstRunMedication.ts`,
  * ported from mobile so both platforms write identical rows. These components
@@ -68,15 +67,6 @@ export function FullDetailsLink({ onClick, disabled = false }: FullDetailsLinkPr
 
 // ── ① Choose an action ──────────────────────────────────────────────────────
 
-interface ActionOption {
-  id: Exclude<FirstRunAction, 'skip'>;
-  /** Ionicons glyph, drawn in an `IconTile` — no hand-drawn SVG (spec §4.4). */
-  icon: IconName;
-  title: string;
-  description: string;
-  recommended?: boolean;
-}
-
 export interface ChooseActionStepProps {
   recipientName: string;
   /** Self-care owner IS the recipient: address them as "you", not by name. */
@@ -84,6 +74,12 @@ export interface ChooseActionStepProps {
   onSelect: (action: FirstRunAction) => void;
 }
 
+/**
+ * Screen ① — ONE filled primary action (the first medication, with one line
+ * saying why: it is what sets up reminders), then a quiet "or start with"
+ * group of three text-style rows. Same destinations as the four equal-weight
+ * cards this replaced; only the emphasis changed.
+ */
 export function ChooseActionStep({
   recipientName,
   isSelfCare,
@@ -91,34 +87,10 @@ export function ChooseActionStep({
 }: ChooseActionStepProps): ReactElement {
   const { t } = useTranslation('circles');
 
-  // Copy comes from the EXISTING `quickWin.*` shape mobile uses — this is the
-  // same four choices its QuickWinModal offered, unchanged.
-  const options: ActionOption[] = [
-    {
-      id: 'medication',
-      icon: 'medkit-outline',
-      title: t('quickWin.medication.title'),
-      description: t('quickWin.medication.description'),
-      recommended: true,
-    },
-    {
-      id: 'appointment',
-      icon: 'calendar-outline',
-      title: t('quickWin.appointment.title'),
-      description: t('quickWin.appointment.description'),
-    },
-    {
-      id: 'invite',
-      icon: 'people-outline',
-      title: t('quickWin.invite.title'),
-      description: t('quickWin.invite.description'),
-    },
-    {
-      id: 'emergency',
-      icon: 'medical-outline',
-      title: t('quickWin.emergency.title'),
-      description: t('quickWin.emergency.description'),
-    },
+  const secondary: { id: Exclude<FirstRunAction, 'skip' | 'medication'>; label: string }[] = [
+    { id: 'appointment', label: t('firstRun.choose.appointment') },
+    { id: 'invite', label: t('firstRun.choose.invite') },
+    { id: 'emergency', label: t('firstRun.choose.emergency') },
   ];
 
   return (
@@ -130,38 +102,74 @@ export function ChooseActionStep({
         }
       />
 
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
-        {options.map((option) => (
-          <li key={option.id}>
-            {/* The recommended option is the ONE accented surface (spec
-                §6.3 / §4.5 `Card variant="accent"`); the rest are outlined.
-                Both are real `Card`s, so neither draws its own shell. */}
-            <Card
-              variant={option.recommended ? 'accent' : 'outlined'}
-              padding="sm"
-              onPress={() => onSelect(option.id)}
-              className="flex min-h-11 items-center gap-4"
-            >
-              <IconTile
-                size={44}
-                tone={option.recommended ? 'clay' : 'neutral'}
-                name={option.icon}
-              />
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-md font-medium text-ink">{option.title}</span>
-                <span className="text-sm text-ink-2">{option.description}</span>
-                {option.recommended ? (
-                  <Eyebrow color="clay" className="mt-1">
-                    {t('quickWin.recommended')}
-                  </Eyebrow>
-                ) : null}
-              </span>
-            </Card>
-          </li>
-        ))}
-      </ul>
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          fullWidth
+          onClick={() => onSelect('medication')}
+          data-testid="first-run-primary"
+          aria-describedby="first-run-primary-helper"
+        >
+          {t('firstRun.choose.primary')}
+        </Button>
+        <p id="first-run-primary-helper" className="m-0 text-center text-sm text-ink-2">
+          {t('firstRun.choose.primaryHelper')}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1 border-t border-line-2 pt-4">
+        <Eyebrow as="p" id="first-run-start-with">
+          {t('firstRun.choose.orStartWith')}
+        </Eyebrow>
+        <ul aria-labelledby="first-run-start-with" className="m-0 flex list-none flex-col p-0">
+          {secondary.map((option) => (
+            <li key={option.id} className="border-t border-line-2 first:border-t-0">
+              <button
+                type="button"
+                onClick={() => onSelect(option.id)}
+                data-testid={`first-run-start-with-${option.id}`}
+                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md py-2.5 text-left text-md font-medium text-moss-deep transition-colors duration-fast hover:bg-bg-2"
+              >
+                <span className="min-w-0">{option.label}</span>
+                <Icon name="chevron-forward" size="inline" className="flex-none text-ink-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <p className="m-0 border-t border-line-2 pt-4 text-sm text-ink-2">{t('quickWin.tip')}</p>
+    </div>
+  );
+}
+
+// ── ⑤ Invite, after the medication saved ────────────────────────────────────
+
+/**
+ * Shown once the first medication has saved: inviting someone is the ONE
+ * primary action of this step (the footer carries it, with a plain "Not now").
+ * Presentation only, like the rest of this file.
+ */
+export function InviteAfterSaveStep({
+  recipientName,
+  isSelfCare,
+}: {
+  recipientName: string;
+  /** Self-care owner IS the recipient: address them as "you", not by name. */
+  isSelfCare?: boolean;
+}): ReactElement {
+  // The body is the solo invite card's own copy (mobile reuses it here too).
+  const { t } = useTranslation(['circles', 'overview']);
+  return (
+    <div className="flex flex-col gap-2" data-testid="first-run-invite-step">
+      <Text variant="h2" as="h3">
+        {t('firstRun.inviteNext.title')}
+      </Text>
+      <Text variant="caption">
+        {isSelfCare
+          ? t('overview:solo.bodySelfCare')
+          : t('overview:solo.body', { name: recipientName })}
+      </Text>
     </div>
   );
 }
