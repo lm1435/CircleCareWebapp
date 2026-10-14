@@ -347,3 +347,51 @@ describe('emergency edit modal — router navigation blocker', () => {
     expect(queryPrompt()).toBeNull();
   });
 });
+
+// Text typed in a tag field but not yet added as a tag is an unsaved edit: the
+// person sees it in the field, and closing would drop it.
+describe('EditMedicalInfoModal — text typed in a tag field, not yet added', () => {
+  it.each(['medication_allergies', 'allergies', 'medical_conditions'])(
+    '%s: pending text makes Cancel ask; clearing it makes the form clean again',
+    async (fieldId) => {
+      const onClose = vi.fn();
+      render(
+        <Providers>
+          <EditMedicalInfoModal circleId={CIRCLE_ID} info={baseInfo} onClose={onClose} />
+        </Providers>
+      );
+      const input = document.getElementById(`${fieldId}-input`) as HTMLInputElement;
+      await userEvent.type(input, 'Latex');
+
+      await userEvent.click(within(formDialog()).getByRole('button', { name: 'Cancel' }));
+      const prompt = queryPrompt();
+      expect(prompt).not.toBeNull();
+      await userEvent.click(within(prompt!).getByRole('button', { name: 'Keep editing' }));
+      expect(input).toHaveValue('Latex');
+      expect(onClose).not.toHaveBeenCalled();
+
+      // Erased again (whitespace and commas are not a tag): nothing to lose.
+      await userEvent.clear(input);
+      await userEvent.type(input, ' , ');
+      await userEvent.click(within(formDialog()).getByRole('button', { name: 'Cancel' }));
+      expect(queryPrompt()).toBeNull();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it('adding the typed text as a tag keeps the form dirty (now as a tag)', async () => {
+    const onClose = vi.fn();
+    render(
+      <Providers>
+        <EditMedicalInfoModal circleId={CIRCLE_ID} info={baseInfo} onClose={onClose} />
+      </Providers>
+    );
+    const input = document.getElementById('allergies-input') as HTMLInputElement;
+    await userEvent.type(input, 'Latex{Enter}');
+    expect(input).toHaveValue('');
+
+    await userEvent.click(within(formDialog()).getByRole('button', { name: 'Cancel' }));
+    expect(queryPrompt()).not.toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});

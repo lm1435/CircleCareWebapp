@@ -190,3 +190,27 @@ test('edited form: closing the tab raises beforeunload; untouched does not', asy
     }
   });
 });
+
+test('medical info: text typed in a tag field but not added yet asks before closing', async ({
+  page,
+  circleId,
+}) => {
+  await gotoEmergency(page, circleId);
+  await page.getByRole('button', { name: 'Edit medical information' }).first().click();
+  const dialog = page.getByRole('dialog', { name: /medical information/i });
+  await expect(dialog).toBeVisible({ timeout: 20_000 });
+
+  const input = dialog.locator('#allergies-input');
+  const typed = uniqueLabel('Pending');
+  await input.fill(typed);
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(prompt(page)).toBeVisible();
+  await prompt(page).getByRole('button', { name: 'Keep editing', exact: true }).click();
+  await expect(input).toHaveValue(typed);
+
+  // Erased again: nothing to lose, Cancel closes at once.
+  await input.fill('');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(prompt(page)).toHaveCount(0);
+});

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -222,6 +223,25 @@ export function VitalFormModal({
     setTimeStr(initialWall.time);
   }, [initialWall]);
 
+  /**
+   * "Discard changes?" (same question, same words as mobile VitalFormScreen and
+   * the Emergency editors). Dirty = the values against what the form OPENED
+   * with: the readings and note as first rendered (a restored session draft
+   * lands after that, so it counts), the date/time against the live prefill
+   * (`initialWall`, which a refetch may move while those fields are untouched).
+   * The type is left out: a type with nothing typed under it holds nothing to
+   * lose, and changing it clears the values, which this already sees.
+   */
+  const openedWith = useRef({ value1, systolic, diastolic, notes }).current;
+  const dirty =
+    value1.trim() !== openedWith.value1.trim() ||
+    systolic.trim() !== openedWith.systolic.trim() ||
+    diastolic.trim() !== openedWith.diastolic.trim() ||
+    notes.trim() !== openedWith.notes.trim() ||
+    dateStr !== initialWall.date ||
+    timeStr !== initialWall.time;
+  const discardGuard = useDiscardChangesGuard(dirty, onClose);
+
   const isBloodPressure = vitalType === 'blood_pressure';
   const displayUnit = getDisplayUnit(vitalType, weightUnit, glucoseUnit, temperatureUnit);
   // ── Dual-timezone disclosure (same shape as AddEventModal) ────────────────
@@ -411,7 +431,9 @@ export function VitalFormModal({
         showToast(t('toast.added'), 'success');
       }
       onSaved?.();
-      onClose();
+      // Saved: close WITHOUT the discard prompt (the form still differs from
+      // what it opened with by exactly what was just saved).
+      discardGuard.closeAfterSave();
     } catch {
       // Mutation hooks surface their own permission/subscription/save toasts.
     }
@@ -460,133 +482,136 @@ export function VitalFormModal({
               : '68';
 
   return (
-    <Modal
-      title={isEditing ? t('edit.title') : t('add.title')}
-      onClose={onClose}
-      closeLabel={t('common:close')}
-      size="md"
-      closeOnBackdropClick={false}
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} disabled={isPending}>
-            {t('common:cancel')}
-          </Button>
-          {/* `loading` swaps the label for a Spinner and sets aria-busy, so the
-              old "Saving…" label (and its i18n key) is gone. */}
-          <Button type="submit" form="vital-form" loading={isPending}>
-            {isEditing ? t('edit.save') : t('add.save')}
-          </Button>
-        </div>
-      }
-    >
-      <form id="vital-form" onSubmit={guardedSubmit} className="flex flex-col gap-4" noValidate>
-        {/* Type selector — create only; locked (its own type) when editing. */}
-        {isEditing ? (
-          <div className="flex flex-col gap-1.5">
-            <Text variant="label">{t('add.typeLabel')}</Text>
-            <Text variant="bodyDense">{t(`types.${vitalType}`)}</Text>
+    <>
+      <Modal
+        title={isEditing ? t('edit.title') : t('add.title')}
+        onClose={discardGuard.requestClose}
+        closeLabel={t('common:close')}
+        size="md"
+        closeOnBackdropClick={false}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={discardGuard.requestClose} disabled={isPending}>
+              {t('common:cancel')}
+            </Button>
+            {/* `loading` swaps the label for a Spinner and sets aria-busy, so the
+                old "Saving…" label (and its i18n key) is gone. */}
+            <Button type="submit" form="vital-form" loading={isPending}>
+              {isEditing ? t('edit.save') : t('add.save')}
+            </Button>
           </div>
-        ) : (
-          <Select
-            id="vital_type"
-            label={t('add.typeLabel')}
-            options={typeOptions}
-            value={vitalType}
-            onChange={(e) => handleTypeChange(e.target.value as VitalType)}
-          />
-        )}
+        }
+      >
+        <form id="vital-form" onSubmit={guardedSubmit} className="flex flex-col gap-4" noValidate>
+          {/* Type selector — create only; locked (its own type) when editing. */}
+          {isEditing ? (
+            <div className="flex flex-col gap-1.5">
+              <Text variant="label">{t('add.typeLabel')}</Text>
+              <Text variant="bodyDense">{t(`types.${vitalType}`)}</Text>
+            </div>
+          ) : (
+            <Select
+              id="vital_type"
+              label={t('add.typeLabel')}
+              options={typeOptions}
+              value={vitalType}
+              onChange={(e) => handleTypeChange(e.target.value as VitalType)}
+            />
+          )}
 
-        {/* Value inputs */}
-        {isBloodPressure ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Value inputs */}
+          {isBloodPressure ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField
+                id="value1"
+                label={t('fields.systolic')}
+                type="text"
+                inputMode="numeric"
+                value={systolic}
+                placeholder="120"
+                hint={t('fields.unitSuffix', { unit: 'mmHg' })}
+                error={errors.value1}
+                onChange={(e) => {
+                  setSystolic(e.target.value);
+                  clearError('value1');
+                }}
+              />
+              <TextField
+                id="value2"
+                label={t('fields.diastolic')}
+                type="text"
+                inputMode="numeric"
+                value={diastolic}
+                placeholder="80"
+                hint={t('fields.unitSuffix', { unit: 'mmHg' })}
+                error={errors.value2}
+                onChange={(e) => {
+                  setDiastolic(e.target.value);
+                  clearError('value2');
+                }}
+              />
+            </div>
+          ) : (
             <TextField
               id="value1"
-              label={t('fields.systolic')}
+              label={t(`types.${vitalType}`)}
               type="text"
-              inputMode="numeric"
-              value={systolic}
-              placeholder="120"
-              hint={t('fields.unitSuffix', { unit: 'mmHg' })}
+              inputMode="decimal"
+              value={value1}
+              placeholder={value1Placeholder}
+              hint={t('fields.unitSuffix', { unit: displayUnit })}
               error={errors.value1}
               onChange={(e) => {
-                setSystolic(e.target.value);
+                setValue1(e.target.value);
                 clearError('value1');
               }}
             />
-            <TextField
-              id="value2"
-              label={t('fields.diastolic')}
-              type="text"
-              inputMode="numeric"
-              value={diastolic}
-              placeholder="80"
-              hint={t('fields.unitSuffix', { unit: 'mmHg' })}
-              error={errors.value2}
+          )}
+
+          {/* Recorded-at date + time (recipient TZ). */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <DateField
+              id="recorded_at"
+              label={t('fields.date')}
+              value={dateStr}
+              error={errors.recorded_at}
+              hint={showDualTimezone ? dualTimezoneLabel : undefined}
               onChange={(e) => {
-                setDiastolic(e.target.value);
-                clearError('value2');
+                wallTouched.current = true;
+                setDateStr(e.target.value);
+                clearError('recorded_at');
+              }}
+            />
+            <TimeField
+              id="recorded_time"
+              label={t('fields.time')}
+              value={timeStr}
+              // The live conversion sits on the TIME field, where the digits are.
+              hint={conversionText ?? undefined}
+              onChange={(e) => {
+                wallTouched.current = true;
+                setTimeStr(e.target.value);
+                clearError('recorded_at');
               }}
             />
           </div>
-        ) : (
-          <TextField
-            id="value1"
-            label={t(`types.${vitalType}`)}
-            type="text"
-            inputMode="decimal"
-            value={value1}
-            placeholder={value1Placeholder}
-            hint={t('fields.unitSuffix', { unit: displayUnit })}
-            error={errors.value1}
-            onChange={(e) => {
-              setValue1(e.target.value);
-              clearError('value1');
-            }}
-          />
-        )}
 
-        {/* Recorded-at date + time (recipient TZ). */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <DateField
-            id="recorded_at"
-            label={t('fields.date')}
-            value={dateStr}
-            error={errors.recorded_at}
-            hint={showDualTimezone ? dualTimezoneLabel : undefined}
+          <TextArea
+            id="notes"
+            label={t('fields.notes')}
+            value={notes}
+            rows={3}
+            maxLength={500}
+            placeholder={t('fields.notesPlaceholder')}
+            error={errors.notes}
             onChange={(e) => {
-              wallTouched.current = true;
-              setDateStr(e.target.value);
-              clearError('recorded_at');
+              setNotes(e.target.value);
+              clearError('notes');
             }}
           />
-          <TimeField
-            id="recorded_time"
-            label={t('fields.time')}
-            value={timeStr}
-            // The live conversion sits on the TIME field, where the digits are.
-            hint={conversionText ?? undefined}
-            onChange={(e) => {
-              wallTouched.current = true;
-              setTimeStr(e.target.value);
-              clearError('recorded_at');
-            }}
-          />
-        </div>
-
-        <TextArea
-          id="notes"
-          label={t('fields.notes')}
-          value={notes}
-          rows={3}
-          maxLength={500}
-          placeholder={t('fields.notesPlaceholder')}
-          error={errors.notes}
-          onChange={(e) => {
-            setNotes(e.target.value);
-            clearError('notes');
-          }}
-        />
-      </form>
-    </Modal>
+        </form>
+      </Modal>
+      {discardGuard.prompt}
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { useCallback, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
@@ -38,6 +38,8 @@ export function splitCommaList(text: string): string[] {
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
+
+const EMPTY_PENDING: ReadonlySet<string> = new Set();
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -87,7 +89,19 @@ function EditMedicalInfoModalForm({
   const medicalBaseline = useRef(JSON.stringify(medicalSnapshot));
   // Same baseline the draft compares to: an untouched form is never dirty, a
   // restored draft that differs from the record is.
-  const dirty = JSON.stringify(medicalSnapshot) !== medicalBaseline.current;
+  // Text typed in a tag field but not added yet is an edit too: closing drops it.
+  const [pendingTagText, setPendingTagText] = useState<ReadonlySet<string>>(EMPTY_PENDING);
+  const reportPendingTagText = useCallback((field: string, pending: boolean): void => {
+    setPendingTagText((prev) => {
+      if (prev.has(field) === pending) return prev;
+      const next = new Set(prev);
+      if (pending) next.add(field);
+      else next.delete(field);
+      return next;
+    });
+  }, []);
+  const dirty =
+    JSON.stringify(medicalSnapshot) !== medicalBaseline.current || pendingTagText.size > 0;
   const discardGuard = useDiscardChangesGuard(dirty, onClose);
   useSessionDraft<typeof medicalSnapshot>(
     `emergency:medical:${circleId}`,
@@ -169,6 +183,7 @@ function EditMedicalInfoModalForm({
           </div>
           <TagInput
             id="medication_allergies"
+            onPendingTextChange={(pending) => reportPendingTagText('medication_allergies', pending)}
             label={t('edit.medical.medicationAllergies')}
             values={medicationAllergies}
             onChange={setMedicationAllergies}
@@ -177,6 +192,7 @@ function EditMedicalInfoModalForm({
           />
           <TagInput
             id="allergies"
+            onPendingTextChange={(pending) => reportPendingTagText('allergies', pending)}
             label={t('edit.medical.otherAllergies')}
             values={allergies}
             onChange={setAllergies}
@@ -185,6 +201,7 @@ function EditMedicalInfoModalForm({
           />
           <TagInput
             id="medical_conditions"
+            onPendingTextChange={(pending) => reportPendingTagText('medical_conditions', pending)}
             label={t('edit.medical.conditions')}
             values={conditions}
             onChange={setConditions}

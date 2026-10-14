@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { Text } from './Text';
@@ -19,6 +19,13 @@ export interface TagInputProps {
   maxTags?: number;
   /** Server cap: max characters per tag. */
   maxTagLength?: number;
+  /**
+   * Told whether the search/add field holds text that is not a tag yet (trimmed,
+   * commas stripped: what "Add" would add). The host's "Discard changes?" guard
+   * counts it as an unsaved edit. Called on change only, and with `false` on
+   * unmount so a host never keeps a stale `true`.
+   */
+  onPendingTextChange?: (hasPendingText: boolean) => void;
 }
 
 const COLLAPSED_COUNT = 8;
@@ -52,6 +59,7 @@ export function TagInput({
   placeholder,
   maxTags = 100,
   maxTagLength = 200,
+  onPendingTextChange,
 }: TagInputProps): ReactElement {
   const { t } = useTranslation('emergency');
   const [input, setInput] = useState('');
@@ -78,6 +86,13 @@ export function TagInput({
 
   // Free-text candidate: trim + strip commas + truncate to the per-tag cap.
   const candidate = input.replace(/,/g, '').trim().slice(0, maxTagLength);
+  const hasPendingText = candidate.length > 0;
+  const pendingCallbackRef = useRef(onPendingTextChange);
+  pendingCallbackRef.current = onPendingTextChange;
+  useEffect(() => {
+    pendingCallbackRef.current?.(hasPendingText);
+  }, [hasPendingText]);
+  useEffect(() => () => pendingCallbackRef.current?.(false), []);
   const candidateKey = normalize(candidate);
   // The one suggestion that IS the candidate, if any (case/diacritic
   // insensitive). A SUBSTRING match (e.g. "Sulfa" inside "Sulfa drugs") does
