@@ -68,6 +68,12 @@
     "saving": "Saving…",
     "cancel": "Cancel",
     "close": "Close",
+    "discard": {
+      "title": "Discard changes?",
+      "message": "What you typed here won't be saved.",
+      "confirm": "Discard",
+      "keep": "Keep editing"
+    },
     "required": "Required",
     "optional": "Optional",
     "addDoctor": "Add doctor",

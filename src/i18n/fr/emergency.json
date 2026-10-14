@@ -68,6 +68,12 @@
     "saving": "Enregistrement…",
     "cancel": "Annuler",
     "close": "Fermer",
+    "discard": {
+      "title": "Abandonner les modifications ?",
+      "message": "Ce que vous avez saisi ici ne sera pas enregistré.",
+      "confirm": "Abandonner",
+      "keep": "Continuer à modifier"
+    },
     "required": "Obligatoire",
     "optional": "Facultatif",
     "addDoctor": "Ajouter un médecin",

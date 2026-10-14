@@ -68,6 +68,12 @@
     "saving": "Wird gespeichert …",
     "cancel": "Abbrechen",
     "close": "Schließen",
+    "discard": {
+      "title": "Änderungen verwerfen?",
+      "message": "Was Sie hier eingegeben haben, wird nicht gespeichert.",
+      "confirm": "Verwerfen",
+      "keep": "Weiter bearbeiten"
+    },
     "required": "Pflichtfeld",
     "optional": "optional",
     "addDoctor": "Ärztin/Arzt hinzufügen",

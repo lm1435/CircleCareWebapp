@@ -26,6 +26,10 @@
   },
   "edit": {
     "delete": "Eliminar",
+    "discard": {
+      "message": "O que escreveu aqui não será guardado.",
+      "keep": "Continuar a editar"
+    },
     "save": "Guardar",
     "saving": "A guardar…",
     "addContact": "Adicionar contacto",

@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import type { AdditionalDoctor, EmergencyInfo } from '@/api/emergencyInfo';
 import {
   appendItem,
@@ -106,6 +107,10 @@ function EditDoctorModalForm({
     : emergencyEntryDraftId(info?.additional_doctors, editIndex, DOCTOR_DRAFT_FIELDS);
   const doctorSnapshot = { name, specialty, phoneValue, extension, address };
   const doctorBaseline = useRef(JSON.stringify(doctorSnapshot));
+  // Same baseline the draft compares to: an untouched form is never dirty, a
+  // restored draft that differs from the record is.
+  const dirty = JSON.stringify(doctorSnapshot) !== doctorBaseline.current;
+  const discardGuard = useDiscardChangesGuard(dirty, onClose);
   useSessionDraft<typeof doctorSnapshot>(
     draftId ? `emergency:doctor:${circleId}:${draftId}` : null,
     () => (JSON.stringify(doctorSnapshot) === doctorBaseline.current ? null : doctorSnapshot),
@@ -173,7 +178,9 @@ function EditDoctorModalForm({
     }
 
     update.mutate(withIfMatch(info, partial), {
-      onSuccess: onClose,
+      // Saved: close WITHOUT the discard prompt (the form still differs from
+      // its baseline — by exactly what was just saved).
+      onSuccess: discardGuard.closeAfterSave,
       onError: (err) => {
         if (getEmergencyInfoConflict(err)) onConflict();
       },
@@ -188,84 +195,87 @@ function EditDoctorModalForm({
       : t('edit.doctor.addTitle');
 
   return (
-    <Modal
-      title={title}
-      // lg, not the md default: the phone row needs a ~17.5rem country column
-      // beside the number (see PhoneField).
-      size="lg"
-      onClose={onClose}
-      closeLabel={t('edit.close')}
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
-            {t('edit.cancel')}
-          </Button>
-          <Button type="submit" form="edit-doctor-form" variant="primary" loading={update.isPending}>
-            {t('edit.save')}
-          </Button>
-        </div>
-      }
-    >
-      <form id="edit-doctor-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <TextField
-          id="doctor-name"
-          label={t('edit.doctor.name')}
-          required
-          value={name}
-          maxLength={100}
-          error={nameError}
-          placeholder={t('edit.doctor.namePlaceholder')}
-          onChange={(e) => {
-            setName(e.target.value);
-            if (nameError) setNameError(undefined);
-          }}
-        />
-        <TextField
-          id="doctor-specialty"
-          label={t('edit.doctor.specialty')}
-          value={specialty}
-          maxLength={100}
-          placeholder={t('edit.doctor.specialtyPlaceholder')}
-          onChange={(e) => setSpecialty(e.target.value)}
-        />
-        {/* Quick-fill: chips fill the specialty field above; the field stays
-            the source of truth (custom specialties remain possible). Selected
-            = field matches the chip case-insensitively (QP3). */}
-        <ChipSelect
-          id="doctor-specialty-suggestions"
-          label={t('specialties.label')}
-          options={SPECIALTY_KEYS.map((key) => t(key))}
-          value={specialty}
-          // Quick-fill row (text field stays the source of truth) — re-tapping
-          // the selected chip must not silently clear the field (WA7).
-          allowDeselect={false}
-          onChange={(next) => setSpecialty(next ?? '')}
-        />
-        <PhoneField
-          ref={phoneRef}
-          id="doctor-phone"
-          label={t('edit.doctor.phone')}
-          value={phoneValue.phone}
-          countryCode={phoneValue.countryCode}
-          onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
-        />
-        <ExtensionField
-          id="doctor-phone-extension"
-          value={extension}
-          onChange={setExtension}
-          hasPhone={phoneValue.phone.trim() !== ''}
-        />
-        <TextArea
-          id="doctor-address"
-          label={t('edit.doctor.address')}
-          value={address}
-          rows={2}
-          maxLength={1000}
-          placeholder={t('edit.doctor.addressPlaceholder')}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-      </form>
-    </Modal>
+    <>
+      <Modal
+        title={title}
+        // lg, not the md default: the phone row needs a ~17.5rem country column
+        // beside the number (see PhoneField).
+        size="lg"
+        onClose={discardGuard.requestClose}
+        closeLabel={t('edit.close')}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
+              {t('edit.cancel')}
+            </Button>
+            <Button type="submit" form="edit-doctor-form" variant="primary" loading={update.isPending}>
+              {t('edit.save')}
+            </Button>
+          </div>
+        }
+      >
+        <form id="edit-doctor-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <TextField
+            id="doctor-name"
+            label={t('edit.doctor.name')}
+            required
+            value={name}
+            maxLength={100}
+            error={nameError}
+            placeholder={t('edit.doctor.namePlaceholder')}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (nameError) setNameError(undefined);
+            }}
+          />
+          <TextField
+            id="doctor-specialty"
+            label={t('edit.doctor.specialty')}
+            value={specialty}
+            maxLength={100}
+            placeholder={t('edit.doctor.specialtyPlaceholder')}
+            onChange={(e) => setSpecialty(e.target.value)}
+          />
+          {/* Quick-fill: chips fill the specialty field above; the field stays
+              the source of truth (custom specialties remain possible). Selected
+              = field matches the chip case-insensitively (QP3). */}
+          <ChipSelect
+            id="doctor-specialty-suggestions"
+            label={t('specialties.label')}
+            options={SPECIALTY_KEYS.map((key) => t(key))}
+            value={specialty}
+            // Quick-fill row (text field stays the source of truth) — re-tapping
+            // the selected chip must not silently clear the field (WA7).
+            allowDeselect={false}
+            onChange={(next) => setSpecialty(next ?? '')}
+          />
+          <PhoneField
+            ref={phoneRef}
+            id="doctor-phone"
+            label={t('edit.doctor.phone')}
+            value={phoneValue.phone}
+            countryCode={phoneValue.countryCode}
+            onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
+          />
+          <ExtensionField
+            id="doctor-phone-extension"
+            value={extension}
+            onChange={setExtension}
+            hasPhone={phoneValue.phone.trim() !== ''}
+          />
+          <TextArea
+            id="doctor-address"
+            label={t('edit.doctor.address')}
+            value={address}
+            rows={2}
+            maxLength={1000}
+            placeholder={t('edit.doctor.addressPlaceholder')}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </form>
+      </Modal>
+      {discardGuard.prompt}
+    </>
   );
 }
 

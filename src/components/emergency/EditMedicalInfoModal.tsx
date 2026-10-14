@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
 import {
   useEmergencyEditSeed,
@@ -84,6 +85,10 @@ function EditMedicalInfoModalForm({
   // saved when the form differs from what it opened with.
   const medicalSnapshot = { bloodType, medicationAllergies, allergies, conditions };
   const medicalBaseline = useRef(JSON.stringify(medicalSnapshot));
+  // Same baseline the draft compares to: an untouched form is never dirty, a
+  // restored draft that differs from the record is.
+  const dirty = JSON.stringify(medicalSnapshot) !== medicalBaseline.current;
+  const discardGuard = useDiscardChangesGuard(dirty, onClose);
   useSessionDraft<typeof medicalSnapshot>(
     `emergency:medical:${circleId}`,
     () => (JSON.stringify(medicalSnapshot) === medicalBaseline.current ? null : medicalSnapshot),
@@ -113,7 +118,9 @@ function EditMedicalInfoModalForm({
         medical_conditions: conditions,
       }),
       {
-        onSuccess: onClose,
+        // Saved: close WITHOUT the discard prompt (the form still differs from
+        // its baseline — by exactly what was just saved).
+        onSuccess: discardGuard.closeAfterSave,
         onError: (err) => {
           if (getEmergencyInfoConflict(err)) onConflict();
         },
@@ -123,68 +130,71 @@ function EditMedicalInfoModalForm({
   };
 
   return (
-    <Modal
-      title={t('edit.medical.title')}
-      size="xl"
-      onClose={onClose}
-      closeLabel={t('edit.close')}
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
-            {t('edit.cancel')}
-          </Button>
-          <Button type="submit" form="edit-medical-form" variant="primary" loading={update.isPending}>
-            {t('edit.save')}
-          </Button>
-        </div>
-      }
-    >
-      <form id="edit-medical-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Blood type — single-select chips; clicking the selected chip clears it.
-            Legacy free-text values stay visible as an extra chip so they can be
-            deselected; new selections are standard types only. */}
-        <div className="flex flex-col gap-1.5">
-          {/* ChipSelect exposes its accessible name only via `label` → its own
-              aria-label (it has no aria-labelledby prop to point at this
-              span instead), so this visible span and that aria-label
-              necessarily carry the same text — not a component to fix here. */}
-          <span id="blood-type-label" className="text-sm font-medium text-ink-2">
-            {t('edit.medical.bloodType')}
-          </span>
-          <ChipSelect
-            id="blood_type"
-            label={t('edit.medical.bloodType')}
-            options={bloodTypeOptions}
-            value={storedBloodType || null}
-            onChange={(next) => setBloodType(next ?? '')}
+    <>
+      <Modal
+        title={t('edit.medical.title')}
+        size="xl"
+        onClose={discardGuard.requestClose}
+        closeLabel={t('edit.close')}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
+              {t('edit.cancel')}
+            </Button>
+            <Button type="submit" form="edit-medical-form" variant="primary" loading={update.isPending}>
+              {t('edit.save')}
+            </Button>
+          </div>
+        }
+      >
+        <form id="edit-medical-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Blood type — single-select chips; clicking the selected chip clears it.
+              Legacy free-text values stay visible as an extra chip so they can be
+              deselected; new selections are standard types only. */}
+          <div className="flex flex-col gap-1.5">
+            {/* ChipSelect exposes its accessible name only via `label` → its own
+                aria-label (it has no aria-labelledby prop to point at this
+                span instead), so this visible span and that aria-label
+                necessarily carry the same text — not a component to fix here. */}
+            <span id="blood-type-label" className="text-sm font-medium text-ink-2">
+              {t('edit.medical.bloodType')}
+            </span>
+            <ChipSelect
+              id="blood_type"
+              label={t('edit.medical.bloodType')}
+              options={bloodTypeOptions}
+              value={storedBloodType || null}
+              onChange={(next) => setBloodType(next ?? '')}
+            />
+          </div>
+          <TagInput
+            id="medication_allergies"
+            label={t('edit.medical.medicationAllergies')}
+            values={medicationAllergies}
+            onChange={setMedicationAllergies}
+            suggestions={MED_ALLERGY_TAG_KEYS.map((key) => t(key))}
+            placeholder={t('edit.medical.medicationAllergiesPlaceholder')}
           />
-        </div>
-        <TagInput
-          id="medication_allergies"
-          label={t('edit.medical.medicationAllergies')}
-          values={medicationAllergies}
-          onChange={setMedicationAllergies}
-          suggestions={MED_ALLERGY_TAG_KEYS.map((key) => t(key))}
-          placeholder={t('edit.medical.medicationAllergiesPlaceholder')}
-        />
-        <TagInput
-          id="allergies"
-          label={t('edit.medical.otherAllergies')}
-          values={allergies}
-          onChange={setAllergies}
-          suggestions={OTHER_ALLERGY_TAG_KEYS.map((key) => t(key))}
-          placeholder={t('edit.medical.otherAllergiesPlaceholder')}
-        />
-        <TagInput
-          id="medical_conditions"
-          label={t('edit.medical.conditions')}
-          values={conditions}
-          onChange={setConditions}
-          suggestions={CONDITION_TAG_KEYS.map((key) => t(key))}
-          placeholder={t('edit.medical.conditionsPlaceholder')}
-        />
-      </form>
-    </Modal>
+          <TagInput
+            id="allergies"
+            label={t('edit.medical.otherAllergies')}
+            values={allergies}
+            onChange={setAllergies}
+            suggestions={OTHER_ALLERGY_TAG_KEYS.map((key) => t(key))}
+            placeholder={t('edit.medical.otherAllergiesPlaceholder')}
+          />
+          <TagInput
+            id="medical_conditions"
+            label={t('edit.medical.conditions')}
+            values={conditions}
+            onChange={setConditions}
+            suggestions={CONDITION_TAG_KEYS.map((key) => t(key))}
+            placeholder={t('edit.medical.conditionsPlaceholder')}
+          />
+        </form>
+      </Modal>
+      {discardGuard.prompt}
+    </>
   );
 }
 

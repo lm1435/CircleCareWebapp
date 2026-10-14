@@ -68,6 +68,12 @@
     "saving": "Guardando…",
     "cancel": "Cancelar",
     "close": "Cerrar",
+    "discard": {
+      "title": "¿Descartar los cambios?",
+      "message": "Lo que escribiste aquí no se guardará.",
+      "confirm": "Descartar",
+      "keep": "Seguir editando"
+    },
     "required": "Obligatorio",
     "optional": "Opcional",
     "addDoctor": "Agregar doctor",

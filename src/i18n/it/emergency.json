@@ -68,6 +68,12 @@
     "saving": "Salvataggio…",
     "cancel": "Annulla",
     "close": "Chiudi",
+    "discard": {
+      "title": "Vuoi scartare le modifiche?",
+      "message": "Quello che hai scritto qui non verrà salvato.",
+      "confirm": "Scarta",
+      "keep": "Continua a modificare"
+    },
     "required": "Obbligatorio",
     "optional": "Facoltativo",
     "addDoctor": "Aggiungi medico",

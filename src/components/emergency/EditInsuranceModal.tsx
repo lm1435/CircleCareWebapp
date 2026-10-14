@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import type { EmergencyInfo, InsurancePlan } from '@/api/emergencyInfo';
 import {
   relocateIndex,
@@ -87,6 +88,10 @@ function EditInsuranceModalForm({
   const draftId = emergencyEntryDraftId(info?.insurance_plans, index, INSURANCE_DRAFT_FIELDS);
   const planSnapshot = { label, carrier, policyNumber, groupNumber, phoneValue, extension, isPrimary };
   const planBaseline = useRef(JSON.stringify(planSnapshot));
+  // Same baseline the draft compares to: an untouched form is never dirty, a
+  // restored draft that differs from the record is.
+  const dirty = JSON.stringify(planSnapshot) !== planBaseline.current;
+  const discardGuard = useDiscardChangesGuard(dirty, onClose);
   useSessionDraft<typeof planSnapshot>(
     draftId ? `emergency:insurance:${circleId}:${draftId}` : null,
     () => (JSON.stringify(planSnapshot) === planBaseline.current ? null : planSnapshot),
@@ -136,7 +141,9 @@ function EditInsuranceModalForm({
     const next = upsertWithPrimaryExclusivity(info?.insurance_plans ?? [], plan, index);
 
     update.mutate(withIfMatch(info, { insurance_plans: toRequestPlans(next) }), {
-      onSuccess: onClose,
+      // Saved: close WITHOUT the discard prompt (the form still differs from
+      // its baseline — by exactly what was just saved).
+      onSuccess: discardGuard.closeAfterSave,
       onError: (err) => {
         if (getEmergencyInfoConflict(err)) onConflict();
       },
@@ -145,82 +152,85 @@ function EditInsuranceModalForm({
   };
 
   return (
-    <Modal
-      title={index !== undefined ? t('edit.insurance.editTitle') : t('edit.insurance.addTitle')}
-      // lg, not the md default: the phone row needs a ~17.5rem country column
-      // beside the number (see PhoneField).
-      size="lg"
-      onClose={onClose}
-      closeLabel={t('edit.close')}
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
-            {t('edit.cancel')}
-          </Button>
-          <Button type="submit" form="edit-insurance-form" variant="primary" loading={update.isPending}>
-            {t('edit.save')}
-          </Button>
-        </div>
-      }
-    >
-      <form id="edit-insurance-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <TextField
-          id="insurance-carrier"
-          label={t('edit.insurance.carrier')}
-          required
-          value={carrier}
-          maxLength={100}
-          error={error}
-          placeholder={t('edit.insurance.carrierPlaceholder')}
-          onChange={(e) => {
-            setCarrier(e.target.value);
-            if (error) setError(undefined);
-          }}
-        />
-        <TextField
-          id="insurance-label"
-          label={t('edit.insurance.label')}
-          value={label}
-          maxLength={100}
-          placeholder={t('edit.insurance.labelPlaceholder')}
-          onChange={(e) => setLabel(e.target.value)}
-        />
-        <TextField
-          id="insurance-policy"
-          label={t('edit.insurance.policyNumber')}
-          value={policyNumber}
-          maxLength={100}
-          onChange={(e) => setPolicyNumber(e.target.value)}
-        />
-        <TextField
-          id="insurance-group"
-          label={t('edit.insurance.groupNumber')}
-          value={groupNumber}
-          maxLength={100}
-          onChange={(e) => setGroupNumber(e.target.value)}
-        />
-        <PhoneField
-          ref={phoneRef}
-          id="insurance-phone"
-          label={t('edit.insurance.phone')}
-          value={phoneValue.phone}
-          countryCode={phoneValue.countryCode}
-          onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
-        />
-        <ExtensionField
-          id="insurance-phone-extension"
-          value={extension}
-          onChange={setExtension}
-          hasPhone={phoneValue.phone.trim() !== ''}
-        />
-        <Toggle
-          checked={isPrimary}
-          onChange={setIsPrimary}
-          label={t('edit.insurance.primary')}
-          hint={t('edit.insurance.primaryHint')}
-        />
-      </form>
-    </Modal>
+    <>
+      <Modal
+        title={index !== undefined ? t('edit.insurance.editTitle') : t('edit.insurance.addTitle')}
+        // lg, not the md default: the phone row needs a ~17.5rem country column
+        // beside the number (see PhoneField).
+        size="lg"
+        onClose={discardGuard.requestClose}
+        closeLabel={t('edit.close')}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
+              {t('edit.cancel')}
+            </Button>
+            <Button type="submit" form="edit-insurance-form" variant="primary" loading={update.isPending}>
+              {t('edit.save')}
+            </Button>
+          </div>
+        }
+      >
+        <form id="edit-insurance-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <TextField
+            id="insurance-carrier"
+            label={t('edit.insurance.carrier')}
+            required
+            value={carrier}
+            maxLength={100}
+            error={error}
+            placeholder={t('edit.insurance.carrierPlaceholder')}
+            onChange={(e) => {
+              setCarrier(e.target.value);
+              if (error) setError(undefined);
+            }}
+          />
+          <TextField
+            id="insurance-label"
+            label={t('edit.insurance.label')}
+            value={label}
+            maxLength={100}
+            placeholder={t('edit.insurance.labelPlaceholder')}
+            onChange={(e) => setLabel(e.target.value)}
+          />
+          <TextField
+            id="insurance-policy"
+            label={t('edit.insurance.policyNumber')}
+            value={policyNumber}
+            maxLength={100}
+            onChange={(e) => setPolicyNumber(e.target.value)}
+          />
+          <TextField
+            id="insurance-group"
+            label={t('edit.insurance.groupNumber')}
+            value={groupNumber}
+            maxLength={100}
+            onChange={(e) => setGroupNumber(e.target.value)}
+          />
+          <PhoneField
+            ref={phoneRef}
+            id="insurance-phone"
+            label={t('edit.insurance.phone')}
+            value={phoneValue.phone}
+            countryCode={phoneValue.countryCode}
+            onChange={(phone, countryCode) => setPhoneValue({ phone, countryCode })}
+          />
+          <ExtensionField
+            id="insurance-phone-extension"
+            value={extension}
+            onChange={setExtension}
+            hasPhone={phoneValue.phone.trim() !== ''}
+          />
+          <Toggle
+            checked={isPrimary}
+            onChange={setIsPrimary}
+            label={t('edit.insurance.primary')}
+            hint={t('edit.insurance.primaryHint')}
+          />
+        </form>
+      </Modal>
+      {discardGuard.prompt}
+    </>
   );
 }
 

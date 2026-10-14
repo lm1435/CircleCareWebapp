@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import type { EmergencyContact, EmergencyInfo } from '@/api/emergencyInfo';
 import {
   relocateIndex,
@@ -85,6 +86,10 @@ function EditContactModalForm({
   const draftId = emergencyEntryDraftId(info?.emergency_contacts, index, CONTACT_DRAFT_FIELDS);
   const contactSnapshot = { name, relationship, phoneValue, isPrimary };
   const contactBaseline = useRef(JSON.stringify(contactSnapshot));
+  // Same baseline the draft compares to: an untouched form is never dirty, a
+  // restored draft that differs from the record is.
+  const dirty = JSON.stringify(contactSnapshot) !== contactBaseline.current;
+  const discardGuard = useDiscardChangesGuard(dirty, onClose);
   useSessionDraft<typeof contactSnapshot>(
     draftId ? `emergency:contact:${circleId}:${draftId}` : null,
     () => (JSON.stringify(contactSnapshot) === contactBaseline.current ? null : contactSnapshot),
@@ -122,7 +127,9 @@ function EditContactModalForm({
     const next = upsertWithPrimaryExclusivity(info?.emergency_contacts ?? [], contact, index);
 
     update.mutate(withIfMatch(info, { emergency_contacts: toRequestContacts(next) }), {
-      onSuccess: onClose,
+      // Saved: close WITHOUT the discard prompt (the form still differs from
+      // its baseline — by exactly what was just saved).
+      onSuccess: discardGuard.closeAfterSave,
       onError: (err) => {
         if (getEmergencyInfoConflict(err)) onConflict();
       },
@@ -131,88 +138,91 @@ function EditContactModalForm({
   };
 
   return (
-    <Modal
-      title={index !== undefined ? t('edit.contact.editTitle') : t('edit.contact.addTitle')}
-      // lg, not the md default: the phone row needs a ~17.5rem country column
-      // beside the number (see PhoneField).
-      size="lg"
-      onClose={onClose}
-      closeLabel={t('edit.close')}
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
-            {t('edit.cancel')}
-          </Button>
-          <Button type="submit" form="edit-contact-form" variant="primary" loading={update.isPending}>
-            {t('edit.save')}
-          </Button>
-        </div>
-      }
-    >
-      <form id="edit-contact-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <TextField
-          id="contact-name"
-          label={t('edit.contact.name')}
-          required
-          value={name}
-          maxLength={100}
-          error={error && !name.trim() ? error : undefined}
-          placeholder={t('edit.contact.namePlaceholder')}
-          onChange={(e) => {
-            setName(e.target.value);
-            if (error) setError(undefined);
-          }}
-        />
-        <TextField
-          id="contact-relationship"
-          label={t('edit.contact.relationship')}
-          required
-          value={relationship}
-          maxLength={100}
-          error={error && !relationship.trim() ? error : undefined}
-          placeholder={t('edit.contact.relationshipPlaceholder')}
-          onChange={(e) => {
-            setRelationship(e.target.value);
-            if (error) setError(undefined);
-          }}
-        />
-        {/* Quick-fill: chips fill the field above; the field stays the source
-            of truth (custom values like "Niece" remain possible). Selected =
-            field matches the chip case-insensitively (QP2). */}
-        <ChipSelect
-          id="contact-relationship-suggestions"
-          label={t('relationships.label')}
-          options={RELATIONSHIP_KEYS.map((key) => t(key))}
-          value={relationship}
-          // Quick-fill row (text field stays the source of truth) — re-tapping
-          // the selected chip must not clear a required field (WA7).
-          allowDeselect={false}
-          onChange={(next) => {
-            setRelationship(next ?? '');
-            if (next && error) setError(undefined);
-          }}
-        />
-        <PhoneField
-          ref={phoneRef}
-          id="contact-phone"
-          label={t('edit.contact.phone')}
-          required
-          value={phoneValue.phone}
-          countryCode={phoneValue.countryCode}
-          error={error && !phone.trim() ? error : undefined}
-          onChange={(nextPhone, countryCode) => {
-            setPhoneValue({ phone: nextPhone, countryCode });
-            if (error) setError(undefined);
-          }}
-        />
-        <Toggle
-          checked={isPrimary}
-          onChange={setIsPrimary}
-          label={t('edit.contact.primary')}
-          hint={t('edit.contact.primaryHint')}
-        />
-      </form>
-    </Modal>
+    <>
+      <Modal
+        title={index !== undefined ? t('edit.contact.editTitle') : t('edit.contact.addTitle')}
+        // lg, not the md default: the phone row needs a ~17.5rem country column
+        // beside the number (see PhoneField).
+        size="lg"
+        onClose={discardGuard.requestClose}
+        closeLabel={t('edit.close')}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
+              {t('edit.cancel')}
+            </Button>
+            <Button type="submit" form="edit-contact-form" variant="primary" loading={update.isPending}>
+              {t('edit.save')}
+            </Button>
+          </div>
+        }
+      >
+        <form id="edit-contact-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <TextField
+            id="contact-name"
+            label={t('edit.contact.name')}
+            required
+            value={name}
+            maxLength={100}
+            error={error && !name.trim() ? error : undefined}
+            placeholder={t('edit.contact.namePlaceholder')}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (error) setError(undefined);
+            }}
+          />
+          <TextField
+            id="contact-relationship"
+            label={t('edit.contact.relationship')}
+            required
+            value={relationship}
+            maxLength={100}
+            error={error && !relationship.trim() ? error : undefined}
+            placeholder={t('edit.contact.relationshipPlaceholder')}
+            onChange={(e) => {
+              setRelationship(e.target.value);
+              if (error) setError(undefined);
+            }}
+          />
+          {/* Quick-fill: chips fill the field above; the field stays the source
+              of truth (custom values like "Niece" remain possible). Selected =
+              field matches the chip case-insensitively (QP2). */}
+          <ChipSelect
+            id="contact-relationship-suggestions"
+            label={t('relationships.label')}
+            options={RELATIONSHIP_KEYS.map((key) => t(key))}
+            value={relationship}
+            // Quick-fill row (text field stays the source of truth) — re-tapping
+            // the selected chip must not clear a required field (WA7).
+            allowDeselect={false}
+            onChange={(next) => {
+              setRelationship(next ?? '');
+              if (next && error) setError(undefined);
+            }}
+          />
+          <PhoneField
+            ref={phoneRef}
+            id="contact-phone"
+            label={t('edit.contact.phone')}
+            required
+            value={phoneValue.phone}
+            countryCode={phoneValue.countryCode}
+            error={error && !phone.trim() ? error : undefined}
+            onChange={(nextPhone, countryCode) => {
+              setPhoneValue({ phone: nextPhone, countryCode });
+              if (error) setError(undefined);
+            }}
+          />
+          <Toggle
+            checked={isPrimary}
+            onChange={setIsPrimary}
+            label={t('edit.contact.primary')}
+            hint={t('edit.contact.primaryHint')}
+          />
+        </form>
+      </Modal>
+      {discardGuard.prompt}
+    </>
   );
 }
 

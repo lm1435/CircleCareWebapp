@@ -165,6 +165,27 @@ describe('PK5 emergency modals: 409 EMERGENCY_INFO_CHANGED', () => {
     expect(second.emergency_contacts?.[0].phone).toBe('5559999');
   });
 
+  it('the reseeded form starts NOT dirty: Cancel closes without the discard prompt', async () => {
+    mockGet.mockResolvedValueOnce({ ...info(), versions: V1 });
+    mockUpdate.mockRejectedValueOnce(CONFLICT);
+    const onClose = vi.fn();
+    mount((i) => <EditContactModal circleId={CIRCLE_ID} info={i} index={0} onClose={onClose} />);
+    await waitFor(() => expect(nameInput().value).toBe('Ana'));
+    mockGet.mockResolvedValue({
+      ...info({ emergency_contacts: [{ name: 'Ana', relationship: 'Daughter', phone: '5559999' }] }),
+      versions: { ...V1, emergency_contacts: 'c2' },
+    });
+    fireEvent.change(nameInput(), { target: { value: 'Stale draft' } });
+    fireEvent.submit(document.getElementById('edit-contact-form')!);
+    await screen.findByText(/Someone else updated this/);
+    await waitFor(() => expect(nameInput().value).toBe('Ana'));
+
+    // The remount (key={seed.epoch}) took a fresh baseline from the server row.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog', { name: 'Discard changes?' })).toBeNull();
+  });
+
   it('closes when the contact being edited was removed by the other caregiver', async () => {
     mockGet.mockResolvedValueOnce({ ...info(), versions: V1 });
     mockUpdate.mockRejectedValueOnce(CONFLICT);
