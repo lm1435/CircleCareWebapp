@@ -23,6 +23,23 @@ function Harness(): ReactElement {
 }
 
 describe('NoteComposer', () => {
+  // The submit row is a sticky footer: Post stays on screen while the form is
+  // taller than the viewport. jsdom has no layout, so this pins the structure;
+  // e2e/flows/sticky-save-footer.spec.ts measures the real geometry.
+  it('keeps Post in a sticky footer row, disabled until there is something to post', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const post = screen.getByRole('button', { name: 'Post' });
+    const footer = screen.getByTestId('note-composer-footer');
+    expect(footer).toContainElement(post);
+    expect(footer.className.split(/\s+/)).toContain('sticky');
+    expect(footer.className).toMatch(/bg-cream/);
+    expect(post).toBeDisabled();
+
+    await user.type(screen.getByRole('textbox'), 'Slept well');
+    expect(post).toBeEnabled();
+  });
+
   it('renders the mood and categories field labels', () => {
     render(<Harness />);
     expect(screen.getByText('Mood')).toBeInTheDocument();

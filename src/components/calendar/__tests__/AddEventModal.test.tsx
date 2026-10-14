@@ -172,11 +172,59 @@ beforeEach(() => {
 });
 
 describe('AddEventModal', () => {
+  // Save lives in the dialog's pinned footer and is disabled until the
+  // always-required fields are filled (title; date; a medication's time).
+  describe('Save is disabled until the required fields are filled', () => {
+    const save = (name = 'Create'): HTMLElement => screen.getByRole('button', { name });
+
+    it('appointment: needs a title (the date is pre-filled)', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      expect(save()).toBeDisabled();
+      expect(save()).toHaveAttribute('data-testid', 'add-event-save');
+      // In the footer band, not in the scrolling form body.
+      expect(save().closest('[data-modal-footer]')).not.toBeNull();
+      expect(save().closest('form')).toBeNull();
+
+      await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Cardiology');
+      expect(save()).toBeEnabled();
+
+      await user.clear(screen.getByLabelText(/^Title( \* \(required\))?$/));
+      expect(save()).toBeDisabled();
+    });
+
+    it('a title of only spaces does not count', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), '   ');
+      expect(save()).toBeDisabled();
+    });
+
+    it('medication: needs a name AND a time', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      expect(save()).toBeDisabled();
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+      expect(save()).toBeDisabled();
+      fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '09:00' } });
+      expect(save()).toBeEnabled();
+    });
+
+    it('edit: an existing entry opens with Save enabled', () => {
+      render(
+        <AddEventModal circleId={CIRCLE_ID} event={makeEvent()} onClose={vi.fn()} />
+      );
+      expect(save('Save changes')).toBeEnabled();
+    });
+  });
+
   it('blocks submit and shows + focuses the title error when title is empty', async () => {
-    const user = userEvent.setup();
     render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+    // Save is disabled with the title empty, so this is the submit that does
+    // not go through the button (a programmatic `requestSubmit`).
+    fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
+    await screen.findByText('Please enter a title.');
 
     expect(mutateCreate).not.toHaveBeenCalled();
     const titleInput = screen.getByLabelText(/^Title( \* \(required\))?$/);

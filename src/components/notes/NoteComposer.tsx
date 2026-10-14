@@ -168,7 +168,15 @@ export function NoteComposer({
         </p>
       ) : null}
 
-      <div className="flex justify-end gap-2">
+      {/* STICKY: the submit row stays in view while the form is taller than
+          what is left of the viewport (phone widths, or the keyboard up), so
+          Post/Save never has to be scrolled to. Below xl it clears the
+          floating nav pill; from xl the sidebar replaces the pill. The cream
+          ground and top rule are what the fields scroll under. */}
+      <div
+        data-testid="note-composer-footer"
+        className="sticky bottom-[calc(var(--nav-h,64px)+var(--nav-inset,0px)+8px)] z-10 -mx-1 flex items-center justify-end gap-2 border-t border-line-2 bg-cream px-1 pt-3 pb-1 xl:bottom-0"
+      >
         {onCancel && (
           <Button variant="ghost" onClick={onCancel}>
             {cancelLabel ?? t('composer.cancel')}

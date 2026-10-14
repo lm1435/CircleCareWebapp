@@ -179,12 +179,16 @@ test.describe('create menu — keyboard a11y, ARIA, validation', () => {
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.locator('#event_type')).toHaveValue('task');
 
-    // Title is empty by default — submit via the dialog's own Create button.
-    await dialog.getByRole('button', { name: 'Create', exact: true }).click();
-
-    // Validation error is shown and the title input is flagged invalid (WCAG 3.3.1).
-    await expect(dialog.getByText('Please enter a title.')).toBeVisible({ timeout: 10_000 });
-    await expect(dialog.locator('#title')).toHaveAttribute('aria-invalid', 'true');
+    // Title is empty by default — so Create (pinned in the dialog footer) is
+    // disabled, and a title of only spaces does not enable it.
+    const create = dialog.getByRole('button', { name: 'Create', exact: true });
+    await expect(create).toBeDisabled();
+    await dialog.locator('#title').fill('   ');
+    await expect(create).toBeDisabled();
+    await dialog.locator('#title').fill('x');
+    await expect(create).toBeEnabled();
+    await dialog.locator('#title').fill('');
+    await expect(create).toBeDisabled();
 
     // The dialog must STAY OPEN — nothing was created.
     await expect(dialog).toBeVisible();

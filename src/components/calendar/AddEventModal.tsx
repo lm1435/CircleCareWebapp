@@ -1387,6 +1387,17 @@ function AddEventForm({
 
   const titleFieldId = isMedication ? 'medication_name' : 'title';
 
+  // Save sits in the dialog's pinned footer (always on screen, in add AND
+  // edit) and stays disabled until every ALWAYS-required field is filled: the
+  // name/title, the date, and a medication's time (an as-needed medication has
+  // neither date nor time). These are exactly the fields `buildPayload` refuses
+  // unconditionally; the conditional rules (end time once a start is set,
+  // at least one weekday) still answer on submit with their own message.
+  const requiredFilled =
+    title.trim().length > 0 &&
+    (isAsNeeded || dateStr !== '') &&
+    (!isMedication || isAsNeeded || timeStr !== '');
+
   return (
     <>
     <Modal
@@ -1400,7 +1411,13 @@ function AddEventForm({
           <Button variant="secondary" onClick={onClose} disabled={isPending}>
             {t('common:cancel')}
           </Button>
-          <Button type="submit" form="add-event-form" loading={isPending}>
+          <Button
+            type="submit"
+            form="add-event-form"
+            loading={isPending}
+            disabled={!requiredFilled}
+            data-testid="add-event-save"
+          >
             {isEditing ? t('addEvent.saveChanges') : t('addEvent.create')}
           </Button>
         </>
