@@ -5,7 +5,10 @@ import { dbQuery, sqlStr } from '../unhappy';
 import {
   cookieLogin,
   createCircle,
+  createInvite,
   createScopedAccount,
+  inviteStatus,
+  membershipCount,
   ownerApi,
   uniq,
 } from '../unhappy/auth-invites/_helpers';
@@ -187,5 +190,181 @@ test('offline: banner, writes explained not sent, input kept; reconnect hides it
   } finally {
     await context.setOffline(false);
     await deleteSeries(session, circleId, root);
+  }
+});
+
+// ── Join and first-run gates (commit 052d34f) ─────────────────────────────────
+//
+//   - CreateCircleModal's "Join with an invite code" hand-off is a change: offline
+//     it explains "Connect to make changes." and the join modal does not open;
+//   - JoinCircleModal's details-step "Join circle" (invite looked up ONLINE) is a
+//     save: offline it explains "Connect to save this.", the preview stays, and no
+//     POST /api/invites/code/:code/accept leaves the page, then or on reconnect;
+//   - the first-run wizard's step 1: all four choices are aria-disabled offline and
+//     explain with the change sentence; the footer "Skip for now" still closes it.
+//
+// FALSIFIED (10-15) by removing each gate in the app file in turn
+// (offlineKind on the join link / on Join circle, and the ChooseActionStep
+// offline branch): the matching test below goes red; files restored byte-identical.
+
+const CHANGE = "You're offline. Connect to make changes.";
+const SAVE = "You're offline. Connect to save this.";
+
+test('offline: the create-circle modal\'s "Join with an invite code" explains and does not open the join modal', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  const joiner = await createScopedAccount('offline-cjoin');
+  await cookieLogin(context, joiner, baseURL);
+  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
+  const createEntry = page.getByRole('button', { name: 'Create circle' }).first();
+  await expect(createEntry).toBeVisible({ timeout: 30_000 });
+  await createEntry.click();
+  const createDialog = page.getByRole('dialog');
+  await expect(createDialog.locator('#recipient_name')).toBeVisible();
+  const joinLink = createDialog.getByRole('button', { name: 'Join with an invite code', exact: true });
+  await expect(joinLink).not.toHaveAttribute('aria-disabled');
+
+  const api = recordApi(page);
+  try {
+    await context.setOffline(true);
+    await expect(page.getByTestId('offline-banner')).toBeVisible();
+    await expect(joinLink).toHaveAttribute('aria-disabled', 'true');
+    await joinLink.click({ force: true });
+    await expect(toast(page, CHANGE)).toBeVisible();
+    // Still on the create form; the join modal never opened.
+    await expect(createDialog.locator('#recipient_name')).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Join a circle', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+    expect(api.writes.map((r) => `${r.method()} ${r.url()}`)).toEqual([]);
+  } finally {
+    await context.setOffline(false);
+  }
+});
+
+test('offline: join by code - an invite looked up online is not accepted offline; the preview stays, nothing is sent', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  const owner = await createScopedAccount('offline-jowner');
+  const session = await ownerApi(request, owner);
+  const circleId = await createCircle(session, uniq('offline-join'));
+  const invite = await createInvite(session, circleId);
+  const recipientName = dbQuery<{ recipient_name: string }>(
+    `select recipient_name from care_circles where id = ${sqlStr(circleId)}::uuid`
+  )[0].recipient_name;
+
+  const joiner = await createScopedAccount('offline-joiner');
+  await cookieLogin(context, joiner, baseURL);
+  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
+  const entry = page.getByRole('button', { name: 'Join with an invite code', exact: true });
+  await expect(entry).toBeVisible({ timeout: 30_000 });
+  await entry.click();
+  const dialog = page.getByRole('dialog', { name: 'Join a circle', exact: true });
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+
+  // ONLINE: type the code and look it up.
+  await dialog.getByLabel('Character 1 of 6', { exact: true }).click();
+  await page.keyboard.type(invite.code.toLowerCase(), { delay: 15 });
+  await dialog.getByRole('button', { name: 'Find circle', exact: true }).click();
+  await expect(dialog.getByText(recipientName, { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  const join = dialog.getByRole('button', { name: 'Join circle', exact: true });
+  await expect(join).not.toHaveAttribute('aria-disabled');
+
+  const api = recordApi(page);
+  try {
+    await context.setOffline(true);
+    await expect(page.getByTestId('offline-banner')).toBeVisible();
+    await expect(join).toHaveAttribute('aria-disabled', 'true');
+    await join.click({ force: true });
+    await expect(toast(page, SAVE)).toBeVisible();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(recipientName, { exact: true }).first()).toBeVisible();
+    await page.waitForTimeout(2_000);
+    expect(api.writes.map((r) => `${r.method()} ${r.url()}`)).toEqual([]);
+
+    // Reconnect: nothing replays.
+    await context.setOffline(false);
+    await expect(page.getByTestId('offline-banner')).toHaveCount(0);
+    await expect(join).not.toHaveAttribute('aria-disabled');
+    await page.waitForTimeout(3_000);
+    expect(api.writes.map((r) => `${r.method()} ${r.url()}`)).toEqual([]);
+    expect(membershipCount(circleId, joiner.userId)).toBe(0);
+    expect(inviteStatus(invite.id)).toBe('pending');
+  } finally {
+    await context.setOffline(false);
+  }
+});
+
+test('offline: first-run wizard - every step-1 choice is aria-disabled and explains; Skip for now still closes; nothing sent', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  const acct = await createScopedAccount('offline-wiz');
+  await cookieLogin(context, acct, baseURL);
+  await page.goto('/circles', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Create circle' }).first().click();
+  const modal = page.getByRole('dialog');
+  await modal.locator('#recipient_name').fill(uniq('offwiz'));
+  // The wizard mounts over the new circle; let its circle GET land first.
+  const circleLoaded = page.waitForResponse(
+    (r) =>
+      r.request().method() === 'GET' &&
+      /^\/api\/circles\/[0-9a-f-]{36}$/.test(new URL(r.url()).pathname) &&
+      r.ok(),
+    { timeout: 30_000 }
+  );
+  await modal.getByRole('button', { name: 'Create circle' }).click();
+  await page.waitForURL(/\/circles\/[0-9a-f-]{36}/, { timeout: 30_000 });
+  const wizard = page.getByRole('dialog', { name: 'Circle created' });
+  await expect(wizard).toBeVisible({ timeout: 20_000 });
+  await circleLoaded;
+  const circleId = /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
+
+  const choices = [
+    wizard.getByTestId('first-run-primary'),
+    wizard.getByTestId('first-run-start-with-appointment'),
+    wizard.getByTestId('first-run-start-with-invite'),
+    wizard.getByTestId('first-run-start-with-emergency'),
+  ];
+  for (const choice of choices) {
+    await expect(choice).toBeVisible();
+    await expect(choice).not.toHaveAttribute('aria-disabled');
+  }
+
+  const api = recordApi(page);
+  try {
+    await context.setOffline(true);
+    await expect(page.getByTestId('offline-banner')).toBeVisible();
+    for (const choice of choices) {
+      await expect(choice).toHaveAttribute('aria-disabled', 'true');
+      await choice.click({ force: true });
+      await expect(toast(page, CHANGE).first()).toBeVisible();
+      // Still on step 1 of the wizard: the choice went nowhere.
+      await expect(wizard).toBeVisible();
+      await expect(wizard.getByTestId('first-run-primary')).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/circles/${circleId}(/|\\?|$)`));
+    }
+    // No other modal opened (appointment / invite / emergency hand-offs).
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+
+    // Skip is a close, not a write: it still closes offline.
+    await wizard.getByRole('button', { name: 'Skip for now', exact: true }).click();
+    await expect(wizard).toHaveCount(0);
+    await page.waitForTimeout(1_000);
+    expect(api.writes.map((r) => `${r.method()} ${r.url()}`)).toEqual([]);
+    expect(
+      Number(
+        dbQuery<{ n: string }>(
+          `select count(*)::text as n from calendar_events where circle_id = ${sqlStr(circleId)}::uuid`
+        )[0].n
+      )
+    ).toBe(0);
+  } finally {
+    await context.setOffline(false);
   }
 });
