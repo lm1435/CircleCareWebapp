@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CircleButton } from '@/components/ui';
 import { UserMenu } from './Header';
 import { Wordmark } from './Wordmark';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 /**
  * Layout for the authenticated routes that render WITHOUT AppLayout (the circle
@@ -72,6 +73,7 @@ export function StandalonePageLayout(): ReactElement {
           ErrorBoundary below, is), so a route change can't steal focus back
           off of it once landed. */}
       <main id="main" tabIndex={-1} className="min-w-0">
+        <OfflineBanner />
         {/* Page-level boundary so one page's error doesn't blank the app; keyed by
             path so navigation auto-clears a caught error. */}
         <ErrorBoundary boundary="standalone-page" key={location.pathname}>

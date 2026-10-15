@@ -216,7 +216,7 @@ export function CreateCircleModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             {t('create.cancel')}
           </Button>
-          <Button type="submit" form="create-circle-form" loading={create.isPending}>
+          <Button type="submit" offlineKind="save" form="create-circle-form" loading={create.isPending}>
             {create.isPending ? t('create.creating') : t('create.create')}
           </Button>
         </>

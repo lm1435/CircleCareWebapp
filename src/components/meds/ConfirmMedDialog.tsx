@@ -198,7 +198,7 @@ export function ConfirmMedDialog({
             <Button variant="secondary" onClick={onClose}>
               {t('common:close')}
             </Button>
-            <Button variant="primary" onClick={() => setChanging(true)}>
+            <Button variant="primary" onClick={() => setChanging(true)} offlineKind="mark">
               {t('dialog.changeAnswerAction')}
             </Button>
           </>
@@ -207,7 +207,12 @@ export function ConfirmMedDialog({
             <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
               {t('dialog.cancel')}
             </Button>
-            <Button variant="primary" onClick={handleSubmit} loading={mutation.isPending}>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              loading={mutation.isPending}
+              offlineKind="mark"
+            >
               {mutation.isPending ? t('dialog.submitting') : t('dialog.submit')}
             </Button>
           </>

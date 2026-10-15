@@ -296,6 +296,7 @@ export function InviteMemberModal({
             </Button>
             <Button
               type="submit"
+              offlineKind="save"
               form="invite-member-form"
               loading={createInvite.isPending}
               disabled={createInvite.isPending || email.trim().length === 0}

@@ -429,4 +429,13 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /*
+   * A write control refused while offline (lib/offlineWrite.ts): dimmed, but
+   * still focusable and pressable — a press explains instead of writing.
+   */
+  [data-offline-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }

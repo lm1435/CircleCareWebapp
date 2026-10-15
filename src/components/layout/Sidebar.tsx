@@ -176,6 +176,7 @@ export function Sidebar({
             aria-disabled={!canCreate}
             disabled={!canCreate}
             onClick={() => setAddOpen((prev) => !prev)}
+            offlineKind="change"
           >
             {t('nav.new')}
           </Button>

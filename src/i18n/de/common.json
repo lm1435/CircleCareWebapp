@@ -179,5 +179,12 @@
   "maps": {
     "openAria": "{{address}} in Karten öffnen",
     "newTab": "Wird in einem neuen Tab geöffnet"
+  },
+  "offline": {
+    "title": "Sie sind offline",
+    "bannerSubtitle": "Gespeicherte Infos. Für Änderungen verbinden Sie sich.",
+    "writeBlocked": "Sie sind offline. Verbinden Sie sich, um das zu markieren.",
+    "saveBlocked": "Sie sind offline. Verbinden Sie sich, um das zu speichern.",
+    "changeBlocked": "Sie sind offline. Verbinden Sie sich, um Änderungen vorzunehmen."
   }
 }

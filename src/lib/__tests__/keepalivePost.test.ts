@@ -2,6 +2,7 @@
 // tests: the token is the in-memory bearer, the request is keepalive, and
 // every "cannot do it safely" case returns null so the caller keeps axios.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { onlineManager } from '@tanstack/react-query';
 import { keepalivePost } from '../keepalivePost';
 import { tokenAccessor } from '../tokenAccessor';
 
@@ -38,6 +39,17 @@ describe('keepalivePost', () => {
     tokenAccessor.setToken('tok-123', null);
     keepalivePost('/circles/c1/events/t1/complete');
     expect('body' in fetchMock.mock.calls[0][1]).toBe(false);
+  });
+
+  it('offline: null, nothing sent — never held for later (lib/offlineWrite.ts)', () => {
+    tokenAccessor.setToken('tok-123', null);
+    onlineManager.setOnline(false);
+    try {
+      expect(keepalivePost('/circles/c1/medications/confirm', { event_id: 'e1' })).toBeNull();
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 
   it('no token: null, nothing sent (the caller keeps axios, which can refresh)', () => {

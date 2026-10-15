@@ -855,7 +855,9 @@ export default function MedicationsPage(): ReactElement {
         description={canEdit ? t('meds:page.empty.hint') : t('meds:page.empty.hintReadOnly')}
         actions={
           canEdit ? (
-            <Button onClick={() => setShowAdd(true)}>{t('meds:page.empty.cta')}</Button>
+            <Button onClick={() => setShowAdd(true)} offlineKind="change">
+              {t('meds:page.empty.cta')}
+            </Button>
           ) : undefined
         }
       />
@@ -964,6 +966,7 @@ export default function MedicationsPage(): ReactElement {
                 name: 'add-outline',
                 label: t('meds:page.add'),
                 onClick: () => setShowAdd(true),
+                offlineKind: 'change',
               }
             : undefined
         }
@@ -1181,6 +1184,7 @@ export default function MedicationsPage(): ReactElement {
 
       {inactiveEditGroup && (
         <ConfirmDialog
+          offlineKind="change"
           icon="repeat-outline"
           iconTone="moss"
           title={t('calendar:discontinueMed.editInactiveTitle')}

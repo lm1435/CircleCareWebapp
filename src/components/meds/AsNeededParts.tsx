@@ -134,6 +134,7 @@ export function AsNeededActions({
             ref={giveRef}
             size="md"
             onClick={onGive}
+            offlineKind="mark"
             aria-label={t('asNeeded.card.giveA11y', { name })}
           >
             {t('asNeeded.card.give')}

@@ -411,6 +411,7 @@ export default function InviteLandingPage(): ReactElement {
                   <Button
                     className="w-full max-w-xs"
                     onClick={() => void handleAccept()}
+                    offlineKind="change"
                     disabled={accepting}
                   >
                     {accepting ? t('accepting') : t('accept')}

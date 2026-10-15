@@ -125,6 +125,7 @@ export default function DocumentsPage(): ReactElement {
                 name: 'add-outline',
                 label: t('documents:upload.openButton'),
                 onClick: openUpload,
+                offlineKind: 'change',
                 disabled: storageFull,
                 title: storageFull ? storageFullMessage : undefined,
               }
@@ -211,6 +212,7 @@ export default function DocumentsPage(): ReactElement {
                     <div className="flex flex-col items-center gap-2">
                       <Button
                         onClick={openUpload}
+                        offlineKind="change"
                         disabled={storageFull}
                         title={storageFull ? storageFullMessage : undefined}
                       >
@@ -286,6 +288,7 @@ export default function DocumentsPage(): ReactElement {
 
       {deleteDoc && (
         <ConfirmDialog
+          offlineKind="change"
           title={t('documents:delete.title')}
           message={t('documents:delete.message', { name: deleteDoc.label })}
           confirmLabel={

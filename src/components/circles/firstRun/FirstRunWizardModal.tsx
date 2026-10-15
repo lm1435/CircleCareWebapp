@@ -631,6 +631,7 @@ export function FirstRunWizardModal({
                 </Button>
                 <Button
                   onClick={isLastStep ? handleSave : handleContinue}
+                  offlineKind={isLastStep ? 'save' : undefined}
                   disabled={saving || (step === 'what' && name.trim().length === 0)}
                 >
                   {isLastStep
@@ -729,6 +730,7 @@ export function FirstRunWizardModal({
 
       {pendingPastTime && (
         <ConfirmDialog
+          offlineKind="save"
           icon="time-outline"
           iconTone="clay"
           title={t('calendar:addEvent.alerts.pastTimeTitle')}

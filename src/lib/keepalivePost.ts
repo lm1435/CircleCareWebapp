@@ -1,6 +1,7 @@
 import { apiClient } from '@/lib/api';
 import { tokenAccessor } from '@/lib/tokenAccessor';
 import { hasTraversalSegment } from '@/lib/routeIds';
+import { isOfflineNow } from '@/hooks/useIsOffline';
 
 /**
  * PK11 (approved 2026-09-30): a POST that survives the page going away.
@@ -12,7 +13,8 @@ import { hasTraversalSegment } from '@/lib/routeIds';
  * keepalive: true })` is the request the browser finishes after unload.
  *
  * Used ONLY by those two flushes. Everything else, and the unmount flush,
- * keeps axios (its 401 refresh/retry, timeouts and error shapes).
+ * keeps axios (its 401 refresh/retry, timeouts and error shapes). Offline it
+ * returns `null` (no write is sent or queued while offline — lib/offlineWrite.ts).
  *
  * Auth is the in-memory bearer token (never persisted, never a cookie). A
  * keepalive request cannot refresh a 401 and retry, so when there is no token,
@@ -28,6 +30,9 @@ const EXPIRY_MARGIN_MS = 10_000;
 export function keepalivePost(path: string, body?: unknown): Promise<Response> | null {
   try {
     if (typeof fetch !== 'function') return null;
+    // Offline: never sent, never queued — the caller's axios path is refused by
+    // the api.ts backstop and fails through its normal error handling.
+    if (isOfflineNow()) return null;
     // Same guard as the axios interceptor: no Bearer to a dot-segment path.
     if (hasTraversalSegment(path)) return null;
     const token = tokenAccessor.getAuthToken();

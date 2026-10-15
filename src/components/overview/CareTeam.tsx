@@ -19,6 +19,7 @@ import { Analytics } from '@/lib/analytics';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
 import type { GettingStartedStatus } from '@/components/circles/GettingStartedChecklist';
 import { pickHomeNudge } from './homeNudge';
+import { guardOfflineWrite } from '@/lib/offlineWrite';
 
 // Spec §6.3.7 + §6.3.8 — port of mobile CircleDetailScreen's care-team Sheet
 // (CircleDetailScreen.tsx:1375-1520) and `components/circle/SoloInviteCard.tsx`.
@@ -126,8 +127,10 @@ export function CareTeam({
         ? t('members:manage.clearMedResponsible')
         : t('members:manage.setMedResponsible'),
       icon: 'notifications-outline',
-      onSelect: () =>
-        setMedResponsible.mutate(member.is_medication_responsible ? null : member.id),
+      onSelect: guardOfflineWrite(
+        () => setMedResponsible.mutate(member.is_medication_responsible ? null : member.id),
+        'change'
+      ),
     },
     { divider: true },
     {
@@ -250,6 +253,7 @@ export function CareTeam({
 
       {pendingRemoval ? (
         <ConfirmDialog
+          offlineKind="change"
           icon="person-outline"
           title={t('members:manage.removeConfirmTitle')}
           message={t('members:manage.removeConfirmBody', { name: displayName(pendingRemoval) })}

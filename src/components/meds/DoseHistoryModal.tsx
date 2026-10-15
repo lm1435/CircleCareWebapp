@@ -127,6 +127,7 @@ export function DoseHistoryModal({
   if (removing) {
     return (
       <ConfirmDialog
+        offlineKind="change"
         variant="destructive"
         title={t('asNeeded.remove.title')}
         message={t('asNeeded.remove.body', {

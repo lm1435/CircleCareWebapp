@@ -179,5 +179,12 @@
   "maps": {
     "openAria": "Ouvrir {{address}} dans Plans",
     "newTab": "S’ouvre dans un nouvel onglet"
+  },
+  "offline": {
+    "title": "Vous êtes hors ligne",
+    "bannerSubtitle": "Informations enregistrées. Connectez-vous pour faire des modifications.",
+    "writeBlocked": "Vous êtes hors ligne. Connectez-vous pour l’indiquer.",
+    "saveBlocked": "Vous êtes hors ligne. Connectez-vous pour enregistrer.",
+    "changeBlocked": "Vous êtes hors ligne. Connectez-vous pour faire des modifications."
   }
 }

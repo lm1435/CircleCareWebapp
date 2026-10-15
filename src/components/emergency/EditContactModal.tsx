@@ -161,7 +161,7 @@ function EditContactModalForm({
             <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
               {t('edit.cancel')}
             </Button>
-            <Button type="submit" form="edit-contact-form" variant="primary" loading={update.isPending}>
+            <Button type="submit" offlineKind="save" form="edit-contact-form" variant="primary" loading={update.isPending}>
               {t('edit.save')}
             </Button>
           </div>

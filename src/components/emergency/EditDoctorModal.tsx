@@ -208,7 +208,7 @@ function EditDoctorModalForm({
             <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
               {t('edit.cancel')}
             </Button>
-            <Button type="submit" form="edit-doctor-form" variant="primary" loading={update.isPending}>
+            <Button type="submit" offlineKind="save" form="edit-doctor-form" variant="primary" loading={update.isPending}>
               {t('edit.save')}
             </Button>
           </div>

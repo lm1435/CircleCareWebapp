@@ -220,6 +220,7 @@ export function NoteComposer({
           ) : null}
           <Button
             type="submit"
+            offlineKind="save"
             size="sm"
             disabled={!canSubmit || submitting}
             aria-describedby={error ? errorId : undefined}

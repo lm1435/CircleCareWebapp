@@ -24,6 +24,8 @@ import { useAiChat } from '@/hooks/useAiChat';
 import { useAiSuggestions } from '@/hooks/useAiSuggestions';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 
 // Web port of mobile/src/components/ai/AIChatModal.tsx (the core chat exchange
 // plus the server suggestions list). Mirrors mobile 1:1 for behavior; drops
@@ -82,6 +84,7 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
   // Enter in the textarea, and from a suggestion chip, and all three land in
   // the same handler.
   const sendGuard = useSubmitGuard();
+  const offline = useIsOffline();
 
   // Clears the in-memory conversation without closing the modal — both the
   // "New chat" header button and the reset-on-open effect below share it.
@@ -128,7 +131,11 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
       // whichever one answered last. `isPending` first, then the ref (see
       // `useSubmitGuard`); released in `onSettled`, since `mutate` returns
       // immediately and there is no promise to hold the guard open.
-      if (!text || mutation.isPending || !sendGuard.claim()) return;
+      if (!text || mutation.isPending) return;
+      // Offline: explain, never queue — and keep the typed question in the
+      // composer (returns before `setInput('')`). lib/offlineWrite.ts.
+      if (blockOfflineWrite('change')) return;
+      if (!sendGuard.claim()) return;
 
       setMessages((prev) => [...prev, { id: nextMessageId(), role: 'user', content: text }]);
       setInput('');
@@ -396,6 +403,7 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
             type="submit"
             aria-label={mutation.isPending ? t('sending') : t('send')}
             disabled={!canSend}
+            {...offlineDisabledProps(offline && canSend)}
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-coral text-cream disabled:bg-line"
           >
             <Icon name="send" size="row" />

@@ -229,6 +229,7 @@ export function DocumentUploadModal({
             loading={upload.isPending}
             disabled={disabled}
             onClick={handleSubmit}
+            offlineKind="save"
           >
             {t('documents:upload.submit')}
           </Button>

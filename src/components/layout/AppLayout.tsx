@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { AddMenu, type AddMenuType } from './AddMenu';
 import { FloatingNavBar } from './FloatingNavBar';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { AIChatModal } from '@/components/ai/AIChatModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
@@ -239,6 +240,9 @@ export function AppLayout(): ReactElement {
           tabIndex={-1}
           className="min-w-0 pb-[calc(var(--nav-h,0px)+var(--nav-inset,0px)+24px)] xl:pb-0"
         >
+          {/* Offline: one slim strip under the header, in flow — never over the
+              header, the sidebar or the nav pill (components/OfflineBanner). */}
+          <OfflineBanner />
           <NeedsCircleSelectionBanner />
           {/* Page-level boundary: a single page's render error shows the fallback
               inside <main> while the header + sidebar stay usable. Keyed by path

@@ -210,6 +210,7 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
             </Button>
             <Button
               type="submit"
+              offlineKind="save"
               form="join-circle-code-form"
               size="lg"
               className="w-full"

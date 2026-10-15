@@ -1,5 +1,6 @@
 import { useCallback, type ReactElement, type ReactNode } from 'react';
 import { Button } from './Button';
+import type { OfflineWriteKind } from '@/lib/offlineWrite';
 import { IconTile, type IconTileTone } from './IconTile';
 import { Modal } from './Modal';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
@@ -55,6 +56,13 @@ export interface ConfirmDialogProps {
   icon?: IconName;
   /** Tint for `icon`. Defaults to the variant's tone (`dusk` for a plain confirm). */
   iconTone?: IconTileTone;
+  /**
+   * The confirm WRITES (delete, remove, discontinue, change an answer): while
+   * offline it is refused with this sentence instead of running `onConfirm`
+   * (Button `offlineKind`, lib/offlineWrite.ts). Omit for a confirm that
+   * writes nothing (sign out, an acknowledgment, discard changes).
+   */
+  offlineKind?: OfflineWriteKind;
 }
 
 /**
@@ -96,6 +104,7 @@ export function ConfirmDialog({
   loadingLabel,
   icon,
   iconTone,
+  offlineKind,
 }: ConfirmDialogProps): ReactElement {
   const resolvedVariant: ConfirmDialogVariant =
     variant ?? (destructive ? 'destructive' : 'confirm');
@@ -174,6 +183,7 @@ export function ConfirmDialog({
             onClick={handleConfirm}
             disabled={disabled}
             loading={loading}
+            offlineKind={offlineKind}
           >
             {confirmText}
           </Button>

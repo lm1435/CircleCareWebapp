@@ -159,7 +159,7 @@ export default function TasksPage(): ReactElement {
           }
           actions={
             canEdit && (
-              <Button onClick={() => setShowCreate(true)}>{t('empty.cta')}</Button>
+              <Button onClick={() => setShowCreate(true)} offlineKind="change">{t('empty.cta')}</Button>
             )
           }
         />
@@ -196,7 +196,14 @@ export default function TasksPage(): ReactElement {
         title={t('title')}
         subtitle={t('subtitle')}
         rightAction={
-          canEdit ? { name: 'add-outline', label: t('addTask'), onClick: () => setShowCreate(true) } : undefined
+          canEdit
+            ? {
+                name: 'add-outline',
+                label: t('addTask'),
+                onClick: () => setShowCreate(true),
+                offlineKind: 'change',
+              }
+            : undefined
         }
       >
         <CareTabs />

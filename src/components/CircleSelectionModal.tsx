@@ -60,7 +60,12 @@ export function CircleSelectionModal({ onClose }: { onClose: () => void }): Reac
             <Button variant="ghost" disabled={select.isPending} onClick={() => setStep('select')}>
               {t('circleSelection.back')}
             </Button>
-            <Button variant="primary" disabled={select.isPending} onClick={handleKeep}>
+            <Button
+              variant="primary"
+              disabled={select.isPending}
+              onClick={handleKeep}
+              offlineKind="save"
+            >
               {t('circleSelection.confirmKeep')}
             </Button>
           </div>

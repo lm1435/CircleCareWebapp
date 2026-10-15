@@ -7,6 +7,8 @@ import {
   type ReactNode,
 } from 'react';
 import { Spinner } from './Spinner';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import { explainOfflineWrite, type OfflineWriteKind } from '@/lib/offlineWrite';
 
 /** Canonical variants (spec §4.5 — mobile parity). */
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -67,6 +69,14 @@ type ButtonOwnProps = {
    * `aria-disabled` + `tabIndex={-1}`, since anchors reject `disabled`.
    */
   disabled?: boolean;
+  /**
+   * This button WRITES. While the browser is offline it renders
+   * `aria-disabled` (dimmed, still focusable) and a press explains once
+   * ("You're offline. Connect to save this.") instead of running `onClick` or
+   * submitting its form — the form's input stays as typed. See
+   * lib/offlineWrite.ts. Online it is an ordinary button.
+   */
+  offlineKind?: OfflineWriteKind;
 };
 
 /**
@@ -118,6 +128,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
     type,
     'aria-busy': ariaBusy,
     onClick,
+    offlineKind,
     // Everything the caller passed for the underlying element (onClick, href,
     // `to`, aria-*, form, …). The cast only widens the rest bucket — the
     // declared props above keep their real types.
@@ -129,6 +140,10 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
   // `busy` swaps the native disable for aria-disabled so focus survives.
   const isDisabled = Boolean(disabled) || (loading && !busy);
   const isBusy = busy && !disabled;
+  const offline = useIsOffline();
+  // Offline-refused: same treatment as busy (aria-disabled, focus kept), but
+  // the press explains. A native `disabled` would swallow the press silently.
+  const isOfflineBlocked = offlineKind != null && offline && !isDisabled;
 
   const classes = [
     BASE,
@@ -143,7 +158,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
     !isNativeButton && isDisabled ? 'opacity-50 pointer-events-none' : null,
     // A busy button without its spinner dims like a disabled one (it is one,
     // to assistive tech) but keeps pointer events so focus is not stolen.
-    isBusy && !loading ? 'opacity-50 cursor-not-allowed' : null,
+    (isBusy || isOfflineBlocked) && !loading ? 'opacity-50 cursor-not-allowed' : null,
     className,
   ]
     .filter(Boolean)
@@ -156,13 +171,20 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
       ? { 'aria-disabled': true as const, tabIndex: -1 }
       : {};
 
-  const handleClick = isBusy
+  const handleClick = isOfflineBlocked
     ? (event: { preventDefault: () => void }) => {
-        // Ignored while busy; preventDefault also stops a submit button
-        // from submitting its form.
+        // preventDefault stops a submit button (and Enter's implicit
+        // submission, which clicks it) from submitting its form.
         event.preventDefault();
+        explainOfflineWrite(offlineKind);
       }
-    : (onClick as ((...args: unknown[]) => unknown) | undefined);
+    : isBusy
+      ? (event: { preventDefault: () => void }) => {
+          // Ignored while busy; preventDefault also stops a submit button
+          // from submitting its form.
+          event.preventDefault();
+        }
+      : (onClick as ((...args: unknown[]) => unknown) | undefined);
 
   return (
     <Component
@@ -172,6 +194,8 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
       {...elementProps}
       {...(isBusy ? { 'aria-disabled': true as const } : {})}
       {...rest}
+      // After `rest`: a caller's own `aria-disabled={false}` must not undo it.
+      {...(isOfflineBlocked ? { 'aria-disabled': true as const, 'data-offline-disabled': true } : {})}
       onClick={handleClick}
     >
       {loading ? (

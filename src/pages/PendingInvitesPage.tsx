@@ -147,6 +147,7 @@ export default function PendingInvitesPage(): ReactElement {
               <div>
                 <Button
                   onClick={() => handleAccept(invite)}
+                  offlineKind="change"
                   disabled={acceptInvite.isPending && acceptingId === invite.id}
                 >
                   {acceptInvite.isPending && acceptingId === invite.id

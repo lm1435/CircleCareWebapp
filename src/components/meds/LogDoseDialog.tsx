@@ -107,7 +107,12 @@ export function LogDoseDialog({
           <Button variant="secondary" onClick={onCancel}>
             {t('asNeeded.log.cancel')}
           </Button>
-          <Button type="submit" form="log-dose-form" data-testid="log-dose-submit">
+          <Button
+            type="submit"
+            form="log-dose-form"
+            data-testid="log-dose-submit"
+            offlineKind="mark"
+          >
             {t(isSelf ? 'asNeeded.log.submitSelf' : 'asNeeded.log.submit')}
           </Button>
         </>

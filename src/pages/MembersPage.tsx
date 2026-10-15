@@ -26,6 +26,7 @@ import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import { getInviteExpiryState, isPendingInviteExpired } from '@/api/circleMembers';
 import type { CircleMember, PendingCircleInvite } from '@/api/circleMembers';
+import { blockOfflineWrite } from '@/lib/offlineWrite';
 
 function MemberRowSkeleton(): ReactElement {
   return (
@@ -150,6 +151,7 @@ export default function MembersPage(): ReactElement {
   };
 
   const handleResendInvite = (invite: PendingCircleInvite): void => {
+    if (blockOfflineWrite('change')) return;
     // Guard THIS row only. Guarding on "any resend in flight" made a second
     // expired invite's button a silent dead click: the `disabled` prop is
     // applied per-row, so that row looked live, showed no spinner, and produced
@@ -173,6 +175,7 @@ export default function MembersPage(): ReactElement {
   };
 
   const handleToggleMedResponsible = (member: CircleMember): void => {
+    if (blockOfflineWrite('change')) return;
     const next = member.is_medication_responsible ? null : member.id;
     setMedResponsible.mutate(next, {
       onSuccess: () => {
@@ -265,7 +268,12 @@ export default function MembersPage(): ReactElement {
         backTo={`/circles/${circleId}`}
         rightAction={
           isOwner
-            ? { name: 'share-outline', label: t('invite.cta'), onClick: () => setShowInvite(true) }
+            ? {
+                name: 'share-outline',
+                label: t('invite.cta'),
+                onClick: () => setShowInvite(true),
+                offlineKind: 'change',
+              }
             : undefined
         }
       />
@@ -280,7 +288,7 @@ export default function MembersPage(): ReactElement {
         <Card padding="lg" className="mx-5 mt-6 text-center">
           <h2 className="m-0 text-lg font-semibold text-ink">{t('list.soloTitle')}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-2">{t('list.soloBody')}</p>
-          <Button className="mt-6" onClick={() => setShowInvite(true)}>
+          <Button className="mt-6" onClick={() => setShowInvite(true)} offlineKind="change">
             {t('list.soloCta')}
           </Button>
         </Card>
@@ -415,6 +423,7 @@ export default function MembersPage(): ReactElement {
 
       {memberToRemove ? (
         <ConfirmDialog
+          offlineKind="change"
           icon="person-outline"
           title={t('manage.removeConfirmTitle')}
           message={t('manage.removeConfirmBody', { name: memberName(memberToRemove) })}
@@ -429,6 +438,7 @@ export default function MembersPage(): ReactElement {
 
       {inviteToCancel ? (
         <ConfirmDialog
+          offlineKind="change"
           icon="mail-outline"
           title={t('manage.cancelInviteConfirmTitle')}
           message={t('manage.cancelInviteConfirmBody', { email: inviteToCancel.invited_email })}
@@ -443,6 +453,7 @@ export default function MembersPage(): ReactElement {
 
       {showLeave ? (
         <ConfirmDialog
+          offlineKind="change"
           icon="log-out-outline"
           title={t('manage.leaveConfirmTitle')}
           message={t('manage.leaveConfirmBody')}

@@ -31,6 +31,7 @@ import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
 import type { CareNote, CareNoteInput } from '@/api/careNotes';
+import { blockOfflineWrite } from '@/lib/offlineWrite';
 
 // Daily Care Notes page (Wave 3, Task 16 — mobile-parity pass) — the web twin
 // of mobile's NotesTab. A shared per-circle day journal: composer at the top
@@ -256,6 +257,9 @@ export default function NotesPage(): ReactElement {
     const submitted = draft;
     const input = draftToInput(submitted);
     if (input.body === undefined && input.mood === undefined) return;
+    // Offline: explain, never queue — and the draft stays in the composer
+    // (returns before the optimistic clear below). lib/offlineWrite.ts.
+    if (blockOfflineWrite('save')) return;
     // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `createMutation.isPending` — the
     // same value NoteComposer receives as `submitting` — is React Query state,
     // committed a render AFTER the submit that started the request. Two submits
@@ -303,6 +307,8 @@ export default function NotesPage(): ReactElement {
 
   // ── Inline edit (own notes) ────────────────────────────────────────────────
   function handleSaveEdit(noteId: string, edited: NoteDraft): void {
+    // Offline: explain, never queue; the edit stays open as typed.
+    if (blockOfflineWrite('save')) return;
     const body = edited.body.trim();
     // The edit composer's gate mirrors the server refine (body-or-mood).
     if (!body && !edited.mood) return;
@@ -481,6 +487,7 @@ export default function NotesPage(): ReactElement {
 
       {deletingNote && (
         <ConfirmDialog
+          offlineKind="change"
           title={t('notes:deleteTitle')}
           message={t('notes:deleteConfirm')}
           confirmLabel={t('notes:row.delete')}

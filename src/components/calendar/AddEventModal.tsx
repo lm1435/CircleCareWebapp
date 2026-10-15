@@ -1423,6 +1423,7 @@ function AddEventForm({
           </Button>
           <Button
             type="submit"
+            offlineKind="save"
             form="add-event-form"
             loading={isPending}
             disabled={!requiredFilled}
@@ -2071,6 +2072,7 @@ function AddEventForm({
         mobile's lightweight confirm), Cancel returns to the form. */}
     {pendingPastTime && (
       <ConfirmDialog
+        offlineKind="save"
         icon="time-outline"
         iconTone="clay"
         title={t(

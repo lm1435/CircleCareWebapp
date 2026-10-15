@@ -249,6 +249,7 @@ export default function EmergencyInfoPage(): ReactElement {
     name: 'create-outline',
     label: t('edit.editMedicalInfo'),
     onClick: openEditMedical,
+    offlineKind: 'change',
   };
 
   // Replaces the old `window.print()` fridge sheet as a BUTTON (the
@@ -670,6 +671,7 @@ export default function EmergencyInfoPage(): ReactElement {
       {/* ── Per-item delete confirmation. ── */}
       {pendingDelete && (
         <ConfirmDialog
+          offlineKind="change"
           title={deleteCopy[pendingDelete.kind].title}
           message={deleteCopy[pendingDelete.kind].message}
           confirmLabel={t('edit.delete')}

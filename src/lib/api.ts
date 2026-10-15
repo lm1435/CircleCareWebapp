@@ -3,6 +3,8 @@ import { env } from './env';
 import { tokenAccessor } from './tokenAccessor';
 import { hasTraversalSegment } from './routeIds';
 import { API_TIMEOUT } from '@/constants/config';
+import { isOfflineNow } from '@/hooks/useIsOffline';
+import { offlineWriteRejection } from './offlineWrite';
 
 // PORT of mobile/src/api/client.ts adapted for the web threat model:
 // - Access token: in memory only (tokenAccessor). Authorization: Bearer on every call.
@@ -160,6 +162,17 @@ apiClient.interceptors.request.use(
         success: false,
         error: { code: 'INVALID_REQUEST_PATH', message: 'Invalid request path' },
       });
+    }
+    // NO WRITES WHILE OFFLINE, NO QUEUE (owner decision 2026-10-14). A write
+    // made while the browser is offline is refused here, before it is sent —
+    // it can never be held and replayed on reconnect, and it fails at once
+    // through the caller's own failure path. Reads go out as ever (React Query
+    // pauses them itself); auth calls fail on their own terms (a refresh's
+    // network failure must not read as a refused write). Mobile twin:
+    // mobile/src/api/client.ts.
+    const method = (config.method ?? 'get').toLowerCase();
+    if (method !== 'get' && method !== 'head' && !isAuthEndpoint(config.url) && isOfflineNow()) {
+      return Promise.reject(offlineWriteRejection());
     }
     if (isCookieAuthEndpoint(config.url)) {
       // Cookie-mode auth endpoints ONLY: send the httpOnly session cookie +

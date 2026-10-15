@@ -105,7 +105,12 @@ export function DocumentEditModal({ circleId, doc, onClose }: DocumentEditModalP
           <Button variant="secondary" onClick={onClose}>
             {t('common:cancel')}
           </Button>
-          <Button variant="primary" loading={update.isPending} onClick={handleSubmit}>
+          <Button
+            variant="primary"
+            loading={update.isPending}
+            onClick={handleSubmit}
+            offlineKind="save"
+          >
             {t('common:save')}
           </Button>
         </>

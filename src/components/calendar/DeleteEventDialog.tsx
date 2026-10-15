@@ -152,6 +152,7 @@ export function DeleteEventDialog({
     // Discontinue for a med the caregiver wants to keep in the Inactive list.
     return (
       <ConfirmDialog
+        offlineKind="change"
         title={copy.title}
         message={
           <div className="flex flex-col gap-3">
@@ -177,6 +178,7 @@ export function DeleteEventDialog({
   if (!isRecurring) {
     return (
       <ConfirmDialog
+        offlineKind="change"
         title={copy.title}
         message={t('deleteEvent.confirmMessage', { title })}
         confirmLabel={t('deleteEvent.delete')}
@@ -200,6 +202,7 @@ export function DeleteEventDialog({
   // the picker isn't squeezed.
   return (
     <ConfirmDialog
+      offlineKind="change"
       title={copy.title}
       message={
         <div className="flex flex-col gap-4">

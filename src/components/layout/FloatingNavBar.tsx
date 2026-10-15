@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '@/components/ui';
 import type { AiNavState } from '@/lib/aiAccess';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 
 /**
  * Mobile `FLOATING_NAVBAR_HEIGHT` (64 phone / 72 tablet). Published to the
@@ -109,6 +111,7 @@ export function FloatingNavBar({
   const { pathname } = useLocation();
   const section = sectionOf(pathname);
   const base = `/circles/${circleId}`;
+  const offline = useIsOffline();
   // Anything but 'allowed' is the same dimmed, non-interactive cell.
   const inert = assistantAccess !== 'allowed';
 
@@ -152,7 +155,12 @@ export function FloatingNavBar({
         aria-expanded={addOpen}
         aria-disabled={!canCreate}
         disabled={!canCreate}
-        onClick={onToggleAdd}
+        // Offline: the menu does not open; a press explains (lib/offlineWrite.ts).
+        onClick={() => {
+          if (!addOpen && blockOfflineWrite('change')) return;
+          onToggleAdd();
+        }}
+        {...offlineDisabledProps(offline && canCreate)}
         className={`flex min-w-[52px] flex-col items-center justify-center gap-0.5 min-h-[44px] px-2 py-1 text-ink${
           canCreate ? '' : ' opacity-50'
         }`}

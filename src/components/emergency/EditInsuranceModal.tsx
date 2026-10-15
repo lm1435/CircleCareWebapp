@@ -165,7 +165,7 @@ function EditInsuranceModalForm({
             <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
               {t('edit.cancel')}
             </Button>
-            <Button type="submit" form="edit-insurance-form" variant="primary" loading={update.isPending}>
+            <Button type="submit" offlineKind="save" form="edit-insurance-form" variant="primary" loading={update.isPending}>
               {t('edit.save')}
             </Button>
           </div>

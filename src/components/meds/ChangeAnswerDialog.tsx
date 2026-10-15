@@ -109,6 +109,7 @@ export function ChangeAnswerDialog({
 
   return (
     <ConfirmDialog
+      offlineKind="mark"
       title={copy.title}
       message={copy.message}
       confirmLabel={copy.confirm}

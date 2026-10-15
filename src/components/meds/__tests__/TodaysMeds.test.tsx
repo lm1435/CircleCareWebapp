@@ -1637,3 +1637,47 @@ describe('TodaysMeds', () => {
     });
   });
 });
+
+// ============================================================================
+// OFFLINE (owner decision 2026-10-14): no writes, no queue. Take/Skip stay
+// visible and focusable, aria-disabled; a press explains once and starts
+// nothing — no optimistic "Taken", no undo window, no request now or later.
+// ============================================================================
+describe('TodaysMeds — offline', () => {
+  afterEach(() => onlineManager.setOnline(true));
+
+  it('Confirm/Skip are aria-disabled offline; a press explains and nothing is marked or sent', async () => {
+    mockApi();
+    renderWidget();
+    await screen.findByText('Atorvastatin');
+    const row = medRow('Atorvastatin');
+
+    act(() => onlineManager.setOnline(false));
+    for (const verb of ['Confirm', 'Skip'] as const) {
+      for (const b of within(row).getAllByRole('button', { name: `${verb} Atorvastatin` })) {
+        expect(b).toHaveAttribute('aria-disabled', 'true');
+      }
+    }
+
+    fireEvent.click(action(row, 'Confirm'));
+    expect(await screen.findByText("You're offline. Connect to mark this.")).toBeInTheDocument();
+    // No optimistic answer, no undo window.
+    expect(within(row).queryByRole('button', { name: 'Undo Atorvastatin' })).toBeNull();
+    expect(within(row).getByText('Not marked')).toBeInTheDocument();
+
+    // Past the undo delay AND back online: nothing was queued to send.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, MEDICATION_UNDO_DELAY_MS + 100));
+    });
+    act(() => onlineManager.setOnline(true));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    expect(mockedPost).not.toHaveBeenCalled();
+    for (const b of within(medRow('Atorvastatin')).getAllByRole('button', {
+      name: 'Confirm Atorvastatin',
+    })) {
+      expect(b).not.toHaveAttribute('aria-disabled');
+    }
+  }, 15000);
+});

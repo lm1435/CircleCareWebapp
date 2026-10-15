@@ -242,7 +242,7 @@ export function MedicationDetailModal({
           <div className="flex flex-wrap items-center justify-end gap-2">
             {canEdit && <MoreMenu items={menuItems} />}
             {canEdit && (
-              <Button variant="secondary" onClick={onEdit}>
+              <Button variant="secondary" onClick={onEdit} offlineKind="change">
                 {t('meds:page.actions.edit')}
               </Button>
             )}
@@ -252,7 +252,9 @@ export function MedicationDetailModal({
               </Button>
             )}
             {asNeeded && canEdit && !inactive && (
-              <Button onClick={asNeeded.onGive}>{t('meds:asNeeded.card.give')}</Button>
+              <Button onClick={asNeeded.onGive} offlineKind="mark">
+                {t('meds:asNeeded.card.give')}
+              </Button>
             )}
           </div>
         ) : undefined

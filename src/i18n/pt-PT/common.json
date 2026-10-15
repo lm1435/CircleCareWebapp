@@ -61,5 +61,12 @@
   "draftRestored": "Restaurámos o seu rascunho não guardado.",
   "undoCap": {
     "savingSoon": "A guardar dentro de 10 segundos."
+  },
+  "offline": {
+    "title": "Está offline",
+    "bannerSubtitle": "A mostrar informação guardada. Ligue-se para fazer alterações.",
+    "writeBlocked": "Está offline. Ligue-se para marcar isto.",
+    "saveBlocked": "Está offline. Ligue-se para guardar isto.",
+    "changeBlocked": "Está offline. Ligue-se para fazer alterações."
   }
 }

@@ -183,12 +183,14 @@ describe('AppLayout', () => {
     renderLayout();
 
     const main = screen.getByRole('main');
-    const before = main.firstElementChild;
+    // The LAST child: the offline banner's always-mounted status region
+    // (components/OfflineBanner) sits above the page, in flow.
+    const before = main.lastElementChild;
     expect(before).toHaveClass('animate-[fade-in_200ms_ease-out]');
 
     await user.click(within(pill()).getByRole('link', { name: 'Health' }));
 
-    const after = screen.getByRole('main').firstElementChild;
+    const after = screen.getByRole('main').lastElementChild;
     expect(after).toHaveClass('animate-[fade-in_200ms_ease-out]');
     // A new node, not the same one re-rendered: the key changed with the path.
     expect(after).not.toBe(before);

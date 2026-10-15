@@ -129,6 +129,7 @@ export function DiscontinueMedDialog({
 
   return (
     <ConfirmDialog
+      offlineKind="change"
       icon={discontinue ? 'medkit-outline' : 'repeat-outline'}
       iconTone={discontinue ? 'terracotta' : 'moss'}
       title={discontinue ? t('discontinueMed.title') : t('discontinueMed.reactivateTitle')}

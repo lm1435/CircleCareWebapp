@@ -446,7 +446,7 @@ export function EventDetailActions({
         </Button>
       )}
       {canConfirmDose && (
-        <Button variant="secondary" onClick={() => onConfirmDose('skipped')}>
+        <Button variant="secondary" onClick={() => onConfirmDose('skipped')} offlineKind="mark">
           {t('eventDetail.skipDose')}
         </Button>
       )}
@@ -456,12 +456,13 @@ export function EventDetailActions({
           variant="primary"
           disabled={completeEvent.isPending}
           onClick={() => void guardedComplete()}
+          offlineKind="mark"
         >
           {t('eventDetail.markComplete')}
         </Button>
       )}
       {canConfirmDose && (
-        <Button variant="primary" onClick={() => onConfirmDose('taken')}>
+        <Button variant="primary" onClick={() => onConfirmDose('taken')} offlineKind="mark">
           {t('eventDetail.markTaken')}
         </Button>
       )}
@@ -469,6 +470,7 @@ export function EventDetailActions({
 
       {showInactiveEditPrompt && (
         <ConfirmDialog
+          offlineKind="change"
           icon="repeat-outline"
           iconTone="moss"
           title={t('discontinueMed.editInactiveTitle')}

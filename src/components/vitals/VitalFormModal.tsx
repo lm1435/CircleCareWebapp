@@ -496,7 +496,7 @@ export function VitalFormModal({
             </Button>
             {/* `loading` swaps the label for a Spinner and sets aria-busy, so the
                 old "Saving…" label (and its i18n key) is gone. */}
-            <Button type="submit" form="vital-form" loading={isPending}>
+            <Button type="submit" offlineKind="save" form="vital-form" loading={isPending}>
               {isEditing ? t('edit.save') : t('add.save')}
             </Button>
           </div>

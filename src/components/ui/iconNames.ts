@@ -58,6 +58,7 @@ import iconTimeOutline from '../../../node_modules/ionicons/dist/svg/time-outlin
 import iconLocationOutline from '../../../node_modules/ionicons/dist/svg/location-outline.svg?raw';
 import iconRepeatOutline from '../../../node_modules/ionicons/dist/svg/repeat-outline.svg?raw';
 import iconHelpCircleOutline from '../../../node_modules/ionicons/dist/svg/help-circle-outline.svg?raw';
+import iconCloudOfflineOutline from '../../../node_modules/ionicons/dist/svg/cloud-offline-outline.svg?raw';
 import iconLogoApple from '../../../node_modules/ionicons/dist/svg/logo-apple.svg?raw';
 import iconLogoGoogle from '../../../node_modules/ionicons/dist/svg/logo-google.svg?raw';
 import iconLogOutOutline from '../../../node_modules/ionicons/dist/svg/log-out-outline.svg?raw';
@@ -125,6 +126,7 @@ export const ICON_NAMES = [
   'location-outline',
   'repeat-outline',
   'help-circle-outline',
+  'cloud-offline-outline',
   'logo-apple',
   'logo-google',
   'log-out-outline', // mobile ProfileScreen sign-out row
@@ -192,6 +194,7 @@ export const ICON_FILES: Record<IconName, string> = {
   'location-outline': iconLocationOutline,
   'repeat-outline': iconRepeatOutline,
   'help-circle-outline': iconHelpCircleOutline,
+  'cloud-offline-outline': iconCloudOfflineOutline,
   'logo-apple': iconLogoApple,
   'logo-google': iconLogoGoogle,
   'log-out-outline': iconLogOutOutline,

@@ -877,7 +877,7 @@ export default function VitalsPage(): ReactElement {
           description={canEdit ? t('emptyState.neverLogged.description') : undefined}
           actions={
             canEdit ? (
-              <Button onClick={() => setShowAdd(true)}>{emptyNeverCtas[neverType]}</Button>
+              <Button onClick={() => setShowAdd(true)} offlineKind="change">{emptyNeverCtas[neverType]}</Button>
             ) : undefined
           }
         />
@@ -925,7 +925,7 @@ export default function VitalsPage(): ReactElement {
           icon="heart-outline"
           title={t('empty.title')}
           description={canEdit ? t('empty.hint') : t('empty.hintReadOnly')}
-          actions={canEdit ? <Button onClick={() => setShowAdd(true)}>{t('empty.cta')}</Button> : undefined}
+          actions={canEdit ? <Button onClick={() => setShowAdd(true)} offlineKind="change">{t('empty.cta')}</Button> : undefined}
         />
       </Card>
     );
@@ -984,6 +984,7 @@ export default function VitalsPage(): ReactElement {
                 name: 'add-outline' as const,
                 label: t('add.cta'),
                 onClick: () => setShowAdd(true),
+                offlineKind: 'change' as const,
               },
             }
           : {})}
@@ -1095,6 +1096,7 @@ export default function VitalsPage(): ReactElement {
           row, which does not render until the zone resolves. */}
       {deletingVital && timezone !== null && (
         <ConfirmDialog
+          offlineKind="change"
           title={t('delete.title')}
           message={t('delete.message', {
             type: t(`types.${deletingVital.vital_type}`).toLocaleLowerCase(i18n.language),

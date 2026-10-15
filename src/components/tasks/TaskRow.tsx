@@ -21,6 +21,8 @@ import {
   getRelativeDateLabel,
   zoneReferenceInstant,
 } from '@/utils/timezone';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 
 // The ONE task row (Wave 3, Task 16 — mobile parity pass). Rendered by the
 // full Tasks page and by the Overview "Open tasks" card, the same way mobile
@@ -104,6 +106,7 @@ export function TaskRow({
   const { t, i18n } = useTranslation('tasks');
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
+  const offline = useIsOffline();
 
   // Persisted completion (from the server) OR an in-flight optimistic one.
   const isDone = Boolean(task.completed_at) || isPendingComplete;
@@ -242,8 +245,13 @@ export function TaskRow({
         <button
           key={key}
           type="button"
-          onClick={() => onComplete(task)}
+          // Offline: explain, never queue (lib/offlineWrite.ts).
+          onClick={() => {
+            if (blockOfflineWrite('mark')) return;
+            onComplete(task);
+          }}
           aria-label={t('row.completeLabel', { title: task.title })}
+          {...offlineDisabledProps(offline)}
           className={`${careCardActionPrimary} min-w-[66px] px-4`}
         >
           {t('row.done')}

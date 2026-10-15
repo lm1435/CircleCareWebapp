@@ -369,7 +369,12 @@ export default function CalendarPage(): ReactElement {
         subtitle={t('calendar:subtitle')}
         rightAction={
           canEdit
-            ? { name: 'add-outline', label: t('calendar:addEvent.addEvent'), onClick: () => setShowCreate(true) }
+            ? {
+                name: 'add-outline',
+                label: t('calendar:addEvent.addEvent'),
+                onClick: () => setShowCreate(true),
+                offlineKind: 'change',
+              }
             : undefined
         }
       >
@@ -493,7 +498,7 @@ export default function CalendarPage(): ReactElement {
                 description={canEdit ? t('calendar:empty.hint') : t('calendar:empty.hintReadOnly')}
               >
                 {canEdit && (
-                  <Button onClick={() => setShowCreate(true)}>
+                  <Button onClick={() => setShowCreate(true)} offlineKind="change">
                     {t('calendar:addEvent.addEvent')}
                   </Button>
                 )}

@@ -68,6 +68,7 @@ import {
   type SelectOption,
 } from '@/components/ui';
 import pkg from '../../package.json';
+import { blockOfflineWrite } from '@/lib/offlineWrite';
 
 // Stage 7, Task 7.3 — Profile & settings page. Built only on Stage 0 primitives
 // + the Stage 7 data layer (src/hooks/useProfile.ts + src/api/users.ts). Mirrors
@@ -302,6 +303,8 @@ export default function ProfilePage(): ReactElement {
 
   // ── Handlers ───────────────────────────────────────────────────────────
   const handleSaveName = (): void => {
+    // Offline: explain, never queue; the typed name stays (lib/offlineWrite.ts).
+    if (blockOfflineWrite('save')) return;
     if (saveName.isPending) return;
     // A retry replaces the previous failure; a new alert mounts (and is
     // announced again) if this attempt fails too.
@@ -331,6 +334,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleTimezone = async (tz: string): Promise<void> => {
+    if (blockOfflineWrite('save')) return;
     if (tz === user.timezone) return;
     // Recipients without their own account follow THIS zone, so a change moves
     // their dose reminders: ask first. Never block a change on a failed read.
@@ -365,6 +369,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleLanguage = (lang: string): void => {
+    if (blockOfflineWrite('save')) return;
     updateProfile.mutate(
       { language: lang as SupportedLanguage },
       {
@@ -389,6 +394,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleNotifGroup = (group: NotificationGroup, next: boolean): void => {
+    if (blockOfflineWrite('save')) return;
     const prefs = savedPrefs();
     const wasMixed = groupMixed(prefs, group);
     // Medications ON -> OFF (including from the mixed state) asks first,
@@ -453,6 +459,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleQuietEnabledToggle = (next: boolean): void => {
+    if (blockOfflineWrite('save')) return;
     if (next) {
       updateQuiet.mutate(
         { quiet_hours_start: quietStart, quiet_hours_end: quietEnd },
@@ -467,6 +474,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleQuietTime = (start: string, end: string): void => {
+    if (blockOfflineWrite('save')) return;
     setQuietStart(start);
     setQuietEnd(end);
     updateQuiet.mutate(
@@ -476,6 +484,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleWeightUnit = (value: string): void => {
+    if (blockOfflineWrite('save')) return;
     updateUnits.mutate(
       { weight_unit: value as 'lbs' | 'kg' },
       { onSuccess: () => showToast(t('units.success'), 'success') }
@@ -483,6 +492,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleTemperatureUnit = (value: string): void => {
+    if (blockOfflineWrite('save')) return;
     updateUnits.mutate(
       { temperature_unit: value as '°F' | '°C' },
       { onSuccess: () => showToast(t('units.success'), 'success') }
@@ -490,6 +500,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleGlucoseUnit = (value: string): void => {
+    if (blockOfflineWrite('save')) return;
     updateUnits.mutate(
       { glucose_unit: value as 'mg/dL' | 'mmol/L' },
       { onSuccess: () => showToast(t('units.success'), 'success') }
@@ -497,6 +508,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleDigestEnabled = (next: boolean): void => {
+    if (blockOfflineWrite('save')) return;
     updateDigest.mutate(
       { enabled: next, day: user.email_digest_day ?? 0 },
       { onSuccess: () => showToast(t('emailDigest.success'), 'success') }
@@ -504,6 +516,7 @@ export default function ProfilePage(): ReactElement {
   };
 
   const handleDigestDay = (day: number): void => {
+    if (blockOfflineWrite('save')) return;
     updateDigest.mutate(
       { enabled: true, day },
       { onSuccess: () => showToast(t('emailDigest.success'), 'success') }
@@ -638,6 +651,7 @@ export default function ProfilePage(): ReactElement {
               <Button
                 size="sm"
                 onClick={handleSaveName}
+                offlineKind="save"
                 disabled={saveName.isPending || updateProfile.isPending}
               >
                 {t('account.save')}
@@ -683,6 +697,7 @@ export default function ProfilePage(): ReactElement {
             value={user.avatar_color}
             onChange={(key) => {
               if (key === user.avatar_color) return;
+              if (blockOfflineWrite('save')) return;
               setColorSaved(false);
               updateAvatarColor.mutate(key, { onSuccess: () => setColorSaved(true) });
             }}
@@ -964,6 +979,7 @@ export default function ProfilePage(): ReactElement {
 
       {pendingMedicationsOff ? (
         <ConfirmDialog
+          offlineKind="save"
           variant="confirm"
           title={t('notifications.confirmMedicationsOff.title')}
           message={t('notifications.confirmMedicationsOff.message')}
@@ -976,6 +992,7 @@ export default function ProfilePage(): ReactElement {
 
       {pendingZone ? (
         <ConfirmDialog
+          offlineKind="save"
           title={t('timezoneImpact.impactTitle')}
           message={t('timezoneImpact.impactMessage', {
             count: pendingZone.count,
@@ -993,6 +1010,7 @@ export default function ProfilePage(): ReactElement {
 
       {showDelete ? (
         <ConfirmDialog
+          offlineKind="change"
           title={t('delete.confirmTitle')}
           message={
             <>

@@ -161,10 +161,10 @@ export default function CirclePickerPage(): ReactElement {
       // user who opened the wrong door has no other way out.
       <EmptyCircles
         action={
-          <Button onClick={() => setShowCreate(true)}>{t('circles:create.create')}</Button>
+          <Button onClick={() => setShowCreate(true)} offlineKind="change">{t('circles:create.create')}</Button>
         }
         joinAction={
-          <Button variant="secondary" onClick={() => setShowJoin(true)}>
+          <Button variant="secondary" onClick={() => setShowJoin(true)} offlineKind="change">
             {t('circles:join.withCode')}
           </Button>
         }
@@ -218,11 +218,11 @@ export default function CirclePickerPage(): ReactElement {
           // width (326px), 30px past a 320px viewport, so Create circle hung
           // off-screen; free to shrink, the buttons wrap instead.
           <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <Button variant="secondary" onClick={() => setShowJoin(true)}>
+            <Button variant="secondary" onClick={() => setShowJoin(true)} offlineKind="change">
               {t('circles:join.button')}
             </Button>
             <span className="text-sm text-ink-3">{t('circles:join.or')}</span>
-            <Button onClick={() => setShowCreate(true)}>{t('circles:create.create')}</Button>
+            <Button onClick={() => setShowCreate(true)} offlineKind="change">{t('circles:create.create')}</Button>
           </div>
         )}
       </header>

@@ -7,8 +7,9 @@
  * How long `withRefetchCap` will wait for a refetch before giving up and
  * resolving anyway.
  *
- * WHY THE CAP EXISTS. Every `QueryClient` in this app runs with `networkMode:
- * 'online'` (src/lib/queryClient.ts): a refetch attempted while the browser is
+ * WHY THE CAP EXISTS. Every `QueryClient` in this app runs its QUERIES with
+ * `networkMode: 'online'` (src/lib/queryClient.ts; mutations run 'always' so an
+ * offline write fails at once and is never replayed): a refetch attempted while the browser is
  * offline is PAUSED rather than rejected, and a paused fetch's promise does
  * not settle until connectivity returns. Without a cap, a caregiver whose
  * connection drops between a write succeeding and its refetch landing would

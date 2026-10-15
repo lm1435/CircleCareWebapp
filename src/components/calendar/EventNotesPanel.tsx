@@ -322,7 +322,7 @@ export function EventNotesPanel({
             rows={3}
           />
           <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={!composer.trim() || createNote.isPending}>
+            <Button type="submit" offlineKind="save" size="sm" disabled={!composer.trim() || createNote.isPending}>
               {t('calendar:notes.add')}
             </Button>
           </div>
@@ -331,6 +331,7 @@ export function EventNotesPanel({
 
       {deletingNote && (
         <ConfirmDialog
+          offlineKind="change"
           title={t('calendar:notes.deleteTitle')}
           message={t('calendar:notes.deleteConfirm')}
           confirmLabel={t('calendar:notes.delete')}

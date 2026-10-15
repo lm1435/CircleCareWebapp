@@ -55,6 +55,8 @@ import {
   type DoseAlreadyRecorded,
 } from '@/lib/doseAlreadyRecorded';
 import { ChangeAnswerDialog } from './ChangeAnswerDialog';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
 
 // Today's medications (spec §6.3.2 / §4.6): the dose cards a caregiver answers,
 // rendered on Home and anywhere else a day's doses belong. "Today" and every
@@ -179,6 +181,7 @@ export interface TodaysMedsProps {
 export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement | null {
   const { t } = useTranslation(['meds', 'calendar', 'common']);
   const { showToast } = useToast();
+  const offline = useIsOffline();
   const { data: circles } = useCircles();
   const circle = circles?.find((c) => c.id === circleId);
   // The care recipient's timezone is NOT on the circles list — it comes from
@@ -296,6 +299,8 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   );
 
   function handleConfirm(med: TodaysMedication, status: ConfirmableStatus): void {
+    // Offline: explain, never queue (lib/offlineWrite.ts). Read at press time.
+    if (blockOfflineWrite('mark')) return;
     // DEFENSE IN DEPTH, mirroring mobile (CalendarScreen.confirmEventWithStatus
     // re-checks the same predicate before mutating, not just where the pair is
     // rendered). The pair is already gated on `isDoseConfirmable`, but a card
@@ -412,6 +417,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
               Analytics.homeEmptyCtaTapped('medications');
               setShowAdd(true);
             }}
+            offlineKind="change"
           >
             {t('addFirst')}
           </Button>
@@ -491,6 +497,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
             type="button"
             onClick={() => handleConfirm(med, 'skipped')}
             aria-label={t('skipLabel', { name: medName })}
+            {...offlineDisabledProps(offline)}
             className={careCardActionText}
           >
             {t('skip')}
@@ -499,6 +506,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
             type="button"
             onClick={() => handleConfirm(med, 'taken')}
             aria-label={t('confirmLabel', { name: medName })}
+            {...offlineDisabledProps(offline)}
             className={careCardActionPrimary}
           >
             {t('confirm')}

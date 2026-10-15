@@ -19,6 +19,7 @@ import { Icon } from './Icon';
 import { EXIT_FALLBACK_MS, prefersReducedMotion, waitForExitAnimation } from './motion';
 import { Text } from './Text';
 import { captureSessionGuard } from '@/lib/forcedSignOut';
+import { setOfflineWriteExplainer } from '@/lib/offlineWrite';
 
 export type ToastType = 'info' | 'success' | 'error';
 
@@ -318,6 +319,13 @@ export function ToastProvider({ children }: { children: ReactNode }): ReactEleme
   }, []);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
+
+  // The offline write refusal (lib/offlineWrite.ts) is explained here: a calm
+  // info toast, from any control, without threading this context to it.
+  useEffect(() => {
+    setOfflineWriteExplainer((message) => showToast(message, 'info'));
+    return () => setOfflineWriteExplainer(null);
+  }, [showToast]);
 
   return (
     <ToastContext.Provider value={value}>

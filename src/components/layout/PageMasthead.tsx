@@ -2,6 +2,12 @@ import type { ReactElement, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, CircleButton, Eyebrow, Icon, Text, type IconName } from '@/components/ui';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import {
+  guardOfflineWrite,
+  offlineDisabledProps,
+  type OfflineWriteKind,
+} from '@/lib/offlineWrite';
 
 /**
  * The section colours a masthead eyebrow can take (spec §5.4). A subset of
@@ -29,6 +35,29 @@ export interface MastheadAction {
    * "busy" rather than an unexplained dead control.
    */
   busy?: boolean;
+  /**
+   * The action WRITES or opens a create/edit flow (Add, Edit, Upload, Invite):
+   * while offline both renderings are `aria-disabled` and a press explains with
+   * this sentence instead of running `onClick` (lib/offlineWrite.ts). Only for
+   * `onClick` actions — a `to` link just navigates.
+   */
+  offlineKind?: OfflineWriteKind;
+}
+
+/** `onClick` + offline props for one action (see `MastheadAction.offlineKind`). */
+function useActionGuard(): (action: MastheadAction) => {
+  onClick?: () => void;
+  'aria-disabled'?: true;
+  'data-offline-disabled'?: true;
+} {
+  const offline = useIsOffline();
+  return (action) =>
+    action.offlineKind && !action.to
+      ? {
+          onClick: guardOfflineWrite(action.onClick, action.offlineKind),
+          ...offlineDisabledProps(offline),
+        }
+      : { onClick: action.onClick };
 }
 
 export interface PageMastheadProps {
@@ -99,6 +128,7 @@ export function PageMasthead({
   const { t } = useTranslation('common');
   const secondaryAction = rightAction ? secondaryActionProp : undefined;
   const endSlot = secondaryAction ? SPACER_WIDE : SPACER;
+  const guard = useActionGuard();
 
   return (
     <header>
@@ -135,7 +165,7 @@ export function PageMasthead({
               label={secondaryAction.label}
               {...(secondaryAction.to
                 ? { to: secondaryAction.to }
-                : { onClick: secondaryAction.onClick })}
+                : guard(secondaryAction))}
               disabled={secondaryAction.disabled || secondaryAction.busy}
               aria-busy={secondaryAction.busy || undefined}
               title={secondaryAction.title}
@@ -146,7 +176,7 @@ export function PageMasthead({
             <CircleButton
               name={rightAction.name}
               label={rightAction.label}
-              {...(rightAction.to ? { to: rightAction.to } : { onClick: rightAction.onClick })}
+              {...(rightAction.to ? { to: rightAction.to } : guard(rightAction))}
               disabled={rightAction.disabled || rightAction.busy}
               aria-busy={rightAction.busy || undefined}
               title={rightAction.title}
@@ -198,7 +228,7 @@ export function PageMasthead({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={secondaryAction.onClick}
+                  {...guard(secondaryAction)}
                   leftIcon={<Icon name={secondaryAction.name} size="row" />}
                   disabled={secondaryAction.disabled}
                   loading={secondaryAction.busy}
@@ -223,7 +253,7 @@ export function PageMasthead({
               <Button
                 variant="primary"
                 size="sm"
-                onClick={rightAction.onClick}
+                {...guard(rightAction)}
                 leftIcon={<Icon name={rightAction.name} size="row" />}
                 disabled={rightAction.disabled}
                 loading={rightAction.busy}

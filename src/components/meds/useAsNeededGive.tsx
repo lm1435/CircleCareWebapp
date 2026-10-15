@@ -221,6 +221,7 @@ export function useAsNeededGive({
         : '';
       return (
         <ConfirmDialog
+          offlineKind="mark"
           title={
             prompt.name
               ? t('asNeeded.recent.title', { name: prompt.name })

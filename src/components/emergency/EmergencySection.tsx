@@ -132,6 +132,7 @@ export function EmergencyAccordionSection<T>({
       size="sm"
       leftIcon={<Icon name="add-outline" size="row" />}
       onClick={onAdd}
+      offlineKind="change"
     >
       {addLabel}
     </Button>

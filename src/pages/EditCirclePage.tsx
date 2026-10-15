@@ -289,6 +289,7 @@ export default function EditCirclePage(): ReactElement {
             </Button>
             <Button
               type="submit"
+              offlineKind="save"
               loading={update.isPending}
               disabled={update.isPending || !isDirty}
             >
@@ -320,6 +321,7 @@ export default function EditCirclePage(): ReactElement {
 
       {confirmDelete && (
         <ConfirmDialog
+          offlineKind="change"
           title={t('edit.deleteConfirmTitle')}
           message={
             <span className="flex flex-col gap-3">

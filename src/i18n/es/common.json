@@ -179,5 +179,12 @@
   "maps": {
     "openAria": "Abrir {{address}} en Mapas",
     "newTab": "Se abre en una pestaña nueva"
+  },
+  "offline": {
+    "title": "Sin conexión",
+    "bannerSubtitle": "Mostrando información guardada. Conéctate para hacer cambios.",
+    "writeBlocked": "Sin conexión. Conéctate para marcar esto.",
+    "saveBlocked": "Sin conexión. Conéctate para guardar esto.",
+    "changeBlocked": "Sin conexión. Conéctate para hacer cambios."
   }
 }
