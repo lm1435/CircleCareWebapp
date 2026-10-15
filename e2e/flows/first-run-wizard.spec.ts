@@ -233,6 +233,24 @@ test.describe('first-run wizard', () => {
 
     // The primary is the only FILLED control: the rows have no background of
     // their own, and each is at least a 44px target under the primary.
+    // Measure the RESTING layout: the modal panel enters with `modal-in`
+    // (globals.css, scale(0.98) -> 1), and a box read mid-animation is scaled
+    // down (a 44px row read 43.9994px). Wait until every finite animation on
+    // the dialog, its ancestors and its descendants has finished.
+    await expect
+      .poll(
+        () =>
+          wizard.evaluate((el) =>
+            document.getAnimations().filter((a) => {
+              const target = (a.effect as KeyframeEffect | null)?.target ?? null;
+              if (!target || !(target.contains(el) || el.contains(target))) return false;
+              if (a.effect?.getComputedTiming().endTime === Infinity) return false;
+              return a.playState !== 'finished';
+            }).length
+          ),
+        { message: 'the wizard entrance animation has finished' }
+      )
+      .toBe(0);
     const filled = await primary.evaluate((el) => getComputedStyle(el).backgroundColor);
     const primaryBox = (await primary.boundingBox())!;
     for (const row of await rows.all()) {

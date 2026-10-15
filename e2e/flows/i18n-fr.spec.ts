@@ -97,7 +97,7 @@ async function expectFrenchNav(page: Page): Promise<void> {
 // Each circle-scoped page: nav in French + the page's own heading in French.
 // `heading: null` ⇒ heading is dynamic (month / recipient name), so we lean on
 // the nav assertion for that page.
-const CIRCLE_PAGES: { path: string; heading: string | null }[] = [
+const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
   { path: '', heading: 'Équipe d’aidants' }, // overview (h1 is the recipient name)
   { path: '/calendar', heading: null }, // heading is the current month
   { path: '/tasks', heading: 'Tâches' },
@@ -106,7 +106,9 @@ const CIRCLE_PAGES: { path: string; heading: string | null }[] = [
   { path: '/documents', heading: 'Documents' },
   { path: '/vitals', heading: 'Constantes' },
   { path: '/members', heading: 'Membres' },
-  { path: '/settings', heading: 'Paramètres du cercle' },
+  // The loaded settings page heading names the recipient ("Modifier {{name}}");
+  // the old "Paramètres du cercle" title is only the loading skeleton's.
+  { path: '/settings', heading: /^Modifier / },
 ];
 
 for (const { path, heading } of CIRCLE_PAGES) {

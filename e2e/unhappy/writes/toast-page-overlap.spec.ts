@@ -179,11 +179,33 @@ async function revealLikeAUser(page: Page, control: Locator): Promise<number> {
   return page.evaluate(() => Math.round(scrollY));
 }
 
-/** Reveal like a user, then act — and fail if the action itself scrolled the page. */
+/**
+ * Reveal like a user, then act — and fail if the action itself scrolled the page.
+ *
+ * What this guards against is the harness, not the app: Playwright's click-time
+ * scrolling centres a control it finds obscured, a jump of tens to hundreds of
+ * px that would park the form somewhere no user puts it and make every
+ * measurement after it meaningless. So the page may move by at most 4 px.
+ *
+ * The 4 px is the browser's own focus nudge, not slack for the action: a
+ * focused control inside the root `scroll-padding` band (globals.css, WCAG
+ * 2.4.11) is scrolled until it clears it. The Notes composer's STICKY submit row
+ * (96288c7) rests 12 px above the nav pill (bottom offset 8 + its 4 px bottom
+ * padding) against a 16 px band, so focusing Post scrolls exactly 4 px — and,
+ * being sticky, never clears it. Sub-pixel layouts (the compact Profile header,
+ * 681f53c) round a smaller adjustment to 1 px. Anything larger is a real jump
+ * and fails. (Not "the control stayed put": a failed save inserts its inline
+ * alert above the Save button, which moves it ~40 px without any scrolling.)
+ */
+const SCROLL_NUDGE_PX = 4;
 async function actInPlace(page: Page, control: Locator, act: () => Promise<void>): Promise<void> {
   const before = await revealLikeAUser(page, control);
   await act();
-  expect(await page.evaluate(() => Math.round(scrollY)), 'the action did not scroll the page').toBe(before);
+  const after = await page.evaluate(() => Math.round(scrollY));
+  expect(
+    Math.abs(after - before),
+    `the action did not scroll the page (scrollY ${before} -> ${after}; at most the ${SCROLL_NUDGE_PX}px focus nudge)`
+  ).toBeLessThanOrEqual(SCROLL_NUDGE_PX);
 }
 
 /**

@@ -328,13 +328,17 @@ async function homeSample(page: Page): Promise<HomeSample | null> {
         const tasks = document.querySelector(tasksSel);
         const meds = document.querySelector(medsSel);
         const region = document.querySelector(checklistSel);
-        // The med step is pending iff its row carries an action button ("Add").
-        const stepHasCta =
-          !!region &&
-          Array.from(region.querySelectorAll('li')).some(
-            (li) =>
-              (li.querySelector('p')?.textContent ?? '').trim().startsWith(stepLabel) && li.querySelector('button') !== null
-          );
+        // The med step is pending iff its row carries something pressable: the
+        // filled "Add" when it is the next step, or (cb55ea4) the whole row as a
+        // plain button when another step is next. A done row has neither. The row
+        // is found by its test id (the label markup is not a stable hook: it went
+        // <p> -> <span> in cb55ea4), and its label is pinned so a reworded or
+        // re-keyed step fails loudly instead of reading as "no-cta".
+        const medStep = region?.querySelector('[data-testid="getting-started-step-event"]') ?? null;
+        if (region && (!medStep || !(medStep.textContent ?? '').trim().startsWith(stepLabel))) {
+          throw new Error(`checklist med step not found by test id / label "${stepLabel}"`);
+        }
+        const stepHasCta = !!medStep && medStep.querySelector('button, [role="button"]') !== null;
         const ctas: string[] = [];
         if (hasButton(tasks, tasksCta)) ctas.push('tasks');
         if (hasButton(meds, medsCta)) ctas.push('meds');

@@ -544,7 +544,12 @@ test('delete the account through the Profile page: auth user gone, public.users 
 
     await cookieLogin(context, acct, baseURL);
     await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText(acct.email, { exact: true })).toBeVisible({ timeout: 20_000 });
+    // The page is loaded as THIS account. The email shows twice since the compact
+    // header (681f53c): under the name in the header and in the Account card. Pin
+    // the header's (a stable test id), not "any element with this text".
+    await expect(page.getByTestId('profile-header').getByText(acct.email, { exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
 
     await pretendSaved(page, 'delete-account', 'DELETE', ME_RE, {
       success: true,

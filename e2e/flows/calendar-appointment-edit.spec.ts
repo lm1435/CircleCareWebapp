@@ -227,14 +227,34 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await expect.poll(() => k.rootRow().title, { timeout: 15_000 }).toBe(k.B);
     expect(k.rootRow().scheduled_time).toBe(`${expectedStored.hhmm}:00`);
     expect(k.rootRow().scheduled_date, 'the series anchor date did not move').toBe(k.at(-14));
-    // No detached "this occurrence only" copy carrying the old title.
-    expect(
-      dbQuery(`select 1 from calendar_events where parent_event_id = ${sqlStr(k.rootId)}::uuid and title = ${sqlStr(k.A)}`)
-    ).toHaveLength(0);
-    // Series semantics: last week's occurrence reads the new title too.
+    // A SETTLED FIRST DAY STAYS AS IT WAS (backend 3b30571, 2026-10-11;
+    // utils/seriesStartFreeze.ts, calendarEvents.ts PATCH): the root is also its
+    // own start-date occurrence, and that start (-14) is in the past, so before
+    // the root is rewritten the backend mints ONE physical child on -14 carrying
+    // the PRE-EDIT values. That is the only child: no other occurrence is
+    // detached, and the series itself (the root) carries the edit.
+    const children = dbQuery<{ scheduled_date: string; title: string; scheduled_time: string; removed_at: string | null }>(
+      `select scheduled_date::text as scheduled_date, title, scheduled_time::text as scheduled_time, removed_at::text as removed_at
+         from calendar_events where parent_event_id = ${sqlStr(k.rootId)}::uuid`
+    );
+    expect(children, 'exactly one frozen child, on the settled start day, with the old values').toEqual([
+      { scheduled_date: k.at(-14), title: k.A, scheduled_time: '10:00:00', removed_at: null },
+    ]);
+    // The calendar draws the frozen start day from that child: old title only.
+    await gotoWeekContaining(page, k.circleId, k.today, k.at(-14));
+    await assertChipPresent(page, k.at(-14), k.reA);
+    await assertChipAbsent(page, k.at(-14), k.reB);
+    // Series semantics everywhere else: last week's (unmaterialised) occurrence
+    // and today's read the new title.
     await gotoWeekContaining(page, k.circleId, k.today, k.at(-7));
     await assertChipPresent(page, k.at(-7), k.reB);
     await assertChipAbsent(page, k.at(-7), k.reA);
+    await gotoWeekContaining(page, k.circleId, k.today, k.at(0));
+    await assertChipPresent(page, k.at(0), k.reB);
+    await assertChipAbsent(page, k.at(0), k.reA);
+    await gotoWeekContaining(page, k.circleId, k.today, k.at(7));
+    await assertChipPresent(page, k.at(7), k.reB);
+    await assertChipAbsent(page, k.at(7), k.reA);
   });
 
   test('(b) "This appointment only" removes just +7 (one tombstone at (root, +7)) and keeps 0 and +14', async ({

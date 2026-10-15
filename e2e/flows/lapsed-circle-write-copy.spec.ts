@@ -43,7 +43,15 @@ test('vitals: a reading refused on a lapsed circle gives the OWNER the lapse cop
     'no vital row'
   ).toBe(0);
 
+  // The kept draft is an unsaved edit, so leaving for /upgrade goes through the
+  // vitals form's "Discard changes?" guard (7a81ae4, router blocker): it asks
+  // first and does NOT navigate on its own. Discard lets the Upgrade action
+  // through. (Keep editing is pinned in vitals-discard-changes.spec.ts.)
   await page.getByRole('button', { name: 'Upgrade', exact: true }).click();
+  const discard = page.getByRole('dialog', { name: 'Discard changes?' });
+  await expect(discard).toBeVisible();
+  await expect(page).not.toHaveURL(/\/upgrade/);
+  await discard.getByRole('button', { name: 'Discard', exact: true }).click();
   await expect(page).toHaveURL(/\/upgrade/);
 });
 

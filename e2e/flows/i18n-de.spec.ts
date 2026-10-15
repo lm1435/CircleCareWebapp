@@ -99,7 +99,7 @@ async function expectGermanNav(page: Page): Promise<void> {
 // Each circle-scoped page: nav in German + the page's own heading in German.
 // `heading: null` ⇒ heading is dynamic (month / recipient name), so we lean on
 // the nav assertion for that page.
-const CIRCLE_PAGES: { path: string; heading: string | null }[] = [
+const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
   { path: '', heading: 'Pflegeteam' }, // overview (h1 is the recipient name)
   { path: '/calendar', heading: null }, // heading is the current month
   { path: '/tasks', heading: 'Aufgaben' },
@@ -108,7 +108,9 @@ const CIRCLE_PAGES: { path: string; heading: string | null }[] = [
   { path: '/documents', heading: 'Dokumente' },
   { path: '/vitals', heading: 'Vitalwerte' },
   { path: '/members', heading: 'Mitglieder' },
-  { path: '/settings', heading: 'Kreiseinstellungen' },
+  // The loaded settings page heading names the recipient ("{{name}} bearbeiten");
+  // the old "Kreiseinstellungen" title is only the loading skeleton's.
+  { path: '/settings', heading: / bearbeiten$/ },
 ];
 
 for (const { path, heading } of CIRCLE_PAGES) {
