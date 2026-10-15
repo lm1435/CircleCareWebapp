@@ -10,6 +10,8 @@ import {
 import type { FirstRunAction } from './firstRunActionRoute';
 import type { DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from '@/components/calendar/DrugAutocomplete';
+import { useIsOffline } from '@/hooks/useIsOffline';
+import { explainOfflineWrite } from '@/lib/offlineWrite';
 
 /**
  * The wizard screens, rebuilt in this repo's own idiom.
@@ -86,6 +88,10 @@ export function ChooseActionStep({
   onSelect,
 }: ChooseActionStepProps): ReactElement {
   const { t } = useTranslation('circles');
+  // Offline (owner decision 2026-10-14): every choice here starts a create, so each
+  // explains with the 'change' sentence and goes nowhere — mobile FirstRunWizardScreen's
+  // `handleAction` gate. "Skip for now" (the modal footer) is a close and stays live.
+  const offline = useIsOffline();
 
   const secondary: { id: Exclude<FirstRunAction, 'skip' | 'medication'>; label: string }[] = [
     { id: 'appointment', label: t('firstRun.choose.appointment') },
@@ -106,6 +112,7 @@ export function ChooseActionStep({
         <Button
           type="button"
           fullWidth
+          offlineKind="change"
           onClick={() => onSelect('medication')}
           data-testid="first-run-primary"
           aria-describedby="first-run-primary-helper"
@@ -126,9 +133,10 @@ export function ChooseActionStep({
             <li key={option.id} className="border-t border-line-2 first:border-t-0">
               <button
                 type="button"
-                onClick={() => onSelect(option.id)}
+                aria-disabled={offline || undefined}
+                onClick={() => (offline ? explainOfflineWrite('change') : onSelect(option.id))}
                 data-testid={`first-run-start-with-${option.id}`}
-                className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md py-2.5 text-left text-md font-medium text-moss-deep transition-colors duration-fast hover:bg-bg-2"
+                className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-md py-2.5 text-left text-md font-medium text-moss-deep transition-colors duration-fast hover:bg-bg-2${offline ? ' cursor-not-allowed opacity-50' : ''}`}
               >
                 <span className="min-w-0">{option.label}</span>
                 <Icon name="chevron-forward" size="inline" className="flex-none text-ink-3" />

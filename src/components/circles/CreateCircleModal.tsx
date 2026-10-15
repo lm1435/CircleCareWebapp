@@ -271,7 +271,7 @@ export function CreateCircleModal({
       {onJoinInstead ? (
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2 border-t border-line-2 pt-4 text-center">
           <p className="m-0 text-sm text-ink-3">{t('join.invitedPrompt')}</p>
-          <Button type="button" variant="ghost" size="sm" onClick={onJoinInstead}>
+          <Button type="button" variant="ghost" size="sm" offlineKind="change" onClick={onJoinInstead}>
             {t('join.withCode')}
           </Button>
         </div>

@@ -232,7 +232,7 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
             >
               {t('joinModal.enterDifferentCode')}
             </Button>
-            <Button size="lg" className="w-full" loading={accept.isPending} onClick={handleAccept}>
+            <Button size="lg" className="w-full" offlineKind="save" loading={accept.isPending} onClick={handleAccept}>
               {accept.isPending ? t('joinModal.joining') : t('joinModal.joinCircle')}
             </Button>
           </div>

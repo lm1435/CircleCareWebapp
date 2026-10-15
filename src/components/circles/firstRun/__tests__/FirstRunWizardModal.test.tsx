@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import type { CreateEventRequest } from '@/api/calendarEvents';
 import { FirstRunWizardModal } from '../FirstRunWizardModal';
+import { onlineManager } from '@tanstack/react-query';
+import { __resetOfflineWriteForTests, setOfflineWriteExplainer } from '@/lib/offlineWrite';
 
 /**
  * The wizard's BEHAVIOUR: step transitions, the constraint-4 gate, the
@@ -545,6 +547,29 @@ describe('skip and close', () => {
     expect(analytics.firstRunSkipped).toHaveBeenCalledWith(CIRCLE_ID, 'skip_button');
     // `skip` is NOT an action-selected value — it maps to its own event.
     expect(analytics.firstRunActionSelected).not.toHaveBeenCalled();
+  });
+
+  // OFFLINE = READ-ONLY (owner decision 2026-10-14): every step ① choice is a
+  // write and is blocked offline (ChooseActionStep.offline.test.tsx), but Skip
+  // only closes the wizard — it stays live and explains nothing.
+  it('"Skip for now" still closes offline, with no offline explanation', async () => {
+    const explained = vi.fn();
+    __resetOfflineWriteForTests();
+    setOfflineWriteExplainer(explained);
+    try {
+      const { onClose } = renderWizard();
+      act(() => onlineManager.setOnline(false));
+      expect(screen.getByTestId('first-run-primary')).toHaveAttribute('aria-disabled', 'true');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+
+      expect(onClose).toHaveBeenCalled();
+      expect(analytics.firstRunSkipped).toHaveBeenCalledWith(CIRCLE_ID, 'skip_button');
+      expect(explained).not.toHaveBeenCalled();
+    } finally {
+      setOfflineWriteExplainer(null);
+      act(() => onlineManager.setOnline(true));
+    }
   });
 
   it('closes straight away from step ①, where nothing has been answered', async () => {
