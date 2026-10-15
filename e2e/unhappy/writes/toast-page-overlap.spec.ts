@@ -185,27 +185,37 @@ async function revealLikeAUser(page: Page, control: Locator): Promise<number> {
  * What this guards against is the harness, not the app: Playwright's click-time
  * scrolling centres a control it finds obscured, a jump of tens to hundreds of
  * px that would park the form somewhere no user puts it and make every
- * measurement after it meaningless. So the page may move by at most 4 px.
+ * measurement after it meaningless. So the page may not move at all.
  *
- * The 4 px is the browser's own focus nudge, not slack for the action: a
- * focused control inside the root `scroll-padding` band (globals.css, WCAG
- * 2.4.11) is scrolled until it clears it. The Notes composer's STICKY submit row
- * (96288c7) rests 12 px above the nav pill (bottom offset 8 + its 4 px bottom
- * padding) against a 16 px band, so focusing Post scrolls exactly 4 px — and,
- * being sticky, never clears it. Sub-pixel layouts (the compact Profile header,
- * 681f53c) round a smaller adjustment to 1 px. Anything larger is a real jump
- * and fails. (Not "the control stayed put": a failed save inserts its inline
- * alert above the Save button, which moves it ~40 px without any scrolling.)
+ * Zero holds for the Notes composer: its STICKY submit row sits 12 px above
+ * the nav pill with 4 px bottom padding, so Post's bottom edge is exactly 16 px
+ * clear — the root `scroll-padding` band (globals.css, WCAG 2.4.11) the
+ * browser enforces on focus — and focusing it scrolls nothing. (It used to
+ * rest 12 px clear, and every focus nudged the page 4 px that a sticky row can
+ * never satisfy.) Not "the control stayed put": a failed save inserts its
+ * inline alert above the Save button, which moves it without any scrolling.
+ *
+ * ProfilePage keeps a separate allowance (PROFILE_FOCUS_NUDGE_PX): at 360x640
+ * focusing "Edit name" / the first-name field after the name form expands is
+ * scrolled 1-4 px by the browser (measured 2026-10-14 over 12 repeats; varies
+ * run to run, sub-pixel compact header, 681f53c). That is the page's own focus
+ * scroll, not a harness jump, and it is not a sticky row.
  */
-const SCROLL_NUDGE_PX = 4;
-async function actInPlace(page: Page, control: Locator, act: () => Promise<void>): Promise<void> {
+const SCROLL_NUDGE_PX = 0;
+const PROFILE_FOCUS_NUDGE_PX = 4;
+async function actInPlace(
+  page: Page,
+  control: Locator,
+  act: () => Promise<void>,
+  allowedPx: number = SCROLL_NUDGE_PX
+): Promise<void> {
   const before = await revealLikeAUser(page, control);
   await act();
   const after = await page.evaluate(() => Math.round(scrollY));
   expect(
     Math.abs(after - before),
-    `the action did not scroll the page (scrollY ${before} -> ${after}; at most the ${SCROLL_NUDGE_PX}px focus nudge)`
-  ).toBeLessThanOrEqual(SCROLL_NUDGE_PX);
+    `the action did not scroll the page (scrollY ${before} -> ${after}; allowed ${allowedPx}px)`
+  ).toBeLessThanOrEqual(allowedPx);
 }
 
 /**
@@ -289,12 +299,12 @@ test.describe('save failures', () => {
         await page.goto('/profile', { waitUntil: 'domcontentloaded' });
         await pageSettled(page);
         const edit = page.getByRole('button', { name: 'Edit name', exact: true }).first();
-        await actInPlace(page, edit, () => edit.click());
+        await actInPlace(page, edit, () => edit.click(), PROFILE_FOCUS_NUDGE_PX);
         const first = page.locator('#profile-first-name');
-        await actInPlace(page, first, () => first.fill(uniqueLabel('TPO').slice(0, 40)));
+        await actInPlace(page, first, () => first.fill(uniqueLabel('TPO').slice(0, 40)), PROFILE_FOCUS_NUDGE_PX);
         const injected = await failRequest(page, 'PATCH', '/api/users/me', { status: 500, times: 1 });
         const save = page.getByRole('button', { name: 'Save', exact: true }).first();
-        await actInPlace(page, save, () => save.click());
+        await actInPlace(page, save, () => save.click(), PROFILE_FOCUS_NUDGE_PX);
         await injected.expectHits(1);
         await assertInlineError(page, errorToast(page, "Couldn't save your changes. Please try again."), '#profile-first-name', `${vp.label}] [ProfilePage`);
       });
@@ -314,3 +324,75 @@ test.describe('save failures', () => {
   }
 });
 
+
+// The Notes composer's failed-Post alert lives INSIDE its sticky submit row, so
+// it is on screen whenever Post is. Narrowest phone and 200% text (WCAG 1.4.4):
+// the alert must wrap inside the viewport, be painted (nothing on top of it —
+// not the sticky row's own ground, not the nav pill), and describe Post.
+test.describe('Notes composer failed-Post alert at 320px and 200% text', () => {
+  for (const vp of [
+    { width: 320, height: 640 },
+    { width: 390, height: 844 },
+  ]) {
+    test(`${vp.width}x${vp.height}: the alert wraps, stays on screen and unobscured above Post`, async ({ page, circleId }) => {
+      await page.setViewportSize(vp);
+      await page.goto(`/circles/${circleId}/notes`, { waitUntil: 'domcontentloaded' });
+      await pageSettled(page);
+      // Text-only 200% resize: the type scale is px tokens (globals.css), so
+      // a root font-size change would not move them — double the tokens.
+      await page.addStyleTag({
+        content:
+          ':root { --text-xs: 24px !important; --text-sm: 28px !important; --text-base: 36px !important; --text-lg: 48px !important; --text-xl: 64px !important; }',
+      });
+      const composer = page.getByLabel(/^Add a note/);
+      await composer.fill(uniqueLabel('TPO'));
+      const injected = await failRequest(page, 'POST', '/api/circles/:id/care-notes', { status: 500, times: 1 });
+      const post = page.getByRole('button', { name: 'Post', exact: true });
+      await post.click();
+      await injected.expectHits(1);
+      const alert = page.getByTestId('note-composer-footer').getByRole('alert');
+      await expect(alert).toBeVisible({ timeout: 15_000 });
+      await expect(post).toHaveAttribute('aria-describedby', (await alert.getAttribute('id')) ?? 'missing');
+      // A failed post brings the alert into view if the sticky row was pinned
+      // to the form's top edge with the alert hanging below the floor (the
+      // page scrolls smoothly, so wait for it to settle).
+      await expect
+        .poll(() => alert.evaluate((el) => {
+          const pill = document.querySelector('[data-testid="floating-nav"]');
+          const floor = pill && getComputedStyle(pill).display !== 'none' ? pill.getBoundingClientRect().top : innerHeight;
+          return el.getBoundingClientRect().bottom <= floor;
+        }), { timeout: 5_000 })
+        .toBe(true);
+      const geo = await alert.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const pill = document.querySelector('[data-testid="floating-nav"]');
+        const pillTop = pill && getComputedStyle(pill).display !== 'none' ? pill.getBoundingClientRect().top : innerHeight;
+        const painted = [0.1, 0.5, 0.9].every((fx) =>
+          [0.25, 0.75].every((fy) => {
+            const hit = document.elementFromPoint(r.left + r.width * fx, r.top + r.height * fy);
+            return !!hit && (hit === el || el.contains(hit));
+          })
+        );
+        return {
+          left: r.left,
+          right: r.right,
+          top: r.top,
+          bottom: r.bottom,
+          lineCount: Math.round(r.height / parseFloat(getComputedStyle(el).lineHeight)),
+          ceiling: document.querySelector('header')?.getBoundingClientRect().bottom ?? 0,
+          floor: Math.min(pillTop, innerHeight),
+          vw: document.documentElement.clientWidth,
+          painted,
+        };
+      });
+      console.log(`[notes alert ${vp.width}x${vp.height} @200%] ${JSON.stringify(geo)}`);
+      expect(geo.left, 'alert inside the viewport (left)').toBeGreaterThanOrEqual(0);
+      expect(geo.right, 'alert wraps inside the viewport (right)').toBeLessThanOrEqual(geo.vw);
+      expect(geo.top, 'alert below the header').toBeGreaterThanOrEqual(geo.ceiling);
+      expect(geo.bottom, 'alert above the nav pill / viewport floor').toBeLessThanOrEqual(geo.floor);
+      expect(geo.painted, 'nothing is painted over the alert').toBe(true);
+      const p = await post.boundingBox();
+      expect(p && p.y >= geo.bottom, 'the alert sits above Post').toBe(true);
+    });
+  }
+});

@@ -40,6 +40,51 @@ describe('NoteComposer', () => {
     expect(post).toBeEnabled();
   });
 
+  // A failed post's alert must be on screen whenever Post is. At phone widths
+  // the form is taller than the viewport, so an alert in the form's normal
+  // flow (above the sticky row) ended up under the row + nav pill or below
+  // the fold. It lives INSIDE the sticky footer, above Post, and Post points
+  // at it so a screen reader on Post hears why the last attempt failed.
+  it('renders a failed-post alert inside the sticky footer, above Post, linked via aria-describedby', () => {
+    render(
+      <NoteComposer
+        idPrefix="note"
+        draft={{ ...EMPTY_NOTE_DRAFT, body: 'Slept well' }}
+        onChange={() => {}}
+        onSubmit={() => {}}
+        submitLabel="Post"
+        error="Couldn't post your note."
+      />
+    );
+    const footer = screen.getByTestId('note-composer-footer');
+    const alert = screen.getByRole('alert');
+    const post = screen.getByRole('button', { name: 'Post' });
+    expect(alert).toHaveTextContent("Couldn't post your note.");
+    expect(footer).toContainElement(alert);
+    // Above Post in the footer (DOM order = visual order in the column).
+    expect(alert.compareDocumentPosition(post) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(alert.id).toBe('note-error');
+    expect(post).toHaveAttribute('aria-describedby', 'note-error');
+    expect(post).toHaveAccessibleDescription("Couldn't post your note.");
+  });
+
+  it('leaves Post undescribed when there is no error', () => {
+    render(<Harness />);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Post' })).not.toHaveAttribute('aria-describedby');
+  });
+
+  // Post's bottom edge must sit exactly at the root scroll-padding-bottom band
+  // (nav + inset + 16px): offset 12px + the row's 4px bottom padding. Less,
+  // and every focus on Post scrolls the page (globals.css scroll-padding).
+  it('rests the footer 12px above the nav pill (16px with its padding: the scroll-padding band)', () => {
+    render(<Harness />);
+    const classes = screen.getByTestId('note-composer-footer').className.split(/\s+/);
+    expect(classes).toContain('bottom-[calc(var(--nav-h,64px)+var(--nav-inset,0px)+12px)]');
+    expect(classes).toContain('pb-1');
+    expect(classes).toContain('xl:bottom-3');
+  });
+
   it('renders the mood and categories field labels', () => {
     render(<Harness />);
     expect(screen.getByText('Mood')).toBeInTheDocument();
