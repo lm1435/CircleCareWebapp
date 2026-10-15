@@ -272,6 +272,18 @@ describe.each([
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(screen.queryByText(ERROR)).toBeNull();
     expect(screen.getAllByText('Name, relationship, and phone are required.').length).toBeGreaterThan(0);
+    // Focus lands on the empty field, so its error is scrolled into the
+    // dialog body's view (Save is in the pinned footer).
+    expect(document.activeElement).toBe(phone);
+  });
+
+  it('an EMPTY name moves focus to the name field, the first empty required field', () => {
+    open();
+    const name = document.getElementById('contact-name') as HTMLInputElement;
+    fireEvent.change(name, { target: { value: '' } });
+    fireEvent.submit(document.getElementById('edit-contact-form') as HTMLFormElement);
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(name);
   });
 });
 

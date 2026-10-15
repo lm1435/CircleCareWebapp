@@ -105,6 +105,16 @@ function EditContactModalForm({
     event.preventDefault();
     if (!name.trim() || !relationship.trim() || !phone.trim()) {
       setError(t('edit.contact.requiredFields'));
+      // Move focus to the first empty required field so its error is scrolled
+      // into the dialog body's view and announced (WCAG 3.3.1) — Save sits in
+      // the pinned footer, so with the body scrolled down (short viewport,
+      // 200% text) the name/relationship error would otherwise be out of view.
+      const firstEmpty = !name.trim()
+        ? 'contact-name'
+        : !relationship.trim()
+          ? 'contact-relationship'
+          : 'contact-phone';
+      document.getElementById(firstEmpty)?.focus();
       return;
     }
 
