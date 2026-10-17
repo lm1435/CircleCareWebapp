@@ -161,6 +161,15 @@ test('already a member: ALREADY_MEMBER → sent to their circles, no error, no d
 
   const second = await createInvite(api, circleId);
   await cookieLogin(context, invitee, baseURL);
+  // Since 2026-10-17 the page asks GET /invites/code/:code who is looking and a
+  // member is never offered Accept (flows/invite-own-link.spec.ts). Strip that
+  // field here — an OLDER backend / failed lookup — so the ALREADY_MEMBER
+  // handling behind the button stays covered.
+  await rewriteJson(page, 'GET', '/api/invites/code/:code', (json) => {
+    const invite = (json.data as { invite?: Record<string, unknown> } | undefined)?.invite;
+    if (invite) delete invite.viewer_relationship;
+    return json;
+  });
   await page.goto(`/invite/${second.code}`, { waitUntil: 'domcontentloaded' });
   const accept = await acceptButton(page);
   const accepts = countRequests(page, 'POST', ACCEPT);
@@ -176,6 +185,8 @@ test('already a member: ALREADY_MEMBER → sent to their circles, no error, no d
   await expect(page.getByText(COPY.joined)).toHaveCount(0);
   await accepts.expectCount(1);
   expect(membershipCount(circleId, invitee.userId)).toBe(1);
+  // ...and a member's ALREADY_MEMBER never consumes the invite (2026-10-17).
+  expect(inviteStatus(second.id)).toBe('pending');
 });
 
 test('double-click Accept while held: one accept request, one membership', async ({

@@ -50,5 +50,14 @@
     "suggestion": "In una cerchia può esserci una sola persona assistita, quindi questo invito non può essere usato. Chiedi a chi ti ha invitato di mandarti invece un invito come caregiver."
   },
   "acceptExpired": "Questo invito è scaduto. Chiedi a chi ti ha invitato di mandartene uno nuovo.",
-  "acceptAlreadyUsed": "Questo invito è già stato usato."
+  "acceptAlreadyUsed": "Questo invito è già stato usato.",
+  "ownLink": {
+    "title": "Questo è il tuo link di invito",
+    "message": "Condividilo con la persona che stai invitando. Quando lo aprirà, potrà unirsi alla tua cerchia."
+  },
+  "memberLink": {
+    "title": "Fai già parte di questa cerchia",
+    "message": "Questo invito è per un'altra persona, quindi non c'è nulla da accettare."
+  },
+  "goToCircle": "Vai alla cerchia"
 }

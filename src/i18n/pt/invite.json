@@ -50,5 +50,14 @@
     "suggestion": "Apenas uma pessoa pode ser a pessoa cuidada em um círculo, então este convite não pode ser usado. Peça a quem convidou você que envie um convite de cuidador."
   },
   "acceptExpired": "Este convite expirou. Peça a quem convidou você que envie um novo.",
-  "acceptAlreadyUsed": "Este convite já foi usado."
+  "acceptAlreadyUsed": "Este convite já foi usado.",
+  "ownLink": {
+    "title": "Este é o seu próprio link de convite",
+    "message": "Compartilhe com a pessoa que você está convidando. Quando ela abrir, poderá entrar no seu círculo."
+  },
+  "memberLink": {
+    "title": "Você já está neste círculo",
+    "message": "Este convite é para outra pessoa, então não há nada para aceitar."
+  },
+  "goToCircle": "Ir para o círculo"
 }

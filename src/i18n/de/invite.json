@@ -50,5 +50,14 @@
     "suggestion": "In einem Kreis kann es nur eine umsorgte Person geben, daher kann diese Einladung nicht verwendet werden. Bitten Sie die Person, die Sie eingeladen hat, stattdessen eine Einladung als Pflegeperson zu schicken."
   },
   "acceptExpired": "Diese Einladung ist abgelaufen. Bitten Sie die Person, die Sie eingeladen hat, Ihnen eine neue zu schicken.",
-  "acceptAlreadyUsed": "Diese Einladung wurde bereits verwendet."
+  "acceptAlreadyUsed": "Diese Einladung wurde bereits verwendet.",
+  "ownLink": {
+    "title": "Das ist Ihr eigener Einladungslink",
+    "message": "Teilen Sie ihn mit der Person, die Sie einladen. Wenn sie ihn öffnet, kann sie Ihrem Kreis beitreten."
+  },
+  "memberLink": {
+    "title": "Sie sind bereits in diesem Kreis",
+    "message": "Diese Einladung ist für jemand anderen, daher gibt es nichts anzunehmen."
+  },
+  "goToCircle": "Zum Kreis"
 }

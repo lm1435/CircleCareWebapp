@@ -77,7 +77,7 @@ test.describe('invite landing page', () => {
     await expect(page.getByRole('button', { name: 'I already have an account' })).toHaveCount(0);
   });
 
-  test('valid code: logged-out create-account + sign-in CTAs + logged-in "Accept invitation" CTA (created then canceled — net-zero, never accepted)', async ({
+  test('valid code: logged-out create-account + sign-in CTAs + logged-in sender sees "your own invite link" (created then canceled — net-zero, never accepted)', async ({
     page,
     context,
     circleId,
@@ -116,13 +116,19 @@ test.describe('invite landing page', () => {
     expect(code, 'create response did not return an invite_code').toBeTruthy();
 
     try {
-      // --- LOGGED-IN: authenticated visitor sees "Accept invitation", enabled.
-      // We do NOT click it (accepting is not cleanly reversible from the web). ---
+      // --- LOGGED-IN AS THE SENDER: the fixture account OWNS this circle and just
+      // created the invite, so since 2026-10-17 it is told this is its own link
+      // and is NOT offered "Accept invitation" (accepting your own link used to
+      // burn the invite for the real invitee — see flows/invite-own-link.spec.ts).
+      // The Accept CTA for a genuine invitee is covered by
+      // unhappy/auth-invites/invites.spec.ts. ---
       await page.goto(`/invite/${code}`, { waitUntil: 'domcontentloaded' });
       await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => {});
-      const acceptBtn = page.getByRole('button', { name: 'Accept invitation' });
-      await expect(acceptBtn).toBeVisible({ timeout: 20_000 });
-      await expect(acceptBtn).toBeEnabled();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'This is your own invite link' })
+      ).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('button', { name: 'Go to circle' })).toBeEnabled();
+      await expect(page.getByRole('button', { name: 'Accept invitation' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Create an account to join' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'I already have an account' })).toHaveCount(0);
 

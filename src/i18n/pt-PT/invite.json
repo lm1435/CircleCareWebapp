@@ -29,5 +29,12 @@
   "errorRecipientExists": {
     "suggestion": "Apenas uma pessoa pode ser a pessoa cuidada num círculo, por isso este convite não pode ser usado. Peça a quem fez o convite que envie um convite de cuidador."
   },
-  "acceptExpired": "Este convite expirou. Peça a quem fez o convite que envie um novo."
+  "acceptExpired": "Este convite expirou. Peça a quem fez o convite que envie um novo.",
+  "ownLink": {
+    "message": "Partilhe-o com a pessoa que está a convidar. Quando o abrir, poderá aderir ao seu círculo."
+  },
+  "memberLink": {
+    "title": "Já está neste círculo"
+  },
+  "goToCircle": "Ir para o círculo"
 }

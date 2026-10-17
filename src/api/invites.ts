@@ -290,6 +290,22 @@ export interface InviteByCode {
     last_name: string | null;
   };
   expires_at: string;
+  /**
+   * ADDITIVE (backend 2026-10-17): who the signed-in caller is to this invite.
+   * 'inviter' = they sent it; 'member' = already in the circle. Either way
+   * there is nothing to join, so the page shows a calm note instead of Accept.
+   * Absent on an older backend → treat as 'none'.
+   */
+  viewer_relationship?: InviteViewerRelationship;
+}
+
+export type InviteViewerRelationship = 'inviter' | 'member' | 'none';
+
+/** True when the caller has nothing to join: they sent it, or are already in. */
+export function isOwnOrMemberInvite(
+  invite: { viewer_relationship?: InviteViewerRelationship } | null | undefined
+): boolean {
+  return invite?.viewer_relationship === 'inviter' || invite?.viewer_relationship === 'member';
 }
 
 interface InviteByCodeEnvelope {

@@ -650,3 +650,43 @@ describe('JoinCircleModal — double-submit guard', () => {
     expect(acceptMutate).toHaveBeenCalledTimes(1);
   });
 });
+
+// THE SENDER TYPED THEIR OWN CODE (2026-10-17) — parity with mobile. "Join
+// circle" could only answer ALREADY_MEMBER (and, before the backend fix, burned
+// the invite). `viewer_relationship` now drives a calm note + "Go to circle".
+describe('JoinCircleModal — own / already-member invite code', () => {
+  async function reach(viewer_relationship: string | undefined) {
+    const user = userEvent.setup();
+    lookupMutate.mockImplementation((_code, opts) =>
+      opts?.onSuccess?.({ ...INVITE, viewer_relationship })
+    );
+    const handlers = renderModal();
+    await pasteCode(user, 'abc123');
+    await user.click(screen.getByRole('button', { name: 'Find circle' }));
+    await screen.findByText("Rose's Circle");
+    return { user, ...handlers };
+  }
+
+  it('the sender sees "your own invite link", no Join, and Go to circle opens it', async () => {
+    const { user, onClose, onJoined } = await reach('inviter');
+    expect(screen.getByText('This is your own invite link')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join circle' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Go to circle' }));
+    expect(onClose).toHaveBeenCalled();
+    expect(onJoined).toHaveBeenCalledWith('circle-1');
+    expect(acceptMutate).not.toHaveBeenCalled();
+  });
+
+  it('an existing member sees "already in this circle", no Join', async () => {
+    await reach('member');
+    expect(screen.getByText("You're already in this circle")).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join circle' })).not.toBeInTheDocument();
+  });
+
+  it('"none" / an older backend keeps Join', async () => {
+    await reach(undefined);
+    expect(screen.getByRole('button', { name: 'Join circle' })).toBeInTheDocument();
+    expect(screen.queryByText('This is your own invite link')).not.toBeInTheDocument();
+  });
+});

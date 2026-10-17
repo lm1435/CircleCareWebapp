@@ -9,7 +9,7 @@ import { joinedCircleMessage } from '@/hooks/useOpenJoinedCircle';
 import { extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
-import type { InviteByCode } from '@/api/invites';
+import { isOwnOrMemberInvite, type InviteByCode } from '@/api/invites';
 
 // Web port of mobile/src/components/JoinCircleModal.tsx — the two-step
 // join-by-code flow for an already-authenticated user:
@@ -99,7 +99,7 @@ function joinErrorMessage(
 }
 
 export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): ReactElement {
-  const { t } = useTranslation('circles');
+  const { t } = useTranslation(['circles', 'invite']);
   const { showToast } = useToast();
 
   const [code, setCode] = useState('');
@@ -190,6 +190,15 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
     });
   };
 
+  // The caller typed their OWN invite code (or one for a circle they are already
+  // in): nothing to join, so "Go to circle" opens it instead. Parity with mobile.
+  const ownInvite = isOwnOrMemberInvite(invite) ? invite : null;
+  const handleGoToCircle = (): void => {
+    if (!ownInvite) return;
+    onClose();
+    onJoined(ownInvite.circle.id);
+  };
+
   const handleReset = (): void => {
     setInvite(null);
     setError(null);
@@ -232,9 +241,15 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
             >
               {t('joinModal.enterDifferentCode')}
             </Button>
-            <Button size="lg" className="w-full" offlineKind="save" loading={accept.isPending} onClick={handleAccept}>
-              {accept.isPending ? t('joinModal.joining') : t('joinModal.joinCircle')}
-            </Button>
+            {ownInvite ? (
+              <Button size="lg" className="w-full" onClick={handleGoToCircle}>
+                {t('invite:goToCircle')}
+              </Button>
+            ) : (
+              <Button size="lg" className="w-full" offlineKind="save" loading={accept.isPending} onClick={handleAccept}>
+                {accept.isPending ? t('joinModal.joining') : t('joinModal.joinCircle')}
+              </Button>
+            )}
           </div>
         )
       }
@@ -288,6 +303,20 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
         </>
       ) : (
         <div className="flex flex-col gap-4">
+          {ownInvite ? (
+            <div role="status" className="flex flex-col gap-1" data-testid="own-invite-code-notice">
+              <Text variant="h3" as="p">
+                {ownInvite.viewer_relationship === 'inviter'
+                  ? t('invite:ownLink.title')
+                  : t('invite:memberLink.title')}
+              </Text>
+              <p className="m-0 text-sm text-ink-2">
+                {ownInvite.viewer_relationship === 'inviter'
+                  ? t('invite:ownLink.message')
+                  : t('invite:memberLink.message')}
+              </p>
+            </div>
+          ) : null}
           {error ? (
             <p
               role="alert"

@@ -50,5 +50,14 @@
     "suggestion": "Only one person can be the care recipient in a circle, so this invite can't be used. Ask the person who invited you to send a caregiver invite instead."
   },
   "acceptExpired": "This invitation has expired. Ask whoever invited you to send a new one.",
-  "acceptAlreadyUsed": "This invitation has already been used."
+  "acceptAlreadyUsed": "This invitation has already been used.",
+  "ownLink": {
+    "title": "This is your own invite link",
+    "message": "Share it with the person you're inviting. When they open it, they can join your circle."
+  },
+  "memberLink": {
+    "title": "You're already in this circle",
+    "message": "This invite is for someone else, so there's nothing to accept."
+  },
+  "goToCircle": "Go to circle"
 }

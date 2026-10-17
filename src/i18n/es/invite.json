@@ -50,5 +50,14 @@
     "suggestion": "Solo una persona puede ser el receptor de cuidado en un círculo, así que esta invitación no se puede usar. Pídele a quien te invitó que te envíe una invitación de cuidador."
   },
   "acceptExpired": "Esta invitación expiró. Pide a quien te invitó que envíe una nueva.",
-  "acceptAlreadyUsed": "Esta invitación ya se usó."
+  "acceptAlreadyUsed": "Esta invitación ya se usó.",
+  "ownLink": {
+    "title": "Este es tu propio enlace de invitación",
+    "message": "Compártelo con la persona que estás invitando. Cuando lo abra, podrá unirse a tu círculo."
+  },
+  "memberLink": {
+    "title": "Ya estás en este círculo",
+    "message": "Esta invitación es para otra persona, así que no hay nada que aceptar."
+  },
+  "goToCircle": "Ir al círculo"
 }

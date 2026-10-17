@@ -7,7 +7,12 @@ import { Badge, Button, Eyebrow, Skeleton, Text } from '@/components/ui';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
 import { StoreBadges } from '@/components/layout/StoreBadges';
-import { previewInviteByCode, type InviteMemberType } from '@/api/invites';
+import {
+  isOwnOrMemberInvite,
+  lookupInviteByCode,
+  previewInviteByCode,
+  type InviteMemberType,
+} from '@/api/invites';
 import { getApiError } from '@/api/auth';
 import { formatInviteExpiryDate } from '@/lib/inviteExpiry';
 import { useAuth } from '@/hooks/useAuth';
@@ -146,6 +151,27 @@ export default function InviteLandingPage(): ReactElement {
     staleTime: Infinity,
   });
 
+  // WHO IS LOOKING (2026-10-17). The preview above is unauthenticated, so it
+  // cannot say whether the signed-in visitor SENT this invite. An inviter who
+  // opened their own link (to check it, or by pasting it back into a browser)
+  // was offered "Accept invitation" — and before the backend fix, accepting
+  // marked the invite used, so the family member it was meant for was told it
+  // had already been used. The authenticated lookup carries
+  // `viewer_relationship`; the sender and existing members get a calm note and
+  // a way back to the circle instead of Accept. A failed lookup falls back to
+  // the ordinary Accept (the backend no longer lets a member consume it).
+  const viewerLookup = useQuery({
+    queryKey: ['inviteViewer', displayCode],
+    queryFn: () => lookupInviteByCode(displayCode),
+    enabled: !!invite && isAuthenticated && !isBootstrapping,
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+  const ownInvite = isOwnOrMemberInvite(viewerLookup.data) ? viewerLookup.data! : null;
+  // Hold the action area until we know who is looking, so Accept never flashes
+  // for the sender before the note replaces it.
+  const viewerPending = isAuthenticated && !!invite && viewerLookup.isPending;
+
   // The api client unwraps errors — the code lives at err.error.code, which is
   // exactly what `getApiError` reads (never err.response.data.error.code).
   const errorCopy = previewErrorCopy(t, getApiError(error)?.code);
@@ -242,12 +268,29 @@ export default function InviteLandingPage(): ReactElement {
   const autoAccepted = useRef(false);
   useEffect(() => {
     if (isBootstrapping || !isAuthenticated) return;
+    // Wait for the preview, then (when it found an invite) for the viewer
+    // lookup: the SENDER who signed in from their own link must not be
+    // auto-"accepted" into the circle they own.
+    if (isPending || (invite && viewerLookup.isPending)) return;
+    if (ownInvite) {
+      consumePendingInviteCode();
+      return;
+    }
     const parked = consumePendingInviteCode();
     if (parked === displayCode && !autoAccepted.current) {
       autoAccepted.current = true;
       void handleAccept();
     }
-  }, [isBootstrapping, isAuthenticated, displayCode, handleAccept]);
+  }, [
+    isBootstrapping,
+    isAuthenticated,
+    displayCode,
+    handleAccept,
+    isPending,
+    invite,
+    viewerLookup.isPending,
+    ownInvite,
+  ]);
 
   // Not signed in: route to signup, preserving this invite page as the return
   // destination. SignUpPage always hands off to /verify-email, which has no
@@ -374,14 +417,19 @@ export default function InviteLandingPage(): ReactElement {
           <>
             <div className="flex flex-col items-center gap-3 text-center">
               <Text variant="h2" as="h1" className="text-balance">
-                {isRecipientInvite
+                {/* The SENDER is not "invited" — their headline is the note. */}
+                {ownInvite
+                  ? ownInvite.viewer_relationship === 'inviter'
+                    ? t('ownLink.title')
+                    : t('memberLink.title')
+                  : isRecipientInvite
                   ? t('titleRecipient')
                   : t('title', {
                       inviterName,
                       recipientName: invite.circle.recipient_name,
                     })}
               </Text>
-              {isRecipientInvite ? (
+              {isRecipientInvite && !ownInvite ? (
                 <p className="m-0 text-base text-ink-2 text-balance">
                   {t('invitedByRecipient', { inviterName })}
                 </p>
@@ -405,7 +453,26 @@ export default function InviteLandingPage(): ReactElement {
               ) : null}
             </div>
 
-            {!isBootstrapping && (
+            {!isBootstrapping && !viewerPending && ownInvite && (
+              <div
+                className="flex flex-col items-center gap-3 text-center"
+                data-testid="own-invite-link-notice"
+              >
+                <p className="m-0 text-base text-ink-2 text-balance">
+                  {ownInvite.viewer_relationship === 'inviter'
+                    ? t('ownLink.message')
+                    : t('memberLink.message')}
+                </p>
+                <Button
+                  className="w-full max-w-xs"
+                  onClick={() => navigate(`/circles/${ownInvite.circle.id}`)}
+                >
+                  {t('goToCircle')}
+                </Button>
+              </div>
+            )}
+
+            {!isBootstrapping && !viewerPending && !ownInvite && (
               <div className="flex flex-col items-center gap-3">
                 {isAuthenticated ? (
                   <Button

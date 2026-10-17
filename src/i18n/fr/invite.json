@@ -50,5 +50,14 @@
     "suggestion": "Un cercle ne peut avoir qu’une seule personne aidée : cette invitation ne peut donc pas être utilisée. Demandez à la personne à l’origine de l’invitation de vous envoyer plutôt une invitation d’aidant."
   },
   "acceptExpired": "Cette invitation a expiré. Demandez à la personne à l’origine de l’invitation de vous en envoyer une nouvelle.",
-  "acceptAlreadyUsed": "Cette invitation a déjà été utilisée."
+  "acceptAlreadyUsed": "Cette invitation a déjà été utilisée.",
+  "ownLink": {
+    "title": "C’est votre propre lien d’invitation",
+    "message": "Partagez-le avec la personne que vous invitez. En l’ouvrant, elle pourra rejoindre votre cercle."
+  },
+  "memberLink": {
+    "title": "Vous faites déjà partie de ce cercle",
+    "message": "Cette invitation est destinée à quelqu’un d’autre : il n’y a rien à accepter."
+  },
+  "goToCircle": "Aller au cercle"
 }
