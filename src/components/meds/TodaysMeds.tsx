@@ -4,7 +4,7 @@ import {
   Button,
   Card,
   Icon,
-  Skeleton,
+  CareCardSkeleton,
   SectionHeader,
   UndoBadge,
   useToast,
@@ -318,10 +318,13 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   const showAllRow =
     'flex w-full items-center justify-center gap-1 min-h-[44px] py-3 text-md font-medium text-dusk';
 
+  // Three dose cards in the real card shell (mobile's TodaysMedications
+  // skeleton): the inset, border and list gap are the loaded list's.
   const skeleton = (
-    <div className="flex flex-col gap-2" aria-busy="true">
-      <Skeleton className="h-14 w-full" />
-      <Skeleton className="h-14 w-full" />
+    <div className={careCardListGap} aria-busy="true" data-testid="todays-meds-skeleton">
+      <CareCardSkeleton withAction />
+      <CareCardSkeleton withAction />
+      <CareCardSkeleton withAction />
     </div>
   );
 

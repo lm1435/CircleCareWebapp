@@ -33,6 +33,13 @@ export function barHeight(rate: number): number {
   return Math.max(MIN_BAR_HEIGHT, CHART_HEIGHT * rate);
 }
 
+/**
+ * The adherence Sheet's inset — mobile's `adherenceSheetShell` (22pt), shared
+ * by the loaded card and its skeleton so the placeholder never sits flush
+ * against the border and nothing shifts when the data lands.
+ */
+export const ADHERENCE_SHEET_PADDING = 'px-[22px] py-[22px]';
+
 export interface AdherenceCardProps {
   circleId: string;
 }
@@ -55,7 +62,22 @@ export function AdherenceCard({ circleId }: AdherenceCardProps): ReactElement | 
         <span role="status" className="sr-only">
           {t('common:loading')}
         </span>
-        <Skeleton className="h-[96px] w-full" />
+        <Sheet
+          padding="none"
+          data-testid="adherence-skeleton"
+          className={`flex items-center justify-between ${ADHERENCE_SHEET_PADDING}`}
+        >
+          <div className="flex min-w-0 flex-1 flex-col gap-1" aria-hidden="true">
+            <Skeleton className="h-[11px] w-[70px]" />
+            <Skeleton className="h-7 w-[60px]" />
+          </div>
+          <div aria-hidden="true" className="flex h-[52px] w-[92px] shrink-0 items-end gap-[6px]">
+            {Array.from({ length: BAR_COUNT }, (_, i) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <Skeleton key={i} className="h-9 w-2 rounded" />
+            ))}
+          </div>
+        </Sheet>
       </div>
     );
   }
@@ -66,7 +88,11 @@ export function AdherenceCard({ circleId }: AdherenceCardProps): ReactElement | 
   const rates = barRates(data.daily_breakdown);
 
   return (
-    <Sheet padding="none" className="flex items-center justify-between px-[22px] py-[22px]">
+    <Sheet
+      padding="none"
+      data-testid="adherence-card"
+      className={`flex items-center justify-between ${ADHERENCE_SHEET_PADDING}`}
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <Eyebrow color="moss">{t('adherence.eyebrow')}</Eyebrow>
         {/* 32/600 lh44 tracking -0.5 beside a 24/400 unit on the same 44px

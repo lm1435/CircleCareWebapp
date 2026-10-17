@@ -26,7 +26,7 @@ export {
   type BadgeSize,
 } from './Badge';
 export { Spinner, type SpinnerProps } from './Spinner';
-export { Skeleton, type SkeletonProps } from './Skeleton';
+export { Skeleton, CareCardSkeleton, type SkeletonProps, type CareCardSkeletonProps } from './Skeleton';
 export { ToastProvider, useToast, type Toast, type ToastType } from './Toast';
 export { Modal, type ModalProps } from './Modal';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';

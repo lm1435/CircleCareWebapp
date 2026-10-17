@@ -2,7 +2,7 @@ import { useState, type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Button, Skeleton, SectionHeader, careCardListGap } from '@/components/ui';
+import { Button, CareCardSkeleton, SectionHeader, careCardListGap } from '@/components/ui';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useCircle } from '@/hooks/useCircle';
@@ -70,12 +70,12 @@ export function OpenTasksCard({
   let body: ReactElement;
   if (tasksLoading) {
     body = (
-      <div className="flex flex-col gap-2" aria-busy="true">
+      <div className={careCardListGap} aria-busy="true" data-testid="open-tasks-skeleton">
         <span role="status" className="sr-only">
           {t('common:loading')}
         </span>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+        <CareCardSkeleton />
+        <CareCardSkeleton />
       </div>
     );
   } else if (tasksQuery.isError || (openTasks.length === 0 && everTasksQuery.isError)) {
