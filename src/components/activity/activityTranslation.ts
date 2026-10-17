@@ -272,6 +272,12 @@ const KEY_RENDERERS = new Map<string, KeyRenderer>(Object.entries({
   //
   // No params by design -- the sentence has no name slot -- so `requires` is
   // empty and the `{}` the backend sends is a COMPLETE params object here.
+  // Manager role (docs/plans/manager-role.md): the owner made a member a
+  // manager, or took the role back. Written by PATCH .../members/:userId/role.
+  'entries.memberRoleChanged.manager': { requires: ['name'], render: (p, ctx) =>
+    ctx.t('entries.memberRoleChanged.manager', { name: p.name ?? '' }) },
+  'entries.memberRoleChanged.member': { requires: ['name'], render: (p, ctx) =>
+    ctx.t('entries.memberRoleChanged.member', { name: p.name ?? '' }) },
   'entries.memberJoined.careRecipientUnknown': { requires: [], render: (_p, ctx) =>
     ctx.t('entries.memberJoined.careRecipientUnknown') },
   'entries.memberJoined.caregiverUnknown': { requires: [], render: (_p, ctx) =>
@@ -453,6 +459,16 @@ const SENTENCE_RULES: readonly SentenceRule[] = [
     render: (_m, t) => t('sentences.memberRemoved') },
   { actionType: 'member_removed', pattern: /^(.+) was removed from the circle$/,
     render: (m, t) => t('sentences.memberRemovedNamed', { name: m[1] }) },
+  // --- member_role_changed ---------------------------------------------------
+  // The account-deletion scrub's name-free form (key-less), and the two named
+  // sentences for a row whose params are unusable (blank name) — the route
+  // writes "<Name> is now a manager" / "<Name> is no longer a manager".
+  { actionType: 'member_role_changed', pattern: /^A member's role in the circle changed$/,
+    render: (_m, t) => t('sentences.memberRoleChanged') },
+  { actionType: 'member_role_changed', pattern: /^(.+) is no longer a manager$/,
+    render: (m, t) => t('entries.memberRoleChanged.member', { name: m[1] }) },
+  { actionType: 'member_role_changed', pattern: /^(.+) is now a manager$/,
+    render: (m, t) => t('entries.memberRoleChanged.manager', { name: m[1] }) },
   // --- member_invited / member_joined (F-1 scrub forms) --------------------
   { actionType: 'member_invited', pattern: /^A member was invited to the circle$/,
     render: (_m, t) => t('sentences.memberInvited') },

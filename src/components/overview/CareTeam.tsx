@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Avatar,
+  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -13,13 +14,18 @@ import {
   Text,
   type MoreMenuEntry,
 } from '@/components/ui';
-import { useRemoveMember, useSetMedicationResponsible } from '@/hooks/useCircleMembers';
+import {
+  useRemoveMember,
+  useSetMedicationResponsible,
+  useSetMemberRole,
+} from '@/hooks/useCircleMembers';
+import { memberRowActions, viewerCanManageMembers } from '@/lib/premiumOwnership';
 import { isPendingInviteExpired } from '@/api/circleMembers';
 import { Analytics } from '@/lib/analytics';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
 import type { GettingStartedStatus } from '@/components/circles/GettingStartedChecklist';
 import { pickHomeNudge } from './homeNudge';
-import { guardOfflineWrite } from '@/lib/offlineWrite';
+import { blockOfflineWrite, guardOfflineWrite } from '@/lib/offlineWrite';
 
 // Spec §6.3.7 + §6.3.8 — port of mobile CircleDetailScreen's care-team Sheet
 // (CircleDetailScreen.tsx:1375-1520) and `components/circle/SoloInviteCard.tsx`.
@@ -89,12 +95,13 @@ export interface CareTeamProps {
 
 /**
  * The care-team Sheet: one row per member with a role overlay on the avatar,
- * a member-count pill in the header, and — for owners — the per-member action
- * menu and an Invite button.
+ * a member-count pill in the header, and — for the owner and managers — the
+ * per-member action menu and an Invite button.
  *
- * ACTIONS ARE OWNER-ONLY AND NEVER TARGET THE RECIPIENT OR YOURSELF, mirroring
- * mobile's `isTappable`. The backend enforces the same rule; this only avoids
- * offering an action that would be rejected.
+ * ACTIONS NEVER TARGET THE OWNER, THE RECIPIENT OR YOURSELF, mirroring mobile's
+ * `isTappable`; a manager only gets Remove, and only on plain members. The rule
+ * is `memberRowActions` (shared with MembersPage). The backend enforces the
+ * same rule; this only avoids offering an action that would be rejected.
  */
 export function CareTeam({
   circleId,
@@ -107,7 +114,10 @@ export function CareTeam({
   const { t } = useTranslation(['overview', 'members', 'common']);
   const removeMember = useRemoveMember(circleId);
   const setMedResponsible = useSetMedicationResponsible(circleId);
+  const setMemberRole = useSetMemberRole(circleId);
   const [pendingRemoval, setPendingRemoval] = useState<CircleMember | null>(null);
+  const [roleTarget, setRoleTarget] = useState<CircleMember | null>(null);
+  const canManageMembers = viewerCanManageMembers(circle, currentUserId);
 
   const base = `/circles/${circleId}`;
   const isCurrentUserRecipient = members.some(
@@ -120,27 +130,57 @@ export function CareTeam({
   const soloEligible = isOwner && members.length === 1 && liveInvites.length === 0;
   const showSolo = pickHomeNudge({ checklist: checklistStatus, soloEligible }) === 'soloInvite';
 
-  const menuFor = (member: CircleMember): MoreMenuEntry[] => [
-    {
-      id: 'med-responsible',
-      label: member.is_medication_responsible
-        ? t('members:manage.clearMedResponsible')
-        : t('members:manage.setMedResponsible'),
-      icon: 'notifications-outline',
-      onSelect: guardOfflineWrite(
-        () => setMedResponsible.mutate(member.is_medication_responsible ? null : member.id),
-        'change'
-      ),
-    },
-    { divider: true },
-    {
-      id: 'remove',
-      label: t('members:manage.remove'),
-      icon: 'trash-outline',
-      danger: true,
-      onSelect: () => setPendingRemoval(member),
-    },
-  ];
+  const menuFor = (member: CircleMember): MoreMenuEntry[] => {
+    const allowed = memberRowActions(circle, currentUserId, member);
+    const items: MoreMenuEntry[] = [];
+    if (allowed.medResponsible) {
+      items.push({
+        id: 'med-responsible',
+        label: member.is_medication_responsible
+          ? t('members:manage.clearMedResponsible')
+          : t('members:manage.setMedResponsible'),
+        icon: 'notifications-outline',
+        onSelect: guardOfflineWrite(
+          () => setMedResponsible.mutate(member.is_medication_responsible ? null : member.id),
+          'change'
+        ),
+      });
+    }
+    if (allowed.managerRole) {
+      items.push({
+        id: 'toggle-manager',
+        label:
+          member.role === 'manager'
+            ? t('members:manage.removeManager')
+            : t('members:manage.makeManager'),
+        icon: 'people-outline',
+        onSelect: () => {
+          if (blockOfflineWrite('change')) return;
+          setRoleTarget(member);
+        },
+        disabled: setMemberRole.isPending,
+      });
+    }
+    if (allowed.remove) {
+      if (items.length > 0) items.push({ divider: true });
+      items.push({
+        id: 'remove',
+        label: t('members:manage.remove'),
+        icon: 'trash-outline',
+        danger: true,
+        onSelect: () => setPendingRemoval(member),
+      });
+    }
+    return items;
+  };
+
+  const confirmRoleChange = (): void => {
+    if (!roleTarget) return;
+    const name = displayName(roleTarget);
+    const role = roleTarget.role === 'manager' ? 'member' : 'manager';
+    setMemberRole.mutate({ userId: roleTarget.id, role, name });
+    setRoleTarget(null);
+  };
 
   return (
     <section aria-labelledby="care-team-heading">
@@ -157,7 +197,7 @@ export function CareTeam({
             <span className="inline-flex items-center rounded-full border border-line-2 bg-bg-2 px-3 py-1 text-xs font-medium text-ink-2">
               {t('team.count', { count: members.length })}
             </span>
-            {isOwner ? (
+            {canManageMembers ? (
               <Button as={Link} to={`${base}/members`} variant="primary" size="sm">
                 {t('team.invite')}
               </Button>
@@ -178,8 +218,10 @@ export function CareTeam({
               ? member.email
               : member.role === 'owner'
                 ? t('team.circleAdmin')
-                : t('team.familyMember');
-          const canAct = isOwner && !member.is_care_recipient && !isSelf;
+                : member.role === 'manager'
+                  ? t('members:roles.manager')
+                  : t('team.familyMember');
+          const items = menuFor(member);
 
           return (
             <div
@@ -221,15 +263,24 @@ export function CareTeam({
               </span>
 
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-md font-semibold text-ink">
-                  {isSelf ? `${name} ${t('team.you')}` : name}
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-md font-semibold text-ink">
+                    {isSelf ? `${name} ${t('team.you')}` : name}
+                  </span>
+                  {/* Only a NAMED manager gets the pill: an unnamed one already
+                      reads "Manager" on the line below. */}
+                  {member.role === 'manager' && member.first_name ? (
+                    <Badge variant="dusk" size="sm" className="shrink-0">
+                      {t('members:roles.manager')}
+                    </Badge>
+                  ) : null}
                 </span>
                 <span className="truncate text-sm text-ink-2">{role}</span>
               </span>
 
-              {canAct ? (
+              {items.length > 0 ? (
                 <MoreMenu
-                  items={menuFor(member)}
+                  items={items}
                   label={t('members:manage.removeMemberLabel', { name })}
                 />
               ) : null}
@@ -265,6 +316,31 @@ export function CareTeam({
             setPendingRemoval(null);
           }}
           onCancel={() => setPendingRemoval(null)}
+        />
+      ) : null}
+
+      {roleTarget ? (
+        <ConfirmDialog
+          offlineKind="change"
+          icon="people-outline"
+          title={
+            roleTarget.role === 'manager'
+              ? t('members:manage.removeManagerConfirmTitle', { name: displayName(roleTarget) })
+              : t('members:manage.makeManagerConfirmTitle', { name: displayName(roleTarget) })
+          }
+          message={
+            roleTarget.role === 'manager'
+              ? t('members:manage.removeManagerConfirmBody', { name: displayName(roleTarget) })
+              : t('members:manage.makeManagerConfirmBody', { name: displayName(roleTarget) })
+          }
+          confirmLabel={
+            roleTarget.role === 'manager'
+              ? t('members:manage.removeManager')
+              : t('members:manage.makeManager')
+          }
+          cancelLabel={t('common:cancel')}
+          onConfirm={confirmRoleChange}
+          onCancel={() => setRoleTarget(null)}
         />
       ) : null}
     </section>

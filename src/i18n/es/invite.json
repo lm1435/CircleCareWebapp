@@ -2,7 +2,7 @@
   "title": "{{inviterName}} te invitó a ayudar a cuidar a {{recipientName}}",
   "inviterFallback": "Alguien",
   "titleRecipient": "Tu círculo de cuidado",
-  "invitedByRecipient": "{{inviterName}} configuró CircleCare para ayudarte con tu cuidado",
+  "invitedByRecipient": "{{inviterName}} te invitó a unirte al círculo de cuidado de tu familia en CircleCare",
   "circleLabel": "Círculo de cuidado",
   "appDescription": "CircleCare ayuda a las familias a coordinar juntas los medicamentos, las citas y el cuidado diario.",
   "roles": {

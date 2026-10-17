@@ -23,6 +23,8 @@ export interface CircleOwnershipFields {
   owner_id?: string | null;
   view_only?: boolean | null;
   members?: ReadonlyArray<{ role: string; first_name: string | null }> | null;
+  viewer_role?: string | null;
+  viewer_permissions?: ReadonlyArray<string> | null;
 }
 
 /**
@@ -49,4 +51,117 @@ export function getCircleOwnerName(
   const owner = circle?.members?.find((m) => m.role === 'owner');
   const name = owner?.first_name?.trim();
   return name ? name : undefined;
+}
+
+// ===========================================================================
+// MEMBER MANAGEMENT (manager role, docs/plans/manager-role.md)
+// ---------------------------------------------------------------------------
+// The backend serves `viewer_role` + `viewer_permissions` on GET /circles and
+// GET /circles/:id, and the client READS them -- it never works permissions
+// out itself. Web port of mobile's `viewerCanManageMembers`.
+//
+// Owning a circle is NOT the same as managing its members any more: a Manager
+// (Premium, owner-picked) can invite, resend/cancel invites, see the pending
+// list and remove plain members, while circle settings, medication reminders,
+// billing and the role itself stay with the owner. Every premium CTA still
+// keys on `viewerOwnsCircle` -- a manager is never sold a paywall.
+// ===========================================================================
+
+/**
+ * May the viewer invite / cancel / resend invites / remove members here?
+ *
+ * `viewer_permissions` present -> it is the answer (an empty array means no).
+ * Absent (a backend older than the manager role) -> the owner test, which is
+ * exactly what that backend enforces.
+ */
+export function viewerCanManageMembers(
+  circle: CircleOwnershipFields | null | undefined,
+  userId: string | null | undefined
+): boolean {
+  if (circle == null) return false;
+  if (Array.isArray(circle.viewer_permissions)) {
+    return circle.viewer_permissions.includes('manage_members');
+  }
+  return viewerOwnsCircle(circle, userId);
+}
+
+/**
+ * May the viewer make / remove managers? Only from `viewer_permissions` --
+ * there is NO ownership fallback: an older backend (or the switch off) has no
+ * role endpoint, so the item must not appear at all. Served to a free owner
+ * too; the endpoint's 402 then routes to the owner's upgrade path.
+ */
+export function viewerCanAssignManager(
+  circle: CircleOwnershipFields | null | undefined,
+  userId: string | null | undefined
+): boolean {
+  if (!viewerOwnsCircle(circle, userId)) return false;
+  return circle?.viewer_permissions?.includes('assign_manager') === true;
+}
+
+/** The viewer's role, for analytics (`actor_role`) and copy. */
+export function viewerCircleRole(
+  circle: CircleOwnershipFields | null | undefined,
+  userId: string | null | undefined
+): 'owner' | 'manager' | 'member' {
+  if (viewerOwnsCircle(circle, userId)) return 'owner';
+  if (circle?.viewer_role === 'manager' && viewerCanManageMembers(circle, userId)) {
+    return 'manager';
+  }
+  return 'member';
+}
+
+/** The row being acted on. `CircleMember` satisfies it. */
+export interface MemberTargetFields {
+  id: string;
+  role: string;
+  is_care_recipient: boolean;
+  view_only?: boolean;
+}
+
+export interface MemberRowActions {
+  /** Remove from the circle. */
+  remove: boolean;
+  /** Set / clear the medication-responsible member (owner only). */
+  medResponsible: boolean;
+  /** Make manager / Remove as manager (owner only, `assign_manager`). */
+  managerRole: boolean;
+}
+
+const NO_ACTIONS: MemberRowActions = { remove: false, medResponsible: false, managerRole: false };
+
+/**
+ * Which per-member actions to offer on one row. ONE rule for MembersPage and
+ * the Home care team, so the two can never disagree.
+ *
+ *   - Nobody acts on their own row, the owner's row, or the care recipient's
+ *     (the owner never could; a manager may not do more than the owner).
+ *   - Owner: medication reminders on every other row; Remove on every other
+ *     row (other managers included); Make/Remove manager when the server says
+ *     `assign_manager`, never on a view-only seat (the backend refuses it).
+ *   - Manager: Remove on PLAIN members only -- never another manager.
+ *   - Member: nothing.
+ */
+export function memberRowActions(
+  circle: CircleOwnershipFields | null | undefined,
+  userId: string | null | undefined,
+  member: MemberTargetFields
+): MemberRowActions {
+  if (userId == null || circle == null) return NO_ACTIONS;
+  if (member.id === userId || member.role === 'owner' || member.is_care_recipient) {
+    return NO_ACTIONS;
+  }
+  if (viewerOwnsCircle(circle, userId)) {
+    return {
+      remove: true,
+      medResponsible: true,
+      managerRole:
+        viewerCanAssignManager(circle, userId) &&
+        (member.role === 'manager' || member.view_only !== true),
+    };
+  }
+  if (viewerCanManageMembers(circle, userId)) {
+    return { remove: member.role === 'member', medResponsible: false, managerRole: false };
+  }
+  return NO_ACTIONS;
 }

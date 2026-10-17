@@ -63,6 +63,7 @@ export function getActivityIconName(actionType: string): ActivityIconName {
     case 'member_invited':
     case 'member_left':
     case 'member_removed':
+    case 'member_role_changed':
     case 'circle_created':
     case 'circle_updated':
       return 'circle';

@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api';
+import type { CircleRole, ViewerPermission } from '@/api/circles';
 
 // GET /circles/:circleId — circle detail including the members array.
 // Members are NOT included in the GET /circles list response, so this module
@@ -11,7 +12,8 @@ export interface CircleMember {
   email: string;
   first_name: string | null;
   last_name: string | null;
-  role: 'owner' | 'member';
+  /** 'manager' only while the backend's manager switch is on. */
+  role: CircleRole;
   is_care_recipient: boolean;
   is_medication_responsible: boolean;
   /** ISO timestamp (timestamptz) or date-only string — format defensively. */
@@ -29,7 +31,8 @@ export interface CircleMember {
   view_only?: boolean;
   /**
    * Whether this member can receive push reminders (has a registered push
-   * token). Returned by GET /circles/:circleId to the circle OWNER only.
+   * token). Returned by GET /circles/:circleId to viewers who can manage
+   * members (the owner, and managers).
    * OPTIONAL for staged-rollout safety: older backends and non-owner
    * requesters omit it, and `undefined` must render nothing — only an explicit
    * `false` means "notifications off".
@@ -62,7 +65,7 @@ export interface PendingCircleInvite {
    */
   member_type?: 'care_recipient' | 'caregiver';
   /**
-   * Shareable join link for this invite. Returned to the circle OWNER only by
+   * Shareable join link for this invite. Returned to the owner and managers by
    * GET /circles/:circleId. OPTIONAL (older backend → absent): consumers must
    * offer "Copy link" only when it is present.
    */
@@ -142,14 +145,17 @@ export interface CircleDetail {
   is_self_care: boolean;
   care_recipient_timezone: string;
   members: CircleMember[];
-  /** Pending invites for this circle (owner/inviter perspective). Optional —
-   *  only returned to owners; consumers default to []. */
+  /** Pending invites for this circle. Optional — only returned to viewers who
+   *  can manage members (owner, managers); consumers default to []. */
   pending_invites?: PendingCircleInvite[];
   // Subscription-aware access info (requester's perspective)
   access_level: 'full' | 'edit' | 'view';
   is_premium_circle: boolean;
   can_edit: boolean;
   view_only: boolean;
+  /** The viewer's role / permissions. Optional (older backend) — see `Circle`. */
+  viewer_role?: CircleRole;
+  viewer_permissions?: ViewerPermission[];
 }
 
 interface CircleDetailEnvelope {
@@ -197,4 +203,32 @@ export async function setMedicationResponsible(
   userId: string | null
 ): Promise<void> {
   await apiClient.put(`/circles/${circleId}/medication-responsible`, { userId });
+}
+
+/** The role a member can be given or taken back to via PATCH …/role. */
+export type AssignableRole = 'manager' | 'member';
+
+export interface SetMemberRoleResult {
+  user_id: string;
+  role: AssignableRole;
+  /** False when the member already had that role (nothing was written). */
+  changed: boolean;
+}
+
+/**
+ * PATCH /circles/:circleId/members/:userId/role — owner makes a member a
+ * manager or takes the role back. Errors (`err.error.code`): 403
+ * FEATURE_DISABLED (switch off), 402 SUBSCRIPTION_REQUIRED (promoting on a free
+ * owner's circle), 400 CARE_RECIPIENT_CANNOT_MANAGE / VIEW_ONLY_CANNOT_MANAGE /
+ * CIRCLE_ARCHIVED / INVALID_REQUEST, 403 FORBIDDEN, 404 NOT_FOUND, 503.
+ */
+export async function setMemberRole(
+  circleId: string,
+  userId: string,
+  role: AssignableRole
+): Promise<SetMemberRoleResult> {
+  const response = (await apiClient.patch(`/circles/${circleId}/members/${userId}/role`, {
+    role,
+  })) as unknown as { success: boolean; data: SetMemberRoleResult };
+  return response.data;
 }

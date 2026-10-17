@@ -10,8 +10,8 @@ import InviteLandingPage from '@/pages/InviteLandingPage';
 // Role-aware invite copy: when the invite is for the CARE RECIPIENT the circle
 // is about them (its name is their own name), so the caregiver framing
 // ("X invited you to help care for <you>", "<you>'s circle") is wrong.
-// Approved 2026-10-04: title "Your care circle"; body "{inviter} set up
-// CircleCare to help with your care".
+// Approved 2026-10-04 (reworded 2026-10-17, manager role: invites name the SENDER, never imply they own the circle): title "Your care circle"; body "{inviter} invited you to join your family's care circle on CircleCare" (was "{inviter} set up
+// CircleCare to help with your care").
 
 const mockedPost = vi.mocked(apiClient.post);
 
@@ -58,7 +58,7 @@ describe('InviteLandingPage — care recipient copy', () => {
       await screen.findByRole('heading', { level: 1, name: 'Your care circle' })
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Luis Meza set up CircleCare to help with your care')
+      screen.getByText("Luis Meza invited you to join your family's care circle on CircleCare")
     ).toBeInTheDocument();
     expect(screen.queryByText(/help care for/)).not.toBeInTheDocument();
     expect(screen.getByText('Care recipient')).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('InviteLandingPage — care recipient copy', () => {
       await screen.findByRole('heading', { level: 1, name: 'Tu círculo de cuidado' })
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Luis Meza configuró CircleCare para ayudarte con tu cuidado')
+      screen.getByText('Luis Meza te invitó a unirte al círculo de cuidado de tu familia en CircleCare')
     ).toBeInTheDocument();
   });
 
@@ -86,7 +86,7 @@ describe('InviteLandingPage — care recipient copy', () => {
     mockedPost.mockResolvedValue(envelope('care_recipient', null));
     renderPage();
     expect(
-      await screen.findByText('Someone set up CircleCare to help with your care')
+      await screen.findByText("Someone invited you to join your family's care circle on CircleCare")
     ).toBeInTheDocument();
   });
 
@@ -95,7 +95,7 @@ describe('InviteLandingPage — care recipient copy', () => {
     mockedPost.mockResolvedValue(envelope('care_recipient', null));
     renderPage();
     expect(
-      await screen.findByText('Alguien configuró CircleCare para ayudarte con tu cuidado')
+      await screen.findByText('Alguien te invitó a unirte al círculo de cuidado de tu familia en CircleCare')
     ).toBeInTheDocument();
   });
 
@@ -108,6 +108,6 @@ describe('InviteLandingPage — care recipient copy', () => {
         name: 'Sarah invited you to help care for Luis',
       })
     ).toBeInTheDocument();
-    expect(screen.queryByText(/set up CircleCare/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/your family's care circle/)).not.toBeInTheDocument();
   });
 });

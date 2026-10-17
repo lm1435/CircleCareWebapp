@@ -12,8 +12,11 @@ import {
   leaveCircle,
   removeMember,
   setMedicationResponsible,
+  setMemberRole,
+  type AssignableRole,
   type CircleDetail,
   type CircleMember,
+  type SetMemberRoleResult,
 } from '@/api/circleMembers';
 import type { Circle } from '@/api/circles';
 import { queryKeys } from '@/lib/queryKeys';
@@ -22,18 +25,25 @@ import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiE
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
+import { cachedActorRole } from '@/lib/circleViewerRole';
 
 const EMPTY_MEMBERS: CircleMember[] = [];
 
-/** Owner first, then care recipient, then caregivers by join date. */
+/**
+ * Owner first, then managers, then the care recipient, then caregivers — each
+ * group by join date. Managers sit right under the owner because they are the
+ * people to ask about the circle (mirrors the backend's owner → manager →
+ * member order).
+ */
 function rolePriority(member: CircleMember): number {
   if (member.role === 'owner') return 0;
-  if (member.is_care_recipient) return 1;
-  return 2;
+  if (member.role === 'manager') return 1;
+  if (member.is_care_recipient) return 2;
+  return 3;
 }
 
 export interface UseCircleMembersResult {
-  /** Sorted: owner, care recipient, then caregivers (oldest join first). */
+  /** Sorted: owner, managers, care recipient, then caregivers (oldest join first). */
   members: CircleMember[];
 }
 
@@ -94,12 +104,19 @@ function useMemberMutationOnError(circleId: string): (error: unknown) => void {
   const { t } = useTranslation('members');
 
   return (error: unknown) => {
+    const code = (error as { error?: { code?: string } } | null)?.error?.code;
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
       invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isPermissionDeniedError(error)) {
+      // Also a manager whose role was taken back since the page loaded, or one
+      // trying to remove another manager: refresh so the menu matches the server.
       showToast(t('errors.permissionDenied'), 'error');
       invalidateCircleAccessFlags(queryClient, circleId);
+      invalidateCircleQueries(queryClient, circleId);
+    } else if (code === 'CIRCLE_ARCHIVED') {
+      showToast(t('errors.circleInactive'), 'error');
+      invalidateCircleQueries(queryClient, circleId);
     } else {
       showToast(t('errors.saveFailed'), 'error');
     }
@@ -121,7 +138,7 @@ export function useRemoveMember(
     mutationFn: ({ userId }: RemoveMemberVariables) => removeMember(circleId, userId),
     onSuccess: () => {
       // Deliberately no removed-user id — see Analytics.memberRemoved's doc comment.
-      Analytics.memberRemoved(circleId);
+      Analytics.memberRemoved(circleId, cachedActorRole(circleId));
       invalidateCircleQueries(queryClient, circleId);
     },
     onError,
@@ -168,5 +185,74 @@ export function useSetMedicationResponsible(
     mutationFn: (userId: string | null) => setMedicationResponsible(circleId, userId),
     onSuccess: () => invalidateCircleQueries(queryClient, circleId),
     onError,
+  });
+}
+
+export interface SetMemberRoleVariables {
+  userId: string;
+  role: AssignableRole;
+  /** Display name for the success toast ("Ana is now a manager."). */
+  name: string;
+}
+
+/**
+ * PATCH /circles/:circleId/members/:userId/role — the owner makes a member a
+ * manager, or takes the role back. Owner-only on the server; the UI offers it
+ * only when `viewer_permissions` carries `assign_manager`.
+ *
+ * Errors (`err.error.code`), each with copy that says what to do:
+ *   402 SUBSCRIPTION_REQUIRED   promoting on a free owner's circle — the owner
+ *                               is the viewer, so the owner-aware gate offers
+ *                               Upgrade ('feature': managers are Premium).
+ *   403 FEATURE_DISABLED        the switch was turned off since the page loaded.
+ *   400 CARE_RECIPIENT_CANNOT_MANAGE / VIEW_ONLY_CANNOT_MANAGE
+ *   400 CIRCLE_ARCHIVED, 403 FORBIDDEN, 404 NOT_FOUND, 503, network → generic.
+ * Every refusal refreshes the circle so the menu matches the server again.
+ */
+export function useSetMemberRole(
+  circleId: string
+): UseMutationResult<SetMemberRoleResult, unknown, SetMemberRoleVariables> {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { promptUpgrade } = usePremiumGate('feature', { circleId });
+  const { t } = useTranslation('members');
+
+  return useMutation({
+    mutationFn: ({ userId, role }: SetMemberRoleVariables) =>
+      setMemberRole(circleId, userId, role),
+    onSuccess: (result, variables) => {
+      // Enum only: no circle id, no member id (founder rule on new events).
+      if (result?.changed !== false) Analytics.memberRoleChanged(variables.role);
+      // The toast lives here, not in the two surfaces that offer the action
+      // (Members page, Home care team), so they can never word it differently.
+      showToast(
+        variables.role === 'manager'
+          ? t('manage.madeManager', { name: variables.name })
+          : t('manage.removedManager', { name: variables.name }),
+        'success'
+      );
+      invalidateCircleQueries(queryClient, circleId);
+    },
+    onError: (error: unknown) => {
+      const code = (error as { error?: { code?: string } } | null)?.error?.code;
+      if (isSubscriptionRequiredError(error)) {
+        promptUpgrade();
+        invalidateCircleAccessFlags(queryClient, circleId);
+      } else if (code === 'FEATURE_DISABLED') {
+        showToast(t('errors.managerUnavailable'), 'error');
+      } else if (code === 'CARE_RECIPIENT_CANNOT_MANAGE') {
+        showToast(t('errors.careRecipientCannotManage'), 'error');
+      } else if (code === 'VIEW_ONLY_CANNOT_MANAGE') {
+        showToast(t('errors.viewOnlyCannotManage'), 'error');
+      } else if (code === 'CIRCLE_ARCHIVED') {
+        showToast(t('errors.circleInactive'), 'error');
+      } else if (isPermissionDeniedError(error)) {
+        showToast(t('errors.permissionDenied'), 'error');
+        invalidateCircleAccessFlags(queryClient, circleId);
+      } else {
+        showToast(t('errors.saveFailed'), 'error');
+      }
+      invalidateCircleQueries(queryClient, circleId);
+    },
   });
 }

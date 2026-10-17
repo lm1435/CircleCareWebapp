@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { addDays } from '@/components/calendar/dateMath';
 import { getDateInTimezone } from '@/utils/timezone';
 import { isPendingInviteExpired } from '@/api/circleMembers';
+import { viewerCanManageMembers, viewerOwnsCircle } from '@/lib/premiumOwnership';
 import { Analytics } from '@/lib/analytics';
 import type { EmergencyInfo } from '@/api/emergencyInfo';
 
@@ -171,9 +172,11 @@ export function GettingStartedChecklist({
 
   const emergencyQuery = useEmergencyInfo(circleId);
 
-  // Still derived (same shape as OverviewPage/MembersPage) — but it now only
-  // decides whether the `invite` step is offered, not whether the card renders.
-  const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
+  // Ownership decides the intro sentence only. Whether the `invite` step is
+  // offered is `canManageMembers` — the owner AND managers can invite (from the
+  // server's `viewer_permissions`, owner fallback on an older backend).
+  const isOwner = viewerOwnsCircle(circle, currentUserId);
+  const canInvite = viewerCanManageMembers(circle, currentUserId);
 
   // The intro sentence is ROLE-AWARE (mobile CircleDetailScreen uses the same
   // four strings). Only the owner created the circle; a member who joined
@@ -212,8 +215,8 @@ export function GettingStartedChecklist({
   const hasEvent = presenceQuery.data?.medication === true;
   const hasEmergency = hasAnyEmergencyContent(emergencyQuery.data);
 
-  // Only steps the viewer can actually perform. `invite` is owner-only (the
-  // backend refuses invites from members), so non-owners get a 2-step list —
+  // Only steps the viewer can actually perform. `invite` is for the owner and
+  // managers (the backend refuses invites from members), so members get a 2-step list —
   // and every count below derives from THIS filtered array, never the full one.
   const steps = useMemo<Step[]>(
     () =>
@@ -226,7 +229,7 @@ export function GettingStartedChecklist({
           actionLabel: t('gettingStarted.actionAdd'),
           onAction: () => onAddEvent?.(),
         },
-        ...(isOwner
+        ...(canInvite
           ? [
               {
                 key: 'invite',
@@ -247,7 +250,7 @@ export function GettingStartedChecklist({
           onAction: () => navigate(`/circles/${circleId}/emergency`),
         },
       ] satisfies Step[],
-    [t, isOwner, hasEvent, invited, hasEmergency, onAddEvent, navigate, circleId]
+    [t, canInvite, hasEvent, invited, hasEmergency, onAddEvent, navigate, circleId]
   );
 
   // A step may read as NOT DONE (with its Add/Invite button) only when the read

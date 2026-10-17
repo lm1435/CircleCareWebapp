@@ -43,7 +43,11 @@
       "caregiverUnknown": "Someone joined the circle as caregiver"
     },
     "asNeededDoseLogged": "Logged a dose: {{title}} at {{time}}",
-    "asNeededDoseRemoved": "Removed a logged dose: {{title}} ({{time}})"
+    "asNeededDoseRemoved": "Removed a logged dose: {{title}} ({{time}})",
+    "memberRoleChanged": {
+      "manager": "{{name}} is now a manager",
+      "member": "{{name}} is no longer a manager"
+    }
   },
   "phrases": {
     "confirmedMedication": "Confirmed Medication:",
@@ -94,6 +98,7 @@
     "discontinuedMedication": "Discontinued medication: {{title}}",
     "reactivatedMedication": "Reactivated medication: {{title}}",
     "rescheduledMedication": "Rescheduled Medication: {{title}} to {{time}}",
-    "addedNotes": "Added notes to {{title}}"
+    "addedNotes": "Added notes to {{title}}",
+    "memberRoleChanged": "A member's role in the circle changed"
   }
 }

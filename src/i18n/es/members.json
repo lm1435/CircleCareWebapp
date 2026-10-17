@@ -42,7 +42,8 @@
   "roles": {
     "owner": "Propietario",
     "caregiver": "Cuidador",
-    "careRecipient": "Receptor de cuidado"
+    "careRecipient": "Receptor de cuidado",
+    "manager": "Gestor"
   },
   "access": {
     "readOnly": "Solo lectura",
@@ -78,7 +79,13 @@
     "pendingInviteSeat": "Ya usaste tu invitación: el lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
     "pendingInviteSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
     "circleArchived": "Este círculo de cuidado ya no está activo, así que no se pueden enviar ni aceptar invitaciones.",
-    "careRecipientExists": "Este círculo ya tiene un receptor de cuidado."
+    "careRecipientExists": "Este círculo ya tiene un receptor de cuidado.",
+    "managerUnavailable": "El rol de gestor no está disponible en este momento. Inténtalo de nuevo más tarde.",
+    "careRecipientCannotManage": "El receptor de cuidado no puede tener el rol de gestor.",
+    "viewOnlyCannotManage": "Los miembros con acceso de solo visualización no pueden tener el rol de gestor.",
+    "circleInactive": "Este círculo de cuidado ya no está activo.",
+    "pendingInviteSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancela esa invitación para liberarlo o pídele al dueño del círculo que mejore a Premium.",
+    "pendingInviteSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o pídele al dueño del círculo que mejore a Premium."
   },
   "invite": {
     "cta": "Invitar miembro",
@@ -114,7 +121,11 @@
     "emailNote": "También enviamos a {{email}} las instrucciones para unirse como {{role}}.",
     "sendAnother": "Invitar a alguien más",
     "dailyUpdateLine": "Las personas que invites reciben un resumen diario de {{name}}.",
-    "dailyUpdateLineSelfCare": "Las personas que invites reciben un resumen diario de tu día."
+    "dailyUpdateLineSelfCare": "Las personas que invites reciben un resumen diario de tu día.",
+    "capReachedAskOwner": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo el dueño del círculo puede mejorar el plan para agregar más.",
+    "capReachedAskOwnerNamed": "Los círculos gratuitos incluyen hasta dos cuidadores. Solo {{ownerName}}, el dueño del círculo, puede mejorar el plan para agregar más.",
+    "pendingSeatAskOwner": "El lugar gratuito lo tiene una invitación pendiente para {{email}}. Cancélala en Invitaciones pendientes para liberar el lugar o pídele al dueño del círculo que mejore el plan.",
+    "pendingSeatAskOwnerUnknown": "El lugar gratuito lo tiene otra invitación pendiente. Cancélala en Invitaciones pendientes para liberar el lugar o pídele al dueño del círculo que mejore el plan."
   },
   "manage": {
     "subheading": "Todos en este círculo de cuidado. Invita, elimina o administra miembros abajo.",
@@ -147,13 +158,22 @@
     "leave": "Salir del círculo",
     "leaveConfirmTitle": "¿Salir de este círculo?",
     "leaveConfirmBody": "Perderás el acceso a este círculo de cuidado. El propietario puede volver a invitarte más tarde.",
-    "leaveSuccess": "Saliste del círculo."
+    "leaveSuccess": "Saliste del círculo.",
+    "subheadingManager": "Todas las personas de este círculo de cuidado. Como gestor, puedes invitar a personas y quitar cuidadores.",
+    "makeManager": "Dar rol de gestor",
+    "removeManager": "Quitar rol de gestor",
+    "makeManagerConfirmTitle": "¿Darle a {{name}} el rol de gestor?",
+    "makeManagerConfirmBody": "{{name}} podrá invitar a personas, reenviar o cancelar invitaciones y quitar cuidadores. Solo tú puedes cambiar la configuración del círculo, los recordatorios de medicamentos, la facturación y quién tiene el rol de gestor.",
+    "removeManagerConfirmTitle": "¿Quitarle a {{name}} el rol de gestor?",
+    "removeManagerConfirmBody": "{{name}} seguirá en el círculo como cuidador, pero ya no podrá invitar ni quitar personas.",
+    "madeManager": "{{name}} ahora ayuda a administrar el círculo.",
+    "removedManager": "{{name}} ya no ayuda a administrar el círculo."
   },
   "pending": {
     "heading": "Tus invitaciones",
     "subheading": "Círculos de cuidado que te han invitado a ayudar.",
     "invitedYou": "{{inviter}} te invitó a ayudar a cuidar a {{recipient}}",
-    "invitedYouRecipient": "{{inviter}} configuró CircleCare para ayudarte con tu cuidado",
+    "invitedYouRecipient": "{{inviter}} te invitó a unirte al círculo de cuidado de tu familia en CircleCare",
     "yourCareCircle": "Tu círculo de cuidado",
     "accept": "Aceptar",
     "accepting": "Uniéndote…",

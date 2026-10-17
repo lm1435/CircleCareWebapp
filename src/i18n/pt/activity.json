@@ -43,7 +43,11 @@
       "caregiverUnknown": "Alguém entrou no círculo como cuidador"
     },
     "asNeededDoseLogged": "Registrou uma dose: {{title}} às {{time}}",
-    "asNeededDoseRemoved": "Removeu uma dose registrada: {{title}} ({{time}})"
+    "asNeededDoseRemoved": "Removeu uma dose registrada: {{title}} ({{time}})",
+    "memberRoleChanged": {
+      "manager": "{{name}} agora ajuda a gerenciar o círculo",
+      "member": "{{name}} não ajuda mais a gerenciar o círculo"
+    }
   },
   "phrases": {
     "confirmedMedication": "Medicamento confirmado:",
@@ -94,6 +98,7 @@
     "discontinuedMedication": "Medicamento suspenso: {{title}}",
     "reactivatedMedication": "Medicamento reativado: {{title}}",
     "rescheduledMedication": "Medicamento reagendado: {{title}} para {{time}}",
-    "addedNotes": "Adicionou notas a {{title}}"
+    "addedNotes": "Adicionou notas a {{title}}",
+    "memberRoleChanged": "O papel de um membro no círculo mudou"
   }
 }

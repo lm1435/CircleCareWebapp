@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures';
 // Role-aware invite copy (owner 2026-10-04). A care RECIPIENT's circle is about
 // them, so the public invite page must NOT read as a caregiver invite:
 //   h1   "Your care circle"
-//   body "<inviter> set up CircleCare to help with your care"
+//   body "<inviter> invited you to join your family's care circle on CircleCare"
 // A caregiver invite keeps "<inviter> invited you to help care for <name>".
 //
 // Net-zero: creates real email invites through the API (a logged-out visitor
@@ -61,7 +61,7 @@ test.describe('invite landing page — care recipient copy', () => {
         await expect(
           anonPage.getByRole('heading', { level: 1, name: 'Your care circle' })
         ).toBeVisible({ timeout: 20_000 });
-        await expect(anonPage.getByText(/set up CircleCare to help with your care$/)).toBeVisible();
+        await expect(anonPage.getByText(/invited you to join your family's care circle on CircleCare$/)).toBeVisible();
         await expect(anonPage.getByText('Care recipient')).toBeVisible();
         await expect(anonPage.getByText(/help care for/)).toHaveCount(0);
         await expect(anonPage.getByRole('button', { name: 'Create an account to join' })).toBeVisible();
@@ -70,7 +70,7 @@ test.describe('invite landing page — care recipient copy', () => {
         await expect(
           anonPage.getByRole('heading', { level: 1, name: /invited you to help care for/ })
         ).toBeVisible({ timeout: 20_000 });
-        await expect(anonPage.getByText(/set up CircleCare/)).toHaveCount(0);
+        await expect(anonPage.getByText(/your family's care circle/)).toHaveCount(0);
       } finally {
         await anon.close();
       }

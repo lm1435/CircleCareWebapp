@@ -7,6 +7,24 @@ import { apiClient } from '@/lib/api';
 
 export type CircleAccessLevel = 'full' | 'edit' | 'view';
 
+/**
+ * A member's role in a circle. 'manager' (Premium, owner-picked) can invite and
+ * remove plain members; it is only ever served while the backend's
+ * `manager_role_enabled` switch is on, so a build must render it but never
+ * assume it exists.
+ */
+export type CircleRole = 'owner' | 'manager' | 'member';
+
+/**
+ * `viewer_permissions` on GET /circles and GET /circles/:id.
+ *   manage_members  invite, resend/cancel any invite, see pending invites and
+ *                   push reachability, remove members (a manager: plain members only).
+ *   assign_manager  make / remove managers (owner only, switch on). Served to a
+ *                   FREE owner too: the endpoint answers 402 so the owner sees
+ *                   the upgrade path.
+ */
+export type ViewerPermission = 'manage_members' | 'assign_manager';
+
 export interface Circle {
   id: string;
   name: string;
@@ -15,7 +33,8 @@ export interface Circle {
   // NOTE: GET /circles (list) does NOT return a timezone. The care recipient's
   // timezone lives only on GET /circles/:circleId → care_recipient_timezone.
   // Use useCareRecipientTimezone(circleId) for any date/time math.
-  role: 'owner' | 'member';
+  /** 'manager' only while the backend's manager switch is on. */
+  role: CircleRole;
   is_care_recipient: boolean;
   member_count: number;
   created_at: string;
@@ -28,6 +47,14 @@ export interface Circle {
   is_self_care?: boolean;
   // True when circle is non-selected on free tier (read-only access)
   read_only?: boolean;
+  /**
+   * The viewer's role and what it lets them do, served by the backend so the
+   * client never derives permissions itself. OPTIONAL: a backend older than the
+   * manager role omits both, and consumers then fall back to `owner_id === me`
+   * (see `lib/premiumOwnership.ts`).
+   */
+  viewer_role?: CircleRole;
+  viewer_permissions?: ViewerPermission[];
 }
 
 interface CirclesEnvelope {

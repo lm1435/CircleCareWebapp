@@ -8,6 +8,7 @@ import { InviteMemberModal } from '@/components/members/InviteMemberModal';
 import { Button, ConfirmDialog, Modal, useToast } from '@/components/ui';
 import { useCreateEvent } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
+import { getCircleOwnerName } from '@/lib/premiumOwnership';
 import { Analytics } from '@/lib/analytics';
 import { getDeviceTimezone } from '@/utils/timezone';
 import {
@@ -82,7 +83,7 @@ export function FirstRunWizardModal({
   const { t } = useTranslation(['circles', 'calendar', 'common', 'overview']);
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { circle, canEdit } = useCircle(circleId);
+  const { circle, canEdit, isOwner } = useCircle(circleId);
   const createEvent = useCreateEvent(circleId);
 
   /**
@@ -573,6 +574,8 @@ export function FirstRunWizardModal({
         isSelfCare={circle.is_self_care}
         circleName={circle.name}
         recipientName={circle.recipient_name}
+        viewerIsOwner={isOwner}
+        ownerName={getCircleOwnerName(circle)}
         onInvited={handleHandoffSaved}
         onClose={handleHandoffClose}
       />

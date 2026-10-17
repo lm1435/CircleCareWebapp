@@ -16,7 +16,8 @@
     "expired": "Este convite expirou. Peça a quem o convidou que envie um novo.",
     "alreadyUsed": "Este convite já foi usado. Peça a quem o convidou que envie um novo.",
     "alreadyMember": "Já é membro deste círculo.",
-    "careRecipientExists": "Este círculo já tem uma pessoa cuidada. Peça a quem o convidou que envie um convite de cuidador."
+    "careRecipientExists": "Este círculo já tem uma pessoa cuidada. Peça a quem o convidou que envie um convite de cuidador.",
+    "setUpForYou": "{{inviter}} convidou-o para se juntar ao círculo de cuidado da sua família no CircleCare"
   },
   "edit": {
     "title": "Definições do círculo",

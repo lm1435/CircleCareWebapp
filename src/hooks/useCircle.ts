@@ -2,6 +2,13 @@ import { useMemo } from 'react';
 import { useCircles } from '@/hooks/useCircles';
 import { useCircleMembers } from '@/hooks/useCircleMembers';
 import { isCircleLostError } from '@/lib/purgeCircleCache';
+import {
+  viewerCanAssignManager,
+  viewerCanManageMembers,
+  viewerCircleRole,
+  viewerOwnsCircle,
+} from '@/lib/premiumOwnership';
+import { useAuthStore } from '@/store/authStore';
 import type { Circle, CircleAccessLevel } from '@/api/circles';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
 
@@ -73,6 +80,18 @@ export interface UseCircleResult {
   isPremiumCircle: boolean;
   /** Membership-level view-only (freemium caregiver cap). */
   viewOnly: boolean;
+  /** The signed-in user owns this circle (settings, billing, med reminders). */
+  isOwner: boolean;
+  /**
+   * The signed-in user may invite, manage invites and remove members — the
+   * owner, or a Manager. From `viewer_permissions`; owner fallback on an older
+   * backend. See `lib/premiumOwnership.ts`.
+   */
+  canManageMembers: boolean;
+  /** The owner may make / remove managers (`assign_manager`). */
+  canAssignManager: boolean;
+  /** 'owner' | 'manager' | 'member' for the signed-in user. */
+  viewerRole: 'owner' | 'manager' | 'member';
   /** Non-selected free-tier circle (read-only). From the list response only. */
   readOnly: boolean;
   isLoading: boolean;
@@ -91,6 +110,7 @@ export function useCircle(circleId: string): UseCircleResult {
   const circlesQuery = useCircles();
 
   const circle = detailQuery.data;
+  const currentUserId = useAuthStore((s) => s.user?.id);
 
   const circleSummary = useMemo(
     () => circlesQuery.data?.find((c) => c.id === circleId),
@@ -108,6 +128,10 @@ export function useCircle(circleId: string): UseCircleResult {
     accessLevel: circle?.access_level,
     isPremiumCircle: circle?.is_premium_circle ?? false,
     viewOnly: circle?.view_only ?? false,
+    isOwner: viewerOwnsCircle(circle, currentUserId),
+    canManageMembers: viewerCanManageMembers(circle, currentUserId),
+    canAssignManager: viewerCanAssignManager(circle, currentUserId),
+    viewerRole: viewerCircleRole(circle, currentUserId),
     readOnly: circleSummary?.read_only ?? false,
     // The summary is supplementary (read_only only); the detail query is the
     // source of truth for loading/error of THIS circle — and for every gating

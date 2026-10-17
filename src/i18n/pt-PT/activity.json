@@ -8,7 +8,11 @@
   "entries": {
     "medicationNotTaken": "Dose saltada: {{title}} ({{date}})",
     "asNeededDoseLogged": "Registou uma dose: {{title}} às {{time}}",
-    "asNeededDoseRemoved": "Removeu uma dose registada: {{title}} ({{time}})"
+    "asNeededDoseRemoved": "Removeu uma dose registada: {{title}} ({{time}})",
+    "memberRoleChanged": {
+      "manager": "{{name}} agora ajuda a gerir o círculo",
+      "member": "{{name}} já não ajuda a gerir o círculo"
+    }
   },
   "phrases": {
     "deletedMedication": "Medicamento eliminado:",

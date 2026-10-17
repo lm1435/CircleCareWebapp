@@ -43,7 +43,11 @@
       "caregiverUnknown": "Jemand ist dem Kreis als Pflegeperson beigetreten"
     },
     "asNeededDoseLogged": "Dosis eingetragen: {{title}} um {{time}}",
-    "asNeededDoseRemoved": "Eingetragene Dosis entfernt: {{title}} ({{time}})"
+    "asNeededDoseRemoved": "Eingetragene Dosis entfernt: {{title}} ({{time}})",
+    "memberRoleChanged": {
+      "manager": "{{name}} verwaltet den Kreis jetzt mit",
+      "member": "{{name}} verwaltet den Kreis nicht mehr mit"
+    }
   },
   "phrases": {
     "confirmedMedication": "Medikament bestätigt:",
@@ -94,6 +98,7 @@
     "discontinuedMedication": "Medikament abgesetzt: {{title}}",
     "reactivatedMedication": "Medikament wieder aufgenommen: {{title}}",
     "rescheduledMedication": "Medikament verschoben: {{title}} auf {{time}}",
-    "addedNotes": "Notizen hinzugefügt zu: {{title}}"
+    "addedNotes": "Notizen hinzugefügt zu: {{title}}",
+    "memberRoleChanged": "Die Rolle eines Mitglieds im Kreis wurde geändert"
   }
 }

@@ -42,7 +42,8 @@
   "roles": {
     "owner": "Propriétaire",
     "caregiver": "Aidant",
-    "careRecipient": "Personne aidée"
+    "careRecipient": "Personne aidée",
+    "manager": "Gestionnaire"
   },
   "access": {
     "readOnly": "Lecture seule",
@@ -78,7 +79,13 @@
     "pendingInviteSeat": "Votre invitation gratuite est déjà utilisée : la place est réservée par une invitation en attente pour {{email}}. Annulez cette invitation pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
     "pendingInviteSeatUnknown": "Votre invitation gratuite est déjà utilisée : la place est réservée par une autre invitation en attente. Annulez cette invitation pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
     "circleArchived": "Ce cercle de soins n’est plus actif : les invitations ne peuvent donc plus être envoyées ni acceptées.",
-    "careRecipientExists": "Ce cercle a déjà une personne aidée."
+    "careRecipientExists": "Ce cercle a déjà une personne aidée.",
+    "managerUnavailable": "Le rôle de gestionnaire n’est pas disponible pour le moment. Réessayez plus tard.",
+    "careRecipientCannotManage": "La personne aidée ne peut pas être gestionnaire.",
+    "viewOnlyCannotManage": "Les membres en lecture seule ne peuvent pas être gestionnaires.",
+    "circleInactive": "Ce cercle de soins n’est plus actif.",
+    "pendingInviteSeatAskOwner": "La place gratuite est réservée par une invitation en attente pour {{email}}. Annulez cette invitation pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
+    "pendingInviteSeatAskOwnerUnknown": "La place gratuite est réservée par une autre invitation en attente. Annulez cette invitation pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium."
   },
   "invite": {
     "cta": "Inviter un membre",
@@ -114,7 +121,11 @@
     "emailNote": "Nous avons aussi envoyé à {{email}} les instructions pour rejoindre le cercle avec le rôle « {{role}} ».",
     "sendAnother": "Inviter quelqu’un d’autre",
     "dailyUpdateLine": "Les personnes que vous invitez reçoivent un point quotidien sur {{name}}.",
-    "dailyUpdateLineSelfCare": "Les personnes que vous invitez reçoivent un point quotidien sur votre journée."
+    "dailyUpdateLineSelfCare": "Les personnes que vous invitez reçoivent un point quotidien sur votre journée.",
+    "capReachedAskOwner": "Les cercles gratuits incluent jusqu’à deux aidants. Seul le propriétaire du cercle peut passer à Premium pour en ajouter d’autres.",
+    "capReachedAskOwnerNamed": "Les cercles gratuits incluent jusqu’à deux aidants. Seul le propriétaire du cercle, {{ownerName}}, peut passer à Premium pour en ajouter d’autres.",
+    "pendingSeatAskOwner": "La place gratuite est réservée par une invitation en attente pour {{email}}. Annulez-la dans Invitations en attente pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium.",
+    "pendingSeatAskOwnerUnknown": "La place gratuite est réservée par une autre invitation en attente. Annulez-la dans Invitations en attente pour libérer la place, ou demandez au propriétaire du cercle de passer à Premium."
   },
   "manage": {
     "subheading": "Toutes les personnes de ce cercle de soins. Invitez, retirez ou gérez les membres ci-dessous.",
@@ -147,13 +158,22 @@
     "leave": "Quitter le cercle",
     "leaveConfirmTitle": "Quitter ce cercle ?",
     "leaveConfirmBody": "Vous perdrez l’accès à ce cercle de soins. Le propriétaire pourra vous inviter à nouveau plus tard.",
-    "leaveSuccess": "Vous avez quitté le cercle."
+    "leaveSuccess": "Vous avez quitté le cercle.",
+    "subheadingManager": "Toutes les personnes de ce cercle de soins. En tant que gestionnaire, vous pouvez inviter des personnes et retirer des aidants.",
+    "makeManager": "Nommer gestionnaire",
+    "removeManager": "Retirer le rôle de gestionnaire",
+    "makeManagerConfirmTitle": "Nommer {{name}} gestionnaire ?",
+    "makeManagerConfirmBody": "{{name}} pourra inviter des personnes, renvoyer ou annuler des invitations et retirer des aidants. Vous seul pouvez modifier les paramètres du cercle, les rappels de médicaments, la facturation et choisir les gestionnaires.",
+    "removeManagerConfirmTitle": "Retirer le rôle de gestionnaire à {{name}} ?",
+    "removeManagerConfirmBody": "{{name}} restera dans le cercle en tant qu’aidant, mais ne pourra plus inviter ni retirer de personnes.",
+    "madeManager": "{{name}} aide désormais à gérer le cercle.",
+    "removedManager": "{{name}} n’aide plus à gérer le cercle."
   },
   "pending": {
     "heading": "Vos invitations",
     "subheading": "Les cercles de soins qui font appel à votre aide.",
     "invitedYou": "{{inviter}} vous invite à rejoindre le cercle de soins pour {{recipient}}",
-    "invitedYouRecipient": "{{inviter}} a configuré CircleCare pour vous aider dans vos soins",
+    "invitedYouRecipient": "{{inviter}} vous invite à rejoindre le cercle de soins de votre famille sur CircleCare",
     "yourCareCircle": "Votre cercle de soins",
     "accept": "Accepter",
     "accepting": "Connexion au cercle…",

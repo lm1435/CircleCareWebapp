@@ -109,6 +109,9 @@ interface Signals {
   isSelfCare?: boolean;
   /** Membership-level view-only seat (separate from `canEdit`). */
   viewOnly?: boolean;
+  /** Server-served viewer fields (manager role). Omitted = older backend. */
+  viewerRole?: 'owner' | 'manager' | 'member';
+  viewerPermissions?: Array<'manage_members' | 'assign_manager'>;
 }
 
 /** Points the mocked hooks at a given set of signals. Does not render. */
@@ -120,6 +123,9 @@ function configure(s: Signals = {}): void {
       recipient_name: s.recipientName ?? 'Rosa',
       is_self_care: s.isSelfCare ?? false,
       view_only: s.viewOnly ?? false,
+      ...(s.viewerPermissions
+        ? { viewer_role: s.viewerRole, viewer_permissions: s.viewerPermissions }
+        : {}),
     },
     circleSummary: { created_at: s.createdAt ?? new Date().toISOString() },
     members: s.members ?? [{ id: CURRENT_USER_ID }],
@@ -435,6 +441,27 @@ describe('GettingStartedChecklist', () => {
     // The un-offered invite step must not hold the checklist open forever.
     expect(screen.queryByRole('region', { name: 'Get started' })).not.toBeInTheDocument();
     expect(screen.getByText('Nothing scheduled yet.')).toBeInTheDocument();
+  });
+
+  // Manager role: a manager CAN invite, so they get the invite step (3 steps).
+  // Their circle always has the owner in it, so the step reads done.
+  it('offers a MANAGER the invite step (from viewer_permissions)', () => {
+    configure({
+      ownerId: 'someone-else',
+      viewerRole: 'manager',
+      viewerPermissions: ['manage_members'],
+      members: [{ id: 'someone-else' }, { id: CURRENT_USER_ID }],
+    });
+    renderChecklist('circle-1');
+    expect(screen.getByText('Invite family & caregivers')).toBeInTheDocument();
+    expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
+  });
+
+  it('a demoted manager (empty permissions) gets the 2-step member list', () => {
+    configure({ ownerId: 'someone-else', viewerRole: 'manager', viewerPermissions: [] });
+    renderChecklist('circle-1');
+    expect(screen.queryByText('Invite family & caregivers')).not.toBeInTheDocument();
+    expect(screen.getByText('0 of 2 done')).toBeInTheDocument();
   });
 
   it('shows the fallback instead of the checklist for a view-only member', () => {

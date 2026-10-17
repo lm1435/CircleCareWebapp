@@ -222,3 +222,66 @@ describe('useCircle', () => {
     });
   });
 });
+
+// Manager role: useCircle exposes the viewer's role + permissions, read from
+// the server's viewer fields (owner_id fallback on an older backend).
+describe('useCircle — viewer role & permissions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCircles();
+  });
+
+  async function asUser(id: string | null) {
+    const { useAuthStore } = await import('@/store/authStore');
+    useAuthStore.setState({ user: id ? ({ id } as never) : null });
+  }
+
+  it('owner with assign_manager', async () => {
+    await asUser('u1');
+    mockMembers({
+      data: detail({ viewer_role: 'owner', viewer_permissions: ['manage_members', 'assign_manager'] }),
+    });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current).toMatchObject({
+      isOwner: true,
+      canManageMembers: true,
+      canAssignManager: true,
+      viewerRole: 'owner',
+    });
+  });
+
+  it('manager', async () => {
+    await asUser('u-mgr');
+    mockMembers({ data: detail({ viewer_role: 'manager', viewer_permissions: ['manage_members'] }) });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current).toMatchObject({
+      isOwner: false,
+      canManageMembers: true,
+      canAssignManager: false,
+      viewerRole: 'manager',
+    });
+  });
+
+  it('older backend: owner fallback, no assign', async () => {
+    await asUser('u1');
+    mockMembers({ data: detail() });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current).toMatchObject({
+      isOwner: true,
+      canManageMembers: true,
+      canAssignManager: false,
+    });
+  });
+
+  it('signed out / loading: nothing', async () => {
+    await asUser(null);
+    mockMembers({ data: undefined, members: [], isLoading: true });
+    const { result } = renderHook(() => useCircle(CIRCLE_ID));
+    expect(result.current).toMatchObject({
+      isOwner: false,
+      canManageMembers: false,
+      canAssignManager: false,
+      viewerRole: 'member',
+    });
+  });
+});

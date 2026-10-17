@@ -42,7 +42,8 @@
   "roles": {
     "owner": "Titolare",
     "caregiver": "Caregiver",
-    "careRecipient": "Persona assistita"
+    "careRecipient": "Persona assistita",
+    "manager": "Gestore"
   },
   "access": {
     "readOnly": "Sola lettura",
@@ -78,7 +79,13 @@
     "pendingInviteSeat": "Hai già usato il tuo invito: il posto gratuito è occupato da un invito in sospeso per {{email}}. Annulla quell'invito per liberarlo, oppure passa a Premium per aggiungere altri caregiver.",
     "pendingInviteSeatUnknown": "Hai già usato il tuo invito: il posto gratuito è occupato da un altro invito in sospeso. Annulla quell'invito per liberarlo, oppure passa a Premium per aggiungere altri caregiver.",
     "circleArchived": "Questa cerchia di cura non è più attiva, quindi non è possibile inviare né accettare inviti.",
-    "careRecipientExists": "Questa cerchia ha già una persona assistita."
+    "careRecipientExists": "Questa cerchia ha già una persona assistita.",
+    "managerUnavailable": "Il ruolo di gestore non è disponibile al momento. Riprova più tardi.",
+    "careRecipientCannotManage": "La persona assistita non può essere gestore.",
+    "viewOnlyCannotManage": "I membri con accesso in sola lettura non possono essere gestori.",
+    "circleInactive": "Questa cerchia di cura non è più attiva.",
+    "pendingInviteSeatAskOwner": "Il posto gratuito è occupato da un invito in sospeso per {{email}}. Annulla quell'invito per liberarlo, oppure chiedi al titolare della cerchia di passare a Premium.",
+    "pendingInviteSeatAskOwnerUnknown": "Il posto gratuito è occupato da un altro invito in sospeso. Annulla quell'invito per liberarlo, oppure chiedi al titolare della cerchia di passare a Premium."
   },
   "invite": {
     "cta": "Invita un membro",
@@ -114,7 +121,11 @@
     "emailNote": "Abbiamo inviato anche a {{email}} le istruzioni per entrare come {{role}}.",
     "sendAnother": "Invita un'altra persona",
     "dailyUpdateLine": "Le persone che inviti ricevono un riepilogo quotidiano su {{name}}.",
-    "dailyUpdateLineSelfCare": "Le persone che inviti ricevono un riepilogo quotidiano sulla tua giornata."
+    "dailyUpdateLineSelfCare": "Le persone che inviti ricevono un riepilogo quotidiano sulla tua giornata.",
+    "capReachedAskOwner": "Le cerchie gratuite includono fino a due caregiver. Solo il titolare della cerchia può passare a Premium per aggiungerne altri.",
+    "capReachedAskOwnerNamed": "Le cerchie gratuite includono fino a due caregiver. Solo {{ownerName}}, titolare della cerchia, può passare a Premium per aggiungerne altri.",
+    "pendingSeatAskOwner": "Il posto gratuito è occupato da un invito in sospeso per {{email}}. Annullalo in Inviti in sospeso per liberare il posto, oppure chiedi al titolare della cerchia di passare a Premium.",
+    "pendingSeatAskOwnerUnknown": "Il posto gratuito è occupato da un altro invito in sospeso. Annullalo in Inviti in sospeso per liberare il posto, oppure chiedi al titolare della cerchia di passare a Premium."
   },
   "manage": {
     "subheading": "Tutte le persone di questa cerchia di cura. Qui sotto puoi invitare, rimuovere o gestire i membri.",
@@ -147,13 +158,22 @@
     "leave": "Esci dalla cerchia",
     "leaveConfirmTitle": "Vuoi uscire da questa cerchia?",
     "leaveConfirmBody": "Perderai l'accesso a questa cerchia di cura. Il titolare potrà invitarti di nuovo in seguito.",
-    "leaveSuccess": "Hai lasciato la cerchia."
+    "leaveSuccess": "Hai lasciato la cerchia.",
+    "subheadingManager": "Tutte le persone di questa cerchia di cura. Come gestore, puoi invitare persone e rimuovere caregiver.",
+    "makeManager": "Nomina gestore",
+    "removeManager": "Togli il ruolo di gestore",
+    "makeManagerConfirmTitle": "Nominare {{name}} gestore?",
+    "makeManagerConfirmBody": "{{name}} potrà invitare persone, inviare di nuovo o annullare inviti e rimuovere caregiver. Solo tu puoi modificare le impostazioni della cerchia, i promemoria dei farmaci, la fatturazione e scegliere i gestori.",
+    "removeManagerConfirmTitle": "Togliere il ruolo di gestore a {{name}}?",
+    "removeManagerConfirmBody": "{{name}} resterà nella cerchia come caregiver, ma non potrà più invitare né rimuovere persone.",
+    "madeManager": "{{name}} ora aiuta a gestire la cerchia.",
+    "removedManager": "{{name}} non aiuta più a gestire la cerchia."
   },
   "pending": {
     "heading": "I tuoi inviti",
     "subheading": "Le cerchie di cura che ti hanno chiesto di dare una mano.",
     "invitedYou": "{{inviter}} ti ha mandato un invito per aiutare nella cura di {{recipient}}",
-    "invitedYouRecipient": "{{inviter}} ha configurato CircleCare per aiutarti nella tua cura",
+    "invitedYouRecipient": "{{inviter}} ti ha invitato a unirti alla cerchia di cura della tua famiglia su CircleCare",
     "yourCareCircle": "La tua cerchia di cura",
     "accept": "Accetta",
     "accepting": "Ingresso in corso…",

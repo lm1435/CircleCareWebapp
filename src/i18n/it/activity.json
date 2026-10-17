@@ -43,7 +43,11 @@
       "caregiverUnknown": "Qualcuno ora fa parte della cerchia come caregiver"
     },
     "asNeededDoseLogged": "Dose registrata: {{title}} alle {{time}}",
-    "asNeededDoseRemoved": "Dose registrata rimossa: {{title}} ({{time}})"
+    "asNeededDoseRemoved": "Dose registrata rimossa: {{title}} ({{time}})",
+    "memberRoleChanged": {
+      "manager": "{{name}} ora aiuta a gestire la cerchia",
+      "member": "{{name}} non aiuta più a gestire la cerchia"
+    }
   },
   "phrases": {
     "confirmedMedication": "Farmaco confermato:",
@@ -94,6 +98,7 @@
     "discontinuedMedication": "Farmaco interrotto: {{title}}",
     "reactivatedMedication": "Farmaco riattivato: {{title}}",
     "rescheduledMedication": "Farmaco riprogrammato: {{title}} alle {{time}}",
-    "addedNotes": "Ha aggiunto note a {{title}}"
+    "addedNotes": "Ha aggiunto note a {{title}}",
+    "memberRoleChanged": "Il ruolo di un membro nella cerchia è cambiato"
   }
 }

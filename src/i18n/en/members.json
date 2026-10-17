@@ -42,7 +42,8 @@
   "roles": {
     "owner": "Owner",
     "caregiver": "Caregiver",
-    "careRecipient": "Care recipient"
+    "careRecipient": "Care recipient",
+    "manager": "Manager"
   },
   "access": {
     "readOnly": "Read-only",
@@ -78,7 +79,13 @@
     "pendingInviteSeat": "You've already used your invitation — the free spot is held by a pending invite to {{email}}. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers.",
     "pendingInviteSeatUnknown": "You've already used your invitation — the free spot is held by another pending invite. Cancel that invitation to free it up, or upgrade to Premium to add more caregivers.",
     "circleArchived": "This care circle is no longer active, so invitations can't be sent or accepted.",
-    "careRecipientExists": "This circle already has a care recipient."
+    "careRecipientExists": "This circle already has a care recipient.",
+    "managerUnavailable": "Managers aren't available right now. Please try again later.",
+    "careRecipientCannotManage": "The care recipient can't be a manager.",
+    "viewOnlyCannotManage": "Members with view-only access can't be managers.",
+    "circleInactive": "This care circle is no longer active.",
+    "pendingInviteSeatAskOwner": "The free spot is held by a pending invite to {{email}}. Cancel that invitation to free it up, or ask the circle owner about upgrading to Premium.",
+    "pendingInviteSeatAskOwnerUnknown": "The free spot is held by another pending invite. Cancel that invitation to free it up, or ask the circle owner about upgrading to Premium."
   },
   "invite": {
     "cta": "Invite member",
@@ -114,7 +121,11 @@
     "emailNote": "We also emailed {{email}} instructions to join as a {{role}}.",
     "sendAnother": "Invite someone else",
     "dailyUpdateLine": "The people you invite get a daily update on {{name}}.",
-    "dailyUpdateLineSelfCare": "The people you invite get a daily update on your day."
+    "dailyUpdateLineSelfCare": "The people you invite get a daily update on your day.",
+    "capReachedAskOwner": "Free circles include up to two caregivers. Only the circle owner can upgrade to add more.",
+    "capReachedAskOwnerNamed": "Free circles include up to two caregivers. Only {{ownerName}}, the circle owner, can upgrade to add more.",
+    "pendingSeatAskOwner": "The free spot is held by a pending invite to {{email}}. Cancel it under Pending invites to free the spot, or ask the circle owner to upgrade.",
+    "pendingSeatAskOwnerUnknown": "The free spot is held by another pending invite. Cancel it under Pending invites to free the spot, or ask the circle owner to upgrade."
   },
   "manage": {
     "subheading": "Everyone in this care circle. Invite, remove, or manage members below.",
@@ -147,13 +158,22 @@
     "leave": "Leave circle",
     "leaveConfirmTitle": "Leave this circle?",
     "leaveConfirmBody": "You'll lose access to this care circle. The owner can invite you again later.",
-    "leaveSuccess": "You left the circle."
+    "leaveSuccess": "You left the circle.",
+    "subheadingManager": "Everyone in this care circle. As a manager, you can invite people and remove caregivers.",
+    "makeManager": "Make manager",
+    "removeManager": "Remove as manager",
+    "makeManagerConfirmTitle": "Make {{name}} a manager?",
+    "makeManagerConfirmBody": "{{name}} will be able to invite people, resend or cancel invitations, and remove caregivers. Only you can change circle settings, medication reminders, billing, and who is a manager.",
+    "removeManagerConfirmTitle": "Remove {{name}} as manager?",
+    "removeManagerConfirmBody": "{{name}} will stay in the circle as a caregiver, but won't be able to invite or remove people anymore.",
+    "madeManager": "{{name}} is now a manager.",
+    "removedManager": "{{name}} is no longer a manager."
   },
   "pending": {
     "heading": "Your invitations",
     "subheading": "Care circles that have invited you to help.",
     "invitedYou": "{{inviter}} invited you to help care for {{recipient}}",
-    "invitedYouRecipient": "{{inviter}} set up CircleCare to help with your care",
+    "invitedYouRecipient": "{{inviter}} invited you to join your family's care circle on CircleCare",
     "yourCareCircle": "Your care circle",
     "accept": "Accept",
     "accepting": "Joining…",

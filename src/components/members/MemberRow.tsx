@@ -7,22 +7,27 @@ import { NotificationsOffBadge } from './NotificationsOffBadge';
 
 export interface MemberRowProps {
   member: CircleMember;
-  /** Owner-only action slot (a `MoreMenu`: set/clear med-responsible, remove). */
+  /** Action slot for the owner / a manager (a `MoreMenu`: med reminders, manager role, remove). */
   actions?: ReactNode;
 }
 
-type RoleKey = 'owner' | 'caregiver' | 'careRecipient';
+type RoleKey = 'owner' | 'manager' | 'caregiver' | 'careRecipient';
 
-/** Spec §6.7: owner `primary`, care recipient `coral`, caregiver `default`. */
+/**
+ * Spec §6.7: owner `primary`, care recipient `coral`, caregiver `default`.
+ * Manager `dusk` — distinct from the owner's moss, never terracotta (alarm).
+ */
 const roleBadgeVariant: Record<RoleKey, BadgeVariant> = {
   owner: 'primary',
+  manager: 'dusk',
   careRecipient: 'coral',
   caregiver: 'default',
 };
 
 function getRoleKey(member: CircleMember): RoleKey {
   if (member.is_care_recipient) return 'careRecipient';
-  return member.role === 'owner' ? 'owner' : 'caregiver';
+  if (member.role === 'owner') return 'owner';
+  return member.role === 'manager' ? 'manager' : 'caregiver';
 }
 
 function getDisplayName(member: CircleMember): string {
@@ -54,13 +59,15 @@ export function MemberRow({ member, actions }: MemberRowProps): ReactElement {
   // Subtitle: prefer the email for named members (mobile convention); fall
   // back to the role label when there's no name. The role itself is also shown
   // as a Badge, so we never repeat the role label when an email is available.
-  const subtitle = hasName
-    ? member.email
-    : member.is_care_recipient
+  const roleLabel =
+    roleKey === 'careRecipient'
       ? t('roles.careRecipient')
-      : member.role === 'owner'
+      : roleKey === 'owner'
         ? t('roles.owner')
-        : t('roles.caregiver');
+        : roleKey === 'manager'
+          ? t('roles.manager')
+          : t('roles.caregiver');
+  const subtitle = hasName ? member.email : roleLabel;
 
   return (
     <SheetRow as="li" className="gap-3 px-[18px] py-3.5">

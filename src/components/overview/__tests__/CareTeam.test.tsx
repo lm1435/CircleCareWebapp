@@ -1,17 +1,23 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import { CareTeam } from '../CareTeam';
-import { useRemoveMember, useSetMedicationResponsible } from '@/hooks/useCircleMembers';
+import {
+  useRemoveMember,
+  useSetMedicationResponsible,
+  useSetMemberRole,
+} from '@/hooks/useCircleMembers';
 import type { CircleDetail, CircleMember } from '@/api/circleMembers';
 import { avatarGradientFor, avatarGradientForKey } from '@/components/ui/Avatar';
 
 const removeMutate = vi.fn();
 const setMedMutate = vi.fn();
+const setRoleMutate = vi.fn();
 vi.mock('@/hooks/useCircleMembers', () => ({
   useRemoveMember: vi.fn(),
   useSetMedicationResponsible: vi.fn(),
+  useSetMemberRole: vi.fn(),
 }));
 
 // Home had no instrumentation on web; the solo nudge's CTA is the one press
@@ -85,6 +91,10 @@ describe('CareTeam', () => {
     vi.mocked(useSetMedicationResponsible).mockReturnValue({
       mutate: setMedMutate,
     } as unknown as ReturnType<typeof useSetMedicationResponsible>);
+    vi.mocked(useSetMemberRole).mockReturnValue({
+      mutate: setRoleMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useSetMemberRole>);
   });
 
   it('shows the member-count pill and marks the current user', () => {
@@ -321,5 +331,109 @@ describe('CareTeam member avatar colour', () => {
     expect(bg('F')).toBe(gradient(avatarGradientForKey('dusk')));
     expect(bg('F')).not.toBe(gradient(avatarGradientFor('Fay')));
     expect(bg('O')).toBe(gradient(avatarGradientFor('Owen')));
+  });
+});
+
+// Manager role (docs/plans/manager-role.md): the Home care team offers the SAME
+// actions as the Members page (shared `memberRowActions`), read from the
+// server's `viewer_permissions`.
+describe('CareTeam — manager role', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useRemoveMember).mockReturnValue({
+      mutate: removeMutate,
+    } as unknown as ReturnType<typeof useRemoveMember>);
+    vi.mocked(useSetMedicationResponsible).mockReturnValue({
+      mutate: setMedMutate,
+    } as unknown as ReturnType<typeof useSetMedicationResponsible>);
+    vi.mocked(useSetMemberRole).mockReturnValue({
+      mutate: setRoleMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useSetMemberRole>);
+  });
+
+  const team = [
+    member({ id: OWNER, first_name: 'Pat', role: 'owner' }),
+    member({ id: 'u-mia', first_name: 'Mia', role: 'manager' }),
+    member({ id: 'u-ivy', first_name: 'Ivy', role: 'manager' }),
+    member({ id: 'u-rose', first_name: 'Rose', is_care_recipient: true }),
+    member({ id: 'u-sam', first_name: 'Sam' }),
+  ];
+  const items = (): string[] => screen.getAllByRole('menuitem').map((el) => el.textContent ?? '');
+
+  it('a MANAGER gets the Invite button and Remove on plain members only', async () => {
+    const user = userEvent.setup();
+    renderTeam({
+      isOwner: false,
+      currentUserId: 'u-mia',
+      members: team,
+      circle: circleWith({ viewer_role: 'manager', viewer_permissions: ['manage_members'] }),
+    });
+    expect(screen.getByRole('link', { name: 'Invite member' })).toBeInTheDocument();
+    // Only Sam's row has a menu: not the owner, not Ivy (another manager), not
+    // the recipient, not Mia herself.
+    expect(screen.getAllByRole('button', { name: /^Remove / })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
+    expect(items()).toEqual(['Remove']);
+    await user.click(screen.getByRole('menuitem', { name: 'Remove' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove' }));
+    expect(removeMutate).toHaveBeenCalledWith({ userId: 'u-sam' });
+  });
+
+  it('a demoted manager (empty permissions) gets nothing', () => {
+    renderTeam({
+      isOwner: false,
+      currentUserId: 'u-mia',
+      members: team,
+      circle: circleWith({ viewer_role: 'manager', viewer_permissions: [] }),
+    });
+    expect(screen.queryByRole('link', { name: 'Invite member' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Remove / })).toBeNull();
+  });
+
+  it('the OWNER with assign_manager gets Make manager / Remove as manager and the confirm PATCHes', async () => {
+    const user = userEvent.setup();
+    renderTeam({
+      members: team,
+      circle: circleWith({
+        viewer_role: 'owner',
+        viewer_permissions: ['manage_members', 'assign_manager'],
+      }),
+    });
+    await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
+    expect(items()).toEqual(['Make medication manager', 'Make manager', 'Remove']);
+    await user.click(screen.getByRole('menuitem', { name: 'Make manager' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Make Sam a manager?');
+    await user.click(within(dialog).getByRole('button', { name: 'Make manager' }));
+    expect(setRoleMutate).toHaveBeenCalledWith({ userId: 'u-sam', role: 'manager', name: 'Sam' });
+
+    await user.click(screen.getByRole('button', { name: 'Remove Mia' }));
+    expect(items()).toEqual(['Make medication manager', 'Remove as manager', 'Remove']);
+  });
+
+  it('the OWNER without assign_manager (switch off) sees exactly today’s menu', async () => {
+    const user = userEvent.setup();
+    renderTeam({
+      members: team,
+      circle: circleWith({ viewer_role: 'owner', viewer_permissions: ['manage_members'] }),
+    });
+    await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
+    expect(items()).toEqual(['Make medication manager', 'Remove']);
+  });
+
+  it('labels a manager row: a pill when named, "Manager" as the role line when not', () => {
+    renderTeam({
+      members: [
+        member({ id: OWNER, first_name: 'Pat', role: 'owner' }),
+        member({ id: 'u-mia', first_name: 'Mia', role: 'manager' }),
+        member({ id: 'u-x', role: 'manager', email: 'x@example.com' }),
+      ],
+    });
+    const named = screen.getByText('Mia').parentElement!;
+    expect(within(named).getByText('Manager')).toBeInTheDocument();
+    // Unnamed: the role line reads Manager (not "Family member").
+    expect(screen.getAllByText('Manager')).toHaveLength(2);
+    expect(screen.queryByText('Family member')).toBeNull();
   });
 });

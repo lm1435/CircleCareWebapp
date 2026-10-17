@@ -4,6 +4,7 @@ import { databaseIsReachable, nonLocalDbTargetReasons, nonLocalTargetAllowed } f
 import { purgeRun, runDir, runNeedsIsolation, selectedProjectNames } from './isolation';
 import { currentRunId } from './runId';
 import { purgeRunMail } from './unhappy';
+import { restoreManagerSwitch } from './managerRole';
 
 /**
  * Remove THIS RUN's isolated accounts (worker slots, the read-only account,
@@ -41,6 +42,14 @@ async function globalTeardown(config: FullConfig): Promise<void> {
     }
 
     if (databaseIsReachable()) {
+      // Put the manager-role switch back to what this run found (e2e/managerRole.ts).
+      // Never fatal: a failure here must not skip the purge below.
+      try {
+        restoreManagerSwitch();
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[e2e manager role] could not restore manager_role_enabled:', err);
+      }
       const removed = await purgeRun(runId);
       // eslint-disable-next-line no-console
       console.log(`[e2e isolation] run ${runId} torn down: ${removed} account(s) and their circles removed`);

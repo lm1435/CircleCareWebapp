@@ -25,9 +25,10 @@ import {
   type RadioOption,
 } from '@/components/ui';
 
-// Owner-only "invite a member" form — EMAIL-required. The owner enters the
-// invitee's email and role; the backend emails them a link to join this care
-// circle.
+// "Invite a member" form for the owner AND managers — EMAIL-required. The
+// sender enters the invitee's email and role; the backend emails them a link to
+// join this care circle. Seats are always the OWNER's plan, so only the owner
+// is ever offered Upgrade on the cap card; a manager is told to ask the owner.
 //
 // MIRRORS mobile/src/screens/circle/InviteMemberScreen.tsx. The free-tier
 // caregiver cap returns 402 SUBSCRIPTION_REQUIRED — the hook already classifies
@@ -59,6 +60,14 @@ export interface InviteMemberModalProps {
   /** Names for the share message. Optional — the message degrades gracefully. */
   circleName?: string;
   recipientName?: string;
+  /**
+   * The viewer owns this circle. Decides the cap card: the owner gets Upgrade,
+   * anyone else (a manager) gets "ask the circle owner" and NO upgrade action —
+   * seats are the owner's plan, so a manager who paid would unlock nothing.
+   */
+  viewerIsOwner: boolean;
+  /** The owner's first name for the manager's cap copy; nameless copy without it. */
+  ownerName?: string;
 }
 
 export function InviteMemberModal({
@@ -68,6 +77,8 @@ export function InviteMemberModal({
   onInvited,
   circleName,
   recipientName,
+  viewerIsOwner,
+  ownerName,
 }: InviteMemberModalProps): ReactElement {
   const { t, i18n } = useTranslation('members');
   const dailyUpdateOn = useDailyUpdateEnabled(circleId);
@@ -433,17 +444,27 @@ export function InviteMemberModal({
                 className="mt-0.5 shrink-0 text-terracotta"
               />
               <p className="m-0 text-ink-2">
-                {capNotice.kind === 'cap'
-                  ? t('invite.capReached')
-                  : capNotice.email
-                    ? t('invite.pendingSeat', { email: capNotice.email })
-                    : t('invite.pendingSeatUnknown')}
+                {viewerIsOwner
+                  ? capNotice.kind === 'cap'
+                    ? t('invite.capReached')
+                    : capNotice.email
+                      ? t('invite.pendingSeat', { email: capNotice.email })
+                      : t('invite.pendingSeatUnknown')
+                  : capNotice.kind === 'cap'
+                    ? ownerName
+                      ? t('invite.capReachedAskOwnerNamed', { ownerName })
+                      : t('invite.capReachedAskOwner')
+                    : capNotice.email
+                      ? t('invite.pendingSeatAskOwner', { email: capNotice.email })
+                      : t('invite.pendingSeatAskOwnerUnknown')}
               </p>
             </div>
             {/* The seat cap is the INVITE_CAP context — see lib/paywallContext.ts.
                 Without the state, this entry point's conversions pool into
-                'general' and the seat-cap paywall becomes unmeasurable. */}
-            {isWebBillingConfigured() ? (
+                'general' and the seat-cap paywall becomes unmeasurable.
+                OWNER ONLY: a manager is never sold a paywall (memory
+                project_owner_aware_premium_gates). */}
+            {viewerIsOwner && isWebBillingConfigured() ? (
               <Button
                 size="sm"
                 onClick={() => navigate('/upgrade', { state: { paywallContext: 'invite_cap' } })}

@@ -104,3 +104,29 @@ describe('MemberRow notifications-off badge', () => {
     }
   });
 });
+
+// Manager role: a manager row gets its own badge, and an unnamed manager's
+// subtitle says Manager (not Caregiver).
+describe('MemberRow manager label', () => {
+  it('badges a manager "Manager" in the dusk tone', () => {
+    render(<ul><MemberRow member={member({ role: 'manager' })} /></ul>);
+    const badge = screen.getByText('Manager');
+    expect(badge).toHaveClass('bg-dusk-soft');
+    expect(screen.queryByText('Caregiver')).toBeNull();
+  });
+
+  it('uses Manager as the subtitle for an unnamed manager', () => {
+    render(
+      <ul>
+        <MemberRow member={member({ role: 'manager', first_name: null, email: 'm@example.com' })} />
+      </ul>
+    );
+    // Badge + subtitle.
+    expect(screen.getAllByText('Manager')).toHaveLength(2);
+  });
+
+  it('still shows Notifications off on a manager row (the badge is per member)', () => {
+    render(<ul><MemberRow member={member({ role: 'manager', push_reachable: false })} /></ul>);
+    expect(screen.getByText('Notifications off')).toBeInTheDocument();
+  });
+});

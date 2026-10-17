@@ -2,7 +2,12 @@ import { useState, type ReactElement } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircle } from '@/hooks/useCircle';
-import { useRemoveMember, useLeaveCircle, useSetMedicationResponsible } from '@/hooks/useCircleMembers';
+import {
+  useRemoveMember,
+  useLeaveCircle,
+  useSetMedicationResponsible,
+  useSetMemberRole,
+} from '@/hooks/useCircleMembers';
 import { useCancelInvite, useResendInvite } from '@/hooks/useInvites';
 import {
   Badge,
@@ -27,6 +32,12 @@ import { useAuthStore } from '@/store/authStore';
 import { getInviteExpiryState, isPendingInviteExpired } from '@/api/circleMembers';
 import type { CircleMember, PendingCircleInvite } from '@/api/circleMembers';
 import { blockOfflineWrite } from '@/lib/offlineWrite';
+import {
+  getCircleOwnerName,
+  memberRowActions,
+  viewerCanManageMembers,
+  viewerOwnsCircle,
+} from '@/lib/premiumOwnership';
 
 function MemberRowSkeleton(): ReactElement {
   return (
@@ -48,13 +59,18 @@ function memberName(member: CircleMember): string {
 /**
  * Members page (plan Tasks 35-36 + Stage 5 Task 5.4; mobile-parity Task 22).
  *
- * Read-only roster for everyone, plus owner-only management: invite a member,
- * remove a member, set/clear the medication-responsible caregiver, and cancel
- * pending invites. Non-owners additionally see a "Leave circle" action (the
- * owner cannot leave — backend blocks it).
+ * Read-only roster for everyone, plus management for those allowed it:
+ *   - owner AND managers (`canManageMembers`): invite, the pending-invite list
+ *     (copy link / resend / cancel), remove members (a manager: plain members
+ *     only — never the owner or another manager);
+ *   - owner only: medication reminders, Make / Remove manager (when the server
+ *     grants `assign_manager`).
+ * Non-owners (managers included) additionally see "Leave circle" (the owner
+ * cannot leave — backend blocks it).
  *
- * Gating: owner === `circle.owner_id === currentUserId`. The backend enforces
- * each action independently — UI gating is cosmetic.
+ * Gating reads the server's `viewer_permissions` (owner_id fallback on an older
+ * backend) through `lib/premiumOwnership.ts`. The backend enforces each action
+ * independently — UI gating is cosmetic.
  */
 export default function MembersPage(): ReactElement {
   const { t } = useTranslation('members');
@@ -64,7 +80,8 @@ export default function MembersPage(): ReactElement {
   const currentUserId = useAuthStore((s) => s.user?.id);
 
   const { circle, members, isLoading, isError, refetch } = useCircle(circleId);
-  const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
+  const isOwner = viewerOwnsCircle(circle, currentUserId);
+  const canManageMembers = viewerCanManageMembers(circle, currentUserId);
   const pendingInvites: PendingCircleInvite[] = circle?.pending_invites ?? [];
   // Live (non-lapsed) invites only. An expired invite is not "someone you
   // invited" — nobody can join through it — so it must not suppress the
@@ -78,6 +95,7 @@ export default function MembersPage(): ReactElement {
   const setMedResponsible = useSetMedicationResponsible(circleId);
   const cancelInvite = useCancelInvite(circleId);
   const resendInvite = useResendInvite(circleId);
+  const setMemberRole = useSetMemberRole(circleId);
 
   const [showInvite, setShowInvite] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<CircleMember | null>(null);
@@ -86,6 +104,8 @@ export default function MembersPage(): ReactElement {
   // row, so it can't disable just the one that was clicked.
   const [invitePendingResend, setInvitePendingResend] = useState<string | null>(null);
   const [showLeave, setShowLeave] = useState(false);
+  // The member whose manager role is being changed (confirm dialog open).
+  const [roleTarget, setRoleTarget] = useState<CircleMember | null>(null);
 
   const handleRemove = (): void => {
     if (!memberToRemove) return;
@@ -192,6 +212,16 @@ export default function MembersPage(): ReactElement {
     });
   };
 
+  const handleRoleChange = (): void => {
+    if (!roleTarget) return;
+    const name = memberName(roleTarget);
+    const role = roleTarget.role === 'manager' ? 'member' : 'manager';
+    setMemberRole.mutate(
+      { userId: roleTarget.id, role, name },
+      { onSettled: () => setRoleTarget(null) }
+    );
+  };
+
   let content: ReactElement;
   if (isLoading) {
     content = (
@@ -228,35 +258,52 @@ export default function MembersPage(): ReactElement {
     content = (
       <Sheet as="ul" padding="none" className="mx-5">
         {members.map((member) => {
-          const isSelf = member.id === currentUserId;
-          // Owners can manage caregivers, but never the care recipient, the
-          // owner row, or themselves.
-          const canManage =
-            isOwner && !member.is_care_recipient && !isSelf && member.role !== 'owner';
-          const actions = canManage ? (
-            <MoreMenu
-              label={t('manage.memberActionsLabel', { name: memberName(member) })}
-              items={[
-                {
-                  id: 'toggle-med',
-                  label: member.is_medication_responsible
-                    ? t('manage.clearMedResponsible')
-                    : t('manage.setMedResponsible'),
-                  icon: 'notifications-outline',
-                  onSelect: () => handleToggleMedResponsible(member),
-                  disabled: setMedResponsible.isPending,
-                },
-                { divider: true, id: 'divider' },
-                {
-                  id: 'remove',
-                  label: t('manage.remove'),
-                  icon: 'trash-outline',
-                  danger: true,
-                  onSelect: () => setMemberToRemove(member),
-                },
-              ]}
-            />
-          ) : undefined;
+          // Never the care recipient, the owner row, or yourself; a manager
+          // only acts on plain members, and only to remove them. One rule,
+          // shared with the Home care team (`memberRowActions`).
+          const allowed = memberRowActions(circle, currentUserId, member);
+          const items: MoreMenuEntry[] = [];
+          if (allowed.medResponsible) {
+            items.push({
+              id: 'toggle-med',
+              label: member.is_medication_responsible
+                ? t('manage.clearMedResponsible')
+                : t('manage.setMedResponsible'),
+              icon: 'notifications-outline',
+              onSelect: () => handleToggleMedResponsible(member),
+              disabled: setMedResponsible.isPending,
+            });
+          }
+          if (allowed.managerRole) {
+            items.push({
+              id: 'toggle-manager',
+              label:
+                member.role === 'manager' ? t('manage.removeManager') : t('manage.makeManager'),
+              icon: 'people-outline',
+              onSelect: () => {
+                if (blockOfflineWrite('change')) return;
+                setRoleTarget(member);
+              },
+              disabled: setMemberRole.isPending,
+            });
+          }
+          if (allowed.remove) {
+            if (items.length > 0) items.push({ divider: true, id: 'divider' });
+            items.push({
+              id: 'remove',
+              label: t('manage.remove'),
+              icon: 'trash-outline',
+              danger: true,
+              onSelect: () => setMemberToRemove(member),
+            });
+          }
+          const actions =
+            items.length > 0 ? (
+              <MoreMenu
+                label={t('manage.memberActionsLabel', { name: memberName(member) })}
+                items={items}
+              />
+            ) : undefined;
           return <MemberRow key={member.id} member={member} actions={actions} />;
         })}
       </Sheet>
@@ -269,10 +316,16 @@ export default function MembersPage(): ReactElement {
         section={t('common:nav.members')}
         tone="moss"
         title={t('list.heading')}
-        subtitle={isOwner ? t('manage.subheading') : t('list.subheadingReadOnly')}
+        subtitle={
+          isOwner
+            ? t('manage.subheading')
+            : canManageMembers
+              ? t('manage.subheadingManager')
+              : t('list.subheadingReadOnly')
+        }
         backTo={`/circles/${circleId}`}
         rightAction={
-          isOwner
+          canManageMembers
             ? {
                 name: 'share-outline',
                 label: t('invite.cta'),
@@ -299,11 +352,12 @@ export default function MembersPage(): ReactElement {
         </Card>
       ) : null}
 
-      {/* Owner-only pending invites list with cancel + resend.
+      {/* Pending invites (owner AND managers — `pending_invites` is served to
+          both, `[]` to everyone else) with copy link + cancel + resend.
           Expired invites stay in this list (the backend returns them with
           `is_expired`), so the badge is the only thing telling them apart —
           and resend is the only way out other than cancel-and-retype. */}
-      {isOwner && pendingInvites.length > 0 ? (
+      {canManageMembers && pendingInvites.length > 0 ? (
         <div className="mt-10">
           <SectionHeader title={t('manage.pendingHeading')} className="mx-5" />
           {/* No `overflow-hidden` — see the members list above. This Sheet is
@@ -326,7 +380,7 @@ export default function MembersPage(): ReactElement {
               // countdown informs; the button appears when it is actually needed.
               const canResend = isExpired;
               const menuItems: MoreMenuEntry[] = [];
-              // Owner-only `invite_url` (absent on older backends) — no URL, no
+              // `invite_url` (owner/managers; absent on older backends) — no URL, no
               // item. Expired links are dead, so never offered for those.
               if (!isExpired && invite.invite_url) {
                 menuItems.push({
@@ -422,6 +476,8 @@ export default function MembersPage(): ReactElement {
           isSelfCare={circle.is_self_care}
           circleName={circle.name}
           recipientName={circle.recipient_name}
+          viewerIsOwner={isOwner}
+          ownerName={getCircleOwnerName(circle)}
           onClose={() => setShowInvite(false)}
         />
       ) : null}
@@ -438,6 +494,30 @@ export default function MembersPage(): ReactElement {
           confirmDisabled={removeMember.isPending}
           onConfirm={handleRemove}
           onCancel={() => setMemberToRemove(null)}
+        />
+      ) : null}
+
+      {roleTarget ? (
+        <ConfirmDialog
+          offlineKind="change"
+          icon="people-outline"
+          title={
+            roleTarget.role === 'manager'
+              ? t('manage.removeManagerConfirmTitle', { name: memberName(roleTarget) })
+              : t('manage.makeManagerConfirmTitle', { name: memberName(roleTarget) })
+          }
+          message={
+            roleTarget.role === 'manager'
+              ? t('manage.removeManagerConfirmBody', { name: memberName(roleTarget) })
+              : t('manage.makeManagerConfirmBody', { name: memberName(roleTarget) })
+          }
+          confirmLabel={
+            roleTarget.role === 'manager' ? t('manage.removeManager') : t('manage.makeManager')
+          }
+          cancelLabel={t('common:cancel')}
+          confirmDisabled={setMemberRole.isPending}
+          onConfirm={handleRoleChange}
+          onCancel={() => setRoleTarget(null)}
         />
       ) : null}
 

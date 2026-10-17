@@ -34,7 +34,12 @@
     "saveFailed": "Ocorreu um erro. Tente novamente.",
     "pendingInviteSeat": "Já utilizou o seu convite — a vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele esse convite para libertar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
     "pendingInviteSeatUnknown": "Já utilizou o seu convite — a vaga gratuita está ocupada por outro convite pendente. Cancele esse convite para libertar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
-    "circleArchived": "Este círculo de cuidado já não está ativo, por isso os convites não podem ser enviados nem aceites."
+    "circleArchived": "Este círculo de cuidado já não está ativo, por isso os convites não podem ser enviados nem aceites.",
+    "managerUnavailable": "O papel de gestor não está disponível de momento. Tente novamente mais tarde.",
+    "viewOnlyCannotManage": "Membros com acesso apenas de visualização não podem ser gestores.",
+    "circleInactive": "Este círculo de cuidado já não está ativo.",
+    "pendingInviteSeatAskOwner": "A vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele esse convite para libertar a vaga ou peça ao proprietário do círculo para fazer upgrade para o Premium.",
+    "pendingInviteSeatAskOwnerUnknown": "A vaga gratuita está ocupada por outro convite pendente. Cancele esse convite para libertar a vaga ou peça ao proprietário do círculo para fazer upgrade para o Premium."
   },
   "invite": {
     "sending": "A enviar…",
@@ -48,11 +53,20 @@
     "shareTitle": "Participe no nosso círculo de cuidado",
     "shareMessageRecipient": "Configurei o CircleCare para ajudar a acompanhar os seus medicamentos e consultas. Junte-se a mim aqui: {{inviteUrl}}",
     "dailyUpdateLine": "As pessoas que convidar recebem um resumo diário sobre {{name}}.",
-    "dailyUpdateLineSelfCare": "As pessoas que convidar recebem um resumo diário sobre o seu dia."
+    "dailyUpdateLineSelfCare": "As pessoas que convidar recebem um resumo diário sobre o seu dia.",
+    "capReachedAskOwner": "Os círculos gratuitos incluem até dois cuidadores. Apenas o proprietário do círculo pode fazer upgrade para adicionar mais.",
+    "capReachedAskOwnerNamed": "Os círculos gratuitos incluem até dois cuidadores. Apenas {{ownerName}}, proprietário do círculo, pode fazer upgrade para adicionar mais.",
+    "pendingSeatAskOwner": "A vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele-o em Convites pendentes para libertar a vaga ou peça ao proprietário do círculo para fazer upgrade.",
+    "pendingSeatAskOwnerUnknown": "A vaga gratuita está ocupada por outro convite pendente. Cancele-o em Convites pendentes para libertar a vaga ou peça ao proprietário do círculo para fazer upgrade."
   },
   "manage": {
     "subheading": "Todos neste círculo de cuidado. Convide, remova ou faça a gestão dos membros abaixo.",
-    "leaveSuccess": "Saiu do círculo."
+    "leaveSuccess": "Saiu do círculo.",
+    "subheadingManager": "Todos neste círculo de cuidado. Como gestor, pode convidar pessoas e remover cuidadores.",
+    "makeManagerConfirmBody": "{{name}} poderá convidar pessoas, reenviar ou cancelar convites e remover cuidadores. Apenas o utilizador pode alterar as definições do círculo, os lembretes de medicamentos, a faturação e quem é gestor.",
+    "removeManagerConfirmBody": "{{name}} continuará no círculo como cuidador, mas já não poderá convidar nem remover pessoas.",
+    "madeManager": "{{name}} agora ajuda a gerir o círculo.",
+    "removedManager": "{{name}} já não ajuda a gerir o círculo."
   },
   "pending": {
     "heading": "Os seus convites",
@@ -61,6 +75,7 @@
     "errorBody": "Verifique a sua ligação e tente novamente.",
     "banner": {
       "count_one": "Tem 1 convite pendente"
-    }
+    },
+    "invitedYouRecipient": "{{inviter}} convidou-o para se juntar ao círculo de cuidado da sua família no CircleCare"
   }
 }

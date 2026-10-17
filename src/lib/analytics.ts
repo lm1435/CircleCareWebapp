@@ -280,6 +280,10 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
 
 const AS_NEEDED_SURFACES = ['home', 'meds_tab', 'detail'] as const;
 
+/** `actor_role` on invite_sent / member_removed: who performed it. */
+const ACTOR_ROLES = ['owner', 'manager'] as const;
+export type ActorRole = (typeof ACTOR_ROLES)[number];
+
 /** `daily_update_row_tapped.row`: which Daily update row (card or page) was tapped. */
 const DAILY_UPDATE_ROWS = ['tasks', 'appointment', 'note', 'full_update', 'invite'] as const;
 export type DailyUpdateRow = (typeof DAILY_UPDATE_ROWS)[number];
@@ -454,16 +458,34 @@ export const Analytics = {
   dailyUpdateInviteTapped: () => capture('daily_update_invite_tapped'),
 
   // --- Members ---
-  /** Owner removed a member. Deliberately NO removed-user id — that member's
-   *  identity is not this event's business, only that a removal happened. */
-  memberRemoved: (circleId: string) => capture('member_removed', { circle_id: circleId }),
+  /** Owner or manager removed a member. Deliberately NO removed-user id — that
+   *  member's identity is not this event's business, only that a removal
+   *  happened. `actor_role` says who did it ('owner' | 'manager'); same name
+   *  and shape as mobile. */
+  memberRemoved: (circleId: string, actorRole: ActorRole = 'owner') =>
+    capture('member_removed', {
+      circle_id: circleId,
+      actor_role: pickEnum(actorRole, ACTOR_ROLES, 'owner'),
+    }),
+  /**
+   * The owner made a member a manager (`role: 'manager'`) or took the role
+   * back (`role: 'member'`). Enum only — NO circle_id, NO member id (new
+   * events carry no identifiers: memory feedback_conservative_analytics_identifiers).
+   */
+  memberRoleChanged: (role: 'manager' | 'member') =>
+    capture('member_role_changed', { role: pickEnum(role, ['manager', 'member'], 'member') }),
   /** The current member voluntarily left the circle. */
   circleLeft: (circleId: string) => capture('circle_left', { circle_id: circleId }),
 
   // --- Invites ---
   inviteStarted: (circleId: string) => capture('invite_started', { circle_id: circleId }),
-  inviteSent: (circleId: string, role: string) =>
-    capture('invite_sent', { circle_id: circleId, role }),
+  /** `actor_role`: who sent it, the owner or a manager (mobile parity). */
+  inviteSent: (circleId: string, role: string, actorRole: ActorRole = 'owner') =>
+    capture('invite_sent', {
+      circle_id: circleId,
+      role,
+      actor_role: pickEnum(actorRole, ACTOR_ROLES, 'owner'),
+    }),
   inviteFailed: (circleId: string, error: string) =>
     capture('invite_failed', { circle_id: circleId, error: sanitizeErrorText(error) }),
   /**

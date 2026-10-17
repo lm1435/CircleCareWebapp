@@ -36,5 +36,6 @@
   "memberLink": {
     "title": "Já está neste círculo"
   },
-  "goToCircle": "Ir para o círculo"
+  "goToCircle": "Ir para o círculo",
+  "invitedByRecipient": "{{inviterName}} convidou-o para se juntar ao círculo de cuidado da sua família no CircleCare"
 }

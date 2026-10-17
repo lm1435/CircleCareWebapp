@@ -124,6 +124,18 @@ describe('CircleCard', () => {
     expect(screen.getByText('Caring together with 1 person')).toBeInTheDocument();
   });
 
+  // Manager role: GET /circles serves role 'manager' (switch on only).
+  it('shows the Manager badge (dusk, not the owner moss) and folds it into the label', async () => {
+    renderCard(makeCircle({ role: 'manager', member_count: 3 }));
+
+    const link = await screen.findByRole('link');
+    const badge = screen.getByText('Manager');
+    expect(badge).toHaveClass('bg-dusk-soft', 'text-dusk-deep');
+    expect(badge).not.toHaveClass('text-moss-deep');
+    expect(link.getAttribute('aria-label')).toContain('(Manager)');
+    expect(screen.queryByText('Caregiver')).toBeNull();
+  });
+
   it('shows the Care recipient badge for an is_care_recipient membership', async () => {
     renderCard(makeCircle({ role: 'member', is_care_recipient: true }));
 

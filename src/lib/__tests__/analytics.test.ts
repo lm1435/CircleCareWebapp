@@ -195,13 +195,31 @@ describe('analytics wrapper — active path (key set)', () => {
     });
   });
 
-  it('invite_sent carries circle_id + role (never an email)', async () => {
+  it('invite_sent carries circle_id + role + actor_role (never an email)', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.inviteSent('circle-123', 'caregiver');
     expect(capture).toHaveBeenCalledWith('invite_sent', {
       circle_id: 'circle-123',
       role: 'caregiver',
+      actor_role: 'owner',
     });
+    Analytics.inviteSent('circle-123', 'caregiver', 'manager');
+    expect(capture).toHaveBeenLastCalledWith('invite_sent', {
+      circle_id: 'circle-123',
+      role: 'caregiver',
+      actor_role: 'manager',
+    });
+  });
+
+  it('member_role_changed carries ONLY the new role enum (no circle_id, no member id)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.memberRoleChanged('manager');
+    expect(capture).toHaveBeenCalledWith('member_role_changed', { role: 'manager' });
+    Analytics.memberRoleChanged('member');
+    expect(capture).toHaveBeenLastCalledWith('member_role_changed', { role: 'member' });
+    // A value outside the enum never reaches PostHog verbatim.
+    Analytics.memberRoleChanged('owner' as unknown as 'member');
+    expect(capture).toHaveBeenLastCalledWith('member_role_changed', { role: 'member' });
   });
 
   it('invite_cap_reached carries NO circle_id (founder rule)', async () => {
@@ -288,7 +306,15 @@ describe('analytics wrapper — active path (key set)', () => {
   it('member_removed carries circle_id and NO user id', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.memberRemoved('circle-123');
-    expect(capture).toHaveBeenCalledWith('member_removed', { circle_id: 'circle-123' });
+    expect(capture).toHaveBeenCalledWith('member_removed', {
+      circle_id: 'circle-123',
+      actor_role: 'owner',
+    });
+    Analytics.memberRemoved('circle-123', 'manager');
+    expect(capture).toHaveBeenLastCalledWith('member_removed', {
+      circle_id: 'circle-123',
+      actor_role: 'manager',
+    });
   });
 
   it('circle_left carries only circle_id', async () => {

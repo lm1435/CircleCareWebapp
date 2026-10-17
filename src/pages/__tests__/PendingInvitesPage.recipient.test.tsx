@@ -46,7 +46,7 @@ describe('PendingInvitesPage — care recipient copy', () => {
     result.data = [invite('care_recipient')];
     renderPage();
     expect(
-      screen.getByText('Luis Meza set up CircleCare to help with your care')
+      screen.getByText("Luis Meza invited you to join your family's care circle on CircleCare")
     ).toBeInTheDocument();
     expect(screen.getByText(/Your care circle/)).toBeInTheDocument();
     expect(screen.queryByText(/help care for/)).not.toBeInTheDocument();
@@ -57,7 +57,7 @@ describe('PendingInvitesPage — care recipient copy', () => {
     result.data = [invite('care_recipient')];
     renderPage();
     expect(
-      screen.getByText('Luis Meza configuró CircleCare para ayudarte con tu cuidado')
+      screen.getByText('Luis Meza te invitó a unirte al círculo de cuidado de tu familia en CircleCare')
     ).toBeInTheDocument();
     expect(screen.getByText(/Tu círculo de cuidado/)).toBeInTheDocument();
   });
@@ -66,6 +66,6 @@ describe('PendingInvitesPage — care recipient copy', () => {
     result.data = [invite('caregiver')];
     renderPage();
     expect(screen.getByText('Luis Meza invited you to help care for Luis')).toBeInTheDocument();
-    expect(screen.queryByText(/set up CircleCare/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/your family's care circle/)).not.toBeInTheDocument();
   });
 });

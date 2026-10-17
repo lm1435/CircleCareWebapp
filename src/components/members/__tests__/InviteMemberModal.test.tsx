@@ -80,7 +80,7 @@ beforeEach(() => {
 describe('InviteMemberModal — email-required', () => {
   it('disables the send button until an email is entered', async () => {
     const user = userEvent.setup();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Send invite' })).toBeDisabled();
 
@@ -90,7 +90,7 @@ describe('InviteMemberModal — email-required', () => {
 
   it('blocks the invite on a malformed email', async () => {
     const user = userEvent.setup();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'not-an-email');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -117,7 +117,7 @@ describe('InviteMemberModal — email-required', () => {
       opts?.onSuccess?.({ invite: { invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' } })
     );
     const onClose = vi.fn();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
 
     await user.type(screen.getByLabelText('Email address'), '  ana@example.com  ');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -141,7 +141,7 @@ describe('InviteMemberModal — email-required', () => {
     mutate.mockImplementation((_vars, opts) =>
       opts?.onSuccess?.({ invite: { invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' } })
     );
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(screen.getByRole('heading', { name: 'Invitation sent' })).toHaveFocus();
@@ -153,7 +153,7 @@ describe('InviteMemberModal — email-required', () => {
       opts?.onSuccess?.({ invite: { invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' } })
     );
     const onClose = vi.fn();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -179,7 +179,7 @@ describe('InviteMemberModal — email-required', () => {
       opts?.onSuccess?.({ invite: { invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' } })
     );
     const { container } = render(
-      <InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
+      <InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
     );
 
     // Exact token match, not a substring check: a ghost button's
@@ -211,7 +211,7 @@ describe('InviteMemberModal — email-required', () => {
   it('passes the chosen role through for a non-self-care circle', async () => {
     const user = userEvent.setup();
     mutate.mockImplementation((_vars, opts) => opts?.onSuccess?.());
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.click(screen.getByRole('radio', { name: /Care Recipient/i }));
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
@@ -224,7 +224,7 @@ describe('InviteMemberModal — email-required', () => {
   });
 
   it('hides the role picker for a self-care circle', () => {
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare onClose={vi.fn()} />);
     expect(screen.queryByRole('radio', { name: /Care Recipient/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
   });
@@ -234,7 +234,7 @@ describe('InviteMemberModal — email-required', () => {
     mutate.mockImplementation((_vars, opts) =>
       opts?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED' } })
     );
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -262,7 +262,7 @@ describe('InviteMemberModal — email-required', () => {
         },
       })
     );
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -284,7 +284,7 @@ describe('InviteMemberModal — email-required', () => {
         },
       })
     );
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -303,7 +303,7 @@ describe('InviteMemberModal — email-required', () => {
         },
       })
     );
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -320,7 +320,7 @@ describe('InviteMemberModal — email-required', () => {
     mutate.mockImplementation((_vars, opts) =>
       opts?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED' } })
     );
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -363,7 +363,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
   }
 
   it('fires exactly once, with no arguments (no circle id), when the cap card appears after a 402', async () => {
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
     expect(capReached).not.toHaveBeenCalled();
 
     await rejectWith402();
@@ -374,7 +374,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
 
   it('does not fire again on a re-render that leaves the card in place', async () => {
     const user = userEvent.setup();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
     await rejectWith402();
 
     // Typing re-renders the modal several times; the card stays as it was.
@@ -387,7 +387,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
 
   it('fires once more when a SECOND attempt hits the cap again', async () => {
     const user = userEvent.setup();
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
     await rejectWith402();
 
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -397,7 +397,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
   });
 
   it('counts the recoverable pending-seat card as a cap reached too', async () => {
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await rejectWith402({
       reason: 'pending_invite_seat',
@@ -413,7 +413,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
     mutate.mockImplementation((_vars, opts) =>
       opts?.onError?.({ error: { code: 'ALREADY_MEMBER' } })
     );
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -424,7 +424,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
 
   it('leaves invite_started on open exactly as it was', () => {
     const started = vi.spyOn(Analytics, 'inviteStarted');
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     expect(started).toHaveBeenCalledTimes(1);
     expect(started).toHaveBeenCalledWith(CIRCLE_ID);
@@ -457,7 +457,7 @@ describe('InviteMemberModal — sharing the link', () => {
   async function sendInvite(navStubs: Record<string, unknown> = {}) {
     const user = userEvent.setup();
     stubNavigator(navStubs);
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     return user;
@@ -702,7 +702,7 @@ describe('InviteMemberModal — double-submit guard', () => {
     // submit.
     mutate.mockImplementation(() => {});
     const { container } = render(
-      <InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
+      <InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
     );
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
@@ -715,7 +715,7 @@ describe('InviteMemberModal — double-submit guard', () => {
     const user = userEvent.setup();
     mutate.mockImplementation(() => {});
     const { container } = render(
-      <InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
+      <InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
     );
     const form = container.querySelector('#invite-member-form') as HTMLFormElement;
 
@@ -741,7 +741,7 @@ describe('InviteMemberModal — double-submit guard', () => {
     mutate.mockImplementation((_vars, opts) => {
       pending = opts;
     });
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -763,7 +763,7 @@ describe('InviteMemberModal — double-submit guard', () => {
     mutate.mockImplementation((_vars, opts) => {
       pending = opts;
     });
-    render(<InviteMemberModal circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
@@ -787,7 +787,7 @@ describe('InviteMemberModal — double-submit guard', () => {
 describe('InviteMemberModal — daily update line (plan §2.3, D10)', () => {
   it('tells the owner the people they invite get a daily update on the recipient', () => {
     render(
-      <InviteMemberModal
+      <InviteMemberModal viewerIsOwner
         circleId={CIRCLE_ID}
         isSelfCare={false}
         recipientName="Rose"
@@ -801,7 +801,7 @@ describe('InviteMemberModal — daily update line (plan §2.3, D10)', () => {
 
   it('self-care circles speak about the owner\'s own day', () => {
     render(
-      <InviteMemberModal circleId={CIRCLE_ID} isSelfCare recipientName="Pat" onClose={vi.fn()} />
+      <InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare recipientName="Pat" onClose={vi.fn()} />
     );
     expect(screen.getByTestId('invite-daily-update-line')).toHaveTextContent(
       'The people you invite get a daily update on your day.'
@@ -811,7 +811,7 @@ describe('InviteMemberModal — daily update line (plan §2.3, D10)', () => {
   it('is absent while the server reports the feature switched off', () => {
     dailyUpdateOn = false;
     render(
-      <InviteMemberModal
+      <InviteMemberModal viewerIsOwner
         circleId={CIRCLE_ID}
         isSelfCare={false}
         recipientName="Rose"
@@ -826,7 +826,7 @@ describe('InviteMemberModal — daily update line (plan §2.3, D10)', () => {
     await i18n.changeLanguage('es');
     try {
       render(
-        <InviteMemberModal
+        <InviteMemberModal viewerIsOwner
           circleId={CIRCLE_ID}
           isSelfCare={false}
           recipientName="Rose"
@@ -839,5 +839,76 @@ describe('InviteMemberModal — daily update line (plan §2.3, D10)', () => {
     } finally {
       await i18n.changeLanguage('en');
     }
+  });
+});
+
+// Manager role: seats are the OWNER's plan. A manager who hits the cap is told
+// to ask the owner and is NEVER offered Upgrade (memory
+// project_owner_aware_premium_gates) — even with web billing configured.
+describe('InviteMemberModal — a MANAGER at the seat cap', () => {
+  async function sendAsManager(
+    error: unknown,
+    props: { ownerName?: string } = {}
+  ): Promise<HTMLElement> {
+    const user = userEvent.setup();
+    mutate.mockImplementation((_vars, opts) => opts?.onError?.(error));
+    render(
+      <InviteMemberModal
+        viewerIsOwner={false}
+        ownerName={props.ownerName}
+        circleId={CIRCLE_ID}
+        isSelfCare={false}
+        onClose={vi.fn()}
+      />
+    );
+    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invite' }));
+    return screen.findByRole('alert');
+  }
+
+  it('names the owner and offers no Upgrade on a members_full 402', async () => {
+    const note = await sendAsManager(
+      { error: { code: 'SUBSCRIPTION_REQUIRED', details: { reason: 'members_full' } } },
+      { ownerName: 'Luis' }
+    );
+    expect(note).toHaveTextContent(
+      'Free circles include up to two caregivers. Only Luis, the circle owner, can upgrade to add more.'
+    );
+    expect(note).not.toHaveTextContent(/Upgrade to Premium/);
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('uses the nameless owner copy when the owner has no name', async () => {
+    const note = await sendAsManager({ error: { code: 'SUBSCRIPTION_REQUIRED' } });
+    expect(note).toHaveTextContent('Only the circle owner can upgrade to add more.');
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
+  });
+
+  it('explains a held seat with "ask the circle owner", not "upgrade to Premium"', async () => {
+    const note = await sendAsManager({
+      error: {
+        code: 'SUBSCRIPTION_REQUIRED',
+        details: {
+          reason: 'pending_invite_seat',
+          blocking_invite: { id: 'inv-2', invited_email: 'blocked@example.com' },
+        },
+      },
+    });
+    expect(note).toHaveTextContent('blocked@example.com');
+    expect(note).toHaveTextContent(/ask the circle owner to upgrade/);
+    expect(note).not.toHaveTextContent(/upgrade to Premium to add more/i);
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
+  });
+
+  it('nameless held seat, manager copy', async () => {
+    const note = await sendAsManager({
+      error: {
+        code: 'SUBSCRIPTION_REQUIRED',
+        details: { reason: 'pending_invite_seat', blocking_invite: null },
+      },
+    });
+    expect(note).toHaveTextContent(/held by another pending invite.*ask the circle owner/);
+    expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
   });
 });

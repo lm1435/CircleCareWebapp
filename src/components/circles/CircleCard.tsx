@@ -16,13 +16,14 @@ export interface CircleCardProps {
   circle: Circle;
 }
 
-type RoleKey = 'owner' | 'caregiver' | 'careRecipient';
+type RoleKey = 'owner' | 'manager' | 'caregiver' | 'careRecipient';
 
 // Soft status-dot tint on the avatar, by role (mirrors mobile's accent dot).
 // Care-recipient identity uses coral (warmth/identity), never terracotta
 // (reserved for danger/alarm — see the overdue alert badge below).
 const roleDotClass: Record<RoleKey, string> = {
   owner: 'bg-moss',
+  manager: 'bg-dusk',
   careRecipient: 'bg-coral',
   caregiver: 'bg-dusk',
 };
@@ -32,13 +33,17 @@ const roleDotClass: Record<RoleKey, string> = {
 // pair per role.
 const roleBadgeClass: Record<RoleKey, string> = {
   owner: 'rounded-sm bg-moss-wash px-2 py-0.5 text-xs font-semibold text-moss-deep',
+  // Manager: dusk pair (the Badge `dusk` variant's tokens), so it never reads
+  // as the owner's moss or as an alarm.
+  manager: 'rounded-sm bg-dusk-soft px-2 py-0.5 text-xs font-semibold text-dusk-deep',
   careRecipient: 'rounded-sm bg-clay-soft px-2 py-0.5 text-xs font-semibold text-clay-deep',
   caregiver: 'rounded-sm bg-bg-2 px-2 py-0.5 text-xs font-semibold text-ink-2',
 };
 
 function getRoleKey(circle: Circle): RoleKey {
   if (circle.is_care_recipient) return 'careRecipient';
-  return circle.role === 'owner' ? 'owner' : 'caregiver';
+  if (circle.role === 'owner') return 'owner';
+  return circle.role === 'manager' ? 'manager' : 'caregiver';
 }
 
 /**

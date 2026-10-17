@@ -60,6 +60,7 @@ export const PERSONAS = [
   'viewOnlyMember',
   'frozenCircleOwner',
   'archivedCircleOwner',
+  'premiumManager',
 ] as const;
 
 export type PersonaName = (typeof PERSONAS)[number];
@@ -184,6 +185,25 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     needsCircleSelection: false,
     isOwner: true,
     archived: true,
+  },
+  // Manager role (docs/plans/manager-role.md): a non-owner caregiver whose
+  // membership row is role 'manager' in a PREMIUM host's circle. The flags are
+  // a premium non-owner's (circleAccess.ts: owner tier != free -> full); what
+  // makes the persona a MANAGER is `viewer_role` / `viewer_permissions`, which
+  // the backend serves only while app_settings `manager_role_enabled` = 'on'
+  // (e2e/managerRole.ts switches it on per run). With the switch off the same
+  // rows are a plain member. AI suggestions are not probed (an allowed caller
+  // would reach the model).
+  premiumManager: {
+    detail: { access_level: 'full', can_edit: true, view_only: false, is_premium_circle: true },
+    listed: true,
+    read_only: false,
+    aiEntry: 'available',
+    aiSuggestions: null,
+    writeGate: null,
+    needsCircleSelection: false,
+    isOwner: false,
+    archived: false,
   },
 };
 
@@ -368,6 +388,7 @@ const PERSONA_TOKEN: Record<Exclude<PersonaName, 'premiumOwner'>, string> = {
   viewOnlyMember: 'viewonly',
   frozenCircleOwner: 'frozenowner',
   archivedCircleOwner: 'archivedowner',
+  premiumManager: 'manager',
 };
 
 function personaEmail(slot: string, token: string): string {
@@ -434,6 +455,36 @@ async function provision(slot: string, persona: Exclude<PersonaName, 'premiumOwn
       return {
         ...base, userId, circleId, circleIds: [circleId, other], ownerUserId: userId, ownerEmail: email,
         liveCircleIds: [circleId, other], archivedCircleIds: [], seeded,
+      };
+    }
+    case 'premiumManager': {
+      // Premium host + the template's caregivers; the persona joins FIRST and is
+      // made a manager (the row PATCH …/members/:userId/role writes). A second
+      // manager ("peer") and a plain caregiver with a known name make the
+      // manager's remove rules (never the owner, never another manager)
+      // checkable by name. Their names are set so roster rows are predictable.
+      const hostEmail = personaEmail(slot, `${token}-host`);
+      const hostId = await account(hostEmail, 'premium');
+      const circleId = clone(template, 0, hostId);
+      const userId = await account(email, 'free');
+      addCaregiver(circleId, userId, 'first');
+      const peerId = await account(personaEmail(slot, `${token}-peer`), 'free');
+      addCaregiver(circleId, peerId, 'last');
+      const plainId = await account(personaEmail(slot, `${token}-plain`), 'free');
+      addCaregiver(circleId, plainId, 'last');
+      sqlExec(`
+        update circle_memberships set role = 'manager'
+         where circle_id = ${sqlStr(circleId)}::uuid
+           and user_id in (${sqlStr(userId)}::uuid, ${sqlStr(peerId)}::uuid);
+        update public.users set first_name = 'Mara', last_name = 'Manager' where id = ${sqlStr(userId)}::uuid;
+        update public.users set first_name = 'Pia', last_name = 'Peer' where id = ${sqlStr(peerId)}::uuid;
+        update public.users set first_name = 'Cal', last_name = 'Plain' where id = ${sqlStr(plainId)}::uuid;
+        update public.users set first_name = 'Hana', last_name = 'Host' where id = ${sqlStr(hostId)}::uuid;
+      `);
+      const seeded = await seedMissingRecords(circleId, hostId);
+      return {
+        ...base, userId, circleId, circleIds: [circleId], ownerUserId: hostId, ownerEmail: hostEmail,
+        liveCircleIds: [circleId], archivedCircleIds: [], seeded,
       };
     }
     case 'archivedCircleOwner': {

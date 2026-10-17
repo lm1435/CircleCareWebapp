@@ -19,6 +19,14 @@ vi.mock('@/api/invites', async (importOriginal) => {
 // Deterministic translations so error toasts assert on a stable key string.
 // Interpolation values are appended verbatim (`key:value`) so a message that
 // must NAME the blocking invitee is assertable without loading real i18n.
+// The viewer's role is read from the circle-detail cache at call time (see
+// lib/circleViewerRole.ts); stubbed so each test can say who is acting.
+const viewerRole = vi.hoisted(() => ({ owner: true, actor: 'owner' as 'owner' | 'manager' }));
+vi.mock('@/lib/circleViewerRole', () => ({
+  cachedActorRole: () => viewerRole.actor,
+  cachedViewerOwnsCircle: () => viewerRole.owner,
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
@@ -52,6 +60,7 @@ import {
   type ResendInviteResult,
 } from '@/api/invites';
 import { queryKeys } from '@/lib/queryKeys';
+import { Analytics } from '@/lib/analytics';
 import {
   useCreateInvite,
   useCancelInvite,
@@ -252,6 +261,68 @@ describe('useCreateInvite', () => {
     expect(promptUpgrade).toHaveBeenCalledWith('errors.pendingInviteSeatUnknown');
     expect(showToast).not.toHaveBeenCalledWith('errors.pendingInviteSeatUnknown', 'error');
   });
+
+  // Manager role: seats are the OWNER's plan, so a manager's copy must not
+  // tell them to upgrade -- it says to ask the owner (promptUpgrade shows a
+  // non-owner's message as-is, with no action).
+  it('gives a MANAGER the ask-the-owner pending-seat copy, never "upgrade to Premium"', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue(PENDING_SEAT_ENVELOPE);
+    viewerRole.owner = false;
+    try {
+      const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+      result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(promptUpgrade).toHaveBeenCalledWith(
+        'errors.pendingInviteSeatAskOwner:blocked@example.com'
+      );
+      expect(promptUpgrade).not.toHaveBeenCalledWith(
+        'errors.pendingInviteSeat:blocked@example.com'
+      );
+    } finally {
+      viewerRole.owner = true;
+    }
+  });
+
+  it('gives a MANAGER the nameless ask-the-owner copy when blocking_invite is missing', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue({
+      success: false,
+      error: {
+        code: 'SUBSCRIPTION_REQUIRED',
+        message: 'upgrade',
+        details: { reason: 'pending_invite_seat', blocking_invite: null },
+      },
+    });
+    viewerRole.owner = false;
+    try {
+      const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+      result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(promptUpgrade).toHaveBeenCalledWith('errors.pendingInviteSeatAskOwnerUnknown');
+    } finally {
+      viewerRole.owner = true;
+    }
+  });
+
+  it.each(['owner', 'manager'] as const)(
+    'fires invite_sent with actor_role %s',
+    async (actor) => {
+      const { wrapper } = setup();
+      mockCreate.mockResolvedValue(CREATE_RESULT);
+      const spy = vi.spyOn(Analytics, 'inviteSent');
+      viewerRole.actor = actor;
+      try {
+        const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+        result.current.mutate({ email: 'a@b.com', member_type: 'caregiver' });
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(spy).toHaveBeenCalledWith(CIRCLE_ID, 'caregiver', actor);
+      } finally {
+        viewerRole.actor = 'owner';
+        spy.mockRestore();
+      }
+    }
+  );
 
   it('prompts the upgrade for a members_full 402', async () => {
     const { wrapper } = setup();

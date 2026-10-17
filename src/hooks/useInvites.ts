@@ -28,6 +28,7 @@ import {
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
+import { cachedActorRole, cachedViewerOwnsCircle } from '@/lib/circleViewerRole';
 
 // Plan Stage 5, Task 5.2 — invite mutations + pending-invites query.
 //
@@ -84,10 +85,18 @@ function useInviteMutationOnError(
       // because having used up the only free seat IS a real reason to buy more.
       // Routing through promptUpgrade keeps this to a single toast carrying both
       // the explanation and the action, rather than two competing ones.
+      // A MANAGER is not the one who can buy more seats, so their copy ends in
+      // "ask the circle owner" instead of "upgrade to Premium" (promptUpgrade
+      // shows a non-owner's message as-is, with no action).
+      const owner = cachedViewerOwnsCircle(circleId);
       promptUpgrade(
         pendingSeat.email
-          ? t('errors.pendingInviteSeat', { email: pendingSeat.email })
-          : t('errors.pendingInviteSeatUnknown')
+          ? owner
+            ? t('errors.pendingInviteSeat', { email: pendingSeat.email })
+            : t('errors.pendingInviteSeatAskOwner', { email: pendingSeat.email })
+          : owner
+            ? t('errors.pendingInviteSeatUnknown')
+            : t('errors.pendingInviteSeatAskOwnerUnknown')
       );
       invalidateCircleAccessFlags(queryClient, circleId);
     } else if (isSubscriptionRequiredError(error)) {
@@ -130,7 +139,7 @@ export function useCreateInvite(
     mutationFn: (data: CreateInviteRequest) => createInvite(circleId, data),
     onSuccess: (_response, variables) => {
       // PHI-safe: only circle_id + the member_type role enum (never the email).
-      Analytics.inviteSent(circleId, variables.member_type);
+      Analytics.inviteSent(circleId, variables.member_type, cachedActorRole(circleId));
       // A new pending invite changes the circle detail (pending_invites list) and
       // the circle summary (member/invite counts).
       void queryClient.invalidateQueries({ queryKey: queryKeys.circle(circleId) });
