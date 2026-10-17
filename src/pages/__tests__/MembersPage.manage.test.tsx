@@ -272,7 +272,7 @@ describe('MembersPage — owner management', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Leave circle' }));
 
     expect(leaveCircle).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledWith('/circles');
+    expect(navigate).toHaveBeenCalledWith('/circles', { replace: true, state: { fromSwitcher: true } });
   });
 
   it('lists pending invites and cancels one via useCancelInvite after confirm', async () => {

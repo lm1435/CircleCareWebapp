@@ -107,7 +107,12 @@ export default function MembersPage(): ReactElement {
       onSuccess: () => {
         showToast(t('manage.leaveSuccess'), 'success');
         setShowLeave(false);
-        navigate('/circles');
+        // REPLACE, not push: the page this was done on belongs to a circle the
+        // user is no longer in, so browser Back must not return to it (mobile
+        // parity: returnToCircleList pops the left circle off the stack).
+        // `fromSwitcher`: land ON the picker even when one circle is left — no
+        // auto-skip into the other circle (mobile shows its list, 2026-10-17).
+        navigate('/circles', { replace: true, state: { fromSwitcher: true } });
       },
       onError: () => setShowLeave(false),
     });

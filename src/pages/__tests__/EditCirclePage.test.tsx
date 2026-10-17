@@ -302,7 +302,7 @@ describe('EditCirclePage', () => {
     // Trigger the success callback passed to mutate to assert navigation.
     const opts = deleteMutate.mock.calls[0][1];
     opts.onSuccess();
-    expect(navigate).toHaveBeenCalledWith('/circles');
+    expect(navigate).toHaveBeenCalledWith('/circles', { replace: true, state: { fromSwitcher: true } });
   });
 
   // Home's settings row links to `/circles/:id/settings#danger` (a plain

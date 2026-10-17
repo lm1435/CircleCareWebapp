@@ -216,7 +216,11 @@ export default function EditCirclePage(): ReactElement {
     remove.mutate(undefined, {
       onSuccess: () => {
         showToast(t('edit.deletedToast'), 'success');
-        navigate('/circles');
+        // REPLACE, not push: browser Back must not return to the deleted
+        // circle's settings (mobile parity: returnToCircleList pops it).
+        // `fromSwitcher`: land ON the picker even when one circle is left — no
+        // auto-skip into the other circle (mobile shows its list, 2026-10-17).
+        navigate('/circles', { replace: true, state: { fromSwitcher: true } });
       },
     });
   };

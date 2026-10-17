@@ -23,8 +23,9 @@ function greetingKey(): 'morning' | 'afternoon' | 'evening' {
 }
 
 interface PickerLocationState {
-  /** Set by the header's "All circles" switcher item — see the auto-skip
-   *  effect below. */
+  /** Set by the header's "All circles" switcher item, and by leave / delete
+   *  circle (the person lands on the picker, never auto-skipped into the one
+   *  circle left) — see the auto-skip effect below. */
   fromSwitcher?: boolean;
 }
 

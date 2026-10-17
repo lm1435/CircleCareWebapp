@@ -1,7 +1,8 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import type { ReactElement } from 'react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import '@/i18n';
 import MembersPage from '@/pages/MembersPage';
 import CirclePickerPage from '@/pages/CirclePickerPage';
@@ -163,6 +164,105 @@ describe('PK16: leaving the only circle never forwards back into it', () => {
     await new Promise((r) => setTimeout(r, 400));
 
     expect(visited).not.toContain('/circles/c1');
+    expect(screen.queryByTestId('overview-page')).not.toBeInTheDocument();
+    expect(visited[visited.length - 1]).toBe('/circles');
+  });
+});
+
+/**
+ * Browser Back after leaving must not return to the page the leave was done on
+ * (mobile parity: returnToCircleList pops the left circle off the stack instead
+ * of pushing a second list over it). The leave REPLACES that history entry.
+ */
+function BackButton(): ReactElement {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      probe-back
+    </button>
+  );
+}
+
+describe('leaving: the left circle page is not left in browser history', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    visited.length = 0;
+  });
+
+  it('Back from the picker does not land on /circles/<left>/members', async () => {
+    const user = userEvent.setup();
+    vi.mocked(leaveCircle).mockResolvedValue(undefined);
+    vi.mocked(getCircles).mockResolvedValue([]);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(queryKeys.circles, []);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={['/elsewhere', '/circles/c1/members']} initialIndex={1}>
+            <LocationProbe />
+            <BackButton />
+            <Routes>
+              <Route path="/circles/:circleId/members" element={<MembersPage />} />
+              <Route path="/circles" element={<CirclePickerPage />} />
+              <Route path="/elsewhere" element={<div data-testid="elsewhere" />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Leave circle' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Leave circle' }));
+    await waitFor(() => expect(visited[visited.length - 1]).toBe('/circles'));
+
+    await user.click(screen.getByRole('button', { name: 'probe-back' }));
+    await waitFor(() => expect(screen.getByTestId('elsewhere')).toBeInTheDocument());
+    expect(visited[visited.length - 1]).toBe('/elsewhere');
+  });
+});
+
+/**
+ * Leaving ONE OF TWO circles: the picker would auto-skip into the one circle
+ * left. Mobile lands on its circle list after a leave (the list under the
+ * circle never auto-forwards), so web lands on the picker too.
+ */
+describe('leaving one of two circles lands on the picker (mobile parity)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    visited.length = 0;
+  });
+
+  it('shows the picker with the remaining circle; no auto-skip into it', async () => {
+    const user = userEvent.setup();
+    const other = { ...leftCircle, id: 'c2', name: "Dad's Care", recipient_name: 'Walt' } as Circle;
+    vi.mocked(leaveCircle).mockResolvedValue(undefined);
+    vi.mocked(getCircles).mockResolvedValue([other]);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(queryKeys.circles, [leftCircle, other]);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={['/circles/c1/members']}>
+            <LocationProbe />
+            <Routes>
+              <Route path="/circles/:circleId/members" element={<MembersPage />} />
+              <Route path="/circles" element={<CirclePickerPage />} />
+              <Route path="/circles/:circleId" element={<div data-testid="overview-page" />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Leave circle' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Leave circle' }));
+    await waitFor(() => expect(visited).toContain('/circles'));
+    await waitFor(() => expect(screen.getByText('1 care circle')).toBeInTheDocument());
+    await new Promise((r) => setTimeout(r, 300));
+
+    expect(visited).not.toContain('/circles/c2');
     expect(screen.queryByTestId('overview-page')).not.toBeInTheDocument();
     expect(visited[visited.length - 1]).toBe('/circles');
   });
