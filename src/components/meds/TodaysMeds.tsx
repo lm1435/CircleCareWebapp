@@ -322,9 +322,9 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
   // skeleton): the inset, border and list gap are the loaded list's.
   const skeleton = (
     <div className={careCardListGap} aria-busy="true" data-testid="todays-meds-skeleton">
-      <CareCardSkeleton withAction />
-      <CareCardSkeleton withAction />
-      <CareCardSkeleton withAction />
+      <CareCardSkeleton action={canEdit ? 'dose' : undefined} />
+      <CareCardSkeleton action={canEdit ? 'dose' : undefined} />
+      <CareCardSkeleton action={canEdit ? 'dose' : undefined} />
     </div>
   );
 

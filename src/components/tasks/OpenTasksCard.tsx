@@ -74,8 +74,8 @@ export function OpenTasksCard({
         <span role="status" className="sr-only">
           {t('common:loading')}
         </span>
-        <CareCardSkeleton />
-        <CareCardSkeleton />
+        <CareCardSkeleton action={canEdit ? 'task' : undefined} />
+        <CareCardSkeleton action={canEdit ? 'task' : undefined} />
       </div>
     );
   } else if (tasksQuery.isError || (openTasks.length === 0 && everTasksQuery.isError)) {

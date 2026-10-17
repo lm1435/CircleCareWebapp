@@ -62,6 +62,7 @@ export {
   careCardActionsInline,
   careCardActionsRow,
   careCardActionBtn,
+  careCardActionCompact,
   careCardActionPrimary,
   careCardActionSecondary,
   careCardActionText,

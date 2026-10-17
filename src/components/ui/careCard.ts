@@ -82,6 +82,14 @@ export const careCardActionsRow = 'mt-2 hidden items-center justify-end gap-1 @m
 export const careCardActionBtn =
   'inline-flex items-center justify-center min-h-[44px] min-w-[88px] px-[18px] py-2 rounded-full gap-1.5 text-sm font-semibold transition-transform duration-fast ease-spring active:scale-[0.97]';
 
+/**
+ * The COMPACT pill modifier — TaskRow's single Done, which shares the content
+ * row with the title. Layer it AFTER `careCardActionPrimary`/`careCardActionBtn`
+ * (mobile `careCardActions.compactButton`: minWidth 66, paddingHorizontal 16).
+ * The task card skeleton draws its Done placeholder from the same token.
+ */
+export const careCardActionCompact = 'min-w-[66px] px-4';
+
 /** Primary action pill (e.g. Take, Done) — moss fill, cream text. */
 export const careCardActionPrimary = `${careCardActionBtn} bg-moss text-cream`;
 

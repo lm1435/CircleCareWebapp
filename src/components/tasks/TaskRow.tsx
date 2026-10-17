@@ -5,6 +5,7 @@ import type { CircleMember } from '@/api/circleMembers';
 import {
   Icon,
   UndoBadge,
+  careCardActionCompact,
   careCardActionPrimary,
   careCardActionsInline,
   careCardActionsRow,
@@ -252,7 +253,7 @@ export function TaskRow({
           }}
           aria-label={t('row.completeLabel', { title: task.title })}
           {...offlineDisabledProps(offline)}
-          className={`${careCardActionPrimary} min-w-[66px] px-4`}
+          className={`${careCardActionPrimary} ${careCardActionCompact}`}
         >
           {t('row.done')}
         </button>
