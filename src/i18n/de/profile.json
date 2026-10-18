@@ -196,5 +196,15 @@
     "impactMessage_one": "Die Dosiszeiten für {{names}} richten sich nach Ihrer Zeitzone, da diese Person kein eigenes Konto hat. Wenn Sie auf {{zone}} wechseln, werden diese Erinnerungen auf dieselbe Uhrzeit in {{zone}} verschoben.",
     "impactMessage_other": "Die Dosiszeiten für {{names}} richten sich nach Ihrer Zeitzone, da diese Personen kein eigenes Konto haben. Wenn Sie auf {{zone}} wechseln, werden diese Erinnerungen auf dieselbe Uhrzeit in {{zone}} verschoben.",
     "impactConfirm": "Zeitzone ändern"
+  },
+  "appearance": {
+    "title": "Darstellung",
+    "darkMode": "Dunkelmodus",
+    "comingSoon": "Demnächst",
+    "requested": "Angefragt",
+    "hint": "Möchten Sie den Dunkelmodus? Tippen Sie, um es uns mitzuteilen. Das hilft uns zu entscheiden, was wir als Nächstes entwickeln.",
+    "thanks": "Danke. Wir haben Ihre Stimme vermerkt.",
+    "a11yComingSoon": "Dunkelmodus, demnächst",
+    "a11yRequested": "Dunkelmodus, angefragt"
   }
 }

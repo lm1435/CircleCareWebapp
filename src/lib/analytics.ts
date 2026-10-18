@@ -983,6 +983,11 @@ export const Analytics = {
   // --- Settings (web-new) ---
   languageChanged: (language: string) => capture('language_changed', { language }),
   timezoneChanged: (timezone: string) => capture('timezone_changed', { timezone }),
+  /** Profile > Appearance dark-mode fake door. Booleans only. */
+  darkModeInterestShown: (props: { system_dark: boolean }) =>
+    capture('dark_mode_interest_shown', props),
+  darkModeInterestTapped: (props: { system_dark: boolean }) =>
+    capture('dark_mode_interest_tapped', props),
   /** Profile > Notifications group switch. Enums/booleans only (no circle id,
    *  no names). `confirmed` is present only for the Medications-off confirm. */
   notificationGroupToggled: (props: {

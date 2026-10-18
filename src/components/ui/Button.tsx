@@ -40,6 +40,16 @@ const SIZE = {
   lg: 'min-h-[52px] px-8 py-5 rounded-xl text-md',
 } as const;
 
+/**
+ * Look of a button that is waiting on a REQUIRED input (`incomplete`): a light
+ * paper fill, ink-3 label and the `line-strong` control edge, so it can never
+ * be mistaken for the enabled moss action (a dark slab with a white label read
+ * as pressable). Same family as a resting secondary button. ink-3 on bg-2 is
+ * 4.6:1. No shadow, no press-scale: nothing happens on press except a focus move.
+ */
+const INCOMPLETE =
+  'bg-bg-2 text-ink-3 border-[1.5px] border-line-strong hover:bg-bg-2 cursor-not-allowed';
+
 /** Every accepted variant name → its class set. */
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: VARIANT.primary,
@@ -61,6 +71,17 @@ type ButtonOwnProps = {
    * Use `disabled` only when the action is unavailable.
    */
   busy?: boolean;
+  /**
+   * A required input is still missing. The button is greyed (see INCOMPLETE)
+   * but stays focusable and pressable: it renders `aria-disabled` (never the
+   * native `disabled`, which would drop it from the tab order and swallow the
+   * press), a press NEVER activates it (the default action, e.g. a form
+   * submit, is cancelled) and `onClick` is called so the caller can move
+   * focus to the missing field. `disabled` / `loading` / `busy` win over the
+   * behaviour (a truly unavailable button is inert); the muted look stays
+   * unless `loading`.
+   */
+  incomplete?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   fullWidth?: boolean;
@@ -118,6 +139,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
     size = 'md',
     loading = false,
     busy = false,
+    incomplete = false,
     leftIcon,
     rightIcon,
     fullWidth = false,
@@ -140,6 +162,8 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
   // `busy` swaps the native disable for aria-disabled so focus survives.
   const isDisabled = Boolean(disabled) || (loading && !busy);
   const isBusy = busy && !disabled;
+  // Not while a save is in flight or the action is unavailable: those win.
+  const isIncomplete = incomplete && !isDisabled && !isBusy && !loading;
   const offline = useIsOffline();
   // Offline-refused: same treatment as busy (aria-disabled, focus kept), but
   // the press explains. A native `disabled` would swallow the press silently.
@@ -147,7 +171,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
 
   const classes = [
     BASE,
-    VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.primary,
+    (incomplete && !loading) ? INCOMPLETE : (VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.primary),
     SIZE[size],
     fullWidth ? 'w-full' : null,
     // Positioning context for the loading overlay. Kept out of BASE because
@@ -178,6 +202,13 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
         event.preventDefault();
         explainOfflineWrite(offlineKind);
       }
+    : isIncomplete
+      ? (event: { preventDefault: () => void }) => {
+          // Never activates: cancel the default (form submit) and let the
+          // caller's handler do the only thing a press means here.
+          event.preventDefault();
+          (onClick as ((...args: unknown[]) => unknown) | undefined)?.(event);
+        }
     : isBusy
       ? (event: { preventDefault: () => void }) => {
           // Ignored while busy; preventDefault also stops a submit button
@@ -192,7 +223,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
       className={classes}
       aria-busy={loading ? true : ariaBusy}
       {...elementProps}
-      {...(isBusy ? { 'aria-disabled': true as const } : {})}
+      {...(isBusy || isIncomplete ? { 'aria-disabled': true as const } : {})}
       {...rest}
       // After `rest`: a caller's own `aria-disabled={false}` must not undo it.
       {...(isOfflineBlocked ? { 'aria-disabled': true as const, 'data-offline-disabled': true } : {})}

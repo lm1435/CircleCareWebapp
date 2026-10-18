@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { Link, MemoryRouter } from 'react-router-dom';
 import { Button } from '../Button';
 
@@ -406,6 +406,68 @@ describe('Button', () => {
       );
       expect(container.querySelector('a')).not.toBeNull();
       expect(container.querySelector('button')).toBeNull();
+    });
+  });
+
+  describe('incomplete (a required input is missing)', () => {
+    it('is aria-disabled but not natively disabled, with the muted look', () => {
+      const { container } = render(<Button incomplete>Create</Button>);
+      const node = btn(container);
+      expect(node).toHaveAttribute('aria-disabled', 'true');
+      expect(node).not.toBeDisabled();
+      expect(node.className).toContain('bg-bg-2');
+      expect(node.className).toContain('text-ink-3');
+      expect(node.className).toContain('border-line-strong');
+      expect(node.className).not.toContain('bg-moss');
+    });
+
+    it('a press calls onClick but cancels the default (never submits)', () => {
+      const onClick = vi.fn();
+      const onSubmit = vi.fn((e: { preventDefault: () => void }) => e.preventDefault());
+      const { container } = render(
+        <form onSubmit={onSubmit}>
+          <Button type="submit" incomplete onClick={onClick}>
+            Create
+          </Button>
+        </form>
+      );
+      expect(fireEvent.click(btn(container))).toBe(false);
+      expect(onClick).toHaveBeenCalledTimes(1);
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('is inert when truly disabled: native disabled, onClick never runs', () => {
+      const onClick = vi.fn();
+      const { container } = render(
+        <Button incomplete disabled onClick={onClick}>
+          Create
+        </Button>
+      );
+      const node = btn(container);
+      expect(node).toBeDisabled();
+      expect(node).not.toHaveAttribute('aria-disabled');
+      fireEvent.click(node);
+      expect(onClick).not.toHaveBeenCalled();
+    });
+
+    it('is inert while loading and drops the muted look', () => {
+      const onClick = vi.fn();
+      const { container } = render(
+        <Button incomplete loading onClick={onClick}>
+          Create
+        </Button>
+      );
+      const node = btn(container);
+      expect(node).toBeDisabled();
+      expect(node.className).not.toContain('bg-bg-2');
+      fireEvent.click(node);
+      expect(onClick).not.toHaveBeenCalled();
+    });
+
+    it('without incomplete a button is unchanged (no aria-disabled)', () => {
+      const { container } = render(<Button>Create</Button>);
+      expect(btn(container)).not.toHaveAttribute('aria-disabled');
+      expect(btn(container).className).toContain('bg-moss');
     });
   });
 });

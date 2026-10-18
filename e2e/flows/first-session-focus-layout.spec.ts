@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
+import { checkA11y } from '../helpers';
 
 // 1.2.3 "first session focus", sections E + F — the parts jsdom cannot see.
 //
@@ -202,6 +203,99 @@ test.describe('Save is always visible on the add form', () => {
       await expect(dialog).toBeHidden({ timeout: 10_000 });
     });
   }
+});
+
+test.describe('Greyed Save is still pressable: it takes you to the missing field', () => {
+  test.use({ viewport: { width: 1280, height: 560 } });
+
+  test('Appointment: pressing the greyed Create focuses the empty title and saves nothing', async ({
+    page,
+    circleId,
+  }, testInfo) => {
+    const dialog = await openNewEntry(page, circleId, 'Appointment');
+    const save = dialog.getByTestId('add-event-save');
+    const hint = dialog.getByTestId('add-event-save-missing');
+
+    // Greyed, not natively disabled: focusable, and it names what is missing.
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    expect(await save.evaluate((el) => (el as HTMLButtonElement).disabled)).toBe(false);
+    await expect(save).toHaveAccessibleDescription('Please enter a title.');
+    await expect(hint).toBeVisible();
+
+    // Light fill + ink-3 label, not the dark moss slab; the 48px target holds.
+    const look = await save.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { bg: cs.backgroundColor, color: cs.color, h: (el as HTMLElement).offsetHeight };
+    });
+    expect(look.bg, 'light fill').toBe('rgb(243, 239, 230)');
+    expect(look.color, 'ink-3 label').toBe('rgb(110, 105, 97)');
+    expect(look.h).toBeGreaterThanOrEqual(48);
+
+    await checkA11y(page, 'add-event-greyed-save', testInfo);
+
+    // Scroll the form away from the title, then press the greyed Create.
+    const scroller = dialog.locator('#add-event-form').locator('xpath=..');
+    await scroller.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await save.click({ force: true }); // Playwright reads aria-disabled as "not enabled"
+    const title = dialog.locator('#title');
+    await expect(title).toBeFocused();
+    await expect(title).toBeInViewport();
+    // Nothing was saved and the dialog is still open.
+    await expect(dialog).toBeVisible();
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+
+    // Fixing the field restores the enabled moss action.
+    await title.fill('Greyed save check');
+    await expect(save).not.toHaveAttribute('aria-disabled', 'true');
+    const enabledBg = await save.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(enabledBg).not.toBe('rgb(243, 239, 230)');
+
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  });
+
+  test('Medication: the greyed Create goes to the name, then to the time', async ({
+    page,
+    circleId,
+  }) => {
+    const dialog = await openNewEntry(page, circleId, 'Medication');
+    const save = dialog.getByTestId('add-event-save');
+    await save.click({ force: true });
+    await expect(dialog.locator('#medication_name')).toBeFocused();
+    await dialog.locator('#medication_name').fill('Greyed save check');
+    await save.click({ force: true });
+    await expect(dialog.locator('#scheduled_time')).toBeFocused();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialog).toBeHidden({ timeout: 10_000 });
+  });
+
+  test('footer padding is capped in px: a larger root font does not fatten the band', async ({
+    page,
+    circleId,
+  }) => {
+    const dialog = await openNewEntry(page, circleId, 'Appointment');
+    const save = dialog.getByTestId('add-event-save');
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
+    const measure = (el: Locator) =>
+      el.evaluate((node) => {
+        const s = getComputedStyle(node);
+        return { pt: s.paddingTop, pb: s.paddingBottom, h: (node as HTMLElement).offsetHeight };
+      });
+    const before = await measure(save);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '24px'; // 150% text size
+    });
+    // rem padding (the footer's old py-2.5) would now be 15px.
+    for (const button of [save, cancel]) {
+      const m = await measure(button);
+      expect(m.pt).toBe('10px');
+      expect(m.pb).toBe('10px');
+      expect(m.h).toBeGreaterThanOrEqual(48);
+    }
+    expect((await measure(save)).h).toBe(before.h);
+    await cancel.click();
+  });
 });
 
 test.describe('Notes composer: the Post row is a sticky footer', () => {

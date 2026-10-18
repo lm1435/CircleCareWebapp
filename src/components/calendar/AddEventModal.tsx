@@ -18,6 +18,7 @@ import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
 import { useCircle } from '@/hooks/useCircle';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
+import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
@@ -234,6 +235,15 @@ const EARLIER_REMINDERS_LABEL_ID = 'reminders-earlier-label';
 const EARLIER_REMINDERS_WARNING_ID = 'reminders-earlier-warning';
 // The days-of-week picker: its group id doubles as the field-error focus target.
 const RECURRENCE_DAYS_ID = 'recurrence_days';
+
+/**
+ * Footer buttons: only the LABEL grows with the user's text size. The shared
+ * footer rule sets `py-2.5` (rem), so at a large browser font the padding grew
+ * with the label and the pair ate the dialog. Pixel padding + a 48px floor
+ * (>= 44px target) keep the band a constant height until the label itself is
+ * taller. `!` wins over the footer's `[&_button]:` rule, which is more specific.
+ */
+const FOOTER_BUTTON_CLASS = 'py-[10px]! min-h-[48px]!';
 const RECURRENCE_DAYS_ERROR_ID = 'recurrence_days-error';
 const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
 const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
@@ -445,6 +455,9 @@ function AddEventForm({
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const { showToast } = useToast();
   const { circle, timezone, canEdit, members } = useCircle(circleId);
+  // On a phone the on-screen keyboard covers half the screen: the footer's
+  // "what is missing" line steps aside (kept for screen readers) while it is up.
+  const keyboardOpen = useKeyboardOpen();
 
   const createEvent = useCreateEvent(circleId);
   const updateEvent = useUpdateEvent(circleId);
@@ -1408,6 +1421,27 @@ function AddEventForm({
         ? t('addEvent.validation.dateRequired')
         : t('addEvent.validation.timeRequired');
 
+  // Save cannot do anything yet: the recipient's zone (every date is converted
+  // into it) or the series root (an edit PATCHes it) is still loading. There
+  // is nothing to point the user at, so this one is a real `disabled`.
+  const setupBlocked = !timezone || seriesRootPending;
+
+  // The first required field still empty, in the order the form lists them.
+  // Ids match the inputs (`title` / `medication_name`, `scheduled_date`,
+  // `scheduled_time`); a press on the greyed Save scrolls to AND focuses it.
+  function focusMissingField(): void {
+    const id =
+      title.trim().length === 0
+        ? titleFieldId
+        : !isAsNeeded && dateStr === ''
+          ? 'scheduled_date'
+          : 'scheduled_time';
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView?.({ block: 'center' });
+    el.focus({ preventScroll: true });
+  }
+
   return (
     <>
     <Modal
@@ -1418,17 +1452,32 @@ function AddEventForm({
       closeOnBackdropClick={false}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={isPending}>
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            disabled={isPending}
+            className={FOOTER_BUTTON_CLASS}
+          >
             {t('common:cancel')}
           </Button>
+          {/* Save is never natively `disabled` just because a required field is
+              empty: `incomplete` renders it greyed but `aria-disabled`, so it
+              stays focusable and a press moves focus to the missing field
+              instead of doing nothing (a dead grey button on a phone says
+              nothing). It is truly `disabled` only while the zone / series
+              root is still loading (nothing to point at), and `loading`
+              (save in flight) disables it as before. */}
           <Button
             type="submit"
             offlineKind="save"
             form="add-event-form"
             loading={isPending}
-            disabled={!requiredFilled}
+            disabled={setupBlocked}
+            incomplete={!requiredFilled}
+            onClick={!requiredFilled ? focusMissingField : undefined}
             aria-describedby={missingFieldMessage ? 'add-event-save-missing' : undefined}
             data-testid="add-event-save"
+            className={`${FOOTER_BUTTON_CLASS}${requiredFilled ? ' border-[1.5px] border-transparent' : ''}`}
           >
             {isEditing ? t('addEvent.saveChanges') : t('addEvent.create')}
           </Button>
@@ -1439,7 +1488,11 @@ function AddEventForm({
               variant="caption"
               id="add-event-save-missing"
               data-testid="add-event-save-missing"
-              className="m-0 self-center min-[480px]:order-first min-[480px]:mr-auto"
+              className={
+                keyboardOpen
+                  ? 'sr-only'
+                  : 'm-0 self-center min-[480px]:order-first min-[480px]:mr-auto'
+              }
             >
               {missingFieldMessage}
             </Text>
