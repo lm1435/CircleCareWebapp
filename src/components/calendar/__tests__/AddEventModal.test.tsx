@@ -172,154 +172,154 @@ beforeEach(() => {
 });
 
 describe('AddEventModal', () => {
-  // Save lives in the dialog's pinned footer and is greyed (aria-disabled, NOT
-  // the native `disabled`) until the always-required fields are filled (title;
-  // date; a medication's time). The greyed button stays pressable: a press
-  // focuses the missing field and never saves.
-  describe('Save is greyed until the required fields are filled', () => {
+  // Save lives in the dialog's pinned footer and is ALWAYS the solid primary
+  // button. With a required field missing a press does not save: it focuses the
+  // field and shows its inline error (title; date; a medication's time).
+  describe('Save with a required field missing', () => {
     const save = (name = 'Create'): HTMLElement => screen.getByRole('button', { name });
-    const greyed = (el: HTMLElement): void => {
-      expect(el).toHaveAttribute('aria-disabled', 'true');
-      expect(el).toBeEnabled(); // not natively disabled: focusable and pressable
-    };
-    const ready = (el: HTMLElement): void => {
+    const titleInput = () => screen.getByLabelText(/^Title( \* \(required\))?$/);
+    const solid = (el: HTMLElement): void => {
       expect(el).not.toHaveAttribute('aria-disabled');
       expect(el).toBeEnabled();
+      expect(el.className).toContain('bg-moss');
+      expect(el.className).toContain('text-cream');
+      expect(el.className).not.toContain('bg-bg-2');
+      expect(el.className).not.toContain('text-moss-mid');
     };
 
-    it('appointment: needs a title (the date is pre-filled)', async () => {
-      const user = userEvent.setup();
+    it('appointment: solid and not aria-disabled with the title missing, in the footer', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-      greyed(save());
+      solid(save());
       expect(save()).toHaveAttribute('data-testid', 'add-event-save');
-      // In the footer band, not in the scrolling form body.
       expect(save().closest('[data-modal-footer]')).not.toBeNull();
       expect(save().closest('form')).toBeNull();
-
-      await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Cardiology');
-      ready(save());
-
-      await user.clear(screen.getByLabelText(/^Title( \* \(required\))?$/));
-      greyed(save());
     });
 
-    it('a title of only spaces does not count', async () => {
+    it('medication: solid with the time missing too', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
+      solid(save());
+    });
+
+    it('shows no hint line and no field error before a click', () => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      expect(screen.queryByTestId('add-event-save-missing')).toBeNull();
+      expect(screen.queryByText('Please enter a title.')).toBeNull();
+      expect(save()).not.toHaveAttribute('aria-describedby');
+      expect(titleInput()).not.toHaveAttribute('aria-invalid');
+    });
+
+    it('click with the title missing: focuses it, shows the error linked by aria-describedby, never saves', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      await user.click(save());
+      expect(titleInput()).toHaveFocus();
+      expect(titleInput()).toHaveAttribute('aria-invalid', 'true');
+      expect(titleInput()).toHaveAccessibleDescription(/Please enter a title\./);
+      const msg = screen.getByText('Please enter a title.');
+      expect(msg.closest('[data-modal-footer]')).toBeNull();
+      expect(screen.queryByTestId('add-event-save-missing')).toBeNull();
+      expect(mutateCreate).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      // Still the solid button afterwards.
+      solid(save());
+    });
+
+    it('the error clears as soon as the title is filled, and the next missing field shows nothing until the next click', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      await user.click(save());
+      const name = screen.getByRole('combobox', { name: /Medication name/ });
+      expect(name).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByText('Please enter a medication name.')).toBeInTheDocument();
+
+      await user.type(name, 'Metformin');
+      expect(name).not.toHaveAttribute('aria-invalid');
+      expect(screen.queryByText('Please enter a medication name.')).toBeNull();
+      // The time is still missing, but no error appears for it yet.
+      expect(screen.getByLabelText(/^Time/)).not.toHaveAttribute('aria-invalid');
+      expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
+
+      await user.click(save());
+      const time = screen.getByLabelText(/^Time/);
+      expect(time).toHaveFocus();
+      expect(time).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByText('Medications need a scheduled time.')).toBeInTheDocument();
+      expect(mutateCreate).not.toHaveBeenCalled();
+
+      fireEvent.change(time, { target: { value: '09:00' } });
+      expect(time).not.toHaveAttribute('aria-invalid');
+      expect(screen.queryByText('Medications need a scheduled time.')).toBeNull();
+      solid(save());
+    });
+
+    it('clearing the field again after fixing it does not resurrect the old error', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      await user.click(save());
+      await user.type(titleInput(), 'A');
+      await user.clear(titleInput());
+      expect(titleInput()).not.toHaveAttribute('aria-invalid');
+    });
+
+    it('does not submit the form (the click default is cancelled)', () => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      const onSubmit = vi.fn();
+      document.getElementById('add-event-form')?.addEventListener('submit', onSubmit);
+      // fireEvent.click returns false when preventDefault was called.
+      expect(fireEvent.click(save())).toBe(false);
+      expect(onSubmit).not.toHaveBeenCalled();
+      expect(mutateCreate).not.toHaveBeenCalled();
+    });
+
+    it('a title of only spaces still counts as missing', async () => {
       const user = userEvent.setup();
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
-      await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), '   ');
-      greyed(save());
+      await user.type(titleInput(), '   ');
+      await user.click(save());
+      expect(titleInput()).toHaveAttribute('aria-invalid', 'true');
+      expect(mutateCreate).not.toHaveBeenCalled();
     });
 
-    it('medication: needs a name AND a time', async () => {
+    it('focuses the date when it is the empty one, and shows its error', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
-      greyed(save());
-      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
-      greyed(save());
-      fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '09:00' } });
-      ready(save());
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      await user.type(titleInput(), 'Call pharmacy');
+      const date = screen.getByLabelText(/^Date/) as HTMLInputElement;
+      await user.clear(date);
+      await user.click(save());
+      expect(date).toHaveFocus();
+      expect(date).toHaveAttribute('aria-invalid', 'true');
+      expect(mutateCreate).not.toHaveBeenCalled();
     });
 
-    it('says which field holds Save back, and the greyed button points at it', async () => {
+    it('is reachable by keyboard and Enter does the same as a click', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
-      const hint = () => screen.queryByTestId('add-event-save-missing');
-      expect(hint()).toHaveTextContent('Please enter a medication name.');
-      expect(hint()?.closest('[data-modal-footer]')).not.toBeNull();
-      expect(save()).toHaveAttribute('aria-describedby', 'add-event-save-missing');
-      expect(save()).toHaveAccessibleDescription('Please enter a medication name.');
-
-      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
-      expect(hint()).toHaveTextContent('Medications need a scheduled time.');
-
-      fireEvent.change(screen.getByLabelText(/^Time/), { target: { value: '09:00' } });
-      expect(hint()).toBeNull();
-      expect(save()).not.toHaveAttribute('aria-describedby');
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      save().focus();
+      expect(save()).toHaveFocus();
+      await user.keyboard('{Enter}');
+      expect(titleInput()).toHaveFocus();
+      expect(titleInput()).toHaveAttribute('aria-invalid', 'true');
+      expect(mutateCreate).not.toHaveBeenCalled();
     });
 
-    describe('pressing the greyed Save', () => {
-      it('focuses the title and never saves', async () => {
-        const user = userEvent.setup();
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        await user.click(save());
-        expect(screen.getByLabelText(/^Title( \* \(required\))?$/)).toHaveFocus();
-        expect(mutateCreate).not.toHaveBeenCalled();
-        // The press is not a submit: no validation error is raised either.
-        expect(screen.queryByText('Please enter a title.', { selector: 'p[role="alert"]' })).toBeNull();
-      });
-
-      it('does not submit the form (the click default is cancelled)', () => {
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        const onSubmit = vi.fn();
-        document.getElementById('add-event-form')?.addEventListener('submit', onSubmit);
-        // fireEvent.click returns false when preventDefault was called.
-        expect(fireEvent.click(save())).toBe(false);
-        expect(onSubmit).not.toHaveBeenCalled();
-        expect(mutateCreate).not.toHaveBeenCalled();
-      });
-
-      it('medication: focuses the name first, then the time', async () => {
-        const user = userEvent.setup();
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
-        await user.click(save());
-        expect(screen.getByRole('combobox', { name: /Medication name/ })).toHaveFocus();
-        await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
-        await user.click(save());
-        expect(screen.getByLabelText(/^Time/)).toHaveFocus();
-        expect(mutateCreate).not.toHaveBeenCalled();
-      });
-
-      it('focuses the date when it is the empty one', async () => {
-        const user = userEvent.setup();
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
-        await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Call pharmacy');
-        const date = screen.getByLabelText(/^Date/) as HTMLInputElement;
-        await user.clear(date);
-        greyed(save());
-        await user.click(save());
-        expect(date).toHaveFocus();
-        expect(mutateCreate).not.toHaveBeenCalled();
-      });
-
-      it('is reachable by keyboard and Enter does the same as a click', async () => {
-        const user = userEvent.setup();
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        save().focus();
-        expect(save()).toHaveFocus();
-        await user.keyboard('{Enter}');
-        expect(screen.getByLabelText(/^Title( \* \(required\))?$/)).toHaveFocus();
-        expect(mutateCreate).not.toHaveBeenCalled();
-      });
+    it('filled: the same solid button saves', async () => {
+      const user = userEvent.setup();
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      await user.type(titleInput(), 'Cardiology');
+      solid(save());
+      await user.click(save());
+      await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     });
 
-    describe('look', () => {
-      it('greyed: light fill, ink-3 label, line-strong edge, not the moss slab', () => {
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        const cls = save().className;
-        expect(cls).toContain('bg-bg-2');
-        expect(cls).toContain('text-ink-3');
-        expect(cls).toContain('border-line-strong');
-        expect(cls).not.toContain('bg-moss');
-        expect(cls).not.toContain('text-cream');
-      });
-
-      it('ready: the moss action, unchanged', async () => {
-        const user = userEvent.setup();
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Cardiology');
-        const cls = save().className;
-        expect(cls).toContain('bg-moss');
-        expect(cls).toContain('text-cream');
-        expect(cls).not.toContain('bg-bg-2');
-      });
-
-      it('padding is capped in px (only the label grows with text size), 48px floor', () => {
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        for (const button of [save(), screen.getByRole('button', { name: 'Cancel' })]) {
-          expect(button.className).toContain('py-[10px]!');
-          expect(button.className).toContain('min-h-[48px]!');
-        }
-      });
+    it('padding is capped in px (only the label grows with text size), 48px floor', () => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      for (const button of [save(), screen.getByRole('button', { name: 'Cancel' })]) {
+        expect(button.className).toContain('py-[10px]!');
+        expect(button.className).toContain('min-h-[48px]!');
+      }
     });
 
     describe('truly disabled', () => {
@@ -332,65 +332,11 @@ describe('AddEventModal', () => {
           expect(save()).toBeDisabled();
           await user.click(save());
           expect(screen.getByRole('dialog')).toBeInTheDocument();
+          expect(titleInput()).not.toHaveAttribute('aria-invalid');
           expect(mutateCreate).not.toHaveBeenCalled();
         } finally {
           useCircleResult.timezone = zone;
         }
-      });
-    });
-
-    describe('keyboard (visualViewport)', () => {
-      const original = Object.getOwnPropertyDescriptor(window, 'visualViewport');
-      const setViewport = (height: number, scale = 1) => {
-        const listeners = new Set<() => void>();
-        const vv = {
-          height,
-          scale,
-          addEventListener: (_: string, cb: () => void) => listeners.add(cb),
-          removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
-        };
-        Object.defineProperty(window, 'visualViewport', { configurable: true, value: vv });
-        return {
-          resize: (h: number) => {
-            vv.height = h;
-            act(() => listeners.forEach((cb) => cb()));
-          },
-        };
-      };
-      afterEach(() => {
-        if (original) Object.defineProperty(window, 'visualViewport', original);
-        else delete (window as { visualViewport?: unknown }).visualViewport;
-      });
-
-      it('hides the hint visually (kept for screen readers) while a field is focused and the viewport is short', async () => {
-        const user = userEvent.setup();
-        const vv = setViewport(window.innerHeight);
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        const hint = () => screen.getByTestId('add-event-save-missing');
-        expect(hint().className).not.toContain('sr-only');
-
-        await user.click(document.getElementById('description') as HTMLElement);
-        vv.resize(Math.round(window.innerHeight * 0.5)); // keyboard up
-        expect(hint().className).toContain('sr-only');
-        // Still in the DOM and still the button's description.
-        expect(save()).toHaveAccessibleDescription('Please enter a title.');
-
-        vv.resize(window.innerHeight); // keyboard down
-        expect(hint().className).not.toContain('sr-only');
-      });
-
-      it('pinch-zoom (scale > 1) is not a keyboard', async () => {
-        const user = userEvent.setup();
-        setViewport(Math.round(window.innerHeight * 0.5), 2);
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        await user.click(document.getElementById('description') as HTMLElement);
-        expect(screen.getByTestId('add-event-save-missing').className).not.toContain('sr-only');
-      });
-
-      it('no visualViewport (desktop / old browser): the hint stays', () => {
-        delete (window as { visualViewport?: unknown }).visualViewport;
-        render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
-        expect(screen.getByTestId('add-event-save-missing').className).not.toContain('sr-only');
       });
     });
 
@@ -408,8 +354,7 @@ describe('AddEventModal', () => {
     // Save is disabled with the title empty, so this is the submit that does
     // not go through the button (a programmatic `requestSubmit`).
     fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
-    // Twice: the field's own error, and the footer line beside the disabled Save.
-    await waitFor(() => expect(screen.getAllByText('Please enter a title.')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByText('Please enter a title.')).toHaveLength(1));
 
     expect(mutateCreate).not.toHaveBeenCalled();
     const titleInput = screen.getByLabelText(/^Title( \* \(required\))?$/);

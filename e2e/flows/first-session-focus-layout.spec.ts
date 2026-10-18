@@ -160,7 +160,7 @@ test.describe('Save is always visible on the add form', () => {
   test.use({ viewport: { width: 1280, height: 560 } });
 
   for (const item of ['Medication', 'Appointment', 'Task']) {
-    test(`${item}: Save is pinned in the footer, disabled until the required fields are filled`, async ({
+    test(`${item}: Save is pinned in the footer and always solid`, async ({
       page,
       circleId,
     }) => {
@@ -169,9 +169,11 @@ test.describe('Save is always visible on the add form', () => {
       const form = dialog.locator('#add-event-form');
       const scroller = form.locator('xpath=..');
 
-      // On screen without scrolling, and disabled while the form is empty.
+      // On screen without scrolling, and solid (enabled, not aria-disabled)
+      // even while the form is empty.
       await expect(save).toBeInViewport({ ratio: 1 });
-      await expect(save).toBeDisabled();
+      await expect(save).toBeEnabled();
+      await expect(save).not.toHaveAttribute('aria-disabled', 'true');
       expect(
         await scroller.evaluate((el) => el.scrollHeight > el.clientHeight),
         'the form is taller than the dialog body, so the footer has something to stay above'
@@ -190,10 +192,11 @@ test.describe('Save is always visible on the add form', () => {
       const last = await box(lastField);
       expect(last.y + last.height, 'last control ends above the footer').toBeLessThanOrEqual(footerTop);
 
-      // Filling the required fields enables it, wherever the form is scrolled.
+      // Filling the required fields keeps it enabled, wherever the form is scrolled.
       await dialog.locator(item === 'Medication' ? '#medication_name' : '#title').fill('Layout check');
       if (item === 'Medication') {
-        await expect(save).toBeDisabled(); // a medication also needs its time
+        // a medication also needs its time; Save stays solid either way
+        await expect(save).not.toHaveAttribute('aria-disabled', 'true');
         await dialog.locator('#scheduled_time').fill('09:00');
       }
       await expect(save).toBeEnabled();
@@ -205,66 +208,69 @@ test.describe('Save is always visible on the add form', () => {
   }
 });
 
-test.describe('Greyed Save is still pressable: it takes you to the missing field', () => {
+test.describe('Save is solid; pressing it with a field missing takes you to that field', () => {
   test.use({ viewport: { width: 1280, height: 560 } });
 
-  test('Appointment: pressing the greyed Create focuses the empty title and saves nothing', async ({
+  test('Appointment: pressing Create focuses the empty title, shows its error and saves nothing', async ({
     page,
     circleId,
   }, testInfo) => {
     const dialog = await openNewEntry(page, circleId, 'Appointment');
     const save = dialog.getByTestId('add-event-save');
-    const hint = dialog.getByTestId('add-event-save-missing');
+    const title = dialog.locator('#title');
 
-    // Greyed, not natively disabled: focusable, and it names what is missing.
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
-    expect(await save.evaluate((el) => (el as HTMLButtonElement).disabled)).toBe(false);
-    await expect(save).toHaveAccessibleDescription('Please enter a title.');
-    await expect(hint).toBeVisible();
-
-    // Light fill + ink-3 label, not the dark moss slab; the 48px target holds.
+    // Solid primary: enabled, no aria-disabled, no hint line, no error yet.
+    await expect(save).not.toHaveAttribute('aria-disabled', 'true');
+    await expect(save).toBeEnabled();
+    await expect(dialog.getByTestId('add-event-save-missing')).toHaveCount(0);
+    await expect(title).not.toHaveAttribute('aria-invalid', 'true');
     const look = await save.evaluate((el) => {
       const cs = getComputedStyle(el);
-      return { bg: cs.backgroundColor, color: cs.color, h: (el as HTMLElement).offsetHeight };
+      return { bg: cs.backgroundColor, h: (el as HTMLElement).offsetHeight };
     });
-    expect(look.bg, 'light fill').toBe('rgb(243, 239, 230)');
-    expect(look.color, 'ink-3 label').toBe('rgb(110, 105, 97)');
+    expect(look.bg, 'not the light paper fill').not.toBe('rgb(243, 239, 230)');
     expect(look.h).toBeGreaterThanOrEqual(48);
 
-    await checkA11y(page, 'add-event-greyed-save', testInfo);
-
-    // Scroll the form away from the title, then press the greyed Create.
+    // Scroll the form away from the title, then press Create.
     const scroller = dialog.locator('#add-event-form').locator('xpath=..');
     await scroller.evaluate((el) => el.scrollTo(0, el.scrollHeight));
-    await save.click({ force: true }); // Playwright reads aria-disabled as "not enabled"
-    const title = dialog.locator('#title');
+    await save.click();
     await expect(title).toBeFocused();
     await expect(title).toBeInViewport();
-    // Nothing was saved and the dialog is still open.
+    await expect(title).toHaveAttribute('aria-invalid', 'true');
+    await expect(title).toHaveAccessibleDescription(/Please enter a title\./);
+    await expect(dialog.getByText('Please enter a title.')).toBeVisible();
+    // Nothing was saved and the dialog is still open; Save is still solid.
     await expect(dialog).toBeVisible();
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
-
-    // Fixing the field restores the enabled moss action.
-    await title.fill('Greyed save check');
     await expect(save).not.toHaveAttribute('aria-disabled', 'true');
-    const enabledBg = await save.evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(enabledBg).not.toBe('rgb(243, 239, 230)');
+
+    await checkA11y(page, 'add-event-missing-title-error', testInfo);
+
+    // Fixing the field clears the error.
+    await title.fill('Missing field check');
+    await expect(title).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(dialog.getByText('Please enter a title.')).toHaveCount(0);
 
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(dialog).toBeHidden({ timeout: 10_000 });
   });
 
-  test('Medication: the greyed Create goes to the name, then to the time', async ({
+  test('Medication: Create goes to the name, then to the time, each with its error', async ({
     page,
     circleId,
   }) => {
     const dialog = await openNewEntry(page, circleId, 'Medication');
     const save = dialog.getByTestId('add-event-save');
-    await save.click({ force: true });
+    await save.click();
     await expect(dialog.locator('#medication_name')).toBeFocused();
-    await dialog.locator('#medication_name').fill('Greyed save check');
-    await save.click({ force: true });
+    await expect(dialog.locator('#medication_name')).toHaveAttribute('aria-invalid', 'true');
+    await dialog.locator('#medication_name').fill('Missing field check');
+    await expect(dialog.locator('#medication_name')).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(dialog.locator('#scheduled_time')).not.toHaveAttribute('aria-invalid', 'true');
+    await save.click();
     await expect(dialog.locator('#scheduled_time')).toBeFocused();
+    await expect(dialog.locator('#scheduled_time')).toHaveAttribute('aria-invalid', 'true');
+    await expect(dialog.getByText('Medications need a scheduled time.')).toBeVisible();
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(dialog).toBeHidden({ timeout: 10_000 });

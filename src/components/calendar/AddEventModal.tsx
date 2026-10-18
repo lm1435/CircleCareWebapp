@@ -18,7 +18,6 @@ import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
 import { useCircle } from '@/hooks/useCircle';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
-import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
@@ -457,7 +456,6 @@ function AddEventForm({
   const { circle, timezone, canEdit, members } = useCircle(circleId);
   // On a phone the on-screen keyboard covers half the screen: the footer's
   // "what is missing" line steps aside (kept for screen readers) while it is up.
-  const keyboardOpen = useKeyboardOpen();
 
   const createEvent = useCreateEvent(circleId);
   const updateEvent = useUpdateEvent(circleId);
@@ -1410,30 +1408,49 @@ function AddEventForm({
     title.trim().length > 0 &&
     (isAsNeeded || dateStr !== '') &&
     (!isMedication || isAsNeeded || timeStr !== '');
-  // Which field is holding Save back, said in words beside the disabled button
-  // (mobile shows the same line above its pinned Save). A greyed button alone
-  // tells a screen reader nothing, so the button points at this line too.
-  const missingFieldMessage = requiredFilled
+  // The first required field still empty, in the order the form lists them.
+  const missingField: 'title' | 'date' | 'time' | null = requiredFilled
     ? null
     : title.trim().length === 0
-      ? t(isMedication ? 'addEvent.validation.medicationRequired' : 'addEvent.validation.titleRequired')
+      ? 'title'
       : !isAsNeeded && dateStr === ''
-        ? t('addEvent.validation.dateRequired')
-        : t('addEvent.validation.timeRequired');
+        ? 'date'
+        : 'time';
+  // Save is always the solid primary button. Pressing it with a field missing
+  // does not save: it records WHICH field was missing (`pressedMissing`), focuses
+  // it, and that field shows its normal inline error. The error is shown only
+  // while that same field is still the missing one, so it clears the moment the
+  // field is satisfied and never jumps to the next missing field by itself.
+  const [pressedMissing, setPressedMissing] = useState<'title' | 'date' | 'time' | null>(null);
+  useEffect(() => {
+    if (pressedMissing !== null && pressedMissing !== missingField) setPressedMissing(null);
+  }, [pressedMissing, missingField]);
+  const missingMessage =
+    missingField === null
+      ? undefined
+      : missingField === 'title'
+        ? t(isMedication ? 'addEvent.validation.medicationRequired' : 'addEvent.validation.titleRequired')
+        : missingField === 'date'
+          ? t('addEvent.validation.dateRequired')
+          : t('addEvent.validation.timeRequired');
+  const missingErrorFor = (field: 'title' | 'date' | 'time'): string | undefined =>
+    pressedMissing === field && missingField === field ? missingMessage : undefined;
 
   // Save cannot do anything yet: the recipient's zone (every date is converted
   // into it) or the series root (an edit PATCHes it) is still loading. There
   // is nothing to point the user at, so this one is a real `disabled`.
   const setupBlocked = !timezone || seriesRootPending;
 
-  // The first required field still empty, in the order the form lists them.
-  // Ids match the inputs (`title` / `medication_name`, `scheduled_date`,
-  // `scheduled_time`); a press on the greyed Save scrolls to AND focuses it.
+  // Save pressed with a required field missing: show that field's error and
+  // scroll to AND focus it. Ids match the inputs (`title` / `medication_name`,
+  // `scheduled_date`, `scheduled_time`).
   function focusMissingField(): void {
+    if (missingField === null) return;
+    setPressedMissing(missingField);
     const id =
-      title.trim().length === 0
+      missingField === 'title'
         ? titleFieldId
-        : !isAsNeeded && dateStr === ''
+        : missingField === 'date'
           ? 'scheduled_date'
           : 'scheduled_time';
     const el = document.getElementById(id);
@@ -1460,43 +1477,31 @@ function AddEventForm({
           >
             {t('common:cancel')}
           </Button>
-          {/* Save is never natively `disabled` just because a required field is
-              empty: `incomplete` renders it greyed but `aria-disabled`, so it
-              stays focusable and a press moves focus to the missing field
-              instead of doing nothing (a dead grey button on a phone says
-              nothing). It is truly `disabled` only while the zone / series
-              root is still loading (nothing to point at), and `loading`
-              (save in flight) disables it as before. */}
+          {/* Save is always the solid primary button. With a required field
+              missing a press does not save: it cancels the submit, focuses the
+              field and shows its inline error (`focusMissingField`). It is
+              truly `disabled` only while the zone / series root is still
+              loading (nothing to point at), and `loading` (save in flight)
+              disables it as before. */}
           <Button
             type="submit"
             offlineKind="save"
             form="add-event-form"
             loading={isPending}
             disabled={setupBlocked}
-            incomplete={!requiredFilled}
-            onClick={!requiredFilled ? focusMissingField : undefined}
-            aria-describedby={missingFieldMessage ? 'add-event-save-missing' : undefined}
+            onClick={
+              !requiredFilled
+                ? (event) => {
+                    event.preventDefault();
+                    focusMissingField();
+                  }
+                : undefined
+            }
             data-testid="add-event-save"
-            className={`${FOOTER_BUTTON_CLASS}${requiredFilled ? ' border-[1.5px] border-transparent' : ''}`}
+            className={`${FOOTER_BUTTON_CLASS} border-[1.5px] border-transparent`}
           >
             {isEditing ? t('addEvent.saveChanges') : t('addEvent.create')}
           </Button>
-          {/* Last in the DOM so the narrow stacked footer (column-reverse) puts
-              it above the buttons; wide screens move it to the left edge. */}
-          {missingFieldMessage && (
-            <Text
-              variant="caption"
-              id="add-event-save-missing"
-              data-testid="add-event-save-missing"
-              className={
-                keyboardOpen
-                  ? 'sr-only'
-                  : 'm-0 self-center min-[480px]:order-first min-[480px]:mr-auto'
-              }
-            >
-              {missingFieldMessage}
-            </Text>
-          )}
         </>
       }
     >
@@ -1548,7 +1553,7 @@ function AddEventForm({
             required
             value={title}
             maxLength={150}
-            error={errors[titleFieldId] ?? errors.title}
+            error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
             placeholder={t('addEvent.placeholders.medicationName')}
             selectedDrug={selectedDrug}
             onSelectDrug={setSelectedDrug}
@@ -1564,7 +1569,7 @@ function AddEventForm({
             required
             value={title}
             maxLength={150}
-            error={errors[titleFieldId] ?? errors.title}
+            error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
             placeholder={t(
               eventType === 'appointment'
                 ? 'addEvent.placeholders.appointmentTitle'
@@ -1626,7 +1631,7 @@ function AddEventForm({
             label={t('addEvent.fields.date')}
             required
             value={dateStr}
-            error={errors.scheduled_date}
+            error={errors.scheduled_date ?? missingErrorFor('date')}
             hint={showDualTimezone ? dualTimezoneLabel : undefined}
             onChange={(e) => {
               datesTouched.current = true;
@@ -1684,7 +1689,7 @@ function AddEventForm({
             // a time; appointments and tasks may be all-day.
             required={isMedication}
             value={timeStr}
-            error={errors.scheduled_time}
+            error={errors.scheduled_time ?? missingErrorFor('time')}
             hint={
               // The live conversion wins over the "optional" note whenever the
               // zones differ — it is the thing the caregiver needs to see while
