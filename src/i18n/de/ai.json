@@ -14,8 +14,8 @@
   "newChat": "Neuer Chat",
   "errors": {
     "subscriptionRequired": "Der Pflegeassistent ist eine Premium-Funktion. Upgraden Sie auf Premium, um ihn zu nutzen.",
-    "viewOnly": "Sie haben nur Lesezugriff auf diesen Kreis. Bitten Sie den Kreis-Admin um vollen Zugriff, um den Pflegeassistenten zu nutzen.",
-    "circleReadOnly": "Dieser Kreis ist derzeit nur lesbar. Der Pflegeassistent ist wieder verfügbar, sobald das Abo des Kreis-Admins ihn enthält.",
+    "viewOnly": "Sie haben nur Lesezugriff auf diesen Kreis. Bitten Sie den Kreis-Inhaber um vollen Zugriff, um den Pflegeassistenten zu nutzen.",
+    "circleReadOnly": "Dieser Kreis ist derzeit nur lesbar. Der Pflegeassistent ist wieder verfügbar, sobald das Abo des Kreis-Inhabers ihn enthält.",
     "rateLimited": "Sie haben das heutige Fragenlimit erreicht. Der Pflegeassistent ist morgen wieder für Sie da.",
     "unavailable": "Der Pflegeassistent ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.",
     "sendFailed": "Entschuldigung, es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",

@@ -136,10 +136,10 @@
   },
   "delete": {
     "title": "Konto löschen",
-    "description": "Löschen Sie Ihr Konto und alle Pflegekreise, deren Admin Sie sind, endgültig. Dies kann nicht rückgängig gemacht werden. Möchten Sie vorher eine Kopie Ihrer Daten? Nutzen Sie oben „Meine Daten herunterladen“.",
+    "description": "Löschen Sie Ihr Konto und alle Pflegekreise, deren Inhaber Sie sind, endgültig. Dies kann nicht rückgängig gemacht werden. Möchten Sie vorher eine Kopie Ihrer Daten? Nutzen Sie oben „Meine Daten herunterladen“.",
     "cta": "Mein Konto löschen",
     "confirmTitle": "Konto löschen?",
-    "confirmBody": "Dadurch werden Ihr Konto und alle Pflegekreise, deren Admin Sie sind, endgültig gelöscht – einschließlich aller darin enthaltenen Medikamente, Termine, Aufgaben, Notizen, Vitalwerte, Dokumente und Notfallinfos. Alle anderen Mitglieder dieser Kreise verlieren den Zugriff und werden darüber benachrichtigt. Kreise, in denen Sie Mitglied, aber nicht Admin sind, werden nicht gelöscht; Sie werden lediglich daraus entfernt. Dies kann nicht rückgängig gemacht werden.",
+    "confirmBody": "Dadurch werden Ihr Konto und alle Pflegekreise, deren Inhaber Sie sind, endgültig gelöscht – einschließlich aller darin enthaltenen Medikamente, Termine, Aufgaben, Notizen, Vitalwerte, Dokumente und Notfallinfos. Alle anderen Mitglieder dieser Kreise verlieren den Zugriff und werden darüber benachrichtigt. Kreise, in denen Sie Mitglied, aber nicht Inhaber sind, werden nicht gelöscht; Sie werden lediglich daraus entfernt. Dies kann nicht rückgängig gemacht werden.",
     "confirm": "Konto löschen",
     "keep": "Mein Konto behalten",
     "success": "Ihr Konto wurde gelöscht.",

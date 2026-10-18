@@ -23,12 +23,12 @@
       "title": "Kreise & Rollen",
       "items": [
         {
-          "question": "Was ist der Unterschied zwischen Kreis-Admin, Pflegeperson und umsorgter Person?",
-          "answer": "Der Kreis-Admin erstellt den Kreis und kann Mitglieder einladen, Einstellungen verwalten und den Kreis löschen. Pflegepersonen sind Familienmitglieder, die bei der Organisation der Pflege helfen – sie können Informationen ansehen und aktualisieren. Die umsorgte Person ist die Person, um die man sich kümmert – sie erhält Medikamenten-Erinnerungen und kann bestätigen, wenn sie ein Medikament eingenommen hat."
+          "question": "Was ist der Unterschied zwischen Kreis-Inhaber, Pflegeperson und umsorgter Person?",
+          "answer": "Der Kreis-Inhaber erstellt den Kreis und kann Mitglieder einladen, Einstellungen verwalten und den Kreis löschen. Pflegepersonen sind Familienmitglieder, die bei der Organisation der Pflege helfen – sie können Informationen ansehen und aktualisieren. Die umsorgte Person ist die Person, um die man sich kümmert – sie erhält Medikamenten-Erinnerungen und kann bestätigen, wenn sie ein Medikament eingenommen hat."
         },
         {
           "question": "Kann ich in mehreren Kreisen sein?",
-          "answer": "Ja! Sie können Mitglied in mehreren Kreisen sein. Zum Beispiel können Sie Admin des Kreises für Ihre Mutter sein und Pflegeperson im Kreis für Ihren Vater, den ein Geschwisterteil erstellt hat."
+          "answer": "Ja! Sie können Mitglied in mehreren Kreisen sein. Zum Beispiel können Sie Inhaber des Kreises für Ihre Mutter sein und Pflegeperson im Kreis für Ihren Vater, den ein Geschwisterteil erstellt hat."
         }
       ]
     },
