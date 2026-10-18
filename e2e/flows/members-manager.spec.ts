@@ -45,6 +45,8 @@ interface Copy {
   cancelInvite: string;
   remove: string;
   membersHeading: string;
+  managerHint: string;
+  careRecipient: string;
 }
 
 const COPY: Record<'en' | 'es', Copy> = {
@@ -63,6 +65,8 @@ const COPY: Record<'en' | 'es', Copy> = {
     cancelInvite: 'Cancel invite',
     remove: 'Remove',
     membersHeading: 'Members',
+    managerHint: 'After they join, you can make them a manager to help invite and manage members.',
+    careRecipient: 'Care recipient',
   },
   es: {
     locale: 'es',
@@ -79,6 +83,8 @@ const COPY: Record<'en' | 'es', Copy> = {
     cancelInvite: 'Cancelar invitación',
     remove: 'Eliminar',
     membersHeading: 'Miembros',
+    managerHint: 'Cuando se una, puedes darle el rol de gestor para que te ayude a invitar y administrar miembros.',
+    careRecipient: 'Receptor de cuidado',
   },
 };
 
@@ -160,6 +166,16 @@ for (const lang of ['en', 'es'] as const) {
         const mgrRow = page.getByRole('listitem').filter({ hasText: mgr.name });
         await expect(mgrRow.getByText(S.managerBadge, { exact: true })).toBeVisible({ timeout: 15_000 });
 
+        // ---- OWNER (premium, assign_manager): the invite form's manager hint ----
+        // Shown for a caregiver invite, gone for a care recipient. Nothing is sent.
+        await visibleButton(page, S.inviteCta).click();
+        const ownerModal = page.getByRole('dialog');
+        await expect(ownerModal.getByText(S.managerHint, { exact: true })).toBeVisible({ timeout: 15_000 });
+        await ownerModal.getByRole('radio', { name: new RegExp(`^${S.careRecipient}`) }).check();
+        await expect(ownerModal.getByText(S.managerHint, { exact: true })).toHaveCount(0);
+        await page.keyboard.press('Escape');
+        await expect(ownerModal).toBeHidden();
+
         // ---- MANAGER: a separate session ----------------------------------------
         await waitForViewer(request, mgr, circleId, (v) => v.viewer_role === 'manager');
         const mp = await signedInPage(browser, origin, mgr, S.locale);
@@ -178,6 +194,9 @@ for (const lang of ['en', 'es'] as const) {
           // Invite.
           await visibleButton(mp, S.inviteCta).click();
           const modal = mp.getByRole('dialog');
+          // A manager never gets the "make them a manager" hint.
+          await expect(modal.getByLabel(S.emailLabel)).toBeVisible();
+          await expect(modal.getByText(S.managerHint, { exact: true })).toHaveCount(0);
           await modal.getByLabel(S.emailLabel).fill(inviteEmail);
           await modal.getByRole('button', { name: S.send }).click();
           await expect(modal.getByRole('heading', { name: S.sentTitle })).toBeVisible({ timeout: 20_000 });

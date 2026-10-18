@@ -93,6 +93,7 @@
     "subtitle": "Nous lui enverrons par e-mail une invitation à rejoindre ce cercle de soins.",
     "emailLabel": "Adresse e-mail",
     "emailPlaceholder": "nom@exemple.com",
+    "managerHint": "Une fois cette personne dans le cercle, vous pourrez la nommer gestionnaire pour vous aider à inviter et gérer les membres.",
     "roleLabel": "Son rôle",
     "roleHints": {
       "caregiver": "Peut consulter et aider à coordonner les soins.",

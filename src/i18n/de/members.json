@@ -93,6 +93,7 @@
     "subtitle": "Wir senden eine Einladung per E-Mail, damit die Person diesem Pflegekreis beitreten kann.",
     "emailLabel": "E-Mail-Adresse",
     "emailPlaceholder": "name@example.com",
+    "managerHint": "Sobald die Person beigetreten ist, können Sie sie zur Mitverwaltung machen, damit sie beim Einladen und Verwalten von Mitgliedern hilft.",
     "roleLabel": "Rolle der Person",
     "roleHints": {
       "caregiver": "Kann ansehen und bei der Koordination der Pflege helfen.",

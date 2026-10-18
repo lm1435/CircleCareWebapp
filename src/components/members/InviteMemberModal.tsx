@@ -68,6 +68,12 @@ export interface InviteMemberModalProps {
   viewerIsOwner: boolean;
   /** The owner's first name for the manager's cap copy; nameless copy without it. */
   ownerName?: string;
+  /**
+   * Show "after they join, you can make them a manager" under the email field
+   * (Family caregiver only). The parent decides it with
+   * `viewerCanSuggestManager` -- premium owner with `assign_manager`.
+   */
+  canSuggestManager?: boolean;
 }
 
 export function InviteMemberModal({
@@ -79,6 +85,7 @@ export function InviteMemberModal({
   recipientName,
   viewerIsOwner,
   ownerName,
+  canSuggestManager = false,
 }: InviteMemberModalProps): ReactElement {
   const { t, i18n } = useTranslation('members');
   const dailyUpdateOn = useDailyUpdateEnabled(circleId);
@@ -433,6 +440,11 @@ export function InviteMemberModal({
             if (errors['invite-email']) setErrors((prev) => ({ ...prev, 'invite-email': '' }));
           }}
           error={errors['invite-email'] || undefined}
+          // Manager role hint (docs/plans/manager-role.md): a care recipient
+          // can never be a manager, so only for a Family caregiver invite.
+          hint={
+            canSuggestManager && memberType === 'caregiver' ? t('invite.managerHint') : undefined
+          }
         />
 
         {capNotice ? (

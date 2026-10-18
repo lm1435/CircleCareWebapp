@@ -36,6 +36,7 @@ import {
   getCircleOwnerName,
   memberRowActions,
   viewerCanManageMembers,
+  viewerCanSuggestManager,
   viewerOwnsCircle,
 } from '@/lib/premiumOwnership';
 
@@ -478,6 +479,7 @@ export default function MembersPage(): ReactElement {
           recipientName={circle.recipient_name}
           viewerIsOwner={isOwner}
           ownerName={getCircleOwnerName(circle)}
+          canSuggestManager={viewerCanSuggestManager(circle, currentUserId)}
           onClose={() => setShowInvite(false)}
         />
       ) : null}

@@ -99,6 +99,22 @@ export function viewerCanAssignManager(
   return circle?.viewer_permissions?.includes('assign_manager') === true;
 }
 
+/**
+ * May the invite form tell the viewer "after they join, you can make them a
+ * manager"? The OWNER, while the server offers `assign_manager`, on a PREMIUM
+ * circle only: `assign_manager` is served to a free owner too, and the invite
+ * flow must never become a paywall upsell. `is_premium_circle` is the owner's
+ * tier as the server computes it (never false for the owner's own row, which
+ * is never a view-only seat). Mobile parity: InviteMemberScreen
+ * `showManagerHint`. The caller still hides it for a care-recipient invite.
+ */
+export function viewerCanSuggestManager(
+  circle: (CircleOwnershipFields & { is_premium_circle?: boolean | null }) | null | undefined,
+  userId: string | null | undefined
+): boolean {
+  return viewerCanAssignManager(circle, userId) && circle?.is_premium_circle === true;
+}
+
 /** The viewer's role, for analytics (`actor_role`) and copy. */
 export function viewerCircleRole(
   circle: CircleOwnershipFields | null | undefined,

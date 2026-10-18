@@ -93,6 +93,7 @@
     "subtitle": "We'll email them an invitation to join this care circle.",
     "emailLabel": "Email address",
     "emailPlaceholder": "name@example.com",
+    "managerHint": "After they join, you can make them a manager to help invite and manage members.",
     "roleLabel": "Their role",
     "roleHints": {
       "caregiver": "Can view and help coordinate care.",

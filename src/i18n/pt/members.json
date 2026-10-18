@@ -93,6 +93,7 @@
     "subtitle": "Enviaremos um convite por e-mail para participar deste círculo de cuidado.",
     "emailLabel": "Endereço de e-mail",
     "emailPlaceholder": "nome@exemplo.com",
+    "managerHint": "Depois que a pessoa entrar, você poderá dar a ela o papel de gestor para ajudar a convidar e gerenciar membros.",
     "roleLabel": "Função da pessoa",
     "roleHints": {
       "caregiver": "Pode visualizar e ajudar a coordenar o cuidado.",

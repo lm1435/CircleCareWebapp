@@ -93,6 +93,7 @@
     "subtitle": "Le enviaremos un correo con la invitación para unirse a este círculo de cuidado.",
     "emailLabel": "Correo electrónico",
     "emailPlaceholder": "nombre@ejemplo.com",
+    "managerHint": "Cuando se una, puedes darle el rol de gestor para que te ayude a invitar y administrar miembros.",
     "roleLabel": "Su rol",
     "roleHints": {
       "caregiver": "Puede ver y ayudar a coordinar el cuidado.",

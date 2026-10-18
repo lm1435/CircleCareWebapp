@@ -372,3 +372,48 @@ describe('MembersPage — MEMBER (and a demoted manager)', () => {
     expect(screen.queryByRole('button', { name: 'Actions for Ana Reyes' })).toBeNull();
   });
 });
+
+describe('MembersPage — invite form manager hint', () => {
+  const HINT = 'After they join, you can make them a manager to help invite and manage members.';
+
+  async function openInvite(): Promise<void> {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getAllByRole('button', { name: 'Invite member' })[0]);
+  }
+
+  it('shows for a PREMIUM owner with assign_manager (caregiver is the default type)', async () => {
+    setCircle(roster(), { ...OWNER_ON, is_premium_circle: true });
+    await openInvite();
+    expect(screen.getByText(HINT)).toBeInTheDocument();
+  });
+
+  it('hides once Care recipient is chosen', async () => {
+    setCircle(roster(), { ...OWNER_ON, is_premium_circle: true });
+    await openInvite();
+    await userEvent.setup().click(screen.getByRole('radio', { name: /Care recipient/ }));
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+
+  it('is absent for a FREE owner (assign_manager is still served)', async () => {
+    setCircle(roster(), { ...OWNER_ON, is_premium_circle: false });
+    await openInvite();
+    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+
+  it('is absent without assign_manager (switch off)', async () => {
+    setCircle(roster(), { ...OWNER_OFF, is_premium_circle: true });
+    await openInvite();
+    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+
+  it('is absent for a manager on a premium circle', async () => {
+    currentUserId = 'u-mgr';
+    setCircle(roster(), { ...MANAGER, is_premium_circle: true });
+    await openInvite();
+    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+});

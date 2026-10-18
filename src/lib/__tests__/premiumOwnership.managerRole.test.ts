@@ -2,6 +2,7 @@ import {
   memberRowActions,
   viewerCanAssignManager,
   viewerCanManageMembers,
+  viewerCanSuggestManager,
   viewerCircleRole,
   type CircleOwnershipFields,
   type MemberTargetFields,
@@ -136,5 +137,31 @@ describe('memberRowActions', () => {
     expect(memberRowActions(member, MEMBER, plainRow)).toEqual(none);
     expect(memberRowActions(demoted, MGR, plainRow)).toEqual(none);
     expect(memberRowActions(base, MGR, plainRow)).toEqual(none);
+  });
+});
+
+describe('viewerCanSuggestManager (invite-form manager hint)', () => {
+  it('is true for a PREMIUM owner the server offers assign_manager', () => {
+    expect(viewerCanSuggestManager({ ...ownerOn, is_premium_circle: true }, OWNER)).toBe(true);
+  });
+
+  it('is false for a FREE owner, even though assign_manager is served (no upsell)', () => {
+    expect(viewerCanSuggestManager({ ...ownerOn, is_premium_circle: false }, OWNER)).toBe(false);
+    expect(viewerCanSuggestManager(ownerOn, OWNER)).toBe(false);
+  });
+
+  it('is false for an owner without assign_manager (switch off / older backend)', () => {
+    expect(viewerCanSuggestManager({ ...ownerOff, is_premium_circle: true }, OWNER)).toBe(false);
+    expect(viewerCanSuggestManager({ ...base, is_premium_circle: true }, OWNER)).toBe(false);
+  });
+
+  it('is false for a manager or a plain member, and when signed out', () => {
+    const premiumOn = { ...ownerOn, is_premium_circle: true };
+    expect(viewerCanSuggestManager({ ...manager, is_premium_circle: true }, MGR)).toBe(false);
+    expect(viewerCanSuggestManager({ ...member, is_premium_circle: true }, MEMBER)).toBe(false);
+    // Even a payload that (wrongly) carried assign_manager never shows it to a non-owner.
+    expect(viewerCanSuggestManager(premiumOn, MGR)).toBe(false);
+    expect(viewerCanSuggestManager(premiumOn, null)).toBe(false);
+    expect(viewerCanSuggestManager(undefined, OWNER)).toBe(false);
   });
 });

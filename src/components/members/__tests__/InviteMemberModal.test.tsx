@@ -912,3 +912,36 @@ describe('InviteMemberModal — a MANAGER at the seat cap', () => {
     expect(screen.queryByRole('button', { name: 'Upgrade' })).toBeNull();
   });
 });
+
+describe('InviteMemberModal — manager hint (docs/plans/manager-role.md)', () => {
+  const HINT = 'After they join, you can make them a manager to help invite and manage members.';
+
+  it('shows under the email field for a Family caregiver when the parent allows it', () => {
+    render(
+      <InviteMemberModal viewerIsOwner canSuggestManager circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
+    );
+    const hint = screen.getByText(HINT);
+    expect(hint).toBeInTheDocument();
+    // Plain text, tied to the email field so it is read with it.
+    expect(screen.getByLabelText('Email address')).toHaveAttribute(
+      'aria-describedby',
+      expect.stringContaining(hint.id)
+    );
+  });
+
+  it('hides for a Care recipient invite and comes back for Caregiver', async () => {
+    const user = userEvent.setup();
+    render(
+      <InviteMemberModal viewerIsOwner canSuggestManager circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
+    );
+    await user.click(screen.getByRole('radio', { name: /Care recipient/ }));
+    expect(screen.queryByText(HINT)).toBeNull();
+    await user.click(screen.getByRole('radio', { name: /^Caregiver/ }));
+    expect(screen.getByText(HINT)).toBeInTheDocument();
+  });
+
+  it('is absent when the parent does not allow it (free owner, manager, member, no assign_manager)', () => {
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    expect(screen.queryByText(HINT)).toBeNull();
+  });
+});
