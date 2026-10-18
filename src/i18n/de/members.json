@@ -43,7 +43,7 @@
     "owner": "Inhaber",
     "caregiver": "Pflegeperson",
     "careRecipient": "Umsorgte Person",
-    "manager": "Mitverwaltung"
+    "manager": "Mitverwalter"
   },
   "access": {
     "readOnly": "Nur Lesen",
@@ -93,7 +93,7 @@
     "subtitle": "Wir senden eine Einladung per E-Mail, damit die Person diesem Pflegekreis beitreten kann.",
     "emailLabel": "E-Mail-Adresse",
     "emailPlaceholder": "name@example.com",
-    "managerHint": "Sobald die Person beigetreten ist, können Sie sie zur Mitverwaltung machen, damit sie beim Einladen und Verwalten von Mitgliedern hilft.",
+    "managerHint": "Sobald die Person beigetreten ist, können Sie sie zum Mitverwalter machen, damit sie beim Einladen und Verwalten von Mitgliedern hilft.",
     "roleLabel": "Rolle der Person",
     "roleHints": {
       "caregiver": "Kann ansehen und bei der Koordination der Pflege helfen.",
@@ -160,10 +160,10 @@
     "leaveConfirmTitle": "Diesen Kreis verlassen?",
     "leaveConfirmBody": "Sie verlieren den Zugriff auf diesen Pflegekreis. Der Kreis-Inhaber kann Sie später erneut einladen.",
     "leaveSuccess": "Sie haben den Kreis verlassen.",
-    "subheadingManager": "Alle in diesem Pflegekreis. Als Mitverwaltung können Sie Personen einladen und Pflegepersonen entfernen.",
-    "makeManager": "Zur Mitverwaltung machen",
+    "subheadingManager": "Alle in diesem Pflegekreis. Als Mitverwalter können Sie Personen einladen und Pflegepersonen entfernen.",
+    "makeManager": "Zum Mitverwalter machen",
     "removeManager": "Mitverwaltung entziehen",
-    "makeManagerConfirmTitle": "{{name}} zur Mitverwaltung machen?",
+    "makeManagerConfirmTitle": "{{name}} zum Mitverwalter machen?",
     "makeManagerConfirmBody": "{{name}} kann dann Personen einladen, Einladungen erneut senden oder zurückziehen und Pflegepersonen entfernen. Nur Sie können Kreiseinstellungen, Medikamentenerinnerungen, die Abrechnung und die Mitverwaltung ändern.",
     "removeManagerConfirmTitle": "{{name}} die Mitverwaltung entziehen?",
     "removeManagerConfirmBody": "{{name}} bleibt als Pflegeperson im Kreis, kann aber keine Personen mehr einladen oder entfernen.",
