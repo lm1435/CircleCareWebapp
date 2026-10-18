@@ -432,8 +432,16 @@ describe('CareTeam — manager role', () => {
     });
     const named = screen.getByText('Mia').parentElement!;
     expect(within(named).getByText('Manager')).toBeInTheDocument();
+    // Same filled moss badge as the owner (owner decision 2026-10-18), not dusk.
+    expect(within(named).getByText('Manager')).toHaveClass('bg-moss-soft', 'text-moss-deep');
     // Unnamed: the role line reads Manager (not "Family member").
     expect(screen.getAllByText('Manager')).toHaveLength(2);
     expect(screen.queryByText('Family member')).toBeNull();
+  });
+
+  it('an unnamed owner\'s role line reads "Circle owner" (never "admin")', () => {
+    renderTeam({ members: [member({ id: OWNER, role: 'owner', email: 'o@example.com' })] });
+    expect(screen.getByText('Circle owner')).toBeInTheDocument();
+    expect(screen.queryByText(/admin/i)).toBeNull();
   });
 });

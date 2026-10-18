@@ -40,7 +40,7 @@
     "takenOverdue": "{{taken}}/{{total}} eingenommen · {{overdue}} überfällig"
   },
   "roles": {
-    "owner": "Kreis-Admin",
+    "owner": "Inhaber",
     "caregiver": "Pflegeperson",
     "careRecipient": "Umsorgte Person",
     "manager": "Mitverwaltung"

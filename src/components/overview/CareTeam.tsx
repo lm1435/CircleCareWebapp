@@ -269,8 +269,9 @@ export function CareTeam({
                   </span>
                   {/* Only a NAMED manager gets the pill: an unnamed one already
                       reads "Manager" on the line below. */}
+                  {/* Same filled style as the owner's badge (2026-10-18). */}
                   {member.role === 'manager' && member.first_name ? (
-                    <Badge variant="dusk" size="sm" className="shrink-0">
+                    <Badge variant="primary" size="sm" className="shrink-0">
                       {t('members:roles.manager')}
                     </Badge>
                   ) : null}

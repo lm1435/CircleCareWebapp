@@ -125,13 +125,14 @@ describe('CircleCard', () => {
   });
 
   // Manager role: GET /circles serves role 'manager' (switch on only).
-  it('shows the Manager badge (dusk, not the owner moss) and folds it into the label', async () => {
+  // Owner decision 2026-10-18: owner and manager share ONE badge style.
+  it('shows the Manager badge in the owner\'s style and folds it into the label', async () => {
     renderCard(makeCircle({ role: 'manager', member_count: 3 }));
 
     const link = await screen.findByRole('link');
     const badge = screen.getByText('Manager');
-    expect(badge).toHaveClass('bg-dusk-soft', 'text-dusk-deep');
-    expect(badge).not.toHaveClass('text-moss-deep');
+    expect(badge).toHaveClass('bg-moss-wash', 'text-moss-deep');
+    expect(badge).not.toHaveClass('bg-dusk-soft');
     expect(link.getAttribute('aria-label')).toContain('(Manager)');
     expect(screen.queryByText('Caregiver')).toBeNull();
   });

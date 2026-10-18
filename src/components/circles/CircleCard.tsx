@@ -33,9 +33,10 @@ const roleDotClass: Record<RoleKey, string> = {
 // pair per role.
 const roleBadgeClass: Record<RoleKey, string> = {
   owner: 'rounded-sm bg-moss-wash px-2 py-0.5 text-xs font-semibold text-moss-deep',
-  // Manager: dusk pair (the Badge `dusk` variant's tokens), so it never reads
-  // as the owner's moss or as an alarm.
-  manager: 'rounded-sm bg-dusk-soft px-2 py-0.5 text-xs font-semibold text-dusk-deep',
+  // Manager: exactly the owner's pair (owner decision 2026-10-18: both role
+  // badges share one style; the label tells them apart). Mobile parity:
+  // CircleListScreen gives owner and manager the same pill colours.
+  manager: 'rounded-sm bg-moss-wash px-2 py-0.5 text-xs font-semibold text-moss-deep',
   careRecipient: 'rounded-sm bg-clay-soft px-2 py-0.5 text-xs font-semibold text-clay-deep',
   caregiver: 'rounded-sm bg-bg-2 px-2 py-0.5 text-xs font-semibold text-ink-2',
 };

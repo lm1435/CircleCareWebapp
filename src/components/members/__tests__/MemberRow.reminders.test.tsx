@@ -108,10 +108,14 @@ describe('MemberRow notifications-off badge', () => {
 // Manager role: a manager row gets its own badge, and an unnamed manager's
 // subtitle says Manager (not Caregiver).
 describe('MemberRow manager label', () => {
-  it('badges a manager "Manager" in the dusk tone', () => {
+  // Owner decision 2026-10-18: owner and manager share ONE filled badge style.
+  it('badges a manager "Manager" in the owner\'s filled style', () => {
     render(<ul><MemberRow member={member({ role: 'manager' })} /></ul>);
     const badge = screen.getByText('Manager');
-    expect(badge).toHaveClass('bg-dusk-soft');
+    expect(badge).toHaveClass('bg-moss-soft', 'text-moss-deep');
+    expect(badge).not.toHaveClass('bg-dusk-soft');
+    render(<ul><MemberRow member={member({ id: 'o1', role: 'owner', first_name: 'Olga' })} /></ul>);
+    expect(screen.getByText('Owner').className).toBe(badge.className);
     expect(screen.queryByText('Caregiver')).toBeNull();
   });
 

@@ -17,9 +17,11 @@ type RoleKey = 'owner' | 'manager' | 'caregiver' | 'careRecipient';
  * Spec §6.7: owner `primary`, care recipient `coral`, caregiver `default`.
  * Manager `dusk` — distinct from the owner's moss, never terracotta (alarm).
  */
+// Owner and manager share ONE filled style (owner decision 2026-10-18); the
+// label tells them apart. Mobile: CircleDetailScreen adminPill / managerPill.
 const roleBadgeVariant: Record<RoleKey, BadgeVariant> = {
   owner: 'primary',
-  manager: 'dusk',
+  manager: 'primary',
   careRecipient: 'coral',
   caregiver: 'default',
 };
