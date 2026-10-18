@@ -279,6 +279,15 @@ export function CareTeam({
                 <span className="truncate text-sm text-ink-2">{role}</span>
               </span>
 
+              {/* Owner pill on the right of the row, like mobile's care team
+                  (CircleDetailScreen adminPill); same filled style as the
+                  Manager pill (owner decision 2026-10-18). */}
+              {member.role === 'owner' ? (
+                <Badge variant="primary" size="sm" className="shrink-0">
+                  {t('members:roles.owner')}
+                </Badge>
+              ) : null}
+
               {items.length > 0 ? (
                 <MoreMenu
                   items={items}
