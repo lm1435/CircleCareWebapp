@@ -1,6 +1,9 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
-import { runScopedEmail } from '../../isolation';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { createAccount, purgeAccount, runScopedEmail } from '../../isolation';
+import { currentRunId } from '../../runId';
 import { API_ERRORS, countRequests, dbQuery, generateSignupOtp, holdRequest, sqlStr } from '../../unhappy';
 import {
   CONSENT_LOCAL_KEYS,
@@ -40,6 +43,40 @@ const COPY = {
 };
 const GOOD_PASSWORD = 'Str0ng!Passw0rd';
 
+// REAL-BACKEND addresses. The full suite runs its backend with
+// EMAIL_BLOCKED_DOMAINS=circlecare.test,example.com, and POST /signup answers a
+// blocked domain with a deliberate fake 200 (routes/auth.ts, anti-enumeration),
+// so a run-scoped @circlecare.test address never reaches GoTrue there. These
+// tests need the REAL GoTrue path, so they use a SUBDOMAIN of the reserved
+// .test TLD: isEmailBlocked matches the exact domain only, and .test can never
+// receive mail. Run teardown does not match this domain — each test purges its
+// own address in `finally`.
+const REAL_PATH_DOMAIN = 'real-path.circlecare.test';
+function realPathEmail(label: string): string {
+  return `e2e-iso-${currentRunId()}-${label}@${REAL_PATH_DOMAIN}`;
+}
+
+/**
+ * Email safety for the real-GoTrue tests: the address is NOT on the backend's
+ * blocklist, so the only thing keeping mail from being sent is that GoTrue's
+ * send_email hook is unreachable. Fail BEFORE submitting if anything answers
+ * on the hook URL (a backend on :3001 would forward the OTP to Resend).
+ */
+async function expectSendEmailHookUnreachable(): Promise<void> {
+  const config = fs.readFileSync(fileURLToPath(new URL('../../../../backend/supabase/config.toml', import.meta.url)), 'utf8');
+  const hook = /\[auth\.hook\.send_email\][^[]*?enabled\s*=\s*true[^[]*?uri\s*=\s*"([^"]+)"/.exec(config)?.[1];
+  if (!hook) return; // hook disabled: GoTrue's own mailer goes to Mailpit locally
+  const url = hook.replace('host.docker.internal', '127.0.0.1');
+  const reachable = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(3000) }).then(
+    () => true,
+    () => false
+  );
+  expect(
+    reachable,
+    `${url} answers: GoTrue's send_email hook would forward a REAL email. Stop whatever listens there before running this spec.`
+  ).toBe(false);
+}
+
 async function openSignup(page: Page): Promise<void> {
   await page.goto('/signup', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Create account' })).toBeVisible({ timeout: 20_000 });
@@ -77,8 +114,11 @@ async function expectNoConsentRecorded(page: Page): Promise<void> {
 
 test('existing email (real backend): failure copy, no navigation, nothing recorded, account untouched', async ({
   page,
-  account,
 }) => {
+  await expectSendEmailHookUnreachable();
+  const email = realPathEmail(uniq('signup-existing'));
+  const account = { email, userId: await createAccount(email, 'free') };
+  try {
   const before = dbQuery<{ first_name: string | null; last_name: string | null; terms_accepted_at: string | null }>(
     `select first_name, last_name, terms_accepted_at::text as terms_accepted_at from public.users where id = ${sqlStr(account.userId)}::uuid`
   )[0];
@@ -103,6 +143,9 @@ test('existing email (real backend): failure copy, no navigation, nothing record
     )[0]
   ).toEqual(before);
   expect(authUser(account.email).encrypted_password, 'the existing password was not replaced').toBe(passwordBefore);
+  } finally {
+    await purgeAccount(email);
+  }
 });
 
 test('USER_EXISTS: exact copy, no navigation, no consent answer stored', async ({ page }) => {
@@ -152,7 +195,9 @@ test('client-side validation sends no request: weak password, mismatch, missing 
 });
 
 test('real backend 400 SIGNUP_FAILED is surfaced and the form recovers', async ({ page }) => {
-  const email = runScopedEmail(uniq('signup-real400'));
+  await expectSendEmailHookUnreachable();
+  const email = realPathEmail(uniq('signup-real400'));
+  try {
   await openSignup(page);
   const posts = countRequests(page, 'POST', SIGNUP);
   await fillSignup(page, { email });
@@ -168,6 +213,9 @@ test('real backend 400 SIGNUP_FAILED is surfaced and the form recovers', async (
   await posts.expectCount(1);
   expect(authUserCount(email), 'no auth user was created').toBe(0);
   await expectNoConsentRecorded(page);
+  } finally {
+    await purgeAccount(email);
+  }
 });
 
 test('double submit while the signup is in flight sends exactly one request', async ({ page }) => {

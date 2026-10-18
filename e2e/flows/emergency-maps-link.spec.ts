@@ -77,6 +77,20 @@ test('doctor: the saved address is a maps link that opens in a new tab', async (
     const outline = await link.evaluate((el) => getComputedStyle(el).outlineStyle);
     expect(outline).not.toBe('none');
 
+    // Let finite animations finish before axe samples colours: the route wrapper
+    // fades in (`animate-[fade-in_200ms]`), and an axe pass that lands mid-fade
+    // reads every text-ink-3 label at partial opacity and reports a page-wide
+    // color-contrast failure (13/20 runs caught the fade still running; the
+    // flake reproduced 1/20). Infinite loops (cc-shimmer skeletons) never
+    // finish, so they are skipped; a cancelled animation counts as settled.
+    await page.evaluate(async () => {
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => undefined))
+      );
+    });
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
     expect(
       axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 140)).join(' ;; ')}`)
