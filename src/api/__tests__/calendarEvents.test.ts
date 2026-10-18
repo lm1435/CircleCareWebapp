@@ -51,6 +51,19 @@ describe('updateEvent', () => {
 });
 
 describe('getSeriesRoot', () => {
+  // `?eventId=` deep links hand this function an id from a URL anyone can write,
+  // already DECODED by URLSearchParams. It must stay one path segment.
+  it('encodes an attacker-shaped id into ONE path segment (no path/query rebuild)', async () => {
+    mockGet.mockResolvedValue({
+      success: true,
+      data: { event: { id: 'x', scheduled_date: '2026-06-15' } },
+    } as never);
+    await getSeriesRoot(CIRCLE_ID, 'x/notes?circle_id=other#frag');
+    expect(mockGet).toHaveBeenCalledWith(
+      `/circles/${CIRCLE_ID}/events/x%2Fnotes%3Fcircle_id%3Dother%23frag`
+    );
+  });
+
   it('keeps the schedule AND the series content, never the signed photo URL', async () => {
     mockGet.mockResolvedValue({
       success: true,

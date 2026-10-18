@@ -490,8 +490,14 @@ export type SeriesRootContentField = (typeof SERIES_ROOT_CONTENT_FIELDS)[number]
  * content (`SERIES_ROOT_CONTENT_FIELDS`) are kept.
  */
 export async function getSeriesRoot(circleId: string, eventId: string): Promise<SeriesRoot> {
+  // SECURITY (web audit 2026-10-17): `eventId` can come straight from a URL a
+  // stranger wrote — CalendarPage's `?eventId=` deep link (daily-update rows) —
+  // and `URLSearchParams` has already DECODED it, so `?eventId=x%2Fnotes%3Fa%3D1`
+  // arrives as `x/notes?a=1`. Interpolated raw, that rebuilt the Bearer-carrying
+  // request path (`/events/x/notes?a=1`). Encoded, it stays ONE path segment and
+  // the backend answers 404 (-> "This item is no longer available.").
   const response = (await apiClient.get(
-    `/circles/${circleId}/events/${eventId}`,
+    `/circles/${circleId}/events/${encodeURIComponent(eventId)}`,
   )) as unknown as SingleEventEnvelope;
   const event = response.data.event;
   return {
