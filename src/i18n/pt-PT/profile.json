@@ -66,5 +66,9 @@
   },
   "timezoneImpact": {
     "impactTitle": "Alterar o seu fuso horário?"
+  },
+  "appearance": {
+    "title": "Aspeto",
+    "hint": "Sistema acompanha o seu dispositivo. Esta escolha aplica-se apenas a este dispositivo."
   }
 }
