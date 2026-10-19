@@ -62,7 +62,6 @@ import iconCloudOfflineOutline from '../../../node_modules/ionicons/dist/svg/clo
 import iconLogoApple from '../../../node_modules/ionicons/dist/svg/logo-apple.svg?raw';
 import iconLogoGoogle from '../../../node_modules/ionicons/dist/svg/logo-google.svg?raw';
 import iconLogOutOutline from '../../../node_modules/ionicons/dist/svg/log-out-outline.svg?raw';
-import iconMoonOutline from '../../../node_modules/ionicons/dist/svg/moon-outline.svg?raw';
 import iconRemove from '../../../node_modules/ionicons/dist/svg/remove.svg?raw';
 
 /**
@@ -132,7 +131,6 @@ export const ICON_NAMES = [
   'logo-google',
   'log-out-outline', // mobile ProfileScreen sign-out row
   'remove', // mobile VitalsDetailScreen's stable-trend glyph
-  'moon-outline', // dark-mode interest row (mobile ProfileScreen Appearance section)
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
@@ -200,6 +198,5 @@ export const ICON_FILES: Record<IconName, string> = {
   'logo-apple': iconLogoApple,
   'logo-google': iconLogoGoogle,
   'log-out-outline': iconLogOutOutline,
-  'moon-outline': iconMoonOutline,
   remove: iconRemove,
 };

@@ -353,6 +353,41 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(capture).toHaveBeenCalledWith('timezone_changed', { timezone: 'America/Denver' });
   });
 
+  it('theme_preference_changed carries enums and a boolean only', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.themePreferenceChanged({
+      theme: 'dark',
+      previous: 'system',
+      system_dark: false,
+      effective: 'dark',
+    });
+    expect(capture).toHaveBeenCalledWith('theme_preference_changed', {
+      theme: 'dark',
+      previous: 'system',
+      system_dark: false,
+      effective: 'dark',
+    });
+  });
+
+  it('registerThemeProperties registers theme + theme_preference as super properties', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.registerThemeProperties({ theme: 'dark', theme_preference: 'system' });
+    expect(register).toHaveBeenCalledWith({ theme: 'dark', theme_preference: 'system' });
+  });
+
+  it('theme analytics no-op without a PostHog key', async () => {
+    const { Analytics } = await loadWithKey(undefined);
+    Analytics.themePreferenceChanged({
+      theme: 'light',
+      previous: 'system',
+      system_dark: true,
+      effective: 'light',
+    });
+    Analytics.registerThemeProperties({ theme: 'light', theme_preference: 'light' });
+    expect(capture).not.toHaveBeenCalled();
+    expect(register).not.toHaveBeenCalled();
+  });
+
   it('account_deleted carries no properties', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.accountDeleted();

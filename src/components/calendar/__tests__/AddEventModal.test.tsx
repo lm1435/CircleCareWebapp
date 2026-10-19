@@ -181,8 +181,8 @@ describe('AddEventModal', () => {
     const solid = (el: HTMLElement): void => {
       expect(el).not.toHaveAttribute('aria-disabled');
       expect(el).toBeEnabled();
-      expect(el.className).toContain('bg-moss');
-      expect(el.className).toContain('text-cream');
+      expect(el.className).toContain('bg-primary-fill');
+      expect(el.className).toContain('text-on-primary');
       expect(el.className).not.toContain('bg-bg-2');
       expect(el.className).not.toContain('text-moss-mid');
     };

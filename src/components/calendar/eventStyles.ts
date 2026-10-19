@@ -11,6 +11,8 @@ import { isEventPastDue } from '@/utils/timezone';
 // mobile's only compact status cue: skipped/done events read as muted
 // (lower opacity) and skipped titles get a strikethrough. Tokens only — the
 // white-on-solid treatment matches mobile's #FFFFFF on the colored blocks.
+// The solids are the *-fill role tokens (globals.css), which stay the SAME solid
+// light-mode section colours with white text in dark mode too.
 
 export type MedicationStatus = 'taken' | 'missed' | 'skipped' | 'pending';
 
@@ -23,9 +25,9 @@ export const EVENT_TYPE_DOT_CLASS: Record<EventType, string> = {
 
 /** Solid block background per event type (mobile TimelineEventBlock). */
 export const EVENT_TYPE_BLOCK_CLASS: Record<EventType, string> = {
-  medication: 'bg-clay',
-  appointment: 'bg-dusk',
-  task: 'bg-moss',
+  medication: 'bg-medication-fill',
+  appointment: 'bg-appointment-fill',
+  task: 'bg-task-fill',
 };
 
 /**
@@ -118,7 +120,7 @@ export function getEventCardClass(
   const isDone = status === 'taken' || status === 'skipped';
   return isDone
     ? EVENT_TYPE_DONE_CLASS[event.event_type]
-    : `${EVENT_TYPE_BLOCK_CLASS[event.event_type]} text-cream`;
+    : `${EVENT_TYPE_BLOCK_CLASS[event.event_type]} text-on-fill`;
 }
 
 /**
@@ -135,5 +137,5 @@ export function getEventTextClass(
   status: MedicationStatus | null = null
 ): string {
   const isDone = status === 'taken' || status === 'skipped';
-  return isDone ? EVENT_TYPE_DEEP_TEXT[event.event_type] : 'text-cream';
+  return isDone ? EVENT_TYPE_DEEP_TEXT[event.event_type] : 'text-on-fill';
 }

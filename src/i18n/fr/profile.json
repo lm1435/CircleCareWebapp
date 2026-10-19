@@ -199,12 +199,10 @@
   },
   "appearance": {
     "title": "Apparence",
-    "darkMode": "Mode sombre",
-    "comingSoon": "Bientôt disponible",
-    "requested": "Demandé",
-    "hint": "Envie du mode sombre ? Touchez pour nous le dire. Cela nous aide à décider quoi développer ensuite.",
-    "thanks": "Merci. Nous avons bien noté votre vote.",
-    "a11yComingSoon": "Mode sombre, bientôt disponible",
-    "a11yRequested": "Mode sombre, demandé"
+    "themeLabel": "Thème",
+    "themeSystem": "Système",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "hint": "Système suit votre appareil. Ce choix s’applique uniquement à cet appareil."
   }
 }

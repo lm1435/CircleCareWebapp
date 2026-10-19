@@ -22,7 +22,7 @@ const BASE =
   'whitespace-nowrap select-none';
 
 const VARIANT = {
-  primary: 'bg-moss text-cream shadow-md hover:bg-moss-mid',
+  primary: 'bg-primary-fill text-on-primary shadow-md hover:bg-primary-fill-hover',
   // Cream fill + `border-line-strong` (WCAG 1.4.11 control edge): the same resting treatment as an
   // unselected chip, so a secondary button and a chip in one dialog read as
   // one family. The earlier `bg-bg-2` tan fill was 1.09:1 against the page

@@ -42,32 +42,32 @@ export function AuthShell({ children }: AuthShellProps): ReactElement {
         <img
           src={hero.src}
           alt={t(hero.altKey)}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover [filter:var(--photo-filter)]"
         />
         {/* Gradient overlay — mirrors mobile WelcomeScreen: ramps from 0.95
             opacity at the bottom 10% to 0.55 at 55% (the stops below), so the
             cream headline/tagline/value-prop list keep AA contrast on any
             photo. */}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/95 from-10% via-ink/55 via-55% to-ink/25" />
+        <div className="absolute inset-0 bg-gradient-to-t from-photo-scrim/95 from-10% via-photo-scrim/55 via-55% to-photo-scrim/25" />
         <div className="absolute inset-x-0 bottom-0 p-10">
           {/* The wordmark only — the editorial face stops here (spec §6.1). */}
-          <p className="m-0 text-xl text-cream" style={{ fontFamily: 'var(--font-serif)' }}>
+          <p className="m-0 text-xl text-on-photo" style={{ fontFamily: 'var(--font-serif)' }}>
             {t('appName')}
           </p>
           {/* A <p>, not <h2> — the form column's <h1> (the actual page
               heading) renders after this in the DOM, so an <h2> here would
               put an h2 before the page's h1 and break heading order. Sans
               type scale (`editorialTitle`), not the serif face. */}
-          <Text variant="editorialTitle" as="p" className="mt-6 max-w-md text-cream!">
+          <Text variant="editorialTitle" as="p" className="mt-6 max-w-md text-on-photo!">
             {t('authHero.headline')}
           </Text>
-          <Text variant="caption" className="m-0 mt-3 max-w-md text-cream/90!">
+          <Text variant="caption" className="m-0 mt-3 max-w-md text-on-photo/90!">
             {t('authHero.tagline')}
           </Text>
           <ul role="list" className="m-0 mt-5 flex max-w-md list-none flex-col gap-2 p-0">
             {VALUE_PROP_KEYS.map((key) => (
               <li key={key} className="flex items-start gap-2">
-                <Text variant="caption" className="text-cream/90!">
+                <Text variant="caption" className="text-on-photo/90!">
                   {t(key)}
                 </Text>
               </li>

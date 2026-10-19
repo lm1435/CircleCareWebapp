@@ -65,7 +65,7 @@ describe('AddMenu', () => {
     setup();
 
     const items = screen.getAllByRole('menuitem');
-    const tints = ['bg-clay', 'bg-dusk', 'bg-moss', 'bg-dusk'];
+    const tints = ['bg-menu-clay', 'bg-menu-dusk', 'bg-menu-moss', 'bg-menu-dusk'];
     items.forEach((item, i) => {
       const disc = item.querySelector('span');
       expect(disc?.className).toContain('h-11 w-11');
@@ -94,7 +94,7 @@ describe('AddMenu', () => {
     expect(menu.className).toContain('fixed');
     expect(menu.className).toContain('left-1/2');
     expect(menu.className).toContain('rounded-full');
-    expect(menu.className).toContain('bg-ink');
+    expect(menu.className).toContain('bg-menu-pill');
   });
 
   // The sidebar rail is `overflow-y-auto` (which forces `overflow-x` to auto

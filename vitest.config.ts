@@ -23,6 +23,8 @@ export default defineConfig({
       VITE_SUPABASE_URL: 'https://test-project.supabase.co',
       VITE_SUPABASE_ANON_KEY: 'test-anon-key',
       VITE_API_URL: 'http://localhost:3000',
+      // Dark mode ON in tests (the flag-off path stubs it per test).
+      VITE_DARK_MODE: 'true',
     },
   },
 });

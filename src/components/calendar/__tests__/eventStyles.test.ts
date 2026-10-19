@@ -79,24 +79,24 @@ describe('getEventCardClass', () => {
     // Mirrors mobile: medication → clay, appointment → dusk, task → moss,
     // always solid with white text regardless of confirmation status.
     const med = getEventCardClass(makeEvent({ event_type: 'medication' }));
-    expect(med).toContain('bg-clay');
-    expect(med).toContain('text-cream');
+    expect(med).toContain('bg-medication-fill');
+    expect(med).toContain('text-on-fill');
 
     const appt = getEventCardClass(makeEvent({ event_type: 'appointment' }));
-    expect(appt).toContain('bg-dusk');
-    expect(appt).toContain('text-cream');
+    expect(appt).toContain('bg-appointment-fill');
+    expect(appt).toContain('text-on-fill');
 
     const task = getEventCardClass(makeEvent({ event_type: 'task' }));
-    expect(task).toContain('bg-moss');
-    expect(task).toContain('text-cream');
+    expect(task).toContain('bg-task-fill');
+    expect(task).toContain('text-on-fill');
   });
 
   it('keeps pending/missed blocks solid type-colored with white text', () => {
     const med = makeEvent({ event_type: 'medication' });
-    expect(getEventCardClass(med, 'pending')).toContain('bg-clay');
-    expect(getEventCardClass(med, 'pending')).toContain('text-cream');
-    expect(getEventCardClass(med, 'missed')).toContain('bg-clay');
-    expect(getEventCardClass(med, 'missed')).toContain('text-cream');
+    expect(getEventCardClass(med, 'pending')).toContain('bg-medication-fill');
+    expect(getEventCardClass(med, 'pending')).toContain('text-on-fill');
+    expect(getEventCardClass(med, 'missed')).toContain('bg-medication-fill');
+    expect(getEventCardClass(med, 'missed')).toContain('text-on-fill');
   });
 
   it('uses the muted soft-tint + deep-text treatment for done (taken/skipped) — WCAG AA, no opacity', () => {
@@ -105,7 +105,7 @@ describe('getEventCardClass', () => {
     // failed contrast). White cream text must NOT be used on the soft surface.
     expect(getEventCardClass(med, 'taken')).toBe('bg-clay-soft text-clay-deep');
     expect(getEventCardClass(med, 'skipped')).toBe('bg-clay-soft text-clay-deep');
-    expect(getEventCardClass(med, 'taken')).not.toContain('text-cream');
+    expect(getEventCardClass(med, 'taken')).not.toContain('text-on-fill');
     expect(getEventCardClass(med, 'taken')).not.toContain('opacity-70');
 
     expect(getEventCardClass(makeEvent({ event_type: 'appointment' }), 'taken')).toBe(

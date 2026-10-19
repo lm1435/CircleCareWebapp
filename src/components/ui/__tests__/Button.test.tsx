@@ -83,10 +83,10 @@ describe('Button', () => {
     it('primary: moss under cream text with the resting shadow', () => {
       const { container } = render(<Button variant="primary">P</Button>);
       const cls = btn(container).className;
-      expect(cls).toContain('bg-moss');
-      expect(cls).toContain('text-cream');
+      expect(cls).toContain('bg-primary-fill');
+      expect(cls).toContain('text-on-primary');
       expect(cls).toContain('shadow-md');
-      expect(cls).toContain('hover:bg-moss-mid');
+      expect(cls).toContain('hover:bg-primary-fill-hover');
     });
 
     it('secondary: cream with a 1.5px line border, the unselected-chip treatment', () => {
@@ -121,7 +121,7 @@ describe('Button', () => {
 
     it('defaults to primary', () => {
       const { container } = render(<Button>Default</Button>);
-      expect(btn(container).className).toContain('bg-moss');
+      expect(btn(container).className).toContain('bg-primary-fill');
     });
   });
 
@@ -353,7 +353,7 @@ describe('Button', () => {
       const link = screen.getByRole('link', { name: 'Care' });
       expect(link.tagName).toBe('A');
       expect(link).toHaveAttribute('href', '/care');
-      expect(link.className).toContain('bg-moss');
+      expect(link.className).toContain('bg-primary-fill');
     });
 
     it('never puts type or disabled on a non-button element', () => {

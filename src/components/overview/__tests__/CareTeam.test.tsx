@@ -142,7 +142,7 @@ describe('CareTeam', () => {
   it('renders the Invite button as the primary (moss) action', () => {
     renderTeam();
     const link = screen.getByRole('link', { name: 'Invite member' });
-    expect(link).toHaveClass('bg-moss');
+    expect(link).toHaveClass('bg-primary-fill');
     expect(link).not.toHaveClass('bg-cream');
   });
 

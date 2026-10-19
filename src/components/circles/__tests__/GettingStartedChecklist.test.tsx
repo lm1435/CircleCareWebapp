@@ -580,7 +580,7 @@ describe('GettingStartedChecklist', () => {
     const filledButtons = (): HTMLElement[] =>
       screen
         .getAllByRole('button')
-        .filter((button) => button.className.split(/\s+/).includes('bg-moss'));
+        .filter((button) => button.className.split(/\s+/).includes('bg-primary-fill'));
     const nextStep = (): string | null =>
       document.querySelector('[data-next="true"]')?.getAttribute('data-testid') ?? null;
 

@@ -71,7 +71,7 @@ export function NotificationsOffBadge({ firstName }: NotificationsOffBadgeProps)
         id={tipId}
         role="tooltip"
         hidden={!open}
-        className="absolute left-0 top-full z-30 mt-1 w-64 max-w-[80vw] rounded-md bg-ink px-3 py-2 text-xs text-cream shadow-md"
+        className="absolute left-0 top-full z-30 mt-1 w-64 max-w-[80vw] rounded-md bg-surface-raised px-3 py-2 text-xs text-on-raised shadow-md"
       >
         {explanation}
       </span>

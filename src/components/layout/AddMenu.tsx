@@ -35,22 +35,22 @@ const OPTIONS: readonly AddMenuOption[] = [
   {
     type: 'medication',
     icon: 'medical-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-clay/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-clay',
   },
   {
     type: 'appointment',
     icon: 'calendar-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-dusk/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-dusk',
   },
   {
     type: 'task',
     icon: 'checkbox-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-moss/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-moss',
   },
   {
     type: 'note',
     icon: 'pencil-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-dusk/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-dusk',
   },
 ];
 
@@ -230,7 +230,7 @@ export function AddMenu({
           data-testid="add-menu-pill"
           onKeyDown={menu.onMenuKeyDown}
           style={anchor === 'sidebar' ? sidebarPosition : undefined}
-          className={`${PILL_ANCHOR[anchor]} z-50 flex gap-5 rounded-full bg-ink px-5 py-3 shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none`}
+          className={`${PILL_ANCHOR[anchor]} z-50 flex gap-5 rounded-full bg-menu-pill px-5 py-3 shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none`}
         >
           {OPTIONS.map((option, index) => (
             <button
@@ -252,9 +252,9 @@ export function AddMenu({
               className="flex min-w-[48px] min-h-[48px] flex-col items-center justify-center gap-1 active:opacity-70 animate-[zoom-in_200ms_var(--ease-spring)] [animation-fill-mode:both] motion-reduce:animate-none"
             >
               <span className={option.circle}>
-                <Icon name={option.icon} size="chrome" className="text-cream" />
+                <Icon name={option.icon} size="chrome" className="text-menu-icon" />
               </span>
-              <span className="text-2xs tracking-[0.8px] uppercase text-cream/80">
+              <span className="text-2xs tracking-[0.8px] uppercase text-menu-label">
                 {t(`addMenu.${option.type}Short`)}
               </span>
             </button>

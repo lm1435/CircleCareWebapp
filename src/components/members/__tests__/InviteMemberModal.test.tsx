@@ -186,7 +186,7 @@ describe('InviteMemberModal — email-required', () => {
     // `hover:bg-moss-soft` class would also satisfy a naive
     // `.includes('bg-moss')` (it's a literal substring), misclassifying a
     // ghost button as filled.
-    const FILLED_CLASSES = new Set(['bg-moss', 'bg-terracotta-soft']);
+    const FILLED_CLASSES = new Set(['bg-primary-fill', 'bg-terracotta-soft']);
     const countFilledInFooter = () => {
       const footer = container.querySelector('.shrink-0.justify-end');
       if (!footer) throw new Error('footer container not found');

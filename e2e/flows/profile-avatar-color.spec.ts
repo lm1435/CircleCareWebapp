@@ -100,7 +100,7 @@ test('pick a colour: preview, persistence, reload, and a second member sees it',
     await expect(row).toBeVisible({ timeout: 20_000 });
     await expect(row.locator('span[aria-hidden="true"][style*="linear-gradient"]').first()).toHaveAttribute(
       'style',
-      /var\(--color-coral-deep\)/
+      /var\(--color-avatar-coral-deep\)/
     );
   } finally {
     await other.close();

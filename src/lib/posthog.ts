@@ -1,6 +1,7 @@
 import { redactAuthTokens, redactInviteCode, sanitizeErrorText } from './analytics';
 import { discardBootErrors, flushBootErrors } from './bootErrorBuffer';
 import { env } from './env';
+import { getThemeSuperProperties } from './themeCore';
 import {
   analyticsCollectionAllowed,
   collectionAllowed,
@@ -267,6 +268,9 @@ function registerPrivacySuperProperties(posthog: PostHogInstance): void {
       platform: 'web',
       app_env: import.meta.env.DEV ? 'development' : 'production',
       $ip: null,
+      // `theme` (painted) + `theme_preference` (chosen): enums, re-registered
+      // here so they also survive every reset() like the rest of this bag.
+      ...getThemeSuperProperties(),
     });
   } catch {
     // Best-effort, like every other analytics call in this file: an SDK that

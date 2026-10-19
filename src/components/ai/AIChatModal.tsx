@@ -350,7 +350,7 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
             message.role === 'user' ? (
               <p
                 key={message.id}
-                className="max-w-[85%] self-end whitespace-pre-wrap break-words rounded-xl rounded-br-sm bg-ink px-4 py-2.5 text-sm text-cream"
+                className="max-w-[85%] self-end whitespace-pre-wrap break-words rounded-xl rounded-br-sm bg-surface-raised px-4 py-2.5 text-sm text-on-raised"
               >
                 {message.content}
               </p>

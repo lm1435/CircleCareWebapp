@@ -272,8 +272,8 @@ describe('CalendarPage', () => {
     const monthTab = screen.getByRole('tab', { name: 'Month' });
     expect(weekTab).toHaveAttribute('aria-selected', 'true');
     expect(monthTab).toHaveAttribute('aria-selected', 'false');
-    expect(weekTab.className).toContain('text-cream');
-    expect(monthTab.className).not.toContain('text-cream');
+    expect(weekTab.className).toContain('text-on-primary');
+    expect(monthTab.className).not.toContain('text-on-primary');
 
     // Times shown in the CARE RECIPIENT's timezone
     expect(screen.getByText('Times shown in Chicago')).toBeInTheDocument();
@@ -443,16 +443,16 @@ describe('CalendarPage', () => {
     expect(taken).toHaveAttribute('data-med-status', 'taken');
     expect(taken.className).toContain('bg-clay-soft');
     expect(taken.className).toContain('text-clay-deep');
-    expect(taken.className).not.toContain('text-cream');
+    expect(taken.className).not.toContain('text-on-fill');
 
     const missed = screen.getByRole('button', { name: /Lisinopril/ });
     expect(missed).toHaveAttribute('data-med-status', 'missed');
-    expect(missed.className).toContain('bg-clay');
-    expect(missed.className).toContain('text-cream');
+    expect(missed.className).toContain('bg-medication-fill');
+    expect(missed.className).toContain('text-on-fill');
 
     const pending = screen.getByRole('button', { name: /Vitamin D/ });
     expect(pending).toHaveAttribute('data-med-status', 'pending');
-    expect(pending.className).toContain('text-cream');
+    expect(pending.className).toContain('text-on-fill');
 
     const skipped = screen.getByRole('button', { name: /Aspirin/ });
     expect(skipped).toHaveAttribute('data-med-status', 'skipped');

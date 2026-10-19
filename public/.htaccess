@@ -102,6 +102,13 @@ Options -Indexes
   <FilesMatch "^index(\.[a-z]{2}(-[A-Z]{2})?)?\.html$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
   </FilesMatch>
+  # The pre-paint theme script is NOT content-hashed (index.html names it by a
+  # fixed path), so the immutable rule above would pin it for a year and any
+  # later edit would never reach returning browsers. Revalidate it like the
+  # documents (it is ~1 KB; a 304 costs nothing).
+  <FilesMatch "^theme-init\.js$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
 
   # --- Security headers (edit origins if prod services change) ---------------
   # RevenueCat Web Billing: SDK fetches offerings from api.revenuecat.com

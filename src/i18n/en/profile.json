@@ -199,12 +199,10 @@
   },
   "appearance": {
     "title": "Appearance",
-    "darkMode": "Dark mode",
-    "comingSoon": "Coming soon",
-    "requested": "Requested",
-    "hint": "Want dark mode? Tap to let us know. It helps us decide what to build next.",
-    "thanks": "Thanks. We've noted your vote.",
-    "a11yComingSoon": "Dark mode, coming soon",
-    "a11yRequested": "Dark mode, requested"
+    "themeLabel": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "hint": "System follows your device. This choice applies to this device only."
   }
 }

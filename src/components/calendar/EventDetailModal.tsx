@@ -8,7 +8,7 @@ import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatEventTimeForDisplay, getDateInTimezone, zoneReferenceInstant } from '@/utils/timezone';
 import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
 import {
-  EVENT_TYPE_BLOCK_CLASS,
+  EVENT_TYPE_DOT_CLASS,
   getMedicationStatus,
   isInactiveMedication,
 } from './eventStyles';
@@ -281,7 +281,7 @@ export function EventDetailModal({
     <span className="flex items-stretch gap-3.5">
       <span
         aria-hidden="true"
-        className={`w-1 shrink-0 self-stretch rounded-full ${EVENT_TYPE_BLOCK_CLASS[event.event_type]}`}
+        className={`w-1 shrink-0 self-stretch rounded-full ${EVENT_TYPE_DOT_CLASS[event.event_type]}`}
       />
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="block break-words leading-tight">

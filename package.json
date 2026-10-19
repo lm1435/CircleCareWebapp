@@ -15,7 +15,7 @@
     "test:integration": "bash scripts/run-integration-timezones.sh",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:a11y": "playwright test public-smoke.spec.ts --project=a11y-public --project=a11y-tablet --project=a11y-mobile",
+    "test:a11y": "playwright test public-smoke.spec.ts --project=a11y-public --project=a11y-public-dark --project=a11y-tablet --project=a11y-mobile",
     "test:a11y:report": "playwright show-report",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",

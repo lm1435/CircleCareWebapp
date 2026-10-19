@@ -1317,7 +1317,7 @@ describe('EventDetailActions', () => {
     // not) button's `hover:bg-moss-soft` class ALSO satisfies a naive
     // `/\bbg-moss\b/` (the word boundary sits right before the trailing
     // `-soft`), which would misclassify every ghost button as filled.
-    const FILLED_CLASSES = new Set(['bg-moss', 'bg-terracotta-soft']);
+    const FILLED_CLASSES = new Set(['bg-primary-fill', 'bg-terracotta-soft']);
     function isFilled(button: HTMLElement): boolean {
       return button.className.split(/\s+/).some((cls) => FILLED_CLASSES.has(cls));
     }

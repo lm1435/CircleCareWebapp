@@ -115,6 +115,23 @@ export default defineConfig({
       testMatch: /public-smoke\.spec\.ts/,
     },
 
+    // 0c-bis) DARK MODE. `a11y-public-dark` is the same backend-free public crawl
+    //    (axe, incl. colour contrast) with the DEVICE set to dark: the default
+    //    preference is System, so `colorScheme: 'dark'` is all it takes to render
+    //    the whole dark palette. `theme-public` drives the theme runtime itself
+    //    (pre-paint script, live System, stored preference, print) on /login,
+    //    also with no session. The authenticated half is flows/theme.spec.ts.
+    {
+      name: 'a11y-public-dark',
+      use: { ...devices['Desktop Chrome'], colorScheme: 'dark' },
+      testMatch: /public-smoke\.spec\.ts/,
+    },
+    {
+      name: 'theme-public',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /theme-public\.spec\.ts/,
+    },
+
     // 0d) The picker's SCROLL ARITHMETIC, measured in real pixels. Backend-free
     //    for the same reason as the `a11y-*` projects above — it drives
     //    e2e/harness/, a page with one field on it and no session — and it is
@@ -240,6 +257,7 @@ export default defineConfig({
         /e2e\/mobile\//,
         /picker-geometry\.spec\.ts/,
         /coarse-pointer\.spec\.ts/,
+        /theme-public\.spec\.ts/,
         /\.consent\.spec\.ts$/,
       ],
     },

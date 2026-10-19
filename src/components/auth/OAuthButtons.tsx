@@ -62,7 +62,7 @@ export function OAuthButtons({
         type="button"
         disabled={disabled}
         onClick={onApple}
-        className="inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-lg bg-ink text-md font-semibold text-cream transition-transform duration-fast ease-spring active:scale-[0.97] disabled:opacity-50"
+        className="inline-flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-lg bg-apple-fill text-md font-semibold text-on-apple [box-shadow:var(--apple-outline)] transition-transform duration-fast ease-spring active:scale-[0.97] disabled:opacity-50"
       >
         <Icon name="logo-apple" size="row" />
         {appleLabel}

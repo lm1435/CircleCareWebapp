@@ -45,7 +45,7 @@ describe('Toggle', () => {
 
     rerender(<Toggle checked onChange={vi.fn()} label="Reminders" />);
     track = trackOf(screen.getByRole('switch', { name: 'Reminders' }));
-    expect(track.className).toContain('bg-moss');
+    expect(track.className).toContain('bg-primary-fill');
     expect(track.className).not.toContain('bg-line');
     expect(track.firstElementChild?.className).toContain('translate-x-5');
   });

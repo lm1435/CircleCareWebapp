@@ -199,12 +199,10 @@
   },
   "appearance": {
     "title": "Aparência",
-    "darkMode": "Modo escuro",
-    "comingSoon": "Em breve",
-    "requested": "Solicitado",
-    "hint": "Quer o modo escuro? Toque para nos avisar. Isso nos ajuda a decidir o que criar a seguir.",
-    "thanks": "Obrigado. Registramos o seu voto.",
-    "a11yComingSoon": "Modo escuro, em breve",
-    "a11yRequested": "Modo escuro, solicitado"
+    "themeLabel": "Tema",
+    "themeSystem": "Sistema",
+    "themeLight": "Claro",
+    "themeDark": "Escuro",
+    "hint": "Sistema acompanha o seu dispositivo. Esta escolha vale apenas para este dispositivo."
   }
 }

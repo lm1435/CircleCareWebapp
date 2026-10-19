@@ -983,11 +983,31 @@ export const Analytics = {
   // --- Settings (web-new) ---
   languageChanged: (language: string) => capture('language_changed', { language }),
   timezoneChanged: (timezone: string) => capture('timezone_changed', { timezone }),
-  /** Profile > Appearance dark-mode fake door. Booleans only. */
-  darkModeInterestShown: (props: { system_dark: boolean }) =>
-    capture('dark_mode_interest_shown', props),
-  darkModeInterestTapped: (props: { system_dark: boolean }) =>
-    capture('dark_mode_interest_tapped', props),
+  /** Profile > Appearance > Theme. Enums + a boolean only: `theme` is the NEW
+   *  preference, `previous` the old one, `effective` what is now painted. */
+  themePreferenceChanged: (props: {
+    theme: 'system' | 'light' | 'dark';
+    previous: 'system' | 'light' | 'dark';
+    system_dark: boolean;
+    effective: 'light' | 'dark';
+  }) => capture('theme_preference_changed', props),
+  /** Super properties on every later event: `theme` (what is painted) and
+   *  `theme_preference` (what was chosen). lib/posthog.ts re-registers the same
+   *  pair after init and after every reset; this is the on-change path. */
+  registerThemeProperties: (props: {
+    theme: 'light' | 'dark';
+    theme_preference: 'system' | 'light' | 'dark';
+  }): void => {
+    if (!env.VITE_POSTHOG_KEY) return;
+    if (!analyticsCollectionAllowed()) return;
+    withPosthog((posthog) => {
+      try {
+        posthog.register(props);
+      } catch {
+        // Best-effort, like capture().
+      }
+    });
+  },
   /** Profile > Notifications group switch. Enums/booleans only (no circle id,
    *  no names). `confirmed` is present only for the Medications-off confirm. */
   notificationGroupToggled: (props: {
