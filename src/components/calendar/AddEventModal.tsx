@@ -234,6 +234,15 @@ const EARLIER_REMINDERS_LABEL_ID = 'reminders-earlier-label';
 const EARLIER_REMINDERS_WARNING_ID = 'reminders-earlier-warning';
 // The days-of-week picker: its group id doubles as the field-error focus target.
 const RECURRENCE_DAYS_ID = 'recurrence_days';
+
+/**
+ * Footer buttons: only the LABEL grows with the user's text size. The shared
+ * footer rule sets `py-2.5` (rem), so at a large browser font the padding grew
+ * with the label and the pair ate the dialog. Pixel padding + a 48px floor
+ * (>= 44px target) keep the band a constant height until the label itself is
+ * taller. `!` wins over the footer's `[&_button]:` rule, which is more specific.
+ */
+const FOOTER_BUTTON_CLASS = 'py-[10px]! min-h-[48px]!';
 const RECURRENCE_DAYS_ERROR_ID = 'recurrence_days-error';
 const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
 const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
@@ -445,6 +454,8 @@ function AddEventForm({
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const { showToast } = useToast();
   const { circle, timezone, canEdit, members } = useCircle(circleId);
+  // On a phone the on-screen keyboard covers half the screen: the footer's
+  // "what is missing" line steps aside (kept for screen readers) while it is up.
 
   const createEvent = useCreateEvent(circleId);
   const updateEvent = useUpdateEvent(circleId);
@@ -1397,16 +1408,56 @@ function AddEventForm({
     title.trim().length > 0 &&
     (isAsNeeded || dateStr !== '') &&
     (!isMedication || isAsNeeded || timeStr !== '');
-  // Which field is holding Save back, said in words beside the disabled button
-  // (mobile shows the same line above its pinned Save). A greyed button alone
-  // tells a screen reader nothing, so the button points at this line too.
-  const missingFieldMessage = requiredFilled
+  // The first required field still empty, in the order the form lists them.
+  const missingField: 'title' | 'date' | 'time' | null = requiredFilled
     ? null
     : title.trim().length === 0
-      ? t(isMedication ? 'addEvent.validation.medicationRequired' : 'addEvent.validation.titleRequired')
+      ? 'title'
       : !isAsNeeded && dateStr === ''
-        ? t('addEvent.validation.dateRequired')
-        : t('addEvent.validation.timeRequired');
+        ? 'date'
+        : 'time';
+  // Save is always the solid primary button. Pressing it with a field missing
+  // does not save: it records WHICH field was missing (`pressedMissing`), focuses
+  // it, and that field shows its normal inline error. The error is shown only
+  // while that same field is still the missing one, so it clears the moment the
+  // field is satisfied and never jumps to the next missing field by itself.
+  const [pressedMissing, setPressedMissing] = useState<'title' | 'date' | 'time' | null>(null);
+  useEffect(() => {
+    if (pressedMissing !== null && pressedMissing !== missingField) setPressedMissing(null);
+  }, [pressedMissing, missingField]);
+  const missingMessage =
+    missingField === null
+      ? undefined
+      : missingField === 'title'
+        ? t(isMedication ? 'addEvent.validation.medicationRequired' : 'addEvent.validation.titleRequired')
+        : missingField === 'date'
+          ? t('addEvent.validation.dateRequired')
+          : t('addEvent.validation.timeRequired');
+  const missingErrorFor = (field: 'title' | 'date' | 'time'): string | undefined =>
+    pressedMissing === field && missingField === field ? missingMessage : undefined;
+
+  // Save cannot do anything yet: the recipient's zone (every date is converted
+  // into it) or the series root (an edit PATCHes it) is still loading. There
+  // is nothing to point the user at, so this one is a real `disabled`.
+  const setupBlocked = !timezone || seriesRootPending;
+
+  // Save pressed with a required field missing: show that field's error and
+  // scroll to AND focus it. Ids match the inputs (`title` / `medication_name`,
+  // `scheduled_date`, `scheduled_time`).
+  function focusMissingField(): void {
+    if (missingField === null) return;
+    setPressedMissing(missingField);
+    const id =
+      missingField === 'title'
+        ? titleFieldId
+        : missingField === 'date'
+          ? 'scheduled_date'
+          : 'scheduled_time';
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView?.({ block: 'center' });
+    el.focus({ preventScroll: true });
+  }
 
   return (
     <>
@@ -1418,32 +1469,39 @@ function AddEventForm({
       closeOnBackdropClick={false}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={isPending}>
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            disabled={isPending}
+            className={FOOTER_BUTTON_CLASS}
+          >
             {t('common:cancel')}
           </Button>
+          {/* Save is always the solid primary button. With a required field
+              missing a press does not save: it cancels the submit, focuses the
+              field and shows its inline error (`focusMissingField`). It is
+              truly `disabled` only while the zone / series root is still
+              loading (nothing to point at), and `loading` (save in flight)
+              disables it as before. */}
           <Button
             type="submit"
             offlineKind="save"
             form="add-event-form"
             loading={isPending}
-            disabled={!requiredFilled}
-            aria-describedby={missingFieldMessage ? 'add-event-save-missing' : undefined}
+            disabled={setupBlocked}
+            onClick={
+              !requiredFilled
+                ? (event) => {
+                    event.preventDefault();
+                    focusMissingField();
+                  }
+                : undefined
+            }
             data-testid="add-event-save"
+            className={`${FOOTER_BUTTON_CLASS} border-[1.5px] border-transparent`}
           >
             {isEditing ? t('addEvent.saveChanges') : t('addEvent.create')}
           </Button>
-          {/* Last in the DOM so the narrow stacked footer (column-reverse) puts
-              it above the buttons; wide screens move it to the left edge. */}
-          {missingFieldMessage && (
-            <Text
-              variant="caption"
-              id="add-event-save-missing"
-              data-testid="add-event-save-missing"
-              className="m-0 self-center min-[480px]:order-first min-[480px]:mr-auto"
-            >
-              {missingFieldMessage}
-            </Text>
-          )}
         </>
       }
     >
@@ -1495,7 +1553,7 @@ function AddEventForm({
             required
             value={title}
             maxLength={150}
-            error={errors[titleFieldId] ?? errors.title}
+            error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
             placeholder={t('addEvent.placeholders.medicationName')}
             selectedDrug={selectedDrug}
             onSelectDrug={setSelectedDrug}
@@ -1511,7 +1569,7 @@ function AddEventForm({
             required
             value={title}
             maxLength={150}
-            error={errors[titleFieldId] ?? errors.title}
+            error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
             placeholder={t(
               eventType === 'appointment'
                 ? 'addEvent.placeholders.appointmentTitle'
@@ -1573,7 +1631,7 @@ function AddEventForm({
             label={t('addEvent.fields.date')}
             required
             value={dateStr}
-            error={errors.scheduled_date}
+            error={errors.scheduled_date ?? missingErrorFor('date')}
             hint={showDualTimezone ? dualTimezoneLabel : undefined}
             onChange={(e) => {
               datesTouched.current = true;
@@ -1631,7 +1689,7 @@ function AddEventForm({
             // a time; appointments and tasks may be all-day.
             required={isMedication}
             value={timeStr}
-            error={errors.scheduled_time}
+            error={errors.scheduled_time ?? missingErrorFor('time')}
             hint={
               // The live conversion wins over the "optional" note whenever the
               // zones differ — it is the thing the caregiver needs to see while

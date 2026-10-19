@@ -196,5 +196,15 @@
     "impactMessage_one": "Les heures de dose pour {{names}} suivent votre fuseau horaire, car cette personne n’a pas son propre compte. Passer à {{zone}} déplace ces rappels à la même heure d’horloge, selon {{zone}}.",
     "impactMessage_other": "Les heures de dose pour {{names}} suivent votre fuseau horaire, car ces personnes n’ont pas leur propre compte. Passer à {{zone}} déplace ces rappels à la même heure d’horloge, selon {{zone}}.",
     "impactConfirm": "Changer de fuseau horaire"
+  },
+  "appearance": {
+    "title": "Apparence",
+    "darkMode": "Mode sombre",
+    "comingSoon": "Bientôt disponible",
+    "requested": "Demandé",
+    "hint": "Envie du mode sombre ? Touchez pour nous le dire. Cela nous aide à décider quoi développer ensuite.",
+    "thanks": "Merci. Nous avons bien noté votre vote.",
+    "a11yComingSoon": "Mode sombre, bientôt disponible",
+    "a11yRequested": "Mode sombre, demandé"
   }
 }

@@ -43,14 +43,14 @@
     "owner": "Inhaber",
     "caregiver": "Pflegeperson",
     "careRecipient": "Umsorgte Person",
-    "manager": "Mitverwaltung"
+    "manager": "Mitverwalter"
   },
   "access": {
     "readOnly": "Nur Lesen",
     "viewOnly": "Nur Ansicht",
     "readOnlyOwnerSubtitle": "Ihr Abonnement ist beendet – vorerst nur Lesezugriff.",
     "readOnlyMemberSubtitle": "Sie können diesen Kreis ansehen, aber nicht bearbeiten",
-    "viewOnlySubtitle": "Nur Ansicht – wenden Sie sich an den Kreis-Admin, wenn Sie Änderungen vornehmen möchten."
+    "viewOnlySubtitle": "Nur Ansicht – wenden Sie sich an den Kreis-Inhaber, wenn Sie Änderungen vornehmen möchten."
   },
   "member": {
     "notificationsOff": "Benachrichtigungen aus",
@@ -84,8 +84,8 @@
     "careRecipientCannotManage": "Die umsorgte Person kann den Kreis nicht mitverwalten.",
     "viewOnlyCannotManage": "Mitglieder mit „Nur Ansicht“-Zugriff können den Kreis nicht mitverwalten.",
     "circleInactive": "Dieser Pflegekreis ist nicht mehr aktiv.",
-    "pendingInviteSeatAskOwner": "Der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Admin, zu Premium zu wechseln.",
-    "pendingInviteSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Admin, zu Premium zu wechseln."
+    "pendingInviteSeatAskOwner": "Der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu Premium zu wechseln.",
+    "pendingInviteSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu Premium zu wechseln."
   },
   "invite": {
     "cta": "Mitglied einladen",
@@ -93,7 +93,7 @@
     "subtitle": "Wir senden eine Einladung per E-Mail, damit die Person diesem Pflegekreis beitreten kann.",
     "emailLabel": "E-Mail-Adresse",
     "emailPlaceholder": "name@example.com",
-    "managerHint": "Sobald die Person beigetreten ist, können Sie sie zur Mitverwaltung machen, damit sie beim Einladen und Verwalten von Mitgliedern hilft.",
+    "managerHint": "Sobald die Person beigetreten ist, können Sie sie zum Mitverwalter machen, damit sie beim Einladen und Verwalten von Mitgliedern hilft.",
     "roleLabel": "Rolle der Person",
     "roleHints": {
       "caregiver": "Kann ansehen und bei der Koordination der Pflege helfen.",
@@ -123,10 +123,10 @@
     "sendAnother": "Weitere Person einladen",
     "dailyUpdateLine": "Die Personen, die Sie einladen, erhalten eine tägliche Übersicht über {{name}}.",
     "dailyUpdateLineSelfCare": "Die Personen, die Sie einladen, erhalten eine tägliche Übersicht über Ihren Tag.",
-    "capReachedAskOwner": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Nur der Kreis-Admin kann upgraden, um weitere hinzuzufügen.",
-    "capReachedAskOwnerNamed": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Nur {{ownerName}}, Kreis-Admin, kann upgraden, um weitere hinzuzufügen.",
-    "pendingSeatAskOwner": "Der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Admin, zu upgraden.",
-    "pendingSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Admin, zu upgraden."
+    "capReachedAskOwner": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Nur der Kreis-Inhaber kann upgraden, um weitere hinzuzufügen.",
+    "capReachedAskOwnerNamed": "Kostenlose Kreise bieten Platz für bis zu zwei Pflegepersonen. Nur {{ownerName}}, Kreis-Inhaber, kann upgraden, um weitere hinzuzufügen.",
+    "pendingSeatAskOwner": "Der kostenlose Platz ist durch eine ausstehende Einladung an {{email}} belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu upgraden.",
+    "pendingSeatAskOwnerUnknown": "Der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie sie unter „Ausstehende Einladungen“ zurück, um den Platz freizugeben, oder bitten Sie den Kreis-Inhaber, zu upgraden."
   },
   "manage": {
     "subheading": "Alle in diesem Pflegekreis. Laden Sie unten Mitglieder ein, entfernen Sie sie oder verwalten Sie sie.",
@@ -158,12 +158,12 @@
     "resendInviteFailed": "Die Einladung konnte nicht erneut gesendet werden. Bitte versuchen Sie es erneut.",
     "leave": "Kreis verlassen",
     "leaveConfirmTitle": "Diesen Kreis verlassen?",
-    "leaveConfirmBody": "Sie verlieren den Zugriff auf diesen Pflegekreis. Der Kreis-Admin kann Sie später erneut einladen.",
+    "leaveConfirmBody": "Sie verlieren den Zugriff auf diesen Pflegekreis. Der Kreis-Inhaber kann Sie später erneut einladen.",
     "leaveSuccess": "Sie haben den Kreis verlassen.",
-    "subheadingManager": "Alle in diesem Pflegekreis. Als Mitverwaltung können Sie Personen einladen und Pflegepersonen entfernen.",
-    "makeManager": "Zur Mitverwaltung machen",
+    "subheadingManager": "Alle in diesem Pflegekreis. Als Mitverwalter können Sie Personen einladen und Pflegepersonen entfernen.",
+    "makeManager": "Zum Mitverwalter machen",
     "removeManager": "Mitverwaltung entziehen",
-    "makeManagerConfirmTitle": "{{name}} zur Mitverwaltung machen?",
+    "makeManagerConfirmTitle": "{{name}} zum Mitverwalter machen?",
     "makeManagerConfirmBody": "{{name}} kann dann Personen einladen, Einladungen erneut senden oder zurückziehen und Pflegepersonen entfernen. Nur Sie können Kreiseinstellungen, Medikamentenerinnerungen, die Abrechnung und die Mitverwaltung ändern.",
     "removeManagerConfirmTitle": "{{name}} die Mitverwaltung entziehen?",
     "removeManagerConfirmBody": "{{name}} bleibt als Pflegeperson im Kreis, kann aber keine Personen mehr einladen oder entfernen.",

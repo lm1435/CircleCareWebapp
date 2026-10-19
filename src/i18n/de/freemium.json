@@ -6,7 +6,7 @@
   "readOnly": {
     "ownerBanner": "Ihr Abo ist beendet, daher ist dieser Kreis vorerst nur lesbar. Alles ist gespeichert – erneuern Sie das Abo, um dort weiterzumachen, wo Sie aufgehört haben.",
     "ownerUpgradeCta": "Abo erneuern",
-    "memberBanner": "Dieser Kreis ist derzeit nur lesbar, weil das Abo des Kreis-Admins beendet ist. Alles ist weiterhin einsehbar, und das Bearbeiten ist wieder möglich, sobald der Kreis-Admin das Abo erneuert."
+    "memberBanner": "Dieser Kreis ist derzeit nur lesbar, weil das Abo des Kreis-Inhabers beendet ist. Alles ist weiterhin einsehbar, und das Bearbeiten ist wieder möglich, sobald der Kreis-Inhaber das Abo erneuert."
   },
   "circleSelection": {
     "banner": "Ihr Abo ist beendet. Wählen Sie, welchen Kreis Sie kostenlos behalten möchten.",

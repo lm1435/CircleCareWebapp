@@ -101,11 +101,11 @@
   "upgradeGate": {
     "message": "Diese Funktion ist im kostenlosen Tarif nicht enthalten. Upgraden Sie auf Premium, um sie für Ihren gesamten Kreis freizuschalten.",
     "action": "Upgrade",
-    "ownerOnly": "Für diesen Kreis ist das eine Premium-Funktion. Nur der Kreis-Admin kann upgraden.",
-    "ownerOnlyNamed": "Für diesen Kreis ist das eine Premium-Funktion. Nur {{ownerName}}, Kreis-Admin, kann upgraden.",
-    "viewOnlySeat": "Dieser Kreis hat mehr Pflegepersonen, als der kostenlose Tarif erlaubt. Deshalb haben Sie nur Lesezugriff. Der Kreis-Admin kann upgraden, damit alle vollen Zugriff erhalten.",
+    "ownerOnly": "Für diesen Kreis ist das eine Premium-Funktion. Nur der Kreis-Inhaber kann upgraden.",
+    "ownerOnlyNamed": "Für diesen Kreis ist das eine Premium-Funktion. Nur {{ownerName}}, Kreis-Inhaber, kann upgraden.",
+    "viewOnlySeat": "Dieser Kreis hat mehr Pflegepersonen, als der kostenlose Tarif erlaubt. Deshalb haben Sie nur Lesezugriff. Der Kreis-Inhaber kann upgraden, damit alle vollen Zugriff erhalten.",
     "lapsedOwner": "Ihr Abo ist beendet, daher kann dieser Kreis für alle nur gelesen werden. Ihre Daten sind sicher.",
-    "lapsedMember": "Das Abo des Kreis-Admins ist beendet. Nur der Kreis-Admin kann das Abo erneuern, um den Zugriff wiederherzustellen.",
+    "lapsedMember": "Das Abo des Kreis-Inhabers ist beendet. Nur der Kreis-Inhaber kann das Abo erneuern, um den Zugriff wiederherzustellen.",
     "lapsedMemberNamed": "Das Abo von {{ownerName}} ist beendet. Nur {{ownerName}} kann das Abo erneuern, um den Zugriff wiederherzustellen."
   },
   "notFound": {

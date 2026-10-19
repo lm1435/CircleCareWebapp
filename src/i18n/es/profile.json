@@ -196,5 +196,15 @@
     "impactMessage_one": "Los horarios de las dosis de {{names}} siguen tu zona horaria porque no tiene su propia cuenta. Si la cambias a {{zone}}, esos recordatorios pasarán a la misma hora en {{zone}}.",
     "impactMessage_other": "Los horarios de las dosis de {{names}} siguen tu zona horaria porque no tienen su propia cuenta. Si la cambias a {{zone}}, esos recordatorios pasarán a la misma hora en {{zone}}.",
     "impactConfirm": "Cambiar zona horaria"
+  },
+  "appearance": {
+    "title": "Apariencia",
+    "darkMode": "Modo oscuro",
+    "comingSoon": "Próximamente",
+    "requested": "Solicitado",
+    "hint": "¿Quieres el modo oscuro? Toca para avisarnos. Nos ayuda a decidir qué crear a continuación.",
+    "thanks": "Gracias. Registramos tu voto.",
+    "a11yComingSoon": "Modo oscuro, próximamente",
+    "a11yRequested": "Modo oscuro, solicitado"
   }
 }

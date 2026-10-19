@@ -13,7 +13,7 @@
     "other": "Sonstiges"
   },
   "uploadCtaTitle": "Möchten Sie ein Dokument hinzufügen?",
-  "uploadCta": "Nur Mitglieder mit Bearbeitungsrechten können Dokumente zu diesem Kreis hinzufügen. Fragen Sie den Kreis-Admin, wenn etwas ergänzt werden soll.",
+  "uploadCta": "Nur Mitglieder mit Bearbeitungsrechten können Dokumente zu diesem Kreis hinzufügen. Fragen Sie den Kreis-Inhaber, wenn etwas ergänzt werden soll.",
   "errorTitle": "Dokumente konnten nicht geladen werden",
   "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
   "noDocuments": "Noch keine Dokumente",
@@ -71,8 +71,8 @@
     "used": "{{used}} belegt",
     "remaining": "{{remaining}} frei",
     "full": "Speicher voll. Führen Sie ein Upgrade für mehr Platz durch.",
-    "fullNonOwnerNamed": "Speicher voll. Nur {{ownerName}}, der Kreis-Admin, kann für mehr Platz ein Upgrade durchführen.",
-    "fullNonOwner": "Speicher voll. Nur der Kreis-Admin kann für mehr Platz ein Upgrade durchführen.",
+    "fullNonOwnerNamed": "Speicher voll. Nur {{ownerName}}, der Kreis-Inhaber, kann für mehr Platz ein Upgrade durchführen.",
+    "fullNonOwner": "Speicher voll. Nur der Kreis-Inhaber kann für mehr Platz ein Upgrade durchführen.",
     "fullPremium": "Speicher voll. Löschen Sie nicht mehr benötigte Dateien, um Platz zu schaffen.",
     "upgrade": "Upgrade",
     "trackLabel": "Belegter Speicher"

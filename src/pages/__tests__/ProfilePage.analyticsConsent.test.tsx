@@ -107,6 +107,8 @@ vi.mock('@/lib/analytics', () => ({
     timezoneChanged: vi.fn(),
     accountDeleted: vi.fn(),
     errorOccurred: vi.fn(),
+    darkModeInterestShown: vi.fn(),
+    darkModeInterestTapped: vi.fn(),
   },
 }));
 

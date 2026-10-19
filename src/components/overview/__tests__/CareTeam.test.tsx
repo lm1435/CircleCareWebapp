@@ -444,4 +444,23 @@ describe('CareTeam — manager role', () => {
     expect(screen.getByText('Circle owner')).toBeInTheDocument();
     expect(screen.queryByText(/admin/i)).toBeNull();
   });
+
+  it('shows the Owner pill on the owner row only, in the Manager pill\'s filled style', () => {
+    renderTeam({
+      members: [
+        member({ id: OWNER, first_name: 'Pat', role: 'owner' }),
+        member({ id: 'u-mia', first_name: 'Mia', role: 'manager' }),
+        member({ id: 'u-sam', first_name: 'Sam', role: 'member' }),
+      ],
+    });
+    const owners = screen.getAllByText('Owner');
+    expect(owners).toHaveLength(1);
+    const ownerRow = screen.getByText(/^Pat/).closest('div')!;
+    expect(within(ownerRow).getByText('Owner')).toBe(owners[0]);
+    expect(within(screen.getByText('Sam').closest('div')!).queryByText('Owner')).toBeNull();
+    expect(within(screen.getByText('Mia').closest('div')!).queryByText('Owner')).toBeNull();
+    const manager = within(screen.getByText('Mia').parentElement!).getByText('Manager');
+    expect(owners[0]).toHaveClass('bg-moss-soft', 'text-moss-deep');
+    expect(owners[0].className).toBe(manager.className);
+  });
 });

@@ -39,11 +39,11 @@
     "suggestion": "Wenn Sie bereits beigetreten sind, melden Sie sich an – den Pflegekreis finden Sie dann in Ihrer Kreisliste. Andernfalls bitten Sie die Person, die Sie eingeladen hat, eine neue Einladung zu schicken."
   },
   "expiresLabel": "Läuft ab",
-  "acceptArchived": "Dieser Kreis ist nicht mehr aktiv, daher kann die Einladung nicht verwendet werden. Bitten Sie die Person, die Sie eingeladen hat, beim Kreis-Admin nachzufragen.",
+  "acceptArchived": "Dieser Kreis ist nicht mehr aktiv, daher kann die Einladung nicht verwendet werden. Bitten Sie die Person, die Sie eingeladen hat, beim Kreis-Inhaber nachzufragen.",
   "acceptRecipientExists": "In diesem Kreis gibt es bereits eine umsorgte Person, daher kann diese Einladung nicht verwendet werden. Bitten Sie die Person, die Sie eingeladen hat, stattdessen eine Einladung als Pflegeperson zu schicken.",
   "errorArchived": {
     "title": "Dieser Pflegekreis ist nicht mehr aktiv",
-    "suggestion": "Der Kreis wurde gelöscht, nachdem Ihre Einladung gesendet wurde, daher kann diese Einladung nicht verwendet werden. Mit Ihrem Code ist alles in Ordnung – bitten Sie die Person, die Sie eingeladen hat, beim Kreis-Admin nachzufragen."
+    "suggestion": "Der Kreis wurde gelöscht, nachdem Ihre Einladung gesendet wurde, daher kann diese Einladung nicht verwendet werden. Mit Ihrem Code ist alles in Ordnung – bitten Sie die Person, die Sie eingeladen hat, beim Kreis-Inhaber nachzufragen."
   },
   "errorRecipientExists": {
     "title": "In diesem Kreis gibt es bereits eine umsorgte Person",

@@ -50,7 +50,7 @@
     "alreadyUsed": "Diese Einladung wurde bereits verwendet. Bitten Sie die Person, die Sie eingeladen hat, Ihnen eine neue zu schicken.",
     "alreadyMember": "Sie sind bereits Mitglied dieses Kreises.",
     "joinFailed": "Der Beitritt zu diesem Kreis hat nicht geklappt. Bitte versuchen Sie es erneut.",
-    "circleArchived": "Dieser Kreis ist nicht mehr aktiv. Bitten Sie die Person, die Sie eingeladen hat, sich an den Kreis-Admin zu wenden.",
+    "circleArchived": "Dieser Kreis ist nicht mehr aktiv. Bitten Sie die Person, die Sie eingeladen hat, sich an den Kreis-Inhaber zu wenden.",
     "careRecipientExists": "In diesem Kreis gibt es bereits eine umsorgte Person. Bitten Sie die Person, die Sie eingeladen hat, Ihnen stattdessen eine Einladung als Pflegeperson zu schicken."
   },
   "edit": {
@@ -59,8 +59,8 @@
     "loadingLabel": "Kreiseinstellungen werden geladen",
     "errorTitle": "Dieser Kreis konnte nicht geladen werden.",
     "retry": "Erneut versuchen",
-    "ownerOnlyTitle": "Nur der Kreis-Admin kann dies bearbeiten",
-    "ownerOnlyMessage": "Bitten Sie den Kreis-Admin, diese Angaben zu aktualisieren.",
+    "ownerOnlyTitle": "Nur der Kreis-Inhaber kann dies bearbeiten",
+    "ownerOnlyMessage": "Bitten Sie den Kreis-Inhaber, diese Angaben zu aktualisieren.",
     "recipientName": "Name der umsorgten Person",
     "recipientNamePlaceholder": "Vollständiger Name",
     "recipientDob": "Geburtsdatum",
@@ -137,7 +137,7 @@
   },
   "accessLost": {
     "removedTitle": "Zugriff entzogen",
-    "removedBody": "Sie haben keinen Zugriff mehr auf diesen Kreis. Möglicherweise hat der Kreis-Admin Sie entfernt oder den Kreis gelöscht.",
+    "removedBody": "Sie haben keinen Zugriff mehr auf diesen Kreis. Möglicherweise hat der Kreis-Inhaber Sie entfernt oder den Kreis gelöscht.",
     "notFoundTitle": "Kreis nicht gefunden",
     "notFoundBody": "Dieser Kreis wurde gelöscht oder existiert nicht mehr.",
     "returnToCircles": "Zurück zu den Kreisen"

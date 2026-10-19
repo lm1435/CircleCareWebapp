@@ -196,5 +196,15 @@
     "impactMessage_one": "Gli orari delle dosi di {{names}} seguono il tuo fuso orario perché non ha un account personale. Se lo cambi in {{zone}}, quei promemoria passano allo stesso orario sull'orologio di {{zone}}.",
     "impactMessage_other": "Gli orari delle dosi di {{names}} seguono il tuo fuso orario perché non hanno un account personale. Se lo cambi in {{zone}}, quei promemoria passano allo stesso orario sull'orologio di {{zone}}.",
     "impactConfirm": "Cambia fuso orario"
+  },
+  "appearance": {
+    "title": "Aspetto",
+    "darkMode": "Modalità scura",
+    "comingSoon": "In arrivo",
+    "requested": "Richiesta",
+    "hint": "Vuoi la modalità scura? Tocca per farcelo sapere. Ci aiuta a decidere cosa sviluppare in futuro.",
+    "thanks": "Grazie. Abbiamo registrato il tuo voto.",
+    "a11yComingSoon": "Modalità scura, in arrivo",
+    "a11yRequested": "Modalità scura, richiesta"
   }
 }

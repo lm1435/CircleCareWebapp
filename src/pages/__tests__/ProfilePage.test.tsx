@@ -139,6 +139,8 @@ vi.mock('@/lib/analytics', () => ({
     timezoneChanged: (...args: unknown[]) => mockTimezoneChanged(...args),
     accountDeleted: (...args: unknown[]) => mockAccountDeleted(...args),
     errorOccurred: vi.fn(),
+    darkModeInterestShown: vi.fn(),
+    darkModeInterestTapped: vi.fn(),
   },
 }));
 
