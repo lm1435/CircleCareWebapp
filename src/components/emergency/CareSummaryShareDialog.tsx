@@ -84,7 +84,10 @@ export function CareSummaryShareDialog({
   } else if (isCountError) {
     countLine = t('emergency:shareSummary.countError');
   } else {
-    countLine = t('emergency:shareSummary.countLine', { visit: visitCount, care: careCount });
+    countLine = t('emergency:shareSummary.countLine', {
+      visit: t('emergency:shareSummary.visitNotesCount', { count: visitCount }),
+      care: t('emergency:shareSummary.careNotesCount', { count: careCount }),
+    });
   }
 
   return (

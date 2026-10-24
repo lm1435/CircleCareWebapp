@@ -130,7 +130,7 @@ describe('CareSummaryShareDialog', () => {
     mockUseCareNotes.mockReturnValue(loaded({ notes: [], today: '2026-06-01', timezone: TZ }));
     renderDialog();
 
-    expect(screen.getByText('Includes 1 visit notes and 0 daily care notes')).toBeInTheDocument();
+    expect(screen.getByText('Includes 1 visit note and 0 daily care notes')).toBeInTheDocument();
   });
 
   it('shows the error copy and disables both switches when a count query fails', () => {
@@ -204,5 +204,43 @@ describe('CareSummaryShareDialog', () => {
   it('shows the busy label while isSharing is true', () => {
     renderDialog({ isSharing: true });
     expect(screen.getByRole('button', { name: 'Generating...' })).toBeInTheDocument();
+  });
+});
+
+describe('CareSummaryShareDialog count line plurals', () => {
+  const visitNote = (id: string) => ({
+    id,
+    body: 'x',
+    created_at: '2026-06-01T00:00:00Z',
+    author: { first_name: 'Sam', last_name: null },
+    event: { id: 'e1', title: 'Visit', scheduled_date: '2026-06-01', event_type: 'appointment' },
+  });
+  
+  it.each([
+    [0, 0, 'Includes 0 visit notes and 0 daily care notes'],
+    [1, 1, 'Includes 1 visit note and 0 daily care notes'],
+    [2, 2, 'Includes 2 visit notes and 0 daily care notes'],
+  ])('en: %i visit notes', (n, _c, text) => {
+    mockUseEventNotesRange.mockReturnValue(
+      loaded(Array.from({ length: n }, (_, i) => visitNote(`n${i}`)))
+    );
+    mockUseCareNotes.mockReturnValue(loaded({ notes: [], today: '2026-06-01', timezone: TZ }));
+    renderDialog();
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  it('es: singular and plural fragments', async () => {
+    const i18n = (await import('@/i18n')).default;
+    await i18n.changeLanguage('es');
+    try {
+      mockUseEventNotesRange.mockReturnValue(loaded([visitNote('n1')]));
+      mockUseCareNotes.mockReturnValue(loaded({ notes: [], today: '2026-06-01', timezone: TZ }));
+      renderDialog();
+      expect(
+        screen.getByText('Incluye 1 nota de cita y 0 notas de cuidado diarias')
+      ).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
   });
 });

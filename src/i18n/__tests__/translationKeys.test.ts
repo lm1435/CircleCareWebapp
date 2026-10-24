@@ -481,18 +481,25 @@ describe('W5: no unreferenced en keys', () => {
 
   const referenced = new Set<string>();
 
+  // A referenced plural key also references its optional `_zero` form (i18next
+  // uses `key_zero` for count 0 in every language when present).
+  function markForm(ns: string, form: string): void {
+    referenced.add(`${ns}:${form}`);
+    if (/_(one|other)$/.test(form)) referenced.add(`${ns}:${form.replace(/_(one|other)$/, '_zero')}`);
+  }
+
   function markExact(literal: string): void {
     const colon = literal.indexOf(':');
     if (colon > 0 && ALL_NAMESPACES.includes(literal.slice(0, colon))) {
       const ns = literal.slice(0, colon);
       const path = literal.slice(colon + 1);
       const forms = resolvedForms('en', ns, path);
-      if (forms) for (const form of forms) referenced.add(`${ns}:${form}`);
+      if (forms) for (const form of forms) markForm(ns, form);
       return;
     }
     for (const ns of ALL_NAMESPACES) {
       const forms = resolvedForms('en', ns, literal);
-      if (forms) for (const form of forms) referenced.add(`${ns}:${form}`);
+      if (forms) for (const form of forms) markForm(ns, form);
     }
   }
 
