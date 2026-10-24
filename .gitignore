@@ -19,3 +19,7 @@ e2e/.auth/
 # Editor / OS
 .DS_Store
 *.local
+
+# Help-video recording kit: per-run seeded accounts (email + password) and any footage
+e2e/howto/state/
+e2e/howto/out/
