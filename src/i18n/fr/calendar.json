@@ -1,4 +1,8 @@
 {
+  "noCareRecipient": {
+    "title": "Les rappels vous sont envoyés",
+    "description": "Les rappels de médicaments vous sont envoyés (propriétaire du cercle) jusqu’à ce que vous ajoutiez une personne aidée ou choisissiez un membre pour les recevoir."
+  },
   "title": "Calendrier",
   "subtitle": "Médicaments, rendez-vous et tâches au même endroit.",
   "week": "Semaine",
@@ -203,7 +207,7 @@
       "atTimeOff": "Rien ne sera envoyé à l’heure prévue : seulement les rappels anticipés choisis ci-dessous.",
       "atTimeOffNoEarlier": "Aucun rappel ne sera envoyé avant cette dose : la première alerte serait le suivi indiquant qu’elle n’a pas encore été renseignée, 15 minutes après l’heure prévue.",
       "additional": "Rappels anticipés",
-      "escalation": "Si une dose n’est pas confirmée, nous relançons : la personne aidée après 15 minutes, les aidants après 30, tout le cercle après une heure.",
+      "escalation": "Si une dose n’est pas confirmée, nous relançons : un nouveau rappel après 15 minutes, les aidants après 30, tout le cercle après une heure.",
       "escalationSelf": "Si une dose n’est pas confirmée, nous relançons : vous après 15 minutes, les aidants après 30, tout le cercle après une heure.",
       "offMedication": "Personne ne sera averti à l’échéance de cette dose, et personne ne sera alerté si elle n’est pas renseignée.",
       "offGeneric": "Personne ne recevra de rappel : ni vous, ni les autres membres du cercle.",
@@ -257,7 +261,7 @@
     },
     "dualTimezoneHint": "Votre heure / heure pour {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Votre heure / son heure ({{timezone}})",
-    "quietHoursDoseWarning": "Cette heure tombe pendant les heures de silence : aucun rappel ne sera envoyé. Vous pouvez modifier les heures de silence dans Compte.",
+    "quietHoursDoseWarning": "Cette heure tombe pendant les heures de silence : aucun rappel ne sera envoyé. Vous pouvez modifier les heures de silence dans Profil, section Heures de silence.",
     "dayOffsetNext": "+1 jour",
     "dayOffsetPrevious": "-1 jour",
     "timezoneUnresolvedNotice": "Chargement du fuseau horaire de ce cercle. L’enregistrement est suspendu pour éviter de stocker des dates dans le mauvais fuseau.",

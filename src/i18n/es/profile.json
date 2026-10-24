@@ -7,7 +7,7 @@
     "account": "Cuenta",
     "language": "Idioma",
     "notifications": "Notificaciones",
-    "quietHours": "Horario sin interrupciones",
+    "quietHours": "Horas de silencio",
     "units": "Unidades de medida",
     "emailDigest": "Resumen semanal por correo",
     "privacy": "Privacidad"
@@ -75,11 +75,11 @@
   },
   "quietHours": {
     "description": "Pausa las notificaciones no urgentes durante estas horas.",
-    "enable": "Activar horario sin interrupciones",
+    "enable": "Activar horas de silencio",
     "start": "Hora de inicio",
     "end": "Hora de fin",
-    "success": "Horario sin interrupciones actualizado.",
-    "almostAllDayWarning": "El horario sin interrupciones cubre casi todo el día, así que las notificaciones se retendrán hasta las {{endTime}}."
+    "success": "Horas de silencio actualizadas.",
+    "almostAllDayWarning": "Las horas de silencio cubren casi todo el día, así que las notificaciones se retendrán hasta las {{endTime}}."
   },
   "units": {
     "description": "Elige cómo se muestran los valores de peso, glucosa y temperatura.",

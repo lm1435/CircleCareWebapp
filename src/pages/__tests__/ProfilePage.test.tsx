@@ -884,7 +884,7 @@ describe('ProfilePage quiet hours', () => {
         const end = await screen.findByLabelText(/^Hora de fin/);
         fireEvent.change(end, { target: { value: '21:59' } });
         expect(await screen.findByTestId('quiet-hours-almost-all-day-warning')).toHaveTextContent(
-          /cubre casi todo el día.*retendrán hasta las/
+          /cubren casi todo el día.*retendrán hasta las/
         );
         fireEvent.change(end, { target: { value: '07:00' } });
         expect(screen.queryByTestId('quiet-hours-almost-all-day-warning')).toBeNull();

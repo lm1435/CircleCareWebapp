@@ -105,3 +105,48 @@ test('medication manager: set, clear, fail, and non-owner refusal against the DB
   expect(await errorCodeOf(refused)).toBe('FORBIDDEN');
   expect(responsible(circleId)).toEqual([]);
 });
+
+// A view-only seat receives no notifications, so it must never become the
+// medication manager: the menu does not offer it, and the API refuses it with
+// 400 RESPONSIBLE_MEMBER_VIEW_ONLY (backend circles.ts PUT
+// /medication-responsible). Old clients that still try get their generic error.
+test('medication manager: a view-only member is not offered, and the API refuses it', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  const { owner, ownerSession, member, circleId } = await circleWithMember(request, 'medmgrvo');
+  dbQuery(
+    `update circle_memberships set view_only = true
+      where circle_id = ${sqlStr(circleId)}::uuid and user_id = ${sqlStr(member.userId)}::uuid`
+  );
+
+  const detail = await ownerSession.get(`/api/circles/${circleId}`);
+  expect(detail.status()).toBe(200);
+  const members = ((await detail.json()) as {
+    data: {
+      circle: {
+        members: { user_id?: string; id?: string; first_name?: string; last_name?: string; email: string }[];
+      };
+    };
+  }).data.circle.members;
+  const row = members.find((m) => (m.user_id ?? m.id) === member.userId);
+  expect(row, 'member present in circle detail').toBeTruthy();
+  const memberName =
+    [row!.first_name, row!.last_name].filter(Boolean).join(' ') || row!.email;
+
+  await cookieLogin(context, owner, baseURL);
+  await page.goto(`/circles/${circleId}/members`);
+  await page.getByRole('button', { name: `Actions for ${memberName}` }).click();
+  await expect(page.getByRole('menuitem', { name: 'Remove' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Make medication manager' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  const refused = await ownerSession.put(`/api/circles/${circleId}/medication-responsible`, {
+    userId: member.userId,
+  });
+  expect(refused.status()).toBe(400);
+  expect(await errorCodeOf(refused)).toBe('RESPONSIBLE_MEMBER_VIEW_ONLY');
+  expect(responsible(circleId)).toEqual([]);
+});

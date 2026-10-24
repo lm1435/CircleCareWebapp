@@ -1166,7 +1166,7 @@ describe('AddEventModal', () => {
       expect(screen.queryByText('Always on for medications.')).not.toBeInTheDocument();
       // The escalation chain hangs off notifications_enabled, and is medication-only.
       expect(
-        screen.getByText(/we follow up: the care recipient after 15 minutes/)
+        screen.getByText(/we follow up: a follow-up reminder after 15 minutes/)
       ).toBeInTheDocument();
     });
 
@@ -1178,7 +1178,7 @@ describe('AddEventModal', () => {
 
       expect(screen.getByText(/we follow up: you after 15 minutes/)).toBeInTheDocument();
       expect(
-        screen.queryByText(/we follow up: the care recipient/)
+        screen.queryByText(/we follow up: a follow-up reminder/)
       ).not.toBeInTheDocument();
     });
 
@@ -1188,7 +1188,7 @@ describe('AddEventModal', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
 
       expect(
-        screen.getByText(/we follow up: the care recipient after 15 minutes/)
+        screen.getByText(/we follow up: a follow-up reminder after 15 minutes/)
       ).toBeInTheDocument();
     });
 
@@ -1242,7 +1242,7 @@ describe('AddEventModal', () => {
       const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
       expect(anchor).toHaveAttribute('aria-checked', 'true');
       expect(screen.getByText('Earlier reminders')).toBeInTheDocument();
-      expect(screen.queryByText(/we follow up: the care recipient/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/we follow up: a follow-up reminder/)).not.toBeInTheDocument();
     });
 
     it('warns only once the at-due anchor is switched OFF — the genuinely silent state', async () => {

@@ -133,6 +133,7 @@ export interface MemberTargetFields {
   role: string;
   is_care_recipient: boolean;
   view_only?: boolean;
+  is_medication_responsible?: boolean;
 }
 
 export interface MemberRowActions {
@@ -152,8 +153,11 @@ const NO_ACTIONS: MemberRowActions = { remove: false, medResponsible: false, man
  *
  *   - Nobody acts on their own row, the owner's row, or the care recipient's
  *     (the owner never could; a manager may not do more than the owner).
- *   - Owner: medication reminders on every other row; Remove on every other
- *     row (other managers included); Make/Remove manager when the server says
+ *   - Owner: medication reminders on every other row EXCEPT a view-only seat
+ *     (it receives no notifications; the backend refuses it with
+ *     RESPONSIBLE_MEMBER_VIEW_ONLY) -- unless that seat is ALREADY responsible,
+ *     so the owner can still clear it; Remove on every other row (other
+ *     managers included); Make/Remove manager when the server says
  *     `assign_manager`, never on a view-only seat (the backend refuses it).
  *   - Manager: Remove on PLAIN members only -- never another manager.
  *   - Member: nothing.
@@ -170,7 +174,7 @@ export function memberRowActions(
   if (viewerOwnsCircle(circle, userId)) {
     return {
       remove: true,
-      medResponsible: true,
+      medResponsible: member.view_only !== true || member.is_medication_responsible === true,
       managerRole:
         viewerCanAssignManager(circle, userId) &&
         (member.role === 'manager' || member.view_only !== true),

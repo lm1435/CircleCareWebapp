@@ -97,6 +97,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Documentos: 1",
     "2 documentos",
   ],
+  "pt emergency:shareSummary.careNotesCount": [
+    "0 notas diárias de cuidado",
+    "1 nota diária de cuidado",
+    "2 notas diárias de cuidado",
+  ],
+  "pt emergency:shareSummary.visitNotesCount": [
+    "0 notas de consulta",
+    "1 nota de consulta",
+    "2 notas de consulta",
+  ],
   "pt freemium:circleSelection.memberCount": [
     "Membros: 0",
     "Membros: 1",
@@ -306,6 +316,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Documentos: 0",
     "Documentos: 1",
     "2 documentos",
+  ],
+  "pt-PT emergency:shareSummary.careNotesCount": [
+    "0 notas diárias de cuidado",
+    "1 nota diária de cuidado",
+    "2 notas diárias de cuidado",
+  ],
+  "pt-PT emergency:shareSummary.visitNotesCount": [
+    "0 notas de consulta",
+    "1 nota de consulta",
+    "2 notas de consulta",
   ],
   "pt-PT freemium:circleSelection.memberCount": [
     "Membros: 0",

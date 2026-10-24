@@ -1,4 +1,8 @@
 {
+  "noCareRecipient": {
+    "title": "I promemoria arrivano a te",
+    "description": "I promemoria dei farmaci arrivano a te (titolare della cerchia) finché non aggiungi una persona assistita o scegli un membro che li riceva."
+  },
   "title": "Calendario",
   "subtitle": "Farmaci, appuntamenti e incarichi in un unico posto.",
   "week": "Settimana",
@@ -203,7 +207,7 @@
       "atTimeOff": "Non verrà inviato nulla all'orario programmato, solo i promemoria anticipati che scegli qui sotto.",
       "atTimeOffNoEarlier": "Non verrà inviato alcun promemoria prima di questa dose: il primo avviso sarebbe il sollecito che non è ancora stata segnata, 15 minuti dopo l'orario previsto.",
       "additional": "Promemoria anticipati",
-      "escalation": "Se una dose non viene confermata, mandiamo un nuovo avviso: alla persona assistita dopo 15 minuti, ai caregiver dopo 30, all'intera cerchia dopo un'ora.",
+      "escalation": "Se una dose non viene confermata, mandiamo un nuovo avviso: con un nuovo promemoria dopo 15 minuti, ai caregiver dopo 30, all'intera cerchia dopo un'ora.",
       "escalationSelf": "Se una dose non viene confermata, ti avvisiamo di nuovo dopo 15 minuti, poi avvisiamo i caregiver dopo 30 minuti e l'intera cerchia dopo un'ora.",
       "offMedication": "Nessuno riceverà una notifica quando questa dose è prevista, e nessuno verrà avvisato se non viene segnata.",
       "offGeneric": "Nessuno riceverà un promemoria: né tu né gli altri della cerchia.",
@@ -257,7 +261,7 @@
     },
     "dualTimezoneHint": "Il tuo orario / l'orario di {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Il tuo orario / il suo orario ({{timezone}})",
-    "quietHoursDoseWarning": "Questo orario rientra nelle ore di silenzio, quindi in quel momento non verrà inviato alcun promemoria. Puoi modificare le ore di silenzio in Account.",
+    "quietHoursDoseWarning": "Questo orario rientra nelle ore di silenzio, quindi in quel momento non verrà inviato alcun promemoria. Puoi modificare le ore di silenzio in Profilo, nella sezione Ore di silenzio.",
     "dayOffsetNext": "+1 giorno",
     "dayOffsetPrevious": "-1 giorno",
     "timezoneUnresolvedNotice": "Stiamo ancora caricando il fuso orario di questa cerchia. Il salvataggio è in pausa per non memorizzare le date nel fuso sbagliato.",

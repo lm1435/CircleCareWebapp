@@ -1,4 +1,12 @@
-import { useRef, type KeyboardEvent, type ReactElement } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactElement,
+  type RefObject,
+} from 'react';
 import { chipClass } from './inputStyles';
 
 export interface ChipSelectOption {
@@ -23,6 +31,69 @@ export interface ChipSelectProps {
    * where a text field stays the source of truth and chips only ever fill it.
    */
   allowDeselect?: boolean;
+  /**
+   * The most lines the wrapped chips may take. When the options would need more
+   * (a long locale, a narrow phone, zoomed text), the row becomes one
+   * horizontally scrolling line instead of growing a third. Unset = wrap
+   * freely (every existing caller).
+   */
+  maxRows?: number;
+}
+
+/** Wrapped chip row; the default. */
+const CHIP_ROW_WRAP = 'flex flex-wrap gap-2';
+
+/**
+ * The capped row's fallback: one line that scrolls sideways. Chips keep their
+ * width (`shrink-0`, no inner wrap) and the vertical padding keeps the focus
+ * ring from being clipped by the scroll box.
+ */
+const CHIP_ROW_SCROLL =
+  'flex flex-nowrap gap-2 overflow-x-auto py-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap';
+
+/** The class for a chip row, given `useChipRowCap`'s verdict. */
+export function chipRowClass(overflow: boolean): string {
+  return overflow ? CHIP_ROW_SCROLL : CHIP_ROW_WRAP;
+}
+
+/**
+ * The line cap behind `maxRows` (also used by the composer's category row).
+ *
+ * Measured, not estimated: before paint, the wrapped chips' distinct
+ * `offsetTop`s are the number of lines, and more than `maxRows` flips the row
+ * to its scroll fallback. The verdict is keyed to the row's width and to
+ * `contentKey` (the option labels), so a resize, zoom or language switch drops
+ * it and the row is re-measured as a wrap first.
+ */
+export function useChipRowCap(
+  maxRows: number | undefined,
+  contentKey: string
+): { ref: RefObject<HTMLDivElement>; overflow: boolean } {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [overflowKey, setOverflowKey] = useState<string | null>(null);
+  const measureKey = `${width}|${contentKey}`;
+  const overflow = maxRows !== undefined && overflowKey === measureKey;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (maxRows === undefined || overflow || !el) return;
+    const lines = new Set(Array.from(el.children, (child) => (child as HTMLElement).offsetTop))
+      .size;
+    if (lines > maxRows) setOverflowKey(measureKey);
+  });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (maxRows === undefined || !el || typeof ResizeObserver === 'undefined') return;
+    // Width only: the fallback row is shorter than the wrap, and reacting to
+    // that height change would flip it straight back.
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [maxRows]);
+
+  return { ref, overflow };
 }
 
 /** Case-insensitive, trimmed comparison — chip selection is forgiving. */
@@ -60,6 +131,7 @@ export function ChipSelect({
   value,
   onChange,
   allowDeselect = true,
+  maxRows,
 }: ChipSelectProps): ReactElement {
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const count = options.length;
@@ -68,6 +140,11 @@ export function ChipSelect({
     value: typeof option === 'string' ? option : option.value,
     label: typeof option === 'string' ? option : (option.label ?? option.value),
   }));
+
+  const { ref: rowRef, overflow } = useChipRowCap(
+    maxRows,
+    normalized.map((option) => option.label).join('\u0001')
+  );
 
   const selectedIndex =
     value !== null ? normalized.findIndex((option) => matches(value, option.value)) : -1;
@@ -94,7 +171,14 @@ export function ChipSelect({
   }
 
   return (
-    <div id={id} role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
+    <div
+      ref={rowRef}
+      id={id}
+      role="radiogroup"
+      aria-label={label}
+      data-layout={overflow ? 'scroll' : 'wrap'}
+      className={chipRowClass(overflow)}
+    >
       {normalized.map((option, index) => {
         const selected = index === selectedIndex;
         return (

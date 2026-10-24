@@ -1,4 +1,8 @@
 {
+  "noCareRecipient": {
+    "title": "Erinnerungen gehen an Sie",
+    "description": "Medikamentenerinnerungen gehen an Sie (Kreis-Inhaber), bis Sie eine umsorgte Person hinzufügen oder ein Mitglied auswählen, das sie erhält."
+  },
   "title": "Kalender",
   "subtitle": "Medikamente, Termine und Aufgaben an einem Ort.",
   "week": "Woche",
@@ -203,7 +207,7 @@
       "atTimeOff": "Zur geplanten Uhrzeit wird nichts gesendet – nur die früheren Erinnerungen, die Sie unten auswählen.",
       "atTimeOffNoEarlier": "Vor dieser Dosis wird keine Erinnerung gesendet – die erste Benachrichtigung wäre die Nachfrage, dass sie noch nicht eingetragen wurde, 15 Minuten nach der Fälligkeit.",
       "additional": "Frühere Erinnerungen",
-      "escalation": "Wird eine Dosis nicht bestätigt, haken wir nach: bei der umsorgten Person nach 15 Minuten, bei den Pflegepersonen nach 30 Minuten, beim ganzen Kreis nach einer Stunde.",
+      "escalation": "Wird eine Dosis nicht bestätigt, haken wir nach: mit einer weiteren Erinnerung nach 15 Minuten, bei den Pflegepersonen nach 30 Minuten, beim ganzen Kreis nach einer Stunde.",
       "escalationSelf": "Wird eine Dosis nicht bestätigt, haken wir nach: bei Ihnen nach 15 Minuten, bei den Pflegepersonen nach 30 Minuten, beim ganzen Kreis nach einer Stunde.",
       "offMedication": "Niemand wird benachrichtigt, wenn diese Dosis fällig ist, und niemand wird gewarnt, wenn sie nicht eingetragen wurde.",
       "offGeneric": "Niemand wird hieran erinnert – weder Sie noch jemand anderes im Kreis.",
@@ -257,7 +261,7 @@
     },
     "dualTimezoneHint": "Ihre Zeit / Zeit von {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Ihre Zeit / Zeit der umsorgten Person ({{timezone}})",
-    "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Konto ändern.",
+    "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Profil im Bereich Ruhezeiten ändern.",
     "dayOffsetNext": "+1 Tag",
     "dayOffsetPrevious": "-1 Tag",
     "timezoneUnresolvedNotice": "Die Zeitzone dieses Kreises wird noch geladen. Das Speichern ist pausiert, damit Daten nicht in der falschen Zeitzone gespeichert werden.",

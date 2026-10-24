@@ -60,7 +60,7 @@ describe('QuickAccess', () => {
       'Vitals',
       'Daily updates',
       'Activity feed',
-      'Care info',
+      'Health',
     ]);
     expect(screen.getByRole('link', { name: 'Daily updates' })).toHaveAttribute(
       'href',
@@ -128,13 +128,13 @@ describe('QuickAccess', () => {
     renderQuickAccess();
     await user.click(screen.getByRole('link', { name: 'Meds' }));
     await user.click(screen.getByRole('link', { name: 'Activity feed' }));
-    await user.click(screen.getByRole('link', { name: 'Care info' }));
+    await user.click(screen.getByRole('link', { name: 'Health' }));
     expect(quickAccessTapped.mock.calls).toEqual([['medications'], ['activityFeed'], ['careInfo']]);
   });
 
   it('labels the rows from the shared mobile copy', () => {
     renderQuickAccess();
-    for (const label of ['Notes', 'Calendar', 'Meds', 'Tasks', 'Vitals', 'Activity feed', 'Care info']) {
+    for (const label of ['Notes', 'Calendar', 'Meds', 'Tasks', 'Vitals', 'Activity feed', 'Health']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });

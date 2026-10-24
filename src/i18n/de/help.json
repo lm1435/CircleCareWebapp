@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "Wie funktionieren Medikamenten-Erinnerungen?",
-          "answer": "Wenn Sie ein Medikament hinzufügen, erhält die umsorgte Person zur geplanten Zeit eine Push-Benachrichtigung. Mit „Ich habe es eingenommen“ bestätigt sie die Einnahme, und alle Familienmitglieder im Kreis werden benachrichtigt. Wird die Dosis innerhalb von 15 Minuten nicht bestätigt, erhält die umsorgte Person eine sanfte Erinnerung. Nach 30 Minuten werden alle Pflegepersonen im Kreis benachrichtigt. Nach 1 Stunde werden alle im Kreis informiert. Nichts wird automatisch eingetragen: Solange niemand die Dosis als Eingenommen oder Ausgelassen markiert, wird sie einfach als Noch nicht eingetragen angezeigt."
+          "answer": "Wenn Sie ein Medikament hinzufügen, geht die Erinnerung an das Mitglied, das der Kreis-Inhaber für die Medikamentenerinnerungen ausgewählt hat (eines pro Kreis). Ist niemand ausgewählt, geht sie an die umsorgte Person oder, falls es keine gibt, an den Kreis-Inhaber. Mit „Ich habe es eingenommen“ bestätigt sie die Einnahme, und alle Familienmitglieder im Kreis werden benachrichtigt. Wird die Dosis innerhalb von 15 Minuten nicht bestätigt, wird eine sanfte Erinnerung gesendet. Nach 30 Minuten werden alle Pflegepersonen im Kreis benachrichtigt. Nach 1 Stunde werden alle im Kreis informiert. Nichts wird automatisch eingetragen: Solange niemand die Dosis als Eingenommen oder Ausgelassen markiert, wird sie einfach als Noch nicht eingetragen angezeigt."
         },
         {
           "question": "Was passiert, wenn eine Dosis nicht eingetragen wird?",
@@ -58,11 +58,11 @@
         },
         {
           "question": "Welche Benachrichtigungen erhalte ich?",
-          "answer": "Sie erhalten Hinweise in vier Gruppen, die Sie im Profil ein- oder ausschalten können: Medikamente (Dosen eingenommen, ausgelassen oder noch nicht eingetragen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor es fällig ist), Notizen (wenn jemand eine Notiz hinzufügt) und Tipps & Vorschläge. Sind Sie selbst die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
+          "answer": "Sie erhalten Hinweise in vier Gruppen, die Sie im Profil ein- oder ausschalten können: Medikamente (Dosen eingenommen, ausgelassen oder noch nicht eingetragen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor es fällig ist), Notizen (wenn jemand eine Notiz hinzufügt) und Tagesübersicht und Tipps. Sind Sie selbst die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
         },
         {
           "question": "Was sind Ruhezeiten?",
-          "answer": "Während der Ruhezeiten, die Sie festlegen (zum Beispiel nachts von 22 bis 7 Uhr), werden Benachrichtigungen pausiert. Ihre Ruhezeiten richten Sie unter Profil & Einstellungen ein."
+          "answer": "Während der Ruhezeiten, die Sie festlegen (zum Beispiel nachts von 22 bis 7 Uhr), werden Benachrichtigungen pausiert. Ihre Ruhezeiten richten Sie unter Profil im Bereich Ruhezeiten ein."
         },
         {
           "question": "Kann ich bestimmte Benachrichtigungen ausschalten?",
@@ -83,7 +83,7 @@
         },
         {
           "question": "Wie stelle ich meine Käufe wieder her?",
-          "answer": "Gehen Sie in der mobilen CircleCare-App zu Profil > Abo > Käufe wiederherstellen. Das ist nützlich, wenn Sie die App neu installieren oder das Smartphone wechseln. Wenn Sie hier im Web abonniert haben, folgt Ihr Abo automatisch Ihrem Konto."
+          "answer": "Gehen Sie in der mobilen CircleCare-App zu Profil > Konto > Käufe wiederherstellen. Das ist nützlich, wenn Sie die App neu installieren oder das Smartphone wechseln. Wenn Sie hier im Web abonniert haben, folgt Ihr Abo automatisch Ihrem Konto."
         },
         {
           "question": "Wie kündige ich mein Abo?",

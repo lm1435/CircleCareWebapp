@@ -265,7 +265,7 @@ test.describe('daily update', () => {
       'Vitals',
       'Daily updates',
       'Activity feed',
-      'Care info',
+      'Health',
     ]);
     await checkA11y(page, `/circles/${circleId} (Quick access with Daily updates)`, testInfo);
     await row.click();

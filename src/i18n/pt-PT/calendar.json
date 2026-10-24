@@ -1,4 +1,8 @@
 {
+  "noCareRecipient": {
+    "title": "Os lembretes são enviados para si",
+    "description": "Os lembretes de medicamentos são enviados para si (proprietário do círculo) até adicionar uma pessoa cuidada ou escolher um membro que os receba."
+  },
   "empty": {
     "hintReadOnly": "Quando a equipa de cuidado adicionar medicamentos ou consultas, eles aparecerão aqui."
   },
@@ -42,7 +46,7 @@
     },
     "dualTimezoneHint": "O seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})",
-    "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Conta.",
+    "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Perfil, na secção Horário de silêncio.",
     "timezoneUnresolvedNotice": "A carregar o fuso horário deste círculo. A gravação está em pausa para que as datas não sejam guardadas no fuso errado.",
     "drugSearch": {
       "searching": "A pesquisar medicamentos"

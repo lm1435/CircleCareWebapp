@@ -202,7 +202,9 @@ describe('MembersPage — owner with the manager switch ON', () => {
     setCircle(roster(), OWNER_ON);
     renderPage();
     await openMemberMenu(user, 'Ben Ortiz');
-    expect(menuItems()).toEqual(['Make medication manager', 'Remove']);
+    // Nor "Make medication manager": a view-only seat receives no notifications,
+    // and the backend refuses it (400 RESPONSIBLE_MEMBER_VIEW_ONLY).
+    expect(menuItems()).toEqual(['Remove']);
   });
 
   it('confirms, then PATCHes the role with the member name for the toast', async () => {
