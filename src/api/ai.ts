@@ -34,6 +34,27 @@ export interface AIChatResponse {
   /** Classifier label (e.g. GET_MEDICATION, UNKNOWN) for analytics only.
    *  Optional: older backends do not send it. Never carries intent params. */
   intent?: string;
+  /**
+   * FIND_NOTES only (backend 1.3.0+): buttons that open where the notes are.
+   * Optional and additive: older backends never send it. Validate with
+   * `sanitizeReplyActions` before rendering. Mirrors mobile/src/api/ai.ts.
+   */
+  actions?: unknown;
+  /** FIND_NOTES only: enums/booleans for analytics. Never a name. */
+  notes_path?: unknown;
+}
+
+/** A tappable destination attached to an assistant reply (backend `AiReplyAction`). */
+export type AIReplyAction =
+  | { type: 'open_provider'; provider_id: string; provider_name: string }
+  | { type: 'open_notes' }
+  | { type: 'open_doctors' };
+
+/** Which FIND_NOTES answer was given (backend `NotesPathInfo`). */
+export interface AINotesPath {
+  target: 'doctor' | 'doctor_list' | 'notes';
+  doctor_named: boolean;
+  doctor_matched: boolean;
 }
 
 /**

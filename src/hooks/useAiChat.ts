@@ -16,6 +16,7 @@ import {
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { Analytics, type AiChatFailureReason } from '@/lib/analytics';
 import { normalizeLocale } from '@/i18n/locales';
+import { parseNotesPath, sanitizeReplyActions } from '@/components/ai/aiReplyActions';
 
 // Web port of the send half of mobile/src/components/ai/AIChatModal.tsx's
 // handleSend. A mutation hook (mirrors useMedConfirmation's pattern) that POSTs
@@ -203,6 +204,15 @@ export function useAiChat(circleId: string): UseAiChatResult {
         latencyMs: Date.now() - startedAtRef.current,
         turnIndex: Math.max(0, turnIndexRef.current - 1),
       });
+      // FIND_NOTES: the reply pointed to where the notes are (mobile fires the
+      // same event from its modal on the same response).
+      const notesPath = data.intent === 'FIND_NOTES' ? parseNotesPath(data.notes_path) : null;
+      if (notesPath) {
+        Analytics.aiNotesPathSuggested({
+          ...notesPath,
+          action_count: sanitizeReplyActions(data.actions).length,
+        });
+      }
     },
     onError: (err) => {
       // Unconditional: `aiChatMessageSent` has already fired for this turn.

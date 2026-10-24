@@ -26,6 +26,9 @@ import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useIsOffline } from '@/hooks/useIsOffline';
 import { blockOfflineWrite, offlineDisabledProps } from '@/lib/offlineWrite';
+import { Analytics } from '@/lib/analytics';
+import type { AIReplyAction } from '@/api/ai';
+import { replyActionKey, replyActionLabel, sanitizeReplyActions } from './aiReplyActions';
 
 // Web port of mobile/src/components/ai/AIChatModal.tsx (the core chat exchange
 // plus the server suggestions list). Mirrors mobile 1:1 for behavior; drops
@@ -48,12 +51,21 @@ interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  /** Buttons under an assistant reply (FIND_NOTES; validated server `actions`). */
+  actions?: AIReplyAction[];
 }
 
 export interface AIChatModalProps {
   circleId: string;
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Opens a reply action's destination (FIND_NOTES: Notes, Doctors, one
+   * doctor's Visits & notes). The host closes the modal and navigates
+   * (AppLayout); without it the buttons are not rendered (the reply text names
+   * the place anyway). Mirrors mobile's `onOpenAction`.
+   */
+  onOpenAction?: (action: AIReplyAction) => void;
 }
 
 let messageSeq = 0;
@@ -62,7 +74,12 @@ function nextMessageId(): string {
   return `msg-${messageSeq}`;
 }
 
-export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): ReactElement | null {
+export function AIChatModal({
+  circleId,
+  isOpen,
+  onClose,
+  onOpenAction,
+}: AIChatModalProps): ReactElement | null {
   const { t } = useTranslation('ai');
   const { mutation, errorKey, resetConversation } = useAiChat(circleId);
   // The AI assistant is a premium-only surface — FEATURE (mobile sends the
@@ -145,9 +162,17 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
         {
           onSuccess: (data) => {
             setRemaining(data.remaining_requests);
+            // FIND_NOTES: buttons to where the notes are (additive; absent on
+            // every other reply and from older backends).
+            const actions = sanitizeReplyActions(data.actions);
             setMessages((prev) => [
               ...prev,
-              { id: nextMessageId(), role: 'assistant', content: data.message },
+              {
+                id: nextMessageId(),
+                role: 'assistant',
+                content: data.message,
+                ...(actions.length > 0 ? { actions } : {}),
+              },
             ]);
           },
           onError: (error) => {
@@ -201,6 +226,16 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
       );
     },
     [input, mutation, errorKey, t, promptUpgrade, sendGuard]
+  );
+
+  /** A reply button: report the kind, hand it to the host (which closes and navigates). */
+  const handleAction = useCallback(
+    (action: AIReplyAction) => {
+      if (!onOpenAction) return;
+      Analytics.aiNotesPathActionTapped({ action: action.type });
+      onOpenAction(action);
+    },
+    [onOpenAction]
   );
 
   const handleSubmit = useCallback(
@@ -354,6 +389,28 @@ export function AIChatModal({ circleId, isOpen, onClose }: AIChatModalProps): Re
               >
                 {message.content}
               </p>
+            ) : onOpenAction && message.actions && message.actions.length > 0 ? (
+              <div key={message.id} className="flex max-w-[85%] flex-col gap-2">
+                <p className="whitespace-pre-wrap break-words rounded-xl rounded-bl-sm bg-bg-2 px-4 py-2.5 text-sm text-ink">
+                  {message.content}
+                </p>
+                {/* FIND_NOTES buttons: the suggestion-chip look, 44px targets. */}
+                <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="ai-chat-reply-actions">
+                  {message.actions.map((action) => (
+                    <li key={replyActionKey(action)}>
+                      <Card
+                        variant="outlined"
+                        padding="sm"
+                        onPress={() => handleAction(action)}
+                        data-testid={`ai-chat-action-${replyActionKey(action)}`}
+                        className="min-h-[44px] w-full rounded-lg! text-sm font-semibold text-ink"
+                      >
+                        {replyActionLabel(t, action)}
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : (
               <p
                 key={message.id}
