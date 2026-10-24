@@ -15,6 +15,44 @@ import type {
 import { PDF_PALETTE as CC } from './palette';
 import { getSharedPdfStyles, displayValue, computeAge, escapeHtml } from './pdfBranding';
 
+/**
+ * SUMMARY TILE LABELS NEVER BREAK MID-WORD, IN ANY LOCALE.
+ *
+ * On the iOS print width (504pt of content; six tiles in one row) a tile has
+ * ~73px of interior. Uppercase 9px labels broke "TASA DE ADHERENCIA" as
+ * "ADHERENCI / A" (overflow-wrap: break-word), and German was worse
+ * ("EINNAHMETR / EUE", "EINGENOMME / N", "AUSGELASSE / N"). Labels now print in
+ * the sentence case they are written in, and ONE font size per document is
+ * chosen so the longest single word of the six labels fits a tile; multi-word
+ * labels wrap only between words. 0.6em is a conservative per-character width
+ * for this font stack (measured: 0.44-0.59em for mixed-case words), and the
+ * budget leaves ~10% for iOS rendering wider than desktop Chrome.
+ */
+export const SUMMARY_TILE_LABEL_BUDGET_PX = 65;
+export const SUMMARY_TILE_LABEL_MAX_PX = 10;
+export const SUMMARY_TILE_LABEL_MIN_PX = 7;
+export function summaryTileLabelFontPx(labels: string[]): number {
+  const longestWord = labels
+    .flatMap((label) => label.split(/\s+/))
+    .reduce((max, word) => Math.max(max, Array.from(word).length), 0);
+  if (longestWord === 0) return SUMMARY_TILE_LABEL_MAX_PX;
+  const fit = Math.floor((SUMMARY_TILE_LABEL_BUDGET_PX / (longestWord * 0.6)) * 2) / 2;
+  return Math.min(SUMMARY_TILE_LABEL_MAX_PX, Math.max(SUMMARY_TILE_LABEL_MIN_PX, fit));
+}
+
+/**
+ * A heading and the block it introduces print on the same page. Chrome honours
+ * the shared `break-after: avoid` on headings; iOS WebKit (expo-print) does NOT,
+ * which left "Daily breakdown" alone at the foot of page 1 with its strip on
+ * page 2. WebKit does honour `break-inside: avoid`, so each heading is wrapped
+ * with its content in a `keep-together` block. A table longer than this many
+ * rows cannot be held on one page, so it flows (its header row repeats).
+ */
+export const KEEP_WITH_HEADING_MAX_ROWS = 12;
+function keepWithHeading(rows: number): string {
+  return rows <= KEEP_WITH_HEADING_MAX_ROWS ? ' keep-together' : '';
+}
+
 /** " mmHg", " kg", " °C" after a value; a percentage takes its sign with no space ("96%"). */
 function vitalUnitSuffix(unit: string): string {
   return unit === '%' ? '%' : ` ${escapeHtml(unit)}`;
@@ -327,8 +365,7 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
   );
   const asNeededSection = asNeededMeds.length > 0 ? `
   <div class="section">
-    <div class="section-title">${t('medicationHistory.export.asNeededSection')}</div>
-    ${asNeededMeds.map((m) => {
+    ${asNeededMeds.map((m, index) => {
       const label = m.medication_dosage ? `${m.medication_name} (${m.medication_dosage})` : m.medication_name;
       const rows = (m.doses ?? []).map((d) => {
         const at = new Date(d.given_at);
@@ -341,7 +378,12 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
           <td>${escapeHtml(d.note ?? '')}</td>
         </tr>`;
       }).join('');
+      // The section heading rides in the FIRST medication's block, and each
+      // medication's own heading in its block, so neither is left alone at the
+      // foot of a page (see keepWithHeading).
       return `
+    <div class="${keepWithHeading(m.doses?.length ?? 0).trim()}">
+    ${index === 0 ? `<div class="section-title">${t('medicationHistory.export.asNeededSection')}</div>` : ''}
     <div class="subsection-title">${t('medicationHistory.export.asNeededGiven', { name: escapeHtml(label), count: m.doses_given })}</div>
     <table role="table" aria-label="${escapeHtml(label)}">
       <caption class="visually-hidden">${escapeHtml(label)}</caption>
@@ -354,12 +396,22 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
         </tr>
       </thead>
       <tbody>${rows}</tbody>
-    </table>`;
+    </table>
+    </div>`;
     }).join('')}
   </div>
   ` : '';
 
   const takenOnTime = summary.taken - summary.taken_late;
+  const tileLabels = {
+    adherenceRate: t('medicationHistory.export.adherenceRate'),
+    takenOnTime: t('medicationHistory.export.takenOnTime'),
+    takenLate: t('medicationHistory.export.takenLate'),
+    notMarked: t('medicationHistory.export.notMarked'),
+    skipped: t('medicationHistory.export.skipped'),
+    total: t('medicationHistory.export.total'),
+  };
+  const tileLabelPx = summaryTileLabelFontPx(Object.values(tileLabels));
 
   return `<!DOCTYPE html>
 <html lang="${langCode}">
@@ -418,21 +470,21 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
       min-width: 0;
       background: ${CC.paper};
       border-radius: 8px;
-      padding: 12px 6px;
+      padding: 12px 3px;
       text-align: center;
     }
     .summary-box .value { font-size: 24px; font-weight: 700; }
-    /* Sized for the iOS printable width (612pt − 54pt margins → ~65px of tile
-       interior), where the widest single label word — "ADHERENCIA" — must fit.
-       11px/0.5px spilled past the tile border there; Chrome's wider preview
-       never shows the spill. break-word is the last-resort guard for longer
-       locales: a wrapped word beats text outside the box. */
+    /* Font size is set per document by summaryTileLabelFontPx so the longest
+       word fits the tile at the iOS print width. Wrap BETWEEN words only: a
+       label must never split inside a word ("ADHERENCI / A"). */
     .summary-box .label {
-      font-size: 9px;
+      font-size: ${tileLabelPx}px;
+      line-height: 1.25;
       color: ${CC.inkSoft};
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      overflow-wrap: break-word;
+      overflow-wrap: normal;
+      word-break: normal;
+      hyphens: manual;
+      -webkit-hyphens: manual;
     }
     .adherence-highlight {
       background: ${CC.mossWash};
@@ -477,27 +529,27 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
     <div class="summary-grid">
       <div class="summary-box adherence-highlight">
         <div class="value" style="color:${adherenceColor}">${summary.adherence_rate}%</div>
-        <div class="label">${t('medicationHistory.export.adherenceRate')}</div>
+        <div class="label">${tileLabels.adherenceRate}</div>
       </div>
       <div class="summary-box">
         <div class="value">${takenOnTime}</div>
-        <div class="label">${t('medicationHistory.export.takenOnTime')}</div>
+        <div class="label">${tileLabels.takenOnTime}</div>
       </div>
       <div class="summary-box">
         <div class="value">${summary.taken_late}</div>
-        <div class="label">${t('medicationHistory.export.takenLate')}</div>
+        <div class="label">${tileLabels.takenLate}</div>
       </div>
       <div class="summary-box">
         <div class="value">${summary.not_marked}</div>
-        <div class="label">${t('medicationHistory.export.notMarked')}</div>
+        <div class="label">${tileLabels.notMarked}</div>
       </div>
       <div class="summary-box">
         <div class="value">${summary.skipped}</div>
-        <div class="label">${t('medicationHistory.export.skipped')}</div>
+        <div class="label">${tileLabels.skipped}</div>
       </div>
       <div class="summary-box">
         <div class="value">${summary.total_scheduled}</div>
-        <div class="label">${t('medicationHistory.export.total')}</div>
+        <div class="label">${tileLabels.total}</div>
       </div>
     </div>
     <!-- The badge alone ("↔ &hellip; (0%)") is a riddle to anyone who did not
@@ -517,7 +569,7 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
 
   <!-- By Medication -->
   ${mergedByMedication.length > 0 ? `
-  <div class="section">
+  <div class="section${keepWithHeading(mergedByMedication.length)}">
     <div class="section-title">${t('medicationHistory.export.byMedication')}</div>
     <table role="table" aria-label="${t('medicationHistory.export.byMedication')}">
       <caption class="visually-hidden">${t('medicationHistory.export.byMedication')}</caption>
@@ -539,10 +591,12 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
   <!-- Daily Breakdown -->
   ${recentDaily.length > 0 ? `
   <div class="section">
-    <div class="section-title">${t('medicationHistory.export.dailyBreakdown')}</div>
-    <!-- Strip + both legend lines are ONE unit: an iOS export split the colour
-         key onto the next page, away from the squares it explains. -->
+    <!-- Heading + strip + both legend lines are ONE unit: an iOS export split
+         the colour key onto the next page, away from the squares it explains,
+         and iOS WebKit ignores break-after on the heading, which left the
+         heading alone at the foot of page 1. -->
     <div class="keep-together">
+    <div class="section-title">${t('medicationHistory.export.dailyBreakdown')}</div>
     <div class="day-strip" aria-label="${t('medicationHistory.export.dailyBreakdown')}">${dayStrip}</div>
     <div class="legend">${t('medicationHistory.export.dailyLegend')}</div>
     ${dayLegend}
@@ -573,7 +627,7 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
 
   <!-- Time Breakdown -->
   ${time_breakdown.length > 0 ? `
-  <div class="section">
+  <div class="section${keepWithHeading(time_breakdown.length)}">
     <div class="section-title">${t('medicationHistory.export.timeBreakdown')}</div>
     <table role="table" aria-label="${t('medicationHistory.export.timeBreakdown')}">
       <caption class="visually-hidden">${t('medicationHistory.export.timeBreakdown')}</caption>
@@ -597,7 +651,7 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
 
   <!-- Health Vitals -->
   ${vitalsData && vitalsData.length > 0 ? `
-  <div class="section">
+  <div class="section${keepWithHeading(vitalsData.length)}">
     <div class="section-title">${t('medicationHistory.export.healthVitals')}</div>
     <table role="table" aria-label="${t('medicationHistory.export.healthVitals')}">
       <caption class="visually-hidden">${t('medicationHistory.export.healthVitals')}</caption>
