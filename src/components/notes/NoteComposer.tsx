@@ -1,6 +1,6 @@
-import { useEffect, useRef, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ChipSelect, TextArea, chipClass } from '@/components/ui';
+import { Button, ChipSelect, DateField, TextArea, chipClass } from '@/components/ui';
 import {
   CARE_NOTE_CATEGORIES,
   CARE_NOTE_MOODS,
@@ -31,9 +31,15 @@ export interface NoteDraft {
   body: string;
   mood: CareNoteMood | null;
   categories: CareNoteCategory[];
+  /**
+   * The note's date, 'YYYY-MM-DD' in the recipient's timezone. `null` = today
+   * (the create composer's default: nothing is sent). The edit composer seeds
+   * the note's own date.
+   */
+  noteDate: string | null;
 }
 
-export const EMPTY_NOTE_DRAFT: NoteDraft = { body: '', mood: null, categories: [] };
+export const EMPTY_NOTE_DRAFT: NoteDraft = { body: '', mood: null, categories: [], noteDate: null };
 
 export interface NoteComposerProps {
   /** Unique id prefix so multiple composers (create + inline edit) coexist. */
@@ -74,6 +80,11 @@ export interface NoteComposerProps {
    * at the top of the page does not pass this — nothing removed its focus.
    */
   autoFocus?: boolean;
+  /**
+   * The recipient-timezone "today" (the date input's ceiling). The Date row is
+   * withheld until it is known.
+   */
+  today?: string;
 }
 
 export function NoteComposer({
@@ -87,11 +98,15 @@ export function NoteComposer({
   cancelLabel,
   error = null,
   autoFocus = false,
+  today,
 }: NoteComposerProps): ReactElement {
   const { t, i18n } = useTranslation('notes');
   // Re-measured per language: the labels, and so the line count, change with it.
   const categoryRow = useChipRowCap(NOTE_CHIP_MAX_ROWS, i18n.language);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [futureError, setFutureError] = useState(false);
+  const dateValue = draft.noteDate ?? today ?? '';
+  const isToday = !!today && dateValue === today;
 
   // Mount-only: this component instance is created fresh each time NoteRow
   // enters edit mode (its editing branch renders a new NoteComposer), so a
@@ -144,6 +159,45 @@ export function NoteComposer({
         maxLength={MAX_CARE_NOTE_LENGTH}
         rows={3}
       />
+
+      {/* Date row: defaults to Today; a past day shows "Reset to today". The
+          ceiling is the recipient-timezone today, never the browser's. */}
+      {today ? (
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-1" data-testid={`${idPrefix}-date-row`}>
+          <DateField
+            id={`${idPrefix}-date`}
+            label={t('date.label')}
+            value={dateValue}
+            max={today}
+            hint={isToday ? t('date.today') : undefined}
+            error={futureError ? t('date.futureError') : undefined}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (!next) return;
+              if (next > today) {
+                setFutureError(true);
+                return;
+              }
+              setFutureError(false);
+              onChange({ ...draft, noteDate: next === today ? null : next });
+            }}
+          />
+          {!isToday && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid={`${idPrefix}-date-reset`}
+              onClick={() => {
+                setFutureError(false);
+                onChange({ ...draft, noteDate: null });
+              }}
+            >
+              {t('date.reset')}
+            </Button>
+          )}
+        </div>
+      ) : null}
 
       {/* Visible field labels are aria-hidden: each chip row is a role="group"
           whose aria-label carries the same (matching) accessible name, so

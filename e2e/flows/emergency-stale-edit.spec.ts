@@ -13,7 +13,6 @@ import {
   loggedInPage,
   names,
   openEntryAction,
-  putAs,
   serverArray,
   serverInfo,
   waitPut,
@@ -43,14 +42,23 @@ import {
 // the PRIMARY doctor (flat primary_doctor_* fields, a different code path from
 // the additional_doctors array).
 //
-// Test ids (PW_FALSIFY=emergency-stale:<id>): edit-contact, edit-doctor,
-// edit-insurance, edit-contact-es, removed-contact, removed-doctor,
-// removed-insurance, edit-primary-doctor. PW_FALSIFY=emergency-stale (all)
+// Test ids (PW_FALSIFY=emergency-stale:<id>): edit-contact,
+// edit-insurance, edit-contact-es, removed-contact, removed-insurance. PW_FALSIFY=emergency-stale (all)
 // skips B's change: A's save is then NOT stale, so it is accepted (200) and the
 // "refused" assertion must go red.
+//
+// DOCTORS ARE NOT IN THIS FILE ANY MORE (notes by doctor). A doctor now has a stable id and
+// is edited / removed through the per-doctor API (PATCH /providers/:id, POST
+// /providers/:id/archive), which addresses the doctor itself, never a position in an array
+// and never under a section version. The race these tests pin (a stale position or a stale
+// array overwriting a caregiver's change) therefore cannot happen for doctors; what replaces
+// it is pinned in emergency-doctor-ids.spec.ts.
 // ===========================================================================
 
 test.use({ storageState: { cookies: [], origins: [] } });
+
+/** Contacts and insurance still write the whole array under a section version (PK5). */
+const ARRAY_KINDS = KINDS.filter((k) => k.id !== 'doctor');
 test.setTimeout(120_000);
 
 interface Ctx {
@@ -121,7 +129,7 @@ async function staleEditScenario(ctx: Ctx, kind: Kind, lang: Lang, id: string): 
   }
 }
 
-for (const kind of KINDS) {
+for (const kind of ARRAY_KINDS) {
   test(`${kind.id}: a stale save is refused, the editor reloads with the other caregiver's value, the server keeps theirs`, async ({
     browser,
     request,
@@ -139,7 +147,7 @@ test('ES contact: the stale save is refused with the Spanish message and the edi
   await staleEditScenario({ browser, request, baseURL }, KINDS[0], 'es', 'edit-contact-es');
 });
 
-for (const kind of KINDS) {
+for (const kind of ARRAY_KINDS) {
   test(`${kind.id}: the other caregiver REMOVED the entry being edited: the save is refused, the editor closes, nothing is resurrected`, async ({
     browser,
     request,
@@ -189,55 +197,3 @@ for (const kind of KINDS) {
     }
   });
 }
-
-test('primary doctor: a stale save is refused, the editor reloads with the other caregiver\'s value, the server keeps theirs', async ({
-  browser,
-  request,
-  baseURL,
-}) => {
-  const id = 'edit-primary-doctor';
-  const copy = COPY.en;
-  const w = await world(request);
-  const A = await loggedInPage(browser, w.owner, baseURL, w.circleId);
-  try {
-    const name = SEED.primary_doctor_name;
-    await openEntryAction(A.page, copy, copy.noun.doctor, name, 'edit');
-    const dialog = A.page.getByRole('dialog', { name: copy.primaryTitle });
-    await expect(dialog).toBeVisible({ timeout: 20_000 });
-    const specialty = dialog.locator('#doctor-specialty');
-    await expect(specialty).toHaveValue(SEED.primary_doctor_specialty);
-
-    // B changes the primary doctor's specialty meanwhile.
-    if (!falsify(id)) await putAs(w.memberSession, w.circleId, { primary_doctor_specialty: 'Oncology B-wrote' });
-    const afterB = await serverInfo(w.ownerSession, w.circleId);
-
-    await specialty.fill('Radiology A-stale');
-    const refusedPut = waitPut(A.page, w.circleId);
-    await dialog.getByRole('button', { name: copy.save, exact: true }).click();
-    // Only the flat field B changed conflicts; the other four A named did not move.
-    const { versions } = await expectRefused(await refusedPut, ['primary_doctor_specialty']);
-    await expectConflictToast(A.page, copy);
-
-    await expect(dialog).toBeVisible();
-    await expect(specialty).toHaveValue('Oncology B-wrote', { timeout: 15_000 });
-    await expect(dialog.locator('#doctor-name')).toHaveValue(name);
-    const afterRefusal = await serverInfo(w.ownerSession, w.circleId);
-    expect(JSON.stringify(afterRefusal), 'the refused save changed nothing').toBe(JSON.stringify(afterB));
-    expect(afterRefusal.primary_doctor_specialty).toBe('Oncology B-wrote');
-
-    // The retry saves with the fresh version.
-    await specialty.fill('Radiology A-again');
-    const redoPut = waitPut(A.page, w.circleId);
-    await dialog.getByRole('button', { name: copy.save, exact: true }).click();
-    const redo = await redoPut;
-    expect(redo.status(), 'the re-done change saves').toBe(200);
-    const sent = redo.request().postDataJSON() as { if_match?: Record<string, string> };
-    expect(sent.if_match?.primary_doctor_specialty).toBe(versions.primary_doctor_specialty);
-    await expect(dialog).toBeHidden({ timeout: 20_000 });
-    const final = await serverInfo(w.ownerSession, w.circleId);
-    expect(final.primary_doctor_specialty).toBe('Radiology A-again');
-    expect(final.primary_doctor_name).toBe(name);
-  } finally {
-    await A.context.close();
-  }
-});

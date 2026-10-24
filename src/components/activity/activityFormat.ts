@@ -50,7 +50,7 @@ export function formatRelativeTime(
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
-function formatDateOnlyKey(
+export function formatDateOnlyKey(
   dateKey: string,
   locale: string,
   options: Intl.DateTimeFormatOptions

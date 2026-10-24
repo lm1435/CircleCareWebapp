@@ -9,11 +9,16 @@ vi.mock('@/api/emergencyInfo', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/emergencyInfo')>();
   return { ...actual, updateEmergencyInfo: vi.fn() };
 });
+vi.mock('@/api/providers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/providers')>();
+  return { ...actual, createProvider: vi.fn(), updateProvider: vi.fn() };
+});
 vi.mock('@/hooks/usePremiumGate', () => ({
   usePremiumGate: () => ({ promptUpgrade: vi.fn() }),
 }));
 
 import { updateEmergencyInfo, type EmergencyInfo } from '@/api/emergencyInfo';
+import { createProvider, updateProvider } from '@/api/providers';
 import { ToastProvider } from '@/components/ui';
 import { EditContactModal, EditDoctorModal, EditInsuranceModal } from '@/components/emergency';
 
@@ -27,6 +32,22 @@ import { EditContactModal, EditDoctorModal, EditInsuranceModal } from '@/compone
 
 const CIRCLE_ID = 'circle-1';
 const mockUpdate = vi.mocked(updateEmergencyInfo);
+const mockCreate = vi.mocked(createProvider);
+const mockPatch = vi.mocked(updateProvider);
+const SAVED_PROVIDER = {
+  id: '77777777-7777-4777-8777-777777777777',
+  name: 'Dr. Lee',
+  specialty: null,
+  phone: null,
+  country_code: null,
+  phone_extension: null,
+  address: null,
+  is_primary: false,
+  sort_order: 1,
+  archived_at: null,
+  created_at: '',
+  updated_at: '',
+};
 const ERROR = 'Enter a valid phone number';
 const TOO_LONG = '5121548191566';
 
@@ -93,6 +114,8 @@ function expectRefused(input: HTMLElement): void {
 beforeEach(() => {
   vi.clearAllMocks();
   mockUpdate.mockResolvedValue(baseInfo);
+  mockCreate.mockResolvedValue({ provider: SAVED_PROVIDER, providers: [SAVED_PROVIDER] });
+  mockPatch.mockResolvedValue({ provider: SAVED_PROVIDER, providers: [SAVED_PROVIDER] });
 });
 
 const DOCTOR_FORMS: ReadonlyArray<readonly [string, 'primary' | number | undefined, EmergencyInfo]> = [
@@ -118,23 +141,28 @@ describe.each(DOCTOR_FORMS)('EditDoctorModal — %s — phone save gate', (_mode
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  // An ADD goes through POST /providers; an edit of a doctor the snapshot has no
+  // id for keeps the legacy full-array PUT. Either way the gate is the same.
+  const writer = () => (target === undefined ? mockCreate : mockUpdate);
+
   it('correcting the number then saves it', async () => {
     const phone = open();
     type(nameInput(), 'Dr. Lee');
     type(phone, TOO_LONG);
     save();
     expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
     type(phone, '5121548191');
     save();
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    expect(JSON.stringify(mockUpdate.mock.calls[0][1])).toContain('(512) 154-8191');
+    await waitFor(() => expect(writer()).toHaveBeenCalledTimes(1));
+    expect(JSON.stringify(writer().mock.calls[0][1])).toContain('(512) 154-8191');
   });
 
   it('an EMPTY phone still saves (optional)', async () => {
     open();
     type(nameInput(), 'Dr. Lee');
     save();
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(writer()).toHaveBeenCalledTimes(1));
   });
 });
 

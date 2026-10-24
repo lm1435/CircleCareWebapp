@@ -55,6 +55,16 @@ describe('Header circle switch lands on a fresh view', () => {
     expect(screen.getByTestId('hash')).toBeEmptyDOMElement();
   });
 
+  // A doctor's id means nothing in another circle: switching from a Visits & notes
+  // page lands on the new circle's Medical Info, never on a dead /providers/:id.
+  it("leaves a doctor's Visits & notes page for the new circle's Emergency Info", async () => {
+    const user = userEvent.setup();
+    renderAt('/circles/A/providers/some-doctor-id');
+    await user.click(screen.getByRole('button', { name: /Circle A/ }));
+    await user.click(screen.getByRole('menuitem', { name: /Circle B/ }));
+    expect(screen.getByTestId('path')).toHaveTextContent(/^\/circles\/B\/emergency$/);
+  });
+
   it('drops the /daily-update/:date segment and any hash', async () => {
     const user = userEvent.setup();
     renderAt('/circles/A/daily-update/2026-10-01?x=1#top');

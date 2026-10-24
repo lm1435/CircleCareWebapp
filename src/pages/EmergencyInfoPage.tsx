@@ -6,6 +6,7 @@ import {
   CareSummaryShareDialog,
   ContactCard,
   DoctorCard,
+  type DoctorCardProps,
   EditContactModal,
   EditDoctorModal,
   EditInsuranceModal,
@@ -16,6 +17,7 @@ import {
 } from '@/components/emergency';
 // Not (yet) re-exported from the barrel above — see EmergencySection.tsx.
 import { EmergencyAccordionSection } from '@/components/emergency/EmergencySection';
+import { synthesizeEmptyEmergencyInfo } from '@/components/emergency/emptyEmergencyInfo';
 import {
   buildEmergencyDelete,
   useUpdateEmergencyInfo,
@@ -39,6 +41,8 @@ import { useCareSummaryExport } from '@/hooks/useCareSummaryExport';
 import { useCircleMembers } from '@/hooks/useCircleMembers';
 import { useCircles } from '@/hooks/useCircles';
 import { useEmergencyInfo } from '@/hooks/useEmergencyInfo';
+import { useArchiveProvider, useProviders } from '@/hooks/useProviders';
+import { isProviderArchivedError } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import '@/styles/print.css';
 
@@ -83,7 +87,15 @@ type OpenModal =
 // the delete is built from IT (array and versions together), never from the live
 // cache, so a refetch under the open confirm cannot re-point `index` at another
 // entry. See buildEmergencyDelete in hooks/useEmergencyInfo.
-type PendingDelete = EmergencyDeleteTarget & { base: EmergencyInfo | null };
+//
+// `providerId` (notes by doctor): the doctor's stable id when the snapshot carries
+// one. A doctor with an id is REMOVED through POST /providers/:id/archive (its
+// linked visits keep the link and show "(removed)"); one without (an older
+// backend, or a circle with no doctor rows yet) takes the legacy array write.
+type PendingDelete = EmergencyDeleteTarget & {
+  base: EmergencyInfo | null;
+  providerId?: string | null;
+};
 
 // One row of the doctors accordion: the primary doctor (flat fields on
 // `EmergencyInfo`, at most one) or an entry from `additional_doctors` (needs
@@ -93,6 +105,7 @@ type PendingDelete = EmergencyDeleteTarget & { base: EmergencyInfo | null };
 type DoctorRow =
   | ({ kind: 'primary' } & Pick<
       EmergencyInfo,
+      | 'primary_doctor_id'
       | 'primary_doctor_name'
       | 'primary_doctor_specialty'
       | 'primary_doctor_phone'
@@ -134,32 +147,6 @@ function hasContacts(info: EmergencyInfo): boolean {
 
 function hasInsurance(info: EmergencyInfo): boolean {
   return (info.insurance_plans?.length ?? 0) > 0;
-}
-
-/**
- * A blank record for a circle whose emergency-info GET has SETTLED (not
- * loading, not errored) but resolved `emergency_info: null` — i.e. no row
- * exists yet (backend PGRST116). Passed to the edit modals instead of the raw
- * `null` so their `if (!props.info) return null` self-defense guard (which
- * exists to stop an unhydrated read-modify-write, see the mobile emergency
- * editors' history) doesn't ALSO block the legitimate first-ever add: without
- * this, `info` stays `null` forever for an empty circle, so "Add contact"
- * opened a modal that immediately rendered nothing — a silent no-op with no
- * error, no loading state, nothing to retry (WA1).
- */
-function synthesizeEmptyEmergencyInfo(circleId: string): EmergencyInfo {
-  return {
-    id: '',
-    circle_id: circleId,
-    insurance_plans: [],
-    additional_doctors: [],
-    allergies: [],
-    medication_allergies: [],
-    medical_conditions: [],
-    emergency_contacts: [],
-    created_at: '',
-    updated_at: '',
-  };
 }
 
 /**
@@ -213,6 +200,10 @@ export default function EmergencyInfoPage(): ReactElement {
   const { data: circleDetail } = useCircleMembers(circleId);
   const { canEdit, timezone: careRecipientTimezone } = useCircle(circleId);
   const update = useUpdateEmergencyInfo(circleId);
+  // Notes by doctor: removing a doctor archives it (its visits keep the link);
+  // the active list also carries each doctor's visit count for the card rows.
+  const archive = useArchiveProvider(circleId);
+  const { providers } = useProviders(circleId);
   // Gathers circle, emergency info and the medication window itself at
   // export time (fresh cache reused), so nothing PHI-shaped is threaded here.
   const { exportPdf, isExporting } = useCareSummaryExport({ circleId });
@@ -285,12 +276,25 @@ export default function EmergencyInfoPage(): ReactElement {
 
   // Freeze what the user is looking at the moment they pick Delete (`info` is the
   // data this render's list was built from).
-  const askDelete = (target: EmergencyDeleteTarget): void =>
-    setPendingDelete({ ...target, base: info ?? null });
+  const askDelete = (target: EmergencyDeleteTarget, providerId?: string | null): void =>
+    setPendingDelete({ ...target, base: info ?? null, providerId: providerId ?? null });
 
   const confirmDelete = (): void => {
     if (!pendingDelete) return;
     const onSuccess = () => setPendingDelete(null);
+    // A doctor with a stable id is archived by id: no array position to go stale,
+    // no version race (the per-item endpoint is last-write-wins per field set).
+    if (pendingDelete.providerId) {
+      archive.mutate({ providerId: pendingDelete.providerId, wasPrimary: pendingDelete.kind === 'doctor-primary' }, {
+        onSuccess,
+        // Already removed by someone else: the hook reloaded the lists, so drop
+        // the confirm. Any other failure keeps it open for a retry.
+        onError: (err) => {
+          if (isProviderArchivedError(err)) setPendingDelete(null);
+        },
+      });
+      return;
+    }
     // PK5: a 409 means the section changed under us; the hook toasts + reloads,
     // so drop the stale confirm (the list behind it now shows the latest).
     const cbs = {
@@ -378,6 +382,7 @@ export default function EmergencyInfoPage(): ReactElement {
       ? [
           {
             kind: 'primary' as const,
+            primary_doctor_id: info.primary_doctor_id,
             primary_doctor_name: info.primary_doctor_name,
             primary_doctor_specialty: info.primary_doctor_specialty,
             primary_doctor_phone: info.primary_doctor_phone,
@@ -391,6 +396,15 @@ export default function EmergencyInfoPage(): ReactElement {
       (doctor, index): DoctorRow => ({ kind: 'additional', index, doctor })
     ),
   ];
+  // "Visits & notes · N": the stable id comes from the emergency-info projection,
+  // the count from GET /providers (hidden at 0, and while that read is pending).
+  const visitsFor = (id: string | null | undefined): DoctorCardProps['visits'] =>
+    id
+      ? {
+          to: `/circles/${circleId}/providers/${encodeURIComponent(id)}`,
+          count: providers.find((p) => p.id === id)?.visit_count ?? 0,
+        }
+      : undefined;
   const renderDoctorRow = (row: DoctorRow): ReactNode =>
     row.kind === 'primary' ? (
       <DoctorCard
@@ -401,8 +415,13 @@ export default function EmergencyInfoPage(): ReactElement {
         extension={row.primary_doctor_phone_extension}
         address={row.primary_doctor_address}
         isPrimary
+        visits={visitsFor(row.primary_doctor_id)}
         onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: 'primary' }) : undefined}
-        onDelete={canEdit ? () => askDelete({ kind: 'doctor-primary' }) : undefined}
+        onDelete={
+          canEdit
+            ? () => askDelete({ kind: 'doctor-primary' }, row.primary_doctor_id)
+            : undefined
+        }
       />
     ) : (
       <DoctorCard
@@ -412,8 +431,11 @@ export default function EmergencyInfoPage(): ReactElement {
         countryCode={row.doctor.country_code}
         extension={row.doctor.phone_extension}
         address={row.doctor.address}
+        visits={visitsFor(row.doctor.id)}
         onEdit={canEdit ? () => setOpenModal({ kind: 'doctor', target: row.index }) : undefined}
-        onDelete={canEdit ? () => askDelete({ kind: 'doctor', index: row.index }) : undefined}
+        onDelete={
+          canEdit ? () => askDelete({ kind: 'doctor', index: row.index }, row.doctor.id) : undefined
+        }
       />
     );
 
@@ -677,7 +699,7 @@ export default function EmergencyInfoPage(): ReactElement {
           confirmLabel={t('edit.delete')}
           cancelLabel={t('edit.cancel')}
           destructive
-          confirmDisabled={update.isPending}
+          confirmDisabled={update.isPending || archive.isPending}
           onConfirm={confirmDelete}
           onCancel={() => setPendingDelete(null)}
         />

@@ -11,7 +11,7 @@ import { ENTRY_SOURCES, type EntrySource } from '@/utils/entrySource';
 // The backend expands recurrences (virtual + persisted instances) — the client
 // must render exactly what it receives and NEVER expand recurrences itself.
 
-export type EventType = 'medication' | 'appointment' | 'task';
+export type EventType = 'medication' | 'appointment' | 'task' | 'shift';
 
 export type ConfirmationStatus = 'taken' | 'taken_late' | 'missed' | 'skipped';
 
@@ -83,11 +83,29 @@ export interface CalendarEvent {
    */
   entry_source?: EntrySource | null;
 
+  /**
+   * APPOINTMENTS ONLY: the doctor (`care_providers.id`) the visit is with, or
+   * null/absent = none (docs/plans/notes-by-doctor.md). Stored on the series ROOT:
+   * an occurrence (physical or virtual) reports its root's value. The doctor may
+   * since have been REMOVED (archived): resolve the name with
+   * `useProviders(circleId, { includeArchived: true })` and show "(removed)".
+   * Absent from a backend that predates the feature.
+   */
+  provider_id?: string | null;
+
   // Scheduling — naive local values in the care recipient's timezone
   scheduled_date: string; // YYYY-MM-DD
   scheduled_time?: string | null; // HH:MM:SS (null/undefined = all-day)
   duration_minutes?: number | null;
   location?: string | null;
+
+  /**
+   * SHIFTS ONLY (event_type 'shift', docs/plans/care-shifts.md): minutes before
+   * the start the assignee is reminded — 60 | 120 | 240 | 1440, or null = off.
+   * Absent on every other event type and on a backend that predates shifts.
+   * A shift's `assigned_to` null means OPEN (nobody on it).
+   */
+  reminder_lead_minutes?: number | null;
 
   // Recurrence (display only on web). recurrence_days: 0=Sun..6=Sat.
   recurrence_rule?: string | null; // 'daily' | 'every_other_day' | 'weekly' | 'custom:N'
@@ -202,6 +220,13 @@ export interface GetEventsParams {
    * section pass it; the calendar must not.
    */
   includeAsNeeded?: boolean;
+  /**
+   * Care shifts. Opt-in and EXCLUSIVE: with it the response is shifts ONLY
+   * (one-offs, series roots, physical children, virtual `<root>_<date>`
+   * occurrences); without it a shift never appears, so every other calendar
+   * read is unchanged. Only the Shifts view passes it.
+   */
+  includeShifts?: boolean;
 }
 
 interface EventsEnvelope {
@@ -225,6 +250,7 @@ export async function getEvents(
     if (params.includeDiscontinued) requestParams.includeDiscontinued = 'true';
     if (params.includeInactiveRoots) requestParams.includeInactiveRoots = 'true';
     if (params.includeAsNeeded) requestParams.includeAsNeeded = 'true';
+    if (params.includeShifts) requestParams.includeShifts = 'true';
   }
   // apiClient's response interceptor unwraps axios' response.data, so the
   // resolved value IS the `{ success, data }` envelope.
@@ -356,6 +382,8 @@ export interface CreateEventRequest {
   scheduled_time?: string; // HH:MM or HH:MM:SS
   duration_minutes?: number;
   location?: string;
+  /** Shifts only: 60 | 120 | 240 | 1440 minutes before the start, null = off. */
+  reminder_lead_minutes?: number | null;
 
   /**
    * AS-NEEDED medication (create only — locked afterwards). The server pins the
@@ -373,6 +401,15 @@ export interface CreateEventRequest {
    * utils/entrySource.ts).
    */
   entry_source?: EntrySource;
+
+  /**
+   * APPOINTMENTS ONLY: link the visit to a doctor (must be an ACTIVE doctor of
+   * this circle). `null` clears the link; absent leaves it untouched. Edits echo
+   * the stored value: an unchanged `provider_id` is never re-validated server
+   * side, so saving a form whose doctor was removed since keeps the link. An
+   * edit aimed at an occurrence writes the series ROOT's link.
+   */
+  provider_id?: string | null;
 
   // Recurrence
   recurrence_rule?: string;
@@ -771,7 +808,7 @@ const recurrenceRuleSchema = z
 // Fields the form cannot populate by hand keep Zod's defaults; the consumer's
 // `defaultValue` fallback catches those as a generic localized line.
 export const eventFormSchema = z.object({
-  event_type: z.enum(['medication', 'appointment', 'task']),
+  event_type: z.enum(['medication', 'appointment', 'task', 'shift']),
   title: z.string().min(1, { message: 'titleRequired' }).max(150, { message: 'titleTooLong' }),
   description: z.string().max(850, { message: 'descriptionTooLong' }).optional(),
 
@@ -811,6 +848,9 @@ export const eventFormSchema = z.object({
 
   // How the entry was added — mirrors the backend's create schema.
   entry_source: z.enum(ENTRY_SOURCES).optional(),
+
+  // Appointments only: the doctor this visit is with (null clears the link).
+  provider_id: z.string().uuid().nullable().optional(),
 
   // Task-specific
   assigned_to: z.string().uuid().nullable().optional(),

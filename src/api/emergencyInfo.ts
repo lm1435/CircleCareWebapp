@@ -26,6 +26,13 @@ export interface EmergencyContact {
 }
 
 export interface AdditionalDoctor {
+  /**
+   * Stable doctor id (`care_providers.id`), docs/plans/notes-by-doctor.md. The
+   * emergency-info GET projects the circle's doctors from that table and tags
+   * each entry with it. Absent from an older backend, and from a circle with no
+   * `care_providers` rows yet: treat absent as "no id" (the legacy PUT path).
+   */
+  id?: string | null;
   name: string;
   specialty?: string | null;
   phone?: string | null;
@@ -61,6 +68,8 @@ export interface EmergencyInfo {
   insurance_plans: InsurancePlan[] | null;
 
   // Primary doctor (flat fields)
+  /** Id of the active primary doctor; null = none; absent = no doctor rows yet. */
+  primary_doctor_id?: string | null;
   primary_doctor_name?: string | null;
   primary_doctor_specialty?: string | null;
   primary_doctor_phone?: string | null;
@@ -147,6 +156,10 @@ export const emergencyContactSchema = z.object({
 
 /** Mirror of backend `additionalDoctorSchema`. */
 export const additionalDoctorSchema = z.object({
+  // Optional and never an error server side (an unknown/archived/repeated id is
+  // ignored); `null` / "" mean "no id". Sent back so a legacy full-array save
+  // keeps every other doctor's identity.
+  id: z.union([z.string().uuid(), z.literal('')]).nullable().optional(),
   name: z.string().max(100),
   specialty: z.string().max(100).nullable().optional(),
   phone: z.string().max(20).nullable().optional(),

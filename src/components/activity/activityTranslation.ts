@@ -8,7 +8,7 @@
 // Today/Yesterday, else a localized short date) instead of leaking ISO dates.
 
 import i18n from '@/i18n';
-import { formatDateShort } from './activityFormat';
+import { formatDateShort, formatDateOnlyKey } from './activityFormat';
 import { normalizeLocale } from '@/i18n/locales';
 import { formatTimeOfDay, getTimezoneSuffix, type TimeLanguage } from '@/utils/timezone';
 import type { HourCycle } from '@/utils/hourCycle';
@@ -290,6 +290,14 @@ const KEY_RENDERERS = new Map<string, KeyRenderer>(Object.entries({
     ctx.t('entries.eventNoteAdded', { title: p.title ?? '' }) },
   'entries.careNoteAdded': { requires: [], render: (_p, ctx) =>
     ctx.t('entries.careNoteAdded') },
+  // Backdated note: names the note's own day, always as a calendar date (a row
+  // read later must not say "today"). Twin of backend/mobile `careNoteAddedForDate`.
+  'entries.careNoteAddedForDate': { requires: ['noteDate'], render: (p, ctx) =>
+    ctx.t('entries.careNoteAddedForDate', {
+      date: typeof p.noteDate === 'string'
+        ? formatDateOnlyKey(p.noteDate, ctx.locale, { month: 'short', day: 'numeric' })
+        : '',
+    }) },
   // As-needed (PRN) doses. `time` is the dose's wall clock in the CARE
   // RECIPIENT's zone ('HH:MM:SS'), so it renders (and zone-labels) like every
   // other time here. NEW rows only — no existing key or phrase is touched.

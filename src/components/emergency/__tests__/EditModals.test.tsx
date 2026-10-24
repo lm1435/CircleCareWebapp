@@ -13,6 +13,7 @@ vi.mock('@/api/emergencyInfo', async (importOriginal) => {
 });
 
 import { updateEmergencyInfo, type EmergencyInfo } from '@/api/emergencyInfo';
+import { createProvider, updateProvider } from '@/api/providers';
 import { ToastProvider } from '@/components/ui';
 import {
   EditContactModal,
@@ -20,6 +21,11 @@ import {
   EditInsuranceModal,
   EditMedicalInfoModal,
 } from '@/components/emergency';
+
+vi.mock('@/api/providers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/providers')>();
+  return { ...actual, createProvider: vi.fn(), updateProvider: vi.fn() };
+});
 
 // The write hook's premium gate routes through usePremiumGate (useNavigate);
 // stub it so these modals render without a Router.
@@ -29,6 +35,22 @@ vi.mock('@/hooks/usePremiumGate', () => ({
 
 const CIRCLE_ID = 'circle-1';
 const mockUpdate = vi.mocked(updateEmergencyInfo);
+const mockCreate = vi.mocked(createProvider);
+const mockPatch = vi.mocked(updateProvider);
+const SAVED_PROVIDER = {
+  id: '77777777-7777-4777-8777-777777777777',
+  name: 'Dr. Lee',
+  specialty: null,
+  phone: null,
+  country_code: null,
+  phone_extension: null,
+  address: null,
+  is_primary: false,
+  sort_order: 1,
+  archived_at: null,
+  created_at: '',
+  updated_at: '',
+};
 
 const baseInfo: EmergencyInfo = {
   id: 'ei-1',
@@ -65,6 +87,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Resolve with a saved row so the mutation's onSuccess (onClose) runs.
   mockUpdate.mockResolvedValue(baseInfo);
+  mockCreate.mockResolvedValue({ provider: SAVED_PROVIDER, providers: [SAVED_PROVIDER] });
+  mockPatch.mockResolvedValue({ provider: SAVED_PROVIDER, providers: [SAVED_PROVIDER] });
 });
 
 // Regression: these saves are read-modify-write over `info`. With `info` null,
@@ -153,14 +177,16 @@ describe('required-field labels render via the shared RequiredMarker', () => {
 });
 
 describe('EditDoctorModal — add a doctor', () => {
-  it('appends the new doctor to additional_doctors and sends a partial PUT', async () => {
+  it('adds the doctor through POST /providers (an additional doctor), not the full-array PUT', async () => {
     const onClose = vi.fn();
+    const onSaved = vi.fn();
     render(
       wrap(
         <EditDoctorModal
           circleId={CIRCLE_ID}
           info={baseInfo}
           target={undefined}
+          onSaved={onSaved}
           onClose={onClose}
         />
       )
@@ -170,18 +196,20 @@ describe('EditDoctorModal — add a doctor', () => {
     fireEvent.change(screen.getByLabelText('Specialty'), { target: { value: 'Oncology' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-
-    // Partial body: ONLY additional_doctors, read-modify-write appends to the end.
-    const [, body] = mockUpdate.mock.calls[0];
-    expect(Object.keys(body)).toEqual(['additional_doctors']);
-    expect(body.additional_doctors).toHaveLength(2);
-    expect(body.additional_doctors?.[0].name).toBe('Dr. Patel'); // existing preserved
-    expect(body.additional_doctors?.[1]).toMatchObject({
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate).not.toHaveBeenCalled();
+    const [circleId, body] = mockCreate.mock.calls[0];
+    expect(circleId).toBe(CIRCLE_ID);
+    expect(body).toMatchObject({
       name: 'Dr. Lee',
       specialty: 'Oncology',
+      phone: null,
+      address: null,
+      is_primary: false,
     });
 
+    // The saved doctor is handed back (the appointment form selects it), then it closes.
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(SAVED_PROVIDER));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
@@ -236,6 +264,87 @@ describe('EditDoctorModal — add a doctor', () => {
     const [, body] = mockUpdate.mock.calls[0];
     expect(body).toMatchObject({ primary_doctor_name: 'Dr. Chen' });
     expect(body.additional_doctors).toBeUndefined();
+  });
+});
+
+// Notes by doctor: a doctor the emergency-info snapshot carries a stable id for is
+// edited through PATCH /providers/:id; only a doctor WITHOUT an id (an older
+// backend, or no doctor rows yet) keeps the legacy full-array PUT. Both are kept.
+describe('EditDoctorModal — edit through /providers (stable ids)', () => {
+  const PATEL_ID = '88888888-8888-4888-8888-888888888888';
+  const PRIMARY_ID = '99999999-9999-4999-8999-999999999999';
+  const withIds: EmergencyInfo = {
+    ...baseInfo,
+    primary_doctor_id: PRIMARY_ID,
+    primary_doctor_name: 'Dr. Ruiz',
+    primary_doctor_specialty: 'GP',
+    additional_doctors: [{ id: PATEL_ID, name: 'Dr. Patel', specialty: 'Neurology', phone: '(303) 555-0102' }],
+  };
+
+  it('an additional doctor is PATCHed by id with every field named (null clears), and no array PUT is sent', async () => {
+    const onClose = vi.fn();
+    render(wrap(<EditDoctorModal circleId={CIRCLE_ID} info={withIds} target={0} onClose={onClose} />));
+
+    fireEvent.change(screen.getByLabelText('Specialty'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledTimes(1));
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
+    const [circleId, providerId, data] = mockPatch.mock.calls[0];
+    expect(circleId).toBe(CIRCLE_ID);
+    expect(providerId).toBe(PATEL_ID);
+    expect(data).toMatchObject({ name: 'Dr. Patel', specialty: null, address: null });
+    expect('is_primary' in data).toBe(false);
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('the primary doctor is PATCHed by primary_doctor_id', async () => {
+    render(wrap(<EditDoctorModal circleId={CIRCLE_ID} info={withIds} target="primary" onClose={vi.fn()} />));
+    fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dr. Chen' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalledTimes(1));
+    expect(mockPatch.mock.calls[0][1]).toBe(PRIMARY_ID);
+    expect(mockPatch.mock.calls[0][2]).toMatchObject({ name: 'Dr. Chen', specialty: 'GP' });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('PROVIDER_ARCHIVED (removed by someone else meanwhile) closes the editor: nothing is left to edit', async () => {
+    mockPatch.mockRejectedValue({ success: false, error: { code: 'PROVIDER_ARCHIVED' } });
+    const onClose = vi.fn();
+    render(wrap(<EditDoctorModal circleId={CIRCLE_ID} info={withIds} target={0} onClose={onClose} />));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('PROVIDER_CONFLICT and PROVIDER_LIMIT_REACHED keep the form open with what was typed, and release Save for a retry', async () => {
+    for (const code of ['PROVIDER_CONFLICT', 'PROVIDER_LIMIT_REACHED']) {
+      mockCreate.mockReset();
+      mockCreate.mockRejectedValueOnce({ success: false, error: { code } });
+      const onClose = vi.fn();
+      const { unmount } = render(
+        wrap(<EditDoctorModal circleId={CIRCLE_ID} info={baseInfo} target={undefined} onClose={onClose} />)
+      );
+      fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Dr. Lee' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+      // Still open, still typed, and a second press goes out (the guard was released).
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/^Name.*required/i)).toHaveValue('Dr. Lee');
+      mockCreate.mockResolvedValueOnce({ provider: SAVED_PROVIDER, providers: [SAVED_PROVIDER] });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(2));
+      unmount();
+    }
+  });
+
+  it('a doctor with no id in the snapshot still takes the legacy array PUT (older backend)', async () => {
+    render(wrap(<EditDoctorModal circleId={CIRCLE_ID} info={baseInfo} target={0} onClose={vi.fn()} />));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockPatch).not.toHaveBeenCalled();
+    expect(Object.keys(mockUpdate.mock.calls[0][1])).toEqual(['additional_doctors']);
   });
 });
 
@@ -352,9 +461,9 @@ describe('EditDoctorModal — specialty quick-fill chips vs manual entry', () =>
     expect(screen.getByRole('radio', { name: 'Cardiologist' })).toBeChecked();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    const [, body] = mockUpdate.mock.calls[0];
-    expect(body.additional_doctors?.[1]).toMatchObject({
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    const [, body] = mockCreate.mock.calls[0];
+    expect(body).toMatchObject({
       name: 'Dr. Lee',
       specialty: 'Cardiologist',
     });
@@ -375,8 +484,8 @@ describe('EditDoctorModal — specialty quick-fill chips vs manual entry', () =>
     }
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    expect(mockUpdate.mock.calls[0][1].additional_doctors?.[1]).toMatchObject({
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect(mockCreate.mock.calls[0][1]).toMatchObject({
       specialty: 'Sports Medicine',
     });
   });
@@ -407,10 +516,10 @@ describe('EditDoctorModal — specialty quick-fill chips vs manual entry', () =>
     expect(screen.getByRole('radio', { name: 'Oncologist' })).toBeChecked();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    const [, body] = mockUpdate.mock.calls[0];
-    expect(body.additional_doctors?.[1].name).toBe('Dr. Lee');
-    expect(body.additional_doctors?.[1].specialty).toBe('Oncologist');
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    const [, body] = mockCreate.mock.calls[0];
+    expect(body.name).toBe('Dr. Lee');
+    expect(body.specialty).toBe('Oncologist');
   });
 });
 

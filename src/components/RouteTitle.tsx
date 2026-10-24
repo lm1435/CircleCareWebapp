@@ -49,6 +49,10 @@ function titleKeyForPath(pathname: string): string | null {
   const circleMatch =
     pathname.match(/^\/circles\/[^/]+(?:\/([^/]+))?\/?$/) ??
     pathname.match(/^\/circles\/[^/]+\/(daily-update)\/\d{4}-\d{2}-\d{2}\/?$/);
+  // /circles/:circleId/providers/:providerId — one doctor's Visits & notes.
+  if (/^\/circles\/[^/]+\/providers\/[^/]+\/?$/.test(pathname)) {
+    return 'pageTitles.providerVisits';
+  }
   if (circleMatch) {
     const sub = circleMatch[1];
     if (!sub) {

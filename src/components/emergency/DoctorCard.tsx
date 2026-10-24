@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Card, Text } from '@/components/ui';
+import { Badge, Card, Icon, Text } from '@/components/ui';
 import { CardActions } from './CardActions';
 import { FieldList, type Field } from './FieldList';
 import { MapsLink } from '@/components/MapsLink';
@@ -14,6 +15,12 @@ export interface DoctorCardProps {
   extension?: string | null;
   address?: string | null;
   isPrimary?: boolean;
+  /**
+   * "Visits & notes" row (notes by doctor): a link to this doctor's visits page,
+   * shown to every member (view-only included). `count` appears only when above 0.
+   * Omit for a doctor with no stable id yet.
+   */
+  visits?: { to: string; count?: number };
   /** When set (canEdit), renders the Edit action. */
   onEdit?: () => void;
   /** When set (canEdit), renders the Delete action. */
@@ -29,6 +36,7 @@ export function DoctorCard({
   extension,
   address,
   isPrimary = false,
+  visits,
   onEdit,
   onDelete,
 }: DoctorCardProps): ReactElement {
@@ -75,6 +83,30 @@ export function DoctorCard({
         )}
       </div>
       {fields.length > 0 && <FieldList fields={fields} />}
+      {visits && (
+        // The card's own row, not a control inside the FieldList: a full-width,
+        // 44px+ target that routes to the doctor's visits. Hidden in print (the
+        // fridge sheet lists doctors, it does not link anywhere).
+        <Link
+          to={visits.to}
+          state={{ source: 'medical_info' }}
+          className={`no-print flex min-h-[44px] items-center justify-between gap-3 border-t border-line-2 pt-3 text-ink no-underline hover:text-ink-2 ${
+            fields.length > 0 ? 'mt-3' : ''
+          }`}
+        >
+          <span className="flex items-center gap-2 text-base font-medium">
+            <Icon name="document-text-outline" size="row" />
+            <span>
+              {t('providers.visitsLink')}{' '}
+              <span className="sr-only">{t('providers.visitsLinkFor', { name })}</span>
+            </span>
+          </span>{' '}
+          <span className="flex items-center gap-1 text-sm text-ink-2">
+            {visits.count && visits.count > 0 ? <span>{visits.count}</span> : null}
+            <Icon name="chevron-forward" size="row" />
+          </span>
+        </Link>
+      )}
     </Card>
   );
 }

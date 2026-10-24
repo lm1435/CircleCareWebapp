@@ -12,7 +12,7 @@
 // machine clock), and non-relative day labels are computed with the same
 // UTC-noon Intl call the page uses.
 
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { submitFormTwice } from '@/test/doubleSubmit';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -21,10 +21,19 @@ import i18n from '@/i18n';
 import { ToastProvider } from '@/components/ui';
 import NotesPage from '../NotesPage';
 import type { CareNote } from '@/api/careNotes';
+import { daysBetween, olderPagesNeeded } from '@/lib/noteDate';
+
+function shiftIso(date: string, days: number): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 // ── Hook mocks ───────────────────────────────────────────────────────────────
 
 const mockUseCareNotes = vi.fn();
+const OLDER_EMPTY = { notes: [], isFetching: false, isError: false, reachedEnd: false };
+const mockUseOlder = vi.fn((_c: string, _t: string | undefined, _p: number): unknown => OLDER_EMPTY);
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
@@ -34,6 +43,8 @@ vi.mock('@/hooks/useCareNotes', () => ({
   useCreateCareNote: () => ({ mutate: mockCreate, isPending: false }),
   useUpdateCareNote: () => ({ mutate: mockUpdate, isPending: false }),
   useDeleteCareNote: () => ({ mutate: mockDelete, isPending: false }),
+  useOlderCareNotes: (circleId: string, today: string | undefined, pages: number) =>
+    mockUseOlder(circleId, today, pages),
 }));
 
 let circleState: { circle: { owner_id: string } | undefined; canEdit: boolean } = {
@@ -56,6 +67,7 @@ const mockCareNotesViewed = vi.fn();
 const mockCareNoteAdded = vi.fn();
 const mockCareNoteUpdated = vi.fn();
 const mockCareNoteDeleted = vi.fn();
+const mockCareNotesOlderLoaded = vi.fn();
 
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
@@ -63,6 +75,7 @@ vi.mock('@/lib/analytics', () => ({
     careNoteAdded: (...args: unknown[]) => mockCareNoteAdded(...args),
     careNoteUpdated: (...args: unknown[]) => mockCareNoteUpdated(...args),
     careNoteDeleted: (...args: unknown[]) => mockCareNoteDeleted(...args),
+    careNotesOlderLoaded: (...args: unknown[]) => mockCareNotesOlderLoaded(...args),
     errorOccurred: vi.fn(),
   },
 }));
@@ -146,6 +159,9 @@ beforeEach(() => {
   mockCareNoteAdded.mockReset();
   mockCareNoteUpdated.mockReset();
   mockCareNoteDeleted.mockReset();
+  mockCareNotesOlderLoaded.mockReset();
+  mockUseOlder.mockReset();
+  mockUseOlder.mockReturnValue(OLDER_EMPTY);
   mockUseHourCycle.mockReturnValue('12h');
   // jsdom has no layout, so scrollIntoView doesn't exist — stub it so the
   // MoodWeekStrip / `?date=` scroll wiring below can assert on it directly.
@@ -270,6 +286,8 @@ describe('NotesPage — posting', () => {
     // `mood: 'good'` in the captured payload.
     expect(mockCareNoteAdded).toHaveBeenCalledWith(CIRCLE_ID, {
       categoryCount: 1,
+      backdated: false,
+      daysBack: 0,
     });
     expect(mockCareNoteAdded.mock.calls[0][1]).not.toHaveProperty('mood');
 
@@ -546,18 +564,17 @@ describe('NotesPage — ?date= deep link', () => {
     expect(screen.getByTestId('location-search')).toHaveTextContent('');
   });
 
-  it('ignores a date older than the 92-day cap — no widen, no scroll, page renders normally', async () => {
+  it('a date older than 92 days widens the base window to a full page AND adds older pages (no cap)', async () => {
     mockUseCareNotes.mockReturnValue(notesResult([makeNote({ note_date: TODAY })]));
     renderPage(`/circles/${CIRCLE_ID}/notes?date=${TOO_OLD_DATE}`);
 
     await act(async () => {});
 
-    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
-    // Never asked for a window that reaches past the cap.
-    for (const [, params] of mockUseCareNotes.mock.calls) {
-      expect((params as { from?: string } | undefined)?.from).not.toBe(TOO_OLD_DATE);
-    }
-    expect(screen.getByText('Quiet morning, good appetite.')).toBeInTheDocument();
+    const froms = mockUseCareNotes.mock.calls.map(([, params]) => (params as { from?: string } | undefined)?.from);
+    expect(froms).toContain(shiftIso(TODAY, -91));
+    expect(Math.max(...mockUseOlder.mock.calls.map((c) => c[2] as number))).toBe(
+      olderPagesNeeded(daysBetween(TOO_OLD_DATE, TODAY))
+    );
   });
 
   it('ignores a malformed date param', async () => {
@@ -700,7 +717,11 @@ describe('NotesPage — own-note affordances', () => {
       input: { body: 'Corrected text', mood: 'okay', categories: [] },
     });
     // Mirrors careNoteAdded: category COUNT only, never mood/body.
-    expect(mockCareNoteUpdated).toHaveBeenCalledWith(CIRCLE_ID, { categoryCount: 0 });
+    expect(mockCareNoteUpdated).toHaveBeenCalledWith(CIRCLE_ID, {
+      categoryCount: 0,
+      backdated: false,
+      daysBack: 0,
+    });
   });
 
   it('deletes an own note through the confirm dialog', async () => {
@@ -784,5 +805,161 @@ describe('NotesPage — double submit', () => {
     expect(mockCreate).toHaveBeenCalledTimes(2);
     // The retry clears the previous failure (a new one mounts if it fails too).
     expect(within(composerForm()).queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('NotesPage — backdating (Date row)', () => {
+  async function openRowMenu(row: HTMLElement, user: ReturnType<typeof userEvent.setup>) {
+    await user.click(within(row).getByRole('button', { name: /^Actions for note by / }));
+  }
+  const dateInput = () => screen.getByLabelText(/^Date/) as HTMLInputElement;
+
+  it('shows the Date row defaulting to Today, capped at the recipient-TZ today, no reset action', () => {
+    renderPage();
+    expect(dateInput()).toHaveValue(TODAY);
+    expect(dateInput()).toHaveAttribute('max', TODAY);
+    expect(screen.getByText('Today', { selector: 'p, span' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset to today' })).not.toBeInTheDocument();
+  });
+
+  it('sends NO note_date when posting for today', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText(/^Add a note/), 'Quiet');
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    expect(mockCreate.mock.calls[0][0].input).toEqual({ body: 'Quiet' });
+  });
+
+  it('picking a past day shows Reset to today; reset returns to today and sends nothing', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    fireEvent.change(dateInput(), { target: { value: '2026-03-01' } });
+    expect(dateInput()).toHaveValue('2026-03-01');
+    await user.click(screen.getByRole('button', { name: 'Reset to today' }));
+    expect(dateInput()).toHaveValue(TODAY);
+    await user.type(screen.getByLabelText(/^Add a note/), 'x');
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    expect(mockCreate.mock.calls[0][0].input).not.toHaveProperty('note_date');
+  });
+
+  it('refuses a future day with the inline error and keeps today', () => {
+    renderPage();
+    fireEvent.change(dateInput(), { target: { value: '2026-03-16' } });
+    expect(screen.getByText('Pick today or an earlier date.')).toBeInTheDocument();
+    expect(dateInput()).toHaveValue(TODAY);
+  });
+
+  it('posts a backdated note with note_date, widens + scrolls to its day, fires analytics without the date', async () => {
+    mockCreate.mockImplementation((_v, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
+    const target = '2025-12-25';
+    mockUseCareNotes.mockImplementation(() =>
+      notesResult([
+        makeNote({ id: 'n-today', note_date: TODAY, body: 'Today note' }),
+        makeNote({ id: 'n-old', note_date: target, body: 'Old note' }),
+      ])
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText(/^Add a note/), 'Private fall details');
+    fireEvent.change(dateInput(), { target: { value: target } });
+    await user.click(screen.getByRole('button', { name: 'Post' }));
+    await act(async () => {});
+
+    expect(mockCreate.mock.calls[0][0].input).toEqual({
+      body: 'Private fall details',
+      note_date: target,
+    });
+    expect(mockCareNoteAdded).toHaveBeenCalledWith(CIRCLE_ID, {
+      categoryCount: 0,
+      backdated: true,
+      daysBack: daysBetween(target, TODAY),
+    });
+    expect(JSON.stringify(mockCareNoteAdded.mock.calls)).not.toContain('2025');
+    // Widened to reach it (older pages) and scrolled to the group.
+    expect(Math.max(...mockUseOlder.mock.calls.map((c) => c[2] as number))).toBe(
+      olderPagesNeeded(daysBetween(target, TODAY))
+    );
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it('edit: Date row prefilled with the note date; unchanged sends no note_date', async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: 'mine', note_date: '2026-03-10', body: 'Original text' })])
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await openRowMenu(rowContaining('Original text'), user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    expect(dateInput()).toHaveValue('2026-03-10');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(mockUpdate.mock.calls[0][0].input).not.toHaveProperty('note_date');
+  });
+
+  it('edit: changing the date sends note_date and fires careNoteUpdated with the flags', async () => {
+    mockUpdate.mockImplementation((_v, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: 'mine', note_date: TODAY, body: 'Original text' })])
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await openRowMenu(rowContaining('Original text'), user);
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    fireEvent.change(dateInput(), { target: { value: '2026-03-08' } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(mockUpdate.mock.calls[0][0].input).toMatchObject({ note_date: '2026-03-08' });
+    expect(mockCareNoteUpdated).toHaveBeenCalledWith(CIRCLE_ID, {
+      categoryCount: 0,
+      backdated: true,
+      daysBack: 7,
+    });
+  });
+});
+
+describe('NotesPage — Show older notes', () => {
+  it('steps the base window by 14 days until a full 92-day page, then loads older pages with no cap', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    // 14 -> 28 -> ... -> 92 days: 6 steps with no analytics (not an older page).
+    for (let i = 0; i < 6; i++) {
+      await user.click(screen.getByTestId('notes-show-older'));
+    }
+    expect(mockCareNotesOlderLoaded).not.toHaveBeenCalled();
+    const lastFrom = mockUseCareNotes.mock.calls.at(-1)![1] as { from: string };
+    expect(lastFrom.from).toBe(shiftIso(TODAY, -91));
+    // Now each press is one 92-day page, indefinitely.
+    for (let page = 1; page <= 5; page++) {
+      await user.click(screen.getByTestId('notes-show-older'));
+      expect(mockCareNotesOlderLoaded).toHaveBeenLastCalledWith({ page });
+      expect(mockUseOlder.mock.calls.at(-1)![2]).toBe(page);
+    }
+  });
+
+  it('renders older notes after the base ones and shows "No older notes" when a page is empty', async () => {
+    mockUseOlder.mockReturnValue({
+      notes: [makeNote({ id: 'z', note_date: '2025-01-02', body: 'Ancient note' })],
+      isFetching: false,
+      isError: false,
+      reachedEnd: false,
+    });
+    const { rerender } = renderPage();
+    expect(screen.getByText('Ancient note')).toBeInTheDocument();
+    mockUseOlder.mockReturnValue({ notes: [], isFetching: false, isError: false, reachedEnd: true });
+    rerender(
+      <ToastProvider>
+        <MemoryRouter initialEntries={[`/circles/${CIRCLE_ID}/notes`]}>
+          <Routes>
+            <Route path="/circles/:circleId/notes" element={<NotesPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    );
+    expect(screen.getByTestId('notes-no-older')).toHaveTextContent('No older notes');
+    expect(screen.queryByTestId('notes-show-older')).not.toBeInTheDocument();
+  });
+
+  it('is reachable from the empty state too (an old note with nothing recent)', () => {
+    mockUseCareNotes.mockReturnValue(notesResult([]));
+    renderPage();
+    expect(screen.getByTestId('notes-show-older')).toBeInTheDocument();
   });
 });

@@ -56,10 +56,15 @@ test('doctor: a too-long phone number blocks Save (no request, error shown, phon
   ]);
 
   try {
-    // Every write to the record from here on, so "no network call" is a fact.
+    // Every write to a doctor from here on (PATCH /providers/:id since notes by
+    // doctor), so "no network call" is a fact.
     const puts: string[] = [];
     page.on('request', (r) => {
-      if (r.method() === 'PUT' && new URL(r.url()).pathname === `/api/circles/${circleId}/emergency-info`) {
+      const path = new URL(r.url()).pathname;
+      if (
+        (r.method() === 'PUT' && path === `/api/circles/${circleId}/emergency-info`) ||
+        (r.method() === 'PATCH' && path.startsWith(`/api/circles/${circleId}/providers/`))
+      ) {
         puts.push(r.url());
       }
     });
@@ -104,13 +109,13 @@ test('doctor: a too-long phone number blocks Save (no request, error shown, phon
     const [saved] = await Promise.all([
       page.waitForResponse(
         (r) =>
-          r.request().method() === 'PUT' &&
-          new URL(r.url()).pathname === `/api/circles/${circleId}/emergency-info`,
+          r.request().method() === 'PATCH' &&
+          new URL(r.url()).pathname.startsWith(`/api/circles/${circleId}/providers/`),
         { timeout: 20_000 }
       ),
       save.click(),
     ]);
-    expect(saved.ok(), `PUT emergency-info from the modal → ${saved.status()}`).toBe(true);
+    expect(saved.ok(), `PATCH providers from the modal → ${saved.status()}`).toBe(true);
     await expect(dialog).toBeHidden({ timeout: 20_000 });
     expect(puts).toHaveLength(1);
 

@@ -34,6 +34,9 @@ function currentSection(pathname: string): Section | '' {
   // /circles/:circleId/:section/... → ['circles', circleId, section, ...]
   const segments = pathname.split('/').filter(Boolean);
   const candidate = segments[2] ?? '';
+  // A doctor's Visits & notes page belongs to Medical Info; its id means nothing
+  // in another circle, so switching circles lands on that circle's Medical Info.
+  if (candidate === 'providers') return 'emergency';
   return (SECTIONS as readonly string[]).includes(candidate) ? (candidate as Section) : '';
 }
 

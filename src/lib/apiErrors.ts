@@ -325,6 +325,38 @@ export function isNotFoundError(err: unknown): boolean {
 }
 
 /**
+ * Providers (doctors), docs/plans/notes-by-doctor.md + PROVIDERS_API_CONTRACT.md.
+ * All are state conflicts or limits the user can act on, never "try again":
+ *
+ *  - 400 `PROVIDER_LIMIT_REACHED` — a circle holds at most 50 active doctors.
+ *  - 409 `PROVIDER_CONFLICT`      — a concurrent caregiver change collided on the
+ *                                    one-primary rule: reload, then retry.
+ *  - `PROVIDER_ARCHIVED`          — 409 editing a removed doctor, or 400 linking an
+ *                                    appointment to one.
+ *  - 400 `PROVIDER_NOT_FOUND`     — the linked doctor id is unknown / another circle's.
+ *  - 400 `PROVIDER_NOT_ALLOWED`   — only appointments take a doctor.
+ */
+export function isProviderLimitReachedError(err: unknown): boolean {
+  return errorCode(err) === 'PROVIDER_LIMIT_REACHED';
+}
+
+export function isProviderConflictError(err: unknown): boolean {
+  return errorCode(err) === 'PROVIDER_CONFLICT';
+}
+
+export function isProviderArchivedError(err: unknown): boolean {
+  return errorCode(err) === 'PROVIDER_ARCHIVED';
+}
+
+export function isProviderNotFoundError(err: unknown): boolean {
+  return errorCode(err) === 'PROVIDER_NOT_FOUND';
+}
+
+export function isProviderNotAllowedError(err: unknown): boolean {
+  return errorCode(err) === 'PROVIDER_NOT_ALLOWED';
+}
+
+/**
  * 400 `INVALID_MESSAGE` — the AI chat route's prompt-injection detector
  * refused the message (`backend/src/routes/ai.ts`, `detectPromptInjection`).
  * Terminal for that exact text: sending it again produces the same 400, so the

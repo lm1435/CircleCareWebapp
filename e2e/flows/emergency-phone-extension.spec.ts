@@ -13,6 +13,8 @@ import { apiSession, type ApiSession } from '../unhappy';
 // backend the key is stripped and the "shown on the card" step fails by design.
 // Mobile twin: mobile/.maestro/parity/emergency/ (doctor phone extension).
 //
+// A doctor is edited through PATCH /providers/:id (notes by doctor), not the array PUT.
+//
 // The doctor is SEEDED THROUGH THE API on this worker's isolated circle,
 // appended to whatever it already holds; the original array is PUT back in
 // `finally`. The name is run-unique.
@@ -79,13 +81,13 @@ test('doctor: the extension is digits-only, saved, shown beside the number, and 
     const [saved] = await Promise.all([
       page.waitForResponse(
         (r) =>
-          r.request().method() === 'PUT' &&
-          new URL(r.url()).pathname === `/api/circles/${circleId}/emergency-info`,
+          r.request().method() === 'PATCH' &&
+          new URL(r.url()).pathname.startsWith(`/api/circles/${circleId}/providers/`),
         { timeout: 20_000 }
       ),
       save.click(),
     ]);
-    expect(saved.ok(), `PUT emergency-info → ${saved.status()}`).toBe(true);
+    expect(saved.ok(), `PATCH providers → ${saved.status()}`).toBe(true);
     await expect(dialog).toBeHidden({ timeout: 20_000 });
 
     const stored = (await readDoctors(api, circleId)).find((d) => d.name === name);
@@ -104,8 +106,8 @@ test('doctor: the extension is digits-only, saved, shown beside the number, and 
     await Promise.all([
       page.waitForResponse(
         (r) =>
-          r.request().method() === 'PUT' &&
-          new URL(r.url()).pathname === `/api/circles/${circleId}/emergency-info`,
+          r.request().method() === 'PATCH' &&
+          new URL(r.url()).pathname.startsWith(`/api/circles/${circleId}/providers/`),
         { timeout: 20_000 }
       ),
       dialog.getByRole('button', { name: 'Save', exact: true }).click(),

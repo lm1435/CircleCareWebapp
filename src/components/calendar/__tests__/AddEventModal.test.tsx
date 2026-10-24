@@ -47,6 +47,12 @@ vi.mock('@/api/drugs', async (importOriginal) => {
   return { ...actual, searchDrugs: vi.fn().mockResolvedValue([]) };
 });
 
+// The appointment form's Doctor row reads the circle's doctors over React Query; this
+// suite mounts no QueryClient and is not about it (AddEventModal.doctor.test.tsx).
+vi.mock('@/hooks/useProviders', () => ({
+  useProviders: () => ({ providers: [], isSuccess: true }),
+}));
+
 vi.mock('@/hooks/useCalendarEvents', () => ({
   useCreateEvent: () => ({ mutateAsync: mutateCreate, isPending: false }),
   useUpdateEvent: () => ({ mutateAsync: mutateUpdate, isPending: false }),

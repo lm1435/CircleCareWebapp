@@ -93,6 +93,8 @@ describe('FloatingNavBar', () => {
     ['/circles/c1/notes', 'Care'],
     ['/circles/c1/emergency', 'Health'],
     ['/circles/c1/documents', 'Health'],
+    // A doctor's Visits & notes page is reached from Medical Info.
+    ['/circles/c1/providers/p1', 'Health'],
   ])('marks the right cell active on %s', (path, active) => {
     renderNav(path);
 

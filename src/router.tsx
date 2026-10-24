@@ -33,6 +33,7 @@ const TasksPage = lazy(() => import('@/pages/TasksPage'));
 const NotesPage = lazy(() => import('@/pages/NotesPage'));
 const ActivityFeedPage = lazy(() => import('@/pages/ActivityFeedPage'));
 const EmergencyInfoPage = lazy(() => import('@/pages/EmergencyInfoPage'));
+const ProviderVisitsPage = lazy(() => import('@/pages/ProviderVisitsPage'));
 const DocumentsPage = lazy(() => import('@/pages/DocumentsPage'));
 const MembersPage = lazy(() => import('@/pages/MembersPage'));
 const VitalsPage = lazy(() => import('@/pages/VitalsPage'));
@@ -122,6 +123,8 @@ export const router = createBrowserRouter([
           { path: 'notes', element: <NotesPage /> },
           { path: 'activity', element: <ActivityFeedPage /> },
           { path: 'emergency', element: <EmergencyInfoPage /> },
+          // One doctor's Visits & notes (docs/plans/notes-by-doctor.md).
+          { path: 'providers/:providerId', element: <ProviderVisitsPage /> },
           { path: 'documents', element: <DocumentsPage /> },
           { path: 'vitals', element: <VitalsPage /> },
           { path: 'members', element: <MembersPage /> },

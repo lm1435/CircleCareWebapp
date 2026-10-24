@@ -38,16 +38,25 @@ import {
 //     new entry AND the entry A tried to delete (a last-write-wins write of the
 //     stale array minus A's entry would wipe B's new entry). A then deletes
 //     again from the refreshed list: only the chosen entry goes.
-//   * ES (doctor), and the PRIMARY doctor (flat primary_doctor_* fields).
+//   * ES (contact).
 //
-// Test ids (PW_FALSIFY=emergency-stale:<id>): delete-changed-{contact,doctor,
-// insurance}, delete-moved-{contact,doctor,insurance}, delete-changed-doctor-es,
-// delete-changed-primary-doctor. PW_FALSIFY=emergency-stale (all) skips B's
+// Test ids (PW_FALSIFY=emergency-stale:<id>): delete-changed-{contact,insurance},
+// delete-moved-{contact,insurance}, delete-changed-contact-es. PW_FALSIFY=emergency-stale (all) skips B's
 // change: A's delete is then NOT stale, so it is accepted (200) and the
 // "refused" assertion must go red.
+//
+// DOCTORS ARE NOT IN THIS FILE ANY MORE (notes by doctor). A doctor now has a stable id and
+// is edited / removed through the per-doctor API (PATCH /providers/:id, POST
+// /providers/:id/archive), which addresses the doctor itself, never a position in an array
+// and never under a section version. The race these tests pin (a stale position or a stale
+// array overwriting a caregiver's change) therefore cannot happen for doctors; what replaces
+// it is pinned in emergency-doctor-ids.spec.ts.
 // ===========================================================================
 
 test.use({ storageState: { cookies: [], origins: [] } });
+
+/** Contacts and insurance still write the whole array under a section version (PK5). */
+const ARRAY_KINDS = KINDS.filter((k) => k.id !== 'doctor');
 test.setTimeout(120_000);
 
 interface Ctx {
@@ -133,7 +142,7 @@ async function staleDeleteScenario(ctx: Ctx, kind: Kind, variant: Variant, lang:
   }
 }
 
-for (const kind of KINDS) {
+for (const kind of ARRAY_KINDS) {
   test(`${kind.id} delete: the entry was CHANGED meanwhile: the delete is refused, the list reloads, the server keeps the change`, async ({
     browser,
     request,
@@ -151,65 +160,12 @@ for (const kind of KINDS) {
   });
 }
 
-test('ES doctor delete: the entry was changed meanwhile: the Spanish message shows and the delete is refused', async ({
+test('ES contact delete: the entry was changed meanwhile: the Spanish message shows and the delete is refused', async ({
   browser,
   request,
   baseURL,
 }) => {
-  await staleDeleteScenario({ browser, request, baseURL }, KINDS[1], 'changed', 'es', 'delete-changed-doctor-es');
-});
-
-test('primary doctor delete: the doctor was changed meanwhile: the delete is refused, the server keeps the change', async ({
-  browser,
-  request,
-  baseURL,
-}) => {
-  const id = 'delete-changed-primary-doctor';
-  const copy = COPY.en;
-  const w = await world(request);
-  const A = await loggedInPage(browser, w.owner, baseURL, w.circleId);
-  try {
-    const name = SEED.primary_doctor_name;
-    const row = A.page.getByRole('button', { name: `${copy.actionsFor} ${name}`, exact: true });
-    await expect(row).toBeVisible({ timeout: 20_000 });
-
-    if (!falsify(id)) await putAs(w.memberSession, w.circleId, { primary_doctor_specialty: 'Oncology B-wrote' });
-    const afterB = await serverInfo(w.ownerSession, w.circleId);
-
-    await openEntryAction(A.page, copy, copy.noun.doctor, name, 'delete');
-    const confirm = A.page.getByRole('dialog', { name: copy.removeTitle.primary });
-    await expect(confirm).toBeVisible({ timeout: 15_000 });
-    const refusedPut = waitPut(A.page, w.circleId);
-    await confirm.getByRole('button', { name: copy.del, exact: true }).click();
-    // The delete names four flat fields; only the one B changed conflicts.
-    const { versions } = await expectRefused(await refusedPut, ['primary_doctor_specialty']);
-
-    await expectConflictToast(A.page, copy);
-    await expect(confirm).toBeHidden({ timeout: 15_000 });
-    await expect(row).toBeVisible();
-    await expect(A.page.getByText('Oncology B-wrote', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
-    const afterRefusal = await serverInfo(w.ownerSession, w.circleId);
-    expect(JSON.stringify(afterRefusal), 'the refused delete changed nothing').toBe(JSON.stringify(afterB));
-    expect(afterRefusal.primary_doctor_name).toBe(name);
-    expect(afterRefusal.primary_doctor_specialty).toBe('Oncology B-wrote');
-
-    // Again from the refreshed page: the primary doctor goes.
-    await openEntryAction(A.page, copy, copy.noun.doctor, name, 'delete');
-    await expect(confirm).toBeVisible({ timeout: 15_000 });
-    const redoPut = waitPut(A.page, w.circleId);
-    await confirm.getByRole('button', { name: copy.del, exact: true }).click();
-    const redo = await redoPut;
-    expect(redo.status(), 'the re-done delete saves').toBe(200);
-    const sent = redo.request().postDataJSON() as { if_match?: Record<string, string> };
-    expect(sent.if_match?.primary_doctor_specialty).toBe(versions.primary_doctor_specialty);
-    await expect(confirm).toBeHidden({ timeout: 20_000 });
-    await expect(row).toHaveCount(0, { timeout: 20_000 });
-    const final = await serverInfo(w.ownerSession, w.circleId);
-    expect(final.primary_doctor_name).toBeNull();
-    expect(final.primary_doctor_specialty).toBeNull();
-  } finally {
-    await A.context.close();
-  }
+  await staleDeleteScenario({ browser, request, baseURL }, KINDS[0], 'changed', 'es', 'delete-changed-contact-es');
 });
 
 // ---------------------------------------------------------------------------
@@ -232,7 +188,7 @@ test('primary doctor delete: the doctor was changed meanwhile: the delete is ref
 // deleted, the toast shows, the confirm closes, the list shows the fresh state,
 // and deleting SECOND again from there removes exactly SECOND. Chosen behaviour
 // (refuse + reload, not a silent re-target): see buildEmergencyDelete.
-// Test ids: delete-shift-{contact,doctor,insurance}, delete-shift-primary-doctor.
+// Test ids: delete-shift-{contact,insurance}.
 // PW_FALSIFY skips B's change: nothing shifts, so the delete goes through and the
 // "refused" assertion must go red.
 // ---------------------------------------------------------------------------
@@ -252,7 +208,7 @@ async function refocus(page: Page, circleId: string): Promise<void> {
   await refetched;
 }
 
-for (const kind of KINDS) {
+for (const kind of ARRAY_KINDS) {
   test(`${kind.id} delete: the list SHIFTS while the confirm is OPEN (tab refocus): the delete is refused, never the neighbour deleted`, async ({
     browser,
     request,
@@ -317,40 +273,3 @@ for (const kind of KINDS) {
     }
   });
 }
-
-test('primary doctor delete: the doctor is CHANGED while the confirm is OPEN (tab refocus): the delete is refused, the doctor stays', async ({
-  browser,
-  request,
-  baseURL,
-}) => {
-  const id = 'delete-shift-primary-doctor';
-  const copy = COPY.en;
-  const w = await world(request);
-  const A = await loggedInPage(browser, w.owner, baseURL, w.circleId);
-  try {
-    const name = SEED.primary_doctor_name;
-    const row = A.page.getByRole('button', { name: `${copy.actionsFor} ${name}`, exact: true });
-    await expect(row).toBeVisible({ timeout: 20_000 });
-    await openEntryAction(A.page, copy, copy.noun.doctor, name, 'delete');
-    const confirm = A.page.getByRole('dialog', { name: copy.removeTitle.primary });
-    await expect(confirm).toBeVisible({ timeout: 15_000 });
-
-    if (!falsify(id)) await putAs(w.memberSession, w.circleId, { primary_doctor_specialty: 'Oncology B-wrote' });
-    const afterB = await serverInfo(w.ownerSession, w.circleId);
-    await refocus(A.page, w.circleId);
-    if (!falsify(id)) await expect(A.page.getByText('Oncology B-wrote', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
-
-    // The delete was picked on the doctor A saw; it is not silently re-based onto B's edit.
-    const putA = waitPut(A.page, w.circleId);
-    await confirm.getByRole('button', { name: copy.del, exact: true }).click();
-    await expectRefused(await putA, ['primary_doctor_specialty']);
-    await expectConflictToast(A.page, copy);
-    await expect(confirm).toBeHidden({ timeout: 15_000 });
-    const afterRefusal = await serverInfo(w.ownerSession, w.circleId);
-    expect(JSON.stringify(afterRefusal), 'the refused delete changed nothing').toBe(JSON.stringify(afterB));
-    expect(afterRefusal.primary_doctor_name).toBe(name);
-    await expect(row).toBeVisible();
-  } finally {
-    await A.context.close();
-  }
-});

@@ -21,7 +21,8 @@ const TABLET_QUERY = '(min-width: 600px)';
 /** Sections that light the CARE cell (spec §5.3 — mobile's Care top tabs). */
 const CARE_SECTIONS = ['calendar', 'meds', 'tasks', 'notes'];
 /** Sections that light the HEALTH cell (Emergency · Documents). */
-const HEALTH_SECTIONS = ['emergency', 'documents'];
+// `providers` = a doctor's Visits & notes page, reached from Medical Info.
+const HEALTH_SECTIONS = ['emergency', 'documents', 'providers'];
 
 /** `/circles/:id/:section` → `section`, or '' for the overview index route. */
 function sectionOf(pathname: string): string {
