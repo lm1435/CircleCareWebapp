@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "How do medication reminders work?",
-          "answer": "When you add a medication, the care recipient receives a push notification at the scheduled time. They tap 'I took it' to confirm, and all family members in the circle are notified. If the dose isn't confirmed within 15 minutes, your loved one gets a gentle reminder. After 30 minutes, all caregivers in the circle are notified. After 1 hour, everyone in the circle is alerted. Nothing is recorded automatically: until someone marks it as Taken or Skipped, the dose simply shows as Not marked."
+          "answer": "When you add a medication, the reminder goes to the member the owner chose to receive medication reminders (one per circle). If no one is chosen, it goes to the care recipient, or to the owner if there is no care recipient. They tap 'I took it' to confirm, and all family members in the circle are notified. If the dose isn't confirmed within 15 minutes, a gentle follow-up reminder is sent. After 30 minutes, all caregivers in the circle are notified. After 1 hour, everyone in the circle is alerted. Nothing is recorded automatically: until someone marks it as Taken or Skipped, the dose simply shows as Not marked."
         },
         {
           "question": "What happens if a dose isn't marked?",
@@ -58,11 +58,11 @@
         },
         {
           "question": "What notifications will I receive?",
-          "answer": "You'll receive alerts in four groups you can turn on or off in Profile: Medications (doses taken, skipped or not marked), Tasks & appointments (when something's assigned to you and before it's due), Notes (when someone adds a note) and Tips & suggestions. If you're the care recipient you also get your own dose reminders, which are always on."
+          "answer": "You'll receive alerts in four groups you can turn on or off in Profile: Medications (doses taken, skipped or not marked), Tasks & appointments (when something's assigned to you and before it's due), Notes (when someone adds a note) and Daily update & tips. If you're the care recipient you also get your own dose reminders, which are always on."
         },
         {
           "question": "What are quiet hours?",
-          "answer": "Quiet hours pause notifications during times you set (like overnight from 10 PM to 7 AM). Go to Profile & settings to set up your quiet hours."
+          "answer": "Quiet hours pause notifications during times you set (like overnight from 10 PM to 7 AM). Go to Profile, then Quiet hours, to set up your quiet hours."
         },
         {
           "question": "Can I turn off certain notifications?",
@@ -83,7 +83,7 @@
         },
         {
           "question": "How do I restore my purchases?",
-          "answer": "In the CircleCare mobile app, go to Profile > Subscription > Restore Purchases. This is useful if you reinstall the app or switch phones. If you subscribed here on the web, your subscription follows your account automatically."
+          "answer": "In the CircleCare mobile app, go to Profile > Account > Restore purchases. This is useful if you reinstall the app or switch phones. If you subscribed here on the web, your subscription follows your account automatically."
         },
         {
           "question": "How do I cancel my subscription?",

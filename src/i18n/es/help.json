@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "¿Cómo funcionan los recordatorios de medicamentos?",
-          "answer": "Cuando agregas un medicamento, el receptor de cuidado recibe una notificación a la hora programada. Toca 'Lo tomé' para confirmar, y todos los familiares del círculo son notificados. Si la dosis no se confirma en 15 minutos, tu ser querido recibe un recordatorio amable. Después de 30 minutos, todos los cuidadores del círculo son notificados. Después de 1 hora, todos los miembros del círculo reciben una alerta. Nada se registra automáticamente: mientras nadie la marque como Tomado u Omitido, la dosis aparece como Sin marcar."
+          "answer": "Cuando agregas un medicamento, el recordatorio llega al miembro que el propietario eligió para recibir los recordatorios de medicamentos (uno por círculo). Si no hay ninguno elegido, llega al receptor de cuidado o, si no lo hay, al propietario. Toca 'Lo tomé' para confirmar, y todos los familiares del círculo son notificados. Si la dosis no se confirma en 15 minutos, se envía un amable recordatorio de seguimiento. Después de 30 minutos, todos los cuidadores del círculo son notificados. Después de 1 hora, todos los miembros del círculo reciben una alerta. Nada se registra automáticamente: mientras nadie la marque como Tomado u Omitido, la dosis aparece como Sin marcar."
         },
         {
           "question": "¿Qué pasa si una dosis no se marca?",
@@ -58,11 +58,11 @@
         },
         {
           "question": "¿Qué notificaciones voy a recibir?",
-          "answer": "Recibirás avisos en cuatro grupos que puedes activar o desactivar en Perfil: Medicamentos (dosis tomadas, omitidas o sin marcar), Tareas y citas (cuando te asignan algo y antes de que llegue la hora), Notas (cuando alguien agrega una nota) y Consejos y sugerencias. Si eres el receptor de cuidado, también recibes tus propios recordatorios de dosis, que siempre están activos."
+          "answer": "Recibirás avisos en cuatro grupos que puedes activar o desactivar en Perfil: Medicamentos (dosis tomadas, omitidas o sin marcar), Tareas y citas (cuando te asignan algo y antes de que llegue la hora), Notas (cuando alguien agrega una nota) y Resumen del día y consejos. Si eres el receptor de cuidado, también recibes tus propios recordatorios de dosis, que siempre están activos."
         },
         {
-          "question": "¿Qué es el horario sin interrupciones?",
-          "answer": "El horario sin interrupciones pausa las notificaciones durante las horas que configures (por ejemplo, de 10 PM a 7 AM). Ve a Perfil y ajustes para configurar tu horario sin interrupciones."
+          "question": "¿Qué son las horas de silencio?",
+          "answer": "Las horas de silencio pausan las notificaciones durante las horas que configures (por ejemplo, de 10 PM a 7 AM). Ve a Perfil, luego Horas de silencio, para configurar tus horas de silencio."
         },
         {
           "question": "¿Puedo desactivar ciertas notificaciones?",
@@ -83,7 +83,7 @@
         },
         {
           "question": "¿Cómo restauro mis compras?",
-          "answer": "En la app móvil de CircleCare, ve a Perfil > Suscripción > Restaurar compras. Es útil si reinstalas la app o cambias de teléfono. Si te suscribiste aquí en la web, tu suscripción se aplica automáticamente a tu cuenta."
+          "answer": "En la app móvil de CircleCare, ve a Perfil > Cuenta > Restaurar compras. Es útil si reinstalas la app o cambias de teléfono. Si te suscribiste aquí en la web, tu suscripción se aplica automáticamente a tu cuenta."
         },
         {
           "question": "¿Cómo cancelo mi suscripción?",

@@ -96,11 +96,23 @@ describe('memberRowActions', () => {
       medResponsible: true,
       managerRole: true,
     });
+    // A view-only seat receives no notifications; the server refuses it as the
+    // medication-responsible member (400 RESPONSIBLE_MEMBER_VIEW_ONLY).
     expect(memberRowActions(ownerOn, OWNER, viewOnlyRow)).toEqual({
       remove: true,
-      medResponsible: true,
+      medResponsible: false,
       managerRole: false,
     });
+  });
+
+  it('owner: a view-only seat that is ALREADY responsible keeps the item, so it can be cleared', () => {
+    for (const c of [ownerOn, ownerOff, base]) {
+      expect(
+        memberRowActions(c, OWNER, row({ id: 'u-vo2', view_only: true, is_medication_responsible: true }))
+          .medResponsible
+      ).toBe(true);
+      expect(memberRowActions(c, OWNER, viewOnlyRow).medResponsible).toBe(false);
+    }
   });
 
   it('owner (switch off / older backend): exactly today — med + remove, no role item', () => {

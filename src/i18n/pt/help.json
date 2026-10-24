@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "Como funcionam os lembretes de medicamentos?",
-          "answer": "Quando você adiciona um medicamento, a pessoa cuidada recebe uma notificação push no horário programado. Ela toca em 'Tomei' para confirmar, e todos os familiares do círculo são notificados. Se a dose não for confirmada em 15 minutos, seu ente querido recebe um lembrete gentil. Após 30 minutos, todos os cuidadores do círculo são notificados. Após 1 hora, todos no círculo são avisados. Nada é registrado automaticamente: até que alguém marque a dose como Tomado ou Pulado, ela aparece como Não marcado."
+          "answer": "Ao adicionar um medicamento, o lembrete vai para o membro que o proprietário escolheu para receber os lembretes de medicamentos (um por círculo). Se ninguém foi escolhido, ele vai para a pessoa cuidada ou, se não houver, para o proprietário. Ela toca em 'Tomei' para confirmar, e todos os familiares do círculo são notificados. Se a dose não for confirmada em 15 minutos, um lembrete gentil é enviado. Após 30 minutos, todos os cuidadores do círculo são notificados. Após 1 hora, todos no círculo são avisados. Nada é registrado automaticamente: até que alguém marque a dose como Tomado ou Pulado, ela aparece como Não marcado."
         },
         {
           "question": "O que acontece se uma dose não for marcada?",
@@ -58,11 +58,11 @@
         },
         {
           "question": "Que notificações vou receber?",
-          "answer": "Você receberá alertas em quatro grupos que pode ativar ou desativar em Perfil: Medicamentos (doses tomadas, puladas ou não marcadas), Tarefas e consultas (quando algo é atribuído a você e antes do prazo), Notas (quando alguém adiciona uma nota) e Dicas e sugestões. Se você é a pessoa cuidada, também recebe seus próprios lembretes de dose, que ficam sempre ativados."
+          "answer": "Você receberá alertas em quatro grupos que pode ativar ou desativar em Perfil: Medicamentos (doses tomadas, puladas ou não marcadas), Tarefas e consultas (quando algo é atribuído a você e antes do prazo), Notas (quando alguém adiciona uma nota) e Resumo do dia e dicas. Se você é a pessoa cuidada, também recebe seus próprios lembretes de dose, que ficam sempre ativados."
         },
         {
           "question": "O que são horários de silêncio?",
-          "answer": "Os horários de silêncio pausam as notificações nos períodos que você definir (por exemplo, à noite, das 22h às 7h). Vá em Perfil e configurações para definir seus horários de silêncio."
+          "answer": "Os horários de silêncio pausam as notificações nos períodos que você definir (por exemplo, à noite, das 22h às 7h). Vá em Perfil e depois Horário de silêncio para definir seus horários de silêncio."
         },
         {
           "question": "Posso desativar certas notificações?",
@@ -83,7 +83,7 @@
         },
         {
           "question": "Como restauro minhas compras?",
-          "answer": "No app móvel CircleCare, vá em Perfil > Assinatura > Restaurar compras. Isso é útil se você reinstalar o app ou trocar de celular. Se você assinou aqui na web, sua assinatura acompanha sua conta automaticamente."
+          "answer": "No app móvel CircleCare, vá em Perfil > Conta > Restaurar compras. Isso é útil se você reinstalar o app ou trocar de celular. Se você assinou aqui na web, sua assinatura acompanha sua conta automaticamente."
         },
         {
           "question": "Como cancelo minha assinatura?",

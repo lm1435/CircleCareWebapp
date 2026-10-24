@@ -1,4 +1,8 @@
 {
+  "noCareRecipient": {
+    "title": "Reminders go to you",
+    "description": "Medication reminders go to you (the circle owner) until you add a care recipient or choose a member to receive them."
+  },
   "title": "Calendar",
   "subtitle": "Medications, appointments, and tasks in one place.",
   "week": "Week",
@@ -203,7 +207,7 @@
       "atTimeOff": "Nothing will be sent at the scheduled time — only the earlier reminders you pick below.",
       "atTimeOffNoEarlier": "No reminder will be sent before this dose — the first alert would be the follow-up that it hasn't been marked yet, 15 minutes after it was due.",
       "additional": "Earlier reminders",
-      "escalation": "If a dose isn't confirmed, we follow up: the care recipient after 15 minutes, caregivers after 30, the whole circle after an hour.",
+      "escalation": "If a dose isn't confirmed, we follow up: a follow-up reminder after 15 minutes, caregivers after 30, the whole circle after an hour.",
       "escalationSelf": "If a dose isn't confirmed, we follow up: you after 15 minutes, caregivers after 30, the whole circle after an hour.",
       "offMedication": "No one will be notified when this dose is due, and no one will be alerted if it hasn't been marked.",
       "offGeneric": "No one will be reminded about this — not you, and not anyone else in the circle.",
@@ -257,7 +261,7 @@
     },
     "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
     "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
-    "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Account.",
+    "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Profile, under Quiet hours.",
     "dayOffsetNext": "+1 day",
     "dayOffsetPrevious": "-1 day",
     "timezoneUnresolvedNotice": "Still loading this circle's time zone. Saving is paused so dates aren't stored in the wrong one.",

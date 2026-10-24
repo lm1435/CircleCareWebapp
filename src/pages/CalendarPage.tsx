@@ -13,6 +13,7 @@ import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
 import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog';
 import { ConfirmMedDialog } from '@/components/meds/ConfirmMedDialog';
+import { ReminderRoutingNotice } from '@/components/calendar/ReminderRoutingNotice';
 import { useCircle } from '@/hooks/useCircle';
 import { MonthView } from '@/components/calendar/MonthView';
 import { WeekView } from '@/components/calendar/WeekView';
@@ -469,6 +470,15 @@ export default function CalendarPage(): ReactElement {
           )}
           {!isError && <CalendarLegend />}
         </div>
+
+        {/* Who gets the medication reminders (owner only, dismissable): mobile
+            CalendarScreen parity. */}
+        {circleId && (
+          <ReminderRoutingNotice
+            circleId={circleId}
+            hasMedications={events.some((e) => e.event_type === 'medication')}
+          />
+        )}
 
         <div>
           {isLoading && <CalendarSkeleton view={view} />}

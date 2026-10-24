@@ -448,6 +448,12 @@ export const Analytics = {
     capture('daily_update_opened', { source, dated }),
   /** The card's X was pressed (hidden until the recipient's midnight). */
   dailyUpdateDismissed: () => capture('daily_update_dismissed'),
+  /**
+   * The calendar's "Reminders go to you" notice (owner, no care recipient and no
+   * medication-responsible member) was closed. No properties (never circle_id).
+   * Same name as mobile.
+   */
+  reminderRoutingNoticeDismissed: () => capture('reminder_routing_notice_dismissed'),
   /** A tappable row on the card or the full page. Enums only: which row, and where. */
   dailyUpdateRowTapped: (row: DailyUpdateRow, source: 'card' | 'page') =>
     capture('daily_update_row_tapped', {

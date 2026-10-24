@@ -1,4 +1,8 @@
 {
+  "noCareRecipient": {
+    "title": "Os lembretes vão para você",
+    "description": "Os lembretes de medicamentos vão para você (proprietário do círculo) até que você adicione uma pessoa cuidada ou escolha um membro que os receba."
+  },
   "title": "Calendário",
   "subtitle": "Medicamentos, consultas e tarefas em um só lugar.",
   "week": "Semana",
@@ -203,7 +207,7 @@
       "atTimeOff": "Nada será enviado no horário agendado, apenas os lembretes antecipados que você escolher abaixo.",
       "atTimeOffNoEarlier": "Nenhum lembrete será enviado antes desta dose: o primeiro alerta seria o aviso de que ela ainda não foi marcada, 15 minutos depois do horário.",
       "additional": "Lembretes antecipados",
-      "escalation": "Se uma dose não for confirmada, avisamos novamente: a pessoa cuidada após 15 minutos, os cuidadores após 30 e todo o círculo após uma hora.",
+      "escalation": "Se uma dose não for confirmada, avisamos novamente: com um novo lembrete após 15 minutos, os cuidadores após 30 e todo o círculo após uma hora.",
       "escalationSelf": "Se uma dose não for confirmada, avisamos novamente: você após 15 minutos, os cuidadores após 30 e todo o círculo após uma hora.",
       "offMedication": "Ninguém será notificado quando chegar a hora desta dose, e ninguém será alertado se ela não for marcada.",
       "offGeneric": "Ninguém será lembrado disto: nem você, nem qualquer outra pessoa do círculo.",
@@ -257,7 +261,7 @@
     },
     "dualTimezoneHint": "Seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Seu horário / horário da pessoa ({{timezone}})",
-    "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Você pode alterar o horário de silêncio em Conta.",
+    "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Você pode alterar o horário de silêncio em Perfil, na seção Horário de silêncio.",
     "dayOffsetNext": "+1 dia",
     "dayOffsetPrevious": "-1 dia",
     "timezoneUnresolvedNotice": "Ainda carregando o fuso horário deste círculo. O salvamento está em pausa para que as datas não sejam gravadas no fuso errado.",

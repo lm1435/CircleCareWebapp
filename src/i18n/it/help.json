@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "Come funzionano i promemoria dei farmaci?",
-          "answer": "Quando aggiungi un farmaco, la persona assistita riceve una notifica all'ora programmata. Tocca 'L'ho presa' per confermare, e tutti i familiari della cerchia vengono avvisati. Se la dose non viene confermata entro 15 minuti, la tua persona cara riceve un promemoria gentile. Dopo 30 minuti vengono avvisati tutti i caregiver della cerchia. Dopo 1 ora viene avvisata l'intera cerchia. Nulla viene registrato in automatico: finché qualcuno non la segna come Presa o Saltata, la dose risulta semplicemente Non segnata."
+          "answer": "Quando aggiungi un farmaco, il promemoria arriva al membro che il titolare ha scelto per ricevere i promemoria dei farmaci (uno per cerchia). Se nessuno è stato scelto, arriva alla persona assistita o, se non c'è, al titolare. Tocca 'L'ho presa' per confermare, e tutti i familiari della cerchia vengono avvisati. Se la dose non viene confermata entro 15 minuti, viene inviato un promemoria gentile. Dopo 30 minuti vengono avvisati tutti i caregiver della cerchia. Dopo 1 ora viene avvisata l'intera cerchia. Nulla viene registrato in automatico: finché qualcuno non la segna come Presa o Saltata, la dose risulta semplicemente Non segnata."
         },
         {
           "question": "Cosa succede se una dose non viene segnata?",
@@ -58,11 +58,11 @@
         },
         {
           "question": "Quali notifiche riceverò?",
-          "answer": "Riceverai avvisi in quattro gruppi che puoi attivare o disattivare nel Profilo: Farmaci (dosi prese, saltate o non segnate), Incarichi e appuntamenti (quando ti viene assegnato qualcosa e prima della scadenza), Note (quando qualcuno aggiunge una nota) e Consigli e suggerimenti. Se sei la persona assistita ricevi anche i tuoi promemoria delle dosi, sempre attivi."
+          "answer": "Riceverai avvisi in quattro gruppi che puoi attivare o disattivare nel Profilo: Farmaci (dosi prese, saltate o non segnate), Incarichi e appuntamenti (quando ti viene assegnato qualcosa e prima della scadenza), Note (quando qualcuno aggiunge una nota) e Riepilogo del giorno e consigli. Se sei la persona assistita ricevi anche i tuoi promemoria delle dosi, sempre attivi."
         },
         {
           "question": "Cosa sono le ore di silenzio?",
-          "answer": "Le ore di silenzio mettono in pausa le notifiche negli orari che scegli (ad esempio di notte, dalle 22 alle 7). Vai su Profilo e impostazioni per configurarle."
+          "answer": "Le ore di silenzio mettono in pausa le notifiche negli orari che scegli (ad esempio di notte, dalle 22 alle 7). Vai su Profilo, poi Ore di silenzio, per configurarle."
         },
         {
           "question": "Posso disattivare alcune notifiche?",
@@ -83,7 +83,7 @@
         },
         {
           "question": "Come ripristino i miei acquisti?",
-          "answer": "Nell'app mobile di CircleCare, vai su Profilo > Abbonamento > Ripristina acquisti. Serve se reinstalli l'app o cambi telefono. Se ti sei abbonato qui sul web, l'abbonamento segue automaticamente il tuo account."
+          "answer": "Nell'app mobile di CircleCare, vai su Profilo > Account > Ripristina acquisti. Serve se reinstalli l'app o cambi telefono. Se ti sei abbonato qui sul web, l'abbonamento segue automaticamente il tuo account."
         },
         {
           "question": "Come disdico l'abbonamento?",

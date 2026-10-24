@@ -1,4 +1,8 @@
 {
+  "noCareRecipient": {
+    "title": "Los recordatorios te llegan a ti",
+    "description": "Los recordatorios de medicamentos te llegan a ti (dueño del círculo) hasta que agregues un receptor de cuidado o elijas a un miembro para recibirlos."
+  },
   "title": "Calendario",
   "subtitle": "Medicamentos, citas y tareas en un solo lugar.",
   "week": "Semana",
@@ -203,7 +207,7 @@
       "atTimeOff": "No se enviará nada a la hora programada, solo los recordatorios anticipados que elijas abajo.",
       "atTimeOffNoEarlier": "No se enviará ningún recordatorio antes de esta dosis: la primera alerta sería el aviso por dosis no confirmada, 15 minutos después de la hora indicada.",
       "additional": "Recordatorios anticipados",
-      "escalation": "Si no se confirma una dosis, hacemos seguimiento: el receptor de cuidado a los 15 minutos, los cuidadores a los 30 y todo el círculo a la hora.",
+      "escalation": "Si no se confirma una dosis, hacemos seguimiento: un recordatorio de seguimiento a los 15 minutos, los cuidadores a los 30 y todo el círculo a la hora.",
       "escalationSelf": "Si no se confirma una dosis, hacemos seguimiento: tú a los 15 minutos, los cuidadores a los 30 y todo el círculo a la hora.",
       "offMedication": "Nadie recibirá aviso cuando toque esta dosis, ni alerta si no se confirma.",
       "offGeneric": "Nadie recibirá un recordatorio de esto: ni tú, ni nadie más del círculo.",
@@ -257,7 +261,7 @@
     },
     "dualTimezoneHint": "Tu hora / Hora de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Tu hora / Su hora ({{timezone}})",
-    "quietHoursDoseWarning": "Esta hora cae dentro de tu horario sin interrupciones, así que no se enviará ningún recordatorio. Puedes cambiar el horario sin interrupciones en Cuenta.",
+    "quietHoursDoseWarning": "Esta hora cae dentro de tus horas de silencio, así que no se enviará ningún recordatorio. Puedes cambiar las horas de silencio en Perfil, en la sección Horas de silencio.",
     "dayOffsetNext": "+1 día",
     "dayOffsetPrevious": "-1 día",
     "timezoneUnresolvedNotice": "Aún se está cargando la zona horaria de este círculo. Se pausó el guardado para no registrar fechas en la zona equivocada.",
