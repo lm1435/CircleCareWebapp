@@ -23,10 +23,35 @@ export const VITAL_TYPE_LABEL_KEYS: Record<string, string> = {
 // decimal place is what every in-app surface shows.
 const round1 = (value: number): number => Math.round(value * 10) / 10;
 
+type Reading = { value1: number; value2?: number };
+
+/**
+ * The whole reading with the extreme systolic (a real reading, never two
+ * independent extremes). Ties on systolic: Min takes the lower diastolic, Max
+ * the higher. A reading without a diastolic loses a tie to one that has it.
+ */
+function pickReading(entries: PdfHealthVital[], which: 'min' | 'max'): Reading {
+  let best = entries[0];
+  for (const e of entries.slice(1)) {
+    const better = which === 'min' ? e.value1 < best.value1 : e.value1 > best.value1;
+    const tie = e.value1 === best.value1;
+    if (better) {
+      best = e;
+    } else if (tie && e.value2 != null) {
+      if (best.value2 == null) best = e;
+      else if (which === 'min' ? e.value2 < best.value2 : e.value2 > best.value2) best = e;
+    }
+  }
+  return {
+    value1: round1(best.value1),
+    value2: best.value2 != null ? round1(best.value2) : undefined,
+  };
+}
+
 /**
  * Collapse a period's recorded vitals into one row per vital type for the
  * adherence report's Health Vitals table: the latest reading (by
- * `recorded_at`), and the average / min / max of `value1` across the period.
+ * `recorded_at`), and the average / min / max of `value1` (plus the diastolic side for blood pressure) across the period.
  *
  * Rows come out in first-seen order of `vitals`. A vital type without a label
  * key falls back to the raw type string rather than printing a missing key.
@@ -55,6 +80,18 @@ export function computeVitalsSummary(
     const min = round1(Math.min(...values));
     const max = round1(Math.max(...values));
 
+    // Blood pressure (any vital whose readings carry a diastolic): Average is
+    // "sys/dia", Min/Max are whole readings. Everything else is unchanged.
+    const withDia = entries.filter((e) => e.value2 != null);
+    const bp =
+      withDia.length > 0
+        ? {
+            average2: round1(withDia.reduce((s, e) => s + (e.value2 as number), 0) / withDia.length),
+            minReading: pickReading(entries, 'min'),
+            maxReading: pickReading(entries, 'max'),
+          }
+        : {};
+
     result.push({
       type: VITAL_TYPE_LABEL_KEYS[type] ? t(VITAL_TYPE_LABEL_KEYS[type]) : type,
       latest: {
@@ -65,6 +102,7 @@ export function computeVitalsSummary(
       average: avg,
       min,
       max,
+      ...bp,
     });
   }
   return result;

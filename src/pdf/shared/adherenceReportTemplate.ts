@@ -668,9 +668,9 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
         <tr>
           <td>${escapeHtml(v.type)}</td>
           <td style="text-align:center">${v.latest.value2 != null ? `${v.latest.value1}/${v.latest.value2}` : `${v.latest.value1}`}${vitalUnitSuffix(v.latest.unit)}</td>
-          <td style="text-align:center">${v.average}${vitalUnitSuffix(v.latest.unit)}</td>
-          <td style="text-align:center">${v.min}${vitalUnitSuffix(v.latest.unit)}</td>
-          <td style="text-align:center">${v.max}${vitalUnitSuffix(v.latest.unit)}</td>
+          <td style="text-align:center">${v.average2 != null ? `${v.average}/${v.average2}` : `${v.average}`}${vitalUnitSuffix(v.latest.unit)}</td>
+          <td style="text-align:center">${v.minReading && v.minReading.value2 != null ? `${v.minReading.value1}/${v.minReading.value2}` : `${v.minReading ? v.minReading.value1 : v.min}`}${vitalUnitSuffix(v.latest.unit)}</td>
+          <td style="text-align:center">${v.maxReading && v.maxReading.value2 != null ? `${v.maxReading.value1}/${v.maxReading.value2}` : `${v.maxReading ? v.maxReading.value1 : v.max}`}${vitalUnitSuffix(v.latest.unit)}</td>
         </tr>`).join('')}
       </tbody>
     </table>

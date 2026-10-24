@@ -159,6 +159,12 @@ export interface PdfVitalsSummary {
   average: number;
   min: number;
   max: number;
+  /** Blood pressure only: mean diastolic (rounded like `average`). */
+  average2?: number;
+  /** Blood pressure only: the whole reading with the lowest systolic. */
+  minReading?: { value1: number; value2?: number };
+  /** Blood pressure only: the whole reading with the highest systolic. */
+  maxReading?: { value1: number; value2?: number };
 }
 
 /** A recorded vital as `computeVitalsSummary` reads it. */
