@@ -5,11 +5,15 @@
   },
   "title": "Kalender",
   "subtitle": "Medikamente, Termine und Aufgaben an einem Ort.",
+  "day": "Tag",
   "week": "Woche",
   "month": "Monat",
   "viewLabel": "Kalenderansicht",
+  "dayViewLabel": "Tagesansicht",
   "weekViewLabel": "Kalender in Wochenansicht",
   "monthViewLabel": "Kalender in Monatsansicht",
+  "previousDay": "Vorheriger Tag",
+  "nextDay": "Nächster Tag",
   "previousWeek": "Vorherige Woche",
   "nextWeek": "Nächste Woche",
   "previousMonth": "Vorheriger Monat",
@@ -43,7 +47,8 @@
   "eventTypes": {
     "medication": "Medikament",
     "appointment": "Termin",
-    "task": "Aufgabe"
+    "task": "Aufgabe",
+    "shift": "Schicht"
   },
   "status": {
     "taken": "Eingenommen",
@@ -72,7 +77,9 @@
     "close": "Details zum Eintrag schließen",
     "completedByLabel": "Erledigt von",
     "completedByValue": "{{name}} · {{when}}",
-    "completedLabel": "Erledigt am"
+    "completedLabel": "Erledigt am",
+    "doctor": "Ärztin/Arzt",
+    "seeAllVisits": "Alle Besuche ansehen"
   },
   "recurrence": {
     "daily": "Täglich",
@@ -89,7 +96,9 @@
     "invalidOccurrenceDate": "Dieser Eintrag wiederholt sich an diesem Tag nicht mehr – der Kalender wurde aktualisiert.",
     "eventNotFound": "Dieser Eintrag existiert nicht mehr. Möglicherweise hat ihn jemand anderes gelöscht.",
     "recurrenceDaysExcludeStart": "Der Starttag muss ausgewählt bleiben.",
-    "asNeededLocked": "Ein Medikament kann nicht zwischen nach Zeitplan und bei Bedarf umgestellt werden. Setzen Sie es ab und legen Sie es neu an."
+    "asNeededLocked": "Ein Medikament kann nicht zwischen nach Zeitplan und bei Bedarf umgestellt werden. Setzen Sie es ab und legen Sie es neu an.",
+    "providerUnavailable": "Diese Ärztin bzw. dieser Arzt ist nicht mehr verfügbar. Wählen Sie jemand anderen oder Keine.",
+    "providerNotAllowed": "Nur Termine können eine Ärztin bzw. einen Arzt haben."
   },
   "addEvent": {
     "addEvent": "Eintrag hinzufügen",
@@ -280,6 +289,15 @@
       "lockedRepeat": "Bei Bedarf · kann nicht geändert werden. Um dieses Medikament auf einen Zeitplan umzustellen, setzen Sie es ab und legen Sie es neu an.",
       "remindersNone": "Keine Erinnerungen. Medikamente bei Bedarf haben keinen Zeitplan.",
       "updateOldBackend": "Ein Medikament bei Bedarf kann noch nicht hinzugefügt werden – bitte aktualisieren Sie die App und versuchen Sie es erneut."
+    },
+    "doctor": {
+      "label": "Ärztin/Arzt",
+      "none": "Keine",
+      "add": "Ärztin/Arzt hinzufügen",
+      "removed": "{{name}} (entfernt)",
+      "linked": "Verknüpfte Ärztin/verknüpfter Arzt",
+      "series": "Gilt für die gesamte Terminserie",
+      "filledFrom": "Aus der Adresse von {{name}} übernommen"
     }
   },
   "deleteEvent": {
@@ -353,5 +371,16 @@
     "noteCount_one": "{{count}} Notiz",
     "noteCount_other": "{{count}} Notizen"
   },
-  "permissionDenied": "Sie haben keine Berechtigung, in diesem Kreis Änderungen vorzunehmen."
+  "permissionDenied": "Sie haben keine Berechtigung, in diesem Kreis Änderungen vorzunehmen.",
+  "today": "Heute",
+  "yesterday": "Gestern",
+  "tomorrow": "Morgen",
+  "daySummary": {
+    "doses_one": "{{count}} Dosis",
+    "doses_other": "{{count}} Dosen",
+    "appointments_one": "{{count}} Termin",
+    "appointments_other": "{{count}} Termine",
+    "tasks_one": "{{count}} Aufgabe",
+    "tasks_other": "{{count}} Aufgaben"
+  }
 }

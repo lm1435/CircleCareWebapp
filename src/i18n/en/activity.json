@@ -32,6 +32,7 @@
     "recurrenceStopped": "Stopped recurrence for {{title}} from {{date}}",
     "eventNoteAdded": "Added a note to {{title}}",
     "careNoteAdded": "Added a daily care note",
+    "careNoteAddedForDate": "Added a daily care note for {{date}}",
     "memberInvited": {
       "careRecipient": "Invited {{email}} to join as Care Recipient",
       "caregiver": "Invited {{email}} to join as Caregiver"

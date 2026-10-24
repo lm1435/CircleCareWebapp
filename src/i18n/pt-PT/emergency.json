@@ -134,5 +134,15 @@
   },
   "conflict": {
     "message": "Outro cuidador alterou esta secção enquanto editava. Carregámos a versão mais recente. Reveja-a e faça novamente a sua alteração."
+  },
+  "providers": {
+    "errors": {
+      "limitReached": "Atingiu o limite de 50 médicos. Remova um para adicionar outro.",
+      "conflict": "Outra pessoa acabou de alterar os médicos. Recarregámos a lista; tente novamente.",
+      "archived": "Este médico já foi removido. Recarregámos a lista."
+    },
+    "visits": {
+      "loading": "A carregar visitas"
+    }
   }
 }

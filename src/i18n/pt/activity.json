@@ -32,6 +32,7 @@
     "recurrenceStopped": "Interrompeu a repetição de {{title}} (a partir de: {{date}})",
     "eventNoteAdded": "Adicionou uma nota a {{title}}",
     "careNoteAdded": "Adicionou uma nota diária de cuidado",
+    "careNoteAddedForDate": "Adicionou uma nota diária de cuidado para {{date}}",
     "memberInvited": {
       "careRecipient": "Convidou {{email}} para participar como pessoa cuidada",
       "caregiver": "Convidou {{email}} para participar como cuidador"

@@ -380,5 +380,38 @@
   "conflict": {
     "title": "Someone else updated this",
     "message": "Another caregiver changed this section while you were editing. We loaded the latest version. Review it and make your change again."
+  },
+  "providers": {
+    "visitsLink": "Visits & notes",
+    "visitsLinkFor": "with {{name}}",
+    "removedName": "{{name}} (removed)",
+    "errors": {
+      "limitReached": "You've reached the limit of 50 doctors. Remove one to add another.",
+      "conflict": "Someone else just changed the doctors. We reloaded the list, so please try again.",
+      "archived": "This doctor was already removed. We reloaded the list."
+    },
+    "visits": {
+      "title": "Visits & notes",
+      "loading": "Loading visits",
+      "errorTitle": "Couldn't load visits",
+      "notFound": "This doctor isn't available.",
+      "nextVisit": "Next visit",
+      "pastVisits": "Past visits",
+      "noPast": "No past visits yet.",
+      "noteCount_one": "{{count}} note",
+      "noteCount_other": "{{count}} notes",
+      "noNotes": "No notes yet",
+      "addNote": "Add a note",
+      "addNoteFor": "Add a note to the visit on {{date}}",
+      "more": "more",
+      "less": "less",
+      "showEarlier": "Show earlier visits",
+      "earlierLoaded": "Earlier visits loaded.",
+      "earlierFailed": "Couldn't load earlier visits. Please try again.",
+      "emptyTitle": "No visits with {{name}} yet",
+      "emptyBody": "Choose {{name}} as the doctor when you add or edit an appointment. Visits and their notes will show up here.",
+      "addAppointment": "Add an appointment",
+      "unnamedAuthor": "Someone"
+    }
   }
 }

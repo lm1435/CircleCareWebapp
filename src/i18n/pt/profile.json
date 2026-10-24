@@ -62,7 +62,9 @@
       "notes": "Notas",
       "notesDesc": "Quando alguém adiciona uma nota",
       "tips": "Resumo do dia e dicas",
-      "tipsDesc": "Seu resumo do dia e lembretes úteis"
+      "tipsDesc": "Seu resumo do dia e lembretes úteis",
+      "shifts": "Plantões",
+      "shiftsDesc": "Novos plantões em aberto, lembretes e mudanças nos seus plantões"
     },
     "someTurnedOff": "Algumas desativadas",
     "confirmMedicationsOff": {

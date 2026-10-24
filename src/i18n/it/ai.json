@@ -20,5 +20,10 @@
     "unavailable": "L'Assistente di cura non è disponibile al momento. Riprova più tardi.",
     "sendFailed": "Scusa, si è verificato un errore. Riprova.",
     "invalidMessage": "Non è stato possibile elaborare quel messaggio. Prova a riformulare la domanda su cura o salute."
+  },
+  "actions": {
+    "openNotes": "Apri le note",
+    "openDoctors": "Vedi i medici",
+    "openProvider": "{{name}}: Visite e note"
   }
 }

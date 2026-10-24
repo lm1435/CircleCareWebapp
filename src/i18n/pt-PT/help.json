@@ -52,7 +52,7 @@
         },
         {
           "question": "Que notificações vou receber?",
-          "answer": "Receberá alertas em quatro grupos que pode ativar ou desativar em Perfil: Medicamentos (doses tomadas, saltadas ou não marcadas), Tarefas e consultas (quando algo lhe é atribuído e antes do prazo), Notas (quando alguém adiciona uma nota) e Resumo do dia e dicas. Se for a pessoa cuidada, também recebe os seus próprios lembretes de dose, que ficam sempre ativados."
+          "answer": "Receberá alertas em cinco grupos que pode ativar ou desativar em Perfil: Medicamentos (doses tomadas, saltadas ou não marcadas), Tarefas e consultas (quando algo lhe é atribuído e antes do prazo), Notas (quando alguém adiciona uma nota), Resumo do dia e dicas e Turnos (novos turnos por preencher, lembretes e alterações nos seus turnos). Se for a pessoa cuidada, também recebe os seus próprios lembretes de dose, que ficam sempre ativados."
         },
         {
           "question": "O que são horários de silêncio?",
@@ -60,7 +60,7 @@
         },
         {
           "question": "Posso desativar certas notificações?",
-          "answer": "Sim. Vá a Perfil e depois a Notificações. Cada um dos quatro interruptores ativa ou desativa um grupo inteiro na sua conta, em todos os círculos de que faz parte. Desativar Medicamentos significa que não será avisado quando uma dose não for marcada."
+          "answer": "Sim. Vá a Perfil e depois a Notificações. Cada um dos cinco interruptores ativa ou desativa um grupo inteiro na sua conta, em todos os círculos de que faz parte. Desativar Medicamentos significa que não será avisado quando uma dose não for marcada."
         }
       ]
     },

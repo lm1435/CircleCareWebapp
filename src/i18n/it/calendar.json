@@ -5,11 +5,15 @@
   },
   "title": "Calendario",
   "subtitle": "Farmaci, appuntamenti e incarichi in un unico posto.",
+  "day": "Giorno",
   "week": "Settimana",
   "month": "Mese",
   "viewLabel": "Vista del calendario",
+  "dayViewLabel": "Vista giornaliera",
   "weekViewLabel": "Calendario in vista settimanale",
   "monthViewLabel": "Calendario in vista mensile",
+  "previousDay": "Giorno precedente",
+  "nextDay": "Giorno successivo",
   "previousWeek": "Settimana precedente",
   "nextWeek": "Settimana successiva",
   "previousMonth": "Mese precedente",
@@ -43,7 +47,8 @@
   "eventTypes": {
     "medication": "Farmaco",
     "appointment": "Appuntamento",
-    "task": "Incarico"
+    "task": "Incarico",
+    "shift": "Turno"
   },
   "status": {
     "taken": "Presa",
@@ -72,7 +77,9 @@
     "close": "Chiudi i dettagli dell'evento",
     "completedByLabel": "Completato da",
     "completedByValue": "{{name}} · {{when}}",
-    "completedLabel": "Completato il"
+    "completedLabel": "Completato il",
+    "doctor": "Medico",
+    "seeAllVisits": "Vedi tutte le visite"
   },
   "recurrence": {
     "daily": "Ogni giorno",
@@ -89,7 +96,9 @@
     "invalidOccurrenceDate": "Questo evento non si ripete più in quel giorno: il calendario è stato aggiornato.",
     "eventNotFound": "Questo evento non esiste più. Potrebbe averlo eliminato qualcun altro.",
     "recurrenceDaysExcludeStart": "Il giorno di inizio deve restare selezionato.",
-    "asNeededLocked": "Un farmaco non può passare da programmato ad al bisogno, o viceversa. Interrompilo e aggiungilo di nuovo."
+    "asNeededLocked": "Un farmaco non può passare da programmato ad al bisogno, o viceversa. Interrompilo e aggiungilo di nuovo.",
+    "providerUnavailable": "Questo medico non è più disponibile. Scegli un altro medico oppure Nessuno.",
+    "providerNotAllowed": "Solo gli appuntamenti possono avere un medico."
   },
   "addEvent": {
     "addEvent": "Aggiungi evento",
@@ -280,6 +289,15 @@
       "lockedRepeat": "Al bisogno · non modificabile. Per programmare questo farmaco a orari fissi, interrompilo e aggiungilo di nuovo.",
       "remindersNone": "Nessun promemoria. I farmaci al bisogno non hanno un programma.",
       "updateOldBackend": "Non è ancora possibile aggiungere un farmaco al bisogno: aggiorna l'app e riprova."
+    },
+    "doctor": {
+      "label": "Medico",
+      "none": "Nessuno",
+      "add": "Aggiungi un medico",
+      "removed": "{{name}} (rimosso)",
+      "linked": "Medico collegato",
+      "series": "Vale per l'intera serie",
+      "filledFrom": "Compilato con l'indirizzo di {{name}}"
     }
   },
   "deleteEvent": {
@@ -353,5 +371,16 @@
     "noteCount_one": "{{count}} nota",
     "noteCount_other": "{{count}} note"
   },
-  "permissionDenied": "Non hai il permesso di apportare modifiche in questa cerchia."
+  "permissionDenied": "Non hai il permesso di apportare modifiche in questa cerchia.",
+  "today": "Oggi",
+  "yesterday": "Ieri",
+  "tomorrow": "Domani",
+  "daySummary": {
+    "doses_one": "{{count}} dose",
+    "doses_other": "{{count}} dosi",
+    "appointments_one": "{{count}} appuntamento",
+    "appointments_other": "{{count}} appuntamenti",
+    "tasks_one": "{{count}} incarico",
+    "tasks_other": "{{count}} incarichi"
+  }
 }

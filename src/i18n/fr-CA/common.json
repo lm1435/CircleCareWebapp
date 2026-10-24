@@ -9,5 +9,9 @@
   },
   "undoCap": {
     "savingSoon": "Enregistrement dans 10 secondes."
+  },
+  "addMenu": {
+    "shift": "Quart",
+    "shiftShort": "Quart"
   }
 }

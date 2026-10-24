@@ -56,7 +56,8 @@
     "members": "Miembros",
     "settings": "Editar círculo",
     "notFound": "Página no encontrada",
-    "dailyUpdate": "Resumen del día"
+    "dailyUpdate": "Resumen del día",
+    "providerVisits": "Visitas y notas"
   },
   "errorBoundary": {
     "title": "Algo salió mal",
@@ -170,7 +171,9 @@
     "medicationShort": "Med.",
     "appointmentShort": "Cita",
     "taskShort": "Tarea",
-    "noteShort": "Nota"
+    "noteShort": "Nota",
+    "shift": "Turno",
+    "shiftShort": "Turno"
   },
   "draftRestored": "Recuperamos tu borrador sin guardar.",
   "undoCap": {

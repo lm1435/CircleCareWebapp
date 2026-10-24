@@ -58,7 +58,7 @@
         },
         {
           "question": "Welche Benachrichtigungen erhalte ich?",
-          "answer": "Sie erhalten Hinweise in vier Gruppen, die Sie im Profil ein- oder ausschalten können: Medikamente (Dosen eingenommen, ausgelassen oder noch nicht eingetragen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor es fällig ist), Notizen (wenn jemand eine Notiz hinzufügt) und Tagesübersicht und Tipps. Sind Sie selbst die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
+          "answer": "Sie erhalten Hinweise in fünf Gruppen, die Sie im Profil ein- oder ausschalten können: Medikamente (eingenommene, ausgelassene oder nicht eingetragene Dosen), Aufgaben & Termine (wenn Ihnen etwas zugewiesen wird und bevor etwas fällig ist), Notizen (wenn jemand eine Notiz hinzufügt), Tagesübersicht und Tipps sowie Schichten (neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten). Sind Sie die umsorgte Person, erhalten Sie außerdem Ihre eigenen Dosis-Erinnerungen, die immer eingeschaltet sind."
         },
         {
           "question": "Was sind Ruhezeiten?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "Kann ich bestimmte Benachrichtigungen ausschalten?",
-          "answer": "Ja. Gehen Sie zu Profil und dann zu Benachrichtigungen. Jeder der vier Schalter schaltet eine ganze Gruppe für Ihr Konto ein oder aus, in jedem Kreis, dem Sie angehören. Wenn Sie Medikamente ausschalten, erfahren Sie nicht mehr, wenn eine Dosis noch nicht eingetragen ist."
+          "answer": "Ja. Öffnen Sie Profil, dann Benachrichtigungen. Jeder der fünf Schalter schaltet eine ganze Gruppe für Ihr Konto ein oder aus, in jedem Kreis, dem Sie angehören. Wenn Sie Medikamente ausschalten, werden Sie nicht benachrichtigt, wenn eine Dosis nicht eingetragen wurde."
         }
       ]
     },

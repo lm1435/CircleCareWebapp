@@ -56,7 +56,8 @@
     "members": "Members",
     "settings": "Edit circle",
     "notFound": "Page not found",
-    "dailyUpdate": "Daily update"
+    "dailyUpdate": "Daily update",
+    "providerVisits": "Visits & notes"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -170,7 +171,9 @@
     "medicationShort": "Med",
     "appointmentShort": "Appt",
     "taskShort": "Task",
-    "noteShort": "Note"
+    "noteShort": "Note",
+    "shift": "Shift",
+    "shiftShort": "Shift"
   },
   "draftRestored": "We restored your unsaved draft.",
   "undoCap": {

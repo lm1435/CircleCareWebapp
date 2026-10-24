@@ -26,6 +26,7 @@ import help from './help.json';
 import freemium from './freemium.json';
 import upgrade from './upgrade.json';
 import dailyUpdate from './dailyUpdate.json';
+import shifts from './shifts.json';
 
 const ptResources = {
   common,
@@ -48,6 +49,7 @@ const ptResources = {
   freemium,
   upgrade,
   dailyUpdate,
+  shifts,
 };
 
 export default ptResources;

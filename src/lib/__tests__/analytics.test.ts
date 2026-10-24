@@ -323,13 +323,32 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(capture).toHaveBeenCalledWith('circle_left', { circle_id: 'circle-123' });
   });
 
-  it('care_note_updated carries circle_id + category_count (never mood/body)', async () => {
+  it('care_note_updated carries circle_id + category_count + backdating flags (never mood/body/date)', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
-    Analytics.careNoteUpdated('circle-123', { categoryCount: 2 });
+    Analytics.careNoteUpdated('circle-123', { categoryCount: 2, backdated: true, daysBack: 7 });
     expect(capture).toHaveBeenCalledWith('care_note_updated', {
       circle_id: 'circle-123',
       category_count: 2,
+      backdated: true,
+      days_back: 7,
     });
+  });
+
+  it('care_note_added carries backdated + days_back', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.careNoteAdded('circle-123', { categoryCount: 1, backdated: true, daysBack: 95 });
+    expect(capture).toHaveBeenCalledWith('care_note_added', {
+      circle_id: 'circle-123',
+      category_count: 1,
+      backdated: true,
+      days_back: 95,
+    });
+  });
+
+  it('care_notes_older_loaded carries only the page', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.careNotesOlderLoaded({ page: 2 });
+    expect(capture).toHaveBeenCalledWith('care_notes_older_loaded', { page: 2 });
   });
 
   it('care_note_deleted carries only circle_id', async () => {

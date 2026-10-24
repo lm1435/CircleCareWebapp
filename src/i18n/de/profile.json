@@ -62,7 +62,9 @@
       "notes": "Notizen",
       "notesDesc": "Wenn jemand eine Notiz hinzufügt",
       "tips": "Tagesübersicht und Tipps",
-      "tipsDesc": "Ihre Tagesübersicht und hilfreiche Hinweise"
+      "tipsDesc": "Ihre Tagesübersicht und hilfreiche Hinweise",
+      "shifts": "Schichten",
+      "shiftsDesc": "Neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten"
     },
     "someTurnedOff": "Teilweise ausgeschaltet",
     "confirmMedicationsOff": {

@@ -62,7 +62,9 @@
       "notes": "Notes",
       "notesDesc": "When someone adds a note",
       "tips": "Daily update & tips",
-      "tipsDesc": "Your daily update and helpful nudges"
+      "tipsDesc": "Your daily update and helpful nudges",
+      "shifts": "Shifts",
+      "shiftsDesc": "New open shifts, shift reminders and changes to your shifts"
     },
     "someTurnedOff": "Some turned off",
     "confirmMedicationsOff": {

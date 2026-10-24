@@ -44,7 +44,6 @@
   },
   "deleteTitle": "Notiz löschen?",
   "deleteConfirm": "Diese Notiz wird für alle im Kreis entfernt.",
-  "loadOlder": "Frühere Notizen anzeigen",
   "postRequirementHint": "Schreiben Sie eine Notiz oder wählen Sie eine Stimmung, um zu veröffentlichen",
   "moodStrip": {
     "summary": "Diese Woche: {{list}}",
@@ -58,5 +57,13 @@
     "count_okay_other": "{{count}} okay",
     "count_tough_one": "{{count}} schwer",
     "count_tough_other": "{{count}} schwer"
-  }
+  },
+  "date": {
+    "label": "Datum",
+    "today": "Heute",
+    "reset": "Auf heute zurücksetzen",
+    "futureError": "Wählen Sie heute oder ein früheres Datum."
+  },
+  "showOlder": "Ältere Notizen anzeigen",
+  "noOlder": "Keine älteren Notizen"
 }

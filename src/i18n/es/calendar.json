@@ -5,11 +5,15 @@
   },
   "title": "Calendario",
   "subtitle": "Medicamentos, citas y tareas en un solo lugar.",
+  "day": "Día",
   "week": "Semana",
   "month": "Mes",
   "viewLabel": "Vista del calendario",
+  "dayViewLabel": "Vista del día",
   "weekViewLabel": "Calendario en vista de semana",
   "monthViewLabel": "Calendario en vista de mes",
+  "previousDay": "Día anterior",
+  "nextDay": "Próximo día",
   "previousWeek": "Semana anterior",
   "nextWeek": "Próxima semana",
   "previousMonth": "Mes anterior",
@@ -43,7 +47,8 @@
   "eventTypes": {
     "medication": "Medicamento",
     "appointment": "Cita",
-    "task": "Tarea"
+    "task": "Tarea",
+    "shift": "Turno"
   },
   "status": {
     "taken": "Tomado",
@@ -72,7 +77,9 @@
     "close": "Cerrar detalles del evento",
     "completedByLabel": "Completada por",
     "completedByValue": "{{name}} · {{when}}",
-    "completedLabel": "Completada el"
+    "completedLabel": "Completada el",
+    "doctor": "Doctor",
+    "seeAllVisits": "Ver todas las visitas"
   },
   "recurrence": {
     "daily": "Diario",
@@ -89,7 +96,9 @@
     "invalidOccurrenceDate": "Este evento ya no se repite ese día; se actualizó el calendario.",
     "eventNotFound": "Ese evento ya no existe. Es posible que alguien más lo haya eliminado.",
     "recurrenceDaysExcludeStart": "El día de inicio debe seguir seleccionado.",
-    "asNeededLocked": "Un medicamento no puede cambiar entre con horario y según se necesite. Suspéndelo y agrégalo de nuevo."
+    "asNeededLocked": "Un medicamento no puede cambiar entre con horario y según se necesite. Suspéndelo y agrégalo de nuevo.",
+    "providerUnavailable": "Ese doctor ya no está disponible. Elige otro doctor o Ninguno.",
+    "providerNotAllowed": "Solo las citas pueden tener un doctor."
   },
   "addEvent": {
     "addEvent": "Agregar evento",
@@ -280,6 +289,15 @@
       "lockedRepeat": "Según se necesite · no se puede cambiar. Para ponerle horario, suspéndelo y agrégalo de nuevo.",
       "remindersNone": "Sin recordatorios. Los medicamentos según se necesite no tienen horario.",
       "updateOldBackend": "Aún no se pudo agregar un medicamento según se necesite. Actualiza la app e inténtalo de nuevo."
+    },
+    "doctor": {
+      "label": "Doctor",
+      "none": "Ninguno",
+      "add": "Agregar un doctor",
+      "removed": "{{name}} (quitado)",
+      "linked": "Doctor vinculado",
+      "series": "Se aplica a toda la serie",
+      "filledFrom": "Completado con la dirección de {{name}}"
     }
   },
   "deleteEvent": {
@@ -353,5 +371,16 @@
     "noteCount_one": "{{count}} nota",
     "noteCount_other": "{{count}} notas"
   },
-  "permissionDenied": "No tienes permiso para hacer cambios en este círculo."
+  "permissionDenied": "No tienes permiso para hacer cambios en este círculo.",
+  "today": "Hoy",
+  "yesterday": "Ayer",
+  "tomorrow": "Mañana",
+  "daySummary": {
+    "doses_one": "{{count}} dosis",
+    "doses_other": "{{count}} dosis",
+    "appointments_one": "{{count}} cita",
+    "appointments_other": "{{count}} citas",
+    "tasks_one": "{{count}} tarea",
+    "tasks_other": "{{count}} tareas"
+  }
 }

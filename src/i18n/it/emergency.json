@@ -380,5 +380,38 @@
   "conflict": {
     "title": "Qualcun altro ha aggiornato questa sezione",
     "message": "Un altro caregiver ha modificato questa sezione mentre stavi apportando le tue modifiche. Abbiamo caricato la versione più recente. Controllala e rifai la modifica."
+  },
+  "providers": {
+    "visitsLink": "Visite e note",
+    "visitsLinkFor": "con {{name}}",
+    "removedName": "{{name}} (rimosso)",
+    "errors": {
+      "limitReached": "Hai raggiunto il limite di 50 medici. Rimuovine uno per aggiungerne un altro.",
+      "conflict": "Qualcun altro ha appena modificato i medici. Abbiamo ricaricato l'elenco: riprova.",
+      "archived": "Questo medico è già stato rimosso. Abbiamo ricaricato l'elenco."
+    },
+    "visits": {
+      "title": "Visite e note",
+      "loading": "Caricamento delle visite",
+      "errorTitle": "Impossibile caricare le visite",
+      "notFound": "Questo medico non è disponibile.",
+      "nextVisit": "Prossima visita",
+      "pastVisits": "Visite passate",
+      "noPast": "Ancora nessuna visita passata.",
+      "noteCount_one": "{{count}} nota",
+      "noteCount_other": "{{count}} note",
+      "noNotes": "Ancora nessuna nota",
+      "addNote": "Aggiungi una nota",
+      "addNoteFor": "Aggiungi una nota alla visita del {{date}}",
+      "more": "mostra tutto",
+      "less": "mostra meno",
+      "showEarlier": "Mostra visite precedenti",
+      "earlierLoaded": "Visite precedenti caricate.",
+      "earlierFailed": "Impossibile caricare le visite precedenti. Riprova.",
+      "emptyTitle": "Ancora nessuna visita con {{name}}",
+      "emptyBody": "Scegli {{name}} come medico quando aggiungi o modifichi un appuntamento. Le visite e le relative note compariranno qui.",
+      "addAppointment": "Aggiungi un appuntamento",
+      "unnamedAuthor": "Qualcuno"
+    }
   }
 }

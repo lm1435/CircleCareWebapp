@@ -380,5 +380,38 @@
   "conflict": {
     "title": "Quelqu’un d’autre a modifié cette section",
     "message": "Un autre aidant a modifié cette section pendant que vous la modifiiez. Nous avons chargé la dernière version. Relisez-la, puis refaites votre modification."
+  },
+  "providers": {
+    "visitsLink": "Visites et notes",
+    "visitsLinkFor": "avec {{name}}",
+    "removedName": "{{name}} (retiré)",
+    "errors": {
+      "limitReached": "Vous avez atteint la limite de 50 médecins. Retirez-en un pour en ajouter un autre.",
+      "conflict": "Quelqu’un d’autre vient de modifier les médecins. Nous avons rechargé la liste, veuillez réessayer.",
+      "archived": "Ce médecin a déjà été retiré. Nous avons rechargé la liste."
+    },
+    "visits": {
+      "title": "Visites et notes",
+      "loading": "Chargement des visites",
+      "errorTitle": "Impossible de charger les visites",
+      "notFound": "Ce médecin n’est pas disponible.",
+      "nextVisit": "Prochaine visite",
+      "pastVisits": "Visites passées",
+      "noPast": "Aucune visite passée pour l’instant.",
+      "noteCount_one": "{{count}} note",
+      "noteCount_other": "{{count}} notes",
+      "noNotes": "Aucune note pour l’instant",
+      "addNote": "Ajouter une note",
+      "addNoteFor": "Ajouter une note à la visite du {{date}}",
+      "more": "voir plus",
+      "less": "voir moins",
+      "showEarlier": "Afficher les visites précédentes",
+      "earlierLoaded": "Visites précédentes chargées.",
+      "earlierFailed": "Impossible de charger les visites précédentes. Veuillez réessayer.",
+      "emptyTitle": "Aucune visite avec {{name}} pour l’instant",
+      "emptyBody": "Choisissez {{name}} comme médecin lorsque vous ajoutez ou modifiez un rendez-vous. Les visites et leurs notes apparaîtront ici.",
+      "addAppointment": "Ajouter un rendez-vous",
+      "unnamedAuthor": "Quelqu’un"
+    }
   }
 }

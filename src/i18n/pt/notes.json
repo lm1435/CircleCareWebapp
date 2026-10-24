@@ -44,7 +44,6 @@
   },
   "deleteTitle": "Excluir nota?",
   "deleteConfirm": "Esta nota será removida para todos no círculo.",
-  "loadOlder": "Mostrar notas anteriores",
   "postRequirementHint": "Escreva uma nota ou escolha um humor para publicar",
   "moodStrip": {
     "summary": "Esta semana: {{list}}",
@@ -58,5 +57,13 @@
     "count_okay_other": "Regular: {{count}}",
     "count_tough_one": "Difícil: {{count}}",
     "count_tough_other": "Difícil: {{count}}"
-  }
+  },
+  "date": {
+    "label": "Data",
+    "today": "Hoje",
+    "reset": "Voltar para hoje",
+    "futureError": "Escolha hoje ou uma data anterior."
+  },
+  "showOlder": "Mostrar notas mais antigas",
+  "noOlder": "Sem notas mais antigas"
 }

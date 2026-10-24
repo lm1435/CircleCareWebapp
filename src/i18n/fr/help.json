@@ -58,7 +58,7 @@
         },
         {
           "question": "Quelles notifications vais-je recevoir ?",
-          "answer": "Vous recevrez des alertes réparties en quatre groupes que vous pouvez activer ou désactiver dans Profil : Médicaments (doses prises, sautées ou non renseignées), Tâches et rendez-vous (lorsqu’un élément vous est attribué et avant son échéance), Notes (lorsque quelqu’un ajoute une note) et Point du jour et conseils. Si vous êtes la personne aidée, vous recevez aussi vos propres rappels de dose, toujours activés."
+          "answer": "Vous recevrez des alertes réparties en cinq groupes que vous pouvez activer ou désactiver dans Profil : Médicaments (doses prises, sautées ou non renseignées), Tâches et rendez-vous (lorsqu’un élément vous est attribué et avant son échéance), Notes (lorsque quelqu’un ajoute une note), Point du jour et conseils et Gardes (nouvelles gardes à pourvoir, rappels et changements de vos gardes). Si vous êtes la personne aidée, vous recevez aussi vos propres rappels de dose, toujours activés."
         },
         {
           "question": "Que sont les heures de silence ?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "Puis-je désactiver certaines notifications ?",
-          "answer": "Oui. Allez dans Profil, puis Notifications. Chacun des quatre interrupteurs active ou désactive un groupe entier pour votre compte, dans tous les cercles dont vous faites partie. Si vous désactivez Médicaments, vous ne serez pas prévenu lorsqu’une dose n’est pas renseignée."
+          "answer": "Oui. Allez dans Profil, puis Notifications. Chacun des cinq interrupteurs active ou désactive un groupe entier pour votre compte, dans tous les cercles dont vous faites partie. Si vous désactivez Médicaments, vous ne serez pas prévenu lorsqu’une dose n’est pas renseignée."
         }
       ]
     },
