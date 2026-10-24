@@ -43,6 +43,8 @@ describe('summary sentence plurals (web)', () => {
   it('pt', async () => {
     expect(await render('pt', 1, 1)).toContain('1 foi tomada com atraso. 1 não foi marcada.');
     expect(await render('pt', 2, 2)).toContain('2 foram tomadas com atraso. 2 não foram marcadas.');
+    // CLDR pt selects _one at 0: the _zero forms keep "0 foi tomada" out of the report.
+    expect(await render('pt', 0, 0)).toContain('0 doses tomadas com atraso. 0 doses não marcadas.');
   });
   it('de', async () => {
     expect(await render('de', 1, 1)).toContain('1 wurde verspätet eingenommen. 1 wurde nicht eingetragen.');

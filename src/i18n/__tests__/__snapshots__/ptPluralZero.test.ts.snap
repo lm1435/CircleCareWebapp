@@ -142,6 +142,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Doses administradas (Ana): 1",
     "Ana: 2 doses administradas",
   ],
+  "pt meds:export.summaryLate": [
+    "0 doses tomadas com atraso.",
+    "1 foi tomada com atraso.",
+    "2 foram tomadas com atraso.",
+  ],
+  "pt meds:export.summaryNotMarked": [
+    "0 doses não marcadas.",
+    "1 não foi marcada.",
+    "2 não foram marcadas.",
+  ],
+  "pt meds:export.summaryTaken": [
+    "Ana tomou 0 de {{total}} doses agendadas ({{rate}}%).",
+    "Ana tomou 1 de {{total}} doses agendadas ({{rate}}%).",
+    "Ana tomou 2 de {{total}} doses agendadas ({{rate}}%).",
+  ],
   "pt meds:page.stock.daysLeft": [
     "Dias restantes: 0",
     "Dias restantes: 1",
@@ -416,6 +431,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Doses administradas (Ana): 0",
     "Doses administradas (Ana): 1",
     "Ana: 2 doses administradas",
+  ],
+  "pt-PT meds:export.summaryLate": [
+    "0 doses tomadas com atraso.",
+    "1 foi tomada com atraso.",
+    "2 foram tomadas com atraso.",
+  ],
+  "pt-PT meds:export.summaryNotMarked": [
+    "0 doses não marcadas.",
+    "1 não foi marcada.",
+    "2 não foram marcadas.",
+  ],
+  "pt-PT meds:export.summaryTaken": [
+    "Ana tomou 0 de {{total}} doses agendadas ({{rate}}%).",
+    "Ana tomou 1 de {{total}} doses agendadas ({{rate}}%).",
+    "Ana tomou 2 de {{total}} doses agendadas ({{rate}}%).",
   ],
   "pt-PT meds:page.stock.daysLeft": [
     "Dias restantes: 0",
