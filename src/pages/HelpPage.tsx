@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Accordion, Button, Card, Sheet, Text, useAccordionGroup } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { Analytics } from '@/lib/analytics';
+import { HelpHome } from '@/components/help/HelpHome';
 
 // Static help / FAQ page (plan Task 8.8 — no writes). FAQ content is ported
 // verbatim from the mobile HelpScreen (mobile/src/screens/help) into the `help`
@@ -30,6 +31,10 @@ export default function HelpPage(): ReactElement {
     <section className="mx-auto w-full max-w-2xl p-6 md:p-8">
       <Text variant="editorialTitle">{t('title')}</Text>
       <p className="mt-3.5 text-md font-medium text-ink">{t('subtitle')}</p>
+
+      {/* In-app help center: search, Popular and categories over the bundled
+          articles (renders nothing until content.json is present). */}
+      <HelpHome />
 
       <div className="mt-6 flex flex-col gap-4">
         {SECTION_KEYS.map((key) => {

@@ -1,0 +1,2115 @@
+{
+  "generated": "2026-10-24",
+  "categories": [
+    {
+      "id": "getting-started",
+      "label": {
+        "en": "Getting started",
+        "es": "Primeros pasos"
+      }
+    },
+    {
+      "id": "medications",
+      "label": {
+        "en": "Medications",
+        "es": "Medicamentos"
+      }
+    },
+    {
+      "id": "calendar",
+      "label": {
+        "en": "Calendar and tasks",
+        "es": "Calendario y tareas"
+      }
+    },
+    {
+      "id": "notes-and-records",
+      "label": {
+        "en": "Notes and records",
+        "es": "Notas y registros"
+      }
+    },
+    {
+      "id": "notifications",
+      "label": {
+        "en": "Notifications",
+        "es": "Notificaciones"
+      }
+    },
+    {
+      "id": "plans-and-account",
+      "label": {
+        "en": "Plans and account",
+        "es": "Planes y cuenta"
+      }
+    },
+    {
+      "id": "privacy",
+      "label": {
+        "en": "Privacy and security",
+        "es": "Privacidad y seguridad"
+      }
+    }
+  ],
+  "popular": [
+    "invite-family",
+    "add-a-medication",
+    "confirm-a-dose",
+    "notifications-not-arriving",
+    "free-and-premium"
+  ],
+  "articles": {
+    "en": [
+      {
+        "slug": "create-a-care-circle",
+        "category": "getting-started",
+        "title": "Set up your first care circle",
+        "summary": "A care circle is a private space for one person you care for. Create an account, choose who you are caring for, type their name and tap \"Create circle\". It takes about a minute and is free.",
+        "steps": [
+          "Download CircleCare on your iPhone or Android phone and tap \"Get started\" to create your account.",
+          "Under \"Who are you caring for?\", choose \"A parent\", \"My spouse / partner\", \"My child\", \"Myself\" or \"Someone else\".",
+          "Type their name or what you call them, like Mom or Grandpa. Adding a date of birth is optional.",
+          "Tap \"Create circle\".",
+          "Pick a first step: add a medication, an appointment, invite someone or add emergency info. You can also tap \"Skip for now\" and come back later."
+        ],
+        "body": "## Were you invited by someone?\n\nIf a family member already set up a circle and invited you, **do not create a new one**. Open the invite link from your email instead, or tap \"Have an invite code?\". If an invitation is waiting for you, the \"Create circle\" screen shows a banner that says \"You have 1 pending invitation\". Tap \"Review invitation\" to join. See [Join a circle you were invited to](/help/join-a-circle/).\n\n## Good to know\n\n- One circle is for one person. If you care for both parents, see [Care for more than one person](/help/second-circle/).\n- Choosing \"Myself\" makes a circle for your own care. You are both the owner and the care recipient, and you can still invite family to help.\n- After your first circle, the app may show the Premium plans once. You can tap \"Continue with free plan\" and keep using CircleCare for free.\n- You can also create a circle on a computer at my.circlecare.app: click \"Create circle\" on your list of circles. See [Use CircleCare on a computer](/help/use-on-a-computer/).\n\n## What to do next\n\n1. [Add a medication and its reminders](/help/add-a-medication/).\n2. [Invite family and caregivers](/help/invite-family/).\n3. [Keep emergency info and share a care summary](/help/care-info-and-summary/).",
+        "related": [
+          "invite-family",
+          "add-a-medication",
+          "join-a-circle",
+          "free-and-premium"
+        ],
+        "keywords": [
+          "create circle",
+          "new circle",
+          "get started",
+          "set up account",
+          "sign up",
+          "care for my mom",
+          "first steps"
+        ],
+        "video": {
+          "file": "create-a-care-circle-en.mp4",
+          "durationSec": 54
+        },
+        "poster": "create-a-care-circle-en.jpg"
+      },
+      {
+        "slug": "invite-family",
+        "category": "getting-started",
+        "title": "Invite family and caregivers",
+        "summary": "The circle owner invites people by email from the circle's Home screen. They get an email with a link and a 6-character code, and joining is always free for them.",
+        "steps": [
+          "Open the circle and stay on the \"Home\" tab.",
+          "Scroll to \"Care team\" and tap \"Add family member\".",
+          "Under \"Who are you inviting?\", choose \"Family caregiver\" or \"Care recipient\".",
+          "Type their email address and tap \"Send invitation\".",
+          "Optional: tap \"Share invite link\" or \"Copy link\" to send the link by text message or chat, so they can join right away."
+        ],
+        "body": "## What the invited person gets\n\nCircleCare emails them a link and an invite code. When they open the link on a phone with CircleCare installed, the app opens. Without the app, the link opens in their web browser, and they can join there. They need a free account. See [Join a circle you were invited to](/help/join-a-circle/).\n\n## Caregiver or care recipient\n\n- **Family caregiver** is for siblings, partners, friends or paid helpers who help with care.\n- **Care recipient** is the person being cared for. They get a simpler app focused on medication reminders, and they can confirm when they have taken a dose. A circle can have only one care recipient. The care recipient does not need an account for the circle to work.\n\n## Limits on the free plan\n\n- A free circle includes you plus 1 caregiver. A pending invitation holds that spot until it is accepted, cancelled or expires.\n- If the spot is taken by a pending invite, the app shows \"Your invitation is already in use\". Cancel that invitation to free the spot, or upgrade.\n- Inviting the care recipient is never limited. They do not count toward the caregiver limit.\n- With Premium, you can invite as many caregivers as you need. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Pending invitations\n\nInvitations last 7 days. Under \"Care team\", \"Pending invitations\" shows each one and when it expires. Once an invitation has expired, tap \"Resend\" to send it again for another 7 days. To withdraw one, tap the X next to it.\n\n## Good to know\n\n- Only the circle owner and managers can invite people. Other caregivers cannot send invitations. See [Owners, caregivers, care recipients and view-only](/help/roles-and-permissions/).\n- On a computer at my.circlecare.app, open the circle, choose \"Members\" and then \"Invite member\".",
+        "related": [
+          "join-a-circle",
+          "roles-and-permissions",
+          "free-and-premium",
+          "create-a-care-circle"
+        ],
+        "keywords": [
+          "invite",
+          "add sibling",
+          "add family member",
+          "share access",
+          "add caregiver",
+          "invite code",
+          "invitation link",
+          "resend invite"
+        ],
+        "video": {
+          "file": "invite-family-en.mp4",
+          "durationSec": 55
+        },
+        "poster": "invite-family-en.jpg"
+      },
+      {
+        "slug": "join-a-circle",
+        "category": "getting-started",
+        "title": "Join a circle you were invited to",
+        "summary": "Open the invite link from your email and follow the steps to create a free account. You will join the circle straight away. Joining someone else's circle is always free.",
+        "steps": [
+          "Find the invitation email from CircleCare. Check your spam or promotions folder if you do not see it.",
+          "Tap the link in the email. If CircleCare is on your phone, the app opens. If not, the invitation opens in your web browser.",
+          "In the app, the \"Enter your invite code\" screen opens with your code filled in. Type the email address the invite was sent to and tap \"Continue\".",
+          "Check who invited you, then tap \"Continue to create account\" in the app, or \"Create an account to join\" in the browser.",
+          "Create your account. In the app, tap \"Create account and join\".",
+          "If you already have an account, choose \"Sign in\" (or \"I already have an account\" in the browser). You join the circle as soon as you sign in."
+        ],
+        "body": "## If you only have the code\n\nThe invitation email also includes a 6-character code. Open the app and tap \"Have an invite code?\", then \"Enter code\". Type the email address the invite was sent to and the code. On a computer at my.circlecare.app, choose \"Join with an invite code\".\n\n## If the app asks you to create a circle\n\nAfter you sign up, the app may show the \"Create circle\" screen. If someone invited you, **you do not need your own circle**.\n\n- Look for the banner \"You have 1 pending invitation\" at the top and tap \"Review invitation\", then \"Accept\".\n- Or tap \"Have an invite code?\" at the bottom of the screen and type your code.\n\n## If you already made a circle by mistake\n\nYour invitation still works. On your list of circles, tap the pending invite card (\"Tap to review and join circles\") and accept it. On a computer, go to \"Your invitations\".\n\nThen you can delete the extra circle: open it, go to \"Manage\" and tap \"Delete circle\". A deleted circle does not count toward your free circle, so you can still start your own circle later.\n\n## If the invite does not work\n\n- Invitations last 7 days. If yours has expired, ask the person who invited you to tap \"Resend\" or send a new invite.\n- To join from the list of pending invitations, sign in with the email address the invite was sent to. If you use a different email (for example \"Hide My Email\" with Apple), use the invite link or the code instead.\n\n## Good to know\n\n- Being invited never costs anything, on the free plan or on Premium. Only the circle owner can pay for Premium.\n- You can belong to several circles, for example your mom's circle and your dad's circle.",
+        "related": [
+          "invite-family",
+          "roles-and-permissions",
+          "create-a-care-circle",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "join circle",
+          "accept invite",
+          "invite code",
+          "invitation",
+          "invite link not working",
+          "invited by sibling",
+          "pending invite"
+        ],
+        "video": {
+          "file": "join-a-circle-en.mp4",
+          "durationSec": 118
+        },
+        "poster": "join-a-circle-en.jpg"
+      },
+      {
+        "slug": "roles-and-permissions",
+        "category": "getting-started",
+        "title": "Owners, caregivers, care recipients and view-only",
+        "summary": "Each circle has one owner, who created it. Caregivers can see and update care information. A manager is a caregiver who can also invite and remove people. The care recipient gets reminders and confirms their doses. View-only means you can see everything but not make changes.",
+        "body": "## Circle owner\n\nThe person who created the circle. The owner can invite people, cancel or resend invitations, and remove members, and is the only one who can:\n\n- change the circle's details (**Edit circle**)\n- delete the circle (**Delete circle**)\n- choose who gets medication reminders\n- make or remove a manager\n- pay for Premium for the circle\n\n## Manager\n\nA manager is a caregiver the owner has chosen to help run the circle. Managers can:\n\n- invite people, and resend or cancel any pending invitation\n- see the pending invitations\n- remove caregivers from the circle (never the owner or another manager)\n- put someone else on a care shift or take someone off one (see [Plan who is on care shifts](/help/care-shifts/))\n\nManagers cannot change the circle's details, delete the circle, choose who gets medication reminders, handle billing, or make other managers. A circle can have more than one manager.\n\nTo make someone a manager, the owner opens the circle, taps the person in the list of members (on the web, uses the menu on their row in **Members**), and chooses **Make manager**. To undo it, choose **Remove as manager**. The person stays in the circle as a caregiver.\n\nGood to know:\n\n- Managers are a Premium feature. It follows the owner's plan, so only the owner needs Premium. If the owner's Premium ends, every manager goes back to being a caregiver. Invitations they already sent stay valid. If the owner subscribes again, the owner has to choose managers again.\n- The care recipient and view-only members cannot be managers.\n- Seat limits are still the owner's. On the free plan the circle has room for the owner plus 1 caregiver, whoever sends the invitation.\n- A manager sees the manager tools in CircleCare 1.3.0 or later, and on the website. Older app versions show a manager as a regular caregiver.\n\n## Caregiver\n\nFamily members and helpers. When you invite someone, this is the **Family caregiver** choice. Caregivers can see and update care information: medications, doses, appointments, tasks, notes, vitals, documents and emergency info. A caregiver can leave a circle at any time with **Leave circle**, at the bottom of Home.\n\n## Care recipient\n\nThe person being cared for. If they join with their own account, they get medication reminders and can confirm when they have taken a dose, and the family is notified. A circle has at most one care recipient. They do not count toward the free plan's caregiver limit. In a circle you create for yourself (\"Myself\"), you are both the owner and the care recipient.\n\n## View-only\n\nA person with view-only access can see everything in the circle but cannot make changes. They see a \"You have view-only access\" notice, and the **New** button is dimmed. This happens when:\n\n- a free circle has more caregivers than the free plan allows, for example after the owner's Premium ends. The caregiver who joined first keeps editing, and the others become view-only.\n- the owner's Premium ended while they had more than one circle. The circles they did not keep become read-only for everyone.\n\nWhen the owner upgrades again, editing comes back for everyone. Nothing is deleted. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Where this is enforced\n\nThese rules are checked on CircleCare's servers, not only in the app. Someone without permission cannot get around them by using a different device or the website.",
+        "related": [
+          "invite-family",
+          "free-and-premium",
+          "privacy-and-security",
+          "join-a-circle"
+        ],
+        "keywords": [
+          "roles",
+          "owner",
+          "caregiver",
+          "care recipient",
+          "view only",
+          "permissions",
+          "who can edit",
+          "read only"
+        ],
+        "video": {
+          "file": "roles-and-permissions-en.mp4",
+          "durationSec": 60
+        },
+        "poster": "roles-and-permissions-en.jpg"
+      },
+      {
+        "slug": "use-on-a-computer",
+        "category": "getting-started",
+        "title": "Use CircleCare on a computer",
+        "summary": "Go to my.circlecare.app in any web browser and sign in with the same account you use on your phone. You see the same circles and information. Reminders and alerts only arrive on the phone app.",
+        "steps": [
+          "Open a web browser on your computer and go to my.circlecare.app.",
+          "Sign in with the same email, Google or Apple account you use in the phone app.",
+          "Your circle opens. If you have more than one, choose it from your list of circles. To get back to that list later, click the circle's name at the top and choose \"All circles\".",
+          "Use the menu on the side to move between Calendar, Medications, Tasks, Notes, Vitals, Documents, Members and more."
+        ],
+        "body": "## What you can do on a computer\n\nMost everyday things: see the calendar, add and edit medications, appointments and tasks, mark doses, write notes, log vitals, upload documents, keep emergency info, invite family from \"Members\", and manage your notification settings and subscription from \"Profile\". Anything you change shows up on everyone's phones too.\n\n## What needs the phone app\n\n- **Reminders and alerts.** CircleCare sends them as push notifications to the iPhone and Android app. The website does not deliver reminders. If you want reminders, install the app and turn on notifications. See [Not getting notifications](/help/notifications-not-arriving/).\n- **Adding by voice** is only in the phone app.\n- **Importing appointments from your phone's calendar** is only in the phone app.\n- **Face ID or fingerprint sign-in** is a phone feature.\n\n## Good to know\n\n- Invited family members can join from a browser without installing anything. They still need a free account.\n- To switch between circles on the website, click the circle's name at the top, then \"All circles\".",
+        "related": [
+          "notifications-not-arriving",
+          "join-a-circle",
+          "invite-family",
+          "quiet-hours"
+        ],
+        "keywords": [
+          "computer",
+          "web",
+          "browser",
+          "desktop",
+          "laptop",
+          "website",
+          "my.circlecare.app",
+          "web app"
+        ],
+        "video": {
+          "file": "use-on-a-computer-en.mp4",
+          "durationSec": 73
+        },
+        "poster": "use-on-a-computer-en.jpg"
+      },
+      {
+        "slug": "add-a-medication",
+        "category": "medications",
+        "title": "Add a medication and its reminders",
+        "summary": "Tap New, choose Medication, enter the name, dose and times, and save. Reminders are on by default, so the right person is reminded at each dose time.",
+        "steps": [
+          "Tap New at the bottom of the screen, then Med.",
+          "Type the Medication name and the Dosage (for example, 100mg or 1 tablet).",
+          "Under Date & time, pick a time, or tap a common schedule such as Every morning (it also sets Repeat to Daily). Once a time is set, tap Add another dose time for more doses in a day (up to 4).",
+          "Under Repeat, choose how often it is taken, such as Daily or Days of the week.",
+          "Check Reminders. Enable notifications is on, with At the scheduled time checked, and you can add Earlier reminders.",
+          "Tap Create Medication."
+        ],
+        "body": "## Good to know\n\n- **Who gets the reminder.** Dose reminders go to the care recipient. If the circle owner has chosen someone to handle medication reminders for them, that person gets them instead. See [How reminders and missed-dose alerts work](/help/reminders-and-alerts/).\n- **More details** holds refills, pharmacy, prescriber and instructions. Turn on **Track refills** to be told when the bottle is running low.\n- **Add a photo** of the bottle so everyone can confirm the right pill.\n- **Times are in the care recipient's time zone.** If you live somewhere else, the form shows both your time and theirs.\n- **If today's time has already passed**, the medication starts with its next scheduled dose. Nothing is recorded for today.\n- **Add by voice.** On supported phones, Premium circles can tap **Add by voice** and say the medication. The form fills in, and nothing is saved until you check it and confirm.\n\n## On a computer\n\nOn [my.circlecare.app](/help/use-on-a-computer/), open **Medications** and choose **Add medication**. The form has the same fields. Reminders are push notifications, so they only arrive on phones with the CircleCare app installed.\n\n## Limits\n\n- The free plan has no limit on how many medications or reminders you add.\n- CircleCare is a tool, not a doctor. It does not check for drug interactions or give dosing advice.",
+        "related": [
+          "medication-schedules",
+          "confirm-a-dose",
+          "reminders-and-alerts",
+          "as-needed-medications"
+        ],
+        "keywords": [
+          "add medication",
+          "new medicine",
+          "pill",
+          "dose",
+          "prescription",
+          "medication reminder",
+          "drug"
+        ],
+        "video": {
+          "file": "add-a-medication-en.mp4",
+          "durationSec": 94
+        },
+        "poster": "add-a-medication-en.jpg"
+      },
+      {
+        "slug": "medication-schedules",
+        "category": "medications",
+        "title": "Medications on certain days or every few days",
+        "summary": "Under Repeat, choose Days of the week for set weekdays, Every 2 days for every other day, or Cycle for patterns like 7 days on, 7 days off.",
+        "steps": [
+          "Tap New, then Med. Enter the name, dose and a time (for example, tap Every evening).",
+          "Tap Repeat.",
+          "For set weekdays, choose Days of the week, tap the days you need under Repeat on (the start day is already selected), then tap Done.",
+          "For every other day, choose Every 2 days.",
+          "For on and off patterns, choose Cycle and set the Days on and Days off (they start at 7 and 7).",
+          "Add an End date (optional) if the medication stops on a known date, then tap Create Medication."
+        ],
+        "body": "## Repeat options\n\nThe Repeat list offers: **Never**, **Daily**, **Every 2 days**, **Weekly**, **Monthly**, **Yearly**, **Cycle** and **Days of the week**. When you add a new medication, it also offers **As needed** for medications with no set times (see [As-needed medications](/help/as-needed-medications/)).\n\nOn the web, the same choices are called **Every other day** and **Cycle (days on / off)**.\n\n## Good to know\n\n- **Days of the week** follows the care recipient's time zone.\n- **Several doses a day** are set under Date & time with **Add another dose time**, not under Repeat.\n- **Leave the end date blank** to keep the medication going until you stop it.\n- **A schedule that started on a day can't drop that day later.** To remove it, stop the medication and add it again with the new days.\n- There is no \"every 3 days\" or other custom interval yet. **Cycle** covers most on-and-off patterns.\n\n## Not for meals or routines\n\nMeals, walks and other routines work better as a repeating task. See [Reminders for meals and daily routines](/help/routine-reminders/).",
+        "related": [
+          "add-a-medication",
+          "routine-reminders",
+          "stop-or-delete-a-medication"
+        ],
+        "keywords": [
+          "weekdays",
+          "every other day",
+          "specific days",
+          "cycle",
+          "on and off",
+          "schedule",
+          "pill",
+          "repeat"
+        ],
+        "video": {
+          "file": "medication-schedules-en.mp4",
+          "durationSec": 111
+        },
+        "poster": "medication-schedules-en.jpg"
+      },
+      {
+        "slug": "confirm-a-dose",
+        "category": "medications",
+        "title": "Mark a dose taken or skipped",
+        "summary": "On Home, tap Take when a dose is given or Skip when it is not. Everyone in the circle sees who marked it and when.",
+        "steps": [
+          "Open Home, where today's doses are listed.",
+          "Tap Take on the dose that was given, or Skip if it was not given.",
+          "If you tapped by mistake, tap Undo while it shows.",
+          "To see who marked it, tap View history, then History."
+        ],
+        "body": "## What each status means\n\n- **Taken**: someone marked it as given.\n- **Skipped**: someone marked it as not given. It shows in grey and counts against the adherence rate.\n- **Not marked**: nobody marked the dose. CircleCare never decides on its own that a dose was missed. An unmarked dose stays **Not marked** until someone marks it.\n\n## Good to know\n\n- **From a reminder notification** on your phone, you can also tap I took it or Skip.\n- A dose that is past its time and not marked yet shows **Overdue**.\n- **Anyone in the circle can mark a dose**, except people with view-only access.\n- **If two people mark the same dose**, the app shows who marked it first, for example \"Already marked taken by Ana at 8:05 AM.\" You can change the answer, and everyone sees the change in Activity.\n- **Older doses** can be marked from the Meds tab or the calendar.\n- **Marked doses build the history.** Open the Meds tab to see adherence, or share a [care summary](/help/care-info-and-summary/).\n\n## On a computer\n\nOn the web Overview, use **Confirm** or **Skip** next to each dose.",
+        "related": [
+          "reminders-and-alerts",
+          "add-a-medication",
+          "care-info-and-summary"
+        ],
+        "keywords": [
+          "mark taken",
+          "confirm dose",
+          "skip dose",
+          "pill taken",
+          "not marked",
+          "undo",
+          "dose"
+        ],
+        "video": {
+          "file": "confirm-a-dose-en.mp4",
+          "durationSec": 46
+        },
+        "poster": "confirm-a-dose-en.jpg"
+      },
+      {
+        "slug": "reminders-and-alerts",
+        "category": "medications",
+        "title": "How reminders and missed-dose alerts work",
+        "summary": "At dose time the care recipient (or the person chosen to handle their reminders) gets a push. If nobody marks the dose, CircleCare follows up at 15 minutes, 30 minutes and 1 hour, reaching more of the circle each time.",
+        "body": "## The reminder\n\nAt the scheduled time, a push notification goes to **one person**:\n\n1. the member the owner chose for **Medication reminders**, if there is one,\n2. otherwise the care recipient,\n3. otherwise the circle owner.\n\nTo choose that member, the owner opens **Home**, taps the person under **Care team**, and taps **Medication reminders** (then **Switch**, if someone else already gets them).\n\nYou can also turn on **Earlier reminders**: **24 hours before**, **1 hour before**, **30 minutes before** or **15 minutes before**.\n\n## If nobody marks the dose\n\n| Time after the dose | Who is told |\n|---|---|\n| 15 minutes | The person who gets the reminders |\n| 30 minutes | The caregivers in the circle |\n| 1 hour | Everyone in the circle |\n\nThe alerts stop as soon as someone marks the dose **Taken** or **Skipped**. CircleCare never marks a dose \"missed\" by itself: the dose stays **Not marked** until someone marks it. These follow-ups are included on the free plan. People with view-only access don't get reminders or these alerts.\n\n## Quiet hours\n\nDuring your [quiet hours](/help/quiet-hours/), reminders and earlier reminders are not sent. Missed-dose alerts wait and arrive when quiet hours end, unless the dose was marked in the meantime. If several alerts waited for the same dose, only the latest one arrives.\n\n## Good to know\n\n- **Push only works on phones.** The web app does not send notifications, so install the app on your phone and allow notifications. See [Not getting notifications](/help/notifications-not-arriving/).\n- **Turning reminders off for a medication** stops both the reminder and the follow-up alerts for it.\n- **To stop dose updates and missed-dose alerts just for you**, go to Profile and turn off **Medications** under Notifications. This does not stop the dose reminders sent to you.",
+        "related": [
+          "confirm-a-dose",
+          "quiet-hours",
+          "notifications-not-arriving",
+          "roles-and-permissions"
+        ],
+        "keywords": [
+          "medication reminder",
+          "missed dose",
+          "escalation",
+          "alert family",
+          "notification",
+          "pill reminder",
+          "dose"
+        ],
+        "video": {
+          "file": "reminders-and-alerts-en.mp4",
+          "durationSec": 106
+        },
+        "poster": "reminders-and-alerts-en.jpg"
+      },
+      {
+        "slug": "stop-or-delete-a-medication",
+        "category": "medications",
+        "title": "Stop a medication vs delete it",
+        "summary": "Use Discontinue when a medication is stopped: reminders end right away and its history is kept. Use Delete only for a medication added by mistake.",
+        "steps": [
+          "Open Care, then the Meds tab.",
+          "Tap the ... button on the medication.",
+          "Tap Discontinue to stop it, or Delete to remove it.",
+          "Confirm."
+        ],
+        "body": "## Discontinue (stop)\n\n- Takes effect **right away**, for the whole medication (every dose time).\n- Upcoming doses leave the calendar and reminders stop.\n- Past doses stay in the history and the reports.\n- The medication moves to **Inactive medications**. Tap **Reactivate** there to turn it back on. Doses that passed while it was stopped don't come back.\n\n## Delete\n\n- The medication disappears from the medication list and the calendar, and its reminders stop.\n- Doses already recorded stay in the history and the reports.\n- This can't be undone. If you might need it again, use **Discontinue** instead.\n\n## Good to know\n\n- In the medication form, the same choices are under **Manage medication**.\n- In the calendar, deleting a single dose asks **This dose only** or **This and all future doses**.\n- On the web, open **Medications** and use the same **Discontinue** and **Delete** options on each card.",
+        "related": [
+          "add-a-medication",
+          "medication-schedules",
+          "export-your-data"
+        ],
+        "keywords": [
+          "stop medication",
+          "discontinue",
+          "delete medication",
+          "remove pill",
+          "inactive",
+          "reactivate"
+        ],
+        "video": {
+          "file": "stop-or-delete-a-medication-en.mp4",
+          "durationSec": 74
+        },
+        "poster": "stop-or-delete-a-medication-en.jpg"
+      },
+      {
+        "slug": "as-needed-medications",
+        "category": "medications",
+        "title": "As-needed (PRN) medications",
+        "summary": "Choose As needed under Repeat when you add the medication. It has no set times or reminders. Whoever gives a dose logs it, so the circle can see when it was last given.",
+        "steps": [
+          "Tap New at the bottom of the screen, then Med. Type the Medication name and the Dosage.",
+          "Under Repeat, choose As needed.",
+          "Optionally fill in What is it for? (for example, pain or nausea), then tap Create Medication.",
+          "When you give a dose, tap Gave a dose on its card on Home.",
+          "Under Given, keep Now or tap an earlier time (such as 15 min ago), add a note if you like, and tap Log dose."
+        ],
+        "body": "## Good to know\n\n- **No reminders and no alerts.** As-needed medications don't have a schedule.\n- **Everyone sees it.** Logging a dose lets the circle know, and the card shows \"Last given\" with the time and who gave it.\n- **Double-dose check.** If someone else logged the same medication in the last 30 minutes, the app asks before logging another.\n- **Earlier doses.** You can log a dose from the last 48 hours, but never in the future.\n- **History.** Tap **History** on the card to see every dose. You can remove a dose logged by mistake, and the circle is told.\n- **Not part of adherence.** Reports list as-needed doses separately from the adherence rate.\n- **Can't switch later.** A medication can't change between scheduled and as needed. Discontinue it and add it again.\n\nCircleCare doesn't set limits on how often a dose can be logged. Follow the instructions from the doctor or pharmacist. The app is a tool, not a doctor.\n\nOn the web, the same **As needed** option is in the medication form.",
+        "related": [
+          "add-a-medication",
+          "confirm-a-dose",
+          "stop-or-delete-a-medication"
+        ],
+        "keywords": [
+          "prn",
+          "as needed",
+          "when needed",
+          "pain medicine",
+          "log dose",
+          "pill",
+          "rescue inhaler"
+        ],
+        "video": {
+          "file": "as-needed-medications-en.mp4",
+          "durationSec": 122
+        },
+        "poster": "as-needed-medications-en.jpg"
+      },
+      {
+        "slug": "routine-reminders",
+        "category": "calendar",
+        "title": "Reminders for meals and daily routines",
+        "summary": "Add meals, walks or other routines as a repeating Task assigned to the person who should do them. Keep medications for real medications.",
+        "steps": [
+          "Tap New, then Task.",
+          "Enter a Title, such as Lunch.",
+          "Under Assigned to, choose the person who should be reminded.",
+          "Under Date & time, set the date and time, then under Repeat choose Daily or Days of the week.",
+          "Check Reminders: At the scheduled time is on, and you can add an earlier reminder.",
+          "Tap Create Task."
+        ],
+        "body": "## Why a task and not a medication\n\nAdding a meal as a medication fills the medication list, the adherence numbers and the care summary with things that aren't medications. A doctor reading that summary would see \"Lunch\" next to real prescriptions. A repeating task reminds the same way and keeps medication records clean.\n\n## Who gets the reminder\n\n- The person in **Assigned to** gets it.\n- If you leave it on **Anyone**, everyone in the circle who can edit gets it.\n- Reminders are push notifications on phones. The web app doesn't send them.\n\n## Good to know\n\n- Tick the task off when it's done. The circle sees who did it.\n- If you have [quiet hours](/help/quiet-hours/) set, task reminders during those hours are not sent.\n- To change the routine later, edit the task. Changes apply to upcoming tasks only.",
+        "related": [
+          "tasks",
+          "medication-schedules",
+          "quiet-hours"
+        ],
+        "keywords": [
+          "meal reminder",
+          "routine",
+          "daily reminder",
+          "lunch",
+          "walk",
+          "habit",
+          "repeating task"
+        ],
+        "video": {
+          "file": "routine-reminders-en.mp4",
+          "durationSec": 99
+        },
+        "poster": "routine-reminders-en.jpg"
+      },
+      {
+        "slug": "appointments",
+        "category": "calendar",
+        "title": "Add an appointment",
+        "summary": "Tap New, choose Appointment, add a title, date, time and location, and save. Everyone in the circle sees it on the calendar.",
+        "steps": [
+          "Tap New at the bottom of the screen, then Appointment.",
+          "Enter a Title, or tap a suggestion such as Doctor visit.",
+          "Add the Location and Details (optional).",
+          "Under Assigned to, choose who is taking them, or leave Anyone.",
+          "Set the Date & time. Then pick how long it lasts: 30 min, 1 hr or 2 hrs.",
+          "Set Reminders and tap Create Appointment."
+        ],
+        "body": "## Reminders\n\nYou can be reminded **At the scheduled time** and choose **Earlier reminders**: 24 hours, 1 hour, 30 minutes or 15 minutes before. The person in **Assigned to** gets them. With **Anyone**, everyone in the circle who can edit does.\n\n## Good to know\n\n- **Repeat** works the same as for tasks: daily, weekly, monthly and more.\n- **Times are in the care recipient's time zone.**\n- After the visit, open the appointment to add notes about what the doctor said.\n- **Add by voice** is available on supported phones for Premium circles.\n- On the web, open **Calendar** and add the appointment there.\n\n## Limits\n\nReminders are push notifications on phones only. During [quiet hours](/help/quiet-hours/) they are not sent.",
+        "related": [
+          "tasks",
+          "daily-care-notes",
+          "care-info-and-summary",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "appointment",
+          "doctor visit",
+          "calendar",
+          "schedule",
+          "cita",
+          "checkup",
+          "reminder"
+        ],
+        "video": {
+          "file": "appointments-en.mp4",
+          "durationSec": 101
+        },
+        "poster": "appointments-en.jpg"
+      },
+      {
+        "slug": "tasks",
+        "category": "calendar",
+        "title": "Share and assign tasks",
+        "summary": "Add a task, assign it to someone or leave it for anyone, and the circle sees when it's done. Tasks can be one-time or repeating.",
+        "steps": [
+          "Tap New, then Task.",
+          "Enter a Title, or tap a suggestion such as Grocery run.",
+          "Under Assigned to, choose a person, or leave Anyone.",
+          "Set a date and time if it has one, and a Repeat if it happens again.",
+          "Tap Create Task.",
+          "When it's done, open Care, then Tasks, and tap Done on it. Tap Undo if you marked the wrong one."
+        ],
+        "body": "## Where tasks live\n\nOpen **Care**, then **Tasks**. **Open** shows what still needs doing and **Completed** shows the last 30 days. You can sort by **Due date**, **Assignee** or **Created date**.\n\n## Reminders\n\n- A task with a time can send reminders: at the time and earlier (24 hours, 1 hour, 30 or 15 minutes before).\n- The assigned person gets them. If the task is for **Anyone**, everyone in the circle who can edit does.\n- People are also told when a task is assigned to them.\n\n## Good to know\n\n- **Completed tasks can't be edited**, but you can still open them and add notes. Delete is the only way to remove one.\n- **Changes to a repeating task** apply to upcoming tasks. Completed and past ones stay as they were.\n- People with view-only access can see tasks but not add or complete them.\n- On the web, open **Tasks**.",
+        "related": [
+          "routine-reminders",
+          "appointments",
+          "roles-and-permissions",
+          "invite-family"
+        ],
+        "keywords": [
+          "task",
+          "to-do",
+          "assign",
+          "errand",
+          "chore",
+          "share tasks",
+          "checklist"
+        ],
+        "video": {
+          "file": "tasks-en.mp4",
+          "durationSec": 81
+        },
+        "poster": "tasks-en.jpg"
+      },
+      {
+        "slug": "care-shifts",
+        "category": "calendar",
+        "title": "Plan who is on care shifts",
+        "summary": "With Premium, add blocks of time that need someone, such as nights or weekday mornings. Family can take open shifts, and everyone sees who is covering and what is still open.",
+        "steps": [
+          "Open Care, then Calendar, and switch from Schedule to Shifts.",
+          "Tap Add shift.",
+          "Give it a Name, such as Night, and set when it Starts and Ends.",
+          "Choose if it Repeats, and set a Reminder for whoever is on it.",
+          "Under Who's covering?, choose Leave open or Me (the circle owner or a manager can pick anyone).",
+          "Tap Save shift. You can then tap Add the next shift to start where this one ends."
+        ],
+        "body": "## Taking and dropping shifts\n\n- An **Open** shift has a **Take** button. For a repeating shift, choose **Just this one** or **This and every future one**.\n- To give a shift back, open it and tap **Drop shift**. It becomes open again and everyone else in the circle is told.\n- The circle owner or a manager can **Assign** a shift to someone, and can drop someone else's shift.\n- There is no swap button. To swap, one person drops the shift and the other takes it.\n\n## Notifications\n\nOn phones:\n\n- When a new open shift is added, everyone else in the circle is told.\n- When someone takes a shift, the person who created it is told.\n- When a shift is assigned to you, you are told.\n- When someone drops a shift, everyone else in the circle is told.\n- The circle owner and managers hear about shifts still open a day before they start.\n\nTurn these on or off in Profile, Notifications, **Shifts**. The web app shows shifts but doesn't send notifications.\n\n## Good to know\n\n- **Premium only.** On a free circle, the owner sees a preview with **See Premium**.\n- **If Premium ends**, shifts stay visible but become read-only until it is renewed.\n- Shifts can run past midnight and last from 15 minutes to 24 hours.\n- Times are in the care recipient's time zone.",
+        "related": [
+          "tasks",
+          "free-and-premium",
+          "roles-and-permissions",
+          "invite-family"
+        ],
+        "keywords": [
+          "shifts",
+          "care schedule",
+          "rota",
+          "coverage",
+          "who is on",
+          "night shift",
+          "turnos"
+        ],
+        "video": {
+          "file": "care-shifts-en.mp4",
+          "durationSec": 127
+        },
+        "poster": "care-shifts-en.jpg"
+      },
+      {
+        "slug": "doctor-visits-and-notes",
+        "category": "calendar",
+        "title": "See every visit and note for one doctor",
+        "summary": "Choose the doctor when you add or edit an appointment. Then open that doctor under Doctors to see the next visit, past visits and their notes in one place.",
+        "steps": [
+          "Add the doctor under Doctors in the Health tab, if they aren't there yet.",
+          "Add or edit an appointment and tap Doctor.",
+          "Choose the doctor, or tap Add a doctor, then save the appointment.",
+          "To see everything for that doctor, open Doctors and tap Visits & notes on their card.",
+          "Tap Add a note on any visit to write what was said."
+        ],
+        "body": "## What you see\n\n**Visits & notes** shows the **Next visit**, then **Past visits**, newest first, with each visit's notes. Tap **Show earlier visits** to go further back. From a linked appointment, **See all visits** opens the same page.\n\n## Good to know\n\n- **Free for everyone.**\n- **Past appointments are not linked for you.** CircleCare doesn't guess which doctor an old appointment was with. To add one, edit it and choose the doctor.\n- **Repeating appointments** use one doctor for the whole series.\n- **View-only members** can see visits and notes but can't add notes.\n- The web app has the same doctor picker and **Visits & notes** page.",
+        "related": [
+          "appointments",
+          "care-info-and-summary",
+          "daily-care-notes",
+          "find-older-notes"
+        ],
+        "keywords": [
+          "doctor",
+          "visit history",
+          "appointment notes",
+          "specialist",
+          "provider",
+          "medical visits"
+        ],
+        "video": {
+          "file": "doctor-visits-and-notes-en.mp4",
+          "durationSec": 91
+        },
+        "poster": "doctor-visits-and-notes-en.jpg"
+      },
+      {
+        "slug": "daily-care-notes",
+        "category": "notes-and-records",
+        "title": "Write daily care notes",
+        "summary": "Open Care, then Notes, write how the day went or pick a mood, and tap Post. Everyone in the circle sees the note with your name on it.",
+        "steps": [
+          "Open your circle and tap “Care” at the bottom, then the “Notes” tab at the top.",
+          "Type in the box that says “How was the day?”.",
+          "Optionally pick a mood (“Great day”, “Good day”, “Okay” or “Tough day”) and one or more categories: “Meal”, “Medication”, “Visit” or “Incident”.",
+          "Tap “Post”.",
+          "To change or remove your note later, tap the pencil icon (“Edit note”) or the trash icon (“Delete note”) on it."
+        ],
+        "body": "Daily notes are a shared journal for the person you care for. Use them for how the day went, what they ate, a visit, or anything worth remembering.\n\n## Good to know\n\n- A note needs some text or a mood. You can post a mood on its own.\n- Each note is filed under the day you post it, in the care recipient's time zone.\n- Notes can be up to 2,000 characters.\n- The week's moods show as a small strip above the list (\"This week: ...\").\n- Everyone in the circle can read every note. Notes are not private to the author.\n\n## Who can do what\n\n- Anyone in the circle who can edit can write notes. A view-only member can read them but not post.\n- Only the person who wrote a note can edit it.\n- The author or the circle owner can delete a note. Deleting removes it for everyone.\n\n## When people are told\n\nMembers who have the **Notes** notification group turned on get a push when someone adds a note. The push never shows what the note says. See [Quiet hours and turning notifications off](/help/quiet-hours/).\n\n## On a computer\n\nIn the web companion, open **Notes** in the sidebar (under Care). The box is labelled **Add a note** and works the same way.\n\n## Looking further back\n\nThe Notes list opens on the last two weeks, and **Show older notes** goes back as far as you like. See [Find older notes](/help/find-older-notes/).",
+        "related": [
+          "find-older-notes",
+          "care-info-and-summary",
+          "roles-and-permissions",
+          "quiet-hours"
+        ],
+        "keywords": [
+          "daily notes",
+          "care notes",
+          "journal",
+          "mood",
+          "log the day",
+          "incident",
+          "diary",
+          "update family"
+        ],
+        "video": {
+          "file": "daily-care-notes-en.mp4",
+          "durationSec": 63
+        },
+        "poster": "daily-care-notes-en.jpg"
+      },
+      {
+        "slug": "find-older-notes",
+        "category": "notes-and-records",
+        "title": "Find older notes",
+        "summary": "The Notes list opens on the last two weeks. Tap “Show older notes” at the bottom to go back further, as far as your notes go. There is no search for notes yet.",
+        "steps": [
+          "Open “Care”, then “Notes”.",
+          "Scroll to the bottom of the list. On a phone, scrolling loads earlier days up to about three months back. Tap “Show older notes” to keep going back.",
+          "Keep tapping “Show older notes” until it says “No older notes”."
+        ],
+        "body": "There is no search for notes yet, but you can reach every note by going back through the list.\n\n## How the list loads\n\n- The Notes list opens on the last two weeks.\n- On a phone, scrolling down loads earlier days, two weeks at a time, up to about three months back. On the web, tap **Show older notes** to do the same.\n- Past that, each tap on **Show older notes** loads about three more months. There is no limit on how far back you can go.\n- When there is nothing older, the list says **No older notes**.\n\nYour notes are never deleted when they get old. Every note stays stored with its date, author and text.\n\n## Need a copy of everything?\n\nUse the data export. It is a file with your circle's records, including notes of every age.\n\n- If you **own** the circle, the export includes every daily note and every visit or task note in it.\n- If you are **a member** (not the owner), the export includes only the notes you wrote. Ask the circle owner to run it if you need everyone's notes.\n\nSee [Export your circle's data](/help/export-your-data/) for the steps.\n\n## Need the last month for a doctor?\n\nThe care summary can include daily care notes from the last 30 days. See [Keep emergency info and share a care summary](/help/care-info-and-summary/).\n\n## Before you update\n\nThis describes CircleCare 1.3.0. On earlier versions the list stops at about three months and the older notes are only in the data export.",
+        "related": [
+          "export-your-data",
+          "daily-care-notes",
+          "care-info-and-summary"
+        ],
+        "keywords": [
+          "old notes",
+          "older notes",
+          "search notes",
+          "missing notes",
+          "note history",
+          "past notes",
+          "show older notes",
+          "3 months"
+        ],
+        "video": {
+          "file": "find-older-notes-en.mp4",
+          "durationSec": 84
+        },
+        "poster": "find-older-notes-en.jpg"
+      },
+      {
+        "slug": "care-info-and-summary",
+        "category": "notes-and-records",
+        "title": "Keep emergency info and share a care summary",
+        "summary": "Store contacts, doctors, insurance, allergies and conditions once in Emergency info, and anyone in the circle can see them. Tap Share to send a care summary PDF to a doctor, hospital or relative.",
+        "steps": [
+          "Open your circle and tap “Health” at the bottom. It opens on “Emergency info”. From Home you can also tap the “Health” shortcut.",
+          "Tap the + next to a section, such as “Critical information”, or a row that says “Tap to add”, to fill in medical information, doctors, emergency contacts or insurance.",
+          "To share, tap the share icon at the top right. The “Share care summary” sheet opens.",
+          "Choose whether to “Include visit notes” and “Include daily care notes”.",
+          "Tap “Share” and pick how to send the PDF."
+        ],
+        "body": "Emergency info is the one place for the facts someone may need fast, at the pharmacy, the ER, or on the phone with a nurse.\n\n## Where to find it\n\nThe app names this area in a few places. On a phone it is the **Health** tab, then **Emergency**, and the screen is titled **Emergency info**. On the web it is **Emergency Info** in the sidebar, under Health.\n\n## What you can store\n\n- **Medical information**: blood type, medication allergies, other allergies, and conditions.\n- **Doctors**: a primary doctor and specialists.\n- **Emergency contacts**.\n- **Insurance**.\n- **Current medications** come from the medications you already added. You don't type them twice.\n\nIt is stored once for the circle and everyone in the circle can see it. Members who can edit can change it; view-only members can read it.\n\n## What the care summary PDF includes\n\n- The care recipient's name, date of birth, conditions and allergies\n- Emergency contacts\n- Current medications, plus medications stopped in the last 30 days\n- Doctors\n- Insurance\n- Optional: visit notes and daily care notes from the last 30 days, if you turn those switches on\n\nIt does **not** include vitals or medication adherence. Those are in the adherence report. See [Export your circle's data](/help/export-your-data/).\n\n## Who can share it\n\nAnyone in the circle can create and share the summary, including view-only members. Before it is shared, the app reminds you that it contains sensitive health information. Only share it with people you trust.\n\n## On a computer\n\nOpen **Emergency Info** and click **Share**. The summary opens in your browser's print window, where you can print it or save it as a PDF.\n\nCircleCare stores and shares the information you enter. It does not review it or give medical advice.",
+        "related": [
+          "documents",
+          "export-your-data",
+          "roles-and-permissions",
+          "add-a-medication"
+        ],
+        "keywords": [
+          "emergency info",
+          "care info",
+          "care summary",
+          "PDF",
+          "allergies",
+          "insurance",
+          "doctors",
+          "medical information"
+        ],
+        "video": {
+          "file": "care-info-and-summary-en.mp4",
+          "durationSec": 77
+        },
+        "poster": "care-info-and-summary-en.jpg"
+      },
+      {
+        "slug": "documents",
+        "category": "notes-and-records",
+        "title": "Store documents and photos",
+        "summary": "Upload insurance cards, records and other papers as photos or PDFs under Health, then Documents, so anyone in the circle can open them. Each file can be up to 10MB, and a circle has 200MB on the free plan or 1GB on Premium.",
+        "steps": [
+          "Open your circle and tap “Health”, then the “Documents” tab.",
+          "Tap the add button at the top right (or a “Start here” suggestion).",
+          "Tap “Choose photo” or “Choose file (PDF)”.",
+          "Give it a “Label”, pick a “Category” and add a “Note” if it helps.",
+          "Tap “Upload”."
+        ],
+        "body": "Keep the papers people ask for in one place: insurance cards (front and back), an advance directive, the pharmacy's medication list, recent lab results.\n\n## Files you can add\n\n- Photos: JPG, PNG and HEIC (iPhone photos)\n- PDF files\n- Up to 10MB per file\n\nCategories: **Medical records**, **Insurance**, **Legal**, **Prescriptions** and **Other**. You can filter the list by category.\n\n## Storage\n\nStorage is shared by the whole circle, and the amount depends on the **circle owner's** plan:\n\n- Free: 200MB per circle\n- Premium: 1GB per circle\n\nThe Documents screen shows how much is used. When it is full, deleting files frees space. Only the circle owner can upgrade for more. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Who can do what\n\n- Anyone in the circle can open and view documents.\n- Members who can edit can upload. A view-only member cannot add, rename or remove documents.\n- Only the person who uploaded a document, or the circle owner, can rename or delete it.\n\n## Deleting is permanent\n\nWhen you delete a document, the file is removed for everyone and cannot be recovered. If you might need it later, save a copy first with **Share**.\n\n## On a computer\n\nOpen **Documents** in the web sidebar and click **Upload document**. The web accepts JPG, PNG, HEIC or PDF, up to 10MB.",
+        "related": [
+          "care-info-and-summary",
+          "free-and-premium",
+          "roles-and-permissions",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "documents",
+          "upload",
+          "insurance card",
+          "photos",
+          "PDF",
+          "storage",
+          "files",
+          "records"
+        ],
+        "video": {
+          "file": "documents-en.mp4",
+          "durationSec": 75
+        },
+        "poster": "documents-en.jpg"
+      },
+      {
+        "slug": "vitals",
+        "category": "notes-and-records",
+        "title": "Track blood pressure, heart rate, glucose and weight",
+        "summary": "Log blood pressure, heart rate, glucose and weight by hand, and everyone in the circle sees each reading and who logged it. CircleCare does not sync with Apple Health or other devices.",
+        "steps": [
+          "From your circle's Home, tap “Vitals”.",
+          "Choose the type of reading at the top, such as “Blood pressure”.",
+          "Tap the add button (+) at the top right.",
+          "Enter the numbers. Change the date and time if the reading was earlier, and add notes if you like.",
+          "Tap “Save reading”."
+        ],
+        "body": "Vitals help the circle notice a trend before the next appointment.\n\n## What you can track\n\n- **Blood pressure** (mmHg, systolic and diastolic)\n- **Heart rate** (bpm)\n- **Glucose** (mg/dL or mmol/L)\n- **Weight** (lbs or kg)\n\nThe web companion and the newest version of the app also have **Temperature** and **Blood oxygen**. If you don't see them on your phone, update CircleCare.\n\n## How readings are shared\n\nEvery reading is visible to everyone in the circle, with the name of the person who logged it (\"Logged by ...\"). The screen shows the latest reading, the average, the lowest and highest, and a trend chart over a week, month, six months or year.\n\nMembers who can edit can add, change and delete readings. View-only members can see them.\n\n## Units\n\nChoose your units in Profile, under **Health units**. Readings are converted, so you and your sister can each see your own units.\n\n## What vitals don't do\n\n- Readings are entered by hand. CircleCare does not connect to Apple Health, Google Health Connect, blood pressure cuffs or glucose meters.\n- CircleCare does not interpret readings or tell you what they mean. Talk to a doctor or nurse about any reading that worries you.\n\n## Share readings with a doctor\n\nThe adherence report (Premium) can include a summary of vitals for the period you pick. See [Export your circle's data](/help/export-your-data/). The care summary PDF does not include vitals.\n\n## On a computer\n\nOpen **Vitals** in the web sidebar.",
+        "related": [
+          "export-your-data",
+          "care-info-and-summary",
+          "free-and-premium",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "vitals",
+          "blood pressure",
+          "heart rate",
+          "glucose",
+          "blood sugar",
+          "weight",
+          "readings",
+          "Apple Health"
+        ],
+        "video": {
+          "file": "vitals-en.mp4",
+          "durationSec": 70
+        },
+        "poster": "vitals-en.jpg"
+      },
+      {
+        "slug": "export-your-data",
+        "category": "notes-and-records",
+        "title": "Export your circle's data",
+        "summary": "In Profile, under Your data, tap Download my data to get a JSON file of what CircleCare stores. Circle owners get the whole circle's records; members get their own.",
+        "steps": [
+          "Open Profile. On a phone, go back to your list of circles and tap the person icon at the top.",
+          "Scroll to “Your data”.",
+          "Tap “Download my data”.",
+          "On a phone, choose where to save or send the file. On the web, the file downloads to your computer."
+        ],
+        "body": "There are three different exports in CircleCare. They do different jobs.\n\n## 1. Your data (the full export)\n\nA file named circlecare-export.json. JSON is a data format, not a printable report. It is best for keeping a complete copy or moving your records to another tool.\n\n**If you own a circle**, it includes for that circle:\n\n- The care recipient's details and the member list\n- Emergency info\n- Medications and every recorded dose (taken, late, skipped), plus as-needed doses\n- Appointments and tasks\n- Vitals\n- Daily care notes and visit or task notes, of every age\n- The list of documents (name, category, type, size, date). The files themselves are not inside; download those from Documents.\n\n**If you are a member** of someone else's circle, it includes your membership and the records you created there: events you added, doses you recorded and notes you wrote.\n\nArchived circles are not included. You can run the export up to 5 times a day. Anyone can export their own data; you don't need Premium.\n\n## 2. Care summary (PDF)\n\nA short document for a doctor or hospital: the care recipient, conditions, allergies, emergency contacts, medications, doctors and insurance, with optional notes from the last 30 days. Anyone in the circle can share it. See [Keep emergency info and share a care summary](/help/care-info-and-summary/).\n\n## 3. Medication history report (PDF, Premium)\n\nA printable report of what was taken, taken late, skipped or not marked over a period you pick. See [Share a medication history report](/help/medication-history-report/).",
+        "related": [
+          "find-older-notes",
+          "care-info-and-summary",
+          "vitals",
+          "delete-account",
+          "privacy-and-security"
+        ],
+        "keywords": [
+          "export",
+          "download my data",
+          "data export",
+          "JSON",
+          "backup",
+          "adherence report",
+          "PDF",
+          "records"
+        ],
+        "video": {
+          "file": "export-your-data-en.mp4",
+          "durationSec": 54
+        },
+        "poster": "export-your-data-en.jpg"
+      },
+      {
+        "slug": "medication-history-report",
+        "category": "notes-and-records",
+        "title": "Share a medication history report",
+        "summary": "Open Care, then Meds, tap History and then Export report. Pick a period from the last 7 days to all time, and CircleCare makes a PDF of the doses taken, taken late, skipped or not marked. It needs a Premium circle.",
+        "steps": [
+          "Open “Care”, then “Meds”, and tap “History”. On the web, open “Medications” and choose “History”.",
+          "On the adherence card at the top, tap “Export report”.",
+          "Choose a period: “Last 7 days”, “Last 14 days”, “Last 30 days”, “Last 60 days”, “Last 90 days” or “All time”.",
+          "Wait while it says “Generating PDF...”, then choose where to save or send the PDF. On the web, the report opens in your browser's print window, where you can print it or save it as a PDF."
+        ],
+        "body": "The report is a PDF for a doctor, a pharmacist or the rest of the family. It covers every scheduled dose in the period, up to yesterday. Today isn't counted yet, because some of today's doses may still be ahead.\n\n## What it counts\n\nEach scheduled dose is one of:\n\n- **Taken**: marked as taken within 30 minutes of its time.\n- **Taken late**: marked as taken 30 minutes or more after its time.\n- **Skipped**: someone marked it as skipped.\n- **Not marked**: no one confirmed it in the app. It may or may not have been taken.\n\nThe adherence rate is the doses taken (on time or late) out of the doses scheduled. The report shows:\n\n- **Summary**: the rate, the counts above and whether the second half of the period went better or worse than the first.\n- **By medication**: the dosage, taken, not marked, skipped and rate for each medication.\n- **By day**: one square per day (the last 30 days of the period) and a list of the days with a skipped or unmarked dose.\n- **Time of day**: the same counts for each dose time.\n\nAs-needed medications are listed in their own section (doses given and by whom) and don't count toward the rate. A medication that was stopped counts only the doses that were due before it was stopped.\n\n## Vitals summary\n\nA report made on the web also includes a summary of the vitals recorded in the same period, if there are any: for each type, the latest reading, the average, the lowest and the highest. Reports made in the phone app don't include vitals yet. To look at readings, see [Track blood pressure, heart rate, glucose and weight](/help/vitals/).\n\n## Notes and limits\n\n- It needs a **Premium circle**: the circle owner's plan. In a free circle, the owner sees the upgrade options when tapping Export report, and other members see that the owner needs Premium. See [What is free and what Premium adds](/help/free-and-premium/).\n- The adherence card and its Export report button appear once the circle has had scheduled doses in the last 30 days.\n- “All time” starts from the first dose anyone marked in the circle.\n- Anyone in the circle can make the report, including members with view-only access.\n- The PDF shows the care recipient's name, date of birth and medication history. Share it only with people who should see it.\n- For a one-page summary of conditions, allergies, medications and doctors, use the care summary instead. See [Keep emergency info and share a care summary](/help/care-info-and-summary/). For a full copy of everything, see [Export your circle's data](/help/export-your-data/).",
+        "related": [
+          "export-your-data",
+          "care-info-and-summary",
+          "confirm-a-dose",
+          "vitals",
+          "free-and-premium"
+        ],
+        "keywords": [
+          "medication history",
+          "adherence",
+          "adherence report",
+          "report",
+          "PDF",
+          "doctor",
+          "doses",
+          "missed doses",
+          "export report",
+          "print"
+        ],
+        "video": {
+          "file": "medication-history-report-en.mp4",
+          "durationSec": 51
+        },
+        "poster": "medication-history-report-en.jpg"
+      },
+      {
+        "slug": "log-a-past-incident",
+        "category": "notes-and-records",
+        "title": "Log a fall or incident that already happened",
+        "summary": "Write a daily note, set its Date to the day it happened, and pick the Incident category. The note is filed under that day, even if it was weeks or years ago.",
+        "steps": [
+          "Open “Care”, then “Notes”.",
+          "Write what happened in the box that says “How was the day?”.",
+          "Tap the “Date” row under the text (it says “Today”), pick the day it happened, then tap “Confirm”. Future dates can't be picked.",
+          "Pick the “Incident” category.",
+          "Tap “Post”. The note appears under its own day."
+        ],
+        "body": "Falls, a bad reaction, a trip to the ER: these matter months later, when a doctor asks \"when did that happen?\". Now you can log them on the right date, even if you only remember to write it down later.\n\n## Example: a fall from a few weeks ago\n\nYour mother fell on May 5 and you are logging it today. Write \"Fell in the bathroom, bruised left hip, no ER visit\", set **Date** to May 5, pick **Incident** and tap **Post**. The note is filed under May 5, not today.\n\n## Good to know\n\n- The date can be today or any earlier day. There is no limit on how far back.\n- To go back to today before posting, tap **Reset to today**.\n- The author can change a note's date later by editing it.\n- The circle gets the usual note notification, and it names the day the note is for. It never shows what the note says.\n- To see older days in the list, scroll to the bottom and tap **Show older notes**.\n\n## On a computer\n\nThe web companion has the same **Date** row in the note box on the **Notes** page.\n\nCircleCare keeps a record of what you write. It does not assess injuries or give medical advice. If someone has fallen and may be hurt, call a doctor or emergency services.",
+        "related": [
+          "daily-care-notes",
+          "find-older-notes",
+          "export-your-data",
+          "care-info-and-summary"
+        ],
+        "keywords": [
+          "fall",
+          "incident",
+          "backdate",
+          "past date",
+          "log a fall",
+          "earlier date",
+          "accident",
+          "ER visit"
+        ],
+        "video": {
+          "file": "log-a-past-incident-en.mp4",
+          "durationSec": 56
+        },
+        "poster": "log-a-past-incident-en.jpg"
+      },
+      {
+        "slug": "notifications-not-arriving",
+        "category": "notifications",
+        "title": "Not getting notifications",
+        "summary": "Most often the phone's notification permission for CircleCare is off, the phone is signed in to a different account, quiet hours are on, or that type of notification is turned off in Profile. Go through the checks below in order.",
+        "steps": [
+          "Check the phone: in your phone's Settings, find CircleCare and make sure notifications are allowed. If they're blocked, Profile in the app shows “Notifications are blocked” with an “Open Settings” button.",
+          "Check the account: open Profile on that phone and confirm it shows your name and email.",
+          "Check the notification groups: in Profile, under “Notifications”, make sure the groups you want are on.",
+          "Check quiet hours: in Profile, under “Quiet hours”, see if “Enable quiet hours” is on and what times it covers.",
+          "Check who the reminder is for: dose reminders and task reminders go to specific people, not always to everyone."
+        ],
+        "body": "Notifications depend on the phone, the account and a few settings. Here's what each check means.\n\n## 1. The phone allows CircleCare notifications\n\nIf notifications were turned off for CircleCare (or never allowed), the phone silently drops them. In the app, Profile shows **Notifications are off** or **Notifications are blocked** with a button to turn them on. A Focus or Do Not Disturb mode on the phone can also hide them.\n\n## 2. The phone is signed in to the right account\n\nA phone gets notifications for **one CircleCare account at a time**: the one most recently signed in on it. If a shared family phone or tablet was last signed in as someone else, it gets that person's notifications, not yours. Sign in with your own account on your own phone and open the app once. Signing out doesn't stop a phone's notifications; signing in with another account does.\n\n## 3. Notification groups\n\nIn Profile, under **Notifications**, there is one switch per group, such as **Medications**, **Tasks & appointments**, **Notes** and **Daily update & tips**. They apply to your account in every circle. If a group shows **Some turned off**, part of it is off.\n\n## 4. Quiet hours\n\nDuring your quiet hours, some notifications are held until the end and some are skipped. See [Quiet hours and turning notifications off](/help/quiet-hours/).\n\n## 5. Who each reminder goes to\n\n- **Dose reminders** go to one person: the member the owner chose for **Medication reminders** (this covers every medication in the circle), or the care recipient if they are in the circle, or otherwise the circle owner. That person gets the reminders before and at the dose time, and the alert 15 minutes later. If the chosen member has view-only access, these go to the care recipient or the owner instead. Later missed-dose alerts reach more people in the circle. Reminder times are set on each medication. See [How reminders and missed-dose alerts work](/help/reminders-and-alerts/).\n- **Task reminders** go to the person the task is assigned to. A task set to \"Anyone\" reminds everyone in the circle who can act on it.\n- If your seat in a circle is **view-only**, you don't get that circle's notifications. See [Owners, caregivers, care recipients and view-only](/help/roles-and-permissions/).\n\n## 6. The web doesn't send notifications\n\nThe web companion lets you change your notification settings, but it does not deliver notifications. Install the app on your phone to receive them. See [Use CircleCare on a computer](/help/use-on-a-computer/).\n\nStill stuck? Contact us from the Help page and tell us which notification you expected and roughly when.",
+        "related": [
+          "quiet-hours",
+          "reminders-and-alerts",
+          "roles-and-permissions",
+          "use-on-a-computer",
+          "confirm-a-dose"
+        ],
+        "keywords": [
+          "notifications",
+          "push",
+          "not receiving",
+          "no alerts",
+          "reminders not working",
+          "shared phone",
+          "permission",
+          "silent"
+        ],
+        "video": {
+          "file": "notifications-not-arriving-en.mp4",
+          "durationSec": 68
+        },
+        "poster": "notifications-not-arriving-en.jpg"
+      },
+      {
+        "slug": "quiet-hours",
+        "category": "notifications",
+        "title": "Quiet hours and turning notifications off",
+        "summary": "Quiet hours hold most notifications until your quiet time ends, so you catch up in the morning. Reminders that only make sense ahead of time, like “in 15 minutes”, are skipped. You can also turn whole groups of notifications off in Profile.",
+        "steps": [
+          "Open Profile. On a phone, go back to your list of circles and tap the person icon at the top.",
+          "Under “Quiet hours”, turn on “Enable quiet hours”.",
+          "Set “Start” and “End”.",
+          "Tap “Save quiet hours”. Turning quiet hours off saves right away. On the web, changes save on their own.",
+          "To turn off a type of notification, use the switches under “Notifications”."
+        ],
+        "body": "Quiet hours are yours alone. They follow your time zone and don't change anything for other people in the circle. New accounts start with quiet hours off.\n\n## What happens during quiet hours\n\n**Held and delivered when quiet hours end:**\n\n- Alerts that a dose is late or wasn't marked. If someone marks the dose during the night, the alert is dropped, and several alerts about the same dose arrive as one.\n- Updates from the circle: a dose taken or skipped, a new note, a task assigned to you, a new appointment, a task completed, refill alerts.\n- Shift alerts that are still useful later: a shift was dropped, shifts were reopened because someone left the circle, and, for the owner and managers, a shift still open a day before it starts.\n\n**Skipped, not delivered later:**\n\n- Reminders before or at a dose's time (\"in 1 hour\", \"in 15 minutes\", \"Time for medication\"). Sending them in the morning would be wrong. If the dose still isn't marked about 15 minutes after its time, the follow-up alert is held for the morning instead.\n- Task and appointment reminders that say how soon something is due.\n- Shift alerts for a new open shift, a shift someone took or assigned to you, shift reminders and time changes.\n\nWhen you add a medication and its time falls inside your own quiet hours, the app warns you that no reminder will be sent then. It only checks your quiet hours, and only when the reminder goes to you. If a medication is taken at night, shorten or move quiet hours so the reminder can come through.\n\nIf quiet hours cover almost the whole day, the app warns you that notifications will be held until the end time.\n\n## Turn off types of notifications\n\nIn Profile, under **Notifications**:\n\n- **Medications**: doses taken, skipped or not marked. Turning this off means you won't be told when a dose isn't marked, so the app asks you to confirm.\n- **Tasks & appointments**: when something's assigned to you and before it's due.\n- **Notes**: when someone adds a note.\n- **Daily update & tips**: your daily update and helpful nudges.\n- **Shifts**: new open shifts, shift reminders and changes to your shifts. See [Plan who is on care shifts](/help/care-shifts/).\n\nThese switches apply to your account in every circle. The reminder times for each medication are set on the medication itself. See [How reminders and missed-dose alerts work](/help/reminders-and-alerts/).\n\nNotifications only arrive on a phone with the app installed. See [Not getting notifications](/help/notifications-not-arriving/).",
+        "related": [
+          "notifications-not-arriving",
+          "reminders-and-alerts",
+          "add-a-medication",
+          "routine-reminders"
+        ],
+        "keywords": [
+          "quiet hours",
+          "do not disturb",
+          "night",
+          "mute",
+          "turn off notifications",
+          "pause",
+          "sleep",
+          "notification settings"
+        ],
+        "video": {
+          "file": "quiet-hours-en.mp4",
+          "durationSec": 107
+        },
+        "poster": "quiet-hours-en.jpg"
+      },
+      {
+        "slug": "free-and-premium",
+        "category": "plans-and-account",
+        "title": "What is free and what Premium adds",
+        "summary": "The free plan has no time limit and includes 1 care circle with you plus 1 caregiver, and unlimited medications and reminders. Premium adds up to 5 circles, unlimited caregivers, more document storage and the care assistant.",
+        "body": "## Free plan\n\n- 1 care circle that you own\n- You plus 1 caregiver in that circle (the care recipient does not count)\n- Unlimited medications and reminders. Reminders are never behind a paywall.\n- Calendar, appointments, tasks, notes, vitals, emergency info and the activity history\n- 200MB of documents and photos per circle\n\n## Premium\n\n- Up to 5 care circles that you own\n- Unlimited caregivers in each circle\n- 1GB of documents and photos per circle\n- The care assistant (\"Assistant\" in the app)\n- Care shifts, to plan who is on call (see [Plan who is on care shifts](/help/care-shifts/))\n- Managers, caregivers you choose to help invite and remove people (see [Owners, caregivers, care recipients and view-only](/help/roles-and-permissions/))\n- Adherence reports and importing appointments from your calendar\n- Adding by voice, in the phone app on supported phones\n- The weekly care summary email\n\n## Who pays\n\nOnly the circle owner pays. Premium applies to the circles that person owns, so everyone in those circles gets the Premium features there. Joining someone else's circle is always free.\n\n## Price and free trial\n\nPrices are set in the App Store and Google Play and vary by country. The app shows your price before you buy. The yearly plan can include a 7-day free trial if your store account is eligible. In the phone app, tap **Upgrade to Premium** at the top of Profile. You can also upgrade on the web at my.circlecare.app under \"Profile\".\n\n## If Premium ends\n\nNothing is deleted.\n\n- On a circle with more caregivers than the free plan allows, the caregiver who joined first keeps editing and the others become view-only.\n- Managers go back to being caregivers. If you subscribe again, you choose managers again.\n- Existing shifts stay visible but become read-only.\n- If you own more than one circle, the app asks you to choose one to keep with free access (\"Choose circle\"). The others become read-only for everyone until you subscribe again. You can make this choice only once.\n- When you subscribe again, everything goes back to normal.\n\nSee [Cancel, restore or change your subscription](/help/cancel-or-restore/).",
+        "related": [
+          "second-circle",
+          "cancel-or-restore",
+          "invite-family",
+          "roles-and-permissions"
+        ],
+        "keywords": [
+          "price",
+          "cost",
+          "free plan",
+          "premium",
+          "upgrade",
+          "subscription",
+          "free trial",
+          "how many caregivers"
+        ],
+        "video": {
+          "file": "free-and-premium-en.mp4",
+          "durationSec": 107
+        },
+        "poster": "free-and-premium-en.jpg"
+      },
+      {
+        "slug": "second-circle",
+        "category": "plans-and-account",
+        "title": "Care for more than one person",
+        "summary": "Each person you care for gets their own circle. The free plan lets you own 1 circle. To own more, up to 5, you need Premium. Joining circles that other people own is always free.",
+        "steps": [
+          "Go to your list of circles. From inside a circle, tap the back arrow at the top left.",
+          "Tap the \"+\" button (\"Start a care circle\").",
+          "If you are on the free plan and already own a circle, the app shows the Premium plans. Choose a plan to continue.",
+          "Fill in the new person's details and tap \"Create circle\"."
+        ],
+        "body": "## Free ways to care for two people\n\n- **Let someone else own the second circle.** For example, your sister creates Dad's circle and invites you. You can be a member of any number of circles for free.\n- A circle you create for yourself (\"Myself\") counts as one of your own circles.\n\n## Good to know\n\n- Premium allows up to 5 circles that you own. If you need more, write to support@circlecare.app.\n- If you delete a circle, it no longer counts toward your limit.\n- Each circle is separate. Medications, notes and members do not mix between circles.\n- Switch circles from your list of circles in the app, or with \"All circles\" on the website.\n- If your Premium ends while you own several circles, you choose one to keep with free access and the others become read-only. Nothing is deleted. See [What is free and what Premium adds](/help/free-and-premium/).",
+        "related": [
+          "free-and-premium",
+          "create-a-care-circle",
+          "join-a-circle",
+          "cancel-or-restore"
+        ],
+        "keywords": [
+          "second circle",
+          "two parents",
+          "more than one person",
+          "another circle",
+          "mom and dad",
+          "multiple circles",
+          "circle limit"
+        ],
+        "video": {
+          "file": "second-circle-en.mp4",
+          "durationSec": 67
+        },
+        "poster": "second-circle-en.jpg"
+      },
+      {
+        "slug": "cancel-or-restore",
+        "category": "plans-and-account",
+        "title": "Cancel, restore or change your subscription",
+        "summary": "Cancel where you subscribed: in the App Store or Google Play if you bought it on your phone, or with \"Manage subscription\" in your web Profile if you bought it on the web. You keep Premium until the end of the period you paid for.",
+        "steps": [
+          "In the app, open \"Profile\" (the person icon on your list of circles).",
+          "Under \"Subscription\", tap \"Manage\". This opens the subscription page of the store where you subscribed.",
+          "Cancel or change your plan there.",
+          "If your subscription is not shown, tap \"Restore purchases\" under \"Account\" in Profile."
+        ],
+        "body": "## Cancel from your phone settings\n\n- **iPhone:** Settings, tap your name, then Subscriptions.\n- **Android:** Google Play Store, Payments & subscriptions, then Subscriptions.\n\n## If you subscribed on the web\n\nGo to my.circlecare.app, open \"Profile\" and choose \"Manage subscription\". If you subscribed on your phone, the website tells you to cancel in the App Store or Google Play instead.\n\n## Restore purchases\n\nUse \"Restore purchases\" when you get a new phone, reinstall the app, or Premium does not show up. Sign in to the same CircleCare account first. The app tells you if no purchases were found. A subscription bought on the web is linked to your account and does not need restoring.\n\n## After you cancel\n\nYou keep Premium until the end of the period you already paid for. After that, nothing is deleted. Extra caregivers become view-only, and if you own more than one circle you choose one to keep with free access. Subscribe again at any time to get everything back. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Good to know\n\n- There are no contracts or cancellation fees. You can cancel during a free trial.\n- Deleting your account does not cancel a subscription. Cancel it first. See [Delete your account](/help/delete-account/).\n- If your Premium has ended or a payment did not go through, Profile shows \"Manage existing subscription\" so you can still reach the store page.",
+        "related": [
+          "free-and-premium",
+          "delete-account",
+          "second-circle"
+        ],
+        "keywords": [
+          "cancel",
+          "unsubscribe",
+          "stop paying",
+          "restore purchases",
+          "refund",
+          "manage subscription",
+          "new phone",
+          "change plan"
+        ]
+      },
+      {
+        "slug": "delete-account",
+        "category": "plans-and-account",
+        "title": "Delete your account",
+        "summary": "Open \"Profile\", tap \"Delete account\" and confirm. This permanently deletes your account and every care circle you own. It cannot be undone.",
+        "steps": [
+          "If you have Premium, cancel your subscription first in the App Store, Google Play or your web Profile. Deleting your account does not cancel it.",
+          "Optional: tap \"Download my data\" in Profile to keep a copy of your information.",
+          "Open \"Profile\" and scroll to \"Account\".",
+          "Tap \"Delete account\".",
+          "Read the message and tap \"Delete my account\" to confirm."
+        ],
+        "body": "## What gets deleted\n\n- Your account and your sign-in.\n- **Every circle you own**, with all its medications, appointments, tasks, notes, vitals, documents and emergency info. Everyone else in those circles loses access and is notified.\n- Invitations you sent that were not accepted yet.\n\n## What stays\n\nCircles that someone else owns are not deleted. You are removed from them. What you added there, such as notes, activity, documents and photos, stays in the circle, but your name is removed from it.\n\n## If you cannot open the app\n\nUse the [account deletion page](https://circlecare.app/account-deletion). Enter your account email and we send you a verification code. The code works for 15 minutes. Enter it to confirm the deletion.\n\n## Before you delete\n\n- If you want the circle to continue for your family, talk to them first. Ownership cannot be handed to someone else.\n- To leave just one circle instead of deleting your account, open that circle and tap \"Leave circle\".\n- On a computer, you can also delete your account from \"Profile\" at my.circlecare.app with \"Delete my account\".\n- Some data may stay in backups for up to 30 days before it is gone. See our [privacy policy](https://circlecare.app/privacy).",
+        "related": [
+          "export-your-data",
+          "cancel-or-restore",
+          "privacy-and-security"
+        ],
+        "keywords": [
+          "delete account",
+          "remove account",
+          "close account",
+          "erase my data",
+          "leave circlecare",
+          "account deletion"
+        ]
+      },
+      {
+        "slug": "privacy-and-security",
+        "category": "privacy",
+        "title": "Privacy, security and HIPAA",
+        "summary": "Only people in your circle can see your circle's information. Data is encrypted in transit and at rest and stored in the United States. There are no ads and we never sell your data. CircleCare is not HIPAA compliant and does not sign BAAs.",
+        "body": "## Who can see your information\n\nOnly people who joined your circle. What each person can do depends on their role, and these rules are checked on our servers, not only in the app. See [Owners, caregivers, care recipients and view-only](/help/roles-and-permissions/).\n\nThe circle owner, or a manager (for caregivers only), can remove someone at any time: in \"Care team\", tap the person, then \"Remove from circle\". They lose access to the circle.\n\n## How it is protected\n\n- Data is encrypted in transit (HTTPS/TLS) and at rest.\n- Data is stored in the United States.\n\n## Ads and selling data\n\nThere are no ads in CircleCare. We do not sell your information and do not share your health data with advertisers.\n\n## HIPAA\n\nCircleCare is a consumer app for families. It is **not HIPAA compliant** and we do not sign Business Associate Agreements (BAAs), on any plan. If your organization needs HIPAA compliance, CircleCare is not the right tool for that.\n\n## Usage analytics\n\nIn Profile, under \"Privacy\", the \"Usage analytics\" switch lets you choose whether usage data and crash reports linked to your account are shared to help us improve CircleCare. They never include your readings, medication names or notes. With it off, we still collect anonymous, session-only data that is never linked to you. On the web, the same choice is \"Share usage data\" in Profile.\n\n## Signing in\n\n- There is no two-step (two-factor) sign-in.\n- On your phone you can turn on Face ID, Touch ID or fingerprint sign-in under \"Security\" in Profile (it shows when your phone has one set up). Your fingerprint or face never leaves your phone.\n- Use a strong password, or sign in with Google or Apple.\n\n## Your data, your choice\n\n- Download a copy of your information with \"Download my data\" in Profile. See [Export your circle's data](/help/export-your-data/).\n- Delete your account at any time. See [Delete your account](/help/delete-account/).\n\nRead the full [privacy policy](https://circlecare.app/privacy). In the app, \"Privacy Policy\" and \"Terms of Service\" are in Profile, under \"Support\".",
+        "related": [
+          "roles-and-permissions",
+          "delete-account",
+          "export-your-data"
+        ],
+        "keywords": [
+          "privacy",
+          "security",
+          "HIPAA",
+          "BAA",
+          "encryption",
+          "sell data",
+          "two-factor",
+          "who can see"
+        ],
+        "video": {
+          "file": "privacy-and-security-en.mp4",
+          "durationSec": 80
+        },
+        "poster": "privacy-and-security-en.jpg"
+      }
+    ],
+    "es": [
+      {
+        "slug": "create-a-care-circle",
+        "category": "getting-started",
+        "title": "Crea tu primer círculo de cuidado",
+        "summary": "Un círculo de cuidado es un espacio privado para una persona que cuidas. Crea tu cuenta, elige a quién cuidas, escribe su nombre y toca \"Crear círculo\". Toma como un minuto y es gratis.",
+        "steps": [
+          "Descarga CircleCare en tu iPhone o celular Android y toca \"Comenzar\" para crear tu cuenta.",
+          "En \"¿A quién estás cuidando?\", elige \"A un padre o madre\", \"A mi pareja\", \"A mi hijo/a\", \"A mí\" o \"A otra persona\".",
+          "Escribe su nombre o cómo le llamas, por ejemplo Mamá o Abuelo. La fecha de nacimiento es opcional.",
+          "Toca \"Crear círculo\".",
+          "Elige un primer paso: agregar un medicamento, una cita, invitar a alguien o agregar información de emergencia. También puedes tocar \"Omitir por ahora\" y volver después."
+        ],
+        "body": "## ¿Alguien te invitó?\n\nSi un familiar ya creó un círculo y te invitó, **no crees uno nuevo**. Abre el enlace de invitación que te llegó por correo, o toca \"¿Tienes un código de invitación?\". Si tienes una invitación esperando, la pantalla \"Crear círculo\" muestra un aviso que dice \"Tienes 1 invitación pendiente\". Toca \"Revisar invitación\" para unirte. Consulta [Únete a un círculo al que te invitaron](/help/join-a-circle/).\n\n## Bueno saber\n\n- Cada círculo es para una sola persona. Si cuidas a tu mamá y a tu papá, consulta [Cuidar a más de una persona](/help/second-circle/).\n- Si eliges \"A mí\", el círculo es para tu propio cuidado. Eres a la vez propietario y receptor de cuidado, y puedes invitar a tu familia para que te ayude.\n- Después de crear tu primer círculo, la app puede mostrarte una vez los planes Premium. Puedes tocar \"Continuar con plan gratuito\" y seguir usando CircleCare gratis.\n- También puedes crear un círculo desde la computadora en my.circlecare.app: haz clic en \"Crear círculo\" en la lista de tus círculos. Consulta [Usa CircleCare en la computadora](/help/use-on-a-computer/).\n\n## Qué sigue\n\n1. [Agrega un medicamento y sus recordatorios](/help/add-a-medication/).\n2. [Invita a tu familia y a otros cuidadores](/help/invite-family/).\n3. [Guarda la información de emergencia y comparte un resumen de cuidado](/help/care-info-and-summary/).",
+        "related": [
+          "invite-family",
+          "add-a-medication",
+          "join-a-circle",
+          "free-and-premium"
+        ],
+        "keywords": [
+          "crear círculo",
+          "nuevo círculo",
+          "empezar",
+          "crear cuenta",
+          "registrarme",
+          "cuidar a mi mamá",
+          "primeros pasos"
+        ],
+        "video": {
+          "file": "create-a-care-circle-es.mp4",
+          "durationSec": 55
+        },
+        "poster": "create-a-care-circle-es.jpg"
+      },
+      {
+        "slug": "invite-family",
+        "category": "getting-started",
+        "title": "Invita a tu familia y a otros cuidadores",
+        "summary": "El propietario del círculo invita a otras personas por correo desde la pantalla de Inicio del círculo. Reciben un correo con un enlace y un código de 6 caracteres, y unirse siempre es gratis para ellos.",
+        "steps": [
+          "Abre el círculo y quédate en la pestaña \"Inicio\".",
+          "Baja hasta \"Equipo de cuidado\" y toca \"Agregar familiar\".",
+          "En \"¿A quién estás invitando?\", elige \"Cuidador familiar\" o \"Receptor de cuidado\".",
+          "Escribe su correo electrónico y toca \"Enviar invitación\".",
+          "Si quieres, toca \"Compartir enlace de invitación\" o \"Copiar enlace\" para mandarlo por mensaje o chat, y así pueda unirse de inmediato."
+        ],
+        "body": "## Qué recibe la persona invitada\n\nCircleCare le manda un correo con un enlace y un código de invitación. Si abre el enlace en un celular que tiene CircleCare, se abre la app. Si no tiene la app, el enlace se abre en su navegador y puede unirse desde ahí. Necesita una cuenta gratuita. Consulta [Únete a un círculo al que te invitaron](/help/join-a-circle/).\n\n## Cuidador o receptor de cuidado\n\n- **Cuidador familiar** es para hermanos, pareja, amigos o cuidadores pagados que ayudan con el cuidado.\n- **Receptor de cuidado** es la persona a la que cuidan. Recibe una versión más sencilla de la app, enfocada en los recordatorios de medicamentos, y puede confirmar cuando ya tomó una dosis. Un círculo solo puede tener un receptor de cuidado. El círculo funciona aunque esa persona no tenga cuenta.\n\n## Límites del plan gratuito\n\n- Un círculo gratuito te incluye a ti y a 1 cuidador. Una invitación pendiente ocupa ese lugar hasta que la aceptan, la cancelas o vence.\n- Si el lugar está ocupado por una invitación pendiente, la app muestra \"Tu invitación ya está en uso\". Cancela esa invitación para liberar el lugar, o mejora tu plan.\n- Invitar al receptor de cuidado nunca tiene límite. No cuenta dentro del límite de cuidadores.\n- Con Premium puedes invitar a todos los cuidadores que necesites. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Invitaciones pendientes\n\nLas invitaciones duran 7 días. En \"Equipo de cuidado\", la sección \"Invitaciones pendientes\" muestra cada una y cuándo vence. Cuando una invitación ya venció, toca \"Reenviar\" para mandarla otra vez por 7 días más. Para retirar una, toca la X junto a ella.\n\n## Bueno saber\n\n- Solo el propietario del círculo y los gestores pueden invitar. Los demás cuidadores no pueden enviar invitaciones. Consulta [Propietario, cuidadores, receptor de cuidado y solo lectura](/help/roles-and-permissions/).\n- Desde la computadora, en my.circlecare.app, abre el círculo, entra a \"Miembros\" y luego a \"Invitar miembro\".",
+        "related": [
+          "join-a-circle",
+          "roles-and-permissions",
+          "free-and-premium",
+          "create-a-care-circle"
+        ],
+        "keywords": [
+          "invitar",
+          "agregar hermano",
+          "agregar familiar",
+          "compartir acceso",
+          "agregar cuidador",
+          "código de invitación",
+          "enlace de invitación",
+          "reenviar invitación"
+        ],
+        "video": {
+          "file": "invite-family-es.mp4",
+          "durationSec": 55
+        },
+        "poster": "invite-family-es.jpg"
+      },
+      {
+        "slug": "join-a-circle",
+        "category": "getting-started",
+        "title": "Únete a un círculo al que te invitaron",
+        "summary": "Abre el enlace de invitación que te llegó por correo y sigue los pasos para crear una cuenta gratuita. Te unes al círculo en ese momento. Unirte al círculo de otra persona siempre es gratis.",
+        "steps": [
+          "Busca el correo de invitación de CircleCare. Si no lo ves, revisa la carpeta de spam o promociones.",
+          "Toca el enlace del correo. Si tienes CircleCare en tu celular, se abre la app. Si no, la invitación se abre en tu navegador.",
+          "En la app se abre la pantalla \"Ingresa tu código de invitación\" con tu código ya escrito. Escribe el correo al que te llegó la invitación y toca \"Continuar\".",
+          "Revisa quién te invitó y toca \"Continuar para crear cuenta\" en la app, o \"Crea una cuenta para unirte\" en el navegador.",
+          "Crea tu cuenta. En la app, toca \"Crear cuenta y unirme\".",
+          "Si ya tienes cuenta, elige \"Iniciar sesión\" (o \"Ya tengo una cuenta\" en el navegador). Te unes al círculo en cuanto inicias sesión."
+        ],
+        "body": "## Si solo tienes el código\n\nEl correo de invitación también trae un código de 6 caracteres. Abre la app y toca \"¿Tienes un código de invitación?\" y luego \"Ingresar código\". Escribe el correo al que te llegó la invitación y el código. Desde la computadora, en my.circlecare.app, elige \"Unirte con un código de invitación\".\n\n## Si la app te pide crear un círculo\n\nDespués de registrarte, la app puede mostrarte la pantalla \"Crear círculo\". Si alguien te invitó, **no necesitas tu propio círculo**.\n\n- Busca arriba el aviso \"Tienes 1 invitación pendiente\", toca \"Revisar invitación\" y luego \"Aceptar\".\n- O toca \"¿Tienes un código de invitación?\" al final de la pantalla y escribe tu código.\n\n## Si ya creaste un círculo por error\n\nTu invitación sigue funcionando. En tu lista de círculos, toca la tarjeta de invitaciones (\"Toca para revisar y unirte a círculos\") y acéptala. Desde la computadora, entra a \"Tus invitaciones\".\n\nDespués puedes eliminar el círculo que sobra: ábrelo, ve a \"Administrar\" y toca \"Eliminar círculo\". Un círculo eliminado ya no cuenta como tu círculo gratuito, así que más adelante puedes crear el tuyo.\n\n## Si la invitación no funciona\n\n- Las invitaciones duran 7 días. Si la tuya venció, pídele a quien te invitó que toque \"Reenviar\" o te mande una nueva.\n- Para unirte desde la lista de invitaciones pendientes, inicia sesión con el mismo correo al que te llegó la invitación. Si usas otro correo (por ejemplo \"Ocultar mi correo\" de Apple), usa el enlace o el código.\n\n## Bueno saber\n\n- Que te inviten nunca cuesta nada, ni en el plan gratuito ni en Premium. Solo el propietario del círculo puede pagar Premium.\n- Puedes estar en varios círculos, por ejemplo el de tu mamá y el de tu papá.",
+        "related": [
+          "invite-family",
+          "roles-and-permissions",
+          "create-a-care-circle",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "unirme a un círculo",
+          "aceptar invitación",
+          "código de invitación",
+          "invitación",
+          "enlace no funciona",
+          "me invitó mi hermana",
+          "invitación pendiente"
+        ],
+        "video": {
+          "file": "join-a-circle-es.mp4",
+          "durationSec": 118
+        },
+        "poster": "join-a-circle-es.jpg"
+      },
+      {
+        "slug": "roles-and-permissions",
+        "category": "getting-started",
+        "title": "Propietario, cuidadores, receptor de cuidado y solo lectura",
+        "summary": "Cada círculo tiene un propietario, que es quien lo creó. Los cuidadores pueden ver y actualizar la información de cuidado. Un gestor es un cuidador que además puede invitar y quitar personas. El receptor de cuidado recibe recordatorios y confirma sus dosis. Solo lectura significa que puedes ver todo pero no hacer cambios.",
+        "body": "## Propietario del círculo\n\nEs la persona que creó el círculo. El propietario puede invitar personas, cancelar o reenviar invitaciones y quitar miembros, y es el único que puede:\n\n- cambiar los datos del círculo (**Editar círculo**)\n- eliminar el círculo (**Eliminar círculo**)\n- elegir quién recibe los recordatorios de medicamentos\n- dar o quitar el rol de gestor\n- pagar Premium para el círculo\n\n## Gestor\n\nUn gestor es un cuidador a quien el propietario eligió para ayudar a administrar el círculo. Los gestores pueden:\n\n- invitar personas, y reenviar o cancelar cualquier invitación pendiente\n- ver las invitaciones pendientes\n- quitar cuidadores del círculo (nunca al propietario ni a otro gestor)\n- poner a otra persona en un turno de cuidado o quitarla de uno (consulta [Organiza quién cubre cada turno de cuidado](/help/care-shifts/))\n\nLos gestores no pueden cambiar los datos del círculo, eliminar el círculo, elegir quién recibe los recordatorios de medicamentos, manejar la facturación ni dar el rol de gestor a otras personas. Un círculo puede tener más de un gestor.\n\nPara dar el rol de gestor a alguien, el propietario abre el círculo, toca a la persona en la lista de miembros (en la web, usa el menú de su fila en **Miembros**) y elige **Dar rol de gestor**. Para deshacerlo, elige **Quitar rol de gestor**. La persona sigue en el círculo como cuidador.\n\nConviene saber:\n\n- Los gestores son una función Premium. Depende del plan del propietario, así que solo el propietario necesita Premium. Si se termina el Premium del propietario, todos los gestores vuelven a ser cuidadores. Las invitaciones que ya enviaron siguen vigentes. Si el propietario se suscribe de nuevo, tiene que elegir otra vez a los gestores.\n- El receptor de cuidado y los miembros de solo lectura no pueden ser gestores.\n- Los límites de lugares siguen siendo los del propietario. En el plan gratuito el círculo tiene espacio para el propietario y 1 cuidador, sin importar quién envíe la invitación.\n- Un gestor ve las herramientas de gestor en CircleCare 1.3.0 o posterior, y en el sitio web. Las versiones anteriores de la app muestran a un gestor como un cuidador normal.\n\n## Cuidador\n\nFamiliares y personas que ayudan. Al invitar a alguien, es la opción **Cuidador familiar**. Los cuidadores pueden ver y actualizar la información de cuidado: medicamentos, dosis, citas, tareas, notas, signos vitales, documentos e información de emergencia. Un cuidador puede salir del círculo cuando quiera con **Salir del círculo**, al final de Inicio.\n\n## Receptor de cuidado\n\nEs la persona a la que cuidan. Si se une con su propia cuenta, recibe recordatorios de medicamentos y puede confirmar cuando tomó una dosis; la familia recibe el aviso. Un círculo tiene como máximo un receptor de cuidado, y no cuenta dentro del límite de cuidadores del plan gratuito. En un círculo que creas para ti (\"A mí\"), eres a la vez propietario y receptor de cuidado.\n\n## Solo lectura\n\nUna persona con acceso de solo lectura puede ver todo en el círculo, pero no puede hacer cambios. Ve el aviso \"Tienes acceso de solo lectura\" y el botón **Nuevo** aparece atenuado. Esto pasa cuando:\n\n- un círculo gratuito tiene más cuidadores de los que permite el plan gratuito, por ejemplo cuando se termina el Premium del propietario. El cuidador que se unió primero sigue editando y los demás quedan en solo lectura.\n- se terminó el Premium del propietario y tenía más de un círculo. Los círculos que no conservó quedan en solo lectura para todos.\n\nCuando el propietario vuelve a suscribirse, todos pueden editar otra vez. No se borra nada. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Dónde se aplican estas reglas\n\nEstas reglas se revisan en los servidores de CircleCare, no solo en la app. Nadie sin permiso puede saltárselas usando otro dispositivo o el sitio web.",
+        "related": [
+          "invite-family",
+          "free-and-premium",
+          "privacy-and-security",
+          "join-a-circle"
+        ],
+        "keywords": [
+          "roles",
+          "propietario",
+          "cuidador",
+          "receptor de cuidado",
+          "solo lectura",
+          "permisos",
+          "quién puede editar",
+          "dueño del círculo"
+        ],
+        "video": {
+          "file": "roles-and-permissions-es.mp4",
+          "durationSec": 61
+        },
+        "poster": "roles-and-permissions-es.jpg"
+      },
+      {
+        "slug": "use-on-a-computer",
+        "category": "getting-started",
+        "title": "Usa CircleCare en la computadora",
+        "summary": "Entra a my.circlecare.app desde cualquier navegador e inicia sesión con la misma cuenta de tu celular. Verás los mismos círculos y la misma información. Los recordatorios y alertas solo llegan a la app del celular.",
+        "steps": [
+          "Abre un navegador en tu computadora y entra a my.circlecare.app.",
+          "Inicia sesión con el mismo correo, o la misma cuenta de Google o Apple, que usas en la app del celular.",
+          "Se abre tu círculo. Si tienes más de uno, elígelo en la lista de tus círculos. Para volver a esa lista después, haz clic en el nombre del círculo, arriba, y elige \"Todos los círculos\".",
+          "Usa el menú lateral para moverte entre Calendario, Medicamentos, Tareas, Notas, Signos vitales, Documentos, Miembros y más."
+        ],
+        "body": "## Qué puedes hacer en la computadora\n\nCasi todo lo del día a día: ver el calendario, agregar y editar medicamentos, citas y tareas, marcar dosis, escribir notas, registrar signos vitales, subir documentos, mantener la información de emergencia, invitar a tu familia desde \"Miembros\" y administrar tus notificaciones y tu suscripción desde \"Perfil\". Lo que cambies aparece también en los celulares de todos.\n\n## Qué necesita la app del celular\n\n- **Recordatorios y alertas.** CircleCare los envía como notificaciones a la app de iPhone y Android. El sitio web no entrega recordatorios. Si quieres recibirlos, instala la app y activa las notificaciones. Consulta [No me llegan las notificaciones](/help/notifications-not-arriving/).\n- **Agregar por voz** solo está en la app del celular.\n- **Importar citas desde el calendario de tu celular** solo está en la app del celular.\n- **Iniciar sesión con Face ID o huella** es una función del celular.\n\n## Bueno saber\n\n- Tus familiares invitados pueden unirse desde el navegador sin instalar nada. Sí necesitan una cuenta gratuita.\n- Para cambiar de círculo en el sitio web, haz clic en el nombre del círculo, arriba, y luego en \"Todos los círculos\".",
+        "related": [
+          "notifications-not-arriving",
+          "join-a-circle",
+          "invite-family",
+          "quiet-hours"
+        ],
+        "keywords": [
+          "computadora",
+          "web",
+          "navegador",
+          "laptop",
+          "sitio web",
+          "my.circlecare.app",
+          "app web",
+          "escritorio"
+        ],
+        "video": {
+          "file": "use-on-a-computer-es.mp4",
+          "durationSec": 79
+        },
+        "poster": "use-on-a-computer-es.jpg"
+      },
+      {
+        "slug": "add-a-medication",
+        "category": "medications",
+        "title": "Agrega un medicamento y sus recordatorios",
+        "summary": "Toca Nuevo, elige Medicamento, escribe el nombre, la dosis y los horarios, y guarda. Los recordatorios vienen activados, así que la persona indicada recibe aviso en cada toma.",
+        "steps": [
+          "Toca Nuevo en la parte de abajo de la pantalla y luego Medicina.",
+          "Escribe el Nombre del medicamento y la Dosis (por ejemplo, 100mg o 1 tableta).",
+          "En Fecha y hora, elige una hora o toca un horario común como Cada mañana (también pone Repetir en Diario). Cuando ya hay una hora, toca Agregar otra dosis si se toma más de una vez al día (hasta 4).",
+          "En Repetir, elige cada cuánto se toma, como Diario o Días de la semana.",
+          "Revisa los Recordatorios. Activar notificaciones viene encendido, con A la hora programada marcado, y puedes sumar Recordatorios anticipados.",
+          "Toca Crear medicamento."
+        ],
+        "body": "## Lo que conviene saber\n\n- **Quién recibe el recordatorio.** Los recordatorios de dosis le llegan a la persona que recibe el cuidado. Si el dueño del círculo eligió a alguien para encargarse de sus recordatorios de medicamentos, le llegan a esa persona. Consulta [Cómo funcionan los recordatorios y las alertas de dosis](/help/reminders-and-alerts/).\n- **Más detalles** guarda las recargas, la farmacia, quien receta y las instrucciones. Activa **Seguimiento de recargas** para recibir aviso cuando el frasco se esté acabando.\n- **Agregar una foto** del frasco ayuda a que todos confirmen la pastilla correcta.\n- **Las horas son las de la zona horaria de la persona que recibe el cuidado.** Si vives en otro lugar, el formulario muestra tu hora y la suya.\n- **Si la hora de hoy ya pasó**, el medicamento empieza con la próxima dosis. No se registra nada para hoy.\n- **Agregar por voz.** En celulares compatibles, los círculos Premium pueden tocar **Agregar por voz** y decir el medicamento. El formulario se llena solo y no se guarda nada hasta que lo revises y confirmes.\n\n## En la computadora\n\nEn [my.circlecare.app](/help/use-on-a-computer/), abre **Medicamentos** y elige **Agregar medicamento**. El formulario tiene los mismos campos. Los recordatorios son notificaciones push, así que solo llegan a celulares con la app de CircleCare instalada.\n\n## Límites\n\n- El plan gratuito no limita cuántos medicamentos ni recordatorios agregas.\n- CircleCare es una herramienta, no un médico. No revisa interacciones entre medicamentos ni da indicaciones de dosis.",
+        "related": [
+          "medication-schedules",
+          "confirm-a-dose",
+          "reminders-and-alerts",
+          "as-needed-medications"
+        ],
+        "keywords": [
+          "agregar medicamento",
+          "medicina",
+          "pastilla",
+          "dosis",
+          "receta",
+          "recordatorio de medicamento",
+          "pill"
+        ],
+        "video": {
+          "file": "add-a-medication-es.mp4",
+          "durationSec": 89
+        },
+        "poster": "add-a-medication-es.jpg"
+      },
+      {
+        "slug": "medication-schedules",
+        "category": "medications",
+        "title": "Medicamentos en ciertos días o cada pocos días",
+        "summary": "En Repetir, elige Días de la semana para días fijos, Cada 2 días para un día sí y otro no, o Ciclo para patrones como 7 días activos y 7 de descanso.",
+        "steps": [
+          "Toca Nuevo y luego Medicina. Escribe el nombre, la dosis y una hora (por ejemplo, toca Cada noche).",
+          "Toca Repetir.",
+          "Para días fijos de la semana, elige Días de la semana, toca los días que necesitas en Repetir los (el día de inicio ya viene marcado) y luego Listo.",
+          "Para un día sí y otro no, elige Cada 2 días.",
+          "Para periodos de toma y descanso, elige Ciclo y ajusta los Días activos y los Días de descanso (empiezan en 7 y 7).",
+          "Agrega una Fecha de fin (opcional) si el medicamento termina en una fecha conocida y toca Crear medicamento."
+        ],
+        "body": "## Opciones de repetición\n\nLa lista Repetir ofrece: **Nunca**, **Diario**, **Cada 2 días**, **Semanal**, **Mensual**, **Anual**, **Ciclo** y **Días de la semana**. Al agregar un medicamento nuevo también aparece **Según se necesite**, para medicamentos sin horario fijo (consulta [Medicamentos según se necesite](/help/as-needed-medications/)).\n\nEn la web, el ciclo aparece como **Ciclo (días activos / descanso)**.\n\n## Lo que conviene saber\n\n- **Días de la semana** sigue la zona horaria de la persona que recibe el cuidado.\n- **Varias dosis al día** se configuran en Fecha y hora con **Agregar otra dosis**, no en Repetir.\n- **Deja la fecha de fin en blanco** para que el medicamento siga hasta que lo suspendas.\n- **No puedes quitar el día en que empezó un horario.** Para cambiarlo, suspende el medicamento y agrégalo de nuevo con los días nuevos.\n- Todavía no hay \"cada 3 días\" ni otros intervalos personalizados. **Ciclo** cubre la mayoría de los patrones de toma y descanso.\n\n## No es para comidas ni rutinas\n\nLas comidas, caminatas y otras rutinas funcionan mejor como una tarea que se repite. Consulta [Recordatorios para comidas y rutinas diarias](/help/routine-reminders/).",
+        "related": [
+          "add-a-medication",
+          "routine-reminders",
+          "stop-or-delete-a-medication"
+        ],
+        "keywords": [
+          "días de la semana",
+          "cada dos días",
+          "días específicos",
+          "ciclo",
+          "descanso",
+          "horario",
+          "pastilla",
+          "repetir"
+        ],
+        "video": {
+          "file": "medication-schedules-es.mp4",
+          "durationSec": 110
+        },
+        "poster": "medication-schedules-es.jpg"
+      },
+      {
+        "slug": "confirm-a-dose",
+        "category": "medications",
+        "title": "Marca una dosis como tomada u omitida",
+        "summary": "En Inicio, toca Tomar cuando se dio la dosis u Omitir cuando no se dio. Todos en el círculo ven quién la marcó y cuándo.",
+        "steps": [
+          "Abre Inicio, donde aparecen las dosis de hoy.",
+          "Toca Tomar en la dosis que se dio, u Omitir si no se dio.",
+          "Si tocaste por error, toca Deshacer mientras aparece.",
+          "Para ver quién la marcó, toca Ver historial y luego Historial."
+        ],
+        "body": "## Qué significa cada estado\n\n- **Tomado**: alguien la marcó como dada.\n- **Omitido**: alguien la marcó como no dada. Se muestra en gris y cuenta en contra del porcentaje de cumplimiento.\n- **Sin marcar**: nadie marcó la dosis. CircleCare nunca decide por su cuenta que una dosis se perdió. Una dosis sin marcar sigue **Sin marcar** hasta que alguien la marque.\n\n## Lo que conviene saber\n\n- **Desde la notificación del recordatorio** en tu celular también puedes tocar Lo tomé u Omitir.\n- Una dosis que ya pasó su hora y no se ha marcado aparece como **Atrasado**.\n- **Cualquiera en el círculo puede marcar una dosis**, menos quienes tienen acceso de solo lectura.\n- **Si dos personas marcan la misma dosis**, la app muestra quién la marcó primero, por ejemplo \"Ya marcado como tomado a las 8:05 AM por Ana\". Puedes cambiar la respuesta y todos verán el cambio en Actividad.\n- **Las dosis anteriores** se pueden marcar desde la pestaña Medicinas o desde el calendario.\n- **Las dosis marcadas forman el historial.** Abre la pestaña Medicinas para ver el cumplimiento o comparte un [resumen de cuidado](/help/care-info-and-summary/).\n\n## En la computadora\n\nEn el Resumen de la web, usa **Confirmar** u **Omitir** junto a cada dosis.",
+        "related": [
+          "reminders-and-alerts",
+          "add-a-medication",
+          "care-info-and-summary"
+        ],
+        "keywords": [
+          "marcar tomado",
+          "confirmar dosis",
+          "omitir dosis",
+          "pastilla",
+          "sin marcar",
+          "deshacer",
+          "dosis"
+        ],
+        "video": {
+          "file": "confirm-a-dose-es.mp4",
+          "durationSec": 46
+        },
+        "poster": "confirm-a-dose-es.jpg"
+      },
+      {
+        "slug": "reminders-and-alerts",
+        "category": "medications",
+        "title": "Cómo funcionan los recordatorios y las alertas de dosis",
+        "summary": "A la hora de la dosis, la persona que recibe el cuidado (o quien se encarga de sus recordatorios) recibe una notificación. Si nadie marca la dosis, CircleCare avisa de nuevo a los 15 minutos, a los 30 minutos y a la hora, cada vez a más personas del círculo.",
+        "body": "## El recordatorio\n\nA la hora programada, la notificación push le llega a **una sola persona**:\n\n1. el miembro que el propietario eligió para **Recordatorios de medicamentos**, si hay uno,\n2. si no, la persona que recibe el cuidado,\n3. si no, el propietario del círculo.\n\nPara elegir a ese miembro, el propietario abre **Inicio**, toca a la persona en **Equipo de cuidado** y toca **Recordatorios de medicamentos** (y luego **Cambiar**, si otra persona ya los recibe).\n\nTambién puedes activar **Recordatorios anticipados**: **24 horas antes**, **1 hora antes**, **30 minutos antes** o **15 minutos antes**.\n\n## Si nadie marca la dosis\n\n| Tiempo después de la dosis | A quién se avisa |\n|---|---|\n| 15 minutos | A quien recibe los recordatorios |\n| 30 minutos | A los cuidadores del círculo |\n| 1 hora | A todos en el círculo |\n\nLas alertas se detienen en cuanto alguien marca la dosis como **Tomado** u **Omitido**. CircleCare nunca marca una dosis como \"perdida\" por su cuenta: la dosis sigue **Sin marcar** hasta que alguien la marque. Estos avisos están incluidos en el plan gratuito. Quienes tienen acceso de solo lectura no reciben los recordatorios ni estas alertas.\n\n## Horas de silencio\n\nDurante tus [horas de silencio](/help/quiet-hours/) no se envían los recordatorios ni los recordatorios anticipados. Las alertas de dosis sin marcar esperan y llegan cuando terminan las horas de silencio, a menos que la dosis se haya marcado mientras tanto. Si varias alertas de la misma dosis esperaron, solo llega la más reciente.\n\n## Lo que conviene saber\n\n- **Las notificaciones push solo funcionan en el celular.** La app web no envía notificaciones, así que instala la app en tu celular y permite las notificaciones. Consulta [No me llegan las notificaciones](/help/notifications-not-arriving/).\n- **Si desactivas los recordatorios de un medicamento**, se detienen tanto el recordatorio como las alertas de ese medicamento.\n- **Para dejar de recibir solo tú los avisos de dosis y las alertas de dosis sin marcar**, ve a Perfil y apaga **Medicamentos** en Notificaciones. Esto no detiene los recordatorios de dosis que te llegan.",
+        "related": [
+          "confirm-a-dose",
+          "quiet-hours",
+          "notifications-not-arriving",
+          "roles-and-permissions"
+        ],
+        "keywords": [
+          "recordatorio de medicamento",
+          "dosis olvidada",
+          "alerta a la familia",
+          "notificación",
+          "pastilla",
+          "aviso",
+          "dosis"
+        ],
+        "video": {
+          "file": "reminders-and-alerts-es.mp4",
+          "durationSec": 104
+        },
+        "poster": "reminders-and-alerts-es.jpg"
+      },
+      {
+        "slug": "stop-or-delete-a-medication",
+        "category": "medications",
+        "title": "Suspender un medicamento o eliminarlo",
+        "summary": "Usa Suspender cuando se deja un medicamento: los recordatorios se detienen de inmediato y se conserva su historial. Usa Eliminar solo para un medicamento que se agregó por error.",
+        "steps": [
+          "Abre Cuidado y luego la pestaña Medicinas.",
+          "Toca el botón ... del medicamento.",
+          "Toca Suspender para detenerlo, o Eliminar para quitarlo.",
+          "Confirma."
+        ],
+        "body": "## Suspender\n\n- Se aplica **de inmediato** a todo el medicamento (todos sus horarios).\n- Las dosis futuras salen del calendario y los recordatorios se detienen.\n- Las dosis pasadas se quedan en el historial y en los reportes.\n- El medicamento pasa a **Medicamentos inactivos**. Toca **Reactivar** ahí para volver a activarlo. Las dosis que pasaron mientras estuvo suspendido no regresan.\n\n## Eliminar\n\n- El medicamento desaparece de la lista de medicamentos y del calendario, y sus recordatorios se detienen.\n- Las dosis ya registradas se quedan en el historial y en los reportes.\n- No se puede deshacer. Si podrías necesitarlo otra vez, usa **Suspender**.\n\n## Lo que conviene saber\n\n- En el formulario del medicamento, las mismas opciones están en **Administrar medicamento**.\n- En el calendario, al eliminar una sola dosis la app pregunta **Solo esta dosis** o **Esta y todas las dosis futuras**.\n- En la web, abre **Medicamentos** y usa las mismas opciones **Suspender** y **Eliminar** de cada tarjeta.",
+        "related": [
+          "add-a-medication",
+          "medication-schedules",
+          "export-your-data"
+        ],
+        "keywords": [
+          "suspender medicamento",
+          "dejar medicamento",
+          "eliminar medicamento",
+          "quitar pastilla",
+          "inactivo",
+          "reactivar"
+        ],
+        "video": {
+          "file": "stop-or-delete-a-medication-es.mp4",
+          "durationSec": 76
+        },
+        "poster": "stop-or-delete-a-medication-es.jpg"
+      },
+      {
+        "slug": "as-needed-medications",
+        "category": "medications",
+        "title": "Medicamentos según se necesite (PRN)",
+        "summary": "Elige Según se necesite en Repetir al agregar el medicamento. No tiene horarios ni recordatorios. Quien da una dosis la registra para que el círculo vea cuándo fue la última.",
+        "steps": [
+          "Toca Nuevo en la parte de abajo de la pantalla y luego Medicina. Escribe el Nombre del medicamento y la Dosis.",
+          "En Repetir, elige Según se necesite.",
+          "Si quieres, llena ¿Para qué es? (por ejemplo, dolor o náuseas) y toca Crear medicamento.",
+          "Cuando des una dosis, toca Di una dosis en su tarjeta en Inicio.",
+          "En Dada, deja Ahora o toca una hora anterior (como hace 15 min), agrega una nota si quieres y toca Registrar dosis."
+        ],
+        "body": "## Lo que conviene saber\n\n- **Sin recordatorios ni alertas.** Los medicamentos según se necesite no tienen horario.\n- **Todos lo ven.** Al registrar una dosis se avisa al círculo, y la tarjeta muestra la \"Última dosis\" con la hora y quién la dio.\n- **Aviso de dosis doble.** Si otra persona registró el mismo medicamento en los últimos 30 minutos, la app pregunta antes de registrar otra.\n- **Dosis anteriores.** Puedes registrar dosis de las últimas 48 horas, pero nunca en el futuro.\n- **Historial.** Toca **Historial** en la tarjeta para ver todas las dosis. Puedes quitar una dosis registrada por error, y se avisa al círculo.\n- **No cuenta en el cumplimiento.** Los reportes muestran las dosis según se necesite aparte del porcentaje de cumplimiento.\n- **No se puede cambiar después.** Un medicamento no puede pasar de tener horario a según se necesite, ni al revés. Suspéndelo y agrégalo de nuevo.\n\nCircleCare no pone límites a cada cuánto se puede registrar una dosis. Sigue las indicaciones del médico o del farmacéutico. La app es una herramienta, no un médico.\n\nEn la web, la misma opción **Según se necesite** está en el formulario del medicamento.",
+        "related": [
+          "add-a-medication",
+          "confirm-a-dose",
+          "stop-or-delete-a-medication"
+        ],
+        "keywords": [
+          "prn",
+          "según se necesite",
+          "cuando haga falta",
+          "medicina para el dolor",
+          "registrar dosis",
+          "pastilla",
+          "inhalador"
+        ],
+        "video": {
+          "file": "as-needed-medications-es.mp4",
+          "durationSec": 123
+        },
+        "poster": "as-needed-medications-es.jpg"
+      },
+      {
+        "slug": "routine-reminders",
+        "category": "calendar",
+        "title": "Recordatorios para comidas y rutinas diarias",
+        "summary": "Agrega las comidas, caminatas u otras rutinas como una Tarea que se repite, asignada a la persona que debe hacerlas. Deja los medicamentos solo para medicamentos.",
+        "steps": [
+          "Toca Nuevo y luego Tarea.",
+          "Escribe un Título, como Almuerzo.",
+          "En Asignado a, elige a la persona que debe recibir el recordatorio.",
+          "En Fecha y hora, pon la fecha y la hora, y en Repetir elige Diario o Días de la semana.",
+          "Revisa los recordatorios: deja Activar notificaciones encendido y A la hora programada marcado. También puedes sumar un recordatorio anticipado.",
+          "Toca Crear tarea."
+        ],
+        "body": "## Por qué una tarea y no un medicamento\n\nSi agregas una comida como medicamento, la lista de medicamentos, los números de cumplimiento y el resumen de cuidado se llenan de cosas que no son medicamentos. Un médico que lea ese resumen vería \"Almuerzo\" junto a recetas reales. Una tarea que se repite avisa igual y mantiene limpio el registro de medicamentos.\n\n## Quién recibe el recordatorio\n\n- Le llega a la persona en **Asignado a**.\n- Si la dejas en **Cualquiera**, le llega a todos en el círculo que pueden editar.\n- Los recordatorios son notificaciones push en el celular. La app web no las envía.\n\n## Lo que conviene saber\n\n- Marca la tarea cuando esté hecha. El círculo ve quién la hizo.\n- Si tienes [horas de silencio](/help/quiet-hours/), los recordatorios de tareas en ese horario no se envían.\n- Para cambiar la rutina, edita la tarea. Los cambios se aplican a las próximas tareas.",
+        "related": [
+          "tasks",
+          "medication-schedules",
+          "quiet-hours"
+        ],
+        "keywords": [
+          "recordatorio de comida",
+          "rutina",
+          "recordatorio diario",
+          "almuerzo",
+          "caminata",
+          "hábito",
+          "tarea que se repite"
+        ],
+        "video": {
+          "file": "routine-reminders-es.mp4",
+          "durationSec": 100
+        },
+        "poster": "routine-reminders-es.jpg"
+      },
+      {
+        "slug": "appointments",
+        "category": "calendar",
+        "title": "Agrega una cita",
+        "summary": "Toca Nuevo, elige Cita, agrega un título, fecha, hora y ubicación, y guarda. Todos en el círculo la ven en el calendario.",
+        "steps": [
+          "Toca Nuevo en la parte de abajo de la pantalla y luego Cita.",
+          "Escribe un Título o toca una sugerencia como Consulta médica.",
+          "Agrega la Ubicación y los Detalles (opcional).",
+          "En Asignado a, elige quién acompaña, o deja Cualquiera.",
+          "Pon la Fecha y hora. Luego elige cuánto dura: 30 min, 1 h o 2 h.",
+          "Configura los Recordatorios y toca Crear cita."
+        ],
+        "body": "## Recordatorios\n\nPuedes recibir aviso **A la hora programada** y elegir **Recordatorios anticipados**: 24 horas, 1 hora, 30 minutos o 15 minutos antes. Le llegan a la persona en **Asignado a**. Con **Cualquiera**, le llegan a todos en el círculo que pueden editar.\n\n## Lo que conviene saber\n\n- **Repetir** funciona igual que en las tareas: diario, semanal, mensual y más.\n- **Las horas son las de la zona horaria de la persona que recibe el cuidado.**\n- Después de la consulta, abre la cita para agregar notas sobre lo que dijo el médico.\n- **Agregar por voz** está disponible en celulares compatibles para los círculos Premium.\n- En la web, abre **Calendario** y agrega la cita ahí.\n\n## Límites\n\nLos recordatorios son notificaciones push solo en el celular. Durante las [horas de silencio](/help/quiet-hours/) no se envían.",
+        "related": [
+          "tasks",
+          "daily-care-notes",
+          "care-info-and-summary",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "cita",
+          "consulta médica",
+          "agenda",
+          "calendario",
+          "doctor",
+          "chequeo",
+          "recordatorio"
+        ],
+        "video": {
+          "file": "appointments-es.mp4",
+          "durationSec": 121
+        },
+        "poster": "appointments-es.jpg"
+      },
+      {
+        "slug": "tasks",
+        "category": "calendar",
+        "title": "Comparte y asigna tareas",
+        "summary": "Agrega una tarea, asígnala a alguien o déjala para cualquiera, y el círculo ve cuándo se hizo. Las tareas pueden ser de una sola vez o repetirse.",
+        "steps": [
+          "Toca Nuevo y luego Tarea.",
+          "Escribe un Título o toca una sugerencia como Hacer las compras.",
+          "En Asignado a, elige a una persona o deja Cualquiera.",
+          "Pon fecha y hora si las tiene, y elige Repetir si se vuelve a hacer.",
+          "Toca Crear tarea.",
+          "Cuando esté hecha, abre Cuidado, luego Tareas, y toca Listo en ella. Toca Deshacer si marcaste la equivocada."
+        ],
+        "body": "## Dónde están las tareas\n\nAbre **Cuidado** y luego **Tareas**. **Abiertas** muestra lo que falta y **Completadas** muestra los últimos 30 días. Puedes ordenar por **Fecha límite**, **Asignado a** o **Fecha de creación**.\n\n## Recordatorios\n\n- Una tarea con hora puede enviar recordatorios: a la hora y antes (24 horas, 1 hora, 30 o 15 minutos antes).\n- Le llegan a la persona asignada. Si la tarea es para **Cualquiera**, le llegan a todos en el círculo que pueden editar.\n- También se avisa a la persona cuando le asignan una tarea.\n\n## Lo que conviene saber\n\n- **Las tareas completadas no se pueden editar**, pero puedes abrirlas y agregarles notas. Eliminarla es la única forma de quitarla.\n- **Los cambios a una tarea que se repite** se aplican a las próximas tareas. Las completadas y las pasadas quedan como estaban.\n- Quienes tienen acceso de solo lectura ven las tareas, pero no pueden agregarlas ni completarlas.\n- En la web, abre **Tareas**.",
+        "related": [
+          "routine-reminders",
+          "appointments",
+          "roles-and-permissions",
+          "invite-family"
+        ],
+        "keywords": [
+          "tarea",
+          "pendientes",
+          "asignar",
+          "mandado",
+          "quehacer",
+          "compartir tareas",
+          "lista"
+        ],
+        "video": {
+          "file": "tasks-es.mp4",
+          "durationSec": 81
+        },
+        "poster": "tasks-es.jpg"
+      },
+      {
+        "slug": "care-shifts",
+        "category": "calendar",
+        "title": "Organiza quién cubre cada turno de cuidado",
+        "summary": "Con Premium, agrega los bloques de tiempo que necesitan a alguien, como las noches o las mañanas entre semana. La familia puede tomar los turnos abiertos y todos ven quién cubre cada uno y qué falta.",
+        "steps": [
+          "Abre Cuidado, luego Calendario, y cambia de Agenda a Turnos.",
+          "Toca Agregar turno.",
+          "Ponle un Nombre, como Noche, y elige cuándo Empieza y cuándo Termina.",
+          "Elige si Se repite y configura un Recordatorio para quien tenga el turno.",
+          "En ¿Quién lo cubre?, elige Dejar abierto o Yo (el dueño del círculo o un gestor puede elegir a cualquiera).",
+          "Toca Guardar turno. Luego puedes tocar Agregar el siguiente turno para empezar donde termina este."
+        ],
+        "body": "## Tomar y soltar turnos\n\n- Un turno **Abierto** tiene el botón **Tomar**. Si el turno se repite, elige **Solo este** o **Este y todos los siguientes**.\n- Para devolver un turno, ábrelo y toca **Soltar turno**. Queda abierto otra vez y se avisa a los demás en el círculo.\n- El dueño del círculo o un gestor puede **Asignar** un turno a alguien y soltar el turno de otra persona.\n- No hay botón para intercambiar. Para intercambiar, una persona suelta el turno y la otra lo toma.\n\n## Notificaciones\n\nEn el celular:\n\n- Cuando se agrega un turno abierto, se avisa a los demás en el círculo.\n- Cuando alguien toma un turno, se avisa a quien lo creó.\n- Cuando te asignan un turno, te avisan a ti.\n- Cuando alguien suelta un turno, se avisa a los demás en el círculo.\n- El dueño del círculo y los gestores reciben aviso de los turnos que siguen abiertos un día antes de empezar.\n\nActívalas o desactívalas en Perfil, Notificaciones, **Turnos**. La app web muestra los turnos, pero no envía notificaciones.\n\n## Lo que conviene saber\n\n- **Solo con Premium.** En un círculo gratuito, el dueño ve una vista previa con **Ver Premium**.\n- **Si termina el Premium**, los turnos se siguen viendo, pero quedan de solo lectura hasta que se renueve.\n- Un turno puede pasar de la medianoche y durar de 15 minutos a 24 horas.\n- Las horas son las de la zona horaria de la persona que recibe el cuidado.",
+        "related": [
+          "tasks",
+          "free-and-premium",
+          "roles-and-permissions",
+          "invite-family"
+        ],
+        "keywords": [
+          "turnos",
+          "horario de cuidado",
+          "quién cuida",
+          "cobertura",
+          "turno de noche",
+          "rol",
+          "shifts"
+        ],
+        "video": {
+          "file": "care-shifts-es.mp4",
+          "durationSec": 125
+        },
+        "poster": "care-shifts-es.jpg"
+      },
+      {
+        "slug": "doctor-visits-and-notes",
+        "category": "calendar",
+        "title": "Ve todas las visitas y notas de un doctor",
+        "summary": "Elige al doctor cuando agregues o edites una cita. Luego abre ese doctor en Doctores para ver la próxima visita, las visitas pasadas y sus notas en un solo lugar.",
+        "steps": [
+          "Agrega al doctor en Doctores, en la pestaña Salud, si todavía no está.",
+          "Agrega o edita una cita y toca Doctor.",
+          "Elige al doctor, o toca Agregar un doctor, y guarda la cita.",
+          "Para ver todo lo de ese doctor, abre Doctores y toca Visitas y notas en su tarjeta.",
+          "Toca Agregar una nota en cualquier visita para escribir lo que se dijo."
+        ],
+        "body": "## Lo que vas a ver\n\n**Visitas y notas** muestra la **Próxima visita** y luego las **Visitas pasadas**, de la más reciente a la más antigua, con las notas de cada una. Toca **Mostrar visitas más antiguas** para ir más atrás. Desde una cita vinculada, **Ver todas las visitas** abre la misma página.\n\n## Lo que conviene saber\n\n- **Gratis para todos.**\n- **Las citas pasadas no se vinculan solas.** CircleCare no adivina con qué doctor fue una cita antigua. Para vincular una, edítala y elige al doctor.\n- **Las citas que se repiten** usan un solo doctor para toda la serie.\n- **Los miembros de solo lectura** pueden ver las visitas y las notas, pero no agregar notas.\n- La app web tiene el mismo selector de doctor y la página **Visitas y notas**.",
+        "related": [
+          "appointments",
+          "care-info-and-summary",
+          "daily-care-notes",
+          "find-older-notes"
+        ],
+        "keywords": [
+          "doctor",
+          "médico",
+          "historial de visitas",
+          "notas de la cita",
+          "especialista",
+          "consultas"
+        ],
+        "video": {
+          "file": "doctor-visits-and-notes-es.mp4",
+          "durationSec": 92
+        },
+        "poster": "doctor-visits-and-notes-es.jpg"
+      },
+      {
+        "slug": "daily-care-notes",
+        "category": "notes-and-records",
+        "title": "Escribe notas diarias de cuidado",
+        "summary": "Abre Cuidado y luego Notas, escribe cómo estuvo el día o elige un estado de ánimo, y toca Publicar. Todo el círculo ve la nota con tu nombre.",
+        "steps": [
+          "Abre tu círculo y toca “Cuidado” abajo; luego la pestaña “Notas” arriba.",
+          "Escribe en el cuadro que dice “¿Cómo estuvo el día?”.",
+          "Si quieres, elige un ánimo (“Excelente día”, “Buen día”, “Regular” o “Día difícil”) y una o más categorías: “Comida”, “Medicamento”, “Visita” o “Incidente”.",
+          "Toca “Publicar”.",
+          "Para cambiar o borrar tu nota después, toca el ícono de lápiz (“Editar nota”) o el de basura (“Eliminar nota”)."
+        ],
+        "body": "Las notas del día son un diario compartido sobre la persona que cuidas. Úsalas para contar cómo estuvo el día, qué comió, una visita o cualquier cosa que valga la pena recordar.\n\n## Bueno saber\n\n- Una nota necesita texto o un estado de ánimo. Puedes publicar solo el ánimo.\n- Cada nota queda en el día en que la publicas, según la zona horaria de la persona que recibe el cuidado.\n- Las notas pueden tener hasta 2,000 caracteres.\n- Los ánimos de la semana aparecen en una franja arriba de la lista (\"Esta semana: ...\").\n- Todos en el círculo pueden leer todas las notas. No son privadas de quien las escribe.\n\n## Quién puede hacer qué\n\n- Cualquier miembro del círculo con permiso de edición puede escribir notas. Un miembro de solo lectura puede leerlas, pero no publicar.\n- Solo quien escribió la nota puede editarla.\n- Quien la escribió o el dueño del círculo pueden eliminarla. Al eliminarla, desaparece para todos.\n\n## Cuándo se avisa\n\nLos miembros que tienen activado el grupo **Notas** reciben una notificación cuando alguien agrega una nota. La notificación nunca muestra lo que dice la nota. Consulta [Horas de silencio y cómo desactivar notificaciones](/help/quiet-hours/).\n\n## En la computadora\n\nEn la versión web, abre **Notas** en el menú lateral (dentro de Cuidado). El cuadro se llama **Agregar una nota** y funciona igual.\n\n## Notas más antiguas\n\nLa lista de Notas abre con las últimas dos semanas, y **Mostrar notas anteriores** llega tan atrás como quieras. Consulta [Encuentra notas anteriores](/help/find-older-notes/).",
+        "related": [
+          "find-older-notes",
+          "care-info-and-summary",
+          "roles-and-permissions",
+          "quiet-hours"
+        ],
+        "keywords": [
+          "notas del día",
+          "notas de cuidado",
+          "diario",
+          "estado de ánimo",
+          "bitácora",
+          "incidente",
+          "registro diario",
+          "avisar a la familia"
+        ],
+        "video": {
+          "file": "daily-care-notes-es.mp4",
+          "durationSec": 57
+        },
+        "poster": "daily-care-notes-es.jpg"
+      },
+      {
+        "slug": "find-older-notes",
+        "category": "notes-and-records",
+        "title": "Encuentra notas anteriores",
+        "summary": "La lista de Notas abre con las últimas dos semanas. Toca “Mostrar notas anteriores” al final para ir más atrás, hasta donde lleguen tus notas. Todavía no hay búsqueda de notas.",
+        "steps": [
+          "Abre “Cuidado” y luego “Notas”.",
+          "Baja hasta el final de la lista. En el celular, al deslizar se cargan días anteriores hasta unos tres meses atrás. Toca “Mostrar notas anteriores” para seguir retrocediendo.",
+          "Sigue tocando “Mostrar notas anteriores” hasta que diga “No hay notas anteriores”."
+        ],
+        "body": "Todavía no hay búsqueda de notas, pero puedes llegar a cualquier nota retrocediendo por la lista.\n\n## Cómo se carga la lista\n\n- La lista de Notas abre con las últimas dos semanas.\n- En el celular, al deslizar hacia abajo se cargan días anteriores, de dos en dos semanas, hasta unos tres meses atrás. En la web, toca **Mostrar notas anteriores** para hacer lo mismo.\n- Después de eso, cada toque en **Mostrar notas anteriores** carga unos tres meses más. No hay límite de qué tan atrás puedes llegar.\n- Cuando ya no hay nada más antiguo, la lista dice **No hay notas anteriores**.\n\nTus notas nunca se borran por ser antiguas. Cada nota queda guardada con su fecha, autor y texto.\n\n## ¿Necesitas una copia de todo?\n\nUsa la exportación de datos. Es un archivo con los registros de tu círculo, incluidas las notas de cualquier fecha.\n\n- Si **eres el dueño** del círculo, la exportación incluye todas las notas del día y todas las notas de citas o tareas.\n- Si **eres miembro** (no dueño), incluye solo las notas que tú escribiste. Si necesitas las de todos, pídele al dueño del círculo que la haga.\n\nConsulta [Exporta los datos de tu círculo](/help/export-your-data/) para ver los pasos.\n\n## ¿Necesitas el último mes para el médico?\n\nEl resumen de cuidado puede incluir las notas del día de los últimos 30 días. Consulta [Guarda la información de emergencia y comparte un resumen de cuidado](/help/care-info-and-summary/).\n\n## Antes de actualizar\n\nEsto describe CircleCare 1.3.0. En versiones anteriores la lista se detiene a unos tres meses y las notas más antiguas solo están en la exportación de datos.",
+        "related": [
+          "export-your-data",
+          "daily-care-notes",
+          "care-info-and-summary"
+        ],
+        "keywords": [
+          "notas antiguas",
+          "notas anteriores",
+          "buscar notas",
+          "notas perdidas",
+          "historial de notas",
+          "mostrar notas anteriores",
+          "3 meses",
+          "notas viejas"
+        ],
+        "video": {
+          "file": "find-older-notes-es.mp4",
+          "durationSec": 81
+        },
+        "poster": "find-older-notes-es.jpg"
+      },
+      {
+        "slug": "care-info-and-summary",
+        "category": "notes-and-records",
+        "title": "Guarda la información de emergencia y comparte un resumen de cuidado",
+        "summary": "Guarda una sola vez contactos, doctores, seguro, alergias y condiciones en Info de emergencia, y todo el círculo los puede ver. Toca Compartir para enviar un resumen de cuidado en PDF a un médico, un hospital o un familiar.",
+        "steps": [
+          "Abre tu círculo y toca “Salud” abajo. Se abre en “Info de emergencia”. Desde Inicio también puedes tocar el acceso directo “Salud”.",
+          "Toca el + junto a una sección, como “Información crítica”, o una fila que dice “Toca para agregar”, para llenar la información médica, los doctores, los contactos de emergencia o el seguro.",
+          "Para compartir, toca el ícono de compartir arriba a la derecha. Se abre “Compartir resumen de cuidado”.",
+          "Elige si quieres “Incluir notas de citas” e “Incluir notas de cuidado diarias”.",
+          "Toca “Compartir” y elige cómo enviar el PDF."
+        ],
+        "body": "La información de emergencia es el lugar para los datos que alguien puede necesitar rápido: en la farmacia, en urgencias o al teléfono con una enfermera.\n\n## Dónde encontrarla\n\nLa app le da varios nombres a esta sección. En el celular es la pestaña **Salud**, luego **Emergencia**, y la pantalla se llama **Info de emergencia**. En la web es **Información de emergencia** en el menú lateral, dentro de Salud.\n\n## Qué puedes guardar\n\n- **Información médica**: tipo de sangre, alergias a medicamentos, otras alergias y condiciones.\n- **Doctores**: un doctor principal y especialistas.\n- **Contactos de emergencia**.\n- **Seguro**.\n- **Medicamentos actuales**: salen de los medicamentos que ya agregaste. No hay que escribirlos dos veces.\n\nSe guarda una sola vez para el círculo y todos los miembros la pueden ver. Quienes tienen permiso de edición pueden cambiarla; los miembros de solo lectura pueden leerla.\n\n## Qué incluye el resumen de cuidado en PDF\n\n- Nombre, fecha de nacimiento, condiciones y alergias de la persona que recibe el cuidado\n- Contactos de emergencia\n- Medicamentos actuales y los suspendidos en los últimos 30 días\n- Doctores\n- Seguro\n- Opcional: notas de citas y notas de cuidado diarias de los últimos 30 días, si activas esas opciones\n\n**No** incluye signos vitales ni la adherencia a los medicamentos. Eso está en el reporte de adherencia. Consulta [Exporta los datos de tu círculo](/help/export-your-data/).\n\n## Quién puede compartirlo\n\nCualquier miembro del círculo puede crear y compartir el resumen, incluso los de solo lectura. Antes de compartirlo, la app te recuerda que contiene información de salud sensible. Compártelo solo con personas de tu confianza.\n\n## En la computadora\n\nAbre **Información de emergencia** y haz clic en **Compartir**. El resumen se abre en la ventana de impresión del navegador, donde puedes imprimirlo o guardarlo como PDF.\n\nCircleCare guarda y comparte la información que tú escribes. No la revisa ni da consejos médicos.",
+        "related": [
+          "documents",
+          "export-your-data",
+          "roles-and-permissions",
+          "add-a-medication"
+        ],
+        "keywords": [
+          "información de emergencia",
+          "info de cuidado",
+          "resumen de cuidado",
+          "PDF",
+          "alergias",
+          "seguro",
+          "doctores",
+          "información médica"
+        ],
+        "video": {
+          "file": "care-info-and-summary-es.mp4",
+          "durationSec": 74
+        },
+        "poster": "care-info-and-summary-es.jpg"
+      },
+      {
+        "slug": "documents",
+        "category": "notes-and-records",
+        "title": "Guarda documentos y fotos",
+        "summary": "Sube tarjetas del seguro, expedientes y otros papeles como fotos o PDF en Salud, luego Documentos, para que cualquiera del círculo pueda abrirlos. Cada archivo puede pesar hasta 10MB, y un círculo tiene 200MB en el plan gratis o 1GB con Premium.",
+        "steps": [
+          "Abre tu círculo y toca “Salud”; luego la pestaña “Documentos”.",
+          "Toca el botón para agregar arriba a la derecha (o una sugerencia de “Empieza aquí”).",
+          "Toca “Elegir foto” o “Elegir archivo (PDF)”.",
+          "Ponle una “Etiqueta”, elige una “Categoría” y agrega una “Nota” si ayuda.",
+          "Toca “Subir”."
+        ],
+        "body": "Ten en un solo lugar los papeles que siempre te piden: la tarjeta del seguro (frente y reverso), las voluntades anticipadas, la lista de medicamentos de la farmacia, los resultados de laboratorio recientes.\n\n## Archivos que puedes agregar\n\n- Fotos: JPG, PNG y HEIC (fotos de iPhone)\n- Archivos PDF\n- Hasta 10MB por archivo\n\nCategorías: **Registros médicos**, **Seguro**, **Legal**, **Recetas** y **Otro**. Puedes filtrar la lista por categoría.\n\n## Almacenamiento\n\nEl espacio lo comparte todo el círculo y depende del plan del **dueño del círculo**:\n\n- Gratis: 200MB por círculo\n- Premium: 1GB por círculo\n\nLa pantalla de Documentos muestra cuánto se ha usado. Cuando se llena, puedes eliminar archivos para liberar espacio. Solo el dueño del círculo puede mejorar el plan para tener más. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Quién puede hacer qué\n\n- Cualquier miembro del círculo puede abrir y ver los documentos.\n- Quienes tienen permiso de edición pueden subir. Un miembro de solo lectura no puede agregar, renombrar ni eliminar documentos.\n- Solo quien subió un documento, o el dueño del círculo, puede renombrarlo o eliminarlo.\n\n## Eliminar es permanente\n\nCuando eliminas un documento, el archivo se borra para todos y no se puede recuperar. Si puedes necesitarlo después, guarda antes una copia con **Compartir**.\n\n## En la computadora\n\nAbre **Documentos** en el menú lateral de la web y haz clic en **Subir documento**. La web acepta JPG, PNG, HEIC o PDF, hasta 10MB.",
+        "related": [
+          "care-info-and-summary",
+          "free-and-premium",
+          "roles-and-permissions",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "documentos",
+          "subir",
+          "tarjeta del seguro",
+          "fotos",
+          "PDF",
+          "almacenamiento",
+          "archivos",
+          "expedientes"
+        ],
+        "video": {
+          "file": "documents-es.mp4",
+          "durationSec": 79
+        },
+        "poster": "documents-es.jpg"
+      },
+      {
+        "slug": "vitals",
+        "category": "notes-and-records",
+        "title": "Registra presión arterial, frecuencia cardíaca, glucosa y peso",
+        "summary": "Anota a mano la presión arterial, la frecuencia cardíaca, la glucosa y el peso, y todo el círculo ve cada lectura y quién la registró. CircleCare no se sincroniza con Apple Health ni con otros dispositivos.",
+        "steps": [
+          "Desde Inicio en tu círculo, toca “Signos vitales”.",
+          "Elige el tipo de lectura arriba, por ejemplo “Presión arterial”.",
+          "Toca el botón para agregar (+) arriba a la derecha.",
+          "Escribe los valores. Cambia la fecha y la hora si la lectura fue antes, y agrega notas si quieres.",
+          "Toca “Guardar lectura”."
+        ],
+        "body": "Los signos vitales ayudan al círculo a notar una tendencia antes de la próxima cita.\n\n## Qué puedes registrar\n\n- **Presión arterial** (mmHg, sistólica y diastólica)\n- **Frecuencia cardíaca** (lpm)\n- **Glucosa** (mg/dL o mmol/L)\n- **Peso** (lb o kg)\n\nLa versión web y la versión más reciente de la app también tienen **Temperatura** y **Oxígeno en sangre**. Si no los ves en tu celular, actualiza CircleCare.\n\n## Cómo se comparten las lecturas\n\nTodo el círculo ve cada lectura, con el nombre de quien la registró (\"Registrado por ...\"). La pantalla muestra la última lectura, el promedio, el mínimo y el máximo, y una gráfica de tendencia por semana, mes, seis meses o año.\n\nQuienes tienen permiso de edición pueden agregar, cambiar y eliminar lecturas. Los miembros de solo lectura pueden verlas.\n\n## Unidades\n\nElige tus unidades en Perfil, en **Unidades de salud**. Las lecturas se convierten, así que tú y tu hermana pueden ver cada una sus propias unidades.\n\n## Lo que no hacen los signos vitales\n\n- Las lecturas se escriben a mano. CircleCare no se conecta con Apple Health, Google Health Connect, baumanómetros ni glucómetros.\n- CircleCare no interpreta las lecturas ni te dice qué significan. Habla con un médico o una enfermera sobre cualquier lectura que te preocupe.\n\n## Comparte las lecturas con el médico\n\nEl reporte de adherencia (Premium) puede incluir un resumen de signos vitales del período que elijas. Consulta [Exporta los datos de tu círculo](/help/export-your-data/). El resumen de cuidado en PDF no incluye signos vitales.\n\n## En la computadora\n\nAbre **Signos vitales** en el menú lateral de la web.",
+        "related": [
+          "export-your-data",
+          "care-info-and-summary",
+          "free-and-premium",
+          "use-on-a-computer"
+        ],
+        "keywords": [
+          "signos vitales",
+          "presión arterial",
+          "frecuencia cardíaca",
+          "glucosa",
+          "azúcar",
+          "peso",
+          "lecturas",
+          "Apple Health"
+        ],
+        "video": {
+          "file": "vitals-es.mp4",
+          "durationSec": 62
+        },
+        "poster": "vitals-es.jpg"
+      },
+      {
+        "slug": "export-your-data",
+        "category": "notes-and-records",
+        "title": "Exporta los datos de tu círculo",
+        "summary": "En Perfil, en Tus datos, toca Descargar mis datos para obtener un archivo JSON con lo que CircleCare guarda. El dueño del círculo recibe todos los registros del círculo; los miembros, los suyos.",
+        "steps": [
+          "Abre Perfil. En el celular, regresa a tu lista de círculos y toca el ícono de persona arriba.",
+          "Baja hasta “Tus datos”.",
+          "Toca “Descargar mis datos”.",
+          "En el celular, elige dónde guardar o enviar el archivo. En la web, el archivo se descarga a tu computadora."
+        ],
+        "body": "En CircleCare hay tres exportaciones distintas. Cada una sirve para algo diferente.\n\n## 1. Tus datos (la exportación completa)\n\nUn archivo llamado circlecare-export.json. JSON es un formato de datos, no un reporte para imprimir. Sirve para guardar una copia completa o llevar tus registros a otra herramienta.\n\n**Si eres dueño de un círculo**, incluye para ese círculo:\n\n- Los datos de la persona que recibe el cuidado y la lista de miembros\n- La información de emergencia\n- Los medicamentos y cada dosis registrada (tomada, tarde, omitida), además de las dosis según se necesite\n- Citas y tareas\n- Signos vitales\n- Notas del día y notas de citas o tareas, de cualquier fecha\n- La lista de documentos (nombre, categoría, tipo, tamaño, fecha). Los archivos no vienen dentro; descárgalos desde Documentos.\n\n**Si eres miembro** del círculo de otra persona, incluye tu membresía y lo que tú creaste ahí: los eventos que agregaste, las dosis que registraste y las notas que escribiste.\n\nLos círculos archivados no se incluyen. Puedes hacer la exportación hasta 5 veces al día. Cualquier persona puede exportar sus propios datos; no necesitas Premium.\n\n## 2. Resumen de cuidado (PDF)\n\nUn documento corto para el médico o el hospital: la persona que recibe el cuidado, condiciones, alergias, contactos de emergencia, medicamentos, doctores y seguro, con notas opcionales de los últimos 30 días. Cualquier miembro del círculo lo puede compartir. Consulta [Guarda la información de emergencia y comparte un resumen de cuidado](/help/care-info-and-summary/).\n\n## 3. Reporte del historial de medicamentos (PDF, Premium)\n\nUn reporte para imprimir con lo que se tomó, se tomó tarde, se omitió o quedó sin marcar en el período que elijas. Consulta [Comparte un reporte del historial de medicamentos](/help/medication-history-report/).",
+        "related": [
+          "find-older-notes",
+          "care-info-and-summary",
+          "vitals",
+          "delete-account",
+          "privacy-and-security"
+        ],
+        "keywords": [
+          "exportar",
+          "descargar mis datos",
+          "exportación",
+          "JSON",
+          "respaldo",
+          "reporte de adherencia",
+          "PDF",
+          "registros"
+        ],
+        "video": {
+          "file": "export-your-data-es.mp4",
+          "durationSec": 61
+        },
+        "poster": "export-your-data-es.jpg"
+      },
+      {
+        "slug": "medication-history-report",
+        "category": "notes-and-records",
+        "title": "Comparte un reporte del historial de medicamentos",
+        "summary": "Abre Cuidado, luego Medicinas, toca Historial y después Exportar reporte. Elige un período de los últimos 7 días a todo el tiempo, y CircleCare crea un PDF con las dosis tomadas, tomadas tarde, omitidas o sin marcar. Requiere un círculo Premium.",
+        "steps": [
+          "Abre “Cuidado”, luego “Medicinas”, y toca “Historial”. En la web, abre “Medicamentos” y elige “Historial”.",
+          "En la tarjeta de adherencia, arriba, toca “Exportar reporte”.",
+          "Elige un período: “Últimos 7 días”, “Últimos 14 días”, “Últimos 30 días”, “Últimos 60 días”, “Últimos 90 días” o “Todo el tiempo”.",
+          "Espera mientras dice “Generando PDF...” y luego elige dónde guardar o enviar el PDF. En la web, el reporte se abre en la ventana de impresión del navegador, donde puedes imprimirlo o guardarlo como PDF."
+        ],
+        "body": "El reporte es un PDF para el médico, el farmacéutico o el resto de la familia. Cubre cada dosis programada del período, hasta ayer. Hoy todavía no se cuenta, porque algunas dosis de hoy pueden estar pendientes.\n\n## Qué cuenta\n\nCada dosis programada queda como:\n\n- **Tomada**: se marcó como tomada dentro de los 30 minutos de su hora.\n- **Tomada tarde**: se marcó como tomada 30 minutos o más después de su hora.\n- **Omitida**: alguien la marcó como omitida.\n- **Sin marcar**: nadie la confirmó en la app. Puede haberse tomado o no.\n\nLa tasa de adherencia son las dosis tomadas (a tiempo o tarde) sobre las dosis programadas. El reporte muestra:\n\n- **Resumen**: la tasa, los conteos de arriba y si la segunda mitad del período fue mejor o peor que la primera.\n- **Por medicamento**: la dosis, las tomadas, sin marcar, omitidas y la tasa de cada medicamento.\n- **Por día**: un cuadro por día (los últimos 30 días del período) y la lista de los días con una dosis omitida o sin marcar.\n- **Hora del día**: los mismos conteos para cada hora de dosis.\n\nLos medicamentos según se necesite aparecen en su propia sección (dosis dadas y quién las dio) y no cuentan para la tasa. Un medicamento suspendido solo cuenta las dosis que tocaban antes de suspenderlo.\n\n## Resumen de signos vitales\n\nUn reporte hecho en la web también incluye un resumen de los signos vitales registrados en el mismo período, si los hay: para cada tipo, el último registro, el promedio, el más bajo y el más alto. Los reportes hechos en la app del celular todavía no incluyen signos vitales. Para ver los registros, consulta [Registra presión arterial, frecuencia cardíaca, glucosa y peso](/help/vitals/).\n\n## Notas y límites\n\n- Requiere un **círculo Premium**: el plan del propietario del círculo. En un círculo gratis, el propietario ve las opciones para mejorar el plan al tocar Exportar reporte, y los demás miembros ven que el propietario necesita Premium. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n- La tarjeta de adherencia y su botón Exportar reporte aparecen cuando el círculo tuvo dosis programadas en los últimos 30 días.\n- “Todo el tiempo” empieza desde la primera dosis que alguien marcó en el círculo.\n- Cualquier miembro del círculo puede crear el reporte, incluso con acceso de solo lectura.\n- El PDF muestra el nombre, la fecha de nacimiento y el historial de medicamentos de la persona que recibe el cuidado. Compártelo solo con quien deba verlo.\n- Para un resumen de una página con condiciones, alergias, medicamentos y doctores, usa el resumen de cuidado. Consulta [Guarda la información de emergencia y comparte un resumen de cuidado](/help/care-info-and-summary/). Para una copia completa de todo, consulta [Exporta los datos de tu círculo](/help/export-your-data/).",
+        "related": [
+          "export-your-data",
+          "care-info-and-summary",
+          "confirm-a-dose",
+          "vitals",
+          "free-and-premium"
+        ],
+        "keywords": [
+          "historial de medicamentos",
+          "adherencia",
+          "reporte de adherencia",
+          "reporte",
+          "PDF",
+          "médico",
+          "dosis",
+          "dosis olvidadas",
+          "exportar reporte",
+          "imprimir"
+        ],
+        "video": {
+          "file": "medication-history-report-es.mp4",
+          "durationSec": 50
+        },
+        "poster": "medication-history-report-es.jpg"
+      },
+      {
+        "slug": "log-a-past-incident",
+        "category": "notes-and-records",
+        "title": "Registra una caída o un incidente que ya pasó",
+        "summary": "Escribe una nota del día, cambia su Fecha al día en que pasó y elige la categoría Incidente. La nota queda en ese día, aunque haya sido hace semanas o años.",
+        "steps": [
+          "Abre “Cuidado” y luego “Notas”.",
+          "Escribe lo que pasó en el cuadro que dice “¿Cómo estuvo el día?”.",
+          "Toca la fila “Fecha” debajo del texto (dice “Hoy”), elige el día en que pasó y toca “Confirmar”. No se pueden elegir fechas futuras.",
+          "Elige la categoría “Incidente”.",
+          "Toca “Publicar”. La nota aparece en su propio día."
+        ],
+        "body": "Una caída, una mala reacción, una visita a urgencias: importan meses después, cuando el médico pregunta \"¿cuándo pasó eso?\". Ahora puedes registrarlas en la fecha correcta, aunque te acuerdes de anotarlas después.\n\n## Ejemplo: una caída de hace unas semanas\n\nTu mamá se cayó el 5 de mayo y lo estás anotando hoy. Escribe \"Se cayó en el baño, moretón en la cadera izquierda, no fue a urgencias\", cambia **Fecha** al 5 de mayo, elige **Incidente** y toca **Publicar**. La nota queda en el 5 de mayo, no en hoy.\n\n## Bueno saber\n\n- La fecha puede ser hoy o cualquier día anterior. No hay límite de qué tan atrás.\n- Para regresar a hoy antes de publicar, toca **Volver a hoy**.\n- Quien escribió la nota puede cambiar la fecha después, al editarla.\n- El círculo recibe el aviso de nota de siempre, y dice de qué día es la nota. Nunca muestra lo que dice.\n- Para ver días más antiguos en la lista, baja hasta el final y toca **Mostrar notas anteriores**.\n\n## En la computadora\n\nLa versión web tiene la misma fila **Fecha** en el cuadro de notas de la página **Notas**.\n\nCircleCare guarda lo que escribes. No evalúa lesiones ni da consejos médicos. Si alguien se cayó y puede estar lastimado, llama al médico o a emergencias.",
+        "related": [
+          "daily-care-notes",
+          "find-older-notes",
+          "export-your-data",
+          "care-info-and-summary"
+        ],
+        "keywords": [
+          "caída",
+          "incidente",
+          "fecha anterior",
+          "registrar caída",
+          "fecha pasada",
+          "accidente",
+          "urgencias",
+          "anotar después"
+        ],
+        "video": {
+          "file": "log-a-past-incident-es.mp4",
+          "durationSec": 56
+        },
+        "poster": "log-a-past-incident-es.jpg"
+      },
+      {
+        "slug": "notifications-not-arriving",
+        "category": "notifications",
+        "title": "No me llegan las notificaciones",
+        "summary": "Casi siempre es porque el permiso de notificaciones de CircleCare está apagado en el celular, el celular tiene otra cuenta iniciada, hay horas de silencio activas o ese tipo de notificación está desactivado en Perfil. Revisa estos puntos en orden.",
+        "steps": [
+          "Revisa el celular: en los ajustes del celular, busca CircleCare y confirma que las notificaciones estén permitidas. Si están bloqueadas, Perfil en la app muestra “Las notificaciones están bloqueadas” con el botón “Abrir ajustes”.",
+          "Revisa la cuenta: abre Perfil en ese celular y confirma que aparecen tu nombre y tu correo.",
+          "Revisa los grupos de notificaciones: en Perfil, en “Notificaciones”, confirma que los grupos que quieres estén activados.",
+          "Revisa las horas de silencio: en Perfil, en “Horas de silencio”, mira si “Activar horas de silencio” está encendido y qué horario cubre.",
+          "Revisa para quién es el recordatorio: los recordatorios de dosis y de tareas van a personas específicas, no siempre a todos."
+        ],
+        "body": "Las notificaciones dependen del celular, de la cuenta y de algunos ajustes. Esto es lo que significa cada punto.\n\n## 1. El celular permite las notificaciones de CircleCare\n\nSi las notificaciones de CircleCare se apagaron (o nunca se permitieron), el celular las descarta sin avisar. En la app, Perfil muestra **Las notificaciones están desactivadas** o **Las notificaciones están bloqueadas** con un botón para activarlas. Un modo Concentración o No molestar en el celular también puede ocultarlas.\n\n## 2. El celular tiene tu cuenta iniciada\n\nUn celular recibe las notificaciones de **una sola cuenta de CircleCare a la vez**: la última que inició sesión en él. Si en un celular o tableta de la familia la última sesión fue de otra persona, ese aparato recibe las notificaciones de esa persona, no las tuyas. Inicia sesión con tu propia cuenta en tu propio celular y abre la app una vez. Cerrar sesión no detiene las notificaciones del celular; iniciar sesión con otra cuenta sí.\n\n## 3. Grupos de notificaciones\n\nEn Perfil, en **Notificaciones**, hay un interruptor por grupo, como **Medicamentos**, **Tareas y citas**, **Notas** y **Resumen del día y consejos**. Se aplican a tu cuenta en todos tus círculos. Si un grupo dice **Algunas desactivadas**, una parte está apagada.\n\n## 4. Horas de silencio\n\nDurante tus horas de silencio, algunas notificaciones se guardan para después y otras se omiten. Consulta [Horas de silencio y cómo desactivar notificaciones](/help/quiet-hours/).\n\n## 5. A quién le llega cada recordatorio\n\n- Los **recordatorios de dosis** le llegan a una sola persona: el miembro que el propietario eligió para **Recordatorios de medicamentos** (abarca todos los medicamentos del círculo); si no hay, la persona que recibe el cuidado si está en el círculo; y si no, el propietario del círculo. Esa persona recibe los recordatorios antes de la dosis y a la hora de la dosis, y la alerta 15 minutos después. Si el miembro elegido tiene acceso de solo lectura, todo eso le llega a la persona que recibe el cuidado o al propietario. Las alertas posteriores por dosis olvidadas les llegan a más personas del círculo. Las horas de los recordatorios se configuran en cada medicamento. Consulta [Cómo funcionan los recordatorios y las alertas de dosis](/help/reminders-and-alerts/).\n- Los **recordatorios de tareas** le llegan a la persona asignada. Una tarea asignada a \"Cualquiera\" avisa a todos los del círculo que pueden hacerla.\n- Si tu lugar en un círculo es de **solo lectura**, no recibes las notificaciones de ese círculo. Consulta [Propietario, cuidadores, receptor de cuidado y solo lectura](/help/roles-and-permissions/).\n\n## 6. La web no envía notificaciones\n\nEn la versión web puedes cambiar tus ajustes de notificaciones, pero no recibes notificaciones ahí. Instala la app en tu celular para recibirlas. Consulta [Usa CircleCare en la computadora](/help/use-on-a-computer/).\n\n¿Sigue sin funcionar? Escríbenos desde la página de Ayuda y cuéntanos qué notificación esperabas y más o menos a qué hora.",
+        "related": [
+          "quiet-hours",
+          "reminders-and-alerts",
+          "roles-and-permissions",
+          "use-on-a-computer",
+          "confirm-a-dose"
+        ],
+        "keywords": [
+          "notificaciones",
+          "no llegan",
+          "avisos",
+          "recordatorios no funcionan",
+          "celular compartido",
+          "permiso",
+          "push",
+          "alertas"
+        ],
+        "video": {
+          "file": "notifications-not-arriving-es.mp4",
+          "durationSec": 68
+        },
+        "poster": "notifications-not-arriving-es.jpg"
+      },
+      {
+        "slug": "quiet-hours",
+        "category": "notifications",
+        "title": "Horas de silencio y cómo desactivar notificaciones",
+        "summary": "Las horas de silencio guardan la mayoría de las notificaciones hasta que termina tu horario, para que te pongas al día en la mañana. Los recordatorios que solo tienen sentido antes de tiempo, como “en 15 minutos”, se omiten. También puedes apagar grupos completos de notificaciones en Perfil.",
+        "steps": [
+          "Abre Perfil. En el celular, regresa a tu lista de círculos y toca el ícono de persona arriba.",
+          "En “Horas de silencio”, activa “Activar horas de silencio”.",
+          "Ajusta “Inicio” y “Fin”.",
+          "Toca “Guardar horas de silencio”. Al apagarlas, el cambio se guarda al instante. En la web, los cambios se guardan solos.",
+          "Para apagar un tipo de notificación, usa los interruptores de “Notificaciones”."
+        ],
+        "body": "Las horas de silencio son solo tuyas. Siguen tu zona horaria y no cambian nada para los demás del círculo. Las cuentas nuevas empiezan con las horas de silencio apagadas.\n\n## Qué pasa durante las horas de silencio\n\n**Se guardan y llegan cuando terminan:**\n\n- Las alertas de que una dosis va tarde o no se marcó. Si alguien marca la dosis durante la noche, la alerta se descarta, y varias alertas de la misma dosis llegan como una sola.\n- Las novedades del círculo: una dosis tomada u omitida, una nota nueva, una tarea que te asignaron, una cita nueva, una tarea completada, alertas de resurtido.\n- Las alertas de turnos que siguen siendo útiles después: alguien dejó un turno, los turnos volvieron a quedar abiertos porque alguien salió del círculo y, para el dueño y los gestores, un turno que sigue abierto un día antes de empezar.\n\n**Se omiten y no llegan después:**\n\n- Los recordatorios antes de la hora de una dosis o a la hora (\"en 1 hora\", \"en 15 minutos\", \"Es hora del medicamento\"). Mandarlos en la mañana sería un error. Si la dosis sigue sin marcarse unos 15 minutos después de su hora, esa alerta de seguimiento se guarda para la mañana.\n- Los recordatorios de tareas y citas que dicen cuánto falta.\n- Las alertas de un turno abierto nuevo, un turno que alguien tomó o te asignaron, los recordatorios de turnos y los cambios de horario.\n\nCuando agregas un medicamento y su hora cae dentro de tus propias horas de silencio, la app te avisa que a esa hora no se enviará ningún recordatorio. Solo revisa tus horas de silencio, y solo cuando el recordatorio te llega a ti. Si un medicamento se toma de noche, acorta o mueve las horas de silencio para que el recordatorio llegue.\n\nSi las horas de silencio cubren casi todo el día, la app te avisa que las notificaciones se retendrán hasta la hora de fin.\n\n## Apaga tipos de notificaciones\n\nEn Perfil, en **Notificaciones**:\n\n- **Medicamentos**: dosis tomadas, omitidas o sin marcar. Si lo apagas, no te avisaremos cuando una dosis quede sin marcar, por eso la app te pide confirmar.\n- **Tareas y citas**: cuando te asignan algo y antes de que llegue la hora.\n- **Notas**: cuando alguien agrega una nota.\n- **Resumen del día y consejos**: tu resumen del día y recordatorios útiles.\n- **Turnos**: turnos abiertos nuevos, recordatorios y cambios en tus turnos. Consulta [Planifica quién cubre cada turno de cuidado](/help/care-shifts/).\n\nEstos interruptores se aplican a tu cuenta en todos tus círculos. Las horas de los recordatorios de cada medicamento se configuran en el propio medicamento. Consulta [Cómo funcionan los recordatorios y las alertas de dosis](/help/reminders-and-alerts/).\n\nLas notificaciones solo llegan a un celular con la app instalada. Consulta [No me llegan las notificaciones](/help/notifications-not-arriving/).",
+        "related": [
+          "notifications-not-arriving",
+          "reminders-and-alerts",
+          "add-a-medication",
+          "routine-reminders"
+        ],
+        "keywords": [
+          "horas de silencio",
+          "no molestar",
+          "noche",
+          "silenciar",
+          "desactivar notificaciones",
+          "pausar",
+          "dormir",
+          "ajustes de notificaciones"
+        ],
+        "video": {
+          "file": "quiet-hours-es.mp4",
+          "durationSec": 105
+        },
+        "poster": "quiet-hours-es.jpg"
+      },
+      {
+        "slug": "free-and-premium",
+        "category": "plans-and-account",
+        "title": "Qué es gratis y qué agrega Premium",
+        "summary": "El plan gratuito no tiene límite de tiempo e incluye 1 círculo de cuidado contigo y 1 cuidador, con medicamentos y recordatorios ilimitados. Premium agrega hasta 5 círculos, cuidadores ilimitados, más espacio para documentos y el asistente de cuidado.",
+        "body": "## Plan gratuito\n\n- 1 círculo de cuidado propio\n- Tú y 1 cuidador en ese círculo (el receptor de cuidado no cuenta)\n- Medicamentos y recordatorios ilimitados. Los recordatorios nunca son de pago.\n- Calendario, citas, tareas, notas, signos vitales, información de emergencia y el historial de actividad\n- 200MB de documentos y fotos por círculo\n\n## Premium\n\n- Hasta 5 círculos de cuidado propios\n- Cuidadores ilimitados en cada círculo\n- 1GB de documentos y fotos por círculo\n- El asistente de cuidado (\"Asistente\" en la app)\n- Turnos de cuidado, para organizar quién cubre cada uno (consulta [Organiza quién cubre cada turno de cuidado](/help/care-shifts/))\n- Gestores, cuidadores que eliges para ayudar a invitar y quitar personas (consulta [Propietario, cuidadores, receptor de cuidado y solo lectura](/help/roles-and-permissions/))\n- Reportes de adherencia e importar citas desde tu calendario\n- Agregar por voz en la app del celular, en celulares compatibles\n- El resumen semanal de cuidado por correo\n\n## Quién paga\n\nSolo paga el propietario del círculo. Premium aplica a los círculos de esa persona, así que todos en esos círculos tienen ahí las funciones Premium. Unirte al círculo de otra persona siempre es gratis.\n\n## Precio y prueba gratis\n\nLos precios los fijan App Store y Google Play, y cambian según el país. La app te muestra tu precio antes de comprar. El plan anual puede incluir una prueba gratis de 7 días si tu cuenta de la tienda califica. En la app del celular, toca **Actualizar a Premium** arriba en Perfil. También puedes mejorar tu plan desde la web en my.circlecare.app, en \"Perfil\".\n\n## Si se termina Premium\n\nNo se borra nada.\n\n- En un círculo con más cuidadores de los que permite el plan gratuito, el cuidador que se unió primero sigue editando y los demás quedan en solo lectura.\n- Si tienes más de un círculo propio, la app te pide elegir uno para conservar con acceso gratuito (\"Elegir círculo\"). Los demás quedan en solo lectura para todos hasta que vuelvas a suscribirte. Esta elección solo se puede hacer una vez.\n- Cuando vuelves a suscribirte, todo regresa a la normalidad.\n\nConsulta [Cancela, restaura o cambia tu suscripción](/help/cancel-or-restore/).",
+        "related": [
+          "second-circle",
+          "cancel-or-restore",
+          "invite-family",
+          "roles-and-permissions"
+        ],
+        "keywords": [
+          "precio",
+          "costo",
+          "plan gratuito",
+          "premium",
+          "mejorar plan",
+          "suscripción",
+          "prueba gratis",
+          "cuántos cuidadores"
+        ],
+        "video": {
+          "file": "free-and-premium-es.mp4",
+          "durationSec": 95
+        },
+        "poster": "free-and-premium-es.jpg"
+      },
+      {
+        "slug": "second-circle",
+        "category": "plans-and-account",
+        "title": "Cuidar a más de una persona",
+        "summary": "Cada persona que cuidas tiene su propio círculo. Con el plan gratuito puedes tener 1 círculo propio. Para tener más, hasta 5, necesitas Premium. Unirte a círculos de otras personas siempre es gratis.",
+        "steps": [
+          "Ve a tu lista de círculos. Si estás dentro de un círculo, toca la flecha para regresar, arriba a la izquierda.",
+          "Toca el botón \"+\" (\"Comienza un círculo de cuidado\").",
+          "Si tienes el plan gratuito y ya tienes un círculo propio, la app te muestra los planes Premium. Elige un plan para continuar.",
+          "Llena los datos de la otra persona y toca \"Crear círculo\"."
+        ],
+        "body": "## Formas gratuitas de cuidar a dos personas\n\n- **Que otra persona sea la propietaria del segundo círculo.** Por ejemplo, tu hermana crea el círculo de tu papá y te invita. Puedes estar en todos los círculos que quieras sin pagar.\n- Un círculo que creas para ti (\"A mí\") cuenta como uno de tus círculos propios.\n\n## Bueno saber\n\n- Premium permite hasta 5 círculos propios. Si necesitas más, escríbenos a support@circlecare.app.\n- Si eliminas un círculo, ya no cuenta para tu límite.\n- Cada círculo es independiente. Los medicamentos, las notas y los miembros no se mezclan entre círculos.\n- Cambia de círculo desde tu lista de círculos en la app, o con \"Todos los círculos\" en el sitio web.\n- Si se termina tu Premium y tienes varios círculos propios, eliges uno para conservar con acceso gratuito y los demás quedan en solo lectura. No se borra nada. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).",
+        "related": [
+          "free-and-premium",
+          "create-a-care-circle",
+          "join-a-circle",
+          "cancel-or-restore"
+        ],
+        "keywords": [
+          "segundo círculo",
+          "mis dos papás",
+          "más de una persona",
+          "otro círculo",
+          "mamá y papá",
+          "varios círculos",
+          "límite de círculos"
+        ],
+        "video": {
+          "file": "second-circle-es.mp4",
+          "durationSec": 69
+        },
+        "poster": "second-circle-es.jpg"
+      },
+      {
+        "slug": "cancel-or-restore",
+        "category": "plans-and-account",
+        "title": "Cancela, restaura o cambia tu suscripción",
+        "summary": "Cancela donde te suscribiste: en App Store o Google Play si la compraste en el celular, o con \"Administrar suscripción\" en tu Perfil web si la compraste en la web. Sigues con Premium hasta que termine el periodo que ya pagaste.",
+        "steps": [
+          "En la app, abre \"Perfil\" (el ícono de persona en tu lista de círculos).",
+          "En \"Suscripción\", toca \"Administrar\". Se abre la página de suscripciones de la tienda donde te suscribiste.",
+          "Cancela o cambia tu plan ahí.",
+          "Si tu suscripción no aparece, toca \"Restaurar compras\" en la sección \"Cuenta\" del Perfil."
+        ],
+        "body": "## Cancela desde la configuración de tu celular\n\n- **iPhone:** Configuración, toca tu nombre y luego Suscripciones.\n- **Android:** Google Play Store, Pagos y suscripciones, y luego Suscripciones.\n\n## Si te suscribiste en la web\n\nEntra a my.circlecare.app, abre \"Perfil\" y elige \"Administrar suscripción\". Si te suscribiste en el celular, el sitio te indica que canceles en App Store o Google Play.\n\n## Restaurar compras\n\nUsa \"Restaurar compras\" cuando cambias de celular, reinstalas la app o no aparece tu Premium. Primero inicia sesión en la misma cuenta de CircleCare. La app te avisa si no encontró compras. Una suscripción comprada en la web está ligada a tu cuenta y no necesita restaurarse.\n\n## Después de cancelar\n\nSigues con Premium hasta que termine el periodo que ya pagaste. Después no se borra nada. Los cuidadores de más quedan en solo lectura, y si tienes más de un círculo propio eliges uno para conservar con acceso gratuito. Puedes volver a suscribirte cuando quieras y recuperar todo. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Bueno saber\n\n- No hay contratos ni cargos por cancelar. Puedes cancelar durante la prueba gratis.\n- Eliminar tu cuenta no cancela la suscripción. Cancélala primero. Consulta [Elimina tu cuenta](/help/delete-account/).\n- Si tu Premium ya terminó o un pago no se completó, el Perfil muestra \"Administrar suscripción existente\" para que puedas llegar a la página de la tienda.",
+        "related": [
+          "free-and-premium",
+          "delete-account",
+          "second-circle"
+        ],
+        "keywords": [
+          "cancelar",
+          "darme de baja",
+          "dejar de pagar",
+          "restaurar compras",
+          "reembolso",
+          "administrar suscripción",
+          "celular nuevo",
+          "cambiar plan"
+        ]
+      },
+      {
+        "slug": "delete-account",
+        "category": "plans-and-account",
+        "title": "Elimina tu cuenta",
+        "summary": "Abre \"Perfil\", toca \"Eliminar cuenta\" y confirma. Esto elimina para siempre tu cuenta y todos los círculos de cuidado de los que eres propietario. No se puede deshacer.",
+        "steps": [
+          "Si tienes Premium, primero cancela tu suscripción en App Store, Google Play o tu Perfil web. Eliminar tu cuenta no la cancela.",
+          "Si quieres, toca \"Descargar mis datos\" en el Perfil para guardar una copia de tu información.",
+          "Abre \"Perfil\" y baja hasta \"Cuenta\".",
+          "Toca \"Eliminar cuenta\".",
+          "Lee el mensaje y toca \"Eliminar mi cuenta\" para confirmar."
+        ],
+        "body": "## Qué se elimina\n\n- Tu cuenta y tu acceso.\n- **Todos los círculos de los que eres propietario**, con sus medicamentos, citas, tareas, notas, signos vitales, documentos e información de emergencia. Las demás personas de esos círculos pierden el acceso y reciben un aviso.\n- Las invitaciones que enviaste y que nadie ha aceptado.\n\n## Qué se queda\n\nLos círculos de otras personas no se eliminan; solo te sacan de ellos. Lo que agregaste ahí, como notas, actividad, documentos y fotos, se queda en el círculo, pero ya no aparece tu nombre.\n\n## Si no puedes abrir la app\n\nUsa la [página para eliminar tu cuenta](https://circlecare.app/account-deletion) (está en inglés). Escribe el correo de tu cuenta y te mandamos un código de verificación. El código sirve por 15 minutos. Escríbelo para confirmar.\n\n## Antes de eliminar\n\n- Si quieres que tu familia siga usando el círculo, habla con ellos primero. No se puede pasar la propiedad del círculo a otra persona.\n- Si solo quieres salir de un círculo, ábrelo y toca \"Salir del círculo\".\n- Desde la computadora también puedes eliminar tu cuenta en \"Perfil\" en my.circlecare.app, con \"Eliminar mi cuenta\".\n- Algunos datos pueden quedar en respaldos hasta por 30 días antes de borrarse. Consulta nuestra [política de privacidad](https://circlecare.app/es/privacy).",
+        "related": [
+          "export-your-data",
+          "cancel-or-restore",
+          "privacy-and-security"
+        ],
+        "keywords": [
+          "eliminar cuenta",
+          "borrar cuenta",
+          "cerrar cuenta",
+          "borrar mis datos",
+          "darme de baja de circlecare",
+          "eliminación de cuenta"
+        ]
+      },
+      {
+        "slug": "privacy-and-security",
+        "category": "privacy",
+        "title": "Privacidad, seguridad y HIPAA",
+        "summary": "Solo las personas de tu círculo pueden ver su información. Los datos van cifrados en tránsito y en reposo, y se guardan en Estados Unidos. No hay anuncios y nunca vendemos tus datos. CircleCare no cumple con HIPAA y no firma BAA.",
+        "body": "## Quién puede ver tu información\n\nSolo las personas que se unieron a tu círculo. Lo que puede hacer cada quien depende de su rol, y estas reglas se revisan en nuestros servidores, no solo en la app. Consulta [Propietario, cuidadores, receptor de cuidado y solo lectura](/help/roles-and-permissions/).\n\nEl propietario del círculo, o un gestor (solo a cuidadores), puede quitar a alguien cuando quiera: en \"Equipo de cuidado\", toca a la persona y luego \"Eliminar del círculo\". Esa persona pierde el acceso al círculo.\n\n## Cómo se protege\n\n- Los datos van cifrados en tránsito (HTTPS/TLS) y en reposo.\n- Los datos se guardan en Estados Unidos.\n\n## Anuncios y venta de datos\n\nCircleCare no tiene anuncios. No vendemos tu información y no compartimos tus datos de salud con anunciantes.\n\n## HIPAA\n\nCircleCare es una app para familias. **No cumple con HIPAA** y no firmamos acuerdos de socio comercial (BAA) en ningún plan. Si tu organización necesita cumplir con HIPAA, CircleCare no es la herramienta adecuada para eso.\n\n## Análisis de uso\n\nEn el Perfil, en \"Privacidad\", el interruptor \"Análisis de uso\" te deja elegir si compartes datos de uso e informes de errores vinculados a tu cuenta para ayudarnos a mejorar CircleCare. Nunca incluyen tus mediciones, nombres de medicamentos ni notas. Si lo desactivas, seguimos recopilando datos anónimos, solo de la sesión, que nunca se vinculan a ti. En la web, la misma opción es \"Compartir datos de uso\" en el Perfil.\n\n## Iniciar sesión\n\n- No hay verificación en dos pasos.\n- En tu celular puedes activar el inicio con Face ID, Touch ID o huella en \"Seguridad\", dentro del Perfil (aparece si tu celular tiene uno configurado). Tu huella o tu cara nunca salen de tu celular.\n- Usa una contraseña segura, o inicia sesión con Google o Apple.\n\n## Tus datos, tu decisión\n\n- Descarga una copia de tu información con \"Descargar mis datos\" en el Perfil. Consulta [Exporta los datos de tu círculo](/help/export-your-data/).\n- Elimina tu cuenta cuando quieras. Consulta [Elimina tu cuenta](/help/delete-account/).\n\nLee la [política de privacidad](https://circlecare.app/es/privacy) completa. En la app, \"Política de Privacidad\" y \"Términos de Servicio\" están en el Perfil, en \"Soporte\".",
+        "related": [
+          "roles-and-permissions",
+          "delete-account",
+          "export-your-data"
+        ],
+        "keywords": [
+          "privacidad",
+          "seguridad",
+          "HIPAA",
+          "BAA",
+          "cifrado",
+          "venden mis datos",
+          "verificación en dos pasos",
+          "quién puede ver"
+        ],
+        "video": {
+          "file": "privacy-and-security-es.mp4",
+          "durationSec": 81
+        },
+        "poster": "privacy-and-security-es.jpg"
+      }
+    ]
+  }
+}

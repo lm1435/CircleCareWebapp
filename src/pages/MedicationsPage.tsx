@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import type { TFunction } from 'i18next';
@@ -854,11 +855,14 @@ export default function MedicationsPage(): ReactElement {
         title={t('meds:page.empty.title')}
         description={canEdit ? t('meds:page.empty.hint') : t('meds:page.empty.hintReadOnly')}
         actions={
-          canEdit ? (
-            <Button onClick={() => setShowAdd(true)} offlineKind="change">
-              {t('meds:page.empty.cta')}
-            </Button>
-          ) : undefined
+          <>
+            {canEdit ? (
+              <Button onClick={() => setShowAdd(true)} offlineKind="change">
+                {t('meds:page.empty.cta')}
+              </Button>
+            ) : null}
+            <HowDoesThisWork slug="add-a-medication" />
+          </>
         }
       />
     );

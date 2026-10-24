@@ -37,7 +37,10 @@ function walk(dir: string, out: string[] = []): string[] {
 const SENSITIVE = /signed|file_?url|fileUrl|photo_?url|photoUrl|storage|supabase/i;
 
 /** Public destinations a new tab may open (mapsHref: a google/apple maps search, components/MapsLink.tsx). */
-const ALLOWED_BLANK_HREF = /^(legalUrl\(|APP_STORE_URL$|PLAY_STORE_URL$|mapsHref$)/;
+const ALLOWED_BLANK_HREF = /^(legalUrl\(|APP_STORE_URL$|PLAY_STORE_URL$|mapsHref$|target\.href$)/;
+// target.href: an external link inside a bundled help article (components/help/HelpMarkdown.tsx).
+// The text is author-controlled content shipped in content.json, http(s)/mailto only
+// (classifyHelpLink drops every other scheme); it is never a Storage or signed URL.
 
 const FILES = walk(ROOT).map((file) => ({
   rel: file.slice(ROOT.length + 1),

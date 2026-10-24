@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -492,6 +493,7 @@ export default function NotesPage(): ReactElement {
           icon="document-text-outline"
           title={t('notes:empty.title')}
           description={t('notes:empty.hint')}
+          actions={<HowDoesThisWork slug="daily-care-notes" />}
         />
         {olderControl}
       </div>

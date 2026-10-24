@@ -91,5 +91,13 @@
   },
   "download": {
     "body": "Transfira o CircleCare no seu telemóvel para ter lembretes, ajuda da IA e muito mais."
+  },
+  "center": {
+    "videoUnavailable": "Vídeo indisponível neste momento",
+    "stillNeedHelp": "Ainda precisa de ajuda? Contacte-nos",
+    "homeCardTitle": "É novo por aqui? Veja como funciona",
+    "dismiss": "Dispensar",
+    "howDoesThisWork": "Como é que isto funciona?",
+    "notFoundBody": "Pode ter sido movido. Navegue antes por todos os artigos de ajuda."
   }
 }

@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useCallback, useState, type ReactElement } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -198,7 +199,12 @@ export default function DocumentsPage(): ReactElement {
         {!isLoading && !isError && documents.length === 0 && (
           <>
             {category === 'all' && canEdit && !storageFull ? (
-              <DocumentStarterKit onPick={handleStarterPick} onOther={openUpload} />
+              <>
+                <DocumentStarterKit onPick={handleStarterPick} onOther={openUpload} />
+                <div className="flex justify-center">
+                  <HowDoesThisWork slug="documents" />
+                </div>
+              </>
             ) : category === 'all' ? (
               <EmptyState
                 icon="document-text-outline"
@@ -208,7 +214,8 @@ export default function DocumentsPage(): ReactElement {
                   canEdit ? t('documents:noDocumentsHint') : t('documents:noDocumentsHintReadOnly')
                 }
                 actions={
-                  canEdit ? (
+                  <>
+                  {canEdit ? (
                     <div className="flex flex-col items-center gap-2">
                       <Button
                         onClick={openUpload}
@@ -224,7 +231,9 @@ export default function DocumentsPage(): ReactElement {
                         </Text>
                       )}
                     </div>
-                  ) : undefined
+                  ) : null}
+                  <HowDoesThisWork slug="documents" />
+                  </>
                 }
               />
             ) : (

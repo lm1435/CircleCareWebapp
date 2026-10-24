@@ -1,4 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { ReactElement } from 'react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import HelpPage from '@/pages/HelpPage';
@@ -13,8 +15,19 @@ const mockHelpItemExpanded = vi.fn();
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     helpItemExpanded: (...args: unknown[]) => mockHelpItemExpanded(...args),
+    helpCenterOpened: vi.fn(),
+    helpSearchUsed: vi.fn(),
   },
 }));
+
+// This suite is about the FAQ; the hub is covered by HelpCenter.test.tsx.
+vi.mock('@/help/content', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/help/content')>();
+  return { ...actual, getBundledHelpContent: () => actual.EMPTY_HELP_CONTENT };
+});
+
+// The page now hosts the in-app help hub (links), so it needs a router.
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 beforeEach(() => {
   vi.clearAllMocks();

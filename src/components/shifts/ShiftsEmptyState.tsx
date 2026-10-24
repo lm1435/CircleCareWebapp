@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Button, Card } from '@/components/ui';
@@ -27,6 +28,7 @@ export function ShiftsEmptyState({ onAdd }: ShiftsEmptyStateProps): ReactElement
             {t('empty.cta')}
           </Button>
         )}
+        <HowDoesThisWork slug="care-shifts" />
       </div>
     </Card>
   );

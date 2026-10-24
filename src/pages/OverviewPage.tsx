@@ -19,6 +19,7 @@ import { CareTeam } from '@/components/overview/CareTeam';
 import { SettingsRows } from '@/components/overview/SettingsRows';
 import { UpcomingAppointments } from '@/components/overview/UpcomingAppointments';
 import { DailyUpdateCard } from '@/components/overview/DailyUpdateCard';
+import { HelpHomeCard } from '@/components/help/HelpHomeCard';
 
 interface FirstRunLocationState {
   firstRun?: boolean;
@@ -156,6 +157,12 @@ export default function OverviewPage(): ReactElement {
           onStatusChange={handleChecklistStatus}
           onAddEvent={() => setShowAddMed(true)}
         />
+      </div>
+
+      {/* "New here? Watch how it works" — only while the circle has no activity
+          (same presence read as the checklist); dismissible per user. */}
+      <div className="px-5 pb-6 empty:hidden">
+        {timezone !== null && <HelpHomeCard circleId={circleId} timezone={timezone} />}
       </div>
 
       <div className="grid grid-cols-1 gap-6 px-5 pb-6 xl:grid-cols-2">

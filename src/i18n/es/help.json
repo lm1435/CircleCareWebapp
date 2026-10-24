@@ -101,5 +101,25 @@
   "download": {
     "title": "Obtén la experiencia completa",
     "body": "Descarga CircleCare en tu teléfono para recordatorios, ayuda con IA y más."
+  },
+  "center": {
+    "searchLabel": "Buscar en la ayuda",
+    "clearSearch": "Borrar búsqueda",
+    "results": "Resultados",
+    "resultsCount": "Resultados: {{count}}",
+    "noResults": "Ningún artículo coincide con \"{{query}}\".",
+    "popular": "Populares",
+    "steps": "Pasos",
+    "related": "Artículos relacionados",
+    "allArticles": "Todos los artículos de ayuda",
+    "videoUnavailable": "Video no disponible en este momento",
+    "videoLabel": "Video: {{title}}",
+    "howDoesThisWork": "¿Cómo funciona?",
+    "homeCardTitle": "¿Eres nuevo? Mira cómo funciona",
+    "homeCardCta": "Abrir la ayuda",
+    "dismiss": "Descartar",
+    "stillNeedHelp": "¿Aún necesitas ayuda? Escríbenos",
+    "notFoundTitle": "No encontramos ese artículo",
+    "notFoundBody": "Puede que se haya movido. Mejor explora todos los artículos de ayuda."
   }
 }

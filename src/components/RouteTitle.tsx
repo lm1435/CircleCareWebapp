@@ -70,7 +70,8 @@ export function RouteTitle(): ReactElement | null {
   const { t } = useTranslation('common');
 
   // InviteLandingPage sets its own title — never override it.
-  if (pathname.startsWith('/invite/')) {
+  // HelpArticlePage sets the article's title the same way.
+  if (pathname.startsWith('/invite/') || pathname.startsWith('/help/')) {
     return null;
   }
 

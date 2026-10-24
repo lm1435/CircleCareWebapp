@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -245,6 +246,10 @@ export default function ProviderVisitsPage(): ReactElement {
             />
           </div>
         )}
+
+        <div className="mt-1">
+          <HowDoesThisWork slug="doctor-visits-and-notes" />
+        </div>
 
         {isEmpty ? (
           <Card padding="lg" className="mt-6 border-dashed" data-testid="provider-visits-empty">

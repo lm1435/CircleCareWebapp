@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useState, type ReactElement } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -336,6 +337,12 @@ export default function MembersPage(): ReactElement {
             : undefined
         }
       />
+
+      {canManageMembers ? (
+        <div className="px-5">
+          <HowDoesThisWork slug="invite-family" />
+        </div>
+      ) : null}
 
       {content}
 

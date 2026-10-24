@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useMemo, useState, type ReactElement } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -876,9 +877,12 @@ export default function VitalsPage(): ReactElement {
           title={emptyNeverTitles[neverType]}
           description={canEdit ? t('emptyState.neverLogged.description') : undefined}
           actions={
-            canEdit ? (
-              <Button onClick={() => setShowAdd(true)} offlineKind="change">{emptyNeverCtas[neverType]}</Button>
-            ) : undefined
+            <>
+              {canEdit ? (
+                <Button onClick={() => setShowAdd(true)} offlineKind="change">{emptyNeverCtas[neverType]}</Button>
+              ) : null}
+              <HowDoesThisWork slug="vitals" />
+            </>
           }
         />
       </Card>
@@ -925,7 +929,12 @@ export default function VitalsPage(): ReactElement {
           icon="heart-outline"
           title={t('empty.title')}
           description={canEdit ? t('empty.hint') : t('empty.hintReadOnly')}
-          actions={canEdit ? <Button onClick={() => setShowAdd(true)} offlineKind="change">{t('empty.cta')}</Button> : undefined}
+          actions={
+            <>
+              {canEdit ? <Button onClick={() => setShowAdd(true)} offlineKind="change">{t('empty.cta')}</Button> : null}
+              <HowDoesThisWork slug="vitals" />
+            </>
+          }
         />
       </Card>
     );

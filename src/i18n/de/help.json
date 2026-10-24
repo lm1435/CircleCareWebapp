@@ -101,5 +101,25 @@
   "download": {
     "title": "Das volle Erlebnis",
     "body": "Laden Sie CircleCare auf Ihr Smartphone herunter – für Erinnerungen, KI-Hilfe und mehr."
+  },
+  "center": {
+    "searchLabel": "In der Hilfe suchen",
+    "clearSearch": "Suche löschen",
+    "results": "Ergebnisse",
+    "resultsCount": "Ergebnisse: {{count}}",
+    "noResults": "Kein Artikel passt zu „{{query}}“.",
+    "popular": "Beliebt",
+    "steps": "Schritte",
+    "related": "Verwandte Artikel",
+    "allArticles": "Alle Hilfeartikel",
+    "videoUnavailable": "Video derzeit nicht verfügbar",
+    "videoLabel": "Video: {{title}}",
+    "howDoesThisWork": "Wie funktioniert das?",
+    "homeCardTitle": "Neu hier? Sehen Sie, wie es funktioniert",
+    "homeCardCta": "Hilfe öffnen",
+    "dismiss": "Schließen",
+    "stillNeedHelp": "Brauchen Sie weitere Hilfe? Kontaktieren Sie uns",
+    "notFoundTitle": "Dieser Artikel wurde nicht gefunden",
+    "notFoundBody": "Möglicherweise wurde er verschoben. Stöbern Sie stattdessen in allen Hilfeartikeln."
   }
 }

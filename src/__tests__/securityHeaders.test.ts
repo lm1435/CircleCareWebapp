@@ -58,9 +58,15 @@ describe('production security headers (public/.htaccess)', () => {
     expect(csp.get('frame-ancestors')).toEqual(["'none'"]);
     expect(csp.get('form-action')).toEqual(["'self'"]);
     expect(csp.has('upgrade-insecure-requests')).toBe(true);
-    for (const directive of ['connect-src', 'img-src', 'frame-src']) {
+    for (const directive of ['connect-src', 'img-src', 'frame-src', 'media-src']) {
       expect(csp.get(directive), `${directive} must not be a bare wildcard`).not.toContain('*');
     }
+  });
+
+  it('CSP: help videos and posters load from the Supabase host (media-src + img-src), nowhere else', () => {
+    const csp = cspDirectives();
+    expect(csp.get('media-src')).toEqual(["'self'", 'https://*.supabase.co']);
+    expect(csp.get('img-src')).toContain('https://*.supabase.co');
   });
 
   it('HSTS (>= 1 year, includeSubDomains), nosniff, DENY framing, referrer policy', () => {

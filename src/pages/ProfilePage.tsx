@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -799,6 +800,9 @@ export default function ProfilePage(): ReactElement {
               label={t('quietHours.enable')}
             />
           </div>
+        </SheetRow>
+        <SheetRow>
+          <HowDoesThisWork slug="quiet-hours" />
         </SheetRow>
         {quietEnabled ? (
           <SheetRow>

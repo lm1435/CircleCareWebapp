@@ -1,3 +1,4 @@
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -680,6 +681,7 @@ export default function CalendarPage(): ReactElement {
                     {t('calendar:addEvent.addEvent')}
                   </Button>
                 )}
+                <HowDoesThisWork slug="appointments" />
               </EmptyState>
             </Card>
           )}

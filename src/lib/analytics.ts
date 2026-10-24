@@ -1159,6 +1159,22 @@ export const Analytics = {
    *  rendered question/answer text. */
   helpItemExpanded: (itemKey: string) => capture('help_item_expanded', { item_key: itemKey }),
 
+  // --- In-app help center + videos (1.3.0, docs/plans/in-app-help.md) ---
+  // Enums only. `slug` is always an article slug from the bundled content.json
+  // (a fixed list), never free text; the search query is NEVER sent.
+  helpCenterOpened: (source: 'profile' | 'login' | 'signup' | 'home_card' | 'contextual') =>
+    capture('help_center_opened', { source }),
+  helpArticleViewed: (props: {
+    slug: string;
+    source: 'hub' | 'search' | 'related' | 'contextual';
+    locale: 'en' | 'es';
+  }) => capture('help_article_viewed', props),
+  helpSearchUsed: (resultCountBucket: '0' | '1-3' | '4+') =>
+    capture('help_search_used', { result_count_bucket: resultCountBucket }),
+  helpVideoStarted: (slug: string) => capture('help_video_started', { slug }),
+  helpVideoCompleted: (slug: string) => capture('help_video_completed', { slug }),
+  helpVideoFailed: (slug: string) => capture('help_video_failed', { slug }),
+
   // --- AI (web-new) — NEVER include message text. ---
   /** `usedSuggestion` separates a tapped suggestion chip from a typed question
    *  (mobile sends the same `used_suggestion` property), so the suggestions

@@ -68,6 +68,12 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
     </div>
   ),
 }));
+// The help card has its own suite (components/help/__tests__/HelpHomeCard.test.tsx).
+vi.mock('@/components/help/HelpHomeCard', () => ({
+  HelpHomeCard: ({ circleId, timezone }: { circleId: string; timezone: string }) => (
+    <div data-testid="help-home-card" data-circle-id={circleId} data-timezone={timezone} />
+  ),
+}));
 vi.mock('@/components/overview/AdherenceCard', () => ({
   AdherenceCard: ({ circleId }: { circleId: string }) => (
     <div data-testid="adherence-card" data-circle-id={circleId} />
@@ -245,6 +251,26 @@ describe('OverviewPage', () => {
     );
   });
 
+  describe('help home card', () => {
+    it('is mounted with the circle and recipient zone, and only once the zone is known', () => {
+      setCircle();
+      renderOverview();
+      const card = screen.getByTestId('help-home-card');
+      expect(card).toHaveAttribute('data-circle-id', 'c1');
+      expect(card).toHaveAttribute('data-timezone', 'America/New_York');
+    });
+
+    it('waits for the recipient zone', () => {
+      setCircle();
+      mockUseCircle.mockReturnValue({
+        ...(mockUseCircle('c1') as object),
+        timezone: null,
+      } as unknown as ReturnType<typeof useCircle>);
+      renderOverview();
+      expect(screen.queryByTestId('help-home-card')).not.toBeInTheDocument();
+    });
+  });
+
   describe('daily update card (plan §6)', () => {
     it('receives the recipient zone and the viewer\'s owner / recipient flags', () => {
       setCircle();
@@ -288,6 +314,8 @@ describe('OverviewPage', () => {
       // Daily update: the first content block under the hero (plan §6).
       'daily-update-card',
       'getting-started',
+      // Help card: under the checklist, above the grid.
+      'help-home-card',
       'adherence-card',
       'quick-access',
       'care-team',

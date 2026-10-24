@@ -281,12 +281,13 @@ export default function LoginPage(): ReactElement {
         </Link>
       </p>
 
-      <a
-        href="https://circlecare.app/help/"
+      <Link
+        to="/help"
+        state={{ helpSource: 'login' }}
         className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center text-sm text-ink-3 underline"
       >
         {t('needHelp')}
-      </a>
+      </Link>
     </AuthShell>
   );
 }

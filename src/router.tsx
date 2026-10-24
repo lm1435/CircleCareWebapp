@@ -6,6 +6,7 @@ import { RouteFocus } from '@/components/RouteFocus';
 import { RouteTitle } from '@/components/RouteTitle';
 import { CircleRoute } from '@/components/layout/CircleRoute';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
+import { HelpRouteLayout } from '@/components/layout/HelpRouteLayout';
 import { CancelReasonPrompt } from '@/components/subscription/CancelReasonPrompt';
 // Public / pre-auth routes stay EAGER: a signed-out visitor's very first paint
 // is one of these, so lazy-loading them would trade entry-chunk size for a
@@ -41,6 +42,7 @@ const DailyUpdatePage = lazy(() => import('@/pages/DailyUpdatePage'));
 const EditCirclePage = lazy(() => import('@/pages/EditCirclePage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const HelpPage = lazy(() => import('@/pages/HelpPage'));
+const HelpArticlePage = lazy(() => import('@/pages/HelpArticlePage'));
 const UpgradePage = lazy(() => import('@/pages/UpgradePage'));
 
 /**
@@ -86,6 +88,16 @@ export const router = createBrowserRouter([
   // on the web it falls back to home (AuthGuard sends signed-out users to login).
   { path: '/open', element: <OpenRedirect /> },
 
+  // Help is reachable signed in AND signed out (the Login / Sign up pages link
+  // here), so it sits outside AuthGuard; HelpRouteLayout picks the chrome.
+  {
+    element: <HelpRouteLayout />,
+    children: [
+      { path: '/help', element: <HelpPage /> },
+      { path: '/help/:slug', element: <HelpArticlePage /> },
+    ],
+  },
+
   // Authenticated routes
   {
     element: (
@@ -107,7 +119,6 @@ export const router = createBrowserRouter([
           { path: '/invites', element: <PendingInvitesPage /> },
           { path: '/profile', element: <ProfilePage /> },
           { path: '/upgrade', element: <UpgradePage /> },
-          { path: '/help', element: <HelpPage /> },
         ],
       },
       {

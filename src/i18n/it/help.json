@@ -101,5 +101,25 @@
   "download": {
     "title": "Scopri l'esperienza completa",
     "body": "Scarica CircleCare sul telefono per promemoria, aiuto dell'IA e molto altro."
+  },
+  "center": {
+    "searchLabel": "Cerca nella guida",
+    "clearSearch": "Cancella ricerca",
+    "results": "Risultati",
+    "resultsCount": "Risultati: {{count}}",
+    "noResults": "Nessun articolo corrisponde a \"{{query}}\".",
+    "popular": "Più letti",
+    "steps": "Passaggi",
+    "related": "Articoli correlati",
+    "allArticles": "Tutti gli articoli della guida",
+    "videoUnavailable": "Video non disponibile al momento",
+    "videoLabel": "Video: {{title}}",
+    "howDoesThisWork": "Come funziona?",
+    "homeCardTitle": "Sei nuovo? Guarda come funziona",
+    "homeCardCta": "Apri la guida",
+    "dismiss": "Chiudi",
+    "stillNeedHelp": "Ti serve ancora aiuto? Contattaci",
+    "notFoundTitle": "Non abbiamo trovato questo articolo",
+    "notFoundBody": "Potrebbe essere stato spostato. Sfoglia invece tutti gli articoli della guida."
   }
 }
