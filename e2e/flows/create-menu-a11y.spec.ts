@@ -179,16 +179,21 @@ test.describe('create menu — keyboard a11y, ARIA, validation', () => {
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.locator('#event_type')).toHaveValue('task');
 
-    // Title is empty by default — so Create (pinned in the dialog footer) is
-    // disabled, and a title of only spaces does not enable it.
+    // Create (pinned in the dialog footer) is always the solid, enabled button.
+    // Pressing it with an empty or spaces-only title focuses the title and
+    // shows its inline error instead of creating anything.
     const create = dialog.getByRole('button', { name: 'Create', exact: true });
-    await expect(create).toBeDisabled();
-    await dialog.locator('#title').fill('   ');
-    await expect(create).toBeDisabled();
-    await dialog.locator('#title').fill('x');
+    const title = dialog.locator('#title');
     await expect(create).toBeEnabled();
-    await dialog.locator('#title').fill('');
-    await expect(create).toBeDisabled();
+    await create.click();
+    await expect(title).toBeFocused();
+    await expect(title).toHaveAttribute('aria-invalid', 'true');
+    await expect(dialog.getByText('Please enter a title.')).toBeVisible();
+
+    await title.fill('   ');
+    await create.click();
+    await expect(title).toBeFocused();
+    await expect(dialog.getByText('Please enter a title.')).toBeVisible();
 
     // The dialog must STAY OPEN — nothing was created.
     await expect(dialog).toBeVisible();

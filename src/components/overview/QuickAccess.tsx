@@ -13,7 +13,7 @@ import { Analytics } from '@/lib/analytics';
 // Order is mobile's, in mobile's two groups: the Care destinations first
 // (Notes, Calendar, Meds, Tasks, Vitals) and then the ones that have no other
 // way in (Daily updates — only while that feature is on for the viewer —,
-// Activity feed, Care info). Web draws one continuous list, exactly
+// Activity feed, Health). Web draws one continuous list, exactly
 // as mobile does — mobile's two `<View>` groups exist only so its hairline
 // logic can run per group, and it deliberately keeps the rule between them.
 
@@ -41,7 +41,7 @@ interface QuickAccessRow {
  * the authority here) and both reported with this task:
  *   - Vitals uses `heart-outline`; mobile uses `fitness-outline`, which this
  *     app's icon set does not bundle (`iconNames.ts`).
- *   - Care info uses `medical-outline`; mobile uses `heart-outline`, which
+ *   - Health uses `medical-outline`; mobile uses `heart-outline`, which
  *     would now collide with the Vitals row two lines above it.
  */
 export const QUICK_ACCESS_ROWS: readonly QuickAccessRow[] = [
