@@ -28,6 +28,27 @@ import App from '@/App';
 // still out of reach (ESM hoists them ahead of this line) — accepted.
 installBootErrorBuffer();
 
+// Dark-palette spike (docs/plans/dark-mode-palette.md): dev server only; dead code in prod builds.
+// `?theme=dark` sets a sessionStorage flag so dark survives full reloads and in-app hard
+// navigations while testing; `?theme=light` clears it.
+if (import.meta.env.DEV) {
+  let dark = false;
+  try {
+    const q = new URLSearchParams(location.search).get('theme');
+    if (q === 'dark') sessionStorage.setItem('cc-dark-spike', '1');
+    else if (q === 'light') sessionStorage.removeItem('cc-dark-spike');
+    dark = sessionStorage.getItem('cc-dark-spike') === '1';
+  } catch {
+    dark = new URLSearchParams(location.search).get('theme') === 'dark';
+  }
+  if (dark) {
+    void import('@/styles/dark-spike.css').then(() => {
+      document.documentElement.dataset.theme = 'dark';
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'dark');
+    });
+  }
+}
+
 // First-touch signup attribution (utm_*/src/ref/invite presence) -> sessionStorage.
 captureSignupAttribution();
 
