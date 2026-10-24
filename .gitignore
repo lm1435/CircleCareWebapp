@@ -23,3 +23,7 @@ e2e/.auth/
 # Help-video recording kit: per-run seeded accounts (email + password) and any footage
 e2e/howto/state/
 e2e/howto/out/
+
+# Real env files stay local (owner 2026-10-24); only .env.example is tracked.
+.env.production
+.env.development
