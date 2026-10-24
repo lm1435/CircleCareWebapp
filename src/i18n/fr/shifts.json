@@ -1,0 +1,220 @@
+{
+  "eyebrow": "Gardes",
+  "close": "Fermer",
+  "open": "À pourvoir",
+  "you": "Vous",
+  "takeButton": "Prendre",
+  "takeAria": "Prendre {{name}}",
+  "addShift": "Ajouter une garde",
+  "edit": "Modifier",
+  "nextDay": "jour suivant",
+  "summary_one": "{{count}} garde · {{open}}.",
+  "summary_other": "{{count}} gardes · {{open}}.",
+  "noShiftsDay": "Aucune garde ce jour-là.",
+  "noShiftsWeekDay": "Aucune garde",
+  "mode": {
+    "label": "Mode du calendrier",
+    "schedule": "Agenda",
+    "shifts": "Gardes",
+    "openBadge_one": "{{count}} à pourvoir",
+    "openBadge_other": "{{count}} à pourvoir"
+  },
+  "legend": {
+    "label": "Légende des gardes",
+    "open": "Une garde est à pourvoir",
+    "covered": "Entièrement couvert"
+  },
+  "month": {
+    "label": "Calendrier mensuel des gardes",
+    "cell_one": "{{date}}, {{count}} garde, {{open}}",
+    "cell_other": "{{date}}, {{count}} gardes, {{open}}",
+    "none": "{{date}}, aucune garde"
+  },
+  "empty": {
+    "title": "Partagez les soins, garde après garde",
+    "description": "Ajoutez les plages qui ont besoin de quelqu’un, comme les nuits ou les matins en semaine, et laissez votre famille voir qui prend chacune et ce qui reste à pourvoir.",
+    "cta": "Ajouter une garde"
+  },
+  "teaser": {
+    "chip": "Premium",
+    "title": "Partagez les soins, garde après garde",
+    "description": "Voyez qui couvre chaque plage horaire et lesquelles personne n’a encore prises, avec un rappel pour la personne concernée.",
+    "cta": "Découvrir Premium",
+    "notNow": "Pas maintenant",
+    "morning": "Matin",
+    "afternoon": "Après-midi",
+    "night": "Nuit",
+    "personA": "Ana",
+    "personB": "Luis",
+    "morningTime": "8 h – 14 h",
+    "afternoonTime": "14 h – 20 h",
+    "nightTime": "20 h – 8 h",
+    "previewA11y": "Exemple : une garde du matin et une de l’après-midi ont chacune quelqu’un, et la garde de nuit est à pourvoir."
+  },
+  "take": {
+    "title": "Prendre « {{name}} »",
+    "confirm": "Prendre la garde",
+    "scopeLabel": "Quelles gardes ?",
+    "justThis": "Celle-ci seulement",
+    "futureHint": "Vous pourrez en libérer une plus tard",
+    "reminderRow": "Rappel · {{when}}",
+    "future": "Celle-ci et toutes les suivantes"
+  },
+  "scope": {
+    "label": "Quelles gardes ?",
+    "occurrence": "Cette garde",
+    "future": "Cette garde et les suivantes",
+    "allUpcoming": "Toutes les gardes à venir"
+  },
+  "drop": {
+    "action": "Libérer la garde",
+    "title": "Libérer cette garde ?",
+    "message": "« {{name}} » sera de nouveau à pourvoir et tout le cercle en sera informé.",
+    "confirm": "Libérer la garde",
+    "messageRepeating": "Choisissez les gardes à libérer. Elles seront de nouveau à pourvoir et tout le cercle en sera informé."
+  },
+  "assign": {
+    "action": "Attribuer",
+    "title": "Attribuer la garde",
+    "label": "Qui s’en charge ?",
+    "confirm": "Attribuer",
+    "current": "l’assure actuellement"
+  },
+  "delete": {
+    "action": "Supprimer",
+    "title": "Supprimer la garde",
+    "message": "Supprimer « {{name}} » ? Cette action est irréversible.",
+    "messageRepeating": "Choisissez les gardes à supprimer. Cette action est irréversible.",
+    "confirm": "Supprimer"
+  },
+  "detail": {
+    "date": "Date",
+    "time": "Horaire",
+    "yourTime": "Votre heure : {{range}}",
+    "yourTimeRow": "Votre heure",
+    "repeats": "Répétition",
+    "coveredBy": "Qui s’en charge",
+    "openValue": "Personne pour l’instant",
+    "reminder": "Rappel"
+  },
+  "repeat": {
+    "never": "Jamais",
+    "daily": "Tous les jours",
+    "weekly": "Chaque semaine",
+    "weeklyOn": "Chaque semaine : {{days}}",
+    "series": "Récurrent"
+  },
+  "reminder": {
+    "off": "Désactivé",
+    "h1": "1 heure avant",
+    "h2": "2 heures avant",
+    "h4": "4 heures avant",
+    "d1": "1 jour avant",
+    "chip1h": "1 heure",
+    "chip2h": "2 heures",
+    "chip4h": "4 heures",
+    "chip1d": "1 jour"
+  },
+  "duration": {
+    "hours_one": "{{count}} heure",
+    "hours_other": "{{count}} heures",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "mixed": "{{hours}} h {{minutes}} min"
+  },
+  "form": {
+    "newTitle": "Nouvelle garde",
+    "editTitle": "Modifier la garde",
+    "heading": "Qui est avec {{name}} ?",
+    "editScopeLabel": "Quelles gardes ?",
+    "name": "Nom",
+    "namePlaceholder": "p. ex. Nuit",
+    "starts": "Début",
+    "ends": "Fin",
+    "reminder": "Rappel",
+    "covering": "Qui s’en charge ?",
+    "leaveOpen": "Laisser à pourvoir",
+    "me": "Moi",
+    "timezoneNote": "Ces heures sont celles de {{zone}}.",
+    "seriesNote": "La date et la répétition d’une série ne se modifient pas ici. Votre modification s’applique aux gardes choisies.",
+    "save": "Enregistrer la garde",
+    "repeats": "Répétition",
+    "date": "Date",
+    "endsOn": "La répétition s’arrête",
+    "reminderHint": "Envoyé à la personne qui assure la garde.",
+    "careRecipient": "{{name}} · Personne aidée"
+  },
+  "saved": {
+    "title": "« {{name}} » enregistrée",
+    "summaryOpen": "{{range}}, {{repeat}}. Ouverte à quiconque veut la prendre.",
+    "summaryOpenOnce": "{{range}} · Ouverte à quiconque veut la prendre.",
+    "summaryAssigned": "{{range}}, {{repeat}}. {{who}} s’en charge.",
+    "summaryAssignedOnce": "{{range}} · {{who}} s’en charge.",
+    "addNext": "Ajouter la garde suivante",
+    "addNextHint": "Début à {{time}} · {{repeat}}",
+    "addNextHintOnce": "Début à {{time}}",
+    "done": "Terminé",
+    "summarySelf": "{{range}}, {{repeat}}. Vous vous en chargez.",
+    "summarySelfOnce": "{{range}} · Vous vous en chargez.",
+    "repeatDaily": "tous les jours",
+    "repeatWeekly": "chaque semaine",
+    "repeatDays": "les {{days}}"
+  },
+  "validation": {
+    "nameRequired": "Donnez un nom à la garde.",
+    "nameTooLong": "Le nom doit comporter 60 caractères ou moins.",
+    "dateRequired": "Choisissez une date.",
+    "startRequired": "Choisissez le début de la garde.",
+    "endRequired": "Choisissez l’heure de fin de la garde.",
+    "tooShort": "Une garde dure de 15 minutes à 24 heures.",
+    "tooLong": "Une garde dure de 15 minutes à 24 heures.",
+    "repeatEndBeforeStart": "La date de fin doit être égale ou postérieure à la première date.",
+    "daysRequired": "Choisissez au moins un jour."
+  },
+  "toast": {
+    "taken": "Vous assurez la garde « {{name}} ».",
+    "alreadyTaken": "{{takenBy}} vient de prendre cette garde.",
+    "dropped": "Vous avez libéré « {{name}} ». Elle est de nouveau à pourvoir.",
+    "assigned": "{{name}} assure la garde.",
+    "updated": "Garde mise à jour.",
+    "deleted": "Garde supprimée.",
+    "alreadyTakenUnknown": "Quelqu’un vient de prendre cette garde.",
+    "alreadyOpen": "Cette garde est déjà à pourvoir.",
+    "notFound": "Cette garde n’est plus disponible.",
+    "notAssigned": "Plus personne n’assure cette garde."
+  },
+  "someone": "Quelqu’un",
+  "rangeSpoken": "de {{start}} à {{end}}",
+  "summaryShort_one": "{{count}} garde · {{open}}",
+  "summaryShort_other": "{{count}} gardes · {{open}}",
+  "card": {
+    "statusOpen": "à pourvoir",
+    "statusCovered": "{{name}} s’en charge",
+    "statusMine": "vous assurez cette garde",
+    "openDetailsHint": "Ouvre les détails de la garde"
+  },
+  "loadError": "Impossible de charger les gardes.",
+  "error": {
+    "take": "Impossible de prendre la garde. Réessayez.",
+    "drop": "Impossible de libérer la garde. Réessayez.",
+    "assign": "Impossible d’attribuer la garde. Réessayez.",
+    "save": "Impossible d’enregistrer la garde. Réessayez.",
+    "delete": "Impossible de supprimer la garde. Réessayez.",
+    "dropForbidden": "Seuls la personne qui assure la garde, le propriétaire ou un gestionnaire peuvent la libérer.",
+    "assignForbidden": "Seuls le propriétaire ou un gestionnaire peuvent attribuer une garde à quelqu’un d’autre.",
+    "invalidAssignee": "Cette personne ne peut pas se voir attribuer une garde.",
+    "permissionDenied": "Vous n’avez pas l’autorisation de modifier les gardes de ce cercle."
+  },
+  "week": {
+    "openDayHint": "Ouvre la vue du jour",
+    "today": "Aujourd’hui"
+  },
+  "readOnly": {
+    "owner": "Votre abonnement Premium est terminé. Vos gardes sont en lecture seule.",
+    "renew": "Renouveler Premium",
+    "other": "Les gardes sont en lecture seule pour le moment."
+  },
+  "openCount_zero": "aucune à pourvoir",
+  "openCount_one": "{{count}} à pourvoir",
+  "openCount_other": "{{count}} à pourvoir"
+}

@@ -266,14 +266,23 @@ describe('CalendarPage', () => {
     renderPage();
 
     expect(await screen.findByRole('grid', { name: 'Week view calendar' })).toBeInTheDocument();
-    // Week/Month is the shared `SegmentedControl` (spec §6.4): a tablist of
-    // tabs, not a hand-rolled pressed-button pair.
+    // Day | Week | Month is the `UnderlineTabs` control (care shifts W3): a
+    // tablist of tabs, Week selected by default.
+    const dayTab = screen.getByRole('tab', { name: 'Day' });
     const weekTab = screen.getByRole('tab', { name: 'Week' });
     const monthTab = screen.getByRole('tab', { name: 'Month' });
+    expect(dayTab).toHaveAttribute('aria-selected', 'false');
     expect(weekTab).toHaveAttribute('aria-selected', 'true');
     expect(monthTab).toHaveAttribute('aria-selected', 'false');
-    expect(weekTab.className).toContain('text-on-primary');
-    expect(monthTab.className).not.toContain('text-on-primary');
+    expect(
+      within(screen.getByRole('tablist', { name: 'Calendar view' }))
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent)
+    ).toEqual([
+      'Day',
+      'Week',
+      'Month',
+    ]);
 
     // Times shown in the CARE RECIPIENT's timezone
     expect(screen.getByText('Times shown in Chicago')).toBeInTheDocument();
@@ -366,7 +375,7 @@ describe('CalendarPage', () => {
     const toggleWrap = screen.getByTestId('calendar-view-toggle-wrap');
     expect(toggleWrap.className).toContain('max-[480px]:w-full');
     expect(toggleWrap.className).toContain('max-[480px]:order-last');
-    expect(toggleWrap.className).toContain('w-40');
+    expect(toggleWrap.className).toContain('w-64');
 
     const row = toggleWrap.parentElement as HTMLElement;
     expect(row.className).toContain('flex-wrap');
@@ -534,7 +543,96 @@ describe('CalendarPage', () => {
     expect(screen.getByRole('button', { name: /Metformin/ })).toBeInTheDocument();
   });
 
-  it('month view: clicking a day opens the side panel with that day’s events', async () => {
+  describe('Day view', () => {
+    it('Day tab fetches that single date and keeps the anchor when switching', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('grid', { name: 'Week view calendar' });
+
+      await user.click(screen.getByRole('tab', { name: 'Day' }));
+      expect(await screen.findByTestId('day-view')).toBeInTheDocument();
+      expect(mockGetEvents).toHaveBeenCalledWith('circle-1', {
+        start_date: '2026-06-12',
+        end_date: '2026-06-12',
+      });
+      expect(screen.getByTestId('day-view-title')).toHaveTextContent('Today, Friday');
+
+      // Back to Week: same shared date, so the same Sun-first week.
+      await user.click(screen.getByRole('tab', { name: 'Week' }));
+      expect(await screen.findByRole('grid', { name: 'Week view calendar' })).toBeInTheDocument();
+    });
+
+    it('prev / next / Today move the shared date by one day and fetch it', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('grid', { name: 'Week view calendar' });
+      await user.click(screen.getByRole('tab', { name: 'Day' }));
+      await screen.findByTestId('day-view');
+
+      await user.click(screen.getByRole('button', { name: 'Next day' }));
+      expect(mockGetEvents).toHaveBeenCalledWith('circle-1', {
+        start_date: '2026-06-13',
+        end_date: '2026-06-13',
+      });
+      await waitFor(() =>
+        expect(screen.getByTestId('day-view-title')).toHaveTextContent('Tomorrow, Saturday')
+      );
+      await user.click(screen.getByRole('button', { name: 'Previous day' }));
+      await user.click(screen.getByRole('button', { name: 'Previous day' }));
+      await waitFor(() =>
+        expect(screen.getByTestId('day-view-title')).toHaveTextContent('Yesterday, Thursday')
+      );
+      await user.click(screen.getByRole('button', { name: 'Today' }));
+      await waitFor(() =>
+        expect(screen.getByTestId('day-view-title')).toHaveTextContent('Today, Friday')
+      );
+    });
+
+    it('Week: clicking a day header opens Day for that date', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('grid', { name: 'Week view calendar' });
+
+      await user.click(screen.getByRole('button', { name: 'Wednesday, June 10' }));
+
+      expect(screen.getByRole('tab', { name: 'Day' })).toHaveAttribute('aria-selected', 'true');
+      await waitFor(() =>
+        expect(screen.getByTestId('day-view-title')).toHaveTextContent('Wednesday, June 10')
+      );
+      expect(mockGetEvents).toHaveBeenCalledWith('circle-1', {
+        start_date: '2026-06-10',
+        end_date: '2026-06-10',
+      });
+    });
+
+    it('arrow keys move between the Day, Week and Month tabs', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByRole('grid', { name: 'Week view calendar' });
+
+      screen.getByRole('tab', { name: 'Week' }).focus();
+      await user.keyboard('{ArrowLeft}');
+      expect(screen.getByRole('tab', { name: 'Day' })).toHaveAttribute('aria-selected', 'true');
+      await user.keyboard('{End}');
+      expect(screen.getByRole('tab', { name: 'Month' })).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('shows the empty state with an Add CTA for an editor on an empty day', async () => {
+      const user = userEvent.setup();
+      mockGetMembersCircleDetail.mockResolvedValue({ ...MEMBERS_DETAIL, can_edit: true });
+      renderPage();
+      await screen.findByRole('grid', { name: 'Week view calendar' });
+      mockGetEvents.mockResolvedValue([]);
+
+      await user.click(screen.getByRole('tab', { name: 'Day' }));
+      expect(await screen.findByText('Nothing scheduled for this day')).toBeInTheDocument();
+      expect(
+        await within(screen.getByTestId('day-view')).findByRole('button', { name: 'Add event' })
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('month view: clicking a day opens the Day view for that date', async () => {
     const user = userEvent.setup();
     renderPage();
     await screen.findByRole('grid', { name: 'Week view calendar' });
@@ -543,16 +641,18 @@ describe('CalendarPage', () => {
     await screen.findByRole('grid', { name: 'Month view calendar' });
 
     // Day cell aria-label includes the date and event count (Jun 12 has 4)
-    const dayCell = screen.getByRole('button', { name: 'Friday, June 12, 4 events' });
-    await user.click(dayCell);
-    expect(dayCell).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Friday, June 12, 4 events' }));
 
-    const panel = screen.getByRole('complementary', { name: 'Events for the selected day' });
-    expect(within(panel).getByText('Friday, June 12')).toBeInTheDocument();
-    const panelEvent = within(panel).getByRole('button', { name: /Metformin/ });
+    expect(screen.getByRole('tab', { name: 'Day' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByTestId('day-view')).toBeInTheDocument();
+    expect(screen.getByTestId('day-view-title')).toHaveTextContent('Today, Friday');
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    const dayEvent = within(screen.getByTestId('day-view')).getByRole('button', {
+      name: /Metformin/,
+    });
 
-    // Click-through to the detail modal
-    await user.click(panelEvent);
+    // Click-through to the detail modal (same as from Week)
+    await user.click(dayEvent);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: /Metformin/ })).toBeInTheDocument();
     expect(within(dialog).getByText('Taken at 8:05 AM (Chicago)')).toBeInTheDocument();
@@ -577,13 +677,13 @@ describe('CalendarPage', () => {
     expect(within(dialog).getByText('20:00 (Chicago) / 21:00 (New York)')).toBeInTheDocument();
     fireEvent.keyDown(dialog, { key: 'Escape' });
 
-    // MonthView side panel → formatEventTimeCompact
+    // DayView row → formatEventTimeCompact
     await user.click(screen.getByRole('tab', { name: 'Month' }));
     await screen.findByRole('grid', { name: 'Month view calendar' });
     await user.click(screen.getByRole('button', { name: 'Friday, June 12, 4 events' }));
-    const panel = screen.getByRole('complementary', { name: 'Events for the selected day' });
+    const dayView = await screen.findByTestId('day-view');
     expect(
-      within(panel).getByRole('button', { name: /Metformin, Medication, 08:00 \(Chicago\)/ })
+      within(dayView).getByRole('button', { name: /Metformin, Medication, 08:00 \(Chicago\)/ })
     ).toBeInTheDocument();
   });
 

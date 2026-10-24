@@ -1,0 +1,220 @@
+{
+  "eyebrow": "Schichten",
+  "close": "Schließen",
+  "open": "Offen",
+  "you": "Sie",
+  "takeButton": "Übernehmen",
+  "takeAria": "{{name}} übernehmen",
+  "addShift": "Schicht hinzufügen",
+  "edit": "Bearbeiten",
+  "nextDay": "nächster Tag",
+  "summary_one": "{{count}} Schicht · {{open}}.",
+  "summary_other": "{{count}} Schichten · {{open}}.",
+  "noShiftsDay": "Keine Schichten an diesem Tag.",
+  "noShiftsWeekDay": "Keine Schichten",
+  "mode": {
+    "label": "Kalenderansicht",
+    "schedule": "Terminplan",
+    "shifts": "Schichten",
+    "openBadge_one": "{{count}} offen",
+    "openBadge_other": "{{count}} offen"
+  },
+  "legend": {
+    "label": "Legende der Schichten",
+    "open": "Hat eine offene Schicht",
+    "covered": "Alles besetzt"
+  },
+  "month": {
+    "label": "Monatskalender der Schichten",
+    "cell_one": "{{date}}, {{count}} Schicht, {{open}}",
+    "cell_other": "{{date}}, {{count}} Schichten, {{open}}",
+    "none": "{{date}}, keine Schichten"
+  },
+  "empty": {
+    "title": "Die Pflege teilen, Schicht für Schicht",
+    "description": "Tragen Sie die Zeiten ein, für die jemand gebraucht wird, etwa Nächte oder Vormittage unter der Woche. So sieht Ihre Familie, wer welche Schicht hat und was noch offen ist.",
+    "cta": "Schicht hinzufügen"
+  },
+  "teaser": {
+    "chip": "Premium",
+    "title": "Die Pflege teilen, Schicht für Schicht",
+    "description": "Sehen Sie, wer welchen Zeitblock abdeckt und welche noch niemand übernommen hat, mit einer Erinnerung für die jeweilige Person.",
+    "cta": "Premium ansehen",
+    "notNow": "Nicht jetzt",
+    "morning": "Früh",
+    "afternoon": "Nachmittag",
+    "night": "Nacht",
+    "personA": "Ana",
+    "personB": "Luis",
+    "morningTime": "8:00 – 14:00 Uhr",
+    "afternoonTime": "14:00 – 20:00 Uhr",
+    "nightTime": "20:00 – 8:00 Uhr",
+    "previewA11y": "Beispiel: Eine Früh- und eine Nachmittagsschicht sind besetzt, die Nachtschicht ist offen."
+  },
+  "take": {
+    "title": "„{{name}}“ übernehmen",
+    "confirm": "Schicht übernehmen",
+    "scopeLabel": "Welche Schichten?",
+    "justThis": "Nur diese",
+    "futureHint": "Einzelne können Sie später abgeben",
+    "reminderRow": "Erinnerung · {{when}}",
+    "future": "Diese und alle künftigen"
+  },
+  "scope": {
+    "label": "Welche Schichten?",
+    "occurrence": "Diese Schicht",
+    "future": "Diese und künftige Schichten",
+    "allUpcoming": "Alle kommenden Schichten"
+  },
+  "drop": {
+    "action": "Schicht abgeben",
+    "title": "Diese Schicht abgeben?",
+    "message": "„{{name}}“ ist dann wieder offen und alle im Kreis werden benachrichtigt.",
+    "confirm": "Schicht abgeben",
+    "messageRepeating": "Wählen Sie, welche Schichten Sie abgeben. Sie sind dann wieder offen und alle im Kreis werden benachrichtigt."
+  },
+  "assign": {
+    "action": "Zuweisen",
+    "title": "Schicht zuweisen",
+    "label": "Wer übernimmt?",
+    "confirm": "Zuweisen",
+    "current": "hat sie jetzt"
+  },
+  "delete": {
+    "action": "Löschen",
+    "title": "Schicht löschen",
+    "message": "„{{name}}“ löschen? Das lässt sich nicht rückgängig machen.",
+    "messageRepeating": "Wählen Sie, welche Schichten gelöscht werden. Das lässt sich nicht rückgängig machen.",
+    "confirm": "Löschen"
+  },
+  "detail": {
+    "date": "Datum",
+    "time": "Zeit",
+    "yourTime": "Ihre Zeit: {{range}}",
+    "yourTimeRow": "Ihre Zeit",
+    "repeats": "Wiederholung",
+    "coveredBy": "Wer sie hat",
+    "openValue": "Noch niemand",
+    "reminder": "Erinnerung"
+  },
+  "repeat": {
+    "never": "Nie",
+    "daily": "Täglich",
+    "weekly": "Wöchentlich",
+    "weeklyOn": "Wöchentlich am {{days}}",
+    "series": "Wiederkehrend"
+  },
+  "reminder": {
+    "off": "Aus",
+    "h1": "1 Stunde vorher",
+    "h2": "2 Stunden vorher",
+    "h4": "4 Stunden vorher",
+    "d1": "1 Tag vorher",
+    "chip1h": "1 Stunde",
+    "chip2h": "2 Stunden",
+    "chip4h": "4 Stunden",
+    "chip1d": "1 Tag"
+  },
+  "duration": {
+    "hours_one": "{{count}} Stunde",
+    "hours_other": "{{count}} Stunden",
+    "minutes_one": "{{count}} Minute",
+    "minutes_other": "{{count}} Minuten",
+    "mixed": "{{hours}} Std. {{minutes}} Min."
+  },
+  "form": {
+    "newTitle": "Neue Schicht",
+    "editTitle": "Schicht bearbeiten",
+    "heading": "Wer ist bei {{name}}?",
+    "editScopeLabel": "Welche Schichten?",
+    "name": "Name",
+    "namePlaceholder": "z. B. Nacht",
+    "starts": "Beginn",
+    "ends": "Ende",
+    "reminder": "Erinnerung",
+    "covering": "Wer übernimmt?",
+    "leaveOpen": "Offen lassen",
+    "me": "Ich",
+    "timezoneNote": "Diese Zeiten gelten für {{zone}}.",
+    "seriesNote": "Datum und Wiederholung einer Serie lassen sich hier nicht ändern. Ihre Änderung gilt für die gewählten Schichten.",
+    "save": "Schicht speichern",
+    "repeats": "Wiederholung",
+    "date": "Datum",
+    "endsOn": "Wiederholung endet",
+    "reminderHint": "Wird an die Person gesendet, die die Schicht hat.",
+    "careRecipient": "{{name}} · Umsorgte Person"
+  },
+  "saved": {
+    "title": "„{{name}}“ gespeichert",
+    "summaryOpen": "{{range}}, {{repeat}}. Offen für alle, die sie übernehmen möchten.",
+    "summaryOpenOnce": "{{range}} · Offen für alle, die sie übernehmen möchten.",
+    "summaryAssigned": "{{range}}, {{repeat}}. {{who}} hat sie.",
+    "summaryAssignedOnce": "{{range}} · {{who}} hat sie.",
+    "addNext": "Nächste Schicht hinzufügen",
+    "addNextHint": "Beginnt um {{time}} · {{repeat}}",
+    "addNextHintOnce": "Beginnt um {{time}}",
+    "done": "Fertig",
+    "summarySelf": "{{range}}, {{repeat}}. Sie haben sie.",
+    "summarySelfOnce": "{{range}} · Sie haben sie.",
+    "repeatDaily": "jeden Tag",
+    "repeatWeekly": "jede Woche",
+    "repeatDays": "{{days}}"
+  },
+  "validation": {
+    "nameRequired": "Geben Sie der Schicht einen Namen.",
+    "nameTooLong": "Der Name darf höchstens 60 Zeichen lang sein.",
+    "dateRequired": "Wählen Sie ein Datum.",
+    "startRequired": "Wählen Sie den Beginn der Schicht.",
+    "endRequired": "Wählen Sie, wann die Schicht endet.",
+    "tooShort": "Eine Schicht dauert zwischen 15 Minuten und 24 Stunden.",
+    "tooLong": "Eine Schicht dauert zwischen 15 Minuten und 24 Stunden.",
+    "repeatEndBeforeStart": "Das Enddatum muss auf oder nach dem ersten Datum liegen.",
+    "daysRequired": "Wählen Sie mindestens einen Tag."
+  },
+  "toast": {
+    "taken": "Sie haben die Schicht „{{name}}“.",
+    "alreadyTaken": "{{takenBy}} hat diese Schicht gerade übernommen.",
+    "dropped": "Sie haben „{{name}}“ abgegeben. Sie ist wieder offen.",
+    "assigned": "{{name}} hat die Schicht.",
+    "updated": "Schicht aktualisiert.",
+    "deleted": "Schicht gelöscht.",
+    "alreadyTakenUnknown": "Jemand hat diese Schicht gerade übernommen.",
+    "alreadyOpen": "Diese Schicht ist bereits offen.",
+    "notFound": "Diese Schicht ist nicht mehr verfügbar.",
+    "notAssigned": "Bei dieser Schicht ist niemand mehr eingeteilt."
+  },
+  "someone": "Jemand",
+  "rangeSpoken": "{{start}} bis {{end}}",
+  "summaryShort_one": "{{count}} Schicht · {{open}}",
+  "summaryShort_other": "{{count}} Schichten · {{open}}",
+  "card": {
+    "statusOpen": "offen",
+    "statusCovered": "{{name}} übernimmt sie",
+    "statusMine": "Sie haben diese Schicht",
+    "openDetailsHint": "Öffnet die Schichtdetails"
+  },
+  "loadError": "Die Schichten konnten nicht geladen werden.",
+  "error": {
+    "take": "Die Schicht konnte nicht übernommen werden. Bitte versuchen Sie es erneut.",
+    "drop": "Die Schicht konnte nicht abgegeben werden. Bitte versuchen Sie es erneut.",
+    "assign": "Die Schicht konnte nicht zugewiesen werden. Bitte versuchen Sie es erneut.",
+    "save": "Die Schicht konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    "delete": "Die Schicht konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+    "dropForbidden": "Nur die Person mit der Schicht, der Inhaber oder ein Mitverwalter kann sie abgeben.",
+    "assignForbidden": "Nur der Inhaber oder ein Mitverwalter kann jemand anderen für eine Schicht eintragen.",
+    "invalidAssignee": "Diese Person kann keine Schicht übernehmen.",
+    "permissionDenied": "Sie dürfen Schichten in diesem Kreis nicht ändern."
+  },
+  "week": {
+    "openDayHint": "Öffnet die Tagesansicht",
+    "today": "Heute"
+  },
+  "readOnly": {
+    "owner": "Premium ist abgelaufen. Ihre Schichten sind nur lesbar.",
+    "renew": "Premium verlängern",
+    "other": "Schichten sind derzeit nur lesbar."
+  },
+  "openCount_zero": "keine offen",
+  "openCount_one": "{{count}} offen",
+  "openCount_other": "{{count}} offen"
+}

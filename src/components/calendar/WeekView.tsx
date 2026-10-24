@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -33,6 +33,8 @@ export interface WeekViewProps {
   /** Days with logged as-needed doses (recipient-zone days). Optional: nothing shown without it. */
   asNeededByDay?: Map<string, AsNeededDayEntry[]>;
   onAsNeededOpen?: (entry: AsNeededDayEntry) => void;
+  /** When provided, a day header is a button that opens that day (Day view). */
+  onDayOpen?: (day: string) => void;
 }
 
 // px per hour — matches mobile's WeekTimelineView HOUR_HEIGHT exactly. Also
@@ -99,6 +101,7 @@ export function WeekView({
   onEventClick,
   asNeededByDay,
   onAsNeededOpen,
+  onDayOpen,
 }: WeekViewProps): ReactElement {
   const { t } = useTranslation(['calendar', 'common', 'meds']);
   // Viewer's 12h/24h clock — every rendered time goes through it. (The hour-axis
@@ -430,10 +433,16 @@ export function WeekView({
                       the accessible tree (review 2026-09-05, WCAG 2.5.3):
                       `aria-label` above still carries the full date, which
                       contains both. */}
-                  <div
+                  <DayHeaderWrap
+                    onOpen={onDayOpen ? () => onDayOpen(day) : undefined}
+                    label={formatDateForDisplay(day, {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                     className={`mx-auto flex flex-col items-center justify-center rounded-lg px-1 py-1 ${
                       isToday ? 'bg-ink' : ''
-                    }`}
+                    }${onDayOpen ? ` min-h-[44px] w-full${isToday ? '' : ' hover:bg-bg-2'}` : ''}`}
                   >
                     <span
                       className={`block text-xs font-medium capitalize ${isToday ? 'text-cream' : 'text-ink-3'}`}
@@ -445,7 +454,7 @@ export function WeekView({
                     >
                       {formatDateForDisplay(day, { day: 'numeric' })}
                     </span>
-                  </div>
+                  </DayHeaderWrap>
                   {hasAsNeeded && (
                     <div className="mt-0.5 flex justify-center">
                       <AsNeededRing />
@@ -617,5 +626,25 @@ export function WeekView({
         </div>
       </div>
     </Card>
+  );
+}
+
+/** The header's date block: a button when the page can open Day, else a plain div. */
+function DayHeaderWrap({
+  onOpen,
+  label,
+  className,
+  children,
+}: {
+  onOpen?: () => void;
+  label: string;
+  className: string;
+  children: ReactNode;
+}): ReactElement {
+  if (!onOpen) return <div className={className}>{children}</div>;
+  return (
+    <button type="button" aria-label={label} onClick={onOpen} className={className}>
+      {children}
+    </button>
   );
 }

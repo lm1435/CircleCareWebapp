@@ -29,6 +29,8 @@ export interface MonthViewProps {
   /** Days with logged as-needed doses (recipient-zone days). Optional: no marker without it. */
   asNeededByDay?: Map<string, AsNeededDayEntry[]>;
   onAsNeededOpen?: (entry: AsNeededDayEntry) => void;
+  /** When provided, clicking a day cell opens that day (Day view) instead of the side panel. */
+  onDayOpen?: (day: string) => void;
 }
 
 const MAX_DOTS = 3;
@@ -51,6 +53,7 @@ export function MonthView({
   onEventClick,
   asNeededByDay,
   onAsNeededOpen,
+  onDayOpen,
 }: MonthViewProps): ReactElement {
   const { t } = useTranslation(['calendar', 'common', 'meds']);
   // Viewer's 12h/24h clock — every rendered time goes through it.
@@ -131,7 +134,7 @@ export function MonthView({
                     })}, ${t('calendar:eventCount', { count: events.length })}${
                       hasAsNeeded ? `, ${t('meds:asNeeded.calendar.cellHint')}` : ''
                     }`}
-                    onClick={() => setSelectedDay(day)}
+                    onClick={() => (onDayOpen ? onDayOpen(day) : setSelectedDay(day))}
                     className={`flex h-full w-full flex-col items-center gap-1 rounded-lg p-1 text-center hover:bg-bg-2 ${
                       isSelected ? 'bg-bg-2 ring-1 ring-line' : ''
                     }`}

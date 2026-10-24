@@ -102,6 +102,13 @@ export interface PersonaExpectation {
    * — a refusal writes nothing. `null` for editors (the call would write).
    */
   writeGate: ApiOutcome | null;
+  /**
+   * Care shifts: what the Calendar's Schedule | Shifts control does for the
+   * persona (src/lib/shiftsAccess.ts) — 'available' = the control, 'teaser' = the
+   * control opening the Premium teaser (a free circle's OWNER only), 'hidden' =
+   * no control at all. `null` = not asserted. Constants, like `aiEntry`.
+   */
+  shiftsEntry: 'available' | 'teaser' | 'hidden' | null;
   /** GET /api/subscription-status `needsCircleSelection` (tierService.ts:504-533). */
   needsCircleSelection: boolean;
   isOwner: boolean;
@@ -117,6 +124,7 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     aiEntry: 'available',
     aiSuggestions: { status: 200 },
     writeGate: null,
+    shiftsEntry: 'available',
     needsCircleSelection: false,
     isOwner: true,
     archived: false,
@@ -131,6 +139,7 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     aiEntry: 'upgrade',
     aiSuggestions: { status: 402, code: 'SUBSCRIPTION_REQUIRED' },
     writeGate: null,
+    shiftsEntry: 'teaser',
     needsCircleSelection: false,
     isOwner: true,
     archived: false,
@@ -143,6 +152,7 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     aiEntry: 'hidden',
     aiSuggestions: { status: 402, code: 'SUBSCRIPTION_REQUIRED' },
     writeGate: null,
+    shiftsEntry: 'hidden',
     needsCircleSelection: false,
     isOwner: false,
     archived: false,
@@ -156,6 +166,7 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     aiEntry: 'hidden',
     aiSuggestions: { status: 403, code: 'VIEW_ONLY' },
     writeGate: { status: 403, code: 'VIEW_ONLY' },
+    shiftsEntry: 'hidden',
     needsCircleSelection: false,
     isOwner: false,
     archived: false,
@@ -168,6 +179,7 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     aiEntry: 'upgrade',
     aiSuggestions: { status: 402, code: 'SUBSCRIPTION_REQUIRED' },
     writeGate: { status: 403, code: 'SUBSCRIPTION_REQUIRED' },
+    shiftsEntry: 'teaser',
     needsCircleSelection: true,
     isOwner: true,
     archived: false,
@@ -182,6 +194,7 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     aiEntry: null,
     aiSuggestions: null,
     writeGate: null,
+    shiftsEntry: null,
     needsCircleSelection: false,
     isOwner: true,
     archived: true,
@@ -201,6 +214,7 @@ export const PERSONA_EXPECTATIONS: Record<PersonaName, PersonaExpectation> = {
     aiEntry: 'available',
     aiSuggestions: null,
     writeGate: null,
+    shiftsEntry: 'available',
     needsCircleSelection: false,
     isOwner: false,
     archived: false,

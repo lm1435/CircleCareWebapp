@@ -1,0 +1,220 @@
+{
+  "eyebrow": "Shifts",
+  "close": "Close",
+  "open": "Open",
+  "you": "You",
+  "takeButton": "Take",
+  "takeAria": "Take {{name}}",
+  "addShift": "Add shift",
+  "edit": "Edit",
+  "nextDay": "next day",
+  "summary_one": "{{count}} shift · {{open}}.",
+  "summary_other": "{{count}} shifts · {{open}}.",
+  "noShiftsDay": "No shifts on this day.",
+  "noShiftsWeekDay": "No shifts",
+  "mode": {
+    "label": "Calendar mode",
+    "schedule": "Schedule",
+    "shifts": "Shifts",
+    "openBadge_one": "{{count}} open",
+    "openBadge_other": "{{count}} open"
+  },
+  "legend": {
+    "label": "Shifts key",
+    "open": "Has an open shift",
+    "covered": "Fully covered"
+  },
+  "month": {
+    "label": "Shifts month calendar",
+    "cell_one": "{{date}}, {{count}} shift, {{open}}",
+    "cell_other": "{{date}}, {{count}} shifts, {{open}}",
+    "none": "{{date}}, no shifts"
+  },
+  "empty": {
+    "title": "Share the care, shift by shift",
+    "description": "Add the blocks of time that need someone, like nights or weekday mornings, and let your family see who has each one and what is still open.",
+    "cta": "Add a shift"
+  },
+  "teaser": {
+    "chip": "Premium",
+    "title": "Share the care, shift by shift",
+    "description": "See who covers each block of time and which ones nobody has taken yet, with a reminder for whoever is on.",
+    "cta": "See Premium",
+    "notNow": "Not now",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "night": "Night",
+    "personA": "Ana",
+    "personB": "Luis",
+    "morningTime": "8:00 AM – 2:00 PM",
+    "afternoonTime": "2:00 PM – 8:00 PM",
+    "nightTime": "8:00 PM – 8:00 AM",
+    "previewA11y": "Example: a morning and an afternoon shift each have someone on them, and the night shift is open."
+  },
+  "take": {
+    "title": "Take \"{{name}}\"",
+    "confirm": "Take shift",
+    "scopeLabel": "Which shifts?",
+    "justThis": "Just this one",
+    "futureHint": "You can drop any one later",
+    "reminderRow": "Reminder · {{when}}",
+    "future": "This and every future one"
+  },
+  "scope": {
+    "label": "Which shifts?",
+    "occurrence": "This shift",
+    "future": "This and future shifts",
+    "allUpcoming": "All upcoming shifts"
+  },
+  "drop": {
+    "action": "Drop shift",
+    "title": "Drop this shift?",
+    "message": "\"{{name}}\" will be open again and everyone in the circle will be told.",
+    "confirm": "Drop shift",
+    "messageRepeating": "Choose which shifts to drop. They will be open again and everyone in the circle will be told."
+  },
+  "assign": {
+    "action": "Assign",
+    "title": "Assign shift",
+    "label": "Who's covering?",
+    "confirm": "Assign",
+    "current": "on it now"
+  },
+  "delete": {
+    "action": "Delete",
+    "title": "Delete shift",
+    "message": "Delete \"{{name}}\"? This can't be undone.",
+    "messageRepeating": "Choose which shifts to delete. This can't be undone.",
+    "confirm": "Delete"
+  },
+  "detail": {
+    "date": "Date",
+    "time": "Time",
+    "yourTime": "Your time: {{range}}",
+    "yourTimeRow": "Your time",
+    "repeats": "Repeats",
+    "coveredBy": "Who's on it",
+    "openValue": "Nobody yet",
+    "reminder": "Reminder"
+  },
+  "repeat": {
+    "never": "Never",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "weeklyOn": "Weekly on {{days}}",
+    "series": "Repeats"
+  },
+  "reminder": {
+    "off": "Off",
+    "h1": "1 hour before",
+    "h2": "2 hours before",
+    "h4": "4 hours before",
+    "d1": "1 day before",
+    "chip1h": "1 hour",
+    "chip2h": "2 hours",
+    "chip4h": "4 hours",
+    "chip1d": "1 day"
+  },
+  "duration": {
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "mixed": "{{hours}} h {{minutes}} min"
+  },
+  "form": {
+    "newTitle": "New shift",
+    "editTitle": "Edit shift",
+    "heading": "Who's with {{name}}?",
+    "editScopeLabel": "Which shifts?",
+    "name": "Name",
+    "namePlaceholder": "e.g. Night",
+    "starts": "Starts",
+    "ends": "Ends",
+    "reminder": "Reminder",
+    "covering": "Who's covering?",
+    "leaveOpen": "Leave open",
+    "me": "Me",
+    "timezoneNote": "These times are for {{zone}}.",
+    "seriesNote": "The date and repeat of a series can't be changed here. Your edit applies to the shifts you chose.",
+    "save": "Save shift",
+    "repeats": "Repeats",
+    "date": "Date",
+    "endsOn": "Repeat ends",
+    "reminderHint": "Sent to whoever is on the shift.",
+    "careRecipient": "{{name}} · Care recipient"
+  },
+  "saved": {
+    "title": "\"{{name}}\" saved",
+    "summaryOpen": "{{range}}, {{repeat}}. Open for anyone to take.",
+    "summaryOpenOnce": "{{range}} · Open for anyone to take.",
+    "summaryAssigned": "{{range}}, {{repeat}}. {{who}} is on it.",
+    "summaryAssignedOnce": "{{range}} · {{who}} is on it.",
+    "addNext": "Add the next shift",
+    "addNextHint": "Starts at {{time}} · {{repeat}}",
+    "addNextHintOnce": "Starts at {{time}}",
+    "done": "Done",
+    "summarySelf": "{{range}}, {{repeat}}. You're on it.",
+    "summarySelfOnce": "{{range}} · You're on it.",
+    "repeatDaily": "every day",
+    "repeatWeekly": "every week",
+    "repeatDays": "on {{days}}"
+  },
+  "validation": {
+    "nameRequired": "Give the shift a name.",
+    "nameTooLong": "Keep the name to 60 characters or fewer.",
+    "dateRequired": "Choose a date.",
+    "startRequired": "Choose when the shift starts.",
+    "endRequired": "Choose when the shift ends.",
+    "tooShort": "A shift lasts from 15 minutes to 24 hours.",
+    "tooLong": "A shift lasts from 15 minutes to 24 hours.",
+    "repeatEndBeforeStart": "The end date must be on or after the first date.",
+    "daysRequired": "Choose at least one day."
+  },
+  "toast": {
+    "taken": "You're on the shift \"{{name}}\".",
+    "alreadyTaken": "{{takenBy}} just took this shift.",
+    "dropped": "You dropped \"{{name}}\". It's open again.",
+    "assigned": "{{name}} is on the shift.",
+    "updated": "Shift updated.",
+    "deleted": "Shift deleted.",
+    "alreadyTakenUnknown": "Someone just took this shift.",
+    "alreadyOpen": "This shift is already open.",
+    "notFound": "This shift is no longer available.",
+    "notAssigned": "Nobody is on that shift anymore."
+  },
+  "someone": "Someone",
+  "rangeSpoken": "{{start}} to {{end}}",
+  "summaryShort_one": "{{count}} shift · {{open}}",
+  "summaryShort_other": "{{count}} shifts · {{open}}",
+  "card": {
+    "statusOpen": "open",
+    "statusCovered": "{{name}} is on it",
+    "statusMine": "you are on this shift",
+    "openDetailsHint": "Opens the shift details"
+  },
+  "loadError": "We couldn't load the shifts.",
+  "error": {
+    "take": "We couldn't take the shift. Try again.",
+    "drop": "We couldn't drop the shift. Try again.",
+    "assign": "We couldn't assign the shift. Try again.",
+    "save": "We couldn't save the shift. Try again.",
+    "delete": "We couldn't delete the shift. Try again.",
+    "dropForbidden": "Only the person on a shift, the owner or a manager can drop it.",
+    "assignForbidden": "Only the owner or a manager can put someone else on a shift.",
+    "invalidAssignee": "That person can't be put on a shift.",
+    "permissionDenied": "You don't have permission to change shifts in this circle."
+  },
+  "week": {
+    "openDayHint": "Opens the day view",
+    "today": "Today"
+  },
+  "readOnly": {
+    "owner": "Premium has ended. Your shifts are read-only.",
+    "renew": "Renew Premium",
+    "other": "Shifts are read-only right now."
+  },
+  "openCount_zero": "none open",
+  "openCount_one": "{{count}} open",
+  "openCount_other": "{{count}} open"
+}

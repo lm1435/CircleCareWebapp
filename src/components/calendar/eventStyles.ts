@@ -21,6 +21,7 @@ export const EVENT_TYPE_DOT_CLASS: Record<EventType, string> = {
   medication: 'bg-clay',
   appointment: 'bg-dusk',
   task: 'bg-moss',
+  shift: 'bg-moss',
 };
 
 /** Solid block background per event type (mobile TimelineEventBlock). */
@@ -28,6 +29,7 @@ export const EVENT_TYPE_BLOCK_CLASS: Record<EventType, string> = {
   medication: 'bg-medication-fill',
   appointment: 'bg-appointment-fill',
   task: 'bg-task-fill',
+  shift: 'bg-task-fill',
 };
 
 /**
@@ -41,6 +43,7 @@ export const EVENT_TYPE_DONE_CLASS: Record<EventType, string> = {
   medication: 'bg-clay-soft text-clay-deep',
   appointment: 'bg-dusk-soft text-dusk-deep',
   task: 'bg-moss-soft text-moss-deep',
+  shift: 'bg-moss-soft text-moss-deep',
 };
 
 /** Deep type text color used for the muted "done" treatment. */
@@ -48,6 +51,7 @@ export const EVENT_TYPE_DEEP_TEXT: Record<EventType, string> = {
   medication: 'text-clay-deep',
   appointment: 'text-dusk-deep',
   task: 'text-moss-deep',
+  shift: 'text-moss-deep',
 };
 
 /**

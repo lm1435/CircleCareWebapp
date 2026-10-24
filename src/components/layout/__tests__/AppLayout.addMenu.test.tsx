@@ -65,6 +65,22 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
   ),
 }));
 
+// Care shifts: the composer and teaser echo which flow opened.
+vi.mock('@/components/shifts/ShiftComposer', () => ({
+  ShiftComposer: ({ source, onClose }: { source: string; onClose: () => void }) => (
+    <div data-testid="shift-composer" data-source={source}>
+      <button type="button" onClick={onClose}>
+        close-shift
+      </button>
+    </div>
+  ),
+}));
+vi.mock('@/components/shifts/ShiftsTeaserDialog', () => ({
+  ShiftsTeaserDialog: ({ source }: { source: string }) => (
+    <div data-testid="shifts-teaser" data-source={source} />
+  ),
+}));
+
 const initialAuthState = useAuthStore.getState();
 
 function renderLayout(): void {
@@ -192,7 +208,9 @@ describe.each<Trigger>(['sidebar', 'nav'])('AppLayout AddMenu wiring (%s trigger
 
     expect(screen.queryByRole('menuitem', { name: 'Document' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Invite member' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+    // Four classic options + Shift (this mock's circle is free and owned by the
+    // viewer, so Shift is offered and opens the teaser).
+    expect(screen.getAllByRole('menuitem')).toHaveLength(5);
   });
 });
 
@@ -253,5 +271,88 @@ describe('AppLayout AddMenu gating', () => {
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+  });
+});
+
+describe('AppLayout AddMenu: Shift (care shifts)', () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      user: { id: 'u1', email: 'pat@example.com', first_name: 'Pat', last_name: 'Lee' },
+      isAuthenticated: true,
+    });
+  });
+  afterEach(() => {
+    useAuthStore.setState(initialAuthState, true);
+    vi.mocked(useCircle).mockReturnValue({
+      circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
+      canEdit: true,
+    } as unknown as ReturnType<typeof useCircle>);
+  });
+
+  function mockCircle(over: Record<string, unknown>): void {
+    vi.mocked(useCircle).mockReturnValue({
+      circle: { id: 'c1', owner_id: 'u1', is_self_care: false },
+      canEdit: true,
+      ...over,
+    } as unknown as ReturnType<typeof useCircle>);
+  }
+
+  it('premium circle: Shift opens the composer from the add menu', async () => {
+    mockCircle({ isPremiumCircle: true });
+    const user = userEvent.setup();
+    renderLayout();
+    await pick(user, 'nav', 'Shift');
+    expect(screen.getByTestId('shift-composer')).toHaveAttribute('data-source', 'add_menu');
+    expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
+  });
+
+  it('free OWNER: Shift opens the teaser, never the form', async () => {
+    mockCircle({ isPremiumCircle: false });
+    const user = userEvent.setup();
+    renderLayout();
+    await pick(user, 'sidebar', 'Shift');
+    expect(screen.getByTestId('shifts-teaser')).toHaveAttribute('data-source', 'add_menu');
+    expect(screen.queryByTestId('shift-composer')).not.toBeInTheDocument();
+  });
+
+  it('free manager / member: no Shift option at all', async () => {
+    mockCircle({
+      circle: { id: 'c1', owner_id: 'someone-else', is_self_care: false },
+      isPremiumCircle: false,
+    });
+    const user = userEvent.setup();
+    renderLayout();
+    await user.click(newButton('nav'));
+    expect(screen.queryByRole('menuitem', { name: 'Shift' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+  });
+
+  it.each([['owner', 'u1'], ['manager / member', 'someone-else']])(
+    'lapsed Premium (free circle that still has shifts): the %s gets no Shift option',
+    async (_who, ownerId) => {
+      mockCircle({
+        circle: { id: 'c1', owner_id: ownerId, is_self_care: false },
+        isPremiumCircle: false,
+        hasShifts: true,
+      });
+      const user = userEvent.setup();
+      renderLayout();
+      await user.click(newButton('nav'));
+      expect(screen.queryByRole('menuitem', { name: 'Shift' })).not.toBeInTheDocument();
+      expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+    }
+  );
+
+  it('a view-only seat never gets Shift, even in a premium circle', async () => {
+    mockCircle({
+      circle: { id: 'c1', owner_id: 'someone-else', is_self_care: false },
+      isPremiumCircle: false,
+      viewOnly: true,
+      canEdit: true,
+    });
+    const user = userEvent.setup();
+    renderLayout();
+    await user.click(newButton('nav'));
+    expect(screen.queryByRole('menuitem', { name: 'Shift' })).not.toBeInTheDocument();
   });
 });

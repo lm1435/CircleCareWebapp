@@ -452,7 +452,7 @@ test.describe('Week chip: assignee + note count (mobile TimelineEventBlock parit
     });
   }
 
-  test('month day panel: the note badge prints and joins the row name', async ({
+  test('month day cell opens Day: the note badge prints and joins the row name', async ({
     page,
     request,
     circleId,
@@ -475,23 +475,21 @@ test.describe('Week chip: assignee + note count (mobile TimelineEventBlock parit
         await gotoCalendarSettled(page, circleId);
         await page.getByRole('tab', { name: 'Month', exact: true }).click();
         await page.locator(`button[data-date="${today}"]`).click();
-        const panel = page.getByRole('complementary', { name: 'Events for the selected day' });
+        // A Month cell opens the Day view for that date (care shifts W10).
+        const panel = page.getByTestId('day-view');
         const row = panel.getByRole('button', { name: new RegExp(`^${escapeRegExp(title)},.*, 3 notes$`) });
         await expect(row).toBeVisible({ timeout: 20_000 });
         await expect(row.getByTestId('event-chip-notes')).toHaveText('3');
         const rowBox = (await assertChipFits(row, `month/${vp.name}`)).chip;
-        // The row must be inside the page and its panel must be inside the
-        // layout column — at phone width the panel used to size to the
-        // longest unbreakable title and run off the right edge, clipped.
+        // The row must be inside the page (Day rows are full width).
         expect(rowBox.x + rowBox.w, `month/${vp.name}: row runs past the viewport`).toBeLessThanOrEqual(
           vp.width + EPS
         );
-        const panelFits = await panel.evaluate((aside) => {
-          const a = aside.getBoundingClientRect();
-          const p = (aside.parentElement as HTMLElement).getBoundingClientRect();
-          return a.left >= p.left - 0.75 && a.right <= p.right + 0.75;
+        const panelFits = await panel.evaluate((el) => {
+          const a = el.getBoundingClientRect();
+          return a.left >= -0.75 && a.right <= window.innerWidth + 0.75;
         });
-        expect(panelFits, `month/${vp.name}: day panel overflows its layout column`).toBe(true);
+        expect(panelFits, `month/${vp.name}: day view overflows the viewport`).toBe(true);
         await shotChip(row, `month-panel-${vp.name}-en`);
       }
     } finally {

@@ -1,0 +1,110 @@
+{
+  "eyebrow": "Quarts",
+  "addShift": "Ajouter un quart",
+  "summary_one": "{{count}} quart · {{open}}.",
+  "summary_other": "{{count}} quarts · {{open}}.",
+  "noShiftsDay": "Aucun quart ce jour-là.",
+  "noShiftsWeekDay": "Aucun quart",
+  "mode": {
+    "shifts": "Quarts"
+  },
+  "legend": {
+    "open": "Un quart est à pourvoir",
+    "label": "Légende des quarts"
+  },
+  "month": {
+    "cell_one": "{{date}}, {{count}} quart, {{open}}",
+    "cell_other": "{{date}}, {{count}} quarts, {{open}}",
+    "none": "{{date}}, aucun quart",
+    "label": "Calendrier mensuel des quarts"
+  },
+  "empty": {
+    "title": "Partagez les soins, quart après quart",
+    "cta": "Ajouter un quart"
+  },
+  "teaser": {
+    "title": "Partagez les soins, quart après quart",
+    "previewA11y": "Exemple : un quart du matin et un de l’après-midi ont chacun quelqu’un, et le quart de nuit est à pourvoir."
+  },
+  "take": {
+    "confirm": "Prendre le quart",
+    "futureHint": "Vous pourrez en libérer un plus tard",
+    "future": "Celui-ci et tous les suivants",
+    "scopeLabel": "Quels quarts ?"
+  },
+  "scope": {
+    "occurrence": "Ce quart",
+    "future": "Ce quart et les suivants",
+    "allUpcoming": "Tous les quarts à venir",
+    "label": "Quels quarts ?"
+  },
+  "drop": {
+    "action": "Libérer le quart",
+    "title": "Libérer ce quart ?",
+    "confirm": "Libérer le quart",
+    "messageRepeating": "Choisissez les quarts à libérer. Ils seront de nouveau à pourvoir et tout le cercle en sera informé."
+  },
+  "assign": {
+    "title": "Attribuer le quart"
+  },
+  "delete": {
+    "title": "Supprimer le quart",
+    "messageRepeating": "Choisissez les quarts à supprimer. Cette action est irréversible."
+  },
+  "form": {
+    "newTitle": "Nouveau quart",
+    "editTitle": "Modifier le quart",
+    "seriesNote": "La date et la répétition d’une série ne se modifient pas ici. Votre modification s’applique aux quarts choisis.",
+    "save": "Enregistrer le quart",
+    "reminderHint": "Envoyé à la personne qui assure le quart.",
+    "editScopeLabel": "Quels quarts ?"
+  },
+  "saved": {
+    "title": "« {{name}} » enregistré",
+    "summaryOpen": "{{range}}, {{repeat}}. Ouvert à quiconque veut le prendre.",
+    "summaryOpenOnce": "{{range}} · Ouvert à quiconque veut le prendre.",
+    "addNext": "Ajouter le quart suivant"
+  },
+  "validation": {
+    "nameRequired": "Donnez un nom au quart.",
+    "endRequired": "Choisissez l’heure de fin du quart.",
+    "tooShort": "Un quart dure de 15 minutes à 24 heures.",
+    "tooLong": "Un quart dure de 15 minutes à 24 heures.",
+    "startRequired": "Choisissez l’heure de début du quart."
+  },
+  "toast": {
+    "taken": "Vous assurez le quart « {{name}} ».",
+    "alreadyTaken": "{{takenBy}} vient de prendre ce quart.",
+    "alreadyTakenUnknown": "Quelqu’un vient de prendre ce quart.",
+    "alreadyOpen": "Ce quart est déjà à pourvoir.",
+    "dropped": "Vous avez libéré « {{name}} ». Il est de nouveau à pourvoir.",
+    "assigned": "{{name}} assure le quart.",
+    "updated": "Quart mis à jour.",
+    "deleted": "Quart supprimé.",
+    "notFound": "Ce quart n’est plus disponible.",
+    "notAssigned": "Plus personne n’assure ce quart."
+  },
+  "error": {
+    "take": "Impossible de prendre le quart. Réessayez.",
+    "drop": "Impossible de libérer le quart. Réessayez.",
+    "assign": "Impossible d’attribuer le quart. Réessayez.",
+    "save": "Impossible d’enregistrer le quart. Réessayez.",
+    "delete": "Impossible de supprimer le quart. Réessayez.",
+    "dropForbidden": "Seuls la personne qui assure le quart, le propriétaire ou un gestionnaire peuvent le libérer.",
+    "assignForbidden": "Seuls le propriétaire ou un gestionnaire peuvent attribuer un quart à quelqu’un d’autre.",
+    "invalidAssignee": "Cette personne ne peut pas se voir attribuer un quart.",
+    "permissionDenied": "Vous n’avez pas l’autorisation de modifier les quarts de ce cercle."
+  },
+  "summaryShort_one": "{{count}} quart · {{open}}",
+  "summaryShort_other": "{{count}} quarts · {{open}}",
+  "card": {
+    "statusMine": "vous assurez ce quart",
+    "openDetailsHint": "Ouvre les détails du quart"
+  },
+  "loadError": "Impossible de charger les quarts.",
+  "readOnly": {
+    "owner": "Votre abonnement Premium est terminé. Vos quarts sont en lecture seule.",
+    "other": "Les quarts sont en lecture seule pour le moment."
+  },
+  "openCount_zero": "aucun à pourvoir"
+}

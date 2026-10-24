@@ -755,6 +755,10 @@ export default function ProfilePage(): ReactElement {
               title: t('notifications.groups.tips'),
               desc: t('notifications.groups.tipsDesc'),
             },
+            shifts: {
+              title: t('notifications.groups.shifts'),
+              desc: t('notifications.groups.shiftsDesc'),
+            },
           };
           return (
             <SheetRow key={group}>

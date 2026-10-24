@@ -33,6 +33,8 @@ export const PAYWALL_CONTEXTS = [
   'onboarding',
   'earned_meds',
   'earned_invite',
+  /** The care-shifts teaser (a free circle's OWNER, Calendar -> Shifts). */
+  'shifts',
 ] as const;
 
 export type PaywallContext = (typeof PAYWALL_CONTEXTS)[number];

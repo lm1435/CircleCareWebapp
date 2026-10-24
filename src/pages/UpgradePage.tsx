@@ -516,6 +516,7 @@ const HEADLINE_KEY = {
   feature: 'feature',
   earned_meds: 'earnedMeds',
   earned_invite: 'earnedInvite',
+  shifts: 'shifts',
 } as const satisfies Record<PaywallContext, string>;
 
 interface PlansViewProps {
@@ -557,6 +558,7 @@ function PlansView({
       lead: t('headline.earnedInvite.lead'),
       accent: t('headline.earnedInvite.accent'),
     },
+    shifts: { lead: t('headline.shifts.lead'), accent: t('headline.shifts.accent') },
   };
   const headline = headlines[HEADLINE_KEY[paywallContext]];
   const monthly = plans?.monthly ?? null;

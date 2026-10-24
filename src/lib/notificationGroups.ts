@@ -10,7 +10,7 @@
  * deliberately NOT in any group, so no group write can ever touch them.
  */
 
-export type NotificationGroup = 'medications' | 'tasks' | 'notes' | 'tips';
+export type NotificationGroup = 'medications' | 'tasks' | 'notes' | 'tips' | 'shifts';
 
 export type NotificationPrefs = Partial<Record<string, boolean>>;
 
@@ -19,6 +19,7 @@ export const NOTIFICATION_GROUP_ORDER: readonly NotificationGroup[] = [
   'tasks',
   'notes',
   'tips',
+  'shifts',
 ] as const;
 
 export const GROUPS = {
@@ -26,6 +27,9 @@ export const GROUPS = {
   tasks: ['task_assignments', 'appointment_reminders', 'note_nudges'],
   notes: ['event_notes', 'care_notes'],
   tips: ['tips_and_suggestions'],
+  // Care shifts (docs/plans/care-shifts.md). Absent = ON. Push is mobile-only; the
+  // switch is stored per user, so it applies to the phone either way.
+  shifts: ['shift_alerts'],
 } as const satisfies Record<NotificationGroup, readonly string[]>;
 
 /** Absent = ON. */

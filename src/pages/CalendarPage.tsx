@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getSeriesRoot as fetchEventRow, type CalendarEvent } from '@/api/calendarEvents';
-import { Button, Card, CircleButton, EmptyState, Icon, SegmentedControl, useToast } from '@/components/ui';
+import {
+  Button,
+  Card,
+  CircleButton,
+  EmptyState,
+  Icon,
+  SegmentedControl,
+  UnderlineTabs,
+  useToast,
+} from '@/components/ui';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { CareTabs } from '@/components/layout/CareTabs';
@@ -17,6 +26,7 @@ import { ReminderRoutingNotice } from '@/components/calendar/ReminderRoutingNoti
 import { useCircle } from '@/hooks/useCircle';
 import { MonthView } from '@/components/calendar/MonthView';
 import { WeekView } from '@/components/calendar/WeekView';
+import { DayView } from '@/components/calendar/DayView';
 import {
   addDays,
   addMonths,
@@ -34,8 +44,22 @@ import { useCircleAsNeededDoses } from '@/hooks/useAsNeeded';
 import { DoseHistoryModal } from '@/components/meds/DoseHistoryModal';
 import { groupDosesByDay, type AsNeededDayEntry } from '@/components/calendar/asNeededByDay';
 import { getDateInTimezone, getTimezoneLabel } from '@/utils/timezone';
+import { useAuthStore } from '@/store/authStore';
+import { canWriteShifts, resolveShiftsEntry } from '@/lib/shiftsAccess';
+import { ShiftsReadOnlyNotice } from '@/components/shifts/ShiftsReadOnlyNotice';
+import { useOpenShiftCount, useShiftsByRange, useShiftsPeek } from '@/hooks/useShifts';
+import { useShiftsDialogs } from '@/components/shifts/ShiftsDialogs';
+import { ShiftsDayList } from '@/components/shifts/ShiftsDayList';
+import { ShiftsWeekView } from '@/components/shifts/ShiftsWeekView';
+import { ShiftsLegend, ShiftsMonthView } from '@/components/shifts/ShiftsMonthView';
+import { ShiftsEmptyState } from '@/components/shifts/ShiftsEmptyState';
+import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
+import { countOpen } from '@/components/shifts/shiftUtils';
 
-type CalendarView = 'week' | 'month';
+type CalendarView = 'day' | 'week' | 'month';
+type CalendarMode = 'schedule' | 'shifts';
+
+const EMPTY_AS_NEEDED: AsNeededDayEntry[] = [];
 
 const LEGEND_TYPES: EventType[] = ['medication', 'appointment', 'task'];
 
@@ -106,8 +130,9 @@ function CalendarLegend(): ReactElement {
  * anchor date are computed with getDateInTimezone, never device-local.
  */
 export default function CalendarPage(): ReactElement {
+  const navigate = useNavigate();
   const { circleId = '' } = useParams<{ circleId: string }>();
-  const { t, i18n } = useTranslation(['calendar', 'common']);
+  const { t, i18n } = useTranslation(['calendar', 'common', 'shifts']);
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -170,7 +195,22 @@ export default function CalendarPage(): ReactElement {
   // attribute a completed task's "Completed by" row: the calendar's own GET
   // does not embed the completing user (only the tasks endpoint does), so the
   // circle roster is the only fallback available to this surface.
-  const { canEdit, members } = useCircle(circleId);
+  const { canEdit, members, viewOnly, isPremiumCircle, isOwner, hasShifts } = useCircle(circleId);
+  const viewerId = useAuthStore((s) => s.user?.id ?? null);
+
+  // Schedule | Shifts (care shifts). Premium circles: everyone. Free circles:
+  // the OWNER only (the segment opens the teaser). Free managers / members get
+  // no control at all.
+  // A free circle that still HAS shifts ('readonly', Premium lapsed) keeps the toggle and
+  // the lists for every non-view-only role; `shiftsCanWrite` is false there, so every shift
+  // write control below is gone even where `canEdit` is true.
+  const shiftsEntry = resolveShiftsEntry({ viewOnly, isPremiumCircle, isOwner, hasShifts });
+  const shiftsCanWrite = canWriteShifts(shiftsEntry, canEdit);
+  const [mode, setMode] = useState<CalendarMode>('schedule');
+  const [teaserOpen, setTeaserOpen] = useState(false);
+  const shiftsReadable = shiftsEntry === 'available' || shiftsEntry === 'readonly';
+  const shiftsMode = mode === 'shifts' && shiftsReadable;
+  const shiftDialogs = useShiftsDialogs(circleId);
 
   // PHI-safe: only circle_id + the view enum. Fires on open and on view change.
   useEffect(() => {
@@ -205,6 +245,8 @@ export default function CalendarPage(): ReactElement {
 
   const range = useMemo(() => {
     if (!anchor) return null;
+    // Day: that single date in the recipient's timezone (spec W10).
+    if (view === 'day') return { start: anchor, end: anchor };
     if (view === 'week') {
       const start = startOfWeek(anchor);
       return { start, end: addDays(start, 6) };
@@ -217,8 +259,23 @@ export default function CalendarPage(): ReactElement {
   // Previous/Next land instantly. Everything else fetches only what it shows.
   const eventsQuery = useCalendarEvents(circleId, range?.start ?? '', range?.end ?? '', {
     prefetchAdjacent: true,
+    // The Shifts view has its own query; Schedule is not fetched behind it.
+    enabled: !shiftsMode,
   });
   const { events } = eventsQuery;
+
+  // Shifts mode: its own bounded range query, only while selected.
+  const shiftsQuery = useShiftsByRange(
+    circleId,
+    range?.start ?? '',
+    range?.end ?? '',
+    shiftsMode
+  );
+  const { shifts } = shiftsQuery;
+  // The Shifts segment's "N open" badge (null while loading -> hidden).
+  const openCount = useOpenShiftCount(circleId, timezone, shiftsReadable);
+  // The same 7-day window's rows: the empty state needs "nothing anywhere" too.
+  const shiftsPeek = useShiftsPeek(circleId, timezone, shiftsReadable);
 
   // AS-NEEDED doses are not events: the calendar's own query above never asks for
   // them. This SEPARATE read (circle-wide dose log over the visible range, live
@@ -229,7 +286,7 @@ export default function CalendarPage(): ReactElement {
     range ? { start_date: range.start, end_date: range.end } : undefined,
     {
       includeRemoved: false,
-      enabled: !!timezone,
+      enabled: !!timezone && !shiftsMode,
     }
   );
   const asNeededByDay = useMemo(
@@ -253,16 +310,29 @@ export default function CalendarPage(): ReactElement {
 
   const handlePrev = (): void => {
     if (!anchor) return;
-    setAnchorOverride(view === 'week' ? addDays(anchor, -7) : addMonths(anchor, -1));
+    setAnchorOverride(
+      view === 'day' ? addDays(anchor, -1) : view === 'week' ? addDays(anchor, -7) : addMonths(anchor, -1)
+    );
   };
   const handleNext = (): void => {
     if (!anchor) return;
-    setAnchorOverride(view === 'week' ? addDays(anchor, 7) : addMonths(anchor, 1));
+    setAnchorOverride(
+      view === 'day' ? addDays(anchor, 1) : view === 'week' ? addDays(anchor, 7) : addMonths(anchor, 1)
+    );
   };
   const handleToday = (): void => setAnchorOverride(null);
+  // Week day header / Month cell -> Day for that date (mobile parity). The
+  // anchor is the one shared selected date, so Day/Week/Month all follow it.
+  const handleOpenDay = (day: string): void => {
+    setAnchorOverride(day);
+    setView('day');
+  };
 
   const rangeLabel = useMemo(() => {
     if (!anchor || !range) return '';
+    if (view === 'day') {
+      return formatDateForDisplay(anchor, { weekday: 'long', month: 'long', day: 'numeric' });
+    }
     if (view === 'week') {
       const startLabel = formatDateForDisplay(range.start, {
         month: 'short',
@@ -281,13 +351,54 @@ export default function CalendarPage(): ReactElement {
     });
   }, [anchor, range, view, i18n.language]);
 
-  const isLoading = tzQuery.isLoading || (eventsQuery.isLoading && !!range);
-  const isError = tzQuery.isError || eventsQuery.isError;
+  // The empty-state card: only when the window holds today AND the 7-day peek is
+  // empty too (a Week/Month that merely has no shifts shows its own empty days).
+  const nothingAnywhere =
+    shiftsMode &&
+    !!range &&
+    !!todayStr &&
+    todayStr >= range.start &&
+    todayStr <= range.end &&
+    shifts.length === 0 &&
+    shiftsPeek !== undefined &&
+    shiftsPeek.length === 0;
+
+  const readonlyNotice =
+    shiftsMode && shiftsEntry === 'readonly' ? (
+      <ShiftsReadOnlyNotice
+        isOwner={isOwner}
+        onRenew={() => navigate('/upgrade', { state: { paywallContext: 'shifts' } })}
+      />
+    ) : null;
+  const activeQuery = shiftsMode ? shiftsQuery : eventsQuery;
+  const isLoading = tzQuery.isLoading || (activeQuery.isLoading && !!range);
+  // Shifts mode keeps its rows when a BACKGROUND refetch fails (only a failure
+  // with nothing to show replaces the content).
+  const isError =
+    tzQuery.isError || (shiftsMode ? shiftsQuery.isError && !shiftsQuery.data : eventsQuery.isError);
 
   const handleRetry = (): void => {
     if (tzQuery.isError) void tzQuery.refetch();
-    if (eventsQuery.isError) void eventsQuery.refetch();
+    if (activeQuery.isError) void activeQuery.refetch();
   };
+
+  // shifts_view_opened: once per (mode entry, range), as soon as the open badge
+  // query settles (success OR error: an error reports a 0 bucket). enums + a
+  // count bucket only.
+  const viewedShiftsRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!shiftsMode) {
+      viewedShiftsRef.current = null;
+      return;
+    }
+    if (!openCount.settled || viewedShiftsRef.current === view) return;
+    viewedShiftsRef.current = view;
+    Analytics.shiftsViewOpened({
+      range: view,
+      openCount: openCount.count ?? 0,
+      access: shiftsEntry === 'readonly' ? 'readonly' : 'full',
+    });
+  }, [shiftsMode, view, openCount.settled, openCount.count, shiftsEntry]);
 
   // Resolve the `?date&eventId&panel` deep link once its week's events have
   // settled (loaded, or errored — either way there is nothing left to wait
@@ -364,16 +475,19 @@ export default function CalendarPage(): ReactElement {
     // "Add event" stay flush with the grid edges.
     <div className="mx-auto w-full max-w-7xl">
       <PageMasthead
-        section={t('common:nav.calendar')}
+        section={shiftsMode ? t('shifts:eyebrow') : t('common:nav.calendar')}
         tone="dusk"
         title={t('calendar:title')}
         subtitle={t('calendar:subtitle')}
         rightAction={
-          canEdit
+          (shiftsMode ? shiftsCanWrite : canEdit)
             ? {
                 name: 'add-outline',
-                label: t('calendar:addEvent.addEvent'),
-                onClick: () => setShowCreate(true),
+                label: shiftsMode ? t('shifts:addShift') : t('calendar:addEvent.addEvent'),
+                onClick: () =>
+                  shiftsMode
+                    ? shiftDialogs.openCreate('shifts_view', anchor ?? undefined)
+                    : setShowCreate(true),
                 offlineKind: 'change',
               }
             : undefined
@@ -385,6 +499,44 @@ export default function CalendarPage(): ReactElement {
       {/* px-5 at every width: the PageMasthead gutter. `md:px-8` put the
           toolbar and grid 12px inside the title and "Add event" button. */}
       <div className="px-5 pb-8">
+        {shiftsEntry !== 'hidden' && (
+          <div data-testid="calendar-mode-wrap" className="max-w-sm py-1.5">
+            <SegmentedControl
+              label={t('shifts:mode.label')}
+              value={shiftsMode ? 'shifts' : 'schedule'}
+              onChange={(next) => {
+                if (next === 'shifts' && shiftsEntry === 'teaser') {
+                  setTeaserOpen(true);
+                  return;
+                }
+                setMode(next as CalendarMode);
+              }}
+              options={[
+                { value: 'schedule', label: t('shifts:mode.schedule') },
+                {
+                  value: 'shifts',
+                  label: t('shifts:mode.shifts'),
+                  badge:
+                    openCount.count !== null && openCount.count > 0 ? (
+                      <span
+                        data-testid="shifts-open-badge"
+                        // Opaque surface on purpose: the segment under it is the selected ground (moss in
+                        // light, cream in dark), and the translucent moss-soft wash rides it on an inner span.
+                        className="inline-block rounded-full bg-cream"
+                      >
+                        <span
+                          data-testid="shifts-open-badge-fill"
+                          className="block rounded-full bg-moss-soft px-2 py-0.5 text-xs font-semibold text-moss"
+                        >
+                          {t('shifts:mode.openBadge', { count: openCount.count })}
+                        </span>
+                      </span>
+                    ) : undefined,
+                },
+              ]}
+            />
+          </div>
+        )}
         {/* Date nav row (mobile `DateNavHeader` parity): Today pill · prev/range/next
             cluster · Week/Month segmented control.
 
@@ -402,6 +554,9 @@ export default function CalendarPage(): ReactElement {
             children ALWAYS stack as separate blocks, full width, regardless
             of any min-width override. */}
         <div className="flex flex-wrap items-center gap-y-2 min-h-[44px] py-1.5 max-[480px]:flex-col max-[480px]:items-stretch">
+          {/* Day owns its own prev/next/Today inside DayView's hero, so the
+              page cluster is only drawn for Week and Month. */}
+          {view !== 'day' && (
           <div className="flex min-w-0 flex-1 items-center gap-2 max-[480px]:w-full">
             {/* Today: the mobile pill is visually 32px, but its tap target
                 must still clear the 44px minimum (WCAG 2.5.5) — the button
@@ -440,16 +595,18 @@ export default function CalendarPage(): ReactElement {
               />
             </div>
           </div>
+          )}
 
           <div
             data-testid="calendar-view-toggle-wrap"
-            className="w-40 shrink-0 max-[480px]:order-last max-[480px]:w-full"
+            className="ml-auto w-64 shrink-0 max-[480px]:order-last max-[480px]:w-full"
           >
-            <SegmentedControl
+            <UnderlineTabs
               label={t('calendar:viewLabel')}
               value={view}
               onChange={(next) => setView(next as CalendarView)}
               options={[
+                { value: 'day', label: t('calendar:day') },
                 { value: 'week', label: t('calendar:week') },
                 { value: 'month', label: t('calendar:month') },
               ]}
@@ -458,6 +615,10 @@ export default function CalendarPage(): ReactElement {
         </div>
 
         {/* Timezone caption + legend */}
+        {/* Day draws its own date nav inside DayView's hero, so there the notice rides the
+            slot (below the nav, as on mobile); Week / Month show it here, under their toolbar. */}
+        {readonlyNotice && view !== 'day' && readonlyNotice}
+
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
           {timezone && (
             <p className="m-0 text-sm text-ink-3">
@@ -468,12 +629,13 @@ export default function CalendarPage(): ReactElement {
               {t('calendar:timesShownIn', { timezone: getTimezoneLabel(timezone) })}
             </p>
           )}
-          {!isError && <CalendarLegend />}
+          {!isError && !shiftsMode && <CalendarLegend />}
+          {!isError && shiftsMode && view !== 'month' && <ShiftsLegend />}
         </div>
 
         {/* Who gets the medication reminders (owner only, dismissable): mobile
-            CalendarScreen parity. */}
-        {circleId && (
+            CalendarScreen parity. Schedule mode only: shifts have no doses. */}
+        {!shiftsMode && circleId && (
           <ReminderRoutingNotice
             circleId={circleId}
             hasMedications={events.some((e) => e.event_type === 'medication')}
@@ -485,8 +647,12 @@ export default function CalendarPage(): ReactElement {
 
           {!isLoading && isError && (
             <Card variant="outlined" className="text-center">
-              <p className="m-0 font-medium text-ink">{t('calendar:errorTitle')}</p>
-              <p className="m-0 mt-1 text-sm text-ink-3">{t('calendar:errorHint')}</p>
+              <p className="m-0 font-medium text-ink">
+                {shiftsMode ? t('shifts:loadError') : t('calendar:errorTitle')}
+              </p>
+              {!shiftsMode && (
+                <p className="m-0 mt-1 text-sm text-ink-3">{t('calendar:errorHint')}</p>
+              )}
               <Button variant="ghost" className="mt-4" onClick={handleRetry}>
                 {t('common:retry')}
               </Button>
@@ -498,6 +664,8 @@ export default function CalendarPage(): ReactElement {
             range &&
             timezone &&
             todayStr &&
+            !shiftsMode &&
+            view !== 'day' &&
             events.length === 0 &&
             asNeededByDay.size === 0 && (
             <Card variant="outlined" padding="lg">
@@ -516,13 +684,94 @@ export default function CalendarPage(): ReactElement {
             </Card>
           )}
 
-          {!isLoading &&
+          {shiftsMode && !isLoading && !isError && range && timezone && todayStr && anchor && (
+            view === 'day' ? (
+              <DayView
+                date={anchor}
+                events={[]}
+                asNeeded={EMPTY_AS_NEEDED}
+                timezone={timezone}
+                onEventClick={handleEventClick}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                onToday={handleToday}
+                shiftsSummary={(() => {
+                  const day = shifts.filter((sh) => sh.scheduled_date === anchor);
+                  return day.length > 0
+                    ? t('shifts:summary', { count: day.length, open: t('shifts:openCount', { count: countOpen(day) }) })
+                    : '';
+                })()}
+                shiftsSlot={
+                  <>
+                  {readonlyNotice}
+                  {nothingAnywhere ? (
+                    <ShiftsEmptyState
+                      onAdd={shiftsCanWrite ? () => shiftDialogs.openCreate('empty_state', anchor) : undefined}
+                    />
+                  ) : (
+                  <ShiftsDayList
+                    date={anchor}
+                    shifts={shifts}
+                    timezone={timezone}
+                    members={members}
+                    viewerId={viewerId}
+                    onOpen={shiftDialogs.openDetail}
+                    onTake={shiftsCanWrite ? shiftDialogs.openTake : undefined}
+                    onAdd={shiftsCanWrite ? () => shiftDialogs.openCreate('shifts_view', anchor) : undefined}
+                  />
+                  )}
+                  </>
+                }
+              />
+            ) : nothingAnywhere ? (
+              <ShiftsEmptyState
+                onAdd={shiftsCanWrite ? () => shiftDialogs.openCreate('empty_state', anchor) : undefined}
+              />
+            ) : view === 'week' ? (
+              <ShiftsWeekView
+                days={getWeekDays(range.start)}
+                shifts={shifts}
+                timezone={timezone}
+                todayStr={todayStr}
+                members={members}
+                viewerId={viewerId}
+                onOpen={shiftDialogs.openDetail}
+                onTake={shiftsCanWrite ? shiftDialogs.openTake : undefined}
+                onDayOpen={handleOpenDay}
+                onAdd={shiftsCanWrite ? () => shiftDialogs.openCreate('shifts_view', anchor) : undefined}
+              />
+            ) : (
+              <ShiftsMonthView
+                gridDays={getMonthGridDays(anchor)}
+                monthStart={startOfMonth(anchor)}
+                shifts={shifts}
+                todayStr={todayStr}
+                onDayOpen={handleOpenDay}
+              />
+            )
+          )}
+
+          {!shiftsMode &&
+            !isLoading &&
             !isError &&
             range &&
             timezone &&
             todayStr &&
-            (events.length > 0 || asNeededByDay.size > 0) &&
-            (view === 'week' ? (
+            (view === 'day' || events.length > 0 || asNeededByDay.size > 0) &&
+            (view === 'day' ? (
+              <DayView
+                date={anchor as string}
+                events={events}
+                asNeeded={asNeededByDay.get(anchor as string) ?? EMPTY_AS_NEEDED}
+                timezone={timezone}
+                onEventClick={handleEventClick}
+                onAsNeededOpen={setDoseHistoryFor}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                onToday={handleToday}
+                onAdd={canEdit ? () => setShowCreate(true) : undefined}
+              />
+            ) : view === 'week' ? (
               <WeekView
                 days={getWeekDays(range.start)}
                 eventsByDay={eventsByDay}
@@ -531,6 +780,7 @@ export default function CalendarPage(): ReactElement {
                 onEventClick={handleEventClick}
                 asNeededByDay={asNeededByDay}
                 onAsNeededOpen={setDoseHistoryFor}
+                onDayOpen={handleOpenDay}
               />
             ) : (
               <MonthView
@@ -542,10 +792,14 @@ export default function CalendarPage(): ReactElement {
                 onEventClick={handleEventClick}
                 asNeededByDay={asNeededByDay}
                 onAsNeededOpen={setDoseHistoryFor}
+                onDayOpen={handleOpenDay}
               />
             ))}
         </div>
       </div>
+
+      {shiftDialogs.element}
+      {teaserOpen && <ShiftsTeaserDialog source="toggle" onClose={() => setTeaserOpen(false)} />}
 
       {selectedEvent && timezone && (
         <EventDetailModal

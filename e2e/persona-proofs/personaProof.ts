@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures';
 import { PERSONA_EXPECTATIONS, type PersonaName } from '../personas';
 import { apiSession, dbQuery, errorCodeOf, sqlStr } from '../unhappy';
 import { resolveAiEntry } from '../../src/lib/aiAccess';
+import { resolveShiftsEntry } from '../../src/lib/shiftsAccess';
 
 // ===========================================================================
 // PERSONA PROOF — each persona is what the backend says it is.
@@ -179,6 +180,45 @@ export function definePersonaProof(persona: PersonaName): void {
       const banner = page.getByText(VIEW_ONLY_SHORT);
       if (exp.detail?.can_edit) await expect(banner).toHaveCount(0);
       else await expect(banner).toBeVisible();
+    });
+
+    // Care shifts (docs/plans/care-shifts.md): who gets Schedule | Shifts. The
+    // client rule (src/lib/shiftsAccess.ts, imported, not re-implemented) runs over
+    // the SERVER's flags and must land on the constant; the page then shows exactly
+    // that — the control, the control that opens the teaser, or nothing at all.
+    test('the Shifts entry follows the rule', async ({ page, request, personaHandle: h }) => {
+      const exp = PERSONA_EXPECTATIONS[persona];
+      if (exp.archived || exp.shiftsEntry === null) return;
+
+      const api = await apiSession(request, h);
+      const res = await api.get(`/api/circles/${h.circleId}`);
+      const d = ((await res.json()) as { data: { circle: CircleDetail } }).data.circle;
+      const entry = resolveShiftsEntry({
+        viewOnly: d.view_only,
+        isPremiumCircle: d.is_premium_circle,
+        isOwner: d.owner_id === h.userId,
+      });
+      expect(entry, 'the client rule over the server flags').toBe(exp.shiftsEntry);
+
+      await page.goto(`/circles/${h.circleId}/calendar`);
+      await expect(page.getByRole('tablist', { name: 'Calendar view' })).toBeVisible({ timeout: 20_000 });
+      const modes = page.getByRole('tablist', { name: 'Calendar mode' });
+      if (entry === 'hidden') {
+        await expect(modes).toHaveCount(0);
+        return;
+      }
+      await expect(modes).toBeVisible();
+      await modes.getByRole('tab', { name: /^Shifts/ }).click();
+      if (entry === 'teaser') {
+        await expect(page.getByRole('dialog', { name: 'Share the care, shift by shift' })).toBeVisible();
+        await expect(modes.getByRole('tab', { name: 'Schedule' })).toHaveAttribute('aria-selected', 'true');
+      } else {
+        await expect(modes.getByRole('tab', { name: /^Shifts/ })).toHaveAttribute('aria-selected', 'true');
+        // The Shifts view itself: the empty state (no shifts seeded) or the week of cards.
+        await expect(page.getByTestId('shifts-empty-state').or(page.getByTestId('shifts-week-view'))).toBeVisible({
+          timeout: 20_000,
+        });
+      }
     });
   });
 }

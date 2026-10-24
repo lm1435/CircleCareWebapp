@@ -11,12 +11,14 @@ import {
 const LEGACY = ['activity_updates', 'chat_messages', 'medication_reminders'];
 
 describe('notificationGroups', () => {
-  it('has the four groups in order with the exact child keys', () => {
-    expect(NOTIFICATION_GROUP_ORDER).toEqual(['medications', 'tasks', 'notes', 'tips']);
+  it('has the five groups in order with the exact child keys', () => {
+    expect(NOTIFICATION_GROUP_ORDER).toEqual(['medications', 'tasks', 'notes', 'tips', 'shifts']);
     expect(GROUPS.medications).toEqual(['medication_confirmations', 'missed_medications']);
     expect(GROUPS.tasks).toEqual(['task_assignments', 'appointment_reminders', 'note_nudges']);
     expect(GROUPS.notes).toEqual(['event_notes', 'care_notes']);
     expect(GROUPS.tips).toEqual(['tips_and_suggestions']);
+    // Care shifts: ONE key, absent = ON (docs/plans/care-shifts.md).
+    expect(GROUPS.shifts).toEqual(['shift_alerts']);
   });
 
   it('never includes a legacy key in any group', () => {
@@ -48,6 +50,7 @@ describe('notificationGroups', () => {
         event_notes: false,
         care_notes: false,
         tips_and_suggestions: false,
+        shift_alerts: false,
       };
       for (const g of NOTIFICATION_GROUP_ORDER) {
         expect(groupOn(off, g)).toBe(false);
@@ -113,6 +116,12 @@ describe('notificationGroups', () => {
         expect(body).toEqual({ event_notes: next, care_notes: next });
         expect(Object.keys(body)).not.toContain('note_nudges');
       }
+    });
+
+    it('shifts body is one key and is ON when absent', () => {
+      expect(groupPatchBody({}, 'shifts', false)).toEqual({ shift_alerts: false });
+      expect(groupOn({}, 'shifts')).toBe(true);
+      expect(groupOn({ shift_alerts: false }, 'shifts')).toBe(false);
     });
 
     it('tips body is one key', () => {

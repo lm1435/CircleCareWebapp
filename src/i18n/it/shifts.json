@@ -1,0 +1,220 @@
+{
+  "eyebrow": "Turni",
+  "close": "Chiudi",
+  "open": "Scoperto",
+  "you": "Tu",
+  "takeButton": "Prendi",
+  "takeAria": "Prendi {{name}}",
+  "addShift": "Aggiungi turno",
+  "edit": "Modifica",
+  "nextDay": "giorno dopo",
+  "summary_one": "{{count}} turno · {{open}}.",
+  "summary_other": "{{count}} turni · {{open}}.",
+  "noShiftsDay": "Nessun turno in questo giorno.",
+  "noShiftsWeekDay": "Nessun turno",
+  "mode": {
+    "label": "Modalità calendario",
+    "schedule": "Agenda",
+    "shifts": "Turni",
+    "openBadge_one": "{{count}} scoperto",
+    "openBadge_other": "{{count}} scoperti"
+  },
+  "legend": {
+    "label": "Legenda dei turni",
+    "open": "Ha un turno scoperto",
+    "covered": "Tutto coperto"
+  },
+  "month": {
+    "label": "Calendario mensile dei turni",
+    "cell_one": "{{date}}, {{count}} turno, {{open}}",
+    "cell_other": "{{date}}, {{count}} turni, {{open}}",
+    "none": "{{date}}, nessun turno"
+  },
+  "empty": {
+    "title": "Condividete l'assistenza, turno per turno",
+    "description": "Aggiungi le fasce di tempo che richiedono qualcuno, come le notti o le mattine nei giorni feriali, e lascia che la tua famiglia veda chi ha ogni turno e cosa è ancora scoperto.",
+    "cta": "Aggiungi un turno"
+  },
+  "teaser": {
+    "chip": "Premium",
+    "title": "Condividete l'assistenza, turno per turno",
+    "description": "Vedi chi copre ogni fascia di tempo e quali nessuno ha ancora preso, con un promemoria per chi ha il turno.",
+    "cta": "Scopri Premium",
+    "notNow": "Non ora",
+    "morning": "Mattina",
+    "afternoon": "Pomeriggio",
+    "night": "Notte",
+    "personA": "Ana",
+    "personB": "Luis",
+    "morningTime": "8:00 – 14:00",
+    "afternoonTime": "14:00 – 20:00",
+    "nightTime": "20:00 – 8:00",
+    "previewA11y": "Esempio: un turno del mattino e uno del pomeriggio hanno qualcuno assegnato, mentre il turno di notte è scoperto."
+  },
+  "take": {
+    "title": "Prendi «{{name}}»",
+    "confirm": "Prendi il turno",
+    "scopeLabel": "Quali turni?",
+    "justThis": "Solo questo",
+    "futureHint": "Potrai lasciarne uno più avanti",
+    "reminderRow": "Promemoria · {{when}}",
+    "future": "Questo e tutti i futuri"
+  },
+  "scope": {
+    "label": "Quali turni?",
+    "occurrence": "Questo turno",
+    "future": "Questo e i turni futuri",
+    "allUpcoming": "Tutti i prossimi turni"
+  },
+  "drop": {
+    "action": "Lascia il turno",
+    "title": "Lasciare questo turno?",
+    "message": "«{{name}}» tornerà scoperto e tutti nella cerchia verranno avvisati.",
+    "confirm": "Lascia il turno",
+    "messageRepeating": "Scegli quali turni lasciare. Torneranno scoperti e tutti nella cerchia verranno avvisati."
+  },
+  "assign": {
+    "action": "Assegna",
+    "title": "Assegna turno",
+    "label": "Chi lo copre?",
+    "confirm": "Assegna",
+    "current": "lo ha adesso"
+  },
+  "delete": {
+    "action": "Elimina",
+    "title": "Elimina turno",
+    "message": "Eliminare «{{name}}»? L'operazione non si può annullare.",
+    "messageRepeating": "Scegli quali turni eliminare. L'operazione non si può annullare.",
+    "confirm": "Elimina"
+  },
+  "detail": {
+    "date": "Data",
+    "time": "Orario",
+    "yourTime": "Il tuo orario: {{range}}",
+    "yourTimeRow": "Il tuo orario",
+    "repeats": "Ripetizione",
+    "coveredBy": "Chi se ne occupa",
+    "openValue": "Ancora nessuno",
+    "reminder": "Promemoria"
+  },
+  "repeat": {
+    "never": "Mai",
+    "daily": "Ogni giorno",
+    "weekly": "Ogni settimana",
+    "weeklyOn": "Ogni settimana: {{days}}",
+    "series": "Ripetuto"
+  },
+  "reminder": {
+    "off": "Disattivato",
+    "h1": "1 ora prima",
+    "h2": "2 ore prima",
+    "h4": "4 ore prima",
+    "d1": "1 giorno prima",
+    "chip1h": "1 ora",
+    "chip2h": "2 ore",
+    "chip4h": "4 ore",
+    "chip1d": "1 giorno"
+  },
+  "duration": {
+    "hours_one": "{{count}} ora",
+    "hours_other": "{{count}} ore",
+    "minutes_one": "{{count}} minuto",
+    "minutes_other": "{{count}} minuti",
+    "mixed": "{{hours}} h {{minutes}} min"
+  },
+  "form": {
+    "newTitle": "Nuovo turno",
+    "editTitle": "Modifica turno",
+    "heading": "Chi sta con {{name}}?",
+    "editScopeLabel": "Quali turni?",
+    "name": "Nome",
+    "namePlaceholder": "es. Notte",
+    "starts": "Inizio",
+    "ends": "Fine",
+    "reminder": "Promemoria",
+    "covering": "Chi lo copre?",
+    "leaveOpen": "Lascia scoperto",
+    "me": "Io",
+    "timezoneNote": "Questi orari sono di {{zone}}.",
+    "seriesNote": "Qui non si possono cambiare la data e la ripetizione di una serie. La modifica vale per i turni scelti.",
+    "save": "Salva turno",
+    "repeats": "Ripetizione",
+    "date": "Data",
+    "endsOn": "La ripetizione termina",
+    "reminderHint": "Inviato a chi ha il turno.",
+    "careRecipient": "{{name}} · Persona assistita"
+  },
+  "saved": {
+    "title": "«{{name}}» salvato",
+    "summaryOpen": "{{range}}, {{repeat}}. Scoperto, chiunque può prenderlo.",
+    "summaryOpenOnce": "{{range}} · Scoperto, chiunque può prenderlo.",
+    "summaryAssigned": "{{range}}, {{repeat}}. Se ne occupa {{who}}.",
+    "summaryAssignedOnce": "{{range}} · Se ne occupa {{who}}.",
+    "addNext": "Aggiungi il turno successivo",
+    "addNextHint": "Inizia alle {{time}} · {{repeat}}",
+    "addNextHintOnce": "Inizia alle {{time}}",
+    "done": "Fine",
+    "summarySelf": "{{range}}, {{repeat}}. Te ne occupi tu.",
+    "summarySelfOnce": "{{range}} · Te ne occupi tu.",
+    "repeatDaily": "ogni giorno",
+    "repeatWeekly": "ogni settimana",
+    "repeatDays": "{{days}}"
+  },
+  "validation": {
+    "nameRequired": "Dai un nome al turno.",
+    "nameTooLong": "Il nome deve essere di al massimo 60 caratteri.",
+    "dateRequired": "Scegli una data.",
+    "startRequired": "Scegli quando inizia il turno.",
+    "endRequired": "Scegli quando finisce il turno.",
+    "tooShort": "Un turno dura da 15 minuti a 24 ore.",
+    "tooLong": "Un turno dura da 15 minuti a 24 ore.",
+    "repeatEndBeforeStart": "La data di fine deve essere uguale o successiva alla prima data.",
+    "daysRequired": "Scegli almeno un giorno."
+  },
+  "toast": {
+    "taken": "Hai il turno «{{name}}».",
+    "alreadyTaken": "{{takenBy}} ha appena preso questo turno.",
+    "dropped": "Hai lasciato «{{name}}». È di nuovo scoperto.",
+    "assigned": "{{name}} ha il turno.",
+    "updated": "Turno aggiornato.",
+    "deleted": "Turno eliminato.",
+    "alreadyTakenUnknown": "Qualcuno ha appena preso questo turno.",
+    "alreadyOpen": "Questo turno è già scoperto.",
+    "notFound": "Questo turno non è più disponibile.",
+    "notAssigned": "Nessuno ha più questo turno."
+  },
+  "someone": "Qualcuno",
+  "rangeSpoken": "dalle {{start}} alle {{end}}",
+  "summaryShort_one": "{{count}} turno · {{open}}",
+  "summaryShort_other": "{{count}} turni · {{open}}",
+  "card": {
+    "statusOpen": "scoperto",
+    "statusCovered": "se ne occupa {{name}}",
+    "statusMine": "hai tu questo turno",
+    "openDetailsHint": "Apre i dettagli del turno"
+  },
+  "loadError": "Non siamo riusciti a caricare i turni.",
+  "error": {
+    "take": "Non siamo riusciti a prendere il turno. Riprova.",
+    "drop": "Non siamo riusciti a lasciare il turno. Riprova.",
+    "assign": "Non siamo riusciti ad assegnare il turno. Riprova.",
+    "save": "Non siamo riusciti a salvare il turno. Riprova.",
+    "delete": "Non siamo riusciti a eliminare il turno. Riprova.",
+    "dropForbidden": "Solo chi ha il turno, il titolare o un gestore può lasciarlo.",
+    "assignForbidden": "Solo il titolare o un gestore può assegnare un turno a un'altra persona.",
+    "invalidAssignee": "A questa persona non si può assegnare un turno.",
+    "permissionDenied": "Non hai il permesso di modificare i turni in questa cerchia."
+  },
+  "week": {
+    "openDayHint": "Apre la vista del giorno",
+    "today": "Oggi"
+  },
+  "readOnly": {
+    "owner": "Premium è terminato. I tuoi turni sono in sola lettura.",
+    "renew": "Rinnova Premium",
+    "other": "I turni sono in sola lettura per ora."
+  },
+  "openCount_zero": "nessuno scoperto",
+  "openCount_one": "{{count}} scoperto",
+  "openCount_other": "{{count}} scoperti"
+}

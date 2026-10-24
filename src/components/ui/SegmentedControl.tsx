@@ -1,8 +1,13 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactElement } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 
 export interface SegmentedControlOption {
   value: string;
   label: string;
+  /**
+   * Optional trailing badge inside the segment (the Calendar's amber "3 open").
+   * It joins the tab's accessible name, so it must be TEXT, never an icon alone.
+   */
+  badge?: ReactNode;
 }
 
 /** Extra detail about how a change happened, passed as `onChange`'s 2nd arg. */
@@ -207,6 +212,7 @@ export function SegmentedControl({
               }`.trim()}
             >
               {option.label}
+              {option.badge ? <span className="ml-2 align-middle">{option.badge}</span> : null}
             </button>
           );
         })}

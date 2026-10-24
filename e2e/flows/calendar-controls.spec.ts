@@ -59,16 +59,19 @@ test('week navigation: prev / next / today', async ({ page, circleId }) => {
   await expectNoErrorFallback(page);
 });
 
-test('week ↔ month toggle', async ({ page, circleId }) => {
+test('day ↔ week ↔ month tabs', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
   await waitForCalendarBody(page);
   await expectNoErrorFallback(page);
 
-  // The Week/Month toggle is a SegmentedControl now (WAI-ARIA tabs pattern,
-  // components/ui/SegmentedControl.tsx spec §4.5): role="tablist" of
-  // role="tab" segments with aria-selected, not a role="group" of
-  // aria-pressed buttons.
+  // The range control is UnderlineTabs (WAI-ARIA tabs pattern,
+  // components/ui/UnderlineTabs.tsx): role="tablist" of role="tab" with
+  // aria-selected, three options Day | Week | Month.
   const viewTabs = page.getByRole('tablist', { name: 'Calendar view' });
+  await expect(viewTabs.getByRole('tab')).toHaveText(['Day', 'Week', 'Month'], {
+    timeout: 15_000,
+  });
+  const dayTab = viewTabs.getByRole('tab', { name: 'Day' });
   const weekTab = viewTabs.getByRole('tab', { name: 'Week' });
   const monthTab = viewTabs.getByRole('tab', { name: 'Month' });
 
@@ -85,6 +88,13 @@ test('week ↔ month toggle', async ({ page, circleId }) => {
   const monthGrid = page.getByRole('grid', { name: 'Month view calendar' });
   const monthEmpty = page.getByText('No events this month');
   await expect(monthGrid.or(monthEmpty).first()).toBeVisible({ timeout: 20_000 });
+
+  // --- Switch to Day (the empty day shows its own empty state, not the grid) ---
+  await dayTab.click();
+  await expect(dayTab).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
+  await expect(weekTab).toHaveAttribute('aria-selected', 'false');
+  await expect(page.getByTestId('day-view')).toBeVisible({ timeout: 20_000 });
+  await expectNoErrorFallback(page);
 
   // --- Switch back to Week ---
   await weekTab.click();

@@ -30,6 +30,7 @@ import iconDownloadOutline from '../../../node_modules/ionicons/dist/svg/downloa
 import iconOptionsOutline from '../../../node_modules/ionicons/dist/svg/options-outline.svg?raw';
 import iconCloseOutline from '../../../node_modules/ionicons/dist/svg/close-outline.svg?raw';
 import iconPersonCircleOutline from '../../../node_modules/ionicons/dist/svg/person-circle-outline.svg?raw';
+import iconPersonAddOutline from '../../../node_modules/ionicons/dist/svg/person-add-outline.svg?raw';
 import iconPersonOutline from '../../../node_modules/ionicons/dist/svg/person-outline.svg?raw';
 import iconLockClosedOutline from '../../../node_modules/ionicons/dist/svg/lock-closed-outline.svg?raw';
 import iconEyeOutline from '../../../node_modules/ionicons/dist/svg/eye-outline.svg?raw';
@@ -98,6 +99,7 @@ export const ICON_NAMES = [
   'options-outline',
   'close-outline',
   'person-circle-outline',
+  'person-add-outline',
   'person-outline',
   'lock-closed-outline',
   'eye-outline',
@@ -166,6 +168,7 @@ export const ICON_FILES: Record<IconName, string> = {
   'options-outline': iconOptionsOutline,
   'close-outline': iconCloseOutline,
   'person-circle-outline': iconPersonCircleOutline,
+  'person-add-outline': iconPersonAddOutline,
   'person-outline': iconPersonOutline,
   'lock-closed-outline': iconLockClosedOutline,
   'eye-outline': iconEyeOutline,
