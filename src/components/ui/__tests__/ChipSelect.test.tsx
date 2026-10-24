@@ -190,4 +190,62 @@ describe('ChipSelect', () => {
       expect(onChangeSpy).not.toHaveBeenCalledWith(null);
     });
   });
+
+  // ── maxRows ─────────────────────────────────────────────────────────────────
+  // jsdom has no layout, so each chip's line is fed through a stubbed offsetTop.
+  function stubTops(tops: number[]): void {
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (
+      this: HTMLElement
+    ) {
+      const parent = this.parentElement;
+      return parent?.getAttribute('role') === 'radiogroup'
+        ? (tops[Array.from(parent.children).indexOf(this)] ?? 0)
+        : 0;
+    });
+  }
+
+  describe('maxRows', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('stays a wrapped row while the chips fit in maxRows lines', () => {
+      stubTops([0, 0, 52]);
+      render(
+        <ChipSelect
+          label="Mood"
+          options={['A', 'B', 'C']}
+          value={null}
+          onChange={vi.fn()}
+          maxRows={2}
+        />
+      );
+      const group = screen.getByRole('radiogroup', { name: 'Mood' });
+      expect(group).toHaveAttribute('data-layout', 'wrap');
+      expect(group.className.split(/\s+/)).toContain('flex-wrap');
+    });
+
+    it('becomes one sideways-scrolling line when the chips need more than maxRows lines', () => {
+      stubTops([0, 52, 104]);
+      render(
+        <ChipSelect
+          label="Mood"
+          options={['A', 'B', 'C']}
+          value={null}
+          onChange={vi.fn()}
+          maxRows={2}
+        />
+      );
+      const group = screen.getByRole('radiogroup', { name: 'Mood' });
+      expect(group).toHaveAttribute('data-layout', 'scroll');
+      expect(group.className).toContain('overflow-x-auto');
+      expect(screen.getAllByRole('radio')).toHaveLength(3);
+    });
+
+    it('never caps a row without maxRows (existing callers are unchanged)', () => {
+      stubTops([0, 52, 104]);
+      render(<ChipSelect label="Mood" options={['A', 'B', 'C']} value={null} onChange={vi.fn()} />);
+      const group = screen.getByRole('radiogroup', { name: 'Mood' });
+      expect(group).toHaveAttribute('data-layout', 'wrap');
+      expect(group.className).not.toContain('overflow-x-auto');
+    });
+  });
 });

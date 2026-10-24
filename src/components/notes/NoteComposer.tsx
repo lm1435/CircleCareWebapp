@@ -8,6 +8,7 @@ import {
   type CareNoteCategory,
   type CareNoteMood,
 } from '@/api/careNotes';
+import { chipRowClass, useChipRowCap } from '@/components/ui/ChipSelect';
 
 // Daily Care Notes composer (docs/plans/daily-care-notes.md, Web Task 16).
 // Controlled — the caller owns the draft (the page keeps it to preserve input
@@ -17,6 +18,14 @@ import {
 // aria-pressed buttons in a labeled group — chip classes mirror ChipSelect),
 // then the submit row. Submit is enabled iff body-or-mood (plan rule); the
 // server's Zod refine is the authoritative gate.
+
+/**
+ * Mood and category chips wrap, at most this many lines (mobile parity: the
+ * mobile composer's constant of the same name). Every locale fits in two at the
+ * default text size on a 375px phone; past two (narrower screens, zoomed text)
+ * a row becomes one sideways-scrolling line instead of pushing Post down.
+ */
+export const NOTE_CHIP_MAX_ROWS = 2;
 
 export interface NoteDraft {
   body: string;
@@ -79,7 +88,9 @@ export function NoteComposer({
   error = null,
   autoFocus = false,
 }: NoteComposerProps): ReactElement {
-  const { t } = useTranslation('notes');
+  const { t, i18n } = useTranslation('notes');
+  // Re-measured per language: the labels, and so the line count, change with it.
+  const categoryRow = useChipRowCap(NOTE_CHIP_MAX_ROWS, i18n.language);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   // Mount-only: this component instance is created fresh each time NoteRow
@@ -147,6 +158,7 @@ export function NoteComposer({
           options={CARE_NOTE_MOODS.map((mood) => ({ value: mood, label: t(`moods.${mood}`) }))}
           value={draft.mood}
           onChange={(next) => onChange({ ...draft, mood: (next as CareNoteMood | null) ?? null })}
+          maxRows={NOTE_CHIP_MAX_ROWS}
         />
       </div>
 
@@ -158,10 +170,12 @@ export function NoteComposer({
           {t('composer.categoriesLabel')}
         </span>
         <div
+          ref={categoryRow.ref}
           id={`${idPrefix}-categories`}
           role="group"
           aria-label={t('composer.categoriesLabel')}
-          className="flex flex-wrap gap-2"
+          data-layout={categoryRow.overflow ? 'scroll' : 'wrap'}
+          className={chipRowClass(categoryRow.overflow)}
         >
           {CARE_NOTE_CATEGORIES.map((category) => {
             const selected = draft.categories.includes(category);
