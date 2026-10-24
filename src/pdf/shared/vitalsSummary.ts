@@ -86,7 +86,7 @@ export function computeVitalsSummary(
     const bp =
       withDia.length > 0
         ? {
-            average2: round1(withDia.reduce((s, e) => s + (e.value2 as number), 0) / withDia.length),
+            average2: Math.round(withDia.reduce((s, e) => s + (e.value2 as number), 0) / withDia.length),
             minReading: pickReading(entries, 'min'),
             maxReading: pickReading(entries, 'max'),
           }
@@ -99,7 +99,9 @@ export function computeVitalsSummary(
         value2: latest.value2 != null ? round1(latest.value2) : undefined,
         unit: latest.unit,
       },
-      average: avg,
+      // Blood pressure reads whole numbers everywhere (in-app screens round it), so its
+      // average is "129/81"; every other vital keeps one decimal.
+      average: withDia.length > 0 ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : avg,
       min,
       max,
       ...bp,

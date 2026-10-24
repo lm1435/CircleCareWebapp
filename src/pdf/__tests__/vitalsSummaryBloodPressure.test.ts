@@ -39,8 +39,8 @@ const html = (vitalsData: any[]) =>
 describe('computeVitalsSummary: blood pressure', () => {
   it('averages systolic and diastolic separately, rounded to one decimal', () => {
     const [row] = computeVitalsSummary([bp(118, 74, 1), bp(131, 82, 2), bp(142, 88, 3)], t);
-    expect(row.average).toBe(130.3);
-    expect(row.average2).toBe(81.3);
+    expect(row.average).toBe(130); // whole numbers, like the in-app screens
+    expect(row.average2).toBe(81);
   });
 
   it('Min/Max are the whole reading, never independent minimums', () => {
@@ -61,6 +61,7 @@ describe('computeVitalsSummary: blood pressure', () => {
   it('a reading without a diastolic is skipped for the diastolic mean and loses a tie', () => {
     const [row] = computeVitalsSummary([bp(120, null, 1), bp(120, 80, 2), bp(130, 90, 3)], t);
     expect(row.average2).toBe(85);
+    expect(Number.isInteger(row.average)).toBe(true);
     expect(row.minReading).toEqual({ value1: 120, value2: 80 });
   });
 
@@ -84,12 +85,12 @@ describe('the report table renders blood pressure', () => {
     const out = html([
       {
         type: 'Blood pressure', latest: { value1: 131, value2: 82, unit: 'mmHg' },
-        average: 130.3, average2: 81.3, min: 118, max: 142,
+        average: 130, average2: 81, min: 118, max: 142,
         minReading: { value1: 118, value2: 74 }, maxReading: { value1: 142, value2: 88 },
       },
     ]);
     expect(out).toContain('>131/82 mmHg<');
-    expect(out).toContain('>130.3/81.3 mmHg<');
+    expect(out).toContain('>130/81 mmHg<');
     expect(out).toContain('>118/74 mmHg<');
     expect(out).toContain('>142/88 mmHg<');
   });

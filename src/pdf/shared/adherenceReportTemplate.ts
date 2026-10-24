@@ -518,14 +518,12 @@ export function renderAdherenceReportHtml(options: AdherenceReportTemplateOption
   <!-- Summary -->
   <div class="section keep-together">
     <div class="section-title">${t('medicationHistory.export.summaryTitle')}</div>
-    <div class="summary-sentence">${t('medicationHistory.export.summarySentence', {
+    <div class="summary-sentence">${t('medicationHistory.export.summaryTaken', {
       name: escapeHtml(careRecipientName),
-      taken: summary.taken,
+      count: summary.taken,
       total: summary.total_scheduled,
       rate: summary.adherence_rate,
-      late: summary.taken_late,
-      notMarked: summary.not_marked,
-    })}</div>
+    })} ${t('medicationHistory.export.summaryLate', { count: summary.taken_late })} ${t('medicationHistory.export.summaryNotMarked', { count: summary.not_marked })}</div>
     <div class="summary-grid">
       <div class="summary-box adherence-highlight">
         <div class="value" style="color:${adherenceColor}">${summary.adherence_rate}%</div>
