@@ -8,10 +8,11 @@
  * what actually paints; `data-theme="light|dark"` on <html> carries it and every
  * dark token hangs off `:root[data-theme='dark']` (styles/globals.css).
  *
- * BUILD FLAG. `VITE_DARK_MODE` (vite.config.ts sets it: ON for `vite` dev, OFF
- * for `vite build` unless the env var says otherwise). When off the app is
+ * BUILD FLAG. `VITE_DARK_MODE` (vite.config.ts sets it via
+ * src/lib/darkModeBuildFlag.ts: ON for dev and for `vite build`, i.e. production,
+ * since 1.3.0; `VITE_DARK_MODE=false` is the kill switch). When off the app is
  * forced light, the stored preference is ignored and the Settings selector is
- * hidden. Mobile ships behind the same switch; both flip ON together in 1.3.0.
+ * hidden. Mobile ships behind the same kind of switch (EXPO_PUBLIC_DARK_MODE=0).
  *
  * PRE-PAINT. The same decision is made BEFORE first paint by the classic script
  * public/theme-init.js (external, so the CSP's `script-src 'self'` holds). That

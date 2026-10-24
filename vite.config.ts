@@ -2,18 +2,18 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { isDarkModeBuild } from './src/lib/darkModeBuildFlag';
 
 // `mode`-aware so we can read VITE_API_URL for the dev proxy below.
-export default defineConfig(({ mode, command }) => {
+export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
-  // DARK MODE BUILD FLAG. ON for the dev server, OFF for `vite build` until 1.3.0
-  // (mobile ships behind the same switch). `VITE_DARK_MODE=true|false` overrides
-  // either way, e.g. `VITE_DARK_MODE=true npm run build` for a preview build.
-  // Off = forced light, no Settings selector. Read by src/lib/themeCore.ts
-  // (define below) and by public/theme-init.js (via the <meta name="cc-dark-mode">
-  // token the html plugin replaces).
-  const darkMode = env.VITE_DARK_MODE ? env.VITE_DARK_MODE === 'true' : command === 'serve';
+  // DARK MODE BUILD FLAG (src/lib/darkModeBuildFlag.ts). ON for the dev server AND
+  // for `vite build` (1.3.0); `VITE_DARK_MODE=false` is the kill switch. Off = forced
+  // light, no Settings selector. Read by src/lib/themeCore.ts (define below) and by
+  // public/theme-init.js (via the <meta name="cc-dark-mode"> token the html plugin
+  // replaces).
+  const darkMode = isDarkModeBuild(env.VITE_DARK_MODE);
 
   // DEV ONLY: proxy `/api` to the backend (VITE_API_URL — the LOCAL backend by
   // default; a Cloudflare tunnel or other remote is opt-in via
