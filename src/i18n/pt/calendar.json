@@ -5,11 +5,15 @@
   },
   "title": "Calendário",
   "subtitle": "Medicamentos, consultas e tarefas em um só lugar.",
+  "day": "Dia",
   "week": "Semana",
   "month": "Mês",
   "viewLabel": "Visualização do calendário",
+  "dayViewLabel": "Visualização do dia",
   "weekViewLabel": "Calendário em visualização semanal",
   "monthViewLabel": "Calendário em visualização mensal",
+  "previousDay": "Dia anterior",
+  "nextDay": "Próximo dia",
   "previousWeek": "Semana anterior",
   "nextWeek": "Próxima semana",
   "previousMonth": "Mês anterior",
@@ -43,7 +47,8 @@
   "eventTypes": {
     "medication": "Medicamento",
     "appointment": "Consulta",
-    "task": "Tarefa"
+    "task": "Tarefa",
+    "shift": "Plantão"
   },
   "status": {
     "taken": "Tomado",
@@ -72,7 +77,9 @@
     "close": "Fechar detalhes do evento",
     "completedByLabel": "Concluído por",
     "completedByValue": "{{name}} · {{when}}",
-    "completedLabel": "Concluído em"
+    "completedLabel": "Concluído em",
+    "doctor": "Médico",
+    "seeAllVisits": "Ver todas as visitas"
   },
   "recurrence": {
     "daily": "Diariamente",
@@ -89,7 +96,9 @@
     "invalidOccurrenceDate": "Este evento não se repete mais nesse dia. O calendário foi atualizado.",
     "eventNotFound": "Esse evento não existe mais. Outra pessoa pode tê-lo excluído.",
     "recurrenceDaysExcludeStart": "O dia de início deve continuar selecionado.",
-    "asNeededLocked": "Um medicamento não pode passar de horários fixos para se necessário, nem o contrário. Suspenda-o e adicione-o novamente."
+    "asNeededLocked": "Um medicamento não pode passar de horários fixos para se necessário, nem o contrário. Suspenda-o e adicione-o novamente.",
+    "providerUnavailable": "Este médico não está mais disponível. Escolha outro médico ou Nenhum.",
+    "providerNotAllowed": "Só consultas podem ter um médico."
   },
   "addEvent": {
     "addEvent": "Adicionar evento",
@@ -280,6 +289,15 @@
       "lockedRepeat": "Se necessário · não pode ser alterado. Para definir horários fixos para este medicamento, suspenda-o e adicione-o novamente.",
       "remindersNone": "Sem lembretes. Medicamentos se necessário não têm horários fixos.",
       "updateOldBackend": "Ainda não foi possível adicionar um medicamento se necessário — atualize o app e tente novamente."
+    },
+    "doctor": {
+      "label": "Médico",
+      "none": "Nenhum",
+      "add": "Adicionar um médico",
+      "removed": "{{name}} (removido)",
+      "linked": "Médico vinculado",
+      "series": "Vale para toda a série",
+      "filledFrom": "Preenchido com o endereço de {{name}}"
     }
   },
   "deleteEvent": {
@@ -353,5 +371,16 @@
     "noteCount_one": "Notas: {{count}}",
     "noteCount_other": "{{count}} notas"
   },
-  "permissionDenied": "Você não tem permissão para fazer alterações neste círculo."
+  "permissionDenied": "Você não tem permissão para fazer alterações neste círculo.",
+  "today": "Hoje",
+  "yesterday": "Ontem",
+  "tomorrow": "Amanhã",
+  "daySummary": {
+    "doses_one": "Doses: {{count}}",
+    "doses_other": "{{count}} doses",
+    "appointments_one": "Consultas: {{count}}",
+    "appointments_other": "{{count}} consultas",
+    "tasks_one": "Tarefas: {{count}}",
+    "tasks_other": "{{count}} tarefas"
+  }
 }

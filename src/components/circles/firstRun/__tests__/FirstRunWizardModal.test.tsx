@@ -217,7 +217,7 @@ afterEach(() => {
 
 describe('choose step: one primary', () => {
   const isFilled = (button: HTMLElement): boolean =>
-    button.className.split(/\s+/).includes('bg-moss');
+    button.className.split(/\s+/).includes('bg-primary-fill');
 
   it('offers the first medication as the ONLY filled button, with its reason under it', () => {
     renderWizard();
@@ -261,9 +261,9 @@ describe('invite offer after the first medication saves', () => {
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
     expect(screen.getByText(/help coordinate Rosa's care/)).toBeInTheDocument();
     const primary = screen.getByRole('button', { name: 'Invite your first caregiver' });
-    expect(primary.className.split(/\s+/)).toContain('bg-moss');
+    expect(primary.className.split(/\s+/)).toContain('bg-primary-fill');
     const notNow = screen.getByRole('button', { name: 'Not now' });
-    expect(notNow.className.split(/\s+/)).not.toContain('bg-moss');
+    expect(notNow.className.split(/\s+/)).not.toContain('bg-primary-fill');
     // The save button and Back are gone: a second copy cannot be created.
     expect(screen.queryByRole('button', { name: 'Add medication' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
@@ -432,7 +432,7 @@ describe('modal footer convention', () => {
     // `hover:bg-moss-soft` class would also satisfy a naive `/\bbg-moss\b/`
     // (the word boundary lands right before the trailing `-soft`), which
     // would misclassify the ghost Skip/Back buttons as filled.
-    const FILLED_CLASSES = new Set(['bg-moss', 'bg-terracotta-soft']);
+    const FILLED_CLASSES = new Set(['bg-primary-fill', 'bg-terracotta-soft']);
     const isFilled = (button: HTMLElement): boolean =>
       button.className.split(/\s+/).some((cls) => FILLED_CLASSES.has(cls));
     const filledButtons = within(footer).getAllByRole('button').filter(isFilled);

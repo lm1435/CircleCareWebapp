@@ -22,6 +22,15 @@ const load = (code: string): Record<string, object> =>
 /** Keys whose `_one` hard-codes "1" because the UI returns early at 0 (proven at the call site). */
 const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'members:pending.banner.count': 'PendingInvitesBanner returns null when count === 0',
+  // Care shifts: mobile is canonical for these strings (SHIFTS_PARITY_DECISIONS), and pt reads
+  // "0 <singular>" for them. None is ever rendered at 0: the day / week / month summaries are
+  // shown only for a day that HAS shifts (an empty day reads "No shifts"), and a shift lasts
+  // 15 minutes to 24 hours, so a duration part is never 0.
+  'shifts:summary': 'day summary only for a day with shifts',
+  'shifts:summaryShort': 'week day summary only for a day with shifts',
+  'shifts:month.cell': 'month cell uses month.none for an empty day',
+  'shifts:duration.hours': 'durationLabel renders hours only when hours > 0',
+  'shifts:duration.minutes': 'durationLabel renders minutes only for a 15-minute-or-longer shift',
 };
 /**
  * Whole namespaces whose count lines are NEVER rendered at 0: the daily update omits a line
@@ -76,7 +85,7 @@ describe('pt / pt-PT plural keys read correctly at count 0', () => {
     const bad: string[] = [];
     for (const key of STEMS) {
       const out = t(key, { count: 0, ...VARS });
-      if (neverAtZero(key)) continue;
+      if (neverAtZero(key) || RENDERED_ONLY_ABOVE_ZERO[key]) continue;
       if (/(^|[^\d{])1(\s|$)/.test(out) && !RENDERED_ONLY_ABOVE_ZERO[key]) bad.push(`${key}: "${out}" (hard-coded 1)`);
       const m = /(^|[^\d])0\s+([\p{L}]+)/u.exec(out);
       if (m && !INVARIANT_AFTER_NUMBER.has(m[2].toLowerCase()) && !/s$/i.test(m[2]) && !key.startsWith('upgrade:trialPeriod.')) {

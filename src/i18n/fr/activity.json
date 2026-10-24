@@ -32,6 +32,7 @@
     "recurrenceStopped": "Répétition arrêtée : {{title}} — date d’arrêt : {{date}}",
     "eventNoteAdded": "Note ajoutée : {{title}}",
     "careNoteAdded": "Note de soins du jour ajoutée",
+    "careNoteAddedForDate": "Note de soins ajoutée pour le {{date}}",
     "memberInvited": {
       "careRecipient": "Invitation envoyée à {{email}} pour rejoindre le cercle en tant que personne aidée",
       "caregiver": "Invitation envoyée à {{email}} pour rejoindre le cercle en tant qu’aidant"

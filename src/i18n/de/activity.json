@@ -32,6 +32,7 @@
     "recurrenceStopped": "Wiederholung beendet für {{title}} ab {{date}}",
     "eventNoteAdded": "Notiz hinzugefügt zu: {{title}}",
     "careNoteAdded": "Tägliche Pflegenotiz hinzugefügt",
+    "careNoteAddedForDate": "Tägliche Pflegenotiz für {{date}} hinzugefügt",
     "memberInvited": {
       "careRecipient": "Einladung an {{email}} zum Beitritt als umsorgte Person",
       "caregiver": "Einladung an {{email}} zum Beitritt als Pflegeperson"

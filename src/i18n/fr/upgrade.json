@@ -24,6 +24,10 @@
     "earnedInvite": {
       "lead": "Votre cercle",
       "accent": "s’agrandit."
+    },
+    "shifts": {
+      "lead": "Partagez les soins,",
+      "accent": "garde par garde."
     }
   },
   "subtitle": "Tout ce dont votre famille a besoin pour coordonner les soins, pour chaque cercle dont vous faites partie.",

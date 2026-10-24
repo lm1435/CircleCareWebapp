@@ -108,6 +108,8 @@ function invalidateNotes(
   });
   void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
+  // Notes by doctor: the note shows inline on that doctor's Visits & notes page.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.providerVisits(circleId) });
 }
 
 /**

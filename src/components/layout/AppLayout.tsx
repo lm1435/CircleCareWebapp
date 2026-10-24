@@ -8,6 +8,7 @@ import { FloatingNavBar } from './FloatingNavBar';
 import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AIChatModal } from '@/components/ai/AIChatModal';
+import { replyActionRoute } from '@/components/ai/aiReplyActions';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
 import { CircleAccessLost } from '@/components/circles/CircleAccessLost';
@@ -16,6 +17,9 @@ import { useCircles } from '@/hooks/useCircles';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { useAuthStore } from '@/store/authStore';
 import { resolveAiEntry, resolveAiNav } from '@/lib/aiAccess';
+import { resolveShiftsEntry } from '@/lib/shiftsAccess';
+import { ShiftComposer } from '@/components/shifts/ShiftComposer';
+import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
 
 /**
@@ -76,9 +80,10 @@ export function AppLayout(): ReactElement {
 
   // Write actions need an editable circle. Resolved once here so the sidebar's
   // New button and the pill's NEW cell share one source of truth.
-  const { circle, canEdit, viewOnly, isPremiumCircle, accessLost, isLoading, isError } = useCircle(
+  const { circle, canEdit, viewOnly, isPremiumCircle, hasShifts, accessLost, isLoading, isError } = useCircle(
     circleId ?? ''
   );
+  const [shiftTeaserFor, setShiftTeaserFor] = useState<string | null>(null);
 
   // ── AI Care Assistant gate ────────────────────────────────────────────────
   // The backend already refuses these callers (backend/src/routes/ai.ts); this
@@ -101,6 +106,9 @@ export function AppLayout(): ReactElement {
   const currentUserId = useAuthStore((s) => s.user?.id);
   const isOwner = circle != null && currentUserId != null && circle.owner_id === currentUserId;
   const aiEntry = resolveAiEntry({ viewOnly, isPremiumCircle, isOwner });
+  // Care shifts: the New menu's Shift option (premium: everyone; free: the owner,
+  // who gets the teaser; free managers / members: not offered).
+  const shiftEntry = resolveShiftsEntry({ viewOnly, isPremiumCircle, isOwner, hasShifts });
   // Access is PENDING until the circle detail answers (no data, still loading,
   // not failed). The nav shows the AI cell dimmed + inert meanwhile (mobile's
   // 'reserve'); `aiEntry` itself stays fail-closed, so the modal mount, the
@@ -144,6 +152,7 @@ export function AppLayout(): ReactElement {
   useEffect(() => {
     setCreateFor(null);
     setAddOpen(false);
+    setShiftTeaserFor(null);
   }, [circleId]);
 
   // One handler behind both entry points. A frozen circle's OWNER is the one
@@ -169,6 +178,11 @@ export function AppLayout(): ReactElement {
       if (circleId) navigate(`/circles/${circleId}/notes`);
       return;
     }
+    if (kind === 'shift' && shiftEntry === 'teaser') {
+      if (circleId) setShiftTeaserFor(circleId);
+      return;
+    }
+    if (kind === 'shift' && shiftEntry !== 'available') return;
     if (circleId) setCreateFor({ kind, circleId });
   };
 
@@ -226,6 +240,7 @@ export function AppLayout(): ReactElement {
           assistantDisabled={aiNav !== 'allowed'}
           onCreate={circleId ? openCreate : undefined}
           canCreate={canEdit}
+          shiftEntry={shiftEntry}
         />
         {/* Below xl the pill floats over the page, so the scroll content has to
             reserve its height + 24 (spec §4.5). `--nav-h` is published by
@@ -281,6 +296,7 @@ export function AppLayout(): ReactElement {
             anchor="bottom"
             open={addOpen}
             canCreate={canEdit}
+            shiftEntry={shiftEntry}
             onClose={() => setAddOpen(false)}
             onSelect={(kind) => {
               setAddOpen(false);
@@ -297,10 +313,28 @@ export function AppLayout(): ReactElement {
           `true`. Gating here makes the modal disappear the moment the flags
           say it may not be there. */}
       {circleId && aiEntry === 'available' && (
-        <AIChatModal circleId={circleId} isOpen={aiOpen} onClose={() => setAiOpen(false)} />
+        <AIChatModal
+          circleId={circleId}
+          isOpen={aiOpen}
+          onClose={() => setAiOpen(false)}
+          // FIND_NOTES reply buttons: close the assistant, then open the place.
+          onOpenAction={(action) => {
+            const { to, state } = replyActionRoute(action, circleId);
+            setAiOpen(false);
+            navigate(to, state ? { state } : undefined);
+          }}
+        />
       )}
 
-      {circleId && createKind && createKind !== 'note' && (
+      {circleId && createKind === 'shift' && (
+        <ShiftComposer circleId={circleId} source="add_menu" onClose={() => setCreateFor(null)} />
+      )}
+
+      {circleId && shiftTeaserFor === circleId && (
+        <ShiftsTeaserDialog source="add_menu" onClose={() => setShiftTeaserFor(null)} />
+      )}
+
+      {circleId && createKind && createKind !== 'note' && createKind !== 'shift' && (
         <AddEventModal
           circleId={circleId}
           initialType={createKind}

@@ -22,6 +22,7 @@ vi.mock('@/lib/analytics', () => ({
     aiChatMessageSent: vi.fn(),
     aiChatResponseReceived: vi.fn(),
     aiChatFailed: vi.fn(),
+    aiNotesPathSuggested: vi.fn(),
   },
 }));
 
@@ -409,5 +410,44 @@ describe('classifyAiError — the prompt-injection 400 asks for a rephrase, not 
       CIRCLE_ID,
       expect.objectContaining({ reason: 'sendFailed' })
     );
+  });
+});
+
+describe('useAiChat — FIND_NOTES analytics', () => {
+  it('fires ai_notes_path_suggested once with enums/booleans and the action count', async () => {
+    const { wrapper } = setup();
+    mockSend.mockResolvedValue(
+      makeResponse({
+        intent: 'FIND_NOTES',
+        actions: [
+          { type: 'open_provider', provider_id: '0b9a1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d', provider_name: 'Dr Patel' },
+        ],
+        notes_path: { target: 'doctor', doctor_named: true, doctor_matched: true },
+      })
+    );
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    act(() => result.current.mutation.mutate({ message: "show me Dr. Patel's notes" }));
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    expect(Analytics.aiNotesPathSuggested).toHaveBeenCalledTimes(1);
+    expect(Analytics.aiNotesPathSuggested).toHaveBeenCalledWith({
+      target: 'doctor',
+      doctor_named: true,
+      doctor_matched: true,
+      action_count: 1,
+    });
+    expect(JSON.stringify(vi.mocked(Analytics.aiNotesPathSuggested).mock.calls)).not.toContain('Patel');
+  });
+
+  it('does not fire for any other intent, or when an older backend sends no notes_path', async () => {
+    const { wrapper } = setup();
+    mockSend.mockResolvedValueOnce(makeResponse({ intent: 'GET_SCHEDULE' }));
+    mockSend.mockResolvedValueOnce(makeResponse({ intent: 'FIND_NOTES' }));
+    const { result } = renderHook(() => useAiChat(CIRCLE_ID), { wrapper });
+    act(() => result.current.mutation.mutate({ message: 'a' }));
+    await waitFor(() => expect(result.current.mutation.isSuccess).toBe(true));
+    act(() => result.current.mutation.mutate({ message: 'b' }));
+    await waitFor(() => expect(mockSend).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.mutation.isPending).toBe(false));
+    expect(Analytics.aiNotesPathSuggested).not.toHaveBeenCalled();
   });
 });

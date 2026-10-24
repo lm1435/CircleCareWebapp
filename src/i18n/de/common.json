@@ -56,7 +56,8 @@
     "members": "Mitglieder",
     "settings": "Kreis bearbeiten",
     "notFound": "Seite nicht gefunden",
-    "dailyUpdate": "Tagesübersicht"
+    "dailyUpdate": "Tagesübersicht",
+    "providerVisits": "Besuche und Notizen"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -170,7 +171,9 @@
     "medicationShort": "Medik.",
     "appointmentShort": "Termin",
     "taskShort": "Aufgabe",
-    "noteShort": "Notiz"
+    "noteShort": "Notiz",
+    "shift": "Schicht",
+    "shiftShort": "Schicht"
   },
   "draftRestored": "Wir haben Ihren nicht gespeicherten Entwurf wiederhergestellt.",
   "undoCap": {

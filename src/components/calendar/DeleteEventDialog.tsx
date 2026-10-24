@@ -113,6 +113,14 @@ export function DeleteEventDialog({
       scopeFuture: t('deleteAppointment.scopeFuture'),
       deleted: t('deleteAppointment.deleted'),
     },
+    // Shifts are deleted from the Shifts view (`ShiftDetailModal`), which has
+    // its own dialog; this entry only keeps the map total.
+    shift: {
+      title: t('deleteEvent.title'),
+      scopeSingle: t('deleteEvent.scopeSingle'),
+      scopeFuture: t('deleteEvent.scopeFuture'),
+      deleted: t('deleteEvent.deleted'),
+    },
   };
   const copy: DeleteCopy = copyByType[event.event_type] ?? {
     title: t('deleteEvent.title'),

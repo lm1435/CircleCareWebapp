@@ -24,6 +24,10 @@
     "earnedInvite": {
       "lead": "Seu círculo está",
       "accent": "crescendo."
+    },
+    "shifts": {
+      "lead": "Compartilhem o cuidado,",
+      "accent": "turno a turno."
     }
   },
   "subtitle": "Tudo o que sua família precisa para coordenar o cuidado, em cada círculo de que você participa.",

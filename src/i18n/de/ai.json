@@ -20,5 +20,10 @@
     "unavailable": "Der Pflegeassistent ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.",
     "sendFailed": "Entschuldigung, es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
     "invalidMessage": "Diese Nachricht konnte ich nicht verarbeiten. Formulieren Sie Ihre Frage zu Pflege oder Gesundheit bitte um."
+  },
+  "actions": {
+    "openNotes": "Notizen öffnen",
+    "openDoctors": "Ärztinnen und Ärzte ansehen",
+    "openProvider": "{{name}}: Besuche und Notizen"
   }
 }

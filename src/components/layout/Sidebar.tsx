@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { AddMenu, type AddMenuType } from '@/components/layout/AddMenu';
+import type { ShiftsEntryState } from '@/lib/shiftsAccess';
 import { Button, Eyebrow, Icon, Sheet, Text, type IconName } from '@/components/ui';
 
 /**
@@ -128,6 +129,8 @@ export interface SidebarProps {
   onCreate?: (kind: AddMenuType) => void;
   /** Requester can create calendar/med/task/note items (editable circle). */
   canCreate?: boolean;
+  /** Care shifts: whether the New menu offers Shift (see AddMenu). */
+  shiftEntry?: ShiftsEntryState;
 }
 
 const DESKTOP_CLASS =
@@ -146,9 +149,14 @@ export function Sidebar({
   assistantDisabled = false,
   onCreate,
   canCreate = false,
+  shiftEntry = 'hidden',
 }: SidebarProps = {}): ReactElement {
   const { t } = useTranslation('common');
   const { circleId } = useParams<{ circleId: string }>();
+  // A doctor's Visits & notes page (`/providers/:id`) belongs to Medical Info:
+  // that item stays lit while it is open.
+  const { pathname } = useLocation();
+  const onDoctorVisits = /\/providers\/[^/]+/.test(pathname);
   const [addOpen, setAddOpen] = useState(false);
   // A circle change (browser back/forward) closes the type menu: the create
   // flow belongs to the circle it was opened in (AppLayout's `createFor`).
@@ -185,6 +193,7 @@ export function Sidebar({
             anchorRef={addAnchorRef}
             open={addOpen}
             canCreate={canCreate}
+            shiftEntry={shiftEntry}
             onClose={() => setAddOpen(false)}
             onSelect={(kind: AddMenuType) => onCreate(kind)}
           />
@@ -212,18 +221,26 @@ export function Sidebar({
                       end={item.segment === ''}
                       onClick={onNavigate}
                       className={({ isActive }) =>
-                        `${LINK_BASE} ${isActive ? item.active : LINK_INACTIVE}`
+                        `${LINK_BASE} ${
+                          isActive || (item.segment === 'emergency' && onDoctorVisits)
+                            ? item.active
+                            : LINK_INACTIVE
+                        }`
                       }
                     >
-                      {({ isActive }) => (
-                        <>
-                          <Icon
-                            name={isActive ? (item.activeIcon ?? item.icon) : item.icon}
-                            size="row"
-                          />
-                          {t(item.labelKey)}
-                        </>
-                      )}
+                      {({ isActive: active }) => {
+                        const isActive =
+                          active || (item.segment === 'emergency' && onDoctorVisits);
+                        return (
+                          <>
+                            <Icon
+                              name={isActive ? (item.activeIcon ?? item.icon) : item.icon}
+                              size="row"
+                            />
+                            {t(item.labelKey)}
+                          </>
+                        );
+                      }}
                     </NavLink>
                   </li>
                 ))}

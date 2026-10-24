@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement
 import { useTranslation } from 'react-i18next';
 import type { DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from './DrugAutocomplete';
+import { DoctorField } from './DoctorField';
 import { NotificationInfoModal } from './NotificationInfoModal';
 import { DoseQuietHoursNote } from './DoseQuietHoursNote';
 import {
@@ -14,6 +15,8 @@ import {
   type SeriesRoot,
 } from '@/api/calendarEvents';
 import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
+import { useProviders } from '@/hooks/useProviders';
+import type { Provider } from '@/api/providers';
 import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
 import { useCircle } from '@/hooks/useCircle';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
@@ -155,6 +158,12 @@ export interface AddEventModalProps {
   initialDosage?: string;
   initialTime?: string;
   initialRecurrence?: string | null;
+  /**
+   * Preselect a doctor on a NEW appointment (the doctor's Visits & notes page
+   * "Add an appointment"). The doctor's address fills an empty location, as when
+   * it is picked. Ignored when editing (the stored link is the value).
+   */
+  initialProviderId?: string;
   onClose: () => void;
   /** Called after a successful create/update (parent typically closes + toasts). */
   onSaved?: () => void;
@@ -448,6 +457,7 @@ function AddEventForm({
   initialDosage,
   initialTime,
   initialRecurrence,
+  initialProviderId,
   onClose,
   onSaved,
 }: AddEventModalProps): ReactElement | null {
@@ -557,6 +567,25 @@ function AddEventForm({
     return endTimeForDuration(hydrated.timeStr, scheduleSource.duration_minutes);
   });
   const [location, setLocation] = useState(event?.location ?? '');
+  /**
+   * The appointment's doctor (notes by doctor). An edit starts from the STORED
+   * link and echoes it on every save, so a doctor removed since keeps its link
+   * unless the user changes it. null = None.
+   */
+  const storedProviderId = event?.provider_id ?? null;
+  const [providerId, setProviderId] = useState<string | null>(
+    isEditing ? storedProviderId : (initialProviderId ?? null)
+  );
+  /** Whose address filled the location (for the hint); cleared when the user types there. */
+  const [locationFilledFrom, setLocationFilledFrom] = useState<string | null>(null);
+  // A doctor preselected by the caller (the doctor's own Visits & notes page):
+  // once its row arrives, its address fills the empty location, as if picked.
+  // Reads the cache DoctorField already fills (same query key: no extra request).
+  const presetProviders = useProviders(circleId, {
+    includeArchived: true,
+    enabled: !isEditing && !!initialProviderId,
+  });
+  const presetApplied = useRef(false);
   const [description, setDescription] = useState(event?.description ?? '');
   const [assignedTo, setAssignedTo] = useState<string | null>(event?.assigned_to ?? null);
 
@@ -1074,6 +1103,32 @@ function AddEventForm({
   }
 
   /**
+   * Picking a doctor whose address is on file FILLS AN EMPTY location (and says
+   * so, under the field). A location the user already typed is never touched,
+   * None / a doctor without an address leave it alone, and an address longer than
+   * the field allows is skipped rather than cut mid-word. The user can edit the
+   * filled text freely. (docs/plans/notes-by-doctor.md flow 3.)
+   */
+  function chooseDoctorLocation(provider: Provider | null): void {
+    if (!provider || location.trim() !== '') return;
+    // The doctor form's address is multi-line; the location is one line.
+    const address = (provider.address ?? '').replace(/\s*\n+\s*/g, ', ').trim();
+    if (!address || address.length > 250) return;
+    setLocation(address);
+    setLocationFilledFrom(provider.name);
+    clearError('location');
+  }
+
+  useEffect(() => {
+    if (presetApplied.current || isEditing || !initialProviderId) return;
+    const preset = presetProviders.providers.find((p) => p.id === initialProviderId);
+    if (!preset) return;
+    presetApplied.current = true;
+    chooseDoctorLocation(preset);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetProviders.providers, initialProviderId, isEditing]);
+
+  /**
    * Map a Zod issue KEY NAME (emitted by `eventFormSchema`, never prose) to a
    * translated message. Same helper shape as VitalFormModal.messageFor —
    * unknown keys degrade to a generic localized line instead of leaking Zod's
@@ -1259,6 +1314,17 @@ function AddEventForm({
       data.assigned_to = assignedToValue;
     }
 
+    // The doctor (notes by doctor), APPOINTMENTS ONLY — any other type is refused
+    // PROVIDER_NOT_ALLOWED. An edit ALWAYS echoes the form's value: the stored
+    // link when untouched (an unchanged id is never re-validated server side, so a
+    // doctor removed since is kept), another id, or null = None, which clears it.
+    // A create names a doctor only when one was picked. On an occurrence the server
+    // writes the link to the series ROOT.
+    if (eventType === 'appointment') {
+      if (isEditing) data.provider_id = providerId;
+      else if (providerId) data.provider_id = providerId;
+    }
+
     // How this entry was added, on a CREATE only (the backend ignores it on an
     // edit). The web form is always typed: voice add and the label scan are
     // mobile-only. Mobile shows "Added by voice" from the same field.
@@ -1283,9 +1349,18 @@ function AddEventForm({
     try {
       if (isEditing && targetEventId) {
         await updateEvent.mutateAsync({ eventId: targetEventId, data });
+        // Notes by doctor: counted once the save succeeded, enums only (never
+        // the doctor). Moving to another doctor is a (re)link; None is an unlink.
+        if (data.event_type === 'appointment' && data.provider_id !== storedProviderId) {
+          if (data.provider_id) Analytics.providerLinked({ source: 'edit' });
+          else if (storedProviderId) Analytics.providerUnlinked();
+        }
         showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
       } else {
         const created = await createEvent.mutateAsync(data);
+        if (data.event_type === 'appointment' && data.provider_id) {
+          Analytics.providerLinked({ source: 'add' });
+        }
         // OLD-BACKEND GUARD. A backend that predates as-needed strips the
         // unknown `as_needed` key and answers 200 with an ordinary one-time
         // medication — a silent wrong record. Undo it and say so.
@@ -1611,15 +1686,35 @@ function AddEventForm({
         )}
 
         {eventType === 'appointment' && (
+          <DoctorField
+            circleId={circleId}
+            value={providerId}
+            storedValue={isEditing ? storedProviderId : null}
+            appliesToSeries={isRecurringEdit}
+            busy={isPending}
+            onChange={(id, provider) => {
+              setProviderId(id);
+              chooseDoctorLocation(provider);
+            }}
+          />
+        )}
+
+        {eventType === 'appointment' && (
           <TextField
             id="location"
             label={t('addEvent.fields.location')}
             value={location}
             maxLength={250}
             error={errors.location}
+            hint={
+              locationFilledFrom
+                ? t('addEvent.doctor.filledFrom', { name: locationFilledFrom })
+                : undefined
+            }
             placeholder={t('addEvent.placeholders.location')}
             onChange={(e) => {
               setLocation(e.target.value);
+              setLocationFilledFrom(null);
               clearError('location');
             }}
           />

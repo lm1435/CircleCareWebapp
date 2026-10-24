@@ -516,6 +516,7 @@ const HEADLINE_KEY = {
   feature: 'feature',
   earned_meds: 'earnedMeds',
   earned_invite: 'earnedInvite',
+  shifts: 'shifts',
 } as const satisfies Record<PaywallContext, string>;
 
 interface PlansViewProps {
@@ -557,6 +558,7 @@ function PlansView({
       lead: t('headline.earnedInvite.lead'),
       accent: t('headline.earnedInvite.accent'),
     },
+    shifts: { lead: t('headline.shifts.lead'), accent: t('headline.shifts.accent') },
   };
   const headline = headlines[HEADLINE_KEY[paywallContext]];
   const monthly = plans?.monthly ?? null;
@@ -967,10 +969,10 @@ function RadioDot({ selected }: { selected: boolean }): ReactElement {
       aria-hidden="true"
       className={[
         'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
-        selected ? 'border-moss bg-moss' : 'border-ink/30',
+        selected ? 'border-primary-fill bg-primary-fill' : 'border-ink/30',
       ].join(' ')}
     >
-      {selected && <span className="h-2 w-2 rounded-full bg-white" />}
+      {selected && <span className="h-2 w-2 rounded-full bg-on-primary" />}
     </span>
   );
 }

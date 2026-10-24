@@ -11,9 +11,13 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '@/components/ui';
 import { useMenu } from '@/hooks/useMenu';
+import { showShiftCreateOption, type ShiftsEntryState } from '@/lib/shiftsAccess';
 
-/** The four things the "+" creates (mobile `AddMenu`'s `EventType`). */
-export type AddMenuType = 'medication' | 'appointment' | 'task' | 'note';
+/**
+ * The things the "+" creates (mobile `AddMenu`'s `EventType`). `shift` is the
+ * fifth, offered only where Shifts exist for the viewer (see `shiftEntry`).
+ */
+export type AddMenuType = 'medication' | 'appointment' | 'task' | 'note' | 'shift';
 
 interface AddMenuOption {
   type: AddMenuType;
@@ -35,22 +39,27 @@ const OPTIONS: readonly AddMenuOption[] = [
   {
     type: 'medication',
     icon: 'medical-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-clay/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-clay',
   },
   {
     type: 'appointment',
     icon: 'calendar-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-dusk/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-dusk',
   },
   {
     type: 'task',
     icon: 'checkbox-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-moss/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-moss',
   },
   {
     type: 'note',
     icon: 'pencil-outline',
-    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-dusk/19',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-dusk',
+  },
+  {
+    type: 'shift',
+    icon: 'time-outline',
+    circle: 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-menu-moss',
   },
 ];
 
@@ -122,6 +131,12 @@ export interface AddMenuProps {
   anchorRef?: RefObject<HTMLElement | null>;
   /** Read-only members cannot create anything, so the menu does not exist for them. */
   canCreate?: boolean;
+  /**
+   * Care shifts: 'available' (premium circle) and 'teaser' (a free circle's
+   * OWNER, who is shown the teaser) render the Shift option; 'hidden' (default,
+   * and every free manager / member) does not.
+   */
+  shiftEntry?: ShiftsEntryState;
 }
 
 /**
@@ -141,6 +156,7 @@ export function AddMenu({
   anchor = 'bottom',
   anchorRef,
   canCreate = false,
+  shiftEntry = 'hidden',
 }: AddMenuProps): ReactElement | null {
   const { t } = useTranslation('common');
   /** The control that had focus when the menu opened, to hand it back on close. */
@@ -230,9 +246,9 @@ export function AddMenu({
           data-testid="add-menu-pill"
           onKeyDown={menu.onMenuKeyDown}
           style={anchor === 'sidebar' ? sidebarPosition : undefined}
-          className={`${PILL_ANCHOR[anchor]} z-50 flex gap-5 rounded-full bg-ink px-5 py-3 shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none`}
+          className={`${PILL_ANCHOR[anchor]} z-50 flex gap-5 rounded-full bg-menu-pill px-5 py-3 shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none`}
         >
-          {OPTIONS.map((option, index) => (
+          {OPTIONS.filter((o) => o.type !== 'shift' || showShiftCreateOption(shiftEntry)).map((option, index) => (
             <button
               key={option.type}
               type="button"
@@ -252,9 +268,9 @@ export function AddMenu({
               className="flex min-w-[48px] min-h-[48px] flex-col items-center justify-center gap-1 active:opacity-70 animate-[zoom-in_200ms_var(--ease-spring)] [animation-fill-mode:both] motion-reduce:animate-none"
             >
               <span className={option.circle}>
-                <Icon name={option.icon} size="chrome" className="text-cream" />
+                <Icon name={option.icon} size="chrome" className="text-menu-icon" />
               </span>
-              <span className="text-2xs tracking-[0.8px] uppercase text-cream/80">
+              <span className="text-2xs tracking-[0.8px] uppercase text-menu-label">
                 {t(`addMenu.${option.type}Short`)}
               </span>
             </button>

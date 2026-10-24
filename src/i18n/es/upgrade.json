@@ -6,7 +6,8 @@
     "capacity": { "lead": "Más personas,", "accent": "mejor cuidado." },
     "feature": { "lead": "Aprovecha todo", "accent": "CircleCare." },
     "earnedMeds": { "lead": "Vas por", "accent": "buen camino." },
-    "earnedInvite": { "lead": "Tu círculo está", "accent": "creciendo." }
+    "earnedInvite": { "lead": "Tu círculo está", "accent": "creciendo." },
+    "shifts": { "lead": "Compartan el cuidado,", "accent": "turno por turno." }
   },
   "subtitle": "Todo lo que tu familia necesita para coordinar el cuidado, en cada círculo del que formas parte.",
   "trialHook": "Comienza con una prueba gratis: hoy no pagas nada.",

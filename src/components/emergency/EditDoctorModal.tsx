@@ -12,7 +12,9 @@ import {
   withIfMatch,
   type UpdateEmergencyInfoRequest,
 } from '@/hooks/useEmergencyInfo';
-import { getEmergencyInfoConflict } from '@/lib/apiErrors';
+import { getEmergencyInfoConflict, isProviderArchivedError } from '@/lib/apiErrors';
+import type { Provider } from '@/api/providers';
+import { useCreateProvider, useUpdateProvider } from '@/hooks/useProviders';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { SPECIALTY_KEYS } from '@/lib/quickPicks';
 import { extensionToSave, initialPhoneValue, sanitizeExtension } from '@/lib/phone';
@@ -31,6 +33,12 @@ export interface EditDoctorModalProps {
    */
   target: 'primary' | number | undefined;
   onClose: () => void;
+  /**
+   * An ADD or EDIT saved through /providers: called with the saved doctor, just
+   * before the modal closes. The appointment form uses it to select the doctor
+   * it just added. Not called on the legacy array path (no doctor comes back).
+   */
+  onSaved?: (provider: Provider) => void;
 }
 
 const EMPTY_DOCTOR: AdditionalDoctor = { name: '' };
@@ -52,9 +60,16 @@ function EditDoctorModalForm({
   target,
   onClose,
   onConflict,
+  onSaved,
 }: EditDoctorModalPropsLoaded): ReactElement {
   const { t } = useTranslation('emergency');
+  // Doctors are written through /providers (notes by doctor): create / patch by
+  // the stable id. `update` (the legacy full-array PUT with PK5 conflict handling)
+  // remains ONLY for an edit of a doctor the snapshot carries no id for (an older
+  // backend, or a circle whose doctors were never projected from care_providers).
   const update = useUpdateEmergencyInfo(circleId);
+  const createDoctor = useCreateProvider(circleId);
+  const patchDoctor = useUpdateProvider(circleId);
   // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `update.isPending` drives `loading` on
   // the footer button, but that is React Query state committed a render AFTER
   // the submit that started the request — and implicit form submission (Enter
@@ -70,6 +85,13 @@ function EditDoctorModalForm({
 
   const isPrimary = target === 'primary';
   const editIndex = typeof target === 'number' ? target : undefined;
+  // The id of the doctor being edited, from the snapshot the editor opened with.
+  const providerId: string | null = isPrimary
+    ? (info?.primary_doctor_id ?? null)
+    : editIndex !== undefined
+      ? (info?.additional_doctors?.[editIndex]?.id ?? null)
+      : null;
+  const saving = update.isPending || createDoctor.isPending || patchDoctor.isPending;
 
   const initial: AdditionalDoctor = isPrimary
     ? {
@@ -124,7 +146,7 @@ function EditDoctorModalForm({
     }
   );
 
-  const handleSubmit = (event: FormEvent): void => {
+  const handleSubmit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();
     if (!name.trim()) {
       setNameError(t('edit.doctor.nameRequired'));
@@ -139,7 +161,7 @@ function EditDoctorModalForm({
 
     // Claimed AFTER the validity gate, so a claim is never taken (and then
     // abandoned) on a submit that was going to bail out anyway.
-    if (update.isPending || !submitGuard.claim()) return;
+    if (saving || !submitGuard.claim()) return;
 
     const phone = phoneValue.phone.trim();
     const countryCode = phone ? phoneValue.countryCode : null;
@@ -147,45 +169,70 @@ function EditDoctorModalForm({
     // what is stored", which would resurrect an extension the user just cleared.
     const phoneExtension = extensionToSave(extension, phone);
 
-    let partial: UpdateEmergencyInfoRequest;
-    if (isPrimary) {
-      partial = {
-        primary_doctor_name: name.trim(),
-        primary_doctor_specialty: specialty.trim() || null,
-        primary_doctor_phone: phone || null,
-        primary_doctor_country_code: countryCode,
-        primary_doctor_phone_extension: phoneExtension,
-        primary_doctor_address: address.trim() || null,
-      };
-    } else {
-      // Every field is named explicitly — this rebuild used to omit
-      // `country_code`, so editing a +52 doctor (even a rename) silently
-      // turned it into a US number.
-      const doctor: AdditionalDoctor = {
-        name: name.trim(),
-        specialty: specialty.trim() || null,
-        phone: phone || null,
-        country_code: countryCode,
-        phone_extension: phoneExtension,
-        address: address.trim() || null,
-      };
-      const current = info?.additional_doctors ?? [];
-      const next =
-        editIndex !== undefined
-          ? replaceAtIndex(current, editIndex, doctor)
-          : appendItem(current, doctor);
-      partial = { additional_doctors: next };
-    }
+    // Every field is named (null clears), so an edit that empties a field really
+    // clears it.
+    const fields = {
+      name: name.trim(),
+      specialty: specialty.trim() || null,
+      phone: phone || null,
+      country_code: countryCode,
+      phone_extension: phoneExtension,
+      address: address.trim() || null,
+    };
 
-    update.mutate(withIfMatch(info, partial), {
-      // Saved: close WITHOUT the discard prompt (the form still differs from
-      // its baseline — by exactly what was just saved).
-      onSuccess: discardGuard.closeAfterSave,
-      onError: (err) => {
-        if (getEmergencyInfoConflict(err)) onConflict();
-      },
-      onSettled: submitGuard.release,
-    });
+    // One try/finally releases the guard on every outcome (success, a refused
+    // write, a thrown request), in the same handler that claimed it.
+    try {
+      if (editIndex === undefined && !isPrimary) {
+        // ADD -> POST /providers (the new doctor is an additional one).
+        const { provider } = await createDoctor.mutateAsync({ ...fields, is_primary: false });
+        onSaved?.(provider);
+        discardGuard.closeAfterSave();
+        return;
+      }
+      if (providerId) {
+        // EDIT of a doctor with a stable id -> PATCH /providers/:id.
+        const { provider } = await patchDoctor.mutateAsync({ providerId, data: fields });
+        onSaved?.(provider);
+        discardGuard.closeAfterSave();
+        return;
+      }
+
+      // LEGACY: an edit of a doctor the snapshot carries no id for.
+      let partial: UpdateEmergencyInfoRequest;
+      if (isPrimary) {
+        partial = {
+          primary_doctor_name: fields.name,
+          primary_doctor_specialty: fields.specialty,
+          primary_doctor_phone: fields.phone,
+          primary_doctor_country_code: fields.country_code,
+          primary_doctor_phone_extension: fields.phone_extension,
+          primary_doctor_address: fields.address,
+        };
+      } else {
+        // Every field is named explicitly — this rebuild used to omit
+        // `country_code`, so editing a +52 doctor (even a rename) silently
+        // turned it into a US number.
+        const doctor: AdditionalDoctor = { ...fields };
+        const current = info?.additional_doctors ?? [];
+        const next =
+          editIndex !== undefined
+            ? replaceAtIndex(current, editIndex, doctor)
+            : appendItem(current, doctor);
+        partial = { additional_doctors: next };
+      }
+      // Saved: close WITHOUT the discard prompt (the form still differs from its
+      // baseline — by exactly what was just saved).
+      await update.mutateAsync(withIfMatch(info, partial));
+      discardGuard.closeAfterSave();
+    } catch (err) {
+      // The hooks already toasted and reloaded; only the follow-up is decided here.
+      if (getEmergencyInfoConflict(err)) onConflict();
+      // Removed by someone else while this was open: nothing left to edit.
+      else if (isProviderArchivedError(err)) onClose();
+    } finally {
+      submitGuard.release();
+    }
   };
 
   const title = isPrimary
@@ -205,16 +252,16 @@ function EditDoctorModalForm({
         closeLabel={t('edit.close')}
         footer={
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={discardGuard.requestClose} disabled={update.isPending}>
+            <Button variant="secondary" onClick={discardGuard.requestClose} disabled={saving}>
               {t('edit.cancel')}
             </Button>
-            <Button type="submit" offlineKind="save" form="edit-doctor-form" variant="primary" loading={update.isPending}>
+            <Button type="submit" offlineKind="save" form="edit-doctor-form" variant="primary" loading={saving}>
               {t('edit.save')}
             </Button>
           </div>
         }
       >
-        <form id="edit-doctor-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form id="edit-doctor-form" onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
           <TextField
             id="doctor-name"
             label={t('edit.doctor.name')}

@@ -32,6 +32,7 @@
     "recurrenceStopped": "Ripetizione interrotta per {{title}} dal {{date}}",
     "eventNoteAdded": "Ha aggiunto una nota a {{title}}",
     "careNoteAdded": "Ha aggiunto una nota di cura giornaliera",
+    "careNoteAddedForDate": "Ha aggiunto una nota di cura giornaliera per {{date}}",
     "memberInvited": {
       "careRecipient": "Ha invitato {{email}} a entrare come persona assistita",
       "caregiver": "Ha invitato {{email}} a entrare come caregiver"

@@ -26,6 +26,7 @@ import help from './help.json';
 import freemium from './freemium.json';
 import upgrade from './upgrade.json';
 import dailyUpdate from './dailyUpdate.json';
+import shifts from './shifts.json';
 
 const esResources = {
   common,
@@ -48,6 +49,7 @@ const esResources = {
   freemium,
   upgrade,
   dailyUpdate,
+  shifts,
 };
 
 export default esResources;

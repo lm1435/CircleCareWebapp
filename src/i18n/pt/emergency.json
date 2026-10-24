@@ -380,5 +380,38 @@
   "conflict": {
     "title": "Outra pessoa atualizou isto",
     "message": "Outro cuidador alterou esta seção enquanto você editava. Carregamos a versão mais recente. Revise-a e faça sua alteração novamente."
+  },
+  "providers": {
+    "visitsLink": "Visitas e notas",
+    "visitsLinkFor": "com {{name}}",
+    "removedName": "{{name}} (removido)",
+    "errors": {
+      "limitReached": "Você chegou ao limite de 50 médicos. Remova um para adicionar outro.",
+      "conflict": "Outra pessoa acabou de alterar os médicos. Recarregamos a lista; tente novamente.",
+      "archived": "Este médico já foi removido. Recarregamos a lista."
+    },
+    "visits": {
+      "title": "Visitas e notas",
+      "loading": "Carregando visitas",
+      "errorTitle": "Não foi possível carregar as visitas",
+      "notFound": "Este médico não está disponível.",
+      "nextVisit": "Próxima visita",
+      "pastVisits": "Visitas anteriores",
+      "noPast": "Ainda não há visitas anteriores.",
+      "noteCount_one": "Notas: {{count}}",
+      "noteCount_other": "{{count}} notas",
+      "noNotes": "Ainda não há notas",
+      "addNote": "Adicionar nota",
+      "addNoteFor": "Adicionar nota à visita de {{date}}",
+      "more": "ver mais",
+      "less": "ver menos",
+      "showEarlier": "Mostrar visitas mais antigas",
+      "earlierLoaded": "Visitas mais antigas carregadas.",
+      "earlierFailed": "Não foi possível carregar as visitas mais antigas. Tente novamente.",
+      "emptyTitle": "Ainda não há visitas com {{name}}",
+      "emptyBody": "Escolha {{name}} como médico ao adicionar ou editar uma consulta. As visitas e as notas aparecerão aqui.",
+      "addAppointment": "Adicionar consulta",
+      "unnamedAuthor": "Alguém"
+    }
   }
 }

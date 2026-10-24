@@ -96,6 +96,7 @@ export {
   type SegmentedControlOption,
   type SegmentedControlChangeMeta,
 } from './SegmentedControl';
+export { UnderlineTabs, type UnderlineTabsProps } from './UnderlineTabs';
 export { UndoBadge, type UndoBadgeProps, type UndoBadgeKind } from './UndoBadge';
 export {
   INPUT_SHELL,

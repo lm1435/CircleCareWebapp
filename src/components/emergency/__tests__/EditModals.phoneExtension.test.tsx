@@ -7,11 +7,16 @@ vi.mock('@/api/emergencyInfo', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/emergencyInfo')>();
   return { ...actual, updateEmergencyInfo: vi.fn() };
 });
+vi.mock('@/api/providers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/providers')>();
+  return { ...actual, createProvider: vi.fn(), updateProvider: vi.fn() };
+});
 vi.mock('@/hooks/usePremiumGate', () => ({
   usePremiumGate: () => ({ promptUpgrade: vi.fn() }),
 }));
 
 import { updateEmergencyInfo, type EmergencyInfo } from '@/api/emergencyInfo';
+import { createProvider, updateProvider } from '@/api/providers';
 import { ToastProvider } from '@/components/ui';
 import { EditDoctorModal, EditInsuranceModal } from '@/components/emergency';
 import { DoctorCard } from '@/components/emergency/DoctorCard';
@@ -28,6 +33,22 @@ import { extensionToSave, sanitizeExtension } from '@/lib/phone';
 
 const CIRCLE_ID = 'circle-1';
 const mockUpdate = vi.mocked(updateEmergencyInfo);
+const mockCreate = vi.mocked(createProvider);
+const mockPatch = vi.mocked(updateProvider);
+const SAVED_PROVIDER = {
+  id: '77777777-7777-4777-8777-777777777777',
+  name: 'Dr. Lee',
+  specialty: null,
+  phone: null,
+  country_code: null,
+  phone_extension: null,
+  address: null,
+  is_primary: false,
+  sort_order: 1,
+  archived_at: null,
+  created_at: '',
+  updated_at: '',
+};
 
 const baseInfo: EmergencyInfo = {
   id: 'ei-1',
@@ -69,10 +90,14 @@ const phone = (): HTMLElement => screen.getByLabelText('Phone');
 const nameInput = (): HTMLElement => screen.getByLabelText(/^(Name|Carrier).*required/i);
 /** The body of the one PUT. */
 const sent = (): Record<string, unknown> => mockUpdate.mock.calls[0][1] as Record<string, unknown>;
+/** The body of the one POST /providers (an ADD goes through the doctor API, not the array PUT). */
+const created = (): Record<string, unknown> => mockCreate.mock.calls[0][1] as Record<string, unknown>;
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockUpdate.mockResolvedValue(baseInfo);
+  mockCreate.mockResolvedValue({ provider: SAVED_PROVIDER, providers: [SAVED_PROVIDER] });
+  mockPatch.mockResolvedValue({ provider: SAVED_PROVIDER, providers: [SAVED_PROVIDER] });
 });
 
 describe('lib/phone extension helpers', () => {
@@ -121,9 +146,9 @@ describe('EditDoctorModal — additional doctor', () => {
     type(ext(), 'x 12-34a56789012');
     expect(ext().value).toBe('1234567890');
     save();
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    const doctors = sent().additional_doctors as Array<Record<string, unknown>>;
-    expect(doctors[0].phone_extension).toBe('1234567890');
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect(created().phone_extension).toBe('1234567890');
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it('add: no extension typed still SENDS the key as null', async () => {
@@ -131,10 +156,9 @@ describe('EditDoctorModal — additional doctor', () => {
     type(nameInput(), 'Dr. Lee');
     type(phone(), '5551234567');
     save();
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    const doctor = (sent().additional_doctors as Array<Record<string, unknown>>)[0];
-    expect('phone_extension' in doctor).toBe(true);
-    expect(doctor.phone_extension).toBeNull();
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect('phone_extension' in created()).toBe(true);
+    expect(created().phone_extension).toBeNull();
   });
 
   it('edit: seeds the stored extension; clearing it sends null', async () => {

@@ -53,14 +53,14 @@ describe('ConfirmDialog', () => {
     const confirm = screen.getByRole('button', { name: 'Delete' });
     expect(confirm.className).toContain('bg-terracotta-soft');
     expect(confirm.className).toContain('text-terracotta-deep');
-    expect(confirm.className).not.toContain('bg-moss ');
+    expect(confirm.className).not.toContain('bg-primary-fill ');
   });
 
   it('uses the primary variant by default', () => {
     setup();
     const confirm = screen.getByRole('button', { name: 'Delete' });
-    expect(confirm.className).toContain('bg-moss');
-    expect(confirm.className).toContain('text-cream');
+    expect(confirm.className).toContain('bg-primary-fill');
+    expect(confirm.className).toContain('text-on-primary');
   });
 
   it('uses the secondary variant for cancel', () => {
@@ -249,7 +249,7 @@ describe('ConfirmDialog', () => {
     const mark = container.querySelector('[class*="bg-terracotta/15"]');
     expect(mark).toBeInTheDocument();
     const confirmButton = screen.getByRole('button', { name: 'Delete' });
-    expect(confirmButton.className).toContain('bg-moss');
+    expect(confirmButton.className).toContain('bg-primary-fill');
     expect(confirmButton.className).not.toContain('bg-terracotta-soft');
   });
   // ──────────────────────────────────────────────────────────────────────────

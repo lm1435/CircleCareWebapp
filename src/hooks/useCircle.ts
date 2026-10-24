@@ -80,6 +80,8 @@ export interface UseCircleResult {
   isPremiumCircle: boolean;
   /** Membership-level view-only (freemium caregiver cap). */
   viewOnly: boolean;
+  /** A free circle that still holds live shift rows (Premium lapsed). Absent = false. */
+  hasShifts: boolean;
   /** The signed-in user owns this circle (settings, billing, med reminders). */
   isOwner: boolean;
   /**
@@ -128,6 +130,7 @@ export function useCircle(circleId: string): UseCircleResult {
     accessLevel: circle?.access_level,
     isPremiumCircle: circle?.is_premium_circle ?? false,
     viewOnly: circle?.view_only ?? false,
+    hasShifts: circle?.has_shifts ?? false,
     isOwner: viewerOwnsCircle(circle, currentUserId),
     canManageMembers: viewerCanManageMembers(circle, currentUserId),
     canAssignManager: viewerCanAssignManager(circle, currentUserId),

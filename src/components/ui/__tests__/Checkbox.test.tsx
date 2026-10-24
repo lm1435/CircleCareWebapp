@@ -78,12 +78,12 @@ describe('Checkbox', () => {
     );
     let box = boxOf(screen.getByRole('checkbox', { name: '15 minutes before' }));
     expect(box.className).toContain('border-line');
-    expect(box.className).not.toContain('bg-moss');
+    expect(box.className).not.toContain('bg-primary-fill');
     expect(box.querySelector('svg')).toBeNull();
 
     rerender(<Checkbox checked onChange={vi.fn()} label="15 minutes before" />);
     box = boxOf(screen.getByRole('checkbox', { name: '15 minutes before' }));
-    expect(box.className).toContain('bg-moss');
+    expect(box.className).toContain('bg-primary-fill');
     expect(box.querySelector('svg')).not.toBeNull();
   });
 

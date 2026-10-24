@@ -158,3 +158,28 @@ describe('privacy super properties survive every reset()', () => {
     expectPrivacyPropertiesOn(lastEvent());
   });
 });
+
+describe('theme super properties', () => {
+  it('registers theme + theme_preference at init and keeps them after a reset()', async () => {
+    localStorage.setItem('cc.themePreference.v1', 'dark');
+    const { setAnalyticsConsent, initAnalytics, resetAnalytics, Analytics } = await loadFresh();
+    setAnalyticsConsent(true);
+    initAnalytics();
+
+    Analytics.loginCompleted('email');
+    expect(lastEvent().props).toMatchObject({ theme: 'dark', theme_preference: 'dark' });
+
+    resetAnalytics();
+    Analytics.loginStarted('email');
+    expect(lastEvent().props).toMatchObject({ theme: 'dark', theme_preference: 'dark' });
+  });
+
+  it('defaults to theme_preference system, with theme following the device', async () => {
+    const { setAnalyticsConsent, initAnalytics, Analytics } = await loadFresh();
+    setAnalyticsConsent(true);
+    initAnalytics();
+    Analytics.loginCompleted('email');
+    // jsdom has no matchMedia: the device reads as light.
+    expect(lastEvent().props).toMatchObject({ theme: 'light', theme_preference: 'system' });
+  });
+});

@@ -172,8 +172,8 @@ describe('WeekView chip: assignee + note count', () => {
   it('meta text uses the chip text colour (cream on a pending block)', () => {
     renderWeek([appt('a')]);
     const chip = chipFor('Appt a');
-    expect(within(chip).getByTestId('event-chip-assignee').className).toContain('text-cream');
-    expect(within(chip).getByTestId('event-chip-notes').className).toContain('text-cream');
+    expect(within(chip).getByTestId('event-chip-assignee').className).toContain('text-on-fill');
+    expect(within(chip).getByTestId('event-chip-notes').className).toContain('text-on-fill');
   });
 
   it('Spanish: "notas" / "nota" in the accessible name', async () => {

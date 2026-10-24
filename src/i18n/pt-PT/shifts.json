@@ -1,0 +1,129 @@
+{
+  "eyebrow": "Turnos",
+  "open": "Por preencher",
+  "you": "Eu",
+  "addShift": "Adicionar turno",
+  "summary_one": "{{count}} turno · {{open}}.",
+  "summary_other": "{{count}} turnos · {{open}}.",
+  "noShiftsDay": "Nenhum turno neste dia.",
+  "noShiftsWeekDay": "Nenhum turno",
+  "mode": {
+    "shifts": "Turnos",
+    "openBadge_one": "{{count}} por preencher",
+    "openBadge_other": "{{count}} por preencher"
+  },
+  "legend": {
+    "open": "Tem um turno por preencher",
+    "label": "Legenda dos turnos"
+  },
+  "month": {
+    "cell_one": "{{date}}, {{count}} turno, {{open}}",
+    "cell_other": "{{date}}, {{count}} turnos, {{open}}",
+    "none": "{{date}}, nenhum turno",
+    "label": "Calendário mensal de turnos"
+  },
+  "empty": {
+    "title": "Dividam o cuidado, turno por turno",
+    "description": "Adicione os períodos que precisam de alguém, como as noites ou as manhãs de dias úteis, e deixe a sua família ver quem está em cada um e o que ainda está por preencher.",
+    "cta": "Adicionar um turno"
+  },
+  "teaser": {
+    "title": "Dividam o cuidado, turno por turno",
+    "description": "Veja quem cobre cada período e quais ninguém assumiu ainda, com um lembrete para quem está no turno.",
+    "previewA11y": "Exemplo: um turno da manhã e um da tarde têm alguém, e o turno da noite está por preencher."
+  },
+  "take": {
+    "confirm": "Assumir turno",
+    "futureHint": "Pode libertar qualquer um mais tarde",
+    "scopeLabel": "Quais turnos?"
+  },
+  "scope": {
+    "occurrence": "Este turno",
+    "allUpcoming": "Todos os próximos turnos",
+    "label": "Quais turnos?"
+  },
+  "drop": {
+    "action": "Libertar turno",
+    "title": "Libertar este turno?",
+    "message": "\"{{name}}\" voltará a ficar por preencher e todos no círculo serão avisados.",
+    "confirm": "Libertar turno",
+    "messageRepeating": "Escolha quais turnos libertar. Eles voltarão a ficar por preencher e todos no círculo serão avisados."
+  },
+  "assign": {
+    "title": "Atribuir turno"
+  },
+  "delete": {
+    "action": "Eliminar",
+    "title": "Eliminar turno",
+    "message": "Eliminar \"{{name}}\"? Não pode ser anulado.",
+    "messageRepeating": "Escolha quais turnos eliminar. Não pode ser anulado.",
+    "confirm": "Eliminar"
+  },
+  "detail": {
+    "yourTime": "O seu horário: {{range}}",
+    "yourTimeRow": "O seu horário"
+  },
+  "form": {
+    "newTitle": "Novo turno",
+    "editTitle": "Editar turno",
+    "leaveOpen": "Deixar por preencher",
+    "seriesNote": "A data e a repetição de uma série não podem ser alteradas aqui. A sua edição aplica-se aos turnos escolhidos.",
+    "save": "Guardar turno",
+    "reminderHint": "Enviado a quem está no turno.",
+    "editScopeLabel": "Quais turnos?"
+  },
+  "saved": {
+    "title": "\"{{name}}\" guardado",
+    "summaryOpen": "{{range}}, {{repeat}}. Por preencher: qualquer pessoa pode assumir.",
+    "summaryOpenOnce": "{{range}} · Por preencher: qualquer pessoa pode assumir.",
+    "summarySelf": "{{range}}, {{repeat}}. Está nele.",
+    "summarySelfOnce": "{{range}} · Está nele.",
+    "addNext": "Adicionar o próximo turno",
+    "repeatWeekly": "todas as semanas"
+  },
+  "validation": {
+    "nameRequired": "Dê um nome ao turno.",
+    "endRequired": "Escolha a hora em que o turno termina.",
+    "tooShort": "Um turno dura de 15 minutos a 24 horas.",
+    "tooLong": "Um turno dura de 15 minutos a 24 horas.",
+    "startRequired": "Escolha quando o turno começa."
+  },
+  "toast": {
+    "taken": "Está no turno \"{{name}}\".",
+    "alreadyTaken": "{{takenBy}} acabou de assumir este turno.",
+    "alreadyTakenUnknown": "Alguém acabou de assumir este turno.",
+    "alreadyOpen": "Este turno já está por preencher.",
+    "dropped": "Libertou \"{{name}}\". Voltou a ficar por preencher.",
+    "assigned": "{{name}} está no turno.",
+    "updated": "Turno atualizado.",
+    "deleted": "Turno eliminado.",
+    "notFound": "Este turno já não está disponível.",
+    "notAssigned": "Já ninguém está nesse turno."
+  },
+  "error": {
+    "take": "Não foi possível assumir o turno. Tente novamente.",
+    "drop": "Não foi possível libertar o turno. Tente novamente.",
+    "assign": "Não foi possível atribuir o turno. Tente novamente.",
+    "save": "Não foi possível guardar o turno. Tente novamente.",
+    "delete": "Não foi possível eliminar o turno. Tente novamente.",
+    "dropForbidden": "Só quem está no turno, o proprietário ou um gestor pode libertá-lo.",
+    "assignForbidden": "Só o proprietário ou um gestor pode colocar outra pessoa num turno.",
+    "invalidAssignee": "Essa pessoa não pode ficar num turno.",
+    "permissionDenied": "Não tem permissão para alterar turnos neste círculo."
+  },
+  "summaryShort_one": "{{count}} turno · {{open}}",
+  "summaryShort_other": "{{count}} turnos · {{open}}",
+  "card": {
+    "statusOpen": "por preencher",
+    "statusMine": "está neste turno",
+    "openDetailsHint": "Abre os detalhes do turno"
+  },
+  "loadError": "Não foi possível carregar os turnos.",
+  "readOnly": {
+    "owner": "O Premium terminou. Os seus turnos são apenas de leitura.",
+    "other": "Os turnos são apenas de leitura neste momento."
+  },
+  "openCount_zero": "nenhum por preencher",
+  "openCount_one": "{{count}} por preencher",
+  "openCount_other": "{{count}} por preencher"
+}

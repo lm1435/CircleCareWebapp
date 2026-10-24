@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Theme (dark mode). public/theme-init.js runs BEFORE first paint and rewrites
+         color-scheme, theme-color and <html data-theme>; src/lib/themeCore.ts keeps
+         them in sync afterwards. The values here are the no-JS / flag-off fallback.
+         `cc-dark-mode` carries the build flag (vite.config.ts replaces the token). -->
     <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#fbf9f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1815" media="(prefers-color-scheme: dark)" />
+    <meta name="cc-dark-mode" content="__CC_DARK_MODE__" />
+    <script src="/theme-init.js"></script>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/icon.png" />
     <meta name="robots" content="noindex, nofollow" />

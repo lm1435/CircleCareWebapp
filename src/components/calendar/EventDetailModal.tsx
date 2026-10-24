@@ -2,13 +2,15 @@ import { useMemo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
+import { Link } from 'react-router-dom';
 import { MapsLink } from '@/components/MapsLink';
 import { Badge, Card, Eyebrow, Modal, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
+import { useProviders } from '@/hooks/useProviders';
 import { formatEventTimeForDisplay, getDateInTimezone, zoneReferenceInstant } from '@/utils/timezone';
 import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
 import {
-  EVENT_TYPE_BLOCK_CLASS,
+  EVENT_TYPE_DOT_CLASS,
   getMedicationStatus,
   isInactiveMedication,
 } from './eventStyles';
@@ -21,10 +23,45 @@ const EVENT_TYPE_EYEBROW_COLOR = {
   medication: 'clay',
   appointment: 'dusk',
   task: 'moss',
+  shift: 'moss',
 } as const;
 
 function memberDisplayName(member: CircleMember): string {
   return [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+}
+
+/**
+ * "Dr. Patel · See all visits": the appointment's doctor, linking to that
+ * doctor's Visits & notes page (docs/plans/notes-by-doctor.md flow 2b). The name
+ * is resolved from the circle's doctors INCLUDING removed ones, so a doctor
+ * removed since the link still reads "Dr. Patel (removed)". While the name is
+ * unknown the link stands alone as "See all visits" (the id is enough to go).
+ */
+function EventDoctorLink({
+  circleId,
+  providerId,
+}: {
+  circleId: string;
+  providerId: string;
+}): ReactElement {
+  const { t } = useTranslation(['calendar', 'emergency']);
+  const { providers } = useProviders(circleId, { includeArchived: true });
+  const provider = providers.find((p) => p.id === providerId);
+  const name = provider
+    ? provider.archived_at
+      ? t('emergency:providers.removedName', { name: provider.name })
+      : provider.name
+    : null;
+  const seeAll = t('calendar:eventDetail.seeAllVisits');
+  return (
+    <Link
+      to={`/circles/${circleId}/providers/${encodeURIComponent(providerId)}`}
+      state={{ source: 'appointment' }}
+      className="inline-flex min-h-[44px] items-center gap-1.5 font-medium text-ink underline underline-offset-2"
+    >
+      {name ? `${name} · ${seeAll}` : seeAll}
+    </Link>
+  );
 }
 
 export interface EventDetailModalProps {
@@ -240,6 +277,13 @@ export function EventDetailModal({
           }
     );
   }
+  if (event.event_type === 'appointment' && event.provider_id) {
+    rows.push({
+      key: 'doctor',
+      label: t('calendar:eventDetail.doctor'),
+      value: <EventDoctorLink circleId={circleId ?? event.circle_id} providerId={event.provider_id} />,
+    });
+  }
   if (event.location) {
     rows.push({
       key: 'location',
@@ -281,7 +325,7 @@ export function EventDetailModal({
     <span className="flex items-stretch gap-3.5">
       <span
         aria-hidden="true"
-        className={`w-1 shrink-0 self-stretch rounded-full ${EVENT_TYPE_BLOCK_CLASS[event.event_type]}`}
+        className={`w-1 shrink-0 self-stretch rounded-full ${EVENT_TYPE_DOT_CLASS[event.event_type]}`}
       />
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="block break-words leading-tight">

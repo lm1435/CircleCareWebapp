@@ -24,6 +24,10 @@
     "earnedInvite": {
       "lead": "Ihr Kreis",
       "accent": "wächst."
+    },
+    "shifts": {
+      "lead": "Pflege teilen,",
+      "accent": "Schicht für Schicht."
     }
   },
   "subtitle": "Alles, was Ihre Familie braucht, um die Pflege zu koordinieren – für jeden Kreis, in dem Sie dabei sind.",

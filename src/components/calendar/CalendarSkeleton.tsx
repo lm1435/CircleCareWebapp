@@ -6,13 +6,19 @@ const WEEK_COLUMNS = [0, 1, 2, 3, 4, 5, 6];
 const MONTH_CELLS = Array.from({ length: 42 }, (_, i) => i);
 
 /** Grid-shaped loading skeletons matching the week/month layouts. */
-export function CalendarSkeleton({ view }: { view: 'week' | 'month' }): ReactElement {
+export function CalendarSkeleton({ view }: { view: 'day' | 'week' | 'month' }): ReactElement {
   const { t } = useTranslation('common');
 
   return (
     <Card variant="outlined" padding="none" role="status" aria-live="polite">
       <span className="sr-only">{t('loading')}</span>
-      {view === 'week' ? (
+      {view === 'day' ? (
+        <div className="flex flex-col gap-3 p-3">
+          {[0, 1, 2].map((row) => (
+            <Skeleton key={row} className="h-14 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : view === 'week' ? (
         <>
           {/* Header row: time-axis spacer + 7 day header pills */}
           <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-line-2 p-2">

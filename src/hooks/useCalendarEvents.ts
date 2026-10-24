@@ -34,6 +34,9 @@ import {
   isInvalidOccurrenceDateError,
   isNotFoundError,
   isRecurrenceDaysExcludeStartError,
+  isProviderArchivedError,
+  isProviderNotAllowedError,
+  isProviderNotFoundError,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
 } from '@/lib/apiErrors';
@@ -65,6 +68,8 @@ export interface UseCalendarEventsOptions {
    * moves window-to-window (CalendarPage) should pass `true`.
    */
   prefetchAdjacent?: boolean;
+  /** Default true. The Calendar turns it off while the Shifts view is showing. */
+  enabled?: boolean;
 }
 
 /**
@@ -81,7 +86,7 @@ export function useCalendarEvents(
   options: UseCalendarEventsOptions = {}
 ): UseQueryResult<CalendarEvent[]> & UseCalendarEventsResult {
   const queryClient = useQueryClient();
-  const enabled = !!circleId && !!startDate && !!endDate;
+  const enabled = !!circleId && !!startDate && !!endDate && options.enabled !== false;
   const prefetchAdjacent = options.prefetchAdjacent === true;
 
   const query = useQuery({
@@ -351,11 +356,19 @@ function invalidateEventQueries(
   }
   void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
+  // Care shifts live under their own key root: a shift edited / deleted through
+  // the generic event hooks must refresh the Shifts view and its open badge.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.shifts(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.medicationTodaySummary(circleId) });
   // Home's Today's meds read now also carries the circle's as-needed medications
   // (`includeAsNeeded`), so adding / editing / stopping one must refresh it too.
   void queryClient.invalidateQueries({ queryKey: todaysMedsKey(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.circle(circleId) });
+  // Notes by doctor: an appointment write can move a visit between doctors (the
+  // link) or change what a visit is called / when it happens, so the doctor
+  // counts and every Visits & notes page are stale too (PROVIDERS_API_CONTRACT §5).
+  void queryClient.invalidateQueries({ queryKey: queryKeys.providers(circleId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.providerVisits(circleId) });
   return calendarRefreshed;
 }
 
@@ -452,6 +465,16 @@ function useEventMutationOnError(
       // refetch in case another member moved the series' start meanwhile.
       showToast(t('errors.recurrenceDaysExcludeStart'), 'error');
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+    } else if (isProviderArchivedError(error) || isProviderNotFoundError(error)) {
+      // 400 PROVIDER_ARCHIVED / PROVIDER_NOT_FOUND: the doctor picked in the form
+      // was removed (or never existed in this circle) since the list was drawn.
+      // A retry re-posts the same id, so name the cause and refresh the picker.
+      showToast(t('errors.providerUnavailable'), 'error');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.providers(circleId) });
+    } else if (isProviderNotAllowedError(error)) {
+      // 400 PROVIDER_NOT_ALLOWED: only appointments take a doctor. The form only
+      // offers the field on appointments, so this is a stale tab or a second client.
+      showToast(t('errors.providerNotAllowed'), 'error');
     } else if (isNotFoundError(error)) {
       // 404: the row was deleted by another member between render and press.
       // Same stale-snapshot shape, same remedy.

@@ -63,18 +63,23 @@ const fontSizePx: Record<AvatarSize, number> = {
  * initials measured 4.12:1 on the old coral stop and 2.87:1 on the old
  * clay-light stop; every stop is now >= 5.4:1 against white.
  *
+ * DARK MODE: the stops are the `--color-avatar-*` ROLE tokens, whose light
+ * values are the hexes above and whose dark values are a muted ramp (the lifted
+ * accent tints read as a highlighter on a 56px+ disc). Initials stay
+ * `text-cream`, i.e. charcoal on those stops in dark (>= 4.8:1).
+ *
  * (`--color-clay-deep` on web is #6E4825, a different value; mobile's
  * `CC.clayDeep` lives at `--color-clay-ramp-deep`. Likewise mobile's
  * `CC.mossDeep` is `--color-moss-mid`, since `--color-moss-deep` already
  * carries mobile's `mossInk`.)
  */
 export const AVATAR_GRADIENTS: readonly (readonly [string, string])[] = [
-  ['var(--color-moss)', 'var(--color-moss-deep)'],
-  ['var(--color-coral-deep)', 'var(--color-terracotta-deep)'],
-  ['var(--color-dusk)', 'var(--color-dusk-deep)'],
-  ['var(--color-clay)', 'var(--color-clay-ramp-deep)'],
-  ['var(--color-moss-mid)', 'var(--color-moss-dark)'],
-  ['var(--color-amber-deep)', 'var(--color-clay-ramp-deep)'],
+  ['var(--color-avatar-moss)', 'var(--color-avatar-moss-deep)'],
+  ['var(--color-avatar-coral-deep)', 'var(--color-avatar-terracotta-deep)'],
+  ['var(--color-avatar-dusk)', 'var(--color-avatar-dusk-deep)'],
+  ['var(--color-avatar-clay)', 'var(--color-avatar-clay-deep)'],
+  ['var(--color-avatar-moss-mid)', 'var(--color-avatar-moss-dark)'],
+  ['var(--color-avatar-amber-deep)', 'var(--color-avatar-clay-deep)'],
 ] as const;
 
 /**

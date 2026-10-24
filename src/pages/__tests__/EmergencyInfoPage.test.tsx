@@ -50,6 +50,7 @@ vi.mock('@/hooks/useCareNotes', async (importOriginal) => {
 // mock resolves with the envelope directly.
 const mockedGet = vi.mocked(apiClient.get);
 const mockedPut = vi.mocked(apiClient.put);
+const mockedPost = vi.mocked(apiClient.post);
 
 /** Typed view of the last PUT body for assertions. */
 function lastPutBody(): {
@@ -144,6 +145,11 @@ function mockApi(emergencyInfo: EmergencyInfo | null, canEdit = false): void {
     if (url === `/circles/${CIRCLE_ID}/emergency-info`) {
       return { success: true, data: { emergency_info: emergencyInfo } };
     }
+    // Notes by doctor: the visit counts for the Medical Info cards. This file is
+    // about the sections, so the answer is "no counts yet" (providers.test covers them).
+    if (url === `/circles/${CIRCLE_ID}/providers`) {
+      return { success: true, data: { providers: [] } };
+    }
     throw new Error(`Unexpected GET in test: ${url}`);
   });
 }
@@ -169,6 +175,7 @@ describe('EmergencyInfoPage', () => {
   beforeEach(() => {
     mockedGet.mockReset();
     mockedPut.mockReset();
+    mockedPost.mockReset();
     mockExportPdf.mockReset();
     mockExportPdf.mockResolvedValue(undefined);
     mockIsExporting = false;
@@ -661,9 +668,15 @@ describe('EmergencyInfoPage', () => {
     expect(within(dialog).getByText('Medical information')).toBeInTheDocument();
   });
 
-  it('adds a doctor via the modal, sending a partial additional_doctors PUT', async () => {
+  it('adds a doctor via the modal, through POST /providers (not the full-array PUT)', async () => {
     mockApi(fullInfo, true);
-    mockedPut.mockResolvedValue({ success: true, data: { emergency_info: fullInfo } });
+    mockedPost.mockResolvedValue({
+      success: true,
+      data: {
+        provider: { id: 'new-id', name: 'Dr. Lee' },
+        providers: [],
+      },
+    });
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Add doctor' }));
@@ -672,13 +685,10 @@ describe('EmergencyInfoPage', () => {
     fireEvent.change(within(dialog).getByLabelText(/^Name.*\(required\)/), { target: { value: 'Dr. Lee' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(mockedPut).toHaveBeenCalledTimes(1));
-    expect(mockedPut.mock.calls[0][0]).toBe(`/circles/${CIRCLE_ID}/emergency-info`);
-    const body = lastPutBody();
-    expect(Object.keys(body)).toEqual(['additional_doctors']);
-    // Existing Dr. Patel preserved, Dr. Lee appended.
-    expect(body.additional_doctors).toHaveLength(2);
-    expect(body.additional_doctors?.[1].name).toBe('Dr. Lee');
+    await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));
+    expect(mockedPost.mock.calls[0][0]).toBe(`/circles/${CIRCLE_ID}/providers`);
+    expect(mockedPost.mock.calls[0][1]).toMatchObject({ name: 'Dr. Lee', is_primary: false });
+    expect(mockedPut).not.toHaveBeenCalled();
   });
 
   // WA1 regression test — this is the case that shipped broken: GET resolves

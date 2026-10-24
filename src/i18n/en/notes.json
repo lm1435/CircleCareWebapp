@@ -44,7 +44,6 @@
   },
   "deleteTitle": "Delete note?",
   "deleteConfirm": "This note will be removed for everyone in the circle.",
-  "loadOlder": "Show earlier notes",
   "postRequirementHint": "Write a note or pick a mood to post",
   "moodStrip": {
     "summary": "This week: {{list}}",
@@ -58,5 +57,13 @@
     "count_okay_other": "{{count}} okay",
     "count_tough_one": "{{count}} tough",
     "count_tough_other": "{{count}} tough"
-  }
+  },
+  "date": {
+    "label": "Date",
+    "today": "Today",
+    "reset": "Reset to today",
+    "futureError": "Pick today or an earlier date."
+  },
+  "showOlder": "Show older notes",
+  "noOlder": "No older notes"
 }

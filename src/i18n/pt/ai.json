@@ -20,5 +20,10 @@
     "unavailable": "O Assistente de cuidado não está disponível no momento. Tente novamente mais tarde.",
     "sendFailed": "Desculpe, ocorreu um erro. Tente novamente.",
     "invalidMessage": "Não consegui processar essa mensagem. Tente reformular sua pergunta sobre cuidados ou saúde."
+  },
+  "actions": {
+    "openNotes": "Abrir as notas",
+    "openDoctors": "Ver os médicos",
+    "openProvider": "{{name}}: Visitas e notas"
   }
 }

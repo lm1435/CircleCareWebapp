@@ -22,6 +22,12 @@ import { apiSession, type ApiSession } from '../unhappy';
 // APPENDED to what it already holds; the original arrays are PUT back in
 // `finally`. Names are run-unique.
 //
+// DOCTORS go through the per-doctor API since notes-by-doctor (docs/plans/
+// notes-by-doctor.md): add = POST /providers, edit = PATCH /providers/:id,
+// delete = POST /providers/:id/archive. Contacts and insurance still write the
+// whole array with PUT /emergency-info. The assertions on what the SERVER holds
+// (read back through GET /emergency-info) are the same for all three.
+//
 // FALSIFY: PW_FALSIFY=emergency-arrays re-plays the hydration bug right after
 // the UI add (the array is PUT back without its first record) — the "add kept
 // every other record" check must go red.
@@ -101,16 +107,28 @@ async function gotoEmergency(page: Page, circleId: string): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Emergency Info' })).toBeVisible({ timeout: 20_000 });
 }
 
-/** Click Save in `dialog` and wait for the real PUT to answer 2xx and the dialog to close. */
-async function saveDialog(page: Page, dialog: Locator, circleId: string): Promise<void> {
+/**
+ * The write a Save (or a delete confirm) makes: the whole-array PUT /emergency-info for contacts and
+ * insurance; for DOCTORS the per-doctor API (create/patch, or archive for a delete).
+ */
+function isWrite(kind: Kind, circleId: string, op: 'save' | 'delete') {
+  return (r: { request(): { method(): string }; url(): string }): boolean => {
+    const method = r.request().method();
+    const path = new URL(r.url()).pathname;
+    if (kind.noun !== 'doctor') return method === 'PUT' && path === `/api/circles/${circleId}/emergency-info`;
+    const base = `/api/circles/${circleId}/providers`;
+    if (op === 'delete') return method === 'POST' && path.startsWith(`${base}/`) && path.endsWith('/archive');
+    return (method === 'POST' && path === base) || (method === 'PATCH' && path.startsWith(`${base}/`));
+  };
+}
+
+/** Click Save in `dialog` and wait for the real write to answer 2xx and the dialog to close. */
+async function saveDialog(page: Page, dialog: Locator, circleId: string, kind: Kind): Promise<void> {
   const [saved] = await Promise.all([
-    page.waitForResponse(
-      (r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/circles/${circleId}/emergency-info`,
-      { timeout: 20_000 }
-    ),
+    page.waitForResponse(isWrite(kind, circleId, 'save'), { timeout: 20_000 }),
     dialog.getByRole('button', { name: 'Save', exact: true }).click(),
   ]);
-  expect(saved.ok(), `PUT from the modal → ${saved.status()}`).toBe(true);
+  expect(saved.ok(), `write from the modal → ${saved.status()}`).toBe(true);
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 }
 
@@ -148,7 +166,7 @@ for (const kind of KINDS) {
       let dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible({ timeout: 15_000 });
       await kind.fill(dialog, n3);
-      await saveDialog(page, dialog, circleId);
+      await saveDialog(page, dialog, circleId, kind);
       await expect(page.getByRole('button', { name: `Actions for ${n3}`, exact: true })).toBeVisible({ timeout: 20_000 });
       if (FALSIFY.has('emergency-arrays')) await putArray(api, circleId, kind.field, (await readArray(api, circleId, kind.field)).slice(1));
       const afterAdd = await readArray(api, circleId, kind.field);
@@ -169,7 +187,7 @@ for (const kind of KINDS) {
       await expect(dialog).toBeVisible({ timeout: 15_000 });
       await expect(dialog.locator(kind.nameInput)).toHaveValue(n3);
       await dialog.locator(kind.nameInput).fill(renamed);
-      await saveDialog(page, dialog, circleId);
+      await saveDialog(page, dialog, circleId, kind);
       const afterEdit = await readArray(api, circleId, kind.field);
       const editNames = afterEdit.map((x) => x[kind.key]);
       expect(editNames, 'renamed in place, no leftover under the old name').toEqual([
@@ -184,13 +202,10 @@ for (const kind of KINDS) {
       const confirm = page.getByRole('dialog', { name: kind.removeTitle });
       await expect(confirm).toBeVisible({ timeout: 15_000 });
       const [deleted] = await Promise.all([
-        page.waitForResponse(
-          (r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/circles/${circleId}/emergency-info`,
-          { timeout: 20_000 }
-        ),
+        page.waitForResponse(isWrite(kind, circleId, 'delete'), { timeout: 20_000 }),
         confirm.getByRole('button', { name: 'Delete', exact: true }).click(),
       ]);
-      expect(deleted.ok(), `PUT from the delete confirm → ${deleted.status()}`).toBe(true);
+      expect(deleted.ok(), `write from the delete confirm → ${deleted.status()}`).toBe(true);
       await expect(page.getByRole('button', { name: `Actions for ${n1}`, exact: true })).toHaveCount(0, { timeout: 20_000 });
       await expect(page.getByRole('button', { name: `Actions for ${n2}`, exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: `Actions for ${renamed}`, exact: true })).toBeVisible();

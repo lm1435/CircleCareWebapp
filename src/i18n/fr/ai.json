@@ -20,5 +20,10 @@
     "unavailable": "L’assistant de soins est indisponible pour le moment. Réessayez plus tard.",
     "sendFailed": "Désolé, une erreur s’est produite. Réessayez.",
     "invalidMessage": "Je n’ai pas pu traiter ce message. Essayez de reformuler votre question sur les soins ou la santé."
+  },
+  "actions": {
+    "openNotes": "Ouvrir les notes",
+    "openDoctors": "Voir les médecins",
+    "openProvider": "{{name}} : Visites et notes"
   }
 }

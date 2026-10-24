@@ -524,15 +524,16 @@ test('Calendar: a day with logged doses gets the marker and a day row that opens
     // Another day has no marker.
     await expect(page.getByTestId('as-needed-marker')).toHaveCount(1);
 
+    // A Month cell opens the Day view for that date (care shifts W10).
     await cell.click();
-    const panel = page.getByRole('complementary');
+    const panel = page.getByTestId('day-view');
     const row = panel.getByTestId('as-needed-day-row');
     await expect(row).toContainText(name);
     // No count of any kind on an as-needed row (owner rule).
     await expect(row).toContainText('Given as needed');
     await expect(row.getByText('Given as needed')).not.toHaveText(/\d/);
     await expect(row).toHaveText(`${name}Given as needed`);
-    await checkA11y(page, 'calendar as-needed day panel', testInfo, { include: '[aria-label]' });
+    await checkA11y(page, 'calendar as-needed day view', testInfo, { include: '[aria-label]' });
 
     await row.click();
     const history = page.getByRole('dialog', { name: 'Dose history' });

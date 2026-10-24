@@ -62,7 +62,9 @@
       "notes": "Notizen",
       "notesDesc": "Wenn jemand eine Notiz hinzufügt",
       "tips": "Tagesübersicht und Tipps",
-      "tipsDesc": "Ihre Tagesübersicht und hilfreiche Hinweise"
+      "tipsDesc": "Ihre Tagesübersicht und hilfreiche Hinweise",
+      "shifts": "Schichten",
+      "shiftsDesc": "Neue offene Schichten, Erinnerungen und Änderungen an Ihren Schichten"
     },
     "someTurnedOff": "Teilweise ausgeschaltet",
     "confirmMedicationsOff": {
@@ -199,12 +201,10 @@
   },
   "appearance": {
     "title": "Darstellung",
-    "darkMode": "Dunkelmodus",
-    "comingSoon": "Demnächst",
-    "requested": "Angefragt",
-    "hint": "Möchten Sie den Dunkelmodus? Tippen Sie, um es uns mitzuteilen. Das hilft uns zu entscheiden, was wir als Nächstes entwickeln.",
-    "thanks": "Danke. Wir haben Ihre Stimme vermerkt.",
-    "a11yComingSoon": "Dunkelmodus, demnächst",
-    "a11yRequested": "Dunkelmodus, angefragt"
+    "themeLabel": "Farbschema",
+    "themeSystem": "System",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "hint": "System folgt Ihrem Gerät. Diese Auswahl gilt nur für dieses Gerät."
   }
 }

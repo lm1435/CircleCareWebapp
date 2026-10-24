@@ -380,5 +380,38 @@
   "conflict": {
     "title": "Alguien más actualizó esto",
     "message": "Otro cuidador cambió esta sección mientras la editabas. Cargamos la versión más reciente. Revísala y vuelve a hacer tu cambio."
+  },
+  "providers": {
+    "visitsLink": "Visitas y notas",
+    "visitsLinkFor": "con {{name}}",
+    "removedName": "{{name}} (quitado)",
+    "errors": {
+      "limitReached": "Llegaste al límite de 50 doctores. Quita uno para agregar otro.",
+      "conflict": "Alguien más acaba de cambiar los doctores. Volvimos a cargar la lista; inténtalo de nuevo.",
+      "archived": "Este doctor ya fue quitado. Volvimos a cargar la lista."
+    },
+    "visits": {
+      "title": "Visitas y notas",
+      "loading": "Cargando visitas",
+      "errorTitle": "No se pudieron cargar las visitas",
+      "notFound": "Este doctor no está disponible.",
+      "nextVisit": "Próxima visita",
+      "pastVisits": "Visitas anteriores",
+      "noPast": "Aún no hay visitas anteriores.",
+      "noteCount_one": "{{count}} nota",
+      "noteCount_other": "{{count}} notas",
+      "noNotes": "Aún no hay notas",
+      "addNote": "Agregar nota",
+      "addNoteFor": "Agregar nota a la visita del {{date}}",
+      "more": "ver más",
+      "less": "ver menos",
+      "showEarlier": "Mostrar visitas más antiguas",
+      "earlierLoaded": "Visitas más antiguas cargadas.",
+      "earlierFailed": "No se pudieron cargar las visitas más antiguas. Inténtalo de nuevo.",
+      "emptyTitle": "Aún no hay visitas con {{name}}",
+      "emptyBody": "Elige a {{name}} como doctor al agregar o editar una cita. Las visitas y sus notas aparecerán aquí.",
+      "addAppointment": "Agregar una cita",
+      "unnamedAuthor": "Alguien"
+    }
   }
 }

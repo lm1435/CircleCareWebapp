@@ -68,5 +68,9 @@
     "writeBlocked": "Está offline. Ligue-se para marcar isto.",
     "saveBlocked": "Está offline. Ligue-se para guardar isto.",
     "changeBlocked": "Está offline. Ligue-se para fazer alterações."
+  },
+  "addMenu": {
+    "shift": "Turno",
+    "shiftShort": "Turno"
   }
 }

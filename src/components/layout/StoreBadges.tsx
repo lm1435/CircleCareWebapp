@@ -59,7 +59,7 @@ export function StoreBadges({ layout = 'stack', className = '' }: StoreBadgesPro
 
   // Spec §4.5 shape: r16, hairline on ink, 44 minimum target, spring lift.
   const badgeClass =
-    'flex min-h-[44px] items-center gap-2.5 rounded-lg border border-cream/15 bg-ink px-3.5 py-2 text-cream no-underline transition-transform duration-fast ease-spring hover:-translate-y-0.5 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
+    'flex min-h-[44px] items-center gap-2.5 rounded-lg border border-badge-line bg-badge px-3.5 py-2 text-on-badge no-underline transition-transform duration-fast ease-spring hover:-translate-y-0.5 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
 
   return (
     <div
@@ -74,10 +74,10 @@ export function StoreBadges({ layout = 'stack', className = '' }: StoreBadgesPro
       >
         <AppleGlyph />
         <span className="flex flex-col items-start leading-none">
-          {/* `text-cream/80!` — `mono` paints ink-3 and a second `text-*` in the
+          {/* `text-on-badge/80!` — `mono` paints ink-3 and a second `text-*` in the
               same attribute does not win on specificity; source order decides
               (see Eyebrow.tsx). The `!` is the deterministic override. */}
-          <Text variant="mono" as="span" className="text-cream/80!">
+          <Text variant="mono" as="span" className="text-on-badge/80!">
             {t('downloadApp.appStoreLead')}
           </Text>
           <span className="mt-0.5 text-md font-semibold tracking-tight">
@@ -94,7 +94,7 @@ export function StoreBadges({ layout = 'stack', className = '' }: StoreBadgesPro
       >
         <GooglePlayGlyph />
         <span className="flex flex-col items-start leading-none">
-          <Text variant="mono" as="span" className="uppercase text-cream/80!">
+          <Text variant="mono" as="span" className="uppercase text-on-badge/80!">
             {t('downloadApp.playLead')}
           </Text>
           <span className="mt-0.5 text-md font-semibold tracking-tight">

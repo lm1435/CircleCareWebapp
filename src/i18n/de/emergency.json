@@ -380,5 +380,38 @@
   "conflict": {
     "title": "Jemand anderes hat dies aktualisiert",
     "message": "Eine andere Pflegeperson hat diesen Bereich geändert, während Sie ihn bearbeitet haben. Wir haben die neueste Version geladen. Prüfen Sie sie und nehmen Sie Ihre Änderung erneut vor."
+  },
+  "providers": {
+    "visitsLink": "Besuche und Notizen",
+    "visitsLinkFor": "mit {{name}}",
+    "removedName": "{{name}} (entfernt)",
+    "errors": {
+      "limitReached": "Sie haben das Limit von 50 Ärztinnen und Ärzten erreicht. Entfernen Sie einen Eintrag, um einen weiteren hinzuzufügen.",
+      "conflict": "Jemand anderes hat die Ärztinnen und Ärzte gerade geändert. Wir haben die Liste neu geladen. Bitte versuchen Sie es erneut.",
+      "archived": "Diese Ärztin bzw. dieser Arzt wurde bereits entfernt. Wir haben die Liste neu geladen."
+    },
+    "visits": {
+      "title": "Besuche und Notizen",
+      "loading": "Besuche werden geladen",
+      "errorTitle": "Die Besuche konnten nicht geladen werden",
+      "notFound": "Diese Ärztin bzw. dieser Arzt ist nicht verfügbar.",
+      "nextVisit": "Nächster Besuch",
+      "pastVisits": "Frühere Besuche",
+      "noPast": "Noch keine früheren Besuche.",
+      "noteCount_one": "{{count}} Notiz",
+      "noteCount_other": "{{count}} Notizen",
+      "noNotes": "Noch keine Notizen",
+      "addNote": "Notiz hinzufügen",
+      "addNoteFor": "Notiz zum Besuch am {{date}} hinzufügen",
+      "more": "mehr",
+      "less": "weniger",
+      "showEarlier": "Frühere Besuche anzeigen",
+      "earlierLoaded": "Frühere Besuche geladen.",
+      "earlierFailed": "Frühere Besuche konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+      "emptyTitle": "Noch keine Besuche bei {{name}}",
+      "emptyBody": "Wählen Sie {{name}} als Ärztin bzw. Arzt, wenn Sie einen Termin hinzufügen oder bearbeiten. Besuche und die zugehörigen Notizen erscheinen dann hier.",
+      "addAppointment": "Termin hinzufügen",
+      "unnamedAuthor": "Jemand"
+    }
   }
 }

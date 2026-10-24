@@ -156,12 +156,17 @@ test('additional doctor with +52 opens with its number, and a name-only edit pre
       await dialog.locator('#doctor-name').fill(renamed);
       const [saved] = await Promise.all([
         page.waitForResponse(
-          (r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/circles/${circleId}/emergency-info`,
+          // A doctor is edited through PATCH /providers/:id (notes by doctor).
+          (r) =>
+            r.request().method() === 'PATCH' &&
+            new URL(r.url()).pathname.startsWith(`/api/circles/${circleId}/providers/`),
           { timeout: 20_000 }
         ),
         dialog.getByRole('button', { name: 'Save', exact: true }).click(),
       ]);
-      expect(saved.ok(), `PUT emergency-info from the modal → ${saved.status()}`).toBe(true);
+      expect(saved.ok(), `PATCH providers from the modal → ${saved.status()}`).toBe(true);
+      // The edit names every field, so phone and country code travel with the rename.
+      expect(saved.request().postDataJSON()).toMatchObject({ phone: '55 8765 4321', country_code: '+52' });
       await expect(dialog).toBeHidden({ timeout: 20_000 });
 
       // The stored record: renamed, phone and '+52' intact.

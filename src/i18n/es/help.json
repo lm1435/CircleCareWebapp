@@ -58,7 +58,7 @@
         },
         {
           "question": "¿Qué notificaciones voy a recibir?",
-          "answer": "Recibirás avisos en cuatro grupos que puedes activar o desactivar en Perfil: Medicamentos (dosis tomadas, omitidas o sin marcar), Tareas y citas (cuando te asignan algo y antes de que llegue la hora), Notas (cuando alguien agrega una nota) y Resumen del día y consejos. Si eres el receptor de cuidado, también recibes tus propios recordatorios de dosis, que siempre están activos."
+          "answer": "Recibirás avisos en cinco grupos que puedes activar o desactivar en Perfil: Medicamentos (dosis tomadas, omitidas o sin marcar), Tareas y citas (cuando te asignan algo y antes de que llegue la hora), Notas (cuando alguien agrega una nota), Resumen del día y consejos y Turnos (turnos abiertos nuevos, recordatorios y cambios en tus turnos). Si eres el receptor de cuidado, también recibes tus propios recordatorios de dosis, que siempre están activos."
         },
         {
           "question": "¿Qué son las horas de silencio?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "¿Puedo desactivar ciertas notificaciones?",
-          "answer": "Sí. Ve a Perfil y luego a Notificaciones. Cada uno de los cuatro interruptores activa o desactiva un grupo completo para tu cuenta, en todos tus círculos. Si desactivas Medicamentos, no te avisaremos cuando una dosis quede sin marcar."
+          "answer": "Sí. Ve a Perfil y luego a Notificaciones. Cada uno de los cinco interruptores activa o desactiva un grupo completo para tu cuenta, en todos tus círculos. Si desactivas Medicamentos, no te avisaremos cuando una dosis quede sin marcar."
         }
       ]
     },

@@ -37,6 +37,19 @@ export const queryKeys = {
   calendarEvent: (circleId: string, eventId: string) =>
     ['calendarEvent', circleId, eventId] as const,
 
+  // Care shifts (docs/plans/care-shifts.md). Their OWN root, not under
+  // `calendarEvents`: the Schedule queries must never share a cache entry with
+  // a shifts-only response, and `useCachedCircleEvents` (title suggestions)
+  // walks every `calendarEvents` entry. Event writes invalidate `shifts` too
+  // (`invalidateEventQueries`), so a shift deleted/edited through the generic
+  // event hooks refreshes the Shifts view.
+  shifts: (circleId: string) => ['shifts', circleId] as const,
+  shiftsRange: (circleId: string, range: CalendarEventsRange) =>
+    ['shifts', circleId, 'range', range] as const,
+  // The badge's own bounded window (today .. today+6 in the recipient's zone).
+  openShiftsWindow: (circleId: string, range: CalendarEventsRange) =>
+    ['shifts', circleId, 'open', range] as const,
+
   // Medications
   medicationTodaySummary: (circleId: string) => ['medicationTodaySummary', circleId] as const,
   medicationConfirmations: (circleId: string, params?: Record<string, unknown>) =>
@@ -75,6 +88,20 @@ export const queryKeys = {
 
   // Emergency info
   emergencyInfo: (circleId: string) => ['emergencyInfo', circleId] as const,
+
+  // Providers (doctors) — docs/plans/notes-by-doctor.md. The bare key is the
+  // invalidation prefix for every list variant; `includeArchived` is part of the
+  // list key so the picker (active only) and the name lookup for a removed doctor
+  // never share an entry.
+  providers: (circleId: string) => ['providers', circleId] as const,
+  providersList: (circleId: string, includeArchived: boolean) =>
+    ['providers', circleId, { include_archived: includeArchived }] as const,
+  // One doctor's Visits & notes (infinite query). The `(circleId)` form is the
+  // prefix every appointment / note / provider write invalidates.
+  providerVisits: (circleId: string, providerId?: string) =>
+    providerId === undefined
+      ? (['providerVisits', circleId] as const)
+      : (['providerVisits', circleId, providerId] as const),
 
   // Documents
   documents: (circleId: string) => ['documents', circleId] as const,

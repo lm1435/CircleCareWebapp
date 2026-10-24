@@ -156,6 +156,12 @@ export interface CircleDetail {
   /** The viewer's role / permissions. Optional (older backend) — see `Circle`. */
   viewer_role?: CircleRole;
   viewer_permissions?: ViewerPermission[];
+  /**
+   * ADDITIVE (care shifts, lapsed Premium): a FREE circle that still holds live shift
+   * rows serves `true`. Omitted on a premium circle, a view-only seat and an older
+   * backend: absent means false.
+   */
+  has_shifts?: boolean;
 }
 
 interface CircleDetailEnvelope {

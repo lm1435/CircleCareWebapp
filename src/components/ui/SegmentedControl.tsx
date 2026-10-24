@@ -1,8 +1,13 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactElement } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 
 export interface SegmentedControlOption {
   value: string;
   label: string;
+  /**
+   * Optional trailing badge inside the segment (the Calendar's amber "3 open").
+   * It joins the tab's accessible name, so it must be TEXT, never an icon alone.
+   */
+  badge?: ReactNode;
 }
 
 /** Extra detail about how a change happened, passed as `onChange`'s 2nd arg. */
@@ -67,9 +72,9 @@ const STACK_HIDE_THUMB: Record<number, string> = {
 };
 
 const STACK_ACTIVE_GROUND: Record<number, string> = {
-  2: '@max-[160px]:bg-moss',
-  3: '@max-[240px]:bg-moss',
-  4: '@max-[320px]:bg-moss',
+  2: '@max-[160px]:bg-primary-fill',
+  3: '@max-[240px]:bg-primary-fill',
+  4: '@max-[320px]:bg-primary-fill',
 };
 
 /**
@@ -171,7 +176,7 @@ export function SegmentedControl({
         <span
           aria-hidden="true"
           data-testid="segmented-thumb"
-          className={`absolute top-1 bottom-1 left-1 rounded-[10px] bg-moss transition-transform duration-normal ease-spring motion-reduce:transition-none ${
+          className={`absolute top-1 bottom-1 left-1 rounded-[10px] bg-primary-fill transition-transform duration-normal ease-spring motion-reduce:transition-none ${
             STACK_HIDE_THUMB[count] ?? ''
           }`.trim()}
           style={{
@@ -202,11 +207,12 @@ export function SegmentedControl({
                 SQUEEZE_PADDING[count] ?? ''
               } ${
                 selected
-                  ? `text-cream ${STACK_ACTIVE_GROUND[count] ?? ''}`
+                  ? `text-on-primary ${STACK_ACTIVE_GROUND[count] ?? ''}`
                   : 'text-ink-2 hover:text-ink'
               }`.trim()}
             >
               {option.label}
+              {option.badge ? <span className="ml-2 align-middle">{option.badge}</span> : null}
             </button>
           );
         })}

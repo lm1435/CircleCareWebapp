@@ -18,7 +18,8 @@
     "permissionDenied": "Não tem permissão para fazer alterações neste círculo.",
     "saveFailed": "Não foi possível guardar as suas alterações. Tente novamente.",
     "eventNotFound": "Esse evento já não existe. Outra pessoa pode tê-lo eliminado.",
-    "doseAlreadyLogged": "Esta dose já foi registada: a hora não pode ser alterada."
+    "doseAlreadyLogged": "Esta dose já foi registada: a hora não pode ser alterada.",
+    "providerUnavailable": "Este médico já não está disponível. Escolha outro médico ou Nenhum."
   },
   "addEvent": {
     "saveChanges": "Guardar alterações",
@@ -54,6 +55,9 @@
     "asNeeded": {
       "repeatHint": "Sem horários fixos. Os familiares são notificados quando alguém regista uma dose.",
       "updateOldBackend": "Ainda não foi possível adicionar um medicamento se necessário — atualize a app e tente novamente."
+    },
+    "doctor": {
+      "filledFrom": "Preenchido com a morada de {{name}}"
     }
   },
   "deleteEvent": {
@@ -91,5 +95,8 @@
     "deleteConfirm": "Eliminar esta nota? Isto não pode ser desfeito.",
     "errorSaving": "Não foi possível guardar a sua nota. Tente novamente."
   },
-  "permissionDenied": "Não tem permissão para fazer alterações neste círculo."
+  "permissionDenied": "Não tem permissão para fazer alterações neste círculo.",
+  "eventTypes": {
+    "shift": "Turno"
+  }
 }

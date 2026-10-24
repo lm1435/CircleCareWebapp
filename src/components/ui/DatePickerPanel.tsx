@@ -617,7 +617,7 @@ export function DatePickerPanel({
                       ? // Selected is NOT the moss fill alone (WCAG 1.4.1): the
                         // weight carries it without colour, and `aria-selected`
                         // carries it without sight.
-                        'bg-moss font-semibold text-cream'
+                        'bg-primary-fill font-semibold text-on-primary'
                       : outside
                         ? 'text-ink-3 hover:bg-bg-2'
                         : 'text-ink hover:bg-bg-2'
@@ -628,7 +628,7 @@ export function DatePickerPanel({
                     <span
                       aria-hidden="true"
                       className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        chosen ? 'bg-cream' : 'bg-moss'
+                        chosen ? 'bg-on-primary' : 'bg-primary-fill'
                       }`}
                     />
                   ) : null}

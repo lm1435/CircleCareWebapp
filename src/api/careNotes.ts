@@ -9,9 +9,10 @@ import { apiClient } from '@/lib/api';
 //          note_date DESC, created_at DESC
 //          → { success, data: { notes, today, timezone } }  (tasks envelope idiom)
 // - POST   /circles/:circleId/care-notes
-//          body: { body? (<=2000), mood?, categories? } — body-or-mood required;
-//          note_date is stamped SERVER-SIDE in the recipient TZ (client never
-//          computes it — midnight-boundary rule) → { success, data: { note } }
+//          body: { body? (<=2000), mood?, categories?, note_date? } — body-or-mood
+//          required; note_date (today or earlier, recipient TZ) is sent ONLY for
+//          a past day — absent, the server stamps today in the recipient TZ
+//          → { success, data: { note } }
 // - PATCH  /circles/:circleId/care-notes/:noteId (author-only; result must
 //          still satisfy body-or-mood) → { success, data: { note } }
 // - DELETE /circles/:circleId/care-notes/:noteId (author or circle owner) → 200
@@ -41,7 +42,7 @@ export interface CareNote {
   id: string;
   circle_id: string;
   author_id: string;
-  /** YYYY-MM-DD in the care recipient's timezone (server-stamped). */
+  /** YYYY-MM-DD in the care recipient's timezone (server stamps today unless a past day was sent). */
   note_date: string;
   body: string | null;
   mood: CareNoteMood | null;
@@ -77,6 +78,8 @@ export interface CareNoteInput {
   body?: string | null;
   mood?: CareNoteMood | null;
   categories?: CareNoteCategory[];
+  /** YYYY-MM-DD, today or earlier (recipient TZ). Omit for today / unchanged. */
+  note_date?: string;
 }
 
 interface NotesEnvelope {

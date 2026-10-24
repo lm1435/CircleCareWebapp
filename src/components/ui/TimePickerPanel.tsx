@@ -503,7 +503,7 @@ export function TimePickerPanel({
                       // who cannot separate the two grounds, and
                       // `aria-selected` carries it for anyone who cannot see
                       // either.
-                      chosen ? 'bg-moss font-semibold text-cream' : 'text-ink hover:bg-bg-2'
+                      chosen ? 'bg-primary-fill font-semibold text-on-primary' : 'text-ink hover:bg-bg-2'
                     }`}
                   >
                     {option.label}

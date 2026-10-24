@@ -19,6 +19,27 @@
           "answer": "Ouvrez votre Profil et choisissez Gérer l’abonnement : si vous vous êtes abonné sur ce site, vous accédez directement à votre espace de facturation, où vous pouvez résilier en quelques clics. Si vous vous êtes abonné dans l’application mobile, résiliez depuis votre téléphone : Réglages > Abonnements sur iPhone, ou Play Store > Paiements et abonnements sur Android. Dans les deux cas, vous gardez Premium jusqu’à la fin de la période déjà payée, et vous n’avez jamais besoin de contacter l’assistance pour résilier."
         }
       ]
+    },
+    "notifications": {
+      "title": "Notifications",
+      "items": [
+        {
+          "question": "Où vais-je recevoir les notifications ?",
+          "answer": "Les rappels et les alertes sont envoyés sous forme de notifications push via l’application mobile CircleCare. Vous pouvez gérer vos préférences de notification ici sur le web, mais pour recevoir réellement les rappels, installez l’application sur votre téléphone et activez les notifications."
+        },
+        {
+          "question": "Quelles notifications vais-je recevoir ?",
+          "answer": "Vous recevrez des alertes réparties en cinq groupes que vous pouvez activer ou désactiver dans Profil : Médicaments (doses prises, sautées ou non renseignées), Tâches et rendez-vous (lorsqu’un élément vous est attribué et avant son échéance), Notes (lorsque quelqu’un ajoute une note), Conseils et suggestions et Quarts (nouveaux quarts à pourvoir, rappels et changements de vos quarts). Si vous êtes la personne aidée, vous recevez aussi vos propres rappels de dose, toujours activés."
+        },
+        {
+          "question": "Que sont les heures de silence ?",
+          "answer": "Les heures de silence suspendent les notifications pendant les plages que vous définissez (par exemple la nuit, de 22 h à 7 h). Allez dans Profil et paramètres pour configurer vos heures de silence."
+        },
+        {
+          "question": "Puis-je désactiver certaines notifications ?",
+          "answer": "Oui. Allez dans Profil, puis Notifications. Chacun des cinq interrupteurs active ou désactive un groupe entier pour votre compte, dans tous les cercles dont vous faites partie. Si vous désactivez Médicaments, vous ne serez pas prévenu lorsqu’une dose n’est pas renseignée."
+        }
+      ]
     }
   }
 }

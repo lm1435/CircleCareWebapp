@@ -24,8 +24,15 @@ import {
   useCareNotes,
   useCreateCareNote,
   useDeleteCareNote,
+  useOlderCareNotes,
   useUpdateCareNote,
 } from '@/hooks/useCareNotes';
+import {
+  NOTE_PAGE_DAYS,
+  daysBetween,
+  olderPagesNeeded,
+  shiftDateBack,
+} from '@/lib/noteDate';
 import { useCircle } from '@/hooks/useCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAuthStore } from '@/store/authStore';
@@ -35,8 +42,8 @@ import { blockOfflineWrite } from '@/lib/offlineWrite';
 
 // Daily Care Notes page (Wave 3, Task 16 — mobile-parity pass) — the web twin
 // of mobile's NotesTab. A shared per-circle day journal: composer at the top
-// (today only — note_date is stamped SERVER-side in the recipient TZ, never
-// computed here), then entries grouped by day, reverse-chron, with
+// (today by default; a past day via the Date row — "today" is always the
+// server-resolved recipient-TZ value, never the browser's), then entries grouped by day, reverse-chron, with
 // recipient-TZ day labels. Own entries get an edit/delete MoreMenu; the circle
 // owner can delete any entry. View-only members see the thread but no
 // composer (ViewOnlyBanner, tasks idiom). Posting is OPTIMISTIC: the hook
@@ -45,10 +52,14 @@ import { blockOfflineWrite } from '@/lib/offlineWrite';
 
 const SKELETON_ROWS = [0, 1, 2];
 
-/** Server default window (last 14 days) and hard cap (92 days) per the API. */
+/**
+ * Server default window (last 14 days). "Show older notes" widens it in 14-day
+ * steps up to one full 92-day server page, then loads whole 92-day pages
+ * before it, repeatably, with no cap (lib/noteDate.ts, useOlderCareNotes).
+ */
 const DEFAULT_WINDOW_DAYS = 14;
 const PAGE_WINDOW_DAYS = 14;
-const MAX_WINDOW_DAYS = 92;
+const MAX_WINDOW_DAYS = NOTE_PAGE_DAYS;
 
 /**
  * Shift a YYYY-MM-DD date string by whole days. Anchored at UTC noon so the
@@ -84,10 +95,12 @@ interface DayGroup {
   notes: CareNote[];
 }
 
-/** Serialize a draft for the API: omit empty fields on create. */
-function draftToInput(draft: NoteDraft): CareNoteInput {
+/** Serialize a draft for the API: omit empty fields on create. `note_date` only
+ *  for a past day, so the common payload is unchanged. */
+function draftToInput(draft: NoteDraft, today: string | undefined): CareNoteInput {
   const body = draft.body.trim();
   return {
+    ...(draft.noteDate && today && draft.noteDate !== today ? { note_date: draft.noteDate } : {}),
     ...(body ? { body } : {}),
     ...(draft.mood ? { mood: draft.mood } : {}),
     ...(draft.categories.length > 0 ? { categories: draft.categories } : {}),
@@ -114,11 +127,13 @@ export default function NotesPage(): ReactElement {
   // `searchParams.get('date')` directly anywhere past the first render would
   // see nothing to act on. An invalid/malformed value is dropped right here
   // ("Invalid ... dates: ignore" — the page just renders normally).
-  const [pendingDate] = useState<string | null>(() => {
+  const [pendingDate, setPendingDate] = useState<string | null>(() => {
     const raw = searchParams.get('date');
     return raw && DATE_PARAM_RE.test(raw) ? raw : null;
   });
   const scrolledForDateRef = useRef(false);
+  // Older history beyond the base 92-day window: whole pages, no cap.
+  const [olderPages, setOlderPages] = useState(0);
 
   const createMutation = useCreateCareNote();
   const updateMutation = useUpdateCareNote();
@@ -144,7 +159,7 @@ export default function NotesPage(): ReactElement {
       const live = d.body.trim() !== '' || d.mood !== null || d.categories.length > 0;
       return live ? d : inFlightDraftRef.current;
     },
-    setDraft
+    (restored) => setDraft({ ...EMPTY_NOTE_DRAFT, ...restored })
   );
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
@@ -154,12 +169,19 @@ export default function NotesPage(): ReactElement {
     if (circleId) Analytics.careNotesViewed(circleId);
   }, [circleId]);
 
-  const notes = useMemo(() => notesQuery.data?.notes ?? [], [notesQuery.data]);
   // Server-resolved "today" + timezone (recipient TZ fallback chain applied).
   const today = notesQuery.data?.today;
+  const older = useOlderCareNotes(circleId, today, olderPages);
+  const notes = useMemo(
+    () =>
+      older.notes.length > 0
+        ? [...(notesQuery.data?.notes ?? []), ...older.notes]
+        : (notesQuery.data?.notes ?? []),
+    [notesQuery.data, older.notes]
+  );
   const timezone = notesQuery.data?.timezone ?? 'America/New_York';
 
-  // Widen the window to include `pendingDate` (≤ MAX_WINDOW_DAYS), then
+  // Widen the window to include `pendingDate` (older pages past 92 days), then
   // scroll to it once loaded — a single effect re-evaluated on every render
   // so the widen and the eventual scroll never race each other (widening
   // schedules a state update; this effect simply runs again with the fresher
@@ -168,18 +190,26 @@ export default function NotesPage(): ReactElement {
   useEffect(() => {
     if (!pendingDate || scrolledForDateRef.current || !today) return;
 
-    const oldestAllowedForDate = shiftDateString(today, -(MAX_WINDOW_DAYS - 1));
-    if (pendingDate < oldestAllowedForDate || pendingDate > today) {
-      // Too old (past the hard cap) or in the future — ignore outright, per
-      // the plan's edge case; never touch the window for it.
+    if (pendingDate > today) {
+      // In the future — ignore outright; never touch the window for it.
       scrolledForDateRef.current = true;
       return;
     }
 
-    const loadedFrom = fromDate ?? shiftDateString(today, -(DEFAULT_WINDOW_DAYS - 1));
+    // Widen to reach the date: the base window first (up to 92 days), then
+    // whole older pages (no cap).
+    const loadedFrom = fromDate ?? shiftDateBack(today, DEFAULT_WINDOW_DAYS - 1);
+    const daysBack = daysBetween(pendingDate, today);
     if (pendingDate < loadedFrom) {
-      setFromDate(pendingDate);
+      const baseFloor = shiftDateBack(today, MAX_WINDOW_DAYS - 1);
+      setFromDate(pendingDate < baseFloor ? baseFloor : pendingDate);
+      const pagesNeeded = olderPagesNeeded(daysBack);
+      if (pagesNeeded > olderPages) setOlderPages(pagesNeeded);
       return; // re-run once the widened window's data lands
+    }
+    if (olderPagesNeeded(daysBack) > olderPages) {
+      setOlderPages(olderPagesNeeded(daysBack));
+      return;
     }
 
     // `useCareNotes`'s `placeholderData: keepPreviousData` can report
@@ -191,7 +221,12 @@ export default function NotesPage(): ReactElement {
     // retried. Gate on `isPlaceholderData` too: only settled, non-placeholder
     // data for the CURRENT `fromDate` is trustworthy about whether the
     // target day group exists.
-    if (notesQuery.isLoading || notesQuery.isFetching || notesQuery.isPlaceholderData) {
+    if (
+      notesQuery.isLoading ||
+      notesQuery.isFetching ||
+      notesQuery.isPlaceholderData ||
+      older.isFetching
+    ) {
       return; // keep waiting — do not touch the ref or the URL
     }
 
@@ -204,13 +239,17 @@ export default function NotesPage(): ReactElement {
     scrollToDayGroup(pendingDate);
     // Clear the param (replace) so a later re-render / back-nav never re-fires
     // this scroll for the same date.
-    const next = new URLSearchParams(searchParams);
-    next.delete('date');
-    setSearchParams(next, { replace: true });
+    if (searchParams.has('date')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('date');
+      setSearchParams(next, { replace: true });
+    }
   }, [
     pendingDate,
     today,
     fromDate,
+    olderPages,
+    older.isFetching,
     notesQuery.isLoading,
     notesQuery.isFetching,
     notesQuery.isPlaceholderData,
@@ -255,7 +294,8 @@ export default function NotesPage(): ReactElement {
   // ── Composer (create) ──────────────────────────────────────────────────────
   function handlePost(): void {
     const submitted = draft;
-    const input = draftToInput(submitted);
+    const input = draftToInput(submitted, today);
+    const sentDate = input.note_date ?? null;
     if (input.body === undefined && input.mood === undefined) return;
     // Offline: explain, never queue — and the draft stays in the composer
     // (returns before the optimistic clear below). lib/offlineWrite.ts.
@@ -286,7 +326,14 @@ export default function NotesPage(): ReactElement {
           // user-authored health content, not an id/count/enum-of-fixed-shape.
           Analytics.careNoteAdded(circleId, {
             categoryCount: submitted.categories.length,
+            backdated: sentDate !== null,
+            daysBack: sentDate && today ? daysBetween(sentDate, today) : 0,
           });
+          // Filed under another day: widen to it and bring it into view.
+          if (sentDate) {
+            scrolledForDateRef.current = false;
+            setPendingDate(sentDate);
+          }
         },
         onError: () => {
           inFlightDraftRef.current = null;
@@ -312,6 +359,8 @@ export default function NotesPage(): ReactElement {
     const body = edited.body.trim();
     // The edit composer's gate mirrors the server refine (body-or-mood).
     if (!body && !edited.mood) return;
+    const originalDate = notes.find((n) => n.id === noteId)?.note_date;
+    const newDate = edited.noteDate && edited.noteDate !== originalDate ? edited.noteDate : null;
     // Same guard, same reason as `handlePost` — checked AFTER the validity
     // gate so a claim is never taken on a call that was going to bail out.
     if (updateMutation.isPending || !editGuard.claim()) return;
@@ -321,12 +370,27 @@ export default function NotesPage(): ReactElement {
         noteId,
         // PATCH sends explicit values (null clears) — the result must still
         // satisfy body-or-mood, enforced above and by the server refine.
-        input: { body: body || null, mood: edited.mood, categories: edited.categories },
+        input: {
+          body: body || null,
+          mood: edited.mood,
+          categories: edited.categories,
+          // Only when the date actually changed.
+          ...(newDate ? { note_date: newDate } : {}),
+        },
       },
       {
         onSuccess: () => {
           // Mirrors careNoteAdded: category COUNT only, never mood/body/names.
-          Analytics.careNoteUpdated(circleId, { categoryCount: edited.categories.length });
+          const finalDate = newDate ?? originalDate;
+          Analytics.careNoteUpdated(circleId, {
+            categoryCount: edited.categories.length,
+            backdated: !!today && !!finalDate && finalDate < today,
+            daysBack: today && finalDate && finalDate < today ? daysBetween(finalDate, today) : 0,
+          });
+          if (newDate) {
+            scrolledForDateRef.current = false;
+            setPendingDate(newDate);
+          }
           setEditingNoteId(null);
         },
         onError: () => showToast(t('notes:composer.errorSaving'), 'error'),
@@ -355,17 +419,41 @@ export default function NotesPage(): ReactElement {
   }
 
   // ── Older pages ────────────────────────────────────────────────────────────
-  const oldestAllowed = today ? shiftDateString(today, -(MAX_WINDOW_DAYS - 1)) : undefined;
   const currentFrom =
     fromDate ?? (today ? shiftDateString(today, -(DEFAULT_WINDOW_DAYS - 1)) : undefined);
-  const canLoadOlder =
-    !!today && !!oldestAllowed && !!currentFrom && currentFrom > oldestAllowed;
+  const baseFloor = today ? shiftDateString(today, -(MAX_WINDOW_DAYS - 1)) : undefined;
+  const baseWindowFull = !!currentFrom && !!baseFloor && currentFrom <= baseFloor;
 
   function handleLoadOlder(): void {
-    if (!currentFrom || !oldestAllowed) return;
-    const next = shiftDateString(currentFrom, -PAGE_WINDOW_DAYS);
-    setFromDate(next < oldestAllowed ? oldestAllowed : next);
+    if (!currentFrom || !baseFloor) return;
+    if (!baseWindowFull) {
+      // Below one full 92-day page: widen the base window in 14-day steps.
+      const next = shiftDateString(currentFrom, -PAGE_WINDOW_DAYS);
+      setFromDate(next < baseFloor ? baseFloor : next);
+      return;
+    }
+    if (older.isFetching) return;
+    const nextPage = olderPages + 1;
+    setOlderPages(nextPage);
+    Analytics.careNotesOlderLoaded({ page: nextPage });
   }
+
+  const olderControl: ReactElement | null = !today ? null : older.reachedEnd ? (
+    <p className="m-0 text-center text-sm text-ink-3" data-testid="notes-no-older">
+      {t('notes:noOlder')}
+    </p>
+  ) : (
+    <div className="flex justify-center">
+      <Button
+        variant="ghost"
+        onClick={handleLoadOlder}
+        disabled={notesQuery.isFetching || older.isFetching}
+        data-testid="notes-show-older"
+      >
+        {t('notes:showOlder')}
+      </Button>
+    </div>
+  );
 
   // ── Body ───────────────────────────────────────────────────────────────────
   let body: ReactElement;
@@ -398,13 +486,14 @@ export default function NotesPage(): ReactElement {
     // Calm empty state — no starter chips (empty-states-stay-calm lesson);
     // the composer above is the call to action.
     body = (
-      <div className="px-5">
+      <div className="flex flex-col gap-6 px-5">
         <EmptyState
           tone="dusk"
           icon="document-text-outline"
           title={t('notes:empty.title')}
           description={t('notes:empty.hint')}
         />
+        {olderControl}
       </div>
     );
   } else {
@@ -433,19 +522,14 @@ export default function NotesPage(): ReactElement {
                     onSaveEdit={(edited) => handleSaveEdit(note.id, edited)}
                     onDelete={() => setDeletingNoteId(note.id)}
                     savePending={updateMutation.isPending}
+                    today={today}
                   />
                 );
               })}
             </ul>
           </section>
         ))}
-        {canLoadOlder && (
-          <div className="flex justify-center">
-            <Button variant="ghost" onClick={handleLoadOlder} disabled={notesQuery.isFetching}>
-              {t('notes:loadOlder')}
-            </Button>
-          </div>
-        )}
+        {olderControl}
       </div>
     );
   }
@@ -473,6 +557,7 @@ export default function NotesPage(): ReactElement {
               submitLabel={t('notes:composer.post')}
               submitting={createMutation.isPending}
               error={postError}
+              today={today}
             />
           </Sheet>
         </div>

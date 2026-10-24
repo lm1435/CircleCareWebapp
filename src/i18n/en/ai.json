@@ -20,5 +20,10 @@
     "unavailable": "The Care Assistant is unavailable right now. Please try again later.",
     "sendFailed": "Sorry, I encountered an error. Please try again.",
     "invalidMessage": "I couldn't process that message. Try rephrasing your question about care or health."
+  },
+  "actions": {
+    "openNotes": "Open Notes",
+    "openDoctors": "See Doctors",
+    "openProvider": "{{name}}: Visits & notes"
   }
 }

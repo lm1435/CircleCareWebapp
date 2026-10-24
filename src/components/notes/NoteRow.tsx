@@ -58,6 +58,8 @@ interface NoteRowProps {
   onSaveEdit: (draft: NoteDraft) => void;
   onDelete: () => void;
   savePending: boolean;
+  /** Recipient-timezone today — the edit Date row's ceiling. */
+  today?: string;
 }
 
 /**
@@ -108,6 +110,7 @@ export function NoteRow({
   onSaveEdit,
   onDelete,
   savePending,
+  today,
 }: NoteRowProps): ReactElement {
   const { t } = useTranslation('notes');
   const hourCycle = useHourCycle();
@@ -115,6 +118,7 @@ export function NoteRow({
     body: note.body ?? '',
     mood: note.mood,
     categories: note.categories,
+    noteDate: note.note_date,
   }));
 
   // The row's own MoreMenu trigger — kept across the editing<->static
@@ -132,7 +136,12 @@ export function NoteRow({
   // second edit of the same note.
   useEffect(() => {
     if (editing) {
-      setDraft({ body: note.body ?? '', mood: note.mood, categories: note.categories });
+      setDraft({
+        body: note.body ?? '',
+        mood: note.mood,
+        categories: note.categories,
+        noteDate: note.note_date,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
@@ -181,6 +190,7 @@ export function NoteRow({
           // this mounts, so this is what carries focus forward instead of
           // letting it fall to <body>.
           autoFocus
+          today={today}
         />
       </Card>
     );

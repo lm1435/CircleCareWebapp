@@ -5,11 +5,15 @@
   },
   "title": "Calendar",
   "subtitle": "Medications, appointments, and tasks in one place.",
+  "day": "Day",
   "week": "Week",
   "month": "Month",
   "viewLabel": "Calendar view",
+  "dayViewLabel": "Day view",
   "weekViewLabel": "Week view calendar",
   "monthViewLabel": "Month view calendar",
+  "previousDay": "Previous day",
+  "nextDay": "Next day",
   "previousWeek": "Previous week",
   "nextWeek": "Next week",
   "previousMonth": "Previous month",
@@ -43,7 +47,8 @@
   "eventTypes": {
     "medication": "Medication",
     "appointment": "Appointment",
-    "task": "Task"
+    "task": "Task",
+    "shift": "Shift"
   },
   "status": {
     "taken": "Taken",
@@ -72,7 +77,9 @@
     "close": "Close event details",
     "completedByLabel": "Completed by",
     "completedByValue": "{{name}} · {{when}}",
-    "completedLabel": "Completed on"
+    "completedLabel": "Completed on",
+    "doctor": "Doctor",
+    "seeAllVisits": "See all visits"
   },
   "recurrence": {
     "daily": "Daily",
@@ -89,7 +96,9 @@
     "invalidOccurrenceDate": "This event no longer repeats on that day — the calendar has been refreshed.",
     "eventNotFound": "That event no longer exists. Someone else may have deleted it.",
     "recurrenceDaysExcludeStart": "The start day must stay selected.",
-    "asNeededLocked": "A medication can't be switched between scheduled and as needed. Discontinue it and add it again."
+    "asNeededLocked": "A medication can't be switched between scheduled and as needed. Discontinue it and add it again.",
+    "providerUnavailable": "That doctor is no longer available. Pick another doctor or choose None.",
+    "providerNotAllowed": "Only appointments can have a doctor."
   },
   "addEvent": {
     "addEvent": "Add event",
@@ -280,6 +289,15 @@
       "lockedRepeat": "As needed · can't be changed. To put this medication on a schedule, discontinue it and add it again.",
       "remindersNone": "No reminders. As-needed medications don't have a schedule.",
       "updateOldBackend": "Couldn't add an as-needed medication yet — please update the app and try again."
+    },
+    "doctor": {
+      "label": "Doctor",
+      "none": "None",
+      "add": "Add a doctor",
+      "removed": "{{name}} (removed)",
+      "linked": "Linked doctor",
+      "series": "Applies to the whole series",
+      "filledFrom": "Filled in from {{name}}'s address"
     }
   },
   "deleteEvent": {
@@ -353,5 +371,16 @@
     "noteCount_one": "{{count}} note",
     "noteCount_other": "{{count}} notes"
   },
-  "permissionDenied": "You don't have permission to make changes in this circle."
+  "permissionDenied": "You don't have permission to make changes in this circle.",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "tomorrow": "Tomorrow",
+  "daySummary": {
+    "doses_one": "{{count}} dose",
+    "doses_other": "{{count}} doses",
+    "appointments_one": "{{count}} appointment",
+    "appointments_other": "{{count}} appointments",
+    "tasks_one": "{{count}} task",
+    "tasks_other": "{{count}} tasks"
+  }
 }

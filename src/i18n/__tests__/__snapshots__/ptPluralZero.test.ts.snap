@@ -22,6 +22,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Mais eventos de dia inteiro em seg.: 1",
     "Mais 2 eventos de dia inteiro em seg.",
   ],
+  "pt calendar:daySummary.appointments": [
+    "Consultas: 0",
+    "Consultas: 1",
+    "2 consultas",
+  ],
+  "pt calendar:daySummary.doses": [
+    "Doses: 0",
+    "Doses: 1",
+    "2 doses",
+  ],
+  "pt calendar:daySummary.tasks": [
+    "Tarefas: 0",
+    "Tarefas: 1",
+    "2 tarefas",
+  ],
   "pt calendar:eventCount": [
     "Eventos: 0",
     "Eventos: 1",
@@ -96,6 +111,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Documentos: 0",
     "Documentos: 1",
     "2 documentos",
+  ],
+  "pt emergency:providers.visits.noteCount": [
+    "Notas: 0",
+    "Notas: 1",
+    "2 notas",
   ],
   "pt emergency:shareSummary.careNotesCount": [
     "0 notas diárias de cuidado",
@@ -202,6 +222,41 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
     "Os horários das doses de Ana seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
   ],
+  "pt shifts:duration.hours": [
+    "0 hora",
+    "1 hora",
+    "2 horas",
+  ],
+  "pt shifts:duration.minutes": [
+    "0 minuto",
+    "1 minuto",
+    "2 minutos",
+  ],
+  "pt shifts:mode.openBadge": [
+    "0 em aberto",
+    "1 em aberto",
+    "2 em aberto",
+  ],
+  "pt shifts:month.cell": [
+    "{{date}}, 0 plantão, {{open}}",
+    "{{date}}, 1 plantão, {{open}}",
+    "{{date}}, 2 plantões, {{open}}",
+  ],
+  "pt shifts:openCount": [
+    "nenhum em aberto",
+    "1 em aberto",
+    "2 em aberto",
+  ],
+  "pt shifts:summary": [
+    "0 plantão · {{open}}.",
+    "1 plantão · {{open}}.",
+    "2 plantões · {{open}}.",
+  ],
+  "pt shifts:summaryShort": [
+    "0 plantão · {{open}}",
+    "1 plantão · {{open}}",
+    "2 plantões · {{open}}",
+  ],
   "pt upgrade:trialPeriod.day": [
     "0 dia",
     "1 dia",
@@ -241,6 +296,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Mais eventos de dia inteiro em seg.: 0",
     "Mais eventos de dia inteiro em seg.: 1",
     "Mais 2 eventos de dia inteiro em seg.",
+  ],
+  "pt-PT calendar:daySummary.appointments": [
+    "Consultas: 0",
+    "Consultas: 1",
+    "2 consultas",
+  ],
+  "pt-PT calendar:daySummary.doses": [
+    "Doses: 0",
+    "Doses: 1",
+    "2 doses",
+  ],
+  "pt-PT calendar:daySummary.tasks": [
+    "Tarefas: 0",
+    "Tarefas: 1",
+    "2 tarefas",
   ],
   "pt-PT calendar:eventCount": [
     "Eventos: 0",
@@ -316,6 +386,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Documentos: 0",
     "Documentos: 1",
     "2 documentos",
+  ],
+  "pt-PT emergency:providers.visits.noteCount": [
+    "Notas: 0",
+    "Notas: 1",
+    "2 notas",
   ],
   "pt-PT emergency:shareSummary.careNotesCount": [
     "0 notas diárias de cuidado",
@@ -421,6 +496,41 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
     "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
     "Os horários das doses de Ana seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
+  ],
+  "pt-PT shifts:duration.hours": [
+    "0 hora",
+    "1 hora",
+    "2 horas",
+  ],
+  "pt-PT shifts:duration.minutes": [
+    "0 minuto",
+    "1 minuto",
+    "2 minutos",
+  ],
+  "pt-PT shifts:mode.openBadge": [
+    "0 por preencher",
+    "1 por preencher",
+    "2 por preencher",
+  ],
+  "pt-PT shifts:month.cell": [
+    "{{date}}, 0 turnos, {{open}}",
+    "{{date}}, 1 turno, {{open}}",
+    "{{date}}, 2 turnos, {{open}}",
+  ],
+  "pt-PT shifts:openCount": [
+    "nenhum por preencher",
+    "1 por preencher",
+    "2 por preencher",
+  ],
+  "pt-PT shifts:summary": [
+    "0 turnos · {{open}}.",
+    "1 turno · {{open}}.",
+    "2 turnos · {{open}}.",
+  ],
+  "pt-PT shifts:summaryShort": [
+    "0 turnos · {{open}}",
+    "1 turno · {{open}}",
+    "2 turnos · {{open}}",
   ],
   "pt-PT upgrade:trialPeriod.day": [
     "0 dia",

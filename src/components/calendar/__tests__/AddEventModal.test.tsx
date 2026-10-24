@@ -47,6 +47,12 @@ vi.mock('@/api/drugs', async (importOriginal) => {
   return { ...actual, searchDrugs: vi.fn().mockResolvedValue([]) };
 });
 
+// The appointment form's Doctor row reads the circle's doctors over React Query; this
+// suite mounts no QueryClient and is not about it (AddEventModal.doctor.test.tsx).
+vi.mock('@/hooks/useProviders', () => ({
+  useProviders: () => ({ providers: [], isSuccess: true }),
+}));
+
 vi.mock('@/hooks/useCalendarEvents', () => ({
   useCreateEvent: () => ({ mutateAsync: mutateCreate, isPending: false }),
   useUpdateEvent: () => ({ mutateAsync: mutateUpdate, isPending: false }),
@@ -181,8 +187,8 @@ describe('AddEventModal', () => {
     const solid = (el: HTMLElement): void => {
       expect(el).not.toHaveAttribute('aria-disabled');
       expect(el).toBeEnabled();
-      expect(el.className).toContain('bg-moss');
-      expect(el.className).toContain('text-cream');
+      expect(el.className).toContain('bg-primary-fill');
+      expect(el.className).toContain('text-on-primary');
       expect(el.className).not.toContain('bg-bg-2');
       expect(el.className).not.toContain('text-moss-mid');
     };

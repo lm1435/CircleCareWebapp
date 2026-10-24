@@ -28,6 +28,12 @@ vi.mock('@/api/calendarEvents', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/calendarEvents')>();
   return { ...actual, deleteEvent: (...a: unknown[]) => deleteEventRequest(...a) };
 });
+// The appointment form's Doctor row reads the circle's doctors over React Query; this
+// suite mounts no QueryClient and is not about it (AddEventModal.doctor.test.tsx).
+vi.mock('@/hooks/useProviders', () => ({
+  useProviders: () => ({ providers: [], isSuccess: true }),
+}));
+
 vi.mock('@/hooks/useCalendarEvents', () => ({
   useCreateEvent: () => ({ mutateAsync: mutateCreate, isPending: false }),
   useUpdateEvent: () => ({ mutateAsync: mutateUpdate, isPending: false }),

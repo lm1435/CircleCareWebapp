@@ -62,7 +62,9 @@
       "notes": "Notes",
       "notesDesc": "Quand quelqu’un ajoute une note",
       "tips": "Point du jour et conseils",
-      "tipsDesc": "Votre point du jour et de petits rappels utiles"
+      "tipsDesc": "Votre point du jour et de petits rappels utiles",
+      "shifts": "Gardes",
+      "shiftsDesc": "Nouvelles gardes à pourvoir, rappels et changements de vos gardes"
     },
     "someTurnedOff": "Certaines désactivées",
     "confirmMedicationsOff": {
@@ -199,12 +201,10 @@
   },
   "appearance": {
     "title": "Apparence",
-    "darkMode": "Mode sombre",
-    "comingSoon": "Bientôt disponible",
-    "requested": "Demandé",
-    "hint": "Envie du mode sombre ? Touchez pour nous le dire. Cela nous aide à décider quoi développer ensuite.",
-    "thanks": "Merci. Nous avons bien noté votre vote.",
-    "a11yComingSoon": "Mode sombre, bientôt disponible",
-    "a11yRequested": "Mode sombre, demandé"
+    "themeLabel": "Thème",
+    "themeSystem": "Système",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "hint": "Système suit votre appareil. Ce choix s’applique uniquement à cet appareil."
   }
 }

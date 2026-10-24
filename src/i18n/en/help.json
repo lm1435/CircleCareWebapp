@@ -58,7 +58,7 @@
         },
         {
           "question": "What notifications will I receive?",
-          "answer": "You'll receive alerts in four groups you can turn on or off in Profile: Medications (doses taken, skipped or not marked), Tasks & appointments (when something's assigned to you and before it's due), Notes (when someone adds a note) and Daily update & tips. If you're the care recipient you also get your own dose reminders, which are always on."
+          "answer": "You'll receive alerts in five groups you can turn on or off in Profile: Medications (doses taken, skipped or not marked), Tasks & appointments (when something's assigned to you and before it's due), Notes (when someone adds a note), Daily update & tips and Shifts (new open shifts, shift reminders and changes to your shifts). If you're the care recipient you also get your own dose reminders, which are always on."
         },
         {
           "question": "What are quiet hours?",
@@ -66,7 +66,7 @@
         },
         {
           "question": "Can I turn off certain notifications?",
-          "answer": "Yes. Go to Profile, then Notifications. Each of the four switches turns a whole group on or off for your account, in every circle you belong to. Turning off Medications means you won't be told when a dose isn't marked."
+          "answer": "Yes. Go to Profile, then Notifications. Each of the five switches turns a whole group on or off for your account, in every circle you belong to. Turning off Medications means you won't be told when a dose isn't marked."
         }
       ]
     },

@@ -62,7 +62,9 @@
       "notes": "Notas",
       "notesDesc": "Cuando alguien agrega una nota",
       "tips": "Resumen del día y consejos",
-      "tipsDesc": "Tu resumen del día y recordatorios útiles"
+      "tipsDesc": "Tu resumen del día y recordatorios útiles",
+      "shifts": "Turnos",
+      "shiftsDesc": "Turnos abiertos nuevos, recordatorios y cambios en tus turnos"
     },
     "someTurnedOff": "Algunas desactivadas",
     "confirmMedicationsOff": {
@@ -199,12 +201,10 @@
   },
   "appearance": {
     "title": "Apariencia",
-    "darkMode": "Modo oscuro",
-    "comingSoon": "Próximamente",
-    "requested": "Solicitado",
-    "hint": "¿Quieres el modo oscuro? Toca para avisarnos. Nos ayuda a decidir qué crear a continuación.",
-    "thanks": "Gracias. Registramos tu voto.",
-    "a11yComingSoon": "Modo oscuro, próximamente",
-    "a11yRequested": "Modo oscuro, solicitado"
+    "themeLabel": "Tema",
+    "themeSystem": "Sistema",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "hint": "Sistema sigue tu dispositivo. Esta opción solo se aplica a este dispositivo."
   }
 }

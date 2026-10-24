@@ -1,0 +1,220 @@
+{
+  "eyebrow": "Plantões",
+  "close": "Fechar",
+  "open": "Em aberto",
+  "you": "Você",
+  "takeButton": "Assumir",
+  "takeAria": "Assumir {{name}}",
+  "addShift": "Adicionar plantão",
+  "edit": "Editar",
+  "nextDay": "dia seguinte",
+  "summary_one": "{{count}} plantão · {{open}}.",
+  "summary_other": "{{count}} plantões · {{open}}.",
+  "noShiftsDay": "Nenhum plantão neste dia.",
+  "noShiftsWeekDay": "Nenhum plantão",
+  "mode": {
+    "label": "Modo do calendário",
+    "schedule": "Agenda",
+    "shifts": "Plantões",
+    "openBadge_one": "{{count}} em aberto",
+    "openBadge_other": "{{count}} em aberto"
+  },
+  "legend": {
+    "label": "Legenda dos plantões",
+    "open": "Tem um plantão em aberto",
+    "covered": "Tudo coberto"
+  },
+  "month": {
+    "label": "Calendário mensal de plantões",
+    "cell_one": "{{date}}, {{count}} plantão, {{open}}",
+    "cell_other": "{{date}}, {{count}} plantões, {{open}}",
+    "none": "{{date}}, nenhum plantão"
+  },
+  "empty": {
+    "title": "Dividam o cuidado, plantão por plantão",
+    "description": "Adicione os períodos que precisam de alguém, como as noites ou as manhãs de dias úteis, e deixe sua família ver quem está em cada um e o que ainda está em aberto.",
+    "cta": "Adicionar um plantão"
+  },
+  "teaser": {
+    "chip": "Premium",
+    "title": "Dividam o cuidado, plantão por plantão",
+    "description": "Veja quem cobre cada período e quais ninguém assumiu ainda, com um lembrete para quem está no plantão.",
+    "cta": "Conhecer o Premium",
+    "notNow": "Agora não",
+    "morning": "Manhã",
+    "afternoon": "Tarde",
+    "night": "Noite",
+    "personA": "Ana",
+    "personB": "Luis",
+    "morningTime": "8h – 14h",
+    "afternoonTime": "14h – 20h",
+    "nightTime": "20h – 8h",
+    "previewA11y": "Exemplo: um plantão da manhã e um da tarde têm alguém, e o plantão da noite está em aberto."
+  },
+  "take": {
+    "title": "Assumir \"{{name}}\"",
+    "confirm": "Assumir plantão",
+    "scopeLabel": "Quais plantões?",
+    "justThis": "Só este",
+    "futureHint": "Você pode largar qualquer um depois",
+    "reminderRow": "Lembrete · {{when}}",
+    "future": "Este e todos os próximos"
+  },
+  "scope": {
+    "label": "Quais plantões?",
+    "occurrence": "Este plantão",
+    "future": "Este e os próximos",
+    "allUpcoming": "Todos os próximos plantões"
+  },
+  "drop": {
+    "action": "Largar plantão",
+    "title": "Largar este plantão?",
+    "message": "\"{{name}}\" voltará a ficar em aberto e todos no círculo serão avisados.",
+    "confirm": "Largar plantão",
+    "messageRepeating": "Escolha quais plantões largar. Eles voltarão a ficar em aberto e todos no círculo serão avisados."
+  },
+  "assign": {
+    "action": "Atribuir",
+    "title": "Atribuir plantão",
+    "label": "Quem vai cobrir?",
+    "confirm": "Atribuir",
+    "current": "está nele agora"
+  },
+  "delete": {
+    "action": "Excluir",
+    "title": "Excluir plantão",
+    "message": "Excluir \"{{name}}\"? Isso não pode ser desfeito.",
+    "messageRepeating": "Escolha quais plantões excluir. Isso não pode ser desfeito.",
+    "confirm": "Excluir"
+  },
+  "detail": {
+    "date": "Data",
+    "time": "Horário",
+    "yourTime": "Seu horário: {{range}}",
+    "yourTimeRow": "Seu horário",
+    "repeats": "Repetição",
+    "coveredBy": "Quem está nele",
+    "openValue": "Ninguém ainda",
+    "reminder": "Lembrete"
+  },
+  "repeat": {
+    "never": "Nunca",
+    "daily": "Diariamente",
+    "weekly": "Semanalmente",
+    "weeklyOn": "Semanal: {{days}}",
+    "series": "Repetido"
+  },
+  "reminder": {
+    "off": "Desativado",
+    "h1": "1 hora antes",
+    "h2": "2 horas antes",
+    "h4": "4 horas antes",
+    "d1": "1 dia antes",
+    "chip1h": "1 hora",
+    "chip2h": "2 horas",
+    "chip4h": "4 horas",
+    "chip1d": "1 dia"
+  },
+  "duration": {
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} horas",
+    "minutes_one": "{{count}} minuto",
+    "minutes_other": "{{count}} minutos",
+    "mixed": "{{hours}} h {{minutes}} min"
+  },
+  "form": {
+    "newTitle": "Novo plantão",
+    "editTitle": "Editar plantão",
+    "heading": "Quem fica com {{name}}?",
+    "editScopeLabel": "Quais plantões?",
+    "name": "Nome",
+    "namePlaceholder": "ex.: Noite",
+    "starts": "Início",
+    "ends": "Fim",
+    "reminder": "Lembrete",
+    "covering": "Quem vai cobrir?",
+    "leaveOpen": "Deixar em aberto",
+    "me": "Eu",
+    "timezoneNote": "Estes horários são de {{zone}}.",
+    "seriesNote": "A data e a repetição de uma série não podem ser alteradas aqui. Sua edição vale para os plantões escolhidos.",
+    "save": "Salvar plantão",
+    "repeats": "Repetição",
+    "date": "Data",
+    "endsOn": "A repetição termina",
+    "reminderHint": "Enviado a quem está no plantão.",
+    "careRecipient": "{{name}} · Pessoa cuidada"
+  },
+  "saved": {
+    "title": "\"{{name}}\" salvo",
+    "summaryOpen": "{{range}}, {{repeat}}. Em aberto para quem quiser assumir.",
+    "summaryOpenOnce": "{{range}} · Em aberto para quem quiser assumir.",
+    "summaryAssigned": "{{range}}, {{repeat}}. {{who}} está nele.",
+    "summaryAssignedOnce": "{{range}} · {{who}} está nele.",
+    "addNext": "Adicionar o próximo plantão",
+    "addNextHint": "Começa às {{time}} · {{repeat}}",
+    "addNextHintOnce": "Começa às {{time}}",
+    "done": "Concluído",
+    "summarySelf": "{{range}}, {{repeat}}. Você está nele.",
+    "summarySelfOnce": "{{range}} · Você está nele.",
+    "repeatDaily": "todos os dias",
+    "repeatWeekly": "toda semana",
+    "repeatDays": "{{days}}"
+  },
+  "validation": {
+    "nameRequired": "Dê um nome ao plantão.",
+    "nameTooLong": "O nome deve ter 60 caracteres ou menos.",
+    "dateRequired": "Escolha uma data.",
+    "startRequired": "Escolha quando o plantão começa.",
+    "endRequired": "Escolha a hora em que o plantão termina.",
+    "tooShort": "Um plantão dura de 15 minutos a 24 horas.",
+    "tooLong": "Um plantão dura de 15 minutos a 24 horas.",
+    "repeatEndBeforeStart": "A data final deve ser igual ou posterior à primeira data.",
+    "daysRequired": "Escolha pelo menos um dia."
+  },
+  "toast": {
+    "taken": "Você está no plantão \"{{name}}\".",
+    "alreadyTaken": "{{takenBy}} acabou de assumir este plantão.",
+    "dropped": "Você largou \"{{name}}\". Ele voltou a ficar em aberto.",
+    "assigned": "{{name}} está no plantão.",
+    "updated": "Plantão atualizado.",
+    "deleted": "Plantão excluído.",
+    "alreadyTakenUnknown": "Alguém acabou de assumir este plantão.",
+    "alreadyOpen": "Este plantão já está em aberto.",
+    "notFound": "Este plantão não está mais disponível.",
+    "notAssigned": "Ninguém mais está nesse plantão."
+  },
+  "someone": "Alguém",
+  "rangeSpoken": "das {{start}} às {{end}}",
+  "summaryShort_one": "{{count}} plantão · {{open}}",
+  "summaryShort_other": "{{count}} plantões · {{open}}",
+  "card": {
+    "statusOpen": "em aberto",
+    "statusCovered": "{{name}} está nele",
+    "statusMine": "você está neste plantão",
+    "openDetailsHint": "Abre os detalhes do plantão"
+  },
+  "loadError": "Não foi possível carregar os plantões.",
+  "error": {
+    "take": "Não foi possível assumir o plantão. Tente novamente.",
+    "drop": "Não foi possível largar o plantão. Tente novamente.",
+    "assign": "Não foi possível atribuir o plantão. Tente novamente.",
+    "save": "Não foi possível salvar o plantão. Tente novamente.",
+    "delete": "Não foi possível excluir o plantão. Tente novamente.",
+    "dropForbidden": "Só quem está no plantão, o proprietário ou um gestor pode largá-lo.",
+    "assignForbidden": "Só o proprietário ou um gestor pode colocar outra pessoa em um plantão.",
+    "invalidAssignee": "Essa pessoa não pode ficar em um plantão.",
+    "permissionDenied": "Você não tem permissão para alterar plantões neste círculo."
+  },
+  "week": {
+    "openDayHint": "Abre a visualização do dia",
+    "today": "Hoje"
+  },
+  "readOnly": {
+    "owner": "O Premium terminou. Seus plantões são somente de leitura.",
+    "renew": "Renovar o Premium",
+    "other": "Os plantões são somente de leitura por enquanto."
+  },
+  "openCount_zero": "nenhum em aberto",
+  "openCount_one": "{{count}} em aberto",
+  "openCount_other": "{{count}} em aberto"
+}

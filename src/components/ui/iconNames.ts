@@ -30,6 +30,7 @@ import iconDownloadOutline from '../../../node_modules/ionicons/dist/svg/downloa
 import iconOptionsOutline from '../../../node_modules/ionicons/dist/svg/options-outline.svg?raw';
 import iconCloseOutline from '../../../node_modules/ionicons/dist/svg/close-outline.svg?raw';
 import iconPersonCircleOutline from '../../../node_modules/ionicons/dist/svg/person-circle-outline.svg?raw';
+import iconPersonAddOutline from '../../../node_modules/ionicons/dist/svg/person-add-outline.svg?raw';
 import iconPersonOutline from '../../../node_modules/ionicons/dist/svg/person-outline.svg?raw';
 import iconLockClosedOutline from '../../../node_modules/ionicons/dist/svg/lock-closed-outline.svg?raw';
 import iconEyeOutline from '../../../node_modules/ionicons/dist/svg/eye-outline.svg?raw';
@@ -62,7 +63,6 @@ import iconCloudOfflineOutline from '../../../node_modules/ionicons/dist/svg/clo
 import iconLogoApple from '../../../node_modules/ionicons/dist/svg/logo-apple.svg?raw';
 import iconLogoGoogle from '../../../node_modules/ionicons/dist/svg/logo-google.svg?raw';
 import iconLogOutOutline from '../../../node_modules/ionicons/dist/svg/log-out-outline.svg?raw';
-import iconMoonOutline from '../../../node_modules/ionicons/dist/svg/moon-outline.svg?raw';
 import iconRemove from '../../../node_modules/ionicons/dist/svg/remove.svg?raw';
 
 /**
@@ -99,6 +99,7 @@ export const ICON_NAMES = [
   'options-outline',
   'close-outline',
   'person-circle-outline',
+  'person-add-outline',
   'person-outline',
   'lock-closed-outline',
   'eye-outline',
@@ -132,7 +133,6 @@ export const ICON_NAMES = [
   'logo-google',
   'log-out-outline', // mobile ProfileScreen sign-out row
   'remove', // mobile VitalsDetailScreen's stable-trend glyph
-  'moon-outline', // dark-mode interest row (mobile ProfileScreen Appearance section)
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];
@@ -168,6 +168,7 @@ export const ICON_FILES: Record<IconName, string> = {
   'options-outline': iconOptionsOutline,
   'close-outline': iconCloseOutline,
   'person-circle-outline': iconPersonCircleOutline,
+  'person-add-outline': iconPersonAddOutline,
   'person-outline': iconPersonOutline,
   'lock-closed-outline': iconLockClosedOutline,
   'eye-outline': iconEyeOutline,
@@ -200,6 +201,5 @@ export const ICON_FILES: Record<IconName, string> = {
   'logo-apple': iconLogoApple,
   'logo-google': iconLogoGoogle,
   'log-out-outline': iconLogOutOutline,
-  'moon-outline': iconMoonOutline,
   remove: iconRemove,
 };

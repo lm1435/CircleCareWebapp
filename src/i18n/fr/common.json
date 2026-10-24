@@ -56,7 +56,8 @@
     "members": "Membres",
     "settings": "Modifier le cercle",
     "notFound": "Page introuvable",
-    "dailyUpdate": "Point du jour"
+    "dailyUpdate": "Point du jour",
+    "providerVisits": "Visites et notes"
   },
   "errorBoundary": {
     "title": "Un problème est survenu",
@@ -170,7 +171,9 @@
     "medicationShort": "Médic.",
     "appointmentShort": "RDV",
     "taskShort": "Tâche",
-    "noteShort": "Note"
+    "noteShort": "Note",
+    "shift": "Garde",
+    "shiftShort": "Garde"
   },
   "draftRestored": "Nous avons restauré votre brouillon non enregistré.",
   "undoCap": {

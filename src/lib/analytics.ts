@@ -278,7 +278,44 @@ function pickEnum<T extends string>(value: unknown, allowed: readonly T[], fallb
     : fallback;
 }
 
+/** Buckets for `provider_visits_opened.visit_count_bucket` (identical on mobile). */
+export const PROVIDER_VISIT_BUCKETS = ['0', '1-5', '6-20', '21+'] as const;
+export type ProviderVisitBucket = (typeof PROVIDER_VISIT_BUCKETS)[number];
+
+/** Bucket a number of past visits: 0 | 1-5 | 6-20 | 21+. Anything non-finite or negative is 0. */
+export function providerVisitBucket(count: number): ProviderVisitBucket {
+  if (!Number.isFinite(count) || count < 1) return '0';
+  if (count <= 5) return '1-5';
+  if (count <= 20) return '6-20';
+  return '21+';
+}
+
 const AS_NEEDED_SURFACES = ['home', 'meds_tab', 'detail'] as const;
+
+// Care shifts: the closed enums behind the `shift*` events (identical on mobile).
+const SHIFT_RANGES = ['day', 'week', 'month'] as const;
+const SHIFT_ACCESS = ['full', 'readonly'] as const;
+const SHIFT_RECURRENCES = ['none', 'daily', 'weekly', 'days'] as const;
+const SHIFT_REMINDERS = ['off', '1h', '2h', '4h', '1d'] as const;
+const SHIFT_SOURCES = ['add_menu', 'shifts_view', 'empty_state', 'add_next'] as const;
+const SHIFT_SCOPES = ['occurrence', 'future'] as const;
+const SHIFT_DROP_ROLES = ['self', 'manager', 'owner'] as const;
+const SHIFT_ASSIGN_ROLES = ['owner', 'manager'] as const;
+const SHIFT_TEASER_SOURCES = ['toggle', 'add_menu'] as const;
+
+/** `open_count_bucket`: '0' | '1-2' | '3+'. */
+function shiftOpenCountBucket(count: number): '0' | '1-2' | '3+' {
+  if (!(count > 0)) return '0';
+  return count <= 2 ? '1-2' : '3+';
+}
+
+/** `duration_bucket`: <4h (<240 min) · 4-8h (240-480) · 8-12h (481-720) · >12h. */
+function shiftDurationBucket(minutes: number): '<4h' | '4-8h' | '8-12h' | '>12h' {
+  if (minutes < 240) return '<4h';
+  if (minutes <= 480) return '4-8h';
+  if (minutes <= 720) return '8-12h';
+  return '>12h';
+}
 
 /** `actor_role` on invite_sent / member_removed: who performed it. */
 const ACTOR_ROLES = ['owner', 'manager'] as const;
@@ -929,6 +966,63 @@ export const Analytics = {
   calendarViewed: (circleId: string, view: string) =>
     capture('calendar_viewed', { circle_id: circleId, view }),
 
+  // --- Care shifts (docs/plans/care-shifts.md) — SAME names and props as mobile.
+  // Enums / booleans / counts ONLY, each coerced through a whitelist so nothing
+  // else can ride along. NEVER `circle_id`, a shift/event id, a name, a title or
+  // a clock time. They go through `capture`, so they are identified when the
+  // user consented and ride the anonymous pipeline when they declined.
+  shiftsViewOpened: (opts: { range: string; openCount: number; access?: string }) =>
+    capture('shifts_view_opened', {
+      range: pickEnum(opts.range, SHIFT_RANGES, 'day'),
+      open_count_bucket: shiftOpenCountBucket(opts.openCount),
+      access: pickEnum(opts.access, SHIFT_ACCESS, 'full'),
+    }),
+  shiftCreated: (opts: {
+    repeats: boolean;
+    recurrence: string;
+    assigned: boolean;
+    assignedSelf: boolean;
+    reminder: string;
+    overnight: boolean;
+    durationMinutes: number;
+    source: string;
+  }) =>
+    capture('shift_created', {
+      repeats: opts.repeats === true,
+      recurrence: pickEnum(opts.recurrence, SHIFT_RECURRENCES, 'none'),
+      assigned: opts.assigned === true,
+      assigned_self: opts.assignedSelf === true,
+      reminder: pickEnum(opts.reminder, SHIFT_REMINDERS, 'off'),
+      overnight: opts.overnight === true,
+      duration_bucket: shiftDurationBucket(opts.durationMinutes),
+      source: pickEnum(opts.source, SHIFT_SOURCES, 'shifts_view'),
+    }),
+  shiftAddNextTapped: () => capture('shift_add_next_tapped', {}),
+  shiftTaken: (opts: { scope: string }) =>
+    capture('shift_taken', { scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence') }),
+  shiftTakeConflict: () => capture('shift_take_conflict', {}),
+  shiftDropped: (opts: { scope: string; within24h: boolean; byRole: string }) =>
+    capture('shift_dropped', {
+      scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence'),
+      within_24h: opts.within24h === true,
+      by_role: pickEnum(opts.byRole, SHIFT_DROP_ROLES, 'self'),
+    }),
+  shiftAssigned: (opts: { scope: string; byRole: string }) =>
+    capture('shift_assigned', {
+      scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence'),
+      by_role: pickEnum(opts.byRole, SHIFT_ASSIGN_ROLES, 'manager'),
+    }),
+  shiftEdited: (opts: { timeChanged: boolean; scope: string }) =>
+    capture('shift_edited', {
+      time_changed: opts.timeChanged === true,
+      scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence'),
+    }),
+  shiftDeleted: (opts: { scope: string }) =>
+    capture('shift_deleted', { scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence') }),
+  shiftsTeaserShown: (opts: { source: string }) =>
+    capture('shifts_teaser_shown', { source: pickEnum(opts.source, SHIFT_TEASER_SOURCES, 'toggle') }),
+  shiftsTeaserCtaTapped: () => capture('shifts_teaser_cta_tapped', {}),
+
   // --- Event notes (notes-first-class plan) — NEVER include note text.
   // Same event as mobile's Analytics.dataExportDownloaded — no properties (a GDPR
   // export must not add identifiers to analytics).
@@ -944,17 +1038,32 @@ export const Analytics = {
   careNotesViewed: (circleId: string) => capture('care_notes_viewed', { circle_id: circleId }),
   /** WB8: mood REMOVED from this payload — it's user-authored health content,
    *  not an id/count. Only how many categories were tagged is sent. */
-  careNoteAdded: (circleId: string, opts: { categoryCount: number }) =>
+  careNoteAdded: (
+    circleId: string,
+    // `backdated` / `daysBack`: filed under a past day, and how many days back
+    // (0 when today). Never the date itself.
+    opts: { categoryCount: number; backdated: boolean; daysBack: number }
+  ) =>
     capture('care_note_added', {
       circle_id: circleId,
       category_count: opts.categoryCount,
+      backdated: opts.backdated,
+      days_back: opts.daysBack,
     }),
+  /** "Show older notes" pressed: `page` = how many 92-day pages back (1 = first). */
+  careNotesOlderLoaded: (opts: { page: number }) =>
+    capture('care_notes_older_loaded', { page: opts.page }),
   /** A daily care note was EDITED. Mirrors `care_note_added`: a category COUNT
    *  and nothing else — never mood, body, or category names. */
-  careNoteUpdated: (circleId: string, opts: { categoryCount: number }) =>
+  careNoteUpdated: (
+    circleId: string,
+    opts: { categoryCount: number; backdated: boolean; daysBack: number }
+  ) =>
     capture('care_note_updated', {
       circle_id: circleId,
       category_count: opts.categoryCount,
+      backdated: opts.backdated,
+      days_back: opts.daysBack,
     }),
   careNoteDeleted: (circleId: string) => capture('care_note_deleted', { circle_id: circleId }),
 
@@ -982,6 +1091,28 @@ export const Analytics = {
       fields_updated: fieldsUpdated,
     }),
 
+  // --- Notes by doctor (docs/plans/notes-by-doctor.md) — same event names and
+  // properties as mobile. Enums, a count and a boolean ONLY: never a doctor's
+  // name or id, a visit title, a note, or circle_id. ---
+  /** The Visits & notes page for one doctor was opened (fires once its first page lands).
+   *  `visit_count_bucket` buckets the PAST visits that first page returned (never a raw
+   *  count); `has_notes` is whether any of them carries a note. Same shape as mobile. */
+  providerVisitsOpened: (opts: {
+    source?: string;
+    visit_count_bucket?: string;
+    has_notes?: boolean;
+  }) =>
+    capture('provider_visits_opened', {
+      source: pickEnum(opts.source, ['medical_info', 'appointment', 'ai_chat'], 'medical_info'),
+      visit_count_bucket: pickEnum(opts.visit_count_bucket, PROVIDER_VISIT_BUCKETS, '0'),
+      has_notes: opts.has_notes === true,
+    }),
+  /** An appointment was saved WITH a (new) doctor. `source` = the add or edit form. */
+  providerLinked: (opts: { source?: string }) =>
+    capture('provider_linked', { source: pickEnum(opts.source, ['add', 'edit'], 'add') }),
+  /** An appointment that had a doctor was saved with none. */
+  providerUnlinked: () => capture('provider_unlinked', {}),
+
   // --- Activity feed (web-new) ---
   activityFeedViewed: (circleId: string) =>
     capture('activity_feed_viewed', { circle_id: circleId }),
@@ -989,15 +1120,35 @@ export const Analytics = {
   // --- Settings (web-new) ---
   languageChanged: (language: string) => capture('language_changed', { language }),
   timezoneChanged: (timezone: string) => capture('timezone_changed', { timezone }),
-  /** Profile > Appearance dark-mode fake door. Booleans only. */
-  darkModeInterestShown: (props: { system_dark: boolean }) =>
-    capture('dark_mode_interest_shown', props),
-  darkModeInterestTapped: (props: { system_dark: boolean }) =>
-    capture('dark_mode_interest_tapped', props),
+  /** Profile > Appearance > Theme. Enums + a boolean only: `theme` is the NEW
+   *  preference, `previous` the old one, `effective` what is now painted. */
+  themePreferenceChanged: (props: {
+    theme: 'system' | 'light' | 'dark';
+    previous: 'system' | 'light' | 'dark';
+    system_dark: boolean;
+    effective: 'light' | 'dark';
+  }) => capture('theme_preference_changed', props),
+  /** Super properties on every later event: `theme` (what is painted) and
+   *  `theme_preference` (what was chosen). lib/posthog.ts re-registers the same
+   *  pair after init and after every reset; this is the on-change path. */
+  registerThemeProperties: (props: {
+    theme: 'light' | 'dark';
+    theme_preference: 'system' | 'light' | 'dark';
+  }): void => {
+    if (!env.VITE_POSTHOG_KEY) return;
+    if (!analyticsCollectionAllowed()) return;
+    withPosthog((posthog) => {
+      try {
+        posthog.register(props);
+      } catch {
+        // Best-effort, like capture().
+      }
+    });
+  },
   /** Profile > Notifications group switch. Enums/booleans only (no circle id,
    *  no names). `confirmed` is present only for the Medications-off confirm. */
   notificationGroupToggled: (props: {
-    group: 'medications' | 'tasks' | 'notes' | 'tips';
+    group: 'medications' | 'tasks' | 'notes' | 'tips' | 'shifts';
     enabled: boolean;
     was_mixed: boolean;
     confirmed?: boolean;
@@ -1035,6 +1186,28 @@ export const Analytics = {
       intent: opts.intent,
       latency_ms: opts.latencyMs,
       turn_index: opts.turnIndex,
+    }),
+  /**
+   * The assistant answered a notes question (FIND_NOTES) by pointing to where the
+   * notes are. Enums, booleans and a count only: never the doctor's name, the
+   * typed question or circle_id. Same name + props as mobile.
+   */
+  aiNotesPathSuggested: (opts: {
+    target?: string;
+    doctor_named?: boolean;
+    doctor_matched?: boolean;
+    action_count?: number;
+  }) =>
+    capture('ai_notes_path_suggested', {
+      target: pickEnum(opts.target, ['doctor', 'doctor_list', 'notes'], 'notes'),
+      doctor_named: opts.doctor_named === true,
+      doctor_matched: opts.doctor_matched === true,
+      action_count: Math.max(0, Math.min(6, Math.floor(Number(opts.action_count) || 0))),
+    }),
+  /** A button on that reply was tapped. `action` is the destination kind, never the doctor. */
+  aiNotesPathActionTapped: (opts: { action?: string }) =>
+    capture('ai_notes_path_action_tapped', {
+      action: pickEnum(opts.action, ['open_provider', 'open_notes', 'open_doctors'], 'open_notes'),
     }),
   /** Failed question. `reason` separates rate limits from everything else.
    *  Typed as the closed `AiChatFailureReason` set declared below rather than

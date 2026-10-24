@@ -31,8 +31,8 @@ describe('StoreBadges', () => {
 
     for (const link of screen.getAllByRole('link')) {
       expect(link.className).toContain('rounded-lg');
-      expect(link.className).toContain('border border-cream/15');
-      expect(link.className).toContain('bg-ink');
+      expect(link.className).toContain('border border-badge-line');
+      expect(link.className).toContain('bg-badge');
       expect(link.className).toContain('min-h-[44px]');
       expect(link.className).toContain('duration-fast');
       expect(link.className).toContain('ease-spring');
@@ -46,7 +46,7 @@ describe('StoreBadges', () => {
     expect(lead.className).toContain('text-xs');
     expect(lead.className).not.toContain('text-[10px]');
     // `mono` paints ink-3, so the cream override has to be the `!` form to win.
-    expect(lead.className).toContain('text-cream/80!');
+    expect(lead.className).toContain('text-on-badge/80!');
   });
 
   it('sets the store name at the dense 16px step', () => {

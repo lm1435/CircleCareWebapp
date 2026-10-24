@@ -21,7 +21,8 @@ const TABLET_QUERY = '(min-width: 600px)';
 /** Sections that light the CARE cell (spec §5.3 — mobile's Care top tabs). */
 const CARE_SECTIONS = ['calendar', 'meds', 'tasks', 'notes'];
 /** Sections that light the HEALTH cell (Emergency · Documents). */
-const HEALTH_SECTIONS = ['emergency', 'documents'];
+// `providers` = a doctor's Visits & notes page, reached from Medical Info.
+const HEALTH_SECTIONS = ['emergency', 'documents', 'providers'];
 
 /** `/circles/:id/:section` → `section`, or '' for the overview index route. */
 function sectionOf(pathname: string): string {
@@ -30,7 +31,7 @@ function sectionOf(pathname: string): string {
 
 const PILL =
   'fixed inset-x-5 bottom-[var(--nav-inset)] z-30 flex h-16 items-center ' +
-  'rounded-full border-[1.5px] border-[rgba(26,25,22,0.18)] bg-[rgba(255,255,255,0.92)] px-2 ' +
+  'rounded-full border-[1.5px] border-nav-pill-line bg-nav-pill px-2 ' +
   'shadow-xl backdrop-blur-[12px] min-[600px]:h-[72px] xl:hidden';
 
 /** Mobile `styles.tabItem`: flex 1, centred column, 44 min, 2px gap. */

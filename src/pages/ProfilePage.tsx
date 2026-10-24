@@ -43,7 +43,7 @@ import {
 import { AvatarColorPicker } from '@/components/profile/AvatarColorPicker';
 import { SubscriptionSection } from '@/components/profile/SubscriptionSection';
 import { DataExportSection } from '@/components/profile/DataExportSection';
-import { DarkModeInterestRow } from '@/components/profile/DarkModeInterestRow';
+import { ThemePreferenceSelector } from '@/components/profile/ThemePreferenceSelector';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useCircles } from '@/hooks/useCircles';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -755,6 +755,10 @@ export default function ProfilePage(): ReactElement {
               title: t('notifications.groups.tips'),
               desc: t('notifications.groups.tipsDesc'),
             },
+            shifts: {
+              title: t('notifications.groups.shifts'),
+              desc: t('notifications.groups.shiftsDesc'),
+            },
           };
           return (
             <SheetRow key={group}>
@@ -875,8 +879,8 @@ export default function ProfilePage(): ReactElement {
         />
       </SettingsCard>
 
-      {/* ── Appearance (dark-mode interest fake door) ─────────────────── */}
-      <DarkModeInterestRow />
+      {/* ── Appearance (System / Light / Dark) ─────────────────────────── */}
+      <ThemePreferenceSelector />
 
       {/* ── Privacy ───────────────────────────────────────────────────── */}
       {/*

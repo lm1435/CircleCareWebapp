@@ -17,6 +17,7 @@ function renderSidebar(initialPath = '/circles/c1/calendar', props: SidebarProps
       <Routes>
         <Route path="/circles/:circleId" element={<Sidebar {...props} />} />
         <Route path="/circles/:circleId/:section" element={<Sidebar {...props} />} />
+        <Route path="/circles/:circleId/providers/:providerId" element={<Sidebar {...props} />} />
       </Routes>
     </MemoryRouter>
   );
@@ -101,6 +102,17 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Vitals' }).className).toContain(
       name === 'Vitals' ? activeClass : 'text-ink-2'
     );
+  });
+
+  // Notes by doctor: a doctor's Visits & notes page is part of Medical Info, so that
+  // item stays lit (and nothing else does) while it is open.
+  it("keeps Emergency Info lit on a doctor's Visits & notes page", () => {
+    renderSidebar('/circles/c1/providers/p1');
+
+    const link = screen.getByRole('link', { name: 'Emergency Info' });
+    expect(link.className).toContain('bg-terracotta-soft text-terracotta-deep');
+    expect(screen.getByRole('link', { name: 'Home' }).className).toContain('text-ink-2');
+    expect(screen.getByRole('link', { name: 'Calendar' }).className).toContain('text-ink-2');
   });
 
   it('Home is only active on the index route, not on a section', () => {

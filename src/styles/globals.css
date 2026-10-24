@@ -101,6 +101,67 @@
   --color-line-strong: #8a8783;
   --color-overlay: rgba(26, 25, 22, 0.4);
 
+  /* ── Semantic role tokens (dark mode, docs/plans/dark-mode-palette.md) ─────
+     Components read ROLES, not hues, wherever light and dark disagree about
+     which hue plays the role. Every value below equals the utility it replaced
+     (bg-moss, text-cream, bg-ink, ...), so light renders as it always did; the
+     dark block further down re-points them.
+     primary-fill  solid primary controls (Button, selected segment/day/time,
+                   checked box/switch, primary card action). Sage in light, warm
+                   white in dark.
+     on-primary    the label/icon on a primary-fill.
+     task-fill, medication-fill, appointment-fill
+                   calendar blocks: SOLID section colours with white text in
+                   BOTH schemes (the dark accents are lifted tints, which read
+                   as highlighters at block size). on-fill is the white label.
+     surface-raised / on-raised
+                   the inverse slab (chat bubble, tooltip): ink in light,
+                   elevated charcoal in dark.
+     surface-toast the toast card: white (cream) in light, raised charcoal in dark.
+     nav-pill(-line)  floating nav pill ground + edge.
+     menu-*        add-menu pill: ink in light, a dimmed warm-white in dark.
+     on-photo, photo-scrim  text and gradient colour that sit on a PHOTOGRAPH
+                   (auth hero); not a theme surface.
+     badge*, apple-*  brand buttons: black store badges / Sign in with Apple.
+     avatar-*      the name-hashed avatar gradient stops; muted in dark. */
+  --color-primary-fill: #5c6b4e;
+  --color-primary-fill-hover: #4a5940;
+  --color-on-primary: #ffffff;
+  --color-task-fill: #5c6b4e;
+  --color-medication-fill: #8b5c32;
+  --color-appointment-fill: #4a6073;
+  --color-on-fill: #ffffff;
+  --color-surface-raised: #1a1916;
+  --color-on-raised: #ffffff;
+  --color-surface-toast: #ffffff;
+  --color-nav-pill: rgba(255, 255, 255, 0.92);
+  --color-nav-pill-line: rgba(26, 25, 22, 0.18);
+  --color-menu-pill: #1a1916;
+  --color-menu-icon: #ffffff;
+  --color-menu-label: rgba(255, 255, 255, 0.8);
+  --color-menu-clay: rgba(139, 92, 50, 0.19);
+  --color-menu-dusk: rgba(74, 96, 115, 0.19);
+  --color-menu-moss: rgba(92, 107, 78, 0.19);
+  --color-on-photo: #ffffff;
+  --color-photo-scrim: #1a1916;
+  --color-badge: #1a1916;
+  --color-on-badge: #ffffff;
+  --color-badge-line: rgba(255, 255, 255, 0.15);
+  --color-apple-fill: #1a1916;
+  --color-on-apple: #ffffff;
+  --color-apple-line: rgba(255, 255, 255, 0);
+  --color-avatar-moss: #5c6b4e;
+  --color-avatar-moss-deep: #3a4832;
+  --color-avatar-coral-deep: #b5453c;
+  --color-avatar-terracotta-deep: #8b3a2c;
+  --color-avatar-dusk: #4a6073;
+  --color-avatar-dusk-deep: #3a4e5e;
+  --color-avatar-clay: #8b5c32;
+  --color-avatar-clay-deep: #865830;
+  --color-avatar-moss-mid: #4a5940;
+  --color-avatar-moss-dark: #2c3826;
+  --color-avatar-amber-deep: #7e5620;
+
   /* ── Type families ────────────────────────────────────────────────────── */
   /* Sidebar / floating-nav split. Mobile's breakpoints.xl is 1024 (iPad landscape);
      Tailwind v4's default xl is 1280, so override it (spec §5.3). */
@@ -184,6 +245,153 @@
      stacks above the pill (main's reserve, the create menu, toasts) adds
      this to `--nav-h` so they all clear the same edge. */
   --nav-inset: calc(max(env(safe-area-inset-bottom), 12px) + 4px);
+}
+
+/* Non-colour roles that differ per scheme (the dark values live in the dark block). */
+:root {
+  --shimmer-highlight: rgba(255, 255, 255, 0.55);
+  --photo-filter: none;
+  --apple-outline: none;
+}
+
+/*
+ * DARK PALETTE (graduated from the 2026-10 spike; rationale and every contrast
+ * pairing: docs/plans/dark-mode-palette.md, proof: scripts/contrast.mjs).
+ *
+ * Applied by `data-theme="dark"` on <html>, set before first paint by
+ * public/theme-init.js and kept in sync by src/lib/theme.ts. SCREEN ONLY: the
+ * `@media screen` wrapper is what keeps print light (print.css and the PDF
+ * templates never read the theme, and the app's own print view must not inherit
+ * a charcoal canvas).
+ *
+ * Warm charcoal ("lamplight on dark paper"): hue ~35deg, saturation <= 12%, never
+ * pure black or blue-black. Elevation order is bg < cream (cards, fields) < bg-2
+ * (hover / wells / tracks) < bg-3 (deepest fill / skeleton): each step is lighter.
+ *
+ * Emphasis inversion: every `-deep` / `-mid` / `-dark` / `-darkest` token is the
+ * HIGHER-EMPHASIS step, so on a dark ground it is the LIGHTER one. That keeps
+ * `text-moss-deep`, `bg-moss-mid` (hover) and gradient ends meaning what they mean
+ * in light mode. `--color-cream` stays the "card surface" AND the "text on a
+ * solid fill" token, so it is dark here (dark label on a lifted tint).
+ *
+ * The `*-soft` washes are low-opacity tint-on-charcoal (rgba), composited by the
+ * browser over whichever ground they sit on (bg or cream).
+ */
+@media screen {
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+
+    /* Neutrals */
+    --color-ink: #efe9de;
+    --color-ink-2: #c8c1b4;
+    --color-ink-3: #a39c8f;
+    --color-cream: #232019;
+    --color-bg: #1a1815;
+    --color-bg-2: #2b2722;
+    --color-bg-3: #37322b;
+    --color-line: rgba(239, 233, 222, 0.16);
+    --color-line-2: rgba(239, 233, 222, 0.09);
+
+    /* Section tints + washes */
+    --color-moss: #8a9e78;
+    --color-moss-soft: rgba(138, 158, 120, 0.12);
+    --color-moss-deep: #b4c6a4;
+    --color-terracotta: #d6826b;
+    --color-terracotta-soft: rgba(214, 130, 107, 0.12);
+    --color-terracotta-deep: #eea08a;
+    --color-coral: #d6837c;
+    --color-coral-soft: rgba(214, 131, 124, 0.12);
+    --color-coral-deep: #eba39c;
+    --color-clay: #bf8f64;
+    --color-clay-soft: rgba(191, 143, 100, 0.12);
+    --color-clay-deep: #dcb48f;
+    --color-dusk: #819bb0;
+    --color-dusk-soft: rgba(129, 155, 176, 0.12);
+    --color-dusk-deep: #b0c4d4;
+
+    /* Ramps (emphasis order: wash < line < muted < light < base < mid < deep < dark < darkest) */
+    --color-moss-wash: rgba(138, 158, 120, 0.09);
+    --color-moss-line: rgba(138, 158, 120, 0.30);
+    --color-moss-muted: #5d6c51;
+    --color-moss-light: #6f8162;
+    --color-moss-mid: #9aae88;
+    --color-moss-dark: #c3d3b5;
+    --color-moss-darkest: #d8e3cd;
+    --color-clay-line: rgba(191, 143, 100, 0.24);
+    --color-clay-sand: rgba(191, 143, 100, 0.38);
+    --color-clay-tan: #9a7149;
+    --color-clay-light: #ab7f55;
+    --color-clay-ramp-deep: #d8ac84;
+    --color-amber-soft: rgba(207, 154, 73, 0.12);
+    --color-amber: #cf9a49;
+    --color-amber-deep: #e2b46a;
+
+    --color-placeholder: rgba(239, 233, 222, 0.6);
+    --color-line-strong: #857e72;
+    --color-overlay: rgba(10, 8, 6, 0.62);
+
+    /* Non-color tokens that only make sense with the palette (shadows on charcoal
+       need black, not warm ink, and a little more weight to read at all). */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.34);
+    --shadow-lg: 0 4px 24px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.46);
+    --shadow-warm: 0 4px 12px rgba(232, 146, 139, 0.14);
+    --shadow-btn: 0 1px 4px rgba(0, 0, 0, 0.34);
+    --shadow-avatar-glow: 0 4px 16px rgba(138, 158, 120, 0.2);
+
+    /* Semantic roles (see the light @theme block for what each one is). */
+    --color-primary-fill: #efe9de;
+    --color-primary-fill-hover: #ddd6c9;
+    --color-on-primary: #232019;
+    --color-task-fill: #5c6b4e;
+    --color-medication-fill: #8b5c32;
+    --color-appointment-fill: #4a6073;
+    --color-on-fill: #ffffff;
+    --color-surface-raised: #37322b;
+    --color-on-raised: #efe9de;
+    /* Toasts: raised charcoal (owner decision 2026-10-18), white card in light. */
+    --color-surface-toast: #37322b;
+    --color-nav-pill: rgba(35, 32, 25, 0.92);
+    --color-nav-pill-line: rgba(239, 233, 222, 0.16);
+    /* ~75-80% of ink's brightness: owner asked for less glare at night. White icons
+       on solid light-mode section circles: 5.71 / 6.54 / 5.72:1; label 6.15:1. */
+    --color-menu-pill: #d9d2c5;
+    --color-menu-icon: #ffffff;
+    --color-menu-label: #4a4742;
+    --color-menu-clay: #8b5c32;
+    --color-menu-dusk: #4a6073;
+    --color-menu-moss: #5c6b4e;
+    --color-on-photo: #fbf9f5;
+    --color-photo-scrim: #0e0c0a;
+    /* Store badges stay black with white text (brand rules) plus a hairline. */
+    --color-badge: #000000;
+    --color-on-badge: #ffffff;
+    --color-badge-line: rgba(255, 255, 255, 0.28);
+    /* Sign in with Apple: the BLACK variant with a light outline. */
+    --color-apple-fill: #000000;
+    --color-on-apple: #ffffff;
+    --color-apple-line: rgba(255, 255, 255, 0.42);
+    /* Avatar discs: the lifted accent tints read as a highlighter at 56px+, so
+       the gradient stops are muted (~40% desaturated). Initials (--color-cream,
+       #232019) stay >= 4.8:1 on every stop. */
+    --color-avatar-moss: #85907b;
+    --color-avatar-moss-deep: #acb6a3;
+    --color-avatar-coral-deep: #c59d99;
+    --color-avatar-terracotta-deep: #c69a8e;
+    --color-avatar-dusk: #808f9a;
+    --color-avatar-dusk-deep: #aab5be;
+    --color-avatar-clay: #a28870;
+    --color-avatar-clay-deep: #bba28c;
+    --color-avatar-moss-mid: #949f8a;
+    --color-avatar-moss-dark: #b9c2b1;
+    --color-avatar-amber-deep: #c3a980;
+
+    /* Non-colour roles. */
+    --shimmer-highlight: rgba(239, 233, 222, 0.07);
+    --photo-filter: brightness(0.7) saturate(0.9);
+    --apple-outline: inset 0 0 0 1px var(--color-apple-line);
+  }
 }
 
 /* `@utility` is how a Tailwind v4 theme token becomes a real utility class
@@ -291,7 +499,7 @@
     background-image: linear-gradient(
       100deg,
       transparent 30%,
-      rgba(255, 255, 255, 0.55) 50%,
+      var(--shimmer-highlight) 50%,
       transparent 70%
     );
     background-size: 200% 100%;
@@ -437,5 +645,14 @@
   [data-offline-disabled] {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+}
+
+/* Print is ALWAYS light: the dark tokens above are screen-only, and this keeps
+   the root's colour-scheme (set from <meta name="color-scheme"> by the theme
+   runtime) from tinting the print canvas or form controls. */
+@media print {
+  :root {
+    color-scheme: light;
   }
 }

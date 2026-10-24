@@ -86,7 +86,7 @@ export function Toggle({
           className={`relative block h-6 w-11 rounded-full transition-colors duration-fast ${
             // Off track: `line-strong` (3.58:1 on cream), not `line` (1.33:1) —
             // the track is the switch's only visible boundary (WCAG 1.4.11).
-            checked ? 'bg-moss' : 'bg-line-strong'
+            checked ? 'bg-primary-fill' : 'bg-line-strong'
           }`}
         >
           <span

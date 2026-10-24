@@ -56,7 +56,8 @@
     "members": "Membri",
     "settings": "Modifica cerchia",
     "notFound": "Pagina non trovata",
-    "dailyUpdate": "Riepilogo del giorno"
+    "dailyUpdate": "Riepilogo del giorno",
+    "providerVisits": "Visite e note"
   },
   "errorBoundary": {
     "title": "Qualcosa è andato storto",
@@ -170,7 +171,9 @@
     "medicationShort": "Farmaco",
     "appointmentShort": "Appunt.",
     "taskShort": "Incarico",
-    "noteShort": "Nota"
+    "noteShort": "Nota",
+    "shift": "Turno",
+    "shiftShort": "Turno"
   },
   "draftRestored": "Abbiamo ripristinato la bozza non salvata.",
   "undoCap": {

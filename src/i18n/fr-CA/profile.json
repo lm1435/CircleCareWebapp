@@ -11,5 +11,11 @@
   },
   "delete": {
     "confirmBody": "Cette action supprime définitivement votre compte et tous les cercles de soins dont vous êtes propriétaire, y compris tous les médicaments, rendez-vous, tâches, notes, signes vitaux, documents et informations d’urgence qu’ils contiennent. Toutes les autres personnes de ces cercles perdent l’accès et en seront informées. Les cercles dont vous êtes membre sans en être propriétaire ne sont pas supprimés : vous ne faites simplement plus partie de ces cercles. Cette action est irréversible."
+  },
+  "notifications": {
+    "groups": {
+      "shifts": "Quarts",
+      "shiftsDesc": "Nouveaux quarts à pourvoir, rappels et changements de vos quarts"
+    }
   }
 }

@@ -1,0 +1,220 @@
+{
+  "eyebrow": "Turnos",
+  "close": "Cerrar",
+  "open": "Abierto",
+  "you": "Tú",
+  "takeButton": "Tomar",
+  "takeAria": "Tomar {{name}}",
+  "addShift": "Agregar turno",
+  "edit": "Editar",
+  "nextDay": "día siguiente",
+  "summary_one": "{{count}} turno · {{open}}.",
+  "summary_other": "{{count}} turnos · {{open}}.",
+  "noShiftsDay": "No hay turnos este día.",
+  "noShiftsWeekDay": "Sin turnos",
+  "mode": {
+    "label": "Modo del calendario",
+    "schedule": "Agenda",
+    "shifts": "Turnos",
+    "openBadge_one": "{{count}} abierto",
+    "openBadge_other": "{{count}} abiertos"
+  },
+  "legend": {
+    "label": "Leyenda de turnos",
+    "open": "Tiene un turno abierto",
+    "covered": "Todo cubierto"
+  },
+  "month": {
+    "label": "Calendario mensual de turnos",
+    "cell_one": "{{date}}, {{count}} turno, {{open}}",
+    "cell_other": "{{date}}, {{count}} turnos, {{open}}",
+    "none": "{{date}}, sin turnos"
+  },
+  "empty": {
+    "title": "Compartan el cuidado, turno por turno",
+    "description": "Agrega los bloques de tiempo que necesitan a alguien, como las noches o las mañanas entre semana, y deja que tu familia vea quién tiene cada uno y qué sigue abierto.",
+    "cta": "Agregar un turno"
+  },
+  "teaser": {
+    "chip": "Premium",
+    "title": "Compartan el cuidado, turno por turno",
+    "description": "Mira quién cubre cada bloque de tiempo y cuáles nadie ha tomado todavía, con un recordatorio para quien tenga el turno.",
+    "cta": "Ver Premium",
+    "notNow": "Ahora no",
+    "morning": "Mañana",
+    "afternoon": "Tarde",
+    "night": "Noche",
+    "personA": "Ana",
+    "personB": "Luis",
+    "morningTime": "8:00 a. m. – 2:00 p. m.",
+    "afternoonTime": "2:00 p. m. – 8:00 p. m.",
+    "nightTime": "8:00 p. m. – 8:00 a. m.",
+    "previewA11y": "Ejemplo: un turno de mañana y uno de tarde tienen a alguien asignado, y el turno de noche está abierto."
+  },
+  "take": {
+    "title": "Tomar \"{{name}}\"",
+    "confirm": "Tomar turno",
+    "scopeLabel": "¿Qué turnos?",
+    "justThis": "Solo este",
+    "futureHint": "Después puedes soltar cualquiera",
+    "reminderRow": "Recordatorio · {{when}}",
+    "future": "Este y todos los siguientes"
+  },
+  "scope": {
+    "label": "¿Qué turnos?",
+    "occurrence": "Este turno",
+    "future": "Este y los siguientes",
+    "allUpcoming": "Todos los próximos turnos"
+  },
+  "drop": {
+    "action": "Soltar turno",
+    "title": "¿Soltar este turno?",
+    "message": "\"{{name}}\" quedará abierto otra vez y se avisará a todos en el círculo.",
+    "confirm": "Soltar turno",
+    "messageRepeating": "Elige qué turnos soltar. Quedarán abiertos otra vez y se avisará a todos en el círculo."
+  },
+  "assign": {
+    "action": "Asignar",
+    "title": "Asignar turno",
+    "label": "¿Quién lo cubre?",
+    "confirm": "Asignar",
+    "current": "lo tiene ahora"
+  },
+  "delete": {
+    "action": "Eliminar",
+    "title": "Eliminar turno",
+    "message": "¿Eliminar \"{{name}}\"? No se puede deshacer.",
+    "messageRepeating": "Elige qué turnos eliminar. No se puede deshacer.",
+    "confirm": "Eliminar"
+  },
+  "detail": {
+    "date": "Fecha",
+    "time": "Horario",
+    "yourTime": "Tu hora: {{range}}",
+    "yourTimeRow": "Tu hora",
+    "repeats": "Se repite",
+    "coveredBy": "Quién lo tiene",
+    "openValue": "Nadie todavía",
+    "reminder": "Recordatorio"
+  },
+  "repeat": {
+    "never": "Nunca",
+    "daily": "Diario",
+    "weekly": "Semanal",
+    "weeklyOn": "Semanal los {{days}}",
+    "series": "Se repite"
+  },
+  "reminder": {
+    "off": "Desactivado",
+    "h1": "1 hora antes",
+    "h2": "2 horas antes",
+    "h4": "4 horas antes",
+    "d1": "1 día antes",
+    "chip1h": "1 hora",
+    "chip2h": "2 horas",
+    "chip4h": "4 horas",
+    "chip1d": "1 día"
+  },
+  "duration": {
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} horas",
+    "minutes_one": "{{count}} minuto",
+    "minutes_other": "{{count}} minutos",
+    "mixed": "{{hours}} h {{minutes}} min"
+  },
+  "form": {
+    "newTitle": "Nuevo turno",
+    "editTitle": "Editar turno",
+    "heading": "¿Quién está con {{name}}?",
+    "editScopeLabel": "¿Qué turnos?",
+    "name": "Nombre",
+    "namePlaceholder": "p. ej. Noche",
+    "starts": "Empieza",
+    "ends": "Termina",
+    "reminder": "Recordatorio",
+    "covering": "¿Quién lo cubre?",
+    "leaveOpen": "Dejar abierto",
+    "me": "Yo",
+    "timezoneNote": "Estas horas son de {{zone}}.",
+    "seriesNote": "Aquí no se puede cambiar la fecha ni la repetición de una serie. Tu cambio se aplica a los turnos que elegiste.",
+    "save": "Guardar turno",
+    "repeats": "Se repite",
+    "date": "Fecha",
+    "endsOn": "La repetición termina",
+    "reminderHint": "Se envía a quien tenga el turno.",
+    "careRecipient": "{{name}} · Receptor de cuidado"
+  },
+  "saved": {
+    "title": "\"{{name}}\" guardado",
+    "summaryOpen": "{{range}}, {{repeat}}. Abierto para que cualquiera lo tome.",
+    "summaryOpenOnce": "{{range}} · Abierto para que cualquiera lo tome.",
+    "summaryAssigned": "{{range}}, {{repeat}}. {{who}} lo tiene.",
+    "summaryAssignedOnce": "{{range}} · {{who}} lo tiene.",
+    "addNext": "Agregar el siguiente turno",
+    "addNextHint": "Empieza a las {{time}} · {{repeat}}",
+    "addNextHintOnce": "Empieza a las {{time}}",
+    "done": "Listo",
+    "summarySelf": "{{range}}, {{repeat}}. Tú lo tienes.",
+    "summarySelfOnce": "{{range}} · Tú lo tienes.",
+    "repeatDaily": "todos los días",
+    "repeatWeekly": "cada semana",
+    "repeatDays": "los {{days}}"
+  },
+  "validation": {
+    "nameRequired": "Ponle un nombre al turno.",
+    "nameTooLong": "El nombre debe tener 60 caracteres o menos.",
+    "dateRequired": "Elige una fecha.",
+    "startRequired": "Elige cuándo comienza el turno.",
+    "endRequired": "Elige a qué hora termina el turno.",
+    "tooShort": "Un turno dura de 15 minutos a 24 horas.",
+    "tooLong": "Un turno dura de 15 minutos a 24 horas.",
+    "repeatEndBeforeStart": "La fecha final debe ser igual o posterior a la primera fecha.",
+    "daysRequired": "Elige al menos un día."
+  },
+  "toast": {
+    "taken": "Tienes el turno \"{{name}}\".",
+    "alreadyTaken": "{{takenBy}} acaba de tomar este turno.",
+    "dropped": "Soltaste \"{{name}}\". Quedó abierto otra vez.",
+    "assigned": "{{name}} tiene el turno.",
+    "updated": "Turno actualizado.",
+    "deleted": "Turno eliminado.",
+    "alreadyTakenUnknown": "Alguien acaba de tomar este turno.",
+    "alreadyOpen": "Este turno ya está abierto.",
+    "notFound": "Este turno ya no está disponible.",
+    "notAssigned": "Ya no hay nadie en ese turno."
+  },
+  "someone": "Alguien",
+  "rangeSpoken": "de {{start}} a {{end}}",
+  "summaryShort_one": "{{count}} turno · {{open}}",
+  "summaryShort_other": "{{count}} turnos · {{open}}",
+  "card": {
+    "statusOpen": "abierto",
+    "statusCovered": "{{name}} lo tiene",
+    "statusMine": "tú tienes este turno",
+    "openDetailsHint": "Abre los detalles del turno"
+  },
+  "loadError": "No pudimos cargar los turnos.",
+  "error": {
+    "take": "No pudimos tomar el turno. Inténtalo de nuevo.",
+    "drop": "No pudimos soltar el turno. Inténtalo de nuevo.",
+    "assign": "No pudimos asignar el turno. Inténtalo de nuevo.",
+    "save": "No pudimos guardar el turno. Inténtalo de nuevo.",
+    "delete": "No pudimos eliminar el turno. Inténtalo de nuevo.",
+    "dropForbidden": "Solo quien tiene el turno, el dueño o un gestor puede soltarlo.",
+    "assignForbidden": "Solo el dueño o un gestor puede poner a otra persona en un turno.",
+    "invalidAssignee": "Esa persona no puede tener un turno.",
+    "permissionDenied": "No tienes permiso para cambiar turnos en este círculo."
+  },
+  "week": {
+    "openDayHint": "Abre la vista del día",
+    "today": "Hoy"
+  },
+  "readOnly": {
+    "owner": "Tu Premium terminó. Tus turnos son de solo lectura.",
+    "renew": "Renovar Premium",
+    "other": "Los turnos son de solo lectura por ahora."
+  },
+  "openCount_zero": "ninguno abierto",
+  "openCount_one": "{{count}} abierto",
+  "openCount_other": "{{count}} abiertos"
+}

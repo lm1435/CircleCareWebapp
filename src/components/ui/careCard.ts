@@ -91,7 +91,7 @@ export const careCardActionBtn =
 export const careCardActionCompact = 'min-w-[66px] px-4';
 
 /** Primary action pill (e.g. Take, Done) — moss fill, cream text. */
-export const careCardActionPrimary = `${careCardActionBtn} bg-moss text-cream`;
+export const careCardActionPrimary = `${careCardActionBtn} bg-primary-fill text-on-primary`;
 
 /** Secondary action pill (e.g. Skip) — bg-2 fill, ink-2 text. */
 export const careCardActionSecondary = `${careCardActionBtn} bg-bg-2 text-ink-2`;
