@@ -596,7 +596,8 @@ export const norm = (text) => String(text).replace(/ | /g, ' ').replace(/\s+/
 
 const LABELS = {
   en: {
-    sentence: (x) => `took ${x.taken} of ${x.total} scheduled doses \\(${x.rate}%\\)\\. ${x.taken_late} were taken late and ${x.not_marked} were not marked`,
+    // Three plural-aware sentences since 2026-10-24 (summaryTaken/summaryLate/summaryNotMarked, "1 was not marked").
+    sentence: (x) => `took ${x.taken} of ${x.total} scheduled doses \\(${x.rate}%\\)\\. ${x.taken_late} ${x.taken_late === 1 ? 'was' : 'were'} taken late\\. ${x.not_marked} ${x.not_marked === 1 ? 'was' : 'were'} not marked`,
     tiles: ['Adherence rate', 'Taken on time', 'Taken late', 'Not marked', 'Skipped', 'Total'],
     range: 'to',
     current: 'Current medications',
@@ -606,7 +607,7 @@ const LABELS = {
     trends: ['Improving', 'Declining', 'Stable'],
   },
   es: {
-    sentence: (x) => `tomó ${x.taken} de ${x.total} dosis programadas \\(${x.rate}%\\)\\. ${x.taken_late} se tomaron tarde y ${x.not_marked} no se marcaron`,
+    sentence: (x) => `tomó ${x.taken} de ${x.total} dosis programadas \\(${x.rate}%\\)\\. ${x.taken_late} ${x.taken_late === 1 ? 'se tomó' : 'se tomaron'} tarde\\. ${x.not_marked} ${x.not_marked === 1 ? 'no fue marcada' : 'no fueron marcadas'}`,
     tiles: ['Tasa de adherencia', 'Tomados a tiempo', 'Tomados tarde', 'Sin marcar', 'Omitidos', 'Total'],
     range: 'al',
     current: 'Medicamentos actuales',
@@ -646,7 +647,7 @@ export function checkAdherenceText(text, exp, { lang = 'en', recipientName } = {
   if (recipientName && !t.toLowerCase().includes(recipientName.toLowerCase())) problems.push(`recipient name "${recipientName}" missing`);
   const sentence = new RegExp(L.sentence(s), 'i');
   if (!sentence.test(t)) {
-    const got = t.match(lang === 'es' ? /tomó \d+ de \d+ dosis[^.]*\.[^.]*\./ : /took \d+ of \d+ scheduled[^.]*\.[^.]*\./);
+    const got = t.match(lang === 'es' ? /tomó \d+ de \d+ dosis[^.]*\.[^.]*\.[^.]*\./ : /took \d+ of \d+ scheduled[^.]*\.[^.]*\.[^.]*\./);
     problems.push(`summary sentence: want "${L.sentence(s).replace(/\\/g, '')}", got "${got ? got[0] : '(none)'}"`);
   }
   const tiles = readTiles(t, lang);

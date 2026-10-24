@@ -139,8 +139,11 @@ async function baselineNoteCounts(
   return { visit, care };
 }
 
+// Plural-correct since 0189d37 (emergency.json visitNotesCount_* / careNotesCount_*): "1 daily care note".
 function countLine(counts: { visit: number; care: number }): string {
-  return `Includes ${counts.visit} visit notes and ${counts.care} daily care notes`;
+  const visit = `${counts.visit} visit ${counts.visit === 1 ? 'note' : 'notes'}`;
+  const care = `${counts.care} daily care ${counts.care === 1 ? 'note' : 'notes'}`;
+  return `Includes ${visit} and ${care}`;
 }
 
 async function seedNotes(session: Awaited<ReturnType<typeof apiSession>>, circleId: string, tz: string, suffix: string) {
