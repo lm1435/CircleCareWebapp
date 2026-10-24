@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Accordion, Button, Card, Sheet, Text, useAccordionGroup } from '@/components/ui';
+import { Accordion, Card, Sheet, Text, useAccordionGroup } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { Analytics } from '@/lib/analytics';
 import { HelpHome } from '@/components/help/HelpHome';
+import { HelpContactCard } from '@/components/help/HelpContactCard';
+import { useHelp } from '@/help/useHelp';
 
 // Static help / FAQ page (plan Task 8.8 — no writes). FAQ content is ported
 // verbatim from the mobile HelpScreen (mobile/src/screens/help) into the `help`
@@ -21,6 +23,7 @@ interface FaqItem {
 
 export default function HelpPage(): ReactElement {
   const { t } = useTranslation('help');
+  const { articles } = useHelp();
   // Both levels start CLOSED (mobile HelpScreen mounts with empty expanded
   // sets) — two-level disclosure means opening a section never also dumps
   // every answer inside it open.
@@ -36,6 +39,9 @@ export default function HelpPage(): ReactElement {
           articles (renders nothing until content.json is present). */}
       <HelpHome />
 
+      {/* Legacy FAQ: only for a build without bundled help content. With content the
+          home above (Popular + Browse) replaces it, matching the mobile help home. */}
+      {articles.length === 0 && (
       <div className="mt-6 flex flex-col gap-4">
         {SECTION_KEYS.map((key) => {
           const sectionItems = t(`sections.${key}.items`, { returnObjects: true }) as FaqItem[];
@@ -83,19 +89,11 @@ export default function HelpPage(): ReactElement {
           );
         })}
       </div>
+      )}
 
-      {/* Contact support */}
-      <Card variant="filled" padding="lg" className="mt-8">
-        <Text variant="h3" as="h2">
-          {t('contact.title')}
-        </Text>
-        <Text variant="caption" className="mt-1">
-          {t('contact.body')}
-        </Text>
-        <Button as="a" href={`mailto:${t('contact.email')}`} variant="primary" className="mt-4">
-          {t('contact.cta')}
-        </Button>
-      </Card>
+      {/* Contact support: the help home above already shows the contact card; this
+          fallback covers a build without bundled help content. */}
+      {articles.length === 0 && <HelpContactCard className="mt-8" />}
 
       {/* Download the app */}
       <Card padding="lg" className="mt-6">

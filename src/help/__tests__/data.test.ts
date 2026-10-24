@@ -60,7 +60,8 @@ describe('search', () => {
   it('searches title, summary and keywords, ranking title first', () => {
     expect(searchArticles(en, 'pill').map((a) => a.slug)).toEqual(['add-a-medication']);
     expect(searchArticles(en, 'email').map((a) => a.slug)).toEqual(['invite-family']);
-    expect(searchArticles(en, 'invite').map((a) => a.slug)).toEqual(['invite-family']);
+    // The title hit ranks first; an article that only mentions it in its body follows.
+    expect(searchArticles(en, 'invite').map((a) => a.slug)[0]).toBe('invite-family');
   });
   it('requires every word and returns nothing for blank queries', () => {
     expect(searchArticles(en, 'invite zebra')).toEqual([]);
@@ -76,5 +77,22 @@ describe('helpMediaUrl', () => {
     expect(helpMediaUrl('add-a-medication-en.mp4')).toBe(
       'https://test-project.supabase.co/storage/v1/object/public/help-videos/add-a-medication-en.mp4'
     );
+  });
+});
+
+describe('search: full text', () => {
+  const base = { category: 'medications', summary: 'Short answer.', related: [] } as const;
+  const articles = [
+    { ...base, slug: 'a', title: 'Alpha', steps: ['Open More details and add the pharmacy.'], body: '' },
+    { ...base, slug: 'b', title: 'Beta', body: 'See [the guide](/help/pharmacy-guide/) for more.' },
+    { ...base, slug: 'c', title: 'Pharmacy basics', body: '' },
+  ];
+  it('finds words that only appear in steps or body, ranked below a title hit', () => {
+    const hits = searchArticles(articles as never, 'pharmacy').map((a) => a.slug);
+    expect(hits).toEqual(['c', 'a']);
+  });
+  it('never matches a markdown link target', () => {
+    expect(searchArticles(articles as never, 'guide').map((a) => a.slug)).toEqual(['b']);
+    expect(searchArticles(articles as never, 'pharmacy-guide')).toEqual([]);
   });
 });

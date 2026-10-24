@@ -120,6 +120,9 @@
     "dismiss": "Dismiss",
     "stillNeedHelp": "Still need help? Contact us",
     "notFoundTitle": "We could not find that article",
-    "notFoundBody": "It may have moved. Browse all help articles instead."
+    "notFoundBody": "It may have moved. Browse all help articles instead.",
+    "browse": "Browse",
+    "articleCount_one": "{{count}} article",
+    "articleCount_other": "{{count}} articles"
   }
 }

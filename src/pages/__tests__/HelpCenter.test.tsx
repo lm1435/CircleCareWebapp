@@ -1,10 +1,11 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HelmetProvider } from 'react-helmet-async';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import HelpPage from '@/pages/HelpPage';
 import HelpArticlePage from '@/pages/HelpArticlePage';
+import HelpCategoryPage from '@/pages/HelpCategoryPage';
 import { HELP_FIXTURE } from '@/help/__tests__/fixture';
 
 // In-app help center (docs/plans/in-app-help.md): hub (search / Popular /
@@ -33,6 +34,7 @@ function renderApp(initial: string | { pathname: string; state?: unknown }): voi
       <MemoryRouter initialEntries={[initial]}>
         <Routes>
           <Route path="/help" element={<HelpPage />} />
+          <Route path="/help/c/:category" element={<HelpCategoryPage />} />
           <Route path="/help/:slug" element={<HelpArticlePage />} />
         </Routes>
       </MemoryRouter>
@@ -46,17 +48,64 @@ beforeEach(async () => {
 });
 
 describe('Help hub', () => {
-  it('shows search, Popular (existing slugs only) and categories', () => {
+  it('shows search, Popular (titles only), Browse rows and the contact card', () => {
     renderApp('/help');
     expect(screen.getByRole('searchbox', { name: 'Search help' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Popular' })).toBeInTheDocument();
     const popular = screen.getByRole('list', { name: 'Popular' });
     expect(popular.querySelectorAll('li')).toHaveLength(2);
-    expect(screen.getByRole('list', { name: 'Getting started' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Daily care' })).toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Empty' })).toBeNull();
-    // The legacy FAQ and contact card are still on the page.
-    expect(screen.getByRole('button', { name: 'Getting started' })).toBeInTheDocument();
+    expect(within(popular).queryByText('Send an invite by email.')).toBeNull();
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Browse' })).toBeInTheDocument();
+    const browse = screen.getByRole('list', { name: 'Browse' });
+    const rows = within(browse).getAllByRole('link');
+    expect(rows.map((r) => r.getAttribute('aria-label'))).toEqual([
+      'Getting started, 1 article',
+      'Daily care, 1 article',
+    ]);
+    expect(rows[0]).toHaveAttribute('href', '/help/c/getting-started');
+    expect(rows[1]).toHaveAttribute('href', '/help/c/care');
+    expect(within(rows[0]).getByText('1 article')).toBeInTheDocument();
+    expect(within(rows[0]).queryByText('Send an invite by email.')).toBeNull();
+    expect(within(browse).queryByText('Empty')).toBeNull();
+    // Article rows of a category are not on the home any more.
+    expect(screen.queryByRole('list', { name: 'Daily care' })).toBeNull();
+
+    expect(screen.getByTestId('help-contact-card')).toBeInTheDocument();
+    // With bundled content the legacy FAQ is gone (Browse replaces it, as on mobile),
+    // and the contact card is not doubled.
+    expect(screen.queryByRole('button', { name: 'Getting started' })).toBeNull();
+    expect(screen.getAllByRole('link', { name: 'Email support' })).toHaveLength(1);
+  });
+
+  it('caps Popular at the first 3 slugs', () => {
+    renderApp('/help');
+    expect(screen.getByRole('list', { name: 'Popular' }).querySelectorAll('li').length).toBeLessThanOrEqual(3);
+  });
+
+  it('search replaces Popular and Browse and shows title plus a truncated summary', async () => {
+    const user = userEvent.setup();
+    renderApp('/help');
+    await user.type(screen.getByRole('searchbox', { name: 'Search help' }), 'invite');
+    expect(screen.queryByRole('heading', { name: 'Popular' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Browse' })).toBeNull();
+    const results = screen.getByRole('list', { name: 'Results' });
+    const summary = within(results).getByText('Send an invite by email.');
+    expect(summary).toHaveClass('truncate');
+  });
+
+  it('opens a category from Browse and an article from the category with source hub', async () => {
+    const user = userEvent.setup();
+    renderApp('/help');
+    await user.click(screen.getByRole('link', { name: 'Daily care, 1 article' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Daily care' })).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Add a medication' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Add a medication' })).toBeInTheDocument();
+    expect(mocks.helpArticleViewed).toHaveBeenCalledWith({
+      slug: 'add-a-medication',
+      source: 'hub',
+      locale: 'en',
+    });
   });
 
   it('fires help_center_opened with the entry point from router state (default profile)', () => {
@@ -116,6 +165,42 @@ describe('Help hub', () => {
       source: 'hub',
       locale: 'en',
     });
+  });
+});
+
+describe('Help category', () => {
+  it('shows only that category, titles only, in order, then the contact card', async () => {
+    renderApp('/help/c/care');
+    expect(screen.getByRole('heading', { level: 1, name: 'Daily care' })).toBeInTheDocument();
+    const list = screen.getByRole('list', { name: 'Daily care' });
+    const items = within(list).getAllByRole('listitem');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent('Add a medication');
+    expect(within(list).queryByText('Add a medicine and its reminder times.')).toBeNull();
+    expect(screen.queryByText('Invite family')).toBeNull();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.getByTestId('help-contact-card')).toBeInTheDocument();
+    // Helmet writes document.title asynchronously.
+    await waitFor(() => expect(document.title).toBe('Daily care · CircleCare'));
+    expect(screen.getByRole('link', { name: 'All help articles' })).toHaveAttribute('href', '/help');
+    expect(within(list).getByRole('link')).toHaveAttribute('href', '/help/add-a-medication');
+  });
+
+  it('renders the Spanish label and plural counts in es', async () => {
+    await i18n.changeLanguage('es');
+    renderApp('/help');
+    expect(screen.getByRole('link', { name: 'Cuidado diario, 1 artículo' })).toHaveAttribute(
+      'href',
+      '/help/c/care'
+    );
+  });
+
+  it('an unknown or empty category shows the not-found state with a way back', () => {
+    renderApp('/help/c/empty');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'We could not find that article' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'All help articles' })).toHaveAttribute('href', '/help');
   });
 });
 

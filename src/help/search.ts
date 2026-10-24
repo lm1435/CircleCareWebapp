@@ -10,10 +10,17 @@ export function normalizeForSearch(value: string): string {
     .trim();
 }
 
+/** Steps plus body text, with markdown link targets dropped so "/help/..." never matches. */
+function fullText(article: HelpArticleOut): string {
+  const body = (article.body ?? '').replace(/\]\([^)]*\)/g, ']');
+  return normalizeForSearch([...(article.steps ?? []), body].join(' '));
+}
+
 /**
- * Client-side search over title, summary and keywords. Every query word must
- * appear somewhere; ranking is title > keywords > summary. Stable for ties
- * (content order).
+ * Client-side search over every article, whatever its category: title, keywords,
+ * summary, steps and body. Every query word must appear somewhere; a word scores
+ * by the best field it hits: title > keywords > summary > steps/body. Stable for
+ * ties (content order). Same weights as mobile.
  */
 export function searchArticles(articles: HelpArticleOut[], query: string): HelpArticleOut[] {
   const words = normalizeForSearch(query).split(' ').filter(Boolean);
@@ -23,11 +30,13 @@ export function searchArticles(articles: HelpArticleOut[], query: string): HelpA
     const title = normalizeForSearch(article.title);
     const keywords = normalizeForSearch((article.keywords ?? []).join(' '));
     const summary = normalizeForSearch(article.summary);
+    const text = fullText(article);
     let score = 0;
     for (const word of words) {
-      if (title.includes(word)) score += 100;
-      else if (keywords.includes(word)) score += 10;
-      else if (summary.includes(word)) score += 1;
+      if (title.includes(word)) score += 1000;
+      else if (keywords.includes(word)) score += 100;
+      else if (summary.includes(word)) score += 10;
+      else if (text.includes(word)) score += 1;
       else return; // a word that matches nowhere rejects the article
     }
     scored.push({ article, score, index });

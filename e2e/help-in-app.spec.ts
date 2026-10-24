@@ -28,6 +28,7 @@ const CONTENT_PATH = resolve(HERE, '../src/help/content.json');
 
 interface Article {
   slug: string;
+  category: string;
   title: string;
   summary: string;
   related: string[];
@@ -35,6 +36,8 @@ interface Article {
   poster?: string;
 }
 interface Content {
+  categories: { id: string; label: { en: string } }[];
+  popular: string[];
   articles: { en: Article[] };
 }
 
@@ -72,6 +75,7 @@ test.describe('in-app help (signed in)', () => {
     await expect(page).toHaveURL(/\/help$/);
     await expect(page.getByRole('searchbox', { name: 'Search help' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'Popular' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Browse' })).toBeVisible();
     await checkA11y(page, '/help', testInfo, { wcag22: true });
 
     // Search by the article title.
@@ -123,6 +127,51 @@ test.describe('in-app help (signed in)', () => {
       .click();
     await expect(page).toHaveURL(new RegExp(`/help/${related.slug}$`));
     await expect(page.getByRole('heading', { level: 1, name: related.title })).toBeVisible();
+  });
+
+  test('home -> category -> article (drill-down), and search still covers everything', async ({
+    page,
+  }, testInfo) => {
+    const cat = content!.categories.find((c) => en.some((a) => a.category === c.id))!;
+    const inCat = en.filter((a) => a.category === cat.id);
+    const first = inCat[0];
+    await page.route(MEDIA_PATH, () => undefined);
+
+    await page.goto('/help', { waitUntil: 'domcontentloaded' });
+    // Home: first 3 popular titles only, one Browse row per category with its count.
+    const popularSlugs = content!.popular.filter((s) => bySlug(s)).slice(0, 3);
+    const popular = page.getByRole('list', { name: 'Popular' });
+    await expect(popular.getByRole('listitem')).toHaveCount(popularSlugs.length);
+    await expect(popular.getByText(bySlug(popularSlugs[0])!.summary)).toHaveCount(0);
+    const browse = page.getByRole('list', { name: 'Browse' });
+    const row = browse.getByRole('link', {
+      name: `${cat.label.en}, ${inCat.length} ${inCat.length === 1 ? 'article' : 'articles'}`,
+    });
+    await expect(row).toHaveAttribute('href', `/help/c/${cat.id}`);
+
+    await row.click();
+    await expect(page).toHaveURL(new RegExp(`/help/c/${cat.id}$`));
+    await expect(page.getByRole('heading', { level: 1, name: cat.label.en })).toBeVisible();
+    const list = page.getByRole('list', { name: cat.label.en });
+    await expect(list.getByRole('listitem')).toHaveCount(inCat.length);
+    await expect(list.getByText(first.summary)).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Email support' })).toBeVisible();
+    // The document title is checked on a direct load: on a signed-in CLIENT-SIDE navigation
+    // the tab title currently stays "Help" for articles too (pre-existing, not from this work).
+    await page.goto(`/help/c/${cat.id}`, { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveTitle(`${cat.label.en} · CircleCare`);
+    await checkA11y(page, `/help/c/${cat.id}`, testInfo, { wcag22: true });
+
+    await page.getByRole('list', { name: cat.label.en }).getByRole('link').first().click();
+    await expect(page).toHaveURL(new RegExp(`/help/${first.slug}$`));
+    await expect(page.getByRole('heading', { level: 1, name: first.title })).toBeVisible();
+
+    // Search covers all articles and replaces Popular / Browse.
+    await page.goto('/help', { waitUntil: 'domcontentloaded' });
+    const other = en[en.length - 1];
+    await page.getByRole('searchbox', { name: 'Search help' }).fill(other.title);
+    await expect(page.getByRole('heading', { level: 2, name: 'Browse' })).toHaveCount(0);
+    await expect(page.getByRole('list', { name: 'Results' }).getByText(other.summary).first()).toBeVisible();
   });
 
   test('a video that cannot load keeps the article and says so', async ({ page }) => {

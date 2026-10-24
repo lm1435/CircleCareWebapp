@@ -43,6 +43,7 @@ const EditCirclePage = lazy(() => import('@/pages/EditCirclePage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const HelpPage = lazy(() => import('@/pages/HelpPage'));
 const HelpArticlePage = lazy(() => import('@/pages/HelpArticlePage'));
+const HelpCategoryPage = lazy(() => import('@/pages/HelpCategoryPage'));
 const UpgradePage = lazy(() => import('@/pages/UpgradePage'));
 
 /**
@@ -94,6 +95,7 @@ export const router = createBrowserRouter([
     element: <HelpRouteLayout />,
     children: [
       { path: '/help', element: <HelpPage /> },
+      { path: '/help/c/:category', element: <HelpCategoryPage /> },
       { path: '/help/:slug', element: <HelpArticlePage /> },
     ],
   },

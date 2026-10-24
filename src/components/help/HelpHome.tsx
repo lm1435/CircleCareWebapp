@@ -8,6 +8,8 @@ import { resultCountBucket, searchArticles } from '@/help/search';
 import { useHelp } from '@/help/useHelp';
 import type { HelpOpenSource } from '@/help/types';
 import { HelpArticleList } from './HelpArticleList';
+import { HelpCategoryList } from './HelpCategoryList';
+import { HelpContactCard } from './HelpContactCard';
 
 const OPEN_SOURCES: readonly HelpOpenSource[] = [
   'profile',
@@ -17,6 +19,7 @@ const OPEN_SOURCES: readonly HelpOpenSource[] = [
   'contextual',
 ];
 const SEARCH_ANALYTICS_DELAY_MS = 800;
+const POPULAR_COUNT = 3;
 
 /** Help home: search, Popular, categories (plan "What the user gets"). */
 export function HelpHome(): ReactElement | null {
@@ -54,7 +57,7 @@ export function HelpHome(): ReactElement | null {
 
   if (articles.length === 0) return null;
 
-  const popular = getPopular(content, locale);
+  const popular = getPopular(content, locale).slice(0, POPULAR_COUNT);
   const groups = groupByCategory(content, locale);
 
   return (
@@ -85,7 +88,12 @@ export function HelpHome(): ReactElement | null {
           </p>
           {results.length > 0 && (
             <div className="mt-3">
-              <HelpArticleList articles={results} source="search" label={t('center.results')} />
+              <HelpArticleList
+                articles={results}
+                source="search"
+                label={t('center.results')}
+                truncateSummary
+              />
             </div>
           )}
         </section>
@@ -97,22 +105,27 @@ export function HelpHome(): ReactElement | null {
                 {t('center.popular')}
               </Text>
               <div className="mt-2">
-                <HelpArticleList articles={popular} source="hub" label={t('center.popular')} />
+                <HelpArticleList
+                  articles={popular}
+                  source="hub"
+                  label={t('center.popular')}
+                  showSummary={false}
+                />
               </div>
             </section>
           )}
-          {groups.map((group) => (
-            <section key={group.id} aria-labelledby={`help-cat-${group.id}`}>
-              <Text variant="label" as="h2" id={`help-cat-${group.id}`} className="uppercase tracking-wide">
-                {group.label}
-              </Text>
-              <div className="mt-2">
-                <HelpArticleList articles={group.articles} source="hub" label={group.label} />
-              </div>
-            </section>
-          ))}
+          <section aria-labelledby="help-browse-heading">
+            <Text variant="label" as="h2" id="help-browse-heading" className="uppercase tracking-wide">
+              {t('center.browse')}
+            </Text>
+            <div className="mt-2">
+              <HelpCategoryList groups={groups} label={t('center.browse')} />
+            </div>
+          </section>
         </>
       )}
+
+      <HelpContactCard />
     </div>
   );
 }

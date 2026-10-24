@@ -120,6 +120,9 @@
     "dismiss": "Fermer",
     "stillNeedHelp": "Besoin d’aide supplémentaire ? Contactez-nous",
     "notFoundTitle": "Cet article est introuvable",
-    "notFoundBody": "Il a peut-être été déplacé. Parcourez plutôt tous les articles d’aide."
+    "notFoundBody": "Il a peut-être été déplacé. Parcourez plutôt tous les articles d’aide.",
+    "browse": "Parcourir",
+    "articleCount_one": "{{count}} article",
+    "articleCount_other": "{{count}} articles"
   }
 }

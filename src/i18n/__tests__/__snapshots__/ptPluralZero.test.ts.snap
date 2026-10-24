@@ -132,6 +132,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Membros: 1",
     "2 membros",
   ],
+  "pt help:center.articleCount": [
+    "0 artigos",
+    "1 artigo",
+    "2 artigos",
+  ],
   "pt meds:asNeeded.recent.minutesAgo": [
     "há 0 min",
     "há 1 min",
@@ -421,6 +426,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Membros: 0",
     "Membros: 1",
     "2 membros",
+  ],
+  "pt-PT help:center.articleCount": [
+    "0 artigos",
+    "1 artigo",
+    "2 artigos",
   ],
   "pt-PT meds:asNeeded.recent.minutesAgo": [
     "há 0 min",

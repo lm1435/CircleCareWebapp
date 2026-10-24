@@ -120,6 +120,9 @@
     "dismiss": "Schließen",
     "stillNeedHelp": "Brauchen Sie weitere Hilfe? Kontaktieren Sie uns",
     "notFoundTitle": "Dieser Artikel wurde nicht gefunden",
-    "notFoundBody": "Möglicherweise wurde er verschoben. Stöbern Sie stattdessen in allen Hilfeartikeln."
+    "notFoundBody": "Möglicherweise wurde er verschoben. Stöbern Sie stattdessen in allen Hilfeartikeln.",
+    "browse": "Durchsuchen",
+    "articleCount_one": "{{count}} Artikel",
+    "articleCount_other": "{{count}} Artikel"
   }
 }
