@@ -92,6 +92,7 @@
     "yourTimeRow": "Your time",
     "repeats": "Repeats",
     "coveredBy": "Who's on it",
+    "whoThisDayOnly": "{{name}} · this day only",
     "openValue": "Nobody yet",
     "reminder": "Reminder"
   },

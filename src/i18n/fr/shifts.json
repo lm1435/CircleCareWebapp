@@ -92,6 +92,7 @@
     "yourTimeRow": "Votre heure",
     "repeats": "Répétition",
     "coveredBy": "Qui s’en charge",
+    "whoThisDayOnly": "{{name}} · ce jour seulement",
     "openValue": "Personne pour l’instant",
     "reminder": "Rappel"
   },

@@ -96,7 +96,9 @@ describe('shifts analytics', () => {
     A.shiftAddNextTapped();
     expect(last()).toEqual(['shift_add_next_tapped', {}]);
     A.shiftTaken({ scope: 'future' });
-    expect(last()).toEqual(['shift_taken', { scope: 'future' }]);
+    expect(last()).toEqual(['shift_taken', { scope: 'future', reminder_changed: false }]);
+    A.shiftTaken({ scope: 'occurrence', reminderChanged: true });
+    expect(last()).toEqual(['shift_taken', { scope: 'occurrence', reminder_changed: true }]);
     A.shiftTakeConflict();
     expect(last()).toEqual(['shift_take_conflict', {}]);
     A.shiftDropped({ scope: 'occurrence', within24h: true, byRole: 'manager' });

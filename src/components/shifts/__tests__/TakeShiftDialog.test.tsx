@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -78,16 +78,51 @@ beforeEach(() => {
 });
 
 describe('TakeShiftDialog', () => {
-  it('a one-off: one Take button, no scope choice, the shift reminder is shown read-only', async () => {
+  it('a one-off: one Take button, no scope choice, the reminder picker starts on the shift value and unchanged sends none', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
     expect(screen.getByRole('heading', { name: 'Take "Night"' })).toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
-    expect(screen.getByTestId('take-shift-reminder')).toHaveTextContent('Reminder · 1 hour before');
+    const picker = screen.getByRole('combobox', { name: 'Reminder' });
+    expect(picker).toHaveValue('60');
+    expect(within(picker).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Off', '1 hour', '2 hours', '4 hours', '1 day',
+    ]);
     await user.click(screen.getByRole('button', { name: 'Take shift' }));
     await waitFor(() =>
       expect(mockTake).toHaveBeenCalledWith('c', 's1', { scope: 'occurrence', scheduledDate: '2026-10-20' })
     );
+  });
+
+  it('changing the reminder sends reminder_lead_minutes (and Off sends null); the event reports reminderChanged', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Reminder' }), '4 hours');
+    await user.click(screen.getByRole('button', { name: 'Take shift' }));
+    await waitFor(() =>
+      expect(mockTake).toHaveBeenCalledWith('c', 's1', {
+        scope: 'occurrence',
+        scheduledDate: '2026-10-20',
+        reminder_lead_minutes: 240,
+      })
+    );
+    await waitFor(() =>
+      expect(Analytics.shiftTaken).toHaveBeenCalledWith({ scope: 'occurrence', reminderChanged: true })
+    );
+  });
+
+  it('Off sends null; picking the original value again sends nothing', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Reminder' }), 'Off');
+    await user.click(screen.getByRole('button', { name: 'Take shift' }));
+    await waitFor(() => expect(mockTake).toHaveBeenCalled());
+    expect(mockTake.mock.calls[0][2]).toHaveProperty('reminder_lead_minutes', null);
+  });
+
+  it('a shift with no reminder starts on Off', () => {
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null, reminder_lead_minutes: null }));
+    expect(screen.getByRole('combobox', { name: 'Reminder' })).toHaveValue('off');
   });
 
   it('repeating + open series: "Just this one" (default) or "This and every future one"; future sends scope future', async () => {
@@ -106,7 +141,9 @@ describe('TakeShiftDialog', () => {
         scheduledDate: '2026-10-20',
       })
     );
-    await waitFor(() => expect(Analytics.shiftTaken).toHaveBeenCalledWith({ scope: 'future' }));
+    await waitFor(() =>
+      expect(Analytics.shiftTaken).toHaveBeenCalledWith({ scope: 'future', reminderChanged: false })
+    );
     expect(onClose).toHaveBeenCalled();
     expect(await screen.findByText("You're on the shift \"Night\".")).toBeInTheDocument();
   });

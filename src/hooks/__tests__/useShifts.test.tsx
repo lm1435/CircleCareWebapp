@@ -113,7 +113,7 @@ describe('optimistic take / drop / assign only move the rows the server will mov
     await waitFor(() => expect(assignees(cached())).toEqual(['u-me', 'u-me', 'u-ana', 'u-me', null]));
     expect(cached()?.[0].assigned_to_user).toEqual(expect.objectContaining({ id: 'u-me', first_name: 'Pat' }));
     d.resolve({ event: ROWS()[0], rootId: 'root' } as never);
-    await waitFor(() => expect(Analytics.shiftTaken).toHaveBeenCalledWith({ scope: 'future' }));
+    await waitFor(() => expect(Analytics.shiftTaken).toHaveBeenCalledWith({ scope: 'future', reminderChanged: false }));
   });
 
   it('an OCCURRENCE take patches only that date', async () => {

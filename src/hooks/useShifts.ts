@@ -168,7 +168,7 @@ export function useCanTakeFuture(
 export function useShiftSeriesRoot(
   circleId: string,
   event: CalendarEvent | null
-): Pick<CalendarEvent, 'recurrence_rule' | 'recurrence_days'> | null {
+): Pick<CalendarEvent, 'id' | 'assigned_to' | 'recurrence_rule' | 'recurrence_days'> | null {
   const rootId = event ? shiftRootId(event) : '';
   const needsRoot = !!event && !!event.parent_event_id && !event.recurrence_rule;
   const { data: root } = useQuery({
@@ -287,6 +287,11 @@ export interface ShiftActionVariables {
   scope: ShiftScope;
 }
 
+export interface TakeShiftVariables extends ShiftActionVariables {
+  /** Only when the taker changed it from the shift's own value; null = Off. */
+  reminder?: 60 | 120 | 240 | 1440 | null;
+}
+
 export interface AssignShiftVariables extends ShiftActionVariables {
   userId: string;
 }
@@ -298,15 +303,19 @@ interface OptimisticContext {
 /** POST .../shift/take — "Take shift". */
 export function useTakeShift(
   circleId: string
-): UseMutationResult<ShiftActionResult, unknown, ShiftActionVariables, OptimisticContext> {
+): UseMutationResult<ShiftActionResult, unknown, TakeShiftVariables, OptimisticContext> {
   const queryClient = useQueryClient();
   const onError = useShiftMutationOnError(circleId);
   const me = useAuthStore((s) => s.user);
 
   return useMutation({
-    mutationFn: ({ shift, scope }: ShiftActionVariables) =>
-      takeShift(circleId, shift.id, { scope, scheduledDate: shift.scheduled_date }),
-    onMutate: async ({ shift, scope }) => {
+    mutationFn: ({ shift, scope, reminder }: TakeShiftVariables) =>
+      takeShift(circleId, shift.id, {
+        scope,
+        scheduledDate: shift.scheduled_date,
+        ...(reminder !== undefined ? { reminder_lead_minutes: reminder } : {}),
+      }),
+    onMutate: async ({ shift, scope, reminder }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.shifts(circleId) });
       return {
         snapshot: patchCaches(
@@ -322,13 +331,14 @@ export function useTakeShift(
                   last_name: me.last_name ?? null,
                   email: me.email ?? null,
                 },
+                ...(reminder !== undefined ? { reminder_lead_minutes: reminder } : {}),
               }
             : { assigned_to: null, assigned_to_user: null }
         ),
       };
     },
-    onSuccess: (_result, { scope }) => {
-      Analytics.shiftTaken({ scope });
+    onSuccess: (_result, { scope, reminder }) => {
+      Analytics.shiftTaken({ scope, reminderChanged: reminder !== undefined });
     },
     onError: (error, _vars, context) => {
       rollback(queryClient, context?.snapshot);

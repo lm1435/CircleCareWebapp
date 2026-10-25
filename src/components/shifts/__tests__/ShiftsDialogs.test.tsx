@@ -168,6 +168,21 @@ describe('Shift detail', () => {
     expect(names).toEqual(['Drop shift', 'Edit', 'Assign', 'Delete']);
   });
 
+  it('Edit / Assign / Delete are 44px buttons; Delete is the destructive (danger) variant', async () => {
+    const { dialog } = await openDetail(shift());
+    for (const name of ['Edit', 'Assign', 'Delete']) {
+      const b = within(dialog).getByRole('button', { name });
+      expect(b.tagName).toBe('BUTTON');
+      expect(b.className).toContain('min-h-[44px]');
+    }
+    expect(within(dialog).getByRole('button', { name: 'Delete' }).className).toContain(
+      'text-terracotta-deep'
+    );
+    expect(within(dialog).getByRole('button', { name: 'Edit' }).className).not.toContain(
+      'text-terracotta-deep'
+    );
+  });
+
   it('an open shift: Take, Edit, Assign, Delete', async () => {
     const open = await openDetail(shift({ id: 'o2', assigned_to: null }));
     const order = within(open.dialog)
@@ -246,6 +261,29 @@ describe('Drop', () => {
     const confirm = await screen.findByRole('dialog', { name: 'Drop this shift?' });
     await user.click(within(confirm).getByRole('button', { name: 'Drop shift' }));
     expect(await screen.findByText("We couldn't drop the shift. Try again.")).toBeInTheDocument();
+  });
+
+  it('took "Just this one" (series default open): "this day only" and a plain confirm with no scope', async () => {
+    vi.mocked(getSeriesRoot).mockResolvedValue({ id: 'root', recurrence_rule: 'daily', assigned_to: null } as never);
+    const { user, dialog } = await openDetail(shift({ id: 'phys1', recurrence_rule: null, is_virtual: false }));
+    expect(await within(dialog).findByText('You · this day only')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Drop shift' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Drop this shift?' });
+    expect(within(confirm).queryByRole('radio')).not.toBeInTheDocument();
+    await user.click(within(confirm).getByRole('button', { name: 'Drop shift' }));
+    await waitFor(() =>
+      expect(dropShift).toHaveBeenCalledWith('c', 'phys1', { scope: 'occurrence', scheduledDate: '2026-10-21' })
+    );
+  });
+
+  it('holding the series too (root is theirs): plain "You" and the scope question stays', async () => {
+    vi.mocked(getSeriesRoot).mockResolvedValue({ id: 'root', recurrence_rule: 'daily', assigned_to: 'u-ana' } as never);
+    const { user, dialog } = await openDetail(shift({ id: 'phys1', recurrence_rule: null, is_virtual: false }));
+    await waitFor(() => expect(getSeriesRoot).toHaveBeenCalled());
+    expect(within(dialog).queryByText('You · this day only')).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Drop shift' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Drop this shift?' });
+    expect(within(confirm).getByRole('radio', { name: 'This and future shifts' })).toBeInTheDocument();
   });
 
   it('a one-off is a plain confirm with no scope', async () => {

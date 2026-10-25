@@ -998,8 +998,12 @@ export const Analytics = {
       source: pickEnum(opts.source, SHIFT_SOURCES, 'shifts_view'),
     }),
   shiftAddNextTapped: () => capture('shift_add_next_tapped', {}),
-  shiftTaken: (opts: { scope: string }) =>
-    capture('shift_taken', { scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence') }),
+  shiftTaken: (opts: { scope: string; reminderChanged?: boolean }) =>
+    capture('shift_taken', {
+      scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence'),
+      // The taker picked a different reminder than the shift's own.
+      reminder_changed: opts.reminderChanged === true,
+    }),
   shiftTakeConflict: () => capture('shift_take_conflict', {}),
   shiftDropped: (opts: { scope: string; within24h: boolean; byRole: string }) =>
     capture('shift_dropped', {

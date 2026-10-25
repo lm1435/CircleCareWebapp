@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
 import { shiftAssignee } from './shiftPeople';
-import {
+import { holdsOnlyThisDay,
   formatShiftRange,
   formatShiftRangeViewer,
   formatShiftRepeat,
@@ -61,6 +61,10 @@ export function ShiftDetailModal({
   const ruleSource = useShiftSeriesRoot(circleId, shift);
   const repeat = formatShiftRepeat(ruleSource ?? shift, isShiftRepeating(shift), t, (days) => formatWeekdayList(days, i18n.language));
   const canDrop = !open && canWrite && (assignee?.isYou === true || canManageMembers);
+  // Took "Just this one" of a repeating shift: say so, or "Repeats: Daily" + "You" reads as every day.
+  const onlyThisDay = holdsOnlyThisDay(shift, ruleSource);
+  const whoName = assignee?.isYou ? t('shifts:you') : (assignee?.name ?? '');
+  const whoValue = onlyThisDay && whoName ? t('shifts:detail.whoThisDayOnly', { name: whoName }) : whoName;
 
   const row = (label: string, value: string, testId: string): ReactElement => (
     <div className="flex flex-col gap-0.5 border-t border-line-2 py-3 first:border-t-0">
@@ -126,11 +130,7 @@ export function ShiftDetailModal({
           {row(t('shifts:detail.repeats'), repeat, 'shift-detail-repeat')}
           {row(
             t('shifts:detail.coveredBy'),
-            open
-              ? t('shifts:detail.openValue')
-              : assignee?.isYou
-                ? t('shifts:you')
-                : (assignee?.name ?? ''),
+            open ? t('shifts:detail.openValue') : whoValue,
             'shift-detail-who'
           )}
           {row(

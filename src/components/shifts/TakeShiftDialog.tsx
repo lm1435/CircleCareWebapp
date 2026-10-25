@@ -2,12 +2,12 @@ import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { ShiftScope } from '@/api/shifts';
-import { Button, Modal, RadioGroup, useToast } from '@/components/ui';
+import { Button, Modal, RadioGroup, Select, useToast } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
 import { useCanTakeFuture, useHandleShiftFailure, useTakeShift } from '@/hooks/useShifts';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { ShiftInlineError } from './ShiftInlineError';
-import { formatShiftReminder } from './shiftUtils';
+import { SHIFT_REMINDER_LEADS, formatShiftReminderChip, type ShiftReminderLead } from './shiftUtils';
 
 export interface TakeShiftDialogProps {
   circleId: string;
@@ -39,6 +39,9 @@ export function TakeShiftDialog({
   const handleFailure = useHandleShiftFailure();
   const [scope, setScope] = useState<ShiftScope>('occurrence');
   const [error, setError] = useState('');
+  // Starts at the shift's own reminder; sent only when the taker changes it.
+  const current = (shift.reminder_lead_minutes ?? null) as ShiftReminderLead;
+  const [reminder, setReminder] = useState<ShiftReminderLead>(current);
 
   // Same rule as mobile: offered only when it can succeed (the series default is
   // open, or the viewer is the owner / a manager); the root is fetched when the
@@ -55,7 +58,11 @@ export function TakeShiftDialog({
   async function submit(): Promise<void> {
     setError('');
     try {
-      await take.mutateAsync({ shift, scope: futureOffered ? scope : 'occurrence' });
+      await take.mutateAsync({
+        shift,
+        scope: futureOffered ? scope : 'occurrence',
+        ...(reminder !== current ? { reminder } : {}),
+      });
       showToast(t('shifts:toast.taken', { name }), 'success');
       onTaken?.();
       onClose();
@@ -104,11 +111,24 @@ export function TakeShiftDialog({
           />
         )}
         <ShiftInlineError message={error} testId="take-shift-error" />
-        <p className="m-0 text-sm text-ink-3" data-testid="take-shift-reminder">
-          {t('shifts:take.reminderRow', {
-            when: formatShiftReminder(shift.reminder_lead_minutes, t),
-          })}
-        </p>
+        <div data-testid="take-shift-reminder">
+          <Select
+            id="take_shift_reminder"
+            label={t('shifts:form.reminder')}
+            options={SHIFT_REMINDER_LEADS.map((lead) => ({
+              value: lead === null ? 'off' : String(lead),
+              label: formatShiftReminderChip(lead, t),
+            }))}
+            value={reminder === null ? 'off' : String(reminder)}
+            busy={take.isPending}
+            onChange={(e) => {
+              const next = SHIFT_REMINDER_LEADS.find(
+                (lead) => (lead === null ? 'off' : String(lead)) === e.target.value
+              );
+              if (next !== undefined) setReminder(next);
+            }}
+          />
+        </div>
       </div>
     </Modal>
   );

@@ -44,6 +44,21 @@ export function isShiftRepeating(
   return !!shift.recurrence_rule || !!shift.parent_event_id;
 }
 
+/**
+ * Does the assignee hold ONLY this day of a repeating shift ("Just this one")? True for a
+ * physical occurrence whose series default person (the root's) is somebody else or nobody.
+ * `false` whenever we cannot tell (root not loaded yet, a virtual row, the root itself), so
+ * the UI falls back to the series wording rather than claiming "this day only".
+ */
+export function holdsOnlyThisDay(
+  shift: Pick<CalendarEvent, 'id' | 'assigned_to' | 'parent_event_id' | 'is_virtual'>,
+  root: Pick<CalendarEvent, 'id' | 'assigned_to'> | null | undefined
+): boolean {
+  if (!shift.assigned_to || !shift.parent_event_id || shift.is_virtual === true) return false;
+  if (!root || root.id === shift.id || root.id !== shift.parent_event_id) return false;
+  return root.assigned_to !== shift.assigned_to;
+}
+
 /** The series root of a shift row (itself for a one-off or a root). */
 export function shiftRootId(shift: Pick<CalendarEvent, 'id' | 'parent_event_id'>): string {
   return shift.parent_event_id || shift.id;
@@ -413,6 +428,22 @@ export function formatShiftReminder(lead: number | null | undefined, t: Translat
       return t('shifts:reminder.h4');
     case 1440:
       return t('shifts:reminder.d1');
+    default:
+      return t('shifts:reminder.off');
+  }
+}
+
+/** The picker's short wording ("1 hour" / "Off"), shared by the shift form and the Take dialog. */
+export function formatShiftReminderChip(lead: number | null | undefined, t: TranslateFn): string {
+  switch (lead) {
+    case 60:
+      return t('shifts:reminder.chip1h');
+    case 120:
+      return t('shifts:reminder.chip2h');
+    case 240:
+      return t('shifts:reminder.chip4h');
+    case 1440:
+      return t('shifts:reminder.chip1d');
     default:
       return t('shifts:reminder.off');
   }

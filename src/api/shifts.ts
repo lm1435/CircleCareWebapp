@@ -75,7 +75,7 @@ async function postShiftAction(
   circleId: string,
   eventId: string,
   action: 'take' | 'drop' | 'assign',
-  body: ShiftActionBody
+  body: ShiftActionBody | TakeShiftBody
 ): Promise<ShiftActionResult> {
   const response = (await apiClient.post(
     `/circles/${circleId}/events/${encodeURIComponent(eventId)}/shift/${action}`,
@@ -84,7 +84,10 @@ async function postShiftAction(
   return response.data;
 }
 
-export const takeShift = (circleId: string, eventId: string, body: ShiftActionBody) =>
+/** Take only: `reminder_lead_minutes` is sent when the taker changed it (null = Off); absent keeps the shift's own. */
+export type TakeShiftBody = ShiftActionBody & { reminder_lead_minutes?: 60 | 120 | 240 | 1440 | null };
+
+export const takeShift = (circleId: string, eventId: string, body: TakeShiftBody) =>
   postShiftAction(circleId, eventId, 'take', body);
 
 export const dropShift = (circleId: string, eventId: string, body: ShiftActionBody) =>

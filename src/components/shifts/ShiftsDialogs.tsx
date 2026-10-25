@@ -8,6 +8,7 @@ import {
   useAssignShift,
   useDeleteShift,
   useDropShift,
+  useShiftSeriesRoot,
   useHandleShiftFailure,
 } from '@/hooks/useShifts';
 import { ShiftComposer } from './ShiftComposer';
@@ -15,7 +16,7 @@ import { ShiftDetailModal, type ShiftDetailAction } from './ShiftDetailModal';
 import { ShiftFormModal, type ShiftFormSource } from './ShiftFormModal';
 import { ShiftScopeDialog } from './ShiftScopeDialog';
 import { TakeShiftDialog } from './TakeShiftDialog';
-import { isShiftRepeating, memberShortName } from './shiftUtils';
+import { holdsOnlyThisDay, isShiftRepeating, memberShortName } from './shiftUtils';
 
 type Active =
   | { kind: 'detail'; shift: CalendarEvent }
@@ -84,6 +85,8 @@ function ActiveDialog({
   const handleFailure = useHandleShiftFailure();
   const [assignee, setAssignee] = useState('');
   const [error, setError] = useState('');
+  // The series root (cached with the detail modal's): tells "holds only this day" apart.
+  const seriesRoot = useShiftSeriesRoot(circleId, active.kind === 'create' ? null : active.shift);
 
   // Classified failures close the dialog with a toast; a network / server failure
   // stays open with the message inline so the action can be retried.
@@ -132,17 +135,19 @@ function ActiveDialog({
           onUpdated={() => showToast(t('shifts:toast.updated'), 'success')}
         />
       );
-    case 'drop':
+    case 'drop': {
+      // Holding only this day there is nothing in the future to drop: no scope question.
+      const askScope = repeating && !holdsOnlyThisDay(shift, seriesRoot);
       return (
         <ShiftScopeDialog
           title={t('shifts:drop.title')}
           message={
-            repeating
+            askScope
               ? t('shifts:drop.messageRepeating')
               : t('shifts:drop.message', { name: shift.title })
           }
           confirmLabel={t('shifts:drop.confirm')}
-          repeating={repeating}
+          repeating={askScope}
           loading={drop.isPending}
           onCancel={onClose}
           error={error}
@@ -158,6 +163,7 @@ function ActiveDialog({
           }}
         />
       );
+    }
     case 'assign': {
       // A list, with whoever holds the shift now marked; nobody is preselected.
       const options = members

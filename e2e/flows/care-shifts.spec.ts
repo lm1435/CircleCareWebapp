@@ -67,9 +67,12 @@ async function openShifts(page: Page, circleId: string, view: 'Day' | 'Week' | '
   }
 }
 
-function sqlShiftRows(circleId: string): Array<{ title: string; assigned_to: string | null; parent: string | null }> {
+function sqlShiftRows(
+  circleId: string
+): Array<{ title: string; assigned_to: string | null; parent: string | null; reminder: number | null }> {
   return dbQuery(`
-    select title, assigned_to::text as assigned_to, parent_event_id::text as parent
+    select title, assigned_to::text as assigned_to, parent_event_id::text as parent,
+           reminder_lead_minutes as reminder
       from calendar_events
      where circle_id = ${sqlStr(circleId)}::uuid and event_type = 'shift'
      order by created_at`);
@@ -247,8 +250,12 @@ test.describe('a member takes and drops a shift', () => {
       const take = page.getByRole('dialog', { name: 'Take "Night"' });
       await expect(take.getByRole('radio', { name: /Just this one/ })).toBeChecked();
       await expect(take.getByRole('radio', { name: /This and every future one/ })).toBeVisible();
-      await expect(take.getByTestId('take-shift-reminder')).toHaveText('Reminder · 1 hour before');
+      // The reminder is a picker starting at the shift's own value; the taker may change it.
+      const reminder = take.getByRole('combobox', { name: 'Reminder' });
+      await expect(reminder).toHaveValue('60');
+      await expect(reminder.locator('option')).toHaveText(['Off', '1 hour', '2 hours', '4 hours', '1 day']);
       await checkA11y(page, 'shifts-take-light', testInfo);
+      await reminder.selectOption({ label: '4 hours' });
       await take.getByRole('button', { name: 'Take shift' }).click();
       await expect(page.getByText('You\'re on the shift "Night".')).toBeVisible({ timeout: 20_000 });
 
@@ -258,6 +265,9 @@ test.describe('a member takes and drops a shift', () => {
       // Only today's occurrence was taken: tomorrow's is still open.
       const rows = sqlShiftRows(s.circleId);
       expect(rows.filter((r) => r.assigned_to === member.userId)).toHaveLength(1);
+      // The reminder picked at take time landed on the claimed row only.
+      expect(rows.find((r) => r.assigned_to === member.userId)?.reminder).toBe(240);
+      expect(rows.find((r) => r.assigned_to === null && r.title === 'Night' && r.parent === null)?.reminder ?? 60).toBe(60);
       await page.getByRole('button', { name: 'Next day', exact: true }).click();
       await expect(
         page.getByTestId('shifts-day-list').getByRole('button', { name: 'Take Night' })
@@ -267,10 +277,11 @@ test.describe('a member takes and drops a shift', () => {
       // Drop it again from the detail.
       await night.click();
       const detail = page.getByRole('dialog', { name: 'Night' });
-      await expect(detail.getByTestId('shift-detail-who')).toHaveText('You');
+      // Took "Just this one": the detail says so, and Drop asks no "this / future" question.
+      await expect(detail.getByTestId('shift-detail-who')).toHaveText('You · this day only');
       await detail.getByRole('button', { name: 'Drop shift' }).click();
       const confirm = page.getByRole('dialog', { name: 'Drop this shift?' });
-      await expect(confirm.getByRole('radio', { name: 'This shift' })).toBeChecked();
+      await expect(confirm.getByRole('radio')).toHaveCount(0);
       await checkA11y(page, 'shifts-drop-light', testInfo);
       await confirm.getByRole('button', { name: 'Drop shift' }).click();
       await expect(page.getByText('You dropped "Night". It\'s open again.')).toBeVisible({
