@@ -80,7 +80,7 @@ export function useMenu({ orientation = 'vertical', onOpenChange }: UseMenuOptio
 
   const getItems = useCallback((): HTMLElement[] => {
     return Array.from(
-      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemcheckbox"]') ?? []
     ).filter(isVisibleMenuItem);
   }, []);
 

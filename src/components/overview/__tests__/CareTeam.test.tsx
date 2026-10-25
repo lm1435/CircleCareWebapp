@@ -103,7 +103,7 @@ describe('CareTeam', () => {
     expect(screen.getByText('Pat Lee (You)')).toBeInTheDocument();
   });
 
-  it('overlays a coral heart on the care recipient and a moss bell on the med manager', () => {
+  it('overlays a coral heart on the care recipient and a moss bell on the member who gets the medication reminders', () => {
     renderTeam({
       members: [
         member({ id: OWNER, first_name: 'Pat', role: 'owner' }),
@@ -115,7 +115,7 @@ describe('CareTeam', () => {
     expect(screen.getByTestId('med-manager-dot-u-sam')).toHaveClass('bg-moss');
     expect(screen.getByRole('img', { name: 'Care recipient' })).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Manages medication reminders' })
+      screen.getByRole('img', { name: 'Med reminders' })
     ).toBeInTheDocument();
   });
 
@@ -176,7 +176,7 @@ describe('CareTeam', () => {
     expect(screen.queryByRole('button', { name: /^Remove / })).not.toBeInTheDocument();
   });
 
-  it('toggles the medication manager from the menu', async () => {
+  it('toggles medication reminders from the menu (unchecked item sets)', async () => {
     const user = userEvent.setup();
     renderTeam({
       members: [
@@ -185,14 +185,16 @@ describe('CareTeam', () => {
       ],
     });
     await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Make medication manager' }));
+    const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
+    expect(item).toHaveAttribute('aria-checked', 'false');
+    await user.click(item);
     expect(setMedMutate).toHaveBeenCalledWith('u-sam');
   });
 
   // The other half of the toggle: on the CURRENT manager the same entry clears
   // the role, which the API takes as `null` — sending the member's id again
   // would re-assign the role the owner just asked to remove.
-  it('clears the medication manager from the menu when the member already holds it', async () => {
+  it('clears medication reminders from the menu when the member already has them (checked item)', async () => {
     const user = userEvent.setup();
     renderTeam({
       members: [
@@ -201,8 +203,10 @@ describe('CareTeam', () => {
       ],
     });
     await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
-    expect(screen.queryByRole('menuitem', { name: 'Make medication manager' })).toBeNull();
-    await user.click(screen.getByRole('menuitem', { name: 'Remove medication manager' }));
+    const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
+    expect(item).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('menuitem', { name: /medication/i })).toBeNull();
+    await user.click(item);
     expect(setMedMutate).toHaveBeenCalledTimes(1);
     expect(setMedMutate).toHaveBeenCalledWith(null);
   });
@@ -359,7 +363,7 @@ describe('CareTeam — manager role', () => {
     member({ id: 'u-rose', first_name: 'Rose', is_care_recipient: true }),
     member({ id: 'u-sam', first_name: 'Sam' }),
   ];
-  const items = (): string[] => screen.getAllByRole('menuitem').map((el) => el.textContent ?? '');
+  const items = (): string[] => Array.from(screen.getByRole('menu').querySelectorAll('[role^="menuitem"]')).map((el) => el.textContent ?? '');
 
   it('a MANAGER gets the Invite button and Remove on plain members only', async () => {
     const user = userEvent.setup();
@@ -401,7 +405,7 @@ describe('CareTeam — manager role', () => {
       }),
     });
     await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
-    expect(items()).toEqual(['Make medication manager', 'Make manager', 'Remove']);
+    expect(items()).toEqual(['Medication reminders', 'Make manager', 'Remove']);
     await user.click(screen.getByRole('menuitem', { name: 'Make manager' }));
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveTextContent('Make Sam a manager?');
@@ -409,7 +413,7 @@ describe('CareTeam — manager role', () => {
     expect(setRoleMutate).toHaveBeenCalledWith({ userId: 'u-sam', role: 'manager', name: 'Sam' });
 
     await user.click(screen.getByRole('button', { name: 'Remove Mia' }));
-    expect(items()).toEqual(['Make medication manager', 'Remove as manager', 'Remove']);
+    expect(items()).toEqual(['Medication reminders', 'Remove as manager', 'Remove']);
   });
 
   it('the OWNER without assign_manager (switch off) sees exactly today’s menu', async () => {
@@ -419,7 +423,7 @@ describe('CareTeam — manager role', () => {
       circle: circleWith({ viewer_role: 'owner', viewer_permissions: ['manage_members'] }),
     });
     await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
-    expect(items()).toEqual(['Make medication manager', 'Remove']);
+    expect(items()).toEqual(['Medication reminders', 'Remove']);
   });
 
   it('labels a manager row: a pill when named, "Manager" as the role line when not', () => {

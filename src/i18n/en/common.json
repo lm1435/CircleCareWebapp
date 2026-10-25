@@ -189,5 +189,10 @@
     "writeBlocked": "You're offline. Connect to mark this.",
     "saveBlocked": "You're offline. Connect to save this.",
     "changeBlocked": "You're offline. Connect to make changes."
+  },
+  "translateBanner": {
+    "message": "CircleCare is available in {{language}}",
+    "accept": "Switch to {{language}}",
+    "dismiss": "Not now"
   }
 }

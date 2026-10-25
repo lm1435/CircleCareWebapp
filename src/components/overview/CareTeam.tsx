@@ -136,9 +136,8 @@ export function CareTeam({
     if (allowed.medResponsible) {
       items.push({
         id: 'med-responsible',
-        label: member.is_medication_responsible
-          ? t('members:manage.clearMedResponsible')
-          : t('members:manage.setMedResponsible'),
+        label: t('members:manage.medReminders'),
+        checked: member.is_medication_responsible,
         icon: 'notifications-outline',
         onSelect: guardOfflineWrite(
           () => setMedResponsible.mutate(member.is_medication_responsible ? null : member.id),

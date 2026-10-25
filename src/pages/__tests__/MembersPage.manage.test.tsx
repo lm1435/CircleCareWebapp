@@ -232,7 +232,7 @@ describe('MembersPage — owner management', () => {
     expect(screen.queryByRole('button', { name: /Actions for Rose/ })).not.toBeInTheDocument();
   });
 
-  it('toggling the medication manager fires useSetMedicationResponsible with the user id', async () => {
+  it('toggling medication reminders fires useSetMedicationResponsible with the user id', async () => {
     const user = userEvent.setup();
     setCircle([
       makeMember({ id: 'u-owner', role: 'owner' }),
@@ -241,12 +241,14 @@ describe('MembersPage — owner management', () => {
     renderPage();
 
     await openMemberMenu(user, 'Ana Reyes');
-    await user.click(screen.getByRole('menuitem', { name: 'Make medication manager' }));
+    const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
+    expect(item).toHaveAttribute('aria-checked', 'false');
+    await user.click(item);
     expect(setMedResponsible).toHaveBeenCalledWith('u1', expect.anything());
     expect(setMedResponsible.mock.calls[0][0]).toBe('u1');
   });
 
-  it('clearing the medication manager passes null', async () => {
+  it('clearing medication reminders (checked item) passes null', async () => {
     const user = userEvent.setup();
     setCircle([
       makeMember({ id: 'u-owner', role: 'owner' }),
@@ -255,8 +257,43 @@ describe('MembersPage — owner management', () => {
     renderPage();
 
     await openMemberMenu(user, 'Ana Reyes');
-    await user.click(screen.getByRole('menuitem', { name: 'Remove medication manager' }));
+    const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
+    expect(item).toHaveAttribute('aria-checked', 'true');
+    await user.click(item);
     expect(setMedResponsible.mock.calls[0][0]).toBeNull();
+  });
+
+  it('toasts who now gets the recipient\'s medication reminders, and where they go back to', async () => {
+    const user = userEvent.setup();
+    setCircle([
+      makeMember({ id: 'u-owner', role: 'owner' }),
+      makeMember({ id: 'u1', first_name: 'Ana', is_medication_responsible: false }),
+    ]);
+    renderPage();
+    setMedResponsible.mockImplementationOnce((_id: unknown, opts: { onSuccess: () => void }) =>
+      opts.onSuccess()
+    );
+    await openMemberMenu(user, 'Ana Reyes');
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' }));
+    expect(showToast).toHaveBeenCalledWith(
+      "Ana Reyes now gets Rose's medication reminders.",
+      'success'
+    );
+  });
+
+  it('toasts that the reminders go back to the care recipient when cleared', async () => {
+    const user = userEvent.setup();
+    setCircle([
+      makeMember({ id: 'u-owner', role: 'owner' }),
+      makeMember({ id: 'u1', first_name: 'Ana', is_medication_responsible: true }),
+    ]);
+    renderPage();
+    setMedResponsible.mockImplementationOnce((_id: unknown, opts: { onSuccess: () => void }) =>
+      opts.onSuccess()
+    );
+    await openMemberMenu(user, 'Ana Reyes');
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' }));
+    expect(showToast).toHaveBeenCalledWith('Medication reminders go back to Rose.', 'success');
   });
 
   it('leaving the circle fires useLeaveCircle and navigates to /circles', async () => {

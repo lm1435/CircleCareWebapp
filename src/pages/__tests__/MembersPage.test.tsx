@@ -157,7 +157,7 @@ describe('MembersPage', () => {
     renderMembers();
 
     await screen.findByText('Med Manager');
-    expect(screen.getByRole('img', { name: 'Manages medication reminders' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Med reminders' })).toBeInTheDocument();
   });
 
   it('falls back to the email when the member has no name', async () => {

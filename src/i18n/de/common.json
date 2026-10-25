@@ -189,5 +189,10 @@
     "writeBlocked": "Sie sind offline. Verbinden Sie sich, um das zu markieren.",
     "saveBlocked": "Sie sind offline. Verbinden Sie sich, um das zu speichern.",
     "changeBlocked": "Sie sind offline. Verbinden Sie sich, um Änderungen vorzunehmen."
+  },
+  "translateBanner": {
+    "message": "CircleCare ist auf {{language}} verfügbar",
+    "accept": "Zu {{language}} wechseln",
+    "dismiss": "Jetzt nicht"
   }
 }

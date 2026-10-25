@@ -180,7 +180,7 @@ const INVITE: PendingCircleInvite = {
 };
 
 function menuItems(): string[] {
-  return screen.getAllByRole('menuitem').map((el) => el.textContent ?? '');
+  return Array.from(screen.getByRole('menu').querySelectorAll('[role^="menuitem"]')).map((el) => el.textContent ?? '');
 }
 
 describe('MembersPage — owner with the manager switch ON', () => {
@@ -190,11 +190,11 @@ describe('MembersPage — owner with the manager switch ON', () => {
     renderPage();
 
     await openMemberMenu(user, 'Ana Reyes');
-    expect(menuItems()).toEqual(['Make medication manager', 'Make manager', 'Remove']);
+    expect(menuItems()).toEqual(['Medication reminders', 'Make manager', 'Remove']);
     await user.keyboard('{Escape}');
 
     await openMemberMenu(user, 'Mia Cruz');
-    expect(menuItems()).toEqual(['Make medication manager', 'Remove as manager', 'Remove']);
+    expect(menuItems()).toEqual(['Medication reminders', 'Remove as manager', 'Remove']);
   });
 
   it('never offers Make manager on a view-only seat (the backend refuses it)', async () => {
@@ -202,7 +202,7 @@ describe('MembersPage — owner with the manager switch ON', () => {
     setCircle(roster(), OWNER_ON);
     renderPage();
     await openMemberMenu(user, 'Ben Ortiz');
-    // Nor "Make medication manager": a view-only seat receives no notifications,
+    // Nor "Medication reminders": a view-only seat receives no notifications,
     // and the backend refuses it (400 RESPONSIBLE_MEMBER_VIEW_ONLY).
     expect(menuItems()).toEqual(['Remove']);
   });
@@ -261,7 +261,7 @@ describe('MembersPage — owner with the switch OFF (no assign_manager): identic
     setCircle(roster(), OWNER_OFF);
     renderPage();
     await openMemberMenu(user, 'Ana Reyes');
-    expect(menuItems()).toEqual(['Make medication manager', 'Remove']);
+    expect(menuItems()).toEqual(['Medication reminders', 'Remove']);
     expect(screen.queryByRole('menuitem', { name: /^(Make manager|Remove as manager)$/ })).toBeNull();
   });
 

@@ -189,5 +189,10 @@
     "writeBlocked": "Sin conexión. Conéctate para marcar esto.",
     "saveBlocked": "Sin conexión. Conéctate para guardar esto.",
     "changeBlocked": "Sin conexión. Conéctate para hacer cambios."
+  },
+  "translateBanner": {
+    "message": "CircleCare está disponible en {{language}}",
+    "accept": "Cambiar a {{language}}",
+    "dismiss": "Ahora no"
   }
 }

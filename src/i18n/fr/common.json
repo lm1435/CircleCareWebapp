@@ -189,5 +189,10 @@
     "writeBlocked": "Vous êtes hors ligne. Connectez-vous pour l’indiquer.",
     "saveBlocked": "Vous êtes hors ligne. Connectez-vous pour enregistrer.",
     "changeBlocked": "Vous êtes hors ligne. Connectez-vous pour faire des modifications."
+  },
+  "translateBanner": {
+    "message": "CircleCare est disponible en {{language}}",
+    "accept": "Passer en {{language}}",
+    "dismiss": "Pas maintenant"
   }
 }

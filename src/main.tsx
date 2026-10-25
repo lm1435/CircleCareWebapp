@@ -15,12 +15,17 @@ import '@fontsource/inter/700.css';
 import '@/styles/globals.css';
 import '@/i18n'; // Initialize i18n (side effect)
 import { initAnalytics } from '@/lib/posthog';
+import { installDomExtensionGuard } from '@/lib/domExtensionGuard';
 import { installBootErrorBuffer } from '@/lib/bootErrorBuffer';
 import { captureSignupAttribution } from '@/lib/signupAttribution';
 import { initTheme } from '@/lib/theme';
 import App from '@/App';
 
-// FIRST statement, before the render and before analytics is even scheduled:
+// FIRST statement of the module body: React must never see the unpatched
+// removeChild/insertBefore (Chrome auto-translate breaks them; see the guard).
+installDomExtensionGuard();
+
+// Right after the guard, before the render and before analytics is even scheduled:
 // posthog-js only starts catching window errors / unhandled rejections inside
 // `init()`, which the schedule below deliberately pushes past first paint. Two
 // `addEventListener` calls hold anything thrown in that gap (max 10, sanitized)

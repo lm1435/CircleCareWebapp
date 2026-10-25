@@ -89,7 +89,7 @@ test('Members: invite + pending list, Remove on plain caregivers only, nothing o
   await checkA11y(page, `/circles/${h.circleId}/members (manager menu open)`, testInfo, { include: '[role="menu"]' });
   await page.keyboard.press('Escape');
 
-  await expect(page.getByRole('menuitem', { name: /medication manager/i })).toHaveCount(0);
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Medication reminders' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Leave circle' })).toBeVisible();
   await checkA11y(page, `/circles/${h.circleId}/members (manager)`, testInfo);
 });

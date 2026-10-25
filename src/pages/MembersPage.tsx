@@ -207,7 +207,12 @@ export default function MembersPage(): ReactElement {
     setMedResponsible.mutate(next, {
       onSuccess: () => {
         showToast(
-          next ? t('manage.medResponsibleSet', { name: memberName(member) }) : t('manage.medResponsibleCleared'),
+          next
+            ? t('manage.medResponsibleSet', {
+                name: memberName(member),
+                recipientName: circle?.recipient_name,
+              })
+            : t('manage.medResponsibleCleared', { recipientName: circle?.recipient_name }),
           'success'
         );
       },
@@ -268,9 +273,8 @@ export default function MembersPage(): ReactElement {
           if (allowed.medResponsible) {
             items.push({
               id: 'toggle-med',
-              label: member.is_medication_responsible
-                ? t('manage.clearMedResponsible')
-                : t('manage.setMedResponsible'),
+              label: t('manage.medReminders'),
+              checked: member.is_medication_responsible,
               icon: 'notifications-outline',
               onSelect: () => handleToggleMedResponsible(member),
               disabled: setMedResponsible.isPending,

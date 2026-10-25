@@ -37,7 +37,7 @@ function getDisplayName(member: CircleMember): string {
   return name || member.email;
 }
 
-/** Spec §6.3.7 / §6.7: 16×16 ring-2 badge, care recipient coral + heart, medication manager moss + bell. */
+/** Spec §6.3.7 / §6.7: 16×16 ring-2 badge, care recipient coral + heart, medication-reminders recipient moss + bell. */
 const OVERLAY_BASE =
   'absolute -bottom-0.5 -right-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full ring-2 ring-cream';
 
@@ -45,8 +45,8 @@ const OVERLAY_BASE =
  * Read-only member list row (mirrors mobile's members sheet, ~CircleDetailScreen
  * L1384-1470). Avatar (initials — the backend members payload carries no
  * per-member photo) with an overlaid role indicator (heart = care recipient,
- * bell = medication manager), name + role `Badge`, and an email/role subtitle.
- * Owner-only management (set/clear medication manager, remove) is the caller's
+ * bell = gets the medication reminders), name + role `Badge`, and an email/role subtitle.
+ * Owner-only management (set/clear medication reminders, remove) is the caller's
  * `actions` slot — a `MoreMenu` — so this component stays a pure display row.
  */
 export function MemberRow({ member, actions }: MemberRowProps): ReactElement {

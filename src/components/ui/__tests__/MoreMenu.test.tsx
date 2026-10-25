@@ -935,4 +935,26 @@ describe('MoreMenu panel name', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sort: Due date' }));
     expect(screen.getByRole('menu', { name: 'Sort: Due date' })).toBeInTheDocument();
   });
+
+  it('renders a toggle item as menuitemcheckbox with aria-checked, and keeps it keyboard-reachable', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    render(
+      <MoreMenu
+        items={[
+          { id: 'rem', label: 'Medication reminders', checked: true, onSelect: onToggle },
+          { id: 'x', label: 'Remove', onSelect: vi.fn() },
+        ]}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    const toggle = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitem', { name: 'Remove' })).not.toHaveAttribute('aria-checked');
+    expect(toggle).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Remove' })).toHaveFocus();
+    await user.keyboard('{ArrowUp}{Enter}');
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
 });

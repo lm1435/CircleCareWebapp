@@ -9,7 +9,7 @@
     "title": "Equipa de cuidado",
     "myTitle": "A minha equipa de cuidado",
     "you": "(Eu)",
-    "medManagerBadge": "Gere os lembretes de medicamentos"
+    "medManagerBadge": "Lembretes"
   },
   "solo": {
     "body": "Convide um familiar ou cuidador para ajudar a coordenar o cuidado de {{name}}: partilhem tarefas, consultas e atualizações para que ninguém carregue tudo sozinho.",

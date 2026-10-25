@@ -1119,6 +1119,10 @@ export const Analytics = {
 
   // --- Settings (web-new) ---
   languageChanged: (language: string) => capture('language_changed', { language }),
+  /** Browser auto-translate detected; banner offered switching the account language. */
+  translatePromptShown: (suggested: string) => capture('translate_prompt_shown', { suggested }),
+  translatePromptResolved: (action: 'accepted' | 'dismissed', suggested: string) =>
+    capture('translate_prompt_resolved', { action, suggested }),
   timezoneChanged: (timezone: string) => capture('timezone_changed', { timezone }),
   /** Profile > Appearance > Theme. Enums + a boolean only: `theme` is the NEW
    *  preference, `previous` the old one, `effective` what is now painted. */

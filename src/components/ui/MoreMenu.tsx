@@ -20,6 +20,11 @@ export interface MoreMenuItem {
   icon?: IconName;
   danger?: boolean;
   disabled?: boolean;
+  /**
+   * Makes the item a toggle: `role="menuitemcheckbox"` with `aria-checked`,
+   * and a trailing check mark while on. Leave undefined for a plain action.
+   */
+  checked?: boolean;
 }
 
 /** A hairline between two groups of items. */
@@ -338,14 +343,18 @@ export function MoreMenu({
     <button
       key={item.id}
       type="button"
-      role="menuitem"
+      role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+      aria-checked={item.checked}
       aria-disabled={item.disabled || undefined}
       tabIndex={-1}
       onClick={() => select(item)}
       className={itemClasses(item)}
     >
       {item.icon ? <Icon name={item.icon} size="row" /> : null}
-      {item.label}
+      <span className={item.checked === undefined ? undefined : 'flex-1 whitespace-nowrap'}>
+        {item.label}
+      </span>
+      {item.checked ? <Icon name="checkmark" size="row" /> : null}
     </button>
   );
 
