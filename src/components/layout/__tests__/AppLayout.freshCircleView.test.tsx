@@ -14,6 +14,11 @@ import { useAuthStore } from '@/store/authStore';
 // circle, state set via the URL is kept. A stub page stands in for the real
 // pages: it holds local state plus URL state, exactly the two mechanisms they use.
 
+// StoreReviewBanner owns its own tests; here it would need a QueryClient.
+vi.mock('@/components/StoreReviewBanner', () => ({
+  StoreReviewBanner: () => null,
+}));
+
 vi.mock('@/hooks/useCircles', () => ({
   useCircles: vi.fn(() => ({
     data: [

@@ -194,5 +194,10 @@
     "message": "CircleCare está disponible en {{language}}",
     "accept": "Cambiar a {{language}}",
     "dismiss": "Ahora no"
+  },
+  "storeReviewBanner": {
+    "message": "¿CircleCare está ayudando a tu familia? Una calificación rápida ayuda a otros cuidadores a encontrarla.",
+    "rate": "Calificar CircleCare",
+    "dismiss": "Ahora no"
   }
 }

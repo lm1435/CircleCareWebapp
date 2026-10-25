@@ -11,6 +11,11 @@ import { useCircle } from '@/hooks/useCircle';
  * with the mobile copy verbatim and a Return-to-circles link; anything else renders the page.
  */
 
+// StoreReviewBanner owns its own tests; here it would need a QueryClient.
+vi.mock('@/components/StoreReviewBanner', () => ({
+  StoreReviewBanner: () => null,
+}));
+
 vi.mock('@/hooks/useCircles', () => ({
   useCircles: vi.fn(() => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() })),
 }));

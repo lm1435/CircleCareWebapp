@@ -17,6 +17,11 @@ import MedicationsPage from '@/pages/MedicationsPage';
  * the REAL lib/queryClient (QueryCache onError purge + list purge) and renders AppLayout, which
  * swaps the page for CircleAccessLost on FORBIDDEN, so nothing remounts: requests stay bounded.
  */
+// StoreReviewBanner owns its own tests; here it would need a QueryClient.
+vi.mock('@/components/StoreReviewBanner', () => ({
+  StoreReviewBanner: () => null,
+}));
+
 vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade: vi.fn() }) }));
 vi.mock('@/components/NeedsCircleSelectionBanner', () => ({ NeedsCircleSelectionBanner: () => null }));
 vi.mock('@/components/ai/AIChatModal', () => ({ AIChatModal: () => null }));

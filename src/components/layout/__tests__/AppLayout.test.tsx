@@ -9,6 +9,11 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ToastProvider } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 
+// StoreReviewBanner owns its own tests; here it would need a QueryClient.
+vi.mock('@/components/StoreReviewBanner', () => ({
+  StoreReviewBanner: () => null,
+}));
+
 vi.mock('@/hooks/useCircles', () => ({
   useCircles: vi.fn(() => ({
     data: [{ id: 'c1', name: "Mom's Care", recipient_name: 'Rosa' }],

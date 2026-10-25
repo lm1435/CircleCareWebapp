@@ -194,5 +194,10 @@
     "message": "CircleCare is available in {{language}}",
     "accept": "Switch to {{language}}",
     "dismiss": "Not now"
+  },
+  "storeReviewBanner": {
+    "message": "Is CircleCare helping your family? A quick rating helps other caregivers find it.",
+    "rate": "Rate CircleCare",
+    "dismiss": "Not now"
   }
 }

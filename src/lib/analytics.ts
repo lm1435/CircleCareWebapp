@@ -1119,6 +1119,11 @@ export const Analytics = {
 
   // --- Settings (web-new) ---
   languageChanged: (language: string) => capture('language_changed', { language }),
+  /** Store-review ask (web): shown only to users with a registered mobile device. */
+  storeReviewAskShown: (platform: 'ios' | 'android') =>
+    capture('store_review_ask_shown', { platform }),
+  storeReviewAskResolved: (action: 'rated' | 'dismissed', platform: 'ios' | 'android') =>
+    capture('store_review_ask_resolved', { action, platform }),
   /** Browser auto-translate detected; banner offered switching the account language. */
   translatePromptShown: (suggested: string) => capture('translate_prompt_shown', { suggested }),
   translatePromptResolved: (action: 'accepted' | 'dismissed', suggested: string) =>

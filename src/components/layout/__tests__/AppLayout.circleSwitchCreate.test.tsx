@@ -14,6 +14,11 @@ import { useAuthStore } from '@/store/authStore';
 // open used to keep the typed input and re-point its save at the NEW circle.
 // Mobile twin: mobile/src/navigation/useCloseOnCircleSwitch.ts.
 
+// StoreReviewBanner owns its own tests; here it would need a QueryClient.
+vi.mock('@/components/StoreReviewBanner', () => ({
+  StoreReviewBanner: () => null,
+}));
+
 vi.mock('@/hooks/useCircles', () => ({
   useCircles: vi.fn(() => ({
     data: [

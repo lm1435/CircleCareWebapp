@@ -194,5 +194,10 @@
     "message": "CircleCare est disponible en {{language}}",
     "accept": "Passer en {{language}}",
     "dismiss": "Pas maintenant"
+  },
+  "storeReviewBanner": {
+    "message": "CircleCare aide votre famille ? Une note rapide aide d’autres aidants à la découvrir.",
+    "rate": "Noter CircleCare",
+    "dismiss": "Plus tard"
   }
 }

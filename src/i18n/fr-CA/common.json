@@ -13,5 +13,10 @@
   "addMenu": {
     "shift": "Quart",
     "shiftShort": "Quart"
+  },
+  "storeReviewBanner": {
+    "message": "CircleCare aide votre famille ? Une note rapide aide d’autres proches aidants à la découvrir.",
+    "rate": "Noter CircleCare",
+    "dismiss": "Plus tard"
   }
 }

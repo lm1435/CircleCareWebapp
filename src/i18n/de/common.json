@@ -194,5 +194,10 @@
     "message": "CircleCare ist auf {{language}} verfügbar",
     "accept": "Zu {{language}} wechseln",
     "dismiss": "Jetzt nicht"
+  },
+  "storeReviewBanner": {
+    "message": "Hilft CircleCare Ihrer Familie? Eine kurze Bewertung hilft anderen Angehörigen, die App zu finden.",
+    "rate": "CircleCare bewerten",
+    "dismiss": "Jetzt nicht"
   }
 }

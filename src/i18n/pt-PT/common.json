@@ -72,5 +72,10 @@
   "addMenu": {
     "shift": "Turno",
     "shiftShort": "Turno"
+  },
+  "storeReviewBanner": {
+    "message": "O CircleCare está a ajudar a sua família? Uma avaliação rápida ajuda outros cuidadores a encontrá-lo.",
+    "rate": "Avaliar o CircleCare",
+    "dismiss": "Agora não"
   }
 }

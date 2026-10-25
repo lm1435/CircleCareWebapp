@@ -21,6 +21,11 @@ import { expandAiEntryCases, type AiEntryScenario } from '@/__tests__/fixtures/a
  * Assistant button, the floating pill's AI cell, and the modal's own mount.
  */
 
+// StoreReviewBanner owns its own tests; here it would need a QueryClient.
+vi.mock('@/components/StoreReviewBanner', () => ({
+  StoreReviewBanner: () => null,
+}));
+
 vi.mock('@/hooks/useCircles', () => ({
   useCircles: vi.fn(() => ({
     data: [{ id: 'c1', name: "Mom's Care", recipient_name: 'Rosa' }],
