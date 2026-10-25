@@ -76,6 +76,10 @@ test('medication reminders: set, clear, fail, and non-owner refusal against the 
   await actions().click();
   const item = () => page.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
   await expect(item()).toHaveAttribute('aria-checked', 'false');
+  // One line under the title says what tapping does; the name stays the title.
+  await expect(item()).toHaveAccessibleDescription(
+    `${memberName} gets ${recipientName}'s reminders and checks off doses`
+  );
   await item().click();
   await expect(
     successToast(page, `${memberName} now gets ${recipientName}'s medication reminders.`)
@@ -86,6 +90,9 @@ test('medication reminders: set, clear, fail, and non-owner refusal against the 
   await page.reload();
   await actions().click();
   await expect(item()).toHaveAttribute('aria-checked', 'true');
+  await expect(item()).toHaveAccessibleDescription(
+    `Tap to send reminders back to ${recipientName}`
+  );
   await item().click();
   await expect(successToast(page, `Medication reminders go back to ${recipientName}.`)).toBeVisible(
     { timeout: 15_000 }

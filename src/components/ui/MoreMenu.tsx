@@ -25,6 +25,13 @@ export interface MoreMenuItem {
    * and a trailing check mark while on. Leave undefined for a plain action.
    */
   checked?: boolean;
+  /**
+   * Optional one-line explanation under the label (muted, smaller, may wrap).
+   * The item's accessible name stays `label`; the description is exposed
+   * through `aria-describedby`, and its visible copy is `aria-hidden` so it
+   * is not also folded into the name.
+   */
+  description?: string;
 }
 
 /** A hairline between two groups of items. */
@@ -216,6 +223,8 @@ function chooseLayout(
 
 const BASE_ITEM_CLASS =
   'flex w-full items-center gap-3 rounded-md px-3 min-h-[44px] text-left text-md';
+/** An item with a description needs vertical padding for its second line. */
+const DESCRIBED_ITEM_CLASS = 'py-2';
 
 const ENABLED_CLASS = {
   normal: 'text-ink hover:bg-bg-2 focus-visible:bg-bg-2',
@@ -237,7 +246,9 @@ function isDivider(entry: MoreMenuEntry): entry is MoreMenuDivider {
 function itemClasses(item: MoreMenuItem): string {
   const tone = item.danger ? 'danger' : 'normal';
   const state = item.disabled ? DISABLED_CLASS[tone] : ENABLED_CLASS[tone];
-  return [BASE_ITEM_CLASS, state].join(' ');
+  return [BASE_ITEM_CLASS, item.description ? DESCRIBED_ITEM_CLASS : '', state]
+    .filter(Boolean)
+    .join(' ');
 }
 
 /**
@@ -339,24 +350,45 @@ export function MoreMenu({
     menu.close(true);
   };
 
-  const renderItem = (item: MoreMenuItem): ReactElement => (
-    <button
-      key={item.id}
-      type="button"
-      role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
-      aria-checked={item.checked}
-      aria-disabled={item.disabled || undefined}
-      tabIndex={-1}
-      onClick={() => select(item)}
-      className={itemClasses(item)}
-    >
-      {item.icon ? <Icon name={item.icon} size="row" /> : null}
-      <span className={item.checked === undefined ? undefined : 'flex-1 whitespace-nowrap'}>
-        {item.label}
-      </span>
-      {item.checked ? <Icon name="checkmark" size="row" /> : null}
-    </button>
-  );
+  const renderItem = (item: MoreMenuItem): ReactElement => {
+    const descriptionId = item.description ? `${menuId}-${item.id}-desc` : undefined;
+    return (
+      <button
+        key={item.id}
+        type="button"
+        role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+        aria-checked={item.checked}
+        aria-disabled={item.disabled || undefined}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
+        onClick={() => select(item)}
+        className={itemClasses(item)}
+      >
+        {item.icon ? <Icon name={item.icon} size="row" /> : null}
+        <span
+          className={
+            item.description
+              ? 'flex min-w-0 flex-1 flex-col'
+              : item.checked === undefined
+                ? undefined
+                : 'flex-1 whitespace-nowrap'
+          }
+        >
+          <span>{item.label}</span>
+          {item.description ? (
+            <span
+              id={descriptionId}
+              aria-hidden="true"
+              className="mt-0.5 text-sm leading-snug text-ink-2"
+            >
+              {item.description}
+            </span>
+          ) : null}
+        </span>
+        {item.checked ? <Icon name="checkmark" size="row" /> : null}
+      </button>
+    );
+  };
 
   const renderEntry = (entry: MoreMenuEntry, index: number): ReactElement =>
     isDivider(entry) ? (
@@ -410,7 +442,7 @@ export function MoreMenu({
           // no scroll container, no change for the call sites that were fine.
           style={layout.maxHeight != null ? { maxHeight: `${layout.maxHeight}px` } : undefined}
           className={[
-            'absolute z-30 min-w-[200px] rounded-lg border border-line-2 bg-cream p-1 shadow-lg',
+            'absolute z-30 w-max min-w-[200px] max-w-[min(380px,calc(100vw-32px))] rounded-lg border border-line-2 bg-cream p-1 shadow-lg',
             'animate-[modal-in_200ms_var(--ease-spring)] motion-reduce:animate-none',
             layout.maxHeight != null ? 'overflow-y-auto overscroll-contain' : '',
             layout.up ? 'bottom-full mb-1' : 'top-full mt-1',

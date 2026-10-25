@@ -957,4 +957,50 @@ describe('MoreMenu panel name', () => {
     await user.keyboard('{ArrowUp}{Enter}');
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
+
+  it('renders a description under the label, exposes it via aria-describedby and keeps the name as the title', async () => {
+    const user = userEvent.setup();
+    render(
+      <MoreMenu
+        items={[
+          {
+            id: 'rem',
+            label: 'Medication reminders',
+            description: 'Sam gets Ann\'s reminders and checks off doses',
+            checked: false,
+            onSelect: vi.fn(),
+          },
+          { id: 'mgr', label: 'Make manager', description: 'Can invite people', onSelect: vi.fn() },
+          { id: 'x', label: 'Remove', onSelect: vi.fn() },
+        ]}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    const toggle = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    const describedBy = toggle.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    const desc = document.getElementById(describedBy as string);
+    expect(desc).toHaveTextContent("Sam gets Ann's reminders and checks off doses");
+    expect(toggle).toHaveAccessibleDescription("Sam gets Ann's reminders and checks off doses");
+    // the description is not folded into the accessible name
+    expect(screen.getByRole('menuitem', { name: 'Make manager' })).toHaveAccessibleDescription(
+      'Can invite people'
+    );
+    // an item without a description carries no aria-describedby
+    expect(screen.getByRole('menuitem', { name: 'Remove' })).not.toHaveAttribute('aria-describedby');
+    // each described item gets its own id
+    expect(screen.getByRole('menuitem', { name: 'Make manager' }).getAttribute('aria-describedby')).not.toBe(
+      describedBy
+    );
+  });
+
+  it('caps the panel width so descriptions wrap instead of stretching it', async () => {
+    const user = userEvent.setup();
+    render(
+      <MoreMenu items={[{ id: 'a', label: 'A', description: 'long '.repeat(40), onSelect: vi.fn() }]} />
+    );
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    expect(screen.getByRole('menu').className).toContain('max-w-[min(380px,calc(100vw-32px))]');
+  });
 });

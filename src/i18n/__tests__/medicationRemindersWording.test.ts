@@ -33,4 +33,18 @@ describe('medication reminders wording', () => {
     expect(es.manage.medReminders).toBe('Recordatorios de medicamentos');
     expect(es.list.medResponsible).toBe('Recordatorios');
   });
+
+  it('pins the one-line menu descriptions (EN and ES, identical to the mobile sheet)', () => {
+    expect(en.manage.medRemindersDesc).toBe("{{name}} gets {{recipientName}}'s reminders and checks off doses");
+    expect(en.manage.medRemindersSetDesc).toBe('Tap to send reminders back to {{recipientName}}');
+    expect(en.manage.medRemindersSetDescSelf).toBe('Tap to send reminders back to you');
+    expect(en.manage.makeManagerDesc).toBe('Can invite people and remove caregivers');
+    expect(en.manage.removeManagerDesc).toBe('Stays in the circle as a caregiver');
+    expect(es.manage.medRemindersDesc).toBe(
+      '{{name}} recibe los recordatorios de {{recipientName}} y marca las dosis'
+    );
+    expect(es.manage.medRemindersSetDesc).toBe('Toca para devolver los recordatorios a {{recipientName}}');
+    expect(es.manage.makeManagerDesc).toBe('Puede invitar personas y quitar cuidadores');
+    expect(es.manage.removeManagerDesc).toBe('Sigue en el círculo como cuidador');
+  });
 });

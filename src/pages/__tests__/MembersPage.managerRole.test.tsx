@@ -179,8 +179,15 @@ const INVITE: PendingCircleInvite = {
   invite_url: 'https://circlecare.app/invite/ABC123',
 };
 
+/** The item's TITLE: its text minus the aria-hidden description line. */
+function titleOf(el: Element): string {
+  const clone = el.cloneNode(true) as Element;
+  clone.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+  return clone.textContent ?? '';
+}
+
 function menuItems(): string[] {
-  return Array.from(screen.getByRole('menu').querySelectorAll('[role^="menuitem"]')).map((el) => el.textContent ?? '');
+  return Array.from(screen.getByRole('menu').querySelectorAll('[role^="menuitem"]')).map((el) => titleOf(el));
 }
 
 describe('MembersPage — owner with the manager switch ON', () => {
@@ -191,10 +198,17 @@ describe('MembersPage — owner with the manager switch ON', () => {
 
     await openMemberMenu(user, 'Ana Reyes');
     expect(menuItems()).toEqual(['Medication reminders', 'Make manager', 'Remove']);
+    expect(screen.getByRole('menuitem', { name: 'Make manager' })).toHaveAccessibleDescription(
+      'Can invite people and remove caregivers'
+    );
+    expect(screen.getByRole('menuitem', { name: 'Remove' })).not.toHaveAttribute('aria-describedby');
     await user.keyboard('{Escape}');
 
     await openMemberMenu(user, 'Mia Cruz');
     expect(menuItems()).toEqual(['Medication reminders', 'Remove as manager', 'Remove']);
+    expect(screen.getByRole('menuitem', { name: 'Remove as manager' })).toHaveAccessibleDescription(
+      'Stays in the circle as a caregiver'
+    );
   });
 
   it('never offers Make manager on a view-only seat (the backend refuses it)', async () => {

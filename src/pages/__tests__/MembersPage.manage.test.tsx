@@ -243,6 +243,7 @@ describe('MembersPage — owner management', () => {
     await openMemberMenu(user, 'Ana Reyes');
     const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
     expect(item).toHaveAttribute('aria-checked', 'false');
+    expect(item).toHaveAccessibleDescription(/^Ana Reyes gets .+'s reminders and checks off doses$/);
     await user.click(item);
     expect(setMedResponsible).toHaveBeenCalledWith('u1', expect.anything());
     expect(setMedResponsible.mock.calls[0][0]).toBe('u1');
@@ -259,6 +260,7 @@ describe('MembersPage — owner management', () => {
     await openMemberMenu(user, 'Ana Reyes');
     const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
     expect(item).toHaveAttribute('aria-checked', 'true');
+    expect(item).toHaveAccessibleDescription(/^Tap to send reminders back to .+/);
     await user.click(item);
     expect(setMedResponsible.mock.calls[0][0]).toBeNull();
   });

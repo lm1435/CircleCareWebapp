@@ -67,7 +67,9 @@
     "makeManagerConfirmBody": "{{name}} poderá convidar pessoas, reenviar ou cancelar convites e remover cuidadores. Apenas o utilizador pode alterar as definições do círculo, os lembretes de medicamentos, a faturação e quem é gestor.",
     "removeManagerConfirmBody": "{{name}} continuará no círculo como cuidador, mas já não poderá convidar nem remover pessoas.",
     "madeManager": "{{name}} agora ajuda a gerir o círculo.",
-    "removedManager": "{{name}} já não ajuda a gerir o círculo."
+    "removedManager": "{{name}} já não ajuda a gerir o círculo.",
+    "medRemindersDesc": "{{name}} recebe os lembretes de {{recipientName}} e assinala as doses",
+    "medRemindersSetDescSelf": "Toque para devolver os lembretes a si"
   },
   "pending": {
     "heading": "Os seus convites",

@@ -84,6 +84,7 @@ export default function MembersPage(): ReactElement {
   const { circle, members, isLoading, isError, refetch } = useCircle(circleId);
   const isOwner = viewerOwnsCircle(circle, currentUserId);
   const canManageMembers = viewerCanManageMembers(circle, currentUserId);
+  const isCurrentUserRecipient = members.some((m) => m.id === currentUserId && m.is_care_recipient);
   const pendingInvites: PendingCircleInvite[] = circle?.pending_invites ?? [];
   // Live (non-lapsed) invites only. An expired invite is not "someone you
   // invited" — nobody can join through it — so it must not suppress the
@@ -274,6 +275,14 @@ export default function MembersPage(): ReactElement {
             items.push({
               id: 'toggle-med',
               label: t('manage.medReminders'),
+              description: member.is_medication_responsible
+                ? isCurrentUserRecipient
+                  ? t('manage.medRemindersSetDescSelf')
+                  : t('manage.medRemindersSetDesc', { recipientName: circle?.recipient_name })
+                : t('manage.medRemindersDesc', {
+                    name: memberName(member),
+                    recipientName: circle?.recipient_name,
+                  }),
               checked: member.is_medication_responsible,
               icon: 'notifications-outline',
               onSelect: () => handleToggleMedResponsible(member),
@@ -285,6 +294,10 @@ export default function MembersPage(): ReactElement {
               id: 'toggle-manager',
               label:
                 member.role === 'manager' ? t('manage.removeManager') : t('manage.makeManager'),
+              description:
+                member.role === 'manager'
+                  ? t('manage.removeManagerDesc')
+                  : t('manage.makeManagerDesc'),
               icon: 'people-outline',
               onSelect: () => {
                 if (blockOfflineWrite('change')) return;

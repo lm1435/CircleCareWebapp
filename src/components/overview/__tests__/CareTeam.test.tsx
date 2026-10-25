@@ -187,6 +187,7 @@ describe('CareTeam', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
     const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
     expect(item).toHaveAttribute('aria-checked', 'false');
+    expect(item).toHaveAccessibleDescription(/^Sam gets .+'s reminders and checks off doses$/);
     await user.click(item);
     expect(setMedMutate).toHaveBeenCalledWith('u-sam');
   });
@@ -205,6 +206,8 @@ describe('CareTeam', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Sam' }));
     const item = screen.getByRole('menuitemcheckbox', { name: 'Medication reminders' });
     expect(item).toHaveAttribute('aria-checked', 'true');
+    expect(item).toHaveAccessibleDescription(/^Tap to send reminders back to .+/);
+    expect(item).not.toHaveAccessibleDescription(/checks off doses/);
     expect(screen.queryByRole('menuitem', { name: /medication/i })).toBeNull();
     await user.click(item);
     expect(setMedMutate).toHaveBeenCalledTimes(1);
@@ -341,6 +344,13 @@ describe('CareTeam member avatar colour', () => {
 // Manager role (docs/plans/manager-role.md): the Home care team offers the SAME
 // actions as the Members page (shared `memberRowActions`), read from the
 // server's `viewer_permissions`.
+/** The item's TITLE: its text minus the aria-hidden description line. */
+function titleOf(el: Element): string {
+  const clone = el.cloneNode(true) as Element;
+  clone.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+  return clone.textContent ?? '';
+}
+
 describe('CareTeam — manager role', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -363,7 +373,7 @@ describe('CareTeam — manager role', () => {
     member({ id: 'u-rose', first_name: 'Rose', is_care_recipient: true }),
     member({ id: 'u-sam', first_name: 'Sam' }),
   ];
-  const items = (): string[] => Array.from(screen.getByRole('menu').querySelectorAll('[role^="menuitem"]')).map((el) => el.textContent ?? '');
+  const items = (): string[] => Array.from(screen.getByRole('menu').querySelectorAll('[role^="menuitem"]')).map((el) => titleOf(el));
 
   it('a MANAGER gets the Invite button and Remove on plain members only', async () => {
     const user = userEvent.setup();

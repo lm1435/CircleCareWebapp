@@ -137,6 +137,14 @@ export function CareTeam({
       items.push({
         id: 'med-responsible',
         label: t('members:manage.medReminders'),
+        description: member.is_medication_responsible
+          ? isCurrentUserRecipient
+            ? t('members:manage.medRemindersSetDescSelf')
+            : t('members:manage.medRemindersSetDesc', { recipientName: circle?.recipient_name })
+          : t('members:manage.medRemindersDesc', {
+              name: displayName(member),
+              recipientName: circle?.recipient_name,
+            }),
         checked: member.is_medication_responsible,
         icon: 'notifications-outline',
         onSelect: guardOfflineWrite(
@@ -152,6 +160,10 @@ export function CareTeam({
           member.role === 'manager'
             ? t('members:manage.removeManager')
             : t('members:manage.makeManager'),
+        description:
+          member.role === 'manager'
+            ? t('members:manage.removeManagerDesc')
+            : t('members:manage.makeManagerDesc'),
         icon: 'people-outline',
         onSelect: () => {
           if (blockOfflineWrite('change')) return;
