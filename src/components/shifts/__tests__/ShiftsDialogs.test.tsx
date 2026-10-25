@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -192,6 +192,23 @@ describe('Shift detail', () => {
     expect(order).toEqual(['Take', 'Edit', 'Assign', 'Delete']);
   });
 
+  it('a care-recipient viewer gets no Take on an open shift (the rest stays); a normal member keeps it', async () => {
+    circle({
+      members: [...members, { id: 'u-rosa', first_name: 'Rosa', last_name: 'G', email: 'r@x.test', role: 'member', is_care_recipient: true }],
+    });
+    const normal = await openDetail(shift({ id: 'o3', assigned_to: null }));
+    expect(within(normal.dialog).getByRole('button', { name: 'Take' })).toBeInTheDocument();
+    cleanup();
+    useAuthStore.setState({
+      user: { id: 'u-rosa', email: 'r@x.test', first_name: 'Rosa', last_name: 'G' },
+      isAuthenticated: true,
+    } as never);
+    const rosa = await openDetail(shift({ id: 'o4', assigned_to: null }));
+    expect(within(rosa.dialog).queryByRole('button', { name: 'Take' })).not.toBeInTheDocument();
+    expect(within(rosa.dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(within(rosa.dialog).getByRole('button', { name: 'Assign' })).toBeInTheDocument();
+  });
+
   it('an open shift offers Take; a plain member cannot assign or drop someone else', async () => {
     circle({ canManageMembers: false, viewerRole: 'member' });
     const { dialog } = await openDetail(shift({ assigned_to: null }));
@@ -344,6 +361,18 @@ describe('Assign', () => {
     expect(inline).toHaveTextContent("We couldn't assign the shift. Try again.");
     expect(screen.getByRole('dialog', { name: 'Assign shift' })).toBeInTheDocument();
     expect(Analytics.shiftAssigned).not.toHaveBeenCalled();
+  });
+
+  it('the care recipient is never offered as an assignee', async () => {
+    circle({
+      members: [...members, { id: 'u-rosa', first_name: 'Rosa', last_name: 'G', email: 'r@x.test', role: 'member', is_care_recipient: true }],
+    });
+    const { user, dialog } = await openDetail(shift({ assigned_to: null }));
+    await user.click(within(dialog).getByRole('button', { name: 'Assign' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Assign shift' });
+    expect(within(confirm).queryByRole('radio', { name: /Rosa/ })).not.toBeInTheDocument();
+    expect(within(confirm).getByRole('radio', { name: 'Bo' })).toBeInTheDocument();
+    expect(within(confirm).getByRole('radio', { name: 'Me' })).toBeInTheDocument();
   });
 
   it('the toast names the first name, else "Someone" (never an email local part)', async () => {

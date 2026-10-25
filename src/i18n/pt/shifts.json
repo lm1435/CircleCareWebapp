@@ -55,7 +55,6 @@
     "scopeLabel": "Quais plantões?",
     "justThis": "Só este",
     "futureHint": "Você pode largar qualquer um depois",
-    "reminderRow": "Lembrete · {{when}}",
     "future": "Este e todos os próximos"
   },
   "scope": {
@@ -140,8 +139,7 @@
     "repeats": "Repetição",
     "date": "Data",
     "endsOn": "A repetição termina",
-    "reminderHint": "Enviado a quem está no plantão.",
-    "careRecipient": "{{name}} · Pessoa cuidada"
+    "reminderHint": "Enviado a quem está no plantão."
   },
   "saved": {
     "title": "\"{{name}}\" salvo",

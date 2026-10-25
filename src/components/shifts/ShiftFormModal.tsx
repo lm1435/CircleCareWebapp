@@ -43,6 +43,7 @@ import {
   shiftEnd,
   shiftRootId,
   shiftZonesDiffer,
+  canCoverShifts,
 } from './shiftUtils';
 
 export type ShiftRepeatChoice = 'none' | 'daily' | 'weekly' | 'days_of_week';
@@ -202,19 +203,14 @@ function ShiftFormBody({
     const mark = (label: string, id: string): string =>
       initialAssignee && id === initialAssignee ? `${label} · ${t('shifts:assign.current')}` : label;
     const opts = [{ value: '', label: t('shifts:form.leaveOpen') }];
-    if (viewerId) opts.push({ value: viewerId, label: mark(t('shifts:form.me'), viewerId) });
+    if (viewerId && canCoverShifts(members, viewerId)) opts.push({ value: viewerId, label: mark(t('shifts:form.me'), viewerId) });
     for (const m of members) {
       if (m.id === viewerId) continue;
+      if (m.is_care_recipient === true) continue;
       const isHolder = m.id === initialAssignee;
       if (!isHolder && (!canManageMembers || m.view_only === true)) continue;
       const label = memberShortName(m);
-      opts.push({
-        value: m.id,
-        label: mark(
-          m.is_care_recipient ? t('shifts:form.careRecipient', { name: label }) : label,
-          m.id
-        ),
-      });
+      opts.push({ value: m.id, label: mark(label, m.id) });
     }
     // A holder who has left the circle still reads.
     if (initialAssignee && !opts.some((o) => o.value === initialAssignee)) {

@@ -55,7 +55,6 @@
     "scopeLabel": "Which shifts?",
     "justThis": "Just this one",
     "futureHint": "You can drop any one later",
-    "reminderRow": "Reminder · {{when}}",
     "future": "This and every future one"
   },
   "scope": {
@@ -140,8 +139,7 @@
     "repeats": "Repeats",
     "date": "Date",
     "endsOn": "Repeat ends",
-    "reminderHint": "Sent to whoever is on the shift.",
-    "careRecipient": "{{name}} · Care recipient"
+    "reminderHint": "Sent to whoever is on the shift."
   },
   "saved": {
     "title": "\"{{name}}\" saved",

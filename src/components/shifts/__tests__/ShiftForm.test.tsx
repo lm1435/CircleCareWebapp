@@ -39,6 +39,7 @@ const members = [
   { id: 'u-me', first_name: 'Pat', last_name: 'L', email: 'pat@x.test', role: 'owner', is_care_recipient: false },
   { id: 'u-ana', first_name: 'Ana', last_name: 'R', email: 'ana@x.test', role: 'member', is_care_recipient: false },
   { id: 'u-vo', first_name: 'Vee', last_name: 'O', email: 'vee@x.test', role: 'member', is_care_recipient: false, view_only: true },
+  { id: 'u-rosa', first_name: 'Rosa', last_name: 'G', email: 'rosa@x.test', role: 'member', is_care_recipient: true },
 ] as unknown as CircleMember[];
 
 function circle(over: Record<string, unknown> = {}): void {
@@ -134,7 +135,7 @@ describe('ShiftFormModal (create)', () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it('an owner may put someone else on it (view-only members are not offered)', () => {
+  it('an owner may put someone else on it (view-only members and the care recipient are not offered)', () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
     const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
     expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual([
@@ -142,6 +143,7 @@ describe('ShiftFormModal (create)', () => {
       'Me',
       'Ana',
     ]);
+    expect(within(group).queryByRole('radio', { name: /Rosa/ })).not.toBeInTheDocument();
     expect(within(group).getByRole('radio', { name: 'Leave open' })).toBeChecked();
   });
 
@@ -150,6 +152,24 @@ describe('ShiftFormModal (create)', () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
     const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
     expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual(['Leave open', 'Me']);
+  });
+
+  it('a care-recipient viewer is not offered "Me"; a normal member is', () => {
+    useAuthStore.setState({
+      user: { id: 'u-rosa', email: 'rosa@x.test', first_name: 'Rosa', last_name: 'G' },
+      isAuthenticated: true,
+    } as never);
+    const { unmount } = shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
+    const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
+    expect(within(group).queryByRole('radio', { name: 'Me' })).not.toBeInTheDocument();
+    expect(within(group).getByRole('radio', { name: 'Leave open' })).toBeInTheDocument();
+    unmount();
+    useAuthStore.setState({
+      user: { id: 'u-me', email: 'pat@x.test', first_name: 'Pat', last_name: 'L' },
+      isAuthenticated: true,
+    } as never);
+    shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
+    expect(within(screen.getByRole('radiogroup', { name: "Who's with Rosa?" })).getByRole('radio', { name: 'Me' })).toBeInTheDocument();
   });
 
   it('saves a daily open shift with the contract payload and fires shift_created (no circle id)', async () => {

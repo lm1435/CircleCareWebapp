@@ -18,6 +18,7 @@ import { holdsOnlyThisDay,
   isShiftOpen,
   isShiftRepeating,
   shiftEnd,
+  canCoverShifts,
 } from './shiftUtils';
 
 export type ShiftDetailAction = 'take' | 'drop' | 'assign' | 'edit' | 'delete';
@@ -142,7 +143,7 @@ export function ShiftDetailModal({
 
         {canWrite && (
           <div className="flex flex-wrap gap-2">
-            {open && (
+            {open && canCoverShifts(members, viewerId) && (
               <Button size="sm" offlineKind="change" onClick={() => onAction('take', shift)}>
                 {t('shifts:takeButton')}
               </Button>

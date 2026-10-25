@@ -167,7 +167,7 @@ function ActiveDialog({
     case 'assign': {
       // A list, with whoever holds the shift now marked; nobody is preselected.
       const options = members
-        .filter((m) => m.view_only !== true)
+        .filter((m) => m.view_only !== true && m.is_care_recipient !== true)
         .map((m) => ({
           value: m.id,
           label: m.id === viewerId ? t('shifts:form.me') : memberShortName(m),

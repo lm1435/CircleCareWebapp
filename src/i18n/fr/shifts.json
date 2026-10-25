@@ -55,7 +55,6 @@
     "scopeLabel": "Quelles gardes ?",
     "justThis": "Celle-ci seulement",
     "futureHint": "Vous pourrez en libérer une plus tard",
-    "reminderRow": "Rappel · {{when}}",
     "future": "Celle-ci et toutes les suivantes"
   },
   "scope": {
@@ -140,8 +139,7 @@
     "repeats": "Répétition",
     "date": "Date",
     "endsOn": "La répétition s’arrête",
-    "reminderHint": "Envoyé à la personne qui assure la garde.",
-    "careRecipient": "{{name}} · Personne aidée"
+    "reminderHint": "Envoyé à la personne qui assure la garde."
   },
   "saved": {
     "title": "« {{name}} » enregistrée",

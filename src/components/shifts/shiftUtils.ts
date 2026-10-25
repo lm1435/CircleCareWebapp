@@ -19,6 +19,19 @@ import { addDays } from '@/components/calendar/dateMath';
 
 export type { ShiftScope } from '@/api/shifts';
 
+/**
+ * May the viewer put THEMSELVES on a shift (Take, "Me" in the form)? The person
+ * receiving care never covers their own shift. The per-viewer flag is not on
+ * the circle-detail payload, so it is read off the member list. Gate this on top
+ * of write access; create/edit/assign keep plain write gating.
+ */
+export function canCoverShifts(
+  members: readonly { id: string; is_care_recipient?: boolean | null }[],
+  viewerId: string | null | undefined
+): boolean {
+  return !members.some((m) => m.id === viewerId && m.is_care_recipient === true);
+}
+
 /** The reminder choices (`reminder_lead_minutes`): 60 | 120 | 240 | 1440, null = off. */
 export const SHIFT_REMINDER_LEADS = [null, 60, 120, 240, 1440] as const;
 export type ShiftReminderLead = (typeof SHIFT_REMINDER_LEADS)[number];

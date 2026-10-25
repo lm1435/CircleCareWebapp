@@ -55,7 +55,6 @@
     "scopeLabel": "¿Qué turnos?",
     "justThis": "Solo este",
     "futureHint": "Después puedes soltar cualquiera",
-    "reminderRow": "Recordatorio · {{when}}",
     "future": "Este y todos los siguientes"
   },
   "scope": {
@@ -140,8 +139,7 @@
     "repeats": "Se repite",
     "date": "Fecha",
     "endsOn": "La repetición termina",
-    "reminderHint": "Se envía a quien tenga el turno.",
-    "careRecipient": "{{name}} · Receptor de cuidado"
+    "reminderHint": "Se envía a quien tenga el turno."
   },
   "saved": {
     "title": "\"{{name}}\" guardado",

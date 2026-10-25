@@ -55,7 +55,7 @@ import { ShiftsWeekView } from '@/components/shifts/ShiftsWeekView';
 import { ShiftsLegend, ShiftsMonthView } from '@/components/shifts/ShiftsMonthView';
 import { ShiftsEmptyState } from '@/components/shifts/ShiftsEmptyState';
 import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
-import { countOpen } from '@/components/shifts/shiftUtils';
+import { canCoverShifts, countOpen } from '@/components/shifts/shiftUtils';
 
 type CalendarView = 'day' | 'week' | 'month';
 type CalendarMode = 'schedule' | 'shifts';
@@ -702,7 +702,7 @@ export default function CalendarPage(): ReactElement {
                     members={members}
                     viewerId={viewerId}
                     onOpen={shiftDialogs.openDetail}
-                    onTake={shiftsCanWrite ? shiftDialogs.openTake : undefined}
+                    onTake={shiftsCanWrite && canCoverShifts(members, viewerId) ? shiftDialogs.openTake : undefined}
                     onAdd={shiftsCanWrite ? () => shiftDialogs.openCreate('shifts_view', anchor) : undefined}
                   />
                   )}
@@ -722,7 +722,7 @@ export default function CalendarPage(): ReactElement {
                 members={members}
                 viewerId={viewerId}
                 onOpen={shiftDialogs.openDetail}
-                onTake={shiftsCanWrite ? shiftDialogs.openTake : undefined}
+                onTake={shiftsCanWrite && canCoverShifts(members, viewerId) ? shiftDialogs.openTake : undefined}
                 onDayOpen={handleOpenDay}
                 onAdd={shiftsCanWrite ? () => shiftDialogs.openCreate('shifts_view', anchor) : undefined}
               />

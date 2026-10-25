@@ -55,7 +55,6 @@
     "scopeLabel": "Quali turni?",
     "justThis": "Solo questo",
     "futureHint": "Potrai lasciarne uno più avanti",
-    "reminderRow": "Promemoria · {{when}}",
     "future": "Questo e tutti i futuri"
   },
   "scope": {
@@ -140,8 +139,7 @@
     "repeats": "Ripetizione",
     "date": "Data",
     "endsOn": "La ripetizione termina",
-    "reminderHint": "Inviato a chi ha il turno.",
-    "careRecipient": "{{name}} · Persona assistita"
+    "reminderHint": "Inviato a chi ha il turno."
   },
   "saved": {
     "title": "«{{name}}» salvato",

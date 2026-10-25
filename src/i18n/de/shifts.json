@@ -55,7 +55,6 @@
     "scopeLabel": "Welche Schichten?",
     "justThis": "Nur diese",
     "futureHint": "Einzelne können Sie später abgeben",
-    "reminderRow": "Erinnerung · {{when}}",
     "future": "Diese und alle künftigen"
   },
   "scope": {
@@ -140,8 +139,7 @@
     "repeats": "Wiederholung",
     "date": "Datum",
     "endsOn": "Wiederholung endet",
-    "reminderHint": "Wird an die Person gesendet, die die Schicht hat.",
-    "careRecipient": "{{name}} · Umsorgte Person"
+    "reminderHint": "Wird an die Person gesendet, die die Schicht hat."
   },
   "saved": {
     "title": "„{{name}}“ gespeichert",

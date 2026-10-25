@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import {
+  canCoverShifts,
   canTakeFuture,
   seriesDefaultOpen,
   countOpen,
@@ -227,5 +228,22 @@ describe('seriesDefaultOpen / canTakeFuture (mobile parity)', () => {
     expect(canTakeFuture(physical, [], false, { id: 'root', assigned_to: 'ana' })).toBe(false);
     expect(canTakeFuture(physical, [], true, { id: 'root', assigned_to: 'ana' })).toBe(true);
     expect(canTakeFuture(shift({ id: 'one', recurrence_rule: null, parent_event_id: null }), [], true)).toBe(false);
+  });
+});
+
+describe('canCoverShifts (may put THEMSELVES on a shift)', () => {
+  const people = [
+    { id: 'u-ana', is_care_recipient: false },
+    { id: 'u-rosa', is_care_recipient: true },
+    { id: 'u-bare' },
+  ];
+  it('is true for a normal member and for a viewer not in the list', () => {
+    expect(canCoverShifts(people, 'u-ana')).toBe(true);
+    expect(canCoverShifts(people, 'u-bare')).toBe(true);
+    expect(canCoverShifts(people, 'u-gone')).toBe(true);
+    expect(canCoverShifts(people, null)).toBe(true);
+  });
+  it('is false for the care recipient', () => {
+    expect(canCoverShifts(people, 'u-rosa')).toBe(false);
   });
 });
