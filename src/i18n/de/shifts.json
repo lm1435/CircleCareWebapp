@@ -15,9 +15,7 @@
   "mode": {
     "label": "Kalenderansicht",
     "schedule": "Terminplan",
-    "shifts": "Schichten",
-    "openBadge_one": "{{count}} offen",
-    "openBadge_other": "{{count}} offen"
+    "shifts": "Schichten"
   },
   "legend": {
     "label": "Legende der Schichten",

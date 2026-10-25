@@ -273,7 +273,7 @@ export default function CalendarPage(): ReactElement {
     shiftsMode
   );
   const { shifts } = shiftsQuery;
-  // The Shifts segment's "N open" badge (null while loading -> hidden).
+  // Open-shift count: feeds only the shifts_view_opened `open_count_bucket` (no UI shows it).
   const openCount = useOpenShiftCount(circleId, timezone, shiftsReadable);
   // The same 7-day window's rows: the empty state needs "nothing anywhere" too.
   const shiftsPeek = useShiftsPeek(circleId, timezone, shiftsReadable);
@@ -383,7 +383,7 @@ export default function CalendarPage(): ReactElement {
     if (activeQuery.isError) void activeQuery.refetch();
   };
 
-  // shifts_view_opened: once per (mode entry, range), as soon as the open badge
+  // shifts_view_opened: once per (mode entry, range), as soon as the open-count
   // query settles (success OR error: an error reports a 0 bucket). enums + a
   // count bucket only.
   const viewedShiftsRef = useRef<string | null>(null);
@@ -517,22 +517,6 @@ export default function CalendarPage(): ReactElement {
                 {
                   value: 'shifts',
                   label: t('shifts:mode.shifts'),
-                  badge:
-                    openCount.count !== null && openCount.count > 0 ? (
-                      <span
-                        data-testid="shifts-open-badge"
-                        // Opaque surface on purpose: the segment under it is the selected ground (moss in
-                        // light, cream in dark), and the translucent moss-soft wash rides it on an inner span.
-                        className="inline-block rounded-full bg-cream"
-                      >
-                        <span
-                          data-testid="shifts-open-badge-fill"
-                          className="block rounded-full bg-moss-soft px-2 py-0.5 text-xs font-semibold text-moss"
-                        >
-                          {t('shifts:mode.openBadge', { count: openCount.count })}
-                        </span>
-                      </span>
-                    ) : undefined,
                 },
               ]}
             />

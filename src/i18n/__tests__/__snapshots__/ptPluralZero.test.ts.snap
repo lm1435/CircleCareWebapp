@@ -252,11 +252,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 minuto",
     "2 minutos",
   ],
-  "pt shifts:mode.openBadge": [
-    "0 em aberto",
-    "1 em aberto",
-    "2 em aberto",
-  ],
   "pt shifts:month.cell": [
     "{{date}}, 0 plantão, {{open}}",
     "{{date}}, 1 plantão, {{open}}",
@@ -546,11 +541,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 minuto",
     "1 minuto",
     "2 minutos",
-  ],
-  "pt-PT shifts:mode.openBadge": [
-    "0 por preencher",
-    "1 por preencher",
-    "2 por preencher",
   ],
   "pt-PT shifts:month.cell": [
     "{{date}}, 0 turnos, {{open}}",

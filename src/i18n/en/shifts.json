@@ -15,9 +15,7 @@
   "mode": {
     "label": "Calendar mode",
     "schedule": "Schedule",
-    "shifts": "Shifts",
-    "openBadge_one": "{{count}} open",
-    "openBadge_other": "{{count}} open"
+    "shifts": "Shifts"
   },
   "legend": {
     "label": "Shifts key",

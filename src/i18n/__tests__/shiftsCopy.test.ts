@@ -31,15 +31,6 @@ describe('shifts open-count plurals', () => {
     expect(i18n.getFixedT(lng)('openCount', { count })).toBe(expected);
   });
 
-  it.each([
-    ['en', 1, '1 open'],
-    ['en', 2, '2 open'],
-    ['es', 1, '1 abierto'],
-    ['es', 2, '2 abiertos'],
-  ])('%s mode.openBadge at %i reads "%s"', (lng, count, expected) => {
-    expect(i18n.getFixedT(lng)('mode.openBadge', { count })).toBe(expected);
-  });
-
   it('composes the day summaries with the plural open phrase', () => {
     const es = i18n.getFixedT('es');
     expect(es('summary', { count: 3, open: es('openCount', { count: 1 }) })).toBe('3 turnos · 1 abierto.');

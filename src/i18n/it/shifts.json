@@ -15,9 +15,7 @@
   "mode": {
     "label": "Modalità calendario",
     "schedule": "Agenda",
-    "shifts": "Turni",
-    "openBadge_one": "{{count}} scoperto",
-    "openBadge_other": "{{count}} scoperti"
+    "shifts": "Turni"
   },
   "legend": {
     "label": "Legenda dei turni",

@@ -48,7 +48,7 @@ import { getDateInTimezone } from '@/utils/timezone';
 // Module-level constant — never `?? []` inline in selectors/returns.
 const EMPTY_SHIFTS: CalendarEvent[] = [];
 
-/** The badge count is cached for 60 s (spec: "one bounded 7-day range, cached for 60 s"). */
+/** The open-count window is cached for 60 s (spec: "one bounded 7-day range, cached for 60 s"). */
 const OPEN_COUNT_STALE_MS = 60_000;
 
 export interface UseShiftsResult {
@@ -72,7 +72,7 @@ export function useShiftsByRange(
 }
 
 export interface UseOpenShiftCountResult {
-  /** Open, not-yet-ended shifts from today through the next 7 days; `null` while loading (the badge stays hidden). */
+  /** Open, not-yet-ended shifts from today through the next 7 days; `null` while loading (no count yet). */
   count: number | null;
 }
 
@@ -96,10 +96,11 @@ function useBadgeWindowQuery<T>(
 }
 
 /**
- * The Shifts segment's "N open" badge: open shifts over today .. today+6 in the
+ * Open shifts over today .. today+6 in the
  * RECIPIENT's timezone, excluding shifts that have already ENDED. `null` until
- * the first answer arrives and on error, so the badge never flashes "0 open".
- * `settled` is true once the badge query answered OR failed (analytics).
+ * the first answer arrives and on error. Feeds only the shifts_view_opened bucket
+ * (the Shifts toggle badge was removed 2026-10-24).
+ * `settled` is true once the window query answered OR failed (analytics).
  */
 export function useOpenShiftCount(
   circleId: string,
@@ -107,7 +108,7 @@ export function useOpenShiftCount(
   enabled: boolean
 ): UseOpenShiftCountResult & { settled: boolean } {
   const query = useBadgeWindowQuery(circleId, timezone, enabled, (rows) =>
-    // Only the count is kept: the badge never needs the rows. The clock is read
+    // Only the count is kept. The clock is read
     // per select run, so a shift that ended since the fetch drops on re-render.
     timezone ? countOpenUpcoming(rows, timezone) : 0
   );
@@ -118,7 +119,7 @@ export function useOpenShiftCount(
 }
 
 /**
- * The same bounded window's rows (shares the badge's cache entry): the Shifts
+ * The same bounded window's rows (shares the open-count cache entry): the Shifts
  * empty state shows only when the visible range holds today AND this 7-day peek
  * is empty too. `undefined` until loaded.
  */

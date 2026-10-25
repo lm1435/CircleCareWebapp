@@ -15,9 +15,7 @@
   "mode": {
     "label": "Mode du calendrier",
     "schedule": "Agenda",
-    "shifts": "Gardes",
-    "openBadge_one": "{{count}} à pourvoir",
-    "openBadge_other": "{{count}} à pourvoir"
+    "shifts": "Gardes"
   },
   "legend": {
     "label": "Légende des gardes",

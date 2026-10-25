@@ -15,9 +15,7 @@
   "mode": {
     "label": "Modo do calendário",
     "schedule": "Agenda",
-    "shifts": "Plantões",
-    "openBadge_one": "{{count}} em aberto",
-    "openBadge_other": "{{count}} em aberto"
+    "shifts": "Plantões"
   },
   "legend": {
     "label": "Legenda dos plantões",

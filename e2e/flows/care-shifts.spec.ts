@@ -140,11 +140,11 @@ test.describe('premium owner', () => {
     expect(rows.map((r) => r.title).sort()).toEqual(['Day', 'Night']);
     expect(rows.every((r) => r.assigned_to === null)).toBe(true);
 
-    // Shifts view: the badge counts open shifts over today .. today+6 (recipient
-    // zone), not yet ended. Both series start tomorrow, so it is EXACT: 2 x 6 = 12.
-    await expect(page.getByTestId('shifts-open-badge')).toHaveText('12 open', { timeout: 20_000 });
+    // Shifts view: the toggle carries no open count (owner decision 2026-10-24).
+    await expect(page.getByTestId('shifts-open-badge')).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Shifts', exact: true })).toBeVisible({ timeout: 20_000 });
     await page.getByRole('tablist', { name: 'Calendar view' }).getByRole('tab', { name: 'Day' }).click();
-    // Today holds nothing (the series start tomorrow); the badge window is not empty, so
+    // Today holds nothing (the series start tomorrow); the shifts exist tomorrow, so
     // this is the plain "No shifts on this day." line, then step to tomorrow.
     await expect(page.getByText('No shifts on this day.')).toBeVisible();
     await page.getByRole('button', { name: 'Next day', exact: true }).click();

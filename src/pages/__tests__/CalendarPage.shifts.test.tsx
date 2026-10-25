@@ -200,48 +200,26 @@ describe('Schedule | Shifts visibility', () => {
   });
 });
 
-describe('the open badge', () => {
-  it('counts open shifts over the next 7 days in the recipient zone and shows "N open"', async () => {
+describe('the Shifts toggle carries no open count', () => {
+  it('reads plain "Shifts" even when open shifts exist, and the open-count window still feeds analytics', async () => {
     renderPage();
-    expect(await screen.findByTestId('shifts-open-badge')).toHaveTextContent('1 open');
-    const fill = screen.getByTestId('shifts-open-badge-fill');
-    expect(fill).toHaveClass('bg-moss-soft', 'text-moss');
-    expect(screen.getByTestId('shifts-open-badge').className).not.toMatch(/amber/);
-    // today .. today + 6, recipient frame
-    expect(mockGetShifts).toHaveBeenCalledWith('circle-1', '2026-06-12', '2026-06-18');
-    expect(screen.getByRole('tab', { name: /Shifts.*1 open/ })).toBeInTheDocument();
-  });
-
-  it('is hidden at 0', async () => {
-    mockGetShifts.mockResolvedValue([shift({ id: 'a', assigned_to: 'u-ana' })]);
-    renderPage();
-    await waitFor(() => expect(mockGetShifts).toHaveBeenCalled());
-    await screen.findByRole('tablist', { name: 'Calendar mode' });
+    const tab = await screen.findByRole('tab', { name: 'Shifts' });
+    expect(tab).toHaveTextContent(/^Shifts$/);
     expect(screen.queryByTestId('shifts-open-badge')).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d+ open/)).not.toBeInTheDocument();
+    // The count is not rendered, but the 7-day window (today .. +6) is still read for analytics.
+    await waitFor(() => expect(mockGetShifts).toHaveBeenCalledWith('circle-1', '2026-06-12', '2026-06-18'));
   });
 
-  it('is hidden while loading (never a "0 open" flash)', async () => {
+  it('has no count at 0 open or while loading either', async () => {
     let release: (rows: CalendarEvent[]) => void = () => {};
     mockGetShifts.mockImplementation(() => new Promise((resolve) => (release = resolve)));
     renderPage();
-    await screen.findByRole('tablist', { name: 'Calendar mode' });
-    expect(screen.queryByTestId('shifts-open-badge')).not.toBeInTheDocument();
-    release([shift({ id: 'o' })]);
-    expect(await screen.findByTestId('shifts-open-badge')).toHaveTextContent('1 open');
-  });
-});
-
-describe('the open badge: ended shifts and failures', () => {
-  it('does not count an open shift that has already ended today', async () => {
-    mockGetShifts.mockImplementation(async (_c, start, end) =>
-      [
-        ...SHIFTS,
-        // 06:00 + 4 h = ended 10:00 Chicago; it is 10:30.
-        shift({ id: 'ended', title: 'Early', scheduled_time: '06:00:00', duration_minutes: 240 }),
-      ].filter((s) => s.scheduled_date >= start && s.scheduled_date <= end)
-    );
-    renderPage();
-    expect(await screen.findByTestId('shifts-open-badge')).toHaveTextContent('1 open');
+    const tab = await screen.findByRole('tab', { name: 'Shifts' });
+    expect(tab).toHaveTextContent(/^Shifts$/);
+    release([shift({ id: 'a', assigned_to: 'u-ana' })]);
+    await waitFor(() => expect(mockGetShifts).toHaveBeenCalled());
+    expect(screen.getByRole('tab', { name: 'Shifts' })).toHaveTextContent(/^Shifts$/);
   });
 });
 
@@ -379,7 +357,7 @@ describe('Shifts mode', () => {
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
-  it('shifts_view_opened still fires when the badge read fails (0 bucket)', async () => {
+  it('shifts_view_opened still fires when the open-count read fails (0 bucket)', async () => {
     mockGetShifts.mockRejectedValue({ success: false, error: { code: 'INTERNAL', message: 'x' } });
     const user = userEvent.setup();
     renderPage();

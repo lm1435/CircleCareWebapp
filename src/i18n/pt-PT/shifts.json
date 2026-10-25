@@ -8,9 +8,7 @@
   "noShiftsDay": "Nenhum turno neste dia.",
   "noShiftsWeekDay": "Nenhum turno",
   "mode": {
-    "shifts": "Turnos",
-    "openBadge_one": "{{count}} por preencher",
-    "openBadge_other": "{{count}} por preencher"
+    "shifts": "Turnos"
   },
   "legend": {
     "open": "Tem um turno por preencher",
