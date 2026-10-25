@@ -5,8 +5,9 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { AddMenu, type AddMenuType } from './AddMenu';
 import { FloatingNavBar } from './FloatingNavBar';
-import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
+import { TranslateLanguageBanner } from '@/components/TranslateLanguageBanner';
 import { StoreReviewBanner } from '@/components/StoreReviewBanner';
+import { NeedsCircleSelectionBanner } from '@/components/NeedsCircleSelectionBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AIChatModal } from '@/components/ai/AIChatModal';
 import { replyActionRoute } from '@/components/ai/aiReplyActions';
@@ -260,6 +261,7 @@ export function AppLayout(): ReactElement {
               header, the sidebar or the nav pill (components/OfflineBanner). */}
           <OfflineBanner />
           <NeedsCircleSelectionBanner />
+          <TranslateLanguageBanner />
           <StoreReviewBanner />
           {/* Page-level boundary: a single page's render error shows the fallback
               inside <main> while the header + sidebar stay usable. Keyed by path

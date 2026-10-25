@@ -41,6 +41,12 @@
  *
  * Idempotent: a second call (HMR, tests) is a no-op, so the originals are never
  * wrapped twice and the patched functions keep a stable identity.
+ *
+ * SCOPE: the patch covers THIS document's realm — every route, lazy chunk and
+ * boundary of the SPA, present and future. An iframe or popup window has its
+ * own Node.prototype: if one ever renders React (today's only iframe is the
+ * native PDF viewer in DocumentPreviewModal, no React inside), it needs its
+ * own install.
  */
 
 let installed = false;
