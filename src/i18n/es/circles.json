@@ -89,28 +89,19 @@
   },
   "quickWin": {
     "title": "Círculo creado",
-    "subtitle": "El círculo de cuidado de {{name}} está listo. ¿Qué te gustaría hacer primero?",
-    "subtitleSelf": "Tu círculo de cuidado está listo. ¿Qué te gustaría hacer primero?",
-    "skipForNow": "Omitir por ahora",
-    "tip": "Siempre puedes hacer esto después desde la página del círculo."
+    "skipForNow": "Omitir por ahora"
   },
   "firstRun": {
     "steps": {
-      "choose": "Inicio",
       "what": "Nombre",
       "when": "Hora",
       "repeat": "Repetir"
     },
     "choose": {
       "primary": "Agregar el primer medicamento",
-      "primaryHelper": "Así se configuran los recordatorios.",
-      "orStartWith": "o empieza con",
-      "appointment": "Una cita",
-      "invite": "Invitar a alguien",
-      "emergency": "Información de emergencia"
+      "primarySelf": "Agregar tu primer medicamento"
     },
     "inviteNext": {
-      "title": "Invita a alguien a ayudar",
       "notNow": "Ahora no"
     },
     "progressLabel": "Paso {{current}} de {{total}}",
@@ -133,7 +124,42 @@
     "discardTitle": "¿Descartar este medicamento?",
     "discardMessage": "No se guardará nada.",
     "discardConfirm": "Descartar",
-    "discardClose": "Cerrar el aviso de descartar"
+    "discardClose": "Cerrar el aviso de descartar",
+    "ready": {
+      "title": "El círculo de {{name}} está listo.",
+      "titleSelf": "Tu círculo está listo.",
+      "lede": "Agrega el primer medicamento de {{name}}. Es el recordatorio que compartirá todo el círculo.",
+      "ledeSelf": "Agrega tu primer medicamento. Es el recordatorio que compartirá todo tu círculo.",
+      "toggleShow": "¿Sin medicamentos que seguir? Mira qué más hay",
+      "toggleHide": "Ocultar",
+      "appointmentTitle": "Agregar una cita",
+      "appointmentHelper": "Las visitas al médico en un solo calendario que ve la familia.",
+      "inviteTitle": "Invitar a alguien a ayudar",
+      "inviteHelper": "Compartan la carga, para que no recaiga todo en ti.",
+      "emergencyTitle": "Agregar información de emergencia",
+      "emergencyHelper": "Alergias y médicos, a la mano cuando importa."
+    },
+    "whatLede": "Basta con el nombre. Los detalles pueden esperar.",
+    "addDosage": "+ Agregar dosis",
+    "nextEyebrow": "Siguiente",
+    "nextPreview": {
+      "everyMorning": "Todas las mañanas a las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
+      "everyEvening": "Todas las noches a las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
+      "twiceDaily": "Dos veces al día, desde las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
+      "threeTimesDaily": "Tres veces al día, desde las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
+      "custom": "A las {{time}}. Puedes cambiarlo en la siguiente pantalla."
+    },
+    "payoff": {
+      "title": "El recordatorio de las {{time}} de {{name}} está listo.",
+      "titleMulti": "Los recordatorios de {{name}} están listos.",
+      "titleSelf": "Tu recordatorio de las {{time}} está listo.",
+      "titleMultiSelf": "Tus recordatorios están listos.",
+      "line": "Cuando alguien toca Tomado, todo el círculo lo ve. Sin mensajes de grupo, sin adivinar.",
+      "lineSelf": "Cuando tocas Tomado, las personas que invites también lo ven.",
+      "inviteHeading": "¿Quién suele acompañar a {{name}}?",
+      "inviteHeadingSelf": "¿Quién te ayuda?",
+      "invite": "Invitar a alguien"
+    }
   },
   "accessLost": {
     "removedTitle": "Acceso eliminado",

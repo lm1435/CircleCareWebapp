@@ -89,28 +89,19 @@
   },
   "quickWin": {
     "title": "Círculo criado",
-    "subtitle": "O círculo de cuidado de {{name}} está pronto. O que você gostaria de fazer primeiro?",
-    "subtitleSelf": "Seu círculo de cuidado está pronto. O que você gostaria de fazer primeiro?",
-    "skipForNow": "Pular por enquanto",
-    "tip": "Tudo isso pode ser feito depois, na página do círculo."
+    "skipForNow": "Pular por enquanto"
   },
   "firstRun": {
     "steps": {
-      "choose": "Início",
       "what": "Nome",
       "when": "Horário",
       "repeat": "Repetição"
     },
     "choose": {
       "primary": "Adicionar o primeiro medicamento",
-      "primaryHelper": "É isso que configura os lembretes.",
-      "orStartWith": "ou comece por",
-      "appointment": "Uma consulta",
-      "invite": "Convidar alguém",
-      "emergency": "Informações de emergência"
+      "primarySelf": "Adicionar seu primeiro medicamento"
     },
     "inviteNext": {
-      "title": "Convide alguém para ajudar",
       "notNow": "Agora não"
     },
     "progressLabel": "Etapa {{current}} de {{total}}",
@@ -133,7 +124,42 @@
     "discardTitle": "Descartar este medicamento?",
     "discardMessage": "Nada será salvo.",
     "discardConfirm": "Descartar",
-    "discardClose": "Fechar aviso de descarte"
+    "discardClose": "Fechar aviso de descarte",
+    "ready": {
+      "title": "O círculo de {{name}} está pronto.",
+      "titleSelf": "Seu círculo está pronto.",
+      "lede": "Adicione o primeiro medicamento de {{name}}. É o lembrete que todo o círculo vai compartilhar.",
+      "ledeSelf": "Adicione seu primeiro medicamento. É o lembrete que todo o seu círculo vai compartilhar.",
+      "toggleShow": "Sem medicamentos para acompanhar? Veja o que mais",
+      "toggleHide": "Ocultar",
+      "appointmentTitle": "Adicionar uma consulta",
+      "appointmentHelper": "As consultas médicas em um só calendário que a família vê.",
+      "inviteTitle": "Convidar alguém para ajudar",
+      "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre você.",
+      "emergencyTitle": "Adicionar informações de emergência",
+      "emergencyHelper": "Alergias e médicos, à mão quando importa."
+    },
+    "whatLede": "Só o nome já basta. Os detalhes podem esperar.",
+    "addDosage": "+ Adicionar dosagem",
+    "nextEyebrow": "Em seguida",
+    "nextPreview": {
+      "everyMorning": "Toda manhã às {{time}}. Você pode mudar isso na próxima tela.",
+      "everyEvening": "Toda noite às {{time}}. Você pode mudar isso na próxima tela.",
+      "twiceDaily": "Duas vezes ao dia, a partir das {{time}}. Você pode mudar isso na próxima tela.",
+      "threeTimesDaily": "Três vezes ao dia, a partir das {{time}}. Você pode mudar isso na próxima tela.",
+      "custom": "Às {{time}}. Você pode mudar isso na próxima tela."
+    },
+    "payoff": {
+      "title": "O lembrete de {{name}} das {{time}} está definido.",
+      "titleMulti": "Os lembretes de {{name}} estão definidos.",
+      "titleSelf": "Seu lembrete das {{time}} está definido.",
+      "titleMultiSelf": "Seus lembretes estão definidos.",
+      "line": "Quando alguém toca em Tomado, todo o círculo vê. Sem mensagens em grupo, sem adivinhar.",
+      "lineSelf": "Quando você toca em Tomado, quem você convidar também vê.",
+      "inviteHeading": "Quem costuma estar com {{name}}?",
+      "inviteHeadingSelf": "Quem ajuda você?",
+      "invite": "Convidar alguém"
+    }
   },
   "accessLost": {
     "removedTitle": "Acesso removido",

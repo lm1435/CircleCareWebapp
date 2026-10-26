@@ -1,9 +1,23 @@
-import { type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ChipSelect, Eyebrow, Icon, Text, TextField, TimeField } from '@/components/ui';
+import {
+  Avatar,
+  Button,
+  Card,
+  ChipSelect,
+  Eyebrow,
+  Icon,
+  TEXT_CLASS,
+  Text,
+  TextField,
+  TimeField,
+} from '@/components/ui';
+import type { HourCycle } from '@/utils/hourCycle';
 import {
   FIRST_RUN_PRESET_ORDER,
   FIRST_RUN_REPEAT_ORDER,
+  firstRunAllTimes,
+  formatFirstRunTime,
   type FirstRunPresetKey,
   type FirstRunRecurrence,
 } from '@/utils/firstRunMedication';
@@ -67,117 +81,220 @@ export function FullDetailsLink({ onClick, disabled = false }: FullDetailsLinkPr
   );
 }
 
-// ── ① Choose an action ──────────────────────────────────────────────────────
+// ── ① The circle is ready ───────────────────────────────────────────────────
 
 export interface ChooseActionStepProps {
   recipientName: string;
   /** Self-care owner IS the recipient: address them as "you", not by name. */
   isSelfCare?: boolean;
   onSelect: (action: FirstRunAction) => void;
+  /** Fired on every tap of the "see what else" toggle, with the NEW state. */
+  onMoreOptionsToggled?: (open: boolean) => void;
 }
 
 /**
- * Screen ① — ONE filled primary action (the first medication, with one line
- * saying why: it is what sets up reminders), then a quiet "or start with"
- * group of three text-style rows. Same destinations as the four equal-weight
- * cards this replaced; only the emphasis changed.
+ * Screen ① — "{{name}}'s circle is ready." and ONE button: the first
+ * medication. Everything else (appointment, invite, emergency info) sits behind
+ * a quiet text toggle that reveals a card of rows ABOVE the primary. Each row
+ * routes through the same `onSelect` as before, so routing and analytics are
+ * unchanged. The toggle state lives here and starts closed; nothing animates,
+ * so reduced motion is respected by construction.
  */
 export function ChooseActionStep({
   recipientName,
   isSelfCare,
   onSelect,
+  onMoreOptionsToggled,
 }: ChooseActionStepProps): ReactElement {
   const { t } = useTranslation('circles');
+  const [open, setOpen] = useState(false);
   // Offline (owner decision 2026-10-14): every choice here starts a create, so each
   // explains with the 'change' sentence and goes nowhere — mobile FirstRunWizardScreen's
   // `handleAction` gate. "Skip for now" (the modal footer) is a close and stays live.
   const offline = useIsOffline();
 
-  const secondary: { id: Exclude<FirstRunAction, 'skip' | 'medication'>; label: string }[] = [
-    { id: 'appointment', label: t('firstRun.choose.appointment') },
-    { id: 'invite', label: t('firstRun.choose.invite') },
-    { id: 'emergency', label: t('firstRun.choose.emergency') },
+  const rows: {
+    id: Exclude<FirstRunAction, 'skip' | 'medication'>;
+    title: string;
+    helper: string;
+  }[] = [
+    {
+      id: 'appointment',
+      title: t('firstRun.ready.appointmentTitle'),
+      helper: t('firstRun.ready.appointmentHelper'),
+    },
+    {
+      id: 'invite',
+      title: t('firstRun.ready.inviteTitle'),
+      helper: t('firstRun.ready.inviteHelper'),
+    },
+    {
+      id: 'emergency',
+      title: t('firstRun.ready.emergencyTitle'),
+      helper: t('firstRun.ready.emergencyHelper'),
+    },
   ];
+
+  const toggle = (): void => {
+    const next = !open;
+    setOpen(next);
+    onMoreOptionsToggled?.(next);
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      <StepHeading
-        eyebrow={t('firstRun.steps.choose')}
-        title={
-          isSelfCare ? t('quickWin.subtitleSelf') : t('quickWin.subtitle', { name: recipientName })
-        }
-      />
+      <header className="flex flex-col gap-3">
+        <Avatar name={recipientName} size="lg" />
+        <Text variant="h2" as="h3">
+          {isSelfCare ? t('firstRun.ready.titleSelf') : t('firstRun.ready.title', { name: recipientName })}
+        </Text>
+        <Text variant="caption" id="first-run-ready-lede">
+          {isSelfCare ? t('firstRun.ready.ledeSelf') : t('firstRun.ready.lede', { name: recipientName })}
+        </Text>
+      </header>
 
-      <div className="flex flex-col gap-2">
+      {open && (
+        <Card
+          as="ul"
+          variant="outlined"
+          padding="none"
+          id="first-run-more-options"
+          className="m-0 flex list-none flex-col"
+        >
+          {rows.map((row) => (
+            <li key={row.id} className="border-t border-line-2 first:border-t-0">
+              <button
+                type="button"
+                aria-disabled={offline || undefined}
+                onClick={() => (offline ? explainOfflineWrite('change') : onSelect(row.id))}
+                data-testid={`first-run-start-with-${row.id}`}
+                className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-lg px-4 py-2.5 text-left transition-colors duration-fast hover:bg-bg-2${offline ? ' cursor-not-allowed opacity-50' : ''}`}
+              >
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-md font-semibold text-ink">{row.title}</span>
+                  <span className="text-sm text-ink-2">{row.helper}</span>
+                </span>
+                <Icon name="chevron-forward" size="inline" className="flex-none text-ink-3" />
+              </button>
+            </li>
+          ))}
+        </Card>
+      )}
+
+      <div className="flex flex-col gap-1">
         <Button
           type="button"
           fullWidth
           offlineKind="change"
           onClick={() => onSelect('medication')}
           data-testid="first-run-primary"
-          aria-describedby="first-run-primary-helper"
+          aria-describedby="first-run-ready-lede"
         >
-          {t('firstRun.choose.primary')}
+          {isSelfCare ? t('firstRun.choose.primarySelf') : t('firstRun.choose.primary')}
         </Button>
-        <p id="first-run-primary-helper" className="m-0 text-center text-sm text-ink-2">
-          {t('firstRun.choose.primaryHelper')}
-        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-controls="first-run-more-options"
+          data-testid="first-run-more-toggle"
+          className="self-center"
+        >
+          {open ? t('firstRun.ready.toggleHide') : t('firstRun.ready.toggleShow')}
+        </Button>
       </div>
-
-      <div className="flex flex-col gap-1 border-t border-line-2 pt-4">
-        <Eyebrow as="p" id="first-run-start-with">
-          {t('firstRun.choose.orStartWith')}
-        </Eyebrow>
-        <ul aria-labelledby="first-run-start-with" className="m-0 flex list-none flex-col p-0">
-          {secondary.map((option) => (
-            <li key={option.id} className="border-t border-line-2 first:border-t-0">
-              <button
-                type="button"
-                aria-disabled={offline || undefined}
-                onClick={() => (offline ? explainOfflineWrite('change') : onSelect(option.id))}
-                data-testid={`first-run-start-with-${option.id}`}
-                className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-md py-2.5 text-left text-md font-medium text-moss-deep transition-colors duration-fast hover:bg-bg-2${offline ? ' cursor-not-allowed opacity-50' : ''}`}
-              >
-                <span className="min-w-0">{option.label}</span>
-                <Icon name="chevron-forward" size="inline" className="flex-none text-ink-3" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <p className="m-0 border-t border-line-2 pt-4 text-sm text-ink-2">{t('quickWin.tip')}</p>
     </div>
   );
 }
 
-// ── ⑤ Invite, after the medication saved ────────────────────────────────────
+// ── ⑤ Payoff, then the invite offer, after the medication saved ─────────────
+
+/** What the wizard just saved — the payoff card is built from it. */
+export interface SavedMedicationSummary {
+  name: string;
+  /** Every dose time, `HH:MM`, the same ones step ③ showed. */
+  times: string[];
+  recurrence: FirstRunRecurrence;
+}
+
+export interface InviteAfterSaveStepProps {
+  recipientName: string;
+  /** Self-care owner IS the recipient: address them as "you", not by name. */
+  isSelfCare?: boolean;
+  saved: SavedMedicationSummary;
+  hourCycle: HourCycle;
+}
 
 /**
- * Shown once the first medication has saved: inviting someone is the ONE
- * primary action of this step (the footer carries it, with a plain "Not now").
- * Presentation only, like the rest of this file.
+ * Shown once the first medication has saved: the payoff ("your reminder is
+ * set", with the card as the circle will see it), then ONE invite question.
+ * The footer carries the Invite / Not now buttons. Presentation only.
  */
 export function InviteAfterSaveStep({
   recipientName,
   isSelfCare,
-}: {
-  recipientName: string;
-  /** Self-care owner IS the recipient: address them as "you", not by name. */
-  isSelfCare?: boolean;
-}): ReactElement {
-  // The body is the solo invite card's own copy (mobile reuses it here too).
-  const { t } = useTranslation(['circles', 'overview']);
+  saved,
+  hourCycle,
+}: InviteAfterSaveStepProps): ReactElement {
+  const { t } = useTranslation(['circles', 'calendar']);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // Focus follows the step change (the heading names what just happened).
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  const times = saved.times.map((time) => formatFirstRunTime(time, hourCycle));
+  const multi = times.length > 1;
+  const recurrenceLabels: Record<FirstRunRecurrence, string> = {
+    daily: t('calendar:addEvent.recurrence.daily'),
+    every_other_day: t('calendar:addEvent.recurrence.everyOtherDay'),
+    weekly: t('calendar:addEvent.recurrence.weekly'),
+    none: t('calendar:addEvent.recurrence.never'),
+  };
+  const title = isSelfCare
+    ? multi
+      ? t('firstRun.payoff.titleMultiSelf')
+      : t('firstRun.payoff.titleSelf', { time: times[0] })
+    : multi
+      ? t('firstRun.payoff.titleMulti', { name: recipientName })
+      : t('firstRun.payoff.title', { name: recipientName, time: times[0] });
+
   return (
-    <div className="flex flex-col gap-2" data-testid="first-run-invite-step">
-      <Text variant="h2" as="h3">
-        {t('firstRun.inviteNext.title')}
-      </Text>
+    <div className="flex flex-col gap-4" data-testid="first-run-invite-step">
+      <h3 ref={headingRef} tabIndex={-1} className={`${TEXT_CLASS.h2} m-0 outline-none`}>
+        {title}
+      </h3>
+
+      <Card
+        variant="outlined"
+        padding="sm"
+        className="flex items-center gap-3"
+        data-testid="first-run-payoff-card"
+      >
+        <span
+          aria-hidden="true"
+          className="h-6 w-6 flex-none rounded-full border-2 border-clay"
+        />
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate text-md font-semibold text-ink">{saved.name}</span>
+          <span className="text-sm text-ink-2">
+            {times.join(', ')} · {recurrenceLabels[saved.recurrence]}
+          </span>
+        </div>
+      </Card>
+
       <Text variant="caption">
-        {isSelfCare
-          ? t('overview:solo.bodySelfCare')
-          : t('overview:solo.body', { name: recipientName })}
+        {isSelfCare ? t('firstRun.payoff.lineSelf') : t('firstRun.payoff.line')}
       </Text>
+
+      <div className="flex flex-col gap-1 border-t border-line-2 pt-4">
+        <Text variant="h4" as="p">
+          {isSelfCare
+            ? t('firstRun.payoff.inviteHeadingSelf')
+            : t('firstRun.payoff.inviteHeading', { name: recipientName })}
+        </Text>
+      </div>
     </div>
   );
 }
@@ -197,10 +314,14 @@ export interface MedicationNameStepProps {
   /** The RxNorm row behind `name` — see `DrugAutocomplete`; both required. */
   selectedDrug: DrugSearchResult | null;
   onSelectDrug: (drug: DrugSearchResult | null) => void;
+  /** The CURRENT schedule answer — the "Next" preview shows what ③ will show. */
+  presetKey: FirstRunPresetKey;
+  customTime: string | null;
+  hourCycle: HourCycle;
 }
 
 /**
- * Screen ② — the name, and optionally the dosage.
+ * Screen ② — the name; the dosage hides behind "+ Add dosage".
  *
  * An unnamed medication is the one field the payload builder cannot supply a
  * default for, so Continue is blocked on it and says why, rather than failing
@@ -216,8 +337,37 @@ export function MedicationNameStep({
   nameError,
   selectedDrug,
   onSelectDrug,
+  presetKey,
+  customTime,
+  hourCycle,
 }: MedicationNameStepProps): ReactElement {
   const { t } = useTranslation(['circles', 'calendar']);
+  // Starts revealed when there is already a dosage (Back from ③).
+  const [dosageShown, setDosageShown] = useState(dosage.trim().length > 0);
+  const dosageRef = useRef<HTMLInputElement>(null);
+  const focusDosageRef = useRef(false);
+  useEffect(() => {
+    if (dosageShown && focusDosageRef.current) {
+      focusDosageRef.current = false;
+      dosageRef.current?.focus();
+    }
+  }, [dosageShown]);
+
+  const firstTime = firstRunAllTimes(presetKey, customTime)[0];
+  // One literal t() per preset (key-coverage tooling resolves literals only).
+  const previewTime = firstTime ? formatFirstRunTime(firstTime, hourCycle) : null;
+  const preview =
+    previewTime === null
+      ? null
+      : presetKey === 'everyMorning'
+        ? t('firstRun.nextPreview.everyMorning', { time: previewTime })
+        : presetKey === 'everyEvening'
+          ? t('firstRun.nextPreview.everyEvening', { time: previewTime })
+          : presetKey === 'twiceDaily'
+            ? t('firstRun.nextPreview.twiceDaily', { time: previewTime })
+            : presetKey === 'threeTimesDaily'
+              ? t('firstRun.nextPreview.threeTimesDaily', { time: previewTime })
+              : t('firstRun.nextPreview.custom', { time: previewTime });
 
   return (
     <div className="flex flex-col gap-4">
@@ -227,6 +377,10 @@ export function MedicationNameStep({
           isSelfCare ? t('firstRun.whatTitleSelf') : t('firstRun.whatTitle', { name: recipientName })
         }
       />
+
+      <Text variant="caption" className="-mt-2">
+        {t('firstRun.whatLede')}
+      </Text>
 
       <DrugAutocomplete
         id="first-run-name"
@@ -242,14 +396,40 @@ export function MedicationNameStep({
         onChange={onChangeName}
       />
 
-      <TextField
-        id="first-run-dosage"
-        label={t('firstRun.dosageLabel')}
-        placeholder={t('firstRun.dosagePlaceholder')}
-        value={dosage}
-        maxLength={100}
-        onChange={(e) => onChangeDosage(e.target.value)}
-      />
+      {dosageShown ? (
+        <TextField
+          ref={dosageRef}
+          id="first-run-dosage"
+          label={t('firstRun.dosageLabel')}
+          placeholder={t('firstRun.dosagePlaceholder')}
+          value={dosage}
+          maxLength={100}
+          onChange={(e) => onChangeDosage(e.target.value)}
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          className="self-start"
+          data-testid="first-run-add-dosage"
+          onClick={() => {
+            focusDosageRef.current = true;
+            setDosageShown(true);
+          }}
+        >
+          {t('firstRun.addDosage')}
+        </Button>
+      )}
+
+      {preview && (
+        <div
+          className="flex flex-col gap-1 rounded-xl border border-line-2 bg-moss-soft p-4"
+          data-testid="first-run-next-preview"
+        >
+          <Eyebrow>{t('firstRun.nextEyebrow')}</Eyebrow>
+          <p className="m-0 text-md text-ink">{preview}</p>
+        </div>
+      )}
     </div>
   );
 }

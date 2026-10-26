@@ -89,28 +89,19 @@
   },
   "quickWin": {
     "title": "Circle created",
-    "subtitle": "{{name}}'s care circle is ready. What would you like to do first?",
-    "subtitleSelf": "Your care circle is ready. What would you like to do first?",
-    "skipForNow": "Skip for now",
-    "tip": "You can always do these later from the circle page."
+    "skipForNow": "Skip for now"
   },
   "firstRun": {
     "steps": {
-      "choose": "Start",
       "what": "Name",
       "when": "Time",
       "repeat": "Repeat"
     },
     "choose": {
       "primary": "Add the first medication",
-      "primaryHelper": "This is what sets up reminders.",
-      "orStartWith": "or start with",
-      "appointment": "An appointment",
-      "invite": "Inviting someone",
-      "emergency": "Emergency info"
+      "primarySelf": "Add your first medication"
     },
     "inviteNext": {
-      "title": "Invite someone to help",
       "notNow": "Not now"
     },
     "progressLabel": "Step {{current}} of {{total}}",
@@ -133,7 +124,42 @@
     "discardTitle": "Discard this medication?",
     "discardMessage": "Nothing will be saved.",
     "discardConfirm": "Discard",
-    "discardClose": "Close discard prompt"
+    "discardClose": "Close discard prompt",
+    "ready": {
+      "title": "{{name}}'s circle is ready.",
+      "titleSelf": "Your circle is ready.",
+      "lede": "Add {{name}}'s first medication. That's the reminder everyone in the circle will share.",
+      "ledeSelf": "Add your first medication. That's the reminder everyone in your circle will share.",
+      "toggleShow": "No medications to track? See what else",
+      "toggleHide": "Hide",
+      "appointmentTitle": "Add an appointment",
+      "appointmentHelper": "Doctor visits on one calendar the family sees.",
+      "inviteTitle": "Invite someone to help",
+      "inviteHelper": "Share the load, so it isn't all on you.",
+      "emergencyTitle": "Add emergency info",
+      "emergencyHelper": "Allergies and doctors, ready when it matters."
+    },
+    "whatLede": "Just the name is enough. Details can wait.",
+    "addDosage": "+ Add dosage",
+    "nextEyebrow": "Next",
+    "nextPreview": {
+      "everyMorning": "Every morning at {{time}}. You can change it on the next screen.",
+      "everyEvening": "Every evening at {{time}}. You can change it on the next screen.",
+      "twiceDaily": "Twice a day, starting at {{time}}. You can change it on the next screen.",
+      "threeTimesDaily": "Three times a day, starting at {{time}}. You can change it on the next screen.",
+      "custom": "At {{time}}. You can change it on the next screen."
+    },
+    "payoff": {
+      "title": "{{name}}'s {{time}} reminder is set.",
+      "titleMulti": "{{name}}'s reminders are set.",
+      "titleSelf": "Your {{time}} reminder is set.",
+      "titleMultiSelf": "Your reminders are set.",
+      "line": "When someone taps Taken, everyone in the circle sees it. No group texts, no guessing.",
+      "lineSelf": "When you tap Taken, anyone you invite sees it too.",
+      "inviteHeading": "Who's usually there with {{name}}?",
+      "inviteHeadingSelf": "Who helps you out?",
+      "invite": "Invite someone"
+    }
   },
   "accessLost": {
     "removedTitle": "Access removed",

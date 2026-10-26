@@ -194,7 +194,7 @@ test.describe('first-run wizard', () => {
     await acceptPastTimeNotice(page, 'Starts with the next dose', 'Continue', COPY.en.savedToast);
     await expect(page.getByText('Medication added.').first()).toBeVisible({ timeout: 20_000 });
     // The save lands on the invite offer; "Not now" closes the wizard.
-    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible({
+    await expect(wizard.getByRole('heading', { name: /reminder is set\.$/ })).toBeVisible({
       timeout: 15_000,
     });
     await wizard.getByRole('button', { name: 'Not now', exact: true }).click();

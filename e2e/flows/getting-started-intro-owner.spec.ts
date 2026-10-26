@@ -18,6 +18,6 @@ test('the owner is told they created the circle, and keeps the invite step', asy
   await expect(card.getByText(/joined/)).toHaveCount(0);
   // The owner keeps the owner-only invite step (already done here: the cloned
   // circle has members, so it shows as done rather than with its button).
-  await expect(card.getByText(/^Invite family & caregivers/)).toBeVisible();
+  await expect(card.getByText(/^Invite family and caregivers/)).toBeVisible();
   await expect(card.getByText(/^\d of 3 done$/)).toBeVisible();
 });

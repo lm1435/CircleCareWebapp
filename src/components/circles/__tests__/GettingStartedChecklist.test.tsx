@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { cleanup, render, screen, type RenderResult } from '@testing-library/react';
+import { cleanup, render, screen, within, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
@@ -187,7 +187,7 @@ describe('GettingStartedChecklist', () => {
 
     expect(screen.getByRole('region', { name: 'Get started' })).toBeInTheDocument();
     expect(screen.getByText('Add a medication')).toBeInTheDocument();
-    expect(screen.getByText('Invite family & caregivers')).toBeInTheDocument();
+    expect(screen.getByText('Invite family and caregivers')).toBeInTheDocument();
     expect(screen.getByText('Add emergency info')).toBeInTheDocument();
 
     // All three pending → two "Add" actions (event, emergency) + one "Invite".
@@ -214,15 +214,26 @@ describe('GettingStartedChecklist', () => {
   it('shows a "why this matters" line under each step', () => {
     setup();
 
+    expect(screen.getByText('Sets up the reminder the whole circle shares.')).toBeInTheDocument();
     expect(
       screen.getByText('Everyone gets the reminder, so no one has to be the one who remembers.')
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('Share the load — they see the same schedule and updates.')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Allergies, doctors, and contacts ready the moment they're needed.")
-    ).toBeInTheDocument();
+    expect(screen.getByText('Allergies and doctors, ready when it matters.')).toBeInTheDocument();
+  });
+
+  // 1.3.1: mobile and web show the same three items in the same order.
+  it('lists medication, invite, emergency in that order', () => {
+    setup();
+
+    const steps = screen.getAllByTestId(/^getting-started-step-/);
+    expect(steps.map((el) => el.getAttribute('data-testid'))).toEqual([
+      'getting-started-step-event',
+      'getting-started-step-invite',
+      'getting-started-step-emergency',
+    ]);
+    ['Add a medication', 'Invite family and caregivers', 'Add emergency info'].forEach(
+      (label, i) => expect(within(steps[i]).getByText(label)).toBeInTheDocument()
+    );
   });
 
   /**
@@ -258,12 +269,12 @@ describe('GettingStartedChecklist', () => {
 
   it('marks step 2 done when the circle has more than one member', () => {
     setup({ members: [{ id: 'owner' }, { id: 'caregiver' }] });
-    expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+    expect(screen.getByText('Invite family and caregivers').className).toContain('line-through');
   });
 
   it('marks step 2 done when there is a pending invite', () => {
     setup({ pendingInvites: [{ id: 'inv-1' }] });
-    expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+    expect(screen.getByText('Invite family and caregivers').className).toContain('line-through');
   });
 
   // An EXPIRED invite is still returned in `pending_invites`, but nobody can
@@ -277,7 +288,7 @@ describe('GettingStartedChecklist', () => {
           { id: 'inv-1', expires_at: '2020-01-01T00:00:00Z', is_expired: true },
         ],
       });
-      expect(screen.getByText('Invite family & caregivers').className).not.toContain(
+      expect(screen.getByText('Invite family and caregivers').className).not.toContain(
         'line-through'
       );
       expect(screen.getByRole('button', { name: /Invite/ })).toBeInTheDocument();
@@ -286,7 +297,7 @@ describe('GettingStartedChecklist', () => {
 
     it('falls back to expires_at when the backend omits is_expired', () => {
       setup({ pendingInvites: [{ id: 'inv-1', expires_at: '2020-01-01T00:00:00Z' }] });
-      expect(screen.getByText('Invite family & caregivers').className).not.toContain(
+      expect(screen.getByText('Invite family and caregivers').className).not.toContain(
         'line-through'
       );
     });
@@ -298,12 +309,12 @@ describe('GettingStartedChecklist', () => {
           { id: 'inv-1', expires_at: '2020-01-01T00:00:00Z', is_expired: false },
         ],
       });
-      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+      expect(screen.getByText('Invite family and caregivers').className).toContain('line-through');
     });
 
     it('treats an unusable expires_at as live rather than nagging', () => {
       setup({ pendingInvites: [{ id: 'inv-1', expires_at: 'not-a-date' }] });
-      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+      expect(screen.getByText('Invite family and caregivers').className).toContain('line-through');
     });
 
     it('still counts a live invite alongside an expired one', () => {
@@ -313,7 +324,7 @@ describe('GettingStartedChecklist', () => {
           { id: 'inv-2', expires_at: '2099-01-01T00:00:00Z', is_expired: false },
         ],
       });
-      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+      expect(screen.getByText('Invite family and caregivers').className).toContain('line-through');
     });
 
     it('keeps step 2 done off a real member even when every invite lapsed', () => {
@@ -323,7 +334,7 @@ describe('GettingStartedChecklist', () => {
           { id: 'inv-1', expires_at: '2020-01-01T00:00:00Z', is_expired: true },
         ],
       });
-      expect(screen.getByText('Invite family & caregivers').className).toContain('line-through');
+      expect(screen.getByText('Invite family and caregivers').className).toContain('line-through');
     });
   });
 
@@ -415,7 +426,7 @@ describe('GettingStartedChecklist', () => {
 
     expect(screen.getByText('Add a medication')).toBeInTheDocument();
     expect(screen.getByText('Add emergency info')).toBeInTheDocument();
-    expect(screen.queryByText('Invite family & caregivers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invite family and caregivers')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Invite/ })).not.toBeInTheDocument();
 
     // Two real steps → the eyebrow counts out of 2, never 3.
@@ -453,14 +464,14 @@ describe('GettingStartedChecklist', () => {
       members: [{ id: 'someone-else' }, { id: CURRENT_USER_ID }],
     });
     renderChecklist('circle-1');
-    expect(screen.getByText('Invite family & caregivers')).toBeInTheDocument();
+    expect(screen.getByText('Invite family and caregivers')).toBeInTheDocument();
     expect(screen.getByText('1 of 3 done')).toBeInTheDocument();
   });
 
   it('a demoted manager (empty permissions) gets the 2-step member list', () => {
     configure({ ownerId: 'someone-else', viewerRole: 'manager', viewerPermissions: [] });
     renderChecklist('circle-1');
-    expect(screen.queryByText('Invite family & caregivers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invite family and caregivers')).not.toBeInTheDocument();
     expect(screen.getByText('0 of 2 done')).toBeInTheDocument();
   });
 
@@ -478,7 +489,7 @@ describe('GettingStartedChecklist', () => {
     renderChecklist('circle-1');
 
     expect(screen.getByText('Add a medication')).toBeInTheDocument();
-    expect(screen.getByText('Invite family & caregivers')).toBeInTheDocument();
+    expect(screen.getByText('Invite family and caregivers')).toBeInTheDocument();
     expect(screen.getByText('Add emergency info')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Invite/ })).toBeInTheDocument();
     expect(screen.getByText('0 of 3 done')).toBeInTheDocument();
@@ -590,7 +601,7 @@ describe('GettingStartedChecklist', () => {
       expect(filledButtons()[0]).toHaveTextContent('Add');
       expect(nextStep()).toBe('getting-started-step-event');
       // Still pressable, as whole rows named by their step.
-      expect(screen.getByRole('button', { name: /Invite family & caregivers/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Invite family and caregivers/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Add emergency info/ })).toBeInTheDocument();
     });
 
@@ -726,7 +737,7 @@ describe('GettingStartedChecklist', () => {
       expect(screen.getByText(JOINED_INTRO)).toBeInTheDocument();
       expect(screen.queryByText(/created/i)).not.toBeInTheDocument();
       // Owner-only action withheld: no invite step for a member.
-      expect(screen.queryByText('Invite family & caregivers')).not.toBeInTheDocument();
+      expect(screen.queryByText('Invite family and caregivers')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Invite/ })).not.toBeInTheDocument();
     });
 

@@ -2,6 +2,10 @@
   "title": "Medikamente heute",
   "empty": "Für heute sind keine Medikamente geplant.",
   "emptyFirstRun": "Noch keine Medikamente. Fügen Sie das erste hinzu, und alle im Kreis erhalten die Erinnerung.",
+  "emptyCard": {
+    "body": "Für {{name}} ist heute noch nichts geplant. Fügen Sie ein Medikament hinzu, und alle im Kreis sehen es hier, mit Eingenommen und Auslassen.",
+    "bodySelfCare": "Für Sie ist heute noch nichts geplant. Fügen Sie ein Medikament hinzu, und es erscheint hier, mit Eingenommen und Auslassen."
+  },
   "addFirst": "Medikament hinzufügen",
   "loadError": "Die heutigen Medikamente konnten nicht geladen werden",
   "presenceLoadError": "Die Medikamente konnten nicht geladen werden",

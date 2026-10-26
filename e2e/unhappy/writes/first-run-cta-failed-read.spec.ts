@@ -235,10 +235,14 @@ test.describe('TodaysMeds', () => {
     try {
       await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
       await expect(page.locator(MEDS_CARD).getByRole('button', { name: MEDS_CTA })).toBeVisible({ timeout: 20_000 });
+      // 1.3.1: the dashed empty card, with the add door and no voice button on web.
+      await expect(page.locator(MEDS_CARD).getByTestId('meds-empty-card')).toBeVisible();
+      await expect(page.locator(MEDS_CARD).getByRole('button', { name: /Say it/ })).toHaveCount(0);
 
       await seedFutureMedication(api, circleId, tz);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page.locator(MEDS_CARD).getByText(MEDS_NONE_TODAY)).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator(MEDS_CARD).getByTestId('meds-empty-card')).toHaveCount(0);
       await expectNoCtaWhileSettled(page, MEDS_CARD, MEDS_CTA);
     } finally {
       await removeCircle(api, circleId);

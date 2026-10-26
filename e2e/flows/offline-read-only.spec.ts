@@ -325,6 +325,8 @@ test('offline: first-run wizard - every step-1 choice is aria-disabled and expla
   await circleLoaded;
   const circleId = /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
 
+  // The three secondary choices sit behind the "See what else" toggle.
+  await wizard.getByTestId('first-run-more-toggle').click();
   const choices = [
     wizard.getByTestId('first-run-primary'),
     wizard.getByTestId('first-run-start-with-appointment'),

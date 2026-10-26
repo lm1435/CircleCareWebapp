@@ -2,6 +2,10 @@
   "title": "Médicaments du jour",
   "empty": "Aucun médicament prévu aujourd’hui.",
   "emptyFirstRun": "Aucun médicament pour l’instant. Ajoutez le premier et tout le cercle recevra le rappel.",
+  "emptyCard": {
+    "body": "Rien de prévu pour {{name}} aujourd’hui pour l’instant. Ajoutez un médicament et tout le cercle le verra ici, avec Prise et Sauter.",
+    "bodySelfCare": "Rien de prévu pour vous aujourd’hui pour l’instant. Ajoutez un médicament et il apparaîtra ici, avec Prise et Sauter."
+  },
   "addFirst": "Ajouter un médicament",
   "loadError": "Impossible de charger les médicaments d’aujourd’hui",
   "presenceLoadError": "Impossible de charger les médicaments",

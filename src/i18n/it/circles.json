@@ -89,28 +89,19 @@
   },
   "quickWin": {
     "title": "Cerchia creata",
-    "subtitle": "La cerchia di cura di {{name}} è pronta. Cosa vuoi fare per prima cosa?",
-    "subtitleSelf": "La tua cerchia di cura è pronta. Cosa vuoi fare per prima cosa?",
-    "skipForNow": "Salta per ora",
-    "tip": "Potrai sempre farlo più tardi dalla pagina della cerchia."
+    "skipForNow": "Salta per ora"
   },
   "firstRun": {
     "steps": {
-      "choose": "Inizio",
       "what": "Nome",
       "when": "Ora",
       "repeat": "Ripeti"
     },
     "choose": {
       "primary": "Aggiungi il primo farmaco",
-      "primaryHelper": "È ciò che attiva i promemoria.",
-      "orStartWith": "oppure inizia con",
-      "appointment": "Un appuntamento",
-      "invite": "Invitare qualcuno",
-      "emergency": "Info di emergenza"
+      "primarySelf": "Aggiungi il tuo primo farmaco"
     },
     "inviteNext": {
-      "title": "Invita qualcuno ad aiutarti",
       "notNow": "Non ora"
     },
     "progressLabel": "Passaggio {{current}} di {{total}}",
@@ -133,7 +124,42 @@
     "discardTitle": "Scartare questo farmaco?",
     "discardMessage": "Non verrà salvato nulla.",
     "discardConfirm": "Scarta",
-    "discardClose": "Chiudi l'avviso di scarto"
+    "discardClose": "Chiudi l'avviso di scarto",
+    "ready": {
+      "title": "La cerchia di {{name}} è pronta.",
+      "titleSelf": "La tua cerchia è pronta.",
+      "lede": "Aggiungi il primo farmaco di {{name}}. È il promemoria che tutta la cerchia condividerà.",
+      "ledeSelf": "Aggiungi il tuo primo farmaco. È il promemoria che tutta la tua cerchia condividerà.",
+      "toggleShow": "Nessun farmaco da seguire? Vedi altro",
+      "toggleHide": "Nascondi",
+      "appointmentTitle": "Aggiungi un appuntamento",
+      "appointmentHelper": "Le visite mediche in un unico calendario che la famiglia vede.",
+      "inviteTitle": "Invita qualcuno ad aiutare",
+      "inviteHelper": "Dividete il carico, così non pesa tutto su di te.",
+      "emergencyTitle": "Aggiungi info di emergenza",
+      "emergencyHelper": "Allergie e medici, a portata di mano quando serve."
+    },
+    "whatLede": "Basta il nome. I dettagli possono aspettare.",
+    "addDosage": "+ Aggiungi dosaggio",
+    "nextEyebrow": "Poi",
+    "nextPreview": {
+      "everyMorning": "Ogni mattina alle {{time}}. Puoi cambiarlo nella schermata successiva.",
+      "everyEvening": "Ogni sera alle {{time}}. Puoi cambiarlo nella schermata successiva.",
+      "twiceDaily": "Due volte al giorno, a partire dalle {{time}}. Puoi cambiarlo nella schermata successiva.",
+      "threeTimesDaily": "Tre volte al giorno, a partire dalle {{time}}. Puoi cambiarlo nella schermata successiva.",
+      "custom": "Alle {{time}}. Puoi cambiarlo nella schermata successiva."
+    },
+    "payoff": {
+      "title": "Il promemoria di {{name}} delle {{time}} è impostato.",
+      "titleMulti": "I promemoria di {{name}} sono impostati.",
+      "titleSelf": "Il tuo promemoria delle {{time}} è impostato.",
+      "titleMultiSelf": "I tuoi promemoria sono impostati.",
+      "line": "Quando qualcuno tocca Presa, lo vede tutta la cerchia. Niente messaggi di gruppo, niente dubbi.",
+      "lineSelf": "Quando tocchi Presa, lo vedono anche le persone che inviti.",
+      "inviteHeading": "Chi è di solito accanto a {{name}}?",
+      "inviteHeadingSelf": "Chi ti aiuta?",
+      "invite": "Invita qualcuno"
+    }
   },
   "accessLost": {
     "removedTitle": "Accesso rimosso",

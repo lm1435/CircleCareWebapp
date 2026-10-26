@@ -29,6 +29,7 @@ import { validateWithZod, focusFirstError, type FieldErrors } from '@/components
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
 import { AuthHeader } from '@/components/auth/AuthHeader';
+import { DoseDemoCard } from '@/components/auth/DoseDemoCard';
 import { AuthDivider } from '@/components/auth/AuthDivider';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
@@ -405,6 +406,8 @@ export default function SignUpPage(): ReactElement {
           </Card>
         </div>
       ) : null}
+
+      <DoseDemoCard />
 
       <OAuthButtons
         disabled={isSubmitting || !termsAccepted}

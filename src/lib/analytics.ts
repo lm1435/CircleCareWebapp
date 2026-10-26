@@ -472,6 +472,12 @@ export const Analytics = {
   /** A Home empty-state CTA was pressed ("Add a medication" / "Add your first task"). */
   homeEmptyCtaTapped: (section: 'medications' | 'tasks') =>
     capture('home_empty_cta_tapped', { section }),
+  /** The Home medications empty-state CTA was pressed. Web only ever offers 'add' (voice is mobile-only). */
+  medsEmptyStateCtaTapped: (action: 'add' | 'voice') =>
+    capture('meds_empty_state_cta_tapped', { action }),
+  /** The live sample dose card was answered or undone. `surface` is where it sits ('signup' on web). */
+  welcomeDemoInteracted: (action: 'taken' | 'skip' | 'undo', surface: 'signup' | 'welcome') =>
+    capture('welcome_demo_interacted', { action, surface }),
 
   // --- Daily update (docs/plans/daily-update.md §7) ---
   // Booleans and enums ONLY: no circle_id (2026-09-04 decision), no names, no
@@ -955,6 +961,20 @@ export const Analytics = {
       dosage_filled: opts.dosageFilled,
       dose_count: opts.doseCount,
     }),
+
+  /**
+   * The "No medications to track? See what else" toggle on wizard step ①, on
+   * every tap. `open` is the state AFTER the tap. Same name and shape as mobile.
+   */
+  firstRunMoreOptionsToggled: (open: boolean) =>
+    capture('first_run_more_options_toggled', { open }),
+
+  /**
+   * What the user did with the invite prompt after the first medication saved:
+   * 'invite' (primary), 'not_now' (secondary) or 'close' (the X / Escape).
+   */
+  firstRunInvitePromptAction: (action: 'invite' | 'not_now' | 'close') =>
+    capture('first_run_invite_prompt_action', { action }),
 
   // --- Calendar & events ---
   eventCreated: (circleId: string, eventType: string, recurring: boolean) =>

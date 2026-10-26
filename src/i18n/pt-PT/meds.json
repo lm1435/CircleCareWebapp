@@ -1,4 +1,8 @@
 {
+  "emptyCard": {
+    "body": "Ainda não há nada agendado para {{name}} hoje. Adicione um medicamento e todos no círculo o veem aqui, com Tomado e Saltar.",
+    "bodySelfCare": "Ainda não há nada agendado para si hoje. Adicione um medicamento e ele aparece aqui, com Tomado e Saltar."
+  },
   "skip": "Saltar",
   "skipLabel": "Saltar {{name}}",
   "status": {

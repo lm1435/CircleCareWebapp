@@ -89,28 +89,19 @@
   },
   "quickWin": {
     "title": "Kreis erstellt",
-    "subtitle": "Der Pflegekreis von {{name}} ist bereit. Was möchten Sie als Erstes tun?",
-    "subtitleSelf": "Ihr Pflegekreis ist bereit. Was möchten Sie als Erstes tun?",
-    "skipForNow": "Vorerst überspringen",
-    "tip": "Sie können all das jederzeit später auf der Kreisseite erledigen."
+    "skipForNow": "Vorerst überspringen"
   },
   "firstRun": {
     "steps": {
-      "choose": "Start",
       "what": "Name",
       "when": "Zeit",
       "repeat": "Wiederholung"
     },
     "choose": {
       "primary": "Erstes Medikament hinzufügen",
-      "primaryHelper": "Damit werden die Erinnerungen eingerichtet.",
-      "orStartWith": "oder beginnen Sie mit",
-      "appointment": "Einem Termin",
-      "invite": "Einer Einladung",
-      "emergency": "Notfallinfos"
+      "primarySelf": "Ihr erstes Medikament hinzufügen"
     },
     "inviteNext": {
-      "title": "Jemanden zur Unterstützung einladen",
       "notNow": "Nicht jetzt"
     },
     "progressLabel": "Schritt {{current}} von {{total}}",
@@ -133,7 +124,42 @@
     "discardTitle": "Dieses Medikament verwerfen?",
     "discardMessage": "Es wird nichts gespeichert.",
     "discardConfirm": "Verwerfen",
-    "discardClose": "Verwerfen-Abfrage schließen"
+    "discardClose": "Verwerfen-Abfrage schließen",
+    "ready": {
+      "title": "Der Kreis von {{name}} ist bereit.",
+      "titleSelf": "Ihr Kreis ist bereit.",
+      "lede": "Fügen Sie das erste Medikament von {{name}} hinzu. Das ist die Erinnerung, die der ganze Kreis teilt.",
+      "ledeSelf": "Fügen Sie Ihr erstes Medikament hinzu. Das ist die Erinnerung, die Ihr ganzer Kreis teilt.",
+      "toggleShow": "Keine Medikamente zu erfassen? Weitere Optionen",
+      "toggleHide": "Ausblenden",
+      "appointmentTitle": "Termin hinzufügen",
+      "appointmentHelper": "Arztbesuche in einem Kalender, den die Familie sieht.",
+      "inviteTitle": "Jemanden zur Hilfe einladen",
+      "inviteHelper": "Teilen Sie die Last, damit nicht alles an Ihnen hängt.",
+      "emergencyTitle": "Notfallinfos hinzufügen",
+      "emergencyHelper": "Allergien und Ärzte, griffbereit, wenn es darauf ankommt."
+    },
+    "whatLede": "Der Name genügt. Details können warten.",
+    "addDosage": "+ Dosierung hinzufügen",
+    "nextEyebrow": "Als Nächstes",
+    "nextPreview": {
+      "everyMorning": "Jeden Morgen um {{time}}. Sie können das im nächsten Schritt ändern.",
+      "everyEvening": "Jeden Abend um {{time}}. Sie können das im nächsten Schritt ändern.",
+      "twiceDaily": "Zweimal täglich, ab {{time}}. Sie können das im nächsten Schritt ändern.",
+      "threeTimesDaily": "Dreimal täglich, ab {{time}}. Sie können das im nächsten Schritt ändern.",
+      "custom": "Um {{time}}. Sie können das im nächsten Schritt ändern."
+    },
+    "payoff": {
+      "title": "Die Erinnerung für {{name}} um {{time}} ist eingerichtet.",
+      "titleMulti": "Die Erinnerungen für {{name}} sind eingerichtet.",
+      "titleSelf": "Ihre Erinnerung um {{time}} ist eingerichtet.",
+      "titleMultiSelf": "Ihre Erinnerungen sind eingerichtet.",
+      "line": "Sobald jemand auf Eingenommen tippt, sieht es der ganze Kreis. Keine Gruppennachrichten, kein Raten.",
+      "lineSelf": "Wenn Sie auf Eingenommen tippen, sehen es auch alle, die Sie einladen.",
+      "inviteHeading": "Wer ist meistens bei {{name}}?",
+      "inviteHeadingSelf": "Wer unterstützt Sie?",
+      "invite": "Jemanden einladen"
+    }
   },
   "accessLost": {
     "removedTitle": "Zugriff entzogen",

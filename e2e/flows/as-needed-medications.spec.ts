@@ -359,7 +359,7 @@ test('Home: the As needed section is its own list and never makes "all done"; Sp
     const section = page.getByRole('region', { name: 'As needed' });
     await expect(section.getByText(name)).toBeVisible({ timeout: 30_000 });
     // A circle with only an as-needed medication is NOT a first-run circle and has no dose to answer.
-    await expect(page.getByText(/No medications yet/)).toHaveCount(0);
+    await expect(page.getByText(/No medications yet|Nothing scheduled for .* today yet/)).toHaveCount(0);
     await expect(page.getByText('All medications answered for today')).toHaveCount(0);
     await expect(section.getByRole('button', { name: /^Confirm|^Skip/ })).toHaveCount(0);
     // Overview with the As needed section: headings, names, contrast.

@@ -2,6 +2,10 @@
   "title": "Medicamentos de hoy",
   "empty": "No hay medicamentos programados para hoy.",
   "emptyFirstRun": "Aún no hay medicamentos. Agrega el primero y todo el círculo recibe el recordatorio.",
+  "emptyCard": {
+    "body": "Todavía no hay nada programado para {{name}} hoy. Agrega un medicamento y todos en el círculo lo verán aquí, con Tomado y Omitir.",
+    "bodySelfCare": "Todavía no hay nada programado para ti hoy. Agrega un medicamento y aparecerá aquí, con Tomado y Omitir."
+  },
   "addFirst": "Agregar medicamento",
   "loadError": "No se pudieron cargar los medicamentos de hoy",
   "presenceLoadError": "No se pudieron cargar los medicamentos",

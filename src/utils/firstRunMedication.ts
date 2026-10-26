@@ -1,7 +1,8 @@
 import type { CreateEventRequest } from '@/api/calendarEvents';
 import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
 import { eventDatesForApi } from '@/utils/recipientEventDate';
-import { getDateInTimezone, isEventPastDue } from '@/utils/timezone';
+import type { HourCycle } from '@/utils/hourCycle';
+import { formatTimeOfDay, getDateInTimezone, isEventPastDue } from '@/utils/timezone';
 
 /**
  * The first-run wizard's payload contract.
@@ -113,6 +114,29 @@ export function firstRunPresetTimes(
   if (!preset) throw new Error(`unknown preset: ${presetKey}`);
   const [first, ...rest] = preset.times;
   return { primaryTime: first, additionalTimes: rest };
+}
+
+/**
+ * Every dose time a schedule answer means, in order (`HH:MM`, the viewer frame
+ * the wizard's own step ③ shows). Safe for the display-only previews: a custom
+ * preset with no time yet yields an empty list rather than throwing.
+ */
+export function firstRunAllTimes(
+  presetKey: FirstRunPresetKey,
+  customTime: string | null
+): string[] {
+  if (presetKey === 'custom' && !customTime) return [];
+  const { primaryTime, additionalTimes } = firstRunPresetTimes(presetKey, customTime);
+  return [primaryTime, ...additionalTimes];
+}
+
+/**
+ * `HH:MM` -> display text through the app's canonical `formatTimeOfDay`, so the
+ * viewer's 12h/24h cycle (and the language's period marker) apply.
+ */
+export function formatFirstRunTime(time: string, cycle: HourCycle): string {
+  const [h, m] = time.split(':').map((n) => Number.parseInt(n, 10));
+  return formatTimeOfDay(h || 0, m || 0, cycle);
 }
 
 /**

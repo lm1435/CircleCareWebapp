@@ -45,6 +45,7 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
 // members (medicationConfirmed, errorOccurred), so only the CTA event is
 // swapped for a spy.
 const homeEmptyCtaTapped = vi.fn();
+const medsEmptyStateCtaTapped = vi.fn();
 vi.mock('@/lib/analytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/analytics')>();
   return {
@@ -52,6 +53,7 @@ vi.mock('@/lib/analytics', async (importOriginal) => {
     Analytics: {
       ...actual.Analytics,
       homeEmptyCtaTapped: (...args: unknown[]) => homeEmptyCtaTapped(...args),
+      medsEmptyStateCtaTapped: (...args: unknown[]) => medsEmptyStateCtaTapped(...args),
     },
   };
 });
@@ -251,6 +253,7 @@ function hasAction(row: HTMLElement, verb: 'Confirm' | 'Skip'): boolean {
 
 beforeEach(() => {
   homeEmptyCtaTapped.mockReset();
+  medsEmptyStateCtaTapped.mockReset();
   mockUseHourCycle.mockReturnValue('12h');
   vi.useFakeTimers({ toFake: ['Date'], now: NOW });
   vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
@@ -498,7 +501,7 @@ describe('TodaysMeds', () => {
     renderWidget();
 
     expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
-    expect(screen.queryByText(/No medications yet/)).toBeNull();
+    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
   });
 
@@ -551,7 +554,7 @@ describe('TodaysMeds', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(screen.queryByText(/No medications yet/)).toBeNull();
+    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
     expect(screen.queryByText('No medications scheduled today.')).toBeNull();
 
     // The window answers: this circle DOES have a medication, just not today.
@@ -562,7 +565,7 @@ describe('TodaysMeds', () => {
 
     expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
     // The first-run copy and its door never appeared at all.
-    expect(screen.queryByText(/No medications yet/)).toBeNull();
+    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
   });
 
@@ -578,7 +581,7 @@ describe('TodaysMeds', () => {
     mockApi({ events: [], presenceEvents: [] });
     renderWidget();
 
-    await screen.findByText(/No medications yet/);
+    await screen.findByText(/No medications yet|Nothing scheduled for .* today yet/);
     await act(async () => {
       await new Promise((r) => setTimeout(r, 30));
     });
@@ -649,7 +652,7 @@ describe('TodaysMeds', () => {
       renderWidget();
       expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
     });
   });
 
@@ -741,7 +744,7 @@ describe('TodaysMeds', () => {
 
     expect(
       await screen.findByText(
-        'No medications yet. Add the first one and everyone in the circle gets the reminder.'
+        'Nothing scheduled for Mom today yet. Add a medication and everyone in the circle sees it here, with Taken and Skip.'
       )
     ).toBeInTheDocument();
     expect(screen.queryByText('No medications scheduled today.')).toBeNull();
@@ -752,6 +755,30 @@ describe('TodaysMeds', () => {
     expect(screen.getByTestId('add-event-modal')).toHaveTextContent('medication');
     expect(homeEmptyCtaTapped).toHaveBeenCalledTimes(1);
     expect(homeEmptyCtaTapped).toHaveBeenCalledWith('medications');
+    expect(medsEmptyStateCtaTapped).toHaveBeenCalledTimes(1);
+    expect(medsEmptyStateCtaTapped).toHaveBeenCalledWith('add');
+  });
+
+  it('the empty card is dashed, has decorative placeholder rows and only the Add button (no voice on web)', async () => {
+    mockApi({ events: [], presenceEvents: [] });
+    renderWidget();
+
+    const card = await screen.findByTestId('meds-empty-card');
+    expect(card.className).toContain('border-dashed');
+    expect(card.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(within(card).getAllByRole('button')).toHaveLength(1);
+    expect(medsEmptyStateCtaTapped).not.toHaveBeenCalled();
+  });
+
+  it('uses the self-care copy when the circle is the viewer\'s own', async () => {
+    mockApi({ circles: [makeCircle({ is_self_care: true })], events: [], presenceEvents: [] });
+    renderWidget();
+
+    expect(
+      await screen.findByText(
+        'Nothing scheduled for you today yet. Add a medication and it shows up here, with Taken and Skip.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('on a first-run circle the viewer cannot edit, shows the copy but no door', async () => {
@@ -762,7 +789,8 @@ describe('TodaysMeds', () => {
     });
     renderWidget();
 
-    expect(await screen.findByText(/No medications yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeInTheDocument();
+    expect(screen.queryByTestId('meds-empty-card')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
   });
 
@@ -819,7 +847,7 @@ describe('TodaysMeds', () => {
 
       expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
       expect(screen.queryByText('No medications scheduled today.')).toBeNull();
 
       const before = presenceCalls();
@@ -840,7 +868,7 @@ describe('TodaysMeds', () => {
 
       expect(await screen.findByText("Couldn't load today's medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
 
       api.heal();
       const user = userEvent.setup();
@@ -1016,7 +1044,7 @@ describe('TodaysMeds', () => {
       expect(callsFor(PRESENCE_START)).toBe(0);
 
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
       expect(screen.queryByText('No medications scheduled today.')).toBeNull();
       expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
 
@@ -1062,7 +1090,7 @@ describe('TodaysMeds', () => {
       expect(await screen.findByText('Needs attention')).toBeInTheDocument();
       expect(screen.getByText('Warfarin')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
     });
 
     it("yesterday's read fails while today's doses are listed: the doses render, the gap is named, and Retry refetches yesterday", async () => {
@@ -1105,7 +1133,7 @@ describe('TodaysMeds', () => {
 
       expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
 
       const before = callsFor(YESTERDAY);
       const presenceBefore = callsFor(PRESENCE_START);

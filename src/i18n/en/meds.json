@@ -2,6 +2,10 @@
   "title": "Today's medications",
   "empty": "No medications scheduled today.",
   "emptyFirstRun": "No medications yet. Add the first one and everyone in the circle gets the reminder.",
+  "emptyCard": {
+    "body": "Nothing scheduled for {{name}} today yet. Add a medication and everyone in the circle sees it here, with Taken and Skip.",
+    "bodySelfCare": "Nothing scheduled for you today yet. Add a medication and it shows up here, with Taken and Skip."
+  },
   "addFirst": "Add a medication",
   "loadError": "Couldn't load today's medications",
   "presenceLoadError": "Couldn't load medications",

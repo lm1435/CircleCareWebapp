@@ -2,6 +2,10 @@
   "title": "Farmaci di oggi",
   "empty": "Nessun farmaco in programma per oggi.",
   "emptyFirstRun": "Ancora nessun farmaco. Aggiungi il primo e tutti nella cerchia riceveranno il promemoria.",
+  "emptyCard": {
+    "body": "Per {{name}} oggi non c'è ancora nulla in programma. Aggiungi un farmaco e tutti nella cerchia lo vedono qui, con Presa e Salta.",
+    "bodySelfCare": "Per te oggi non c'è ancora nulla in programma. Aggiungi un farmaco e compare qui, con Presa e Salta."
+  },
   "addFirst": "Aggiungi un farmaco",
   "loadError": "Impossibile caricare i farmaci di oggi",
   "presenceLoadError": "Impossibile caricare i farmaci",

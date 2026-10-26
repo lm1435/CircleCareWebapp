@@ -409,23 +409,50 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
     // the invitation and, for a writer, the door itself. The modal is hosted
     // here, not on the calendar — Medications is its own page with its own Add,
     // and the old copy sent people to the wrong one.
-    body = (
-      <div className="flex flex-col items-start gap-3">
-        <p className="m-0 text-sm text-ink-3">{t('emptyFirstRun')}</p>
-        {canEdit && (
+    body = canEdit ? (
+      // The dashed empty card (spec 1.3.1 section 5): two faint placeholder rows
+      // (decorative), one sentence, one door. Web shows only the primary button;
+      // mobile adds a voice "Say it" button (voice is excluded on web).
+      <Card
+        variant="flat"
+        padding="sm"
+        data-testid="meds-empty-card"
+        className="flex flex-col gap-4 border border-dashed border-line"
+      >
+        <div aria-hidden="true" className="flex flex-col gap-2 opacity-50">
+          {[0, 1].map((row) => (
+            <div key={row} className="flex items-center gap-3 rounded-lg bg-bg-2 p-3">
+              <span className="h-5 w-5 flex-none rounded-full border-2 border-line" />
+              <span className="flex flex-1 flex-col gap-1.5">
+                <span className="h-2.5 w-2/5 rounded-full bg-line" />
+                <span className="h-2 w-1/4 rounded-full bg-line-2" />
+              </span>
+              <span className="h-7 w-14 flex-none rounded-full bg-line-2" />
+            </div>
+          ))}
+        </div>
+        <p className="m-0 text-sm text-ink-2">
+          {circle.is_self_care
+            ? t('emptyCard.bodySelfCare')
+            : t('emptyCard.body', { name: circle.recipient_name })}
+        </p>
+        <div>
           <Button
-            variant="secondary"
-            size="sm"
+            variant="primary"
+            size="md"
             onClick={() => {
               Analytics.homeEmptyCtaTapped('medications');
+              Analytics.medsEmptyStateCtaTapped('add');
               setShowAdd(true);
             }}
             offlineKind="change"
           >
             {t('addFirst')}
           </Button>
-        )}
-      </div>
+        </div>
+      </Card>
+    ) : (
+      <p className="m-0 text-sm text-ink-3">{t('emptyFirstRun')}</p>
     );
   } else {
     /**

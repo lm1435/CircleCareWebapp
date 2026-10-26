@@ -11,12 +11,14 @@ import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
 import { getCircleOwnerName, viewerCanSuggestManager } from '@/lib/premiumOwnership';
 import { Analytics } from '@/lib/analytics';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import { getDeviceTimezone } from '@/utils/timezone';
 import {
   FIRST_RUN_DEFAULT_PRESET,
   FIRST_RUN_SCHEDULE_PRESETS,
   buildFirstRunMedication,
   buildSiblingDoseRequests,
+  firstRunAllTimes,
   isFirstRunDosePastDue,
   requiresFullForm,
   viewerToday,
@@ -34,6 +36,7 @@ import {
   MedicationNameStep,
   RepeatStep,
   ScheduleStep,
+  type SavedMedicationSummary,
   type ScheduleSelection,
 } from './steps';
 
@@ -87,6 +90,7 @@ export function FirstRunWizardModal({
   const { circle, canEdit, isOwner } = useCircle(circleId);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const createEvent = useCreateEvent(circleId);
+  const hourCycle = useHourCycle();
 
   /**
    * THE ZONE A DOSE IS STORED IN, with AddEventModal's exact precedence plus
@@ -137,6 +141,8 @@ export function FirstRunWizardModal({
   });
   const [recurrence, setRecurrence] = useState<FirstRunRecurrence>('daily');
   const [saving, setSaving] = useState(false);
+  /** Snapshot of what saved, for the payoff step. */
+  const [saved, setSaved] = useState<SavedMedicationSummary | null>(null);
   /** The in-place hand-off currently showing in place of the wizard, if any. */
   const [handoff, setHandoff] = useState<FirstRunModal | null>(null);
   /**
@@ -277,6 +283,7 @@ export function FirstRunWizardModal({
    * screen ①, and this user already made theirs (medication).
    */
   const handleInviteAfterSave = (): void => {
+    Analytics.firstRunInvitePromptAction('invite');
     setHandoff('invite');
   };
 
@@ -350,6 +357,7 @@ export function FirstRunWizardModal({
   const handleClose = (): void => {
     if (step === 'invite') {
       // The medication is saved; there is nothing left to discard.
+      Analytics.firstRunInvitePromptAction('close');
       onClose();
       return;
     }
@@ -429,6 +437,11 @@ export function FirstRunWizardModal({
       // invite offer, IN THIS SAME DIALOG (never a second modal on top): a
       // terminal step with no Back, so the save button stays unreachable.
       // `savingRef` is deliberately left claimed for the same reason.
+      setSaved({
+        name: name.trim(),
+        times: firstRunAllTimes(schedule.presetKey, schedule.customTime),
+        recurrence,
+      });
       setSaving(false);
       setStep('invite');
     } catch {
@@ -608,11 +621,17 @@ export function FirstRunWizardModal({
         footer={
           isInviteStep ? (
             <div className="flex justify-end gap-3">
-              <Button variant="ghost" onClick={onClose}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  Analytics.firstRunInvitePromptAction('not_now');
+                  onClose();
+                }}
+              >
                 {t('firstRun.inviteNext.notNow')}
               </Button>
               <Button onClick={handleInviteAfterSave} disabled={!circle}>
-                {t('overview:solo.cta')}
+                {t('firstRun.payoff.invite')}
               </Button>
             </div>
           ) : step === 'choose' ? (
@@ -676,10 +695,12 @@ export function FirstRunWizardModal({
         </div>
         )}
 
-        {isInviteStep && (
+        {isInviteStep && saved && (
           <InviteAfterSaveStep
             recipientName={circleName}
             isSelfCare={circle?.is_self_care === true}
+            saved={saved}
+            hourCycle={hourCycle}
           />
         )}
         {step === 'choose' && (
@@ -687,6 +708,7 @@ export function FirstRunWizardModal({
             recipientName={circleName}
             isSelfCare={circle?.is_self_care === true}
             onSelect={handleAction}
+            onMoreOptionsToggled={(open) => Analytics.firstRunMoreOptionsToggled(open)}
           />
         )}
         {step === 'what' && (
@@ -700,6 +722,9 @@ export function FirstRunWizardModal({
             onSelectDrug={setSelectedDrug}
             onChangeDosage={setDosage}
             nameError={nameError}
+            presetKey={schedule.presetKey}
+            customTime={schedule.customTime}
+            hourCycle={hourCycle}
           />
         )}
         {step === 'when' && (

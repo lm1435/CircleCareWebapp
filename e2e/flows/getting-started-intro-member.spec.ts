@@ -17,7 +17,7 @@ test('a caregiver who joined is told they joined — never that they created it'
   ).toBeVisible();
   await expect(card.getByText(/created/)).toHaveCount(0);
   // Inviting is owner-only: the step and its button are withheld.
-  await expect(card.getByText(/Invite family & caregivers/)).toHaveCount(0);
+  await expect(card.getByText(/Invite family and caregivers/)).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(0);
   await expect(card.getByText('0 of 2 done')).toBeVisible();
 });

@@ -38,15 +38,36 @@
     "nameRequired": "Introduza o nome da pessoa cuidada."
   },
   "quickWin": {
-    "skipForNow": "Saltar por agora",
-    "subtitle": "O círculo de cuidado de {{name}} está pronto. O que gostaria de fazer primeiro?",
-    "subtitleSelf": "O seu círculo de cuidado está pronto. O que gostaria de fazer primeiro?"
+    "skipForNow": "Saltar por agora"
   },
   "firstRun": {
     "whatTitleSelf": "O que toma?",
     "whenTitleSelf": "Quando toma?",
     "saving": "A adicionar...",
-    "discardMessage": "Nada será guardado."
+    "discardMessage": "Nada será guardado.",
+    "ready": {
+      "titleSelf": "O seu círculo está pronto.",
+      "lede": "Adicione o primeiro medicamento de {{name}}. É o lembrete que todo o círculo vai partilhar.",
+      "ledeSelf": "Adicione o seu primeiro medicamento. É o lembrete que todo o seu círculo vai partilhar.",
+      "appointmentHelper": "As consultas médicas num só calendário que a família vê.",
+      "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre si."
+    },
+    "nextPreview": {
+      "everyMorning": "Todas as manhãs às {{time}}. Pode alterar no ecrã seguinte.",
+      "everyEvening": "Todas as noites às {{time}}. Pode alterar no ecrã seguinte.",
+      "twiceDaily": "Duas vezes ao dia, a partir das {{time}}. Pode alterar no ecrã seguinte.",
+      "threeTimesDaily": "Três vezes ao dia, a partir das {{time}}. Pode alterar no ecrã seguinte.",
+      "custom": "Às {{time}}. Pode alterar no ecrã seguinte."
+    },
+    "payoff": {
+      "titleSelf": "O seu lembrete das {{time}} está definido.",
+      "titleMultiSelf": "Os seus lembretes estão definidos.",
+      "lineSelf": "Quando toca em Tomado, quem convidar também vê.",
+      "inviteHeadingSelf": "Quem ajuda no seu dia a dia?"
+    },
+    "choose": {
+      "primarySelf": "Adicionar o seu primeiro medicamento"
+    }
   },
   "accessLost": {
     "removedBody": "Já não tem acesso a este círculo. O proprietário pode tê-lo removido ou eliminado o círculo.",

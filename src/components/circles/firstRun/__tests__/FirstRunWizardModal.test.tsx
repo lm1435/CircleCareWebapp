@@ -163,7 +163,12 @@ vi.mock('@/components/members/InviteMemberModal', () => ({
   ),
 }));
 
+const hourCycleState = vi.hoisted(() => ({ value: '12h' as '12h' | '24h' }));
+vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => hourCycleState.value }));
+
 const analytics = vi.hoisted(() => ({
+  firstRunMoreOptionsToggled: vi.fn(),
+  firstRunInvitePromptAction: vi.fn(),
   firstRunStepViewed: vi.fn(),
   firstRunActionSelected: vi.fn(),
   firstRunSkipped: vi.fn(),
@@ -194,8 +199,16 @@ async function walkToRepeat(user: ReturnType<typeof userEvent.setup>, name = 'Me
   await user.click(screen.getByRole('button', { name: 'Continue' }));
 }
 
+/** Opens step ①'s "See what else" card. */
+async function openMore(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /See what else/i }));
+}
+
+const PAYOFF_8AM = "Rosa's 8:00 AM reminder is set.";
+
 beforeEach(() => {
   vi.clearAllMocks();
+  hourCycleState.value = '12h';
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(MORNING);
   mutateCreate.mockResolvedValue({ id: 'evt-primary' });
@@ -215,31 +228,79 @@ afterEach(() => {
 
 // ── Screen ①: one primary, three quiet rows ─────────────────────────────────
 
-describe('choose step: one primary', () => {
+describe('choose step: circle is ready, one button', () => {
   const isFilled = (button: HTMLElement): boolean =>
     button.className.split(/\s+/).includes('bg-primary-fill');
 
-  it('offers the first medication as the ONLY filled button, with its reason under it', () => {
+  it('opens closed: title, lede, ONE filled button, a collapsed toggle, no rows', () => {
     renderWizard();
     const dialog = screen.getByRole('dialog');
+    expect(screen.getByRole('heading', { name: "Rosa's circle is ready." })).toBeInTheDocument();
+    const lede = "Add Rosa's first medication. That's the reminder everyone in the circle will share.";
+    expect(screen.getByText(lede)).toBeInTheDocument();
     const filled = within(dialog).getAllByRole('button').filter(isFilled);
     expect(filled).toHaveLength(1);
     expect(filled[0]).toHaveTextContent('Add the first medication');
-    expect(filled[0]).toHaveAccessibleDescription('This is what sets up reminders.');
-  });
-
-  it('lists the other three starts as plain rows under "or start with", then Skip', () => {
-    renderWizard();
-    const group = screen.getByRole('list', { name: 'or start with' });
-    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
-      'An appointment',
-      'Inviting someone',
-      'Emergency info',
-    ]);
-    expect(within(group).getAllByRole('button').filter(isFilled)).toHaveLength(0);
+    expect(filled[0]).toHaveAccessibleDescription(lede);
+    const toggle = screen.getByRole('button', { name: 'No medications to track? See what else' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('first-run-start-with-appointment')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close setup' })).toBeInTheDocument();
-    expect(screen.queryByText('Recommended')).not.toBeInTheDocument();
+  });
+
+  it('the toggle reveals three rows ABOVE the primary, then hides them', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await openMore(user);
+
+    const toggle = screen.getByTestId('first-run-more-toggle');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveTextContent('Hide');
+    const list = document.getElementById(toggle.getAttribute('aria-controls') as string) as HTMLElement;
+    const rows = within(list).getAllByRole('button');
+    expect(rows.map((r) => r.textContent)).toEqual([
+      'Add an appointmentDoctor visits on one calendar the family sees.',
+      "Invite someone to helpShare the load, so it isn't all on you.",
+      'Add emergency infoAllergies and doctors, ready when it matters.',
+    ]);
+    expect(rows.filter(isFilled)).toHaveLength(0);
+    const primary = screen.getByTestId('first-run-primary');
+    expect(list.compareDocumentPosition(primary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('first-run-start-with-appointment')).not.toBeInTheDocument();
+  });
+
+  it('records every toggle tap with the new state, and nothing else', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await user.click(screen.getByTestId('first-run-more-toggle'));
+    await user.click(screen.getByTestId('first-run-more-toggle'));
+    expect(analytics.firstRunMoreOptionsToggled.mock.calls).toEqual([
+      [true],
+      [false],
+    ]);
+    expect(analytics.firstRunActionSelected).not.toHaveBeenCalled();
+    expect(analytics.firstRunSkipped).not.toHaveBeenCalled();
+  });
+
+  it('each row records the same action as before', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await openMore(user);
+    await user.click(screen.getByTestId('first-run-start-with-emergency'));
+    expect(analytics.firstRunActionSelected).toHaveBeenCalledWith(CIRCLE_ID, 'emergency');
+  });
+
+  it('self-care reads you-copy on the lede and the primary', () => {
+    useCircleResult.circle = { ...useCircleResult.circle, is_self_care: true };
+    renderWizard();
+    expect(
+      screen.getByText("Add your first medication. That's the reminder everyone in your circle will share.")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('first-run-primary')).toHaveTextContent('Add your first medication');
   });
 });
 
@@ -249,7 +310,7 @@ describe('invite offer after the first medication saves', () => {
   async function saveMedication(user: ReturnType<typeof userEvent.setup>) {
     await walkToRepeat(user);
     await user.click(screen.getByRole('button', { name: 'Add medication' }));
-    await screen.findByRole('heading', { name: 'Invite someone to help' });
+    await screen.findByRole('heading', { name: PAYOFF_8AM });
   }
 
   it('shows inviting as the one primary action, with a plain "Not now" and no way back', async () => {
@@ -259,8 +320,9 @@ describe('invite offer after the first medication saves', () => {
 
     // One dialog — the offer replaces the questions, it is not stacked on them.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    expect(screen.getByText(/help coordinate Rosa's care/)).toBeInTheDocument();
-    const primary = screen.getByRole('button', { name: 'Invite your first caregiver' });
+    expect(screen.getByText(/When someone taps Taken, everyone in the circle sees it/)).toBeInTheDocument();
+    expect(screen.getByText("Who's usually there with Rosa?")).toBeInTheDocument();
+    const primary = screen.getByRole('button', { name: 'Invite someone' });
     expect(primary.className.split(/\s+/)).toContain('bg-primary-fill');
     const notNow = screen.getByRole('button', { name: 'Not now' });
     expect(notNow.className.split(/\s+/)).not.toContain('bg-primary-fill');
@@ -295,10 +357,10 @@ describe('invite offer after the first medication saves', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
     await saveMedication(user);
-    await user.click(screen.getByRole('button', { name: 'Invite your first caregiver' }));
+    await user.click(screen.getByRole('button', { name: 'Invite someone' }));
 
     expect(screen.getByTestId('invite-modal')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Invite someone to help' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: PAYOFF_8AM })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'stub-save' }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(mutateCreate).toHaveBeenCalledTimes(1);
@@ -308,7 +370,7 @@ describe('invite offer after the first medication saves', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
     await saveMedication(user);
-    await user.click(screen.getByRole('button', { name: 'Invite your first caregiver' }));
+    await user.click(screen.getByRole('button', { name: 'Invite someone' }));
 
     expect(analytics.firstRunStepViewed.mock.calls.map((c) => c[1])).toEqual([
       'choose',
@@ -317,6 +379,149 @@ describe('invite offer after the first medication saves', () => {
       'repeat',
     ]);
     expect(analytics.firstRunActionSelected.mock.calls.map((c) => c[1])).toEqual(['medication']);
+  });
+});
+
+describe('payoff and invite events', () => {
+  async function saveWith(user: ReturnType<typeof userEvent.setup>, preset?: RegExp) {
+    await user.click(screen.getByRole('button', { name: /Add the first medication|Add your first medication/i }));
+    await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    if (preset) await user.click(screen.getByRole('radio', { name: preset }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: 'Add medication' }));
+  }
+
+  it('single dose: names the time, the medication and the repeat in the card', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user);
+    await screen.findByRole('heading', { name: "Rosa's 8:00 AM reminder is set." });
+    const card = screen.getByTestId('first-run-payoff-card');
+    expect(card).toHaveTextContent('Metformin');
+    expect(card).toHaveTextContent('8:00 AM · Daily');
+    expect(screen.getByRole('heading', { name: "Rosa's 8:00 AM reminder is set." })).toHaveFocus();
+  });
+
+  it('multi dose: plural title, every time listed', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user, /Twice daily/i);
+    await screen.findByRole('heading', { name: "Rosa's reminders are set." });
+    expect(screen.getByTestId('first-run-payoff-card')).toHaveTextContent('8:00 AM, 8:00 PM · Daily');
+  });
+
+  it('self-care: you-copy for single and multi dose', async () => {
+    useCircleResult.circle = { ...useCircleResult.circle, is_self_care: true };
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user);
+    await screen.findByRole('heading', { name: 'Your 8:00 AM reminder is set.' });
+    expect(screen.getByText('When you tap Taken, anyone you invite sees it too.')).toBeInTheDocument();
+    expect(screen.getByText('Who helps you out?')).toBeInTheDocument();
+  });
+
+  it('self-care multi dose reads "Your reminders are set."', async () => {
+    useCircleResult.circle = { ...useCircleResult.circle, is_self_care: true };
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user, /Three times daily/i);
+    expect(await screen.findByRole('heading', { name: 'Your reminders are set.' })).toBeInTheDocument();
+  });
+
+  it('formats times with the viewer hour cycle (24h)', async () => {
+    hourCycleState.value = '24h';
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user);
+    expect(await screen.findByRole('heading', { name: "Rosa's 08:00 reminder is set." })).toBeInTheDocument();
+  });
+
+  it('records invite, not_now and close as first_run_invite_prompt_action', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const first = renderWizard();
+    await saveWith(user);
+    await screen.findByRole('heading', { name: PAYOFF_8AM });
+    await user.click(screen.getByRole('button', { name: 'Invite someone' }));
+    expect(analytics.firstRunInvitePromptAction).toHaveBeenLastCalledWith('invite');
+    expect(first.onClose).not.toHaveBeenCalled();
+  });
+
+  it('records not_now', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user);
+    await screen.findByRole('heading', { name: PAYOFF_8AM });
+    await user.click(screen.getByRole('button', { name: 'Not now' }));
+    expect(analytics.firstRunInvitePromptAction.mock.calls).toEqual([['not_now']]);
+  });
+
+  it('records close', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user);
+    await screen.findByRole('heading', { name: PAYOFF_8AM });
+    await user.click(screen.getByRole('button', { name: 'Close setup' }));
+    expect(analytics.firstRunInvitePromptAction.mock.calls).toEqual([['close']]);
+  });
+});
+
+describe('step ② lighter name', () => {
+  async function toName(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
+  }
+
+  it('shows the lede, hides the dosage, and previews the default time', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await toName(user);
+    expect(screen.getByText('Just the name is enough. Details can wait.')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Dosage/i)).not.toBeInTheDocument();
+    const preview = screen.getByTestId('first-run-next-preview');
+    expect(preview).toHaveTextContent('Next');
+    expect(preview).toHaveTextContent('Every morning at 8:00 AM. You can change it on the next screen.');
+  });
+
+  it('"+ Add dosage" reveals the field and focuses it', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await toName(user);
+    await user.click(screen.getByRole('button', { name: '+ Add dosage' }));
+    const field = screen.getByLabelText(/Dosage/i);
+    expect(field).toHaveFocus();
+    expect(screen.queryByRole('button', { name: '+ Add dosage' })).not.toBeInTheDocument();
+  });
+
+  it('starts revealed when a dosage already exists (after Back)', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await toName(user);
+    await user.click(screen.getByRole('button', { name: '+ Add dosage' }));
+    await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
+    await user.type(screen.getByLabelText(/Dosage/i), '500mg');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByLabelText(/Dosage/i)).toHaveValue('500mg');
+    expect(screen.queryByRole('button', { name: '+ Add dosage' })).not.toBeInTheDocument();
+  });
+
+  it('previews the CURRENT first time of the schedule chosen on ③', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await toName(user);
+    await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('radio', { name: /Evening/i }));
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByTestId('first-run-next-preview')).toHaveTextContent('Every evening at 8:00 PM.');
+  });
+
+  it('formats the preview with the 24h cycle', async () => {
+    hourCycleState.value = '24h';
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await toName(user);
+    expect(screen.getByTestId('first-run-next-preview')).toHaveTextContent('Every morning at 08:00.');
   });
 });
 
@@ -457,7 +662,8 @@ describe('choose-step actions', () => {
   it('hands appointment to the event form, pre-typed', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Add an appointment/i }));
 
     expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-type', 'appointment');
     expect(analytics.firstRunActionSelected).toHaveBeenCalledWith(CIRCLE_ID, 'appointment');
@@ -466,7 +672,8 @@ describe('choose-step actions', () => {
   it('hands invite to the invite modal', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    await user.click(screen.getByRole('button', { name: /^Inviting someone$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Invite someone to help/i }));
 
     expect(screen.getByTestId('invite-modal')).toBeInTheDocument();
     expect(analytics.firstRunActionSelected).toHaveBeenCalledWith(CIRCLE_ID, 'invite');
@@ -475,18 +682,20 @@ describe('choose-step actions', () => {
   it('returns to the chooser when the appointment form is cancelled unsaved', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Add an appointment/i }));
     await user.click(screen.getByRole('button', { name: 'stub-cancel' }));
 
     expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^An appointment$/i })).toBeInTheDocument();
+    expect(screen.getByTestId('first-run-more-toggle')).toHaveAttribute('aria-expanded', 'false');
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('closes the wizard once the appointment form has saved', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Add an appointment/i }));
     await user.click(screen.getByRole('button', { name: 'stub-save' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -495,18 +704,20 @@ describe('choose-step actions', () => {
   it('returns to the chooser when the invite modal is dismissed without sending', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /^Inviting someone$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Invite someone to help/i }));
     await user.click(screen.getByRole('button', { name: 'stub-cancel' }));
 
     expect(screen.queryByTestId('invite-modal')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Inviting someone$/i })).toBeInTheDocument();
+    expect(screen.getByTestId('first-run-more-toggle')).toHaveAttribute('aria-expanded', 'false');
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('closes the wizard once an invite has been sent', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /^Inviting someone$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Invite someone to help/i }));
     await user.click(screen.getByRole('button', { name: 'stub-save' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -515,7 +726,8 @@ describe('choose-step actions', () => {
   it('navigates to emergency info, which is a page rather than a modal', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onClose } = renderWizard();
-    await user.click(screen.getByRole('button', { name: /^Emergency info$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Add emergency info/i }));
 
     expect(navigate).toHaveBeenCalledWith(`/circles/${CIRCLE_ID}/emergency`);
     expect(onClose).toHaveBeenCalled();
@@ -664,7 +876,7 @@ describe('saving', () => {
     await user.click(screen.getByRole('button', { name: 'Add medication' }));
 
     // The save lands on the invite offer, in the same dialog; it does not close.
-    expect(await screen.findByRole('heading', { name: 'Invite someone to help' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: PAYOFF_8AM })).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(mutateCreate).toHaveBeenCalledTimes(1);
     const payload = mutateCreate.mock.calls[0][0] as CreateEventRequest;
@@ -717,6 +929,7 @@ describe('saving', () => {
     renderWizard();
     await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
+    await user.click(screen.getByRole('button', { name: '+ Add dosage' }));
     await user.type(screen.getByLabelText(/Dosage/i), '500mg');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -771,6 +984,7 @@ describe('constraint 4 — multi-dose on a non-daily rule', () => {
   async function chooseTwiceDailyWeekly(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
     await user.type(screen.getByLabelText(/Medication name/i), 'Metformin');
+    await user.click(screen.getByRole('button', { name: '+ Add dosage' }));
     await user.type(screen.getByLabelText(/Dosage/i), '500mg');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('radio', { name: /Twice daily/i }));
@@ -885,7 +1099,8 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
     useCircleResult.circle = undefined;
     renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Add an appointment/i }));
 
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Add the first medication/i })).toBeInTheDocument();
@@ -925,7 +1140,8 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
     useCircleResult.canEdit = false;
     renderWizard();
 
-    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Add an appointment/i }));
 
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Add the first medication/i })).toBeInTheDocument();
@@ -948,7 +1164,8 @@ describe('constraint 8 — an unresolved circle timezone refuses the save', () =
     renderWizard();
 
     // Ignored: nothing is writable yet, so this falls through to the wizard.
-    await user.click(screen.getByRole('button', { name: /^An appointment$/i }));
+    await openMore(user);
+    await user.click(screen.getByRole('button', { name: /^Add an appointment/i }));
 
     // The user moves on. The circle lands while they are answering.
     useCircleResult.circle = {
@@ -1057,7 +1274,7 @@ describe('RxNorm lookup on step ② (mobile parity)', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Add medication' }));
 
-    await screen.findByRole('heading', { name: 'Invite someone to help' });
+    await screen.findByRole('heading', { name: PAYOFF_8AM });
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({ medication_name: 'Metformin', rxcui: '6809' });
   });
 });
@@ -1076,10 +1293,11 @@ describe('recipient wording', () => {
     useCircleResult.circle = { ...useCircleResult.circle, is_self_care: true };
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    expect(screen.getByText('Your care circle is ready. What would you like to do first?')).toBeInTheDocument();
-    expect(screen.queryByText(/Rosa's care circle/)).not.toBeInTheDocument();
+    expect(screen.getByText('Your circle is ready.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add your first medication/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Rosa's circle/)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Add the first medication/i }));
+    await user.click(screen.getByRole('button', { name: /Add your first medication/i }));
     expect(screen.getByText('What do you take?')).toBeInTheDocument();
     expect(screen.queryByText(/What does Rosa take/)).not.toBeInTheDocument();
 
@@ -1092,7 +1310,7 @@ describe('recipient wording', () => {
   it('caregiver owner of someone else keeps the name on all three steps', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();
-    expect(screen.getByText("Rosa's care circle is ready. What would you like to do first?")).toBeInTheDocument();
+    expect(screen.getByText("Rosa's circle is ready.")).toBeInTheDocument();
     await walk(user);
     expect(screen.getByText('When does Rosa take it?')).toBeInTheDocument();
     expect(screen.queryByText('When do you take it?')).not.toBeInTheDocument();
@@ -1104,7 +1322,7 @@ describe('recipient wording', () => {
     try {
       useCircleResult.circle = { ...useCircleResult.circle, is_self_care: true };
       renderWizard();
-      expect(screen.getByText('Tu círculo de cuidado está listo. ¿Qué te gustaría hacer primero?')).toBeInTheDocument();
+      expect(screen.getByText('Tu círculo está listo.')).toBeInTheDocument();
     } finally {
       await i18n.changeLanguage('en');
     }

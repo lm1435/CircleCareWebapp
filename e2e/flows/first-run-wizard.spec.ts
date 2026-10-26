@@ -193,11 +193,11 @@ test.describe('first-run wizard', () => {
     await expect(page.getByText('Medication added.').first()).toBeVisible({ timeout: 20_000 });
     // The save lands on the invite offer (same dialog, one primary action);
     // "Not now" is what closes the wizard.
-    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible({
+    await expect(wizard.getByRole('heading', { name: /reminder is set\.$/ })).toBeVisible({
       timeout: 15_000,
     });
     await expect(wizard.getByRole('button', { name: 'Add medication' })).toHaveCount(0);
-    await expect(wizard.getByRole('button', { name: 'Invite your first caregiver' })).toBeVisible();
+    await expect(wizard.getByRole('button', { name: 'Invite someone', exact: true })).toBeVisible();
     await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
     await expect(wizard).toHaveCount(0, { timeout: 15_000 });
 
@@ -214,25 +214,40 @@ test.describe('first-run wizard', () => {
     await expect(page.getByRole('dialog', { name: COPY.en.wizardName })).toHaveCount(0);
   });
 
-  // 1.2.3 "first session focus", section A: ONE filled primary on screen ①.
-  test('choose step: one filled primary with its reason, three quiet rows, Skip and close stay', async ({
+  // 1.3.1 "show, don't tell", step 1: the circle is ready, ONE button, the rest
+  // behind a "See what else" toggle.
+  test('ready step: one filled primary, a collapsed toggle, three rows above the primary once opened', async ({
     page,
   }) => {
-    await createFirstCircle(page, 'en', uniq('wizone'));
+    const recipient = uniq('wizone');
+    await createFirstCircle(page, 'en', recipient);
     const wizard = page.getByRole('dialog', { name: COPY.en.wizardName });
 
     const primary = wizard.getByRole('button', { name: COPY.en.addMed, exact: true });
     await expect(primary).toBeVisible();
-    await expect(wizard.getByText('This is what sets up reminders.', { exact: true })).toBeVisible();
-    await expect(wizard.getByText('Recommended', { exact: true })).toHaveCount(0);
-
-    const rows = wizard.getByRole('list', { name: 'or start with' }).getByRole('button');
-    await expect(rows).toHaveText(['An appointment', 'Inviting someone', 'Emergency info']);
+    await expect(wizard.getByRole('heading', { name: `${recipient}'s circle is ready.` })).toBeVisible();
+    await expect(
+      wizard.getByText(`Add ${recipient}'s first medication. That's the reminder everyone in the circle will share.`)
+    ).toBeVisible();
     await expect(wizard.getByRole('button', { name: COPY.en.skip, exact: true })).toBeVisible();
     await expect(wizard.getByRole('button', { name: 'Close setup', exact: true })).toBeVisible();
 
-    // The primary is the only FILLED control: the rows have no background of
-    // their own, and each is at least a 44px target under the primary.
+    const toggle = wizard.getByTestId('first-run-more-toggle');
+    await expect(toggle).toHaveText('No medications to track? See what else');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(wizard.getByTestId('first-run-start-with-appointment')).toHaveCount(0);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(toggle).toHaveText('Hide');
+
+    const rows = wizard.locator('#first-run-more-options').getByRole('button');
+    await expect(rows).toHaveCount(3);
+    await expect(wizard.getByTestId('first-run-start-with-appointment')).toContainText('Add an appointment');
+    await expect(wizard.getByTestId('first-run-start-with-invite')).toContainText('Invite someone to help');
+    await expect(wizard.getByTestId('first-run-start-with-emergency')).toContainText('Add emergency info');
+
+    // The primary is the only FILLED control: the rows have no filled
+    // background, and each is at least a 44px target above the primary.
     // Measure the RESTING layout: the modal panel enters with `modal-in`
     // (globals.css, scale(0.98) -> 1), and a box read mid-animation is scaled
     // down (a 44px row read 43.9994px). Wait until every finite animation on
@@ -257,7 +272,8 @@ test.describe('first-run wizard', () => {
       expect(await row.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(filled);
       const box = (await row.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
-      expect(box.y).toBeGreaterThan(primaryBox.y + primaryBox.height);
+      // The card sits ABOVE the primary.
+      expect(box.y + box.height).toBeLessThanOrEqual(primaryBox.y + 1);
     }
 
     // Same destinations as before: the invite row swaps in the invite form,
@@ -267,6 +283,25 @@ test.describe('first-run wizard', () => {
     await expect(invite).toBeVisible({ timeout: 10_000 });
     await invite.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(wizard.getByRole('button', { name: COPY.en.addMed, exact: true })).toBeVisible();
+  });
+
+  test('name step: lede, dosage behind "+ Add dosage" (focused on reveal), preview of the first time', async ({
+    page,
+  }) => {
+    await stubDrugs(page);
+    const recipient = uniq('wizname');
+    await createFirstCircle(page, 'en', recipient);
+    const wizard = page.getByRole('dialog', { name: COPY.en.wizardName });
+    await wizard.getByRole('button', { name: COPY.en.addMed }).click();
+
+    await expect(wizard.getByText('Just the name is enough. Details can wait.')).toBeVisible();
+    await expect(wizard.getByLabel(/Dosage/i)).toHaveCount(0);
+    await expect(wizard.getByTestId('first-run-next-preview')).toContainText(
+      /^Next\s*Every morning at \d{1,2}:\d{2}( [AP]M)?\. You can change it on the next screen\.$/
+    );
+    await wizard.getByRole('button', { name: '+ Add dosage' }).click();
+    await expect(wizard.getByLabel(/Dosage/i)).toBeFocused();
+    await expect(wizard.getByRole('button', { name: '+ Add dosage' })).toHaveCount(0);
   });
 
   // Sections B + C: after the wizard, Home shows ONE nudge card. The checklist
@@ -290,7 +325,7 @@ test.describe('first-run wizard', () => {
     const next = checklist.getByTestId('getting-started-step-event');
     await expect(next).toHaveAttribute('data-next', 'true');
     await expect(next.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
-    await expect(checklist.getByRole('button', { name: /Invite family & caregivers/ })).toBeVisible();
+    await expect(checklist.getByRole('button', { name: /Invite family and caregivers/ })).toBeVisible();
     await expect(checklist.getByRole('button', { name: /Add emergency info/ })).toBeVisible();
     await expect(checklist.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(0);
 
