@@ -31,15 +31,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const CONTAINER = process.env.PG_CONTAINER || 'supabase_db_CircleCare';
-const OUT = path.join(
+// FIXTURE_OUT writes elsewhere — e.g. a scratch file to diff against the
+// committed one before replacing it.
+const OUT = process.env.FIXTURE_OUT || path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '../src/test/fixtures/eventDateConversions.json'
 );
 
-// Every zone `scripts/run-unit-timezones.sh` sweeps, plus the ones a dev box or
-// CI plausibly sits in. A viewer zone the suite runs under but the fixture
-// lacks fails loudly by design.
-const VIEWER_ZONES = [
+// Every zone `scripts/run-unit-timezones.sh` sweeps — read from the ONE list
+// shared by all three repos, CircleCare/scripts/timezones.txt — appended to the
+// zones this fixture already carried, IN THAT ORDER. Existing rows keep their
+// position so a regeneration that adds zones leaves every existing row
+// byte-identical (checked by the sweep's fixture test resolving them, and by
+// diffing the old and new `viewers[zone]` when you regenerate). A viewer zone
+// the suite runs under but the fixture lacks fails loudly by design.
+const LEGACY_VIEWER_ZONES = [
   'America/Denver',
   'UTC',
   'Asia/Tokyo',
@@ -51,6 +57,17 @@ const VIEWER_ZONES = [
   'Asia/Kolkata',
   'America/St_Johns',
   'Australia/Sydney',
+];
+const ZONE_LIST = process.env.TZ_LIST_FILE ||
+  path.join(path.dirname(fileURLToPath(import.meta.url)), '../../scripts/timezones.txt');
+if (!fs.existsSync(ZONE_LIST)) {
+  throw new Error(`zone list not found at ${ZONE_LIST} (set TZ_LIST_FILE)`);
+}
+const LISTED_ZONES = fs.readFileSync(ZONE_LIST, 'utf8').split('\n')
+  .map((l) => l.trim()).filter((l) => l && !l.startsWith('#')).map((l) => l.split(/\s+/)[0]);
+const VIEWER_ZONES = [
+  ...LEGACY_VIEWER_ZONES,
+  ...LISTED_ZONES.filter((z) => !LEGACY_VIEWER_ZONES.includes(z)),
 ];
 
 // The extremes that broke the old offset lookup, the fractional offsets, and a

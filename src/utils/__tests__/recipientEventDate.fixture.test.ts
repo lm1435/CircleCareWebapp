@@ -6,7 +6,12 @@ import {
   isoDaysBetween,
 } from '../recipientEventDate';
 import fixture from '@/test/fixtures/eventDateConversions.json';
-import { KNOWN_TZDATA_DIVERGENCE, RUNTIME_IS_AHEAD_OF_FIXTURES } from '@/test/knownTzdataDivergence';
+import {
+  KNOWN_TZDATA_DIVERGENCE,
+  KNOWN_VIEWER_TZDATA_DIVERGENCE,
+  RUNTIME_IS_AHEAD_OF_FIXTURES,
+} from '@/test/knownTzdataDivergence';
+import { loadSweepZones, RUNNING_UNDER_SWEEP } from '@/test/sweepZones';
 
 /**
  * The save/hydrate pair vs. POSTGRES.
@@ -99,10 +104,17 @@ function processSignature(): number[] {
  */
 function resolveViewerRow(): { zone: string; row: ViewerRow } | null {
   const mine = processSignature().join(',');
-  for (const [zone, row] of Object.entries(viewers)) {
-    if (row.signature.join(',') === mine) return { zone, row };
-  }
-  return null;
+  const candidates = Object.entries(viewers).filter(([, row]) => row.signature.join(',') === mine);
+  if (candidates.length === 0) return null;
+  // SIGNATURES CAN COLLIDE. Europe/Kyiv and Africa/Cairo are both +2/+3/+3 at
+  // the three probes (they differ only in WHEN their DST runs), and more
+  // zones mean more such pairs. Among behaviour-matching rows, prefer the one
+  // that IS this zone — compared canonically, so an alias still matches — and
+  // only fall back to the first behavioural match when none is.
+  const procCanon = canonicalZone(new Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const named = candidates.find(([zone]) => canonicalZone(zone) === procCanon);
+  const [zone, row] = named ?? candidates[0];
+  return { zone, row };
 }
 
 const resolved = resolveViewerRow();
@@ -128,26 +140,17 @@ function canonicalZone(zone: string): string {
 }
 
 /**
- * Zones the sweep actually runs under. The fixture MUST cover these — a gap
- * here is a real hole, and is asserted as one below.
+ * Zones the sweep actually runs under — the ONE shared list,
+ * CircleCare/scripts/timezones.txt (see src/test/sweepZones.ts). The fixture
+ * MUST cover these: a gap here is a real hole, and is asserted as one below.
+ * (Until 2026-10-27 this was a hard-coded copy that had already drifted: it
+ * lacked Australia/Sydney, which the script swept.)
  */
-const SWEEP_ZONES = [
-  'America/Denver',
-  'UTC',
-  'Asia/Tokyo',
-  'Pacific/Auckland',
-  'Pacific/Midway',
-  'Pacific/Kiritimati',
-  'Pacific/Chatham',
-  'Asia/Kathmandu',
-  'Asia/Kolkata',
-  'America/St_Johns',
-];
+const SWEEP_ZONES = loadSweepZones().zones;
 
 /** Is THIS machine running one of them? (Alias-safe — see `canonicalZone`.) */
-const processIsSweepZone = SWEEP_ZONES.some(
-  (z) => canonicalZone(z) === canonicalZone(processZone)
-);
+const processIsSweepZone =
+  RUNNING_UNDER_SWEEP || SWEEP_ZONES.some((z) => canonicalZone(z) === canonicalZone(processZone));
 
 describe('eventDatesForApi / eventDatesFromApi vs Postgres', () => {
   /**
@@ -214,6 +217,39 @@ describe('eventDatesForApi / eventDatesFromApi vs Postgres', () => {
   const { zone, row } = resolved;
 
   /**
+   * VIEWER-side tzdata divergence (see KNOWN_VIEWER_TZDATA_DIVERGENCE). The
+   * Etc/UTC recipient case of each typed clock is Postgres' reading of the
+   * viewer offset; where the runtime reads that clock as a different instant,
+   * every case for that typed clock has a stale expectation.
+   */
+  const typedKey = (c: Case): string => `${c.typedDate} ${c.typedTime}`;
+  const runtimeUtcOfTyped = (c: Case): string => {
+    const [y, m, d] = c.typedDate.split('-').map(Number);
+    const [hh, mm] = c.typedTime.split(':').map(Number);
+    return new Date(y, m - 1, d, hh, mm).toISOString().slice(0, 16).replace('T', ' ');
+  };
+  const divergentTyped = new Set(
+    row.cases
+      .filter((c) => c.recipient === 'Etc/UTC')
+      .filter((c) => runtimeUtcOfTyped(c) !== `${c.scheduledDate} ${c.scheduledTime}`)
+      .map(typedKey)
+  );
+  const viewerIsPinned = [...KNOWN_VIEWER_TZDATA_DIVERGENCE].some(
+    (z) => canonicalZone(z) === canonicalZone(zone)
+  );
+  const viewerStale = (c: Case): boolean => viewerIsPinned && divergentTyped.has(typedKey(c));
+
+  it('confines viewer-side tzdata divergence to the pinned zones (and it is real while pinned)', () => {
+    expect(row.cases.some((c) => c.recipient === 'Etc/UTC')).toBe(true);
+    if (viewerIsPinned) {
+      expect(divergentTyped.size).toBeGreaterThan(0);
+      expect(divergentTyped.size).toBeLessThan(new Set(row.cases.map(typedKey)).size);
+    } else {
+      expect([...divergentTyped]).toEqual([]);
+    }
+  });
+
+  /**
    * The four tests below each walk all 4,977 fixture cases, and every case runs
    * the full save path — several `Intl` conversions apiece. Alone that is ~13s
    * of work for the file; sharing cores with the rest of the suite it is more.
@@ -234,7 +270,7 @@ describe('eventDatesForApi / eventDatesFromApi vs Postgres', () => {
       // Recipient zones whose IANA rules changed after the fixture's Postgres
       // release are compared in the self-destruct test below, not here — see
       // src/test/knownTzdataDivergence.ts.
-      if (KNOWN_TZDATA_DIVERGENCE.has(c.recipient)) continue;
+      if (KNOWN_TZDATA_DIVERGENCE.has(c.recipient) || viewerStale(c)) continue;
       const out = eventDatesForApi({
         dateStr: c.typedDate,
         timeStr: c.typedTime,
@@ -260,7 +296,7 @@ describe('eventDatesForApi / eventDatesFromApi vs Postgres', () => {
     // them a day with no dose at all.
     const mismatches: string[] = [];
     for (const c of row.cases) {
-      if (KNOWN_TZDATA_DIVERGENCE.has(c.recipient)) continue;
+      if (KNOWN_TZDATA_DIVERGENCE.has(c.recipient) || viewerStale(c)) continue;
       const out = eventDatesForApi({
         dateStr: c.typedDate,
         timeStr: c.typedTime,
@@ -297,11 +333,28 @@ describe('eventDatesForApi / eventDatesFromApi vs Postgres', () => {
       expect(KNOWN_TZDATA_DIVERGENCE.size).toBe(0);
       return;
     }
-    const present = new Set(row.cases.map((c) => c.recipient).filter((z) => KNOWN_TZDATA_DIVERGENCE.has(z)));
+    // Under a pinned VIEWER (Casablanca), a pinned recipient on the SAME rules
+    // (Casablanca, El_Aaiun: same offsets at every probe) is stale on both
+    // sides by the same hour, so the two errors cancel and it agrees with
+    // Postgres for the wrong reason. It cannot show divergence from this seat;
+    // every other sweep zone still checks it.
+    const viewerSig = signatureOf(zone).join(',');
+    const cancelsWithViewer = (z: string): boolean =>
+      viewerIsPinned && signatureOf(z).join(',') === viewerSig;
+    const present = new Set(
+      row.cases
+        .map((c) => c.recipient)
+        .filter((z) => KNOWN_TZDATA_DIVERGENCE.has(z) && !cancelsWithViewer(z))
+    );
     expect(present.size).toBeGreaterThan(0);
 
     const stillDiverging = new Set<string>();
     for (const c of row.cases) {
+      // viewerStale cases are NOT skipped here: for a pinned viewer (Casablanca)
+      // every BC/Alberta divergence falls on the stale post-2026-09-20 typed
+      // clocks, so skipping them would report those recipients "healed". The
+      // self-destruct stays honest in the other zones of the sweep, where the
+      // viewer side is not stale.
       if (!present.has(c.recipient) || stillDiverging.has(c.recipient)) continue;
       const out = eventDatesForApi({
         dateStr: c.typedDate,

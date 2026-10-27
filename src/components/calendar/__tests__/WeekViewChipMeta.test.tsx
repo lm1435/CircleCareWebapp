@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { WeekView } from '../WeekView';
+import { recipientZoneOtherThanViewer } from '@/test/viewerZone';
 
 // Mobile TimelineEventBlock parity: the week chip prints the assignee and a
 // note-count badge, and both join the chip's accessible name. Visible only on
@@ -24,6 +25,14 @@ const DAYS = [
   '2026-03-21',
 ];
 const DAY = '2026-03-16';
+// A recipient zone that is a different clock from the viewer (the process) on
+// DAY, so times carry the "(City)" suffix: Chicago unless the process IS
+// Chicago (see src/test/viewerZone.ts).
+const RECIPIENT_TZ = recipientZoneOtherThanViewer(
+  'America/Chicago',
+  'America/Denver',
+  new Date(`${DAY}T16:00:00Z`)
+);
 
 function appt(id: string, overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
@@ -47,7 +56,7 @@ function renderWeek(events: CalendarEvent[]) {
     <WeekView
       days={DAYS}
       eventsByDay={new Map([[DAY, events]])}
-      careRecipientTimezone="America/Chicago"
+      careRecipientTimezone={RECIPIENT_TZ}
       todayStr="2026-03-17"
       onEventClick={vi.fn()}
     />
@@ -161,7 +170,7 @@ describe('WeekView chip: assignee + note count', () => {
   it('a zone-suffixed time truncates instead of refusing to shrink (class contract; geometry is e2e)', () => {
     renderWeek([appt('a')]);
     const chip = chipFor('Appt a');
-    // The viewer (test process) is not in Chicago, so the time carries the zone.
+    // RECIPIENT_TZ is a different clock from the viewer, so the time carries the zone.
     const time = within(chip).getByText(/^10:00 AM \(/);
     expect(time.className).toMatch(/\bmin-w-0\b.*\btruncate\b/);
     expect(time.className).not.toMatch(/\bshrink-0\b/);

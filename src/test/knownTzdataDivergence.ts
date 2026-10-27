@@ -73,3 +73,20 @@ export const RUNTIME_IS_AHEAD_OF_FIXTURES = RUNTIME_TZDATA >= FIRST_DIVERGING_RE
 export const KNOWN_TZDATA_DIVERGENCE: ReadonlySet<string> = new Set(
   RUNTIME_IS_AHEAD_OF_FIXTURES ? PINNED_ZONES : []
 );
+
+/**
+ * The same divergence from the OTHER seat: VIEWER (process) zones whose
+ * fixture row Postgres computed from older rules than this runtime's. Morocco's
+ * 2026c move to permanent +00 on 2026-09-20 means that for a Casablanca viewer
+ * every typed wall clock after that date names a different instant to Postgres
+ * (+01) than to Node (+00). Found 2026-10-27 when Africa/Casablanca joined the
+ * shared sweep list (CircleCare/scripts/timezones.txt). The fixture test
+ * detects the affected typed clocks FROM THE DATA (the Etc/UTC recipient row is
+ * Postgres' own reading of the viewer offset), excludes them only for zones
+ * listed here, requires the set to be empty for every other viewer zone, and
+ * self-destructs when a listed zone stops diverging. Empty when the runtime is
+ * not ahead.
+ */
+export const KNOWN_VIEWER_TZDATA_DIVERGENCE: ReadonlySet<string> = new Set(
+  RUNTIME_IS_AHEAD_OF_FIXTURES ? ['Africa/Casablanca'] : []
+);

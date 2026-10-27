@@ -16,6 +16,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from '../dateMath';
+import { cityOf, recipientZoneOtherThanViewer } from '@/test/viewerZone';
 
 /**
  * The VIEWER's zone. A rendered timestamp is labelled only when the viewer sits
@@ -158,15 +159,18 @@ describe('formatTimestampInTimezone honours the app hour cycle and the instant',
     // differently for the same user depending on the tag — `es-MX` gave
     // "8:05 p.m." while a bare `es` gave "20:05".
     const iso = '2026-06-12T13:05:00Z';
-    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'es', '12h')).toContain('8:05');
-    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'es-MX', '12h')).toContain('8:05');
+    // A zone that is a different clock from the viewer, so the "(City)" suffix
+    // is drawn: Chicago (08:05) unless the process IS Chicago, then Denver
+    // (07:05). See src/test/viewerZone.ts.
+    const zone = recipientZoneOtherThanViewer('America/Chicago', 'America/Denver', new Date(iso));
+    const [h, hh] = zone === 'America/Chicago' ? ['8:05', '08:05'] : ['7:05', '07:05'];
+    expect(formatTimestampInTimezone(iso, zone, 'es', '12h')).toContain(h);
+    expect(formatTimestampInTimezone(iso, zone, 'es-MX', '12h')).toContain(h);
     // Same cycle in, same digits out, regardless of the locale tag.
-    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'es', '12h')).toBe(
-      formatTimestampInTimezone(iso, 'America/Chicago', 'es-MX', '12h')
+    expect(formatTimestampInTimezone(iso, zone, 'es', '12h')).toBe(
+      formatTimestampInTimezone(iso, zone, 'es-MX', '12h')
     );
-    expect(formatTimestampInTimezone(iso, 'America/Chicago', 'en', '24h')).toBe(
-      '08:05 (Chicago)'
-    );
+    expect(formatTimestampInTimezone(iso, zone, 'en', '24h')).toBe(`${hh} (${cityOf(zone)})`);
   });
 
   it('names ANY zone by its city, never by an offset', () => {

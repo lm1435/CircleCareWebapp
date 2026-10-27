@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:timezones": "bash scripts/run-unit-timezones.sh",
+    "test:timezones:full": "TZ_TIER=all bash scripts/run-unit-timezones.sh",
     "test:integration": "bash scripts/run-integration-timezones.sh",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
