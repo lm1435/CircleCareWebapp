@@ -403,6 +403,23 @@ describe('payoff and invite events', () => {
     expect(screen.getByRole('heading', { name: "Rosa's 8:00 AM reminder is set." })).toHaveFocus();
   });
 
+  // The payoff shows the SAVED dose the way the medication surfaces show a
+  // dose (and mobile's payoff + Home banner): the recipient's time, plus the
+  // viewer's own when the zones differ. It used to print the viewer's picked
+  // clock bare, which no other surface showing that dose agrees with.
+  it('cross-zone: the recipient\'s saved time, then the viewer\'s, each named', async () => {
+    useCircleResult.circle = { ...useCircleResult.circle, care_recipient_timezone: 'America/Denver' };
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWizard();
+    await saveWith(user);
+    // 08:00 picked in the viewer's zone (UTC) on 2026-09-01 is 02:00 in Denver (MDT).
+    const saved = mutateCreate.mock.calls[0][0] as CreateEventRequest;
+    expect(saved.scheduled_time).toBe('02:00');
+    const card = await screen.findByTestId('first-run-payoff-card');
+    expect(card).toHaveTextContent('2:00 AM (Denver) / 8:00 AM');
+    expect(card).toHaveTextContent('· Daily');
+  });
+
   it('multi dose: plural title, every time listed', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWizard();

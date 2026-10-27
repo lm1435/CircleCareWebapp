@@ -63,7 +63,7 @@ const emergencyInfo = {
 
 function render(tz: string) {
   const todayStr = getDateInTimezone(tz, NOW);
-  const { forExport } = selectCareSummaryMedications(events, { todayStr, careRecipientTimezone: tz, getDateInTimezone, now: NOW });
+  const { forExport } = selectCareSummaryMedications(events, { todayStr, careRecipientTimezone: tz, getDateInTimezone });
   const html = generateCareSummaryHtml({
     recipientName: 'Pat Doe',
     recipientDob: null,

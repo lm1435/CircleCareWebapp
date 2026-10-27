@@ -89,11 +89,13 @@ function recurrenceKey(e: PdfCalendarEvent): string {
  * Stopped = discontinued, OR a recurring course that ended through its
  * `recurrence_end_date` ("This and future", PK26). The second kind has no
  * `discontinued_at`, so it was in no table at all before. Same "ended" definition as the
- * roster and the selection (`isMedicationSeriesEnded`).
+ * roster and the selection (`isMedicationSeriesEnded`): current through the end
+ * date, stopped from the recipient's next day (`recipientToday` is resolved in
+ * the RECIPIENT's zone).
  */
-function isStoppedMedication(m: PdfCalendarEvent): boolean {
+function isStoppedMedication(m: PdfCalendarEvent, recipientToday: string): boolean {
   if (m.discontinued_at) return true;
-  return Boolean(m.recurrence_rule) && isMedicationSeriesEnded(m);
+  return Boolean(m.recurrence_rule) && isMedicationSeriesEnded(m, recipientToday);
 }
 
 /**
@@ -104,14 +106,17 @@ function isStoppedMedication(m: PdfCalendarEvent): boolean {
  * dose after it was STOPPED — a re-added medication must not fold into the
  * stopped row (or vice versa) and lose its status.
  */
-function groupMedications(medications: PdfCalendarEvent[]): MedicationGroup[] {
+function groupMedications(
+  medications: PdfCalendarEvent[],
+  recipientToday: string
+): MedicationGroup[] {
   const order: string[] = [];
   const groups = new Map<string, MedicationGroup>();
 
   for (const m of medications) {
     const name = m.medication_name || m.title;
     const dosage = m.medication_dosage || null;
-    const stopped = isStoppedMedication(m);
+    const stopped = isStoppedMedication(m, recipientToday);
     const asNeeded = Boolean(m.as_needed);
     const key = `${stopped ? 'stopped' : 'active'} ${asNeeded ? 'prn' : 'sched'} ${name} ${dosage ?? ''}`;
 
@@ -223,7 +228,7 @@ function formatStoppedLabel(
   careRecipientTimezone: string,
   env: PdfEnv
 ): string {
-  if (!isStoppedMedication(m)) return '';
+  if (!isStoppedMedication(m, env.getDateInTimezone(careRecipientTimezone))) return '';
   return env.t('careSummary.fields.stopped', {
     date: formatStoppedDate(m, careRecipientTimezone, env),
   });
@@ -332,7 +337,9 @@ export function renderCareSummaryHtml(options: CareSummaryTemplateOptions, env: 
   // together rather than one row per time (see `groupMedications`). Current
   // and stopped medications are two tables: a table titled "Current
   // medications" must not carry rows that are not current.
-  const medGroups = groupMedications(medications);
+  // "Today" for the care recipient, in THEIR zone: the day an ended course
+  // stops being current is judged on their calendar, not the printer's.
+  const medGroups = groupMedications(medications, env.getDateInTimezone(careRecipientTimezone));
   const activeGroups = medGroups.filter((g) => !g.stopped);
   const stoppedGroups = medGroups.filter((g) => g.stopped);
   const medRows = activeGroups
@@ -722,7 +729,9 @@ export function renderCareSummaryText(options: CareSummaryTemplateOptions, env: 
   // Stopped medications follow under their own heading.
   lines.push(`\n${t('careSummary.sections.medications')}`);
   lines.push(divider);
-  const medGroups = groupMedications(medications);
+  // "Today" for the care recipient, in THEIR zone: the day an ended course
+  // stops being current is judged on their calendar, not the printer's.
+  const medGroups = groupMedications(medications, env.getDateInTimezone(careRecipientTimezone));
   const activeGroups = medGroups.filter((g) => !g.stopped);
   const stoppedGroups = medGroups.filter((g) => g.stopped);
   if (activeGroups.length > 0) {

@@ -1,5 +1,6 @@
 import i18n from '@/i18n';
 import type { ActivityActor } from '@/api/activityFeed';
+import { addDaysToIsoDay } from '@/utils/recipientEventDate';
 import { getDateInTimezone, getDeviceTimezone } from '@/utils/timezone';
 
 // Formatting helpers mirroring mobile/src/screens/activity/ActivityFeedScreen.tsx
@@ -9,8 +10,6 @@ import { getDateInTimezone, getDeviceTimezone } from '@/utils/timezone';
 // never bare Date getters for date keys).
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Display name for an activity actor — falls back to email prefix, then "System". */
 export function getActorName(actor: ActivityActor | null | undefined, t: TFn): string {
@@ -77,7 +76,9 @@ export function formatDayLabel(
   const todayKey = getDateInTimezone(timezone, now);
   if (dateKey === todayKey) return t('today');
 
-  const yesterdayKey = getDateInTimezone(timezone, new Date(now.getTime() - DAY_MS));
+  // Step the DAY STRING, never the instant: on a 23-hour DST day, now - 24h
+  // lands two calendar days back.
+  const yesterdayKey = addDaysToIsoDay(todayKey, -1);
   if (dateKey === yesterdayKey) return t('yesterday');
 
   const sameYear = dateKey.slice(0, 4) === todayKey.slice(0, 4);
@@ -103,7 +104,9 @@ export function formatDateShort(
   const todayKey = getDateInTimezone(timezone, now);
   if (dateKey === todayKey) return t('today');
 
-  const yesterdayKey = getDateInTimezone(timezone, new Date(now.getTime() - DAY_MS));
+  // Step the DAY STRING, never the instant: on a 23-hour DST day, now - 24h
+  // lands two calendar days back.
+  const yesterdayKey = addDaysToIsoDay(todayKey, -1);
   if (dateKey === yesterdayKey) return t('yesterday');
 
   return formatDateOnlyKey(dateKey, locale, { month: 'short', day: 'numeric' });

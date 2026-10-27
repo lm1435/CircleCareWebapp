@@ -2,33 +2,12 @@ import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Eyebrow, Text } from '@/components/ui';
 import type { CircleMember } from '@/api/circleMembers';
+import { computeRecipientAge } from '@/utils/recipientAge';
 
 // Spec §6.3.1 — the circle Home hero, in mobile CircleDetailScreen's COMPACT
 // form: the avatar sits LEFT of the name in one row, with the DOB eyebrow
 // above the name and "Cared for by" under it, so the page's real content
 // starts higher. (It used to be a centred 96px avatar stacked over the name.)
-
-/**
- * Age in whole years from a YYYY-MM-DD date of birth, computed in UTC.
- *
- * PORT of mobile's `computeAge` (CircleDetailScreen.tsx:~100) including its
- * UTC-only arithmetic: a birthday is a calendar fact, not an instant, so
- * reading it through the viewer's local zone can shift it a day and age the
- * person a year early or late on their birthday. Returns null for anything
- * that is not a real date, so a malformed value hides the eyebrow rather than
- * rendering "age NaN".
- */
-export function computeAge(dob: string, now: Date = new Date()): number | null {
-  const parsed = new Date(`${dob.slice(0, 10)}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  let age = now.getUTCFullYear() - parsed.getUTCFullYear();
-  const monthDiff = now.getUTCMonth() - parsed.getUTCMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < parsed.getUTCDate())) {
-    age -= 1;
-  }
-  if (age < 0 || age > 130) return null;
-  return age;
-}
 
 /** The recipient's DOB rendered in the viewer's locale, anchored at noon UTC. */
 function formatDob(dob: string, locale: string): string | null {
@@ -56,6 +35,12 @@ export interface HeroProps {
   recipientPhotoUrl?: string | null;
   /** YYYY-MM-DD, or null when the circle has no date of birth on file. */
   recipientDob?: string | null;
+  /**
+   * The care recipient's IANA zone: the age is counted on THEIR calendar.
+   * `null` while the circle is loading; the age eyebrow waits for it rather
+   * than guessing a day.
+   */
+  recipientTimezone: string | null;
   members: CircleMember[];
 }
 
@@ -74,11 +59,13 @@ export function Hero({
   recipientName,
   recipientPhotoUrl,
   recipientDob,
+  recipientTimezone,
   members,
 }: HeroProps): ReactElement {
   const { t, i18n } = useTranslation('overview');
 
-  const age = recipientDob ? computeAge(recipientDob) : null;
+  const age =
+    recipientDob && recipientTimezone ? computeRecipientAge(recipientDob, recipientTimezone) : null;
   const bornLabel = recipientDob ? formatDob(recipientDob, i18n.language) : null;
   const dobEyebrow =
     bornLabel !== null && age !== null ? t('hero.bornAge', { date: bornLabel, age }) : null;

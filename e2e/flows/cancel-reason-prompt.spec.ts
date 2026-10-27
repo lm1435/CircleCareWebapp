@@ -179,6 +179,8 @@ async function stubFeedback(page: Page, initialStatus = 200): Promise<FeedbackSt
 }
 
 /** The date string the dialog renders, formatted by the page's own Intl. */
+// The expiry on the SUBSCRIBER's own calendar: the browser's zone, as the
+// prompt renders it (never UTC — an evening expiry read as the next day).
 async function renderedDate(page: Page, ms: number, locale: string): Promise<string> {
   return page.evaluate(
     ([value, loc]) =>
@@ -186,7 +188,7 @@ async function renderedDate(page: Page, ms: number, locale: string): Promise<str
         month: 'short',
         day: 'numeric',
         year: 'numeric',
-        timeZone: 'UTC',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }),
     [ms, locale] as const
   );

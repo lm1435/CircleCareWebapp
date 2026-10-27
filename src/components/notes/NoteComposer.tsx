@@ -169,6 +169,7 @@ export function NoteComposer({
             label={t('date.label')}
             value={dateValue}
             max={today}
+            today={today}
             hint={isToday ? t('date.today') : undefined}
             error={futureError ? t('date.futureError') : undefined}
             onChange={(e) => {

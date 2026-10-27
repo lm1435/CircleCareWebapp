@@ -69,7 +69,10 @@ test('compose, edit, and delete a daily care note', async ({ page, circleId }) =
   const editMenu = page.getByRole('menu');
   await expect(editMenu).toBeVisible();
   await editMenu.getByRole('menuitem', { name: 'Edit', exact: true }).click();
-  const editField = page.getByRole('textbox').last();
+  // The editor's body textarea, by its NoteComposer id (`note-edit-<id>-body`):
+  // since backdated notes (ebe75f8) the editor also renders a date <input>
+  // AFTER the textarea, so a positional `textbox().last()` lands on the date.
+  const editField = page.locator('textarea[id^="note-edit-"][id$="-body"]');
   await editField.fill(editedBody);
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText(new RegExp(escapeRe(editedBody))).first()).toBeVisible({

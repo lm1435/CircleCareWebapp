@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import '@/i18n';
-import { Hero, computeAge } from '../Hero';
+import { Hero } from '../Hero';
 import type { CircleMember } from '@/api/circleMembers';
 
 // Spec §6.3.1. The hero is pure presentation — no hooks, no router — so it
@@ -24,7 +24,7 @@ describe('Hero', () => {
   // Compact: avatar LEFT of the name in one row; "Cared for by" under the name.
   it('puts the avatar and the name in one row, with the caregivers under the name', () => {
     render(
-      <Hero recipientName="Rose Meza" members={[member({ id: 'a', first_name: 'Pat' })]} />
+      <Hero recipientTimezone="America/New_York" recipientName="Rose Meza" members={[member({ id: 'a', first_name: 'Pat' })]} />
     );
     const header = screen.getByTestId('overview-hero');
     const classes = header.className.split(/\s+/);
@@ -42,33 +42,33 @@ describe('Hero', () => {
 
   it('never truncates a long name: it wraps instead', () => {
     const long = 'Maria Guadalupe Hernandez-Villanueva de la Santisima Trinidad';
-    render(<Hero recipientName={long} members={[]} />);
+    render(<Hero recipientTimezone="America/New_York" recipientName={long} members={[]} />);
     const heading = screen.getByRole('heading', { name: long });
     expect(heading.className).toContain('break-words');
     expect(heading.className).not.toMatch(/truncate|line-clamp|whitespace-nowrap/);
   });
 
   it('renders the recipient name as the page heading', () => {
-    render(<Hero recipientName="Rose Meza" members={[]} />);
+    render(<Hero recipientTimezone="America/New_York" recipientName="Rose Meza" members={[]} />);
     expect(screen.getByRole('heading', { name: 'Rose Meza' })).toBeInTheDocument();
   });
 
   it('shows the DOB eyebrow with the born date and computed age', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-05T12:00:00Z'));
-    render(<Hero recipientName="Rose" recipientDob="1946-03-02" members={[]} />);
+    render(<Hero recipientTimezone="America/New_York" recipientName="Rose" recipientDob="1946-03-02" members={[]} />);
     // "Born {{date}} · age {{age}}" — 1946-03-02 has had its 2026 birthday.
     expect(screen.getByText(/Born March 2, 1946 · age 80/)).toBeInTheDocument();
     vi.useRealTimers();
   });
 
   it('hides the DOB eyebrow when the circle has no date of birth', () => {
-    render(<Hero recipientName="Rose" recipientDob={null} members={[]} />);
+    render(<Hero recipientTimezone="America/New_York" recipientName="Rose" recipientDob={null} members={[]} />);
     expect(screen.queryByText(/Born/)).not.toBeInTheDocument();
   });
 
   it('hides the DOB eyebrow rather than printing NaN for a malformed date', () => {
-    render(<Hero recipientName="Rose" recipientDob="not-a-date" members={[]} />);
+    render(<Hero recipientTimezone="America/New_York" recipientName="Rose" recipientDob="not-a-date" members={[]} />);
     expect(screen.queryByText(/Born/)).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
@@ -76,6 +76,7 @@ describe('Hero', () => {
   it('lists up to three caregiver first names and then "+N more"', () => {
     render(
       <Hero
+        recipientTimezone="America/New_York"
         recipientName="Rose"
         members={[
           member({ id: 'a', first_name: 'Pat' }),
@@ -97,6 +98,7 @@ describe('Hero', () => {
   it('excludes the care recipient from the "cared for by" list', () => {
     render(
       <Hero
+        recipientTimezone="America/New_York"
         recipientName="Rose"
         members={[
           member({ id: 'r', first_name: 'Rose', is_care_recipient: true }),
@@ -112,6 +114,7 @@ describe('Hero', () => {
   it('hides the "cared for by" row when nobody else is on the team', () => {
     render(
       <Hero
+        recipientTimezone="America/New_York"
         recipientName="Rose"
         members={[member({ id: 'r', first_name: 'Rose', is_care_recipient: true })]}
       />
@@ -122,24 +125,31 @@ describe('Hero', () => {
   // Self-care circles carry the OWNER's own name in `recipient_name`, and
   // mobile renders that field unconditionally — there is no self-care branch.
   it('shows the same name field on a self-care circle', () => {
-    render(<Hero recipientName="Pat Lee" members={[member({ id: 'a', first_name: 'Pat' })]} />);
+    render(<Hero recipientTimezone="America/New_York" recipientName="Pat Lee" members={[member({ id: 'a', first_name: 'Pat' })]} />);
     expect(screen.getByRole('heading', { name: 'Pat Lee' })).toBeInTheDocument();
   });
 
-  describe('computeAge', () => {
-    const NOW = new Date('2026-09-05T12:00:00Z');
+  // Age is counted on the RECIPIENT's calendar (utils/recipientAge). DOB
+  // 1946-10-28 at 2026-10-27T22:00Z: 09:00 on the birthday in Sydney, but
+  // still 10-27 in UTC and in Denver.
+  describe('age in the recipient frame', () => {
+    afterEach(() => vi.useRealTimers());
 
-    it('has not counted a birthday that has not happened yet this year', () => {
-      expect(computeAge('1946-12-31', NOW)).toBe(79);
+    it.each([
+      ['Australia/Sydney', 80],
+      ['America/Denver', 79],
+    ])('recipient in %s sees age %i', (zone, age) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-27T22:00:00Z'));
+      render(
+        <Hero recipientName="Rose" recipientDob="1946-10-28" recipientTimezone={zone} members={[]} />
+      );
+      expect(screen.getByText(new RegExp(`age ${age}$`))).toBeInTheDocument();
     });
 
-    it('counts the birthday on the day itself', () => {
-      expect(computeAge('1946-09-05', NOW)).toBe(80);
-    });
-
-    it('returns null for an unparseable or absurd value', () => {
-      expect(computeAge('nonsense', NOW)).toBeNull();
-      expect(computeAge('1800-01-01', NOW)).toBeNull();
+    it('waits for the recipient zone before showing an age', () => {
+      render(<Hero recipientName="Rose" recipientDob="1946-03-02" recipientTimezone={null} members={[]} />);
+      expect(screen.queryByText(/Born/)).not.toBeInTheDocument();
     });
   });
 });

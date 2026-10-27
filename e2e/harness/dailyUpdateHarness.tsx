@@ -143,6 +143,7 @@ function App(): ReactElement {
           recipientName={data.recipient_name ?? ''}
           recipientPhotoUrl={null}
           recipientDob={null}
+          recipientTimezone={TZ}
           members={[]}
         />
         <div className="px-5 pb-6">

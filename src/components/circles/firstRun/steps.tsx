@@ -13,6 +13,7 @@ import {
   TimeField,
 } from '@/components/ui';
 import type { HourCycle } from '@/utils/hourCycle';
+import { formatEventTimeForDisplay, zoneReferenceInstant } from '@/utils/timezone';
 import {
   FIRST_RUN_PRESET_ORDER,
   FIRST_RUN_REPEAT_ORDER,
@@ -213,8 +214,13 @@ export function ChooseActionStep({
 /** What the wizard just saved — the payoff card is built from it. */
 export interface SavedMedicationSummary {
   name: string;
-  /** Every dose time, `HH:MM`, the same ones step ③ showed. */
-  times: string[];
+  /**
+   * Every saved dose, as STORED: naive `YYYY-MM-DD` + `HH:MM` in the care
+   * recipient's frame (the wire values the wizard just sent).
+   */
+  doses: { scheduledDate: string; scheduledTime: string }[];
+  /** The care recipient's zone the doses were saved in. */
+  timezone: string;
   recurrence: FirstRunRecurrence;
 }
 
@@ -244,7 +250,19 @@ export function InviteAfterSaveStep({
     headingRef.current?.focus();
   }, []);
 
-  const times = saved.times.map((time) => formatFirstRunTime(time, hourCycle));
+  // The saved doses the way the medication surfaces show a dose (and mobile's
+  // payoff + Home banner): the recipient's time, bare when the viewer shares
+  // the recipient's zone, both clocks named when they do not. The viewer's
+  // picked clock alone disagreed with every other surface for that dose.
+  const times = saved.doses.map((dose) =>
+    formatEventTimeForDisplay(
+      dose.scheduledTime,
+      saved.timezone,
+      undefined,
+      zoneReferenceInstant(dose.scheduledDate),
+      hourCycle
+    )
+  );
   const multi = times.length > 1;
   const recurrenceLabels: Record<FirstRunRecurrence, string> = {
     daily: t('calendar:addEvent.recurrence.daily'),

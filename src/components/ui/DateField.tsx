@@ -43,6 +43,12 @@ export interface DateFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   label: ReactNode;
   error?: string;
   hint?: ReactNode;
+  /**
+   * The field's "today" (`YYYY-MM-DD`) when the field holds a RECIPIENT-frame
+   * day: the picker's Today button and today ring use it. Omit for
+   * viewer-frame fields; the picker then uses the viewer's today.
+   */
+  today?: string;
 }
 
 /**
@@ -113,7 +119,7 @@ function isoDayProp(value: InputHTMLAttributes<HTMLInputElement>['min']): string
  * The value is a `YYYY-MM-DD` string — callers own timezone-correct formatting.
  */
 export const DateField = forwardRef<HTMLInputElement, DateFieldProps>(function DateField(
-  { id, label, error, hint, className, disabled, required, readOnly, ...rest },
+  { id, label, error, hint, className, disabled, required, readOnly, today, ...rest },
   ref
 ) {
   const { t } = useTranslation();
@@ -313,6 +319,7 @@ export const DateField = forwardRef<HTMLInputElement, DateFieldProps>(function D
             value={typeof rest.value === 'string' ? rest.value : (inputRef.current?.value ?? '')}
             min={isoDayProp(rest.min)}
             max={isoDayProp(rest.max)}
+            today={isoDayProp(today)}
             onPick={handlePick}
             onDismiss={handleDismiss}
           />

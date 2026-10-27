@@ -221,6 +221,14 @@ export interface DatePickerPanelProps {
   onPick: (next: string) => void;
   /** Close the popover and return focus to the trigger. */
   onDismiss: () => void;
+  /**
+   * "Today" in the FIELD's frame, `YYYY-MM-DD`, when that is not the viewer's.
+   * Drives the Today button, the today ring and whether Today is disabled.
+   * Recipient-frame fields (a note's date, a shift's date, an untimed event's
+   * date) pass the RECIPIENT's today; omitted, it is the viewer's today, which
+   * is right for viewer-frame fields (timed events, vitals).
+   */
+  today?: string;
 }
 
 export function DatePickerPanel({
@@ -233,18 +241,25 @@ export function DatePickerPanel({
   max,
   onPick,
   onDismiss,
+  today: todayProp,
 }: DatePickerPanelProps): ReactElement | null {
   const { t, i18n } = useTranslation();
   const language = i18n.language || 'en';
   const gridRef = useRef<HTMLDivElement>(null);
 
   /**
-   * TODAY, in the VIEWER's frame — which is the frame the field's value is in
-   * (`recipientEventDate`: the web form holds the viewer's wall clock and the
-   * save converts). Through `getDateInTimezone`, so the day comes out of `Intl`
-   * rather than out of `getDate()`.
+   * TODAY, in the FIELD's frame. A caller whose field holds a RECIPIENT-frame
+   * day passes the recipient's today (`today` prop): using the viewer's here
+   * made "Today" save a backdated note from Denver for a Sydney recipient, and
+   * disabled Today in the reverse pairing. Without the prop it is the VIEWER's
+   * today — the frame of timed events (`recipientEventDate`: the web form holds
+   * the viewer's wall clock and the save converts) and vitals. Through
+   * `getDateInTimezone`, so the day comes out of `Intl` rather than `getDate()`.
    */
-  const today = useMemo(() => getDateInTimezone(getDeviceTimezone()), []);
+  const today = useMemo(
+    () => (todayProp && parseDateValue(todayProp) ? todayProp : getDateInTimezone(getDeviceTimezone())),
+    [todayProp]
+  );
 
   const selected = parseDateValue(value);
   const selectedIso = selected ? value.trim() : null;

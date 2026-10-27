@@ -5,6 +5,15 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
 
+// The VIEWER's zone (the browser's), pinned per test: the expiry date is shown
+// on the subscriber's own calendar, so the day it reads depends on it — and the
+// timezone sweep would otherwise vary it (Oct 5 12:00Z is Oct 6 in Kiritimati).
+const viewerZone = vi.hoisted(() => ({ value: 'America/Denver' }));
+vi.mock('@/utils/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/timezone')>();
+  return { ...actual, getDeviceTimezone: () => viewerZone.value };
+});
+
 const submit = vi.fn();
 vi.mock('@/api/feedback', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/feedback')>();
@@ -131,6 +140,7 @@ async function renderShown(path = '/circles/c1') {
 
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW });
+  viewerZone.value = 'America/Denver';
   vi.clearAllMocks();
   window.localStorage.clear();
   window.sessionStorage.clear();
@@ -147,6 +157,26 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   document.body.innerHTML = '';
+});
+
+// The expiry is a real INSTANT; the subscriber reads it on their own calendar
+// (the viewer's zone), like the backend trial-reminder email does with
+// users.timezone and like mobile's CancelReasonModal. It used to be formatted
+// in UTC: a Denver viewer read the NEXT day for an evening expiry.
+describe('CancelReasonPrompt — the date is on the subscriber\'s own calendar', () => {
+  it('Denver viewer, expiry 2026-10-06T02:30Z: Oct 5 (local), not the UTC Oct 6', async () => {
+    viewerZone.value = 'America/Denver';
+    seedStatus = statusWith(cancelPromptFixture({ accessEndsAt: '2026-10-06T02:30:00.000Z' }));
+    await renderShown();
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Your premium stays on until Oct 5, 2026.');
+  });
+
+  it('Sydney viewer, expiry 2026-10-04T14:30Z: Oct 5 (local), not the UTC Oct 4', async () => {
+    viewerZone.value = 'Australia/Sydney';
+    seedStatus = statusWith(cancelPromptFixture({ accessEndsAt: '2026-10-04T14:30:00.000Z' }));
+    await renderShown();
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Your premium stays on until Oct 5, 2026.');
+  });
 });
 
 describe('CancelReasonPrompt — gates', () => {

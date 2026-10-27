@@ -10,6 +10,7 @@ import { getSubscriptionStatus, type CancelPromptStatus } from '@/api/subscripti
 import { queryKeys } from '@/lib/queryKeys';
 import { peekDeferredFirstRun } from '@/lib/onboardingPaywall';
 import { Analytics } from '@/lib/analytics';
+import { getDeviceTimezone } from '@/utils/timezone';
 import {
   evaluateCancelReasonEligibility,
   hasAskedCancelReason,
@@ -285,11 +286,13 @@ function CancelReasonDialog({ context, onClose }: DialogProps): ReactElement {
     };
   }, []);
 
-  // Same shape as mobile ProfileScreen.getRenewalText. UTC: the store's expiry
-  // instant, not the viewer's local calendar.
+  // Same shape as mobile's formatSubscriptionDate (ProfileScreen /
+  // CancelReasonModal): the store's expiry INSTANT on the subscriber's own
+  // calendar — the viewer's zone, never UTC (which put an evening expiry on the
+  // next day west of UTC). Matches the trial-reminder email (users.timezone).
   const formattedDate = new Date(context.expirationDateMs).toLocaleDateString(
     formattingLocale(i18n.language),
-    { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }
+    { month: 'short', day: 'numeric', year: 'numeric', timeZone: getDeviceTimezone() }
   );
 
   const showReassurance = selected === 'auto_charge' && context.entitlementActive;

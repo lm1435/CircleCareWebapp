@@ -222,6 +222,9 @@ function ShiftFormBody({
 
   // Judged at the shift's own date (Phoenix and Denver agree in January only).
   const zonesDiffer = shiftZonesDiffer(date, timezone);
+  // Shift dates are RECIPIENT-frame (stored naive, shown in the recipient's
+  // zone), so the picker's "Today" must be the recipient's today, not ours.
+  const recipientToday = defaultNewEventDate(timezone) || undefined;
 
   const handleFailure = useHandleShiftFailure();
   const [saveError, setSaveError] = useState('');
@@ -472,6 +475,7 @@ function ShiftFormBody({
             label={t('shifts:form.date')}
             required
             value={date}
+            today={recipientToday}
             error={errors.shift_date}
             onChange={(e) => {
               setDate(e.target.value);
@@ -528,6 +532,7 @@ function ShiftFormBody({
             id="shift_repeat_end"
             label={t('shifts:form.endsOn')}
             value={repeatEndDate}
+            today={recipientToday}
             hint={t('calendar:addEvent.hints.endDate')}
             error={errors.shift_repeat_end}
             onChange={(e) => {

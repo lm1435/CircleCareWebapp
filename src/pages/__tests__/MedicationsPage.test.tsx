@@ -1049,6 +1049,55 @@ describe('MedicationsPage — ended series', () => {
     expect(within(inactiveRegion()).getByText('Metformin')).toBeInTheDocument();
   });
 
+  // A series ends after its end date's LAST DAY in the RECIPIENT's zone: Active
+  // through the whole end date, Ended from the recipient's next day. It used to
+  // end at noon UTC on the end date (6 AM in Denver, so a Denver med read
+  // "Ended" all of its last day; in Auckland it stayed Active past its end).
+  describe('the end date is the last ACTIVE day, in the recipient zone', () => {
+    const lastDay = makeMed({
+      id: 'last-day-1',
+      scheduled_date: '2026-10-01',
+      recurrence_end_date: '2026-10-27',
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const expectActive = (isActive: boolean) => {
+      const active = activeRegion();
+      if (isActive) {
+        expect(active).not.toBeNull();
+        expect(within(active as HTMLElement).getByText('Metformin')).toBeInTheDocument();
+        expect(screen.queryByText(/Ended /)).toBeNull();
+      } else {
+        expect(active ? within(active).queryByText('Metformin') : null).toBeNull();
+        expect(within(inactiveRegion()).getByText('Metformin')).toBeInTheDocument();
+      }
+    };
+
+    it('Denver 09:00 on the end date: still Active (its last day)', () => {
+      vi.useFakeTimers({ now: new Date('2026-10-27T15:00:00Z'), toFake: ['Date'] });
+      mockUseMedicationRoster.mockReturnValue(rosterResult([lastDay]));
+      renderPage();
+      expectActive(true);
+    });
+
+    it('Denver 00:00 the day after: Ended', () => {
+      vi.useFakeTimers({ now: new Date('2026-10-28T06:00:00Z'), toFake: ['Date'] });
+      mockUseMedicationRoster.mockReturnValue(rosterResult([lastDay]));
+      renderPage();
+      expectActive(false);
+    });
+
+    it('Auckland 00:30 the day after (11:30Z on the end date): Ended', () => {
+      vi.useFakeTimers({ now: new Date('2026-10-27T11:30:00Z'), toFake: ['Date'] });
+      mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'Pacific/Auckland' });
+      mockUseMedicationRoster.mockReturnValue(rosterResult([lastDay]));
+      renderPage();
+      expectActive(false);
+    });
+  });
+
   const endedRoot = makeMed({
     id: 'ended-1',
     scheduled_date: '2025-11-01',

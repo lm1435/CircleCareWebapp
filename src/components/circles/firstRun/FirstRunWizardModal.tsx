@@ -18,7 +18,6 @@ import {
   FIRST_RUN_SCHEDULE_PRESETS,
   buildFirstRunMedication,
   buildSiblingDoseRequests,
-  firstRunAllTimes,
   isFirstRunDosePastDue,
   requiresFullForm,
   viewerToday,
@@ -437,9 +436,15 @@ export function FirstRunWizardModal({
       // invite offer, IN THIS SAME DIALOG (never a second modal on top): a
       // terminal step with no Back, so the save button stays unreachable.
       // `savingRef` is deliberately left claimed for the same reason.
+      // Built from the WIRE values just sent (recipient frame), so the payoff
+      // shows the same clock as every other surface showing this dose.
       setSaved({
         name: name.trim(),
-        times: firstRunAllTimes(schedule.presetKey, schedule.customTime),
+        doses: [primary, ...siblings].map((dose) => ({
+          scheduledDate: dose.scheduled_date as string,
+          scheduledTime: dose.scheduled_time as string,
+        })),
+        timezone: careRecipientTimezone,
         recurrence,
       });
       setSaving(false);

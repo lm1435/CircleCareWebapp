@@ -874,6 +874,11 @@ function AddEventForm({
   // up on a circle that is not dual-zone at all.
   const deviceTimezone = getDeviceTimezone();
   const hourCycle = useHourCycle();
+  // The date pickers' "today". With no time the picked day is stored AS-IS in
+  // the recipient's frame (`eventDatesForApi`'s null-time branch), so Today
+  // must be the RECIPIENT's today; with a time the field is the viewer's wall
+  // clock and the picker keeps its own (viewer) today.
+  const pickerToday = timeStr ? undefined : defaultNewEventDate(timezone) || undefined;
   //
   // Evaluated at the EVENT's instant, not at `new Date()`. Two zones can agree
   // today and differ on the date being scheduled: Phoenix and Denver are both
@@ -1726,6 +1731,7 @@ function AddEventForm({
             label={t('addEvent.fields.date')}
             required
             value={dateStr}
+            today={pickerToday}
             error={errors.scheduled_date ?? missingErrorFor('date')}
             hint={showDualTimezone ? dualTimezoneLabel : undefined}
             onChange={(e) => {
@@ -2026,6 +2032,7 @@ function AddEventForm({
             id="recurrence_end_date"
             label={t('addEvent.fields.endDate')}
             value={recurrenceEndDate}
+            today={pickerToday}
             hint={t('addEvent.hints.endDate')}
             error={errors.recurrence_end_date}
             onChange={(e) => {

@@ -214,9 +214,16 @@ function groupMedications(
   // instance standing in for it): a "This & future" delete writes the end date
   // on the root only, so a materialized child of an ended series must not keep
   // its medication Active.
+  // The recipient's today, in THEIR zone: a series is current through its end
+  // date and ended from the recipient's next day. `null` only while the circle
+  // (and so the zone) has not answered — the page shows its skeleton then, and
+  // nothing is called ended on a guessed calendar.
+  const recipientToday = timezone ? getDateInTimezone(timezone, now) : null;
   const seriesEndedOn = (e: CalendarEvent): string | null => {
     const source = seriesContent.get(getSeriesRoot(e)) ?? e;
-    return isMedicationSeriesEnded(source, now) ? (source.recurrence_end_date ?? null) : null;
+    return recipientToday !== null && isMedicationSeriesEnded(source, recipientToday)
+      ? (source.recurrence_end_date ?? null)
+      : null;
   };
   // Discontinued is PER SERIES too: with `includeInactiveRoots` the window can
   // hold only materialized children of a stopped series (confirmed doses),

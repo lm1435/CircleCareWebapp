@@ -70,8 +70,6 @@ export interface SelectCareSummaryMedicationsOptions {
   careRecipientTimezone: string;
   /** Resolves an instant to a `YYYY-MM-DD` in the given IANA zone. */
   getDateInTimezone: (timezone: string, date?: Date) => string;
-  /** Clock used for the `recurrence_end_date` comparison. Defaults to `new Date()`. */
-  now?: Date;
 }
 
 export interface CareSummaryMedicationSelection<E extends CareSummaryMedicationEvent> {
@@ -120,16 +118,26 @@ export function addDaysToDateString(dateStr: string, days: number): string {
  * `recurrence_end_date` and NO `discontinued_at`, so it is only recognisable
  * through this check.
  *
- * KNOWN CAVEAT, kept on purpose so every surface agrees: this measures a naive
- * recipient-frame `recurrence_end_date` against a real INSTANT, so a series
- * "ends" at noon UTC on that day (8am in New York, a different DAY in
- * Auckland). Changing it changes the PDF's output and needs its own cases.
+ * The end date is the series' LAST ACTIVE DAY, in the care recipient's frame:
+ * the series is current through the whole of that day and ended from the
+ * recipient's next day. Both sides are naive `YYYY-MM-DD` strings in the
+ * recipient's zone, so the comparison is a plain string compare — the caller
+ * resolves `recipientToday` in the RECIPIENT's zone (`getDateInTimezone`).
+ *
+ * It used to measure the naive end date against an INSTANT (noon UTC on that
+ * day), which ended a Denver med at 6 AM on its last day and kept an Auckland
+ * med current for half a day after it. Matches the backend's roster rule
+ * (`recurrence_end_date < getTodayInTimezone(recipient)` in calendarEvents.ts,
+ * and `currentMedications.ts`' `recurrence_end_date >= today`).
+ *
+ * A DISCONTINUED medication is a different path: `discontinued_at` is a stop
+ * INSTANT and stops it immediately; this function never looks at it.
  */
 export function isMedicationSeriesEnded(
   event: { recurrence_end_date?: string | null },
-  now: Date = new Date()
+  recipientToday: string
 ): boolean {
-  return !!event.recurrence_end_date && new Date(event.recurrence_end_date + 'T12:00:00Z') < now;
+  return !!event.recurrence_end_date && event.recurrence_end_date < recipientToday;
 }
 
 function seriesKey(e: CareSummaryMedicationEvent): string {
@@ -171,8 +179,7 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
   const list: readonly E[] = events ?? [];
   const cutoff =
     options.cutoffStr ?? addDaysToDateString(options.todayStr, -CARE_SUMMARY_MEDICATION_LOOKBACK_DAYS);
-  const now = options.now ?? new Date();
-  const { careRecipientTimezone, getDateInTimezone } = options;
+  const { todayStr, careRecipientTimezone, getDateInTimezone } = options;
 
   const stoppedSeriesMap = collectStoppedSeries(list);
 
@@ -183,12 +190,9 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
   const seen = new Set<string>();
   const active = list.filter((e) => {
     if (e.event_type !== 'medication' || !e.recurrence_rule) return false;
-    // LEFT ALONE DELIBERATELY, and reported rather than smuggled in: this
-    // measures a naive recipient-frame `recurrence_end_date` against a real
-    // INSTANT (so a series "ends" at noon UTC, which is 8am in New York and a
-    // different DAY in Auckland). Fixing it changes behaviour and needs its own
-    // cases; both surfaces must keep printing the same list until then.
-    if (isMedicationSeriesEnded(e, now)) return false;
+    // Ended = its end date is before the recipient's today (the end date itself
+    // is still a current day).
+    if (isMedicationSeriesEnded(e, todayStr)) return false;
     const key = seriesKey(e);
     if (stoppedSeriesMap.has(key)) return false;
     if (seen.has(key)) return false;
@@ -250,7 +254,7 @@ export function selectCareSummaryMedications<E extends CareSummaryMedicationEven
   const endedStopped: StoppedMedication<E>[] = [];
   for (const e of list) {
     if (e.event_type !== 'medication' || !e.recurrence_rule || !e.recurrence_end_date) continue;
-    if (!isMedicationSeriesEnded(e, now)) continue;
+    if (!isMedicationSeriesEnded(e, todayStr)) continue;
     const key = seriesKey(e);
     if (stoppedSeriesMap.has(key) || endedSeen.has(key)) continue;
     if (e.recurrence_end_date < cutoff) continue;

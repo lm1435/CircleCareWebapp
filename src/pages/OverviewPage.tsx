@@ -124,6 +124,7 @@ export default function OverviewPage(): ReactElement {
           recipientName={circle?.recipient_name ?? ''}
           recipientPhotoUrl={circle?.recipient_photo_url}
           recipientDob={circle?.recipient_dob}
+          recipientTimezone={timezone}
           members={members}
         />
       )}
