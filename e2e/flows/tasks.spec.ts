@@ -25,7 +25,10 @@ test('create, complete, and delete a task', async ({ page, circleId }) => {
   const titleRe = new RegExp(escapeRegExp(title));
 
   await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Tasks' })).toBeVisible({ timeout: 15_000 });
+  // exact: an empty list also renders an h2 "No open tasks", which a substring match hits too.
+  await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
 
   // --- Create ---
   await page.getByRole('button', { name: 'Add task' }).first().click();
