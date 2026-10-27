@@ -29,6 +29,9 @@
 #                      canonical name will miss — resolve zones by BEHAVIOUR
 #                      (matching offsets), never by a name table
 #   America/St_Johns   -3:30, a half-hour offset that ALSO observes DST
+#   Australia/Sydney   +10/+11, southern DST on different dates from Auckland;
+#                      where the 2026-10 DOB report came from, and the biggest
+#                      APAC user base (mobile sweeps Adelaide)
 #
 # Usage:
 #   scripts/run-unit-timezones.sh                  # whole suite, every zone
@@ -50,6 +53,7 @@ ZONES=(
   Asia/Kathmandu
   Asia/Kolkata
   America/St_Johns
+  Australia/Sydney
 )
 
 # `set -u` treats an empty array expansion as unbound on bash 3.2 (macOS).

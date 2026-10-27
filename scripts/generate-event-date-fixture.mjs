@@ -50,6 +50,7 @@ const VIEWER_ZONES = [
   'Asia/Kathmandu',
   'Asia/Kolkata',
   'America/St_Johns',
+  'Australia/Sydney',
 ];
 
 // The extremes that broke the old offset lookup, the fractional offsets, and a
