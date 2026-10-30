@@ -1,10 +1,4 @@
 {
-  "hero": {
-    "bornAge": "Naissance : {{date}} · {{age}} ans",
-    "caredForBy": "Entouré par",
-    "andMore_one": "+{{count}} autre",
-    "andMore_other": "+{{count}} autres"
-  },
   "adherence": {
     "eyebrow": "7 derniers jours",
     "label": "Médicaments pris à l’heure",
@@ -16,11 +10,21 @@
     "calendar": "Calendrier",
     "medications": "Médic.",
     "tasks": "Tâches",
-    "tasksNote_one": "{{count}} ouverte",
-    "tasksNote_other": "{{count}} ouvertes",
+    "tasksNote_one": "{{count}} en cours",
+    "tasksNote_other": "{{count}} en cours",
     "vitals": "Constantes",
-    "activityFeed": "Fil d’activité",
-    "careInfo": "Santé"
+    "notesWrote": "{{who}} a écrit {{ago}}",
+    "someone": "Quelqu’un",
+    "notesEmpty": "Comment s’est passée la journée",
+    "tasksEmpty": "Tâches partagées",
+    "calendarNext": "Prochain : {{day}}",
+    "calendarEmpty": "Rien pour l’instant",
+    "medsRefill_one": "{{count}} renouvellement bientôt",
+    "medsRefill_other": "{{count}} renouvellements bientôt",
+    "medsEmpty": "Rien pour l’instant",
+    "shifts": "Gardes",
+    "healthInfo": "Infos de santé",
+    "activity": "Activité"
   },
   "appointments": {
     "title": "Prochains rendez-vous",
@@ -61,5 +65,74 @@
     "editCircle": "Modifier le cercle",
     "members": "Membres",
     "deleteCircle": "Supprimer le cercle"
+  },
+  "today": {
+    "title": "Aujourd’hui pour {{name}}",
+    "titleSelf": "Aujourd’hui",
+    "notNow": "Pas maintenant",
+    "nextUp": {
+      "heading": "À venir",
+      "taken": "Prise",
+      "done": "Terminé",
+      "takenLabel": "Prise, {{name}}, {{when}}",
+      "doneLabel": "Terminé, {{name}}, {{when}}",
+      "anyTime": "À tout moment",
+      "yesterday": "Hier",
+      "daysOverdue_one": "{{count}} jour de retard",
+      "daysOverdue_other": "{{count}} jours de retard",
+      "late": "En retard",
+      "lateHours_one": "{{count}} heure de retard",
+      "lateHours_other": "{{count}} heures de retard",
+      "allOfToday_one": "Toute la journée · {{count}} élément",
+      "allOfToday_other": "Toute la journée · {{count}} éléments",
+      "empty": "Rien d’autre de prévu pour {{name}} aujourd’hui.",
+      "emptySelf": "Rien d’autre de prévu pour vous aujourd’hui.",
+      "loadError": "Impossible de charger la liste du jour"
+    },
+    "nextStep": {
+      "eyebrow": "Prochaine étape · {{current}} sur {{total}}",
+      "first_med": {
+        "title": "Ajoutez le premier médicament de {{name}}",
+        "titleSelf": "Ajoutez votre premier médicament",
+        "body": "Tous ceux qui aident le voient ici, avec un rappel à l’heure prévue.",
+        "bodySelf": "Vous le verrez ici, avec un rappel à l’heure prévue.",
+        "cta": "Ajouter un médicament"
+      },
+      "invite": {
+        "title": "Invitez quelqu’un à aider",
+        "titleSelf": "Invitez quelqu’un à aider",
+        "body": "Un proche, un ami ou un aidant rémunéré. Ils voient les médicaments de {{name}} et reçoivent un rappel si une prise n’est pas marquée comme prise.",
+        "bodySelf": "Un proche, un ami ou un aidant rémunéré. Ils voient vos médicaments et reçoivent un rappel si une prise n’est pas marquée comme prise.",
+        "cta": "Inviter"
+      },
+      "reminders": {
+        "title": "Activez les rappels",
+        "titleSelf": "Activez les rappels",
+        "body": "Recevez un rappel quand une prise est due, et une alerte si l’une n’est pas marquée comme prise.",
+        "bodySelf": "Recevez un rappel quand une prise est due, et une alerte si l’une n’est pas marquée comme prise.",
+        "cta": "Activer les rappels"
+      }
+    },
+    "shiftsNudge": {
+      "joined": "{{member}} a rejoint le cercle de {{name}}",
+      "joinedSelf": "{{member}} a rejoint votre cercle",
+      "title": "Partagez les soins avec des gardes",
+      "body": "Répartissez les nuits et les week-ends pour que chacun sache qui est de garde.",
+      "cta": "Configurer les gardes"
+    },
+    "doseHint": {
+      "eyebrow": "Comment ça marche",
+      "body": "Touchez <b>Prise</b> quand {{name}} prend son médicament. Tous ceux qui aident le voient tout de suite, donc personne ne donne une deuxième dose.",
+      "bodySelf": "Touchez <b>Prise</b> quand vous prenez votre médicament. Tous ceux qui aident le voient tout de suite, donc personne ne donne une deuxième dose.",
+      "gotIt": "Compris"
+    },
+    "markIt": {
+      "tomorrow": "Demain",
+      "today": "Aujourd’hui",
+      "question": "Déjà pris aujourd’hui ?",
+      "action": "Le marquer",
+      "takenByYou": "Pris par vous",
+      "taken": "Prise"
+    }
   }
 }

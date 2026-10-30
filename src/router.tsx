@@ -21,12 +21,14 @@ import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import InviteLandingPage from '@/pages/InviteLandingPage';
 import NotFoundPage from '@/pages/NotFoundPage';
+import HowItWorksPage from '@/pages/HowItWorksPage';
 // Authenticated routes are `React.lazy`: none of this code is reachable (or
 // needed) until AuthGuard has confirmed a session, so it ships as separate
 // chunks instead of bloating the entry bundle every visitor pays for. Caught
 // by the single <Suspense> boundary in src/App.tsx.
 const CirclePickerPage = lazy(() => import('@/pages/CirclePickerPage'));
 const PendingInvitesPage = lazy(() => import('@/pages/PendingInvitesPage'));
+const InviteeWelcomePage = lazy(() => import('@/pages/InviteeWelcomePage'));
 const OverviewPage = lazy(() => import('@/pages/OverviewPage'));
 const CalendarPage = lazy(() => import('@/pages/CalendarPage'));
 const MedicationsPage = lazy(() => import('@/pages/MedicationsPage'));
@@ -45,6 +47,8 @@ const HelpPage = lazy(() => import('@/pages/HelpPage'));
 const HelpArticlePage = lazy(() => import('@/pages/HelpArticlePage'));
 const HelpCategoryPage = lazy(() => import('@/pages/HelpCategoryPage'));
 const UpgradePage = lazy(() => import('@/pages/UpgradePage'));
+const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
+const CircleNotificationsPage = lazy(() => import('@/pages/CircleNotificationsPage'));
 
 /**
  * `/open` target for email CTAs — see "CTA URLs and click measurement" in
@@ -77,6 +81,8 @@ export const router = createBrowserRouter([
   // Public routes — no auth required
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <SignUpPage /> },
+  // Pre-auth "See how it works" walkthrough (mobile's Preview screen).
+  { path: '/how-it-works', element: <HowItWorksPage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
   // "Have a verification code?" — email step before /verify-email.
   { path: '/verify-email/start', element: <VerifyRequestPage /> },
@@ -119,8 +125,14 @@ export const router = createBrowserRouter([
         children: [
           { path: '/circles', element: <CirclePickerPage /> },
           { path: '/invites', element: <PendingInvitesPage /> },
+          // Notifications inbox: account-level (spans circles). Renders nothing with
+          // the `notifications_inbox` flag off.
+          { path: '/notifications', element: <NotificationsPage /> },
           { path: '/profile', element: <ProfilePage /> },
           { path: '/upgrade', element: <UpgradePage /> },
+          // Onboarding 1.3.1: shown once after a NEW member accepts an invite,
+          // then Today. Standalone chrome (no circle sidebar), as the design.
+          { path: '/circles/:circleId/welcome', element: <InviteeWelcomePage /> },
         ],
       },
       {
@@ -146,6 +158,9 @@ export const router = createBrowserRouter([
           // the last 7 recipient-local days (docs/plans/daily-update.md §6).
           { path: 'daily-update', element: <DailyUpdatePage /> },
           { path: 'daily-update/:date', element: <DailyUpdatePage /> },
+          // One circle's notifications (the circle card's count, the in-circle bell).
+          // `/notifications` stays the all-circles inbox. Flag off: redirects to the circle.
+          { path: 'notifications', element: <CircleNotificationsPage /> },
         ],
       },
     ],

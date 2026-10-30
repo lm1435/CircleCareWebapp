@@ -36,6 +36,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Mock } from 'vitest';
 import '@/i18n';
 import { apiClient } from '@/lib/api';
+import { Analytics } from '@/lib/analytics';
 import { ToastProvider } from '@/components/ui';
 import { TodaysMeds } from '@/components/meds/TodaysMeds';
 import { ConfirmMedDialog } from '@/components/meds/ConfirmMedDialog';
@@ -211,11 +212,16 @@ describe('TodaysMeds (undo flow) — ambiguous confirm failure after the write l
   ])(
     '%s: re-reads the day BEFORE any verdict and reports SUCCESS, never "Couldn\'t save" (mobile parity)',
     async (_label, failWith) => {
+      const recovered = vi.spyOn(Analytics, 'medicationConfirmRecovered');
       const server = installBackend({ writeLands: true, failWith: failWith() });
       const readsBefore = () => server.todayReads;
       await takeViaTodaysMeds();
 
       expect(await screen.findByText(SUCCESS_TAKEN)).toBeInTheDocument();
+      // medication_confirm_recovered: fired once on the recovered success path,
+      // with the closed-set code of the failure that was recovered from.
+      await waitFor(() => expect(recovered).toHaveBeenCalledTimes(1));
+      expect(recovered.mock.calls[0][1]).toBe('taken');
       expect(screen.queryByText(GENERIC_ERROR)).not.toBeInTheDocument();
       expect(readsBefore()).toBeGreaterThan(0);
       await waitFor(() => expect(within(doseRow()).getByText('Taken')).toBeInTheDocument());

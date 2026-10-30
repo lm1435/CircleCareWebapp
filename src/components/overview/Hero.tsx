@@ -1,117 +1,60 @@
 import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Avatar, Eyebrow, Text } from '@/components/ui';
-import type { CircleMember } from '@/api/circleMembers';
-import { computeRecipientAge } from '@/utils/recipientAge';
+import { Eyebrow, Text } from '@/components/ui';
+import { getDateInTimezone } from '@/utils/timezone';
 
-// Spec §6.3.1 — the circle Home hero, in mobile CircleDetailScreen's COMPACT
-// form: the avatar sits LEFT of the name in one row, with the DOB eyebrow
-// above the name and "Cared for by" under it, so the page's real content
-// starts higher. (It used to be a centred 96px avatar stacked over the name.)
+// The Today header (docs/plans/simple-ui-1-3-1.md; hi-fi HiToday): a
+// "● WEDNESDAY, OCTOBER 28" eyebrow over "Today for {{name}}". It replaces the
+// old avatar / DOB / "Cared for by" hero: Today is for doing, and the circle's
+// people live on Members.
 
-/** The recipient's DOB rendered in the viewer's locale, anchored at noon UTC. */
-function formatDob(dob: string, locale: string): string | null {
-  const parsed = new Date(`${dob.slice(0, 10)}T12:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return null;
+/** The recipient's today, long form in the viewer's language ("Wednesday, October 28"). */
+export function formatTodayEyebrow(
+  timezone: string | null,
+  locale: string,
+  now: Date = new Date()
+): string | null {
+  if (!timezone) return null;
+  const day = getDateInTimezone(timezone, now);
+  // Anchor at noon UTC and format in UTC so no zone can roll it onto a neighbouring day.
+  const anchor = new Date(`${day}T12:00:00Z`);
+  if (Number.isNaN(anchor.getTime())) return null;
   try {
-    return parsed.toLocaleDateString(locale, {
-      year: 'numeric',
+    return anchor.toLocaleDateString(locale, {
+      weekday: 'long',
       month: 'long',
       day: 'numeric',
       timeZone: 'UTC',
     });
   } catch {
-    return dob.slice(0, 10);
+    return day;
   }
-}
-
-/** First name, falling back to the email — mobile's `caregiverFirstNames`. */
-function firstNameOf(member: CircleMember): string {
-  return member.first_name || member.email;
 }
 
 export interface HeroProps {
   recipientName: string;
-  recipientPhotoUrl?: string | null;
-  /** YYYY-MM-DD, or null when the circle has no date of birth on file. */
-  recipientDob?: string | null;
-  /**
-   * The care recipient's IANA zone: the age is counted on THEIR calendar.
-   * `null` while the circle is loading; the age eyebrow waits for it rather
-   * than guessing a day.
-   */
+  /** Self-care circle: the title is just "Today". */
+  isSelfCare?: boolean;
+  /** The care recipient's IANA zone; the date eyebrow waits for it. */
   recipientTimezone: string | null;
-  members: CircleMember[];
 }
 
-/**
- * The circle Home hero: avatar, DOB eyebrow, name, "Cared for by" row.
- *
- * SELF-CARE CIRCLES SHOW THE SAME NAME as everyone else. Mobile renders
- * `circle.recipient_name` unconditionally, and on a self-care circle that
- * field already holds the owner's own name — so there is no self-care branch
- * here either. Web's old "Your care space" title was a web-only invention.
- *
- * The caregiver list EXCLUDES the care recipient (they are not caring for
- * themselves in this row) and shows at most three names, mobile's cap.
- */
-export function Hero({
-  recipientName,
-  recipientPhotoUrl,
-  recipientDob,
-  recipientTimezone,
-  members,
-}: HeroProps): ReactElement {
+export function Hero({ recipientName, isSelfCare = false, recipientTimezone }: HeroProps): ReactElement {
   const { t, i18n } = useTranslation('overview');
-
-  const age =
-    recipientDob && recipientTimezone ? computeRecipientAge(recipientDob, recipientTimezone) : null;
-  const bornLabel = recipientDob ? formatDob(recipientDob, i18n.language) : null;
-  const dobEyebrow =
-    bornLabel !== null && age !== null ? t('hero.bornAge', { date: bornLabel, age }) : null;
-
-  const caregiverNames = members.filter((m) => !m.is_care_recipient).map(firstNameOf);
-  const shown = caregiverNames.slice(0, 3);
-  const overflow = caregiverNames.length - shown.length;
+  const eyebrow = formatTodayEyebrow(recipientTimezone, i18n.language);
+  const title = isSelfCare || !recipientName ? t('today.titleSelf') : t('today.title', { name: recipientName });
 
   return (
-    <header className="flex items-center gap-4 px-5 pt-5 pb-4" data-testid="overview-hero">
-      {/* 4px cream ring + moss glow, mobile `avatarWrapper`. The ring lives on
-          the wrapper rather than the Avatar's own `bordered` (2px) because
-          mobile's is 4. 60px: between Avatar's `md` and `lg`, hence the `!`. */}
-      <div className="shrink-0 rounded-full ring-4 ring-cream shadow-avatar-glow">
-        <Avatar
-          size="lg"
-          name={recipientName}
-          photoUrl={recipientPhotoUrl ?? null}
-          className="h-15! w-15!"
-        />
-      </div>
-
-      <div className="min-w-0 flex-1">
-        {dobEyebrow ? (
-          <Eyebrow color="ink-2" className="mb-0.5">
-            {dobEyebrow}
-          </Eyebrow>
-        ) : null}
-
-        {/* NEVER truncated: a long name wraps onto a second line instead. */}
-        <Text variant="heroName" className="break-words">
-          {recipientName}
-        </Text>
-
-        {shown.length > 0 ? (
-          <p className="m-0 mt-0.5 flex flex-wrap gap-x-1 text-sm text-ink-2">
-            <span>{t('hero.caredForBy')}</span>
-            {shown.map((name, i) => (
-              <span key={name} className="font-semibold text-ink">
-                {i < shown.length - 1 ? `${name},` : name}
-              </span>
-            ))}
-            {overflow > 0 ? <span>{t('hero.andMore', { count: overflow })}</span> : null}
-          </p>
-        ) : null}
-      </div>
+    <header className="px-5 pt-5 pb-4" data-testid="overview-hero">
+      {eyebrow ? (
+        <Eyebrow dot deep color="moss" className="mb-1">
+          {eyebrow}
+        </Eyebrow>
+      ) : null}
+      {/* NEVER truncated: a long name wraps onto a second line. */}
+      <Text variant="heroName" className="break-words">
+        {title}
+      </Text>
     </header>
   );
 }

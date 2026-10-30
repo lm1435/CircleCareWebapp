@@ -18,5 +18,15 @@
     "message": "CircleCare aide votre famille ? Une note rapide aide d’autres proches aidants à la découvrir.",
     "rate": "Noter CircleCare",
     "dismiss": "Plus tard"
+  },
+  "removedState": {
+    "title": "Cet élément a été supprimé",
+    "removed": "Il a été supprimé ou n’est plus programmé.",
+    "ended": "C’est terminé.",
+    "noAccess": "Vous n’avez plus accès à ce cercle.",
+    "fromEmail": "Depuis votre courriel",
+    "fromEmailDate": "Depuis votre courriel · {{date}}",
+    "ok": "OK",
+    "seeCircles": "Voir vos cercles"
   }
 }

@@ -59,5 +59,31 @@
     "title": "Sie sind bereits in diesem Kreis",
     "message": "Diese Einladung ist für jemand anderen, daher gibt es nichts anzunehmen."
   },
-  "goToCircle": "Zum Kreis"
+  "goToCircle": "Zum Kreis",
+  "welcome": {
+    "eyebrow": "Willkommen",
+    "title": "{{inviter}} hat Sie eingeladen, bei {{name}} zu helfen.",
+    "titleNoInviter": "Sie helfen bei {{name}}.",
+    "titleSelf": "{{inviter}} hat Sie in Ihren Kreis eingeladen.",
+    "titleSelfNoInviter": "Sie sind in Ihrem Kreis.",
+    "lede": "Sie sind jetzt im Kreis von {{name}}. Das können Sie tun:",
+    "ledeSelf": "Sie sind jetzt in Ihrem Kreis. Das können Sie tun:",
+    "goToToday": "Weiter zu Heute",
+    "caregiver": {
+      "medsTitle": "Die heutigen Medikamente sehen und eine Dosis als Eingenommen markieren",
+      "medsSub": "Alle sehen es sofort, so gibt niemand eine zweite Dosis.",
+      "noteTitle": "Eine Notiz dazu schreiben, wie der Tag war",
+      "noteSub": "{{inviter}} und alle anderen Helfenden können sie lesen.",
+      "noteSubNoInviter": "Alle Helfenden können sie lesen.",
+      "tasksTitle": "Termine und Aufgaben ansehen",
+      "tasksSub": "Übernehmen Sie die, die zu Ihnen gehören."
+    },
+    "viewOnly": {
+      "medsTitle": "Die heutigen Medikamente sehen",
+      "medsSub": "Wer was gegeben hat, und wann.",
+      "tasksTitle": "Termine und Aufgaben ansehen",
+      "tasksSub": "Alles, was für {{name}} ansteht.",
+      "tasksSubSelf": "Alles, was für Sie ansteht."
+    }
+  }
 }

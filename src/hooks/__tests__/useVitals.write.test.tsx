@@ -38,6 +38,7 @@ const mockVitalDeleted = vi.fn();
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     vitalLogged: vi.fn(),
+    errorOccurred: vi.fn(),
     vitalUpdated: (...args: unknown[]) => mockVitalUpdated(...args),
     vitalDeleted: (...args: unknown[]) => mockVitalDeleted(...args),
   },

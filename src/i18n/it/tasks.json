@@ -39,12 +39,12 @@
   },
   "empty": {
     "open": "Nessun incarico aperto",
-    "openHint": "Coordina le cose da fare che tengono in ordine la cura della persona cara, come commissioni, rifornimenti e controlli, e condividile con tutti quelli che aiutano.",
+    "openHint": "Cose da fare condivise, come commissioni, rifornimenti e controlli.",
     "openHintReadOnly": "Gli incarichi aggiunti dal team di cura compariranno qui.",
     "completed": "Ancora nessun incarico completato",
-    "completedHint": "Gli incarichi portati a termine dalla cerchia compariranno qui, così tutti possono vedere cosa è già stato fatto.",
+    "completedHint": "Gli incarichi completati appariranno qui.",
     "all": "Ancora nessun incarico",
-    "allHint": "Coordina le cose da fare che tengono in ordine la cura della persona cara, come commissioni, rifornimenti e controlli, e condividile con tutti quelli che aiutano.",
+    "allHint": "Cose da fare condivise, come commissioni, rifornimenti e controlli.",
     "cta": "Aggiungi incarico"
   },
   "errorTitle": "Non è stato possibile caricare gli incarichi",

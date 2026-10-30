@@ -40,11 +40,12 @@
     "forgotPassword": "Mot de passe oublié",
     "resetPassword": "Réinitialiser le mot de passe",
     "circlePicker": "Choisir un cercle",
+    "notifications": "Notifications",
     "invites": "Invitations en attente",
     "profile": "Profil",
     "upgrade": "Passer à Premium",
     "help": "Aide",
-    "overview": "Vue d’ensemble",
+    "overview": "Aujourd’hui",
     "calendar": "Calendrier",
     "meds": "Médicaments",
     "tasks": "Tâches",
@@ -57,7 +58,9 @@
     "settings": "Modifier le cercle",
     "notFound": "Page introuvable",
     "dailyUpdate": "Point du jour",
-    "providerVisits": "Visites et notes"
+    "providerVisits": "Visites et notes",
+    "howItWorks": "Découvrir comment ça marche",
+    "welcome": "Bienvenue"
   },
   "errorBoundary": {
     "title": "Un problème est survenu",
@@ -68,7 +71,7 @@
   "nav": {
     "label": "Navigation principale",
     "back": "Retour",
-    "home": "Accueil",
+    "home": "Jour",
     "calendar": "Calendrier",
     "tasks": "Tâches",
     "notes": "Notes",
@@ -199,5 +202,57 @@
     "message": "CircleCare aide votre famille ? Une note rapide aide d’autres aidants à la découvrir.",
     "rate": "Noter CircleCare",
     "dismiss": "Plus tard"
+  },
+  "removedState": {
+    "title": "Cet élément a été supprimé",
+    "removed": "Il a été supprimé ou n’est plus programmé.",
+    "ended": "C’est terminé.",
+    "noAccess": "Vous n’avez plus accès à ce cercle.",
+    "fromEmail": "Depuis votre courriel",
+    "fromEmailDate": "Depuis votre courriel · {{date}}",
+    "ok": "OK",
+    "seeCircles": "Voir vos cercles"
+  },
+  "inbox": {
+    "bell": "Notifications",
+    "bellUnread": "Notifications, {{count}} non lues",
+    "eyebrow": "Notifications",
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "allMarkedRead": "Toutes les notifications sont marquées comme lues.",
+    "unread": "Non lue",
+    "sections": {
+      "today": "Aujourd’hui",
+      "yesterday": "Hier",
+      "twoDaysAgo": "Il y a 2 jours"
+    },
+    "meta": "{{circle}} · {{time}}",
+    "dose": {
+      "taken": "{{med}} {{time}} · Prise",
+      "takenBy": "{{med}} {{time}} · Prise, notée par {{name}}",
+      "skipped": "{{med}} {{time}} · Sautée",
+      "skippedBy": "{{med}} {{time}} · Sautée, notée par {{name}}",
+      "due": "C’est l’heure de {{med}} {{time}}",
+      "notMarked": "{{med}} {{time}} n’est pas encore notée comme prise",
+      "markedAt": "Notée à {{markedTime}}"
+    },
+    "empty": "Les rappels et les nouvelles de vos cercles s’affichent ici pendant 3 jours. Les plus anciens se trouvent dans Activité.",
+    "errorTitle": "Impossible de charger les notifications.",
+    "errorBody": "Vérifiez votre connexion et réessayez. Vos rappels arrivent toujours comme d’habitude.",
+    "tryAgain": "Réessayer",
+    "side": {
+      "title": "3 derniers jours",
+      "body": "Rappels, doses prises, notes, rendez-vous et personnes qui se joignent, dans tous vos cercles, pendant 3 jours. Ouvrir une notification vous mène au même endroit qu’une notification sur votre téléphone."
+    },
+    "seeOlder": "Voir les plus anciennes dans Activité",
+    "settings": "Paramètres de notification",
+    "backToList": "Retour aux notifications",
+    "countNew_one": "{{count}} nouvelle",
+    "countNew_other": "{{count}} nouvelles",
+    "circleUnreadA11y_one": "Notifications de {{name}}, {{count}} nouvelle",
+    "circleUnreadA11y_other": "Notifications de {{name}}, {{count}} nouvelles",
+    "scopedSubtitle_one": "{{name}} · {{count}} nouvelle",
+    "scopedSubtitle_other": "{{name}} · {{count}} nouvelles",
+    "allNotifications": "Toutes les notifications"
   }
 }

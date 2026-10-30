@@ -40,11 +40,12 @@
     "forgotPassword": "Passwort vergessen",
     "resetPassword": "Passwort zurücksetzen",
     "circlePicker": "Kreis auswählen",
+    "notifications": "Benachrichtigungen",
     "invites": "Offene Einladungen",
     "profile": "Profil",
     "upgrade": "Upgrade",
     "help": "Hilfe",
-    "overview": "Übersicht",
+    "overview": "Heute",
     "calendar": "Kalender",
     "meds": "Medikamente",
     "tasks": "Aufgaben",
@@ -57,7 +58,9 @@
     "settings": "Kreis bearbeiten",
     "notFound": "Seite nicht gefunden",
     "dailyUpdate": "Tagesübersicht",
-    "providerVisits": "Besuche und Notizen"
+    "providerVisits": "Besuche und Notizen",
+    "howItWorks": "So funktioniert es",
+    "welcome": "Willkommen"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -68,7 +71,7 @@
   "nav": {
     "label": "Hauptnavigation",
     "back": "Zurück",
-    "home": "Start",
+    "home": "Heute",
     "calendar": "Kalender",
     "tasks": "Aufgaben",
     "notes": "Notizen",
@@ -199,5 +202,57 @@
     "message": "Hilft CircleCare Ihrer Familie? Eine kurze Bewertung hilft anderen Angehörigen, die App zu finden.",
     "rate": "CircleCare bewerten",
     "dismiss": "Jetzt nicht"
+  },
+  "removedState": {
+    "title": "Das wurde entfernt",
+    "removed": "Es wurde gelöscht oder ist nicht mehr geplant.",
+    "ended": "Das ist beendet.",
+    "noAccess": "Sie haben keinen Zugriff mehr auf diesen Kreis.",
+    "fromEmail": "Aus Ihrer E-Mail",
+    "fromEmailDate": "Aus Ihrer E-Mail · {{date}}",
+    "ok": "OK",
+    "seeCircles": "Ihre Kreise ansehen"
+  },
+  "inbox": {
+    "bell": "Benachrichtigungen",
+    "bellUnread": "Benachrichtigungen, {{count}} ungelesen",
+    "eyebrow": "Benachrichtigungen",
+    "title": "Benachrichtigungen",
+    "markAllRead": "Alle als gelesen markieren",
+    "allMarkedRead": "Alle Benachrichtigungen als gelesen markiert.",
+    "unread": "Ungelesen",
+    "sections": {
+      "today": "Heute",
+      "yesterday": "Gestern",
+      "twoDaysAgo": "Vor 2 Tagen"
+    },
+    "meta": "{{circle}} · {{time}}",
+    "dose": {
+      "taken": "{{med}} {{time}} · Eingenommen",
+      "takenBy": "{{med}} {{time}} · Eingenommen, markiert von {{name}}",
+      "skipped": "{{med}} {{time}} · Ausgelassen",
+      "skippedBy": "{{med}} {{time}} · Ausgelassen, markiert von {{name}}",
+      "due": "Zeit für {{med}} {{time}}",
+      "notMarked": "{{med}} {{time}} ist noch nicht als eingenommen markiert",
+      "markedAt": "Markiert um {{markedTime}}"
+    },
+    "empty": "Erinnerungen und Neuigkeiten aus Ihren Kreisen erscheinen hier 3 Tage lang. Ältere finden Sie unter Aktivität.",
+    "errorTitle": "Benachrichtigungen konnten nicht geladen werden.",
+    "errorBody": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut. Ihre Erinnerungen kommen weiterhin wie gewohnt an.",
+    "tryAgain": "Erneut versuchen",
+    "side": {
+      "title": "Letzte 3 Tage",
+      "body": "Erinnerungen, eingenommene Dosen, Notizen, Termine und neue Mitglieder aus allen Ihren Kreisen, 3 Tage lang. Ein Eintrag führt Sie an dieselbe Stelle wie eine Benachrichtigung auf dem Handy."
+    },
+    "seeOlder": "Ältere in Aktivität ansehen",
+    "settings": "Benachrichtigungseinstellungen",
+    "backToList": "Zurück zu Benachrichtigungen",
+    "countNew_one": "{{count}} neu",
+    "countNew_other": "{{count}} neu",
+    "circleUnreadA11y_one": "Benachrichtigungen für {{name}}, {{count}} neu",
+    "circleUnreadA11y_other": "Benachrichtigungen für {{name}}, {{count}} neu",
+    "scopedSubtitle_one": "{{name}} · {{count}} neu",
+    "scopedSubtitle_other": "{{name}} · {{count}} neu",
+    "allNotifications": "Alle Benachrichtigungen"
   }
 }

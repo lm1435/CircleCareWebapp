@@ -3,7 +3,7 @@
   "subtitle": "Alles, was im Pflegekreis passiert – von allen in der Familie.",
   "loading": "Aktivität wird geladen …",
   "noActivity": "Noch keine Aktivität",
-  "noActivityHint": "Hier erscheint die Aktivität, sobald Ihr Pflegeteam etwas erledigt. Gemeinsam ist es besser – laden Sie Familie und Pflegepersonen ein, damit alle sehen, was schon erledigt wurde.",
+  "noActivityHint": "Die Aktivität für {{name}} erscheint hier.",
   "inviteCta": "Jemanden einladen",
   "errorTitle": "Der Aktivitätsverlauf konnte nicht geladen werden",
   "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
@@ -101,5 +101,6 @@
     "rescheduledMedication": "Medikament verschoben: {{title}} auf {{time}}",
     "addedNotes": "Notizen hinzugefügt zu: {{title}}",
     "memberRoleChanged": "Die Rolle eines Mitglieds im Kreis wurde geändert"
-  }
+  },
+  "noActivityHintSelf": "Die Aktivität erscheint hier."
 }

@@ -958,14 +958,14 @@ describe('CalendarPage — note deep link (Task 26)', () => {
     await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
   });
 
-  it('toasts and opens no modal when nothing on that date matches the id', async () => {
+  it('shows the removed state and opens no modal when nothing on that date matches the id', async () => {
     renderEditablePage(
       '/circles/circle-1/calendar?date=2026-06-12&eventId=does-not-exist&panel=notes'
     );
 
-    expect(
-      await screen.findByText('That note is no longer available.')
-    ).toBeInTheDocument();
+    const removed = await screen.findByTestId('removed-state');
+    expect(within(removed).getByRole('heading', { name: 'This was removed' })).toBeInTheDocument();
+    expect(within(removed).getByText('It was deleted or is no longer scheduled.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
   });
@@ -986,7 +986,7 @@ describe('CalendarPage — note deep link (Task 26)', () => {
     await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
   });
 
-  it('`?eventId=` alone for a deleted row: a gentle toast, no modal', async () => {
+  it('`?eventId=` alone for a deleted row: the removed state, no modal', async () => {
     vi.mocked(apiClient.get).mockImplementation(async (url: string) => {
       if (url === '/circles/circle-1/events/gone') {
         throw { success: false, error: { code: 'NOT_FOUND', message: 'x' } };
@@ -994,14 +994,67 @@ describe('CalendarPage — note deep link (Task 26)', () => {
       return undefined as never;
     });
     renderEditablePage('/circles/circle-1/calendar?eventId=gone');
-    expect(await screen.findByText('This item is no longer available. Someone may have deleted it.')).toBeInTheDocument();
+    expect(await screen.findByText('This was removed')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent(''));
   });
 
-  it('a missed non-note link says "This item…", not "That note…"', async () => {
+  it('a missed link from an email adds the "From your email" line with the linked date; OK dismisses', async () => {
+    renderEditablePage('/circles/circle-1/calendar?date=2026-06-12&eventId=does-not-exist&src=weekly_digest');
+    const removed = await screen.findByTestId('removed-state');
+    expect(within(removed).getByTestId('removed-state-context')).toHaveTextContent(/^From your email · .*2026/);
+    await userEvent.click(within(removed).getByRole('button', { name: 'OK' }));
+    expect(screen.queryByTestId('removed-state')).not.toBeInTheDocument();
+  });
+
+  it('email_link_opened: a gone item reports landed + target_found false; a found one reports true (once each)', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const { __resetEmailLinkLandingForTests } = await import('@/lib/emailLinkLanding');
+    __resetEmailLinkLandingForTests();
+    const spy = vi.spyOn(Analytics, 'emailLinkOpened').mockImplementation(() => undefined);
+    try {
+      const gone = renderEditablePage(
+        '/circles/circle-1/calendar?date=2026-06-12&eventId=does-not-exist&src=weekly_digest'
+      );
+      await screen.findByTestId('removed-state');
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith({
+        type: 'weekly_digest',
+        appState: 'signed_in',
+        landed: true,
+        targetFound: false,
+      });
+      gone.unmount();
+
+      __resetEmailLinkLandingForTests();
+      spy.mockClear();
+      mockGetEvents.mockResolvedValue([
+        makeEvent({
+          id: 'parent-1_2026-06-19',
+          parent_event_id: 'parent-1',
+          is_virtual: true,
+          event_type: 'task',
+          title: 'Water the plants',
+          recurrence_rule: 'daily',
+          scheduled_date: '2026-06-19',
+          scheduled_time: null,
+        }),
+      ]);
+      renderEditablePage(
+        '/circles/circle-1/calendar?date=2026-06-19&eventId=parent-1&src=weekly_digest'
+      );
+      await screen.findByRole('dialog');
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ landed: true, targetFound: true }));
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('without `src` the removed state has no email context line', async () => {
     renderEditablePage('/circles/circle-1/calendar?date=2026-06-12&eventId=does-not-exist');
-    expect(await screen.findByText('This item is no longer available. Someone may have deleted it.')).toBeInTheDocument();
+    const removed = await screen.findByTestId('removed-state');
+    expect(within(removed).queryByTestId('removed-state-context')).not.toBeInTheDocument();
   });
 
   it('ignores a deep link with no `date`/`eventId` — page renders normally, no toast', async () => {
@@ -1009,6 +1062,6 @@ describe('CalendarPage — note deep link (Task 26)', () => {
     await screen.findByRole('grid', { name: 'Week view calendar' });
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.queryByText('That note is no longer available.')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('removed-state')).not.toBeInTheDocument();
   });
 });

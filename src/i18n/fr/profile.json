@@ -97,7 +97,7 @@
     "success": "Unités mises à jour."
   },
   "emailDigest": {
-    "description": "Un récapitulatif hebdomadaire de l’activité des soins, envoyé à votre adresse e-mail.",
+    "description": "Un récapitulatif de l’activité des soins, envoyé par e-mail les semaines où il y a quelque chose à signaler.",
     "enable": "M’envoyer un récapitulatif hebdomadaire",
     "day": "Jour d’envoi",
     "premiumNote": "Inclus avec Premium.",

@@ -186,7 +186,7 @@ describe('DoseQuietHoursNote', () => {
 
 describe('in the medication form', () => {
   function renderForm() {
-    return wrap(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+    return wrap(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
   }
 
   it('appears under the Time field when a dose time inside quiet hours is typed, never blocks Save', async () => {

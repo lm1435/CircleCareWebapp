@@ -77,5 +77,28 @@
     "message": "O CircleCare está a ajudar a sua família? Uma avaliação rápida ajuda outros cuidadores a encontrá-lo.",
     "rate": "Avaliar o CircleCare",
     "dismiss": "Agora não"
+  },
+  "removedState": {
+    "title": "Isto foi removido",
+    "removed": "Foi eliminado ou já não está agendado.",
+    "ended": "Isto terminou.",
+    "noAccess": "Já não tem acesso a este círculo.",
+    "fromEmail": "Do seu e-mail",
+    "fromEmailDate": "Do seu e-mail · {{date}}",
+    "ok": "OK",
+    "seeCircles": "Ver os seus círculos"
+  },
+  "inbox": {
+    "bellUnread": "Notificações, {{count}} por ler",
+    "unread": "Por ler",
+    "dose": {
+      "skipped": "{{med}} {{time}} · Saltada",
+      "skippedBy": "{{med}} {{time}} · Saltada, marcada por {{name}}"
+    },
+    "errorBody": "Verifique a sua ligação e tente novamente. Os seus lembretes continuam a chegar normalmente.",
+    "settings": "Definições de notificação",
+    "side": {
+      "body": "Lembretes, doses tomadas, notas, compromissos e pessoas que entram, em todos os seus círculos, durante 3 dias. Abrir uma leva-o ao mesmo sítio que uma notificação no telemóvel."
+    }
   }
 }

@@ -31,7 +31,6 @@ import {
 
 const prefix = () => `ENDSER_${currentRunId()}_`;
 
-const ACTIVE = 'Active';
 const INACTIVE = 'Inactive / Past medications';
 
 /** "Jan 5, 2026" for a naive YYYY-MM-DD, never shifted by the runner's zone. */
@@ -85,9 +84,7 @@ test.describe('Meds roster: an ENDED series is Inactive ("Ended <date>")', () =>
     try {
       // Live first: listed under Active.
       await gotoMedsRoster(page, circleId);
-      const activeCard = page
-        .getByRole('region', { name: ACTIVE, exact: true })
-        .locator('li')
+      const activeCard = page.getByTestId('med-time-row')
         .filter({ hasText: name });
       await expect(activeCard).toBeVisible({ timeout: 20_000 });
 
@@ -114,7 +111,7 @@ test.describe('Meds roster: an ENDED series is Inactive ("Ended <date>")', () =>
       const endedLabel = `Ended ${shortDate(yesterday)}`;
       await expect(inactiveCard).toContainText(endedLabel);
       await expect(
-        page.getByRole('region', { name: ACTIVE, exact: true }).locator('li').filter({ hasText: name })
+        page.getByTestId('med-time-row').filter({ hasText: name })
       ).toHaveCount(0);
       // The Ended label is part of the card's accessible name.
       await expect(
@@ -206,9 +203,7 @@ test.describe('Meds roster: an ENDED series is Inactive ("Ended <date>")', () =>
       endSeriesInDb(amId, dateInTz(tz, -20));
 
       await gotoMedsRoster(page, circleId);
-      const activeCard = page
-        .getByRole('region', { name: ACTIVE, exact: true })
-        .locator('li')
+      const activeCard = page.getByTestId('med-time-row')
         .filter({ hasText: name });
       await expect(activeCard).toBeVisible({ timeout: 20_000 });
       await expect(activeCard).toHaveCount(1);
@@ -271,14 +266,14 @@ test.describe('Meds roster: an ENDED series is Inactive ("Ended <date>")', () =>
 
       await gotoMedsRoster(page, circleId);
       const inactive = page.getByRole('region', { name: INACTIVE, exact: true });
-      const active = page.getByRole('region', { name: ACTIVE, exact: true });
+      const active = page.getByTestId('med-time-row');
 
       // Ended: one card, "Ended <date>", no Reactivate/Discontinue, no stock.
       const endedCard = inactive.locator('li').filter({ hasText: endedName });
       await expect(endedCard).toHaveCount(1, { timeout: 20_000 });
       await expect(endedCard).toContainText(`Ended ${shortDate(endDate)}`);
       await expect(endedCard).not.toContainText(/days? left/);
-      await expect(active.locator('li').filter({ hasText: endedName })).toHaveCount(0);
+      await expect(active.filter({ hasText: endedName })).toHaveCount(0);
       await endedCard.getByRole('button', { name: `More actions for ${endedName}` }).click();
       await expect(page.getByRole('menuitem', { name: 'Edit' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'Reactivate' })).toHaveCount(0);
@@ -290,7 +285,7 @@ test.describe('Meds roster: an ENDED series is Inactive ("Ended <date>")', () =>
       await expect(discCard).toHaveCount(1);
       await expect(discCard).toContainText('Inactive');
       await expect(discCard).not.toContainText('Ended');
-      await expect(active.locator('li').filter({ hasText: discName })).toHaveCount(0);
+      await expect(active.filter({ hasText: discName })).toHaveCount(0);
       await discCard.getByRole('button', { name: `More actions for ${discName}` }).click();
       await expect(page.getByRole('menuitem', { name: 'Reactivate' })).toBeVisible();
       await page.keyboard.press('Escape');

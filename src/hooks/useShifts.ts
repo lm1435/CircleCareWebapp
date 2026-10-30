@@ -24,6 +24,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import { classifyShiftFailure, describeShiftFailure } from '@/lib/shiftErrors';
+import { failureContext, type FailureAction } from '@/lib/apiErrors';
 import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
@@ -197,7 +198,10 @@ type ShiftAction = 'take' | 'drop' | 'assign' | 'save' | 'delete';
  * winner; a stale row disappears), prompt the owner-aware paywall, refresh the
  * access flags on a permission refusal.
  */
-function useShiftMutationOnError(circleId: string): (error: unknown) => void {
+function useShiftMutationOnError(
+  circleId: string,
+  action: FailureAction
+): (error: unknown) => void {
   const queryClient = useQueryClient();
   // Owner-aware: only the circle's OWNER is offered Upgrade; everyone else gets
   // the owner-only notice (premium = the OWNER's tier).
@@ -205,6 +209,8 @@ function useShiftMutationOnError(circleId: string): (error: unknown) => void {
 
   return useCallback(
     (error: unknown) => {
+      // `error_occurred` for the admin digest: enums only, no circle_id.
+      Analytics.errorOccurred('shifts', `shifts_${action}_failed`, failureContext('shifts', action, error));
       const kind = classifyShiftFailure(error);
       if (kind === 'already_taken') Analytics.shiftTakeConflict();
       if (kind === 'subscription') {
@@ -215,7 +221,7 @@ function useShiftMutationOnError(circleId: string): (error: unknown) => void {
       if (kind === 'permission') invalidateCircleAccessFlags(queryClient, circleId);
       invalidateShifts(queryClient, circleId);
     },
-    [circleId, promptUpgrade, queryClient]
+    [circleId, promptUpgrade, queryClient, action]
   );
 }
 
@@ -305,7 +311,7 @@ export function useTakeShift(
   circleId: string
 ): UseMutationResult<ShiftActionResult, unknown, TakeShiftVariables, OptimisticContext> {
   const queryClient = useQueryClient();
-  const onError = useShiftMutationOnError(circleId);
+  const onError = useShiftMutationOnError(circleId, 'update');
   const me = useAuthStore((s) => s.user);
 
   return useMutation({
@@ -354,7 +360,7 @@ export function useDropShift(
   circleId: string
 ): UseMutationResult<ShiftActionResult, unknown, ShiftActionVariables, OptimisticContext> {
   const queryClient = useQueryClient();
-  const onError = useShiftMutationOnError(circleId);
+  const onError = useShiftMutationOnError(circleId, 'update');
   const meId = useAuthStore((s) => s.user?.id ?? null);
   const { viewerRole, timezone } = useCircle(circleId);
 
@@ -391,7 +397,7 @@ export function useAssignShift(
   circleId: string
 ): UseMutationResult<ShiftActionResult, unknown, AssignShiftVariables, OptimisticContext> {
   const queryClient = useQueryClient();
-  const onError = useShiftMutationOnError(circleId);
+  const onError = useShiftMutationOnError(circleId, 'update');
   const { viewerRole, members } = useCircle(circleId);
 
   return useMutation({
@@ -430,7 +436,7 @@ export function useCreateShift(
   circleId: string
 ): UseMutationResult<CalendarEvent, unknown, CreateShiftRequest> {
   const queryClient = useQueryClient();
-  const onError = useShiftMutationOnError(circleId);
+  const onError = useShiftMutationOnError(circleId, 'create');
   return useMutation({
     mutationFn: (data: CreateShiftRequest) => createShift(circleId, data),
     onSuccess: () => invalidateShifts(queryClient, circleId),
@@ -449,7 +455,7 @@ export function useUpdateShift(
   circleId: string
 ): UseMutationResult<CalendarEvent, unknown, UpdateShiftVariables> {
   const queryClient = useQueryClient();
-  const onError = useShiftMutationOnError(circleId);
+  const onError = useShiftMutationOnError(circleId, 'update');
   return useMutation({
     mutationFn: ({ eventId, data }: UpdateShiftVariables) => updateShift(circleId, eventId, data),
     onSuccess: () => {
@@ -471,7 +477,7 @@ export function useDeleteShift(
   circleId: string
 ): UseMutationResult<unknown, unknown, DeleteShiftVariables> {
   const queryClient = useQueryClient();
-  const onError = useShiftMutationOnError(circleId);
+  const onError = useShiftMutationOnError(circleId, 'delete');
   return useMutation({
     mutationFn: ({ shift, scope }: DeleteShiftVariables) => {
       const recurring = !!shift.recurrence_rule || !!shift.parent_event_id;

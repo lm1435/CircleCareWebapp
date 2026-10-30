@@ -18,6 +18,11 @@ const LOGOUT = (
 
 const initialAuthState = useAuthStore.getState();
 
+// The bell's data hook (only mounts with the inbox flag on; flag is off by default here).
+vi.mock('@/hooks/useInbox', () => ({
+  useInboxUnreadSummary: () => ({ data: { unread_count: 2, by_circle: {} } }),
+}));
+
 function renderLayout(initialEntries: string[] = ['/help']): void {
   render(
     <MemoryRouter initialEntries={initialEntries}>
@@ -152,5 +157,21 @@ describe('StandalonePageLayout', () => {
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByText('Circles page stub')).toBeInTheDocument();
     expect(screen.getByRole('main')).toBe(main);
+  });
+
+  describe('notification bell (inbox flag on)', () => {
+    beforeEach(() => vi.stubEnv('VITE_NOTIFICATIONS_INBOX', 'on'));
+    afterEach(() => vi.unstubAllEnvs());
+
+    it('is hidden on the circle list (each card carries its own count)', () => {
+      renderLayout(['/circles']);
+      expect(screen.getByText('Circles page stub')).toBeInTheDocument();
+      expect(screen.queryByTestId('notification-bell')).toBeNull();
+    });
+
+    it('stays on other standalone pages (all-circles bell)', () => {
+      renderLayout(['/profile']);
+      expect(screen.getByTestId('notification-bell')).toHaveAttribute('href', '/notifications');
+    });
   });
 });

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { authApi, getApiError } from '@/api/auth';
 import { supabase } from '@/lib/supabase';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { setPendingReturnPath } from '@/lib/returnPath';
 import { peekPendingSignupEmail, setPendingSignupEmail } from '@/lib/pendingSignupEmail';
 import { setPendingTermsConsent, clearPendingTermsConsent } from '@/lib/pendingTermsConsent';
 import {
@@ -29,7 +30,6 @@ import { validateWithZod, focusFirstError, type FieldErrors } from '@/components
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthTopBar } from '@/components/auth/AuthTopBar';
 import { AuthHeader } from '@/components/auth/AuthHeader';
-import { DoseDemoCard } from '@/components/auth/DoseDemoCard';
 import { AuthDivider } from '@/components/auth/AuthDivider';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
@@ -340,6 +340,8 @@ export default function SignUpPage(): ReactElement {
     // with the right method after the full-page OAuth redirect (router state
     // and this closure are both gone by then).
     setPendingAuthMethod(provider);
+    // A signup is not a return-to-link flow: drop any path a prior login attempt parked.
+    setPendingReturnPath(null);
     const failureMessage =
       provider === 'google' ? t('login.errors.googleFailed') : t('login.errors.appleFailed');
     // THE HANDSHAKE NEVER STARTED — UNPARK EVERYTHING.
@@ -407,7 +409,16 @@ export default function SignUpPage(): ReactElement {
         </div>
       ) : null}
 
-      <DoseDemoCard />
+      {/* The pre-auth walkthrough (mobile Welcome's "See how it works"). */}
+      <p className="m-0 -mt-3 mb-4">
+        <Link
+          to="/how-it-works"
+          state={{ previewSource: 'signup' }}
+          className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss"
+        >
+          {t('preview.seeHowItWorks')}
+        </Link>
+      </p>
 
       <OAuthButtons
         disabled={isSubmitting || !termsAccepted}

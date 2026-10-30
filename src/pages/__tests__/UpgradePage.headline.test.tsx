@@ -36,6 +36,7 @@ vi.mock('@/lib/analytics', () => ({
     planSelectionTrialStarted: vi.fn(),
     planSelectionPurchaseCancelled: vi.fn(),
     paywallDismissed: vi.fn(),
+    paywallShown: vi.fn(),
   },
 }));
 

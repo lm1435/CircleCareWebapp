@@ -29,6 +29,8 @@ vi.mock('@/lib/analytics', () => ({
     shiftAssigned: vi.fn(),
     shiftDeleted: vi.fn(),
     shiftTakeConflict: vi.fn(),
+    // useShifts reports failed writes through error_occurred.
+    errorOccurred: vi.fn(),
   },
 }));
 vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({

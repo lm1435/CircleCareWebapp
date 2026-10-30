@@ -32,9 +32,14 @@ import { isUserCancelledError, type WebPlan } from '@/lib/purchases';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { legalUrl } from '@/lib/legalLinks';
 import { Analytics } from '@/lib/analytics';
-import { asPaywallContext, type PaywallContext, type UpgradeLocationState } from '@/lib/paywallContext';
+import {
+  asOnboardingPaywallTrigger,
+  asPaywallContext,
+  type PaywallContext,
+  type UpgradeLocationState,
+} from '@/lib/paywallContext';
 import { notifyEarnedPaywallAccepted, notifyEarnedPaywallDismissed } from '@/lib/earnedUpsellSession';
-import { firstRunNavigationState, takeDeferredFirstRun } from '@/lib/onboardingPaywall';
+import { clearDeferredFirstRun, takeDeferredFirstRun } from '@/lib/onboardingPaywall';
 
 /**
  * Web purchase page (RevenueCat Web Billing). Free users land here from the
@@ -87,6 +92,21 @@ export default function UpgradePage(): ReactElement {
   }, [paywallContext]);
 
   /**
+   * `paywall_shown` (onboarding 1.3.1): the onboarding paywall was put on screen, with the
+   * moment that did it. Once per mount (a ref, because StrictMode double-runs effects);
+   * `voice_try_used` is false on web (voice is mobile only).
+   */
+  const paywallTrigger = asOnboardingPaywallTrigger(
+    (location.state as UpgradeLocationState | null)?.paywallTrigger
+  );
+  const paywallShownRef = useRef(false);
+  useEffect(() => {
+    if (!isOnboarding || paywallShownRef.current) return;
+    paywallShownRef.current = true;
+    Analytics.paywallShown(paywallTrigger, false);
+  }, [isOnboarding, paywallTrigger]);
+
+  /**
    * A completed purchase is not a dismissal. Set BEFORE the navigation that
    * follows it, because the unmount cleanup below runs synchronously with that
    * navigation (mobile keeps `purchasedRef` for the identical reason).
@@ -130,39 +150,36 @@ export default function UpgradePage(): ReactElement {
     }, 0);
     return () => {
       window.clearTimeout(timer);
-      if (armedRef.current) recordDismissal();
+      if (armedRef.current) {
+        recordDismissal();
+        // A browser-Back exit never went through a control, so the parked return target
+        // (onboarding only) is dropped here: it must not outlive the paywall it was for.
+        if (isOnboarding) clearDeferredFirstRun();
+      }
     };
-  }, [recordDismissal]);
+  }, [recordDismissal, isOnboarding]);
 
   /**
-   * HOW THE DEFERRED FIRST-RUN WIZARD SURVIVES THE ROUTE CHANGE.
+   * WHERE EVERY ONBOARDING EXIT LANDS: TODAY (onboarding 1.3.1; it used to be the first-run
+   * wizard, which now runs BEFORE the paywall). The circle comes from the return target
+   * parked in sessionStorage by `consumeOnboardingPaywall` right before navigating here
+   * (lib/onboardingPaywall.ts); whether the user bought, declined or closed, they land on
+   * the circle they just set up.
    *
-   * Mobile defers the wizard in a ref and replays it on the create screen's
-   * next `focus`. Web cannot: `/upgrade` is a full route, the create modal is
-   * long unmounted, and its component state is gone. The record therefore
-   * lives in sessionStorage (lib/onboardingPaywall.ts) and is CONSUMED here,
-   * on the way out — every exit from the onboarding paywall lands on the new
-   * circle with the wizard open, whether the user bought, declined, or closed.
-   *
-   * `replace: true` so Back from the circle does not walk into the paywall the
-   * user just answered — mobile resets its stack for the same reason.
-   *
-   * The `/circles` fallback covers a consumed-or-missing record (a second tab,
+   * `replace: true` so Back from Today does not walk into the paywall the user just
+   * answered. The `/circles` fallback covers a consumed-or-missing record (a second tab,
    * storage blocked). It is never a dead end.
    */
   const goToDeferredFirstRun = useCallback((): void => {
     const pending = takeDeferredFirstRun();
     if (pending) {
-      navigate(`/circles/${pending.circleId}`, {
-        replace: true,
-        state: firstRunNavigationState(pending.recipientName),
-      });
+      navigate(`/circles/${pending.circleId}`, { replace: true });
     } else {
       navigate('/circles', { replace: true });
     }
   }, [navigate]);
 
-  /** Leave without buying. Onboarding goes to the wizard; every other context
+  /** Leave without buying. Onboarding goes to Today; every other context
    *  keeps this page's original destination. */
   const handleDecline = useCallback((): void => {
     recordDismissal();
@@ -182,8 +199,7 @@ export default function UpgradePage(): ReactElement {
     handleDecline();
   }, [paywallContext, handleDecline]);
 
-  /** Where the post-purchase "Continue" lands. A purchase does not cancel the
-   *  wizard — mobile replays the deferred wizard after a purchase too. */
+  /** Where the post-purchase "Continue" lands: onboarding goes to Today too. */
   const handlePurchasedContinue = useCallback((): void => {
     if (isOnboarding) goToDeferredFirstRun();
     else navigate('/circles');
@@ -805,8 +821,7 @@ function PlansView({
       {/* CONTINUE FREE — onboarding context only, exactly as mobile
           (PlanSelectionScreen.tsx:733-746). THE USER MUST BE ABLE TO DECLINE:
           this is a soft paywall shown to someone who has owned a care circle
-          for four seconds, and the next thing they see is the setup wizard
-          either way. Do not remove it or hide it behind the fold. */}
+          for a few seconds, and the next thing they see is Today either way. Do not remove it or hide it behind the fold. */}
       {isOnboarding && (
         <Button
           variant="ghost"

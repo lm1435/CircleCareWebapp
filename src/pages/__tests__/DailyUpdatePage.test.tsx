@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import { apiClient } from '@/lib/api';
 import { Analytics } from '@/lib/analytics';
+import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
 import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
 import type { DailyUpdateData } from '@/api/dailyUpdate';
@@ -15,7 +16,7 @@ import DailyUpdatePage from '../DailyUpdatePage';
  * within the last 7 recipient-local days.
  */
 vi.mock('@/lib/analytics', () => ({
-  Analytics: { dailyUpdateOpened: vi.fn(), dailyUpdateRowTapped: vi.fn() },
+  Analytics: { dailyUpdateOpened: vi.fn(), dailyUpdateRowTapped: vi.fn(), emailLinkOpened: vi.fn() },
 }));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/components/layout/PageMasthead', () => ({
@@ -366,10 +367,33 @@ describe('DailyUpdatePage', () => {
     ['in the future', '2026-10-09'],
     ['malformed', '2026-10-7'],
     ['impossible', '2026-02-30'],
-  ])('a date %s is unavailable without a request', async (_label, date) => {
+  ])('a date %s shows the removed state without a request', async (_label, date) => {
     renderAt(`/circles/c1/daily-update/${date}`);
-    expect(await screen.findByText('This update is no longer available.')).toBeInTheDocument();
+    expect(await screen.findByText('This was removed')).toBeInTheDocument();
     expect(calls()).toHaveLength(0);
+  });
+
+  it('email_link_opened: a gone day reports target_found false (with the removed-state context), a live day true', async () => {
+    __resetEmailLinkLandingForTests();
+    const first = renderAt('/circles/c1/daily-update/2026-09-30?src=weekly_digest');
+    expect(await screen.findByText('This was removed')).toBeInTheDocument();
+    expect(screen.getByTestId('removed-state-context')).toHaveTextContent(/^From your email · /);
+    expect(vi.mocked(Analytics.emailLinkOpened)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(Analytics.emailLinkOpened)).toHaveBeenCalledWith({
+      type: 'weekly_digest',
+      appState: 'signed_in',
+      landed: true,
+      targetFound: false,
+    });
+    first.unmount();
+
+    __resetEmailLinkLandingForTests();
+    vi.mocked(Analytics.emailLinkOpened).mockClear();
+    renderAt('/circles/c1/daily-update/2026-10-08?src=weekly_digest');
+    await screen.findByText('A smooth day for Rose.');
+    expect(vi.mocked(Analytics.emailLinkOpened)).toHaveBeenCalledWith(
+      expect.objectContaining({ landed: true, targetFound: true })
+    );
   });
 
   it('7 days back is still available (recipient-local today, not the device\'s)', async () => {
@@ -384,7 +408,7 @@ describe('DailyUpdatePage', () => {
     async (code) => {
       respond = () => ({ success: false, error: { code, message: 'x' } });
       renderAt('/circles/c1/daily-update/2026-10-01');
-      expect(await screen.findByText('This update is no longer available.')).toBeInTheDocument();
+      expect(await screen.findByText('This was removed')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
     }
   );

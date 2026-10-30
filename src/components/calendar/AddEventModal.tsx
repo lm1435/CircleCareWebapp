@@ -1,29 +1,45 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from './DrugAutocomplete';
 import { DoctorField } from './DoctorField';
 import { NotificationInfoModal } from './NotificationInfoModal';
 import { DoseQuietHoursNote } from './DoseQuietHoursNote';
+import { DosePastTimeNote } from './DosePastTimeNote';
+import { siblingDosePayload } from '@/utils/firstRunMedication';
 import {
   deleteEvent as deleteEventRequest,
   eventFormSchema,
   SERIES_ROOT_CONTENT_FIELDS,
   type CalendarEvent,
   type CreateEventRequest,
+  type EventsPresence,
   type EventType,
   type SeriesRoot,
 } from '@/api/calendarEvents';
 import { useCachedCircleEvents, useCreateEvent, useUpdateEvent } from '@/hooks/useCalendarEvents';
+import { writeFirstMedNote } from '@/lib/firstMedNote';
+import { markItEligible, toWireTime, type SavedMedicationInfo } from '@/utils/firstMedSaved';
 import { useProviders } from '@/hooks/useProviders';
 import type { Provider } from '@/api/providers';
 import { WEB_ENTRY_SOURCE } from '@/utils/entrySource';
 import { useCircle } from '@/hooks/useCircle';
+import { apiErrorStatus, classifyFailureCode } from '@/lib/apiErrors';
 import { useSessionDraft } from '@/hooks/useSessionDraft';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
-import { Analytics } from '@/lib/analytics';
+import {
+  Analytics,
+  type AppointmentAbandonField,
+  type EntryFormOrigin,
+  type EntryFormStep,
+  type TimeChipId,
+} from '@/lib/analytics';
+import { MED_TIME_CHIPS, chipForTime } from '@/lib/medTimeOfDay';
+import { useLargeTextLayoutEvent } from '@/lib/largeText';
+import { TimeChips } from './TimeChips';
+import { DisclosureRow } from './DisclosureRow';
 import { APPOINTMENT_TITLE_KEYS, MED_SCHEDULE_PRESETS, TASK_TITLE_KEYS } from '@/lib/quickPicks';
 import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
 import {
@@ -47,6 +63,7 @@ import {
   ChipSelect,
   ConfirmDialog,
   DateField,
+  Eyebrow,
   Icon,
   Modal,
   Select,
@@ -165,8 +182,30 @@ export interface AddEventModalProps {
    */
   initialProviderId?: string;
   onClose: () => void;
-  /** Called after a successful create/update (parent typically closes + toasts). */
-  onSaved?: () => void;
+  /**
+   * Called after a successful create/update (parent typically closes + toasts). A NEW
+   * medication passes what it saved (onboarding 1.3.1: the first-run payoff and Today's
+   * Mark it note are built from it); every other save passes nothing.
+   */
+  onSaved?: (saved?: SavedMedicationInfo) => void;
+  /**
+   * FIRST-RUN MODE (onboarding 1.3.1): the setup wizard's "Add {{name}}'s first med" opens
+   * THIS form (the real one, not a copy) headed by "{{NAME}}'S FIRST MED" / "What does
+   * {{name}} take?" with the hint, "Skip for now" in place of Cancel. Only meaningful on a
+   * NEW simple medication; ignored everywhere else. `onClose` without a save = skipped.
+   */
+  firstRun?: boolean;
+  /**
+   * How the form was opened, for the form-funnel analytics (`entry_form_opened`
+   * and the abandon events). Defaults to 'other'.
+   */
+  entry?: EntryFormOrigin;
+  /**
+   * 'auto' (default): a NEW medication / appointment opened for its type gets the short
+   * form ("What is it? / When? / ..."). 'full' forces the all-fields layout, which
+   * edits, tasks and a type-less open always use. Same state and payload either way.
+   */
+  layout?: 'auto' | 'full';
 }
 
 type RecurrenceChoice =
@@ -253,6 +292,23 @@ const RECURRENCE_DAYS_ID = 'recurrence_days';
  */
 const FOOTER_BUTTON_CLASS = 'py-[10px]! min-h-[48px]!';
 const RECURRENCE_DAYS_ERROR_ID = 'recurrence_days-error';
+/** Where focus goes first after a refused save: the form's fields in reading order. */
+const FOCUS_ORDER = [
+  'medication_name',
+  'title',
+  'medication_dosage',
+  'time-chips-morning',
+  'scheduled_date',
+  'scheduled_time',
+  'endTime',
+  'location',
+  'description',
+  'assigned_to',
+  'recurrence_rule',
+  'as_needed_reason',
+  RECURRENCE_DAYS_ID,
+  'recurrence_end_date',
+];
 const RECURRENCE_DAYS_LOCK_ID = 'recurrence_days-lock';
 const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
 
@@ -460,6 +516,9 @@ function AddEventForm({
   initialProviderId,
   onClose,
   onSaved,
+  firstRun: firstRunProp = false,
+  entry: entryOrigin = 'other',
+  layout = 'auto',
 }: AddEventModalProps): ReactElement | null {
   const { t, i18n } = useTranslation(['calendar', 'common']);
   const { showToast } = useToast();
@@ -504,10 +563,25 @@ function AddEventForm({
   const [eventType, setEventType] = useState<EventType>(
     event?.event_type ?? initialType ?? 'medication'
   );
+  // SIMPLE LAYOUT (docs/plans/simple-ui-1-3-1.md): a NEW medication or appointment
+  // opened for that type gets the short "What is it? / When? / ..." form. Everything
+  // else (edit, task, a type-less open) keeps the full form, so no field is lost.
+  const simpleKind: 'medication' | 'appointment' | null =
+    layout !== 'full' &&
+    !isEditing &&
+    (initialType === 'medication' || initialType === 'appointment')
+      ? initialType
+      : null;
+  const firstRun = firstRunProp && simpleKind === 'medication';
   const [title, setTitle] = useState(event?.medication_name || event?.title || initialTitle || '');
   const [dosage, setDosage] = useState(event?.medication_dosage ?? initialDosage ?? '');
   /** The RxNorm row behind a PICKED medication name; `null` once it is hand-edited. */
   const [selectedDrug, setSelectedDrug] = useState<DrugSearchResult | null>(null);
+  /**
+   * The "Use "x" as typed" row was chosen and the name not edited since (feeds
+   * `med_name_suggestion_outcome`). Cleared by any keystroke or a picked suggestion.
+   */
+  const usedAsTypedRef = useRef(false);
   /**
    * The VIEWER-frame values the form's inputs hold, converted OUT of the
    * recipient frame the event is stored in. This is the exact inverse of the
@@ -607,7 +681,13 @@ function AddEventForm({
   // for edit starts (and stays) on `as_needed`; `isAsNeededEdit` locks it.
   const isAsNeededEdit = isEditing && event.as_needed === true;
   const [recurrence, setRecurrence] = useState<RecurrenceChoice>(
-    isAsNeededEdit ? 'as_needed' : initialRecurrenceState.choice
+    isAsNeededEdit
+      ? 'as_needed'
+      : // A new simple medication starts on "Every day" (the wizard's explicit
+        // null / rule still wins): the pills below always have one answer.
+        simpleKind === 'medication' && initialRecurrence === undefined
+        ? 'daily'
+        : initialRecurrenceState.choice
   );
   const [asNeededReason, setAsNeededReason] = useState(event?.as_needed_reason ?? '');
   const [daysOn, setDaysOn] = useState(initialRecurrenceState.daysOn);
@@ -657,6 +737,14 @@ function AddEventForm({
 
   const [errors, setErrors] = useState<FieldErrors>({});
 
+  // `medication_form_abandoned` bookkeeping: when the form opened, the last
+  // field the user touched, whether it was saved, and whether it already fired
+  // (once per form session). Refs, not state: none of it renders.
+  const openedAtRef = useRef(Date.now());
+  const lastFieldRef = useRef<AbandonField>('none');
+  const savedRef = useRef(false);
+  const abandonReportedRef = useRef(false);
+
   // PK9: a NEW event survives a forced sign-out (sessionStorage, same user,
   // 30 min). The core fields only; recurrence/reminder choices are cheap to
   // redo and tie to rules that must be re-derived. Edits are not drafts.
@@ -691,12 +779,8 @@ function AddEventForm({
   // Payload held while the past-time notice is showing (mobile GAP #4 parity):
   // a medication scheduled for TODAY at a time that already passed gets a
   // lightweight confirm, then proceeds. The two paths mean different things:
-  //   - creating: the backend does NOT create the med for today at all — it
-  //     rolls the start forward to the med's next real occurrence (tomorrow,
-  //     the next matching weekday, or +7). Never name a date; the client does
-  //     no rolling of its own and keeps sending the date the user picked.
-  //   - editing: no roll happens, the row stays on today; the only consequence
-  //     is that today's reminder will not fire.
+  // EDIT ONLY: no roll happens, the row stays on today; the only consequence is that today's
+  // reminder will not fire. (Creating shows an inline note instead; see `startsNextDose`.)
   const [pendingPastTime, setPendingPastTime] = useState<CreateEventRequest | null>(null);
   /** The ⓘ explainer behind the Reminders heading (mobile's info bottom sheet). */
   const [showHowItWorks, setShowHowItWorks] = useState(false);
@@ -780,6 +864,60 @@ function AddEventForm({
   }, [assignedTo, members]);
 
   const isMedication = eventType === 'medication';
+
+  // Which field the user changed last, for `medication_form_abandoned`.
+  useNoteFieldChange(lastFieldRef, title, 'name');
+  useNoteFieldChange(lastFieldRef, dosage, 'dosage');
+  useNoteFieldChange(lastFieldRef, timeStr, 'time');
+  useNoteFieldChange(lastFieldRef, recurrence, 'repeat');
+  useNoteFieldChange(lastFieldRef, recurrenceEndDate, 'repeat');
+  useNoteFieldChange(lastFieldRef, location, 'more_details');
+  useNoteFieldChange(lastFieldRef, description, 'more_details');
+  useNoteFieldChange(lastFieldRef, notificationsEnabled, 'more_details');
+  // Same idea for `appointment_form_abandoned`.
+  const apptLastFieldRef = useRef<AppointmentAbandonField>('none');
+  useNoteFieldChange(apptLastFieldRef, title, 'title');
+  useNoteFieldChange(apptLastFieldRef, dateStr, 'date');
+  useNoteFieldChange(apptLastFieldRef, timeStr, 'time');
+  useNoteFieldChange(apptLastFieldRef, assignedTo, 'who');
+  useNoteFieldChange(apptLastFieldRef, location, 'more_details');
+  useNoteFieldChange(apptLastFieldRef, description, 'more_details');
+  useNoteFieldChange(apptLastFieldRef, providerId, 'more_details');
+  useNoteFieldChange(apptLastFieldRef, recurrence, 'more_details');
+
+  // ── Form funnel (docs/plans/simple-ui-1-3-1.md) ────────────────────────────
+  // `entry_form_opened` once per CREATE session; each step completes once.
+  // Enums only, no circle_id.
+  const openedReportedRef = useRef(false);
+  useEffect(() => {
+    if (isEditing || openedReportedRef.current) return;
+    openedReportedRef.current = true;
+    Analytics.entryFormOpened({ type: eventType, entry: entryOrigin });
+    // Once per mount: the type/entry at open time are what the funnel wants.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const stepsDoneRef = useRef(new Set<EntryFormStep>());
+  function completeStep(step: EntryFormStep): void {
+    if (isEditing || stepsDoneRef.current.has(step)) return;
+    if (eventType !== 'medication' && eventType !== 'appointment') return;
+    stepsDoneRef.current.add(step);
+    Analytics.entryFormStepCompleted({ type: eventType, step });
+  }
+  // `large_text_layout` for the two simple forms (once per screen per session).
+  const largeText = useLargeTextLayoutEvent(
+    simpleKind === 'appointment' ? 'appt_form' : 'med_form',
+    simpleKind !== null
+  );
+  // The simple forms' disclosure state. The panels stay mounted; these only show them.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [otherTimeOpen, setOtherTimeOpen] = useState(false);
+  // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
+  // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
+  // the first-run wizard), pointing at the primary's bottle through `refill_group_id`.
+  const [extraTimes, setExtraTimes] = useState<string[]>([]);
+  const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
+  const setRowOpen = (rowId: string, open: boolean): void =>
+    setOpenRows((prev) => ({ ...prev, [rowId]: open }));
   /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
   const isAsNeeded = isMedication && recurrence === 'as_needed';
   const isPending = createEvent.isPending || updateEvent.isPending;
@@ -1032,6 +1170,33 @@ function AddEventForm({
       return null;
     }
   }, [timezone, dateStr, timeStr]);
+  /**
+   * CREATE only: this medication's start rolls to the next dose (the backend does it,
+   * `medicationStartRoll.ts`) because its time already passed today in the recipient's zone.
+   * Drives the inline note under the time field; never blocks Save. One time field on this surface.
+   */
+  const doseStartsNext = useCallback(
+    (time: string): boolean => {
+      if (isEditing || !isMedication || isAsNeeded || !timezone || !dateStr || !time) return false;
+      try {
+        const api = eventDatesForApi({
+          dateStr,
+          timeStr: time,
+          recurrenceEndDateStr: null,
+          timezone,
+        });
+        return (
+          !!api.scheduledTime &&
+          api.scheduledDate === getDateInTimezone(timezone) &&
+          isEventPastDue(api.scheduledDate, api.scheduledTime, timezone)
+        );
+      } catch {
+        return false;
+      }
+    },
+    [isEditing, isMedication, isAsNeeded, timezone, dateStr]
+  );
+  const startsNextDose = useMemo(() => doseStartsNext(timeStr), [doseStartsNext, timeStr]);
   /** "Today" in the circle's (recipient's) timezone — never the device's. */
   const recipientToday = timezone ? getDateInTimezone(timezone) : null;
   /**
@@ -1088,7 +1253,9 @@ function AddEventForm({
   function chooseRecurrence(next: RecurrenceChoice): void {
     recurrenceTouched.current = true;
     setRecurrence(next);
+    if (next === 'as_needed') setExtraTimes([]);
     clearError('recurrence_rule', RECURRENCE_DAYS_ID);
+    if (isMedication) completeStep('how_often');
     if (next === 'days_of_week' && recurrenceDays.length === 0) {
       // Existing days are kept; otherwise the start date's weekday (the
       // anchor's, for a started series — the one that cannot be removed).
@@ -1350,7 +1517,45 @@ function AddEventForm({
     return { ok: true, data };
   }
 
-  async function persist(data: CreateEventRequest): Promise<void> {
+  /**
+   * The extra dose rows of a NEW medication ("+ Another dose"), one request per time: the
+   * primary's payload with its OWN clock, its OWN recipient-frame date and repeat-end date
+   * (re-expressed at THAT time, never borrowed from the primary: an evening dose can sit on
+   * another recipient day), no refill state of its own, and `refill_group_id` set to the
+   * primary's id once that is known. Same helper the first-run wizard uses (mobile's
+   * `siblingDosePayload`).
+   */
+  function buildSiblingRequests(
+    primary: CreateEventRequest,
+    tz: string,
+    primaryId: string | undefined
+  ): CreateEventRequest[] {
+    if (isEditing || !isMedication || isAsNeeded) return [];
+    return extraTimes
+      .filter((time) => time !== '')
+      .map((time) => {
+        const dates = eventDatesForApi({
+          dateStr,
+          timeStr: time,
+          recurrenceEndDateStr:
+            recurrence !== 'none' && recurrenceEndDate ? recurrenceEndDate : null,
+          timezone: tz,
+        });
+        let rowDate = dates.scheduledDate;
+        if (recurrence === 'days_of_week' && selectedDays.length > 0 && selectedDays.length < 7) {
+          rowDate = nextDateOnWeekdays(rowDate, selectedDays) ?? rowDate;
+        }
+        return siblingDosePayload(primary, {
+          scheduledTime: dates.scheduledTime as string,
+          scheduledDate: rowDate,
+          recurrenceEndDate: dates.recurrenceEndDate ?? undefined,
+          refillGroupId: primaryId,
+        });
+      });
+  }
+
+  async function persist(data: CreateEventRequest, withExtraDoses = false): Promise<void> {
+    let savedInfo: SavedMedicationInfo | undefined;
     try {
       if (isEditing && targetEventId) {
         await updateEvent.mutateAsync({ eventId: targetEventId, data });
@@ -1370,6 +1575,7 @@ function AddEventForm({
         // unknown `as_needed` key and answers 200 with an ordinary one-time
         // medication — a silent wrong record. Undo it and say so.
         if (data.as_needed === true && created && created.as_needed !== true) {
+          Analytics.entryValidationBlocked('as_needed_unsupported', eventType);
           try {
             await deleteEventRequest(circleId, created.id);
           } catch {
@@ -1385,13 +1591,143 @@ function AddEventForm({
             has_reason: !!data.as_needed_reason,
           });
         }
-        showToast(t(createdToastKey(eventType)), 'success');
+        // A medication row was persisted (create only; never the name or dose).
+        if (data.event_type === 'medication') {
+          Analytics.medicationCreated(
+            circleId,
+            !!data.recurrence_rule && !data.as_needed,
+            firstRun ? 'wizard' : 'form',
+            startsNextDose
+          );
+          // How the NAME was chosen (onboarding 1.3.1): enum only, never the name.
+          Analytics.medNameSuggestionOutcome(
+            selectedDrug?.rxcui ? 'suggestion' : usedAsTypedRef.current ? 'as_typed' : 'typed'
+          );
+        }
+        // The extra dose rows, after the primary (the wizard's and mobile's sequence). A miss is
+        // NOT a success: the caregiver is told which times are missing.
+        const failedDoseTimes: string[] = [];
+        const savedDoses: SavedMedicationInfo['doses'] = [];
+        if (data.event_type === 'medication' && data.scheduled_date && data.scheduled_time) {
+          savedDoses.push({
+            scheduledDate: data.scheduled_date,
+            scheduledTime: data.scheduled_time,
+          });
+        }
+        if (withExtraDoses && data.event_type === 'medication' && timezone) {
+          for (const sibling of buildSiblingRequests(data, timezone, created?.id)) {
+            try {
+              await createEvent.mutateAsync(sibling);
+              savedDoses.push({
+                scheduledDate: sibling.scheduled_date as string,
+                scheduledTime: sibling.scheduled_time as string,
+              });
+            } catch {
+              failedDoseTimes.push(sibling.scheduled_time as string);
+            }
+          }
+        }
+        // WHAT SAVED, for whoever follows up (first-run payoff / Today's Mark it note). A
+        // scheduled medication only: as-needed has no dose to mark and no start to roll.
+        if (data.event_type === 'medication' && !data.as_needed && timezone && savedDoses.length > 0) {
+          savedInfo = {
+            eventId: created?.id ?? null,
+            name: data.title,
+            dosage: data.medication_dosage ?? '',
+            doses: savedDoses,
+            timezone,
+            recurrenceRule: data.recurrence_rule ?? null,
+            recurrenceDays: data.recurrence_days ?? null,
+            startsNextDose,
+            startDate: created?.scheduled_date ?? null,
+            today: getDateInTimezone(timezone),
+          };
+          if (
+            !firstRun &&
+            circleHadNoMedication(circleId, savedInfo.today) &&
+            savedInfo.eventId &&
+            markItEligible(savedInfo)
+          ) {
+            // The add-menu path (43 of 58 first meds): Today shows the "Tomorrow" row with
+            // the Mark it line for the rest of the recipient's day.
+            writeFirstMedNote(circleId, {
+              eventId: savedInfo.eventId,
+              name: savedInfo.name,
+              dosage: savedInfo.dosage,
+              time: toWireTime(savedInfo.doses[0].scheduledTime),
+              day: savedInfo.today,
+              startDate: savedInfo.startDate ?? savedInfo.today,
+              marked: false,
+            });
+          }
+        }
+        // The first-run funnel's save event: enums, a boolean and a count (never the name).
+        if (firstRun && data.event_type === 'medication') {
+          Analytics.firstRunMedicationSaved({
+            circleId,
+            preset: chipForTime(timeStr) ?? 'other',
+            recurrence:
+              recurrence === 'days_of_week' || recurrence === 'as_needed' ? recurrence : 'daily',
+            dosageFilled: dosage.trim().length > 0,
+            doseCount: Math.max(1, savedDoses.length),
+          });
+        }
+        if (failedDoseTimes.length > 0) {
+          Analytics.entrySaveFailed(circleId, eventType, 'additional_dose_create_failed');
+          showToast(
+            t('addEvent.alerts.someDoseTimesFailed', {
+              count: failedDoseTimes.length,
+              times: failedDoseTimes.join(', '),
+            }),
+            'error'
+          );
+        } else {
+          showToast(t(createdToastKey(eventType)), 'success');
+        }
       }
-      onSaved?.();
+      savedRef.current = true;
+      onSaved?.(savedInfo);
       onClose();
-    } catch {
+    } catch (error) {
       // The mutation hooks surface their own permission/subscription/save toasts.
+      // A REAL failure (the API refused or was unreachable): `error_code` is
+      // the closed-set classifier, never a message.
+      const httpStatus = apiErrorStatus(error);
+      Analytics.entrySaveFailed(circleId, eventType, 'api_error', {
+        errorCode: classifyFailureCode(error),
+        ...(httpStatus !== undefined ? { httpStatus } : {}),
+      });
     }
+  }
+
+  /**
+   * The simple forms keep optional fields in collapsed rows. A refused save that
+   * errored one of them opens its row so the message (and focus) can be seen.
+   * Returns true when something was opened.
+   */
+  function revealErrorFields(fieldErrors: FieldErrors): boolean {
+    if (simpleKind === null) return false;
+    let revealed = false;
+    if (simpleKind === 'medication') {
+      const hidden = ['scheduled_date', 'description', 'recurrence_rule', 'recurrence_end_date'];
+      if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
+        setMoreOpen(true);
+        revealed = true;
+      }
+    } else {
+      const rows: Record<string, string[]> = {
+        place: ['location'],
+        notes: ['description'],
+        repeat: ['recurrence_rule', RECURRENCE_DAYS_ID, 'recurrence_end_date'],
+      };
+      for (const [row, keys] of Object.entries(rows)) {
+        if (keys.some((k) => fieldErrors[k]) && !openRows[row]) {
+          setRowOpen(row, true);
+          revealed = true;
+        }
+      }
+    }
+    return revealed;
   }
 
   async function handleSubmit(formEvent: FormEvent): Promise<void> {
@@ -1405,38 +1741,47 @@ function AddEventForm({
     // so it must not run on an occurrence's values standing in for the root's.
     if (!canEdit || !timezone || isPending || seriesRootPending) return;
 
+    // Before validation, so it counts EVERY attempt (mobile parity).
+    Analytics.entrySaveTapped(circleId, eventType, 'form', isEditing);
+
     const built = buildPayload(timezone);
     if (!built.ok) {
       setErrors(built.errors);
+      Analytics.entryValidationBlocked(
+        validationReason({
+          hasTitle: title.trim().length > 0,
+          isMedication,
+          hasTime: !!timeStr,
+          hasEndTime: !!endTimeStr,
+          errors: built.errors,
+        }),
+        eventType
+      );
       // Cover every field that can error so focus always lands on an errored
       // control — including the title id for the OTHER type and the Zod-derived
       // fields (description, location, dosage, recurrence) (WCAG SC 3.3.1).
-      focusFirstError(built.errors, [
-        'medication_name',
-        'title',
-        'medication_dosage',
-        'scheduled_date',
-        'scheduled_time',
-        'endTime',
-        'location',
-        'description',
-        'assigned_to',
-        'recurrence_rule',
-        'as_needed_reason',
-        RECURRENCE_DAYS_ID,
-        'recurrence_end_date',
-      ]);
+      const revealed = revealErrorFields(built.errors);
+      const focusErrors = (): void =>
+        focusFirstError(
+          // The simple medication form has no time input until "Other time" is
+          // opened: an unset time points at the first chip instead.
+          simpleKind === 'medication' && built.errors.scheduled_time && !otherTimeOpen
+            ? { ...built.errors, 'time-chips-morning': built.errors.scheduled_time }
+            : built.errors,
+          FOCUS_ORDER
+        );
+      if (revealed) setTimeout(focusErrors, 0);
+      else focusErrors();
       return;
     }
     setErrors({});
 
-    // Mobile parity (AddEventScreen GAP #4): saving a MEDICATION whose time
-    // already passed TODAY (care recipient's timezone — never device-local)
-    // gets a non-blocking notice first; confirming proceeds with the save.
-    // The notice's copy differs by path (see `pendingPastTime` above). Only ONE
-    // dose time exists on this surface — the form has a single time field, so
-    // there are no BID/TID extras to sweep the way mobile does.
+    // EDIT only (mobile parity): saving a MEDICATION whose time already passed TODAY (care
+    // recipient's timezone — never device-local) gets a non-blocking notice first; confirming
+    // proceeds. CREATE has no prompt: the backend rolls the start to the next dose and the form
+    // shows `startsNextDose`'s inline note under the time field.
     if (
+      isEditing &&
       built.data.event_type === 'medication' &&
       built.data.scheduled_time &&
       built.data.scheduled_date === getDateInTimezone(timezone) &&
@@ -1446,7 +1791,7 @@ function AddEventForm({
       return;
     }
 
-    await persist(built.data);
+    await persist(built.data, extraTimes.length > 0);
   }
 
   // THE SYNCHRONOUS DOUBLE-SUBMIT GUARD. `isPending` above is React Query
@@ -1466,6 +1811,32 @@ function AddEventForm({
   // `isPending` stays exactly where it is — it is the VISUAL guard (spinner,
   // disabled styling); this is the correctness one.
   const guardedSubmit = useGuardedSubmit(handleSubmit);
+
+  // Every user-initiated close (×, Cancel, Escape) comes through here; a
+  // successful save calls the `onClose` prop directly and is never an abandon.
+  function handleClose(): void {
+    if (!isEditing && !savedRef.current && !abandonReportedRef.current) {
+      if (isMedication) {
+        abandonReportedRef.current = true;
+        Analytics.medicationFormAbandoned({
+          lastField: lastFieldRef.current,
+          hasName: title.trim().length > 0,
+          hasSchedule: !!timeStr,
+          entry: 'form',
+          entrySource: entryOrigin,
+          secondsOpen: (Date.now() - openedAtRef.current) / 1000,
+        });
+      } else if (eventType === 'appointment') {
+        abandonReportedRef.current = true;
+        Analytics.appointmentFormAbandoned({
+          lastField: apptLastFieldRef.current,
+          entrySource: entryOrigin,
+          secondsOpen: (Date.now() - openedAtRef.current) / 1000,
+        });
+      }
+    }
+    onClose();
+  }
 
   // Hidden entirely when the user can't edit — the read-only path keeps the
   // EventDetailModal download CTA instead (Task 1.6 gating).
@@ -1532,18 +1903,853 @@ function AddEventForm({
         ? titleFieldId
         : missingField === 'date'
           ? 'scheduled_date'
-          : 'scheduled_time';
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.scrollIntoView?.({ block: 'center' });
-    el.focus({ preventScroll: true });
+          : simpleKind === 'medication' && !otherTimeOpen && !timeStr
+            ? 'time-chips-morning'
+            : 'scheduled_time';
+    const focusIt = (): void => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView?.({ block: 'center' });
+      el.focus({ preventScroll: true });
+    };
+    // The start date lives in "More details" on the simple medication form.
+    if (simpleKind === 'medication' && missingField === 'date' && !moreOpen) {
+      setMoreOpen(true);
+      setTimeout(focusIt, 0);
+      return;
+    }
+    focusIt();
   }
+
+  const repeatSelectBlock = (
+    <>
+        {/* Recurrence */}
+        {isAsNeededEdit ? (
+          // LOCKED: scheduled <-> as needed cannot change after create (the
+          // server refuses it, AS_NEEDED_IMMUTABLE), so the choice is shown, not
+          // offered. Same read-only treatment the Type selector gets on an edit.
+          <div className="flex flex-col gap-1" data-testid="as-needed-locked-repeat">
+            <span className="text-sm font-medium text-ink">{t('addEvent.fields.repeat')}</span>
+            <p className="m-0 rounded-xl bg-bg-2 px-4 py-3 text-sm text-ink-2">
+              {t('addEvent.asNeeded.lockedRepeat')}
+            </p>
+          </div>
+        ) : (
+          <Select
+            id="recurrence_rule"
+            label={t('addEvent.fields.repeat')}
+            options={recurrenceOptions}
+            value={recurrence}
+            error={errors.recurrence_rule}
+            hint={isAsNeeded ? t('addEvent.recurrence.asNeededHint') : undefined}
+            onChange={(e) => chooseRecurrence(e.target.value as RecurrenceChoice)}
+          />
+        )}
+    </>
+  );
+
+  const asNeededReasonBlock = (
+    <>
+        {/* AS NEEDED details: ONE optional plain note. No minimum interval, no
+            maximum per day — the family decides when a dose is right, the app
+            only records it. */}
+        {isAsNeeded && (
+          <TextField
+            id="as_needed_reason"
+            label={
+              <>
+                {t('addEvent.asNeeded.reason')}{' '}
+                <span className="font-normal text-ink-3">{t('addEvent.asNeeded.optional')}</span>
+              </>
+            }
+            value={asNeededReason}
+            maxLength={100}
+            error={errors.as_needed_reason}
+            placeholder={t('addEvent.asNeeded.reasonPlaceholder')}
+            hint={t('addEvent.asNeeded.repeatHint')}
+            onChange={(e) => {
+              setAsNeededReason(e.target.value);
+              clearError('as_needed_reason');
+            }}
+          />
+        )}
+    </>
+  );
+
+  const daysBlock = (
+    <>
+        {/* "Days of the week" — the chips reveal inline under the select, the
+            way Cycle reveals its on/off inputs (mobile shows the same chips as
+            a step of its Repeat sheet). */}
+        {recurrence === 'days_of_week' && (
+          <div className="flex flex-col gap-2">
+            <DaysOfWeekPicker
+              id={RECURRENCE_DAYS_ID}
+              label={t('addEvent.daysOfWeek.title')}
+              selected={selectedDays}
+              lockedDay={lockedDay}
+              lockedHintId={lockedDay != null ? RECURRENCE_DAYS_LOCK_ID : undefined}
+              describedBy={errors[RECURRENCE_DAYS_ID] ? RECURRENCE_DAYS_ERROR_ID : undefined}
+              // PK23: the chips are in the RECIPIENT's frame; say so only when
+              // the viewer's zone differs (the dual-time hint's condition).
+              note={showDualTimezone ? daysTimezoneNote : undefined}
+              noteId={RECURRENCE_DAYS_NOTE_ID}
+              language={language}
+              onChange={(days) => {
+                recurrenceTouched.current = true;
+                setRecurrenceDays(days);
+                clearError(RECURRENCE_DAYS_ID);
+              }}
+            />
+            {errors[RECURRENCE_DAYS_ID] && (
+              <p id={RECURRENCE_DAYS_ERROR_ID} className={INPUT_ERROR}>
+                <Icon name="alert-circle-outline" size="inline" />
+                {errors[RECURRENCE_DAYS_ID]}
+              </p>
+            )}
+            {/* Polite live region, always mounted while the picker is: the
+                "First time" move is a consequence of a chip toggle that a
+                screen-reader user would otherwise never hear about. */}
+            <div aria-live="polite" className="ml-1 flex flex-col gap-1">
+              {selectedDays.length > 0 && (
+                <p className="m-0 text-sm text-ink-2">
+                  {formatWeekdayList(selectedDays, language)}
+                </p>
+              )}
+              {firstTimeLabel && (
+                <p className="m-0 text-sm font-medium text-ink">
+                  {t('addEvent.daysOfWeek.firstTime', { date: firstTimeLabel })}
+                </p>
+              )}
+              {lockedDay != null && (
+                <p id={RECURRENCE_DAYS_LOCK_ID} className="m-0 text-sm text-ink-3">
+                  {t('addEvent.daysOfWeek.startLocked', { day: lockedDayName })}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+    </>
+  );
+
+  const cycleBlock = (
+    <>
+        {recurrence === 'cycle' && (
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              id="cycle_days_on"
+              label={t('addEvent.fields.daysOn')}
+              type="number"
+              min={1}
+              max={999}
+              value={daysOn}
+              onChange={(e) => setDaysOn(e.target.value)}
+            />
+            <TextField
+              id="cycle_days_off"
+              label={t('addEvent.fields.daysOff')}
+              type="number"
+              min={1}
+              max={999}
+              value={daysOff}
+              onChange={(e) => setDaysOff(e.target.value)}
+            />
+          </div>
+        )}
+    </>
+  );
+
+  const endDateBlock = (
+    <>
+        {recurrence !== 'none' && recurrence !== 'as_needed' && (
+          <DateField
+            id="recurrence_end_date"
+            label={t('addEvent.fields.endDate')}
+            value={recurrenceEndDate}
+            today={pickerToday}
+            hint={t('addEvent.hints.endDate')}
+            error={errors.recurrence_end_date}
+            onChange={(e) => {
+              datesTouched.current = true;
+              setRecurrenceEndDate(e.target.value);
+              clearError('recurrence_end_date');
+            }}
+          />
+        )}
+    </>
+  );
+
+  const reminderBlock = (
+    <>
+        {/* Reminders — only once there is a time to fire against. */}
+        {isAsNeeded && (
+          <p className="m-0 text-sm text-ink-3" data-testid="as-needed-no-reminders">
+            {t('addEvent.asNeeded.remindersNone')}
+          </p>
+        )}
+        {remindersApply(eventType, timeStr) && !isAsNeeded && (
+        <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
+          <Text variant="sectionTitle" as="legend" className="p-0">
+            {t('addEvent.reminders.section')}
+          </Text>
+          {/* WHERE THESE ACTUALLY GO.
+              Every control below writes a flag the BACKEND acts on by sending an
+              Expo push — and the web app has no push at all: no service worker,
+              no Notification API, and it never registers a push token. When a
+              user has none, notificationService returns `no_token` and stops;
+              there is no email fallback on that path.
+
+              STATES THE DESTINATION, NOT THE LIMITATION. This used to carry a
+              second sentence — "The web app cannot send them" — which read as a
+              defect of the surface the user is standing on and invited "then why
+              am I setting this here?". It also overreached: the reminders are
+              mostly NOT for the viewer. The escalation chain pings the care
+              recipient and the other caregivers on their phones, so a web-only
+              caregiver arranging their mother's doses gets exactly the outcome
+              they wanted — the phrasing just implied nothing would happen.
+
+              The case it was protecting is a web-only user with NO device, for
+              whom these really do go nowhere. That warning wants
+              `GET /push-tokens` (already routed; `queryKeys.pushTokens` is
+              reserved and unused), so it can fire only for a viewer with no
+              active token and say "you" rather than "no one" — the member
+              payload carries no device info, so this surface can never speak for
+              anybody else. Until then one true sentence beats a blanket one. */}
+          <p className="m-0 text-sm text-ink-3">{t('addEvent.reminders.webDelivery')}</p>
+          {/* The explainer trigger, mobile's ⓘ beside the notifications row.
+              NOT folded into the `<legend>` above, in either direction: a legend
+              must be the fieldset's FIRST child or it stops naming the group, so
+              it cannot be wrapped in a flex row, and nesting the button inside it
+              instead drags "How notifications work" into the accessible name
+              every control in this fieldset inherits.
+
+              Labelled with VISIBLE TEXT rather than an icon alone. Mobile can
+              lean on a bare ⓘ because its sheet is one tap from a thumb; here
+              the same glyph would be a 16px icon-only control whose only name is
+              an `aria-label`, which is the weakest form this could take. */}
+          <button
+            type="button"
+            onClick={() => setShowHowItWorks(true)}
+            className="-my-2 inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 self-start rounded-md text-sm font-medium text-ink-2 underline decoration-line underline-offset-2 hover:text-ink"
+          >
+            <Icon name="help-circle-outline" size="inline" />
+            {t('addEvent.reminders.howItWorks.button')}
+          </button>
+          <Toggle
+            id="notifications_enabled"
+            label={t('addEvent.reminders.enable')}
+            hint={
+              remindersOffNote ? (
+                <>
+                  {t('addEvent.reminders.enableHint')}
+                  {/* Wired to the switch through the hint's aria-describedby, so
+                      the consequence is announced with the control, not by color. */}
+                  <span className="mt-1 block font-medium text-terracotta-deep">
+                    {remindersOffNote}
+                  </span>
+                </>
+              ) : (
+                t('addEvent.reminders.enableHint')
+              )
+            }
+            checked={notificationsEnabled}
+            onChange={(next) => changeReminder('notificationsEnabled', next)}
+          />
+          {notificationsEnabled && (
+            <div className="flex flex-col gap-3 rounded-xl border border-line-2 p-3">
+              {/* THE ANCHOR ALERT — every event type, and a real control.
+                  Apple's model: the alert at the scheduled time is the primary
+                  one and the "earlier reminders" below are the optional extras.
+                  It used to be a locked, medication-only statement of fact
+                  ("Always on for medications"); `reminder_at_due` makes that
+                  sentence false, so it is a checkbox now, first in the group.
+                  A CHECKBOX, not a switch, and that distinction is the point:
+                  "Send reminders" above is the one kill switch for this entry,
+                  and everything below it — the anchor included — is a selection
+                  WITHIN that permission. Drawn as six identical lozenges the two
+                  kinds read as duplicates of each other, which is exactly how
+                  mobile already splits them (Switch vs `CheckboxRow`). */}
+              <div className="flex flex-col gap-2 border-b border-line-2 pb-3">
+                <Checkbox
+                  id="reminder_at_due"
+                  label={t('addEvent.reminders.atTime')}
+                  hint={
+                    reminderAtDue ? (
+                      t('addEvent.reminders.atTimeHint')
+                    ) : (
+                      <>
+                        {t('addEvent.reminders.atTimeHint')}
+                        {/* Inside the checkbox's own aria-describedby hint, so
+                            the consequence is announced with the control rather
+                            than carried by color alone. */}
+                        <span className="mt-1 block font-medium text-terracotta-deep">
+                          {t(
+                            showNoEarlierBeforeDose
+                              ? 'addEvent.reminders.atTimeOffNoEarlier'
+                              : 'addEvent.reminders.atTimeOff'
+                          )}
+                        </span>
+                      </>
+                    )
+                  }
+                  checked={reminderAtDue}
+                  onChange={(next) => changeReminder('reminderAtDue', next)}
+                />
+                {/* Medication only: the escalation chain hangs off
+                    notifications_enabled, not off any reminder_* flag. */}
+                {isMedication && <p className="m-0 text-sm text-ink-3">{escalationNote}</p>}
+              </div>
+              <div
+                role="group"
+                aria-labelledby={EARLIER_REMINDERS_LABEL_ID}
+                aria-describedby={
+                  showNoneSelectedWarning ? EARLIER_REMINDERS_WARNING_ID : undefined
+                }
+                className="flex flex-col gap-2"
+              >
+                <Text variant="label" as="span" id={EARLIER_REMINDERS_LABEL_ID}>
+                  {t('addEvent.reminders.additional')}
+                </Text>
+                <Checkbox
+                  label={t('addEvent.reminders.h24')}
+                  checked={reminder24h}
+                  onChange={(next) => changeReminder('reminder24h', next)}
+                />
+                <Checkbox
+                  label={t('addEvent.reminders.h1')}
+                  checked={reminder1h}
+                  onChange={(next) => changeReminder('reminder1h', next)}
+                />
+                <Checkbox
+                  label={t('addEvent.reminders.m30')}
+                  checked={reminder30m}
+                  onChange={(next) => changeReminder('reminder30m', next)}
+                />
+                <Checkbox
+                  label={t('addEvent.reminders.m15')}
+                  checked={reminder15m}
+                  onChange={(next) => changeReminder('reminder15m', next)}
+                />
+              </div>
+            </div>
+          )}
+          {/* LIVE REGION, OUTSIDE the `notificationsEnabled` block.
+              A screen reader only announces a change inside a region that was
+              ALREADY in the accessibility tree; a region that mounts at the same
+              moment as its text is typically silent. This previously sat inside
+              that conditional under a comment claiming it rendered
+              unconditionally, so the whole group — region included — unmounted
+              on exactly the interaction whose consequence it exists to announce.
+              The CONTENT stays conditional; the region does not. */}
+          <div aria-live="polite">
+            {showNoneSelectedWarning && (
+              <p
+                id={EARLIER_REMINDERS_WARNING_ID}
+                className="m-0 text-sm font-medium text-terracotta-deep"
+              >
+                {t('addEvent.reminders.noneSelected')}
+              </p>
+            )}
+          </div>
+        </fieldset>
+        )}
+    </>
+  );
+
+  // SIMPLE-UI FIELDS (new medication / new appointment): defined below.
+  const durationOptions = DURATION_PRESETS.map((mins) => ({
+    value: String(mins),
+    label: t(`addEvent.durations.${mins}`),
+  }));
+
+  /** The time field's change rules (shared by the full form's inline handler's twin). */
+  function changeTime(next: string): void {
+    datesTouched.current = true;
+    setTimeStr(next);
+    clearError('scheduled_time');
+    if (!next) {
+      setEndTimeStr('');
+    } else if (!isMedication && endTimeStr && timeStr) {
+      const shifted = shiftEndTimeStr(timeStr, next, endTimeStr);
+      if (shifted) setEndTimeStr(shifted);
+      clearError('endTime');
+    } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
+      setEndTimeStr(addMinutesToTimeStr(next, DEFAULT_DURATION_MINUTES));
+      clearError('endTime');
+    }
+  }
+
+  // ── SIMPLE LAYOUT (new medication / new appointment) ─────────────────────────
+  // Same state, same `buildPayload`, same Save: only the arrangement differs, so
+  // the API payload for a given set of answers is IDENTICAL to the full form's.
+  const showOtherTime = otherTimeOpen || (timeStr !== '' && chipForTime(timeStr) === null);
+  const timeErrorText = errors.scheduled_time ?? missingErrorFor('time');
+  const sectionHeading = (headingId: string, text: string): ReactElement => (
+    <Text variant="sectionTitle" as="h3" id={headingId} className="text-lg">
+      {text}
+    </Text>
+  );
+
+  function chooseTimeChip(chip: TimeChipId | null, time: string): void {
+    datesTouched.current = true;
+    if (chip === null) {
+      setTimeStr('');
+      setExtraTimes([]);
+      return;
+    }
+    setTimeStr(time);
+    clearError('scheduled_time');
+    completeStep('when');
+    Analytics.timeChipSelected({ chip });
+  }
+
+  /** The first chip time not already used, so a new row starts on something sensible. */
+  function addExtraDose(): void {
+    const used = new Set([timeStr, ...extraTimes]);
+    const next = MED_TIME_CHIPS.find((chip) => !used.has(chip.time))?.time ?? '12:00';
+    setExtraTimes((prev) => (prev.length < 3 ? [...prev, next] : prev));
+  }
+
+  function openOtherTime(): void {
+    if (!otherTimeOpen) Analytics.timeChipSelected({ chip: 'other' });
+    setOtherTimeOpen(true);
+    requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
+  }
+
+  const howOftenValue = ['daily', 'days_of_week', 'as_needed'].includes(recurrence)
+    ? recurrence
+    : null;
+
+  const dateFieldBlock = !isAsNeeded ? (
+    <DateField
+      id="scheduled_date"
+      label={isMedication ? t('addEvent.simple.startDate') : t('addEvent.fields.date')}
+      required
+      value={dateStr}
+      today={pickerToday}
+      error={errors.scheduled_date ?? missingErrorFor('date')}
+      hint={showDualTimezone ? dualTimezoneLabel : undefined}
+      onChange={(e) => {
+        datesTouched.current = true;
+        setDateStr(e.target.value);
+        clearError('scheduled_date');
+        completeStep('when');
+      }}
+    />
+  ) : null;
+
+  const detailsBlock = (
+    <TextArea
+      id="description"
+      label={isMedication ? t('addEvent.fields.instructions') : t('addEvent.fields.details')}
+      value={description}
+      rows={3}
+      maxLength={850}
+      error={errors.description}
+      placeholder={
+        isMedication ? t('addEvent.placeholders.instructions') : t('addEvent.placeholders.details')
+      }
+      onChange={(e) => {
+        setDescription(e.target.value);
+        clearError('description');
+      }}
+    />
+  );
+
+  const simpleMedicationFields = (
+    <div className="flex flex-col gap-6" data-testid="simple-medication-form" data-large-text={largeText}>
+      <section
+        aria-labelledby="sf-what"
+        className="flex flex-col gap-3"
+        onBlur={() => {
+          if (title.trim()) completeStep('what');
+        }}
+      >
+        {firstRun ? (
+          // First-run mode: the dialog's own big title ("What does Mom take?") is the
+          // heading, so this one stays for assistive tech only.
+          <span id="sf-what" className="sr-only">
+            {t('addEvent.simple.whatIsIt')}
+          </span>
+        ) : (
+          sectionHeading('sf-what', t('addEvent.simple.whatIsIt'))
+        )}
+        <DrugAutocomplete
+          id={titleFieldId}
+          label={t('addEvent.fields.medicationName')}
+          required
+          value={title}
+          maxLength={150}
+          error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
+          placeholder={t('addEvent.placeholders.medicationName')}
+          selectedDrug={selectedDrug}
+          onSelectDrug={(drug) => {
+            if (drug) usedAsTypedRef.current = false;
+            setSelectedDrug(drug);
+          }}
+          onUseAsTyped={() => {
+            usedAsTypedRef.current = true;
+          }}
+          onChange={(next) => {
+            usedAsTypedRef.current = false;
+            setTitle(next);
+            clearError(titleFieldId, 'title');
+          }}
+        />
+        <TextField
+          id="medication_dosage"
+          label={t('addEvent.fields.dosage')}
+          value={dosage}
+          maxLength={100}
+          error={errors.medication_dosage}
+          placeholder={t('addEvent.placeholders.dosage')}
+          onChange={(e) => {
+            setDosage(e.target.value);
+            clearError('medication_dosage');
+          }}
+        />
+      </section>
+
+      {!isAsNeeded && (
+        <section aria-labelledby="sf-when" className="flex flex-col gap-3">
+          {sectionHeading('sf-when', t('addEvent.simple.when'))}
+          <TimeChips
+            id="time-chips"
+            value={timeStr}
+            hourCycle={hourCycle}
+            describedBy={timeErrorText ? 'scheduled_time-error' : undefined}
+            onChange={chooseTimeChip}
+          />
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              aria-expanded={showOtherTime}
+              onClick={openOtherTime}
+              className="min-h-[44px] cursor-pointer border-0 bg-transparent p-0 text-base font-semibold text-moss-deep underline-offset-2 hover:underline"
+            >
+              {t('addEvent.simple.otherTime')}
+            </button>
+            {timeStr && extraTimes.length < 3 && (
+              <button
+                type="button"
+                data-testid="add-another-dose"
+                onClick={addExtraDose}
+                className="min-h-[44px] cursor-pointer border-0 bg-transparent p-0 text-base font-semibold text-moss-deep underline-offset-2 hover:underline"
+              >
+                {t('addEvent.simple.anotherDose')}
+              </button>
+            )}
+          </div>
+          {showOtherTime && (
+            <TimeField
+              id="scheduled_time"
+              label={t('addEvent.fields.time')}
+              required
+              value={timeStr}
+              error={errors.scheduled_time ?? missingErrorFor('time')}
+              hint={conversionText ?? undefined}
+              onChange={(e) => {
+                datesTouched.current = true;
+                setTimeStr(e.target.value);
+                clearError('scheduled_time');
+                if (e.target.value) completeStep('when');
+              }}
+            />
+          )}
+          {!showOtherTime && timeErrorText && (
+            <p id="scheduled_time-error" role="alert" className={INPUT_ERROR}>
+              <Icon name="alert-circle-outline" size="inline" />
+              {timeErrorText}
+            </p>
+          )}
+          {!showOtherTime && conversionText && (
+            <Text variant="caption" data-testid="time-conversion">
+              {conversionText}
+            </Text>
+          )}
+          <DoseQuietHoursNote
+            applies={isMedication && notificationsEnabled && reminderAtDue}
+            dateStr={dateStr}
+            timeStr={timeStr}
+            members={members}
+            ownerId={circle?.owner_id}
+          />
+          <DosePastTimeNote visible={startsNextDose} />
+          {extraTimes.map((time, index) => (
+            <div
+              key={index}
+              data-testid={`extra-dose-${index + 1}`}
+              className="flex flex-col gap-2"
+            >
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
+                  <TimeField
+                    id={`extra_dose_time_${index + 1}`}
+                    label={t('addEvent.doseNumber', { number: index + 2 })}
+                    value={time}
+                    onChange={(e) =>
+                      setExtraTimes((prev) =>
+                        prev.map((existing, i) => (i === index ? e.target.value : existing))
+                      )
+                    }
+                  />
+                </div>
+                <button
+                  type="button"
+                  aria-label={t('addEvent.simple.removeDose', { number: index + 2 })}
+                  onClick={() => setExtraTimes((prev) => prev.filter((_, i) => i !== index))}
+                  className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-ink-2 hover:text-ink"
+                >
+                  <Icon name="close-outline" size="row" />
+                </button>
+              </div>
+              <DoseQuietHoursNote
+                applies={isMedication && notificationsEnabled && reminderAtDue}
+                dateStr={dateStr}
+                timeStr={time}
+                members={members}
+                ownerId={circle?.owner_id}
+              />
+              <DosePastTimeNote
+                visible={doseStartsNext(time)}
+                testId={`dose-past-time-note-${index + 1}`}
+              />
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
+        {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
+        <ChipSelect
+          id="how-often"
+          label={t('addEvent.simple.howOften')}
+          allowDeselect={false}
+          options={[
+            { value: 'daily', label: t('addEvent.simple.everyDay') },
+            { value: 'days_of_week', label: t('addEvent.simple.someDays') },
+            { value: 'as_needed', label: t('addEvent.simple.whenNeeded') },
+          ]}
+          value={howOftenValue}
+          onChange={(next) => {
+            if (!next) return;
+            chooseRecurrence(next as RecurrenceChoice);
+            completeStep('how_often');
+          }}
+        />
+        {asNeededReasonBlock}
+        {daysBlock}
+      </section>
+
+      <DisclosureRow
+        id="more-details"
+        title={t('addEvent.simple.moreDetails')}
+        summary={t('addEvent.simple.moreDetailsSummary')}
+        open={moreOpen}
+        onToggle={setMoreOpen}
+      >
+        {dateFieldBlock}
+        {detailsBlock}
+        {repeatSelectBlock}
+        {cycleBlock}
+        {endDateBlock}
+        {reminderBlock}
+      </DisclosureRow>
+    </div>
+  );
+
+  const placeSummary = location.trim() || t('addEvent.simple.add');
+  const simpleAppointmentFields = (
+    <div className="flex flex-col gap-6" data-testid="simple-appointment-form" data-large-text={largeText}>
+      <section
+        aria-labelledby="sf-what"
+        className="flex flex-col gap-3"
+        onBlur={() => {
+          if (title.trim()) completeStep('what');
+        }}
+      >
+        {sectionHeading('sf-what', t('addEvent.simple.whatIsIt'))}
+        <TextField
+          id={titleFieldId}
+          label={t('addEvent.fields.title')}
+          required
+          value={title}
+          maxLength={150}
+          error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
+          placeholder={t('addEvent.placeholders.appointmentTitle')}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            clearError(titleFieldId, 'title');
+          }}
+        />
+        {showTitleSuggestions && (
+          <ChipSelect
+            id="title-suggestions"
+            label={t('addEvent.titleSuggestions.label')}
+            options={titleSuggestions}
+            value={title}
+            onChange={(next) => {
+              setTitle(next ?? '');
+              if (next) {
+                clearError(titleFieldId, 'title');
+                completeStep('what');
+              }
+            }}
+          />
+        )}
+      </section>
+
+      <section aria-labelledby="sf-when" className="flex flex-col gap-3">
+        {sectionHeading('sf-when', t('addEvent.simple.when'))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {dateFieldBlock}
+          <TimeField
+            id="scheduled_time"
+            label={t('addEvent.fields.time')}
+            value={timeStr}
+            error={errors.scheduled_time ?? missingErrorFor('time')}
+            hint={conversionText ?? t('addEvent.hints.timeOptional')}
+            onChange={(e) => {
+              changeTime(e.target.value);
+              if (e.target.value) completeStep('when');
+            }}
+          />
+        </div>
+        {timeStr && (
+          <>
+            <TimeField
+              id="endTime"
+              label={t('addEvent.fields.endTime')}
+              required={!isEditingWithoutDuration}
+              value={endTimeStr}
+              error={errors.endTime}
+              onChange={(e) => {
+                setEndTimeStr(e.target.value);
+                clearError('endTime');
+              }}
+            />
+            <ChipSelect
+              id="duration-presets"
+              label={t('addEvent.fields.duration')}
+              options={durationOptions}
+              value={(() => {
+                const index = matchingDurationIndex(timeStr, endTimeStr);
+                return index === -1 ? null : String(DURATION_PRESETS[index]);
+              })()}
+              onChange={(next) => {
+                if (!next) return;
+                setEndTimeStr(addMinutesToTimeStr(timeStr, Number(next)));
+                clearError('endTime');
+              }}
+            />
+          </>
+        )}
+      </section>
+
+      <section aria-labelledby="sf-who" className="flex flex-col gap-3">
+        {sectionHeading('sf-who', t('addEvent.simple.whoIsGoing'))}
+        <ChipSelect
+          id="assigned_to"
+          label={t('addEvent.simple.whoIsGoing')}
+          allowDeselect={false}
+          options={assigneeOptions}
+          value={assignedTo ?? ''}
+          onChange={(next) => {
+            setAssignedTo(next || null);
+            completeStep('who');
+          }}
+        />
+      </section>
+
+      <div className="flex flex-col">
+        <DisclosureRow
+          id="row-doctor"
+          title={t('addEvent.simple.doctor')}
+          summary={providerId ? t('addEvent.simple.added') : t('addEvent.simple.add')}
+          open={!!openRows.doctor}
+          onToggle={(open) => setRowOpen('doctor', open)}
+        >
+          <DoctorField
+            circleId={circleId}
+            value={providerId}
+            storedValue={null}
+            appliesToSeries={false}
+            busy={isPending}
+            onChange={(id, provider) => {
+              setProviderId(id);
+              chooseDoctorLocation(provider);
+            }}
+          />
+        </DisclosureRow>
+        <DisclosureRow
+          id="row-place"
+          title={t('addEvent.simple.place')}
+          summary={placeSummary}
+          open={!!openRows.place}
+          onToggle={(open) => setRowOpen('place', open)}
+        >
+          <TextField
+            id="location"
+            label={t('addEvent.fields.location')}
+            value={location}
+            maxLength={250}
+            error={errors.location}
+            hint={
+              locationFilledFrom
+                ? t('addEvent.doctor.filledFrom', { name: locationFilledFrom })
+                : undefined
+            }
+            placeholder={t('addEvent.placeholders.location')}
+            onChange={(e) => {
+              setLocation(e.target.value);
+              setLocationFilledFrom(null);
+              clearError('location');
+            }}
+          />
+        </DisclosureRow>
+        <DisclosureRow
+          id="row-notes"
+          title={t('addEvent.simple.notesAndReminders')}
+          summary={t('addEvent.simple.add')}
+          open={!!openRows.notes}
+          onToggle={(open) => setRowOpen('notes', open)}
+        >
+          {detailsBlock}
+          {reminderBlock}
+        </DisclosureRow>
+        <DisclosureRow
+          id="row-repeat"
+          title={t('addEvent.simple.repeat')}
+          summary={recurrenceOptions.find((o) => o.value === recurrence)?.label}
+          open={!!openRows.repeat}
+          onToggle={(open) => setRowOpen('repeat', open)}
+        >
+          {repeatSelectBlock}
+          {daysBlock}
+          {cycleBlock}
+          {endDateBlock}
+        </DisclosureRow>
+      </div>
+    </div>
+  );
+
+  const simpleFields = simpleKind === 'medication' ? simpleMedicationFields : simpleAppointmentFields;
+
 
   return (
     <>
     <Modal
-      title={isEditing ? t('addEvent.editTitle') : t('addEvent.newTitle')}
-      onClose={onClose}
+      title={
+        isEditing
+          ? t('addEvent.editTitle')
+          : simpleKind === 'medication'
+            ? t('addEvent.simple.newMedication')
+            : simpleKind === 'appointment'
+              ? t('addEvent.simple.newAppointment')
+              : t('addEvent.newTitle')
+      }
+      hideTitle={firstRun}
+      onClose={handleClose}
       closeLabel={t('addEvent.close')}
       size="lg"
       closeOnBackdropClick={false}
@@ -1551,11 +2757,12 @@ function AddEventForm({
         <>
           <Button
             variant="secondary"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isPending}
             className={FOOTER_BUTTON_CLASS}
+            data-testid={firstRun ? 'first-run-skip' : undefined}
           >
-            {t('common:cancel')}
+            {firstRun ? t('addEvent.firstRun.skip') : t('common:cancel')}
           </Button>
           {/* Save is always the solid primary button. With a required field
               missing a press does not save: it cancels the submit, focuses the
@@ -1580,7 +2787,13 @@ function AddEventForm({
             data-testid="add-event-save"
             className={`${FOOTER_BUTTON_CLASS} border-[1.5px] border-transparent`}
           >
-            {isEditing ? t('addEvent.saveChanges') : t('addEvent.create')}
+            {isEditing
+              ? t('addEvent.saveChanges')
+              : simpleKind === 'medication'
+                ? t('addEvent.simple.addMedication')
+                : simpleKind === 'appointment'
+                  ? t('addEvent.simple.addAppointment')
+                  : t('addEvent.create')}
           </Button>
         </>
       }
@@ -1604,7 +2817,28 @@ function AddEventForm({
           </Text>
         )}
 
+        {firstRun && (
+          <header className="flex flex-col gap-1.5" data-testid="first-run-form-heading">
+            <Eyebrow>
+              {circle?.is_self_care
+                ? t('addEvent.firstRun.eyebrowSelf')
+                : t('addEvent.firstRun.eyebrow', {
+                    name: (circle?.recipient_name ?? '').toLocaleUpperCase(i18n.language),
+                  })}
+            </Eyebrow>
+            <Text variant="h2" as="h3">
+              {circle?.is_self_care
+                ? t('addEvent.firstRun.titleSelf')
+                : t('addEvent.firstRun.title', { name: circle?.recipient_name ?? '' })}
+            </Text>
+            <Text variant="caption">{t('addEvent.firstRun.hint')}</Text>
+          </header>
+        )}
+        {simpleKind !== null ? (simpleFields) : (
+        <>
         {/* Type selector — locked in edit mode, like mobile. */}
+        {/* Opened for a specific type (or editing one): no type switch. */}
+        {!isEditing && !initialType && (
         <Select
           id="event_type"
           label={t('addEvent.fields.type')}
@@ -1621,6 +2855,7 @@ function AddEventForm({
             if (next === 'medication') setEndTimeStr('');
           }}
         />
+        )}
 
         {isMedication ? (
           // Real drug names from RxNorm as you type (mobile parity). For a
@@ -1636,8 +2871,15 @@ function AddEventForm({
             error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
             placeholder={t('addEvent.placeholders.medicationName')}
             selectedDrug={selectedDrug}
-            onSelectDrug={setSelectedDrug}
+            onSelectDrug={(drug) => {
+              if (drug) usedAsTypedRef.current = false;
+              setSelectedDrug(drug);
+            }}
+            onUseAsTyped={() => {
+              usedAsTypedRef.current = true;
+            }}
             onChange={(next) => {
+              usedAsTypedRef.current = false;
               setTitle(next);
               clearError(titleFieldId, 'title');
             }}
@@ -1850,16 +3092,17 @@ function AddEventForm({
           />
         )}
 
+        {/* Inline note (create only): the time already passed today, so the backend starts this
+            medication with its next dose. Live; never blocks Save. */}
+        <DosePastTimeNote visible={startsNextDose} />
+
         {/* Duration presets — the chips cover the common spans; the end-time
             field above stays for anything else. */}
         {!isMedication && timeStr && (
           <ChipSelect
             id="duration-presets"
             label={t('addEvent.fields.duration')}
-            options={DURATION_PRESETS.map((mins) => ({
-              value: String(mins),
-              label: t(`addEvent.durations.${mins}`),
-            }))}
+            options={durationOptions}
             value={(() => {
               const index = matchingDurationIndex(timeStr, endTimeStr);
               return index === -1 ? null : String(DURATION_PRESETS[index]);
@@ -1904,316 +3147,13 @@ function AddEventForm({
             clearError('description');
           }}
         />
-
-        {/* Recurrence */}
-        {isAsNeededEdit ? (
-          // LOCKED: scheduled <-> as needed cannot change after create (the
-          // server refuses it, AS_NEEDED_IMMUTABLE), so the choice is shown, not
-          // offered. Same read-only treatment the Type selector gets on an edit.
-          <div className="flex flex-col gap-1" data-testid="as-needed-locked-repeat">
-            <span className="text-sm font-medium text-ink">{t('addEvent.fields.repeat')}</span>
-            <p className="m-0 rounded-xl bg-bg-2 px-4 py-3 text-sm text-ink-2">
-              {t('addEvent.asNeeded.lockedRepeat')}
-            </p>
-          </div>
-        ) : (
-          <Select
-            id="recurrence_rule"
-            label={t('addEvent.fields.repeat')}
-            options={recurrenceOptions}
-            value={recurrence}
-            error={errors.recurrence_rule}
-            hint={isAsNeeded ? t('addEvent.recurrence.asNeededHint') : undefined}
-            onChange={(e) => chooseRecurrence(e.target.value as RecurrenceChoice)}
-          />
-        )}
-
-        {/* AS NEEDED details: ONE optional plain note. No minimum interval, no
-            maximum per day — the family decides when a dose is right, the app
-            only records it. */}
-        {isAsNeeded && (
-          <TextField
-            id="as_needed_reason"
-            label={
-              <>
-                {t('addEvent.asNeeded.reason')}{' '}
-                <span className="font-normal text-ink-3">{t('addEvent.asNeeded.optional')}</span>
-              </>
-            }
-            value={asNeededReason}
-            maxLength={100}
-            error={errors.as_needed_reason}
-            placeholder={t('addEvent.asNeeded.reasonPlaceholder')}
-            hint={t('addEvent.asNeeded.repeatHint')}
-            onChange={(e) => {
-              setAsNeededReason(e.target.value);
-              clearError('as_needed_reason');
-            }}
-          />
-        )}
-
-        {/* "Days of the week" — the chips reveal inline under the select, the
-            way Cycle reveals its on/off inputs (mobile shows the same chips as
-            a step of its Repeat sheet). */}
-        {recurrence === 'days_of_week' && (
-          <div className="flex flex-col gap-2">
-            <DaysOfWeekPicker
-              id={RECURRENCE_DAYS_ID}
-              label={t('addEvent.daysOfWeek.title')}
-              selected={selectedDays}
-              lockedDay={lockedDay}
-              lockedHintId={lockedDay != null ? RECURRENCE_DAYS_LOCK_ID : undefined}
-              describedBy={errors[RECURRENCE_DAYS_ID] ? RECURRENCE_DAYS_ERROR_ID : undefined}
-              // PK23: the chips are in the RECIPIENT's frame; say so only when
-              // the viewer's zone differs (the dual-time hint's condition).
-              note={showDualTimezone ? daysTimezoneNote : undefined}
-              noteId={RECURRENCE_DAYS_NOTE_ID}
-              language={language}
-              onChange={(days) => {
-                recurrenceTouched.current = true;
-                setRecurrenceDays(days);
-                clearError(RECURRENCE_DAYS_ID);
-              }}
-            />
-            {errors[RECURRENCE_DAYS_ID] && (
-              <p id={RECURRENCE_DAYS_ERROR_ID} className={INPUT_ERROR}>
-                <Icon name="alert-circle-outline" size="inline" />
-                {errors[RECURRENCE_DAYS_ID]}
-              </p>
-            )}
-            {/* Polite live region, always mounted while the picker is: the
-                "First time" move is a consequence of a chip toggle that a
-                screen-reader user would otherwise never hear about. */}
-            <div aria-live="polite" className="ml-1 flex flex-col gap-1">
-              {selectedDays.length > 0 && (
-                <p className="m-0 text-sm text-ink-2">
-                  {formatWeekdayList(selectedDays, language)}
-                </p>
-              )}
-              {firstTimeLabel && (
-                <p className="m-0 text-sm font-medium text-ink">
-                  {t('addEvent.daysOfWeek.firstTime', { date: firstTimeLabel })}
-                </p>
-              )}
-              {lockedDay != null && (
-                <p id={RECURRENCE_DAYS_LOCK_ID} className="m-0 text-sm text-ink-3">
-                  {t('addEvent.daysOfWeek.startLocked', { day: lockedDayName })}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {recurrence === 'cycle' && (
-          <div className="grid grid-cols-2 gap-4">
-            <TextField
-              id="cycle_days_on"
-              label={t('addEvent.fields.daysOn')}
-              type="number"
-              min={1}
-              max={999}
-              value={daysOn}
-              onChange={(e) => setDaysOn(e.target.value)}
-            />
-            <TextField
-              id="cycle_days_off"
-              label={t('addEvent.fields.daysOff')}
-              type="number"
-              min={1}
-              max={999}
-              value={daysOff}
-              onChange={(e) => setDaysOff(e.target.value)}
-            />
-          </div>
-        )}
-
-        {recurrence !== 'none' && recurrence !== 'as_needed' && (
-          <DateField
-            id="recurrence_end_date"
-            label={t('addEvent.fields.endDate')}
-            value={recurrenceEndDate}
-            today={pickerToday}
-            hint={t('addEvent.hints.endDate')}
-            error={errors.recurrence_end_date}
-            onChange={(e) => {
-              datesTouched.current = true;
-              setRecurrenceEndDate(e.target.value);
-              clearError('recurrence_end_date');
-            }}
-          />
-        )}
-
-        {/* Reminders — only once there is a time to fire against. */}
-        {isAsNeeded && (
-          <p className="m-0 text-sm text-ink-3" data-testid="as-needed-no-reminders">
-            {t('addEvent.asNeeded.remindersNone')}
-          </p>
-        )}
-        {remindersApply(eventType, timeStr) && !isAsNeeded && (
-        <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
-          <Text variant="sectionTitle" as="legend" className="p-0">
-            {t('addEvent.reminders.section')}
-          </Text>
-          {/* WHERE THESE ACTUALLY GO.
-              Every control below writes a flag the BACKEND acts on by sending an
-              Expo push — and the web app has no push at all: no service worker,
-              no Notification API, and it never registers a push token. When a
-              user has none, notificationService returns `no_token` and stops;
-              there is no email fallback on that path.
-
-              STATES THE DESTINATION, NOT THE LIMITATION. This used to carry a
-              second sentence — "The web app cannot send them" — which read as a
-              defect of the surface the user is standing on and invited "then why
-              am I setting this here?". It also overreached: the reminders are
-              mostly NOT for the viewer. The escalation chain pings the care
-              recipient and the other caregivers on their phones, so a web-only
-              caregiver arranging their mother's doses gets exactly the outcome
-              they wanted — the phrasing just implied nothing would happen.
-
-              The case it was protecting is a web-only user with NO device, for
-              whom these really do go nowhere. That warning wants
-              `GET /push-tokens` (already routed; `queryKeys.pushTokens` is
-              reserved and unused), so it can fire only for a viewer with no
-              active token and say "you" rather than "no one" — the member
-              payload carries no device info, so this surface can never speak for
-              anybody else. Until then one true sentence beats a blanket one. */}
-          <p className="m-0 text-sm text-ink-3">{t('addEvent.reminders.webDelivery')}</p>
-          {/* The explainer trigger, mobile's ⓘ beside the notifications row.
-              NOT folded into the `<legend>` above, in either direction: a legend
-              must be the fieldset's FIRST child or it stops naming the group, so
-              it cannot be wrapped in a flex row, and nesting the button inside it
-              instead drags "How notifications work" into the accessible name
-              every control in this fieldset inherits.
-
-              Labelled with VISIBLE TEXT rather than an icon alone. Mobile can
-              lean on a bare ⓘ because its sheet is one tap from a thumb; here
-              the same glyph would be a 16px icon-only control whose only name is
-              an `aria-label`, which is the weakest form this could take. */}
-          <button
-            type="button"
-            onClick={() => setShowHowItWorks(true)}
-            className="-my-2 inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 self-start rounded-md text-sm font-medium text-ink-2 underline decoration-line underline-offset-2 hover:text-ink"
-          >
-            <Icon name="help-circle-outline" size="inline" />
-            {t('addEvent.reminders.howItWorks.button')}
-          </button>
-          <Toggle
-            id="notifications_enabled"
-            label={t('addEvent.reminders.enable')}
-            hint={
-              remindersOffNote ? (
-                <>
-                  {t('addEvent.reminders.enableHint')}
-                  {/* Wired to the switch through the hint's aria-describedby, so
-                      the consequence is announced with the control, not by color. */}
-                  <span className="mt-1 block font-medium text-terracotta-deep">
-                    {remindersOffNote}
-                  </span>
-                </>
-              ) : (
-                t('addEvent.reminders.enableHint')
-              )
-            }
-            checked={notificationsEnabled}
-            onChange={(next) => changeReminder('notificationsEnabled', next)}
-          />
-          {notificationsEnabled && (
-            <div className="flex flex-col gap-3 rounded-xl border border-line-2 p-3">
-              {/* THE ANCHOR ALERT — every event type, and a real control.
-                  Apple's model: the alert at the scheduled time is the primary
-                  one and the "earlier reminders" below are the optional extras.
-                  It used to be a locked, medication-only statement of fact
-                  ("Always on for medications"); `reminder_at_due` makes that
-                  sentence false, so it is a checkbox now, first in the group.
-                  A CHECKBOX, not a switch, and that distinction is the point:
-                  "Send reminders" above is the one kill switch for this entry,
-                  and everything below it — the anchor included — is a selection
-                  WITHIN that permission. Drawn as six identical lozenges the two
-                  kinds read as duplicates of each other, which is exactly how
-                  mobile already splits them (Switch vs `CheckboxRow`). */}
-              <div className="flex flex-col gap-2 border-b border-line-2 pb-3">
-                <Checkbox
-                  id="reminder_at_due"
-                  label={t('addEvent.reminders.atTime')}
-                  hint={
-                    reminderAtDue ? (
-                      t('addEvent.reminders.atTimeHint')
-                    ) : (
-                      <>
-                        {t('addEvent.reminders.atTimeHint')}
-                        {/* Inside the checkbox's own aria-describedby hint, so
-                            the consequence is announced with the control rather
-                            than carried by color alone. */}
-                        <span className="mt-1 block font-medium text-terracotta-deep">
-                          {t(
-                            showNoEarlierBeforeDose
-                              ? 'addEvent.reminders.atTimeOffNoEarlier'
-                              : 'addEvent.reminders.atTimeOff'
-                          )}
-                        </span>
-                      </>
-                    )
-                  }
-                  checked={reminderAtDue}
-                  onChange={(next) => changeReminder('reminderAtDue', next)}
-                />
-                {/* Medication only: the escalation chain hangs off
-                    notifications_enabled, not off any reminder_* flag. */}
-                {isMedication && <p className="m-0 text-sm text-ink-3">{escalationNote}</p>}
-              </div>
-              <div
-                role="group"
-                aria-labelledby={EARLIER_REMINDERS_LABEL_ID}
-                aria-describedby={
-                  showNoneSelectedWarning ? EARLIER_REMINDERS_WARNING_ID : undefined
-                }
-                className="flex flex-col gap-2"
-              >
-                <Text variant="label" as="span" id={EARLIER_REMINDERS_LABEL_ID}>
-                  {t('addEvent.reminders.additional')}
-                </Text>
-                <Checkbox
-                  label={t('addEvent.reminders.h24')}
-                  checked={reminder24h}
-                  onChange={(next) => changeReminder('reminder24h', next)}
-                />
-                <Checkbox
-                  label={t('addEvent.reminders.h1')}
-                  checked={reminder1h}
-                  onChange={(next) => changeReminder('reminder1h', next)}
-                />
-                <Checkbox
-                  label={t('addEvent.reminders.m30')}
-                  checked={reminder30m}
-                  onChange={(next) => changeReminder('reminder30m', next)}
-                />
-                <Checkbox
-                  label={t('addEvent.reminders.m15')}
-                  checked={reminder15m}
-                  onChange={(next) => changeReminder('reminder15m', next)}
-                />
-              </div>
-            </div>
-          )}
-          {/* LIVE REGION, OUTSIDE the `notificationsEnabled` block.
-              A screen reader only announces a change inside a region that was
-              ALREADY in the accessibility tree; a region that mounts at the same
-              moment as its text is typically silent. This previously sat inside
-              that conditional under a comment claiming it rendered
-              unconditionally, so the whole group — region included — unmounted
-              on exactly the interaction whose consequence it exists to announce.
-              The CONTENT stays conditional; the region does not. */}
-          <div aria-live="polite">
-            {showNoneSelectedWarning && (
-              <p
-                id={EARLIER_REMINDERS_WARNING_ID}
-                className="m-0 text-sm font-medium text-terracotta-deep"
-              >
-                {t('addEvent.reminders.noneSelected')}
-              </p>
-            )}
-          </div>
-        </fieldset>
+        {repeatSelectBlock}
+        {asNeededReasonBlock}
+        {daysBlock}
+        {cycleBlock}
+        {endDateBlock}
+        {reminderBlock}
+        </>
         )}
       </form>
     </Modal>
@@ -2235,12 +3175,8 @@ function AddEventForm({
         offlineKind="save"
         icon="time-outline"
         iconTone="clay"
-        title={t(
-          isEditing ? 'addEvent.alerts.pastTimeEditTitle' : 'addEvent.alerts.pastTimeTitle'
-        )}
-        message={t(
-          isEditing ? 'addEvent.alerts.pastTimeEditMessage' : 'addEvent.alerts.pastTimeMessage'
-        )}
+        title={t('addEvent.alerts.pastTimeEditTitle')}
+        message={t('addEvent.alerts.pastTimeEditMessage')}
         confirmLabel={t('addEvent.alerts.continue')}
         cancelLabel={t('common:cancel')}
         closeLabel={t('addEvent.alerts.closePastTime')}
@@ -2258,14 +3194,78 @@ function AddEventForm({
           // raise their own toasts, so it resolves on every path.
           return persist(data);
         }}
-        onCancel={() => setPendingPastTime(null)}
+        onCancel={() => {
+          // A cancel, not a failure (mobile parity): the user chose not to save.
+          Analytics.entryValidationBlocked('past_time_cancelled', eventType);
+          setPendingPastTime(null);
+        }}
       />
     )}
     </>
   );
 }
 
+type AbandonField = 'name' | 'dosage' | 'time' | 'repeat' | 'more_details' | 'none';
+
+/** Record `field` in `ref` whenever `value` changes after the first render. */
+function useNoteFieldChange<R extends string>(
+  ref: { current: R },
+  value: unknown,
+  field: R
+): void {
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    ref.current = field;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `value` is the trigger
+  }, [value]);
+}
+
+/**
+ * Why `buildPayload` refused, as an `entry_validation_blocked.reason`. The
+ * first four mirror mobile's values; `invalid_field` is the Zod-schema catch-all
+ * (a value too long, a malformed field, no days chosen) that mobile has no
+ * reason for.
+ */
+function validationReason(input: {
+  hasTitle: boolean;
+  isMedication: boolean;
+  hasTime: boolean;
+  hasEndTime: boolean;
+  errors: FieldErrors;
+}):
+  | 'missing_name'
+  | 'missing_time'
+  | 'missing_end_time'
+  | 'end_time_after_start'
+  | 'invalid_field' {
+  if (!input.hasTitle) return 'missing_name';
+  if (input.isMedication && input.errors.scheduled_time) return 'missing_time';
+  if (!input.isMedication && input.errors.endTime) {
+    return input.hasTime && !input.hasEndTime ? 'missing_end_time' : 'end_time_after_start';
+  }
+  return 'invalid_field';
+}
+
 /** Type-aware create-success toast key, falling back to the generic one. */
+/**
+ * Did the circle have NO medication before this save, according to the presence answer Today's
+ * next-step card already cached (same query, same window)? A cold or unknown cache answers
+ * false: an unknown never writes Today's Mark it note. Cache read only, no fetching.
+ */
+function circleHadNoMedication(circleId: string, today: string): boolean {
+  const cached = queryClient.getQueryData<EventsPresence | null>(
+    queryKeys.calendarEventsPresence(circleId, {
+      start_date: addDays(today, -30),
+      end_date: addDays(today, 180),
+    })
+  );
+  return !!cached && cached.medication === false;
+}
+
 function createdToastKey(eventType: EventType): string {
   switch (eventType) {
     case 'medication':

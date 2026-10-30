@@ -31,7 +31,10 @@ const successEnvelope = {
   },
 };
 
-function renderLogin(state?: { from?: { pathname?: string }; emailVerified?: boolean }) {
+function renderLogin(state?: {
+  from?: { pathname?: string; search?: string; hash?: string };
+  emailVerified?: boolean;
+}) {
   return render(
     <MemoryRouter initialEntries={[{ pathname: '/login', state: state ?? null }]}>
       <LoginPage />
@@ -40,7 +43,7 @@ function renderLogin(state?: { from?: { pathname?: string }; emailVerified?: boo
 }
 
 async function fillAndSubmit(email = 'pat@example.com', password = 'Secret#123', state?: {
-  from?: { pathname?: string };
+  from?: { pathname?: string; search?: string; hash?: string };
 }) {
   const user = userEvent.setup();
   renderLogin(state);
@@ -156,6 +159,66 @@ describe('LoginPage', () => {
     );
     // NOT consumed here — InviteLandingPage clears it on its authenticated render.
     expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
+  });
+
+  it('keeps the full return path (pathname + query + hash) after email/password login', async () => {
+    mockedPost.mockResolvedValueOnce(successEnvelope as never);
+
+    await fillAndSubmit('pat@example.com', 'Secret#123', {
+      from: {
+        pathname: '/circles/c-1/calendar',
+        search: '?date=2026-06-12&eventId=ev-1&src=weekly_digest',
+        hash: '#notes',
+      },
+    });
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/circles/c-1/calendar?date=2026-06-12&eventId=ev-1&src=weekly_digest#notes',
+        { replace: true }
+      )
+    );
+  });
+
+  it.each([
+    ['protocol-relative', '//evil.example/x'],
+    ['backslash host', '/\\evil.example'],
+    ['scheme', 'https://evil.example'],
+    ['javascript scheme', 'javascript:alert(1)'],
+    ['no leading slash', 'circles'],
+  ])('never navigates to an unsafe return path (%s)', async (_label, pathname) => {
+    mockedPost.mockResolvedValueOnce(successEnvelope as never);
+
+    await fillAndSubmit('pat@example.com', 'Secret#123', { from: { pathname } });
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+  });
+
+  it('parks the full return path across the Google OAuth redirect', async () => {
+    vi.mocked(supabase.auth.signInWithOAuth).mockResolvedValueOnce({
+      data: { provider: 'google', url: 'https://accounts.google.com/oauth' },
+      error: null,
+    } as never);
+    const user = userEvent.setup();
+    renderLogin({
+      from: { pathname: '/circles/c-1/meds', search: '?medication=m-1&src=weekly_digest' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    expect(sessionStorage.getItem('cc_pending_return_path')).toBe(
+      '/circles/c-1/meds?medication=m-1&src=weekly_digest'
+    );
+  });
+
+  it('a stale parked return path is cleared when OAuth starts with no return path', async () => {
+    sessionStorage.setItem('cc_pending_return_path', '/circles/old');
+    vi.mocked(supabase.auth.signInWithOAuth).mockResolvedValueOnce({
+      data: { provider: 'google', url: 'x' },
+      error: null,
+    } as never);
+    const user = userEvent.setup();
+    renderLogin();
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    expect(sessionStorage.getItem('cc_pending_return_path')).toBeNull();
   });
 
   it('routes EMAIL_NOT_VERIFIED to /verify-email with the email in router STATE (not query params)', async () => {

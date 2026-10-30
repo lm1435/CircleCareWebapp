@@ -1,10 +1,4 @@
 {
-  "hero": {
-    "bornAge": "Geboren am {{date}} · Alter {{age}}",
-    "caredForBy": "Umsorgt von",
-    "andMore_one": "+{{count}} weitere Person",
-    "andMore_other": "+{{count}} weitere Personen"
-  },
   "adherence": {
     "eyebrow": "Letzte 7 Tage",
     "label": "Medikamente nach Plan",
@@ -19,8 +13,18 @@
     "tasksNote_one": "{{count}} offen",
     "tasksNote_other": "{{count}} offen",
     "vitals": "Vitalwerte",
-    "activityFeed": "Aktivitätsverlauf",
-    "careInfo": "Gesundheit"
+    "notesWrote": "{{who}} schrieb {{ago}}",
+    "someone": "Jemand",
+    "notesEmpty": "Wie der Tag war",
+    "tasksEmpty": "Gemeinsame Aufgaben",
+    "calendarNext": "Als Nächstes: {{day}}",
+    "calendarEmpty": "Noch nichts",
+    "medsRefill_one": "{{count}} Nachschub bald",
+    "medsRefill_other": "{{count}} Nachschübe bald",
+    "medsEmpty": "Noch nichts",
+    "shifts": "Schichten",
+    "healthInfo": "Gesundheitsinfos",
+    "activity": "Aktivität"
   },
   "appointments": {
     "title": "Anstehende Termine",
@@ -61,5 +65,74 @@
     "editCircle": "Kreis bearbeiten",
     "members": "Mitglieder",
     "deleteCircle": "Kreis löschen"
+  },
+  "today": {
+    "title": "Heute für {{name}}",
+    "titleSelf": "Heute",
+    "notNow": "Nicht jetzt",
+    "nextUp": {
+      "heading": "Als Nächstes",
+      "taken": "Eingenommen",
+      "done": "Erledigt",
+      "takenLabel": "Eingenommen, {{name}}, {{when}}",
+      "doneLabel": "Erledigt, {{name}}, {{when}}",
+      "anyTime": "Jederzeit",
+      "yesterday": "Gestern",
+      "daysOverdue_one": "{{count}} Tag überfällig",
+      "daysOverdue_other": "{{count}} Tage überfällig",
+      "late": "Verspätet",
+      "lateHours_one": "{{count}} Stunde verspätet",
+      "lateHours_other": "{{count}} Stunden verspätet",
+      "allOfToday_one": "Alles von heute · {{count}} Eintrag",
+      "allOfToday_other": "Alles von heute · {{count}} Einträge",
+      "empty": "Heute ist für {{name}} nichts weiter geplant.",
+      "emptySelf": "Heute ist für Sie nichts weiter geplant.",
+      "loadError": "Die Liste für heute konnte nicht geladen werden"
+    },
+    "nextStep": {
+      "eyebrow": "Nächster Schritt · {{current}} von {{total}}",
+      "first_med": {
+        "title": "Erstes Medikament für {{name}} hinzufügen",
+        "titleSelf": "Ihr erstes Medikament hinzufügen",
+        "body": "Alle, die helfen, sehen es hier, mit einer Erinnerung zur richtigen Zeit.",
+        "bodySelf": "Sie sehen es hier, mit einer Erinnerung zur richtigen Zeit.",
+        "cta": "Medikament hinzufügen"
+      },
+      "invite": {
+        "title": "Jemanden zum Helfen einladen",
+        "titleSelf": "Jemanden zum Helfen einladen",
+        "body": "Familie, Freunde oder eine bezahlte Pflegekraft. Sie sehen die Medikamente von {{name}} und werden erinnert, wenn eine Einnahme nicht als eingenommen markiert ist.",
+        "bodySelf": "Familie, Freunde oder eine bezahlte Pflegekraft. Sie sehen Ihre Medikamente und werden erinnert, wenn eine Einnahme nicht als eingenommen markiert ist.",
+        "cta": "Einladen"
+      },
+      "reminders": {
+        "title": "Erinnerungen einschalten",
+        "titleSelf": "Erinnerungen einschalten",
+        "body": "Lassen Sie sich erinnern, wenn eine Einnahme fällig ist, und warnen, wenn eine nicht als eingenommen markiert ist.",
+        "bodySelf": "Lassen Sie sich erinnern, wenn eine Einnahme fällig ist, und warnen, wenn eine nicht als eingenommen markiert ist.",
+        "cta": "Erinnerungen einschalten"
+      }
+    },
+    "shiftsNudge": {
+      "joined": "{{member}} ist dem Kreis von {{name}} beigetreten",
+      "joinedSelf": "{{member}} ist Ihrem Kreis beigetreten",
+      "title": "Teilen Sie die Pflege mit Schichten",
+      "body": "Verteilen Sie Nächte und Wochenenden, damit alle wissen, wer dran ist.",
+      "cta": "Schichten einrichten"
+    },
+    "doseHint": {
+      "eyebrow": "So funktioniert es",
+      "body": "Tippen Sie auf <b>Eingenommen</b>, wenn {{name}} es einnimmt. Alle, die helfen, sehen es sofort, sodass niemand eine zweite Dosis gibt.",
+      "bodySelf": "Tippen Sie auf <b>Eingenommen</b>, wenn Sie es einnehmen. Alle, die helfen, sehen es sofort, sodass niemand eine zweite Dosis gibt.",
+      "gotIt": "Verstanden"
+    },
+    "markIt": {
+      "tomorrow": "Morgen",
+      "today": "Heute",
+      "question": "Heute schon gegeben?",
+      "action": "Abhaken",
+      "takenByYou": "Von Ihnen eingenommen",
+      "taken": "Eingenommen"
+    }
   }
 }

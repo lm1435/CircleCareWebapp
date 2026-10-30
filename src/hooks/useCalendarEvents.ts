@@ -29,7 +29,8 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
-  classifyFailureCode,
+  failureContext,
+  type FailureAction,
   isDoseAlreadyLoggedError,
   isInvalidOccurrenceDateError,
   isNotFoundError,
@@ -411,8 +412,9 @@ function withCalendarRefreshCap(refreshed: Promise<void>): Promise<unknown> {
  * enforces access regardless of cached UI state.
  */
 function useEventMutationOnError(
-  hookCircleId: string
-): (error: unknown, sentCircleId?: unknown) => void {
+  hookCircleId: string,
+  action: FailureAction
+): (error: unknown, sentCircleId?: unknown, source?: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // PK18: the only SUBSCRIPTION_REQUIRED an event write can get is the
@@ -430,14 +432,17 @@ function useEventMutationOnError(
   // string counts, because most mutations hand this function to TanStack as
   // `onError` directly, and TanStack's second argument is the mutation
   // VARIABLES object, never a circle id.
-  return (error: unknown, sentCircleId?: unknown) => {
+  return (error: unknown, sentCircleId?: unknown, errorSource?: unknown) => {
     const circleId = typeof sentCircleId === 'string' ? sentCircleId : hookCircleId;
     // Counted before it is classified for the UI — every failed event write
     // reaches the admin digest as `error_occurred`. ids/enums only: `code` is
     // the closed-set `classifyFailureCode` value, never the toast copy.
-    Analytics.errorOccurred('calendar_events', 'calendar_events_mutation_error', {
+    // 'tasks' only when the task undo window committed a task completion
+    // (the sole caller that passes it); every other write is 'calendar_events'.
+    const failSource = errorSource === 'tasks' ? 'tasks' : 'calendar_events';
+    Analytics.errorOccurred(failSource, `${failSource}_${action}_failed`, {
       circle_id: circleId,
-      code: classifyFailureCode(error),
+      ...failureContext(failSource, action, error),
     });
     if (isSubscriptionRequiredError(error)) {
       promptLapsed(circleId);
@@ -507,7 +512,7 @@ export function useCreateEvent(
   circleId: string
 ): UseMutationResult<CalendarEvent, unknown, CreateEventRequest> {
   const queryClient = useQueryClient();
-  const onError = useEventMutationOnError(circleId);
+  const onError = useEventMutationOnError(circleId, 'create');
 
   return useMutation({
     mutationFn: (data: CreateEventRequest) => createEvent(circleId, data),
@@ -535,7 +540,7 @@ export function useUpdateEvent(
   circleId: string
 ): UseMutationResult<CalendarEvent, unknown, UpdateEventVariables> {
   const queryClient = useQueryClient();
-  const onError = useEventMutationOnError(circleId);
+  const onError = useEventMutationOnError(circleId, 'update');
 
   return useMutation({
     mutationFn: ({ eventId, data }: UpdateEventVariables) => updateEvent(circleId, eventId, data),
@@ -559,7 +564,7 @@ export function useDeleteEvent(
   circleId: string
 ): UseMutationResult<DeleteEventResult, unknown, DeleteEventVariables> {
   const queryClient = useQueryClient();
-  const onError = useEventMutationOnError(circleId);
+  const onError = useEventMutationOnError(circleId, 'delete');
 
   return useMutation({
     mutationFn: ({ eventId, deleteScope, scheduledDate }: DeleteEventVariables) =>
@@ -614,7 +619,7 @@ export function useMedicationStatus(
   circleId: string
 ): UseMutationResult<MedicationStatusResult, unknown, MedicationStatusVariables> {
   const queryClient = useQueryClient();
-  const onError = useEventMutationOnError(circleId);
+  const onError = useEventMutationOnError(circleId, 'update');
 
   return useMutation({
     mutationFn: ({ eventId, discontinued, scope }: MedicationStatusVariables) =>
@@ -646,6 +651,8 @@ export interface CompleteEventVariables {
    * the tap was made in. Omitted, the hook's `circleId` is used, as before.
    */
   circleId?: string;
+  /** Failure-report label: the task list's undo window passes 'tasks'. */
+  source?: 'tasks';
 }
 
 /** POST /circles/:circleId/events/:eventId/complete — complete a task/appt. */
@@ -653,7 +660,7 @@ export function useCompleteEvent(
   circleId: string
 ): UseMutationResult<CalendarEvent, unknown, CompleteEventVariables> {
   const queryClient = useQueryClient();
-  const onError = useEventMutationOnError(circleId);
+  const onError = useEventMutationOnError(circleId, 'update');
 
   return useMutation({
     mutationFn: ({ eventId, scheduledDate, circleId: sentCircleId }: CompleteEventVariables) =>
@@ -669,6 +676,7 @@ export function useCompleteEvent(
       }
       void invalidateEventQueries(queryClient, sentCircleId, variables.eventId);
     },
-    onError: (error, variables) => onError(error, variables.circleId ?? circleId),
+    onError: (error, variables) =>
+      onError(error, variables.circleId ?? circleId, variables.source),
   });
 }

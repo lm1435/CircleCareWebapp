@@ -214,7 +214,7 @@ test.describe('adherence report export', () => {
     void request;
     await armPrintCapture(page);
     await page.goto(`/circles/${emptyCircle}/meds`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Medications', level: 1 }).first()).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByRole('heading', { name: /'s meds$/, level: 1 }).first()).toBeVisible({ timeout: 25_000 });
     await page.getByRole('tab', { name: 'History' }).or(page.getByRole('button', { name: 'History', exact: true })).first().click();
     await expect(page.getByText(/No medication history|history/i).first()).toBeVisible({ timeout: 15_000 });
     // PINNED: AdherenceHero renders nothing when there is nothing scheduled, so

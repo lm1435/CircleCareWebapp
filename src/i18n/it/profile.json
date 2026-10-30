@@ -97,7 +97,7 @@
     "success": "Unità aggiornate."
   },
   "emailDigest": {
-    "description": "Un riepilogo settimanale dell'attività di cura, inviato alla tua email.",
+    "description": "Un riepilogo dell'attività di cura, inviato via email nelle settimane in cui c'è qualcosa da segnalare.",
     "enable": "Inviami un riepilogo settimanale",
     "day": "Giorno di invio",
     "premiumNote": "Incluso in Premium.",

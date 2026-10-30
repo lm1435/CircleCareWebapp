@@ -11,9 +11,8 @@ import { Analytics } from '@/lib/analytics';
 import { classifyFailureCode } from '@/lib/apiErrors';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import {
-  deferFirstRun,
   firstRunNavigationState,
-  markOnboardingPaywallSeen,
+  markOnboardingPaywallPending,
   shouldShowOnboardingPaywall,
 } from '@/lib/onboardingPaywall';
 import { Button, DateField, Modal, TextField, Toggle, useToast, useZodForm } from '@/components/ui';
@@ -155,24 +154,17 @@ export function CreateCircleModal({
           showToast(t('create.success'), 'success');
           onClose();
 
-          // THE ONBOARDING PAYWALL FIRES HERE, mirroring mobile's
-          // `doCreate` (CreateCircleScreen.tsx:254-262) exactly: first circle,
-          // free tier, never asked before. Read the long comment block above
-          // that branch on mobile, and lib/onboardingPaywall.ts here, before
-          // moving it — the placement has been removed and restored twice and
-          // the release-cohort data is unambiguous.
-          //
-          // The wizard is DEFERRED, not cancelled. Mobile parks it in a ref and
-          // fires it when CreateCircleScreen regains focus; on web `/upgrade`
-          // is a real route, so it is parked in sessionStorage and every exit
-          // from the paywall delivers it (UpgradePage), with the circle picker
-          // catching a browser-Back exit. Declining leads to the wizard, never
-          // to a dead end.
+          // THE ONBOARDING PAYWALL IS OWED HERE, not shown here (onboarding 1.3.1, spec
+          // section 7). Creation no longer navigates to /upgrade: when the old condition
+          // holds (first circle, free tier, never asked before; the placement has been
+          // removed and restored twice and the release-cohort data is unambiguous, so the
+          // CONDITION is unchanged) it only records "owed" for this user. The paywall then
+          // shows exactly once, at its new moment: after the first med's payoff, or (no first
+          // med) the next time Today is on screen. The seen flag is written when it is
+          // actually presented (lib/onboardingPaywall `consumeOnboardingPaywall`), still
+          // BEFORE navigating, so exactly-once is unchanged.
           if (shouldShowOnboardingPaywall({ isFirstCircle, tier: subscription?.tier })) {
-            markOnboardingPaywallSeen();
-            deferFirstRun({ circleId: circle.id, recipientName: data.recipient_name });
-            navigate('/upgrade', { state: { paywallContext: 'onboarding' } });
-            return;
+            markOnboardingPaywallPending(circle.id);
           }
 
           // Land on the new circle's overview — the get-started checklist + helpers

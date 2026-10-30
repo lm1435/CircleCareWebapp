@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Analytics } from '@/lib/analytics';
 import { Modal, Button, RadioGroup, Spinner, useToast, type RadioOption } from '@/components/ui';
 import { useCircles } from '@/hooks/useCircles';
 import { useSelectDowngradeCircle } from '@/hooks/useSubscriptionStatus';
@@ -83,7 +84,17 @@ export function CircleSelectionModal({ onClose }: { onClose: () => void }): Reac
             label={t('circleSelection.pickLabel')}
             options={options}
             value={selectedId}
-            onChange={setSelectedId}
+            onChange={(id) => {
+              const index = owned.findIndex((c) => c.id === id);
+              if (index >= 0) {
+                Analytics.circleSelected({
+                  position: index + 1,
+                  circleCount: owned.length,
+                  source: 'circle_selection',
+                });
+              }
+              setSelectedId(id);
+            }}
           />
         </div>
       ) : (

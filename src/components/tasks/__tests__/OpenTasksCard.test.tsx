@@ -39,7 +39,10 @@ vi.mock('@/hooks/useCircle', () => ({
 // card's tree touches Analytics, so a bare object is enough.
 const homeEmptyCtaTapped = vi.fn();
 vi.mock('@/lib/analytics', () => ({
-  Analytics: { homeEmptyCtaTapped: (...args: unknown[]) => homeEmptyCtaTapped(...args) },
+  Analytics: {
+    homeEmptyCtaTapped: (...args: unknown[]) => homeEmptyCtaTapped(...args),
+    taskUndone: vi.fn(),
+  },
 }));
 
 // The viewer's 12h/24h clock — pin it so due-date labels never depend on the
@@ -56,13 +59,15 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
   AddEventModal: ({
     event,
     initialType,
+    entry,
     onClose,
   }: {
     event?: CalendarEvent | null;
     initialType?: string;
+    entry?: string;
     onClose: () => void;
   }) => (
-    <div role="dialog" aria-label="add-event-modal">
+    <div role="dialog" aria-label="add-event-modal" data-entry={entry}>
       <span>{event ? 'edit-mode' : 'create-mode'}</span>
       <span>{initialType ?? 'no-initial-type'}</span>
       <button type="button" onClick={onClose}>
@@ -308,6 +313,7 @@ describe('OpenTasksCard', () => {
     const dialog = screen.getByRole('dialog', { name: 'add-event-modal' });
     expect(dialog).toHaveTextContent('create-mode');
     expect(dialog).toHaveTextContent('task');
+    expect(dialog).toHaveAttribute('data-entry', 'empty_state');
     expect(homeEmptyCtaTapped).toHaveBeenCalledTimes(1);
     expect(homeEmptyCtaTapped).toHaveBeenCalledWith('tasks');
     fireEvent.click(screen.getByRole('button', { name: 'close-modal' }));
@@ -498,7 +504,7 @@ describe('OpenTasksCard', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
     } finally {
       vi.useRealTimers();
     }
@@ -566,7 +572,7 @@ describe('OpenTasksCard', () => {
 
       // `toEqual` on the whole object: a `scheduledDate` sneaking in here would
       // fail this, which is the point.
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'child-0806', circleId: 'circle-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'child-0806', circleId: 'circle-1', source: 'tasks' });
     } finally {
       vi.useRealTimers();
     }

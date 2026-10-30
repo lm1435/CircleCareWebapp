@@ -444,7 +444,7 @@ describe('ActivityFeedPage', () => {
     expect(await screen.findByText('No Activity Yet')).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Activity will appear here as your care team takes actions. Activity is better together — invite family and caregivers so everyone can see what's been handled."
+        'Activity will appear here.'
       )
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();

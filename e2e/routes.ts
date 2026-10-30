@@ -6,6 +6,7 @@
 export const PUBLIC_ROUTES: string[] = [
   '/login',
   '/signup',
+  '/how-it-works',
   '/verify-email',
   '/verify-email/start',
   '/forgot-password',

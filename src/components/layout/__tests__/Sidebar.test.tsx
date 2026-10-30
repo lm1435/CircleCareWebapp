@@ -28,7 +28,7 @@ describe('Sidebar', () => {
     renderSidebar();
 
     const hrefs: Array<[string, string]> = [
-      ['Home', '/circles/c1'],
+      ['Today', '/circles/c1'],
       ['Calendar', '/circles/c1/calendar'],
       ['Medications', '/circles/c1/meds'],
       ['Tasks', '/circles/c1/tasks'],
@@ -45,7 +45,7 @@ describe('Sidebar', () => {
     }
   });
 
-  it('groups the links as mobile does: Home, Care, Health, unlabelled, AI', () => {
+  it('groups the links as mobile does: Today, Care, Health, unlabelled, AI', () => {
     renderSidebar('/circles/c1/calendar', { onOpenAssistant: vi.fn() });
 
     expect(screen.getByRole('list', { name: 'Care' })).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe('Sidebar', () => {
     ]);
 
     // Home is its own group, above Care.
-    expect(within(screen.getByRole('list', { name: 'Home' })).getAllByRole('link')).toHaveLength(1);
+    expect(within(screen.getByRole('list', { name: 'Today' })).getAllByRole('link')).toHaveLength(1);
   });
 
   it.each([
@@ -88,7 +88,7 @@ describe('Sidebar', () => {
     ['/circles/c1/meds', 'Medications', 'bg-clay-soft text-clay-deep'],
     ['/circles/c1/emergency', 'Emergency Info', 'bg-terracotta-soft text-terracotta-deep'],
     ['/circles/c1/documents', 'Documents', 'bg-terracotta-soft text-terracotta-deep'],
-    ['/circles/c1', 'Home', 'bg-bg-2 text-ink'],
+    ['/circles/c1', 'Today', 'bg-bg-2 text-ink'],
     ['/circles/c1/vitals', 'Vitals', 'bg-bg-2 text-ink'],
     ['/circles/c1/members', 'Members', 'bg-bg-2 text-ink'],
     ['/circles/c1/settings', 'Circle Settings', 'bg-bg-2 text-ink'],
@@ -111,17 +111,17 @@ describe('Sidebar', () => {
 
     const link = screen.getByRole('link', { name: 'Emergency Info' });
     expect(link.className).toContain('bg-terracotta-soft text-terracotta-deep');
-    expect(screen.getByRole('link', { name: 'Home' }).className).toContain('text-ink-2');
+    expect(screen.getByRole('link', { name: 'Today' }).className).toContain('text-ink-2');
     expect(screen.getByRole('link', { name: 'Calendar' }).className).toContain('text-ink-2');
   });
 
-  it('Home is only active on the index route, not on a section', () => {
+  it('Today is only active on the index route, not on a section', () => {
     renderSidebar('/circles/c1/calendar');
-    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current');
   });
 
   it.each([
-    ['/circles/c1', 'Home', 'home'],
+    ['/circles/c1', 'Today', 'today'],
     ['/circles/c1/calendar', 'Calendar', 'calendar'],
     ['/circles/c1/tasks', 'Tasks', 'checkbox'],
     ['/circles/c1/emergency', 'Emergency Info', 'medical'],
@@ -135,9 +135,9 @@ describe('Sidebar', () => {
   it('an inactive link keeps its outline glyph', () => {
     renderSidebar('/circles/c1/documents');
 
-    const home = screen.getByRole('link', { name: 'Home' }).querySelector('svg');
-    expect(home?.outerHTML).toContain(firstPathData('home-outline'));
-    expect(home?.outerHTML).not.toContain(firstPathData('home'));
+    const home = screen.getByRole('link', { name: 'Today' }).querySelector('svg');
+    expect(home?.outerHTML).toContain(firstPathData('today-outline'));
+    expect(home?.outerHTML).not.toContain(firstPathData('today'));
   });
 
   it('hides the New control when no create handler is supplied', () => {
@@ -163,7 +163,7 @@ describe('Sidebar', () => {
     expect(menu.className).toContain('fixed');
     expect(menu.className).not.toContain('left-1/2');
     expect(menu.closest('[role="region"]')?.parentElement).toBe(document.body);
-    expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+    expect(screen.getAllByRole('menuitem')).toHaveLength(5);
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Note' }));
 

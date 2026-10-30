@@ -40,11 +40,12 @@
     "forgotPassword": "Forgot password",
     "resetPassword": "Reset password",
     "circlePicker": "Choose a circle",
+    "notifications": "Notifications",
     "invites": "Pending invites",
     "profile": "Profile",
     "upgrade": "Upgrade",
     "help": "Help",
-    "overview": "Overview",
+    "overview": "Today",
     "calendar": "Calendar",
     "meds": "Medications",
     "tasks": "Tasks",
@@ -57,7 +58,9 @@
     "settings": "Edit circle",
     "notFound": "Page not found",
     "dailyUpdate": "Daily update",
-    "providerVisits": "Visits & notes"
+    "providerVisits": "Visits & notes",
+    "howItWorks": "See how it works",
+    "welcome": "Welcome"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -68,7 +71,7 @@
   "nav": {
     "label": "Main navigation",
     "back": "Back",
-    "home": "Home",
+    "home": "Today",
     "calendar": "Calendar",
     "tasks": "Tasks",
     "notes": "Notes",
@@ -199,5 +202,57 @@
     "message": "Is CircleCare helping your family? A quick rating helps other caregivers find it.",
     "rate": "Rate CircleCare",
     "dismiss": "Not now"
+  },
+  "removedState": {
+    "title": "This was removed",
+    "removed": "It was deleted or is no longer scheduled.",
+    "ended": "This has ended.",
+    "noAccess": "You no longer have access to this circle.",
+    "fromEmail": "From your email",
+    "fromEmailDate": "From your email · {{date}}",
+    "ok": "OK",
+    "seeCircles": "See your circles"
+  },
+  "inbox": {
+    "bell": "Notifications",
+    "bellUnread": "Notifications, {{count}} unread",
+    "eyebrow": "Notifications",
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "allMarkedRead": "All notifications marked as read.",
+    "unread": "Unread",
+    "sections": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "twoDaysAgo": "2 days ago"
+    },
+    "meta": "{{circle}} · {{time}}",
+    "dose": {
+      "taken": "{{med}} {{time}} · Taken",
+      "takenBy": "{{med}} {{time}} · Taken by {{name}}",
+      "skipped": "{{med}} {{time}} · Skipped",
+      "skippedBy": "{{med}} {{time}} · Skipped by {{name}}",
+      "due": "Time for {{med}} {{time}}",
+      "notMarked": "{{med}} {{time}} isn't marked as taken yet",
+      "markedAt": "Marked at {{markedTime}}"
+    },
+    "empty": "Reminders and updates from your circles show up here for 3 days. Older ones live in Activity.",
+    "errorTitle": "Couldn't load notifications.",
+    "errorBody": "Check your connection and try again. Your reminders still arrive as usual.",
+    "tryAgain": "Try again",
+    "side": {
+      "title": "Last 3 days",
+      "body": "Reminders, doses taken, notes, appointments and people joining, across all your circles, for 3 days. Opening one takes you to the same place a phone notification would."
+    },
+    "seeOlder": "See older in Activity",
+    "settings": "Notification settings",
+    "backToList": "Back to notifications",
+    "countNew_one": "{{count}} new",
+    "countNew_other": "{{count}} new",
+    "circleUnreadA11y_one": "{{name}} notifications, {{count}} new",
+    "circleUnreadA11y_other": "{{name}} notifications, {{count}} new",
+    "scopedSubtitle_one": "{{name}} · {{count}} new",
+    "scopedSubtitle_other": "{{name}} · {{count}} new",
+    "allNotifications": "All notifications"
   }
 }

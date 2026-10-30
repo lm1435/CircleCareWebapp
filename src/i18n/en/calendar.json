@@ -35,7 +35,6 @@
   },
   "errorTitle": "Couldn't load the calendar",
   "errorHint": "Check your connection and try again.",
-  "noteLinkMissing": "That note is no longer available.",
   "eventCount_one": "{{count}} event",
   "eventCount_other": "{{count}} events",
   "moreEvents": "{{count}} more",
@@ -254,8 +253,6 @@
       "reasonTooLong": "What it is for must be 100 characters or fewer."
     },
     "alerts": {
-      "pastTimeTitle": "Starts with the next dose",
-      "pastTimeMessage": "This time has already passed today, so nothing will be recorded for today. This medication will start with its next scheduled dose.",
       "pastTimeEditTitle": "Time already passed",
       "pastTimeEditMessage": "This time has already passed today — no reminder will be sent for today's dose.",
       "continue": "Continue",
@@ -271,6 +268,7 @@
     "dualTimezoneHint": "Your time / {{name}}'s time ({{timezone}})",
     "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
     "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Profile, under Quiet hours.",
+    "pastTimeInline": "Starts with the next dose. This time has already passed today.",
     "dayOffsetNext": "+1 day",
     "dayOffsetPrevious": "-1 day",
     "timezoneUnresolvedNotice": "Still loading this circle's time zone. Saving is paused so dates aren't stored in the wrong one.",
@@ -279,7 +277,8 @@
       "clear": "Clear name",
       "suggestionsLabel": "Medication suggestions",
       "resultCount_one": "{{count}} suggestion",
-      "resultCount_other": "{{count}} suggestions"
+      "resultCount_other": "{{count}} suggestions",
+      "useAsTyped": "Use “{{name}}” as typed"
     },
     "asNeeded": {
       "reason": "What is it for?",
@@ -298,6 +297,47 @@
       "linked": "Linked doctor",
       "series": "Applies to the whole series",
       "filledFrom": "Filled in from {{name}}'s address"
+    },
+    "simple": {
+      "newMedication": "New medication",
+      "newAppointment": "New appointment",
+      "whatIsIt": "What is it?",
+      "when": "When?",
+      "howOften": "How often?",
+      "whoIsGoing": "Who's going?",
+      "moreDetails": "More details",
+      "moreDetailsSummary": "Start date, instructions, reminders",
+      "startDate": "Start date",
+      "addMedication": "Add medication",
+      "addAppointment": "Add appointment",
+      "otherTime": "Other time",
+      "everyDay": "Every day",
+      "someDays": "Some days",
+      "whenNeeded": "When needed",
+      "add": "Add",
+      "added": "Added",
+      "doctor": "Doctor",
+      "place": "Place",
+      "notesAndReminders": "Notes and reminders",
+      "repeat": "Repeat",
+      "anotherDose": "+ Another dose",
+      "removeDose": "Remove dose {{number}}"
+    },
+    "timeChips": {
+      "label": "Common dose times",
+      "morning": "Morning",
+      "midday": "Midday",
+      "evening": "Evening",
+      "bedtime": "Bedtime"
+    },
+    "doseNumber": "Dose {{number}}",
+    "firstRun": {
+      "eyebrow": "{{name}}'S FIRST MED",
+      "eyebrowSelf": "YOUR FIRST MED",
+      "title": "What does {{name}} take?",
+      "titleSelf": "What do you take?",
+      "hint": "Just the name, the big word on the bottle. Dose is optional.",
+      "skip": "Skip for now"
     }
   },
   "deleteEvent": {

@@ -59,5 +59,31 @@
     "title": "You're already in this circle",
     "message": "This invite is for someone else, so there's nothing to accept."
   },
-  "goToCircle": "Go to circle"
+  "goToCircle": "Go to circle",
+  "welcome": {
+    "eyebrow": "Welcome",
+    "title": "{{inviter}} invited you to help with {{name}}.",
+    "titleNoInviter": "You're helping with {{name}}.",
+    "titleSelf": "{{inviter}} invited you to your circle.",
+    "titleSelfNoInviter": "You're in your circle.",
+    "lede": "You're in {{name}}'s circle now. Here's what you can do:",
+    "ledeSelf": "You're in your circle now. Here's what you can do:",
+    "goToToday": "Go to Today",
+    "caregiver": {
+      "medsTitle": "See today's meds and mark a dose Taken",
+      "medsSub": "Everyone sees it right away, so no one gives a second dose.",
+      "noteTitle": "Add a note about how the day went",
+      "noteSub": "{{inviter}} and anyone else helping can read it.",
+      "noteSubNoInviter": "Anyone helping can read it.",
+      "tasksTitle": "See appointments and tasks",
+      "tasksSub": "Take the ones that are yours."
+    },
+    "viewOnly": {
+      "medsTitle": "See today's meds",
+      "medsSub": "Who gave what, and when.",
+      "tasksTitle": "See appointments and tasks",
+      "tasksSub": "Everything coming up for {{name}}.",
+      "tasksSubSelf": "Everything coming up for you."
+    }
+  }
 }

@@ -25,6 +25,9 @@ export default defineConfig({
       VITE_API_URL: 'http://localhost:3000',
       // Dark mode ON in tests (the flag-off path stubs it per test).
       VITE_DARK_MODE: 'true',
+      // Notifications inbox OFF by default in tests (so the header bell makes no request in
+      // unrelated suites); the inbox suites stub it 'on' per test.
+      VITE_NOTIFICATIONS_INBOX: 'off',
     },
   },
 });

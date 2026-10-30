@@ -24,6 +24,14 @@ export const queryKeys = {
   unitPreferences: ['unitPreferences'] as const,
   pushTokens: ['pushTokens'] as const,
 
+  // Notifications inbox (account-level, spans circles)
+  inbox: ['inbox'] as const,
+  // One circle's slice of the inbox. Shares the `inbox` prefix, so invalidating
+  // `inbox` refreshes every scope; its own key keeps a scope from ever showing
+  // another scope's cached rows.
+  inboxForCircle: (circleId: string) => ['inbox', circleId] as const,
+  inboxUnread: ['inboxUnread'] as const,
+
   // Calendar
   calendarEvents: (circleId: string) => ['calendarEvents', circleId] as const,
   calendarEventsRange: (circleId: string, range: CalendarEventsRange) =>

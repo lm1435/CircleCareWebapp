@@ -28,7 +28,7 @@ import {
 } from '@/api/medicationConfirmations';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { classifyFailureCode } from '@/lib/apiErrors';
+import { classifyFailureCode, failureContext } from '@/lib/apiErrors';
 import { withRefetchCap } from '@/lib/refetchCap';
 import { useToast } from '@/components/ui';
 import { getDateInTimezone } from '@/utils/timezone';
@@ -272,11 +272,13 @@ export function useConfirmMedication(
       // `code` comes from `classifyFailureCode`, a closed set by construction
       // — never the toast string, never `error.message`. Fired on BOTH
       // branches: a permission rejection is still a failed confirm.
-      Analytics.errorOccurred('medication_confirm', 'medication_confirm_error', {
+      Analytics.errorOccurred('medication_confirm', 'medication_confirm_update_failed', {
         circle_id: circleId,
         status: variables.status,
+        ...failureContext('medication_confirm', 'update', error),
+        // The surface that answered the dose (an enum) — overrides the generic
+        // `source`, which for this event would only repeat the screen label.
         source,
-        code: classifyFailureCode(error),
       });
       if (isPermissionDeniedError(error)) {
         showToast(t('permissionDenied'), 'error');

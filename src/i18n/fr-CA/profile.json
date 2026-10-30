@@ -6,7 +6,7 @@
     "email": "Courriel"
   },
   "emailDigest": {
-    "description": "Un récapitulatif hebdomadaire de l’activité des soins, envoyé à votre adresse courriel.",
+    "description": "Un récapitulatif de l’activité des soins, envoyé par courriel les semaines où il y a quelque chose à signaler.",
     "success": "Récapitulatif par courriel mis à jour."
   },
   "delete": {

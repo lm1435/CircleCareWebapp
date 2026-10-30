@@ -18,3 +18,16 @@ describe('RouteTitle: Visits & notes', () => {
     await waitFor(() => expect(document.title).toBe('Visits & notes · CircleCare'));
   });
 });
+
+describe('RouteTitle: one circle\'s notifications', () => {
+  it('titles /circles/:id/notifications', async () => {
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={['/circles/c1/notifications']}>
+          <RouteTitle />
+        </MemoryRouter>
+      </HelmetProvider>
+    );
+    await waitFor(() => expect(document.title).toBe('Notifications · CircleCare'));
+  });
+});

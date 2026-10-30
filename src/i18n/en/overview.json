@@ -1,10 +1,4 @@
 {
-  "hero": {
-    "bornAge": "Born {{date}} · age {{age}}",
-    "caredForBy": "Cared for by",
-    "andMore_one": "+{{count}} more",
-    "andMore_other": "+{{count}} more"
-  },
   "adherence": {
     "eyebrow": "Past 7 days",
     "label": "Medications on schedule",
@@ -19,8 +13,18 @@
     "tasksNote_one": "{{count}} open",
     "tasksNote_other": "{{count}} open",
     "vitals": "Vitals",
-    "activityFeed": "Activity feed",
-    "careInfo": "Health"
+    "notesWrote": "{{who}} wrote {{ago}}",
+    "someone": "Someone",
+    "notesEmpty": "How today went",
+    "tasksEmpty": "Shared to-dos",
+    "calendarNext": "Next: {{day}}",
+    "calendarEmpty": "Nothing yet",
+    "medsRefill_one": "{{count}} refill soon",
+    "medsRefill_other": "{{count}} refills soon",
+    "medsEmpty": "Nothing yet",
+    "shifts": "Shifts",
+    "healthInfo": "Health info",
+    "activity": "Activity"
   },
   "appointments": {
     "title": "Upcoming appointments",
@@ -61,5 +65,74 @@
     "editCircle": "Edit circle",
     "members": "Members",
     "deleteCircle": "Delete circle"
+  },
+  "today": {
+    "title": "Today for {{name}}",
+    "titleSelf": "Today",
+    "notNow": "Not now",
+    "nextUp": {
+      "heading": "Next up",
+      "taken": "Taken",
+      "done": "Done",
+      "takenLabel": "Taken, {{name}}, {{when}}",
+      "doneLabel": "Done, {{name}}, {{when}}",
+      "anyTime": "Any time",
+      "yesterday": "Yesterday",
+      "daysOverdue_one": "{{count}} day overdue",
+      "daysOverdue_other": "{{count}} days overdue",
+      "late": "Late",
+      "lateHours_one": "{{count}} hour late",
+      "lateHours_other": "{{count}} hours late",
+      "allOfToday_one": "All of today · {{count}} item",
+      "allOfToday_other": "All of today · {{count}} items",
+      "empty": "Nothing else scheduled for {{name}} today.",
+      "emptySelf": "Nothing else scheduled for you today.",
+      "loadError": "Couldn't load today's list"
+    },
+    "nextStep": {
+      "eyebrow": "Next step · {{current}} of {{total}}",
+      "first_med": {
+        "title": "Add {{name}}'s first medication",
+        "titleSelf": "Add your first medication",
+        "body": "Everyone helping sees it here, with a reminder when it's time.",
+        "bodySelf": "You will see it here, with a reminder when it's time.",
+        "cta": "Add medication"
+      },
+      "invite": {
+        "title": "Invite someone to help",
+        "titleSelf": "Invite someone to help",
+        "body": "Family, a friend or a paid caregiver. They see {{name}}'s meds and get a reminder if a dose isn't marked as taken.",
+        "bodySelf": "Family, a friend or a paid caregiver. They see your meds and get a reminder if a dose isn't marked as taken.",
+        "cta": "Invite"
+      },
+      "reminders": {
+        "title": "Turn on reminders",
+        "titleSelf": "Turn on reminders",
+        "body": "Get a reminder when a dose is due, and a heads-up if one isn't marked as taken.",
+        "bodySelf": "Get a reminder when a dose is due, and a heads-up if one isn't marked as taken.",
+        "cta": "Turn on reminders"
+      }
+    },
+    "shiftsNudge": {
+      "joined": "{{member}} joined {{name}}'s circle",
+      "joinedSelf": "{{member}} joined your circle",
+      "title": "Share the care with shifts",
+      "body": "Split nights and weekends so everyone knows who is on.",
+      "cta": "Set up shifts"
+    },
+    "doseHint": {
+      "eyebrow": "How this works",
+      "body": "Tap <b>Taken</b> when {{name}} takes it. Everyone helping sees it right away, so no one gives a second dose.",
+      "bodySelf": "Tap <b>Taken</b> when you take it. Everyone helping sees it right away, so no one gives a second dose.",
+      "gotIt": "Got it"
+    },
+    "markIt": {
+      "tomorrow": "Tomorrow",
+      "today": "Today",
+      "question": "Already given today?",
+      "action": "Mark it",
+      "takenByYou": "Taken by you",
+      "taken": "Taken"
+    }
   }
 }

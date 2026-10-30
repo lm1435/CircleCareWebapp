@@ -118,7 +118,7 @@ export function readTiles(text: string, lang?: 'en' | 'es'): number[] | null;
 export function checkAdherenceText(
   text: string,
   exp: ExpectedAdherence,
-  opts?: { lang?: 'en' | 'es'; recipientName?: string }
+  opts?: { lang?: 'en' | 'es'; recipientName?: string; readingText?: string }
 ): string[];
 export function checkCareSummaryText(
   text: string,

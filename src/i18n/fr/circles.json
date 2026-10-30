@@ -98,8 +98,10 @@
       "repeat": "Répétition"
     },
     "choose": {
-      "primary": "Ajouter le premier médicament",
-      "primarySelf": "Ajouter votre premier médicament"
+      "primary": "Ajoutez le premier médicament de {{name}}",
+      "primarySelf": "Ajoutez votre premier médicament",
+      "promise": "Environ une minute. Tous ceux qui aident le voient, avec un rappel à l’heure prévue.",
+      "promiseSelf": "Environ une minute. Vous le verrez ici, avec un rappel à l’heure prévue."
     },
     "inviteNext": {
       "notNow": "Pas maintenant"
@@ -128,16 +130,19 @@
     "ready": {
       "title": "Le cercle de {{name}} est prêt.",
       "titleSelf": "Votre cercle est prêt.",
-      "lede": "Ajoutez le premier médicament de {{name}}. C’est le rappel que tout le cercle partagera.",
+      "lede": "Commencez par ce que vous vérifierez le plus souvent.",
       "ledeSelf": "Ajoutez votre premier médicament. C’est le rappel que tout votre cercle partagera.",
       "toggleShow": "Aucun médicament à suivre ? Voir le reste",
       "toggleHide": "Masquer",
-      "appointmentTitle": "Ajouter un rendez-vous",
+      "appointmentTitle": "Un rendez-vous",
       "appointmentHelper": "Les visites médicales dans un seul calendrier que la famille consulte.",
-      "inviteTitle": "Inviter quelqu’un à aider",
+      "inviteTitle": "Quelqu’un pour aider",
       "inviteHelper": "Partagez la charge, pour que tout ne repose pas sur vous.",
-      "emergencyTitle": "Ajouter les infos d’urgence",
-      "emergencyHelper": "Allergies et médecins, à portée de main quand il le faut."
+      "emergencyTitle": "Infos d’urgence",
+      "emergencyHelper": "Allergies et médecins, à portée de main quand il le faut.",
+      "eyebrow": "CERCLE DE {{name}}",
+      "eyebrowSelf": "VOTRE CERCLE",
+      "orStartWith": "OU COMMENCEZ PAR"
     },
     "whatLede": "Le nom suffit. Les détails peuvent attendre.",
     "addDosage": "+ Ajouter le dosage",
@@ -158,7 +163,17 @@
       "lineSelf": "Quand vous touchez Prise, les personnes que vous invitez le voient aussi.",
       "inviteHeading": "Qui est souvent présent auprès de {{name}} ?",
       "inviteHeadingSelf": "Qui vous aide au quotidien ?",
-      "invite": "Inviter quelqu’un"
+      "invite": "Inviter quelqu’un",
+      "eyebrow": "C’EST PRÊT",
+      "everyDay": "tous les jours",
+      "startsToday": "commence aujourd’hui",
+      "startsTomorrow": "commence demain",
+      "startsOn": "commence le {{date}}"
+    },
+    "markIt": {
+      "question": "Déjà pris aujourd’hui ?",
+      "action": "Le marquer",
+      "done": "Marqué comme pris."
     }
   },
   "accessLost": {

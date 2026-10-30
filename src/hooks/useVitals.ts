@@ -20,7 +20,12 @@ import {
 } from '@/api/vitals';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import {
+  failureContext,
+  isPermissionDeniedError,
+  isSubscriptionRequiredError,
+  type FailureAction,
+} from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
@@ -99,7 +104,10 @@ export function useLatestVitals(circleId: string | undefined): UseQueryResult<La
  * Handles SUBSCRIPTION_REQUIRED exactly like the calendar write surface
  * (useCalendarEvents' useEventMutationOnError — events, tasks and medications).
  */
-function useVitalsMutationOnError(circleId: string): (error: unknown) => void {
+function useVitalsMutationOnError(
+  circleId: string,
+  action: FailureAction
+): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // NOT a premium-only surface. The only SUBSCRIPTION_REQUIRED vitals can get
@@ -110,6 +118,8 @@ function useVitalsMutationOnError(circleId: string): (error: unknown) => void {
   const { t } = useTranslation('vitals');
 
   return (error: unknown) => {
+    // `error_occurred` for the admin digest: enums only, no circle_id.
+    Analytics.errorOccurred('vitals', `vitals_${action}_failed`, failureContext('vitals', action, error));
     if (isSubscriptionRequiredError(error)) {
       // PK18: lapsed-plan wording (owner: Upgrade action; members: never sold).
       promptLapsed();
@@ -129,7 +139,7 @@ export function useCreateVital(
   circleId: string
 ): UseMutationResult<HealthVital, unknown, CreateVitalRequest> {
   const queryClient = useQueryClient();
-  const onError = useVitalsMutationOnError(circleId);
+  const onError = useVitalsMutationOnError(circleId, 'create');
 
   return useMutation({
     mutationFn: (data: CreateVitalRequest) => createVital(circleId, data),
@@ -152,7 +162,7 @@ export function useUpdateVital(
   circleId: string
 ): UseMutationResult<HealthVital, unknown, UpdateVitalVariables> {
   const queryClient = useQueryClient();
-  const onError = useVitalsMutationOnError(circleId);
+  const onError = useVitalsMutationOnError(circleId, 'update');
 
   return useMutation({
     mutationFn: ({ id, data }: UpdateVitalVariables) => updateVital(circleId, id, data),
@@ -167,7 +177,7 @@ export function useUpdateVital(
 /** DELETE /circles/:circleId/vitals/:id. */
 export function useDeleteVital(circleId: string): UseMutationResult<void, unknown, string> {
   const queryClient = useQueryClient();
-  const onError = useVitalsMutationOnError(circleId);
+  const onError = useVitalsMutationOnError(circleId, 'delete');
 
   return useMutation({
     mutationFn: (id: string) => deleteVital(circleId, id),

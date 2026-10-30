@@ -55,7 +55,7 @@ test.beforeEach(async ({ page }) => {
 // Sidebar nav is pure chrome (no user data), so it's a false-positive-free
 // signal that the language actually switched on every page.
 const ES_NAV = [
-  'Inicio',
+  'Hoy',
   'Calendario',
   'Tareas',
   'Actividad',
@@ -65,7 +65,7 @@ const ES_NAV = [
   'Configuración del círculo',
 ];
 const EN_NAV = [
-  'Home',
+  'Today',
   'Calendar',
   'Tasks',
   'Activity',
@@ -98,7 +98,7 @@ async function expectSpanishNav(page: Page): Promise<void> {
 // `heading: null` ⇒ heading is dynamic (month / recipient name), so we lean on
 // the nav assertion for that page.
 const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
-  { path: '', heading: 'Equipo de cuidado' }, // overview (h1 is the recipient name)
+  { path: '', heading: /^Hoy para / }, // Today (h1 is "Hoy para {{name}}")
   { path: '/calendar', heading: null }, // heading is the current month
   { path: '/tasks', heading: 'Tareas' },
   { path: '/activity', heading: 'Actividad' },

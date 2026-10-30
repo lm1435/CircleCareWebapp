@@ -40,11 +40,12 @@
     "forgotPassword": "Password dimenticata",
     "resetPassword": "Reimposta la password",
     "circlePicker": "Scegli una cerchia",
+    "notifications": "Notifiche",
     "invites": "Inviti in sospeso",
     "profile": "Profilo",
     "upgrade": "Passa a Premium",
     "help": "Aiuto",
-    "overview": "Panoramica",
+    "overview": "Oggi",
     "calendar": "Calendario",
     "meds": "Farmaci",
     "tasks": "Incarichi",
@@ -57,7 +58,9 @@
     "settings": "Modifica cerchia",
     "notFound": "Pagina non trovata",
     "dailyUpdate": "Riepilogo del giorno",
-    "providerVisits": "Visite e note"
+    "providerVisits": "Visite e note",
+    "howItWorks": "Scopri come funziona",
+    "welcome": "Benvenuto"
   },
   "errorBoundary": {
     "title": "Qualcosa è andato storto",
@@ -68,7 +71,7 @@
   "nav": {
     "label": "Navigazione principale",
     "back": "Indietro",
-    "home": "Home",
+    "home": "Oggi",
     "calendar": "Calendario",
     "tasks": "Incarichi",
     "notes": "Note",
@@ -199,5 +202,57 @@
     "message": "CircleCare sta aiutando la tua famiglia? Una breve valutazione aiuta altri caregiver a trovarla.",
     "rate": "Valuta CircleCare",
     "dismiss": "Non ora"
+  },
+  "removedState": {
+    "title": "Questo elemento è stato rimosso",
+    "removed": "È stato eliminato o non è più in programma.",
+    "ended": "Questo è terminato.",
+    "noAccess": "Non hai più accesso a questa cerchia.",
+    "fromEmail": "Dalla tua email",
+    "fromEmailDate": "Dalla tua email · {{date}}",
+    "ok": "OK",
+    "seeCircles": "Vedi le tue cerchie"
+  },
+  "inbox": {
+    "bell": "Notifiche",
+    "bellUnread": "Notifiche, {{count}} non lette",
+    "eyebrow": "Notifiche",
+    "title": "Notifiche",
+    "markAllRead": "Segna tutto come letto",
+    "allMarkedRead": "Tutte le notifiche sono segnate come lette.",
+    "unread": "Non letta",
+    "sections": {
+      "today": "Oggi",
+      "yesterday": "Ieri",
+      "twoDaysAgo": "2 giorni fa"
+    },
+    "meta": "{{circle}} · {{time}}",
+    "dose": {
+      "taken": "{{med}} {{time}} · Presa",
+      "takenBy": "{{med}} {{time}} · Presa, segnata da {{name}}",
+      "skipped": "{{med}} {{time}} · Saltata",
+      "skippedBy": "{{med}} {{time}} · Saltata, segnata da {{name}}",
+      "due": "È ora di {{med}} {{time}}",
+      "notMarked": "{{med}} {{time}} non è ancora segnata come presa",
+      "markedAt": "Segnata alle {{markedTime}}"
+    },
+    "empty": "I promemoria e le novità delle tue cerchie compaiono qui per 3 giorni. Quelli più vecchi sono in Attività.",
+    "errorTitle": "Impossibile caricare le notifiche.",
+    "errorBody": "Controlla la connessione e riprova. I tuoi promemoria continuano ad arrivare come sempre.",
+    "tryAgain": "Riprova",
+    "side": {
+      "title": "Ultimi 3 giorni",
+      "body": "Promemoria, dosi prese, note, appuntamenti e persone che si uniscono, in tutte le tue cerchie, per 3 giorni. Aprirne una ti porta nello stesso punto di una notifica sul telefono."
+    },
+    "seeOlder": "Vedi quelle più vecchie in Attività",
+    "settings": "Impostazioni delle notifiche",
+    "backToList": "Torna alle notifiche",
+    "countNew_one": "{{count}} nuova",
+    "countNew_other": "{{count}} nuove",
+    "circleUnreadA11y_one": "Notifiche di {{name}}, {{count}} nuova",
+    "circleUnreadA11y_other": "Notifiche di {{name}}, {{count}} nuove",
+    "scopedSubtitle_one": "{{name}} · {{count}} nuova",
+    "scopedSubtitle_other": "{{name}} · {{count}} nuove",
+    "allNotifications": "Tutte le notifiche"
   }
 }

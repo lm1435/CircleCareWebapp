@@ -25,7 +25,8 @@ import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
 import {
-  classifyFailureCode,
+  failureContext,
+  type FailureAction,
   isPermissionDeniedError,
   isProviderArchivedError,
   isProviderConflictError,
@@ -112,16 +113,19 @@ export function invalidateProviderQueries(queryClient: QueryClient, circleId: st
  *   - PROVIDER_ARCHIVED: the doctor was removed meanwhile -> reload.
  * Permission / subscription rejections behave as every other web write.
  */
-function useProviderMutationOnError(circleId: string): (error: unknown) => void {
+function useProviderMutationOnError(
+  circleId: string,
+  action: FailureAction
+): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { promptUpgrade } = usePremiumGate('feature', { circleId });
   const { t } = useTranslation('emergency');
 
   return (error: unknown) => {
-    Analytics.errorOccurred('providers', 'providers_mutation_error', {
+    Analytics.errorOccurred('providers', `providers_${action}_failed`, {
       circle_id: circleId,
-      code: classifyFailureCode(error),
+      ...failureContext('providers', action, error),
     });
     if (isProviderLimitReachedError(error)) {
       showToast(t('providers.errors.limitReached'), 'error');
@@ -170,7 +174,7 @@ export function useCreateProvider(
   circleId: string
 ): UseMutationResult<ProviderWriteResult, unknown, CreateProviderRequest> {
   const queryClient = useQueryClient();
-  const onError = useProviderMutationOnError(circleId);
+  const onError = useProviderMutationOnError(circleId, 'create');
   return useMutation({
     mutationFn: (body: CreateProviderRequest) => createProvider(circleId, body),
     onSuccess: (_result, body) => {
@@ -194,7 +198,7 @@ export function useUpdateProvider(
   circleId: string
 ): UseMutationResult<ProviderWriteResult, unknown, UpdateProviderVariables> {
   const queryClient = useQueryClient();
-  const onError = useProviderMutationOnError(circleId);
+  const onError = useProviderMutationOnError(circleId, 'update');
   return useMutation({
     mutationFn: ({ providerId, data }: UpdateProviderVariables) =>
       updateProvider(circleId, providerId, data),
@@ -220,7 +224,7 @@ export function useArchiveProvider(
   circleId: string
 ): UseMutationResult<ProviderWriteResult, unknown, ArchiveProviderVariables> {
   const queryClient = useQueryClient();
-  const onError = useProviderMutationOnError(circleId);
+  const onError = useProviderMutationOnError(circleId, 'delete');
   return useMutation({
     mutationFn: ({ providerId }: ArchiveProviderVariables) => archiveProvider(circleId, providerId),
     onSuccess: (_result, variables) => {

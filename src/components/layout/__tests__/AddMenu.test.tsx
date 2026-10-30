@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@/i18n';
 import { AddMenu, type AddMenuType } from '@/components/layout/AddMenu';
 import { ICON_FILES, type IconName } from '@/components/ui';
+import { Analytics } from '@/lib/analytics';
+import { resetLargeTextReports } from '@/hooks/useLargeTextLayout';
 
 /**
  * `Icon` inlines the raw ionicon markup, so there is no `name` attribute to
@@ -27,13 +29,13 @@ function setup(
 }
 
 describe('AddMenu', () => {
-  it('renders the four options in mobile order with the matching glyphs', () => {
+  it('renders Med, Appt, Task, Note, Shift in order with the matching glyphs', () => {
     setup();
 
     const items = screen.getAllByRole('menuitem');
 
     // The visible label is mobile's SHORT form — the four options share one row.
-    expect(items.map((el) => el.textContent)).toEqual(['Med', 'Appt', 'Task', 'Note']);
+    expect(items.map((el) => el.textContent)).toEqual(['Med', 'Appt', 'Task', 'Note', 'Shift']);
     // WCAG 2.5.3 Label in Name: the accessible name must CONTAIN the visible
     // text, so the visible short label IS the name — no `aria-label` may
     // override it with "Appointment", which does not contain "Appt".
@@ -46,6 +48,7 @@ describe('AddMenu', () => {
       'Appointment',
       'Task',
       'Note',
+      'Shift',
     ]);
 
     const expected: IconName[] = [
@@ -53,6 +56,7 @@ describe('AddMenu', () => {
       'calendar-outline',
       'checkbox-outline',
       'pencil-outline',
+      'time-outline',
     ];
     items.forEach((item, i) => {
       const svg = item.querySelector('svg');
@@ -65,7 +69,7 @@ describe('AddMenu', () => {
     setup();
 
     const items = screen.getAllByRole('menuitem');
-    const tints = ['bg-menu-clay', 'bg-menu-dusk', 'bg-menu-moss', 'bg-menu-dusk'];
+    const tints = ['bg-menu-clay', 'bg-menu-dusk', 'bg-menu-moss', 'bg-menu-dusk', 'bg-menu-moss'];
     items.forEach((item, i) => {
       const disc = item.querySelector('span');
       expect(disc?.className).toContain('h-11 w-11');
@@ -82,6 +86,7 @@ describe('AddMenu', () => {
       '120ms',
       '160ms',
       '200ms',
+      '240ms',
     ]);
   });
 
@@ -248,12 +253,124 @@ describe('AddMenu', () => {
     expect(screen.getByRole('menuitem', { name: 'Med' })).toHaveFocus();
 
     fireEvent.keyDown(menu, { key: 'ArrowLeft' });
-    expect(screen.getByRole('menuitem', { name: 'Note' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: 'Shift' })).toHaveFocus();
 
     fireEvent.keyDown(menu, { key: 'Home' });
     expect(screen.getByRole('menuitem', { name: 'Med' })).toHaveFocus();
 
     fireEvent.keyDown(menu, { key: 'End' });
-    expect(screen.getByRole('menuitem', { name: 'Note' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: 'Shift' })).toHaveFocus();
+  });
+});
+
+describe('AddMenu analytics (simple UI 1.3.1)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.documentElement.style.fontSize = '';
+    resetLargeTextReports();
+  });
+
+  it('fires add_menu_opened once when the menu opens, not while it stays open', () => {
+    const opened = vi.spyOn(Analytics, 'addMenuOpened');
+    const { rerender } = render(<AddMenu open onClose={vi.fn()} onSelect={vi.fn()} canCreate />);
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(opened).toHaveBeenCalledWith('nav');
+    rerender(<AddMenu open onClose={vi.fn()} onSelect={vi.fn()} canCreate />);
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fire add_menu_opened for a menu that never opens (read-only member)', () => {
+    const opened = vi.spyOn(Analytics, 'addMenuOpened');
+    render(<AddMenu open onClose={vi.fn()} onSelect={vi.fn()} canCreate={false} />);
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Med', 'medication'],
+    ['Appt', 'appointment'],
+    ['Task', 'task'],
+    ['Note', 'note'],
+    ['Shift', 'shift'],
+  ] as const)('tapping %s fires add_menu_option_tapped(%s) and NOT closed_empty', (label, option) => {
+    const tapped = vi.spyOn(Analytics, 'addMenuOptionTapped');
+    const closedEmpty = vi.spyOn(Analytics, 'addMenuClosedEmpty');
+    function Harness(): ReactElement {
+      const [open, setOpen] = useState(true);
+      return <AddMenu open={open} onClose={() => setOpen(false)} onSelect={vi.fn()} canCreate />;
+    }
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('menuitem', { name: label }));
+    expect(tapped).toHaveBeenCalledWith(option);
+    expect(tapped).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(closedEmpty).not.toHaveBeenCalled();
+  });
+
+  it('closing by the backdrop fires add_menu_closed_empty and no option event', () => {
+    const tapped = vi.spyOn(Analytics, 'addMenuOptionTapped');
+    const closedEmpty = vi.spyOn(Analytics, 'addMenuClosedEmpty');
+    function Harness(): ReactElement {
+      const [open, setOpen] = useState(true);
+      return <AddMenu open={open} onClose={() => setOpen(false)} onSelect={vi.fn()} canCreate />;
+    }
+    render(<Harness />);
+    fireEvent.click(screen.getByTestId('add-menu-backdrop'));
+    expect(closedEmpty).toHaveBeenCalledTimes(1);
+    expect(tapped).not.toHaveBeenCalled();
+  });
+
+  it('closing with Escape also counts as closed empty', () => {
+    const closedEmpty = vi.spyOn(Analytics, 'addMenuClosedEmpty');
+    function Harness(): ReactElement {
+      const [open, setOpen] = useState(true);
+      return <AddMenu open={open} onClose={() => setOpen(false)} onSelect={vi.fn()} canCreate />;
+    }
+    render(<Harness />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(closedEmpty).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports large_text_layout(add_menu) once per session with the measured value', () => {
+    const large = vi.spyOn(Analytics, 'largeTextLayout');
+    const { rerender } = render(<AddMenu open onClose={vi.fn()} onSelect={vi.fn()} canCreate />);
+    expect(large).toHaveBeenCalledWith('add_menu', false);
+    rerender(<AddMenu open={false} onClose={vi.fn()} onSelect={vi.fn()} canCreate />);
+    rerender(<AddMenu open onClose={vi.fn()} onSelect={vi.fn()} canCreate />);
+    expect(large).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AddMenu large text', () => {
+  afterEach(() => {
+    document.documentElement.style.fontSize = '';
+    resetLargeTextReports();
+  });
+
+  it('is a horizontal pill at the default size', () => {
+    setup();
+    const menu = screen.getByRole('menu', { name: 'New' });
+    expect(menu).toHaveAttribute('aria-orientation', 'horizontal');
+    expect(menu.className).toContain('rounded-full');
+  });
+
+  it('becomes a vertical list of full-word rows at a large root font', () => {
+    document.documentElement.style.fontSize = '32px';
+    setup();
+    const menu = screen.getByRole('menu', { name: 'New' });
+    expect(menu).toHaveAttribute('aria-orientation', 'vertical');
+    expect(menu.className).toContain('flex-col');
+    expect(menu.className).not.toContain('rounded-full');
+    const items = screen.getAllByRole('menuitem');
+    expect(items.map((el) => el.textContent)).toEqual([
+      'Medication',
+      'Appointment',
+      'Task',
+      'Note',
+      'Shift',
+    ]);
+    // The visible text is the accessible name (WCAG 2.5.3).
+    expect(screen.getByRole('menuitem', { name: 'Appointment' })).toBe(items[1]);
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(items[1]).toHaveFocus();
   });
 });

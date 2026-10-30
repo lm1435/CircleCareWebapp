@@ -97,7 +97,7 @@
     "success": "Units updated."
   },
   "emailDigest": {
-    "description": "A weekly summary of care activity sent to your email.",
+    "description": "A summary of care activity, emailed on weeks when there's something to report.",
     "enable": "Send me a weekly digest",
     "day": "Delivery day",
     "premiumNote": "Included with Premium.",

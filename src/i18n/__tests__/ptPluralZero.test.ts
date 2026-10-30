@@ -31,6 +31,12 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'shifts:month.cell': 'month cell uses month.none for an empty day',
   'shifts:duration.hours': 'durationLabel renders hours only when hours > 0',
   'shifts:duration.minutes': 'durationLabel renders minutes only for a 15-minute-or-longer shift',
+  // Notifications inbox per-circle counts: the card count / bell only renders when count > 0
+  // (CircleCard `unread > 0`), and the scoped subtitle falls back to the bare circle name at 0
+  // (NotificationsPage `scopedUnread > 0`).
+  'common:inbox.countNew': 'CircleCard renders the count only when unread > 0',
+  'common:inbox.circleUnreadA11y': 'CircleCard renders the count control only when unread > 0',
+  'common:inbox.scopedSubtitle': 'NotificationsPage shows just the circle name at 0 unread',
 };
 /**
  * Whole namespaces whose count lines are NEVER rendered at 0: the daily update omits a line

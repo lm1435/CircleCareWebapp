@@ -86,7 +86,7 @@ test.describe('Calendar note deep link (?date & eventId & panel=notes)', () => {
     }
   });
 
-  test('(c) an unknown event id toasts "no longer available" and opens no modal', async ({ page, request, circleId, account }, testInfo) => {
+  test('(c) an unknown event id shows the "This was removed" state and opens no modal', async ({ page, request, circleId, account }, testInfo) => {
     const session = await apiSession(request, account);
     const today = dateInTz(await circleTimezone(session, circleId), 0);
     const bogusId = '00000000-0000-0000-0000-000000000000';
@@ -97,9 +97,11 @@ test.describe('Calendar note deep link (?date & eventId & panel=notes)', () => {
     await expect(page.getByRole('grid').or(page.getByText('No events this week'))).toBeVisible({
       timeout: 25_000,
     });
-    await expect(page.getByText('That note is no longer available.')).toBeVisible({ timeout: 15_000 });
+    const removed = page.getByTestId('removed-state');
+    await expect(removed.getByRole('heading', { name: 'This was removed' })).toBeVisible({ timeout: 15_000 });
+    await expect(removed.getByText('It was deleted or is no longer scheduled.')).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    // New UI state: the "note no longer available" toast over the calendar.
+    // New UI state: the shared removed state over the calendar (it replaced the toast).
     await checkA11y(page, `/circles/${circleId}/calendar`, testInfo);
     await expect(page).not.toHaveURL(/eventId=/, { timeout: 15_000 });
   });

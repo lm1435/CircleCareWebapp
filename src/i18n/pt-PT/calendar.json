@@ -42,12 +42,12 @@
     },
     "alerts": {
       "someDoseTimesFailed_one": "Guardado, mas horários de dose não adicionados: {{count}} ({{times}}). Abra o medicamento e adicione novamente.",
-      "someDoseTimesFailed_other": "Guardado, mas {{count}} horários de dose não puderam ser adicionados ({{times}}). Abra o medicamento e adicione-os novamente.",
-      "pastTimeMessage": "Esta hora já passou hoje, por isso nada será registado para hoje. Este medicamento começará na próxima dose agendada."
+      "someDoseTimesFailed_other": "Guardado, mas {{count}} horários de dose não puderam ser adicionados ({{times}}). Abra o medicamento e adicione-os novamente."
     },
     "dualTimezoneHint": "O seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})",
     "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Pode alterar o horário de silêncio em Perfil, na secção Horário de silêncio.",
+    "pastTimeInline": "Começa na próxima dose. Esta hora já passou hoje.",
     "timezoneUnresolvedNotice": "A carregar o fuso horário deste círculo. A gravação está em pausa para que as datas não sejam guardadas no fuso errado.",
     "drugSearch": {
       "searching": "A pesquisar medicamentos"
@@ -58,6 +58,13 @@
     },
     "doctor": {
       "filledFrom": "Preenchido com a morada de {{name}}"
+    },
+    "timeChips": {
+      "bedtime": "Ao deitar"
+    },
+    "firstRun": {
+      "eyebrowSelf": "O SEU PRIMEIRO MEDICAMENTO",
+      "hint": "Só o nome, a palavra grande na embalagem. A dose é opcional."
     }
   },
   "deleteEvent": {

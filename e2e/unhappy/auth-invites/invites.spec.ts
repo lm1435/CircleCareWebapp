@@ -42,6 +42,22 @@ const COPY = {
   joinedNamed: (circleName: string) => `You've joined ${circleName}.`,
 };
 
+/**
+ * Onboarding 1.3.1: a NEW member lands on the invitee welcome (no join toast), then "Go to Today". The
+ * scoped test accounts may carry no first name, so the title is either the inviter or the no-inviter form.
+ */
+const welcomeHeading = (circleName: string) =>
+  new RegExp(`^(.+ invited you to help with|You're helping with) ${circleName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.$`);
+
+async function expectWelcomeThenToday(page: Page, circleId: string, circleName: string) {
+  await expect(page.getByRole('heading', { level: 1, name: welcomeHeading(circleName) })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/welcome$`));
+  await page.getByRole('button', { name: 'Go to Today', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
+}
+
 /** `createCircle` names the circle after its recipient: `E2E <label>` (backend sets name = recipient_name). */
 const circleNameFor = (label: string) => `E2E ${label}`.slice(0, 100);
 
@@ -217,8 +233,7 @@ test('double-click Accept while held: one accept request, one membership', async
   await joining.click({ force: true });
   await hold.release();
 
-  await expect(page.getByText(COPY.joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 20_000 });
-  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
+  await expectWelcomeThenToday(page, circleId, circleNameFor(label));
   await accepts.expectCount(1);
   expect(membershipCount(circleId, invitee.userId)).toBe(1);
   expect(inviteStatus(invite.id)).toBe('accepted');
@@ -290,8 +305,7 @@ test('sign-in handoff auto-accept names the joined circle and opens it, acceptin
   expect(acceptRes.status()).toBe(200);
   const body = (await acceptRes.json()) as { data: { circle: { id: string; name: string } | null } };
   expect(body.data.circle?.id, 'backend names the joined circle').toBe(circleId);
-  await expect(page.getByText(COPY.joinedNamed(circleName))).toBeVisible({ timeout: 10_000 });
-  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
+  await expectWelcomeThenToday(page, circleId, circleName);
   await expect(page.getByText(COPY.joined)).toHaveCount(0);
   await accepts.expectCount(1);
 });
@@ -358,8 +372,7 @@ test('pending invitations: Accept names the joined circle and opens it', async (
   await accept.click();
   expect((await acceptRes).status()).toBe(200);
 
-  await expect(page.getByText(COPY.joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 20_000 });
-  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
+  await expectWelcomeThenToday(page, circleId, circleNameFor(label));
   expect(membershipCount(circleId, invitee.userId)).toBe(1);
   expect(inviteStatus(inviteId)).toBe('accepted');
 });
@@ -390,8 +403,7 @@ test('accept failure (500): error copy, nothing joined; retry works', async ({
   expect(membershipCount(circleId, invitee.userId)).toBe(0);
 
   await accept.click();
-  await expect(page.getByText(COPY.joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 20_000 });
-  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`));
+  await expectWelcomeThenToday(page, circleId, circleNameFor(label));
   await accepts.expectCount(2);
   expect(membershipCount(circleId, invitee.userId)).toBe(1);
 });

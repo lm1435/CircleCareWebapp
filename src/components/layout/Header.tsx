@@ -7,6 +7,7 @@ import { useCircles } from '@/hooks/useCircles';
 import { useMyAvatarColor } from '@/hooks/useMyAvatarColor';
 import { useAuthStore, type AuthUser } from '@/store/authStore';
 import { useMenu } from '@/hooks/useMenu';
+import { NotificationBell } from './NotificationBell';
 import { Wordmark } from './Wordmark';
 
 /** Sections the circle switcher preserves when jumping between circles. */
@@ -379,6 +380,7 @@ export function Header(_props: HeaderProps = {}): ReactElement {
 
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <CircleSwitcher />
+        <NotificationBell circleId={circleId} />
         <UserMenu />
       </div>
     </header>

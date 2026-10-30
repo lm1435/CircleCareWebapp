@@ -97,7 +97,7 @@
     "success": "Unidades actualizadas."
   },
   "emailDigest": {
-    "description": "Un resumen semanal de la actividad de cuidado enviado a tu correo.",
+    "description": "Un resumen de la actividad de cuidado, enviado por correo las semanas en que haya algo que reportar.",
     "enable": "Enviarme un resumen semanal",
     "day": "Día de envío",
     "premiumNote": "Incluido con Premium.",

@@ -62,4 +62,16 @@ export function asPaywallContext(value: unknown): PaywallContext {
 /** The `location.state` shape every route into `/upgrade` should carry. */
 export interface UpgradeLocationState {
   paywallContext?: PaywallContext;
+  /**
+   * Onboarding 1.3.1: WHICH moment put the onboarding paywall up (`paywall_shown.trigger`):
+   * right after the first med's payoff, or (no first med) the next time Today showed.
+   * Untrusted like the context; anything else reads as 'onboarding'.
+   */
+  paywallTrigger?: OnboardingPaywallTrigger;
+}
+
+export type OnboardingPaywallTrigger = 'after_first_med' | 'onboarding';
+
+export function asOnboardingPaywallTrigger(value: unknown): OnboardingPaywallTrigger {
+  return value === 'after_first_med' ? 'after_first_med' : 'onboarding';
 }

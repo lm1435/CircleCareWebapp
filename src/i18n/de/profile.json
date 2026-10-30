@@ -97,7 +97,7 @@
     "success": "Einheiten aktualisiert."
   },
   "emailDigest": {
-    "description": "Eine wöchentliche Zusammenfassung der Pflegeaktivität per E-Mail.",
+    "description": "Eine Zusammenfassung der Pflegeaktivität per E-Mail – in Wochen, in denen es etwas zu berichten gibt.",
     "enable": "Wöchentliche Zusammenfassung senden",
     "day": "Versandtag",
     "premiumNote": "Im Premium-Abo enthalten.",

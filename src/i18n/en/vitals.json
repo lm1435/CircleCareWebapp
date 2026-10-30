@@ -94,7 +94,7 @@
         "temperature": "No temperature readings yet",
         "oxygen_saturation": "No blood oxygen readings yet"
       },
-      "description": "Log readings over time so the circle can spot a trend before the next appointment.",
+      "description": "Log readings to spot trends before the next appointment.",
       "cta": {
         "blood_pressure": "Log blood pressure",
         "heart_rate": "Log heart rate",

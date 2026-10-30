@@ -95,19 +95,13 @@ function daysAgoISO(days: number): string {
 }
 
 /**
- * Submit the add/edit event form. Saving a medication whose time already
- * passed TODAY (circle timezone) interposes a non-blocking "Time already
- * passed" notice — whether it appears depends on the wall clock, so continue
- * through it when shown.
+ * Submit the CREATE event form. A medication whose time already passed TODAY
+ * (circle timezone) shows an inline "Starts with the next dose" note under the
+ * time field - there is NO prompt to answer, so Create saves straight away.
  */
 async function submitEventForm(page: Page, dialog: Locator): Promise<void> {
   await dialog.getByRole('button', { name: 'Create' }).click();
-  const notice = page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ });
-  const shown = await notice
-    .waitFor({ state: 'visible', timeout: 2_500 })
-    .then(() => true)
-    .catch(() => false);
-  if (shown) await notice.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ })).toHaveCount(0);
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 }
 
@@ -244,6 +238,35 @@ async function sweepCreatedMeds(circleId: string, account: IsolatedAccount): Pro
   }
 }
 
+test.describe('past time on create', () => {
+  test('shows the inline note live and never raises a prompt', async ({ page, circleId, account }) => {
+    // Recipient = browser zone so "today 00:00" is past for the recipient from any browser zone.
+    await pinRecipientZoneToBrowser(page, account, circleId);
+    await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('grid')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Add event' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'New event' });
+    await expect(dialog).toBeVisible();
+
+    await dialog.locator('#event_type').selectOption('medication');
+    await dialog.locator('#medication_name').fill(uniqueMedName('pastnote'));
+    await dialog.locator('#scheduled_date').fill(todayISO());
+    await dialog.locator('#scheduled_time').fill('00:00');
+    const note = dialog.getByTestId('dose-past-time-note');
+    await expect(note).toHaveText('Starts with the next dose. This time has already passed today.');
+    await expect(dialog.getByRole('status').filter({ has: page.getByTestId('dose-past-time-note') })).toHaveCount(1);
+
+    // Live: a time still ahead removes it.
+    await dialog.locator('#scheduled_time').fill('23:59');
+    await expect(note).toHaveCount(0);
+
+    // Back to the past time: Create saves with no prompt.
+    await dialog.locator('#scheduled_time').fill('00:00');
+    await expect(note).toBeVisible();
+    await submitEventForm(page, dialog);
+  });
+});
+
 test.describe('medication lifecycle', () => {
   // Runs after EVERY test — pass, fail, or timeout — so a test that died
   // mid-flow never leaves ZZ_E2E_MED_% series behind for the next test (or the
@@ -278,8 +301,8 @@ test.describe('medication lifecycle', () => {
 
     // --- Active roster shows name + dosage ---
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-    const activeRegion = page.getByRole('region', { name: 'Active', exact: true });
-    const activeCard = activeRegion.locator('li').filter({ hasText: name });
+    const activeRegion = page.getByTestId('med-time-row');
+    const activeCard = activeRegion.filter({ hasText: name });
     await expect(activeCard).toBeVisible({ timeout: 20_000 });
     await expect(activeCard).toContainText(dosage);
     await expect(activeCard).toContainText('Daily');
@@ -302,7 +325,7 @@ test.describe('medication lifecycle', () => {
     const inactiveCard = inactiveRegion.locator('li').filter({ hasText: name });
     await expect(inactiveCard).toBeVisible({ timeout: 20_000 });
     await expect(inactiveCard).toContainText('Inactive');
-    await expect(activeRegion.locator('li').filter({ hasText: name })).toHaveCount(0);
+    await expect(activeRegion.filter({ hasText: name })).toHaveCount(0);
     await checkA11y(page, `/circles/:id/meds (inactive present)`, testInfo);
 
     // --- Calendar: the FUTURE stops, the PAST stays -------------------------
@@ -363,7 +386,7 @@ test.describe('medication lifecycle', () => {
     await reactivateDialog.getByRole('button', { name: 'Reactivate', exact: true }).click();
     await expect(reactivateDialog).toBeHidden({ timeout: 20_000 });
 
-    await expect(activeRegion.locator('li').filter({ hasText: name })).toBeVisible({
+    await expect(activeRegion.filter({ hasText: name })).toBeVisible({
       timeout: 20_000,
     });
     await expect(inactiveRegion.locator('li').filter({ hasText: name })).toHaveCount(0);
@@ -460,13 +483,23 @@ test.describe('medication lifecycle', () => {
         .toBeGreaterThanOrEqual(1);
     }
 
-    // ONE grouped card listing both times.
+    // The roster groups by time of day with ONE time per row: the one medication appears once under
+    // MORNING (8:00 AM) and once under EVENING (8:00 PM).
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-    const activeRegion = page.getByRole('region', { name: 'Active', exact: true });
-    const activeCard = activeRegion.locator('li').filter({ hasText: name });
-    await expect(activeCard).toHaveCount(1, { timeout: 20_000 });
-    await expect(activeCard).toContainText('8:00 AM');
-    await expect(activeCard).toContainText('8:00 PM');
+    const activeRegion = page.getByTestId('med-time-row');
+    const morningRow = page
+      .locator('section[aria-labelledby="meds-part-morning"]')
+      .getByTestId('med-time-row')
+      .filter({ hasText: name });
+    const eveningRow = page
+      .locator('section[aria-labelledby="meds-part-evening"]')
+      .getByTestId('med-time-row')
+      .filter({ hasText: name });
+    await expect(morningRow).toHaveCount(1, { timeout: 20_000 });
+    await expect(eveningRow).toHaveCount(1);
+    await expect(morningRow).toContainText('8:00 AM');
+    await expect(eveningRow).toContainText('8:00 PM');
+    const activeCard = morningRow;
 
     // Discontinue from the single card → BOTH series go inactive.
     await activeCard.getByRole('button', { name: `More actions for ${name}` }).click();
@@ -481,7 +514,7 @@ test.describe('medication lifecycle', () => {
     await expect(inactiveRegion.locator('li').filter({ hasText: name })).toHaveCount(1, {
       timeout: 20_000,
     });
-    await expect(activeRegion.locator('li').filter({ hasText: name })).toHaveCount(0);
+    await expect(activeRegion.filter({ hasText: name })).toHaveCount(0);
 
     // Neither series has any FUTURE occurrence left. Both were created starting
     // TODAY, so the current week straddles the stop instant (whether today's own
@@ -510,7 +543,7 @@ test.describe('medication name suggestions', () => {
 
   async function openAddMedication(page: Page, circleId: string): Promise<Locator> {
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { level: 1, name: 'Medications' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { level: 1, name: /'s meds$/ })).toBeVisible({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Add medication' }).first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -529,7 +562,7 @@ test.describe('medication name suggestions', () => {
     await name.fill('ibu');
 
     const list = page.getByRole('listbox', { name: 'Medication suggestions' });
-    await expect(list.getByRole('option')).toHaveCount(3);
+    await expect(list.getByRole('option')).toHaveCount(4); // 3 drugs + the "Use as typed" row
     await expect(name).toHaveAttribute('aria-expanded', 'true');
     await expect(name).toHaveAttribute('aria-controls', (await list.getAttribute('id')) ?? 'missing');
     // Inside the aria-modal dialog, so a screen reader can reach the options.
@@ -551,7 +584,7 @@ test.describe('medication name suggestions', () => {
 
     // Escape closes an open list without closing the dialog.
     await name.fill('ibup');
-    await expect(list.getByRole('option')).toHaveCount(3);
+    await expect(list.getByRole('option')).toHaveCount(4); // 3 drugs + the "Use as typed" row
     await name.press('Escape');
     await expect(list).toHaveCount(0);
     await expect(dialog).toBeVisible();
@@ -586,6 +619,6 @@ test.describe('medication name suggestions', () => {
 
     // Back in the field, the answer is there without another request.
     await name.focus();
-    await expect(page.getByRole('listbox', { name: 'Medication suggestions' }).getByRole('option')).toHaveCount(3);
+    await expect(page.getByRole('listbox', { name: 'Medication suggestions' }).getByRole('option')).toHaveCount(4); // 3 drugs + the "Use as typed" row
   });
 });

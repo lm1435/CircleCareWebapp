@@ -61,8 +61,16 @@ vi.mock('@/components/ai/AIChatModal', () => ({
 // assert *which* flow opened, and exposes a close button wired to onClose so we
 // can assert unmount-on-close.
 vi.mock('@/components/calendar/AddEventModal', () => ({
-  AddEventModal: ({ initialType, onClose }: { initialType: string; onClose: () => void }) => (
-    <div data-testid="add-event-modal" data-initial-type={initialType}>
+  AddEventModal: ({
+    initialType,
+    entry,
+    onClose,
+  }: {
+    initialType: string;
+    entry?: string;
+    onClose: () => void;
+  }) => (
+    <div data-testid="add-event-modal" data-initial-type={initialType} data-entry={entry}>
       <button type="button" onClick={onClose}>
         close-event
       </button>
@@ -150,6 +158,7 @@ describe.each<Trigger>(['sidebar', 'nav'])('AppLayout AddMenu wiring (%s trigger
       'data-initial-type',
       'appointment'
     );
+    expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-entry', 'add_menu');
   });
 
   it('mounts AddEventModal with initialType="medication" for Med', async () => {
@@ -162,6 +171,8 @@ describe.each<Trigger>(['sidebar', 'nav'])('AppLayout AddMenu wiring (%s trigger
       'data-initial-type',
       'medication'
     );
+    // entry_form_opened.entry: every form opened from the New menu is "add_menu".
+    expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-entry', 'add_menu');
   });
 
   it('mounts AddEventModal with initialType="task" for Task', async () => {
@@ -320,7 +331,7 @@ describe('AppLayout AddMenu: Shift (care shifts)', () => {
     expect(screen.queryByTestId('shift-composer')).not.toBeInTheDocument();
   });
 
-  it('free manager / member: no Shift option at all', async () => {
+  it('free manager / member: Shift is in the menu (for everyone) but opens no form, teaser or paywall', async () => {
     mockCircle({
       circle: { id: 'c1', owner_id: 'someone-else', is_self_care: false },
       isPremiumCircle: false,
@@ -328,36 +339,43 @@ describe('AppLayout AddMenu: Shift (care shifts)', () => {
     const user = userEvent.setup();
     renderLayout();
     await user.click(newButton('nav'));
-    expect(screen.queryByRole('menuitem', { name: 'Shift' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+    expect(screen.getAllByRole('menuitem')).toHaveLength(5);
+    await user.click(screen.getByRole('menuitem', { name: 'Shift' }));
+    expect(screen.queryByTestId('shift-composer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('shifts-teaser')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('add-event-modal')).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it.each([['owner', 'u1'], ['manager / member', 'someone-else']])(
-    'lapsed Premium (free circle that still has shifts): the %s gets no Shift option',
-    async (_who, ownerId) => {
-      mockCircle({
-        circle: { id: 'c1', owner_id: ownerId, is_self_care: false },
-        isPremiumCircle: false,
-        hasShifts: true,
-      });
-      const user = userEvent.setup();
-      renderLayout();
-      await user.click(newButton('nav'));
-      expect(screen.queryByRole('menuitem', { name: 'Shift' })).not.toBeInTheDocument();
-      expect(screen.getAllByRole('menuitem')).toHaveLength(4);
-    }
-  );
-
-  it('a view-only seat never gets Shift, even in a premium circle', async () => {
+  it('lapsed Premium (free circle that still has shifts): Shift stays in the menu and opens the schedule', async () => {
     mockCircle({
       circle: { id: 'c1', owner_id: 'someone-else', is_self_care: false },
       isPremiumCircle: false,
-      viewOnly: true,
-      canEdit: true,
+      hasShifts: true,
     });
     const user = userEvent.setup();
     renderLayout();
     await user.click(newButton('nav'));
-    expect(screen.queryByRole('menuitem', { name: 'Shift' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('menuitem')).toHaveLength(5);
+    await user.click(screen.getByRole('menuitem', { name: 'Shift' }));
+    expect(await screen.findByText('Calendar page stub')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-composer')).not.toBeInTheDocument();
+  });
+
+  it('lists exactly Med, Appt, Task, Note, Shift in that order for everyone', async () => {
+    mockCircle({
+      circle: { id: 'c1', owner_id: 'someone-else', is_self_care: false },
+      isPremiumCircle: false,
+    });
+    const user = userEvent.setup();
+    renderLayout();
+    await user.click(newButton('nav'));
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      'Med',
+      'Appt',
+      'Task',
+      'Note',
+      'Shift',
+    ]);
   });
 });

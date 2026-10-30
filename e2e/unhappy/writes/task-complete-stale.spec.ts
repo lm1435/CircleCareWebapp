@@ -6,7 +6,7 @@ import { apiCreateEvent, dateInZone, errorToast, purgeEventsTitled, recipientTim
 // mobile-e2e-parity P12, web half).
 //
 // The calendar twin (recurring-complete-errors.spec) proves the 400/404 branch
-// toasts and refetches the CALENDAR. The Tasks page and Home's Open tasks card
+// toasts and refetches the CALENDAR. The Tasks page and Today's Next up
 // read a different query — GET /circles/:id/tasks — so a refusal that refetches
 // only `calendarEvents` leaves the dead row on those surfaces, still offering
 // Done, which can only 404 again. Mobile completes tasks through the same hook
@@ -21,8 +21,18 @@ const TASKS_LIST = '/api/circles/:id/tasks';
 const TOAST = 'That event no longer exists. Someone else may have deleted it.';
 
 const SURFACES = [
-  { name: 'Tasks page', path: (c: string) => `/circles/${c}/tasks`, heading: 'Tasks' },
-  { name: 'Home Open tasks card', path: (c: string) => `/circles/${c}`, heading: 'Open tasks' },
+  {
+    name: 'Tasks page',
+    path: (c: string) => `/circles/${c}/tasks`,
+    ready: (p: import('@playwright/test').Page) => p.getByRole('heading', { name: 'Tasks' }).first(),
+    done: (title: string) => `Mark "${title}" complete`,
+  },
+  {
+    name: 'Today Next up',
+    path: (c: string) => `/circles/${c}`,
+    ready: (p: import('@playwright/test').Page) => p.getByRole('region', { name: 'Next up' }),
+    done: (title: string) => `Done, ${title}`,
+  },
 ] as const;
 
 for (const s of SURFACES) {
@@ -38,15 +48,15 @@ for (const s of SURFACES) {
     const task = await apiCreateEvent(api, circleId, {
       event_type: 'task',
       title,
-      // Dated well in the PAST: Home's Open tasks card shows only the 3 oldest open
-      // tasks, so a task dated today fell off it once the persona seed's own open
+      // Dated well in the PAST: Today's Next up shows only the first 3 items (oldest first)
+      // so a task, so a task dated today fell off it once the persona seed's own open
       // tasks aged into overdue (a date bomb, not an app change). Oldest sorts first.
       scheduled_date: dateInZone(tz, -30),
     });
     try {
       await page.goto(s.path(circleId), { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('heading', { name: s.heading }).first()).toBeVisible({ timeout: 15_000 });
-      const done = page.getByRole('button', { name: `Mark "${title}" complete` });
+      await expect(s.ready(page)).toBeVisible({ timeout: 15_000 });
+      const done = page.getByRole('button', { name: s.done(title) });
       await expect(done).toBeVisible({ timeout: 20_000 });
 
       // Deleted by "another member" while the row is on screen.
@@ -68,7 +78,7 @@ for (const s of SURFACES) {
         .poll(() => taskGets.count, { message: 'the tasks list was refetched after the 404', timeout: 10_000 })
         .toBeGreaterThan(0);
       // The dead row is gone — nothing left to press that can only fail again.
-      await expect(page.getByRole('button', { name: `Mark "${title}" complete` })).toHaveCount(0, { timeout: 10_000 });
+      await expect(page.getByRole('button', { name: s.done(title) })).toHaveCount(0, { timeout: 10_000 });
       await expect(page.getByText(title, { exact: true })).toHaveCount(0);
     } finally {
       purgeEventsTitled(circleId, title);

@@ -66,6 +66,8 @@ export default function TasksPage(): ReactElement {
   const [status, setStatus] = useState<TaskStatus>('open');
   const [sort, setSort] = useState<TaskSort>('due_date');
   const [showCreate, setShowCreate] = useState(false);
+  // Which control opened the create form (analytics: entry_form_opened.entry).
+  const [createEntry, setCreateEntry] = useState<'empty_state' | 'other'>('other');
   const [editingTask, setEditingTask] = useState<CalendarEvent | null>(null);
   // A COMPLETED task opens the detail instead. Its Edit (recurring tasks only;
   // a completed one-off is locked) hands off to `editingTask` below.
@@ -159,7 +161,15 @@ export default function TasksPage(): ReactElement {
           }
           actions={
             canEdit && (
-              <Button onClick={() => setShowCreate(true)} offlineKind="change">{t('empty.cta')}</Button>
+              <Button
+                onClick={() => {
+                  setCreateEntry('empty_state');
+                  setShowCreate(true);
+                }}
+                offlineKind="change"
+              >
+                {t('empty.cta')}
+              </Button>
             )
           }
         />
@@ -200,7 +210,10 @@ export default function TasksPage(): ReactElement {
             ? {
                 name: 'add-outline',
                 label: t('addTask'),
-                onClick: () => setShowCreate(true),
+                onClick: () => {
+                  setCreateEntry('other');
+                  setShowCreate(true);
+                },
                 offlineKind: 'change',
               }
             : undefined
@@ -252,6 +265,7 @@ export default function TasksPage(): ReactElement {
         <AddEventModal
           circleId={circleId}
           initialType="task"
+          entry={createEntry}
           onClose={() => setShowCreate(false)}
         />
       )}

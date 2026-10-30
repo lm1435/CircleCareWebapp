@@ -4,7 +4,7 @@ import { ICON_FILES, ICON_NAMES } from '../iconNames';
 
 describe('Icon', () => {
   it('renders an svg child with width/height 20 by default (size="row")', () => {
-    const { container } = render(<Icon name="home-outline" />);
+    const { container } = render(<Icon name="today-outline" />);
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
     expect(svg?.getAttribute('width')).toBe('20');
@@ -12,21 +12,21 @@ describe('Icon', () => {
   });
 
   it('size="chrome" renders 24', () => {
-    const { container } = render(<Icon name="home-outline" size="chrome" />);
+    const { container } = render(<Icon name="today-outline" size="chrome" />);
     const svg = container.querySelector('svg');
     expect(svg?.getAttribute('width')).toBe('24');
     expect(svg?.getAttribute('height')).toBe('24');
   });
 
   it('size={13} renders 13', () => {
-    const { container } = render(<Icon name="home-outline" size={13} />);
+    const { container } = render(<Icon name="today-outline" size={13} />);
     const svg = container.querySelector('svg');
     expect(svg?.getAttribute('width')).toBe('13');
     expect(svg?.getAttribute('height')).toBe('13');
   });
 
   it('unlabelled: svg is aria-hidden and the span has no role', () => {
-    const { container } = render(<Icon name="home-outline" />);
+    const { container } = render(<Icon name="today-outline" />);
     const svg = container.querySelector('svg');
     const span = container.querySelector('span');
     expect(svg?.getAttribute('aria-hidden')).toBe('true');
@@ -47,13 +47,13 @@ describe('Icon', () => {
   });
 
   it('applies className to the span', () => {
-    const { container } = render(<Icon name="home-outline" className="text-moss" />);
+    const { container } = render(<Icon name="today-outline" className="text-moss" />);
     const span = container.querySelector('span');
     expect(span?.className).toContain('text-moss');
   });
 
   it('rendered svg contains fill="currentColor"', () => {
-    const { container } = render(<Icon name="home-outline" />);
+    const { container } = render(<Icon name="today-outline" />);
     const svg = container.querySelector('svg');
     expect(svg?.getAttribute('fill')).toBe('currentColor');
   });

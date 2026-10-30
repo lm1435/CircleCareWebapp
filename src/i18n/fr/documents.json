@@ -17,8 +17,8 @@
   "errorTitle": "Impossible de charger les documents",
   "errorHint": "Vérifiez votre connexion et réessayez.",
   "noDocuments": "Aucun document pour l’instant",
-  "noDocumentsHint": "Gardez les documents importants de votre proche au même endroit (cartes d’assurance, dossiers, directives) pour que toutes les personnes qui aident puissent les retrouver quand il le faut.",
-  "noDocumentsHintReadOnly": "Les documents partagés avec ce cercle apparaîtront ici, pour que toutes les personnes qui aident puissent les retrouver quand il le faut.",
+  "noDocumentsHint": "Gardez cartes d’assurance, dossiers et directives là où chaque aidant peut les retrouver.",
+  "noDocumentsHintReadOnly": "Les documents ajoutés par l’équipe d’aidants apparaîtront ici.",
   "emptyCategory": {
     "title": "Rien dans {{category}} pour l’instant.",
     "action": "Afficher tous les documents"

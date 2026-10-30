@@ -10,9 +10,9 @@ import {
   uniq,
 } from '../unhappy/auth-invites/_helpers';
 import { openAllCircles } from '../unhappy/access/_helpers';
-import { circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSuffix } from '../notesFirstClassShared';
+import { answerYesterdaysDose, circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSuffix } from '../notesFirstClassShared';
 
-// K2 (web test gaps 2026-09-29). Home "Today's medications" Take / Skip / Undo
+// K2 (web test gaps 2026-09-29). Today's "Next up" Taken / Undo (Skip moved to the calendar dose dialog)
 // against the REAL backend and DB: the 5 s undo window (MEDICATION_UNDO_DELAY_MS)
 // really delays the write, Undo really cancels it, leaving the page or the
 // circle inside the window still delivers exactly ONE confirm to the circle the
@@ -90,6 +90,8 @@ async function arrange(request: import('@playwright/test').APIRequestContext, la
   // Started yesterday so today's 00:01 dose is due (a start of TODAY with a past
   // time would be rolled to tomorrow by the late-add rule).
   const root = await createDailyMedication(session, circleId, name, dateInTz(tz, -1), { time: '00:01' });
+  // Today's Next up also lists yesterday's unanswered dose; answer it so today's is the only row.
+  await answerYesterdaysDose(session, circleId, root, tz);
   return { owner, session, circleId, tz, name, root, today: dateInTz(tz, 0) };
 }
 
@@ -102,13 +104,13 @@ function confirmResponse(page: Page) {
 
 /** The Today list of Home. The Needs-attention list (yesterday's dose) is a nested section. */
 function todayList(page: Page) {
-  return page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
+  return page.locator('section[aria-labelledby="next-up-heading"]');
 }
 
 async function openHome(page: Page, circleId: string, name: string) {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
   const list = todayList(page);
-  await expect(list.getByRole('button', { name: `Confirm ${name}` }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(list.getByRole('button', { name: `Taken, ${name}` }).first()).toBeVisible({ timeout: 30_000 });
   return list;
 }
 
@@ -125,7 +127,7 @@ test('(a) Take, then wait: exactly one POST after the window, DB taken, success 
     const posts = countRequests(page, 'POST', CONFIRM);
 
     const answered = confirmResponse(page);
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     // Inside the window nothing has been written.
     await expect(list.getByRole('button', { name: `Undo ${s.name}` })).toBeVisible();
     expect(todayRows(s.circleId, s.root, s.today)).toHaveLength(0);
@@ -141,8 +143,10 @@ test('(a) Take, then wait: exactly one POST after the window, DB taken, success 
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(todayList(page).getByRole('listitem').first()).toBeVisible({ timeout: 30_000 });
-    await expect(todayList(page).getByRole('button', { name: `Confirm ${s.name}` })).toHaveCount(0);
+    await expect(page.getByTestId('quick-access-grid')).toBeVisible({ timeout: 30_000 });
+    await expect(todayList(page)).toBeVisible();
+    await expect(todayList(page).getByRole('button', { name: `Taken, ${s.name}` })).toHaveCount(0);
+    await expect(todayList(page).getByText(s.name)).toHaveCount(0);
   } finally {
     await deleteSeries(s.session, s.circleId, s.root);
   }
@@ -160,14 +164,14 @@ test('(b) Take then Undo inside the window: no POST ever, no row, Confirm offere
     const list = await openHome(page, s.circleId, s.name);
     const posts = countRequests(page, 'POST', CONFIRM);
 
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     await page.waitForTimeout(0); // Undo at ~0 s, well inside the 5 s window
     await list.getByRole('button', { name: `Undo ${s.name}` }).click();
 
     await page.waitForTimeout(PAST_WINDOW_MS + 1_000);
     await posts.expectCount(0);
     expect(todayRows(s.circleId, s.root, s.today)).toHaveLength(0);
-    await expect(list.getByRole('button', { name: `Confirm ${s.name}` }).first()).toBeVisible();
+    await expect(list.getByRole('button', { name: `Taken, ${s.name}` }).first()).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: /Marked as/ })).toHaveCount(0);
   } finally {
     await deleteSeries(s.session, s.circleId, s.root);
@@ -186,7 +190,7 @@ test('(c) Take then in-app navigation inside the window: the unmount flush sends
     const list = await openHome(page, s.circleId, s.name);
     const posts = countRequests(page, 'POST', CONFIRM);
 
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     await expect(list.getByRole('button', { name: `Undo ${s.name}` })).toBeVisible();
     // Sidebar link: a client-side route change, NOT page.goto (a full load is P5).
     await page.getByRole('link', { name: 'Calendar', exact: true }).first().click();
@@ -201,23 +205,18 @@ test('(c) Take then in-app navigation inside the window: the unmount flush sends
   }
 });
 
-test('(d) Skip, then wait: DB skipped, success toast', async ({ page, context, request, baseURL }) => {
+test('(d) One primary action per row: a due dose offers Taken and NO Skip (Skip lives on the calendar dose dialog, see dose-skip-calendar.spec.ts)', async ({ page, context, request, baseURL }) => {
   const s = await arrange(request, 'undod');
   try {
     await cookieLogin(context, s.owner, baseURL);
     const list = await openHome(page, s.circleId, s.name);
-    const posts = countRequests(page, 'POST', CONFIRM);
-
-    const answered = confirmResponse(page);
-    await list.getByRole('button', { name: `Skip ${s.name}` }).first().click();
-    expect((await answered).status()).toBe(201);
-    await posts.expectCount(1);
-    const rows = todayRows(s.circleId, s.root, s.today);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].status).toBe('skipped');
-    expect(rows[0].confirmed_by).toBe(s.owner.userId);
-    await expect(page.getByRole('status').filter({ hasText: /^\s*Marked as skipped/ })).toBeVisible();
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
+    const row = list.getByTestId('next-up-row').filter({ hasText: s.name });
+    await expect(row.getByRole('button')).toHaveCount(1);
+    await expect(row.getByRole('button', { name: `Taken, ${s.name}` })).toBeVisible();
+    await expect(row.getByRole('button', { name: /^Skip/ })).toHaveCount(0);
+    await expect(list.getByRole('button', { name: /^Skip/ })).toHaveCount(0);
+    // Nothing was written by looking.
+    expect(todayRows(s.circleId, s.root, s.today)).toHaveLength(0);
   } finally {
     await deleteSeries(s.session, s.circleId, s.root);
   }
@@ -237,7 +236,7 @@ test('(e) Take in circle A, switch to circle B inside the window: one POST, to A
     const list = await openHome(page, s.circleId, s.name);
     const posts = countRequests(page, 'POST', CONFIRM);
 
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     await expect(list.getByRole('button', { name: `Undo ${s.name}` })).toBeVisible();
     await openAllCircles(page);
     await page.getByRole('link', { name: new RegExp(`^Open E2E ${labelB}`) }).click();
@@ -265,7 +264,7 @@ test('(f) PK11: a full reload inside the window flushes the dose through a keepa
     await cookieLogin(context, s.owner, baseURL);
     const list = await openHome(page, s.circleId, s.name);
 
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     await expect(list.getByRole('button', { name: `Undo ${s.name}` })).toBeVisible();
     // The undo window is still open: the pagehide flush must send it, and it
     // must survive the page being torn down (fetch keepalive, bearer token).
@@ -278,7 +277,8 @@ test('(f) PK11: a full reload inside the window flushes the dose through a keepa
     const rows = todayRows(s.circleId, s.root, s.today);
     expect(rows).toHaveLength(1);
     expect(rows[0].confirmed_by).toBe(s.owner.userId);
-    expect(circleConfirmations(s.circleId)).toBe(1);
+    // Yesterday's dose (answered in arrange) + today's: never a second one for today.
+    expect(circleConfirmations(s.circleId)).toBe(2);
   } finally {
     await deleteSeries(s.session, s.circleId, s.root);
   }

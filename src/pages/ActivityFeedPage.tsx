@@ -37,7 +37,7 @@ export default function ActivityFeedPage(): ReactElement {
   // (`circle ? resolvedTimezone : null`) because `useCircle` reported a
   // hardcoded 'America/New_York' while the query was in flight — the hook now
   // owns it, so the workaround is gone.
-  const { canEdit, timezone } = useCircle(circleId);
+  const { canEdit, timezone, circle } = useCircle(circleId);
 
   const {
     data,
@@ -183,7 +183,11 @@ export default function ActivityFeedPage(): ReactElement {
             tone="dusk"
             icon="pulse-outline"
             title={t('activity:noActivity')}
-            description={t('activity:noActivityHint')}
+            description={
+              circle?.is_self_care || !circle?.recipient_name?.trim()
+                ? t('activity:noActivityHintSelf')
+                : t('activity:noActivityHint', { name: circle.recipient_name.trim() })
+            }
           >
             {canEdit ? (
               <Button as={Link} to={`/circles/${circleId}/members`} variant="ghost">

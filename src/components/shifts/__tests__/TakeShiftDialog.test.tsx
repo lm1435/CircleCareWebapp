@@ -21,7 +21,7 @@ vi.mock('@/api/shifts', async (importOriginal) => ({
 }));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/lib/analytics', () => ({
-  Analytics: { shiftTaken: vi.fn(), shiftTakeConflict: vi.fn() },
+  Analytics: { shiftTaken: vi.fn(), shiftTakeConflict: vi.fn(), errorOccurred: vi.fn() },
 }));
 
 const mockTake = vi.mocked(takeShift);

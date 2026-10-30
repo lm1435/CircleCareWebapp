@@ -45,6 +45,10 @@ export interface CalendarEvent {
   medication_dosage?: string | null;
   quantity_remaining?: number | null;
   pills_per_day?: number | null;
+  /** Refill tracking is on for this bottle (a sibling dose row reports false and points at the owner). */
+  track_refills?: boolean | null;
+  /** The row that owns the bottle when this is a sibling dose time. */
+  refill_group_id?: string | null;
 
   /**
    * Discontinue / inactivate marker (medications only). `null`/undefined =

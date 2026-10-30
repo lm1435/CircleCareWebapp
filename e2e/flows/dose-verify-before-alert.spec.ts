@@ -10,7 +10,7 @@ import {
   uniq,
 } from '../unhappy/auth-invites/_helpers';
 import { errorToast, successToast } from '../unhappy/writes/_helpers';
-import { circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSuffix } from '../notesFirstClassShared';
+import { answerYesterdaysDose, circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSuffix } from '../notesFirstClassShared';
 
 // W13 (verify before alert, lib/confirmVerify.ts + hooks/useMedConfirmation.ts):
 // when a dose confirm fails AMBIGUOUSLY (5xx, timeout, network) the app re-reads
@@ -20,7 +20,7 @@ import { circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSu
 // dose. The failure branches were unit-tested only (confirmVerifyBeforeAlert
 // .test.tsx); todays-meds-undo.spec.ts covers just the happy path.
 //
-// Driven through Home "Today's medications" (Take, 5 s undo window, then the
+// Driven through Today's "Next up" (Taken, 5 s undo window, then the
 // POST) against the real backend and DB:
 //   (a) RESPONSE LOST: the POST reaches the server and is written, the browser
 //       gets a 500 -> the re-read finds it -> success toast, NO error, exactly
@@ -92,11 +92,13 @@ async function arrange(request: APIRequestContext, label: string, lang: 'en' | '
   // Started yesterday so today's 00:01 dose is due (a start of TODAY with a past
   // time would be rolled to tomorrow by the late-add rule).
   const root = await createDailyMedication(session, circleId, name, dateInTz(tz, -1), { time: '00:01' });
+  // Today's Next up also lists yesterday's unanswered dose; answer it so today's is the only row.
+  await answerYesterdaysDose(session, circleId, root, tz);
   return { owner, session, circleId, name, root, today: dateInTz(tz, 0) };
 }
 
 function todayList(page: Page) {
-  return page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
+  return page.locator('section[aria-labelledby="next-up-heading"]');
 }
 
 async function openHome(page: Page, circleId: string, confirmLabel: string) {
@@ -158,13 +160,13 @@ test('(a) response lost after the write landed: the re-read finds it -> "Marked 
   const s = await arrange(request, 'vba');
   try {
     await cookieLogin(context, s.owner, baseURL);
-    const list = await openHome(page, s.circleId, `Confirm ${s.name}`);
+    const list = await openHome(page, s.circleId, `Taken, ${s.name}`);
     // Registered AFTER the page settled, so the lost-response route sits in front
     // of the counter's listener; the counter still sees every request the browser SENT.
     const lost = await loseTheResponse(page);
     const posts = countRequests(page, 'POST', CONFIRM);
 
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     await expect(list.getByRole('button', { name: `Undo ${s.name}` })).toBeVisible();
 
     await expect(successToast(page, 'Marked as taken')).toBeVisible({ timeout: 40_000 });
@@ -176,7 +178,7 @@ test('(a) response lost after the write landed: the re-read finds it -> "Marked 
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toMatch(/^taken/);
     // The row now shows the answer, not Take/Skip.
-    await expect(list.getByRole('button', { name: `Confirm ${s.name}` })).toHaveCount(0, { timeout: 20_000 });
+    await expect(list.getByRole('button', { name: `Taken, ${s.name}` })).toHaveCount(0, { timeout: 20_000 });
   } finally {
     await deleteSeries(s.session, s.circleId, s.root);
   }
@@ -191,16 +193,16 @@ test('(b) control: a 500 that never reached the server -> "Couldn\'t save. Pleas
   const s = await arrange(request, 'vbb');
   try {
     await cookieLogin(context, s.owner, baseURL);
-    const list = await openHome(page, s.circleId, `Confirm ${s.name}`);
+    const list = await openHome(page, s.circleId, `Taken, ${s.name}`);
     const fault = await failRequest(page, 'POST', CONFIRM, { status: 500, code: 'SERVER_ERROR' });
 
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     await expect(errorToast(page, "Couldn't save. Please try again.")).toBeVisible({ timeout: 40_000 });
     await fault.expectHits(1);
     await expect(page.getByRole('status').filter({ hasText: /Marked as/ })).toHaveCount(0);
     await expect(page.getByText(/couldn't check whether/i)).toHaveCount(0);
     expect(todayRows(s.circleId, s.root, s.today)).toHaveLength(0);
-    await expect(list.getByRole('button', { name: `Confirm ${s.name}` }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(list.getByRole('button', { name: `Taken, ${s.name}` }).first()).toBeVisible({ timeout: 20_000 });
   } finally {
     await deleteSeries(s.session, s.circleId, s.root);
   }
@@ -215,11 +217,11 @@ test('(c) the POST fails and the re-read fails too -> "We couldn\'t check whethe
   const s = await arrange(request, 'vbc');
   try {
     await cookieLogin(context, s.owner, baseURL);
-    const list = await openHome(page, s.circleId, `Confirm ${s.name}`);
+    const list = await openHome(page, s.circleId, `Taken, ${s.name}`);
     const reread = await failTheReRead(page);
     const fault = await failRequest(page, 'POST', CONFIRM, { status: 500, code: 'SERVER_ERROR' });
 
-    await list.getByRole('button', { name: `Confirm ${s.name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${s.name}` }).first().click();
     await expect(
       errorToast(page, `We couldn't check whether ${s.name} was recorded. Check the calendar once you're back online.`)
     ).toBeVisible({ timeout: 40_000 });
@@ -244,14 +246,15 @@ test.describe('Spanish', () => {
     // A second medication for the "cannot tell" half, so each half has its own dose.
     const name2 = `ZZ_E2E_VERIFY_ES2_${uniqueSuffix()}`;
     const root2 = await createDailyMedication(s.session, s.circleId, name2, dateInTz(RECIPIENT_TZ, -1), { time: '00:01' });
+    await answerYesterdaysDose(s.session, s.circleId, root2, RECIPIENT_TZ);
     try {
       await cookieLogin(context, s.owner, baseURL);
-      // Spanish accessible name of the Take button: "Confirmar <med>".
-      const list = await openHome(page, s.circleId, `Confirmar ${s.name}`);
+      // Spanish accessible name of the Taken button: "Tomado, <med>".
+      const list = await openHome(page, s.circleId, `Tomado, ${s.name}`);
       await expect(page.locator('html')).toHaveAttribute('lang', /^es/);
 
       const lost = await loseTheResponse(page);
-      await list.getByRole('button', { name: `Confirmar ${s.name}` }).first().click();
+      await list.getByRole('button', { name: `Tomado, ${s.name}` }).first().click();
       await expect(successToast(page, 'Marcado como tomado')).toBeVisible({ timeout: 40_000 });
       await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
       expect(lost.forwarded).toEqual([201]);
@@ -260,7 +263,7 @@ test.describe('Spanish', () => {
 
       const reread = await failTheReRead(page);
       const fault = await failRequest(page, 'POST', CONFIRM, { status: 500, code: 'SERVER_ERROR' });
-      await list.getByRole('button', { name: `Confirmar ${name2}` }).first().click();
+      await list.getByRole('button', { name: `Tomado, ${name2}` }).first().click();
       await expect(
         errorToast(page, `No pudimos verificar si ${name2} se registró. Revisa el calendario cuando tengas conexión.`)
       ).toBeVisible({ timeout: 40_000 });

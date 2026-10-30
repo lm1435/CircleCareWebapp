@@ -213,6 +213,169 @@ export function sanitizeErrorText(raw: string): string {
   }
 }
 
+/**
+ * `$exception` scrubber (1.3.1 privacy change). A JS error MESSAGE can carry
+ * user content ("Cannot read 'Metformin'", an email, a note). Runs inside
+ * `before_send`, AFTER credential redaction, in BOTH consent modes, for
+ * events named `$exception` only. Mirrors mobile/src/services/analytics.ts.
+ *
+ * Message fields (posthog-js dist `$exception_message`/`$exception_values`/
+ * `$exception_list[].value`; @posthog/core `$exception_list[].value`):
+ * quoted substrings -> `[redacted]`, `sanitizeErrorText` (emails, tokens, URL
+ * queries, 200 cap), digit runs of 3+ -> `#`. `$exception_steps` (breadcrumb
+ * text) is dropped. Kept: `type`, frame file/function/line. Removed from
+ * frames: `context_line`, `pre_context`, `post_context` (source literals).
+ * Never throws: a field that cannot be scrubbed is dropped, not the event.
+ */
+const QUOTED_PATTERN = /'[^']*'|"[^"]*"|`[^`]*`|“[^”]*”/g;
+const DIGIT_RUN_PATTERN = /\d{3,}/g;
+const FRAME_SOURCE_KEYS = ['context_line', 'pre_context', 'post_context'];
+
+function scrubExceptionText(raw: unknown): string | undefined {
+  try {
+    if (typeof raw !== 'string') return undefined;
+    return sanitizeErrorText(raw.replace(QUOTED_PATTERN, '[redacted]')).replace(
+      DIGIT_RUN_PATTERN,
+      '#',
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+function scrubExceptionFrame(frame: unknown): unknown {
+  try {
+    if (!frame || typeof frame !== 'object') return frame;
+    const out: Record<string, unknown> = { ...(frame as Record<string, unknown>) };
+    for (const key of FRAME_SOURCE_KEYS) delete out[key];
+    return out;
+  } catch {
+    return undefined;
+  }
+}
+
+function scrubExceptionEntry(entry: unknown): unknown {
+  try {
+    if (!entry || typeof entry !== 'object') return undefined;
+    const out: Record<string, unknown> = { ...(entry as Record<string, unknown>) };
+    if ('value' in out) {
+      const v = scrubExceptionText(out.value);
+      if (v === undefined) delete out.value;
+      else out.value = v;
+    }
+    const st = out.stacktrace as Record<string, unknown> | undefined;
+    if (st && typeof st === 'object') {
+      const frames = Array.isArray(st.frames)
+        ? st.frames.map(scrubExceptionFrame).filter((f) => f !== undefined)
+        : st.frames;
+      out.stacktrace = { ...st, frames };
+    }
+    return out;
+  } catch {
+    return undefined;
+  }
+}
+
+export function scrubExceptionEvent<E extends { event?: string; properties?: unknown }>(
+  event: E,
+): E {
+  try {
+    if (!event || event.event !== '$exception') return event;
+    const props = event.properties;
+    if (!props || typeof props !== 'object') return event;
+    const p: Record<string, unknown> = { ...(props as Record<string, unknown>) };
+    if ('$exception_message' in p) {
+      const m = scrubExceptionText(p.$exception_message);
+      if (m === undefined) delete p.$exception_message;
+      else p.$exception_message = m;
+    }
+    if ('$exception_values' in p) {
+      if (Array.isArray(p.$exception_values)) {
+        p.$exception_values = p.$exception_values
+          .map(scrubExceptionText)
+          .filter((v) => v !== undefined);
+      } else {
+        delete p.$exception_values;
+      }
+    }
+    if ('$exception_list' in p) {
+      if (Array.isArray(p.$exception_list)) {
+        p.$exception_list = p.$exception_list
+          .map(scrubExceptionEntry)
+          .filter((v) => v !== undefined);
+      } else {
+        delete p.$exception_list;
+      }
+    }
+    delete p.$exception_steps;
+    return { ...event, properties: p };
+  } catch {
+    // Drop the message fields rather than the event or a leak.
+    try {
+      const p: Record<string, unknown> = { ...((event.properties as object) ?? {}) };
+      for (const k of ['$exception_message', '$exception_values', '$exception_list', '$exception_steps']) {
+        delete p[k];
+      }
+      return { ...event, properties: p };
+    } catch {
+      return event;
+    }
+  }
+}
+
+/**
+ * CRASH EVENTS ARE NEVER LINKED TO A PERSON (owner decision, 1.3.1; keeps the
+ * App Store "Diagnostics - Not Linked" label true), in BOTH consent modes.
+ * Crash = `$exception` or our boundary event `error_occurred` with
+ * `fatal: true`. Other events pass through untouched.
+ */
+const CRASH_STRIPPED_KEYS = [
+  '$set',
+  '$set_once',
+  '$groups',
+  '$user_id',
+  '$anon_distinct_id',
+  '$device_id',
+  '$session_id',
+  '$window_id',
+  '$sentry_event_id',
+];
+
+function randomCrashId(): string {
+  return `crash-${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+}
+
+export function isCrashEvent(event: { event?: string; properties?: unknown }): boolean {
+  if (event.event === '$exception') return true;
+  const p = event.properties as Record<string, unknown> | null | undefined;
+  return event.event === 'error_occurred' && !!p && typeof p === 'object' && p.fatal === true;
+}
+
+export function anonymizeCrashEvent<E extends { event?: string; properties?: unknown }>(
+  event: E,
+): E | null {
+  try {
+    if (!event || !isCrashEvent(event)) return event;
+    const props = (event.properties ?? {}) as Record<string, unknown>;
+    const p: Record<string, unknown> = { ...props };
+    for (const k of CRASH_STRIPPED_KEYS) delete p[k];
+    if (typeof p.error === 'string') p.error = scrubExceptionText(p.error) ?? '';
+    p.$process_person_profile = false;
+    p.$is_identified = false;
+    // posthog-js sends `data: c` AFTER before_send (module.js `Pn(c)` then the
+    // request), and ingestion reads `properties.distinct_id`, so a fresh random
+    // id here is what is sent: no person, no stitching to the identified user.
+    p.distinct_id = randomCrashId();
+    const out: Record<string, unknown> = { ...event, properties: p };
+    delete out.$set;
+    delete out.$set_once;
+    return out as E;
+  } catch {
+    // Cannot prove it is unlinked: drop the crash rather than send it linked.
+    return null;
+  }
+}
+
 // 'oauth' is a web-only, provider-agnostic fallback: when an OAuth callback
 // fires a completion event but the specific provider couldn't be recovered
 // (e.g. the user deep-linked straight to /auth/callback, or Safari private-mode
@@ -301,7 +464,7 @@ const SHIFT_SOURCES = ['add_menu', 'shifts_view', 'empty_state', 'add_next'] as 
 const SHIFT_SCOPES = ['occurrence', 'future'] as const;
 const SHIFT_DROP_ROLES = ['self', 'manager', 'owner'] as const;
 const SHIFT_ASSIGN_ROLES = ['owner', 'manager'] as const;
-const SHIFT_TEASER_SOURCES = ['toggle', 'add_menu'] as const;
+const SHIFT_TEASER_SOURCES = ['toggle', 'add_menu', 'shifts_nudge'] as const;
 
 /** `open_count_bucket`: '0' | '1-2' | '3+'. */
 function shiftOpenCountBucket(count: number): '0' | '1-2' | '3+' {
@@ -324,6 +487,36 @@ export type ActorRole = (typeof ACTOR_ROLES)[number];
 /** `daily_update_row_tapped.row`: which Daily update row (card or page) was tapped. */
 const DAILY_UPDATE_ROWS = ['tasks', 'appointment', 'note', 'full_update', 'invite'] as const;
 export type DailyUpdateRow = (typeof DAILY_UPDATE_ROWS)[number];
+
+/** Simple-UI form funnel (docs/plans/simple-ui-1-3-1.md): same names/values as mobile. */
+export type EntryFormType = 'medication' | 'appointment' | 'task' | 'note' | 'shift';
+export type EntryFormOrigin =
+  | 'add_menu'
+  | 'next_step'
+  | 'quick_access'
+  | 'empty_state'
+  | 'voice'
+  // Onboarding 1.3.1: the setup wizard's "Add {{name}}'s first med" opens the same form.
+  | 'first_run'
+  | 'other';
+export type EntryFormStep = 'what' | 'when' | 'how_often' | 'who';
+export type TimeChipId = 'morning' | 'midday' | 'evening' | 'bedtime' | 'other';
+export type AppointmentAbandonField =
+  | 'title'
+  | 'date'
+  | 'time'
+  | 'who'
+  | 'more_details'
+  | 'none';
+export type LargeTextScreen = 'today' | 'add_menu' | 'med_form' | 'appt_form' | 'meds';
+/** How the notifications inbox was reached (inbox_viewed `source`). */
+export type InboxSource = 'circle_list' | 'today_bell' | 'header_bell' | 'other';
+
+/** Mobile's rounding: 5s buckets up to a minute, 30s buckets after. */
+function bucketSecondsOpen(seconds: number): number {
+  const s = Math.max(0, seconds);
+  return s <= 60 ? Math.round(s / 5) * 5 : Math.round(s / 30) * 30;
+}
 
 export const Analytics = {
   // --- Auth ---
@@ -462,6 +655,46 @@ export const Analytics = {
   // web's deliberately does not.)
   /** A Quick Access row was opened. `destination` is the row id (e.g. 'calendar'). */
   quickAccessTapped: (destination: string) => capture('quick_access_tapped', { destination }),
+
+  // --- Today (simple UI 1.3.1; docs/plans/simple-ui-1-3-1.md "Analytics contract") ---
+  // Same names and props as mobile. Enums, counts and booleans only; NO circle_id.
+  /** Today opened. `coaching` is the ONE coaching element shown ('none' when no card/hint). */
+  todayViewed: (props: {
+    has_items: boolean;
+    next_up_count: number;
+    coaching: 'next_step' | 'shifts' | 'dose_hint' | 'none';
+  }) => capture('today_viewed', props),
+  /** A Next-up row's primary action (or the row itself, 'open') was pressed. */
+  nextUpAction: (props: {
+    action: 'taken' | 'done' | 'open';
+    item_type: 'medication' | 'appointment' | 'task';
+    position: number;
+  }) => capture('next_up_action', props),
+  /** "All of today" was opened. */
+  todayAllItemsOpened: () => capture('today_all_items_opened', {}),
+  nextStepShown: (step: 'first_med' | 'invite' | 'reminders') =>
+    capture('next_step_shown', { step }),
+  nextStepTapped: (step: 'first_med' | 'invite' | 'reminders') =>
+    capture('next_step_tapped', { step }),
+  nextStepDismissed: (step: 'first_med' | 'invite' | 'reminders') =>
+    capture('next_step_dismissed', { step }),
+  nextStepCompleted: (step: 'first_med' | 'invite' | 'reminders') =>
+    capture('next_step_completed', { step }),
+  coachingHintShown: (hint: 'first_dose' | 'shifts_second_caregiver', opts: { upsell?: boolean } = {}) =>
+    capture('coaching_hint_shown', { hint, upsell: opts.upsell === true }),
+  coachingHintDismissed: (hint: 'first_dose' | 'shifts_second_caregiver', opts: { upsell?: boolean } = {}) =>
+    capture('coaching_hint_dismissed', { hint, upsell: opts.upsell === true }),
+  coachingHintActed: (hint: 'first_dose' | 'shifts_second_caregiver', opts: { upsell?: boolean } = {}) =>
+    capture('coaching_hint_acted', { hint, upsell: opts.upsell === true }),
+  /** The Add (New) menu opened. */
+  addMenuOpened: (from: 'nav' = 'nav') => capture('add_menu_opened', { from }),
+  addMenuOptionTapped: (option: 'medication' | 'appointment' | 'task' | 'note' | 'shift') =>
+    capture('add_menu_option_tapped', { option }),
+  /** The Add menu closed without a choice. */
+  addMenuClosedEmpty: () => capture('add_menu_closed_empty', {}),
+  /** Once per screen per session: whether the large-text layout is active. */
+  largeTextLayout: (screen: LargeTextScreen, active: boolean) =>
+    capture('large_text_layout', { screen, active }),
   /** A pending Get-started step's action button was pressed. `step` is the step key ('event' | 'invite' | 'emergency'). */
   gettingStartedStepTapped: (step: string) => capture('getting_started_step_tapped', { step }),
   /** The Get-started checklist was dismissed, with how far along it was. */
@@ -475,9 +708,15 @@ export const Analytics = {
   /** The Home medications empty-state CTA was pressed. Web only ever offers 'add' (voice is mobile-only). */
   medsEmptyStateCtaTapped: (action: 'add' | 'voice') =>
     capture('meds_empty_state_cta_tapped', { action }),
-  /** The live sample dose card was answered or undone. `surface` is where it sits ('signup' on web). */
-  welcomeDemoInteracted: (action: 'taken' | 'skip' | 'undo', surface: 'signup' | 'welcome') =>
-    capture('welcome_demo_interacted', { action, surface }),
+  /**
+   * The pre-auth "See how it works" walkthrough (/how-it-works) opened — the
+   * same event mobile's Preview screen fires. `source` is the page whose link
+   * opened it; 'direct' is a visit with no in-app link (typed URL, bookmark).
+   */
+  previewOpened: (source: 'welcome' | 'signup' | 'login' | 'direct') =>
+    capture('preview_opened', { source }),
+  /** The walkthrough's final "Get started" CTA; `step` is the 1-based screen. */
+  previewGetStartedTapped: (step: number) => capture('preview_get_started_tapped', { step }),
 
   // --- Daily update (docs/plans/daily-update.md §7) ---
   // Booleans and enums ONLY: no circle_id (2026-09-04 decision), no names, no
@@ -572,6 +811,14 @@ export const Analytics = {
       ...(circleId ? { circle_id: circleId } : {}),
       ...(source ? { source } : {}),
     }),
+
+  // --- Onboarding 1.3.1 (invitee welcome) --- same names/props as mobile.
+  // Enums and counts only: never names, circle_id or the invite code.
+  /** The post-join welcome screen was shown. `items` = how many rows it lists. */
+  inviteeWelcomeViewed: (role: 'caregiver' | 'view_only', items: number) =>
+    capture('invitee_welcome_viewed', { role, items }),
+  /** "Go to Today" pressed; `seconds` = whole seconds the screen was on view. */
+  inviteeWelcomeContinued: (seconds: number) => capture('invitee_welcome_continued', { seconds }),
 
   // --- Medications ---
   /**
@@ -871,12 +1118,14 @@ export const Analytics = {
   medicationCreated: (
     circleId: string,
     hasRecurrence: boolean,
-    source: 'form' | 'wizard' = 'form'
+    source: 'form' | 'wizard' = 'form',
+    startsNextDose: boolean = false
   ) =>
     capture('medication_created', {
       circle_id: circleId,
       has_recurrence: hasRecurrence,
       source,
+      starts_next_dose: startsNextDose,
     }),
 
   /** The user typed into the first meaningful field. Once per entry, never per keystroke. */
@@ -886,8 +1135,97 @@ export const Analytics = {
   entryScheduleSet: (circleId: string, entityType: string, source: 'form' | 'wizard' = 'form') =>
     capture('entry_schedule_set', { circle_id: circleId, entity_type: entityType, source }),
 
-  entrySaveTapped: (circleId: string, entityType: string, source: 'form' | 'wizard' = 'form') =>
-    capture('entry_save_tapped', { circle_id: circleId, entity_type: entityType, source }),
+  /**
+   * A save was attempted (fired before validation, so it counts EVERY attempt).
+   * `is_editing` separates creates from revisions — the same split mobile uses,
+   * so `entry_save_tapped ÷ event_created` is only read with `is_editing: false`.
+   */
+  entrySaveTapped: (
+    circleId: string,
+    entityType: string,
+    source: 'form' | 'wizard' = 'form',
+    isEditing = false
+  ) =>
+    capture('entry_save_tapped', {
+      circle_id: circleId,
+      entity_type: entityType,
+      source,
+      is_editing: isEditing,
+    }),
+
+  /**
+   * A save was BLOCKED before it left the client: a validation rule, or the user
+   * cancelling the past-time notice. NOT a failure — these used to be filed
+   * under `entry_save_failed` and drowned the real ones (~90% of its volume).
+   * Same event, `reason` values and `type` as mobile. No circle_id.
+   *
+   * `invalid_field` is web-only: a field rule the shared Zod schema rejects
+   * (a value too long, a malformed field) that mobile blocks with its own alert.
+   */
+  entryValidationBlocked: (
+    reason:
+      | 'missing_name'
+      | 'missing_time'
+      | 'missing_end_time'
+      | 'missing_start_time'
+      | 'end_time_after_start'
+      | 'past_time_cancelled'
+      | 'as_needed_unsupported'
+      | 'invalid_field',
+    type: string
+  ) => capture('entry_validation_blocked', { reason, type }),
+
+  /**
+   * The add-medication form was closed without saving (never on edit). Once per
+   * form session. Enums, booleans and an integer only — no names, no ids.
+   * `last_field` is the last field whose value changed. `entry` is how the form
+   * was started: always 'form' on web (voice add is mobile-only).
+   */
+  medicationFormAbandoned: (props: {
+    lastField: 'name' | 'dosage' | 'time' | 'repeat' | 'more_details' | 'none';
+    hasName: boolean;
+    hasSchedule: boolean;
+    entry: 'form' | 'voice';
+    /** How the form was opened (same values as `entry_form_opened.entry`). */
+    entrySource: EntryFormOrigin;
+    secondsOpen: number;
+  }) =>
+    capture('medication_form_abandoned', {
+      last_field: props.lastField,
+      has_name: props.hasName,
+      has_schedule: props.hasSchedule,
+      entry: props.entry,
+      entry_source: props.entrySource,
+      seconds_open: bucketSecondsOpen(props.secondsOpen),
+    }),
+
+  /** An add form was opened (simple-UI funnel). Enums only; no circle_id. */
+  entryFormOpened: (props: { type: EntryFormType; entry: EntryFormOrigin }) =>
+    capture('entry_form_opened', { type: props.type, entry: props.entry }),
+
+  /** A step of the add form was completed for the first time ("What", "When", ...). */
+  entryFormStepCompleted: (props: { type: EntryFormType; step: EntryFormStep }) =>
+    capture('entry_form_step_completed', { type: props.type, step: props.step }),
+
+  /** A time chip (or "Other time") was chosen on the new-medication form. */
+  timeChipSelected: (props: { chip: TimeChipId }) =>
+    capture('time_chip_selected', { chip: props.chip }),
+
+  /**
+   * The add-appointment form was closed without saving (create only). Once per
+   * form session; `seconds_open` is bucketed exactly as in medication_form_abandoned.
+   */
+  appointmentFormAbandoned: (props: {
+    lastField: AppointmentAbandonField;
+    /** How the form was opened (same values as `entry_form_opened.entry`); mobile sends it too. */
+    entrySource: EntryFormOrigin;
+    secondsOpen: number;
+  }) =>
+    capture('appointment_form_abandoned', {
+      last_field: props.lastField,
+      entry_source: props.entrySource,
+      seconds_open: bucketSecondsOpen(props.secondsOpen),
+    }),
 
   /**
    * A save attempt did NOT produce the medication the caregiver asked for.
@@ -899,31 +1237,47 @@ export const Analytics = {
    * through `sanitizeErrorText` so a future call site that reaches for
    * `err.message` cannot publish an email, a JWT or an invite code.
    */
-  entrySaveFailed: (circleId: string, entityType: string, reason: string) =>
+  entrySaveFailed: (
+    circleId: string,
+    entityType: string,
+    reason: string,
+    details?: { errorCode?: string; httpStatus?: number }
+  ) =>
     capture('entry_save_failed', {
       circle_id: circleId,
       entity_type: entityType,
       reason: sanitizeErrorText(reason),
+      // Both OMITTED when absent, as on mobile. `errorCode` must come from
+      // `classifyFailureCode` (a closed set), never a message.
+      ...(details?.errorCode ? { error_code: sanitizeErrorText(details.errorCode) } : {}),
+      ...(typeof details?.httpStatus === 'number' ? { http_status: details.httpStatus } : {}),
     }),
 
   // --- First-run wizard (post-circle-create) ---
 
   firstRunStepViewed: (
     circleId: string | undefined,
-    step: 'choose' | 'what' | 'when' | 'repeat'
+    step: 'choose' | 'what' | 'when' | 'repeat' | 'first_med'
   ) =>
     capture('first_run_step_viewed', {
       ...(circleId ? { circle_id: circleId } : {}),
       step,
     }),
 
+  /**
+   * Onboarding 1.3.1: `tier` says WHICH Setup (1) control was used, 'primary' =
+   * the one big "Add {{name}}'s first med", 'secondary' = a quiet "OR START WITH"
+   * row. Optional only so a caller outside Setup (none today) keeps compiling.
+   */
   firstRunActionSelected: (
     circleId: string | undefined,
-    action: 'medication' | 'appointment' | 'invite' | 'emergency'
+    action: 'medication' | 'appointment' | 'invite' | 'emergency',
+    tier?: 'primary' | 'secondary'
   ) =>
     capture('first_run_action_selected', {
       ...(circleId ? { circle_id: circleId } : {}),
       action,
+      ...(tier ? { tier } : {}),
     }),
 
   /**
@@ -949,8 +1303,20 @@ export const Analytics = {
    */
   firstRunMedicationSaved: (opts: {
     circleId?: string;
-    preset: 'everyMorning' | 'everyEvening' | 'twiceDaily' | 'threeTimesDaily' | 'custom';
-    recurrence: 'daily' | 'every_other_day' | 'weekly' | 'none';
+    // Onboarding 1.3.1: the folded form reports the time CHIP picked ('other' = a typed time);
+    // the pre-1.3.1 wizard presets stay in the union for old call sites and tests.
+    preset:
+      | 'everyMorning'
+      | 'everyEvening'
+      | 'twiceDaily'
+      | 'threeTimesDaily'
+      | 'custom'
+      | 'morning'
+      | 'midday'
+      | 'evening'
+      | 'bedtime'
+      | 'other';
+    recurrence: 'daily' | 'every_other_day' | 'weekly' | 'none' | 'days_of_week' | 'as_needed';
     dosageFilled: boolean;
     doseCount: number;
   }) =>
@@ -973,13 +1339,64 @@ export const Analytics = {
    * What the user did with the invite prompt after the first medication saved:
    * 'invite' (primary), 'not_now' (secondary) or 'close' (the X / Escape).
    */
+  onboardingPayoffViewed: () => capture('onboarding_payoff_viewed'),
+
   firstRunInvitePromptAction: (action: 'invite' | 'not_now' | 'close') =>
     capture('first_run_invite_prompt_action', { action }),
+
+  // --- Onboarding 1.3.1 (web flow: Mark it, suggestion outcome, paywall timing) ---
+  // Enums and booleans only: no circle_id, no names, no free text (CLAUDE.md 4).
+
+  /** The "Already given today? Mark it" line was put in front of the user. */
+  markItShown: (surface: 'payoff' | 'today') => capture('mark_it_shown', { surface }),
+
+  /** "Mark it" was tapped; `success` is whether the Taken was recorded. */
+  markItTapped: (surface: 'payoff' | 'today', success: boolean) =>
+    capture('mark_it_tapped', { surface, success }),
+
+  /** "Use as typed" row chosen in the drug suggestions: bucket + boolean only, no text. */
+  drugSuggestionUseAsTyped: (hadSuggestions: boolean, typedLength: number) =>
+    capture('drug_suggestion_use_as_typed', {
+      had_suggestions: hadSuggestions,
+      typed_length_bucket: typedLength <= 3 ? '1-3' : typedLength <= 10 ? '4-10' : '11+',
+    }),
+
+  /**
+   * How the medication NAME was chosen, on save of a create form: a drug
+   * suggestion was picked, the name was typed with no suggestion offered/used, or
+   * the "Use typed name as typed" row was chosen.
+   */
+  medNameSuggestionOutcome: (outcome: 'suggestion' | 'typed' | 'as_typed') =>
+    capture('med_name_suggestion_outcome', { outcome }),
+
+  /**
+   * The onboarding paywall was put on screen. `trigger`: right after the first
+   * medication's payoff, or (no first med) the next time Today showed.
+   * `voice_try_used` is always false on web (voice is mobile only).
+   */
+  paywallShown: (trigger: 'after_first_med' | 'onboarding', voiceTryUsed = false) =>
+    capture('paywall_shown', { trigger, voice_try_used: voiceTryUsed }),
 
   // --- Calendar & events ---
   eventCreated: (circleId: string, eventType: string, recurring: boolean) =>
     capture('event_created', { circle_id: circleId, event_type: eventType, recurring }),
   taskCompleted: (circleId: string) => capture('task_completed', { circle_id: circleId }),
+  /**
+   * A circle was picked from the picker list ('circle_list') or on the
+   * downgrade circle-selection modal ('circle_selection') — the same event and
+   * enum as mobile. `position` is 1-based. Integers and an enum only: NO
+   * circle_id, so it cannot be joined to a household.
+   */
+  circleSelected: (p: {
+    position: number;
+    circleCount: number;
+    source: 'circle_list' | 'circle_selection';
+  }) =>
+    capture('circle_selected', {
+      position: p.position,
+      circle_count: p.circleCount,
+      source: p.source,
+    }),
   taskUndone: (circleId: string) => capture('task_undone', { circle_id: circleId }),
   appointmentCompleted: (circleId: string) =>
     capture('appointment_completed', { circle_id: circleId }),
@@ -1379,47 +1796,66 @@ export const Analytics = {
     }),
 
   // --- Email click signal (docs/plans/email-lifecycle-overhaul.md, "CTA URLs
-  // and click measurement") ---
+  // and click measurement"; landing outcome added in 1.3.1) ---
   /**
-   * A visitor followed an email CTA into the web companion (`/open?src=...`
-   * or any page reached with a `?src=` query param). `src` is a fixed enum
-   * (`welcome`, `drip_d1_<variant>`, `drip_d4_<variant>`, `trial_reminder`) —
-   * never PII. Call through `trackEmailLinkFromLocation`, not directly, so
-   * the once-per-load guard applies.
+   * A visitor followed an email CTA into the web companion (any page reached
+   * with a `?src=` query param) and the link's target RESOLVED. Fired once per
+   * link by `lib/emailLinkLanding.ts`, never directly. Enums and booleans only:
+   * `type` is the known `src` value (else 'other'), `app_state` is whether the
+   * visitor had to sign in first, `landed` is whether the intended route was
+   * reached, `target_found` is whether the linked circle/item existed and was
+   * accessible. Never a circle id, item id, date or text.
    */
-  emailLinkOpened: (src: string) => capture('email_link_opened', { src }),
+  emailLinkOpened: (props: {
+    type: string;
+    appState: 'signed_in' | 'signed_out';
+    landed: boolean;
+    targetFound: boolean;
+  }) =>
+    capture('email_link_opened', {
+      type: props.type,
+      app_state: props.appState,
+      landed: props.landed,
+      target_found: props.targetFound,
+    }),
+
+  // ── Notifications inbox (enums, counts and booleans only: never a circle id,
+  // row id or text) ─────────────────────────────────────────────────────────
+
+  /**
+   * The inbox page was opened and loaded. `unreadBucket`: '0' | '1_3' | '4_9' | '10_plus'.
+   * `source`: how it was reached ('circle_list' = a circle card's count, 'today_bell' =
+   * the bell inside a circle, 'header_bell' = the bell outside a circle, 'other' =
+   * direct URL, email link, the "All notifications" link). `scoped`: one circle's inbox.
+   */
+  inboxViewed: (props: {
+    unreadBucket: '0' | '1_3' | '4_9' | '10_plus';
+    source: InboxSource;
+    scoped: boolean;
+  }) =>
+    capture('inbox_viewed', {
+      unread_bucket: props.unreadBucket,
+      source: props.source,
+      scoped: props.scoped,
+    }),
+
+  /**
+   * The circle list showed at least one card with an unread count. Once per page
+   * view. `circlesWithUnread`: how many cards showed a count, capped at 10.
+   */
+  circleListUnreadShown: (props: { circlesWithUnread: number }) =>
+    capture('circle_list_unread_shown', {
+      circles_with_unread: Math.min(10, Math.max(0, Math.floor(props.circlesWithUnread))),
+    }),
+
+  /** A row was opened. `type` is the push type enum ('other' for an unknown one). */
+  inboxRowOpened: (props: { type: string; targetFound: boolean }) =>
+    capture('inbox_row_opened', { type: props.type, target_found: props.targetFound }),
+
+  /** "Mark all read" was used; `count` is how many unread rows it covered. */
+  inboxMarkAllRead: (props: { count: number }) =>
+    capture('inbox_mark_all_read', { count: props.count }),
 };
-
-// Module-level, NOT persisted (sessionStorage/localStorage): this only needs
-// to survive a single page load, and the boot call site (App.tsx) reads
-// `window.location.search` exactly once anyway. A plain in-memory flag is
-// enough to make React StrictMode's double-invoked mount effect (or any
-// other caller re-running the boot hook) fire `email_link_opened` at most
-// once per load, instead of once per invocation.
-let emailLinkTracked = false;
-
-/**
- * Reads `src` out of a `location.search`-shaped string and fires
- * `Analytics.emailLinkOpened(src)` at most once per page load. No-ops when
- * `src` is missing/empty. Deliberately does NOT strip `src` from the URL —
- * it isn't sensitive and downstream code (PageviewTracker, deep-link
- * handling) doesn't need it removed.
- *
- * Call once from the app root on mount, e.g.:
- *   useEffect(() => { trackEmailLinkFromLocation(window.location.search); }, []);
- */
-export function trackEmailLinkFromLocation(search: string): void {
-  if (emailLinkTracked) return;
-  const src = new URLSearchParams(search).get('src');
-  if (!src) return;
-  emailLinkTracked = true;
-  Analytics.emailLinkOpened(src);
-}
-
-/** Test-only: reset the once-per-load guard between vitest cases. */
-export function __resetEmailLinkTrackedForTests(): void {
-  emailLinkTracked = false;
-}
 
 /**
  * The analytics vocabulary for `ai_chat_failed`. Declared here (not imported)

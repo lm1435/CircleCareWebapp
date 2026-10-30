@@ -1,4 +1,11 @@
-import { redactAuthTokens, redactInviteCode, sanitizeErrorText } from './analytics';
+import {
+  redactAuthTokens,
+  redactInviteCode,
+  sanitizeErrorText,
+  scrubExceptionEvent,
+  anonymizeCrashEvent,
+  isCrashEvent,
+} from './analytics';
 import { discardBootErrors, flushBootErrors } from './bootErrorBuffer';
 import { env } from './env';
 import { getThemeSuperProperties } from './themeCore';
@@ -361,7 +368,11 @@ function configure(posthog: PostHogInstance): void {
         // the stable ids and mask UUIDs in URLs/messages — re-read per event,
         // not per init, because consent can be withdrawn mid-session and the
         // client keeps running (see `disableAnalytics`).
-        return redactCaptureEvent(event, currentAnalyticsMode() === 'anonymous');
+        // Crash events get the anonymous treatment (id strip + UUID mask) in
+        // EVERY mode, then are unlinked from the person and message-scrubbed.
+        const anonymous = currentAnalyticsMode() === 'anonymous' || isCrashEvent(event);
+        const crash = anonymizeCrashEvent(redactCaptureEvent(event, anonymous));
+        return crash ? scrubExceptionEvent(crash) : null;
       } catch {
         // Analytics must never break the app. Dropping the EVENT is safer than
         // sending one that skipped redaction, since the thing being redacted is

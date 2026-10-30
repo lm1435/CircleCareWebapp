@@ -3,8 +3,8 @@
   "empty": "Für heute sind keine Medikamente geplant.",
   "emptyFirstRun": "Noch keine Medikamente. Fügen Sie das erste hinzu, und alle im Kreis erhalten die Erinnerung.",
   "emptyCard": {
-    "body": "Für {{name}} ist heute noch nichts geplant. Fügen Sie ein Medikament hinzu, und alle im Kreis sehen es hier, mit Eingenommen und Auslassen.",
-    "bodySelfCare": "Für Sie ist heute noch nichts geplant. Fügen Sie ein Medikament hinzu, und es erscheint hier, mit Eingenommen und Auslassen."
+    "body": "Für {{name}} ist heute nichts geplant.",
+    "bodySelfCare": "Für Sie ist heute nichts geplant."
   },
   "addFirst": "Medikament hinzufügen",
   "loadError": "Die heutigen Medikamente konnten nicht geladen werden",
@@ -62,7 +62,6 @@
     "loading": "Medikamente werden geladen …",
     "errorTitle": "Die Medikamente konnten nicht geladen werden",
     "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
-    "active": "Aktiv",
     "inactive": "Inaktive / frühere Medikamente",
     "inactiveHint": "Zur Ansicht aufbewahrt. Erinnerungen sind aus.",
     "noTime": "Keine geplante Uhrzeit",
@@ -91,7 +90,19 @@
       "viewLabel": "Details zu {{name}} anzeigen",
       "repeat": "Wiederholung",
       "refill": "Nachschub"
-    }
+    },
+    "titleNamed": "Medikamente von {{name}}",
+    "titleSelf": "Meine Medikamente",
+    "recipientFallback": "die betreute Person",
+    "zoneBehind_one": "Die Zeiten gelten für {{name}} · {{hours}} Stunde früher als bei Ihnen",
+    "zoneBehind_other": "Die Zeiten gelten für {{name}} · {{hours}} Stunden früher als bei Ihnen",
+    "zoneAhead_one": "Die Zeiten gelten für {{name}} · {{hours}} Stunde später als bei Ihnen",
+    "zoneAhead_other": "Die Zeiten gelten für {{name}} · {{hours}} Stunden später als bei Ihnen",
+    "weekSummary": "Diese Woche {{pct}} % eingenommen",
+    "weekReport": "Bericht",
+    "anytime": "Jederzeit",
+    "zoneBehindHm": "Die Zeiten gelten für {{name}} · {{hours}} Std. {{minutes}} Min. hinter Ihnen",
+    "zoneAheadHm": "Die Zeiten gelten für {{name}} · {{hours}} Std. {{minutes}} Min. vor Ihnen"
   },
   "needsAttention": "Braucht Aufmerksamkeit",
   "needsAttentionHint": "Dosen von gestern, auf die niemand geantwortet hat",
@@ -103,7 +114,6 @@
   },
   "history": {
     "title": "Medikamentenverlauf",
-    "subtitle": "Verfolgen Sie die Einnahmetreue und sehen Sie, was wann eingenommen wurde.",
     "loading": "Verlauf wird geladen …",
     "today": "Heute",
     "yesterday": "Gestern",

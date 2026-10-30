@@ -81,14 +81,14 @@ async function ringedAfterOpening(user: ReturnType<typeof userEvent.setup>): Pro
 describe('AddEventModal date picker "Today"', () => {
   it('untimed task: rings the RECIPIENT today', async () => {
     const user = userEvent.setup({ advanceTimers: () => undefined });
-    render(<AddEventModal circleId="c" initialType="task" onClose={vi.fn()} />);
+    render(<AddEventModal circleId="c" initialType="task" layout="full" onClose={vi.fn()} />);
     expect(await ringedAfterOpening(user)).toBe(getDateInTimezone(RECIPIENT.zone, NOW));
   });
 
   it('timed task: keeps the VIEWER today (the field is the viewer wall clock)', async () => {
     const user = userEvent.setup({ advanceTimers: () => undefined });
     render(
-      <AddEventModal circleId="c" initialType="task" initialTime="09:00" onClose={vi.fn()} />
+      <AddEventModal circleId="c" initialType="task" layout="full" initialTime="09:00" onClose={vi.fn()} />
     );
     expect(await ringedAfterOpening(user)).toBe(deviceToday());
   });

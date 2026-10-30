@@ -19,7 +19,7 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
-  classifyFailureCode,
+  failureContext,
   getEmergencyInfoConflict,
   isPermissionDeniedError,
   isSubscriptionRequiredError,
@@ -364,9 +364,9 @@ export function useUpdateEmergencyInfo(
       }
       // `error_occurred` for the admin digest (mobile parity). ids/enums only
       // — never the field values (PHI) and never the toast copy.
-      Analytics.errorOccurred('emergency_info', 'emergency_info_mutation_error', {
+      Analytics.errorOccurred('emergency_info', 'emergency_info_update_failed', {
         circle_id: circleId,
-        code: classifyFailureCode(error),
+        ...failureContext('emergency_info', 'update', error),
       });
       if (isSubscriptionRequiredError(error)) {
         // Free-tier write block — web cannot transact, point at the app.

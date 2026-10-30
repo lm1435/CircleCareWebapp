@@ -39,12 +39,12 @@
   },
   "empty": {
     "open": "Keine offenen Aufgaben",
-    "openHint": "Koordinieren Sie die Aufgaben, die die Pflege Ihrer Angehörigen am Laufen halten – Besorgungen, Nachschub, Nachfragen – und teilen Sie sie mit allen, die helfen.",
+    "openHint": "Geteilte Aufgaben, etwa Besorgungen, Nachschub und Nachsorge.",
     "openHintReadOnly": "Aufgaben, die das Pflegeteam hinzufügt, erscheinen hier.",
     "completed": "Noch keine erledigten Aufgaben",
-    "completedHint": "Aufgaben, die der Kreis erledigt, erscheinen hier, damit alle sehen, was schon geschafft ist.",
+    "completedHint": "Erledigte Aufgaben erscheinen hier.",
     "all": "Noch keine Aufgaben",
-    "allHint": "Koordinieren Sie die Aufgaben, die die Pflege Ihrer Angehörigen am Laufen halten – Besorgungen, Nachschub, Nachfragen – und teilen Sie sie mit allen, die helfen.",
+    "allHint": "Geteilte Aufgaben, etwa Besorgungen, Nachschub und Nachsorge.",
     "cta": "Aufgabe hinzufügen"
   },
   "errorTitle": "Aufgaben konnten nicht geladen werden",

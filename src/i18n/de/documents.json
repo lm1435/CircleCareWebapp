@@ -17,8 +17,8 @@
   "errorTitle": "Dokumente konnten nicht geladen werden",
   "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
   "noDocuments": "Noch keine Dokumente",
-  "noDocumentsHint": "Bewahren Sie die wichtigen Dokumente Ihrer Angehörigen oder Ihres Angehörigen an einem Ort auf – Versicherungskarten, Unterlagen, Verfügungen –, damit alle, die helfen, sie im Ernstfall finden.",
-  "noDocumentsHintReadOnly": "Mit diesem Kreis geteilte Dokumente erscheinen hier, damit alle, die helfen, sie im Ernstfall finden.",
+  "noDocumentsHint": "Bewahren Sie Versicherungskarte, Unterlagen und Verfügungen dort auf, wo alle Helfenden sie finden.",
+  "noDocumentsHintReadOnly": "Dokumente, die das Pflegeteam hochlädt, erscheinen hier.",
   "emptyCategory": {
     "title": "In „{{category}}“ ist noch nichts.",
     "action": "Alle Dokumente anzeigen"

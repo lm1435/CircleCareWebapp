@@ -5,8 +5,8 @@
   },
   "uploadCta": "Apenas membros com permissão de edição podem adicionar documentos a este círculo. Peça ao proprietário do círculo se precisar que algo seja adicionado.",
   "errorHint": "Verifique a sua ligação e tente novamente.",
-  "noDocumentsHint": "Guarde os documentos importantes do seu ente querido num só lugar (cartões de seguro, registos, diretivas) para que todos os que ajudam os possam encontrar quando for preciso.",
-  "noDocumentsHintReadOnly": "Os documentos partilhados com este círculo aparecerão aqui para que todos os que ajudam os possam encontrar quando for preciso.",
+  "noDocumentsHint": "Guarde cartões de seguro, processos clínicos e diretivas onde todos os que ajudam os possam encontrar.",
+  "noDocumentsHintReadOnly": "Os documentos carregados pela equipa de cuidado aparecerão aqui.",
   "starter": {
     "lede": "Quem estiver a ajudar pode aceder-lhes em segundos: na farmácia, nas urgências, ao telefone com uma enfermeira.",
     "items": {

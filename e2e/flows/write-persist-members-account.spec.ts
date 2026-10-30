@@ -513,7 +513,7 @@ test('keep one circle on downgrade through the picker banner: selected_on_downgr
   // before it lets an absence count).
   const addEvent = page.getByRole('button', { name: 'Add event', exact: true });
   await gotoCirclePage(page, keepId, 'calendar');
-  await after(addEvent).toBeVisible({ timeout: SETTLE });
+  await after(addEvent.first()).toBeVisible({ timeout: SETTLE });
   await gotoCirclePage(page, otherId, 'calendar');
   await expect(page.getByRole('heading', { name: 'Calendar', exact: true }).first()).toBeVisible({ timeout: 20_000 });
   await expect(addEvent).toHaveCount(0);

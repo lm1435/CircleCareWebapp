@@ -79,11 +79,12 @@ describe('ShiftCard', () => {
     expect(onTake).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }));
   });
 
-  it('FILLED: moss surface, the assignee name, no Take', () => {
+  it("FILLED by someone else: cream card with a moss hairline (the wash means YOURS, as on mobile), the assignee name, no Take", () => {
     renderCard(shift({ assigned_to: 'u-ana' }));
     const card = screen.getByTestId('shift-card');
     expect(card).toHaveAttribute('data-shift-state', 'filled');
-    expect(card).toHaveClass('bg-moss-soft');
+    expect(card).toHaveClass('bg-cream', 'border-moss-line');
+    expect(card).not.toHaveClass('bg-moss-soft');
     expect(card).not.toHaveClass('border-dashed');
     expect(screen.getByText(/8:00 PM – 8:00 AM · next day · Ana/)).toBeInTheDocument();
     expect(
@@ -92,8 +93,10 @@ describe('ShiftCard', () => {
     expect(screen.queryByRole('button', { name: /^Take/ })).not.toBeInTheDocument();
   });
 
-  it('the viewer reads "You"', () => {
+  it('the viewer reads "You" on a moss-washed card', () => {
     renderCard(shift({ assigned_to: 'u-me' }));
+    const card = screen.getByTestId('shift-card');
+    expect(card).toHaveClass('bg-moss-soft', 'border-moss');
     expect(screen.getByText(/· You/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Night, 8:00 PM to 8:00 AM, next day, you are on this shift' })).toBeInTheDocument();
   });

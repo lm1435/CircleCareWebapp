@@ -14,6 +14,8 @@ import {
   careCardShell,
   useToast,
 } from '@/components/ui';
+import { RemovedState } from '@/components/RemovedState';
+import { useEmailLinkLanding } from '@/lib/emailLinkLanding';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { CareTabs } from '@/components/layout/CareTabs';
 import { ViewOnlyBanner } from '@/components/ViewOnlyBanner';
@@ -133,6 +135,21 @@ export default function NotesPage(): ReactElement {
     return raw && DATE_PARAM_RE.test(raw) ? raw : null;
   });
   const scrolledForDateRef = useRef(false);
+  // A dated link that came from an email (`?src=`) and lands on a day with no
+  // notes (deleted, or never there) shows the shared removed state. In-app
+  // `?date=` jumps (no `src`) keep scrolling silently as before.
+  const [removedDate, setRemovedDate] = useState<string | null>(null);
+  const fromEmail = Boolean(searchParams.get('src'));
+  // Only the FIRST dated jump is the email's; `src` stays in the URL, so a later
+  // in-app day pick must not be mistaken for it.
+  const emailLinkResolvedRef = useRef(false);
+  const reportLanding = useEmailLinkLanding();
+  useEffect(() => {
+    // A `?date=` that is not a real YYYY-MM-DD names nothing we can resolve.
+    if (searchParams.has('date') && !pendingDate) reportLanding(false);
+    // Mount-only: the captured link never changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Older history beyond the base 92-day window: whole pages, no cap.
   const [olderPages, setOlderPages] = useState(0);
 
@@ -194,6 +211,7 @@ export default function NotesPage(): ReactElement {
     if (pendingDate > today) {
       // In the future — ignore outright; never touch the window for it.
       scrolledForDateRef.current = true;
+      reportLanding(false);
       return;
     }
 
@@ -237,7 +255,10 @@ export default function NotesPage(): ReactElement {
     // the date — that the group will never exist (e.g. no notes that day),
     // in which case give up silently rather than retrying forever.
     scrolledForDateRef.current = true;
-    scrollToDayGroup(pendingDate);
+    const dayFound = scrollToDayGroup(pendingDate);
+    if (!dayFound && fromEmail && !emailLinkResolvedRef.current) setRemovedDate(pendingDate);
+    emailLinkResolvedRef.current = true;
+    reportLanding(dayFound);
     // Clear the param (replace) so a later re-render / back-nav never re-fires
     // this scroll for the same date.
     if (searchParams.has('date')) {
@@ -256,6 +277,8 @@ export default function NotesPage(): ReactElement {
     notesQuery.isPlaceholderData,
     searchParams,
     setSearchParams,
+    fromEmail,
+    reportLanding,
   ]);
 
   // Group by note_date, dates descending. Server order is already
@@ -543,6 +566,15 @@ export default function NotesPage(): ReactElement {
       <PageMasthead section={t('common:nav.notes')} tone="dusk" title={t('notes:title')} subtitle={t('notes:subtitle')}>
         <CareTabs />
       </PageMasthead>
+
+      {removedDate ? (
+        <RemovedState
+          reason="removed"
+          date={removedDate}
+          fromEmail={fromEmail}
+          onDismiss={() => setRemovedDate(null)}
+        />
+      ) : null}
 
       {!!circle && !canEdit && <ViewOnlyBanner className="mx-5 mt-4" />}
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
@@ -42,6 +42,12 @@ vi.mock('@/hooks/useMedConfirmation', () => ({
     mockUseMedicationConfirmations(circleId, params, options),
   useAdherenceReport: (circleId: string, period: string) =>
     mockUseAdherenceReport(circleId, period),
+  // The 7-day summary line that moved here from the Overview.
+  useWeeklyAdherence: (circleId: string) => mockUseWeeklyAdherence(circleId),
+}));
+const mockUseWeeklyAdherence = vi.fn((_circleId?: string) => ({
+  data: undefined as { scheduled: number; adherence_rate: number; daily_breakdown: unknown[] } | undefined,
+  isError: false,
 }));
 
 // The viewer's 12h/24h clock. The real hook reads the shared currentUser React
@@ -249,7 +255,8 @@ describe('MedicationsPage', () => {
   it('renders Active and Inactive sections from a mixed roster', () => {
     renderPage();
 
-    const activeSection = screen.getByRole('region', { name: 'Active' });
+    // 08:00 is the MORNING group (simple UI: groups by the dose's own time).
+    const activeSection = screen.getByRole('region', { name: 'Morning' });
     expect(within(activeSection).getByText('Metformin')).toBeInTheDocument();
 
     const inactiveSection = screen.getByRole('region', { name: 'Inactive / Past medications' });
@@ -286,18 +293,24 @@ describe('MedicationsPage', () => {
     mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed]));
     renderPage();
 
-    expect(screen.getByRole('region', { name: 'Active' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Morning' })).toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Inactive / Past medications' })
     ).not.toBeInTheDocument();
   });
 
-  it('groups multiple series of the same name + dose into ONE card', () => {
+  it('one ROW per dose time: two series of the same med are a Morning row and an Evening row', () => {
     const evening = makeMed({ id: 'active-2', scheduled_time: '20:00:00' });
     mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, evening]));
     renderPage();
 
-    expect(screen.getAllByText('Metformin')).toHaveLength(1);
+    expect(screen.getAllByText('Metformin')).toHaveLength(2);
+    expect(
+      within(screen.getByRole('region', { name: 'Morning' })).getByText('8:00 AM')
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Evening' })).getByText('8:00 PM')
+    ).toBeInTheDocument();
   });
 
   it('Edit on an ACTIVE med opens the edit modal directly', async () => {
@@ -364,8 +377,10 @@ describe('MedicationsPage', () => {
 
     // Group is overall Active (at least one active event of this key) — it
     // must render in the Active section, not Inactive.
-    const activeSection = screen.getByRole('region', { name: 'Active' });
+    // Only the LIVE 8pm series gets a row; the stopped 8am one leaves none.
+    const activeSection = screen.getByRole('region', { name: 'Evening' });
     expect(within(activeSection).getByText('Metformin')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Morning' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Inactive / Past medications' })
     ).not.toBeInTheDocument();
@@ -462,13 +477,17 @@ describe('MedicationsPage', () => {
     mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, evening]));
 
     const { unmount } = renderPage();
-    expect(screen.getByText('8:00 AM (New York) · 8:00 PM (New York) · Daily')).toBeInTheDocument();
+    // The recipient's own clock, no zone suffix on the row (the header says when it differs).
+    expect(screen.getByText('8:00 AM')).toBeInTheDocument();
+    expect(screen.getByText('8:00 PM')).toBeInTheDocument();
+    expect(screen.getAllByText('500 mg · Daily')).toHaveLength(2);
     unmount();
 
     mockUseHourCycle.mockReturnValue('24h');
     renderPage();
-    expect(screen.getByText('08:00 (New York) · 20:00 (New York) · Daily')).toBeInTheDocument();
-    expect(screen.queryByText(/8:00 PM ET/)).not.toBeInTheDocument();
+    expect(screen.getByText('08:00')).toBeInTheDocument();
+    expect(screen.getByText('20:00')).toBeInTheDocument();
+    expect(screen.queryByText(/8:00 PM/)).not.toBeInTheDocument();
   });
 
   // ── Low-stock badge (mobile parity) ──────────────────────────────────────
@@ -538,10 +557,11 @@ describe('MedicationsPage', () => {
       mockUseMedicationRoster.mockReturnValue(rosterResult([primary, sibling]));
       renderPage();
 
-      // One card, both times, and the badge sourced from the non-representative
-      // row: 12 / 2 = 6 days.
-      expect(screen.getByText(/8:00 AM \(New York\) · 8:00 PM \(New York\)/)).toBeInTheDocument();
-      expect(screen.getByText(/Low stock · 6 days left/)).toBeInTheDocument();
+      // Both dose rows, and the badge sourced from the non-representative row:
+      // 12 / 2 = 6 days (shown on each row of the medication).
+      expect(screen.getByText('8:00 AM')).toBeInTheDocument();
+      expect(screen.getByText('8:00 PM')).toBeInTheDocument();
+      expect(screen.getAllByText(/Low stock · 6 days left/)).toHaveLength(2);
     });
 
     // A stopped medication has no future to run out in — "Low stock · 3 days
@@ -680,11 +700,11 @@ describe('MedicationsPage', () => {
       const user = userEvent.setup();
       renderPage();
 
-      expect(screen.getByRole('region', { name: 'Active' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Morning' })).toBeInTheDocument();
 
       await user.click(screen.getByRole('tab', { name: 'History' }));
 
-      expect(screen.queryByRole('region', { name: 'Active' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Morning' })).not.toBeInTheDocument();
       expect(screen.getByRole('tab', { name: 'History' })).toHaveAttribute(
         'aria-selected',
         'true'
@@ -899,11 +919,11 @@ describe('MedicationsPage', () => {
 
     // The roster tab needs no equivalent — its section headers already ARE the
     // h2 level, and a second one would be noise.
-    it('uses the ACTIVE / INACTIVE section headers as the roster tab’s h2s', () => {
+    it('uses the time-of-day / INACTIVE section headers as the roster tab’s h2s', () => {
       renderPage();
 
       expect(
-        screen.getByRole('heading', { level: 2, name: 'Active' })
+        screen.getByRole('heading', { level: 2, name: 'Morning' })
       ).toBeInTheDocument();
       expect(
         screen.queryByRole('heading', { level: 2, name: 'Medication history' })
@@ -992,12 +1012,40 @@ describe('MedicationsPage — ?medication= deep link', () => {
     expect(showToast).not.toHaveBeenCalled();
   });
 
-  it('an id that matches nothing: a gentle toast, no detail', async () => {
+  it('email_link_opened: a missing medication reports target_found false, a found one true', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const { __resetEmailLinkLandingForTests } = await import('@/lib/emailLinkLanding');
+    __resetEmailLinkLandingForTests();
+    const spy = vi.spyOn(Analytics, 'emailLinkOpened').mockImplementation(() => {});
+    try {
+      const gone = renderPage('/circles/circle-1/meds?medication=deleted-med&src=weekly_digest');
+      await screen.findByTestId('removed-state');
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith({
+        type: 'weekly_digest',
+        appState: 'signed_in',
+        landed: true,
+        targetFound: false,
+      });
+      gone.unmount();
+
+      __resetEmailLinkLandingForTests();
+      spy.mockClear();
+      renderPage('/circles/circle-1/meds?medication=active-1&src=weekly_digest');
+      await screen.findByRole('dialog');
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ targetFound: true }));
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('an id that matches nothing: the removed state, no detail', async () => {
     renderPage('/circles/circle-1/meds?medication=deleted-med');
-    await waitFor(() =>
-      expect(showToast).toHaveBeenCalledWith('This item is no longer available. Someone may have deleted it.', 'info')
-    );
+    const removed = await screen.findByTestId('removed-state');
+    expect(within(removed).getByText('This was removed')).toBeInTheDocument();
+    expect(within(removed).getByText('It was deleted or is no longer scheduled.')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(showToast).not.toHaveBeenCalled();
   });
 });
 
@@ -1021,7 +1069,8 @@ describe('MedicationsPage — ended series', () => {
     await i18n.changeLanguage('en');
   });
 
-  const activeRegion = () => screen.queryByRole('region', { name: 'Active' });
+  // The default fixture dose is 08:00: its live row sits in the MORNING group.
+  const activeRegion = () => screen.queryByRole('region', { name: 'Morning' });
   const inactiveRegion = () => screen.getByRole('region', { name: 'Inactive / Past medications' });
 
   // PORTED PROOF (scratchpad MedicationsPage.endedSeries.test.tsx): the EXACT
@@ -1233,7 +1282,8 @@ describe('MedicationsPage — ended series', () => {
     );
     renderPage();
 
-    const active = activeRegion();
+    // Only the live 8pm series has a row.
+    const active = screen.queryByRole('region', { name: 'Evening' });
     expect(active).not.toBeNull();
     expect(within(active as HTMLElement).getByText('Metformin')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Inactive / Past medications' })).toBeNull();
@@ -1435,9 +1485,9 @@ describe('MedicationsPage — as-needed medications', () => {
   it('lists active as-needed medications in their OWN "As needed" section, not among the dose-time cards', () => {
     mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, prn]));
     renderPage();
-    const asNeeded = screen.getByRole('region', { name: 'As needed' });
+    const asNeeded = screen.getByRole('region', { name: 'When needed' });
     expect(within(asNeeded).getByText('Ibuprofen')).toBeInTheDocument();
-    const active = screen.getByRole('region', { name: 'Active' });
+    const active = screen.getByRole('region', { name: 'Morning' });
     expect(within(active).queryByText('Ibuprofen')).toBeNull();
     // No schedule line, no time.
     expect(within(asNeeded).queryByText(/No scheduled time/)).toBeNull();
@@ -1448,8 +1498,8 @@ describe('MedicationsPage — as-needed medications', () => {
     mockUseMedicationRoster.mockReturnValue(rosterResult([prn]));
     renderPage();
     expect(screen.queryByText('No medications yet')).toBeNull();
-    expect(screen.getByRole('region', { name: 'As needed' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Active' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'When needed' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Morning' })).toBeNull();
   });
 
   it('"1 tablet daily" and "extra as needed" of the same name and dose are TWO cards (D5)', () => {
@@ -1527,6 +1577,202 @@ describe('MedicationsPage — as-needed medications', () => {
       name: 'Ibuprofen',
       dosage: '200 mg',
       surface: 'detail',
+    });
+  });
+});
+
+// ── Simple UI 1.3.1: header, zone line, time-of-day groups, weekly summary ────
+describe('MedicationsPage — simple UI', () => {
+  const rosa = { canEdit: true, timezone: 'America/New_York', circle: { recipient_name: 'Rosa' } };
+  const noWeek = { data: undefined, isError: false };
+
+  afterEach(() => {
+    mockUseWeeklyAdherence.mockReturnValue(noWeek);
+    document.documentElement.style.fontSize = '';
+  });
+
+  it('header is "{{name}}\'s meds", and "My meds" on a self-care circle', () => {
+    mockUseCircle.mockReturnValue(rosa);
+    const { unmount } = renderPage();
+    expect(screen.getByRole('heading', { level: 1, name: "Rosa's meds" })).toBeInTheDocument();
+    unmount();
+
+    mockUseCircle.mockReturnValue({ ...rosa, circle: { recipient_name: 'Sam', is_self_care: true } });
+    renderPage();
+    expect(screen.getByRole('heading', { level: 1, name: 'My meds' })).toBeInTheDocument();
+  });
+
+  it('falls back to "Medications" until the recipient name is known', () => {
+    mockUseCircle.mockReturnValue({ canEdit: true, timezone: 'America/New_York' });
+    renderPage();
+    expect(screen.getByRole('heading', { level: 1, name: 'Medications' })).toBeInTheDocument();
+  });
+
+  it('shows ONE zone line only when the viewer’s clock differs (Denver viewer, New York recipient)', () => {
+    mockUseCircle.mockReturnValue(rosa);
+    renderPage();
+    expect(screen.getByText("Times are Rosa's time · 2 hours ahead of you")).toBeInTheDocument();
+  });
+
+  it('says "behind you" for an earlier recipient clock and singularises one hour', () => {
+    mockUseCircle.mockReturnValue({ ...rosa, timezone: 'America/Los_Angeles' });
+    renderPage();
+    expect(screen.getByText("Times are Rosa's time · 1 hour behind you")).toBeInTheDocument();
+  });
+
+  it('shows NO zone line when the viewer shares the recipient’s zone', () => {
+    mockUseCircle.mockReturnValue({ ...rosa, timezone: 'America/Denver' });
+    renderPage();
+    expect(screen.queryByText(/Times are/)).toBeNull();
+  });
+
+  it('groups by the dose’s own time: Morning, Midday, Evening, Bedtime, then When needed', () => {
+    mockUseCircle.mockReturnValue(rosa);
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        makeMed({ id: 'a', medication_name: 'Aspirin', title: 'Aspirin', scheduled_time: '21:00:00' }),
+        makeMed({ id: 'b', medication_name: 'Baclofen', title: 'Baclofen', scheduled_time: '07:30:00' }),
+        makeMed({ id: 'c', medication_name: 'Citalopram', title: 'Citalopram', scheduled_time: '12:00:00' }),
+        makeMed({ id: 'd', medication_name: 'Digoxin', title: 'Digoxin', scheduled_time: '18:00:00' }),
+        makeMed({
+          id: 'e',
+          medication_name: 'Ibuprofen',
+          title: 'Ibuprofen',
+          as_needed: true,
+          recurrence_rule: null,
+          scheduled_time: null,
+        }),
+      ])
+    );
+    renderPage();
+    const headings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((h) => h.textContent)
+      .filter((text) => ['Morning', 'Midday', 'Evening', 'Bedtime', 'When needed'].includes(text ?? ''));
+    expect(headings).toEqual(['Morning', 'Midday', 'Evening', 'Bedtime', 'When needed']);
+    expect(within(screen.getByRole('region', { name: 'Bedtime' })).getByText('Aspirin')).toBeVisible();
+    expect(within(screen.getByRole('region', { name: 'Morning' })).getByText('7:30 AM')).toBeVisible();
+    expect(within(screen.getByRole('region', { name: 'When needed' })).getByText('Ibuprofen')).toBeVisible();
+  });
+
+  it('uses the ONE boundary rule shared with mobile: 05:00-10:59 / 11:00-15:59 / 16:00-20:59 / 21:00-04:59', () => {
+    mockUseCircle.mockReturnValue(rosa);
+    const at = (id: string, time: string) =>
+      makeMed({ id, medication_name: `Med${id}`, title: `Med${id}`, scheduled_time: time });
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        at('1', '04:59:00'),
+        at('2', '05:00:00'),
+        at('3', '10:59:00'),
+        at('4', '11:00:00'),
+        at('5', '15:59:00'),
+        at('6', '16:00:00'),
+        at('7', '20:59:00'),
+        at('8', '21:00:00'),
+      ])
+    );
+    renderPage();
+    const names = (part: string) =>
+      within(screen.getByRole('region', { name: part }))
+        .getAllByTestId('med-time-row')
+        .map((r) => r.textContent ?? '');
+    const has = (rows: string[], name: string) => rows.some((r) => r.includes(name));
+    const morning = names('Morning');
+    const midday = names('Midday');
+    const evening = names('Evening');
+    const bedtime = names('Bedtime');
+    expect([has(morning, 'Med2'), has(morning, 'Med3'), has(morning, 'Med1')]).toEqual([true, true, false]);
+    expect([has(midday, 'Med4'), has(midday, 'Med5')]).toEqual([true, true]);
+    expect([has(evening, 'Med6'), has(evening, 'Med7'), has(evening, 'Med8')]).toEqual([true, true, false]);
+    // 04:59 and 21:00 are BEDTIME (it wraps midnight); the after-midnight dose sorts last.
+    expect(bedtime.findIndex((r) => r.includes('Med8'))).toBeLessThan(
+      bedtime.findIndex((r) => r.includes('Med1'))
+    );
+  });
+
+  it('a scheduled med with no usable time is listed under ANYTIME, between Bedtime and When needed', () => {
+    mockUseCircle.mockReturnValue(rosa);
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        makeMed({ id: 'a', medication_name: 'Timed', title: 'Timed', scheduled_time: '07:30:00' }),
+        makeMed({ id: 'u', medication_name: 'Untimed', title: 'Untimed', scheduled_time: null }),
+        makeMed({
+          id: 'p',
+          medication_name: 'Ibuprofen',
+          title: 'Ibuprofen',
+          as_needed: true,
+          recurrence_rule: null,
+          scheduled_time: null,
+        }),
+      ])
+    );
+    renderPage();
+    const headings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((h) => h.textContent)
+      .filter((text) => ['Morning', 'Anytime', 'When needed'].includes(text ?? ''));
+    expect(headings).toEqual(['Morning', 'Anytime', 'When needed']);
+    expect(within(screen.getByRole('region', { name: 'Anytime' })).getByText('Untimed')).toBeVisible();
+  });
+
+  it('rows within a group are in time order, one time per row, no zone suffix', () => {
+    mockUseCircle.mockReturnValue(rosa);
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        makeMed({ id: 'l', medication_name: 'Lisinopril', title: 'Lisinopril', scheduled_time: '08:00:00' }),
+        makeMed({ id: 'o', medication_name: 'Losartan', title: 'Losartan', scheduled_time: '07:30:00' }),
+      ])
+    );
+    renderPage();
+    const rows = within(screen.getByRole('region', { name: 'Morning' })).getAllByTestId('med-time-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('7:30 AM');
+    expect(rows[0]).toHaveTextContent('Losartan');
+    expect(rows[1]).toHaveTextContent('8:00 AM');
+    expect(rows[1]).not.toHaveTextContent(/New York|ET\b/);
+  });
+
+  it('large text stacks the rows and reports large_text_layout once', async () => {
+    const { Analytics } = await import('@/lib/analytics');
+    const { resetLargeTextReports } = await import('@/lib/largeText');
+    resetLargeTextReports();
+    const spy = vi.spyOn(Analytics, 'largeTextLayout').mockImplementation(() => {});
+    document.documentElement.style.fontSize = '32px';
+    mockUseCircle.mockReturnValue(rosa);
+    renderPage();
+    expect(spy).toHaveBeenCalledWith('meds', true);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('med-time-row')[0].className).toContain('flex-col');
+    spy.mockRestore();
+  });
+
+  describe('weekly adherence summary (moved from the Overview)', () => {
+    it('reads "This week 86% taken · Report ›" and Report opens the History tab', async () => {
+      const user = userEvent.setup();
+      mockUseCircle.mockReturnValue(rosa);
+      mockUseWeeklyAdherence.mockReturnValue({
+        data: { scheduled: 14, adherence_rate: 85.7, daily_breakdown: [] },
+        isError: false,
+      });
+      renderPage();
+      const line = screen.getByTestId('week-adherence');
+      expect(line).toHaveTextContent('This week 86% taken');
+      await user.click(within(line).getByRole('button', { name: /Report/ }));
+      expect(screen.getByRole('tab', { name: 'History' })).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('is hidden with nothing scheduled, on error, and while loading', () => {
+      mockUseCircle.mockReturnValue(rosa);
+      for (const value of [
+        { data: { scheduled: 0, adherence_rate: 0, daily_breakdown: [] }, isError: false },
+        { data: undefined, isError: true },
+        { data: undefined, isError: false },
+      ]) {
+        mockUseWeeklyAdherence.mockReturnValue(value);
+        const { unmount } = renderPage();
+        expect(screen.queryByTestId('week-adherence')).toBeNull();
+        unmount();
+      }
     });
   });
 });

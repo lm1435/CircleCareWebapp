@@ -94,7 +94,7 @@
         "temperature": "Noch keine Temperaturwerte",
         "oxygen_saturation": "Noch keine Blutsauerstoffwerte"
       },
-      "description": "Tragen Sie Messwerte im Zeitverlauf ein, damit der Kreis vor dem nächsten Termin eine Entwicklung erkennen kann.",
+      "description": "Tragen Sie Messwerte ein, um vor dem nächsten Termin Trends zu erkennen.",
       "cta": {
         "blood_pressure": "Blutdruck eintragen",
         "heart_rate": "Herzfrequenz eintragen",

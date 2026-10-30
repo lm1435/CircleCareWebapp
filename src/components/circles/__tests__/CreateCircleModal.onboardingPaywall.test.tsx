@@ -5,10 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 import { CreateCircleModal } from '../CreateCircleModal';
 import {
+  ONBOARDING_PAYWALL_PENDING_KEY,
   ONBOARDING_PAYWALL_SEEN_KEY,
-  PENDING_FIRST_RUN_KEY,
   markOnboardingPaywallSeen,
   peekDeferredFirstRun,
+  peekOnboardingPaywallPending,
 } from '@/lib/onboardingPaywall';
 import { useAuthStore } from '@/store/authStore';
 
@@ -18,9 +19,8 @@ import { useAuthStore } from '@/store/authStore';
  * PORT of mobile/src/screens/circle/CreateCircleScreen.tsx:254-262. The gate
  * itself is unit-tested in lib/__tests__/onboardingPaywall.test.ts; what is
  * asserted HERE is the wiring that a unit test cannot see — that the modal
- * reads the PRE-create circle list, that it marks the flag before navigating,
- * that it parks the wizard instead of dropping it, and that every non-paywall
- * branch still lands on the circle with the wizard flag as it did before.
+ * reads the PRE-create circle list and that it only RECORDS the paywall as owed (the wizard runs
+ * first; the paywall shows after the first med or at the next Today).
  */
 
 const navigate = vi.fn();
@@ -83,86 +83,67 @@ async function createCircleNamed(name = 'Rose Meza'): Promise<void> {
   await waitFor(() => expect(createMutate).toHaveBeenCalled());
 }
 
-describe('CreateCircleModal — onboarding paywall', () => {
-  it('sends a first-circle free-tier user to the paywall with the ONBOARDING context', async () => {
+const FIRST_RUN_NAV = [
+  '/circles/circle-new',
+  { state: { firstRun: true, firstRunRecipientName: 'Rose Meza' } },
+] as const;
+
+describe('CreateCircleModal — onboarding paywall (owed, not shown: onboarding 1.3.1)', () => {
+  it('goes to the first-run wizard, NEVER to /upgrade, at creation', async () => {
     await createCircleNamed();
 
-    // `paywall_context: 'onboarding'` is the property the whole cross-platform
-    // ABA is computed from. A different value here does not merge into the
-    // wrong cohort — it invents a third one.
-    expect(navigate).toHaveBeenCalledWith('/upgrade', {
-      state: { paywallContext: 'onboarding' },
-    });
-    // And NOT straight to the circle.
-    expect(navigate).not.toHaveBeenCalledWith(
-      '/circles/circle-new',
-      expect.objectContaining({ state: expect.objectContaining({ firstRun: true }) })
-    );
+    expect(navigate).toHaveBeenCalledWith(...FIRST_RUN_NAV);
+    expect(navigate).not.toHaveBeenCalledWith('/upgrade', expect.anything());
   });
 
-  it('DEFERS the wizard rather than cancelling it', async () => {
+  it('records the paywall as OWED for the new circle for a first-circle free-tier user', async () => {
     await createCircleNamed();
 
-    // Mobile parks it in a ref across a screen push; web parks it in
-    // sessionStorage across a route change. Either way the wizard still runs.
-    expect(peekDeferredFirstRun()).toEqual({
-      circleId: 'circle-new',
-      recipientName: 'Rose Meza',
-    });
+    expect(peekOnboardingPaywallPending()).toBe('circle-new');
+    expect(window.localStorage.getItem(`${ONBOARDING_PAYWALL_PENDING_KEY}:${USER_ID}`)).not.toBeNull();
   });
 
-  it('marks the paywall seen once, in localStorage, at the moment of the ask', async () => {
+  it('does NOT write the seen flag at creation (it is written when the paywall is presented)', async () => {
     await createCircleNamed();
 
-    expect(window.localStorage.getItem(`${ONBOARDING_PAYWALL_SEEN_KEY}:${USER_ID}`)).toBe('1');
-    expect(
-      Object.keys(window.localStorage).filter((k) => k.startsWith(ONBOARDING_PAYWALL_SEEN_KEY))
-    ).toHaveLength(1);
+    expect(window.localStorage.getItem(`${ONBOARDING_PAYWALL_SEEN_KEY}:${USER_ID}`)).toBeNull();
+    expect(peekDeferredFirstRun()).toBeNull();
   });
 
-  it('skips the paywall for a PREMIUM user and opens the wizard directly', async () => {
+  it('owes nothing to a PREMIUM user', async () => {
     tier = 'premium';
 
     await createCircleNamed();
 
-    expect(navigate).toHaveBeenCalledWith('/circles/circle-new', {
-      state: { firstRun: true, firstRunRecipientName: 'Rose Meza' },
-    });
-    expect(navigate).not.toHaveBeenCalledWith('/upgrade', expect.anything());
-    // Nothing to defer — the wizard opened on this very navigation.
-    expect(window.sessionStorage.getItem(`${PENDING_FIRST_RUN_KEY}:${USER_ID}`)).toBeNull();
-    // And a premium user must never be marked as "asked", so that a later
-    // downgrade + first circle on a new account is still reachable.
+    expect(navigate).toHaveBeenCalledWith(...FIRST_RUN_NAV);
+    expect(peekOnboardingPaywallPending()).toBeNull();
     expect(window.localStorage.getItem(`${ONBOARDING_PAYWALL_SEEN_KEY}:${USER_ID}`)).toBeNull();
   });
 
-  it('skips the paywall on a SECOND circle', async () => {
+  it('owes nothing on a SECOND circle', async () => {
     circles = [{ id: 'already-have-one' }];
 
     await createCircleNamed();
 
-    expect(navigate).toHaveBeenCalledWith('/circles/circle-new', {
-      state: { firstRun: true, firstRunRecipientName: 'Rose Meza' },
-    });
-    expect(navigate).not.toHaveBeenCalledWith('/upgrade', expect.anything());
+    expect(navigate).toHaveBeenCalledWith(...FIRST_RUN_NAV);
+    expect(peekOnboardingPaywallPending()).toBeNull();
   });
 
-  it('skips the paywall when this browser has ALREADY shown it to this user', async () => {
+  it('owes nothing when this browser has ALREADY shown it to this user', async () => {
     markOnboardingPaywallSeen();
 
     await createCircleNamed();
 
-    expect(navigate).toHaveBeenCalledWith('/circles/circle-new', {
-      state: { firstRun: true, firstRunRecipientName: 'Rose Meza' },
-    });
-    expect(navigate).not.toHaveBeenCalledWith('/upgrade', expect.anything());
+    expect(navigate).toHaveBeenCalledWith(...FIRST_RUN_NAV);
+    expect(peekOnboardingPaywallPending()).toBeNull();
   });
 
-  it('skips the paywall while the plan tier is still unknown', async () => {
+  it('owes nothing while the plan tier is still unknown', async () => {
     tier = undefined;
 
     await createCircleNamed();
 
-    expect(navigate).not.toHaveBeenCalledWith('/upgrade', expect.anything());
+    expect(navigate).toHaveBeenCalledWith(...FIRST_RUN_NAV);
+    expect(peekOnboardingPaywallPending()).toBeNull();
   });
 });

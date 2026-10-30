@@ -94,7 +94,7 @@
         "temperature": "Nenhuma medição de temperatura ainda",
         "oxygen_saturation": "Nenhuma medição de oxigênio no sangue ainda"
       },
-      "description": "Registre medições ao longo do tempo para que o círculo perceba uma tendência antes da próxima consulta.",
+      "description": "Registre medições para perceber tendências antes da próxima consulta.",
       "cta": {
         "blood_pressure": "Registrar pressão arterial",
         "heart_rate": "Registrar frequência cardíaca",

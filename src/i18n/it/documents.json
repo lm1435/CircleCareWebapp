@@ -17,8 +17,8 @@
   "errorTitle": "Non è stato possibile caricare i documenti",
   "errorHint": "Controlla la connessione e riprova.",
   "noDocuments": "Ancora nessun documento",
-  "noDocumentsHint": "Tieni i documenti importanti della persona cara in un unico posto, come tessere assicurative, cartelle cliniche e direttive, così chi aiuta può trovarli quando serve.",
-  "noDocumentsHintReadOnly": "I documenti condivisi con questa cerchia compariranno qui, così chi aiuta può trovarli quando serve.",
+  "noDocumentsHint": "Tieni tessere assicurative, cartelle cliniche e direttive dove chiunque aiuti possa trovarle.",
+  "noDocumentsHintReadOnly": "I documenti caricati dal team di cura appariranno qui.",
   "emptyCategory": {
     "title": "Ancora niente in {{category}}.",
     "action": "Mostra tutti i documenti"

@@ -11,10 +11,25 @@ import { getActivityIcon } from '@/components/activity/ActivityIcon';
 import { renderActivityDescription } from '@/components/activity/activityTranslation';
 import { formatRelativeTime } from '@/components/activity/activityFormat';
 import { Analytics } from '@/lib/analytics';
+import { circleInboxPath, type InboxLocationState } from '@/lib/notificationsInbox';
 
 export interface CircleCardProps {
   circle: Circle;
+  /** 1-based place in the picker list, for `circle_selected` (omitted: not fired). */
+  position?: number;
+  /** Size of the picker list, for `circle_selected`. */
+  circleCount?: number;
+  /**
+   * Unread notifications for this circle (inbox `by_circle`). > 0 shows the
+   * "N new" count control; 0 / undefined shows nothing.
+   */
+  unreadCount?: number;
 }
+
+// NARROW CARDS: `@max-[22.5rem]:` below. The count switches from a top-right
+// pill to a full-width bar UNDER the card when the CARD (its <li>, a size
+// container) is narrower than 22.5rem: 320px viewports, 200% zoom, large text.
+// rem, so a bigger text size switches sooner.
 
 type RoleKey = 'owner' | 'manager' | 'caregiver' | 'careRecipient';
 
@@ -73,8 +88,16 @@ const NON_ACTIVITY_TYPES = new Set(['circle_created']);
  * circles (`read_only` / `view_only`) show their access badge next to the name
  * instead, skip BOTH fetches entirely, and are visually subdued.
  */
-export function CircleCard({ circle }: CircleCardProps): ReactElement {
+export function CircleCard({
+  circle,
+  position,
+  circleCount,
+  unreadCount,
+}: CircleCardProps): ReactElement {
   const { t } = useTranslation('members');
+  const { t: tCommon } = useTranslation('common');
+  const unread = unreadCount && unreadCount > 0 ? Math.floor(unreadCount) : 0;
+  const countLabel = unread > 0 ? tCommon('inbox.countNew', { count: unread }) : '';
   // A SECOND, SEPARATELY BOUND `t`, not a `useTranslation(['members',
   // 'activity'])` array. The activity renderers below are handed a `t` and
   // call it with bare keys (`phrases.completedTask`, `time.daysAgo`) that live
@@ -222,11 +245,19 @@ export function CircleCard({ circle }: CircleCardProps): ReactElement {
         .join(', ');
 
   return (
-    <li className="list-none">
+    // `@container`: the count control's pill/bar switch is sized by the CARD, not
+    // the viewport (two columns at 200% zoom are as narrow as one at 320px).
+    // `relative`: the pill is positioned over the card's name row.
+    <li className="@container relative list-none">
       <Link
         to={`/circles/${circle.id}`}
         aria-label={cardLabel}
-        onClick={() => Analytics.circleViewed(circle.id)}
+        onClick={() => {
+          if (position !== undefined && circleCount !== undefined) {
+            Analytics.circleSelected({ position, circleCount, source: 'circle_list' });
+          }
+          Analytics.circleViewed(circle.id);
+        }}
         data-restricted={restricted || undefined}
         className="block rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-deep"
       >
@@ -296,6 +327,19 @@ export function CircleCard({ circle }: CircleCardProps): ReactElement {
                 </div>
               </div>
 
+              {/* Space reserved for the count pill, which sits over this spot but is
+                  its OWN control (a sibling of this link, below): an invisible,
+                  aria-hidden copy of it keeps the name from ever running under it. */}
+              {unread > 0 && (
+                <span
+                  aria-hidden="true"
+                  data-testid="circle-unread-spacer"
+                  className="invisible inline-flex h-11 shrink-0 items-center self-start @max-[22.5rem]:hidden"
+                >
+                  <CountPillFace label={countLabel} />
+                </span>
+              )}
+
               <Icon name="chevron-forward" size="inline" className="shrink-0 text-ink-3" />
             </div>
 
@@ -330,6 +374,36 @@ export function CircleCard({ circle }: CircleCardProps): ReactElement {
           </div>
         </Card>
       </Link>
+
+      {/* The unread count: a SEPARATE link to this circle's notifications, never
+          nested inside the card link (nested interactive content, and the card's
+          aria-label would swallow it). Wide: a pill over the card's name row, in
+          the space the spacer above reserves (12px padding + 1.5px border, then
+          the chevron and its gap). Narrow: a full-width bar under the card. */}
+      {unread > 0 && (
+        <Link
+          to={circleInboxPath(circle.id)}
+          state={{ inboxSource: 'circle_list' } satisfies InboxLocationState}
+          aria-label={tCommon('inbox.circleUnreadA11y', { name: circle.name, count: unread })}
+          data-testid="circle-unread-count"
+          className="absolute right-[41.5px] top-[13.5px] z-10 inline-flex h-11 min-w-11 items-center justify-center rounded-full no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-deep @max-[22.5rem]:static @max-[22.5rem]:mt-2 @max-[22.5rem]:flex @max-[22.5rem]:h-auto @max-[22.5rem]:min-h-16 @max-[22.5rem]:w-full @max-[22.5rem]:justify-between @max-[22.5rem]:gap-3 @max-[22.5rem]:rounded-xl @max-[22.5rem]:bg-ink @max-[22.5rem]:px-4 @max-[22.5rem]:py-3 @max-[22.5rem]:text-cream"
+        >
+          <CountPillFace label={countLabel} />
+          <span aria-hidden="true" className="hidden shrink-0 @max-[22.5rem]:inline-flex">
+            <Icon name="chevron-forward" size="inline" />
+          </span>
+        </Link>
+      )}
     </li>
+  );
+}
+
+/** The visible pill: bell + "N new" (dark ink, cream text, like the header bell's count). */
+function CountPillFace({ label }: { label: string }): ReactElement {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-xs font-bold leading-4 text-cream @max-[22.5rem]:min-w-0 @max-[22.5rem]:gap-2 @max-[22.5rem]:bg-transparent @max-[22.5rem]:p-0 @max-[22.5rem]:text-md @max-[22.5rem]:leading-6">
+      <Icon name="notifications-outline" size="inline" />
+      <span className="whitespace-nowrap @max-[22.5rem]:whitespace-normal">{label}</span>
+    </span>
   );
 }

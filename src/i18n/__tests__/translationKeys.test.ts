@@ -720,6 +720,55 @@ describe('W5: no unreferenced en keys', () => {
     // later batches never touch the shared locale files. Each batch that wires
     // a key MUST delete its line here (BV verifies this block is empty).
     'profile:avatarColor.selected',
+    // Onboarding 1.3.1 (docs/plans/onboarding-1-3-1.md section 3): the first-run wizard's
+    // name / when / repeat steps, the invite question on the payoff and the discard prompt
+    // were folded into the ONE simple medication form (AddEventModal first-run mode), so
+    // their copy has no reader left. Carried here rather than deleted (locale files are
+    // append-only for concurrent sessions; an unused key stays in place). The copy the form
+    // still shows (`firstRun.whatTitle`) is read through its own `addEvent.firstRun.*` keys.
+    'calendar:addEvent.schedulePresets.threeTimesDaily',
+    'calendar:addEvent.schedulePresets.twiceDaily',
+    'calendar:addEvent.timezoneUnresolvedNotice',
+    'circles:firstRun.addDosage',
+    'circles:firstRun.back',
+    'circles:firstRun.customTimeHint',
+    'circles:firstRun.customTimeLabel',
+    'circles:firstRun.discardClose',
+    'circles:firstRun.discardConfirm',
+    'circles:firstRun.discardMessage',
+    'circles:firstRun.discardTitle',
+    'circles:firstRun.dosageLabel',
+    'circles:firstRun.dosagePlaceholder',
+    'circles:firstRun.fullDetails',
+    'circles:firstRun.inviteNext.notNow',
+    'circles:firstRun.nextEyebrow',
+    'circles:firstRun.nextPreview.custom',
+    'circles:firstRun.nextPreview.everyEvening',
+    'circles:firstRun.nextPreview.everyMorning',
+    'circles:firstRun.nextPreview.threeTimesDaily',
+    'circles:firstRun.nextPreview.twiceDaily',
+    'circles:firstRun.payoff.invite',
+    'circles:firstRun.payoff.inviteHeading',
+    'circles:firstRun.payoff.inviteHeadingSelf',
+    'circles:firstRun.progressLabel',
+    'circles:firstRun.ready.appointmentHelper',
+    'circles:firstRun.ready.emergencyHelper',
+    'circles:firstRun.ready.inviteHelper',
+    'circles:firstRun.ready.ledeSelf',
+    'circles:firstRun.ready.toggleHide',
+    'circles:firstRun.ready.toggleShow',
+    'circles:firstRun.repeatTitle',
+    'circles:firstRun.save',
+    'circles:firstRun.savedToast',
+    'circles:firstRun.saving',
+    'circles:firstRun.steps.repeat',
+    'circles:firstRun.steps.what',
+    'circles:firstRun.steps.when',
+    'circles:firstRun.whatLede',
+    'circles:firstRun.whatTitle',
+    'circles:firstRun.whatTitleSelf',
+    'circles:firstRun.whenTitle',
+    'circles:firstRun.whenTitleSelf',
   ];
 
   it('has no unreferenced en keys beyond the pinned dead-key allowlist', () => {

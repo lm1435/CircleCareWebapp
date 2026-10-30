@@ -7,6 +7,7 @@ import { PKCE_VERIFIER_KEY, clearPkceVerifier, pkceVerifierStorage } from '@/lib
 import { useAuthStore } from '@/store/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
+import { consumePendingReturnPath } from '@/lib/returnPath';
 import { consumePendingAuthMethod } from '@/lib/pendingAuthMethod';
 import { clearPendingTermsConsent, consumePendingTermsConsent } from '@/lib/pendingTermsConsent';
 import { consumePendingAnalyticsConsent } from '@/lib/pendingAnalyticsConsent';
@@ -223,18 +224,27 @@ export default function AuthCallbackPage(): ReactElement {
         // closure never saw it); fall back to the generic 'oauth' method when
         // it's absent rather than guessing a provider.
         //
-        // NOTE: we always emit login_completed, never signup_completed, for web
-        // OAuth. /auth/oauth-session now returns `is_new_user` (used above for
-        // the consent gate), but switching this event on it is a funnel change
-        // left for a separate decision.
-        Analytics.loginCompleted(consumePendingAuthMethod() ?? 'oauth');
+        // A sign-in that CREATED the account is a signup: the backend decides
+        // new-vs-returning from GoTrue's own timestamps and only an explicit
+        // `true` counts (a backend older than the flag reads as returning).
+        // Exactly one of the two events fires.
+        const method = consumePendingAuthMethod() ?? 'oauth';
+        if (response.data.is_new_user === true) Analytics.signupCompleted(method);
+        else Analytics.loginCompleted(method);
         // An invite handoff parks its code in sessionStorage (router state
         // cannot survive the OAuth full-page redirect) — detour through the
         // invite page. PEEK, don't consume: InviteLandingPage's own effect
         // does the consume-and-auto-accept, so clearing it here would strand
         // the visitor on a card they have to tap "Accept" on manually.
-        const pendingInvite = peekPendingInviteCode();
-        navigate(pendingInvite ? `/invite/${pendingInvite}` : '/circles', { replace: true });
+        //
+        // The path the user was sent to /login from (an email deep link, with
+        // its query string) wins, exactly as it does for email/password login;
+        // it is consumed (cleared) either way so it can never apply twice.
+        const returnPath = consumePendingReturnPath();
+        const pendingInvite = returnPath ? null : peekPendingInviteCode();
+        navigate(returnPath ?? (pendingInvite ? `/invite/${pendingInvite}` : '/circles'), {
+          replace: true,
+        });
       } catch (err) {
         // The token exchange itself failed (backend rejected the tokens, or the
         // request never landed). Report the backend's own error CODE when there

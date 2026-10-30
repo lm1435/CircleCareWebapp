@@ -371,7 +371,7 @@ test.describe('free circles', () => {
     await expect(page.getByRole('dialog', { name: 'New shift' })).toHaveCount(0);
   });
 
-  test('a free member and a free manager see no toggle and no Shift in the New menu', async ({
+  test('a free member and a free manager see no toggle, and the New menu Shift never starts one', async ({
     request,
     browser,
     baseURL,
@@ -397,7 +397,15 @@ test.describe('free circles', () => {
         const newButton = (await nav.isVisible()) ? nav.getByRole('button', { name: 'New' }) : page.getByRole('complementary').getByRole('button', { name: 'New' });
         await newButton.click();
         await expect(page.getByRole('menuitem', { name: 'Task' })).toBeVisible();
-        await expect(page.getByRole('menuitem', { name: 'Shift' })).toHaveCount(0);
+        // Shift is in the menu for everyone (simple UI 1.3.1), but a free circle's
+        // member / manager can not START one: it opens the owner-only notice, never the
+        // shifts schedule or the New-shift form.
+        await page.getByRole('menuitem', { name: 'Shift' }).click();
+        await expect(page.getByRole('dialog', { name: 'New shift' })).toHaveCount(0);
+        await expect(page).not.toHaveURL(/mode=shifts/);
+        // The owner-only notice (never a price, never the paywall).
+        await expect(page.getByText(/Only .*, the circle owner, can upgrade|circle owner/i).first()).toBeVisible();
+        await expect(page).not.toHaveURL(/\/upgrade/);
       } finally {
         await context.close();
       }
@@ -459,8 +467,10 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
       : page.getByRole('complementary').getByRole('button', { name: 'New' });
     await newButton.click();
     await expect(page.getByRole('menuitem', { name: 'Task' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'Shift' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    // Shift stays in the menu; on a lapsed circle that holds shifts it opens the read-only schedule.
+    await page.getByRole('menuitem', { name: 'Shift' }).click();
+    await expect(page.getByRole('dialog', { name: 'New shift' })).toHaveCount(0);
+    await expect(page.getByTestId('shifts-readonly-notice')).toBeVisible();
 
     // Renew Premium -> the paywall.
     await notice.getByRole('button', { name: 'Renew Premium' }).click();

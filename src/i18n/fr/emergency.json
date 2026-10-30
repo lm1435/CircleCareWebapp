@@ -409,7 +409,7 @@
       "earlierLoaded": "Visites précédentes chargées.",
       "earlierFailed": "Impossible de charger les visites précédentes. Veuillez réessayer.",
       "emptyTitle": "Aucune visite avec {{name}} pour l’instant",
-      "emptyBody": "Choisissez {{name}} comme médecin lorsque vous ajoutez ou modifiez un rendez-vous. Les visites et leurs notes apparaîtront ici.",
+      "emptyBody": "Les visites apparaîtront ici lorsque vous choisirez {{name}} comme médecin d’un rendez-vous.",
       "addAppointment": "Ajouter un rendez-vous",
       "unnamedAuthor": "Quelqu’un"
     }

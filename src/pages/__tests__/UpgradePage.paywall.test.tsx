@@ -16,7 +16,7 @@ import { markEarnedUpsellPresented, resetEarnedUpsellSession } from '@/lib/earne
  *    `paywall_context` mobile sends. The 1.1.3–1.1.10 ABA (2.9% vs 22.1%) is
  *    computed by splitting on that property; a wrong or missing value does not
  *    merge into another cohort, it silently creates a third.
- * 2. The deferred first-run wizard SURVIVES the route change. The routes below
+ * 2. The parked return target SURVIVES the route change (every exit lands on Today). The routes below
  *    are real — the wizard hand-off is proved by rendering the destination and
  *    reading its `location.state`, not by asserting a mocked navigate() call.
  *    A mocked navigate would pass even if OverviewPage could never open.
@@ -54,6 +54,7 @@ vi.mock('@/lib/analytics', () => ({
     planSelectionTrialStarted: vi.fn(),
     planSelectionPurchaseCancelled: vi.fn(),
     paywallDismissed: vi.fn(),
+    paywallShown: vi.fn(),
   },
 }));
 
@@ -71,21 +72,25 @@ const mockedStatus = useSubscriptionStatus as unknown as ReturnType<typeof vi.fn
 
 const mutate = vi.fn();
 
-/** Stands in for OverviewPage: renders the wizard hand-off it would read. */
+function expectToday(node: HTMLElement): void {
+  expect(node).toHaveTextContent('today for circle-9');
+  // No wizard to replay: the wizard already ran before the paywall.
+  expect(node).toHaveAttribute('data-first-run', 'false');
+}
+
+/**
+ * Stands in for OverviewPage (TODAY). Onboarding 1.3.1 moved the paywall AFTER the first-run
+ * wizard, so every onboarding exit lands on Today with NO wizard state: the probe renders
+ * `today` and flags a leftover first-run state as a failure.
+ */
 function CircleProbe(): ReactElement {
   const { circleId } = useParams<{ circleId: string }>();
-  const state = useLocation().state as
-    | { firstRun?: boolean; firstRunRecipientName?: string }
-    | null;
+  const state = useLocation().state as { firstRun?: boolean } | null;
   return (
     <div>
-      {state?.firstRun ? (
-        <p data-testid="wizard">
-          wizard for {circleId} / {state.firstRunRecipientName}
-        </p>
-      ) : (
-        <p data-testid="no-wizard">circle {circleId}, no wizard</p>
-      )}
+      <p data-testid="today" data-first-run={String(!!state?.firstRun)}>
+        today for {circleId}
+      </p>
     </div>
   );
 }
@@ -162,6 +167,37 @@ beforeEach(() => {
   });
   mockedPurchase.mockReturnValue({ mutate, isPending: false });
   mockedManage.mockReturnValue({ mutate: vi.fn(), isPending: false });
+});
+
+describe('UpgradePage — paywall_shown (onboarding 1.3.1)', () => {
+  it('fires once with the trigger the opener passed, voice_try_used false', () => {
+    renderAt({ paywallContext: 'onboarding', paywallTrigger: 'after_first_med' });
+    expect(Analytics.paywallShown).toHaveBeenCalledTimes(1);
+    expect(Analytics.paywallShown).toHaveBeenCalledWith('after_first_med', false);
+  });
+
+  it('defaults to the onboarding trigger (the no-first-med path)', () => {
+    renderAt({ paywallContext: 'onboarding' });
+    expect(Analytics.paywallShown).toHaveBeenCalledWith('onboarding', false);
+  });
+
+  it('an unrecognised trigger is read as onboarding, never invented', () => {
+    renderAt({ paywallContext: 'onboarding', paywallTrigger: 'bogus' });
+    expect(Analytics.paywallShown).toHaveBeenCalledWith('onboarding', false);
+  });
+
+  it('is NOT fired for any other paywall context', () => {
+    renderAt({ paywallContext: 'capacity', paywallTrigger: 'after_first_med' });
+    expect(Analytics.paywallShown).not.toHaveBeenCalled();
+  });
+
+  it('leaving by browser Back drops the parked return target', async () => {
+    deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
+    const { unmount } = renderAt({ paywallContext: 'onboarding' });
+    await flushArming();
+    unmount();
+    expect(peekDeferredFirstRun()).toBeNull();
+  });
 });
 
 describe('UpgradePage — paywall_context', () => {
@@ -246,7 +282,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith('onboarding');
     // Declining leads to the wizard, not a dead end — the deferral survived a
     // full route change.
-    expect(await screen.findByTestId('wizard')).toHaveTextContent('wizard for circle-9 / Rose');
+    expectToday(await screen.findByTestId('today'));
     expect(peekDeferredFirstRun()).toBeNull();
   });
 
@@ -259,7 +295,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     expect(screen.queryByRole('button', { name: 'Back to profile' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Not now' }));
 
-    expect(await screen.findByTestId('wizard')).toHaveTextContent('wizard for circle-9 / Rose');
+    expectToday(await screen.findByTestId('today'));
     expect(Analytics.paywallDismissed).toHaveBeenCalledWith('onboarding');
   });
 
@@ -270,7 +306,7 @@ describe('UpgradePage — declining the onboarding paywall', () => {
     await flushArming();
 
     await user.click(screen.getByRole('button', { name: /Continue with Free plan/i }));
-    await screen.findByTestId('wizard');
+    await screen.findByTestId('today');
 
     expect(Analytics.paywallDismissed).toHaveBeenCalledTimes(1);
   });
@@ -393,7 +429,7 @@ describe('UpgradePage — purchase', () => {
     await user.click(await screen.findByRole('button', { name: 'Continue' }));
 
     // A paying first-circle owner needs the setup wizard just as much.
-    expect(await screen.findByTestId('wizard')).toHaveTextContent('wizard for circle-9 / Rose');
+    expectToday(await screen.findByTestId('today'));
   });
 });
 
@@ -419,7 +455,7 @@ describe('UpgradePage — degraded states still reach the wizard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Not now' }));
 
-    await waitFor(() => expect(screen.getByTestId('wizard')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('today')).toBeInTheDocument());
   });
 });
 

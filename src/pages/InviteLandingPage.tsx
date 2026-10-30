@@ -23,6 +23,7 @@ import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
+import { failureContext } from '@/lib/apiErrors';
 
 // Invite-link sharing is SHIPPED: the mobile app's InviteMemberScreen shows
 // Share/Copy actions on the inline success panel after an invite is created,
@@ -228,6 +229,11 @@ export default function InviteLandingPage(): ReactElement {
         navigate('/circles');
         return;
       }
+      // `error_occurred` for the admin digest: enums only — never the invite
+      // code, no circle_id. ALREADY_MEMBER (above) is a success, not a failure.
+      Analytics.errorOccurred('invite_accept', 'invite_accept_create_failed',
+        failureContext('invite_accept', 'create', err)
+      );
       setAcceptError(acceptErrorMessage(t, errorCode));
       return;
     } finally {
@@ -250,8 +256,15 @@ export default function InviteLandingPage(): ReactElement {
     Analytics.inviteAccepted(undefined, 'invite_link');
     // Confirm the join by name and open the joined circle ("You've joined
     // <name>"); `circle: null` → generic copy + /circles.
-    openJoinedCircle(result.circle);
-  }, [acceptAsync, acceptGuard, displayCode, navigate, openJoinedCircle, t]);
+    // Onboarding 1.3.1: a NEW member lands on the invitee welcome (names from the
+    // preview, role from the accept response), then Today.
+    openJoinedCircle(result.circle, {
+      inviterName: invite?.invited_by_name,
+      recipientName: invite?.circle.recipient_name,
+      viewOnly: result.view_only,
+      memberType: invite?.member_type,
+    });
+  }, [acceptAsync, acceptGuard, displayCode, invite, navigate, openJoinedCircle, t]);
 
   // Returning from the sign-in handoff: finish the job the visitor started.
   //
@@ -372,7 +385,9 @@ export default function InviteLandingPage(): ReactElement {
   return (
     <AuthShell>
       <Helmet>
-        <html lang={i18n.language} />
+        {/* No <html lang> here: App.tsx keeps it in sync with i18n, and Helmet REMOVES
+            the attribute when this page unmounts, which left every page after the
+            landing (the invitee welcome, Today) without a document language. */}
         <title>{ogTitle}</title>
         <meta property="og:title" content={ogTitle} />
         <meta property="og:description" content={ogDescription} />

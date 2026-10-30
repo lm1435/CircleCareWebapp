@@ -2,9 +2,13 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCircles } from '@/hooks/useCircles';
+import { useInboxUnreadSummary } from '@/hooks/useInbox';
+import { Analytics } from '@/lib/analytics';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
-import { firstRunNavigationState, takeDeferredFirstRun } from '@/lib/onboardingPaywall';
+import { reportEmailLinkLanding } from '@/lib/emailLinkLanding';
+import { takeDeferredFirstRun } from '@/lib/onboardingPaywall';
 import { useAuth } from '@/hooks/useAuth';
+import { inviteeWelcomePath, peekPendingInviteeWelcome } from '@/lib/inviteeWelcome';
 import { Button, Card, Text } from '@/components/ui';
 import { CircleCard } from '@/components/circles/CircleCard';
 import { CircleCardSkeleton } from '@/components/circles/CircleCardSkeleton';
@@ -47,6 +51,28 @@ export default function CirclePickerPage(): ReactElement {
   const firstName = user?.first_name?.trim();
   const circleCount = circles?.length ?? 0;
 
+  // Per-circle unread counts for the cards (flag off: the query never runs, so no
+  // card ever shows a count). `by_circle` null = an older backend: show nothing.
+  const { data: unread } = useInboxUnreadSummary();
+  const byCircle = unread?.by_circle ?? null;
+
+  // circle_list_unread_shown: ONCE per page view (per mount), the first time the
+  // rendered list has at least one card showing a count. Never per render/refetch.
+  const unreadShownRef = useRef(false);
+  // A lone circle (not reached via "All circles") auto-skips straight into the
+  // circle below, so its card is never really shown.
+  const willAutoSkip =
+    circleCount === 1 && !(location.state as PickerLocationState | null)?.fromSwitcher;
+  const cardsWithUnread =
+    circles && byCircle && !willAutoSkip
+      ? circles.filter((c) => (byCircle[c.id] ?? 0) > 0).length
+      : 0;
+  useEffect(() => {
+    if (unreadShownRef.current || cardsWithUnread === 0) return;
+    unreadShownRef.current = true;
+    Analytics.circleListUnreadShown({ circlesWithUnread: cardsWithUnread });
+  }, [cardsWithUnread]);
+
   // R4-5 onboarding funnel: this page is the post-auth landing, so a resolved
   // circle list is the earliest reliable "zero circles → onboarding_started" /
   // ">= 1 circle → onboarding_flow_completed('existing')" signal. The module
@@ -54,6 +80,21 @@ export default function CirclePickerPage(): ReactElement {
   useEffect(() => {
     if (circles) trackCirclesLoaded(circles.length);
   }, [circles]);
+
+  // Email link landing (`?src=` on /circles: welcome, trial reminder): the list
+  // is the target, so a resolved list is both "landed" and "found". Reported
+  // here, before the single-circle auto-skip below drops the query string.
+  const landingPathname = location.pathname;
+  const landingSearch = location.search;
+  useEffect(() => {
+    if (!circles) return;
+    reportEmailLinkLanding({
+      pathname: landingPathname,
+      search: landingSearch,
+      landed: true,
+      targetFound: true,
+    });
+  }, [circles, landingPathname, landingSearch]);
 
   // Set by the deferred-first-run effect below when it redirects, so the
   // auto-skip effect (same mount) never fires a SECOND, wizard-less navigate
@@ -69,8 +110,9 @@ export default function CirclePickerPage(): ReactElement {
   /**
    * THE BROWSER-BACK ESCAPE HATCH for the onboarding paywall.
    *
-   * `CreateCircleModal` navigates a first-circle free-tier user to `/upgrade`
-   * and parks the first-run wizard in sessionStorage. Every control on that
+   * The first-run wizard's Continue (or Today, for a user with no first med)
+   * navigates a first-circle free-tier user to `/upgrade` after parking the
+   * return target (the circle) in sessionStorage. Every control on that
    * page delivers it — but the browser's Back button does not go through any
    * of them, and it lands HERE, because `/circles` is the entry this page
    * pushed `/upgrade` from. This is the same shape as mobile, where backing
@@ -88,10 +130,9 @@ export default function CirclePickerPage(): ReactElement {
     const pending = takeDeferredFirstRun();
     if (!pending) return;
     deferredHandledRef.current = true;
-    navigate(`/circles/${pending.circleId}`, {
-      replace: true,
-      state: firstRunNavigationState(pending.recipientName),
-    });
+    // Onboarding 1.3.1: the wizard runs BEFORE the paywall now, so a browser-Back exit
+    // from /upgrade lands on that circle's Today, with no wizard to replay.
+    navigate(`/circles/${pending.circleId}`, { replace: true });
     // Deps are deliberately empty — `navigate` is stable for the life of the
     // router, and this must run exactly once per landing.
   }, []);
@@ -174,8 +215,14 @@ export default function CirclePickerPage(): ReactElement {
   } else {
     content = (
       <ul className="m-0 mt-8 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
-        {circles.map((circle) => (
-          <CircleCard key={circle.id} circle={circle} />
+        {circles.map((circle, index) => (
+          <CircleCard
+            key={circle.id}
+            circle={circle}
+            position={index + 1}
+            circleCount={circles.length}
+            unreadCount={byCircle?.[circle.id] ?? 0}
+          />
         ))}
       </ul>
     );
@@ -250,7 +297,13 @@ export default function CirclePickerPage(): ReactElement {
       {showJoin && (
         <JoinCircleModal
           onClose={() => setShowJoin(false)}
-          onJoined={(circleId) => navigate(`/circles/${circleId}`)}
+          onJoined={(circleId) =>
+            navigate(
+              peekPendingInviteeWelcome(user?.id, circleId)
+                ? inviteeWelcomePath(circleId)
+                : `/circles/${circleId}`
+            )
+          }
         />
       )}
     </section>

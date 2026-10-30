@@ -19,7 +19,7 @@ import {
 } from '@/api/careNotes';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { classifyFailureCode, isPermissionDeniedError } from '@/lib/apiErrors';
+import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import { olderPageRange } from '@/lib/noteDate';
@@ -124,11 +124,12 @@ function invalidateCareNotes(
 function refreshFlagsOnPermissionError(
   queryClient: ReturnType<typeof useQueryClient>,
   circleId: string,
-  error: unknown
+  error: unknown,
+  action: FailureAction
 ): void {
-  Analytics.errorOccurred('care_notes', 'care_notes_mutation_error', {
+  Analytics.errorOccurred('care_notes', `care_notes_${action}_failed`, {
     circle_id: circleId,
-    code: classifyFailureCode(error),
+    ...failureContext('care_notes', action, error),
   });
   if (isPermissionDeniedError(error)) {
     invalidateCircleAccessFlags(queryClient, circleId);
@@ -203,7 +204,7 @@ export function useCreateCareNote(): UseMutationResult<
       context?.previous.forEach(([key, data]) => {
         queryClient.setQueryData(key, data);
       });
-      refreshFlagsOnPermissionError(queryClient, variables.circleId, error);
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'create');
     },
     onSettled: (_note, _error, variables) => {
       invalidateCareNotes(queryClient, variables.circleId);
@@ -225,7 +226,7 @@ export function useUpdateCareNote(): UseMutationResult<
       invalidateCareNotes(queryClient, variables.circleId);
     },
     onError: (error, variables) =>
-      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'update'),
   });
 }
 
@@ -243,6 +244,6 @@ export function useDeleteCareNote(): UseMutationResult<
       invalidateCareNotes(queryClient, variables.circleId);
     },
     onError: (error, variables) =>
-      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'delete'),
   });
 }

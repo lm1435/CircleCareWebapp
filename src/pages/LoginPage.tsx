@@ -5,6 +5,8 @@ import { authApi, getApiError } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { peekPendingInviteCode } from '@/lib/pendingInviteCode';
 import { setPendingAuthMethod } from '@/lib/pendingAuthMethod';
+import { setPendingReturnPath, toReturnPath } from '@/lib/returnPath';
+import { markEmailLinkNeededLogin } from '@/lib/emailLinkLanding';
 import { supabase } from '@/lib/supabase';
 import { Analytics } from '@/lib/analytics';
 import { isAuthRateLimitedError, isRateLimitError } from '@/lib/apiErrors';
@@ -50,8 +52,19 @@ export default function LoginPage(): ReactElement {
   const errorRef = useRef<HTMLDivElement>(null);
 
   // AuthGuard preserved the intended location — return there after sign-in.
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-  const stateDestination = from && from !== '/login' ? from : null;
+  // The WHOLE location is kept (pathname + search + hash): an email deep link's
+  // `?date=&eventId=&src=` must survive the login, not just its pathname. Only a
+  // same-origin relative path is accepted (lib/returnPath.ts).
+  const from = (
+    location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null
+  )?.from;
+  const stateDestination = from && from.pathname !== '/login' ? toReturnPath(from) : null;
+
+  // An email link that needed a login first: remember it so the landing event
+  // reports app_state 'signed_out' (the marker is matched to this exact path).
+  useEffect(() => {
+    if (stateDestination) markEmailLinkNeededLogin(stateDestination);
+  }, [stateDestination]);
 
   // VerifyEmailPage lands here when the OTP verified but the auto sign-in
   // session couldn't be established — acknowledge the verification instead of
@@ -152,6 +165,8 @@ export default function LoginPage(): ReactElement {
     // with the right method after the full-page OAuth redirect (router state
     // and this closure are both gone by then).
     setPendingAuthMethod(provider);
+    // Same for the return path: router state (`from`) is gone after the redirect.
+    setPendingReturnPath(stateDestination);
     const failureMessage =
       provider === 'google' ? t('login.errors.googleFailed') : t('login.errors.appleFailed');
     try {
@@ -266,6 +281,17 @@ export default function LoginPage(): ReactElement {
         {t('login.noAccount')}{' '}
         <Link to="/signup" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss">
           {t('login.createAccount')}
+        </Link>
+      </p>
+
+      {/* The pre-auth walkthrough, for a visitor who has no account yet. */}
+      <p className="m-0 text-center">
+        <Link
+          to="/how-it-works"
+          state={{ previewSource: 'login' }}
+          className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss"
+        >
+          {t('preview.seeHowItWorks')}
         </Link>
       </p>
 

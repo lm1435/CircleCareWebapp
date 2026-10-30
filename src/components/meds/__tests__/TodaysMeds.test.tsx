@@ -36,8 +36,10 @@ vi.mock('@/hooks/useHourCycle', () => ({
 // The first-run "Add a medication" door opens the shared AddEventModal — stub
 // it and assert the sentinel, not the real form.
 vi.mock('@/components/calendar/AddEventModal', () => ({
-  AddEventModal: ({ initialType }: { initialType?: string }) => (
-    <div data-testid="add-event-modal">{initialType}</div>
+  AddEventModal: ({ initialType, entry }: { initialType?: string; entry?: string }) => (
+    <div data-testid="add-event-modal" data-entry={entry}>
+      {initialType}
+    </div>
   ),
 }));
 
@@ -501,7 +503,7 @@ describe('TodaysMeds', () => {
     renderWidget();
 
     expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
-    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
   });
 
@@ -554,7 +556,7 @@ describe('TodaysMeds', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
     expect(screen.queryByText('No medications scheduled today.')).toBeNull();
 
     // The window answers: this circle DOES have a medication, just not today.
@@ -565,7 +567,7 @@ describe('TodaysMeds', () => {
 
     expect(await screen.findByText('No medications scheduled today.')).toBeInTheDocument();
     // The first-run copy and its door never appeared at all.
-    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+    expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
   });
 
@@ -581,7 +583,7 @@ describe('TodaysMeds', () => {
     mockApi({ events: [], presenceEvents: [] });
     renderWidget();
 
-    await screen.findByText(/No medications yet|Nothing scheduled for .* today yet/);
+    await screen.findByText(/No medications yet|Nothing scheduled for .* today/);
     await act(async () => {
       await new Promise((r) => setTimeout(r, 30));
     });
@@ -652,7 +654,7 @@ describe('TodaysMeds', () => {
       renderWidget();
       expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
     });
   });
 
@@ -744,7 +746,7 @@ describe('TodaysMeds', () => {
 
     expect(
       await screen.findByText(
-        'Nothing scheduled for Mom today yet. Add a medication and everyone in the circle sees it here, with Taken and Skip.'
+        'Nothing scheduled for Mom today.'
       )
     ).toBeInTheDocument();
     expect(screen.queryByText('No medications scheduled today.')).toBeNull();
@@ -753,6 +755,7 @@ describe('TodaysMeds', () => {
     await user.click(screen.getByRole('button', { name: 'Add a medication' }));
 
     expect(screen.getByTestId('add-event-modal')).toHaveTextContent('medication');
+    expect(screen.getByTestId('add-event-modal')).toHaveAttribute('data-entry', 'empty_state');
     expect(homeEmptyCtaTapped).toHaveBeenCalledTimes(1);
     expect(homeEmptyCtaTapped).toHaveBeenCalledWith('medications');
     expect(medsEmptyStateCtaTapped).toHaveBeenCalledTimes(1);
@@ -776,7 +779,7 @@ describe('TodaysMeds', () => {
 
     expect(
       await screen.findByText(
-        'Nothing scheduled for you today yet. Add a medication and it shows up here, with Taken and Skip.'
+        'Nothing scheduled for you today.'
       )
     ).toBeInTheDocument();
   });
@@ -789,7 +792,7 @@ describe('TodaysMeds', () => {
     });
     renderWidget();
 
-    expect(await screen.findByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/No medications yet|Nothing scheduled for .* today/)).toBeInTheDocument();
     expect(screen.queryByTestId('meds-empty-card')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
   });
@@ -847,7 +850,7 @@ describe('TodaysMeds', () => {
 
       expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
       expect(screen.queryByText('No medications scheduled today.')).toBeNull();
 
       const before = presenceCalls();
@@ -868,7 +871,7 @@ describe('TodaysMeds', () => {
 
       expect(await screen.findByText("Couldn't load today's medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
 
       api.heal();
       const user = userEvent.setup();
@@ -1044,7 +1047,7 @@ describe('TodaysMeds', () => {
       expect(callsFor(PRESENCE_START)).toBe(0);
 
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
       expect(screen.queryByText('No medications scheduled today.')).toBeNull();
       expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
 
@@ -1090,7 +1093,7 @@ describe('TodaysMeds', () => {
       expect(await screen.findByText('Needs attention')).toBeInTheDocument();
       expect(screen.getByText('Warfarin')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
     });
 
     it("yesterday's read fails while today's doses are listed: the doses render, the gap is named, and Retry refetches yesterday", async () => {
@@ -1133,7 +1136,7 @@ describe('TodaysMeds', () => {
 
       expect(await screen.findByText("Couldn't load medications")).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Add a medication' })).toBeNull();
-      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today yet/)).toBeNull();
+      expect(screen.queryByText(/No medications yet|Nothing scheduled for .* today/)).toBeNull();
 
       const before = callsFor(YESTERDAY);
       const presenceBefore = callsFor(PRESENCE_START);

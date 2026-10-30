@@ -41,9 +41,10 @@ test('a crafted ?eventId= stays one encoded path segment and reads as unavailabl
       `/circles/${circleId}/calendar?eventId=${appt.id}%2Fnotes%3Fx%3D1`,
       { waitUntil: 'domcontentloaded' }
     );
-    await expect(
-      page.getByText('This item is no longer available. Someone may have deleted it.')
-    ).toBeVisible({ timeout: 20_000 });
+    // 1.3.1 (push-tap fixes): the calendar's missing-target notice is the shared "This was removed" (same copy as
+    // mobile PushGoneNotice); the old "This item is no longer available..." string is retired.
+    await expect(page.getByText('This was removed', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('It was deleted or is no longer scheduled.')).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // The one event read the link caused kept the payload inside its segment.

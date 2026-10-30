@@ -14,7 +14,12 @@ import {
 } from '@/api/circles';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import {
+  failureContext,
+  isPermissionDeniedError,
+  isSubscriptionRequiredError,
+  type FailureAction,
+} from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
@@ -43,7 +48,10 @@ function invalidateCircleQueries(
 }
 
 /** Shared onError for circle-admin mutations (owner-gated → mostly 403). */
-function useCircleAdminOnError(circleId: string): (error: unknown) => void {
+function useCircleAdminOnError(
+  circleId: string,
+  action: FailureAction
+): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // Circle/seat quota rejections — CAPACITY, the bucket mobile uses for a hard
@@ -53,6 +61,8 @@ function useCircleAdminOnError(circleId: string): (error: unknown) => void {
   const { t } = useTranslation('common');
 
   return (error: unknown) => {
+    // `error_occurred` for the admin digest: enums only, no circle_id.
+    Analytics.errorOccurred('circle_edit', `circle_edit_${action}_failed`, failureContext('circle_edit', action, error));
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
       invalidateCircleAccessFlags(queryClient, circleId);
@@ -123,7 +133,7 @@ export function useUpdateCircle(
   circleId: string
 ): UseMutationResult<void, unknown, UpdateCircleRequest> {
   const queryClient = useQueryClient();
-  const onError = useCircleAdminOnError(circleId);
+  const onError = useCircleAdminOnError(circleId, 'update');
 
   return useMutation({
     mutationFn: (data: UpdateCircleRequest) => updateCircle(circleId, data),
@@ -144,7 +154,7 @@ export function useDeleteCircle(
   circleId: string
 ): UseMutationResult<void, unknown, void> {
   const queryClient = useQueryClient();
-  const onError = useCircleAdminOnError(circleId);
+  const onError = useCircleAdminOnError(circleId, 'delete');
 
   return useMutation({
     mutationFn: () => deleteCircle(circleId),

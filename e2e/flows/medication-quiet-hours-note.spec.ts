@@ -31,7 +31,7 @@ test.setTimeout(120_000);
 
 const TZ = process.env.PW_E2E_TZ || 'America/Denver';
 const NOTE =
-  'This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Account.';
+  'This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Profile, under Quiet hours.';
 
 async function openForm(browser: Browser, baseURL: string | undefined, acc: ScopedAccount, circleId: string) {
   const origin = new URL(baseURL ?? 'http://localhost:5173').origin;
@@ -39,9 +39,12 @@ async function openForm(browser: Browser, baseURL: string | undefined, acc: Scop
   await cookieLogin(ctx, acc, baseURL);
   const page = await ctx.newPage();
   await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { level: 1, name: 'Medications' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: /'s meds$/ })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Add medication' }).first().click();
-  return { ctx, page, form: page.getByRole('dialog') };
+  const form = page.getByRole('dialog', { name: 'New medication' });
+  // The simple form: a custom time is behind "Other time" (the chips are Morning 8:00 AM ...).
+  await form.getByRole('button', { name: 'Other time' }).click();
+  return { ctx, page, form };
 }
 
 test('a NEW account has quiet hours OFF, so a 10 PM dose shows no note', async ({ browser, request, baseURL }) => {
@@ -92,10 +95,12 @@ test('with quiet hours ON the note shows for a 10 PM dose, not a 9 AM one, and n
     await expect(form.getByTestId('dose-quiet-hours-note')).toBeVisible();
     await form.getByLabel(/Medication name/i).fill(`Metformin ${uniq('x').slice(-6)}`);
     await form.getByLabel(/Dosage/i).fill('500 mg');
-    await form.getByLabel(/^Date/).fill(futureDate);
-    await expect(form.getByLabel(/^Date/)).toHaveValue(futureDate);
+    // The start date lives in "More details" on the simple form.
+    await form.getByRole('button', { name: /More details/ }).click();
+    await form.getByLabel(/^Start date/).fill(futureDate);
+    await expect(form.getByLabel(/^Start date/)).toHaveValue(futureDate);
     await expect(form.getByTestId('dose-quiet-hours-note')).toBeVisible();
-    await form.getByRole('button', { name: 'Create' }).click();
+    await form.getByRole('button', { name: 'Add medication' }).click();
     await expect(page.getByText('Medication added')).toBeVisible({ timeout: 20_000 });
   } finally {
     await ctx.close();

@@ -3,7 +3,7 @@
   "subtitle": "Everything happening in the care circle — from everyone in the family.",
   "loading": "Loading activity...",
   "noActivity": "No Activity Yet",
-  "noActivityHint": "Activity will appear here as your care team takes actions. Activity is better together — invite family and caregivers so everyone can see what's been handled.",
+  "noActivityHint": "Activity for {{name}} will appear here.",
   "inviteCta": "Invite someone",
   "errorTitle": "Couldn't load the activity feed",
   "errorHint": "Check your connection and try again.",
@@ -101,5 +101,6 @@
     "rescheduledMedication": "Rescheduled Medication: {{title}} to {{time}}",
     "addedNotes": "Added notes to {{title}}",
     "memberRoleChanged": "A member's role in the circle changed"
-  }
+  },
+  "noActivityHintSelf": "Activity will appear here."
 }

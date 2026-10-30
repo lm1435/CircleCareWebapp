@@ -58,7 +58,7 @@ test.beforeEach(async ({ page }) => {
 // Sidebar nav is pure chrome (no user data), so it's a false-positive-free
 // signal that the language actually switched on every page.
 const IT_NAV = [
-  'Home', // Italian UI keeps the loanword "Home" (common.nav.home)
+  'Oggi',
   'Calendario',
   'Incarichi',
   'Attività',
@@ -101,7 +101,7 @@ async function expectItalianNav(page: Page): Promise<void> {
 // `heading: null` ⇒ heading is dynamic (month / recipient name), so we lean on
 // the nav assertion for that page.
 const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
-  { path: '', heading: 'Team di cura' }, // overview (h1 is the recipient name)
+  { path: '', heading: /^Oggi\ per\ / }, // Today (h1 is "Oggi per {{name}}")
   { path: '/calendar', heading: null }, // heading is the current month
   { path: '/tasks', heading: 'Incarichi' },
   { path: '/activity', heading: 'Attività' },

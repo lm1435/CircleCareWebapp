@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { neverSettles, submitFormTwice } from '@/test/doubleSubmit';
 import '@/i18n';
@@ -194,7 +194,7 @@ describe('AddEventModal', () => {
     };
 
     it('appointment: solid and not aria-disabled with the title missing, in the footer', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       solid(save());
       expect(save()).toHaveAttribute('data-testid', 'add-event-save');
       expect(save().closest('[data-modal-footer]')).not.toBeNull();
@@ -203,13 +203,13 @@ describe('AddEventModal', () => {
 
     it('medication: solid with the time missing too', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Metformin');
       solid(save());
     });
 
     it('shows no hint line and no field error before a click', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       expect(screen.queryByTestId('add-event-save-missing')).toBeNull();
       expect(screen.queryByText('Please enter a title.')).toBeNull();
       expect(save()).not.toHaveAttribute('aria-describedby');
@@ -218,7 +218,7 @@ describe('AddEventModal', () => {
 
     it('click with the title missing: focuses it, shows the error linked by aria-describedby, never saves', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       await user.click(save());
       expect(titleInput()).toHaveFocus();
       expect(titleInput()).toHaveAttribute('aria-invalid', 'true');
@@ -234,7 +234,7 @@ describe('AddEventModal', () => {
 
     it('the error clears as soon as the title is filled, and the next missing field shows nothing until the next click', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       await user.click(save());
       const name = screen.getByRole('combobox', { name: /Medication name/ });
       expect(name).toHaveAttribute('aria-invalid', 'true');
@@ -262,7 +262,7 @@ describe('AddEventModal', () => {
 
     it('clearing the field again after fixing it does not resurrect the old error', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       await user.click(save());
       await user.type(titleInput(), 'A');
       await user.clear(titleInput());
@@ -270,7 +270,7 @@ describe('AddEventModal', () => {
     });
 
     it('does not submit the form (the click default is cancelled)', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       const onSubmit = vi.fn();
       document.getElementById('add-event-form')?.addEventListener('submit', onSubmit);
       // fireEvent.click returns false when preventDefault was called.
@@ -281,7 +281,7 @@ describe('AddEventModal', () => {
 
     it('a title of only spaces still counts as missing', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await user.type(titleInput(), '   ');
       await user.click(save());
       expect(titleInput()).toHaveAttribute('aria-invalid', 'true');
@@ -290,7 +290,7 @@ describe('AddEventModal', () => {
 
     it('focuses the date when it is the empty one, and shows its error', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await user.type(titleInput(), 'Call pharmacy');
       const date = screen.getByLabelText(/^Date/) as HTMLInputElement;
       await user.clear(date);
@@ -302,7 +302,7 @@ describe('AddEventModal', () => {
 
     it('is reachable by keyboard and Enter does the same as a click', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       save().focus();
       expect(save()).toHaveFocus();
       await user.keyboard('{Enter}');
@@ -313,7 +313,7 @@ describe('AddEventModal', () => {
 
     it('filled: the same solid button saves', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       await user.type(titleInput(), 'Cardiology');
       solid(save());
       await user.click(save());
@@ -321,7 +321,7 @@ describe('AddEventModal', () => {
     });
 
     it('padding is capped in px (only the label grows with text size), 48px floor', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       for (const button of [save(), screen.getByRole('button', { name: 'Cancel' })]) {
         expect(button.className).toContain('py-[10px]!');
         expect(button.className).toContain('min-h-[48px]!');
@@ -334,7 +334,7 @@ describe('AddEventModal', () => {
         const zone = useCircleResult.timezone;
         (useCircleResult as { timezone: string | null }).timezone = null;
         try {
-          render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+          render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
           expect(save()).toBeDisabled();
           await user.click(save());
           expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -355,7 +355,7 @@ describe('AddEventModal', () => {
   });
 
   it('blocks submit and shows + focuses the title error when title is empty', async () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
 
     // Save is disabled with the title empty, so this is the submit that does
     // not go through the button (a programmatic `requestSubmit`).
@@ -370,7 +370,7 @@ describe('AddEventModal', () => {
 
   it('builds a TZ-correct payload (recipient TZ differs → crosses midnight)', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
 
     await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Eye exam');
     // Date pickers take a YYYY-MM-DD value; type controls take HH:MM.
@@ -502,7 +502,9 @@ describe('AddEventModal', () => {
 
     it('does not re-apply the default over a choice the user made', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      // Type-less open: the only entry that still has the type switch.
+      render(<AddEventModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+      await user.selectOptions(screen.getByLabelText('Type'), 'task');
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Pick up prescription');
       const timeField = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeField);
@@ -524,7 +526,7 @@ describe('AddEventModal', () => {
       // fallback. Without this line the section is configuration for something
       // a web-only caregiver will never receive.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
       await user.type(timeInput, '09:00');
@@ -671,7 +673,7 @@ describe('AddEventModal', () => {
         useCircleResult.timezone = 'America/New_York';
         const user = userEvent.setup();
         const { rerender } = render(
-          <AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />
+          <AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />
         );
 
         const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
@@ -680,7 +682,7 @@ describe('AddEventModal', () => {
 
         useCircleResult.timezone = 'Pacific/Kiritimati';
         rerender(
-          <AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />
+          <AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />
         );
 
         expect((screen.getByLabelText(/^Date/) as HTMLInputElement).value).toBe('2026-07-04');
@@ -698,7 +700,7 @@ describe('AddEventModal', () => {
   describe('entry_source', () => {
     it.each(['appointment', 'task'] as const)('a new %s sends entry_source "form"', async (type) => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType={type} onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType={type} layout="full" onClose={vi.fn()} />);
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Eye exam');
       await user.click(screen.getByRole('button', { name: 'Create' }));
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
@@ -753,7 +755,7 @@ describe('AddEventModal', () => {
   it('renders nothing when the user cannot edit', () => {
     useCircleResult.canEdit = false;
     const { container } = render(
-      <AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />
+      <AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />
     );
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -766,6 +768,7 @@ describe('AddEventModal', () => {
   // row stays on today and only today's reminder is lost.
   const CREATE_PAST_TIME_MESSAGE =
     'This time has already passed today, so nothing will be recorded for today. This medication will start with its next scheduled dose.';
+  const CREATE_PAST_TIME_INLINE = 'Starts with the next dose. This time has already passed today.';
   const EDIT_PAST_TIME_MESSAGE =
     "This time has already passed today — no reminder will be sent for today's dose.";
 
@@ -781,7 +784,7 @@ describe('AddEventModal', () => {
       vi.useRealTimers();
     });
 
-    async function fillMedication(time: string): Promise<void> {
+    async function fillMedication(time: string, submit = true): Promise<void> {
       const user = userEvent.setup();
       await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
       const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
@@ -790,24 +793,25 @@ describe('AddEventModal', () => {
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
       await user.type(timeInput, time);
-      await user.click(screen.getByRole('button', { name: 'Create' }));
+      if (submit) await user.click(screen.getByRole('button', { name: 'Create' }));
     }
 
-    it('warns before saving a med whose time already passed today, then saves on Continue', async () => {
+    it('CREATE: a passed time shows the inline note, raises NO dialog, and Save proceeds', async () => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
+
+      await fillMedication('10:00', false); // 12:00 New York — 2h in the past there.
+
+      // Live, before any save: an announced status region carries the note.
+      const note = screen.getByTestId('dose-past-time-note');
+      expect(note).toHaveTextContent(CREATE_PAST_TIME_INLINE);
+      expect(note.closest('[role="status"]')).not.toBeNull();
+
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Create' }));
 
-      await fillMedication('10:00'); // 12:00 New York — 2h in the past there.
-
-      // Notice shown, save deferred.
-      expect(mutateCreate).not.toHaveBeenCalled();
-      // CREATE copy: the backend does not record the med for today at all, so
-      // the notice must not talk about reminders.
-      expect(screen.getByText(CREATE_PAST_TIME_MESSAGE)).toBeInTheDocument();
-      expect(screen.queryByText(EDIT_PAST_TIME_MESSAGE)).not.toBeInTheDocument();
-
-      // Non-blocking: Continue proceeds with the save.
-      await user.click(screen.getByRole('button', { name: 'Continue' }));
+      // No prompt of any kind; the save goes straight through.
+      expect(screen.queryByRole('dialog', { name: 'Starts with the next dose' })).not.toBeInTheDocument();
+      expect(screen.queryByText(CREATE_PAST_TIME_MESSAGE)).not.toBeInTheDocument();
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       const payload = mutateCreate.mock.calls[0][0];
       expect(payload.event_type).toBe('medication');
@@ -816,56 +820,17 @@ describe('AddEventModal', () => {
       expect(payload.scheduled_time).toBe('12:00');
     });
 
-    /**
-     * THE NOTICE'S Continue IS A SUBMIT, AND IT HAS TO BE GUARDED LIKE ONE.
-     *
-     * `ConfirmDialog` wraps `onConfirm` in `useGuardedSubmit` and AWAITS what
-     * it returns — that is documented on the shell, and it is the only way the
-     * guard can be held for longer than the tick the click happened in. This
-     * call site returned nothing (`void persist(data)`), so the ref was
-     * released on the very next microtask while the create was still in
-     * flight, and the guard covered the synchronous window only. What gets
-     * through that gap is the failure the form's own guard is commented for:
-     * TWO medication series for one drug, each with its own reminder schedule
-     * and its own dose-confirmation stream, doubling the denominator of the
-     * adherence figure the clinician-facing report is built from.
-     *
-     * A microtask turn between the two clicks, not two synchronous dispatches:
-     * the synchronous pair is blocked either way (nothing runs between them to
-     * release the ref), so a test built that way passes over the defect. The
-     * turn is what the awaited promise is supposed to survive.
-     */
-    it('creates ONE series when Continue is double-clicked mid-save', async () => {
-      // Never settles: the request is still in flight when the second click
-      // arrives, which is the only state in which holding the guard means
-      // anything.
-      mutateCreate.mockImplementation(() => neverSettles());
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+    it('CREATE: the note is live — it disappears when the time moves to the future', async () => {
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
-      await fillMedication('10:00');
-      const confirm = screen.getByRole('button', { name: 'Continue' });
+      await fillMedication('10:00', false);
+      expect(screen.getByTestId('dose-past-time-note')).toBeInTheDocument();
 
-      await act(async () => {
-        confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-        await Promise.resolve();
-        confirm.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-      });
-
-      expect(mutateCreate).toHaveBeenCalledTimes(1);
-    });
-
-    it('cancelling the notice keeps the form open without saving', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
-
-      await fillMedication('10:00');
-      // Two Cancel buttons exist (form footer + notice) — scope to the notice.
-      const notice = screen.getByRole('dialog', { name: 'Starts with the next dose' });
-      await user.click(within(notice).getByRole('button', { name: 'Cancel' }));
-
-      expect(mutateCreate).not.toHaveBeenCalled();
-      // Form still open with the entered value.
-      expect(screen.getByLabelText(/^Medication name/)).toHaveValue('Metformin');
+      const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
+      await user.clear(timeInput);
+      await user.type(timeInput, '20:00'); // 22:00 New York — upcoming.
+      expect(screen.queryByTestId('dose-past-time-note')).not.toBeInTheDocument();
     });
 
     it('EDITING a med onto a passed time keeps the reminder-focused copy', async () => {
@@ -895,6 +860,7 @@ describe('AddEventModal', () => {
       expect(mutateUpdate).not.toHaveBeenCalled();
       expect(screen.getByText(EDIT_PAST_TIME_MESSAGE)).toBeInTheDocument();
       expect(screen.queryByText(CREATE_PAST_TIME_MESSAGE)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dose-past-time-note')).not.toBeInTheDocument();
       expect(
         screen.getByRole('dialog', { name: 'Time already passed' })
       ).toBeInTheDocument();
@@ -907,19 +873,20 @@ describe('AddEventModal', () => {
     });
 
     it('saves a still-upcoming med time directly, with no notice', async () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       await fillMedication('20:00'); // 22:00 New York — still upcoming there.
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
       expect(screen.queryByText(CREATE_PAST_TIME_MESSAGE)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dose-past-time-note')).not.toBeInTheDocument();
     });
   });
 
   describe('quick-pick chips (Round 3)', () => {
     it('appointment title chip fills the title, shows selected, and untaps to clear', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
 
       await user.click(screen.getByRole('radio', { name: 'Doctor visit' }));
 
@@ -938,7 +905,7 @@ describe('AddEventModal', () => {
         makeEvent({ id: 'h1', title: 'Cardiology follow-up', scheduled_date: '2026-06-10' }),
         makeEvent({ id: 'h2', title: 'cardiology follow-up', scheduled_date: '2026-06-20' }),
       ];
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
 
       const group = screen.getByRole('radiogroup', { name: 'Title suggestions' });
       const chips = within(group).getAllByRole('radio');
@@ -952,7 +919,7 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
-          initialType="task"
+          initialType="task" layout="full"
           initialTitle="Grocery run"
           onClose={vi.fn()}
         />
@@ -964,7 +931,7 @@ describe('AddEventModal', () => {
 
     it('scopes the chip rows: presets are medication-only, title chips are appt/task-only', () => {
       const { unmount } = render(
-        <AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />
+        <AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />
       );
       expect(
         screen.queryByRole('radiogroup', { name: 'Title suggestions' })
@@ -972,7 +939,7 @@ describe('AddEventModal', () => {
       expect(screen.getByRole('radiogroup', { name: 'Common schedules' })).toBeInTheDocument();
       unmount();
 
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       expect(screen.queryByRole('radiogroup', { name: 'Common schedules' })).not.toBeInTheDocument();
       expect(screen.getByRole('radiogroup', { name: 'Title suggestions' })).toBeInTheDocument();
     });
@@ -988,7 +955,7 @@ describe('AddEventModal', () => {
 
     it('tapping a preset sets the time AND daily recurrence in one gesture', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
       const chip = within(group).getByRole('radio', { name: MORNING_CHIP });
@@ -1003,7 +970,7 @@ describe('AddEventModal', () => {
 
     it('the evening preset sets 20:00 + daily; switching chips swaps the time', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
 
       await user.click(within(group).getByRole('radio', { name: 'Every evening (8:00 PM)' }));
@@ -1021,7 +988,7 @@ describe('AddEventModal', () => {
 
     it('untapping the selected preset returns time and recurrence to unset', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
 
       await user.click(within(group).getByRole('radio', { name: MORNING_CHIP }));
@@ -1036,7 +1003,7 @@ describe('AddEventModal', () => {
 
     it('selected state requires the EXACT time + recurrence pair', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       const group = screen.getByRole('radiogroup', { name: 'Common schedules' });
 
       // 08:00 typed alone (no recurrence) is NOT the schedule preset.
@@ -1052,7 +1019,7 @@ describe('AddEventModal', () => {
 
     it('is prefill-only: the saved payload carries the preset time + daily rule', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Medication name/), 'Metformin');
       // A future date so the past-time notice can't interpose.
@@ -1076,12 +1043,12 @@ describe('AddEventModal', () => {
     });
 
     it('only renders for medications', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       expect(screen.queryByRole('radiogroup', { name: 'Common schedules' })).not.toBeInTheDocument();
     });
 
     it('the old "Common times" strip is gone — one chip strip in the med flow', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       expect(screen.queryByRole('radiogroup', { name: 'Common times' })).not.toBeInTheDocument();
       expect(screen.getByRole('radiogroup', { name: 'Common schedules' })).toBeInTheDocument();
       // And that consolidated strip carries both complete-schedule chips.
@@ -1094,14 +1061,14 @@ describe('AddEventModal', () => {
 
   describe('reminders', () => {
     it('hides the reminders section for a task with no time', async () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       // Nothing to fire against: the cron filters scheduled_time IS NOT NULL.
       expect(screen.queryByText('Send reminders')).not.toBeInTheDocument();
     });
 
     it('shows the reminders section once a time is set', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
@@ -1111,7 +1078,7 @@ describe('AddEventModal', () => {
     });
 
     it('always shows reminders for a medication', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       expect(screen.getByText('Send reminders')).toBeInTheDocument();
     });
 
@@ -1123,7 +1090,7 @@ describe('AddEventModal', () => {
       // Persisting the type's own defaults instead means adding a time later
       // behaves exactly like creating the task with one.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Refill this week');
       await user.click(screen.getByRole('button', { name: 'Create' }));
@@ -1160,7 +1127,7 @@ describe('AddEventModal', () => {
     }
 
     it('shows the at-time anchor as a real checkbox, on, + escalation for a medication', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       // It used to be a locked statement of fact ("Always on for medications.").
       // `reminder_at_due` makes that sentence false — it is a control now, and a
@@ -1180,7 +1147,7 @@ describe('AddEventModal', () => {
       // The one place in the webapp that was still blind to `is_self_care`.
       // Mobile has branched this line since the escalation chain shipped.
       useCircleResult.circle = { is_self_care: true };
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       expect(screen.getByText(/we follow up: you after 15 minutes/)).toBeInTheDocument();
       expect(
@@ -1191,7 +1158,7 @@ describe('AddEventModal', () => {
     it('keeps "the care recipient" when the circle is not self-care', () => {
       // FALSIFY BY: dropping the ternary and always rendering `escalationSelf`.
       useCircleResult.circle = { is_self_care: false };
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       expect(
         screen.getByText(/we follow up: a follow-up reminder after 15 minutes/)
@@ -1200,7 +1167,7 @@ describe('AddEventModal', () => {
 
     it('tells a medication with the anchor off and nothing earlier that the first alert is the LATE one', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
       await user.click(anchor);
@@ -1225,7 +1192,7 @@ describe('AddEventModal', () => {
 
     it('reverts to the ordinary off-notice once an earlier reminder is picked', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       await user.click(screen.getByRole('checkbox', { name: 'At the scheduled time' }));
       await user.click(screen.getByRole('checkbox', { name: '1 hour before' }));
@@ -1240,7 +1207,7 @@ describe('AddEventModal', () => {
 
     it('shows the same at-time anchor for a task, without the medication escalation', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       // A task DOES get an at-time alert now — that is the whole feature. What
@@ -1253,7 +1220,7 @@ describe('AddEventModal', () => {
 
     it('warns only once the at-due anchor is switched OFF — the genuinely silent state', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       const anchor = screen.getByRole('checkbox', { name: 'At the scheduled time' });
@@ -1281,7 +1248,7 @@ describe('AddEventModal', () => {
 
     it('warns about the missed-dose alert when a medication has reminders off', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       const master = screen.getByRole('switch', { name: 'Send reminders' });
       await user.click(master);
@@ -1298,7 +1265,7 @@ describe('AddEventModal', () => {
     });
 
     it('keeps the legend naming the fieldset, with the explainer trigger outside it', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       // FALSIFY BY: wrapping the `<legend>` in a flex row with the button. A
       // legend that is not the fieldset's first child stops naming the group,
@@ -1312,7 +1279,7 @@ describe('AddEventModal', () => {
 
     it('opens the "How notifications work" explainer, escalation section included', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       await user.click(screen.getByRole('button', { name: 'How notifications work' }));
 
@@ -1330,7 +1297,7 @@ describe('AddEventModal', () => {
 
     it('omits the escalation section of the explainer for a task', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       await user.click(screen.getByRole('button', { name: 'How notifications work' }));
@@ -1347,7 +1314,7 @@ describe('AddEventModal', () => {
       // mobile's now-dead `escalationInfo` drifted to 15 min / 1 hr / 2 hrs.
       useCircleResult.circle = { is_self_care: true };
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       await user.click(screen.getByRole('button', { name: 'How notifications work' }));
 
@@ -1359,7 +1326,7 @@ describe('AddEventModal', () => {
 
     it('shows the neutral off note for a task with reminders off', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       await user.click(screen.getByRole('switch', { name: 'Send reminders' }));
@@ -1377,7 +1344,7 @@ describe('AddEventModal', () => {
 
     it('rule 2 does NOT fire while the at-due anchor is armed', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       const master = screen.getByRole('switch', { name: 'Send reminders' });
@@ -1409,7 +1376,7 @@ describe('AddEventModal', () => {
 
     it('rule 2 — unchecking the LAST earlier reminder with the anchor OFF switches the master off', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       const master = screen.getByRole('switch', { name: 'Send reminders' });
@@ -1430,7 +1397,7 @@ describe('AddEventModal', () => {
 
     it('rule 2 does NOT fire while another earlier reminder is still checked', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       // Two boxes on, then one back off: the master must not follow it down
@@ -1457,7 +1424,7 @@ describe('AddEventModal', () => {
       // already the only thing standing behind the same state on the edit form,
       // which must not auto-correct a hydrated row.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       // Reach real silence: 15m armed, the anchor off, THEN the only box
@@ -1505,7 +1472,7 @@ describe('AddEventModal', () => {
      */
     it('a master off→on cycle invents nothing', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       await setTaskTime(user);
 
       // The fresh state, untouched: the anchor carries the task and no earlier
@@ -1542,7 +1509,7 @@ describe('AddEventModal', () => {
       // The wire half of the test above. `reminderFlagsForSave` is verbatim now,
       // so anything the sync rules invent is persisted.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Refill the water jug');
       await setTaskTime(user);
@@ -1599,7 +1566,7 @@ describe('AddEventModal', () => {
       // partial-patch UPDATE. Only an explicit `true` proves the control is
       // actually wired through to the API.
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Pick up prescription');
       await setTaskTime(user);
@@ -1630,7 +1597,7 @@ describe('AddEventModal', () => {
      */
     it('saves the anchor OFF while the rest of the entry stays on', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Call the pharmacy');
       await setTaskTime(user);
@@ -1652,7 +1619,7 @@ describe('AddEventModal', () => {
 
     it('a task turned fully off saves nothing on — the sync never re-arms a flag', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Water the plants');
       await setTaskTime(user);
@@ -1682,7 +1649,7 @@ describe('AddEventModal', () => {
 
     it('medication — unchecking the last earlier reminder leaves the master ON (rule 2 skipped)', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       // 15m starts OFF for every type now — every event alerts at its scheduled
       // time on its own, so nothing earlier is pre-selected. Turn it ON first so
@@ -1843,7 +1810,7 @@ describe('AddEventModal', () => {
 
     it('never shows the none-selected warning for a medication (baseline still fires)', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       await user.click(screen.getByRole('checkbox', { name: '15 minutes before' }));
 
@@ -1855,7 +1822,7 @@ describe('AddEventModal', () => {
 
     it('saves exactly the chosen flags — the messaging changes no payload', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Water the plants');
       await setTaskTime(user);
@@ -1877,7 +1844,7 @@ describe('AddEventModal', () => {
   describe('duration presets', () => {
     it('prefills a 30-minute end time when a start time is picked', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
 
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
@@ -1888,7 +1855,7 @@ describe('AddEventModal', () => {
 
     it('a duration chip sets the end time', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
 
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
@@ -1901,12 +1868,12 @@ describe('AddEventModal', () => {
     });
 
     it('offers no duration chips before a start time exists', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       expect(screen.queryByRole('radiogroup', { name: 'Duration' })).not.toBeInTheDocument();
     });
 
     it('offers no duration chips for medications', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
       expect(screen.queryByRole('radiogroup', { name: 'Duration' })).not.toBeInTheDocument();
     });
   });
@@ -1975,7 +1942,7 @@ describe('AddEventModal', () => {
 
     it('lists Anyone first, then every member in order with the recipient captioned (EN)', () => {
       useCircleResult.members = MEMBERS;
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       expect(optionLabels()).toEqual(['Anyone', 'Tess', 'Ray · Care recipient', 'cara']);
       expect(Array.from(assigneeSelect().options).map((o) => o.value)).toEqual([
@@ -1992,7 +1959,7 @@ describe('AddEventModal', () => {
       const { default: i18n } = await import('@/i18n');
       await i18n.changeLanguage('es');
       useCircleResult.members = MEMBERS;
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       expect(optionLabels()).toContain('Ray · Receptor de cuidado');
       expect(optionLabels()).toContain('Tess');
@@ -2001,7 +1968,7 @@ describe('AddEventModal', () => {
     it('creates a task assigned to the recipient (his user_id is sent as assigned_to)', async () => {
       const user = userEvent.setup();
       useCircleResult.members = MEMBERS;
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Lunch');
       const timeField = screen.getByLabelText(/^Time/) as HTMLInputElement;
@@ -2081,7 +2048,7 @@ describe('AddEventModal — the 15-minute default', () => {
 
   it.each(['medication', 'task', 'appointment'] as const)('is OFF for a new %s', async (type) => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType={type} onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType={type} layout="full" onClose={vi.fn()} />);
     await openReminders(user, type);
 
     expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
@@ -2149,13 +2116,13 @@ describe('AddEventModal — the 15-minute default', () => {
 
   describe('zone names on the dual-timezone strip', () => {
     it('labels the time field with the recipient’s CITY', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       expect(screen.getByText(/Your time \/ .*New York/)).toBeInTheDocument();
     });
 
     it('names both cities in the live conversion line', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
@@ -2167,7 +2134,7 @@ describe('AddEventModal — the 15-minute default', () => {
 
     it('never shows an abbreviation or a GMT offset', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
@@ -2187,7 +2154,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
       { rxcui: '6809', name: 'Metformin', strength: null, dosageForm: null },
     ]);
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
     const name = screen.getByRole('combobox', { name: /^Medication name/ });
     await user.type(name, 'metf');
@@ -2211,12 +2178,15 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
     const { searchDrugs } = await import('@/api/drugs');
     vi.mocked(searchDrugs).mockResolvedValue([]);
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
     await user.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Doliprane');
     await waitFor(() => expect(searchDrugs).toHaveBeenCalled());
     expect(screen.queryByText(/not found|not recogni[sz]ed|check (the )?spelling|couldn.t find/i)).toBeNull();
-    expect(screen.queryByRole('listbox')).toBeNull();
+    // Onboarding 1.3.1: the only row is "Use ... as typed" (an unknown drug never blocks).
+    const list = await screen.findByRole('listbox', { name: 'Medication suggestions' });
+    expect(within(list).getAllByRole('option')).toHaveLength(1);
+    expect(screen.getByTestId('drug-use-as-typed')).toBeInTheDocument();
     const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
     await user.clear(dateInput);
     await user.type(dateInput, '2099-01-01');
@@ -2232,7 +2202,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
 
   it('sends no rxcui for a typed name', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
     await user.type(screen.getByRole('combobox', { name: /^Medication name/ }), 'Metformin');
     const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
@@ -2285,7 +2255,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
       // `vi.fn()` returning undefined would resolve on the next microtask and
       // legitimately free the guard.
       mutateCreate.mockImplementation(() => neverSettles());
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       const form = await fillFutureMedication();
       await submitFormTwice(form);
@@ -2297,7 +2267,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
       // The guard must be released on the rejection path too — otherwise a
       // failed save latches the form shut for the rest of its life.
       mutateCreate.mockRejectedValueOnce(new Error('500'));
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={vi.fn()} />);
 
       const form = await fillFutureMedication();
       await submitFormTwice(form);
@@ -2310,7 +2280,7 @@ describe('AddEventModal RxNorm lookup (mobile parity)', () => {
 
     it('a validation failure does not latch the form — the corrected submit goes through', async () => {
       const user = userEvent.setup();
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
 
       const form = document.getElementById('add-event-form');
       if (!(form instanceof HTMLFormElement)) throw new Error('add-event-form not found');
@@ -2364,7 +2334,7 @@ describe('AddEventModal — days of the week', () => {
 
   async function createTaskOn(date: string): Promise<ReturnType<typeof userEvent.setup>> {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
     await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Physio exercises');
     const dateInput = screen.getByLabelText(/^Date/) as HTMLInputElement;
     await user.clear(dateInput);
@@ -2373,7 +2343,7 @@ describe('AddEventModal — days of the week', () => {
   }
 
   it('offers "Days of the week" as the LAST repeat option, right after Cycle', () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
     const options = within(screen.getByLabelText('Repeat')).getAllByRole('option');
     expect(options.map((o) => o.textContent).slice(-2)).toEqual([
       'Cycle (days on / off)',
@@ -2701,7 +2671,7 @@ describe('PK21: moving the start moves the end', () => {
 
   it('wraps past midnight instead of clamping at 23:59 (22:00-23:00 moved to 23:30 ends 00:30)', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
     await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Late visit');
     fireEvent.change(timeInput(), { target: { value: '22:00' } });
     fireEvent.change(endInput(), { target: { value: '23:00' } });
@@ -2715,7 +2685,7 @@ describe('PK21: moving the start moves the end', () => {
 
   it('a hand-typed midnight-crossing end saves as the next-day span (23:45 -> 00:15 = 30)', async () => {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
     await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Night call');
     fireEvent.change(timeInput(), { target: { value: '23:45' } });
     fireEvent.change(endInput(), { target: { value: '00:15' } });
@@ -2725,7 +2695,7 @@ describe('PK21: moving the start moves the end', () => {
   });
 
   it('a NEW entry still gets the 30-minute default end', async () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
     fireEvent.change(timeInput(), { target: { value: '09:00' } });
     expect(endInput().value).toBe('09:30');
   });
@@ -2761,7 +2731,7 @@ describe('PK23: the weekday chips name the recipient zone only when it differs',
 
   async function openDays() {
     const user = userEvent.setup();
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
     await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
     return screen.getByRole('group', { name: 'Repeat on' });
   }
@@ -2982,7 +2952,7 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
     });
 
     it('absent when creating a task', () => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
       expect(titleInput()).toBeInTheDocument();
       expect(screen.queryByTestId('series-edit-note')).toBeNull();
     });

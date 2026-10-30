@@ -243,17 +243,19 @@ test('Calendar, stale detail: Mark taken over a dose another caregiver TOOK (sam
   }
 });
 
-// ── Home "Needs attention" row ───────────────────────────────────────────────
+// ── Today Next up: yesterday's unanswered dose ───────────────────────────────────────────────
 
-async function homeNeedsAttentionRow(page: Page, circleId: string, name: string, button: 'Skip' | 'Confirm') {
+// Yesterday's unanswered dose is the FIRST row of Today's Next up (date order), with its Taken button
+// (there is no Skip on Today: one primary action per row).
+async function homeNeedsAttentionRow(page: Page, circleId: string, name: string, _button: 'Skip' | 'Confirm') {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-  const attention = page.locator('section[aria-labelledby="meds-needs-attention"]');
-  const control = attention.getByRole('button', { name: `${button} ${name}` }).first();
+  const attention = page.locator('section[aria-labelledby="next-up-heading"]');
+  const control = attention.getByRole('button', { name: `Taken, ${name}` }).first();
   await expect(control).toBeVisible({ timeout: 30_000 });
   return { attention, control };
 }
 
-test('Home, stale row: Skip over a dose another caregiver TOOK -> 409, ONE request, calm toast, row refetched, their row untouched', async ({
+test('Today, stale row: Taken over a dose another caregiver SKIPPED -> 409, ONE request, calm toast, row refetched, their row untouched', async ({
   page,
   context,
   request,
@@ -264,7 +266,9 @@ test('Home, stale row: Skip over a dose another caregiver TOOK -> 409, ONE reque
     await cookieLogin(context, s.owner, baseURL);
     const { attention, control } = await homeNeedsAttentionRow(page, s.circleId, s.name, 'Skip');
 
-    await memberAnswers(s.memberSession, s.circleId, s.root, 'taken');
+    const openBefore = await attention.getByRole('button', { name: `Taken, ${s.name}` }).count();
+    expect(openBefore, 'yesterday and (when due) today').toBeGreaterThanOrEqual(1);
+    await memberAnswers(s.memberSession, s.circleId, s.root, 'skipped');
     const first = rowsOf(s.circleId, s.root);
     expect(first).toHaveLength(1);
     const feedBefore = feedRows(s.circleId);
@@ -278,10 +282,10 @@ test('Home, stale row: Skip over a dose another caregiver TOOK -> 409, ONE reque
     expect(res.status()).toBe(409);
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe('DOSE_ALREADY_RECORDED');
 
-    await expect(page.getByRole('status').filter({ hasText: ALREADY('taken') })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('status').filter({ hasText: ALREADY('skipped') })).toBeVisible({ timeout: 15_000 });
     await noAlert(page);
-    await expect(attention.getByRole('button', { name: `Skip ${s.name}` })).toHaveCount(0, { timeout: 15_000 });
-    await expect(attention.getByRole('button', { name: `Confirm ${s.name}` })).toHaveCount(0);
+    // Yesterday's row refetched to her answer and lost its Taken button (today's own dose, if due, keeps its own).
+    await expect(attention.getByRole('button', { name: `Taken, ${s.name}` })).toHaveCount(openBefore - 1, { timeout: 15_000 });
     await posts.expectCount(1);
 
     expect(rowsOf(s.circleId, s.root)).toEqual(first);
@@ -291,7 +295,7 @@ test('Home, stale row: Skip over a dose another caregiver TOOK -> 409, ONE reque
   }
 });
 
-test('Home, stale row: Confirm over a dose another caregiver TOOK (same answer) -> 200 no-op, success toast, ONE request, their row untouched', async ({
+test('Today, stale row: Taken over a dose another caregiver TOOK (same answer) -> 200 no-op, success toast, ONE request, their row untouched', async ({
   page,
   context,
   request,
@@ -302,6 +306,8 @@ test('Home, stale row: Confirm over a dose another caregiver TOOK (same answer) 
     await cookieLogin(context, s.owner, baseURL);
     const { attention, control } = await homeNeedsAttentionRow(page, s.circleId, s.name, 'Confirm');
 
+    const openBefore = await attention.getByRole('button', { name: `Taken, ${s.name}` }).count();
+    expect(openBefore, 'yesterday and (when due) today').toBeGreaterThanOrEqual(1);
     await memberAnswers(s.memberSession, s.circleId, s.root, 'taken');
     const first = rowsOf(s.circleId, s.root);
     expect(first).toHaveLength(1);
@@ -318,7 +324,7 @@ test('Home, stale row: Confirm over a dose another caregiver TOOK (same answer) 
 
     await expect(page.getByRole('status').filter({ hasText: /^\s*Marked as taken/ })).toBeVisible({ timeout: 15_000 });
     await noAlert(page);
-    await expect(attention.getByRole('button', { name: `Confirm ${s.name}` })).toHaveCount(0, { timeout: 15_000 });
+    await expect(attention.getByRole('button', { name: `Taken, ${s.name}` })).toHaveCount(openBefore - 1, { timeout: 15_000 }); // today's own dose (when due) keeps its button
     await posts.expectCount(1);
 
     const after = rowsOf(s.circleId, s.root);

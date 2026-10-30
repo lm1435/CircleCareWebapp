@@ -18,8 +18,8 @@
   "errorTitle": "No se pudieron cargar los documentos",
   "errorHint": "Revisa tu conexión e intenta de nuevo.",
   "noDocuments": "Sin documentos aún",
-  "noDocumentsHint": "Guarda en un solo lugar los documentos importantes de tu ser querido: tarjetas del seguro, registros, directivas, para que todos los que ayudan los encuentren cuando hagan falta.",
-  "noDocumentsHintReadOnly": "Los documentos compartidos con este círculo aparecerán aquí para que todos los que ayudan los encuentren cuando hagan falta.",
+  "noDocumentsHint": "Guarda tarjetas del seguro, expedientes y voluntades anticipadas donde cualquiera que ayude pueda encontrarlos.",
+  "noDocumentsHintReadOnly": "Los documentos que suba el equipo de cuidado aparecerán aquí.",
   "emptyCategory": {
     "title": "Todavía no hay nada en {{category}}.",
     "action": "Ver todos los documentos"

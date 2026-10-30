@@ -39,12 +39,12 @@
   },
   "empty": {
     "open": "No hay tareas pendientes",
-    "openHint": "Coordina los pendientes que mantienen al día el cuidado de tu ser querido: mandados, resurtidos, seguimientos, y compártelos con todos los que ayudan.",
+    "openHint": "Tareas compartidas, como mandados, resurtidos y seguimientos.",
     "openHintReadOnly": "Las tareas que agregue el equipo de cuidado aparecerán aquí.",
     "completed": "Aún no hay tareas completadas",
-    "completedHint": "Las tareas que el círculo termine aparecerán aquí para que todos vean qué ya se atendió.",
+    "completedHint": "Las tareas terminadas aparecerán aquí.",
     "all": "Aún no hay tareas",
-    "allHint": "Coordina los pendientes que mantienen al día el cuidado de tu ser querido: mandados, resurtidos, seguimientos, y compártelos con todos los que ayudan.",
+    "allHint": "Tareas compartidas, como mandados, resurtidos y seguimientos.",
     "cta": "Agregar tarea"
   },
   "errorTitle": "No se pudieron cargar las tareas",

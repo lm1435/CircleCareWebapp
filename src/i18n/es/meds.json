@@ -3,8 +3,8 @@
   "empty": "No hay medicamentos programados para hoy.",
   "emptyFirstRun": "Aún no hay medicamentos. Agrega el primero y todo el círculo recibe el recordatorio.",
   "emptyCard": {
-    "body": "Todavía no hay nada programado para {{name}} hoy. Agrega un medicamento y todos en el círculo lo verán aquí, con Tomado y Omitir.",
-    "bodySelfCare": "Todavía no hay nada programado para ti hoy. Agrega un medicamento y aparecerá aquí, con Tomado y Omitir."
+    "body": "Nada programado para {{name}} hoy.",
+    "bodySelfCare": "Nada programado para ti hoy."
   },
   "addFirst": "Agregar medicamento",
   "loadError": "No se pudieron cargar los medicamentos de hoy",
@@ -62,7 +62,6 @@
     "loading": "Cargando medicamentos…",
     "errorTitle": "No se pudieron cargar los medicamentos",
     "errorHint": "Revisa tu conexión e intenta de nuevo.",
-    "active": "Activos",
     "inactive": "Inactivos / Medicamentos anteriores",
     "inactiveHint": "Se conservan como referencia. Los recordatorios están desactivados.",
     "noTime": "Sin hora programada",
@@ -91,7 +90,19 @@
       "viewLabel": "Ver detalles de {{name}}",
       "repeat": "Repetir",
       "refill": "Resurtido"
-    }
+    },
+    "titleNamed": "Medicamentos de {{name}}",
+    "titleSelf": "Mis medicamentos",
+    "recipientFallback": "la persona cuidada",
+    "zoneBehind_one": "Los horarios son los de {{name}} · {{hours}} hora menos que tú",
+    "zoneBehind_other": "Los horarios son los de {{name}} · {{hours}} horas menos que tú",
+    "zoneAhead_one": "Los horarios son los de {{name}} · {{hours}} hora más que tú",
+    "zoneAhead_other": "Los horarios son los de {{name}} · {{hours}} horas más que tú",
+    "weekSummary": "Esta semana {{pct}}% tomado",
+    "weekReport": "Informe",
+    "anytime": "Cualquier hora",
+    "zoneBehindHm": "Los horarios son los de {{name}} · {{hours}} h {{minutes}} min menos que tú",
+    "zoneAheadHm": "Los horarios son los de {{name}} · {{hours}} h {{minutes}} min más que tú"
   },
   "needsAttention": "Requiere atención",
   "needsAttentionHint": "Dosis de ayer que nadie registró",
@@ -103,7 +114,6 @@
   },
   "history": {
     "title": "Historial de medicamentos",
-    "subtitle": "Rastrea la adherencia y revisa qué se tomó y cuándo.",
     "loading": "Cargando historial…",
     "today": "Hoy",
     "yesterday": "Ayer",

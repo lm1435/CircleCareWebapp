@@ -60,6 +60,15 @@ async function openCreateOption(page: Page, name: string): Promise<void> {
   await page.getByRole('menuitem', { name, exact: true }).click();
 }
 
+
+/** The simple New-medication form keeps the start date under "More details" and a custom time behind "Other time". */
+async function fillSimpleMedTimes(dialog: import('@playwright/test').Locator, date: string, time: string): Promise<void> {
+  await dialog.getByRole('button', { name: /More details/ }).click();
+  await dialog.locator('#scheduled_date').fill(date);
+  await dialog.getByRole('button', { name: 'Other time' }).click();
+  await dialog.locator('#scheduled_time').fill(time);
+}
+
 /** "8:00 PM Denver = 5:00 PM Tokyo" — the conversion line's shape. */
 const CONVERSION_TEXT = 'text=/\\d{1,2}:\\d{2}.*=.*\\d{1,2}:\\d{2}/';
 
@@ -80,14 +89,13 @@ for (const timezoneId of VIEWER_ZONES) {
       await gotoCircleWithRecipientZone(page, circleId);
 
       await openCreateOption(page, 'Med');
-      const dialog = page.getByRole('dialog');
+      const dialog = page.getByRole('dialog', { name: 'New medication' });
       await expect(dialog).toBeVisible();
 
       // A medication's title field is `medication_name`, not `title` (see
       // AddEventModal's titleFieldId).
       await dialog.locator('#medication_name').fill('TZ e2e probe');
-      await dialog.locator('#scheduled_date').fill('2026-09-01');
-      await dialog.locator('#scheduled_time').fill('20:00');
+      await fillSimpleMedTimes(dialog, '2026-09-01', '20:00');
 
       /**
        * The conversion must be VISIBLE.
@@ -116,8 +124,7 @@ for (const timezoneId of VIEWER_ZONES) {
       const dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible();
 
-      await dialog.locator('#scheduled_date').fill('2026-09-01');
-      await dialog.locator('#scheduled_time').fill('20:00');
+      await fillSimpleMedTimes(dialog, '2026-09-01', '20:00');
 
       await expect(dialog.locator('#scheduled_date')).toHaveValue('2026-09-01');
       await expect(dialog.locator('#scheduled_time')).toHaveValue('20:00');
@@ -145,8 +152,7 @@ test.describe('viewer in the recipient’s own zone', () => {
     // Both halves of the conversion's input are filled — the line needs a date
     // AND a time, so filling only the time would make the absence vacuous.
     await dialog.locator('#medication_name').fill('TZ e2e probe');
-    await dialog.locator('#scheduled_date').fill('2026-09-01');
-    await dialog.locator('#scheduled_time').fill('20:00');
+    await fillSimpleMedTimes(dialog, '2026-09-01', '20:00');
 
     // Positive: the form really rendered and holds the time being checked.
     await expect(dialog.locator('#scheduled_date')).toHaveValue('2026-09-01');

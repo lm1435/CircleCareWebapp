@@ -75,12 +75,12 @@ test('la tarjeta y la vista por fecha en español', async ({ page, circleId }, t
   await checkA11y(page, `/circles/${circleId}/daily-update/<ayer> (es)`, testInfo);
 });
 
-test('acceso rápido: "Resúmenes del día"', async ({ page, circleId }) => {
+test('el feed de actividad: "Resúmenes del día"', async ({ page, circleId }) => {
   const at = mostRecentWallTime('12:00', TZ);
   await mockDailyUpdate(page, TZ, localDateOf(at, TZ));
   await page.clock.install({ time: at });
-  await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('link', { name: 'Resúmenes del día' })).toBeVisible({
+  await page.goto(`/circles/${circleId}/activity`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('activity-daily-updates-link')).toContainText('Resúmenes del día', {
     timeout: NAV_TIMEOUT,
   });
 });

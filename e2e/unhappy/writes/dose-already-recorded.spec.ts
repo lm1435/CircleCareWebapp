@@ -1,25 +1,27 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect, uniqueLabel } from '../../fixtures';
 import { sqlExec } from '../../db';
-import { ACCOUNT_PASSWORD } from '../../isolation';
-import { apiSession, dbQuery, sqlStr } from '../../unhappy';
+import { dbQuery, sqlStr } from '../../unhappy';
+import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../auth-invites/_helpers';
 import { dateInZone, escapeRe, purgeEventsTitled, recipientTimezone } from './_helpers';
 
 // PK1 (decided 2026-09-29) — TWO CAREGIVERS, ONE DOSE, TWO BROWSERS.
 //
 // "I wouldn't overwrite. Just warn I guess user xyz already marked it?"
 //
-// Caregiver A (the circle's owner) and caregiver B (the freeMember persona)
-// both have Home open on the same dose. A marks it Taken in HER browser. B's
-// page is STALE — it drew the dose before A answered and still offers
-// Take/Skip — and B presses Skip. The real backend refuses to overwrite A
-// (409 DOSE_ALREADY_RECORDED); B must see "Already marked taken by <A> at
+// Caregiver A (the circle's owner) and caregiver B (a member) both have Today
+// open on the same dose. A SKIPS it (through her own real session). B's page is STALE -
+// it drew the dose before A answered and still offers Taken - and B presses it.
+// (Today's Next up has one action per row, so there is no Skip there; the
+// conflict is the same one.) Run in a fresh circle of its own: Next up shows
+// only the first 3 rows, and a cloned demo circle has more than that due. The real backend refuses to overwrite A
+// (409 DOSE_ALREADY_RECORDED); B must see "Already skipped by <A> at
 // <time>." as a calm status toast (never an error), B's row must refetch to
-// A's answer, and the DB row must still be A's Taken.
+// A's answer, and the DB row must still be A's Skipped.
 //
 // NOTHING IS INJECTED: two real sessions, the real backend, the real DB.
 
-test.use({ persona: 'freeMember' });
+test.use({ storageState: { cookies: [], origins: [] } });
 // Two browsers, two 5 s undo windows, two Home paints: well past the default budget
 // on a loaded machine.
 test.setTimeout(120_000);
@@ -37,32 +39,27 @@ function pastTimeInZone(tz: string, minutes: number): string | null {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/** Wait for the dose's row on Home's Today's medications, expanding the card if it is past the limit. */
+/** Wait for the dose's row in Today's Next up. */
 async function revealDose(page: import('@playwright/test').Page, title: string) {
-  const card = page.getByRole('region', { name: "Today's medications" });
-  const skip = card.getByRole('button', { name: `Skip ${title}` });
-  // Two lists can each carry a "Show all" (Needs attention, then today's).
-  const showAll = card.getByRole('button', { name: /^Show all/ });
-  await expect(skip.or(showAll.first()).first()).toBeVisible({ timeout: 20_000 });
-  while (!(await skip.isVisible()) && (await showAll.count()) > 0) {
-    await showAll.last().click();
-  }
-  await expect(skip).toBeVisible({ timeout: 10_000 });
+  const card = page.getByRole('region', { name: 'Next up' });
+  await expect(card.getByRole('button', { name: `Taken, ${title}` })).toBeVisible({ timeout: 20_000 });
 }
 
-test('A marks Taken in her browser; B\'s stale page presses Skip → calm "already marked taken by A", DB keeps A\'s answer', async ({
+test('A skips the dose; B\'s stale page presses Taken → calm "already skipped by A", DB keeps A\'s answer', async ({
   page,
-  browser,
+  context,
   request,
-  account,
-  circleId,
-  personaHandle,
   baseURL,
 }) => {
-  const origin = new URL(baseURL ?? 'http://localhost:5173').origin;
-  const ownerLogin = { email: personaHandle.ownerEmail, password: ACCOUNT_PASSWORD };
-  const apiB = await apiSession(request, account);
-  const tz = await recipientTimezone(apiB, circleId);
+  const a = await createScopedAccount('dar-a');
+  const b = await createScopedAccount('dar-b');
+  sqlExec(`update users set timezone = 'America/Denver', first_name = 'Ana' where id = ${sqlStr(a.userId)}::uuid;`);
+  const apiA = await ownerApi(request, a);
+  const circleId = await createCircle(apiA, uniq('dar'));
+  sqlExec(`insert into circle_memberships (circle_id, user_id, role, is_care_recipient, joined_at, view_only)
+           values (${sqlStr(circleId)}::uuid, ${sqlStr(b.userId)}::uuid, 'member', false, now(), false);`);
+  const personaHandle = { ownerEmail: a.email, ownerUserId: a.userId };
+  const tz = await recipientTimezone(apiA, circleId);
   const time = pastTimeInZone(tz, 30);
   test.skip(time === null, 'within 30 minutes of midnight in the recipient zone — no past dose today');
 
@@ -84,55 +81,47 @@ test('A marks Taken in her browser; B\'s stale page presses Skip → calm "alrea
       `select first_name from users where email = ${sqlStr(personaHandle.ownerEmail)}`
     )[0]?.first_name?.trim() || null;
 
-  const ctxA = await browser.newContext({ baseURL: origin });
   try {
     // ── B's page draws the dose FIRST (it will be stale). ──────────────────
+    await cookieLogin(context, b, baseURL);
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
     await revealDose(page, title);
-    const skipB = page.getByRole('button', { name: `Skip ${title}` });
+    const takenB = page.getByRole('button', { name: `Taken, ${title}` });
 
-    // ── A answers Taken in HER OWN browser. ────────────────────────────────
-    const login = await ctxA.request.post('/api/auth/login', {
-      headers: { 'X-Session-Mode': 'cookie', Origin: origin },
-      data: ownerLogin,
+    // ── A SKIPS the dose (Next up has no Skip button, so through her own real session). ──
+    // B's stale page still offers Taken; a Taken over A's different answer is the conflict.
+    const skipA = await apiA.post(`/api/circles/${circleId}/medications/confirm`, {
+      event_id: med.id,
+      status: 'skipped',
+      scheduled_time: `${time}:00`,
     });
-    expect(login.status(), await login.text()).toBe(200);
-    const pageA = await ctxA.newPage();
-    await pageA.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    await revealDose(pageA, title);
-    const takeA = pageA.getByRole('button', { name: `Confirm ${title}` });
-    const answeredA = pageA.waitForResponse((r) => r.request().method() === 'POST' && CONFIRM.test(new URL(r.url()).pathname), {
-      timeout: 40_000,
-    });
-    await takeA.click();
-    expect((await answeredA).status(), "A's Taken (after her 5 s undo window)").toBe(201);
+    expect(skipA.status(), await skipA.text()).toBe(201);
 
     const rowAfterA = dbQuery<{ confirmed_by: string; status: string; confirmed_at: string }>(
       `select confirmed_by::text, status, confirmed_at::text from medication_confirmations where event_id = ${sqlStr(med.id)}::uuid`
     );
     expect(rowAfterA).toHaveLength(1);
     expect(rowAfterA[0].confirmed_by).toBe(personaHandle.ownerUserId);
-    expect(rowAfterA[0].status).toMatch(/^taken/);
+    expect(rowAfterA[0].status).toBe('skipped');
 
-    // ── B's STALE page still offers Skip. B presses it. ────────────────────
-    await expect(skipB).toBeVisible();
+    // ── B's STALE page still offers Taken. B presses it. ────────────────────
+    await expect(takenB).toBeVisible();
     const answeredB = page.waitForResponse((r) => r.request().method() === 'POST' && CONFIRM.test(new URL(r.url()).pathname), {
       timeout: 40_000,
     });
-    await skipB.click();
+    await takenB.click();
     const resB = await answeredB;
-    expect(resB.status(), "B's Skip is refused, not written").toBe(409);
+    expect(resB.status(), "B's Taken is refused, not written").toBe(409);
     expect(((await resB.json()) as { error: { code: string } }).error.code).toBe('DOSE_ALREADY_RECORDED');
 
     // The calm who-and-when message, as a STATUS toast — never an alert.
     const who = ownerName ? escapeRe(ownerName) : 'another caregiver';
-    const message = new RegExp(`Already marked taken by ${who} at \\d{1,2}:\\d{2}( [AP]M)?\\.`);
+    const message = new RegExp(`Already skipped by ${who} at \\d{1,2}:\\d{2}( [AP]M)?\\.`);
     await expect(page.getByRole('status').filter({ hasText: message })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('alert').filter({ hasText: /couldn|fail/i })).toHaveCount(0);
 
-    // B's row refetched to A's answer: no Skip/Take left for this dose.
-    await expect(page.getByRole('button', { name: `Skip ${title}` })).toHaveCount(0, { timeout: 10_000 });
-    await expect(page.getByRole('button', { name: `Confirm ${title}` })).toHaveCount(0);
+    // B's row refetched to A's answer: no Taken left for this dose.
+    await expect(page.getByRole('button', { name: `Taken, ${title}` })).toHaveCount(0, { timeout: 10_000 });
 
     // The DB is byte-identical to A's answer.
     const rowAfterB = dbQuery<{ confirmed_by: string; status: string; confirmed_at: string }>(
@@ -140,7 +129,6 @@ test('A marks Taken in her browser; B\'s stale page presses Skip → calm "alrea
     );
     expect(rowAfterB).toEqual(rowAfterA);
   } finally {
-    await ctxA.close().catch(() => undefined);
     purgeEventsTitled(circleId, title);
   }
 });

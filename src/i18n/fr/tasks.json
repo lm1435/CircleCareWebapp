@@ -39,12 +39,12 @@
   },
   "empty": {
     "open": "Aucune tâche ouverte",
-    "openHint": "Coordonnez les tâches qui font avancer les soins de votre proche : courses, renouvellements, suivis, partagés avec tous ceux qui aident.",
+    "openHint": "Des tâches partagées, comme les courses, les renouvellements et les suivis.",
     "openHintReadOnly": "Les tâches ajoutées par l’équipe d’aidants apparaîtront ici.",
     "completed": "Aucune tâche terminée pour l’instant",
-    "completedHint": "Les tâches terminées par le cercle apparaîtront ici pour que chacun voie ce qui a été fait.",
+    "completedHint": "Les tâches terminées apparaîtront ici.",
     "all": "Aucune tâche pour l’instant",
-    "allHint": "Coordonnez les tâches qui font avancer les soins de votre proche : courses, renouvellements, suivis, partagés avec tous ceux qui aident.",
+    "allHint": "Des tâches partagées, comme les courses, les renouvellements et les suivis.",
     "cta": "Ajouter une tâche"
   },
   "errorTitle": "Impossible de charger les tâches",

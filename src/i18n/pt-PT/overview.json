@@ -1,7 +1,4 @@
 {
-  "quickAccess": {
-    "activityFeed": "Registo de atividades"
-  },
   "tasks": {
     "emptyFirstRun": "Coordene as tarefas que mantêm o cuidado em dia (compras, reposições, retornos) e partilhe com todos os que ajudam."
   },
@@ -19,5 +16,35 @@
   "settings": {
     "title": "Gerir",
     "deleteCircle": "Eliminar círculo"
+  },
+  "today": {
+    "nextUp": {
+      "emptySelf": "Nada mais agendado para si hoje."
+    },
+    "nextStep": {
+      "first_med": {
+        "titleSelf": "Adicione o seu primeiro medicamento",
+        "body": "Todos os que ajudam veem aqui, com um lembrete à hora certa.",
+        "bodySelf": "Vai vê-lo aqui, com um lembrete à hora certa."
+      },
+      "invite": {
+        "bodySelf": "Família, um amigo ou um cuidador contratado. Eles veem os seus medicamentos e recebem um aviso se uma dose não for marcada como tomada."
+      }
+    },
+    "shiftsNudge": {
+      "title": "Dividam o cuidado com turnos",
+      "body": "Dividam as noites e os fins de semana para que todos saibam quem está de turno.",
+      "cta": "Configurar turnos"
+    },
+    "doseHint": {
+      "body": "Toque em <b>Tomado</b> quando {{name}} tomar. Todos os que ajudam veem de imediato, por isso ninguém dá uma segunda dose.",
+      "bodySelf": "Toque em <b>Tomado</b> quando tomar. Todos os que ajudam veem de imediato, por isso ninguém dá uma segunda dose."
+    },
+    "markIt": {
+      "takenByYou": "Tomado por si"
+    }
+  },
+  "quickAccess": {
+    "shifts": "Turnos"
   }
 }

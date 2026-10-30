@@ -21,7 +21,12 @@ import {
 import type { Circle } from '@/api/circles';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { isPermissionDeniedError, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import {
+  failureContext,
+  isPermissionDeniedError,
+  isSubscriptionRequiredError,
+  type FailureAction,
+} from '@/lib/apiErrors';
 import { useToast } from '@/components/ui';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
 import { Analytics } from '@/lib/analytics';
@@ -95,7 +100,10 @@ function invalidateCircleQueries(
 }
 
 /** Shared onError for member mutations (these are owner-gated → mostly 403). */
-function useMemberMutationOnError(circleId: string): (error: unknown) => void {
+function useMemberMutationOnError(
+  circleId: string,
+  action: FailureAction
+): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // Seat cap on the member write path — CAPACITY, same as invites. The cap is
@@ -104,6 +112,8 @@ function useMemberMutationOnError(circleId: string): (error: unknown) => void {
   const { t } = useTranslation('members');
 
   return (error: unknown) => {
+    // `error_occurred` for the admin digest: enums only, no circle_id.
+    Analytics.errorOccurred('members', `members_${action}_failed`, failureContext('members', action, error));
     const code = (error as { error?: { code?: string } } | null)?.error?.code;
     if (isSubscriptionRequiredError(error)) {
       promptUpgrade();
@@ -132,7 +142,7 @@ export function useRemoveMember(
   circleId: string
 ): UseMutationResult<void, unknown, RemoveMemberVariables> {
   const queryClient = useQueryClient();
-  const onError = useMemberMutationOnError(circleId);
+  const onError = useMemberMutationOnError(circleId, 'delete');
 
   return useMutation({
     mutationFn: ({ userId }: RemoveMemberVariables) => removeMember(circleId, userId),
@@ -148,7 +158,7 @@ export function useRemoveMember(
 /** POST /circles/:circleId/leave — current member voluntarily leaves. */
 export function useLeaveCircle(circleId: string): UseMutationResult<void, unknown, void> {
   const queryClient = useQueryClient();
-  const onError = useMemberMutationOnError(circleId);
+  const onError = useMemberMutationOnError(circleId, 'delete');
 
   return useMutation({
     mutationFn: () => leaveCircle(circleId),
@@ -179,7 +189,7 @@ export function useSetMedicationResponsible(
   circleId: string
 ): UseMutationResult<void, unknown, string | null> {
   const queryClient = useQueryClient();
-  const onError = useMemberMutationOnError(circleId);
+  const onError = useMemberMutationOnError(circleId, 'update');
 
   return useMutation({
     mutationFn: (userId: string | null) => setMedicationResponsible(circleId, userId),
@@ -234,6 +244,7 @@ export function useSetMemberRole(
       invalidateCircleQueries(queryClient, circleId);
     },
     onError: (error: unknown) => {
+      Analytics.errorOccurred('members', 'members_update_failed', failureContext('members', 'update', error));
       const code = (error as { error?: { code?: string } } | null)?.error?.code;
       if (isSubscriptionRequiredError(error)) {
         promptUpgrade();

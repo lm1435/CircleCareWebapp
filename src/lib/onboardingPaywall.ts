@@ -52,8 +52,21 @@ import { scopedKey } from './storageScope';
 /** localStorage — "this browser has shown this user the onboarding paywall". */
 export const ONBOARDING_PAYWALL_SEEN_KEY = 'cc:onboardingPaywallSeen';
 
-/** sessionStorage — the first-run wizard deferred behind the paywall. */
+/**
+ * sessionStorage — WHERE TO LAND when the paywall is left. Onboarding 1.3.1 moved the paywall
+ * AFTER the first med (or to the next Today), so this no longer parks the wizard: it records
+ * the circle whose Today every onboarding paywall exit lands on. (The name is historical.)
+ */
 export const PENDING_FIRST_RUN_KEY = 'cc:pendingFirstRun';
+
+/**
+ * localStorage — "the onboarding paywall is OWED to this user" (onboarding 1.3.1, spec
+ * section 7). Written at circle creation when the old condition holds (first circle, free
+ * tier, not yet seen); consumed, together with writing the seen flag, at the moment the
+ * paywall is actually put on screen. localStorage (not session) so closing the tab between
+ * creating the circle and the next Today still owes the ask exactly once.
+ */
+export const ONBOARDING_PAYWALL_PENDING_KEY = 'cc:onboardingPaywallPending';
 
 /**
  * The wizard hand-off, held across a full route change.
@@ -131,7 +144,50 @@ export function shouldShowOnboardingPaywall(input: {
   return !hasSeenOnboardingPaywall();
 }
 
-/** Park the first-run wizard for the duration of the paywall route. */
+/** The circle the onboarding paywall is owed for (bare id; never a name). */
+export function markOnboardingPaywallPending(circleId: string): void {
+  write('local', scopedKey(ONBOARDING_PAYWALL_PENDING_KEY), JSON.stringify({ circleId }));
+}
+
+/** The owed circle id, or null. Does not consume. */
+export function peekOnboardingPaywallPending(): string | null {
+  const raw = read('local', scopedKey(ONBOARDING_PAYWALL_PENDING_KEY));
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { circleId?: unknown } | null;
+    return parsed && typeof parsed.circleId === 'string' && parsed.circleId !== ''
+      ? parsed.circleId
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearOnboardingPaywallPending(): void {
+  remove('local', scopedKey(ONBOARDING_PAYWALL_PENDING_KEY));
+}
+
+/**
+ * Put the onboarding paywall on screen: EXACTLY ONCE. Seen flag written FIRST (an abandoned
+ * tab still counts as asked), the owed record cleared, the return target parked, then the
+ * route. Returns false (and does nothing) when it was already seen, which is what makes the
+ * two entry points (after the first med's payoff; the next Today) safe to race.
+ */
+export function consumeOnboardingPaywall(input: {
+  circleId: string;
+  recipientName: string;
+}): boolean {
+  if (hasSeenOnboardingPaywall()) {
+    clearOnboardingPaywallPending();
+    return false;
+  }
+  markOnboardingPaywallSeen();
+  clearOnboardingPaywallPending();
+  deferFirstRun({ circleId: input.circleId, recipientName: input.recipientName });
+  return true;
+}
+
+/** Park the paywall's return target (the circle whose Today every exit lands on). */
 export function deferFirstRun(record: DeferredFirstRun): void {
   write('session', scopedKey(PENDING_FIRST_RUN_KEY), JSON.stringify(record));
 }

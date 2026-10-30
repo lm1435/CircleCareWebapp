@@ -52,6 +52,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Todos os dias",
     "A cada 2 dias",
   ],
+  "pt common:inbox.circleUnreadA11y": [
+    "Notificações de Ana, 0 nova",
+    "Notificações de Ana, 1 nova",
+    "Notificações de Ana, 2 novas",
+  ],
+  "pt common:inbox.countNew": [
+    "0 nova",
+    "1 nova",
+    "2 novas",
+  ],
+  "pt common:inbox.scopedSubtitle": [
+    "Ana · 0 nova",
+    "Ana · 1 nova",
+    "Ana · 2 novas",
+  ],
   "pt dailyUpdate:asNeeded.given": [
     "0 dose se necessário dada",
     "1 dose se necessário dada",
@@ -167,6 +182,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Dias restantes: 1",
     "2 dias restantes",
   ],
+  "pt meds:page.zoneAhead": [
+    "Os horários são os de Ana · {{hours}} h a mais que você",
+    "Os horários são os de Ana · {{hours}} h a mais que você",
+    "Os horários são os de Ana · {{hours}} h a mais que você",
+  ],
+  "pt meds:page.zoneBehind": [
+    "Os horários são os de Ana · {{hours}} h a menos que você",
+    "Os horários são os de Ana · {{hours}} h a menos que você",
+    "Os horários são os de Ana · {{hours}} h a menos que você",
+  ],
   "pt members:manage.inviteExpiresIn": [
     "Dias para expirar: 0",
     "Dias para expirar: 1",
@@ -222,20 +247,35 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Difícil: 1",
     "Difícil: 2",
   ],
-  "pt overview:hero.andMore": [
-    "Mais 0",
-    "Mais 1",
-    "+2 mais",
+  "pt overview:quickAccess.medsRefill": [
+    "nenhuma reposição em breve",
+    "1 reposição em breve",
+    "2 reposições em breve",
   ],
   "pt overview:quickAccess.tasksNote": [
-    "Em aberto: 0",
-    "Em aberto: 1",
+    "0 em aberto",
+    "1 em aberto",
     "2 em aberto",
   ],
   "pt overview:team.count": [
     "Membros: 0",
     "Membros: 1",
     "2 membros",
+  ],
+  "pt overview:today.nextUp.allOfToday": [
+    "Tudo de hoje · itens: 0",
+    "Tudo de hoje · itens: 1",
+    "Tudo de hoje · itens: 2",
+  ],
+  "pt overview:today.nextUp.daysOverdue": [
+    "0 dias de atraso",
+    "1 dia de atraso",
+    "2 dias de atraso",
+  ],
+  "pt overview:today.nextUp.lateHours": [
+    "0 horas de atraso",
+    "1 hora de atraso",
+    "2 horas de atraso",
   ],
   "pt profile:timezoneImpact.impactMessage": [
     "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
@@ -341,6 +381,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Todos os dias",
     "Todos os dias",
     "A cada 2 dias",
+  ],
+  "pt-PT common:inbox.circleUnreadA11y": [
+    "Notificações de Ana, 0 nova",
+    "Notificações de Ana, 1 nova",
+    "Notificações de Ana, 2 novas",
+  ],
+  "pt-PT common:inbox.countNew": [
+    "0 nova",
+    "1 nova",
+    "2 novas",
+  ],
+  "pt-PT common:inbox.scopedSubtitle": [
+    "Ana · 0 nova",
+    "Ana · 1 nova",
+    "Ana · 2 novas",
   ],
   "pt-PT dailyUpdate:asNeeded.given": [
     "0 dose se necessário dada",
@@ -457,6 +512,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Dias restantes: 1",
     "2 dias restantes",
   ],
+  "pt-PT meds:page.zoneAhead": [
+    "Os horários são os de Ana · {{hours}} h à frente da sua hora",
+    "Os horários são os de Ana · {{hours}} h à frente da sua hora",
+    "Os horários são os de Ana · {{hours}} h à frente da sua hora",
+  ],
+  "pt-PT meds:page.zoneBehind": [
+    "Os horários são os de Ana · {{hours}} h atrás da sua hora",
+    "Os horários são os de Ana · {{hours}} h atrás da sua hora",
+    "Os horários são os de Ana · {{hours}} h atrás da sua hora",
+  ],
   "pt-PT members:manage.inviteExpiresIn": [
     "Dias para expirar: 0",
     "Dias para expirar: 1",
@@ -512,20 +577,35 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Difícil: 1",
     "Difícil: 2",
   ],
-  "pt-PT overview:hero.andMore": [
-    "Mais 0",
-    "Mais 1",
-    "+2 mais",
+  "pt-PT overview:quickAccess.medsRefill": [
+    "nenhuma reposição em breve",
+    "1 reposição em breve",
+    "2 reposições em breve",
   ],
   "pt-PT overview:quickAccess.tasksNote": [
-    "Em aberto: 0",
-    "Em aberto: 1",
+    "0 em aberto",
+    "1 em aberto",
     "2 em aberto",
   ],
   "pt-PT overview:team.count": [
     "Membros: 0",
     "Membros: 1",
     "2 membros",
+  ],
+  "pt-PT overview:today.nextUp.allOfToday": [
+    "Tudo de hoje · itens: 0",
+    "Tudo de hoje · itens: 1",
+    "Tudo de hoje · itens: 2",
+  ],
+  "pt-PT overview:today.nextUp.daysOverdue": [
+    "0 dias de atraso",
+    "1 dia de atraso",
+    "2 dias de atraso",
+  ],
+  "pt-PT overview:today.nextUp.lateHours": [
+    "0 horas de atraso",
+    "1 hora de atraso",
+    "2 horas de atraso",
   ],
   "pt-PT profile:timezoneImpact.impactMessage": [
     "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",

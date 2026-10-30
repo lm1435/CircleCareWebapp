@@ -137,10 +137,15 @@ export function ShiftCard({
       {content}
     </Card>
   ) : (
+    // The moss-soft wash means "YOURS", as on mobile (cardMine vs cardFilled):
+    // someone else's shift is a cream card with a moss hairline. Washing every
+    // covered card drowned the week in green (owner 2026-10-25).
     <li
       data-testid="shift-card"
       data-shift-state="filled"
-      className={`${common} border border-moss-line bg-moss-soft`}
+      className={`${common} border ${
+        assignee?.isYou ? 'border-moss bg-moss-soft' : 'border-moss-line bg-cream'
+      }`}
     >
       {content}
     </li>

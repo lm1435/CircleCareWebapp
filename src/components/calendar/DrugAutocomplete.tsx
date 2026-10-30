@@ -11,6 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, TextField } from '@/components/ui';
+import { Analytics } from '@/lib/analytics';
 import { DRUG_SEARCH_MIN_CHARS, searchDrugs, type DrugSearchResult } from '@/api/drugs';
 
 /** Mobile `DrugAutocomplete` waits 300ms after the last keystroke; same here. */
@@ -83,6 +84,12 @@ export interface DrugAutocompleteProps {
   autoFocus?: boolean;
   maxLength?: number;
   disabled?: boolean;
+  /**
+   * Onboarding 1.3.1: the user chose the last row, "Use "x" as typed". The name is kept
+   * exactly as typed with NO RxNorm id (`selectedDrug` stays null), so an unknown drug
+   * never blocks. Optional: a host that does not care about the outcome can omit it.
+   */
+  onUseAsTyped?: () => void;
 }
 
 /**
@@ -113,12 +120,16 @@ export function DrugAutocomplete({
   autoFocus,
   maxLength,
   disabled,
+  onUseAsTyped,
 }: DrugAutocompleteProps): ReactElement {
   const { t } = useTranslation('calendar');
   const listboxId = useId();
   const [suggestions, setSuggestions] = useState<DrugSearchResult[]>([]);
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
+  // The search has ANSWERED for the current text (even with no rows): the "as typed" row
+  // can then stand alone, so an unknown drug always has a way forward.
+  const [answered, setAnswered] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -147,7 +158,9 @@ export function DrugAutocomplete({
   // `region` failed on a body-level list). `document.body` is only the
   // fallback for a host that is not in a dialog. The price is repositioning,
   // since a fixed box does not follow a scrolling ancestor.
-  const listVisible = open && suggestions.length > 0;
+  const listVisible = open && (suggestions.length > 0 || answered);
+  // Options = the suggestions, then the "as typed" row.
+  const optionCount = suggestions.length + 1;
   useLayoutEffect(() => {
     if (!listVisible) {
       setPlacement(null);
@@ -177,6 +190,7 @@ export function DrugAutocomplete({
   useEffect(() => {
     if (!userTypedRef.current || selectedDrug) return;
     cancelPending();
+    setAnswered(false);
     if (value.trim().length < DRUG_SEARCH_MIN_CHARS) {
       setSuggestions([]);
       setOpen(false);
@@ -193,14 +207,16 @@ export function DrugAutocomplete({
           if (seq !== requestSeq.current) return;
           setSuggestions(results);
           setActiveIndex(-1);
+          setAnswered(true);
           // Kept either way, so focusing the field again shows them.
-          setOpen(results.length > 0 && focusedRef.current);
+          setOpen(focusedRef.current);
         })
         .catch(() => {
           // Aborted, offline, or rate limited: the field still works as a
           // plain text input, which is all a failed lookup should cost.
           if (seq !== requestSeq.current) return;
           setSuggestions([]);
+          setAnswered(false);
           setOpen(false);
         })
         .finally(() => {
@@ -223,6 +239,18 @@ export function DrugAutocomplete({
     setSearching(false);
   };
 
+  const pickAsTyped = (): void => {
+    Analytics.drugSuggestionUseAsTyped(suggestions.length > 0, value.trim().length);
+    cancelPending();
+    userTypedRef.current = false;
+    setSuggestions([]);
+    setOpen(false);
+    setActiveIndex(-1);
+    setSearching(false);
+    setAnswered(false);
+    onUseAsTyped?.();
+  };
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>): void => {
     userTypedRef.current = true;
     onChange(event.target.value);
@@ -237,14 +265,15 @@ export function DrugAutocomplete({
     setSuggestions([]);
     setOpen(false);
     setSearching(false);
+    setAnswered(false);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
-    if (!open || suggestions.length === 0) {
+    if (!open || !listVisible) {
       // Closed (Escape, or picked and edited back): Down / Alt+Down reopens
       // the suggestions already fetched for this text. Anything else —
       // Escape included — is left to the field and the dialog.
-      if (event.key === 'ArrowDown' && suggestions.length > 0 && !selectedDrug) {
+      if (event.key === 'ArrowDown' && (suggestions.length > 0 || answered) && !selectedDrug) {
         event.preventDefault();
         setOpen(true);
         if (!event.altKey) setActiveIndex(0);
@@ -254,24 +283,25 @@ export function DrugAutocomplete({
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
-        setActiveIndex((index) => (index + 1) % suggestions.length);
+        setActiveIndex((index) => (index + 1) % optionCount);
         break;
       case 'ArrowUp':
         event.preventDefault();
-        setActiveIndex((index) => (index <= 0 ? suggestions.length - 1 : index - 1));
+        setActiveIndex((index) => (index <= 0 ? optionCount - 1 : index - 1));
         break;
       case 'Home':
       case 'End':
         // Only once an option is highlighted: before that the caret owns them.
         if (activeIndex >= 0) {
           event.preventDefault();
-          setActiveIndex(event.key === 'Home' ? 0 : suggestions.length - 1);
+          setActiveIndex(event.key === 'Home' ? 0 : optionCount - 1);
         }
         break;
       case 'Enter':
         if (activeIndex >= 0) {
           event.preventDefault();
-          pick(suggestions[activeIndex]);
+          if (activeIndex < suggestions.length) pick(suggestions[activeIndex]);
+          else pickAsTyped();
         }
         break;
       case 'Escape':
@@ -314,7 +344,7 @@ export function DrugAutocomplete({
         onKeyDown={handleKeyDown}
         onFocus={() => {
           focusedRef.current = true;
-          if (suggestions.length > 0 && !selectedDrug) setOpen(true);
+          if ((suggestions.length > 0 || answered) && !selectedDrug) setOpen(true);
         }}
         onBlur={() => {
           focusedRef.current = false;
@@ -378,6 +408,25 @@ export function DrugAutocomplete({
               </li>
             );
           })}
+          <li
+            id={`${listboxId}-${suggestions.length}`}
+            role="option"
+            aria-selected={activeIndex === suggestions.length}
+            data-testid="drug-use-as-typed"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              pickAsTyped();
+            }}
+            onMouseEnter={() => setActiveIndex(suggestions.length)}
+            className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-md text-ink ${
+              activeIndex === suggestions.length ? 'bg-bg-2' : ''
+            } ${suggestions.length > 0 ? 'mt-1 border-t border-line-2' : ''}`}
+          >
+            <span className="min-w-0 flex-1 truncate">
+              {t('addEvent.drugSearch.useAsTyped', { name: value.trim() })}
+            </span>
+            <Icon name="chevron-forward" size="inline" className="shrink-0 text-ink-3" />
+          </li>
         </ul>,
         portalTarget
         )}

@@ -98,8 +98,10 @@
       "repeat": "Ripeti"
     },
     "choose": {
-      "primary": "Aggiungi il primo farmaco",
-      "primarySelf": "Aggiungi il tuo primo farmaco"
+      "primary": "Aggiungi il primo farmaco di {{name}}",
+      "primarySelf": "Aggiungi il tuo primo farmaco",
+      "promise": "Circa un minuto. Tutti quelli che aiutano lo vedono, con un promemoria all’ora giusta.",
+      "promiseSelf": "Circa un minuto. Lo vedrai qui, con un promemoria all’ora giusta."
     },
     "inviteNext": {
       "notNow": "Non ora"
@@ -128,16 +130,19 @@
     "ready": {
       "title": "La cerchia di {{name}} è pronta.",
       "titleSelf": "La tua cerchia è pronta.",
-      "lede": "Aggiungi il primo farmaco di {{name}}. È il promemoria che tutta la cerchia condividerà.",
+      "lede": "Parti da ciò che controllerai più spesso.",
       "ledeSelf": "Aggiungi il tuo primo farmaco. È il promemoria che tutta la tua cerchia condividerà.",
       "toggleShow": "Nessun farmaco da seguire? Vedi altro",
       "toggleHide": "Nascondi",
-      "appointmentTitle": "Aggiungi un appuntamento",
+      "appointmentTitle": "Un appuntamento",
       "appointmentHelper": "Le visite mediche in un unico calendario che la famiglia vede.",
-      "inviteTitle": "Invita qualcuno ad aiutare",
+      "inviteTitle": "Qualcuno che aiuti",
       "inviteHelper": "Dividete il carico, così non pesa tutto su di te.",
-      "emergencyTitle": "Aggiungi info di emergenza",
-      "emergencyHelper": "Allergie e medici, a portata di mano quando serve."
+      "emergencyTitle": "Informazioni di emergenza",
+      "emergencyHelper": "Allergie e medici, a portata di mano quando serve.",
+      "eyebrow": "CERCHIA DI {{name}}",
+      "eyebrowSelf": "LA TUA CERCHIA",
+      "orStartWith": "OPPURE PARTI DA"
     },
     "whatLede": "Basta il nome. I dettagli possono aspettare.",
     "addDosage": "+ Aggiungi dosaggio",
@@ -158,7 +163,17 @@
       "lineSelf": "Quando tocchi Presa, lo vedono anche le persone che inviti.",
       "inviteHeading": "Chi è di solito accanto a {{name}}?",
       "inviteHeadingSelf": "Chi ti aiuta?",
-      "invite": "Invita qualcuno"
+      "invite": "Invita qualcuno",
+      "eyebrow": "TUTTO PRONTO",
+      "everyDay": "ogni giorno",
+      "startsToday": "inizia oggi",
+      "startsTomorrow": "inizia domani",
+      "startsOn": "inizia il {{date}}"
+    },
+    "markIt": {
+      "question": "Già presa oggi?",
+      "action": "Segna come presa",
+      "done": "Segnata come presa."
     }
   },
   "accessLost": {

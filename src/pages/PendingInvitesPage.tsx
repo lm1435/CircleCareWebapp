@@ -65,7 +65,12 @@ export default function PendingInvitesPage(): ReactElement {
           // PendingInvitesScreen (navigates straight into the circle) and with
           // the invite link / join-by-code paths. The response names the circle
           // joined; the listed invite is the fallback for `circle: null`.
-          openJoinedCircle(result.circle ?? invite.circle);
+          openJoinedCircle(result.circle ?? invite.circle, {
+            inviterName: invite.invited_by.first_name,
+            recipientName: invite.circle.recipient_name,
+            viewOnly: result.view_only,
+            memberType: invite.member_type,
+          });
         },
         onError: () => {
           // The hook's shared onError already toasts the failure.

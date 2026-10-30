@@ -36,49 +36,35 @@ async function stubDrugs(page: Page): Promise<void> {
 interface Copy {
   createBtn: string;
   wizardName: string;
-  addMed: string;
   skip: string;
   nameLabel: RegExp;
-  next: string;
   save: string;
   savedToast: string;
-  whatTitle: (n: string) => RegExp;
+  addMed: (n: string) => string;
+  title: (n: string) => RegExp;
 }
 const COPY: Record<'en' | 'es', Copy> = {
   en: {
     createBtn: 'Create circle',
     wizardName: 'Circle created',
-    addMed: 'Add the first medication',
     skip: 'Skip for now',
     nameLabel: /Medication name/i,
-    next: 'Continue',
     save: 'Add medication',
     savedToast: 'Medication added.',
-    whatTitle: (n) => new RegExp(`What does ${n} take\\?`),
+    addMed: (n) => `Add ${n}'s first med`,
+    title: (n) => new RegExp(`What does ${n} take\\?`),
   },
   es: {
     createBtn: 'Crear círculo',
     wizardName: 'Círculo creado',
-    addMed: 'Agregar el primer medicamento',
     skip: 'Omitir por ahora',
     nameLabel: /Nombre del medicamento/i,
-    next: 'Continuar',
     save: 'Agregar medicamento',
     savedToast: 'Medicamento agregado.',
-    whatTitle: (n) => new RegExp(`¿Qué toma ${n}\\?`),
+    addMed: (n) => `Agrega el primer medicamento de ${n}`,
+    title: (n) => new RegExp(`¿Qué toma ${n}\\?`),
   },
 };
-
-/**
- * The default 08:00 preset may already be past in the recipient's zone, in which
- * case Save first raises a notice. Wait for whichever comes first (the notice or
- * the saved toast) and accept the notice when it is the one that appeared.
- */
-async function acceptPastTimeNotice(page: Page, title: string, cont: string, toast: string): Promise<void> {
-  const notice = page.getByRole('dialog', { name: title });
-  await notice.or(page.getByText(toast).first()).first().waitFor({ timeout: 20_000 });
-  if (await notice.isVisible()) await notice.getByRole('button', { name: cont }).click();
-}
 
 /** /circles -> Create circle -> name -> submit. Returns the new circle's id once the wizard is up. */
 async function createFirstCircle(page: Page, lang: 'en' | 'es', recipient: string): Promise<string> {
@@ -148,31 +134,29 @@ async function measureLastOption(listbox: Locator): Promise<Geometry> {
 }
 
 async function typeIbu(page: Page): Promise<Locator> {
-  await page.getByRole('button', { name: COPY.en.addMed }).click();
+  await page.getByTestId('first-run-primary').click();
   const input = page.getByLabel(COPY.en.nameLabel);
   await input.click();
   await input.pressSequentially('Ibu', { delay: 30 });
   const listbox = page.getByRole('listbox');
   await expect(listbox).toBeVisible({ timeout: 10_000 });
-  await expect(listbox.getByRole('option')).toHaveCount(DRUGS.length);
+  await expect(listbox.getByRole('option')).toHaveCount(DRUGS.length + 1);
   return listbox;
 }
 
-test.describe('first-run wizard', () => {
+test.describe('first-run wizard (onboarding 1.3.1: Setup -> the ONE simple form -> payoff)', () => {
   test.setTimeout(90_000);
   let acct: ScopedAccount;
 
   // `page` is requested so its fixture (which logs in the WORKER account) has
   // already run: cookieLogin then replaces that session with the scoped one.
-  // Without it the page fixture logs in AFTER this hook and the test silently
-  // runs as (and mutates the language of) the worker account.
   test.beforeEach(async ({ page: _page, context, baseURL }) => {
     void _page;
     acct = await createScopedAccount('wiz');
     await cookieLogin(context, acct, baseURL);
   });
 
-  test('medication path: pick the 3rd suggestion, finish with defaults, DB holds its name and rxcui', async ({
+  test('medication path: folded form, pick the 3rd suggestion, DB holds its name and rxcui, payoff has no invite question', async ({
     page,
   }) => {
     await stubDrugs(page);
@@ -180,25 +164,26 @@ test.describe('first-run wizard', () => {
     const circleId = await createFirstCircle(page, 'en', recipient);
 
     const listbox = await typeIbu(page);
-    await expect(page.getByText(COPY.en.whatTitle(recipient))).toBeVisible();
+    // The folded form, headed by the first-med eyebrow and the big question.
+    await expect(page.getByText(COPY.en.title(recipient))).toBeVisible();
+    await expect(page.getByText(`${recipient.toUpperCase()}'S FIRST MED`, { exact: true })).toBeVisible();
+    await expect(page.getByText('Just the name, the big word on the bottle. Dose is optional.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Skip for now' })).toBeVisible();
     await listbox.getByRole('option').nth(2).click();
     await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue(DRUGS[2].name);
 
+    const form = page.getByRole('dialog').last();
+    await form.getByRole('radio', { name: /Morning/ }).click();
+    await form.getByRole('button', { name: 'Add medication' }).click();
+
+    // The payoff, in the wizard dialog: ALL SET, the reminder sentence, ONE primary.
     const wizard = page.getByRole('dialog', { name: COPY.en.wizardName });
-    await wizard.getByRole('button', { name: 'Continue' }).click();
-    await wizard.getByRole('button', { name: 'Continue' }).click(); // default schedule, step 3
-    await wizard.getByRole('button', { name: 'Add medication' }).click();
-    // The default 08:00 preset may already be past in the recipient's zone.
-    await acceptPastTimeNotice(page, 'Starts with the next dose', 'Continue', COPY.en.savedToast);
-    await expect(page.getByText('Medication added.').first()).toBeVisible({ timeout: 20_000 });
-    // The save lands on the invite offer (same dialog, one primary action);
-    // "Not now" is what closes the wizard.
-    await expect(wizard.getByRole('heading', { name: /reminder is set\.$/ })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(wizard.getByRole('button', { name: 'Add medication' })).toHaveCount(0);
-    await expect(wizard.getByRole('button', { name: 'Invite someone', exact: true })).toBeVisible();
-    await wizard.getByRole('button', { name: 'Not now', exact: true }).click();
+    await expect(wizard.getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
+    await expect(wizard.getByRole('heading', { name: /reminder is set\.$/ })).toBeVisible();
+    await expect(wizard.getByRole('button', { name: 'Invite someone' })).toHaveCount(0);
+    await expect(wizard.getByText(/who.s usually there/i)).toHaveCount(0);
+    await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    // Premium scoped account: no paywall, straight to Today.
     await expect(wizard).toHaveCount(0, { timeout: 15_000 });
 
     const rows = dbQuery<{ medication_name: string; rxcui: string | null }>(
@@ -209,129 +194,52 @@ test.describe('first-run wizard', () => {
     // Falsification target: expecting DRUGS[0] (option 1) here must fail.
     expect(rows[0]).toEqual({ medication_name: DRUGS[2].name, rxcui: DRUGS[2].rxcui });
 
+    // The payoff wrote the invite snooze: Today does not ask the invite question again.
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('dialog', { name: COPY.en.wizardName })).toHaveCount(0);
+    await page.waitForTimeout(1500);
+    await expect(page.getByTestId('next-step-card')).toHaveCount(0);
   });
 
-  // 1.3.1 "show, don't tell", step 1: the circle is ready, ONE button, the rest
-  // behind a "See what else" toggle.
-  test('ready step: one filled primary, a collapsed toggle, three rows above the primary once opened', async ({
-    page,
-  }) => {
+  test('Setup (1): one filled primary, the promise, OR START WITH rows, Skip for now', async ({ page }) => {
     const recipient = uniq('wizone');
     await createFirstCircle(page, 'en', recipient);
     const wizard = page.getByRole('dialog', { name: COPY.en.wizardName });
 
-    const primary = wizard.getByRole('button', { name: COPY.en.addMed, exact: true });
-    await expect(primary).toBeVisible();
+    await expect(wizard.getByText(`${recipient.toUpperCase()}'S CIRCLE`, { exact: true })).toBeVisible();
     await expect(wizard.getByRole('heading', { name: `${recipient}'s circle is ready.` })).toBeVisible();
+    await expect(wizard.getByText("Start with the thing you'll check most.")).toBeVisible();
+    await expect(wizard.getByTestId('first-run-primary')).toHaveText(COPY.en.addMed(recipient));
     await expect(
-      wizard.getByText(`Add ${recipient}'s first medication. That's the reminder everyone in the circle will share.`)
+      wizard.getByText("About a minute. Everyone helping sees it, with a reminder when it's time.")
     ).toBeVisible();
+    await expect(wizard.getByText('OR START WITH')).toBeVisible();
+    await expect(wizard.getByTestId('first-run-start-with-appointment')).toHaveText('An appointment');
+    await expect(wizard.getByTestId('first-run-start-with-invite')).toHaveText('Someone to help');
+    await expect(wizard.getByTestId('first-run-start-with-emergency')).toHaveText('Emergency info');
     await expect(wizard.getByRole('button', { name: COPY.en.skip, exact: true })).toBeVisible();
     await expect(wizard.getByRole('button', { name: 'Close setup', exact: true })).toBeVisible();
+    // The old see-what-else toggle and the progress rules are gone.
+    await expect(wizard.getByTestId('first-run-more-toggle')).toHaveCount(0);
+    await expect(wizard.getByRole('progressbar')).toHaveCount(0);
 
-    const toggle = wizard.getByTestId('first-run-more-toggle');
-    await expect(toggle).toHaveText('No medications to track? See what else');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(wizard.getByTestId('first-run-start-with-appointment')).toHaveCount(0);
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(toggle).toHaveText('Hide');
-
-    const rows = wizard.locator('#first-run-more-options').getByRole('button');
-    await expect(rows).toHaveCount(3);
-    await expect(wizard.getByTestId('first-run-start-with-appointment')).toContainText('Add an appointment');
-    await expect(wizard.getByTestId('first-run-start-with-invite')).toContainText('Invite someone to help');
-    await expect(wizard.getByTestId('first-run-start-with-emergency')).toContainText('Add emergency info');
-
-    // The primary is the only FILLED control: the rows have no filled
-    // background, and each is at least a 44px target above the primary.
-    // Measure the RESTING layout: the modal panel enters with `modal-in`
-    // (globals.css, scale(0.98) -> 1), and a box read mid-animation is scaled
-    // down (a 44px row read 43.9994px). Wait until every finite animation on
-    // the dialog, its ancestors and its descendants has finished.
-    await expect
-      .poll(
-        () =>
-          wizard.evaluate((el) =>
-            document.getAnimations().filter((a) => {
-              const target = (a.effect as KeyframeEffect | null)?.target ?? null;
-              if (!target || !(target.contains(el) || el.contains(target))) return false;
-              if (a.effect?.getComputedTiming().endTime === Infinity) return false;
-              return a.playState !== 'finished';
-            }).length
-          ),
-        { message: 'the wizard entrance animation has finished' }
-      )
-      .toBe(0);
-    const filled = await primary.evaluate((el) => getComputedStyle(el).backgroundColor);
-    const primaryBox = (await primary.boundingBox())!;
-    for (const row of await rows.all()) {
-      expect(await row.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(filled);
-      const box = (await row.boundingBox())!;
-      expect(box.height).toBeGreaterThanOrEqual(44);
-      // The card sits ABOVE the primary.
-      expect(box.y + box.height).toBeLessThanOrEqual(primaryBox.y + 1);
-    }
-
-    // Same destinations as before: the invite row swaps in the invite form,
-    // and cancelling it returns to the chooser.
-    await rows.nth(1).click();
-    const invite = page.getByRole('dialog', { name: 'Invite a member' });
-    await expect(invite).toBeVisible({ timeout: 10_000 });
-    await invite.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await expect(wizard.getByRole('button', { name: COPY.en.addMed, exact: true })).toBeVisible();
+    // A quiet row hands off in place and Cancel returns to Setup.
+    await wizard.getByTestId('first-run-start-with-appointment').click();
+    await expect(page.getByRole('dialog', { name: /appointment/i }).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByTestId('first-run-primary')).toBeVisible();
   });
 
-  test('name step: lede, dosage behind "+ Add dosage" (focused on reveal), preview of the first time', async ({
-    page,
-  }) => {
-    await stubDrugs(page);
-    const recipient = uniq('wizname');
-    await createFirstCircle(page, 'en', recipient);
-    const wizard = page.getByRole('dialog', { name: COPY.en.wizardName });
-    await wizard.getByRole('button', { name: COPY.en.addMed }).click();
-
-    await expect(wizard.getByText('Just the name is enough. Details can wait.')).toBeVisible();
-    await expect(wizard.getByLabel(/Dosage/i)).toHaveCount(0);
-    await expect(wizard.getByTestId('first-run-next-preview')).toContainText(
-      /^Next\s*Every morning at \d{1,2}:\d{2}( [AP]M)?\. You can change it on the next screen\.$/
-    );
-    await wizard.getByRole('button', { name: '+ Add dosage' }).click();
-    await expect(wizard.getByLabel(/Dosage/i)).toBeFocused();
-    await expect(wizard.getByRole('button', { name: '+ Add dosage' })).toHaveCount(0);
-  });
-
-  // Sections B + C: after the wizard, Home shows ONE nudge card. The checklist
-  // goes first, with only its next step filled; the solo invite card waits
-  // until the checklist is finished or dismissed.
-  test('Home after Skip: the checklist alone, one filled step; dismissing it brings the solo invite card', async ({
-    page,
-  }) => {
-    await createFirstCircle(page, 'en', uniq('wiznudge'));
-    await page.getByRole('dialog', { name: COPY.en.wizardName }).getByRole('button', { name: COPY.en.skip }).click();
-
-    const checklist = page.getByRole('region', { name: 'Get started' });
-    await expect(checklist).toBeVisible({ timeout: 20_000 });
-    await expect(checklist.getByText('0 of 3 done')).toBeVisible();
-    const solo = page.getByRole('heading', { name: 'Care is easier together' });
-    await expect(solo).toHaveCount(0);
-
-    // Exactly one highlighted step — the medication — and it holds the only
-    // filled button; the other two are plain rows that are still buttons.
-    await expect(checklist.locator('[data-next="true"]')).toHaveCount(1);
-    const next = checklist.getByTestId('getting-started-step-event');
-    await expect(next).toHaveAttribute('data-next', 'true');
-    await expect(next.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
-    await expect(checklist.getByRole('button', { name: /Invite family and caregivers/ })).toBeVisible();
-    await expect(checklist.getByRole('button', { name: /Add emergency info/ })).toBeVisible();
-    await expect(checklist.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(0);
-
-    await checklist.getByRole('button', { name: 'Dismiss the get started checklist' }).click();
-    await expect(checklist).toHaveCount(0);
-    await expect(solo).toBeVisible({ timeout: 10_000 });
+  test('closing the first-run form unsaved returns to Today and saves nothing', async ({ page }) => {
+    const circleId = await createFirstCircle(page, 'en', uniq('wizclose'));
+    await page.getByTestId('first-run-primary').click();
+    await expect(page.getByTestId('first-run-form-heading')).toBeVisible();
+    await page.getByTestId('first-run-skip').click();
+    await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
+    expect(
+      dbQuery(`select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid`)
+    ).toHaveLength(0);
   });
 
   test('skip path: the ghost Skip closes the wizard and leaves no events', async ({ page }) => {
@@ -343,24 +251,21 @@ test.describe('first-run wizard', () => {
     ).toHaveLength(0);
   });
 
-  test('Spanish: the wizard speaks Spanish and saves the medication', async ({ page }) => {
-    // Through the profile UI (setProfileLanguage), not a bare PATCH: the SPA
-    // adopts users.language on its own load path, and a PATCH behind its back
-    // leaves the already-cached English strings in place.
+  test('Spanish: Setup and the folded form speak Spanish and save the medication', async ({ page }) => {
     await setProfileLanguage(page, 'es');
     await stubDrugs(page);
     const recipient = uniq('wizes');
     const circleId = await createFirstCircle(page, 'es', recipient);
     const c = COPY.es;
     const wizard = page.getByRole('dialog', { name: c.wizardName });
-    await wizard.getByRole('button', { name: c.addMed }).click();
-    await expect(wizard.getByText(c.whatTitle(recipient))).toBeVisible();
+    await expect(wizard.getByTestId('first-run-primary')).toHaveText(c.addMed(recipient));
+    await wizard.getByTestId('first-run-primary').click();
+    await expect(page.getByText(c.title(recipient))).toBeVisible();
     await page.getByLabel(c.nameLabel).fill('Metformina');
-    await wizard.getByRole('button', { name: c.next }).click();
-    await wizard.getByRole('button', { name: c.next }).click();
-    await wizard.getByRole('button', { name: c.save }).click();
-    await acceptPastTimeNotice(page, 'Comienza con la próxima dosis', c.next, c.savedToast);
-    await expect(page.getByText(c.savedToast).first()).toBeVisible({ timeout: 20_000 });
+    const form = page.getByRole('dialog').last();
+    await form.getByRole('radio').first().click();
+    await form.getByRole('button', { name: c.save }).click();
+    await expect(page.getByText('TODO LISTO')).toBeVisible({ timeout: 20_000 });
     expect(
       dbQuery(
         `select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid
@@ -377,7 +282,8 @@ test.describe('first-run wizard', () => {
       await createFirstCircle(page, 'en', uniq('wizclip'));
       const listbox = await typeIbu(page);
       const g = await measureLastOption(listbox);
-      expect(g.optionCount).toBe(DRUGS.length);
+      // 8 suggestions + the "Use ... as typed" row.
+      expect(g.optionCount).toBe(DRUGS.length + 1);
       expect(g.lastOption.top, 'last option starts inside the visible dialog body').toBeGreaterThanOrEqual(g.visibleTop - 1);
       expect(g.lastOption.bottom, 'last option ends inside the visible dialog body').toBeLessThanOrEqual(g.visibleBottom + 1);
       expect(g.hitIsOption, 'the last option is what a click at its centre would hit').toBe(true);
@@ -385,28 +291,27 @@ test.describe('first-run wizard', () => {
   }
 
   // Owner decision 2026-10-06: the drug directory (RxNorm) is US-only, so a local brand name
-  // outside the US is quietly kept as typed. The web has no "Check names" step and no unmatched
-  // warning in any region; this pins that a non-US browser with an EMPTY directory answer saves
-  // the typed name (no rxcui) without ever being told it was "not found".
+  // outside the US is kept as typed. 1.3.1 makes that explicit: the last suggestion row is
+  // "Use "x" as typed" (alone when the directory answers empty), keeps the name, no rxcui.
   test.describe('non-US browser, name the directory does not know', () => {
     test.use({ locale: 'fr-FR', timezoneId: 'Europe/Paris' });
 
-    test('Doliprane saves as typed, no warning, no rxcui', async ({ page }) => {
+    test('Doliprane: the as-typed row is the way forward, saves as typed, no warning, no rxcui', async ({ page }) => {
       await stubJson(page, 'GET', '/api/drugs/search', { body: { success: true, data: { drugs: [] } } });
       const recipient = uniq('wizfr');
       const circleId = await createFirstCircle(page, 'en', recipient);
-      const c = COPY.en;
-      const wizard = page.getByRole('dialog', { name: c.wizardName });
-      await wizard.getByRole('button', { name: c.addMed }).click();
-      await page.getByLabel(c.nameLabel).pressSequentially('Doliprane', { delay: 20 });
-      // Let the debounced lookup answer (empty) before judging the screen.
+      await page.getByTestId('first-run-primary').click();
+      await page.getByLabel(COPY.en.nameLabel).pressSequentially('Doliprane', { delay: 20 });
       await page.waitForResponse((r) => r.url().includes('/api/drugs/search'), { timeout: 10_000 });
-      await expect(wizard.getByText(/not found|not recogni[sz]ed|check (the )?spelling|couldn.t find/i)).toHaveCount(0);
-      await wizard.getByRole('button', { name: c.next }).click();
-      await wizard.getByRole('button', { name: c.next }).click();
-      await wizard.getByRole('button', { name: c.save }).click();
-      await acceptPastTimeNotice(page, 'Starts with the next dose', c.next, c.savedToast);
-      await expect(page.getByText(c.savedToast).first()).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText(/not found|not recogni[sz]ed|check (the )?spelling|couldn.t find/i)).toHaveCount(0);
+      const asTyped = page.getByRole('option', { name: /Use .Doliprane. as typed/ });
+      await expect(asTyped).toBeVisible();
+      await asTyped.click();
+      await expect(page.getByLabel(COPY.en.nameLabel)).toHaveValue('Doliprane');
+      const form = page.getByRole('dialog').last();
+      await form.getByRole('radio', { name: /Morning/ }).click();
+      await form.getByRole('button', { name: 'Add medication' }).click();
+      await expect(page.getByText('ALL SET')).toBeVisible({ timeout: 20_000 });
       expect(
         dbQuery(
           `select 1 from calendar_events where circle_id = ${sqlStr(circleId)}::uuid

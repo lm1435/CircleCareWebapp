@@ -35,7 +35,6 @@
   },
   "errorTitle": "Não foi possível carregar o calendário",
   "errorHint": "Verifique sua conexão e tente novamente.",
-  "noteLinkMissing": "Essa nota não está mais disponível.",
   "eventCount_one": "Eventos: {{count}}",
   "eventCount_other": "{{count}} eventos",
   "moreEvents": "Mais {{count}}",
@@ -254,8 +253,6 @@
       "reasonTooLong": "O motivo de uso deve ter no máximo 100 caracteres."
     },
     "alerts": {
-      "pastTimeTitle": "Começa na próxima dose",
-      "pastTimeMessage": "Este horário já passou hoje, então nada será registrado para hoje. Este medicamento começará na próxima dose agendada.",
       "pastTimeEditTitle": "Horário já passou",
       "pastTimeEditMessage": "Este horário já passou hoje. Nenhum lembrete será enviado para a dose de hoje.",
       "continue": "Continuar",
@@ -271,6 +268,7 @@
     "dualTimezoneHint": "Seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Seu horário / horário da pessoa ({{timezone}})",
     "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Você pode alterar o horário de silêncio em Perfil, na seção Horário de silêncio.",
+    "pastTimeInline": "Começa na próxima dose. Este horário já passou hoje.",
     "dayOffsetNext": "+1 dia",
     "dayOffsetPrevious": "-1 dia",
     "timezoneUnresolvedNotice": "Ainda carregando o fuso horário deste círculo. O salvamento está em pausa para que as datas não sejam gravadas no fuso errado.",
@@ -279,7 +277,8 @@
       "clear": "Limpar nome",
       "suggestionsLabel": "Sugestões de medicamentos",
       "resultCount_one": "Sugestões: {{count}}",
-      "resultCount_other": "{{count}} sugestões"
+      "resultCount_other": "{{count}} sugestões",
+      "useAsTyped": "Usar “{{name}}” como digitado"
     },
     "asNeeded": {
       "reason": "Para que serve?",
@@ -298,6 +297,47 @@
       "linked": "Médico vinculado",
       "series": "Vale para toda a série",
       "filledFrom": "Preenchido com o endereço de {{name}}"
+    },
+    "simple": {
+      "newMedication": "Novo medicamento",
+      "newAppointment": "Nova consulta",
+      "whatIsIt": "O que é?",
+      "when": "Quando?",
+      "howOften": "Com que frequência?",
+      "whoIsGoing": "Quem vai?",
+      "moreDetails": "Mais detalhes",
+      "moreDetailsSummary": "Data de início, instruções, lembretes",
+      "startDate": "Data de início",
+      "addMedication": "Adicionar medicamento",
+      "addAppointment": "Adicionar consulta",
+      "otherTime": "Outro horário",
+      "everyDay": "Todos os dias",
+      "someDays": "Alguns dias",
+      "whenNeeded": "Quando necessário",
+      "add": "Adicionar",
+      "added": "Adicionado",
+      "doctor": "Médico",
+      "place": "Local",
+      "notesAndReminders": "Notas e lembretes",
+      "repeat": "Repetir",
+      "anotherDose": "+ Outra dose",
+      "removeDose": "Remover a dose {{number}}"
+    },
+    "timeChips": {
+      "label": "Horários comuns",
+      "morning": "Manhã",
+      "midday": "Meio-dia",
+      "evening": "Noite",
+      "bedtime": "Hora de dormir"
+    },
+    "doseNumber": "Dose {{number}}",
+    "firstRun": {
+      "eyebrow": "PRIMEIRO MEDICAMENTO DE {{name}}",
+      "eyebrowSelf": "SEU PRIMEIRO MEDICAMENTO",
+      "title": "O que {{name}} toma?",
+      "titleSelf": "O que você toma?",
+      "hint": "Só o nome, a palavra grande no frasco. A dose é opcional.",
+      "skip": "Pular por enquanto"
     }
   },
   "deleteEvent": {

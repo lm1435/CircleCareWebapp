@@ -17,8 +17,8 @@
   "errorTitle": "Não foi possível carregar os documentos",
   "errorHint": "Verifique sua conexão e tente novamente.",
   "noDocuments": "Nenhum documento ainda",
-  "noDocumentsHint": "Guarde os documentos importantes do seu ente querido em um só lugar (cartões de seguro, registros, diretivas) para que todos que ajudam possam encontrá-los quando for preciso.",
-  "noDocumentsHintReadOnly": "Os documentos compartilhados com este círculo aparecerão aqui para que todos que ajudam possam encontrá-los quando for preciso.",
+  "noDocumentsHint": "Guarde cartões do plano, prontuários e diretivas onde todos que ajudam possam encontrá-los.",
+  "noDocumentsHintReadOnly": "Os documentos enviados pela equipe de cuidado aparecerão aqui.",
   "emptyCategory": {
     "title": "Nada em {{category}} ainda.",
     "action": "Mostrar todos os documentos"

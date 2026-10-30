@@ -1,7 +1,10 @@
 export type FirstRunAction = 'medication' | 'appointment' | 'invite' | 'emergency' | 'skip';
 
-/** The in-place modals the wizard can hand off to. */
-export type FirstRunModal = 'appointment' | 'invite' | 'fullForm';
+/**
+ * The in-place modals the wizard can hand off to. `firstMed` is the ONE simple medication form
+ * in first-run mode (onboarding 1.3.1); it is opened by the primary button, not by a route.
+ */
+export type FirstRunModal = 'appointment' | 'invite' | 'firstMed';
 
 export type FirstRunRoute =
   /** Swap the wizard for an existing modal, on the page it is already mounted over. */

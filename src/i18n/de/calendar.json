@@ -35,7 +35,6 @@
   },
   "errorTitle": "Der Kalender konnte nicht geladen werden",
   "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
-  "noteLinkMissing": "Diese Notiz ist nicht mehr verfügbar.",
   "eventCount_one": "{{count}} Eintrag",
   "eventCount_other": "{{count}} Einträge",
   "moreEvents": "{{count}} weitere",
@@ -254,8 +253,6 @@
       "reasonTooLong": "Die Angabe, wofür es ist, darf höchstens 100 Zeichen lang sein."
     },
     "alerts": {
-      "pastTimeTitle": "Beginnt mit der nächsten Dosis",
-      "pastTimeMessage": "Diese Uhrzeit ist heute bereits vorbei, daher wird für heute nichts erfasst. Dieses Medikament beginnt mit der nächsten geplanten Dosis.",
       "pastTimeEditTitle": "Uhrzeit bereits vorbei",
       "pastTimeEditMessage": "Diese Uhrzeit ist heute bereits vorbei – für die heutige Dosis wird keine Erinnerung gesendet.",
       "continue": "Weiter",
@@ -271,6 +268,7 @@
     "dualTimezoneHint": "Ihre Zeit / Zeit von {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Ihre Zeit / Zeit der umsorgten Person ({{timezone}})",
     "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Profil im Bereich Ruhezeiten ändern.",
+    "pastTimeInline": "Beginnt mit der nächsten Dosis. Diese Uhrzeit ist heute bereits vorbei.",
     "dayOffsetNext": "+1 Tag",
     "dayOffsetPrevious": "-1 Tag",
     "timezoneUnresolvedNotice": "Die Zeitzone dieses Kreises wird noch geladen. Das Speichern ist pausiert, damit Daten nicht in der falschen Zeitzone gespeichert werden.",
@@ -279,7 +277,8 @@
       "clear": "Namen löschen",
       "suggestionsLabel": "Medikamentenvorschläge",
       "resultCount_one": "{{count}} Vorschlag",
-      "resultCount_other": "{{count}} Vorschläge"
+      "resultCount_other": "{{count}} Vorschläge",
+      "useAsTyped": "„{{name}}“ so verwenden"
     },
     "asNeeded": {
       "reason": "Wofür ist es?",
@@ -298,6 +297,47 @@
       "linked": "Verknüpfte Ärztin/verknüpfter Arzt",
       "series": "Gilt für die gesamte Terminserie",
       "filledFrom": "Aus der Adresse von {{name}} übernommen"
+    },
+    "simple": {
+      "newMedication": "Neues Medikament",
+      "newAppointment": "Neuer Termin",
+      "whatIsIt": "Worum geht es?",
+      "when": "Wann?",
+      "howOften": "Wie oft?",
+      "whoIsGoing": "Wer geht mit?",
+      "moreDetails": "Weitere Details",
+      "moreDetailsSummary": "Startdatum, Hinweise, Erinnerungen",
+      "startDate": "Startdatum",
+      "addMedication": "Medikament hinzufügen",
+      "addAppointment": "Termin hinzufügen",
+      "otherTime": "Andere Uhrzeit",
+      "everyDay": "Jeden Tag",
+      "someDays": "An bestimmten Tagen",
+      "whenNeeded": "Bei Bedarf",
+      "add": "Hinzufügen",
+      "added": "Hinzugefügt",
+      "doctor": "Ärztin/Arzt",
+      "place": "Ort",
+      "notesAndReminders": "Notizen und Erinnerungen",
+      "repeat": "Wiederholen",
+      "anotherDose": "+ Weitere Einnahme",
+      "removeDose": "Dosis {{number}} entfernen"
+    },
+    "timeChips": {
+      "label": "Übliche Einnahmezeiten",
+      "morning": "Morgens",
+      "midday": "Mittags",
+      "evening": "Abends",
+      "bedtime": "Zur Schlafenszeit"
+    },
+    "doseNumber": "Dosis {{number}}",
+    "firstRun": {
+      "eyebrow": "ERSTES MEDIKAMENT VON {{name}}",
+      "eyebrowSelf": "IHR ERSTES MEDIKAMENT",
+      "title": "Was nimmt {{name}} ein?",
+      "titleSelf": "Was nehmen Sie ein?",
+      "hint": "Nur der Name, das große Wort auf der Packung. Die Dosis ist optional.",
+      "skip": "Vorerst überspringen"
     }
   },
   "deleteEvent": {

@@ -26,8 +26,8 @@ test('sidebar links navigate', async ({ page, circleId }) => {
   // it so we don't match same-named links elsewhere (e.g. circle switcher).
   const sidebar = page.locator('aside').first();
 
-  // Home is the index route (no segment), so it's checked on its own first.
-  await sidebar.getByRole('link', { name: 'Home' }).click();
+  // Today is the index route (no segment), so it's checked on its own first.
+  await sidebar.getByRole('link', { name: 'Today' }).click();
   await expect(page).toHaveURL(new RegExp(`${base}(?:[?#]|$)`), { timeout: NAV_TIMEOUT });
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({
     timeout: NAV_TIMEOUT,

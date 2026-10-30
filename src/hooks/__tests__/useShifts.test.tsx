@@ -37,6 +37,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftDropped: vi.fn(),
     shiftAssigned: vi.fn(),
     shiftTakeConflict: vi.fn(),
+    errorOccurred: vi.fn(),
   },
 }));
 

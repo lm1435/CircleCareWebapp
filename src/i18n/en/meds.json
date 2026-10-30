@@ -3,8 +3,8 @@
   "empty": "No medications scheduled today.",
   "emptyFirstRun": "No medications yet. Add the first one and everyone in the circle gets the reminder.",
   "emptyCard": {
-    "body": "Nothing scheduled for {{name}} today yet. Add a medication and everyone in the circle sees it here, with Taken and Skip.",
-    "bodySelfCare": "Nothing scheduled for you today yet. Add a medication and it shows up here, with Taken and Skip."
+    "body": "Nothing scheduled for {{name}} today.",
+    "bodySelfCare": "Nothing scheduled for you today."
   },
   "addFirst": "Add a medication",
   "loadError": "Couldn't load today's medications",
@@ -62,7 +62,6 @@
     "loading": "Loading medications…",
     "errorTitle": "Couldn't load medications",
     "errorHint": "Check your connection and try again.",
-    "active": "Active",
     "inactive": "Inactive / Past medications",
     "inactiveHint": "Kept for reference. Reminders are off.",
     "noTime": "No scheduled time",
@@ -91,7 +90,19 @@
       "viewLabel": "View details for {{name}}",
       "repeat": "Repeat",
       "refill": "Refill"
-    }
+    },
+    "titleNamed": "{{name}}'s meds",
+    "titleSelf": "My meds",
+    "recipientFallback": "the care recipient",
+    "zoneBehind_one": "Times are {{name}}'s time · {{hours}} hour behind you",
+    "zoneBehind_other": "Times are {{name}}'s time · {{hours}} hours behind you",
+    "zoneAhead_one": "Times are {{name}}'s time · {{hours}} hour ahead of you",
+    "zoneAhead_other": "Times are {{name}}'s time · {{hours}} hours ahead of you",
+    "weekSummary": "This week {{pct}}% taken",
+    "weekReport": "Report",
+    "anytime": "Anytime",
+    "zoneBehindHm": "Times are {{name}}'s time · {{hours}} h {{minutes}} min behind you",
+    "zoneAheadHm": "Times are {{name}}'s time · {{hours}} h {{minutes}} min ahead of you"
   },
   "needsAttention": "Needs attention",
   "needsAttentionHint": "Doses from yesterday nobody answered",
@@ -103,7 +114,6 @@
   },
   "history": {
     "title": "Medication history",
-    "subtitle": "Track adherence and review what was taken when.",
     "loading": "Loading history…",
     "today": "Today",
     "yesterday": "Yesterday",

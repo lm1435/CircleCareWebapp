@@ -157,6 +157,40 @@ describe('AuthCallbackPage', () => {
     expect(sessionStorage.getItem('cc_pending_auth_method')).toBeNull();
   });
 
+  it('fires signup_completed (and NOT login_completed) when the sign-in created the account', async () => {
+    const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
+    const signupCompleted = vi.spyOn(Analytics, 'signupCompleted');
+    setPendingAuthMethod('google');
+    arriveWithCode();
+    mockedPost.mockResolvedValueOnce({
+      ...sessionEnvelope,
+      data: { ...sessionEnvelope.data, is_new_user: true },
+    } as never);
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(signupCompleted).toHaveBeenCalledTimes(1);
+    expect(signupCompleted).toHaveBeenCalledWith('google');
+    expect(loginCompleted).not.toHaveBeenCalled();
+  });
+
+  it('only an explicit is_new_user === true counts: a string, or no flag, stays login_completed', async () => {
+    const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
+    const signupCompleted = vi.spyOn(Analytics, 'signupCompleted');
+    arriveWithCode();
+    mockedPost.mockResolvedValueOnce({
+      ...sessionEnvelope,
+      data: { ...sessionEnvelope.data, is_new_user: 'true' },
+    } as never);
+
+    renderCallback();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+    expect(loginCompleted).toHaveBeenCalledTimes(1);
+    expect(signupCompleted).not.toHaveBeenCalled();
+  });
+
   it("falls back to the generic 'oauth' method when no provider was persisted", async () => {
     const loginCompleted = vi.spyOn(Analytics, 'loginCompleted');
     arriveWithCode();
@@ -233,6 +267,49 @@ describe('AuthCallbackPage', () => {
     // landing page would find nothing parked and auto-accept would never
     // arm, stranding the visitor on a card they have to tap manually.
     expect(sessionStorage.getItem('cc_pending_invite_code')).toBe('ABC234');
+  });
+
+  it('honours the parked return path (with its query string) and consumes it', async () => {
+    sessionStorage.setItem('cc_pending_return_path', '/circles/c-1/calendar?eventId=ev-1&src=weekly_digest');
+    arriveWithCode();
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/circles/c-1/calendar?eventId=ev-1&src=weekly_digest',
+        { replace: true }
+      )
+    );
+    expect(sessionStorage.getItem('cc_pending_return_path')).toBeNull();
+  });
+
+  it.each(['//evil.example/x', '/\\evil.example', 'https://evil.example', 'javascript:alert(1)'])(
+    'ignores (and clears) an unsafe parked return path: %s',
+    async (unsafe) => {
+      sessionStorage.setItem('cc_pending_return_path', unsafe);
+      arriveWithCode();
+      mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+      renderCallback();
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/circles', { replace: true }));
+      expect(sessionStorage.getItem('cc_pending_return_path')).toBeNull();
+    }
+  );
+
+  it('the return path wins over a parked invite code', async () => {
+    setPendingInviteCode('ABC234');
+    sessionStorage.setItem('cc_pending_return_path', '/circles/c-1');
+    arriveWithCode();
+    mockedPost.mockResolvedValueOnce(sessionEnvelope as never);
+
+    renderCallback();
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith('/circles/c-1', { replace: true })
+    );
   });
 
   it('leaves the pending invite code parked when the exchange fails (retry via /login)', async () => {

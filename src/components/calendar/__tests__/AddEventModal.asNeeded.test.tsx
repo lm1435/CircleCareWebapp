@@ -67,7 +67,7 @@ vi.mock('@/components/ui', async (importOriginal) => {
 const onClose = vi.fn();
 
 function renderCreate() {
-  return render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" onClose={onClose} />);
+  return render(<AddEventModal circleId={CIRCLE_ID} initialType="medication" layout="full" onClose={onClose} />);
 }
 
 function prnEvent(over: Partial<CalendarEvent> = {}): CalendarEvent {
@@ -129,7 +129,7 @@ describe('creating: Repeat -> As needed', () => {
   it.each(['medication', 'appointment', 'task'] as const)(
     'the %s Repeat field has a VISIBLE "Repeat" label and reads "Never" by default',
     (initialType) => {
-      render(<AddEventModal circleId={CIRCLE_ID} initialType={initialType} onClose={onClose} />);
+      render(<AddEventModal circleId={CIRCLE_ID} initialType={initialType} layout="full" onClose={onClose} />);
       const select = screen.getByRole('combobox', { name: 'Repeat' }) as HTMLSelectElement;
       const label = document.querySelector(`label[for="${select.id}"]`);
       expect(label).toHaveTextContent(/^Repeat$/);
@@ -139,7 +139,7 @@ describe('creating: Repeat -> As needed', () => {
   );
 
   it('does not offer it for an appointment or task', async () => {
-    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" onClose={onClose} />);
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={onClose} />);
     const options = Array.from(
       (screen.getByLabelText('Repeat') as HTMLSelectElement).options
     ).map((o) => o.value);

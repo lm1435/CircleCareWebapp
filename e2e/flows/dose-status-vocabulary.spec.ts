@@ -23,14 +23,14 @@ import {
 // Taken / Taken at / Taken by. Nothing asserts a skip as a miss.
 //
 // Seeding: day -2 is skipped through the Calendar detail dialog (the UI path);
-// the daily 00:00 dose of TODAY is skipped through the public confirm API so the
-// Today card has a skipped dose; day -1 is taken through the API (taken_late).
+// the daily 00:00 dose of TODAY is skipped through the public confirm API so today's dose is answered (and so absent from Next up); day -1 is taken through the API (taken_late).
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.setTimeout(180_000);
 
 const COPY = {
   en: {
+    nextUp: 'Next up',
     skipped: 'Skipped',
     skippedAt: 'Skipped at',
     skippedBy: 'Skipped by',
@@ -41,6 +41,7 @@ const COPY = {
     feed: /\(skipped\)/,
   },
   es: {
+    nextUp: 'Lo próximo',
     skipped: 'Omitido',
     skippedAt: 'Omitido a las',
     skippedBy: 'Omitido por',
@@ -52,7 +53,7 @@ const COPY = {
   },
 } as const;
 
-test('skipped and taken doses read with the approved vocabulary on History, Today, Calendar and Activity (EN + ES)', async ({
+test('skipped and taken doses read with the approved vocabulary on History, Calendar and Activity, and an answered dose leaves Today (EN + ES)', async ({
   page,
   context,
   request,
@@ -131,11 +132,12 @@ test('skipped and taken doses read with the approved vocabulary on History, Toda
       await expect(lateCard.getByText(c.takenAt, { exact: true })).toBeVisible();
       await expect(lateCard.getByText(c.takenBy, { exact: true })).toBeVisible();
 
-      // Today card (Overview): today's skipped dose wears the Skipped pill.
+      // Today: an answered dose leaves Next up (one row per OPEN item). There is no Skipped pill
+      // there any more; the answered state reads on History (above), the Calendar and Activity.
       await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-      const todayRow = page.getByRole('listitem').filter({ hasText: name }).first();
-      await expect(todayRow).toBeVisible({ timeout: 25_000 });
-      await expect(todayRow.getByText(c.skipped, { exact: true }).first()).toBeVisible();
+      await expect(page.getByRole('region', { name: c.nextUp })).toBeVisible({ timeout: 25_000 });
+      await expect(page.getByTestId('quick-access-grid')).toBeVisible();
+      await expect(page.getByTestId('next-up-row').filter({ hasText: name })).toHaveCount(0);
 
       // Calendar chip: the accessible name carries the status word.
       // (today's skipped dose: always in the current week, so no week-stepping,

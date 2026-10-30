@@ -27,9 +27,12 @@ import {
   STATUS_PILL,
   type MoreMenuEntry,
 } from '@/components/ui';
+import { RemovedState } from '@/components/RemovedState';
+import { useEmailLinkLanding } from '@/lib/emailLinkLanding';
 import { PageMasthead } from '@/components/layout/PageMasthead';
 import { CareTabs } from '@/components/layout/CareTabs';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
+import { dayPartLabel } from '@/components/calendar/TimeChips';
 import { DeleteEventDialog } from '@/components/calendar/DeleteEventDialog';
 import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog';
 import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
@@ -56,13 +59,18 @@ import {
   medicationOptions,
   type HistoryConfirmation,
 } from '@/components/meds/historyQuery';
-import { useMedicationConfirmations } from '@/hooks/useMedConfirmation';
+import { useMedicationConfirmations, useWeeklyAdherence } from '@/hooks/useMedConfirmation';
+import { dayPartForTime, doseSortKey, groupByDayPart, type MedDayPart } from '@/lib/medTimeOfDay';
+import { useLargeTextLayoutEvent } from '@/lib/largeText';
+import { zoneGap } from '@/utils/zoneGap';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
 import {
   formatEventTimeCompact,
+  formatTimeOfDay,
   getCachedDateTimeFormat,
   getDateInTimezone,
+  getDeviceTimezone,
 } from '@/utils/timezone';
 import { Analytics } from '@/lib/analytics';
 
@@ -94,6 +102,12 @@ interface MedGroup {
   dosage: string | null;
   /** Distinct scheduled times (HH:MM) across every series, sorted. */
   times: string[];
+  /**
+   * Distinct times of the series that are still RUNNING (not discontinued, not
+   * ended), sorted: the Medications page lists one row per live dose time, so a
+   * stopped 8am series of a med that still runs at 8pm leaves no 8am row.
+   */
+  liveTimes: string[];
   /** Representative recurring event for the frequency label, if any. */
   recurrenceEvent: CalendarEvent | null;
   inactive: boolean;
@@ -255,6 +269,7 @@ function groupMedications(
         name: source.medication_name || source.title || '',
         dosage: source.medication_dosage || null,
         times: [],
+        liveTimes: [],
         recurrenceEvent: null,
         inactive: true,
         endedOn: null,
@@ -290,6 +305,10 @@ function groupMedications(
     if (e.scheduled_time) {
       const hhmm = e.scheduled_time.slice(0, 5);
       if (!group.times.includes(hhmm)) group.times.push(hhmm);
+    }
+    if (live && e.scheduled_time) {
+      const liveHhmm = e.scheduled_time.slice(0, 5);
+      if (!group.liveTimes.includes(liveHhmm)) group.liveTimes.push(liveHhmm);
     }
     // Any LIVE event of this key makes the whole med Active — a multi-series
     // med (8am + 8pm) stays Active while any one series still runs.
@@ -345,6 +364,7 @@ function groupMedications(
   const inactive: MedGroup[] = [];
   for (const group of groups.values()) {
     group.times.sort();
+    group.liveTimes.sort();
     // "Ended <date>" only when the med is inactive AND nothing of it was
     // discontinued: a discontinued series keeps the "Inactive" badge and its
     // Reactivate action, which does something for it.
@@ -394,6 +414,101 @@ function formatSchedule(
     ? formatRecurrenceLabel(group.recurrenceEvent, t, language)
     : null;
   return [timesLabel, recurrenceLabel].filter(Boolean).join(' · ');
+}
+
+interface MedTimeRowProps {
+  group: MedGroup;
+  /** The dose time, already formatted in the RECIPIENT's clock ('' = none scheduled). */
+  timeLabel: string;
+  language: string;
+  canEdit: boolean;
+  /** Large text: the row stacks (time, then name, then actions). */
+  stacked: boolean;
+  onEdit: (group: MedGroup) => void;
+  onToggleStatus: (group: MedGroup) => void;
+  onDelete: (group: MedGroup) => void;
+  onViewDetails: (group: MedGroup) => void;
+}
+
+/**
+ * ONE dose time of ONE medication on the Medications page (simple UI 1.3.1):
+ * "8:00 AM  Lisinopril / 10mg · Daily". A medication with two times is two rows.
+ * The time is the recipient's own clock: the page header says so when it differs
+ * from the viewer's, so no zone suffix is repeated here.
+ */
+function MedTimeRow({
+  group,
+  timeLabel,
+  language,
+  canEdit,
+  stacked,
+  onEdit,
+  onToggleStatus,
+  onDelete,
+  onViewDetails,
+}: MedTimeRowProps): ReactElement {
+  const { t } = useTranslation(['meds', 'calendar']);
+  const recurrenceLabel = group.recurrenceEvent
+    ? formatRecurrenceLabel(group.recurrenceEvent, t, language)
+    : null;
+  const lowStockDays =
+    group.daysLeft !== null && group.daysLeft < LOW_STOCK_DAYS ? group.daysLeft : null;
+  const detail = [
+    group.dosage,
+    recurrenceLabel,
+    lowStockDays !== null
+      ? `${t('meds:page.stock.lowStock')} · ${t('meds:page.stock.daysLeft', { count: lowStockDays })}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const menuItems: MoreMenuEntry[] = [
+    { id: 'edit', label: t('meds:page.actions.edit'), onSelect: () => onEdit(group) },
+    {
+      id: 'toggle-status',
+      label: t('meds:page.actions.discontinue'),
+      onSelect: () => onToggleStatus(group),
+    },
+    { divider: true },
+    {
+      id: 'delete',
+      label: t('meds:page.actions.delete'),
+      onSelect: () => onDelete(group),
+      danger: true,
+    },
+  ];
+  return (
+    <li
+      data-testid="med-time-row"
+      className={`flex min-h-[62px] gap-3 px-4 py-2.5 ${
+        stacked ? 'flex-col items-start' : 'items-center'
+      }`}
+    >
+      <span
+        className={`shrink-0 text-sm font-semibold tabular-nums text-ink-2 ${stacked ? '' : 'w-[4.5rem]'}`}
+      >
+        {timeLabel}
+      </span>
+      <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={() => onViewDetails(group)}
+          aria-label={t('meds:page.detail.viewLabel', { name: group.name })}
+          className="m-0 flex min-h-[44px] w-full items-center border-0 bg-transparent p-0 text-left text-md font-semibold text-ink underline-offset-2 hover:underline"
+        >
+          {group.name}
+        </button>
+        {detail && <p className="m-0 -mt-1 text-sm text-ink-2">{detail}</p>}
+      </div>
+      {canEdit && (
+        <MoreMenu
+          items={menuItems}
+          label={t('meds:page.actions.more', { name: group.name })}
+          className={`shrink-0 ${stacked ? 'self-end' : '-mr-2.5 self-center'}`}
+        />
+      )}
+    </li>
+  );
 }
 
 interface MedCardProps {
@@ -591,12 +706,34 @@ function MedCard({
   );
 }
 
+/** "● MORNING" style group heading: small, tracked, uppercase, never colour alone. */
+const PART_HEADING_CLASS =
+  'm-0 mb-2 text-xs font-semibold uppercase tracking-[1.6px] text-ink-2';
+
+function PartHeading({ id, part }: { id: string; part: MedDayPart }): ReactElement {
+  const { t } = useTranslation('calendar');
+  return (
+    <h2 id={id} className={PART_HEADING_CLASS}>
+      {dayPartLabel(t, part)}
+    </h2>
+  );
+}
+
 export default function MedicationsPage(): ReactElement {
   const { circleId = '' } = useParams<{ circleId: string }>();
   const { t, i18n } = useTranslation(['meds', 'calendar', 'common']);
   const { showToast } = useToast();
 
-  const { canEdit, timezone, isError: circleReadFailed, refetch: refetchCircle } = useCircle(circleId);
+  const {
+    circle,
+    canEdit,
+    timezone,
+    isError: circleReadFailed,
+    refetch: refetchCircle,
+  } = useCircle(circleId);
+  // Large text: rows stack. Reported once per session as `large_text_layout`.
+  const largeText = useLargeTextLayoutEvent('meds');
+  const weekly = useWeeklyAdherence(circleId);
   // Viewer's 12h/24h clock — threaded into every schedule string on this page.
   const hourCycle = useHourCycle();
   const rosterQuery = useMedicationRoster(circleId);
@@ -616,6 +753,8 @@ export default function MedicationsPage(): ReactElement {
   }
 
   const [showAdd, setShowAdd] = useState(false);
+  // Where the add form was opened from, for the form-funnel analytics.
+  const [addEntry, setAddEntry] = useState<'empty_state' | 'other'>('other');
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [detailGroup, setDetailGroup] = useState<MedGroup | null>(null);
@@ -641,17 +780,22 @@ export default function MedicationsPage(): ReactElement {
   // "This item is no longer available." toast instead.
   const [pendingMedication] = useState<string | null>(() => searchParams.get('medication'));
   const medicationLinkHandled = useRef(false);
+  // A gone medication shows the shared removed state (same as mobile) instead
+  // of the old toast; "OK" dismisses it.
+  const [medicationLinkGone, setMedicationLinkGone] = useState(false);
+  const reportLanding = useEmailLinkLanding();
   useEffect(() => {
     if (!pendingMedication || medicationLinkHandled.current) return;
     if (rosterQuery.isLoading || timezone === null) return;
     medicationLinkHandled.current = true;
     const match = [...active, ...inactive].find((g) => g.ids.has(pendingMedication));
     if (match) setDetailGroup(match);
-    else showToast(t('dailyUpdate:itemUnavailable'), 'info');
+    else setMedicationLinkGone(true);
+    reportLanding(Boolean(match));
     const next = new URLSearchParams(searchParams);
     next.delete('medication');
     setSearchParams(next, { replace: true });
-  }, [pendingMedication, rosterQuery.isLoading, timezone, active, inactive, searchParams, setSearchParams, showToast, t]);
+  }, [pendingMedication, rosterQuery.isLoading, timezone, active, inactive, searchParams, setSearchParams, reportLanding]);
 
   // AS-NEEDED (PRN): one summary read for the circle ("last dose" per active
   // as-needed medication), only when the roster has any. The give flow, the
@@ -677,6 +821,29 @@ export default function MedicationsPage(): ReactElement {
     : historyDoseMed;
   const activeScheduled = useMemo(() => active.filter((g) => !g.asNeeded), [active]);
   const activeAsNeeded = useMemo(() => active.filter((g) => g.asNeeded), [active]);
+  // One ROW per medication per dose time, bucketed MORNING / MIDDAY / EVENING /
+  // BEDTIME by the dose's own (recipient) clock — see lib/medTimeOfDay.
+  const timedGroups = useMemo(() => {
+    const rows: Array<{ time: string; item: MedGroup }> = [];
+    for (const group of activeScheduled) {
+      // A med shows in EACH group it has a dose in; two doses in the SAME group
+      // collapse to one row at the earliest time (identical to mobile's
+      // utils/medDayParts).
+      const perPart = new Map<string, string>();
+      const ordered = [...group.liveTimes].sort((a, b) => doseSortKey(a) - doseSortKey(b));
+      for (const time of ordered) {
+        const part = dayPartForTime(time);
+        if (!perPart.has(part)) perPart.set(part, time);
+      }
+      perPart.forEach((time) => rows.push({ time, item: group }));
+    }
+    return groupByDayPart(rows, (a, b) => a.name.localeCompare(b.name));
+  }, [activeScheduled]);
+  // A scheduled medication with no time on any row still has to be listed.
+  const untimedScheduled = useMemo(
+    () => activeScheduled.filter((g) => g.liveTimes.length === 0),
+    [activeScheduled]
+  );
   const asNeededFlowFor = (group: MedGroup): MedCardProps['asNeededFlow'] =>
     group.asNeeded
       ? {
@@ -808,6 +975,41 @@ export default function MedicationsPage(): ReactElement {
     }
   }
 
+  // "{{name}}'s meds" (self-care: "My meds"); the plain title until the circle answers.
+  const recipientName = circle?.recipient_name?.trim() || '';
+  const pageTitle = circle?.is_self_care
+    ? t('meds:page.titleSelf')
+    : recipientName
+      ? t('meds:page.titleNamed', { name: recipientName })
+      : t('meds:page.title');
+  // ONE line, and only when the viewer's clock differs from the recipient's.
+  const gap = timezone ? zoneGap(getDeviceTimezone(), timezone) : null;
+  const zoneName = recipientName || t('meds:page.recipientFallback');
+  // Whole-hour gaps use the pluralised "N hours" strings; half-hour zones (India,
+  // Newfoundland) say "H h M min" — the same split mobile makes.
+  const gapHours = gap ? Math.floor(gap.hours) : 0;
+  const gapMinutes = gap ? Math.round((gap.hours - gapHours) * 60) : 0;
+  const zoneLine = gap
+    ? gapMinutes === 0
+      ? t(gap.direction === 'behind' ? 'meds:page.zoneBehind' : 'meds:page.zoneAhead', {
+          name: zoneName,
+          count: gapHours,
+          hours: gapHours,
+        })
+      : t(gap.direction === 'behind' ? 'meds:page.zoneBehindHm' : 'meds:page.zoneAheadHm', {
+          name: zoneName,
+          hours: gapHours,
+          minutes: gapMinutes,
+        })
+    : null;
+  // The weekly adherence summary (moved here from the Overview): hidden when there
+  // is nothing scheduled or the read failed, like the card it replaces.
+  const weekly_ = weekly.data;
+  const weekSummary =
+    weekly_ && weekly_.scheduled > 0 && !weekly.isError
+      ? t('meds:page.weekSummary', { pct: Math.round(weekly_.adherence_rate) })
+      : null;
+
   const isLoading = rosterQuery.isLoading;
   const isError = rosterQuery.isError;
   const isEmpty = active.length === 0 && inactive.length === 0;
@@ -864,7 +1066,13 @@ export default function MedicationsPage(): ReactElement {
         actions={
           <>
             {canEdit ? (
-              <Button onClick={() => setShowAdd(true)} offlineKind="change">
+              <Button
+                onClick={() => {
+                  setAddEntry('empty_state');
+                  setShowAdd(true);
+                }}
+                offlineKind="change"
+              >
                 {t('meds:page.empty.cta')}
               </Button>
             ) : null}
@@ -876,27 +1084,49 @@ export default function MedicationsPage(): ReactElement {
   } else {
     roster = (
       <div className="flex flex-col gap-8">
-        {activeScheduled.length > 0 && (
-          <section aria-labelledby="meds-active-heading">
-            <SectionHeader
-              id="meds-active-heading"
-              title={t('meds:page.active')}
-              tone="clay"
-              headingLevel={2}
-            />
-            <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
-              {activeScheduled.map((group) => (
-                <MedCard
+        {timedGroups.map(({ part, rows }) => (
+          <section key={part} aria-labelledby={`meds-part-${part}`}>
+            <PartHeading id={`meds-part-${part}`} part={part} />
+            <ul className={`m-0 list-none divide-y divide-line-2 p-0 ${careCardSurface}`}>
+              {rows.map(({ time, item }) => {
+                const [h, m] = time.split(':').map(Number);
+                return (
+                  <MedTimeRow
+                    key={`${item.key}|${time}`}
+                    group={item}
+                    timeLabel={formatTimeOfDay(h, m, hourCycle)}
+                    language={i18n.language}
+                    canEdit={canEdit}
+                    stacked={largeText}
+                    onEdit={handleEdit}
+                    onToggleStatus={setStatusGroup}
+                    onDelete={(g) => setDeletingEvent(g.event)}
+                    onViewDetails={openMedDetail}
+                  />
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+
+        {untimedScheduled.length > 0 && (
+          <section aria-labelledby="meds-part-untimed">
+            <h2 id="meds-part-untimed" className={PART_HEADING_CLASS}>
+              {t('meds:page.anytime')}
+            </h2>
+            <ul className={`m-0 list-none divide-y divide-line-2 p-0 ${careCardSurface}`}>
+              {untimedScheduled.map((group) => (
+                <MedTimeRow
                   key={group.key}
                   group={group}
-                  timezone={timezone}
-                  hourCycle={hourCycle}
+                  timeLabel=""
+                  language={i18n.language}
                   canEdit={canEdit}
+                  stacked={largeText}
                   onEdit={handleEdit}
                   onToggleStatus={setStatusGroup}
                   onDelete={(g) => setDeletingEvent(g.event)}
                   onViewDetails={openMedDetail}
-                  asNeededFlow={asNeededFlowFor(group)}
                 />
               ))}
             </ul>
@@ -907,12 +1137,9 @@ export default function MedicationsPage(): ReactElement {
             schedule, so they never sit among the dose-time cards. */}
         {activeAsNeeded.length > 0 && (
           <section aria-labelledby="meds-as-needed-heading">
-            <SectionHeader
-              id="meds-as-needed-heading"
-              title={t('meds:asNeeded.section.title')}
-              tone="clay"
-              headingLevel={2}
-            />
+            <h2 id="meds-as-needed-heading" className={PART_HEADING_CLASS}>
+              {t('calendar:addEvent.simple.whenNeeded')}
+            </h2>
             <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
               {activeAsNeeded.map((group) => (
                 <MedCard
@@ -969,14 +1196,17 @@ export default function MedicationsPage(): ReactElement {
       <PageMasthead
         section={t('common:nav.meds')}
         tone="clay"
-        title={t('meds:page.title')}
-        subtitle={t('meds:history.subtitle')}
+        title={pageTitle}
+        subtitle={zoneLine ?? undefined}
         rightAction={
           canEdit
             ? {
                 name: 'add-outline',
                 label: t('meds:page.add'),
-                onClick: () => setShowAdd(true),
+                onClick: () => {
+                  setAddEntry('other');
+                  setShowAdd(true);
+                },
                 offlineKind: 'change',
               }
             : undefined
@@ -984,6 +1214,14 @@ export default function MedicationsPage(): ReactElement {
       >
         <CareTabs />
       </PageMasthead>
+
+      {medicationLinkGone ? (
+        <RemovedState
+          reason="removed"
+          fromEmail={Boolean(searchParams.get('src'))}
+          onDismiss={() => setMedicationLinkGone(false)}
+        />
+      ) : null}
 
       <div className="px-5 pt-1">
         <SegmentedControl
@@ -998,7 +1236,26 @@ export default function MedicationsPage(): ReactElement {
       </div>
 
       {tab === 'medications' ? (
-        <div className="px-5 pt-6">{roster}</div>
+        <div className="px-5 pt-6">
+          {weekSummary && (
+            <p
+              data-testid="week-adherence"
+              className="m-0 mb-5 flex flex-wrap items-center gap-x-2 text-base text-ink"
+            >
+              <span>{weekSummary}</span>
+              <span aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={() => selectTab('history')}
+                className="min-h-[44px] cursor-pointer border-0 bg-transparent p-0 font-semibold text-moss-deep underline-offset-2 hover:underline"
+              >
+                {t('meds:page.weekReport')}
+                <span aria-hidden="true"> ›</span>
+              </button>
+            </p>
+          )}
+          {roster}
+        </div>
       ) : (
         <div className="flex flex-col gap-4 px-5 pt-6">
           {/* THE TAB'S OWN HEADING, for the outline only.
@@ -1043,6 +1300,7 @@ export default function MedicationsPage(): ReactElement {
         <AddEventModal
           circleId={circleId}
           initialType="medication"
+          entry={addEntry}
           onClose={() => setShowAdd(false)}
         />
       )}

@@ -282,8 +282,8 @@ describe('useTaskCompletion — every send path posts to the circle the task was
 
     expect(postedPaths()).toEqual([`/circles/${A}/events/task-unknown/complete`]);
     expect(Analytics.errorOccurred).toHaveBeenCalledWith(
-      'calendar_events',
-      'calendar_events_mutation_error',
+      'tasks',
+      'tasks_update_failed',
       expect.objectContaining({ circle_id: A })
     );
   });
@@ -427,7 +427,7 @@ describe('useMedicationUndo — every send path posts to the circle the dose was
     expect(onError).toHaveBeenCalledWith(NOT_FOUND, 'taken', stranger, A);
     expect(Analytics.errorOccurred).toHaveBeenCalledWith(
       'medication_confirm',
-      'medication_confirm_error',
+      'medication_confirm_update_failed',
       expect.objectContaining({ circle_id: A })
     );
   });

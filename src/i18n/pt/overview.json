@@ -1,10 +1,4 @@
 {
-  "hero": {
-    "bornAge": "Nascimento: {{date}} · idade {{age}}",
-    "caredForBy": "Cuidado por",
-    "andMore_one": "Mais {{count}}",
-    "andMore_other": "+{{count}} mais"
-  },
   "adherence": {
     "eyebrow": "Últimos 7 dias",
     "label": "Medicamentos em dia",
@@ -16,11 +10,22 @@
     "calendar": "Calendário",
     "medications": "Medicamentos",
     "tasks": "Tarefas",
-    "tasksNote_one": "Em aberto: {{count}}",
+    "tasksNote_one": "{{count}} em aberto",
     "tasksNote_other": "{{count}} em aberto",
     "vitals": "Sinais vitais",
-    "activityFeed": "Feed de atividades",
-    "careInfo": "Saúde"
+    "notesWrote": "{{who}} escreveu {{ago}}",
+    "someone": "Alguém",
+    "notesEmpty": "Como foi o dia",
+    "tasksEmpty": "Tarefas compartilhadas",
+    "calendarNext": "Próximo: {{day}}",
+    "calendarEmpty": "Nada ainda",
+    "medsRefill_zero": "nenhuma reposição em breve",
+    "medsRefill_one": "{{count}} reposição em breve",
+    "medsRefill_other": "{{count}} reposições em breve",
+    "medsEmpty": "Nada ainda",
+    "shifts": "Plantões",
+    "healthInfo": "Informações de saúde",
+    "activity": "Atividade"
   },
   "appointments": {
     "title": "Próximas consultas",
@@ -61,5 +66,76 @@
     "editCircle": "Editar círculo",
     "members": "Membros",
     "deleteCircle": "Excluir círculo"
+  },
+  "today": {
+    "title": "Hoje para {{name}}",
+    "titleSelf": "Hoje",
+    "notNow": "Agora não",
+    "nextUp": {
+      "heading": "A seguir",
+      "taken": "Tomado",
+      "done": "Concluído",
+      "takenLabel": "Tomado, {{name}}, {{when}}",
+      "doneLabel": "Concluído, {{name}}, {{when}}",
+      "anyTime": "A qualquer hora",
+      "yesterday": "Ontem",
+      "daysOverdue_zero": "0 dias de atraso",
+      "daysOverdue_one": "{{count}} dia de atraso",
+      "daysOverdue_other": "{{count}} dias de atraso",
+      "late": "Atrasado",
+      "lateHours_zero": "0 horas de atraso",
+      "lateHours_one": "{{count}} hora de atraso",
+      "lateHours_other": "{{count}} horas de atraso",
+      "allOfToday_one": "Tudo de hoje · itens: {{count}}",
+      "allOfToday_other": "Tudo de hoje · itens: {{count}}",
+      "empty": "Nada mais agendado para {{name}} hoje.",
+      "emptySelf": "Nada mais agendado para você hoje.",
+      "loadError": "Não foi possível carregar a lista de hoje"
+    },
+    "nextStep": {
+      "eyebrow": "Próximo passo · {{current}} de {{total}}",
+      "first_med": {
+        "title": "Adicione o primeiro medicamento de {{name}}",
+        "titleSelf": "Adicione seu primeiro medicamento",
+        "body": "Todos que ajudam veem aqui, com um lembrete na hora certa.",
+        "bodySelf": "Você verá aqui, com um lembrete na hora certa.",
+        "cta": "Adicionar medicamento"
+      },
+      "invite": {
+        "title": "Convide alguém para ajudar",
+        "titleSelf": "Convide alguém para ajudar",
+        "body": "Família, um amigo ou um cuidador contratado. Eles veem os medicamentos de {{name}} e recebem um aviso se uma dose não for marcada como tomada.",
+        "bodySelf": "Família, um amigo ou um cuidador contratado. Eles veem seus medicamentos e recebem um aviso se uma dose não for marcada como tomada.",
+        "cta": "Convidar"
+      },
+      "reminders": {
+        "title": "Ative os lembretes",
+        "titleSelf": "Ative os lembretes",
+        "body": "Receba um lembrete quando uma dose estiver na hora e um aviso se alguma não for marcada como tomada.",
+        "bodySelf": "Receba um lembrete quando uma dose estiver na hora e um aviso se alguma não for marcada como tomada.",
+        "cta": "Ativar lembretes"
+      }
+    },
+    "shiftsNudge": {
+      "joined": "{{member}} entrou no círculo de {{name}}",
+      "joinedSelf": "{{member}} entrou no seu círculo",
+      "title": "Dividam o cuidado com plantões",
+      "body": "Dividam as noites e os fins de semana para que todos saibam quem está de plantão.",
+      "cta": "Configurar plantões"
+    },
+    "doseHint": {
+      "eyebrow": "Como funciona",
+      "body": "Toque em <b>Tomado</b> quando {{name}} tomar. Todos que ajudam veem na hora, então ninguém dá uma segunda dose.",
+      "bodySelf": "Toque em <b>Tomado</b> quando você tomar. Todos que ajudam veem na hora, então ninguém dá uma segunda dose.",
+      "gotIt": "Entendi"
+    },
+    "markIt": {
+      "tomorrow": "Amanhã",
+      "today": "Hoje",
+      "question": "Já foi dado hoje?",
+      "action": "Marcar",
+      "takenByYou": "Tomado por você",
+      "taken": "Tomado"
+    }
   }
 }

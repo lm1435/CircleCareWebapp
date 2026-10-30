@@ -23,8 +23,7 @@ import { gotoCalendarSettled } from '../../notesFirstClassShared';
 
 test.use({ persona: 'premiumOwner' });
 
-const MEDS_CARD = 'section[aria-labelledby="todays-meds-heading"]';
-const APPOINTMENTS_CARD = 'section[aria-labelledby="upcoming-appointments-heading"]';
+const NEXT_UP = 'section[aria-labelledby="next-up-heading"]';
 
 interface EventRead {
   kind: 'events' | 'presence';
@@ -125,7 +124,7 @@ function logReads(title: string, reads: EventRead[]): void {
   );
 }
 
-test('a cold Home load reads only the windows it renders: no list over 15 days, no prefetch, one presence read', async ({
+test('a cold Today load reads only the windows it renders: no list over 15 days, no prefetch, one presence read', async ({
   page,
   request,
   account,
@@ -149,13 +148,17 @@ test('a cold Home load reads only the windows it renders: no list over 15 days, 
     const rec = recordEventReads(page, circleId);
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
-    // Loaded: TodaysMeds settled (mounted, no skeleton) and the appointments card shows our appointment.
-    const meds = page.locator(MEDS_CARD);
-    await expect(meds).toBeVisible({ timeout: 20_000 });
-    await expect(meds.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
-    await expect(page.locator(APPOINTMENTS_CARD).getByText(apptTitle)).toBeVisible({ timeout: 20_000 });
+    // Loaded: Next up settled (mounted, no skeleton) and Quick access's Calendar tile reads our
+    // appointment tomorrow ("Next: Tomorrow"), which needs the upcoming-window list read.
+    const nextUp = page.locator(NEXT_UP);
+    await expect(nextUp).toBeVisible({ timeout: 20_000 });
+    await expect(nextUp.locator('[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
+    await expect(page.getByTestId('quick-access-grid').getByRole('link', { name: /^Calendar/ })).toContainText(
+      'Next: Tomorrow',
+      { timeout: 20_000 }
+    );
     await rec.settle();
-    logReads('Home cold load', rec.reads);
+    logReads('Today cold load', rec.reads);
 
     const today = dateInZone(tz, 0);
     const events = rec.reads.filter((r) => r.kind === 'events');
@@ -165,11 +168,11 @@ test('a cold Home load reads only the windows it renders: no list over 15 days, 
       events.filter((r) => spanDays(r) > 15).map(label),
       'GET /events requests spanning more than 15 days'
     ).toEqual([]);
-    expect(adjacentReads(rec.reads), 'adjacent-window prefetch requests on Home').toEqual([]);
+    expect(adjacentReads(rec.reads), 'adjacent-window prefetch requests on Today').toEqual([]);
     expect(presence.map(label), 'exactly one presence read, over today-30..today+180').toEqual([
       `presence ${dateInZone(tz, -30)}..${dateInZone(tz, 180)}`,
     ]);
-    expect(events.map(label).sort(), 'the exact set of GET /events requests on Home').toEqual(
+    expect(events.map(label).sort(), 'the exact set of GET /events requests on Today').toEqual(
       [
         `events ${today}..${today} event_type=medication`,
         `events ${dateInZone(tz, -1)}..${dateInZone(tz, -1)} event_type=medication`,

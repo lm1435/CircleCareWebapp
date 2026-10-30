@@ -409,7 +409,7 @@
       "earlierLoaded": "Visitas más antiguas cargadas.",
       "earlierFailed": "No se pudieron cargar las visitas más antiguas. Inténtalo de nuevo.",
       "emptyTitle": "Aún no hay visitas con {{name}}",
-      "emptyBody": "Elige a {{name}} como doctor al agregar o editar una cita. Las visitas y sus notas aparecerán aquí.",
+      "emptyBody": "Las visitas aparecerán aquí cuando elijas a {{name}} como doctor en una cita.",
       "addAppointment": "Agregar una cita",
       "unnamedAuthor": "Alguien"
     }

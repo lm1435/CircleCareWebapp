@@ -23,6 +23,7 @@ import { resolveShiftsEntry } from '@/lib/shiftsAccess';
 import { ShiftComposer } from '@/components/shifts/ShiftComposer';
 import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
+import { hasEmailLinkItemTarget, reportEmailLinkLanding } from '@/lib/emailLinkLanding';
 
 /**
  * Authenticated layout shell (spec §5).
@@ -86,6 +87,30 @@ export function AppLayout(): ReactElement {
     circleId ?? ''
   );
   const [shiftTeaserFor, setShiftTeaserFor] = useState<string | null>(null);
+
+  // Email link landing (`?src=`): the circle itself is the link's target unless
+  // the URL also names an item, in which case that page reports once it knows
+  // whether the item exists (lib/emailLinkLanding.ts). A circle the user can no
+  // longer open is "gone": the route was reached but there is nothing to show.
+  const landingPathname = location.pathname;
+  const landingSearch = location.search;
+  useEffect(() => {
+    if (accessLost) {
+      reportEmailLinkLanding({
+        pathname: landingPathname,
+        search: landingSearch,
+        landed: false,
+        targetFound: false,
+      });
+    } else if (circle && !hasEmailLinkItemTarget(landingPathname, landingSearch)) {
+      reportEmailLinkLanding({
+        pathname: landingPathname,
+        search: landingSearch,
+        landed: true,
+        targetFound: true,
+      });
+    }
+  }, [accessLost, circle, landingPathname, landingSearch]);
 
   // ── AI Care Assistant gate ────────────────────────────────────────────────
   // The backend already refuses these callers (backend/src/routes/ai.ts); this
@@ -184,7 +209,18 @@ export function AppLayout(): ReactElement {
       if (circleId) setShiftTeaserFor(circleId);
       return;
     }
-    if (kind === 'shift' && shiftEntry !== 'available') return;
+    // Shift is in the menu for everyone. Where the viewer cannot start one: a
+    // lapsed-Premium circle that still holds shifts opens the (read-only)
+    // schedule; a free circle's manager / member gets the existing owner-only
+    // notice (never a price - they cannot buy it).
+    if (kind === 'shift' && shiftEntry === 'readonly') {
+      if (circleId) navigate(`/circles/${circleId}/calendar?mode=shifts`);
+      return;
+    }
+    if (kind === 'shift' && shiftEntry !== 'available') {
+      promptUpgrade();
+      return;
+    }
     if (circleId) setCreateFor({ kind, circleId });
   };
 
@@ -242,7 +278,6 @@ export function AppLayout(): ReactElement {
           assistantDisabled={aiNav !== 'allowed'}
           onCreate={circleId ? openCreate : undefined}
           canCreate={canEdit}
-          shiftEntry={shiftEntry}
         />
         {/* Below xl the pill floats over the page, so the scroll content has to
             reserve its height + 24 (spec §4.5). `--nav-h` is published by
@@ -300,7 +335,6 @@ export function AppLayout(): ReactElement {
             anchor="bottom"
             open={addOpen}
             canCreate={canEdit}
-            shiftEntry={shiftEntry}
             onClose={() => setAddOpen(false)}
             onSelect={(kind) => {
               setAddOpen(false);
@@ -342,6 +376,7 @@ export function AppLayout(): ReactElement {
         <AddEventModal
           circleId={circleId}
           initialType={createKind}
+          entry="add_menu"
           onClose={() => setCreateFor(null)}
           onSaved={() => setCreateFor(null)}
         />

@@ -18,7 +18,7 @@ vi.mock('@/api/activityFeed', () => ({
 }));
 
 vi.mock('@/lib/analytics', () => ({
-  Analytics: { circleViewed: vi.fn() },
+  Analytics: { circleViewed: vi.fn(), circleSelected: vi.fn() },
 }));
 
 const mockGetSummary = vi.mocked(getMedicationTodaySummary);
@@ -199,6 +199,29 @@ describe('CircleCard', () => {
 
     expect(screen.getByTestId('overview-page')).toBeInTheDocument();
     expect(Analytics.circleViewed).toHaveBeenCalledWith('c1');
+  });
+
+  it('reports circle_selected with position and count only (no circle id) when given a list position', async () => {
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/circles']}>
+          <Routes>
+            <Route
+              path="/circles"
+              element={<CircleCard circle={makeCircle()} position={2} circleCount={3} />}
+            />
+            <Route path="/circles/:id" element={<div data-testid="overview-page" />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    await user.click(await screen.findByRole('link', { name: /Open Mom's Care/ }));
+    expect(Analytics.circleSelected).toHaveBeenCalledWith({
+      position: 2,
+      circleCount: 3,
+      source: 'circle_list',
+    });
   });
 
   it('shows the overdue alert badge and folds the count into the link label', async () => {

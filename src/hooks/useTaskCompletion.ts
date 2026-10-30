@@ -4,6 +4,7 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import { useCompleteEvent } from '@/hooks/useCalendarEvents';
 import { queryKeys } from '@/lib/queryKeys';
 import { withRefetchCap } from '@/lib/refetchCap';
+import { Analytics } from '@/lib/analytics';
 import { keepalivePost } from '@/lib/keepalivePost';
 import { startUndoTimer, type UndoTimer } from '@/lib/undoTimer';
 
@@ -101,7 +102,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
         ? keepalivePost(`/circles/${sentCircleId}/events/${eventId}/complete`)
         : null;
       if (!request) {
-        completeMutationRef.current.mutate({ eventId, circleId: sentCircleId });
+        completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' });
         return;
       }
       request.then(
@@ -112,10 +113,10 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
             void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(sentCircleId) });
           } else {
             // Refused while the page is alive: the ordinary path reports it.
-            completeMutationRef.current.mutate({ eventId, circleId: sentCircleId });
+            completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' });
           }
         },
-        () => completeMutationRef.current.mutate({ eventId, circleId: sentCircleId })
+        () => completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' })
       );
     });
     timers.clear();
@@ -193,7 +194,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
 
     const timer = startUndoTimer(() => {
       timersRef.current.delete(eventId);
-      completeMutationRef.current.mutate({ eventId, circleId: sentCircleId }, {
+      completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' }, {
         // SUCCESS: hold the pending id until the TASK ROWS THEMSELVES have
         // refetched, not until the POST settles.
         //
@@ -252,7 +253,12 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
   // Cancel the pending completion — nothing is committed.
   const handleUndo = useCallback((eventId: string): void => {
     const entry = timersRef.current.get(eventId);
-    if (entry) entry.timer.clear();
+    if (entry) {
+      entry.timer.clear();
+      // The user took the completion back inside the grace period (mobile
+      // parity). Counted only when a completion was actually pending.
+      Analytics.taskUndone(entry.circleId);
+    }
     timersRef.current.delete(eventId);
     setPendingIds((prev) => {
       if (!prev.has(eventId)) return prev;

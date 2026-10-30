@@ -1,8 +1,8 @@
 // Explicit per-icon `?raw` imports (rather than an eager `import.meta.glob`
 // over all 1357 ionicons SVGs) so only the ~55 glyphs the app actually uses
 // are bundled — measured cost: see Icon.tsx module doc comment.
-import iconHomeOutline from '../../../node_modules/ionicons/dist/svg/home-outline.svg?raw';
-import iconHome from '../../../node_modules/ionicons/dist/svg/home.svg?raw';
+import iconTodayOutline from '../../../node_modules/ionicons/dist/svg/today-outline.svg?raw';
+import iconToday from '../../../node_modules/ionicons/dist/svg/today.svg?raw';
 import iconCalendarOutline from '../../../node_modules/ionicons/dist/svg/calendar-outline.svg?raw';
 import iconCalendar from '../../../node_modules/ionicons/dist/svg/calendar.svg?raw';
 import iconMedicalOutline from '../../../node_modules/ionicons/dist/svg/medical-outline.svg?raw';
@@ -70,8 +70,8 @@ import iconRemove from '../../../node_modules/ionicons/dist/svg/remove.svg?raw';
  * Adding a name here requires a mobile precedent.
  */
 export const ICON_NAMES = [
-  'home-outline',
-  'home',
+  'today-outline',
+  'today',
   'calendar-outline',
   'calendar',
   'medical-outline',
@@ -139,8 +139,8 @@ export type IconName = (typeof ICON_NAMES)[number];
 
 /** Raw SVG markup for every allowed icon, keyed by name. See Icon.tsx. */
 export const ICON_FILES: Record<IconName, string> = {
-  'home-outline': iconHomeOutline,
-  home: iconHome,
+  'today-outline': iconTodayOutline,
+  today: iconToday,
   'calendar-outline': iconCalendarOutline,
   calendar: iconCalendar,
   'medical-outline': iconMedicalOutline,

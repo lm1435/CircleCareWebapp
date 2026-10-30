@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 const STATIC_TITLES: Record<string, string> = {
   '/login': 'pageTitles.login',
   '/signup': 'pageTitles.signup',
+  '/how-it-works': 'pageTitles.howItWorks',
   '/verify-email': 'pageTitles.verifyEmail',
   '/verify-email/start': 'pageTitles.verifyRequest',
   '/forgot-password': 'pageTitles.forgotPassword',
@@ -21,6 +22,7 @@ const STATIC_TITLES: Record<string, string> = {
   '/auth/callback': 'auth:callbackTitle',
   '/circles': 'pageTitles.circlePicker',
   '/invites': 'pageTitles.invites',
+  '/notifications': 'pageTitles.notifications',
   '/profile': 'pageTitles.profile',
   '/upgrade': 'pageTitles.upgrade',
   '/help': 'pageTitles.help',
@@ -38,6 +40,8 @@ const CIRCLE_SUBTITLES: Record<string, string> = {
   members: 'pageTitles.members',
   settings: 'pageTitles.settings',
   'daily-update': 'pageTitles.dailyUpdate',
+  welcome: 'pageTitles.welcome',
+  notifications: 'pageTitles.notifications',
 };
 
 function titleKeyForPath(pathname: string): string | null {

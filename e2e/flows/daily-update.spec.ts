@@ -66,7 +66,7 @@ test.describe('daily update', () => {
       'href',
       `/circles/${circleId}/notes?date=${today}`
     );
-    // No dose list on the card (Home's Medications card is that).
+    // No dose list on the card (Today's Next up is that).
     await expect(card.getByText('Sertraline')).toHaveCount(0);
     expect(asked).toContain(today);
 
@@ -90,7 +90,7 @@ test.describe('daily update', () => {
     const asked = await mockDailyUpdate(page, TZ, localDateOf(at, TZ));
     await page.clock.install({ time: at });
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Quick access' })).toBeVisible({
+    await expect(page.getByTestId('quick-access-grid')).toBeVisible({
       timeout: NAV_TIMEOUT,
     });
     await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
@@ -122,7 +122,7 @@ test.describe('daily update', () => {
     await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Quick access' })).toBeVisible({
+    await expect(page.getByTestId('quick-access-grid')).toBeVisible({
       timeout: NAV_TIMEOUT,
     });
     await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
@@ -154,7 +154,7 @@ test.describe('daily update', () => {
     await expect.poll(() => readTipsPref(account.userId)).toBe(false);
 
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Quick access' })).toBeVisible({
+    await expect(page.getByTestId('quick-access-grid')).toBeVisible({
       timeout: NAV_TIMEOUT,
     });
     await expect(page.getByTestId('daily-update-card')).toHaveCount(0);
@@ -221,9 +221,9 @@ test.describe('daily update', () => {
     await page.goto(`/circles/${circleId}/daily-update/${addDays(today, -8)}`, {
       waitUntil: 'domcontentloaded',
     });
-    await expect(page.getByText('This update is no longer available.')).toBeVisible({
-      timeout: NAV_TIMEOUT,
-    });
+    await expect(
+      page.getByTestId('removed-state').getByRole('heading', { name: 'This was removed' })
+    ).toBeVisible({ timeout: NAV_TIMEOUT });
   });
 
   test('a dose row whose medication is gone lands gently on Medications', async ({
@@ -238,13 +238,13 @@ test.describe('daily update', () => {
       .getByRole('region', { name: 'Medications' })
       .getByRole('link', { name: /Sertraline/ })
       .click({ timeout: NAV_TIMEOUT });
-    await expect(page.getByText('This item is no longer available. Someone may have deleted it.')).toBeVisible({
-      timeout: NAV_TIMEOUT,
-    });
+    await expect(
+      page.getByTestId('removed-state').getByRole('heading', { name: 'This was removed' })
+    ).toBeVisible({ timeout: NAV_TIMEOUT });
     await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/meds$`));
   });
 
-  test('way back: Quick access and the Activity feed open the latest update', async ({
+  test('way back: the Activity feed opens the latest update; Today\'s Quick access no longer carries a Daily updates row', async ({
     page,
     circleId,
   }, testInfo) => {
@@ -254,24 +254,12 @@ test.describe('daily update', () => {
     await mockDailyUpdate(page, TZ, today);
     await page.clock.install({ time: at });
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    const quick = page.getByRole('navigation', { name: 'Quick access' });
-    const row = quick.getByRole('link', { name: 'Daily updates' });
-    await expect(row).toBeVisible({ timeout: NAV_TIMEOUT });
-    await expect(quick.getByRole('link')).toHaveText([
-      'Notes',
-      'Calendar',
-      'Meds',
-      /^Tasks/,
-      'Vitals',
-      'Daily updates',
-      'Activity feed',
-      'Health',
-    ]);
-    await checkA11y(page, `/circles/${circleId} (Quick access with Daily updates)`, testInfo);
-    await row.click();
-    await expect(page).toHaveURL(
-      new RegExp(`/circles/${circleId}/daily-update/${addDays(today, -1)}$`)
-    );
+    const quick = page.getByTestId('quick-access-grid');
+    await expect(quick).toBeVisible({ timeout: NAV_TIMEOUT });
+    // The simple-UI Quick access: four tiles, no Daily updates row (it stays reachable from Activity).
+    await expect(quick.getByRole('link')).toHaveText([/^Notes/, /^Tasks/, /^Calendar/, /^Meds/]);
+    await expect(page.getByRole('link', { name: 'Daily updates' })).toHaveCount(0);
+    await checkA11y(page, `/circles/${circleId} (Quick access)`, testInfo);
 
     await page.goto(`/circles/${circleId}/activity`, { waitUntil: 'domcontentloaded' });
     const feedLink = page.getByTestId('activity-daily-updates-link');
@@ -281,15 +269,19 @@ test.describe('daily update', () => {
       { timeout: NAV_TIMEOUT }
     );
     await checkA11y(page, `/circles/${circleId}/activity (Daily updates link)`, testInfo);
+    await feedLink.click();
+    await expect(page).toHaveURL(
+      new RegExp(`/circles/${circleId}/daily-update/${addDays(today, -1)}$`)
+    );
   });
 
   test('way back is hidden while rollout is off', async ({ page, circleId }) => {
     await mockDailyUpdate(page, TZ, localDateOf(new Date(), TZ), { enabled: false });
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Quick access' })).toBeVisible({
+    await expect(page.getByTestId('quick-access-grid')).toBeVisible({
       timeout: NAV_TIMEOUT,
     });
-    await expect(page.getByRole('link', { name: 'Activity feed' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Activity' }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Daily updates' })).toHaveCount(0);
     await page.goto(`/circles/${circleId}/activity`, { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: NAV_TIMEOUT });

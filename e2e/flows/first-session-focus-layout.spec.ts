@@ -55,31 +55,25 @@ for (const viewport of [
   test.describe(`compact headers [${viewport.label}]`, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
-    test('Home: avatar left of the name, "Cared for by" under the name', async ({ page, circleId }) => {
+    test('Today: the date eyebrow sits above the title, the title is never truncated, the header stays compact', async ({ page, circleId }) => {
       await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
       const hero = page.getByTestId('overview-hero');
       const name = hero.getByRole('heading', { level: 1 });
       await expect(name).toBeVisible({ timeout: NAV_TIMEOUT });
-      const avatar = hero.locator(':scope > div').first();
-
-      await expectAvatarLeftOfName(avatar, name);
+      await expect(name).toContainText(/^Today for /);
       await expectNotTruncated(name);
-      const a = await box(avatar);
-      // About 60px (plus the 4px ring drawn outside the box).
-      expect(a.width).toBeGreaterThanOrEqual(56);
-      expect(a.width).toBeLessThanOrEqual(64);
       const fontSize = await name.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
       expect(fontSize).toBeGreaterThanOrEqual(24);
-      expect(fontSize).toBeLessThanOrEqual(26);
 
-      const caredFor = hero.getByText('Cared for by');
-      if ((await caredFor.count()) > 0) {
-        const n = await box(name);
-        const c = await box(caredFor);
-        expect(c.y, '"Cared for by" sits under the name').toBeGreaterThanOrEqual(n.y + n.height - 1);
-        expect(Math.abs(c.x - n.x), 'and is left-aligned with it').toBeLessThanOrEqual(2);
-      }
-      // The whole header stays compact: well under the old 96px-avatar stack.
+      // "● WEDNESDAY, OCTOBER 28" eyebrow, directly above the title and left-aligned with it.
+      const eyebrow = hero.locator('span').first();
+      await expect(eyebrow).toBeVisible();
+      const n = await box(name);
+      const e = await box(eyebrow);
+      expect(e.y + e.height, 'the date eyebrow sits above the title').toBeLessThanOrEqual(n.y + 1);
+      expect(Math.abs(e.x - n.x), 'and is left-aligned with it').toBeLessThanOrEqual(2);
+      // No avatar / "Cared for by" stack any more: the whole header stays compact.
+      await expect(hero.getByText('Cared for by')).toHaveCount(0);
       expect((await box(hero)).height).toBeLessThanOrEqual(140);
     });
 
@@ -197,7 +191,7 @@ test.describe('Save is always visible on the add form', () => {
       if (item === 'Medication') {
         // a medication also needs its time; Save stays solid either way
         await expect(save).not.toHaveAttribute('aria-disabled', 'true');
-        await dialog.locator('#scheduled_time').fill('09:00');
+        await dialog.getByRole('radio', { name: /Morning/ }).click();
       }
       await expect(save).toBeEnabled();
       await expect(save).toBeInViewport({ ratio: 1 });
@@ -255,7 +249,7 @@ test.describe('Save is solid; pressing it with a field missing takes you to that
     await expect(dialog).toBeHidden({ timeout: 10_000 });
   });
 
-  test('Medication: Create goes to the name, then to the time, each with its error', async ({
+  test('Medication: Add medication goes to the name, then to the time chips, each with its error', async ({
     page,
     circleId,
   }) => {
@@ -266,10 +260,10 @@ test.describe('Save is solid; pressing it with a field missing takes you to that
     await expect(dialog.locator('#medication_name')).toHaveAttribute('aria-invalid', 'true');
     await dialog.locator('#medication_name').fill('Missing field check');
     await expect(dialog.locator('#medication_name')).not.toHaveAttribute('aria-invalid', 'true');
-    await expect(dialog.locator('#scheduled_time')).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(dialog.getByText('Medications need a scheduled time.')).toHaveCount(0);
     await save.click();
-    await expect(dialog.locator('#scheduled_time')).toBeFocused();
-    await expect(dialog.locator('#scheduled_time')).toHaveAttribute('aria-invalid', 'true');
+    // The simple form has no time input until "Other time": focus goes to the first time chip.
+    await expect(dialog.getByRole('radio', { name: /Morning/ })).toBeFocused();
     await expect(dialog.getByText('Medications need a scheduled time.')).toBeVisible();
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();

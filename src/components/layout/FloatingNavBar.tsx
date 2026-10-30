@@ -138,8 +138,8 @@ export function FloatingNavBar({
       <TabCell
         to={base}
         active={section === ''}
-        icon="home-outline"
-        iconActive="home"
+        icon="today-outline"
+        iconActive="today"
         label={t('nav.home')}
       />
       <TabCell

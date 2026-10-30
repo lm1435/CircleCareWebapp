@@ -27,7 +27,7 @@
       "title": {
         "oxygen_saturation": "Nenhuma medição de oxigénio no sangue ainda"
       },
-      "description": "Registe medições ao longo do tempo para que o círculo perceba uma tendência antes da próxima consulta.",
+      "description": "Registe medições para reparar em tendências antes da próxima consulta.",
       "cta": {
         "blood_pressure": "Registar pressão arterial",
         "heart_rate": "Registar frequência cardíaca",

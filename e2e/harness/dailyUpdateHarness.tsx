@@ -141,10 +141,7 @@ function App(): ReactElement {
       <main className="mx-auto max-w-5xl pb-8">
         <Hero
           recipientName={data.recipient_name ?? ''}
-          recipientPhotoUrl={null}
-          recipientDob={null}
           recipientTimezone={TZ}
-          members={[]}
         />
         <div className="px-5 pb-6">
           <DailyUpdateCardView

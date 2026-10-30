@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import i18n from '@/i18n';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCircle } from '@/hooks/useCircle';
+import { Analytics } from '@/lib/analytics';
+import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
 
 /**
  * ACCESS-REMOVED STATE AT THE CIRCLE LAYOUT (PK14, parity with mobile CircleDetailScreen).
@@ -60,6 +62,66 @@ function renderAt(path: string): void {
 
 afterEach(async () => {
   await i18n.changeLanguage('en');
+});
+
+describe('AppLayout — email link to a circle', () => {
+  let spy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    sessionStorage.clear();
+    __resetEmailLinkLandingForTests();
+    spy = vi.spyOn(Analytics, 'emailLinkOpened').mockImplementation(() => undefined);
+  });
+  afterEach(() => spy.mockRestore());
+
+  it('no access: the shared removed state ("See your circles"), event landed=false target_found=false', () => {
+    setCircle({ accessLost: 'FORBIDDEN' });
+    renderAt('/circles/c1?src=weekly_digest');
+    const removed = screen.getByTestId('removed-state');
+    expect(within(removed).getByRole('heading', { level: 1, name: 'This was removed' })).toHaveFocus();
+    expect(within(removed).getByText('You no longer have access to this circle.')).toBeInTheDocument();
+    expect(within(removed).getByTestId('removed-state-context')).toHaveTextContent('From your email');
+    expect(within(removed).getByRole('link', { name: 'See your circles' })).toHaveAttribute('href', '/circles');
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith({
+      type: 'weekly_digest',
+      appState: 'signed_in',
+      landed: false,
+      targetFound: false,
+    });
+  });
+
+  it('after a login the same link reports signed_out', () => {
+    sessionStorage.setItem('cc_email_link_login', '/circles/c1/meds?src=weekly_digest');
+    setCircle({ accessLost: 'FORBIDDEN' });
+    renderAt('/circles/c1/meds?src=weekly_digest');
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ appState: 'signed_out' }));
+  });
+
+  it('accessible circle with no item target: landed + found', () => {
+    setCircle({ circle: { id: 'c1' }, isError: false });
+    renderAt('/circles/c1/meds?src=weekly_digest');
+    expect(screen.getByText('Meds page stub')).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledWith({
+      type: 'weekly_digest',
+      appState: 'signed_in',
+      landed: true,
+      targetFound: true,
+    });
+  });
+
+  it('an item link leaves the report to the page (the layout stays silent while the circle is fine)', () => {
+    setCircle({ circle: { id: 'c1' }, isError: false });
+    renderAt('/circles/c1/meds?medication=m-1&src=weekly_digest');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('without ?src= the old access-removed copy is unchanged and nothing is reported', () => {
+    setCircle({ accessLost: 'FORBIDDEN' });
+    renderAt('/circles/c1/meds');
+    expect(screen.getByRole('heading', { level: 1, name: 'Access removed' })).toBeInTheDocument();
+    expect(screen.queryByTestId('removed-state')).not.toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
+  });
 });
 
 describe('AppLayout access-removed state', () => {

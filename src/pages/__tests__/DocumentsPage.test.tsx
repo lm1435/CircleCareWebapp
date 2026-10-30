@@ -280,7 +280,7 @@ describe('DocumentsPage', () => {
     expect(await screen.findByText('No documents yet')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Documents shared with this circle will appear here so everyone helping can find them when it matters.'
+        'Documents the care team uploads will show up here.'
       )
     ).toBeInTheDocument();
   });

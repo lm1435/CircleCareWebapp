@@ -1,8 +1,9 @@
 import { useEffect, useRef, type ReactElement } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui';
 import { TerminalState } from '@/components/auth/TerminalState';
+import { RemovedState } from '@/components/RemovedState';
 
 export type CircleAccessLostReason = 'FORBIDDEN' | 'NOT_FOUND';
 
@@ -20,6 +21,10 @@ export function CircleAccessLost({ reason }: { reason: CircleAccessLostReason })
   const { t } = useTranslation('circles');
   const ref = useRef<HTMLDivElement>(null);
   const forbidden = reason === 'FORBIDDEN';
+  // Reached from an email link (`?src=`): show the shared removed state, the
+  // twin of mobile's, with the "From your email" context line.
+  const [searchParams] = useSearchParams();
+  const fromEmail = Boolean(searchParams.get('src'));
 
   useEffect(() => {
     const h1 = ref.current?.querySelector('h1');
@@ -27,6 +32,8 @@ export function CircleAccessLost({ reason }: { reason: CircleAccessLostReason })
     h1.setAttribute('tabindex', '-1');
     h1.focus({ preventScroll: true });
   }, [reason]);
+
+  if (fromEmail) return <RemovedState reason="no_access" fromEmail />;
 
   return (
     <div ref={ref} className="mx-auto w-full max-w-md px-4 py-16" data-testid="circle-access-lost">

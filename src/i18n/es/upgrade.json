@@ -1,13 +1,34 @@
 {
   "eyebrow": "CircleCare Premium",
   "headline": {
-    "onboarding": { "lead": "Mejor cuidado,", "accent": "juntos." },
-    "general": { "lead": "Desbloquea la", "accent": "experiencia completa." },
-    "capacity": { "lead": "Más personas,", "accent": "mejor cuidado." },
-    "feature": { "lead": "Aprovecha todo", "accent": "CircleCare." },
-    "earnedMeds": { "lead": "Vas por", "accent": "buen camino." },
-    "earnedInvite": { "lead": "Tu círculo está", "accent": "creciendo." },
-    "shifts": { "lead": "Compartan el cuidado,", "accent": "turno por turno." }
+    "onboarding": {
+      "lead": "Mejor cuidado,",
+      "accent": "juntos."
+    },
+    "general": {
+      "lead": "Desbloquea la",
+      "accent": "experiencia completa."
+    },
+    "capacity": {
+      "lead": "Más personas,",
+      "accent": "mejor cuidado."
+    },
+    "feature": {
+      "lead": "Aprovecha todo",
+      "accent": "CircleCare."
+    },
+    "earnedMeds": {
+      "lead": "Vas por",
+      "accent": "buen camino."
+    },
+    "earnedInvite": {
+      "lead": "Tu círculo está",
+      "accent": "creciendo."
+    },
+    "shifts": {
+      "lead": "Compartan el cuidado,",
+      "accent": "turno por turno."
+    }
   },
   "subtitle": "Todo lo que tu familia necesita para coordinar el cuidado, en cada círculo del que formas parte.",
   "trialHook": "Comienza con una prueba gratis: hoy no pagas nada.",

@@ -1,34 +1,28 @@
 import type { Page } from '@playwright/test';
 import { expect } from './fixtures';
 
-// THE GET-STARTED CARD'S INTRO IS ROLE-AWARE.
+// THE NEXT-STEP CARD IS ROLE-AWARE (it replaced the Get-started checklist and its intro).
 //
-// Mobile told a caregiver who JOINED someone else's circle "You've created a
-// care circle for …". Only the owner created it. Web and mobile now share four
-// sentences (owner / self-care owner / joined / joined-as-recipient), and a
-// view-only seat is never shown the card at all (it could act on no step).
+// Today (docs/plans/simple-ui-1-3-1.md) shows ONE coaching card: the next of three steps
+// (add the first medication, invite someone, turn on reminders), each only while not done.
+// Roles decide which steps exist: the OWNER can do all three ("Next step · 1 of 3"), a
+// caregiver who JOINED cannot invite ("1 of 2"), and a view-only seat is shown no card at all
+// (it could act on no step). Copy never assumes relatives.
 //
-// Roles come from the REAL backend (GET /circles/:id → owner_id, can_edit,
-// view_only, members) for each persona. Only the two "is this circle set up?"
-// reads are answered empty, because every persona circle is a clone of the
-// fully-populated demo circle, on which the card is (correctly) complete and
-// hidden. The fake answers are what a brand-new circle returns.
+// Roles come from the REAL backend (GET /circles/:id -> owner_id, can_edit, view_only, members)
+// for each persona. Only the "does this circle have a medication yet?" read is answered empty,
+// because every persona circle is a clone of the fully-populated demo circle, where step 1 is
+// (correctly) done. The fake answer is what a brand-new circle returns.
 
-export const CARD = '[role="region"][aria-label="Get started"]';
-export const MEDS_CARD = 'section[aria-labelledby="todays-meds-heading"]';
+export const CARD = '[data-testid="next-step-card"]';
 
-/** Answer the presence + emergency reads as an empty circle; return the circle's recipient name. */
+/** Answer the presence read as an empty circle; return the circle's recipient name once Today is up. */
 export async function openEmptyHome(page: Page, circleId: string): Promise<string> {
   await page.route(`**/api/circles/${circleId}/events/presence**`, (route) =>
     route.request().method() === 'GET'
       ? route.fulfill({
           json: { success: true, data: { medication: false, appointment: false, task: false } },
         })
-      : route.continue()
-  );
-  await page.route(`**/api/circles/${circleId}/emergency-info`, (route) =>
-    route.request().method() === 'GET'
-      ? route.fulfill({ json: { success: true, data: { emergency_info: null, versions: null } } })
       : route.continue()
   );
   const detail = page.waitForResponse(
@@ -39,7 +33,7 @@ export async function openEmptyHome(page: Page, circleId: string): Promise<strin
   const res = await detail;
   expect(res.status(), `GET /api/circles/${circleId}`).toBe(200);
   const body = (await res.json()) as { data: { circle: { recipient_name: string } } };
-  await expect(page.locator(MEDS_CARD)).toBeVisible({ timeout: 20_000 });
+  // Today is rendered (header + Quick access); the card, if any, decides on the same presence read.
+  await expect(page.getByTestId('quick-access-grid')).toBeVisible({ timeout: 20_000 });
   return body.data.circle.recipient_name;
 }
-

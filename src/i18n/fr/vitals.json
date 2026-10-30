@@ -94,7 +94,7 @@
         "temperature": "Aucune mesure de température pour l’instant",
         "oxygen_saturation": "Aucune mesure d’oxygène sanguin pour l’instant"
       },
-      "description": "Enregistrez des mesures au fil du temps pour que le cercle repère une tendance avant le prochain rendez-vous.",
+      "description": "Enregistrez des mesures pour repérer les tendances avant le prochain rendez-vous.",
       "cta": {
         "blood_pressure": "Enregistrer la tension artérielle",
         "heart_rate": "Enregistrer la fréquence cardiaque",

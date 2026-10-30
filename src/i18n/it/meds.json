@@ -3,8 +3,8 @@
   "empty": "Nessun farmaco in programma per oggi.",
   "emptyFirstRun": "Ancora nessun farmaco. Aggiungi il primo e tutti nella cerchia riceveranno il promemoria.",
   "emptyCard": {
-    "body": "Per {{name}} oggi non c'è ancora nulla in programma. Aggiungi un farmaco e tutti nella cerchia lo vedono qui, con Presa e Salta.",
-    "bodySelfCare": "Per te oggi non c'è ancora nulla in programma. Aggiungi un farmaco e compare qui, con Presa e Salta."
+    "body": "Per {{name}} oggi non c'è nulla in programma.",
+    "bodySelfCare": "Per te oggi non c'è nulla in programma."
   },
   "addFirst": "Aggiungi un farmaco",
   "loadError": "Impossibile caricare i farmaci di oggi",
@@ -62,7 +62,6 @@
     "loading": "Caricamento dei farmaci…",
     "errorTitle": "Impossibile caricare i farmaci",
     "errorHint": "Controlla la connessione e riprova.",
-    "active": "Attivi",
     "inactive": "Farmaci non attivi / passati",
     "inactiveHint": "Conservati come riferimento. I promemoria sono disattivati.",
     "noTime": "Nessun orario programmato",
@@ -91,7 +90,19 @@
       "viewLabel": "Vedi i dettagli di {{name}}",
       "repeat": "Ripetizione",
       "refill": "Rifornimento"
-    }
+    },
+    "titleNamed": "Farmaci di {{name}}",
+    "titleSelf": "I miei farmaci",
+    "recipientFallback": "la persona assistita",
+    "zoneBehind_one": "Gli orari sono quelli di {{name}} · {{hours}} ora indietro rispetto a te",
+    "zoneBehind_other": "Gli orari sono quelli di {{name}} · {{hours}} ore indietro rispetto a te",
+    "zoneAhead_one": "Gli orari sono quelli di {{name}} · {{hours}} ora avanti rispetto a te",
+    "zoneAhead_other": "Gli orari sono quelli di {{name}} · {{hours}} ore avanti rispetto a te",
+    "weekSummary": "Questa settimana {{pct}}% assunto",
+    "weekReport": "Report",
+    "anytime": "Qualsiasi ora",
+    "zoneBehindHm": "Gli orari sono quelli di {{name}} · {{hours}} h {{minutes}} min indietro rispetto a te",
+    "zoneAheadHm": "Gli orari sono quelli di {{name}} · {{hours}} h {{minutes}} min avanti rispetto a te"
   },
   "needsAttention": "Richiede attenzione",
   "needsAttentionHint": "Dosi di ieri non ancora segnate",
@@ -103,7 +114,6 @@
   },
   "history": {
     "title": "Cronologia dei farmaci",
-    "subtitle": "Monitora l'aderenza e rivedi cosa è stato preso e quando.",
     "loading": "Caricamento della cronologia…",
     "today": "Oggi",
     "yesterday": "Ieri",

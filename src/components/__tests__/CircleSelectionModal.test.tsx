@@ -21,6 +21,7 @@ vi.mock('@/hooks/useSubscriptionStatus', () => ({
 }));
 
 import { CircleSelectionModal } from '@/components/CircleSelectionModal';
+import { Analytics } from '@/lib/analytics';
 
 const onClose = vi.fn();
 
@@ -86,6 +87,14 @@ describe('CircleSelectionModal', () => {
 
     expect(mutate).toHaveBeenCalledTimes(1);
     expect(mutate.mock.calls[0][0]).toBe('c1');
+  });
+
+  it('circle_selected: picking a radio reports its 1-based position among the OWNED circles', () => {
+    const spy = vi.spyOn(Analytics, 'circleSelected').mockImplementation(() => {});
+    renderModal();
+    fireEvent.click(screen.getAllByRole('radio')[1]);
+    expect(spy).toHaveBeenCalledWith({ position: 2, circleCount: 2, source: 'circle_selection' });
+    spy.mockRestore();
   });
 
   it('Back returns from confirm to the selection step', () => {

@@ -58,7 +58,7 @@ test('fr-CA chrome: Quebec delta over the fr base, no English, html lang fr-CA',
   await expect(nav.getByText('Signes vitaux', { exact: true }).first()).toBeVisible();
   await expect(nav.getByText('Constantes', { exact: true })).toHaveCount(0);
   // ...and the fr base for everything the override does not touch.
-  for (const label of ['Accueil', 'Calendrier', 'Tâches', 'Activité', 'Membres']) {
+  for (const label of ['Jour', 'Calendrier', 'Tâches', 'Activité', 'Membres']) {
     await expect(nav.getByText(label, { exact: true }).first()).toBeVisible();
   }
   for (const en of ['Home', 'Calendar', 'Tasks', 'Activity', 'Members', 'Vitals']) {

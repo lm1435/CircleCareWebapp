@@ -176,10 +176,18 @@ describe('useCreateEvent', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(errorOccurred).toHaveBeenCalledTimes(1);
-    expect(errorOccurred).toHaveBeenCalledWith('calendar_events', 'calendar_events_mutation_error', {
-      circle_id: CIRCLE_ID,
-      code,
-    });
+    expect(errorOccurred).toHaveBeenCalledWith(
+      'calendar_events',
+      'calendar_events_create_failed',
+      expect.objectContaining({
+        circle_id: CIRCLE_ID,
+        code,
+        source: 'calendar_events',
+        action: 'create',
+        error_kind: expect.any(String),
+        fatal: false,
+      })
+    );
     expect(JSON.stringify(errorOccurred.mock.calls[0])).not.toContain('@');
     errorOccurred.mockRestore();
   });

@@ -18,7 +18,7 @@ import {
 } from '@/api/eventNotes';
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
-import { classifyFailureCode, isPermissionDeniedError } from '@/lib/apiErrors';
+import { failureContext, isPermissionDeniedError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 
 // PORT of mobile/src/hooks/useEventNotes.ts. Notes are INSTANCE-scoped: every
@@ -121,13 +121,14 @@ function invalidateNotes(
 function refreshFlagsOnPermissionError(
   queryClient: ReturnType<typeof useQueryClient>,
   circleId: string,
-  error: unknown
+  error: unknown,
+  action: FailureAction
 ): void {
   // Counted first (`error_occurred`, mobile parity): ids/enums only — `code`
   // from the closed-set `classifyFailureCode`, never the note body.
-  Analytics.errorOccurred('event_notes', 'event_notes_mutation_error', {
+  Analytics.errorOccurred('event_notes', `event_notes_${action}_failed`, {
     circle_id: circleId,
-    code: classifyFailureCode(error),
+    ...failureContext('event_notes', action, error),
   });
   if (isPermissionDeniedError(error)) {
     invalidateCircleAccessFlags(queryClient, circleId);
@@ -145,7 +146,7 @@ export function useCreateNote(): UseMutationResult<EventNote, unknown, CreateNot
       Analytics.eventNoteAdded(variables.circleId);
     },
     onError: (error, variables) =>
-      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'create'),
   });
 }
 
@@ -160,7 +161,7 @@ export function useUpdateNote(): UseMutationResult<EventNote, unknown, UpdateNot
       Analytics.eventNoteUpdated(variables.circleId);
     },
     onError: (error, variables) =>
-      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'update'),
   });
 }
 
@@ -175,6 +176,6 @@ export function useDeleteNote(): UseMutationResult<void, unknown, DeleteNoteVari
       Analytics.eventNoteDeleted(variables.circleId);
     },
     onError: (error, variables) =>
-      refreshFlagsOnPermissionError(queryClient, variables.circleId, error),
+      refreshFlagsOnPermissionError(queryClient, variables.circleId, error, 'delete'),
   });
 }

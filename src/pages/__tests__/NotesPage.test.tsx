@@ -22,6 +22,7 @@ import { ToastProvider } from '@/components/ui';
 import NotesPage from '../NotesPage';
 import type { CareNote } from '@/api/careNotes';
 import { daysBetween, olderPagesNeeded } from '@/lib/noteDate';
+import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
 
 function shiftIso(date: string, days: number): string {
   const d = new Date(`${date}T12:00:00Z`);
@@ -68,6 +69,7 @@ const mockCareNoteAdded = vi.fn();
 const mockCareNoteUpdated = vi.fn();
 const mockCareNoteDeleted = vi.fn();
 const mockCareNotesOlderLoaded = vi.fn();
+const mockEmailLinkOpened = vi.fn();
 
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
@@ -77,6 +79,7 @@ vi.mock('@/lib/analytics', () => ({
     careNoteDeleted: (...args: unknown[]) => mockCareNoteDeleted(...args),
     careNotesOlderLoaded: (...args: unknown[]) => mockCareNotesOlderLoaded(...args),
     errorOccurred: vi.fn(),
+    emailLinkOpened: (...args: unknown[]) => mockEmailLinkOpened(...args),
   },
 }));
 
@@ -160,6 +163,8 @@ beforeEach(() => {
   mockCareNoteUpdated.mockReset();
   mockCareNoteDeleted.mockReset();
   mockCareNotesOlderLoaded.mockReset();
+  mockEmailLinkOpened.mockReset();
+  __resetEmailLinkLandingForTests();
   mockUseOlder.mockReset();
   mockUseOlder.mockReturnValue(OLDER_EMPTY);
   mockUseHourCycle.mockReturnValue('12h');
@@ -434,6 +439,48 @@ describe('NotesPage — ?date= deep link', () => {
   const WITHIN_WINDOW_DATE = '2026-03-12'; // TODAY - 3d, already loaded by default
   const OUTSIDE_WINDOW_DATE = '2026-02-13'; // TODAY - 30d, needs a widen
   const TOO_OLD_DATE = '2025-12-01'; // > 92 days back — beyond the hard cap
+
+  it('email link to a day with no notes: the removed state with the date, and email_link_opened target_found false', async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: 'n-other', note_date: '2026-03-14', body: 'Another day' })])
+    );
+    renderPage(`/circles/${CIRCLE_ID}/notes?date=${WITHIN_WINDOW_DATE}&src=weekly_digest`);
+
+    await act(async () => {});
+
+    const removed = screen.getByTestId('removed-state');
+    expect(within(removed).getByText('This was removed')).toBeInTheDocument();
+    expect(within(removed).getByTestId('removed-state-context')).toHaveTextContent(
+      /^From your email · /
+    );
+    expect(mockEmailLinkOpened).toHaveBeenCalledTimes(1);
+    expect(mockEmailLinkOpened).toHaveBeenCalledWith({
+      type: 'weekly_digest',
+      appState: 'signed_in',
+      landed: true,
+      targetFound: false,
+    });
+  });
+
+  it('email link to a day that has notes: no removed state, target_found true', async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: 'n-old', note_date: WITHIN_WINDOW_DATE, body: 'Within-window note' })])
+    );
+    renderPage(`/circles/${CIRCLE_ID}/notes?date=${WITHIN_WINDOW_DATE}&src=weekly_digest`);
+    await act(async () => {});
+    expect(screen.queryByTestId('removed-state')).not.toBeInTheDocument();
+    expect(mockEmailLinkOpened).toHaveBeenCalledWith(expect.objectContaining({ targetFound: true }));
+  });
+
+  it('an in-app ?date= jump (no src) to an empty day stays silent: no removed state, no event', async () => {
+    mockUseCareNotes.mockReturnValue(
+      notesResult([makeNote({ id: 'n-other', note_date: '2026-03-14', body: 'Another day' })])
+    );
+    renderPage(`/circles/${CIRCLE_ID}/notes?date=${WITHIN_WINDOW_DATE}`);
+    await act(async () => {});
+    expect(screen.queryByTestId('removed-state')).not.toBeInTheDocument();
+    expect(mockEmailLinkOpened).not.toHaveBeenCalled();
+  });
 
   it('scrolls to the group and clears the param when the date is already within the loaded window', async () => {
     mockUseCareNotes.mockReturnValue(

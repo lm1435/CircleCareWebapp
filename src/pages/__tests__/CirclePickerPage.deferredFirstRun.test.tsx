@@ -37,17 +37,15 @@ vi.mock('@/lib/onboardingAnalytics', () => ({ trackCirclesLoaded: vi.fn() }));
 
 const mockGetCircles = vi.mocked(getCircles);
 
+// Onboarding 1.3.1: the wizard runs BEFORE the paywall, so the return target lands on that
+// circle's Today with NO first-run state. A leftover `firstRun` would re-open the wizard.
 function CircleProbe(): ReactElement {
   const { circleId } = useParams<{ circleId: string }>();
-  const state = useLocation().state as
-    | { firstRun?: boolean; firstRunRecipientName?: string }
-    | null;
-  return state?.firstRun ? (
-    <p data-testid="wizard">
-      wizard for {circleId} / {state.firstRunRecipientName}
+  const state = useLocation().state as { firstRun?: boolean } | null;
+  return (
+    <p data-testid="today" data-first-run={String(!!state?.firstRun)}>
+      circle {circleId}
     </p>
-  ) : (
-    <p data-testid="no-wizard">circle {circleId}</p>
   );
 }
 
@@ -77,19 +75,21 @@ beforeEach(() => {
 });
 
 describe('CirclePickerPage — deferred first run', () => {
-  it('replays a wizard left parked by the onboarding paywall', async () => {
+  it('delivers the parked paywall return target to the circle Today', async () => {
     deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
 
     renderPicker();
 
-    expect(await screen.findByTestId('wizard')).toHaveTextContent('wizard for circle-9 / Rose');
+    const today = await screen.findByTestId('today');
+    expect(today).toHaveTextContent('circle circle-9');
+    expect(today).toHaveAttribute('data-first-run', 'false');
   });
 
   it('CONSUMES the record, so returning to the picker later does not re-open it', async () => {
     deferFirstRun({ circleId: 'circle-9', recipientName: 'Rose' });
 
     renderPicker();
-    await screen.findByTestId('wizard');
+    await screen.findByTestId('today');
 
     expect(peekDeferredFirstRun()).toBeNull();
   });
@@ -99,8 +99,7 @@ describe('CirclePickerPage — deferred first run', () => {
 
     // The ordinary landing: the picker renders, no redirect.
     await waitFor(() => expect(mockGetCircles).toHaveBeenCalled());
-    expect(screen.queryByTestId('wizard')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('no-wizard')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('today')).not.toBeInTheDocument();
   });
 
   it('ignores another account deferral on a shared browser', async () => {
@@ -113,7 +112,7 @@ describe('CirclePickerPage — deferred first run', () => {
     renderPicker();
 
     await waitFor(() => expect(mockGetCircles).toHaveBeenCalled());
-    expect(screen.queryByTestId('wizard')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('today')).not.toBeInTheDocument();
   });
 
   // THE RACE the `deferredHandledRef` guard in CirclePickerPage exists for: a
@@ -147,9 +146,10 @@ describe('CirclePickerPage — deferred first run', () => {
 
     renderPicker();
 
-    expect(await screen.findByTestId('wizard')).toHaveTextContent('wizard for circle-9 / Rose');
+    const today = await screen.findByTestId('today');
+    expect(today).toHaveTextContent('circle circle-9');
+    expect(today).toHaveAttribute('data-first-run', 'false');
     // The auto-skip's OWN (state-less) navigation never landed on top of it —
     // if it had, this would show instead (same route, no firstRun state).
-    expect(screen.queryByTestId('no-wizard')).not.toBeInTheDocument();
   });
 });

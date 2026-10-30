@@ -6,6 +6,8 @@ import { getApiError } from '@/api/auth';
 import { useLookupInviteByCode, useAcceptInviteByCode } from '@/hooks/useJoinCircle';
 import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { joinedCircleMessage } from '@/hooks/useOpenJoinedCircle';
+import { useAuth } from '@/hooks/useAuth';
+import { recordPendingInviteeWelcome } from '@/lib/inviteeWelcome';
 import { extractJoinCode, isCompleteJoinCode } from '@/lib/joinCode';
 import { trackOnboardingCompleted } from '@/lib/onboardingAnalytics';
 import { Analytics } from '@/lib/analytics';
@@ -113,6 +115,8 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
   // (further down) is how the first code box wins that race instead.
   const codeFieldRef = useRef<OtpInputHandle>(null);
 
+  const { user } = useAuth();
+  const userId = user?.id;
   const lookup = useLookupInviteByCode();
   const accept = useAcceptInviteByCode();
   // Both steps hit rate-limited invite endpoints (`inviteGuessRateLimit` per
@@ -177,7 +181,15 @@ export function JoinCircleModal({ onClose, onJoined }: JoinCircleModalProps): Re
         // R4-5: joined their first circle here → onboarding complete. No-op
         // when this browser already saw the user with circles. Carries no code.
         trackOnboardingCompleted('joined');
-        showToast(joinedCircleMessage(t, joined), 'success');
+        // Onboarding 1.3.1: park the invitee welcome; the caller's onJoined
+        // navigation lands on it (welcome is the confirmation, so no toast).
+        const welcomeParked = recordPendingInviteeWelcome(userId, joined.id, {
+          inviterName: invite.invited_by.first_name,
+          recipientName: invite.circle.recipient_name,
+          viewOnly: result.view_only,
+          memberType: invite.member_type,
+        });
+        if (!welcomeParked) showToast(joinedCircleMessage(t, joined), 'success');
         onClose();
         onJoined(joined.id);
       },

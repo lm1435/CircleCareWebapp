@@ -5,6 +5,13 @@ import '@/i18n';
 import { searchDrugs, type DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from '../DrugAutocomplete';
 
+const { capture } = vi.hoisted(() => ({ capture: vi.fn() }));
+vi.mock('@/lib/analytics', () => ({
+  Analytics: {
+    drugSuggestionUseAsTyped: (...a: unknown[]) => capture(...a),
+  },
+}));
+
 vi.mock('@/api/drugs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/drugs')>();
   return { ...actual, searchDrugs: vi.fn() };
@@ -16,7 +23,13 @@ const METFORMIN: DrugSearchResult = { rxcui: '6809', name: 'Metformin', strength
 const METHOTREXATE: DrugSearchResult = { rxcui: '6851', name: 'Methotrexate', strength: null, dosageForm: null };
 
 /** A controlled host, the way both callers drive it. */
-function Host({ onSelectDrug }: { onSelectDrug: (drug: DrugSearchResult | null) => void }) {
+function Host({
+  onSelectDrug,
+  onUseAsTyped,
+}: {
+  onSelectDrug: (drug: DrugSearchResult | null) => void;
+  onUseAsTyped?: () => void;
+}) {
   const [value, setValue] = useState('');
   const [selected, setSelected] = useState<DrugSearchResult | null>(null);
   return (
@@ -26,6 +39,7 @@ function Host({ onSelectDrug }: { onSelectDrug: (drug: DrugSearchResult | null) 
       value={value}
       onChange={setValue}
       selectedDrug={selected}
+      onUseAsTyped={onUseAsTyped}
       onSelectDrug={(drug) => {
         setSelected(drug);
         onSelectDrug(drug);
@@ -143,12 +157,80 @@ describe('DrugAutocomplete', () => {
     expect(input).toHaveFocus();
 
     // Up from the first wraps to the last; Home / End jump.
+    // (Onboarding 1.3.1: the LAST option is now the "Use ... as typed" row.)
     await user.keyboard('{ArrowUp}');
-    expect(input).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Methotrexate' }).id);
+    expect(input).toHaveAttribute('aria-activedescendant', screen.getByTestId('drug-use-as-typed').id);
     await user.keyboard('{Home}');
     expect(input).toHaveAttribute('aria-activedescendant', first.id);
     await user.keyboard('{End}');
-    expect(input).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Methotrexate' }).id);
+    expect(input).toHaveAttribute('aria-activedescendant', screen.getByTestId('drug-use-as-typed').id);
+  });
+
+  describe('"Use \u201Cx\u201D as typed" row (onboarding 1.3.1)', () => {
+    it('is the LAST row of the list, naming what was typed', async () => {
+      const user = userEvent.setup();
+      render(<Host onSelectDrug={vi.fn()} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'meh');
+      const options = await screen.findAllByRole('option');
+      expect(options.map((o) => o.textContent)).toEqual([
+        'Metformin',
+        'Methotrexate',
+        'Use \u201Cmeh\u201D as typed',
+      ]);
+    });
+
+    it('keeps the typed name with NO drug id and reports it', async () => {
+      const user = userEvent.setup();
+      const onSelectDrug = vi.fn();
+      const onUseAsTyped = vi.fn();
+      render(<Host onSelectDrug={onSelectDrug} onUseAsTyped={onUseAsTyped} />);
+      const input = screen.getByRole('combobox', { name: /Medication name/ });
+      await user.type(input, 'meh');
+      await user.click(await screen.findByTestId('drug-use-as-typed'));
+
+      expect(input).toHaveValue('meh');
+      expect(onUseAsTyped).toHaveBeenCalledTimes(1);
+      expect(onSelectDrug).not.toHaveBeenCalled();
+      expect(screen.queryByRole('listbox')).toBeNull();
+    });
+
+    it('reports use-as-typed with a bucket and no typed text', async () => {
+      const user = userEvent.setup();
+      capture.mockClear();
+      render(<Host onSelectDrug={vi.fn()} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'meh');
+      await user.click(await screen.findByTestId('drug-use-as-typed'));
+      expect(capture).toHaveBeenCalledTimes(1);
+      expect(capture).toHaveBeenCalledWith(true, 3);
+      expect(JSON.stringify(capture.mock.calls)).not.toContain('meh');
+    });
+
+    it('is reachable and pickable with the keyboard', async () => {
+      const user = userEvent.setup();
+      const onUseAsTyped = vi.fn();
+      render(<Host onSelectDrug={vi.fn()} onUseAsTyped={onUseAsTyped} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'meh');
+      await screen.findByTestId('drug-use-as-typed');
+      await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{Enter}');
+      expect(onUseAsTyped).toHaveBeenCalledTimes(1);
+    });
+
+    it('stands ALONE when the directory answers empty, so an unknown drug never blocks', async () => {
+      search.mockResolvedValue([]);
+      const user = userEvent.setup();
+      render(<Host onSelectDrug={vi.fn()} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'Doliprane');
+      const options = await screen.findAllByRole('option');
+      expect(options).toHaveLength(1);
+      expect(options[0]).toHaveTextContent('Use \u201CDoliprane\u201D as typed');
+    });
+
+    it('does not appear before the search has answered or below the minimum length', async () => {
+      const user = userEvent.setup();
+      render(<Host onSelectDrug={vi.fn()} />);
+      await user.type(screen.getByRole('combobox', { name: /Medication name/ }), 'm');
+      expect(screen.queryByTestId('drug-use-as-typed')).toBeNull();
+    });
   });
 
   it('Escape closes and clears the highlight; ArrowDown reopens the same suggestions', async () => {

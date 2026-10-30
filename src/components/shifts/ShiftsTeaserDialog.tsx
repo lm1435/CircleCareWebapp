@@ -6,7 +6,7 @@ import { Analytics } from '@/lib/analytics';
 
 export interface ShiftsTeaserDialogProps {
   /** Where it was opened from (analytics enum). */
-  source: 'toggle' | 'add_menu';
+  source: 'toggle' | 'add_menu' | 'shifts_nudge';
   onClose: () => void;
 }
 

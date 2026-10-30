@@ -1,10 +1,4 @@
 {
-  "hero": {
-    "bornAge": "Nació {{date}} · edad {{age}}",
-    "caredForBy": "Cuidado por",
-    "andMore_one": "+{{count}} más",
-    "andMore_other": "+{{count}} más"
-  },
   "adherence": {
     "eyebrow": "Últimos 7 días",
     "label": "Medicamentos al día",
@@ -19,8 +13,18 @@
     "tasksNote_one": "{{count}} pendiente",
     "tasksNote_other": "{{count}} pendientes",
     "vitals": "Signos vitales",
-    "activityFeed": "Actividad",
-    "careInfo": "Salud"
+    "notesWrote": "{{who}} escribió {{ago}}",
+    "someone": "Alguien",
+    "notesEmpty": "Cómo estuvo el día",
+    "tasksEmpty": "Pendientes compartidos",
+    "calendarNext": "Próxima: {{day}}",
+    "calendarEmpty": "Aún nada",
+    "medsRefill_one": "{{count}} resurtido pronto",
+    "medsRefill_other": "{{count}} resurtidos pronto",
+    "medsEmpty": "Aún nada",
+    "shifts": "Turnos",
+    "healthInfo": "Info de salud",
+    "activity": "Actividad"
   },
   "appointments": {
     "title": "Próximas citas",
@@ -61,5 +65,74 @@
     "editCircle": "Editar círculo",
     "members": "Miembros",
     "deleteCircle": "Eliminar círculo"
+  },
+  "today": {
+    "title": "Hoy para {{name}}",
+    "titleSelf": "Hoy",
+    "notNow": "Ahora no",
+    "nextUp": {
+      "heading": "Lo próximo",
+      "taken": "Tomado",
+      "done": "Listo",
+      "takenLabel": "Tomado, {{name}}, {{when}}",
+      "doneLabel": "Listo, {{name}}, {{when}}",
+      "anyTime": "A cualquier hora",
+      "yesterday": "Ayer",
+      "daysOverdue_one": "{{count}} día de atraso",
+      "daysOverdue_other": "{{count}} días de atraso",
+      "late": "Atrasado",
+      "lateHours_one": "{{count}} hora de retraso",
+      "lateHours_other": "{{count}} horas de retraso",
+      "allOfToday_one": "Todo lo de hoy · {{count}} elemento",
+      "allOfToday_other": "Todo lo de hoy · {{count}} elementos",
+      "empty": "No hay nada más programado para {{name}} hoy.",
+      "emptySelf": "No hay nada más programado para ti hoy.",
+      "loadError": "No se pudo cargar la lista de hoy"
+    },
+    "nextStep": {
+      "eyebrow": "Siguiente paso · {{current}} de {{total}}",
+      "first_med": {
+        "title": "Agrega el primer medicamento de {{name}}",
+        "titleSelf": "Agrega tu primer medicamento",
+        "body": "Todos los que ayudan lo ven aquí, con un recordatorio cuando sea la hora.",
+        "bodySelf": "Lo verás aquí, con un recordatorio cuando sea la hora.",
+        "cta": "Agregar medicamento"
+      },
+      "invite": {
+        "title": "Invita a alguien a ayudar",
+        "titleSelf": "Invita a alguien a ayudar",
+        "body": "Familia, un amigo o un cuidador contratado. Ven los medicamentos de {{name}} y reciben un aviso si una dosis no se marca como tomada.",
+        "bodySelf": "Familia, un amigo o un cuidador contratado. Ven tus medicamentos y reciben un aviso si una dosis no se marca como tomada.",
+        "cta": "Invitar"
+      },
+      "reminders": {
+        "title": "Activa los recordatorios",
+        "titleSelf": "Activa los recordatorios",
+        "body": "Recibe un recordatorio cuando toque una dosis y un aviso si alguna no se marca como tomada.",
+        "bodySelf": "Recibe un recordatorio cuando toque una dosis y un aviso si alguna no se marca como tomada.",
+        "cta": "Activar recordatorios"
+      }
+    },
+    "shiftsNudge": {
+      "joined": "{{member}} se unió al círculo de {{name}}",
+      "joinedSelf": "{{member}} se unió a tu círculo",
+      "title": "Compartan el cuidado con turnos",
+      "body": "Repartan las noches y los fines de semana para que todos sepan a quién le toca.",
+      "cta": "Configurar turnos"
+    },
+    "doseHint": {
+      "eyebrow": "Cómo funciona",
+      "body": "Toca <b>Tomado</b> cuando {{name}} lo tome. Todos los que ayudan lo ven al instante, así nadie da una segunda dosis.",
+      "bodySelf": "Toca <b>Tomado</b> cuando lo tomes. Todos los que ayudan lo ven al instante, así nadie da una segunda dosis.",
+      "gotIt": "Entendido"
+    },
+    "markIt": {
+      "tomorrow": "Mañana",
+      "today": "Hoy",
+      "question": "¿Ya se tomó hoy?",
+      "action": "Márcalo",
+      "takenByYou": "Tomado por ti",
+      "taken": "Tomado"
+    }
   }
 }

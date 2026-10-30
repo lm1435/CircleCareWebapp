@@ -35,6 +35,7 @@ const mockCircleDeleted = vi.fn();
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     circleUpdated: (...args: unknown[]) => mockCircleUpdated(...args),
+    errorOccurred: vi.fn(),
     circleDeleted: (...args: unknown[]) => mockCircleDeleted(...args),
   },
 }));

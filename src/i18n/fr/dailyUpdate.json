@@ -91,6 +91,5 @@
     "prevA11y": "Jour précédent, {{date}}",
     "nextA11y": "Jour suivant, {{date}}",
     "navLabel": "Autres jours"
-  },
-  "itemUnavailable": "Cet élément n’est plus disponible. Quelqu’un l’a peut-être supprimé."
+  }
 }

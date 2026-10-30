@@ -21,7 +21,7 @@ import { circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSu
 //     - the slim "You're offline" banner shows (role=status, in flow);
 //     - the open form's Create explains "You're offline. Connect to save this."
 //       and keeps every typed character; the dialog stays open;
-//     - Home's Take is aria-disabled and explains "You're offline. Connect to
+//     - Today's Taken is aria-disabled and explains "You're offline. Connect to
 //       mark this."; the New menu explains "Connect to make changes.";
 //   → back online:
 //     - the banner hides, the page's reads refetch;
@@ -101,8 +101,9 @@ test('offline: banner, writes explained not sent, input kept; reconnect hides it
   try {
     await cookieLogin(context, owner, baseURL);
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    const today = page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
-    const take = today.getByRole('button', { name: `Confirm ${medName}` }).first();
+    // Today's Next up (yesterday's unanswered dose is listed too; the first Taken is enough here).
+    const today = page.locator('section[aria-labelledby="next-up-heading"]');
+    const take = today.getByRole('button', { name: `Taken, ${medName}` }).first();
     await expect(take).toBeVisible({ timeout: 30_000 });
     const banner = page.getByTestId('offline-banner');
     await expect(banner).toHaveCount(0);
@@ -112,7 +113,7 @@ test('offline: banner, writes explained not sent, input kept; reconnect hides it
     await newButton.click();
     await page.getByRole('menuitem', { name: 'Task', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.locator('#event_type')).toHaveValue('task');
+    await expect(dialog.locator('#title')).toBeVisible();
     await dialog.locator('#title').fill(taskTitle);
     await dialog.locator('#scheduled_date').fill(dateInTz(tz, 0));
 
@@ -147,7 +148,7 @@ test('offline: banner, writes explained not sent, input kept; reconnect hides it
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
-    // Home's Take: visible, aria-disabled, explains; nothing optimistic.
+    // Today's Taken: visible, aria-disabled, explains; nothing optimistic.
     await expect(take).toBeVisible();
     await expect(take).toHaveAttribute('aria-disabled', 'true');
     await take.click({ force: true });
@@ -325,8 +326,7 @@ test('offline: first-run wizard - every step-1 choice is aria-disabled and expla
   await circleLoaded;
   const circleId = /\/circles\/([0-9a-f-]{36})/.exec(page.url())![1];
 
-  // The three secondary choices sit behind the "See what else" toggle.
-  await wizard.getByTestId('first-run-more-toggle').click();
+  // Onboarding 1.3.1: the three quiet rows are always visible (no toggle).
   const choices = [
     wizard.getByTestId('first-run-primary'),
     wizard.getByTestId('first-run-start-with-appointment'),

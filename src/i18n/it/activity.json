@@ -3,7 +3,7 @@
   "subtitle": "Tutto quello che succede nella cerchia di cura, da parte di tutta la famiglia.",
   "loading": "Caricamento attività...",
   "noActivity": "Ancora nessuna attività",
-  "noActivityHint": "Le attività compariranno qui man mano che chi si prende cura farà qualcosa. Insieme è meglio: invita familiari e caregiver, così tutti possono vedere cosa è già stato fatto.",
+  "noActivityHint": "Le attività di {{name}} appariranno qui.",
   "inviteCta": "Invita qualcuno",
   "errorTitle": "Non è stato possibile caricare le attività recenti",
   "errorHint": "Controlla la connessione e riprova.",
@@ -101,5 +101,6 @@
     "rescheduledMedication": "Farmaco riprogrammato: {{title}} alle {{time}}",
     "addedNotes": "Ha aggiunto note a {{title}}",
     "memberRoleChanged": "Il ruolo di un membro nella cerchia è cambiato"
-  }
+  },
+  "noActivityHintSelf": "Le attività appariranno qui."
 }

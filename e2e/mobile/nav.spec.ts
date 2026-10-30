@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures';
 
 // Mobile-only nav. Below the xl breakpoint the sidebar is hidden and the
 // FloatingNavBar pill is the whole navigation surface (spec §5.3): five cells,
-// HOME · CARE · NEW · HEALTH · AI. The hamburger drawer this file used to drive
+// TODAY · CARE · NEW · HEALTH · AI. The hamburger drawer this file used to drive
 // no longer exists — it was deleted alongside `AppDownloadBanner` in Task 11.
 //
 // Runs under the `mobile-chrome` (Pixel 5) Playwright project.
@@ -32,7 +32,7 @@ test('the pill shows five cells and the active one follows the route', async ({
   await expect(nav).toBeVisible({ timeout: 15_000 });
 
   // Three route cells and two control cells, in mobile's order.
-  for (const name of ['Home', 'Care', 'Health']) {
+  for (const name of ['Today', 'Care', 'Health']) {
     await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
   }
   for (const name of ['New', 'AI']) {
@@ -44,10 +44,10 @@ test('the pill shows five cells and the active one follows the route', async ({
 
   // /calendar is a CARE section, so CARE is the current cell.
   await expect(nav.getByRole('link', { name: 'Care' })).toHaveAttribute('aria-current', 'page');
-  await expect(nav.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current', 'page');
 });
 
-test('HEALTH and HOME cells navigate and take the active state with them', async ({
+test('HEALTH and TODAY cells navigate and take the active state with them', async ({
   page,
   circleId,
 }) => {
@@ -61,10 +61,10 @@ test('HEALTH and HOME cells navigate and take the active state with them', async
   await expect(nav.getByRole('link', { name: 'Health' })).toHaveAttribute('aria-current', 'page');
   await expect(nav.getByRole('link', { name: 'Care' })).not.toHaveAttribute('aria-current', 'page');
 
-  // HOME → the circle overview (the index route, no section segment).
-  await nav.getByRole('link', { name: 'Home' }).click();
+  // TODAY → the circle's Today page (the index route, no section segment).
+  await nav.getByRole('link', { name: 'Today' }).click();
   await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`), { timeout: 20_000 });
-  await expect(nav.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
 });
 
 test('NEW opens the AddMenu and Escape closes it', async ({ page, circleId }) => {
@@ -81,8 +81,8 @@ test('NEW opens the AddMenu and Escape closes it', async ({ page, circleId }) =>
   const menu = page.getByRole('menu');
   await expect(menu).toBeVisible({ timeout: 10_000 });
   await expect(newCell).toHaveAttribute('aria-expanded', 'true');
-  // Four options only — document upload and invite live on their own pages now.
-  await expect(menu.getByRole('menuitem')).toHaveCount(4);
+  // Five options only (Med, Appt, Task, Note, Shift) - document upload and invite live on their own pages.
+  await expect(menu.getByRole('menuitem')).toHaveCount(5);
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toHaveCount(0, { timeout: 10_000 });

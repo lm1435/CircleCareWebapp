@@ -1,9 +1,11 @@
 import { useEffect, useRef, type ReactElement } from 'react';
-import { useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { isDailyUpdateEnabled } from '@/api/dailyUpdate';
 import { Button, Skeleton } from '@/components/ui';
 import { PageMasthead } from '@/components/layout/PageMasthead';
+import { RemovedState } from '@/components/RemovedState';
+import { useEmailLinkLanding } from '@/lib/emailLinkLanding';
 import {
   DailyUpdateDayArrows,
   DailyUpdateDayView,
@@ -72,7 +74,22 @@ export default function DailyUpdatePage(): ReactElement {
     (query.isError && isDailyUpdateUnavailableError(query.error)) ||
     (query.data !== undefined && (data === null || !data.eligible)) ||
     viewerIsRecipient;
+  // The DAY is gone (outside the 7-day window, or the server says it does not
+  // exist / is not ours): the shared removed state. A rollout switch that is off,
+  // or the recipient's own view, is not "removed" and keeps the plain sentence.
+  const dayGone =
+    (today !== null && !inRange) || (query.isError && isDailyUpdateUnavailableError(query.error));
   const ready = !loading && !unavailable && !query.isError && data !== null;
+
+  // Email link landing (`?src=`): a resolved day is "found", an unavailable one
+  // (out of the 7-day window, deleted, feature off, or the recipient's own
+  // view) is "gone". Loading / network errors report nothing yet.
+  const navigate = useNavigate();
+  const reportLanding = useEmailLinkLanding();
+  useEffect(() => {
+    if (ready) reportLanding(true);
+    else if (!loading && unavailable) reportLanding(false);
+  }, [ready, loading, unavailable, reportLanding]);
 
   // `#tasks` (the card's "2 tasks done" row): once the sections exist, bring
   // that section into view and move focus to its heading, so keyboard and
@@ -102,8 +119,19 @@ export default function DailyUpdatePage(): ReactElement {
         <Skeleton className="mt-5 h-32 w-full rounded-xl" />
       </div>
     );
-  } else if (unavailable) {
+  } else if (unavailable && !(dayGone && !viewerIsRecipient)) {
     body = <p className="m-0 text-md leading-normal text-ink-2">{t('dated.unavailable')}</p>;
+  } else if (unavailable) {
+    // The update is gone (outside the 7-day window or not available): the shared
+    // removed state, same as mobile. "OK" returns to the circle's Home.
+    body = (
+      <RemovedState
+        reason="removed"
+        date={date}
+        fromEmail={Boolean(searchParams.get('src'))}
+        onDismiss={() => navigate(`/circles/${circleId}`, { replace: true })}
+      />
+    );
   } else if (query.isError || data === null) {
     body = (
       <div role="alert" className="flex flex-col items-start gap-3">
@@ -137,7 +165,7 @@ export default function DailyUpdatePage(): ReactElement {
           />
         </div>
       ) : null}
-      <div className="px-5 pt-2">{body}</div>
+      <div className={unavailable && dayGone && !viewerIsRecipient ? undefined : 'px-5 pt-2'}>{body}</div>
     </section>
   );
 }

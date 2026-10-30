@@ -3,7 +3,7 @@
   "subtitle": "Tout ce qui se passe dans le cercle de soins, de la part de toute la famille.",
   "loading": "Chargement de l’activité…",
   "noActivity": "Aucune activité pour l’instant",
-  "noActivityHint": "L’activité apparaîtra ici au fil des actions de votre équipe d’aidants. L’activité est plus utile à plusieurs : invitez vos proches et les aidants pour que chacun voie ce qui a été fait.",
+  "noActivityHint": "L’activité de {{name}} apparaîtra ici.",
   "inviteCta": "Inviter quelqu’un",
   "errorTitle": "Impossible de charger le fil d’activité",
   "errorHint": "Vérifiez votre connexion et réessayez.",
@@ -101,5 +101,6 @@
     "rescheduledMedication": "Médicament reprogrammé : {{title}} à {{time}}",
     "addedNotes": "Notes ajoutées : {{title}}",
     "memberRoleChanged": "Le rôle d’un membre du cercle a changé"
-  }
+  },
+  "noActivityHintSelf": "L’activité apparaîtra ici."
 }

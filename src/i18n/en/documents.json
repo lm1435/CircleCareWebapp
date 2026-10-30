@@ -17,8 +17,8 @@
   "errorTitle": "Couldn't load documents",
   "errorHint": "Check your connection and try again.",
   "noDocuments": "No documents yet",
-  "noDocumentsHint": "Keep your loved one's important documents in one place — insurance cards, records, directives — so everyone helping can find them when it matters.",
-  "noDocumentsHintReadOnly": "Documents shared with this circle will appear here so everyone helping can find them when it matters.",
+  "noDocumentsHint": "Keep insurance cards, records and directives where anyone helping can find them.",
+  "noDocumentsHintReadOnly": "Documents the care team uploads will show up here.",
   "emptyCategory": {
     "title": "Nothing in {{category}} yet.",
     "action": "Show all documents"

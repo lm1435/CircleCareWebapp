@@ -40,11 +40,12 @@
     "forgotPassword": "Olvidé mi contraseña",
     "resetPassword": "Restablecer contraseña",
     "circlePicker": "Elegir un círculo",
+    "notifications": "Notificaciones",
     "invites": "Invitaciones pendientes",
     "profile": "Perfil",
     "upgrade": "Mejorar plan",
     "help": "Ayuda",
-    "overview": "Resumen",
+    "overview": "Hoy",
     "calendar": "Calendario",
     "meds": "Medicamentos",
     "tasks": "Tareas",
@@ -57,7 +58,9 @@
     "settings": "Editar círculo",
     "notFound": "Página no encontrada",
     "dailyUpdate": "Resumen del día",
-    "providerVisits": "Visitas y notas"
+    "providerVisits": "Visitas y notas",
+    "howItWorks": "Mira cómo funciona",
+    "welcome": "Bienvenida"
   },
   "errorBoundary": {
     "title": "Algo salió mal",
@@ -68,7 +71,7 @@
   "nav": {
     "label": "Navegación principal",
     "back": "Atrás",
-    "home": "Inicio",
+    "home": "Hoy",
     "calendar": "Calendario",
     "tasks": "Tareas",
     "notes": "Notas",
@@ -199,5 +202,57 @@
     "message": "¿CircleCare está ayudando a tu familia? Una calificación rápida ayuda a otros cuidadores a encontrarla.",
     "rate": "Calificar CircleCare",
     "dismiss": "Ahora no"
+  },
+  "removedState": {
+    "title": "Esto se eliminó",
+    "removed": "Se eliminó o ya no está programado.",
+    "ended": "Esto ya terminó.",
+    "noAccess": "Ya no tienes acceso a este círculo.",
+    "fromEmail": "Desde tu correo",
+    "fromEmailDate": "Desde tu correo · {{date}}",
+    "ok": "Aceptar",
+    "seeCircles": "Ver tus círculos"
+  },
+  "inbox": {
+    "bell": "Notificaciones",
+    "bellUnread": "Notificaciones, {{count}} sin leer",
+    "eyebrow": "Notificaciones",
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "allMarkedRead": "Todas las notificaciones se marcaron como leídas.",
+    "unread": "Sin leer",
+    "sections": {
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "twoDaysAgo": "Hace 2 días"
+    },
+    "meta": "{{circle}} · {{time}}",
+    "dose": {
+      "taken": "{{med}} {{time}} · Tomada",
+      "takenBy": "{{med}} {{time}} · Tomada por {{name}}",
+      "skipped": "{{med}} {{time}} · Omitida",
+      "skippedBy": "{{med}} {{time}} · Omitida por {{name}}",
+      "due": "Es hora de {{med}} {{time}}",
+      "notMarked": "{{med}} {{time}} todavía no se marcó como tomada",
+      "markedAt": "Marcada a las {{markedTime}}"
+    },
+    "empty": "Los recordatorios y novedades de tus círculos aparecen aquí durante 3 días. Los anteriores están en Actividad.",
+    "errorTitle": "No se pudieron cargar las notificaciones.",
+    "errorBody": "Revisa tu conexión e inténtalo de nuevo. Tus recordatorios siguen llegando como siempre.",
+    "tryAgain": "Reintentar",
+    "side": {
+      "title": "Últimos 3 días",
+      "body": "Recordatorios, dosis tomadas, notas, citas y personas que se unen, de todos tus círculos, durante 3 días. Al abrir una, vas al mismo lugar al que te llevaría una notificación del teléfono."
+    },
+    "seeOlder": "Ver anteriores en Actividad",
+    "settings": "Configuración de notificaciones",
+    "backToList": "Volver a notificaciones",
+    "countNew_one": "{{count}} nueva",
+    "countNew_other": "{{count}} nuevas",
+    "circleUnreadA11y_one": "Notificaciones de {{name}}, {{count}} nueva",
+    "circleUnreadA11y_other": "Notificaciones de {{name}}, {{count}} nuevas",
+    "scopedSubtitle_one": "{{name}} · {{count}} nueva",
+    "scopedSubtitle_other": "{{name}} · {{count}} nuevas",
+    "allNotifications": "Todas las notificaciones"
   }
 }

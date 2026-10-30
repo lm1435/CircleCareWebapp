@@ -367,12 +367,19 @@ describe('useConfirmMedication — error_occurred on failure', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(errorOccurred).toHaveBeenCalledTimes(1);
-    expect(errorOccurred).toHaveBeenCalledWith('medication_confirm', 'medication_confirm_error', {
-      circle_id: CIRCLE_ID,
-      status: 'skipped',
-      source: 'care_profile',
-      code,
-    });
+    expect(errorOccurred).toHaveBeenCalledWith(
+      'medication_confirm',
+      'medication_confirm_update_failed',
+      expect.objectContaining({
+        circle_id: CIRCLE_ID,
+        status: 'skipped',
+        source: 'care_profile',
+        code,
+        action: 'update',
+        error_kind: expect.any(String),
+        fatal: false,
+      })
+    );
     expect(JSON.stringify(errorOccurred.mock.calls[0])).not.toContain('@');
   });
 });

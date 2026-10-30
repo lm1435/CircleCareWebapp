@@ -13,7 +13,7 @@ import {
   type ScopedAccount,
 } from '../unhappy/auth-invites/_helpers';
 import { apiCreateEvent, dateInZone, errorToast } from '../unhappy/writes/_helpers';
-import { circleTimezone, createDailyMedication, deleteSeries, escapeRegExp, uniqueSuffix } from '../notesFirstClassShared';
+import { answerYesterdaysDose, circleTimezone, createDailyMedication, deleteSeries, escapeRegExp, uniqueSuffix } from '../notesFirstClassShared';
 
 // Row "OS-remove-occurrence": the two toasts a caregiver sees when ANOTHER member
 // removes the single occurrence they are looking at ("This event / dose only"
@@ -29,7 +29,7 @@ import { circleTimezone, createDailyMedication, deleteSeries, escapeRegExp, uniq
 //         EN "This event was removed from the calendar for that day."
 //         ES "Este evento se eliminó del calendario para ese día."
 //       No note is written, the composer keeps the text, one POST was sent.
-//   (2) TodaysMeds (Home): today's dose is on the card; a second member removes it;
+//   (2) Today Next up (Home): today's dose is on the card; a second member removes it;
 //       Confirm is pressed (5 s undo window, then the POST).
 //         EN "This dose was removed from the schedule."
 //         ES "Esta dosis se eliminó del horario."
@@ -67,14 +67,14 @@ const COPY = {
     panelToast: 'This event was removed from the calendar for that day.',
     doseToast: 'This dose was removed from the schedule.',
     addNote: 'Add note',
-    confirm: (name: string) => `Confirm ${name}`,
+    confirm: (name: string) => `Taken, ${name}`,
     undo: (name: string) => `Undo ${name}`,
   },
   es: {
     panelToast: 'Este evento se eliminó del calendario para ese día.',
     doseToast: 'Esta dosis se eliminó del horario.',
     addNote: 'Agregar nota',
-    confirm: (name: string) => `Confirmar ${name}`,
+    confirm: (name: string) => `Tomado, ${name}`,
     undo: (name: string) => `Deshacer ${name}`,
   },
 } as const;
@@ -197,7 +197,7 @@ for (const lang of ['en', 'es'] as const) {
     }
   });
 
-  test(`TodaysMeds (${lang.toUpperCase()}): confirming a dose another member removed says so and writes no confirmation`, async ({
+  test(`Today Next up (${lang.toUpperCase()}): confirming a dose another member removed says so and writes no confirmation`, async ({
     page,
     context,
     request,
@@ -217,10 +217,12 @@ for (const lang of ['en', 'es'] as const) {
     // Started yesterday so today's 00:01 dose is due (a start of TODAY with a past time would be
     // rolled to tomorrow by the late-add rule).
     const root = await createDailyMedication(s.ownerSession, s.circleId, name, dateInZone(s.tz, -1), { time: '00:01' });
+    // Today's Next up also lists yesterday's unanswered dose; answer it so today's is the only row.
+    await answerYesterdaysDose(s.ownerSession, s.circleId, root, s.tz);
     try {
       await cookieLogin(context, s.owner, baseURL);
       await page.goto(`/circles/${s.circleId}`, { waitUntil: 'domcontentloaded' });
-      const list = page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
+      const list = page.locator('section[aria-labelledby="next-up-heading"]');
       const confirm = list.getByRole('button', { name: c.confirm(name) }).first();
       await expect(confirm).toBeVisible({ timeout: 30_000 });
 

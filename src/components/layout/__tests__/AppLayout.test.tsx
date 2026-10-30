@@ -175,7 +175,7 @@ describe('AppLayout', () => {
     renderLayout();
 
     expect(Array.from(pill().children).map((cell) => cell.textContent)).toEqual([
-      'Home',
+      'Today',
       'Care',
       'New',
       'Health',

@@ -98,8 +98,10 @@
       "repeat": "Wiederholung"
     },
     "choose": {
-      "primary": "Erstes Medikament hinzufügen",
-      "primarySelf": "Ihr erstes Medikament hinzufügen"
+      "primary": "Erstes Medikament für {{name}} hinzufügen",
+      "primarySelf": "Ihr erstes Medikament hinzufügen",
+      "promise": "Etwa eine Minute. Alle, die helfen, sehen es, mit einer Erinnerung zur richtigen Zeit.",
+      "promiseSelf": "Etwa eine Minute. Sie sehen es hier, mit einer Erinnerung zur richtigen Zeit."
     },
     "inviteNext": {
       "notNow": "Nicht jetzt"
@@ -128,16 +130,19 @@
     "ready": {
       "title": "Der Kreis von {{name}} ist bereit.",
       "titleSelf": "Ihr Kreis ist bereit.",
-      "lede": "Fügen Sie das erste Medikament von {{name}} hinzu. Das ist die Erinnerung, die der ganze Kreis teilt.",
+      "lede": "Beginnen Sie mit dem, was Sie am häufigsten nachsehen.",
       "ledeSelf": "Fügen Sie Ihr erstes Medikament hinzu. Das ist die Erinnerung, die Ihr ganzer Kreis teilt.",
       "toggleShow": "Keine Medikamente zu erfassen? Weitere Optionen",
       "toggleHide": "Ausblenden",
-      "appointmentTitle": "Termin hinzufügen",
+      "appointmentTitle": "Ein Termin",
       "appointmentHelper": "Arztbesuche in einem Kalender, den die Familie sieht.",
-      "inviteTitle": "Jemanden zur Hilfe einladen",
+      "inviteTitle": "Jemand, der hilft",
       "inviteHelper": "Teilen Sie die Last, damit nicht alles an Ihnen hängt.",
-      "emergencyTitle": "Notfallinfos hinzufügen",
-      "emergencyHelper": "Allergien und Ärzte, griffbereit, wenn es darauf ankommt."
+      "emergencyTitle": "Notfallinformationen",
+      "emergencyHelper": "Allergien und Ärzte, griffbereit, wenn es darauf ankommt.",
+      "eyebrow": "KREIS VON {{name}}",
+      "eyebrowSelf": "IHR KREIS",
+      "orStartWith": "ODER BEGINNEN MIT"
     },
     "whatLede": "Der Name genügt. Details können warten.",
     "addDosage": "+ Dosierung hinzufügen",
@@ -158,7 +163,17 @@
       "lineSelf": "Wenn Sie auf Eingenommen tippen, sehen es auch alle, die Sie einladen.",
       "inviteHeading": "Wer ist meistens bei {{name}}?",
       "inviteHeadingSelf": "Wer unterstützt Sie?",
-      "invite": "Jemanden einladen"
+      "invite": "Jemanden einladen",
+      "eyebrow": "ALLES BEREIT",
+      "everyDay": "jeden Tag",
+      "startsToday": "beginnt heute",
+      "startsTomorrow": "beginnt morgen",
+      "startsOn": "beginnt am {{date}}"
+    },
+    "markIt": {
+      "question": "Heute schon gegeben?",
+      "action": "Abhaken",
+      "done": "Als eingenommen markiert."
     }
   },
   "accessLost": {

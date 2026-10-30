@@ -92,11 +92,11 @@ function escapeRegExp(value: string): string {
 // UI helpers
 // ---------------------------------------------------------------------------
 
-/** Continue through the non-blocking past-time notice if it shows (it should not: dates are future). */
+/** Submit and close. Only an EDIT can raise the (non-blocking) "Time already passed" prompt; create shows an inline note instead. */
 async function submitAndClose(page: Page, dialog: Locator, buttonName: string | RegExp): Promise<void> {
   await dialog.getByRole('button', { name: buttonName }).click();
   const notice = page.getByRole('dialog', {
-    name: /^(Time already passed|Starts with the next dose|La hora ya pasó|Empieza con la próxima dosis)$/,
+    name: /^(Time already passed|La hora ya pasó)$/,
   });
   const shown = await notice
     .waitFor({ state: 'visible', timeout: 2_000 })
@@ -356,7 +356,7 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
 
   // --- Medications roster ---
   await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-  const card = page.getByRole('region', { name: 'Active', exact: true }).locator('li').filter({ hasText: med });
+  const card = page.getByTestId('med-time-row').filter({ hasText: med });
   await expect(card).toBeVisible({ timeout: 20_000 });
   await expect(card).toContainText('Weekly on Mon, Wed, Fri');
 });
@@ -442,7 +442,7 @@ test.describe('Spanish', () => {
       .toEqual([1, 3, 5]);
 
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-    const card = page.getByRole('region', { name: 'Activos', exact: true }).locator('li').filter({ hasText: med });
+    const card = page.getByTestId('med-time-row').filter({ hasText: med });
     await expect(card).toBeVisible({ timeout: 20_000 });
     await expect(card).toContainText('Semanal los lun, mié, vie');
   });
@@ -488,8 +488,8 @@ test('started series: anchor chip locked (+axe); switching back to Weekly stores
 
   // --- Open the editor from the Medications roster ---
   await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-  const active = page.getByRole('region', { name: 'Active', exact: true });
-  const card = active.locator('li').filter({ hasText: med });
+  const active = page.getByTestId('med-time-row');
+  const card = active.filter({ hasText: med });
   await expect(card).toBeVisible({ timeout: 20_000 });
   await card.getByRole('button', { name: `More actions for ${med}` }).click();
   await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();

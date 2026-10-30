@@ -35,7 +35,6 @@
   },
   "errorTitle": "Impossibile caricare il calendario",
   "errorHint": "Controlla la connessione e riprova.",
-  "noteLinkMissing": "Questa nota non è più disponibile.",
   "eventCount_one": "{{count}} evento",
   "eventCount_other": "{{count}} eventi",
   "moreEvents": "Altri {{count}}",
@@ -254,8 +253,6 @@
       "reasonTooLong": "Il campo \"A cosa serve\" può contenere al massimo 100 caratteri."
     },
     "alerts": {
-      "pastTimeTitle": "Parte dalla prossima dose",
-      "pastTimeMessage": "Questo orario è già passato oggi, quindi per oggi non verrà registrato nulla. Il farmaco partirà dalla prossima dose programmata.",
       "pastTimeEditTitle": "Orario già passato",
       "pastTimeEditMessage": "Questo orario è già passato oggi: per la dose di oggi non verrà inviato alcun promemoria.",
       "continue": "Continua",
@@ -271,6 +268,7 @@
     "dualTimezoneHint": "Il tuo orario / l'orario di {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Il tuo orario / il suo orario ({{timezone}})",
     "quietHoursDoseWarning": "Questo orario rientra nelle ore di silenzio, quindi in quel momento non verrà inviato alcun promemoria. Puoi modificare le ore di silenzio in Profilo, nella sezione Ore di silenzio.",
+    "pastTimeInline": "Inizia dalla prossima dose. Questo orario è già passato oggi.",
     "dayOffsetNext": "+1 giorno",
     "dayOffsetPrevious": "-1 giorno",
     "timezoneUnresolvedNotice": "Stiamo ancora caricando il fuso orario di questa cerchia. Il salvataggio è in pausa per non memorizzare le date nel fuso sbagliato.",
@@ -279,7 +277,8 @@
       "clear": "Cancella il nome",
       "suggestionsLabel": "Suggerimenti di farmaci",
       "resultCount_one": "{{count}} suggerimento",
-      "resultCount_other": "{{count}} suggerimenti"
+      "resultCount_other": "{{count}} suggerimenti",
+      "useAsTyped": "Usa “{{name}}” così com’è"
     },
     "asNeeded": {
       "reason": "A cosa serve?",
@@ -298,6 +297,47 @@
       "linked": "Medico collegato",
       "series": "Vale per l'intera serie",
       "filledFrom": "Compilato con l'indirizzo di {{name}}"
+    },
+    "simple": {
+      "newMedication": "Nuovo farmaco",
+      "newAppointment": "Nuovo appuntamento",
+      "whatIsIt": "Di cosa si tratta?",
+      "when": "Quando?",
+      "howOften": "Con che frequenza?",
+      "whoIsGoing": "Chi va?",
+      "moreDetails": "Altri dettagli",
+      "moreDetailsSummary": "Data di inizio, istruzioni, promemoria",
+      "startDate": "Data di inizio",
+      "addMedication": "Aggiungi farmaco",
+      "addAppointment": "Aggiungi appuntamento",
+      "otherTime": "Altro orario",
+      "everyDay": "Ogni giorno",
+      "someDays": "Alcuni giorni",
+      "whenNeeded": "Al bisogno",
+      "add": "Aggiungi",
+      "added": "Aggiunto",
+      "doctor": "Medico",
+      "place": "Luogo",
+      "notesAndReminders": "Note e promemoria",
+      "repeat": "Ripeti",
+      "anotherDose": "+ Un’altra dose",
+      "removeDose": "Rimuovi la dose {{number}}"
+    },
+    "timeChips": {
+      "label": "Orari comuni",
+      "morning": "Mattina",
+      "midday": "Mezzogiorno",
+      "evening": "Sera",
+      "bedtime": "Prima di dormire"
+    },
+    "doseNumber": "Dose {{number}}",
+    "firstRun": {
+      "eyebrow": "PRIMO FARMACO DI {{name}}",
+      "eyebrowSelf": "IL TUO PRIMO FARMACO",
+      "title": "Cosa prende {{name}}?",
+      "titleSelf": "Cosa prendi?",
+      "hint": "Solo il nome, la parola grande sulla confezione. La dose è facoltativa.",
+      "skip": "Salta per ora"
     }
   },
   "deleteEvent": {

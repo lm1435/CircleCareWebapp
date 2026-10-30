@@ -3,8 +3,8 @@
   "empty": "Aucun médicament prévu aujourd’hui.",
   "emptyFirstRun": "Aucun médicament pour l’instant. Ajoutez le premier et tout le cercle recevra le rappel.",
   "emptyCard": {
-    "body": "Rien de prévu pour {{name}} aujourd’hui pour l’instant. Ajoutez un médicament et tout le cercle le verra ici, avec Prise et Sauter.",
-    "bodySelfCare": "Rien de prévu pour vous aujourd’hui pour l’instant. Ajoutez un médicament et il apparaîtra ici, avec Prise et Sauter."
+    "body": "Rien de prévu pour {{name}} aujourd’hui.",
+    "bodySelfCare": "Rien de prévu pour vous aujourd’hui."
   },
   "addFirst": "Ajouter un médicament",
   "loadError": "Impossible de charger les médicaments d’aujourd’hui",
@@ -62,7 +62,6 @@
     "loading": "Chargement des médicaments…",
     "errorTitle": "Impossible de charger les médicaments",
     "errorHint": "Vérifiez votre connexion et réessayez.",
-    "active": "Actifs",
     "inactive": "Médicaments inactifs ou passés",
     "inactiveHint": "Conservé pour référence. Les rappels sont désactivés.",
     "noTime": "Aucun horaire prévu",
@@ -91,7 +90,19 @@
       "viewLabel": "Voir les détails : {{name}}",
       "repeat": "Répétition",
       "refill": "Renouvellement"
-    }
+    },
+    "titleNamed": "Médicaments de {{name}}",
+    "titleSelf": "Mes médicaments",
+    "recipientFallback": "la personne accompagnée",
+    "zoneBehind_one": "Les heures sont celles de {{name}} · {{hours}} heure de moins que vous",
+    "zoneBehind_other": "Les heures sont celles de {{name}} · {{hours}} heures de moins que vous",
+    "zoneAhead_one": "Les heures sont celles de {{name}} · {{hours}} heure de plus que vous",
+    "zoneAhead_other": "Les heures sont celles de {{name}} · {{hours}} heures de plus que vous",
+    "weekSummary": "Cette semaine {{pct}} % pris",
+    "weekReport": "Rapport",
+    "anytime": "À tout moment",
+    "zoneBehindHm": "Les heures sont celles de {{name}} · {{hours}} h {{minutes}} min de moins que vous",
+    "zoneAheadHm": "Les heures sont celles de {{name}} · {{hours}} h {{minutes}} min de plus que vous"
   },
   "needsAttention": "À vérifier",
   "needsAttentionHint": "Doses d’hier restées sans réponse",
@@ -103,7 +114,6 @@
   },
   "history": {
     "title": "Historique des médicaments",
-    "subtitle": "Suivez l’observance et consultez ce qui a été pris, et quand.",
     "loading": "Chargement de l’historique…",
     "today": "Aujourd’hui",
     "yesterday": "Hier",

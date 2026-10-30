@@ -512,7 +512,7 @@ test('(d) deleting a one-off MEDICATION that has a recorded dose through the UI 
 // (e) refill decrement on a UI dose confirmation
 // ---------------------------------------------------------------------------
 
-test('(e) confirming today\'s dose from Home decrements the bottle: root quantity_remaining 30 -> 29 (DB + API) and the confirmation carries refill_applied_at', async ({
+test('(e) confirming today\'s dose from Today decrements the bottle: root quantity_remaining 30 -> 29 (DB + API) and the confirmation carries refill_applied_at', async ({
   page,
   context,
   request,
@@ -541,8 +541,10 @@ test('(e) confirming today\'s dose from Home decrements the bottle: root quantit
 
     await cookieLogin(context, s.owner, baseURL);
     await page.goto(`/circles/${s.circleId}`, { waitUntil: 'domcontentloaded' });
-    const list = page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
-    await expect(list.getByRole('button', { name: `Confirm ${name}` }).first()).toBeVisible({ timeout: 30_000 });
+    const list = page.locator('section[aria-labelledby="next-up-heading"]');
+    // Next up also lists yesterday's unanswered dose (answering it would decrement the bottle
+    // too): today's is the last of the two rows for this medication.
+    await expect(list.getByRole('button', { name: `Taken, ${name}` })).toHaveCount(2, { timeout: 30_000 });
 
     if (falsify('refill')) {
       await fakeWrite(page, 'POST', CONFIRM_RE, 201, {
@@ -554,7 +556,7 @@ test('(e) confirming today\'s dose from Home decrements the bottle: root quantit
     }
     // The write lands after the 5 s undo window.
     const answered = responseTo(page, 'POST', CONFIRM_RE, 40_000);
-    await list.getByRole('button', { name: `Confirm ${name}` }).first().click();
+    await list.getByRole('button', { name: `Taken, ${name}` }).last().click();
     await expect(list.getByRole('button', { name: `Undo ${name}` })).toBeVisible();
     expect((await answered).status()).toBe(201);
     await expect(page.getByRole('status').filter({ hasText: /^\s*Marked as taken/ })).toBeVisible();
@@ -590,7 +592,7 @@ test('(e) confirming today\'s dose from Home decrements the bottle: root quantit
     // A reload shows the dose answered (nothing to confirm) and the bottle did not move again.
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(list.getByRole('listitem').first()).toBeVisible({ timeout: 30_000 });
-    await expect(list.getByRole('button', { name: `Confirm ${name}` })).toHaveCount(0);
+    await expect(list.getByRole('button', { name: `Taken, ${name}` })).toHaveCount(1); // yesterday's, still unanswered
     expect(eventRow(root).quantity_remaining).toBe(29);
   } finally {
     await deleteSeries(s.api, s.circleId, root);

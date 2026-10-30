@@ -94,15 +94,14 @@ test('Members: invite + pending list, Remove on plain caregivers only, nothing o
   await checkA11y(page, `/circles/${h.circleId}/members (manager)`, testInfo);
 });
 
-test('Home care team: Invite + Remove on plain caregivers only', async ({ page, personaHandle: h }) => {
+test('Today carries no care-team roster: no Remove control for anyone (the people and their gates live on Members, above)', async ({ page, personaHandle: h }) => {
   await page.goto(`/circles/${h.circleId}`, { waitUntil: 'domcontentloaded' });
-  const team = page.locator('section[aria-labelledby="care-team-heading"]');
-  await expect(team.getByText(PLAIN)).toBeVisible({ timeout: 20_000 });
-  await expect(team.getByRole('link', { name: 'Invite member' })).toBeVisible();
-  await expect(team.getByRole('button', { name: `Remove ${PLAIN}` })).toBeVisible();
-  for (const name of ['Hana', 'Pia', 'Mara']) {
-    await expect(team.getByRole('button', { name: `Remove ${name}` }), name).toHaveCount(0);
+  await expect(page.getByTestId('quick-access-grid')).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('section[aria-labelledby="care-team-heading"]')).toHaveCount(0);
+  for (const name of [PLAIN, 'Hana', 'Pia', 'Mara']) {
+    await expect(page.getByRole('button', { name: `Remove ${name}` }), name).toHaveCount(0);
   }
+  await expect(page.getByRole('link', { name: 'Invite member' })).toHaveCount(0);
 });
 
 test('server refuses every out-of-bounds write, and writes nothing', async ({ request, personaHandle: h }) => {

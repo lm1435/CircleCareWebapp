@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAnalyticsConsent, __resetAnalyticsConsentCache } from '../analyticsConsent';
 
 // Unit tests for the email click signal (docs/plans/email-lifecycle-overhaul.md,
-// "CTA URLs and click measurement"): `Analytics.emailLinkOpened` and the boot
-// helper `trackEmailLinkFromLocation` that reads `?src=` and fires it at most
-// once per page load. Mocking follows lib/__tests__/analytics.test.ts.
+// "CTA URLs and click measurement"): `Analytics.emailLinkOpened`. The landing
+// logic that decides when and with what props it fires is covered by
+// emailLinkLanding.test.ts. Mocking follows lib/__tests__/analytics.test.ts.
 
 const capture = vi.fn();
 const identify = vi.fn();
@@ -58,52 +58,19 @@ afterEach(() => {
 });
 
 describe('Analytics.emailLinkOpened', () => {
-  it('captures email_link_opened with { src }', async () => {
+  it('captures email_link_opened with enum + boolean props only', async () => {
     const { Analytics } = await loadAnalytics();
-    Analytics.emailLinkOpened('drip_d1_first_entry');
-    expect(capture).toHaveBeenCalledWith('email_link_opened', { src: 'drip_d1_first_entry' });
-  });
-});
-
-describe('trackEmailLinkFromLocation', () => {
-  it('fires email_link_opened once with the src param, even if called twice (StrictMode double-mount)', async () => {
-    const { trackEmailLinkFromLocation, __resetEmailLinkTrackedForTests } = await loadAnalytics();
-    __resetEmailLinkTrackedForTests();
-
-    trackEmailLinkFromLocation('?src=drip_d1_first_entry');
-    trackEmailLinkFromLocation('?src=drip_d1_first_entry');
-
-    expect(capture).toHaveBeenCalledTimes(1);
-    expect(capture).toHaveBeenCalledWith('email_link_opened', { src: 'drip_d1_first_entry' });
-  });
-
-  it('never fires when there is no src param', async () => {
-    const { trackEmailLinkFromLocation, __resetEmailLinkTrackedForTests } = await loadAnalytics();
-    __resetEmailLinkTrackedForTests();
-
-    trackEmailLinkFromLocation('');
-    trackEmailLinkFromLocation('?utm_source=newsletter');
-
-    expect(capture).not.toHaveBeenCalled();
-  });
-
-  it('never fires when src is present but empty', async () => {
-    const { trackEmailLinkFromLocation, __resetEmailLinkTrackedForTests } = await loadAnalytics();
-    __resetEmailLinkTrackedForTests();
-
-    trackEmailLinkFromLocation('?src=');
-
-    expect(capture).not.toHaveBeenCalled();
-  });
-
-  it('guard persists across calls even once a later call carries a src (only the first load matters)', async () => {
-    const { trackEmailLinkFromLocation, __resetEmailLinkTrackedForTests } = await loadAnalytics();
-    __resetEmailLinkTrackedForTests();
-
-    trackEmailLinkFromLocation('?src=welcome');
-    trackEmailLinkFromLocation('?src=trial_reminder');
-
-    expect(capture).toHaveBeenCalledTimes(1);
-    expect(capture).toHaveBeenCalledWith('email_link_opened', { src: 'welcome' });
+    Analytics.emailLinkOpened({
+      type: 'drip_d1_first_entry',
+      appState: 'signed_out',
+      landed: true,
+      targetFound: false,
+    });
+    expect(capture).toHaveBeenCalledWith('email_link_opened', {
+      type: 'drip_d1_first_entry',
+      app_state: 'signed_out',
+      landed: true,
+      target_found: false,
+    });
   });
 });

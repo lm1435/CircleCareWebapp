@@ -20,7 +20,7 @@ import {
   type User,
 } from '@/api/users';
 import { queryKeys } from '@/lib/queryKeys';
-import { classifyFailureCode, isSubscriptionRequiredError } from '@/lib/apiErrors';
+import { failureContext, isSubscriptionRequiredError, type FailureAction } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
 import type { AvatarColorKey } from '@/components/ui/Avatar';
 import { useToast } from '@/components/ui';
@@ -42,10 +42,8 @@ import i18n from '@/i18n';
  * circle_id; `code` is the closed-set `classifyFailureCode` value — never the
  * submitted values (name, timezone) and never the toast copy.
  */
-function reportProfileError(error: unknown): void {
-  Analytics.errorOccurred('profile', 'profile_mutation_error', {
-    code: classifyFailureCode(error),
-  });
+function reportProfileError(error: unknown, action: FailureAction = 'update'): void {
+  Analytics.errorOccurred('profile', `profile_${action}_failed`, failureContext('profile', action, error));
 }
 
 /**
@@ -248,7 +246,7 @@ export function useDeleteAccount(): UseMutationResult<void, unknown, void> {
   return useMutation({
     mutationFn: () => deleteAccount(),
     onError: (error) => {
-      reportProfileError(error);
+      reportProfileError(error, 'delete');
       // Deletion failing is scarier than a settings save — say explicitly that
       // the account is unchanged and where to get help.
       showToast(t('delete.error'), 'error');

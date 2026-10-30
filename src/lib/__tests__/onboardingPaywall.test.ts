@@ -1,13 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  ONBOARDING_PAYWALL_PENDING_KEY,
   ONBOARDING_PAYWALL_SEEN_KEY,
   PENDING_FIRST_RUN_KEY,
   clearDeferredFirstRun,
+  clearOnboardingPaywallPending,
+  consumeOnboardingPaywall,
   deferFirstRun,
   firstRunNavigationState,
   hasSeenOnboardingPaywall,
+  markOnboardingPaywallPending,
   markOnboardingPaywallSeen,
   peekDeferredFirstRun,
+  peekOnboardingPaywallPending,
   shouldShowOnboardingPaywall,
   takeDeferredFirstRun,
 } from '@/lib/onboardingPaywall';
@@ -178,5 +183,68 @@ describe('firstRunNavigationState', () => {
       firstRun: true,
       firstRunRecipientName: 'Rose',
     });
+  });
+});
+
+/**
+ * Onboarding 1.3.1 (spec section 7): circle creation only records that the paywall is OWED;
+ * `consumeOnboardingPaywall` is the single place it is actually put on screen, from two entry
+ * points (the first med's payoff, and the next Today) that must never both win.
+ */
+describe('owed (pending) onboarding paywall', () => {
+  it('records the owed circle in localStorage, per user', () => {
+    markOnboardingPaywallPending('circle-7');
+
+    expect(peekOnboardingPaywallPending()).toBe('circle-7');
+    expect(window.localStorage.getItem(`${ONBOARDING_PAYWALL_PENDING_KEY}:${USER_ID}`)).not.toBeNull();
+    // Another user on the same browser owes nothing.
+    signIn('user-2');
+    expect(peekOnboardingPaywallPending()).toBeNull();
+  });
+
+  it('survives a tab close (localStorage, not session)', () => {
+    markOnboardingPaywallPending('circle-7');
+    expect(window.sessionStorage.getItem(`${ONBOARDING_PAYWALL_PENDING_KEY}:${USER_ID}`)).toBeNull();
+  });
+
+  it('treats a corrupt or id-less record as absent', () => {
+    window.localStorage.setItem(`${ONBOARDING_PAYWALL_PENDING_KEY}:${USER_ID}`, '{nope');
+    expect(peekOnboardingPaywallPending()).toBeNull();
+    window.localStorage.setItem(`${ONBOARDING_PAYWALL_PENDING_KEY}:${USER_ID}`, '{"circleId":""}');
+    expect(peekOnboardingPaywallPending()).toBeNull();
+  });
+
+  it('clears cleanly', () => {
+    markOnboardingPaywallPending('circle-7');
+    clearOnboardingPaywallPending();
+    expect(peekOnboardingPaywallPending()).toBeNull();
+  });
+});
+
+describe('consumeOnboardingPaywall (exactly once)', () => {
+  it('writes the seen flag, clears the owed record and parks the return target', () => {
+    markOnboardingPaywallPending('circle-7');
+
+    expect(consumeOnboardingPaywall({ circleId: 'circle-7', recipientName: 'Rose' })).toBe(true);
+
+    expect(hasSeenOnboardingPaywall()).toBe(true);
+    expect(peekOnboardingPaywallPending()).toBeNull();
+    expect(peekDeferredFirstRun()).toEqual({ circleId: 'circle-7', recipientName: 'Rose' });
+  });
+
+  it('a second call (the other entry point) is refused and shows nothing', () => {
+    markOnboardingPaywallPending('circle-7');
+    expect(consumeOnboardingPaywall({ circleId: 'circle-7', recipientName: 'Rose' })).toBe(true);
+    clearDeferredFirstRun();
+
+    markOnboardingPaywallPending('circle-7');
+    expect(consumeOnboardingPaywall({ circleId: 'circle-7', recipientName: 'Rose' })).toBe(false);
+    expect(peekDeferredFirstRun()).toBeNull();
+    // ...and the stale owed record is released.
+    expect(peekOnboardingPaywallPending()).toBeNull();
+  });
+
+  it('keeps the seen key unchanged (cc:onboardingPaywallSeen)', () => {
+    expect(ONBOARDING_PAYWALL_SEEN_KEY).toBe('cc:onboardingPaywallSeen');
   });
 });

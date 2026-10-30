@@ -10,7 +10,7 @@ import {
   uniq,
 } from '../unhappy/auth-invites/_helpers';
 import { successToast } from '../unhappy/writes/_helpers';
-import { circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSuffix } from '../notesFirstClassShared';
+import { answerYesterdaysDose, circleTimezone, createDailyMedication, dateInTz, deleteSeries, uniqueSuffix } from '../notesFirstClassShared';
 
 // OS-undo-hold (undo badge held until the refetch lands; lib/refetchCap.ts,
 // hooks/useMedConfirmation.ts `return todaysMedsRefetched`).
@@ -80,11 +80,13 @@ async function arrange(request: APIRequestContext, label: string) {
   expect(tz).toBe(RECIPIENT_TZ);
   const name = `ZZ_E2E_HOLD_${uniqueSuffix()}`;
   const root = await createDailyMedication(session, circleId, name, dateInTz(tz, -1), { time: '00:01' });
+  // Today's Next up also lists yesterday's unanswered dose; answer it so today's is the only row.
+  await answerYesterdaysDose(session, circleId, root, tz);
   return { owner, session, circleId, name, root, today: dateInTz(tz, 0) };
 }
 
 function todayList(page: Page) {
-  return page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
+  return page.locator('section[aria-labelledby="next-up-heading"]');
 }
 
 /**
@@ -132,7 +134,7 @@ test('(a) while the post-confirm re-read is slow, the answered dose never offers
     await cookieLogin(context, s.owner, baseURL);
     await page.goto(`/circles/${s.circleId}`, { waitUntil: 'domcontentloaded' });
     const list = todayList(page);
-    const confirmBtn = list.getByRole('button', { name: `Confirm ${s.name}` });
+    const confirmBtn = list.getByRole('button', { name: `Taken, ${s.name}` });
     await expect(confirmBtn.first()).toBeVisible({ timeout: 30_000 });
 
     const hold = await holdDayReReadAfterConfirm(page);
@@ -173,7 +175,7 @@ test('(b) a re-read that never lands is capped: the dose still reports "Marked a
     await cookieLogin(context, s.owner, baseURL);
     await page.goto(`/circles/${s.circleId}`, { waitUntil: 'domcontentloaded' });
     const list = todayList(page);
-    const confirmBtn = list.getByRole('button', { name: `Confirm ${s.name}` });
+    const confirmBtn = list.getByRole('button', { name: `Taken, ${s.name}` });
     await expect(confirmBtn.first()).toBeVisible({ timeout: 30_000 });
 
     const h = await holdDayReReadAfterConfirm(page);

@@ -88,14 +88,16 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
     event,
     initialType,
     initialTitle,
+    entry,
     onClose,
   }: {
     event?: CalendarEvent | null;
     initialType?: string;
     initialTitle?: string;
+    entry?: string;
     onClose: () => void;
   }) => (
-    <div role="dialog" aria-label="add-event-modal">
+    <div role="dialog" aria-label="add-event-modal" data-entry={entry}>
       <span>{event ? 'edit-mode' : 'create-mode'}</span>
       <span data-testid="edit-event-id">{event?.id ?? ''}</span>
       <span>{initialType ?? 'no-initial-type'}</span>
@@ -317,6 +319,20 @@ describe('TasksPage', () => {
     const dialog = screen.getByRole('dialog', { name: 'add-event-modal' });
     expect(dialog).toHaveTextContent('create-mode');
     expect(dialog).toHaveTextContent('no-initial-title');
+    // entry_form_opened.entry: the masthead control is "other"...
+    expect(dialog).toHaveAttribute('data-entry', 'other');
+  });
+
+  it('the empty state\'s own Add task button opens the form with entry="empty_state"', async () => {
+    mockUseTasks.mockReturnValue(tasksResult([]));
+    const user = userEvent.setup();
+    renderPage();
+    const buttons = screen.getAllByRole('button', { name: 'Add task' });
+    await user.click(buttons[buttons.length - 1]);
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveAttribute(
+      'data-entry',
+      'empty_state'
+    );
   });
 
   // The undo-window tests use fake timers, so they drive the UI with the
@@ -361,7 +377,7 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
 
       // The timer must not then fire a SECOND request for the same task.
       act(() => {
@@ -426,7 +442,7 @@ describe('TasksPage', () => {
       });
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
     } finally {
       vi.useRealTimers();
     }
@@ -494,14 +510,14 @@ describe('TasksPage', () => {
         vi.advanceTimersByTime(3000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(1);
-      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1' });
+      expect(mockMutate.mock.calls[0][0]).toEqual({ eventId: 'task-1', circleId: 'circle-1', source: 'tasks' });
 
       // ...and B commits at ITS OWN t+5s (t=7s overall).
       act(() => {
         vi.advanceTimersByTime(2000);
       });
       expect(mockMutate).toHaveBeenCalledTimes(2);
-      expect(mockMutate.mock.calls[1][0]).toEqual({ eventId: 'task-2', circleId: 'circle-1' });
+      expect(mockMutate.mock.calls[1][0]).toEqual({ eventId: 'task-2', circleId: 'circle-1', source: 'tasks' });
     } finally {
       vi.useRealTimers();
     }

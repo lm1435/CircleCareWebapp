@@ -409,7 +409,7 @@
       "earlierLoaded": "Visite precedenti caricate.",
       "earlierFailed": "Impossibile caricare le visite precedenti. Riprova.",
       "emptyTitle": "Ancora nessuna visita con {{name}}",
-      "emptyBody": "Scegli {{name}} come medico quando aggiungi o modifichi un appuntamento. Le visite e le relative note compariranno qui.",
+      "emptyBody": "Le visite appariranno qui quando scegli {{name}} come medico di un appuntamento.",
       "addAppointment": "Aggiungi un appuntamento",
       "unnamedAuthor": "Qualcuno"
     }

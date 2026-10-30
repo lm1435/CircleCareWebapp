@@ -1,13 +1,34 @@
 {
   "eyebrow": "CircleCare Premium",
   "headline": {
-    "onboarding": { "lead": "Better care,", "accent": "together." },
-    "general": { "lead": "Unlock the full", "accent": "experience." },
-    "capacity": { "lead": "More people,", "accent": "better care." },
-    "feature": { "lead": "Get more from", "accent": "CircleCare." },
-    "earnedMeds": { "lead": "You're keeping", "accent": "on track." },
-    "earnedInvite": { "lead": "Your circle is", "accent": "growing." },
-    "shifts": { "lead": "Share the care,", "accent": "shift by shift." }
+    "onboarding": {
+      "lead": "Better care,",
+      "accent": "together."
+    },
+    "general": {
+      "lead": "Unlock the full",
+      "accent": "experience."
+    },
+    "capacity": {
+      "lead": "More people,",
+      "accent": "better care."
+    },
+    "feature": {
+      "lead": "Get more from",
+      "accent": "CircleCare."
+    },
+    "earnedMeds": {
+      "lead": "You're keeping",
+      "accent": "on track."
+    },
+    "earnedInvite": {
+      "lead": "Your circle is",
+      "accent": "growing."
+    },
+    "shifts": {
+      "lead": "Share the care,",
+      "accent": "shift by shift."
+    }
   },
   "subtitle": "Everything your family needs to coordinate care, for every circle you're part of.",
   "trialHook": "Start with a free trial — nothing due today.",

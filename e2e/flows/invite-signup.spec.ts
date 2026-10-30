@@ -48,7 +48,9 @@ const FALSIFY = new Set((process.env.PW_FALSIFY ?? '').split(',').filter(Boolean
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-const joinedNamed = (circleName: string) => `You've joined ${circleName}.`;
+// Onboarding 1.3.1: a new member lands on the invitee welcome (no join toast), then "Go to Today".
+const welcomeHeading = (circleName: string) =>
+  new RegExp(`^(.+ invited you to help with|You're helping with) ${circleName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.$`);
 const circleNameFor = (label: string) => `E2E ${label}`.slice(0, 100);
 
 /** Precondition: this backend treats @circlecare.test as a blocked domain (see header). */
@@ -120,7 +122,11 @@ test('invite link -> create account -> verify -> lands in the invited circle, na
   await verifyWithCode(page, email);
 
   // Verified -> back through the invite page -> auto-accept -> the circle, named.
-  await expect(page.getByText(joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByRole('heading', { level: 1, name: welcomeHeading(circleNameFor(label)) })).toBeVisible({
+    timeout: 25_000,
+  });
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/welcome$`), { timeout: 20_000 });
+  await page.getByRole('button', { name: 'Go to Today', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`), { timeout: 20_000 });
   await expect(page.getByRole('heading', { name: /Who are you caring for/i })).toHaveCount(0);
 
@@ -160,7 +166,11 @@ test('plain signup with a pending email invite -> verify -> the pending invitati
   const accept = page.getByRole('button', { name: 'Accept', exact: true });
   await expect(accept).toBeVisible({ timeout: 20_000 });
   await accept.click();
-  await expect(page.getByText(joinedNamed(circleNameFor(label)))).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { level: 1, name: welcomeHeading(circleNameFor(label)) })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/welcome$`), { timeout: 20_000 });
+  await page.getByRole('button', { name: 'Go to Today', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/circles/${circleId}$`), { timeout: 20_000 });
 
   const userId = userIdOf(email);

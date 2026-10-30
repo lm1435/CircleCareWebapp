@@ -94,7 +94,7 @@
         "temperature": "Aún no hay lecturas de temperatura",
         "oxygen_saturation": "Aún no hay lecturas de oxígeno en sangre"
       },
-      "description": "Registra lecturas con el tiempo para que el círculo note un cambio antes de la próxima cita.",
+      "description": "Registra lecturas para detectar cambios antes de la próxima cita.",
       "cta": {
         "blood_pressure": "Registrar presión arterial",
         "heart_rate": "Registrar frecuencia cardíaca",

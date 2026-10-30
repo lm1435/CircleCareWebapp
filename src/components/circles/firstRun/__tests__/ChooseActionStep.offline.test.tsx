@@ -23,8 +23,7 @@ const explained = vi.fn();
 function renderStep() {
   const onSelect = vi.fn();
   render(<ChooseActionStep recipientName="Rosa" isSelfCare={false} onSelect={onSelect} />);
-  // The three secondary choices sit behind the "See what else" toggle.
-  fireEvent.click(screen.getByTestId('first-run-more-toggle'));
+  // Onboarding 1.3.1: the three quiet rows are always visible (no toggle).
   return { onSelect };
 }
 

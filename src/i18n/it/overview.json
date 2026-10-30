@@ -1,10 +1,4 @@
 {
-  "hero": {
-    "bornAge": "Nascita: {{date}} · età {{age}}",
-    "caredForBy": "Se ne prendono cura",
-    "andMore_one": "+{{count}} altro",
-    "andMore_other": "+{{count}} altri"
-  },
   "adherence": {
     "eyebrow": "Ultimi 7 giorni",
     "label": "Farmaci presi come da programma",
@@ -18,9 +12,19 @@
     "tasks": "Incarichi",
     "tasksNote_one": "{{count}} aperto",
     "tasksNote_other": "{{count}} aperti",
-    "vitals": "Parametri vitali",
-    "activityFeed": "Attività recenti",
-    "careInfo": "Salute"
+    "vitals": "Parametri",
+    "notesWrote": "{{who}} ha scritto {{ago}}",
+    "someone": "Qualcuno",
+    "notesEmpty": "Com’è andata la giornata",
+    "tasksEmpty": "Cose da fare condivise",
+    "calendarNext": "Prossimo: {{day}}",
+    "calendarEmpty": "Ancora niente",
+    "medsRefill_one": "{{count}} rifornimento a breve",
+    "medsRefill_other": "{{count}} rifornimenti a breve",
+    "medsEmpty": "Ancora niente",
+    "shifts": "Turni",
+    "healthInfo": "Info sulla salute",
+    "activity": "Attività"
   },
   "appointments": {
     "title": "Prossimi appuntamenti",
@@ -61,5 +65,74 @@
     "editCircle": "Modifica cerchia",
     "members": "Membri",
     "deleteCircle": "Elimina cerchia"
+  },
+  "today": {
+    "title": "Oggi per {{name}}",
+    "titleSelf": "Oggi",
+    "notNow": "Non ora",
+    "nextUp": {
+      "heading": "Prossimi",
+      "taken": "Presa",
+      "done": "Fatto",
+      "takenLabel": "Presa, {{name}}, {{when}}",
+      "doneLabel": "Fatto, {{name}}, {{when}}",
+      "anyTime": "A qualsiasi ora",
+      "yesterday": "Ieri",
+      "daysOverdue_one": "{{count}} giorno di ritardo",
+      "daysOverdue_other": "{{count}} giorni di ritardo",
+      "late": "In ritardo",
+      "lateHours_one": "{{count}} ora di ritardo",
+      "lateHours_other": "{{count}} ore di ritardo",
+      "allOfToday_one": "Tutto di oggi · {{count}} elemento",
+      "allOfToday_other": "Tutto di oggi · {{count}} elementi",
+      "empty": "Nient’altro in programma per {{name}} oggi.",
+      "emptySelf": "Nient’altro in programma per te oggi.",
+      "loadError": "Impossibile caricare l’elenco di oggi"
+    },
+    "nextStep": {
+      "eyebrow": "Prossimo passo · {{current}} di {{total}}",
+      "first_med": {
+        "title": "Aggiungi il primo farmaco di {{name}}",
+        "titleSelf": "Aggiungi il tuo primo farmaco",
+        "body": "Tutti quelli che aiutano lo vedono qui, con un promemoria all’ora giusta.",
+        "bodySelf": "Lo vedrai qui, con un promemoria all’ora giusta.",
+        "cta": "Aggiungi farmaco"
+      },
+      "invite": {
+        "title": "Invita qualcuno ad aiutare",
+        "titleSelf": "Invita qualcuno ad aiutare",
+        "body": "Famiglia, un amico o un assistente a pagamento. Vedono i farmaci di {{name}} e ricevono un avviso se una dose non è segnata come presa.",
+        "bodySelf": "Famiglia, un amico o un assistente a pagamento. Vedono i tuoi farmaci e ricevono un avviso se una dose non è segnata come presa.",
+        "cta": "Invita"
+      },
+      "reminders": {
+        "title": "Attiva i promemoria",
+        "titleSelf": "Attiva i promemoria",
+        "body": "Ricevi un promemoria quando una dose è in programma e un avviso se una non è segnata come presa.",
+        "bodySelf": "Ricevi un promemoria quando una dose è in programma e un avviso se una non è segnata come presa.",
+        "cta": "Attiva i promemoria"
+      }
+    },
+    "shiftsNudge": {
+      "joined": "{{member}} è entrato nel cerchio di {{name}}",
+      "joinedSelf": "{{member}} è entrato nel tuo cerchio",
+      "title": "Condividete la cura con i turni",
+      "body": "Dividetevi notti e weekend così tutti sanno chi è di turno.",
+      "cta": "Imposta i turni"
+    },
+    "doseHint": {
+      "eyebrow": "Come funziona",
+      "body": "Tocca <b>Presa</b> quando {{name}} la prende. Tutti quelli che aiutano lo vedono subito, così nessuno dà una seconda dose.",
+      "bodySelf": "Tocca <b>Presa</b> quando la prendi. Tutti quelli che aiutano lo vedono subito, così nessuno dà una seconda dose.",
+      "gotIt": "Ho capito"
+    },
+    "markIt": {
+      "tomorrow": "Domani",
+      "today": "Oggi",
+      "question": "Già presa oggi?",
+      "action": "Segna come presa",
+      "takenByYou": "Presa da te",
+      "taken": "Presa"
+    }
   }
 }

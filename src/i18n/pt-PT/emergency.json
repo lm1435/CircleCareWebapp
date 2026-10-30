@@ -142,7 +142,8 @@
       "archived": "Este médico já foi removido. Recarregámos a lista."
     },
     "visits": {
-      "loading": "A carregar visitas"
+      "loading": "A carregar visitas",
+      "emptyBody": "As visitas aparecerão aqui quando escolher {{name}} como médico numa consulta."
     }
   }
 }

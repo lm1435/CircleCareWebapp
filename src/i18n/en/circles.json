@@ -98,8 +98,10 @@
       "repeat": "Repeat"
     },
     "choose": {
-      "primary": "Add the first medication",
-      "primarySelf": "Add your first medication"
+      "primary": "Add {{name}}'s first med",
+      "primarySelf": "Add your first med",
+      "promise": "About a minute. Everyone helping sees it, with a reminder when it's time.",
+      "promiseSelf": "About a minute. You'll see it here, with a reminder when it's time."
     },
     "inviteNext": {
       "notNow": "Not now"
@@ -128,16 +130,19 @@
     "ready": {
       "title": "{{name}}'s circle is ready.",
       "titleSelf": "Your circle is ready.",
-      "lede": "Add {{name}}'s first medication. That's the reminder everyone in the circle will share.",
+      "lede": "Start with the thing you'll check most.",
       "ledeSelf": "Add your first medication. That's the reminder everyone in your circle will share.",
       "toggleShow": "No medications to track? See what else",
       "toggleHide": "Hide",
-      "appointmentTitle": "Add an appointment",
+      "appointmentTitle": "An appointment",
       "appointmentHelper": "Doctor visits on one calendar the family sees.",
-      "inviteTitle": "Invite someone to help",
+      "inviteTitle": "Someone to help",
       "inviteHelper": "Share the load, so it isn't all on you.",
-      "emergencyTitle": "Add emergency info",
-      "emergencyHelper": "Allergies and doctors, ready when it matters."
+      "emergencyTitle": "Emergency info",
+      "emergencyHelper": "Allergies and doctors, ready when it matters.",
+      "eyebrow": "{{name}}'S CIRCLE",
+      "eyebrowSelf": "YOUR CIRCLE",
+      "orStartWith": "OR START WITH"
     },
     "whatLede": "Just the name is enough. Details can wait.",
     "addDosage": "+ Add dosage",
@@ -158,7 +163,17 @@
       "lineSelf": "When you tap Taken, anyone you invite sees it too.",
       "inviteHeading": "Who's usually there with {{name}}?",
       "inviteHeadingSelf": "Who helps you out?",
-      "invite": "Invite someone"
+      "invite": "Invite someone",
+      "eyebrow": "ALL SET",
+      "everyDay": "every day",
+      "startsToday": "starts today",
+      "startsTomorrow": "starts tomorrow",
+      "startsOn": "starts {{date}}"
+    },
+    "markIt": {
+      "question": "Already given today?",
+      "action": "Mark it",
+      "done": "Marked as taken."
     }
   },
   "accessLost": {

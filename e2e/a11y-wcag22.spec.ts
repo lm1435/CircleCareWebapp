@@ -2,8 +2,11 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { AUTH_ROUTES, circleRoutes } from './routes';
 import { checkA11y, visitAndCheck } from './helpers';
+import { sqlExec } from './db';
+import { sqlStr } from './unhappy';
+import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from './unhappy/auth-invites/_helpers';
 import {
-  apiSession,
+  answerYesterdaysDose,
   circleTimezone,
   createDailyMedication,
   dateInTz,
@@ -174,6 +177,14 @@ test.describe('dialogs and menus (keyboard)', () => {
         await expect
           .poll(() => dialog.evaluate((d) => d.contains(document.activeElement)))
           .toBe(true);
+        // The 2.2 gate is for a CONTROLLED state (helpers.ts checkA11y `wcag22`). focus() on a low trigger scrolls the page
+        // behind the modal, and a control that slid under the sticky header reads as "partially obscured" (2026-10-30:
+        // C/emergency's contacts accordion under the 1.3.1 header's shifted "Switch circle"). The dialog is fixed, so put
+        // the page behind it back at scroll 0 before the scan: the dialog is unchanged, the page is as a fresh load shows it.
+        await page.evaluate(() => {
+          window.scrollTo(0, 0);
+          document.querySelectorAll('main, [data-scroll-root]').forEach((el) => (el as HTMLElement).scrollTo?.(0, 0));
+        });
         await checkA11y(page, `${route} [${opener.name.source} open]`, testInfo, WCAG22);
         // Focus trap: 30 Tabs never leave the dialog (a toast is the only
         // sanctioned exit — Modal.tsx routes Tab into it and back).
@@ -249,7 +260,7 @@ const NEW_LOCALES = ['fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT'] as const;
 test.describe('1.2.2 locales at 320px', () => {
   test.use({ viewport: { width: 320, height: 800 } });
   for (const locale of NEW_LOCALES) {
-    test(`${locale} — lang + axe + reflow on Overview, Medications, Profile`, async ({ page, circleId }, testInfo) => {
+    test(`${locale} — lang + axe + reflow on Today, Medications, Profile`, async ({ page, circleId }, testInfo) => {
       await page.route('**/api/users/me', async (route) => {
         if (route.request().method() !== 'GET') return route.continue();
         try {
@@ -363,40 +374,52 @@ test.describe('keyboard', () => {
   // 2.4.3: Confirm is replaced by its Undo badge; focus must not fall to
   // <body>. Undo is pressed inside the 5s window, so nothing is recorded.
   //
-  // Home only offers Confirm for a dose inside the 2h early-confirm window (or
-  // overdue) in the care recipient's zone (TodaysMeds isDoseConfirmable), so the
+  // Today's Next up only offers Taken for a dose inside the 2h early-confirm window (or
+  // overdue) in the care recipient's zone (isDoseConfirmable), so the
   // demo seed's own doses (e.g. 20:00) are NOT confirmable for most of the day.
   // This test therefore seeds its own daily dose at 00:01 starting YESTERDAY
   // (recipient zone, naive date strings, never the runner's clock): today's
   // 00:01 is always overdue-or-within-2h whenever it runs, including at 23:30 or
   // just after midnight (a new day's 00:01 is then inside the window), and a
   // start of TODAY would be rolled to tomorrow by the late-add rule.
-  test('focus moves to Undo after Confirm, and back to the row after Undo', async ({
+  test('focus moves to Undo after Taken, and back into the row after Undo', async ({
     page,
+    context,
     request,
-    account,
-    circleId,
+    baseURL,
   }) => {
     test.slow();
     await page.setViewportSize({ width: 1280, height: 800 });
-    const session = await apiSession(request, account);
+    // A FRESH circle of its own: Today's Next up lists only the first 3 rows (oldest first), and the
+    // cloned demo circle has yesterday's unanswered doses ahead of ours.
+    const owner = await createScopedAccount('a11yfocus');
+    sqlExec(`update users set timezone = 'America/Denver' where id = ${sqlStr(owner.userId)}::uuid;`);
+    const session = await ownerApi(request, owner);
+    const circleId = await createCircle(session, uniq('a11yfocus'));
+    await cookieLogin(context, owner, baseURL);
     const tz = await circleTimezone(session, circleId);
     const med = `ZZ_E2E_A11YFOCUS_${uniqueSuffix()}`;
     const root = await createDailyMedication(session, circleId, med, dateInTz(tz, -1), { time: '00:01' });
+    await answerYesterdaysDose(session, circleId, root, tz);
     try {
       await open(page, `/circles/${circleId}`);
-      // Started yesterday, so yesterday's unanswered 00:01 dose also sits in the
-      // nested Needs-attention list; scope to TODAY's list (as todays-meds-undo).
-      const today = page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
-      const confirm = today.getByRole('button', { name: `Confirm ${med}` });
+      // Today's "Next up" list (yesterday's unanswered dose was answered above, so one row).
+      const today = page.locator('section[aria-labelledby="next-up-heading"]');
+      const confirm = today.getByRole('button', { name: `Taken, ${med}` }).first();
       await expect(confirm, 'the seeded 00:01 dose is confirmable').toBeVisible({ timeout: 30_000 });
       await confirm.focus();
       await page.keyboard.press('Enter');
-      await expect(today.getByRole('button', { name: `Undo ${med}` })).toBeFocused();
+      await expect(today.getByRole('button', { name: `Undo ${med}` }).first()).toBeFocused();
       await page.keyboard.press('Enter');
+      // After Undo the badge leaves with focus inside it: focus goes back INTO the same Next up row
+      // (UndoBadge restores it to the row's first control), never to <body> (2.4.3).
       await expect
-        .poll(() => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? ''))
-        .toMatch(new RegExp(`${escapeRegExp(med)}$`));
+        .poll(() =>
+          page.evaluate(
+            () => document.activeElement?.closest('[data-testid="next-up-row"]')?.textContent ?? ''
+          )
+        )
+        .toMatch(new RegExp(escapeRegExp(med)));
     } finally {
       await deleteSeries(session, circleId, root);
     }

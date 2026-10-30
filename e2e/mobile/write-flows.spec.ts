@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import {
   addDaysISO,
+  answerYesterdaysDose,
   circleTimezone,
   createDailyMedication,
   dateInTz,
@@ -19,7 +20,7 @@ import {
 // K16 (docs/plans/web-test-gaps-2026-09-29-reviewed.md): WRITES on a phone
 // (mobile-chrome = Pixel 5, 390x664, coarse pointer). Task create at this size
 // is already covered by create-menu-mobile.spec.ts; this file adds a medication
-// (dates and times PICKED through sheets, never `.fill`), a Home dose confirm
+// (dates and times PICKED through sheets, never `.fill`), a Today dose Taken
 // and a vital, and asserts on every page that nothing scrolls sideways.
 
 const pill = (page: Page) => page.getByTestId('floating-nav');
@@ -52,7 +53,7 @@ async function pickTime(page: Page, hour24: number, minute: number): Promise<voi
 test.describe('phone writes', () => {
   test.setTimeout(120_000);
 
-  test('(a) medication from the pill New menu: sheets for date and time, Create is hittable, one series row', async ({
+  test('(a) medication from the pill New menu: sheets for date and time, Add medication is hittable, one series row', async ({
     page,
     context,
     request,
@@ -74,12 +75,14 @@ test.describe('phone writes', () => {
     await newCell.click();
     await page.getByRole('menuitem', { name: 'Med', exact: true }).click();
 
-    const dialog = page.getByRole('dialog', { name: 'New event' });
+    const dialog = page.getByRole('dialog', { name: 'New medication' });
     await expect(dialog).toBeVisible({ timeout: 15_000 });
-    await expect(dialog.locator('#event_type')).toHaveValue('medication');
+    await expect(dialog.locator('#event_type')).toHaveCount(0);
     await dialog.locator('#medication_name').fill(name);
     await dialog.locator('#medication_dosage').fill('5 mg');
 
+    // The simple form keeps the start date under "More details" and a custom time behind "Other time".
+    await dialog.getByRole('button', { name: /More details/ }).tap();
     // DATE: tap -> sheet -> tap the day. The recipient's +3 (never "today", so
     // the past-time notice cannot interpose). The sheet opens on the current
     // month; +3 days may be next month, so page forward when the cell is absent.
@@ -94,14 +97,15 @@ test.describe('phone writes', () => {
     await expect(datePicker).toBeHidden();
     await expect(dialog.locator('#scheduled_date')).toHaveValue(date);
 
-    // TIME: tap -> sheet -> hour, minute, period.
+    // TIME: "Other time" -> tap -> sheet -> hour, minute, period.
+    await dialog.getByRole('button', { name: 'Other time' }).tap();
     await dialog.locator('#scheduled_time').tap();
     await pickTime(page, 9, 0);
     await expect(dialog.locator('#scheduled_time')).toHaveValue(/^(09:00|0?9:00\s?(AM|a\.\s?m\.))$/i);
 
     // CREATE IS HITTABLE: what is at the button's centre IS the button (a sheet,
     // the keyboard or a stacked footer must not cover it).
-    const create = dialog.getByRole('button', { name: 'Create', exact: true });
+    const create = dialog.getByRole('button', { name: 'Add medication', exact: true });
     await create.scrollIntoViewIfNeeded();
     const hit = await create.evaluate((el) => {
       const r = el.getBoundingClientRect();
@@ -125,7 +129,7 @@ test.describe('phone writes', () => {
     expect(rows).toEqual([{ scheduled_date: date, scheduled_time: '09:00:00' }]);
   });
 
-  test('(b) Home dose confirm on a phone writes a taken confirmation', async ({
+  test('(b) Taken on Today on a phone writes a taken confirmation', async ({
     page,
     context,
     request,
@@ -138,13 +142,15 @@ test.describe('phone writes', () => {
     const name = `ZZ_E2E_PHONEDOSE_${uniqueSuffix()}`;
     // Yesterday start at 00:01: today's 00:01 dose is due (K2 setup).
     const root = await createDailyMedication(api, circleId, name, addDaysISO(dateInTz(tz, 0), -1), { time: '00:01' });
+    await answerYesterdaysDose(api, circleId, root, tz);
     await cookieLogin(context, owner, baseURL);
 
     await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-    const today = page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
-    const confirm = today.getByRole('button', { name: `Confirm ${name}` }).first();
+    // Today's Next up (yesterday's unanswered dose was answered above, so one row).
+    const today = page.locator('section[aria-labelledby="next-up-heading"]');
+    const confirm = today.getByRole('button', { name: `Taken, ${name}` }).first();
     await expect(confirm).toBeVisible({ timeout: 25_000 });
-    await expectNoSidewaysScroll(page, 'Home');
+    await expectNoSidewaysScroll(page, 'Today');
     const posts = countRequests(page, 'POST', '/api/circles/:id/medications/confirm');
     await confirm.tap();
     // The Undo window is 5 s; the write goes out when it lapses.
@@ -177,7 +183,7 @@ test.describe('phone writes', () => {
     await pill(page).getByRole('link', { name: 'Health' }).or(pill(page).getByRole('button', { name: 'Health' })).first().click();
     // The Health tab is a client-side navigation to the Health page. Wait for that page to RENDER (its
     // Emergency/Documents switcher) before probing for a Vitals entry: probed earlier, the probe matches
-    // Home's Quick Access "Vitals" row, which is about to unmount (the URL changes before the new route
+    // Today's Quick Access "Vitals" row, which is about to unmount (the URL changes before the new route
     // renders); the click then waits for a detached element until the test times out (final regression
     // 10-02: red every time, on the pre-tonight web code too).
     await expect(page).toHaveURL(new RegExp(`/circles/${circleId}/emergency`), { timeout: 20_000 });

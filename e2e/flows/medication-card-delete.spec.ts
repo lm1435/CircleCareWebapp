@@ -135,8 +135,8 @@ function inList(ids: string[]): string {
 /** Opens the card's "More actions" menu on /meds and picks Delete. Returns the dialog. */
 async function openCardDelete(page: Page, circleId: string, name: string) {
   await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-  const activeRegion = page.getByRole('region', { name: 'Active', exact: true });
-  const card = activeRegion.locator('li').filter({ hasText: name });
+  const activeRegion = page.getByTestId('med-time-row');
+  const card = activeRegion.filter({ hasText: name });
   await expect(card).toBeVisible({ timeout: 25_000 });
   await card.getByRole('button', { name: `More actions for ${name}` }).click();
   await page.getByRole('menu').getByRole('menuitem', { name: 'Delete', exact: true }).click();
@@ -236,7 +236,7 @@ test.describe('Meds page card → Delete (audit #1)', () => {
       ]);
       // The card is gone from the roster.
       await expect(
-        page.getByRole('region', { name: 'Active', exact: true }).locator('li').filter({ hasText: s.name })
+        page.getByTestId('med-time-row').filter({ hasText: s.name })
       ).toHaveCount(0, { timeout: 15_000 });
     } finally {
       await deleteSeries(s.session, circleId, s.rootId);

@@ -3,7 +3,7 @@
   "subtitle": "Todo lo que ocurre en el círculo de cuidado, de parte de todos en la familia.",
   "loading": "Cargando actividad...",
   "noActivity": "Sin actividad aún",
-  "noActivityHint": "La actividad aparecerá aquí conforme tu equipo de cuidado tome acciones. La actividad es mejor en conjunto: invita a familiares y cuidadores para que todos vean lo que ya se atendió.",
+  "noActivityHint": "La actividad de {{name}} aparecerá aquí.",
   "inviteCta": "Invitar a alguien",
   "errorTitle": "No se pudo cargar el historial de actividad",
   "errorHint": "Revisa tu conexión e intenta de nuevo.",
@@ -101,5 +101,6 @@
     "rescheduledMedication": "Medicamento reprogramado: {{title}} a las {{time}}",
     "addedNotes": "Agregó notas a {{title}}",
     "memberRoleChanged": "Cambió el rol de un miembro en el círculo"
-  }
+  },
+  "noActivityHintSelf": "La actividad aparecerá aquí."
 }

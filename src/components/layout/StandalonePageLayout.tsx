@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CircleButton } from '@/components/ui';
 import { UserMenu } from './Header';
+import { NotificationBell } from './NotificationBell';
 import { Wordmark } from './Wordmark';
 import { OfflineBanner } from '@/components/OfflineBanner';
 
@@ -26,7 +27,11 @@ export function StandalonePageLayout(): ReactElement {
   const { t } = useTranslation('common');
   const location = useLocation();
   const navigate = useNavigate();
-  const isHome = location.pathname === '/circles';
+  // The invitee welcome is also a landing: Back would return to the invite page.
+  const isHome =
+    location.pathname === '/circles' || /^\/circles\/[^/]+\/welcome\/?$/.test(location.pathname);
+
+  const isCircleList = location.pathname === '/circles' || location.pathname === '/circles/';
 
   const handleBack = (): void => {
     // No prior in-app history (direct deep link / fresh tab) → send home so the
@@ -64,7 +69,12 @@ export function StandalonePageLayout(): ReactElement {
           <Wordmark to="/circles" />
         </div>
 
-        <UserMenu />
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* No bell on the circle list: each circle card carries its own count
+              there, so a total bell would only repeat them. */}
+          {!isCircleList && <NotificationBell />}
+          <UserMenu />
+        </div>
       </header>
 
       {/* `tabIndex={-1}`: the skip link's target — focusable programmatically,

@@ -1,5 +1,5 @@
 {
-  "noActivityHint": "As atividades aparecerão aqui conforme a equipa de cuidado agir. Em conjunto fica melhor: convide familiares e cuidadores para que todos vejam o que já foi resolvido.",
+  "noActivityHint": "A atividade de {{name}} aparecerá aqui.",
   "loading": "A carregar atividades...",
   "errorTitle": "Não foi possível carregar o registo de atividades",
   "errorHint": "Verifique a sua ligação e tente novamente.",
@@ -26,5 +26,6 @@
   "sentences": {
     "memberLeftAccountDeleted": "Um membro saiu do círculo (conta eliminada)",
     "memberLeftNamedAccountDeleted": "{{name}} saiu do círculo (conta eliminada)"
-  }
+  },
+  "noActivityHintSelf": "A atividade aparecerá aqui."
 }

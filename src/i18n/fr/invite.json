@@ -59,5 +59,31 @@
     "title": "Vous faites déjà partie de ce cercle",
     "message": "Cette invitation est destinée à quelqu’un d’autre : il n’y a rien à accepter."
   },
-  "goToCircle": "Aller au cercle"
+  "goToCircle": "Aller au cercle",
+  "welcome": {
+    "eyebrow": "Bienvenue",
+    "title": "{{inviter}} vous invite à aider pour {{name}}.",
+    "titleNoInviter": "Vous aidez pour {{name}}.",
+    "titleSelf": "{{inviter}} vous invite dans votre cercle.",
+    "titleSelfNoInviter": "Vous êtes dans votre cercle.",
+    "lede": "Vous êtes maintenant dans le cercle de {{name}}. Voici ce que vous pouvez faire :",
+    "ledeSelf": "Vous êtes maintenant dans votre cercle. Voici ce que vous pouvez faire :",
+    "goToToday": "Aller à Aujourd’hui",
+    "caregiver": {
+      "medsTitle": "Voir les médicaments du jour et marquer une prise comme Prise",
+      "medsSub": "Tout le monde le voit tout de suite, donc personne ne donne une deuxième dose.",
+      "noteTitle": "Ajouter une note sur le déroulement de la journée",
+      "noteSub": "{{inviter}} et toute personne qui aide peuvent la lire.",
+      "noteSubNoInviter": "Toute personne qui aide peut la lire.",
+      "tasksTitle": "Voir les rendez-vous et les tâches",
+      "tasksSub": "Prenez celles qui sont pour vous."
+    },
+    "viewOnly": {
+      "medsTitle": "Voir les médicaments du jour",
+      "medsSub": "Qui a donné quoi, et quand.",
+      "tasksTitle": "Voir les rendez-vous et les tâches",
+      "tasksSub": "Tout ce qui est à venir pour {{name}}.",
+      "tasksSubSelf": "Tout ce qui est à venir pour vous."
+    }
+  }
 }

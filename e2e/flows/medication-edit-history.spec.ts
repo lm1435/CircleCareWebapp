@@ -109,7 +109,7 @@ async function occurrences(api: ApiSession, circleId: string, rootId: string, fr
 
 async function openEditFromMedsPage(page: Page, circleId: string, name: string): Promise<Locator> {
   await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-  const card = page.getByRole('region', { name: 'Active', exact: true }).locator('li').filter({ hasText: name });
+  const card = page.getByTestId('med-time-row').filter({ hasText: name });
   await expect(card).toBeVisible({ timeout: 20_000 });
   await card.getByRole('button', { name: `More actions for ${name}` }).click();
   await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();
@@ -124,7 +124,7 @@ async function saveChanges(page: Page, dialog: Locator, circleId: string, rootId
     { timeout: 25_000 }
   );
   await dialog.getByRole('button', { name: 'Save changes' }).click();
-  const notice = page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ });
+  const notice = page.getByRole('dialog', { name: 'Time already passed' });
   if (await notice.waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch(() => false)) {
     await notice.getByRole('button', { name: 'Continue' }).click();
   }

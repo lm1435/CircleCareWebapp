@@ -11,7 +11,8 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, type IconName } from '@/components/ui';
 import { useMenu } from '@/hooks/useMenu';
-import { showShiftCreateOption, type ShiftsEntryState } from '@/lib/shiftsAccess';
+import { useLargeTextLayout, measureLargeText, shouldReportLargeText } from '@/hooks/useLargeTextLayout';
+import { Analytics } from '@/lib/analytics';
 
 /**
  * The things the "+" creates (mobile `AddMenu`'s `EventType`). `shift` is the
@@ -131,12 +132,6 @@ export interface AddMenuProps {
   anchorRef?: RefObject<HTMLElement | null>;
   /** Read-only members cannot create anything, so the menu does not exist for them. */
   canCreate?: boolean;
-  /**
-   * Care shifts: 'available' (premium circle) and 'teaser' (a free circle's
-   * OWNER, who is shown the teaser) render the Shift option; 'hidden' (default,
-   * and every free manager / member) does not.
-   */
-  shiftEntry?: ShiftsEntryState;
 }
 
 /**
@@ -156,12 +151,20 @@ export function AddMenu({
   anchor = 'bottom',
   anchorRef,
   canCreate = false,
-  shiftEntry = 'hidden',
 }: AddMenuProps): ReactElement | null {
   const { t } = useTranslation('common');
   /** The control that had focus when the menu opened, to hand it back on close. */
   const restoreRef = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
+
+  // Literal keys for the large-text rows (the audit can see them).
+  const fullLabel: Record<AddMenuType, string> = {
+    medication: t('addMenu.medication'),
+    appointment: t('addMenu.appointment'),
+    task: t('addMenu.task'),
+    note: t('addMenu.note'),
+    shift: t('addMenu.shift'),
+  };
 
   const shown = open && canCreate;
   const sidebarPosition = useSidebarPosition(shown && anchor === 'sidebar', anchorRef);
@@ -178,8 +181,11 @@ export function AddMenu({
   // fires when the hook closes itself from a key it handles (Escape or Tab
   // while focus is inside the panel), so those get forwarded to the real
   // `onClose`.
+  // Large text (200% zoom / large root font): the pill becomes a vertical list
+  // of full-width rows, so a label never has to squeeze into a 48px cell.
+  const largeText = useLargeTextLayout();
   const menu = useMenu({
-    orientation: 'horizontal',
+    orientation: largeText ? 'vertical' : 'horizontal',
     onOpenChange: (isOpen) => {
       if (!isOpen) onClose();
     },
@@ -187,15 +193,21 @@ export function AddMenu({
 
   // Focus in on open, focus back out on close. Runs on every open/close edge —
   // NOT on mount — so a menu that is never opened never steals focus.
+  const chosenRef = useRef(false);
   useEffect(() => {
     if (shown && !wasOpen.current) {
       wasOpen.current = true;
+      chosenRef.current = false;
+      Analytics.addMenuOpened('nav');
+      if (shouldReportLargeText('add_menu')) Analytics.largeTextLayout('add_menu', measureLargeText());
       restoreRef.current = (document.activeElement as HTMLElement | null) ?? null;
       menu.menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
       return;
     }
     if (!shown && wasOpen.current) {
       wasOpen.current = false;
+      // Closed without choosing: backdrop, Escape, Tab, or the + pressed again.
+      if (!chosenRef.current) Analytics.addMenuClosedEmpty();
       restoreRef.current?.focus();
       restoreRef.current = null;
     }
@@ -220,6 +232,8 @@ export function AddMenu({
   if (!shown) return null;
 
   const select = (type: AddMenuType): void => {
+    chosenRef.current = true;
+    Analytics.addMenuOptionTapped(type);
     onSelect(type);
     onClose();
   };
@@ -241,14 +255,16 @@ export function AddMenu({
         <div
           ref={menu.menuRef}
           role="menu"
-          aria-orientation="horizontal"
+          aria-orientation={largeText ? 'vertical' : 'horizontal'}
           aria-label={t('nav.new')}
           data-testid="add-menu-pill"
           onKeyDown={menu.onMenuKeyDown}
           style={anchor === 'sidebar' ? sidebarPosition : undefined}
-          className={`${PILL_ANCHOR[anchor]} z-50 flex gap-5 rounded-full bg-menu-pill px-5 py-3 shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none`}
+          className={`${PILL_ANCHOR[anchor]} z-50 flex bg-menu-pill shadow-xl animate-[rise-in_250ms_var(--ease-spring)] motion-reduce:animate-none ${
+            largeText ? 'min-w-64 flex-col gap-1 rounded-3xl p-3' : 'gap-5 rounded-full px-5 py-3'
+          }`}
         >
-          {OPTIONS.filter((o) => o.type !== 'shift' || showShiftCreateOption(shiftEntry)).map((option, index) => (
+          {OPTIONS.map((option, index) => (
             <button
               key={option.type}
               type="button"
@@ -262,17 +278,26 @@ export function AddMenu({
               // visible short label IS the name, and the full word rides along as
               // `title`: a hover tooltip for sighted users and the accessible
               // DESCRIPTION for everyone else ("Appt, menu item, Appointment").
-              title={t(`addMenu.${option.type}`)}
+              title={largeText ? undefined : t(`addMenu.${option.type}`)}
               onClick={() => select(option.type)}
               style={{ animationDelay: `${80 + index * 40}ms` }}
-              className="flex min-w-[48px] min-h-[48px] flex-col items-center justify-center gap-1 active:opacity-70 animate-[zoom-in_200ms_var(--ease-spring)] [animation-fill-mode:both] motion-reduce:animate-none"
+              className={`flex min-h-[48px] active:opacity-70 animate-[zoom-in_200ms_var(--ease-spring)] [animation-fill-mode:both] motion-reduce:animate-none ${
+                largeText
+                  ? 'w-full flex-row items-center gap-3 rounded-2xl px-2'
+                  : 'min-w-[48px] flex-col items-center justify-center gap-1'
+              }`}
             >
               <span className={option.circle}>
                 <Icon name={option.icon} size="chrome" className="text-menu-icon" />
               </span>
-              <span className="text-2xs tracking-[0.8px] uppercase text-menu-label">
-                {t(`addMenu.${option.type}Short`)}
-              </span>
+              {largeText ? (
+                // Room for the full word: the visible text IS the accessible name.
+                <span className="text-md font-medium text-menu-label">{fullLabel[option.type]}</span>
+              ) : (
+                <span className="text-2xs tracking-[0.8px] uppercase text-menu-label">
+                  {t(`addMenu.${option.type}Short`)}
+                </span>
+              )}
             </button>
           ))}
         </div>

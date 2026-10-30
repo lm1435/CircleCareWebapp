@@ -197,7 +197,7 @@ describe('empty state', () => {
     mockVisits.mockResolvedValue(page({ provider: provider({ name: 'Dr. Kim', id: 'p2' }) }));
     renderPage();
     expect(await screen.findByText('No visits with Dr. Kim yet')).toBeInTheDocument();
-    expect(screen.getByText(/Choose Dr\. Kim as the doctor when you add or edit an appointment/)).toBeInTheDocument();
+    expect(screen.getByText(/Visits show up here once you choose Dr\. Kim as the doctor on an appointment/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Add an appointment' }));
     expect(screen.getByRole('dialog', { name: 'add-event-stub' })).toHaveTextContent('appointment:p2');
   });

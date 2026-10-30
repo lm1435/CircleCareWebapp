@@ -22,7 +22,8 @@ import {
 import { queryKeys } from '@/lib/queryKeys';
 import { invalidateCircleAccessFlags } from '@/lib/circleAccessFlags';
 import {
-  classifyFailureCode,
+  failureContext,
+  type FailureAction,
   isPermissionDeniedError,
   isStorageFullError,
   isUnsupportedUploadError,
@@ -92,7 +93,10 @@ export function useDocuments(
  *   - everything else → generic save-failed.
  * Returns the i18n key it surfaced so callers/tests can branch on it too.
  */
-function useDocumentMutationOnError(circleId: string): (error: unknown) => void {
+function useDocumentMutationOnError(
+  circleId: string,
+  action: FailureAction
+): (error: unknown) => void {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // A premium-only surface, not a count the user ran out of — FEATURE.
@@ -103,9 +107,9 @@ function useDocumentMutationOnError(circleId: string): (error: unknown) => void 
   return (error: unknown) => {
     // `error_occurred` for the admin digest (mobile parity). ids/enums only:
     // `code` is the closed-set `classifyFailureCode` value, never toast copy.
-    Analytics.errorOccurred('documents', 'documents_mutation_error', {
+    Analytics.errorOccurred('documents', `documents_${action}_failed`, {
       circle_id: circleId,
-      code: classifyFailureCode(error),
+      ...failureContext('documents', action, error),
     });
     if (isStorageFullError(error)) {
       // Premium 1GB cap — no upgrade path. Distinct from the 402 free-tier path.
@@ -136,7 +140,7 @@ export function useUploadDocument(
   circleId: string
 ): UseMutationResult<CircleDocument, unknown, UploadDocumentRequest> {
   const queryClient = useQueryClient();
-  const onError = useDocumentMutationOnError(circleId);
+  const onError = useDocumentMutationOnError(circleId, 'create');
 
   return useMutation({
     mutationFn: (data: UploadDocumentRequest) => uploadDocument(circleId, data),
@@ -160,7 +164,7 @@ export function useUpdateDocument(
   circleId: string
 ): UseMutationResult<CircleDocument, unknown, UpdateDocumentVariables> {
   const queryClient = useQueryClient();
-  const onError = useDocumentMutationOnError(circleId);
+  const onError = useDocumentMutationOnError(circleId, 'update');
 
   return useMutation({
     mutationFn: ({ documentId, data }: UpdateDocumentVariables) =>
@@ -176,7 +180,7 @@ export function useUpdateDocument(
 /** DELETE /circles/:circleId/documents/:documentId. */
 export function useDeleteDocument(circleId: string): UseMutationResult<void, unknown, string> {
   const queryClient = useQueryClient();
-  const onError = useDocumentMutationOnError(circleId);
+  const onError = useDocumentMutationOnError(circleId, 'delete');
 
   return useMutation({
     mutationFn: (documentId: string) => deleteDocument(circleId, documentId),

@@ -15,6 +15,8 @@ import CirclePickerPage from '@/pages/CirclePickerPage';
 import { ToastProvider } from '@/components/ui';
 import { getCircles, type Circle } from '@/api/circles';
 import { useAuthStore } from '@/store/authStore';
+import { Analytics } from '@/lib/analytics';
+import { __resetEmailLinkLandingForTests } from '@/lib/emailLinkLanding';
 
 // Only `getCircles` is stubbed: the create modal this page owns imports
 // `createCircleSchema` from the same module, and a bare factory mock would
@@ -102,7 +104,7 @@ function OverviewNavigationProbe(): ReactElement {
   return <div data-testid="overview-page">{`${circleId}:${navType}`}</div>;
 }
 
-function renderPickerAt(entry: { pathname: string; state?: unknown }): void {
+function renderPickerAt(entry: { pathname: string; search?: string; state?: unknown }): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
@@ -115,6 +117,53 @@ function renderPickerAt(entry: { pathname: string; state?: unknown }): void {
     </QueryClientProvider>
   );
 }
+
+describe('CirclePickerPage — email link landing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    __resetEmailLinkLandingForTests();
+  });
+
+  it('/circles?src=welcome reports email_link_opened once, after the list resolves', async () => {
+    const spy = vi.spyOn(Analytics, 'emailLinkOpened').mockImplementation(() => {});
+    mockGetCircles.mockResolvedValue([
+      makeCircle(),
+      makeCircle({ id: 'c2', name: "Dad's Circle", recipient_name: 'Hector', role: 'member' }),
+    ]);
+    renderPickerAt({ pathname: '/circles', search: '?src=welcome' });
+    await screen.findByRole('link', { name: /Open Mom's Care/ });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith({
+      type: 'welcome',
+      appState: 'signed_in',
+      landed: true,
+      targetFound: true,
+    });
+    spy.mockRestore();
+  });
+
+  it('a single circle auto-skips into it and the event is still reported (before the skip drops ?src)', async () => {
+    const spy = vi.spyOn(Analytics, 'emailLinkOpened').mockImplementation(() => {});
+    mockGetCircles.mockResolvedValue([makeCircle()]);
+    renderPickerAt({ pathname: '/circles', search: '?src=trial_reminder' });
+    await screen.findByTestId('overview-page');
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ type: 'trial_reminder' }));
+    spy.mockRestore();
+  });
+
+  it('no ?src= means no event', async () => {
+    const spy = vi.spyOn(Analytics, 'emailLinkOpened').mockImplementation(() => {});
+    mockGetCircles.mockResolvedValue([
+      makeCircle(),
+      makeCircle({ id: 'c2', name: "Dad's Circle", recipient_name: 'Hector', role: 'member' }),
+    ]);
+    renderPickerAt({ pathname: '/circles' });
+    await screen.findByRole('link', { name: /Open Mom's Care/ });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
 
 describe('CirclePickerPage', () => {
   beforeEach(() => {
@@ -259,6 +308,17 @@ describe('CirclePickerPage', () => {
 
     const normal = screen.getByRole('link', { name: /Open Normal/ });
     expect(normal).not.toHaveAttribute('data-restricted');
+  });
+
+  it('circle_selected: the picker passes the 1-based position and list size (no circle id)', async () => {
+    const spy = vi.spyOn(Analytics, 'circleSelected').mockImplementation(() => {});
+    const user = userEvent.setup();
+    mockGetCircles.mockResolvedValue([makeCircle(), makeCircle({ id: 'c2', name: 'Other Circle' })]);
+    renderPicker();
+
+    await user.click(await screen.findByRole('link', { name: /Open Other Circle/ }));
+    expect(spy).toHaveBeenCalledWith({ position: 2, circleCount: 2, source: 'circle_list' });
+    spy.mockRestore();
   });
 
   it('navigates to the circle overview on click', async () => {

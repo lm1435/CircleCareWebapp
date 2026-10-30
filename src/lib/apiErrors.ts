@@ -626,3 +626,141 @@ export function classifyFailureCode(err: unknown): FailureCode {
     return 'unknown_error';
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAILURE KIND (for the `error_kind` property of `error_occurred`)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// MIRRORED ON MOBILE: `classifyFailure` in `mobile/src/utils/apiError.ts`, SAME
+// closed vocabulary and the same code → category table, so a cross-platform
+// breakdown by `error_kind` does not split into two series. Where
+// `classifyFailureCode` keeps the precise backend code, this answers the funnel
+// question (network / permissions / input / server) and can never carry PHI.
+
+export type FailureKind =
+  | 'network'
+  | 'timeout'
+  | 'forbidden'
+  | 'not_found'
+  | 'conflict'
+  | 'validation'
+  | 'server'
+  | 'unknown';
+
+const CODE_KINDS: Readonly<Record<string, FailureKind>> = {
+  FORBIDDEN: 'forbidden',
+  UNAUTHORIZED: 'forbidden',
+  NOT_AUTHENTICATED: 'forbidden',
+  SUBSCRIPTION_REQUIRED: 'forbidden',
+  CIRCLE_ARCHIVED: 'forbidden',
+  RATE_LIMIT: 'forbidden',
+  RATE_LIMIT_EXCEEDED: 'forbidden',
+  EMAIL_RATE_LIMIT: 'forbidden',
+  NOT_FOUND: 'not_found',
+  INVITE_NOT_FOUND: 'not_found',
+  ALREADY_MEMBER: 'conflict',
+  INVITE_ALREADY_USED: 'conflict',
+  CARE_RECIPIENT_EXISTS: 'conflict',
+  CARE_RECIPIENT_INVITE_PENDING: 'conflict',
+  PENDING_INVITE: 'conflict',
+  USER_EXISTS: 'conflict',
+  MEDICATION_DISCONTINUED: 'conflict',
+  OCCURRENCE_REMOVED: 'conflict',
+  VALIDATION_ERROR: 'validation',
+  BAD_REQUEST: 'validation',
+  NO_FIELDS_TO_UPDATE: 'validation',
+  EMAIL_MISMATCH: 'validation',
+  INVITE_EXPIRED: 'validation',
+  RECURRENCE_END_BEFORE_START: 'validation',
+  RECURRENCE_START_OFF_PATTERN: 'validation',
+  UNSUPPORTED_SCOPE: 'validation',
+  SERVER_ERROR: 'server',
+  INTERNAL_ERROR: 'server',
+  DATABASE_ERROR: 'server',
+};
+
+function kindFromCodeShape(code: string): FailureKind | undefined {
+  if (code.includes('RATE_LIMIT') || code.startsWith('FORBIDDEN') || code.startsWith('UNAUTHORIZED')) {
+    return 'forbidden';
+  }
+  if (code.endsWith('_NOT_FOUND')) return 'not_found';
+  if (code.endsWith('_EXISTS') || code.startsWith('ALREADY_') || code.includes('_ALREADY_')) {
+    return 'conflict';
+  }
+  if (code.startsWith('INVALID') || code.endsWith('_INVALID') || code.startsWith('MISSING_')) {
+    return 'validation';
+  }
+  return undefined;
+}
+
+function kindFromStatus(status: number): FailureKind {
+  if (status === 408 || status === 504) return 'timeout';
+  if (status === 404) return 'not_found';
+  if (status === 409) return 'conflict';
+  if (status === 401 || status === 402 || status === 403 || status === 429) return 'forbidden';
+  if (status >= 500) return 'server';
+  if (status >= 400) return 'validation';
+  return 'unknown';
+}
+
+/** Total: anything unreadable answers 'unknown' rather than throwing. */
+export function classifyFailure(err: unknown): FailureKind {
+  try {
+    if (err === null || typeof err !== 'object') return 'unknown';
+    const candidate = err as {
+      code?: unknown;
+      name?: unknown;
+      message?: unknown;
+      status?: unknown;
+      response?: { status?: unknown } | null;
+    };
+    const transportCode = typeof candidate.code === 'string' ? candidate.code : '';
+    if (transportCode === 'ECONNABORTED' || transportCode === 'ETIMEDOUT') return 'timeout';
+    if (transportCode === 'ERR_NETWORK') return 'network';
+    if (candidate.name === 'AbortError' || candidate.name === 'TimeoutError') return 'timeout';
+    if (typeof candidate.message === 'string') {
+      const message = candidate.message.toLowerCase();
+      if (message.includes('timeout') || message.includes('timed out')) return 'timeout';
+      if (message === 'network error' || message.includes('network request failed')) {
+        return 'network';
+      }
+    }
+    const status = httpStatusOf(err);
+    if (status !== undefined) return kindFromStatus(status);
+    const code =
+      (err as ApiErrorEnvelope).error?.code ??
+      (candidate.response as { data?: ApiErrorEnvelope } | null | undefined)?.data?.error?.code;
+    if (typeof code === 'string' && code.length > 0) {
+      return CODE_KINDS[code] ?? kindFromCodeShape(code) ?? 'unknown';
+    }
+    return 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+export type FailureAction = 'create' | 'update' | 'delete';
+
+/**
+ * The shared `error_occurred` context for a failed save/delete: enums and a
+ * bounded code only — no circle_id, no message, no user content. Spread it into
+ * `Analytics.errorOccurred(...)`'s context.
+ */
+export function failureContext(source: string, action: FailureAction, err: unknown) {
+  return {
+    source,
+    action,
+    error_kind: classifyFailure(err),
+    code: classifyFailureCode(err),
+    fatal: false,
+  } as const;
+}
+
+/** The HTTP status off a rejection, when it carries one (bounded 100-599). */
+export function apiErrorStatus(err: unknown): number | undefined {
+  try {
+    return err !== null && typeof err === 'object' ? httpStatusOf(err) : undefined;
+  } catch {
+    return undefined;
+  }
+}

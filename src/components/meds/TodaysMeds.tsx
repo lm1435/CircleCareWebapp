@@ -729,6 +729,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
         <AddEventModal
           circleId={circleId}
           initialType="medication"
+          entry="empty_state"
           onClose={() => setShowAdd(false)}
         />
       )}

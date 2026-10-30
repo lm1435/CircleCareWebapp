@@ -1,7 +1,7 @@
 {
   "emptyCard": {
-    "body": "Ainda não há nada agendado para {{name}} hoje. Adicione um medicamento e todos no círculo o veem aqui, com Tomado e Saltar.",
-    "bodySelfCare": "Ainda não há nada agendado para si hoje. Adicione um medicamento e ele aparece aqui, com Tomado e Saltar."
+    "body": "Nada agendado para {{name}} hoje.",
+    "bodySelfCare": "Nada agendado para si hoje."
   },
   "skip": "Saltar",
   "skipLabel": "Saltar {{name}}",
@@ -37,7 +37,13 @@
     },
     "actions": {
       "delete": "Eliminar"
-    }
+    },
+    "zoneBehind_one": "Os horários são os de {{name}} · {{hours}} h atrás da sua hora",
+    "zoneBehind_other": "Os horários são os de {{name}} · {{hours}} h atrás da sua hora",
+    "zoneAhead_one": "Os horários são os de {{name}} · {{hours}} h à frente da sua hora",
+    "zoneAhead_other": "Os horários são os de {{name}} · {{hours}} h à frente da sua hora",
+    "zoneBehindHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min atrás da sua hora",
+    "zoneAheadHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min à frente da sua hora"
   },
   "history": {
     "loading": "A carregar histórico…",

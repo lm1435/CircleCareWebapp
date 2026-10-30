@@ -44,6 +44,7 @@ vi.mock('@/lib/analytics', () => ({
   Analytics: {
     memberRemoved: (...args: unknown[]) => mockMemberRemoved(...args),
     circleLeft: (...args: unknown[]) => mockCircleLeft(...args),
+    errorOccurred: vi.fn(),
     memberRoleChanged: (...args: unknown[]) => mockRoleChanged(...args),
   },
 }));

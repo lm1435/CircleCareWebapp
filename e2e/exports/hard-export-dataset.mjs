@@ -639,7 +639,7 @@ export function readTiles(text, lang = 'en') {
  * web, `pdftotext -layout` of the file the app shared on mobile) against the
  * expected figures. Returns a list of problems (empty = pass).
  */
-export function checkAdherenceText(text, exp, { lang = 'en', recipientName } = {}) {
+export function checkAdherenceText(text, exp, { lang = 'en', recipientName, readingText } = {}) {
   const t = norm(text);
   const L = LABELS[lang];
   const problems = [];
@@ -656,7 +656,15 @@ export function checkAdherenceText(text, exp, { lang = 'en', recipientName } = {
   const range = new RegExp(`${datePattern(exp.start_date, lang)}\\s+${L.range}\\s+${datePattern(exp.end_date, lang)}`, 'i');
   // PK26: each header date is a no-wrap unit, so the year can no longer wrap onto its own
   // line ("... al 30 sept / 2026" on iOS in Spanish): the range must read whole.
-  if (!range.test(t)) problems.push(`period ${exp.start_date}..${exp.end_date} not printed as a range`);
+  // `pdftotext -layout` keeps columns side by side: when the range legitimately wraps BETWEEN the two whole dates
+  // ("24 oct 2026 al / 30 oct 2026"), the right column ("Preparado por ...") lands in between and the layout text
+  // cannot read it (device run 2026-10-30). Then read it in reading order (`readingText`, raw, newlines kept), where
+  // each date must still sit on ONE line (the PK26 bug was a date split across lines) and only the gap around the
+  // range word may break.
+  const oneLine = (d) => datePattern(d, lang).split('\\s+').join('[ \\t\\u00a0]+');
+  const rangeReading = new RegExp(`${oneLine(exp.start_date)}\\s+${L.range}\\s+${oneLine(exp.end_date)}`, 'i');
+  const readable = range.test(t) || (readingText != null && rangeReading.test(String(readingText).replace(/\u00a0/g, ' ')));
+  if (!readable) problems.push(`period ${exp.start_date}..${exp.end_date} not printed as a range`);
   // PK25: no medication due in one half of the window -> the report carries no trend badge.
   // (A window that does have a trend prints one of the three labels; not asserted here: the
   // label depends on the figures, the API comparison in the specs pins those.)

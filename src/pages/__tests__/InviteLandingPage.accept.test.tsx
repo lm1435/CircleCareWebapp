@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import { apiClient } from '@/lib/api';
 import { consumePendingInviteCode, setPendingInviteCode } from '@/lib/pendingInviteCode';
+import { Analytics } from '@/lib/analytics';
 import { ToastProvider } from '@/components/ui';
 import InviteLandingPage from '@/pages/InviteLandingPage';
 import { clickTwice } from '@/test/doubleSubmit';
@@ -219,6 +220,40 @@ describe('InviteLandingPage — accept flow', () => {
     );
     expect(navigate).not.toHaveBeenCalled();
   });
+  it('signed-in: a failed accept reports error_occurred (invite_accept) with enums only', async () => {
+    authState = { isAuthenticated: true, isBootstrapping: false };
+    const spy = vi.spyOn(Analytics, 'errorOccurred').mockImplementation(() => {});
+    acceptMutate.mockRejectedValue({ error: { code: 'INVITE_EXPIRED' } });
+    const user = userEvent.setup();
+    renderPage('abc123');
+
+    await user.click(await screen.findByRole('button', { name: 'Accept invitation' }));
+
+    await screen.findByRole('alert');
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toBe('invite_accept');
+    expect(spy.mock.calls[0][2]).toEqual({
+      source: 'invite_accept',
+      action: 'create',
+      error_kind: 'validation',
+      code: 'INVITE_EXPIRED',
+      fatal: false,
+    });
+    spy.mockRestore();
+  });
+
+  it('signed-in: ALREADY_MEMBER is a success path, not an error_occurred', async () => {
+    authState = { isAuthenticated: true, isBootstrapping: false };
+    const spy = vi.spyOn(Analytics, 'errorOccurred').mockImplementation(() => {});
+    acceptMutate.mockRejectedValue({ error: { code: 'ALREADY_MEMBER' } });
+    const user = userEvent.setup();
+    renderPage('abc123');
+    await user.click(await screen.findByRole('button', { name: 'Accept invitation' }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/circles'));
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
   // ── CIRCLE_ARCHIVED / CARE_RECIPIENT_EXISTS (mobile parity) ───────────────
   //
   // Both are 400s the backend now raises on the accept paths. Unmapped, they

@@ -410,18 +410,20 @@ test.describe('Visits & notes: the empty state', () => {
     await expect(page.getByTestId('provider-visits-empty')).toBeVisible({ timeout: 25_000 });
     await expect(page.getByText(`No visits with ${kim.name} yet`)).toBeVisible();
     await expect(
-      page.getByText(`Choose ${kim.name} as the doctor when you add or edit an appointment`, { exact: false })
+      page.getByText(`Visits show up here once you choose ${kim.name} as the doctor on an appointment`, { exact: false })
     ).toBeVisible();
     await checkA11y(page, 'doctor-visits-empty', testInfo);
 
     await page.getByRole('button', { name: 'Add an appointment' }).click();
-    const form = page.getByRole('dialog');
+    const form = page.getByRole('dialog', { name: 'New appointment' });
     await expect(form).toBeVisible({ timeout: 20_000 });
+    // The simple form keeps Doctor / Place in collapsed rows; their fields hold the preset.
+    await expect(form.getByRole('button', { name: /^Doctor/ })).toContainText('Added');
     await expect(form.locator('#provider_id')).toHaveValue(kim.id);
-    await expect(form.getByLabel(/^Location/)).toHaveValue('12 Elm St');
+    await expect(form.locator('#location')).toHaveValue('12 Elm St');
     const title = `E2E From empty ${sfx}`;
     await form.locator('#title').fill(title);
-    await form.getByRole('button', { name: 'Create' }).click();
+    await form.getByRole('button', { name: 'Add appointment' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 });
     // The page refreshed itself: the new appointment is now the next visit.
     await expect(page.getByTestId('provider-next-visit')).toContainText(title, { timeout: 25_000 });

@@ -132,6 +132,24 @@ describe('analytics wrapper — optional / no-op path', () => {
 });
 
 describe('analytics wrapper — active path (key set)', () => {
+  it('inbox_viewed carries unread_bucket + source + scoped only (no circle id)', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.inboxViewed({ unreadBucket: '1_3', source: 'circle_list', scoped: true });
+    expect(capture).toHaveBeenCalledWith('inbox_viewed', {
+      unread_bucket: '1_3',
+      source: 'circle_list',
+      scoped: true,
+    });
+  });
+
+  it('circle_list_unread_shown carries a count capped at 10', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.circleListUnreadShown({ circlesWithUnread: 3 });
+    expect(capture).toHaveBeenLastCalledWith('circle_list_unread_shown', { circles_with_unread: 3 });
+    Analytics.circleListUnreadShown({ circlesWithUnread: 14 });
+    expect(capture).toHaveBeenLastCalledWith('circle_list_unread_shown', { circles_with_unread: 10 });
+  });
+
   it('circle_created carries only the is_self_care boolean (no PHI)', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.circleCreated(true);
@@ -660,6 +678,82 @@ describe('paywall events mirror mobile exactly', () => {
     Analytics.planSelectionSubscribed('annual', 'onboarding');
     Analytics.paywallDismissed('onboarding');
     expect(capture).not.toHaveBeenCalled();
+  });
+});
+
+describe('onboarding 1.3.1 events (spec analytics contract)', () => {
+  it('mark_it_shown / mark_it_tapped carry the surface (and success), never a circle id', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    Analytics.markItShown('payoff');
+    Analytics.markItTapped('today', false);
+    expect(capture).toHaveBeenNthCalledWith(1, 'mark_it_shown', { surface: 'payoff' });
+    expect(capture).toHaveBeenNthCalledWith(2, 'mark_it_tapped', { surface: 'today', success: false });
+  });
+
+  it('drug_suggestion_use_as_typed carries only a boolean and a length bucket', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    Analytics.drugSuggestionUseAsTyped(false, 3);
+    Analytics.drugSuggestionUseAsTyped(true, 11);
+    expect(capture).toHaveBeenNthCalledWith(1, 'drug_suggestion_use_as_typed', {
+      had_suggestions: false,
+      typed_length_bucket: '1-3',
+    });
+    expect(capture).toHaveBeenNthCalledWith(2, 'drug_suggestion_use_as_typed', {
+      had_suggestions: true,
+      typed_length_bucket: '11+',
+    });
+  });
+
+  it('med_name_suggestion_outcome carries only the outcome enum', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    Analytics.medNameSuggestionOutcome('as_typed');
+    expect(capture).toHaveBeenCalledWith('med_name_suggestion_outcome', { outcome: 'as_typed' });
+  });
+
+  it('paywall_shown carries the trigger and voice_try_used (false on web)', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    Analytics.paywallShown('after_first_med');
+    Analytics.paywallShown('onboarding', false);
+    expect(capture).toHaveBeenNthCalledWith(1, 'paywall_shown', {
+      trigger: 'after_first_med',
+      voice_try_used: false,
+    });
+    expect(capture).toHaveBeenNthCalledWith(2, 'paywall_shown', {
+      trigger: 'onboarding',
+      voice_try_used: false,
+    });
+  });
+
+  it('first_run_action_selected gains tier (and omits it when not given)', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    Analytics.firstRunActionSelected('c1', 'medication', 'primary');
+    Analytics.firstRunActionSelected('c1', 'invite', 'secondary');
+    Analytics.firstRunActionSelected('c1', 'emergency');
+    expect(capture).toHaveBeenNthCalledWith(1, 'first_run_action_selected', {
+      circle_id: 'c1',
+      action: 'medication',
+      tier: 'primary',
+    });
+    expect(capture.mock.calls[1][1]).toMatchObject({ action: 'invite', tier: 'secondary' });
+    expect(capture.mock.calls[2][1]).not.toHaveProperty('tier');
+  });
+
+  it('first_run_medication_saved accepts the folded form chip + recurrence vocabulary', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    Analytics.firstRunMedicationSaved({
+      circleId: 'c1',
+      preset: 'bedtime',
+      recurrence: 'days_of_week',
+      dosageFilled: false,
+      doseCount: 2,
+    });
+    expect(capture).toHaveBeenCalledWith('first_run_medication_saved', {
+      circle_id: 'c1',
+      preset: 'bedtime',
+      recurrence: 'days_of_week',
+      dosage_filled: false,
+      dose_count: 2,
+    });
   });
 });
 
@@ -1321,7 +1415,7 @@ describe('anonymous mode strips stable identifiers', () => {
     consent.setAnalyticsConsent(false);
     initAnalytics();
 
-    const out = installedBeforeSend()({ event: '$exception', properties: { ...URL_SAMPLE } });
+    const out = installedBeforeSend()({ event: 'probe_event', properties: { ...URL_SAMPLE } });
     expect(out?.properties.distinct_id).toBe(OTHER);
     expect(out?.properties.$session_id).toBe(OTHER);
   });
@@ -1332,7 +1426,7 @@ describe('anonymous mode strips stable identifiers', () => {
     consent.setAnalyticsConsent(true);
     initAnalytics();
 
-    const out = installedBeforeSend()({ event: '$exception', properties: { ...URL_SAMPLE } });
+    const out = installedBeforeSend()({ event: 'probe_event', properties: { ...URL_SAMPLE } });
     expect(out?.properties).toMatchObject({
       $current_url: `https://my.circlecare.app/circles/${CIRCLE}/calendar`,
       $pathname: `/circles/${CIRCLE}/calendar`,

@@ -98,8 +98,10 @@
       "repeat": "Repetição"
     },
     "choose": {
-      "primary": "Adicionar o primeiro medicamento",
-      "primarySelf": "Adicionar seu primeiro medicamento"
+      "primary": "Adicione o primeiro medicamento de {{name}}",
+      "primarySelf": "Adicione seu primeiro medicamento",
+      "promise": "Cerca de um minuto. Todos que ajudam veem, com um lembrete na hora certa.",
+      "promiseSelf": "Cerca de um minuto. Você verá aqui, com um lembrete na hora certa."
     },
     "inviteNext": {
       "notNow": "Agora não"
@@ -128,16 +130,19 @@
     "ready": {
       "title": "O círculo de {{name}} está pronto.",
       "titleSelf": "Seu círculo está pronto.",
-      "lede": "Adicione o primeiro medicamento de {{name}}. É o lembrete que todo o círculo vai compartilhar.",
+      "lede": "Comece pelo que você vai conferir mais.",
       "ledeSelf": "Adicione seu primeiro medicamento. É o lembrete que todo o seu círculo vai compartilhar.",
       "toggleShow": "Sem medicamentos para acompanhar? Veja o que mais",
       "toggleHide": "Ocultar",
-      "appointmentTitle": "Adicionar uma consulta",
+      "appointmentTitle": "Uma consulta",
       "appointmentHelper": "As consultas médicas em um só calendário que a família vê.",
-      "inviteTitle": "Convidar alguém para ajudar",
+      "inviteTitle": "Alguém para ajudar",
       "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre você.",
-      "emergencyTitle": "Adicionar informações de emergência",
-      "emergencyHelper": "Alergias e médicos, à mão quando importa."
+      "emergencyTitle": "Informações de emergência",
+      "emergencyHelper": "Alergias e médicos, à mão quando importa.",
+      "eyebrow": "CÍRCULO DE {{name}}",
+      "eyebrowSelf": "SEU CÍRCULO",
+      "orStartWith": "OU COMECE COM"
     },
     "whatLede": "Só o nome já basta. Os detalhes podem esperar.",
     "addDosage": "+ Adicionar dosagem",
@@ -158,7 +163,17 @@
       "lineSelf": "Quando você toca em Tomado, quem você convidar também vê.",
       "inviteHeading": "Quem costuma estar com {{name}}?",
       "inviteHeadingSelf": "Quem ajuda você?",
-      "invite": "Convidar alguém"
+      "invite": "Convidar alguém",
+      "eyebrow": "TUDO PRONTO",
+      "everyDay": "todos os dias",
+      "startsToday": "começa hoje",
+      "startsTomorrow": "começa amanhã",
+      "startsOn": "começa em {{date}}"
+    },
+    "markIt": {
+      "question": "Já foi dado hoje?",
+      "action": "Marcar",
+      "done": "Marcado como tomado."
     }
   },
   "accessLost": {

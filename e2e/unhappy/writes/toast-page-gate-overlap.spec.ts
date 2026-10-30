@@ -1,5 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
+import { pinRecipientZoneToBrowser } from '../../helpers';
+import { localDateOf, mockDailyUpdate, mostRecentWallTime } from '../../dailyUpdateShared';
 
 // A PAGE-LEVEL TOAST MUST NOT COVER THE PAGE'S CONTROLS — the premium gate, on
 // every page, at scroll 0.
@@ -14,7 +16,8 @@ import { test, expect } from '../../fixtures';
 // is intersected with the full visible box of every interactive element on the
 // page — app header, sidebar or nav pill, and <main>. Any shared area fails.
 
-test.use({ persona: 'freeOwner' });
+test.use({ persona: 'freeOwner', timezoneId: 'America/Denver' });
+const TZ = 'America/Denver';
 test.setTimeout(60_000);
 
 const VIEWPORTS = [
@@ -26,12 +29,14 @@ const VIEWPORTS = [
 ];
 
 const GATE_PAGES = [
-  { name: 'Overview', sub: '' },
-  { name: 'Calendar', sub: 'calendar' },
-  { name: 'Tasks', sub: 'tasks' },
-  { name: 'Emergency', sub: 'emergency' },
-  { name: 'Members', sub: 'members' },
-  { name: 'Documents', sub: 'documents' },
+  { name: 'Overview', sub: '', at: '12:00' },
+  // Evening: the daily-update card (19:00-24:00 recipient time) is on Today; its "Hide until tomorrow" X must clear the toast too.
+  { name: 'Overview (evening)', sub: '', at: '20:30' },
+  { name: 'Calendar', sub: 'calendar', at: undefined },
+  { name: 'Tasks', sub: 'tasks', at: undefined },
+  { name: 'Emergency', sub: 'emergency', at: undefined },
+  { name: 'Members', sub: 'members', at: undefined },
+  { name: 'Documents', sub: 'documents', at: undefined },
 ];
 const GATE_COPY = "That feature isn't included in the free plan. Upgrade to Premium to unlock it for your whole circle.";
 
@@ -141,7 +146,17 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height } });
 
     for (const p of GATE_PAGES) {
-      test(`${p.name}: the two-line "Upgrade" toast at scroll 0 covers no control`, async ({ page, circleId }) => {
+      test(`${p.name}: the two-line "Upgrade" toast at scroll 0 covers no control`, async ({ page, circleId, account }) => {
+        // Today shows the daily-update card from 19:00 to midnight (recipient time). Pin the clock so
+        // the gate covers both the card-less day and the evening, whenever the suite runs.
+        if (p.at) {
+          const at = mostRecentWallTime(p.at, TZ);
+          if (p.at >= '19:00') {
+            await pinRecipientZoneToBrowser(page, account, circleId);
+            await mockDailyUpdate(page, TZ, localDateOf(at, TZ));
+          }
+          await page.clock.install({ time: at });
+        }
         await page.goto(`/circles/${circleId}${p.sub ? `/${p.sub}` : ''}`, { waitUntil: 'domcontentloaded' });
         await pageSettled(page);
         expect(await page.evaluate(() => scrollY), 'the page is at its natural (load) scroll').toBe(0);
@@ -154,6 +169,9 @@ for (const vp of VIEWPORTS) {
         await expect(toast).toBeVisible({ timeout: 15_000 });
         await expect(toast.getByRole('button', { name: 'Upgrade', exact: true })).toBeVisible();
         await settledToast(page);
+        if (p.at && p.at >= '19:00') {
+          await expect(page.getByRole('button', { name: 'Hide until tomorrow' }), 'the daily-update card is on screen').toBeVisible();
+        }
         const geo = await measure(page);
 
         const report = geo.controls

@@ -51,7 +51,7 @@ describe('FloatingNavBar', () => {
     renderNav('/circles/c1');
 
     expect(Array.from(pill().children).map((c) => c.textContent)).toEqual([
-      'Home',
+      'Today',
       'Care',
       'New',
       'Health',
@@ -71,7 +71,7 @@ describe('FloatingNavBar', () => {
     renderNav('/circles/c1');
 
     const nav = pill();
-    expect(within(nav).getByRole('link', { name: 'Home' })).toHaveAttribute(
+    expect(within(nav).getByRole('link', { name: 'Today' })).toHaveAttribute(
       'href',
       '/circles/c1'
     );
@@ -86,7 +86,7 @@ describe('FloatingNavBar', () => {
   });
 
   it.each([
-    ['/circles/c1', 'Home'],
+    ['/circles/c1', 'Today'],
     ['/circles/c1/calendar', 'Care'],
     ['/circles/c1/meds', 'Care'],
     ['/circles/c1/tasks', 'Care'],
@@ -98,7 +98,7 @@ describe('FloatingNavBar', () => {
   ])('marks the right cell active on %s', (path, active) => {
     renderNav(path);
 
-    for (const name of ['Home', 'Care', 'Health']) {
+    for (const name of ['Today', 'Care', 'Health']) {
       const link = within(pill()).getByRole('link', { name });
       if (name === active) {
         expect(link).toHaveAttribute('aria-current', 'page');
@@ -113,7 +113,7 @@ describe('FloatingNavBar', () => {
   it('lights no tab on a section that belongs to neither group', () => {
     renderNav('/circles/c1/settings');
 
-    for (const name of ['Home', 'Care', 'Health']) {
+    for (const name of ['Today', 'Care', 'Health']) {
       expect(within(pill()).getByRole('link', { name })).not.toHaveAttribute('aria-current');
     }
   });
@@ -226,7 +226,7 @@ describe('FloatingNavBar', () => {
     expect(ai.className).toContain('flex-1');
     expect(ai).not.toHaveAttribute('aria-describedby');
     expect(Array.from(pill().children).map((c) => c.textContent)).toEqual([
-      'Home',
+      'Today',
       'Care',
       'New',
       'Health',

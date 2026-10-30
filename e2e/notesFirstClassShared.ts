@@ -101,6 +101,29 @@ export async function createDailyMedication(
   return body.data.event.id;
 }
 
+/**
+ * A series that started YESTERDAY has an unanswered dose yesterday, which Today's "Next up" lists
+ * (late, as its own row) above today's. Specs that drive TODAY's single dose answer yesterday's
+ * first, through the API, so exactly one row is left for the medication. Adds ONE confirmation
+ * (yesterday's) to the circle.
+ */
+export async function answerYesterdaysDose(
+  session: ApiSession,
+  circleId: string,
+  rootId: string,
+  tz: string,
+  scheduledTime = '00:01:00'
+): Promise<void> {
+  const res = await session.post(`/api/circles/${circleId}/medications/confirm`, {
+    event_id: `${rootId}_${dateInTz(tz, -1)}`,
+    status: 'taken',
+    scheduled_time: scheduledTime,
+  });
+  if (!res.ok()) {
+    throw new Error(`answer yesterday's dose failed: ${res.status()} ${await res.text()}`);
+  }
+}
+
 export async function createAppointment(
   session: ApiSession,
   circleId: string,

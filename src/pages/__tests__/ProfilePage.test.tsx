@@ -720,9 +720,17 @@ describe('ProfilePage — name form', () => {
     expect(document.activeElement).not.toBe(alert);
     // Input kept; the failure still counts for the digest (closed-set code).
     expect(screen.getByLabelText(/^First name/)).toHaveValue('Samantha');
-    expect(Analytics.errorOccurred).toHaveBeenCalledWith('profile', 'profile_mutation_error', {
-      code: expect.any(String),
-    });
+    expect(Analytics.errorOccurred).toHaveBeenCalledWith(
+      'profile',
+      'profile_update_failed',
+      expect.objectContaining({
+        code: expect.any(String),
+        source: 'profile',
+        action: 'update',
+        error_kind: expect.any(String),
+        fatal: false,
+      })
+    );
 
     mockUpdateProfileRequest.mockResolvedValueOnce(USER);
     await user.click(screen.getByRole('button', { name: 'Save' }));

@@ -20,12 +20,14 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     taskCompleted: vi.fn(),
+    taskUndone: vi.fn(),
     appointmentCompleted: vi.fn(),
     errorOccurred: vi.fn(),
   },
 }));
 
 import { apiClient } from '@/lib/api';
+import { Analytics } from '@/lib/analytics';
 import { useTasks } from '@/hooks/useTasks';
 import { useTaskCompletion, UNDO_DELAY_MS } from '@/hooks/useTaskCompletion';
 import { REFETCH_CAP_MS } from '@/lib/refetchCap';
@@ -310,5 +312,36 @@ describe('useTaskCompletion: PK11 keepalive flush', () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('useTaskCompletion — task_undone', () => {
+  it('fires task_undone (circle id) when a pending completion is undone, and commits nothing', async () => {
+    const { wrapper } = makeWrapper();
+    get.mockResolvedValue(tasksEnvelope([OPEN_TASK]));
+    const { result } = renderHook(() => useHarness(CIRCLE_ID), { wrapper });
+    await waitFor(() => expect(result.current.tasksQuery.isSuccess).toBe(true));
+
+    act(() => {
+      result.current.completion.handleComplete(OPEN_TASK);
+    });
+    act(() => {
+      result.current.completion.handleUndo(OPEN_TASK.id);
+    });
+    expect(Analytics.taskUndone).toHaveBeenCalledTimes(1);
+    expect(Analytics.taskUndone).toHaveBeenCalledWith(CIRCLE_ID);
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('does not fire when there was nothing pending to undo', async () => {
+    const { wrapper } = makeWrapper();
+    get.mockResolvedValue(tasksEnvelope([OPEN_TASK]));
+    vi.mocked(Analytics.taskUndone).mockClear();
+    const { result } = renderHook(() => useHarness(CIRCLE_ID), { wrapper });
+    await waitFor(() => expect(result.current.tasksQuery.isSuccess).toBe(true));
+    act(() => {
+      result.current.completion.handleUndo('nothing-pending');
+    });
+    expect(Analytics.taskUndone).not.toHaveBeenCalled();
   });
 });

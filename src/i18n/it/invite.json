@@ -59,5 +59,31 @@
     "title": "Fai già parte di questa cerchia",
     "message": "Questo invito è per un'altra persona, quindi non c'è nulla da accettare."
   },
-  "goToCircle": "Vai alla cerchia"
+  "goToCircle": "Vai alla cerchia",
+  "welcome": {
+    "eyebrow": "Benvenuto",
+    "title": "{{inviter}} ti invita ad aiutare con {{name}}.",
+    "titleNoInviter": "Stai aiutando con {{name}}.",
+    "titleSelf": "{{inviter}} ti invita nel tuo cerchio.",
+    "titleSelfNoInviter": "Sei nel tuo cerchio.",
+    "lede": "Ora sei nel cerchio di {{name}}. Ecco cosa puoi fare:",
+    "ledeSelf": "Ora sei nel tuo cerchio. Ecco cosa puoi fare:",
+    "goToToday": "Vai a Oggi",
+    "caregiver": {
+      "medsTitle": "Vedere i farmaci di oggi e segnare una dose come Presa",
+      "medsSub": "Tutti lo vedono subito, così nessuno dà una seconda dose.",
+      "noteTitle": "Aggiungere una nota su com'è andata la giornata",
+      "noteSub": "{{inviter}} e chiunque altro aiuti possono leggerla.",
+      "noteSubNoInviter": "Chiunque aiuti può leggerla.",
+      "tasksTitle": "Vedere appuntamenti e attività",
+      "tasksSub": "Prendi quelle che spettano a te."
+    },
+    "viewOnly": {
+      "medsTitle": "Vedere i farmaci di oggi",
+      "medsSub": "Chi ha dato cosa, e quando.",
+      "tasksTitle": "Vedere appuntamenti e attività",
+      "tasksSub": "Tutto ciò che è in programma per {{name}}.",
+      "tasksSubSelf": "Tutto ciò che è in programma per te."
+    }
+  }
 }

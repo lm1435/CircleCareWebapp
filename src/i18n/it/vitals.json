@@ -94,7 +94,7 @@
         "temperature": "Ancora nessuna misurazione della temperatura",
         "oxygen_saturation": "Ancora nessuna misurazione dell'ossigeno nel sangue"
       },
-      "description": "Registra le misurazioni nel tempo, così la cerchia può notare un andamento prima del prossimo appuntamento.",
+      "description": "Registra le misurazioni per notare gli andamenti prima del prossimo appuntamento.",
       "cta": {
         "blood_pressure": "Registra la pressione",
         "heart_rate": "Registra il battito",

@@ -44,7 +44,7 @@ function pill(page: import('@playwright/test').Page) {
   return page.getByTestId('floating-nav');
 }
 
-test('the pill AddMenu offers exactly the four create options', async ({ page, circleId }) => {
+test('the pill AddMenu offers exactly the five create options', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
   const newCell = pill(page).getByRole('button', { name: 'New' });
@@ -58,7 +58,8 @@ test('the pill AddMenu offers exactly the four create options', async ({ page, c
   await expect(menu.getByRole('menuitem', { name: 'Appt', exact: true })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Task', exact: true })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Note', exact: true })).toBeVisible();
-  await expect(menu.getByRole('menuitem')).toHaveCount(4);
+  await expect(menu.getByRole('menuitem', { name: 'Shift', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem')).toHaveText(['Med', 'Appt', 'Task', 'Note', 'Shift']);
 
   // The two options that used to live here now belong to their own pages.
   await expect(menu.getByRole('menuitem', { name: 'Document' })).toHaveCount(0);
@@ -81,8 +82,8 @@ test('create a task end-to-end from the pill NEW cell', async ({ page, circleId 
   // Selecting closes the menu and opens the AddEventModal — the only dialog now.
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 15_000 });
-  // The menu pre-selects 'task' as the event type.
-  await expect(dialog.locator('#event_type')).toHaveValue('task');
+  // Opened for a type: the type switch is gone.
+  await expect(dialog.locator('#event_type')).toHaveCount(0);
 
   await dialog.locator('#title').fill(title);
 

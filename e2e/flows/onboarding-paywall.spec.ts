@@ -4,9 +4,12 @@ import { dbQuery, sqlStr } from '../unhappy';
 import { createAccount, runScopedEmail, ACCOUNT_PASSWORD } from '../isolation';
 import { cookieLogin, uniq } from '../unhappy/auth-invites/_helpers';
 
-// The onboarding soft paywall (docs/plans/prompts-modals-coverage-2026-09-30.md): shown ONCE,
-// right after a FREE user's FIRST circle (CreateCircleModal -> lib/onboardingPaywall.ts
-// shouldShowOnboardingPaywall), the wizard deferred behind it. Mobile twin:
+// The onboarding soft paywall (docs/plans/prompts-modals-coverage-2026-09-30.md), MOVED by
+// onboarding 1.3.1 (docs/plans/onboarding-1-3-1.md section 7): circle creation no longer sends
+// a FREE user's FIRST circle to /upgrade (CreateCircleModal only records it as owed,
+// lib/onboardingPaywall.ts); the wizard runs first and the paywall shows ONCE afterwards (after
+// the first med's payoff: onboarding-first-med.spec.ts; or, no first med, the next Today:
+// onboarding-skip-paywall.spec.ts). This file pins the gate: free / seen / premium / shared browser. Mobile twin:
 // mobile/.maestro/parity/prompts/onboarding-paywall-{free,seen,premium}.yaml.
 // Real backend, no stubs: the tier is the account's stored plan_tier.
 
@@ -67,11 +70,12 @@ function planTier(userId: string): string | undefined {
 
 const wizard = (page: Page) => page.getByRole('dialog', { name: 'Circle created' });
 const offerHeading = (page: Page) => page.getByText('Better care, together.');
+const skipSetup = (page: Page) => wizard(page).getByRole('button', { name: 'Skip for now' }).click();
 
 test.describe('onboarding paywall (web)', () => {
   test.setTimeout(90_000);
 
-  test('free user, first circle: the offer appears once, the flag is written at the ask, Continue free opens the wizard', async ({
+  test('free user, first circle: creation goes to the WIZARD (not /upgrade); Skip then shows the offer once, flag written at the ask, Continue free lands on Today', async ({
     page: _page,
     context,
     baseURL,
@@ -80,21 +84,31 @@ test.describe('onboarding paywall (web)', () => {
     const a = await account('obfree', 'free');
     await cookieLogin(context, a, baseURL);
     const recipient = uniq('ObFree');
+    const paths = trackPaths(page);
 
     await createFirstCircle(page, recipient);
+    await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
+    await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
+    expect(paths).not.toContain('/upgrade');
+    // Owed, not yet asked.
+    expect(await page.evaluate((k) => window.localStorage.getItem(k), `${SEEN_KEY}:${a.userId}`)).toBeNull();
+
+    await skipSetup(page);
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(offerHeading(page)).toBeVisible();
     expect(await page.evaluate((k) => window.localStorage.getItem(k), `${SEEN_KEY}:${a.userId}`)).toBe('1');
 
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
-    await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
+    // Every exit lands on Today, with no wizard to replay.
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(wizard(page)).toHaveCount(0);
 
     expect(planTier(a.userId)).toBe('free');
     expect(ownedCircles(a.userId)).toEqual([recipient]);
   });
 
-  test('free user who was already asked in this browser: the wizard comes up directly, never /upgrade', async ({
+  test('free user who was already asked in this browser: wizard, Skip, Today - never /upgrade', async ({
     page,
     context,
     baseURL,
@@ -107,11 +121,14 @@ test.describe('onboarding paywall (web)', () => {
     await createFirstCircle(page, uniq('ObSeen'));
     await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
     await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
+    await skipSetup(page);
+    await expect(wizard(page)).toHaveCount(0);
+    await page.waitForTimeout(1500);
     expect(paths).not.toContain('/upgrade');
     await expect(offerHeading(page)).toHaveCount(0);
   });
 
-  test('premium user, first circle: no offer, the wizard directly', async ({ page, context, baseURL }) => {
+  test('premium user, first circle: wizard, Skip, Today - no offer', async ({ page, context, baseURL }) => {
     const a = await account('obprem', 'premium');
     await cookieLogin(context, a, baseURL);
     const paths = trackPaths(page);
@@ -119,6 +136,9 @@ test.describe('onboarding paywall (web)', () => {
     await createFirstCircle(page, uniq('ObPrem'));
     await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });
     await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
+    await skipSetup(page);
+    await expect(wizard(page)).toHaveCount(0);
+    await page.waitForTimeout(1500);
     expect(paths).not.toContain('/upgrade');
     expect(planTier(a.userId)).toBe('premium');
   });
@@ -134,6 +154,8 @@ test.describe('onboarding paywall (web)', () => {
     await cookieLogin(context, me, baseURL);
 
     await createFirstCircle(page, uniq('ObMe'));
+    await expect(wizard(page)).toBeVisible({ timeout: 20_000 });
+    await skipSetup(page);
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(offerHeading(page)).toBeVisible();
     expect(await page.evaluate((k) => window.localStorage.getItem(k), `${SEEN_KEY}:${me.userId}`)).toBe('1');
@@ -142,11 +164,11 @@ test.describe('onboarding paywall (web)', () => {
   // PROVEN DEFECT 2026-09-30 (fixed in CirclePickerPage.tsx; unit twin
   // CirclePickerPage.createRace.test.tsx): on a slower client the circles refetch
   // triggered by the create beat the modal's own onSuccess, and the picker's
-  // single-circle auto-skip took the user into the circle with NO paywall and NO
-  // wizard (8/8 at CPU x12 before the fix, 0/8 unthrottled). The CPU throttle makes
-  // the old ordering deterministic.
+  // single-circle auto-skip took the user into the circle with NO first-run state. The CPU
+  // throttle makes the old ordering deterministic. Since 1.3.1 the wizard is the thing that
+  // must still appear (and, for free, the OWED paywall must still be recorded and shown after).
   for (const tier of ['free', 'premium'] as const) {
-    test(`slow client (CPU x12), ${tier}: the first circle still reaches the ${tier === 'free' ? 'offer' : 'wizard'}`, async ({
+    test(`slow client (CPU x12), ${tier}: the first circle still reaches the wizard${tier === 'free' ? ' and the owed offer' : ''}`, async ({
       page,
       context,
       baseURL,
@@ -161,14 +183,14 @@ test.describe('onboarding paywall (web)', () => {
       await modal.locator('#recipient_name').fill(uniq('ObSlow'));
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 12 });
       await modal.getByRole('button', { name: 'Create circle' }).click();
-      if (tier === 'free') {
-        await page.waitForURL(/\/upgrade$/, { timeout: 60_000 });
-        await expect(offerHeading(page)).toBeVisible({ timeout: 30_000 });
-      } else {
-        await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 60_000 });
-        await expect(wizard(page)).toBeVisible({ timeout: 40_000 });
-      }
+      await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 60_000 });
+      await expect(wizard(page)).toBeVisible({ timeout: 40_000 });
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+      if (tier === 'free') {
+        await skipSetup(page);
+        await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
+        await expect(offerHeading(page)).toBeVisible();
+      }
     });
   }
 });

@@ -409,7 +409,7 @@
       "earlierLoaded": "Earlier visits loaded.",
       "earlierFailed": "Couldn't load earlier visits. Please try again.",
       "emptyTitle": "No visits with {{name}} yet",
-      "emptyBody": "Choose {{name}} as the doctor when you add or edit an appointment. Visits and their notes will show up here.",
+      "emptyBody": "Visits show up here once you choose {{name}} as the doctor on an appointment.",
       "addAppointment": "Add an appointment",
       "unnamedAuthor": "Someone"
     }

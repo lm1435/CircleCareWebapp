@@ -11,7 +11,6 @@ import {
   Icon,
   SegmentedControl,
   UnderlineTabs,
-  useToast,
 } from '@/components/ui';
 import { prefersReducedMotion } from '@/components/ui/motion';
 import { PageMasthead } from '@/components/layout/PageMasthead';
@@ -51,6 +50,8 @@ import { ShiftsReadOnlyNotice } from '@/components/shifts/ShiftsReadOnlyNotice';
 import { useOpenShiftCount, useShiftsByRange, useShiftsPeek } from '@/hooks/useShifts';
 import { useShiftsDialogs } from '@/components/shifts/ShiftsDialogs';
 import { ShiftsDayList } from '@/components/shifts/ShiftsDayList';
+import { RemovedState } from '@/components/RemovedState';
+import { useEmailLinkLanding } from '@/lib/emailLinkLanding';
 import { ShiftsWeekView } from '@/components/shifts/ShiftsWeekView';
 import { ShiftsLegend, ShiftsMonthView } from '@/components/shifts/ShiftsMonthView';
 import { ShiftsEmptyState } from '@/components/shifts/ShiftsEmptyState';
@@ -134,7 +135,6 @@ export default function CalendarPage(): ReactElement {
   const navigate = useNavigate();
   const { circleId = '' } = useParams<{ circleId: string }>();
   const { t, i18n } = useTranslation(['calendar', 'common', 'shifts']);
-  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // `?date=&eventId=&panel=` deep link (Task 26) — captured ONCE, before the
@@ -160,6 +160,19 @@ export default function CalendarPage(): ReactElement {
     return !date && eventId ? eventId : null;
   });
   const [resolvedLink, setResolvedLink] = useState<PendingNoteLink | null>(null);
+  // A link whose event is gone: the shared removed state (same as mobile) in
+  // place of the old toast. `date` is the link's own date when the URL had one.
+  const [removedLink, setRemovedLink] = useState<{ date: string | null } | null>(null);
+  const fromEmail = Boolean(searchParams.get('src'));
+  const reportLanding = useEmailLinkLanding();
+  // `?eventId=` with a date that is not a real YYYY-MM-DD: the link names an
+  // item we cannot resolve. Reported as gone (analytics only; the page renders
+  // exactly as it would with no params, as before).
+  useEffect(() => {
+    if (searchParams.get('eventId') && !datedLink && !idOnlyLink) reportLanding(false);
+    // Mount-only: the captured link never changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const pendingNoteLink = datedLink ?? resolvedLink;
   const noteLinkHandledRef = useRef(false);
   const idOnlyStartedRef = useRef(false);
@@ -180,6 +193,12 @@ export default function CalendarPage(): ReactElement {
   // Write-flow modal state (Task 1.6) — owned by the page so the edit/delete
   // modals outlive the detail modal they were launched from.
   const [showCreate, setShowCreate] = useState(false);
+  // Which control opened the create form (analytics: entry_form_opened.entry).
+  const [createEntry, setCreateEntry] = useState<'empty_state' | 'other'>('other');
+  const openCreate = (entry: 'empty_state' | 'other'): void => {
+    setCreateEntry(entry);
+    setShowCreate(true);
+  };
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [discontinuingEvent, setDiscontinuingEvent] = useState<CalendarEvent | null>(null);
@@ -207,7 +226,12 @@ export default function CalendarPage(): ReactElement {
   // write control below is gone even where `canEdit` is true.
   const shiftsEntry = resolveShiftsEntry({ viewOnly, isPremiumCircle, isOwner, hasShifts });
   const shiftsCanWrite = canWriteShifts(shiftsEntry, canEdit);
-  const [mode, setMode] = useState<CalendarMode>('schedule');
+  // `?mode=shifts` (Today's "Shifts" link and the shifts nudge) opens straight on
+  // Shifts. Read once as the initial mode; `shiftsMode` below still gates it on
+  // the viewer's access, so a link can never open a surface they do not have.
+  const [mode, setMode] = useState<CalendarMode>(() =>
+    searchParams.get('mode') === 'shifts' ? 'shifts' : 'schedule'
+  );
   const [teaserOpen, setTeaserOpen] = useState(false);
   const shiftsReadable = shiftsEntry === 'available' || shiftsEntry === 'readonly';
   const shiftsMode = mode === 'shifts' && shiftsReadable;
@@ -420,13 +444,14 @@ export default function CalendarPage(): ReactElement {
       })
       .catch(() => {
         noteLinkHandledRef.current = true;
-        showToast(t('dailyUpdate:itemUnavailable'), 'info');
+        setRemovedLink({ date: null });
+        reportLanding(false);
         const next = new URLSearchParams(searchParams);
         next.delete('eventId');
         next.delete('panel');
         setSearchParams(next, { replace: true });
       });
-  }, [idOnlyLink, circleId, searchParams, setSearchParams, showToast, t]);
+  }, [idOnlyLink, circleId, searchParams, setSearchParams, reportLanding]);
 
   useEffect(() => {
     if (!pendingNoteLink || noteLinkHandledRef.current) return;
@@ -437,15 +462,13 @@ export default function CalendarPage(): ReactElement {
     if (match) {
       setSelectedEvent(match);
       if (pendingNoteLink.panel === 'notes') scrollToNotesRef.current = true;
+      reportLanding(true);
     } else {
       // Edge case (plan): "Web deep link to an event that no longer exists:
-      // calendar opens at the date with no modal and a toast."
-      showToast(
-        pendingNoteLink.panel === 'notes'
-          ? t('calendar:noteLinkMissing')
-          : t('dailyUpdate:itemUnavailable'),
-        'info'
-      );
+      // calendar opens at the date with no modal" plus the shared removed state
+      // (this used to be a toast).
+      setRemovedLink({ date: pendingNoteLink.date });
+      reportLanding(false);
     }
 
     const next = new URLSearchParams(searchParams);
@@ -453,7 +476,7 @@ export default function CalendarPage(): ReactElement {
     next.delete('eventId');
     next.delete('panel');
     setSearchParams(next, { replace: true });
-  }, [pendingNoteLink, isLoading, eventsQuery.isFetching, events, searchParams, setSearchParams, showToast, t]);
+  }, [pendingNoteLink, isLoading, eventsQuery.isFetching, events, searchParams, setSearchParams, reportLanding]);
 
   // Once the matched event's detail modal is open, scroll its notes panel
   // into view for a `panel=notes` link (EventNotesPanel renders its heading
@@ -488,7 +511,7 @@ export default function CalendarPage(): ReactElement {
                 onClick: () =>
                   shiftsMode
                     ? shiftDialogs.openCreate('shifts_view', anchor ?? undefined)
-                    : setShowCreate(true),
+                    : openCreate('other'),
                 offlineKind: 'change',
               }
             : undefined
@@ -496,6 +519,15 @@ export default function CalendarPage(): ReactElement {
       >
         <CareTabs />
       </PageMasthead>
+
+      {removedLink ? (
+        <RemovedState
+          reason="removed"
+          date={removedLink.date}
+          fromEmail={fromEmail}
+          onDismiss={() => setRemovedLink(null)}
+        />
+      ) : null}
 
       {/* px-5 at every width: the PageMasthead gutter. `md:px-8` put the
           toolbar and grid 12px inside the title and "Add event" button. */}
@@ -661,7 +693,13 @@ export default function CalendarPage(): ReactElement {
                 description={canEdit ? t('calendar:empty.hint') : t('calendar:empty.hintReadOnly')}
               >
                 {canEdit && (
-                  <Button onClick={() => setShowCreate(true)} offlineKind="change">
+                  <Button
+                    onClick={() => {
+                      setCreateEntry('empty_state');
+                      setShowCreate(true);
+                    }}
+                    offlineKind="change"
+                  >
                     {t('calendar:addEvent.addEvent')}
                   </Button>
                 )}
@@ -755,7 +793,7 @@ export default function CalendarPage(): ReactElement {
                 onPrev={handlePrev}
                 onNext={handleNext}
                 onToday={handleToday}
-                onAdd={canEdit ? () => setShowCreate(true) : undefined}
+                onAdd={canEdit ? () => openCreate('other') : undefined}
               />
             ) : view === 'week' ? (
               <WeekView
@@ -866,7 +904,13 @@ export default function CalendarPage(): ReactElement {
         />
       )}
 
-      {showCreate && <AddEventModal circleId={circleId} onClose={() => setShowCreate(false)} />}
+      {showCreate && (
+        <AddEventModal
+          circleId={circleId}
+          entry={createEntry}
+          onClose={() => setShowCreate(false)}
+        />
+      )}
 
       {editingEvent && (
         <AddEventModal

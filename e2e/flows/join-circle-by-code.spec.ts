@@ -14,7 +14,6 @@ import {
   uniq,
   type ScopedAccount,
 } from '../unhappy/auth-invites/_helpers';
-import { successToast } from '../unhappy/writes/_helpers';
 
 // W6 (row "W6 accept names and opens the circle"): JOIN BY CODE FROM THE CIRCLE
 // PICKER (`JoinCircleModal`, src/components/circles/JoinCircleModal.tsx). The
@@ -86,7 +85,9 @@ const COPY = {
     invalid: "We couldn't find that invite code. Double-check it and try again.",
     expired: 'This invite has expired. Ask the person who invited you for a new one.',
     used: 'This invite has already been used. Ask the person who invited you to send you a new one.',
-    joined: (name: string) => `You've joined ${name}.`,
+    // Onboarding 1.3.1: a new member lands on the invitee welcome (no toast), then Today.
+    welcome: (inviter: string, name: string) => `${inviter} invited you to help with ${name}.`,
+    goToToday: 'Go to Today',
     switcher: (name: string) => `Switch circle: ${name}`,
     caregiver: 'Caregiver',
   },
@@ -101,7 +102,8 @@ const COPY = {
     invalid: 'No encontramos ese código de invitación. Verifícalo e intenta de nuevo.',
     expired: 'Esta invitación venció. Pídele a quien te invitó una nueva.',
     used: 'Esta invitación ya fue utilizada. Pídele a quien te invitó que te envíe una nueva.',
-    joined: (name: string) => `Te uniste a ${name}.`,
+    welcome: (inviter: string, name: string) => `${inviter} te invitó a ayudar con ${name}.`,
+    goToToday: 'Ir a Hoy',
     switcher: (name: string) => `Cambiar de círculo: ${name}`,
     caregiver: 'Cuidador',
   },
@@ -146,6 +148,7 @@ async function ownerWithCircle(request: APIRequestContext, label: string) {
     circleName: stored.name,
     recipientName: stored.recipient_name,
     inviterName: `Ofelia ${inviterLast}`,
+    inviterFirstName: 'Ofelia',
   };
 }
 
@@ -243,8 +246,13 @@ test('join by code from the picker: a user with no circle enters the code and la
 
   await dialog.getByRole('button', { name: COPY.en.join, exact: true }).click();
 
-  // Lands in the joined circle and names it.
-  await expect(successToast(page, COPY.en.joined(oc.circleName))).toBeVisible({ timeout: 25_000 });
+  // Lands on the invitee welcome for the joined circle (names the inviter and the person cared for),
+  // then "Go to Today" opens the circle.
+  await expect(page.getByRole('heading', { level: 1, name: COPY.en.welcome(oc.inviterFirstName, oc.recipientName) })).toBeVisible({
+    timeout: 25_000,
+  });
+  await expect(page).toHaveURL(new RegExp(`/circles/${oc.circleId}/welcome$`));
+  await page.getByRole('button', { name: COPY.en.goToToday, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/circles/${oc.circleId}(/|\\?|$)`), { timeout: 25_000 });
   await expect(page.getByRole('button', { name: COPY.en.switcher(oc.circleName), exact: true })).toBeVisible({
     timeout: 25_000,
@@ -368,7 +376,10 @@ for (const lang of ['en', 'es'] as const) {
     await lookUp(dialog, lang);
     await expect(dialog.getByText(oc.inviterName, { exact: true })).toBeVisible({ timeout: 20_000 });
     await dialog.getByRole('button', { name: c.join, exact: true }).click();
-    await expect(successToast(page, c.joined(oc.circleName))).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByRole('heading', { level: 1, name: c.welcome(oc.inviterFirstName, oc.recipientName) })).toBeVisible({
+      timeout: 25_000,
+    });
+    await page.getByRole('button', { name: c.goToToday, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/circles/${oc.circleId}(/|\\?|$)`), { timeout: 25_000 });
     await expect(page.getByRole('button', { name: c.switcher(oc.circleName), exact: true })).toBeVisible({
       timeout: 25_000,

@@ -185,12 +185,13 @@ test('Calendar: Skip over a dose Marisol TOOK -> notice + "Change answer" -> dia
   }
 });
 
-// -- Home needs-attention row -------------------------------------------------
+// -- Today Next up row (yesterday's unanswered dose) -------------------------------------------------
 
-async function homeRow(page: Page, circleId: string, name: string, button: 'Skip' | 'Confirm') {
+// Yesterday's unanswered dose is the FIRST row of Today's Next up (date order), with its Taken button.
+async function homeRow(page: Page, circleId: string, name: string, _button: 'Skip' | 'Confirm') {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
-  const attention = page.locator('section[aria-labelledby="meds-needs-attention"]');
-  const control = attention.getByRole('button', { name: `${button} ${name}` }).first();
+  const attention = page.locator('section[aria-labelledby="next-up-heading"]');
+  const control = attention.getByRole('button', { name: `Taken, ${name}` }).first();
   await expect(control).toBeVisible({ timeout: 30_000 });
   return { attention, control };
 }
@@ -246,8 +247,8 @@ function homeChangeAnswer(choice: 'change' | 'keep', title: string): void {
   });
 }
 
-homeChangeAnswer('change', 'Home: Confirm over a dose Marisol SKIPPED -> toast "Change answer" -> dialog -> overwrite taken');
-homeChangeAnswer('keep', 'Home: Confirm over a dose Marisol SKIPPED -> toast "Change answer" -> dialog -> "Keep" sends nothing and her row stands');
+homeChangeAnswer('change', 'Today: Taken over a dose Marisol SKIPPED -> toast "Change answer" -> dialog -> overwrite taken');
+homeChangeAnswer('keep', 'Today: Taken over a dose Marisol SKIPPED -> toast "Change answer" -> dialog -> "Keep" sends nothing and her row stands');
 
 test('Conditional: Marisol changes her answer to the owner\'s wish before the owner confirms -> agreement (200 no-op), her row is untouched, no overwrite feed row', async ({
   page,

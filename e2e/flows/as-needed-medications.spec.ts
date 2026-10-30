@@ -99,7 +99,7 @@ const doseRows = (eventId: string) =>
 
 async function gotoMeds(page: Page, circleId: string): Promise<void> {
   await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { level: 1, name: 'Medications' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: /'s meds$/ })).toBeVisible({ timeout: 30_000 });
 }
 
 const cardOf = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name });
@@ -116,22 +116,21 @@ test('add a PRN medication in the form: As needed hides the schedule, saves the 
     const name = `Ibuprofen ${uniq('x').slice(-6)}`;
     await gotoMeds(page, s.circleId);
     await page.getByRole('button', { name: 'Add medication' }).first().click();
-    const form = page.getByRole('dialog');
+    const form = page.getByRole('dialog', { name: 'New medication' });
     await form.getByLabel(/Medication name/i).fill(name);
     await form.getByLabel(/Dosage/i).fill('200 mg');
 
-    await form.getByLabel('Repeat').selectOption('as_needed');
-    // The schedule is gone; the one optional note is here; no limit fields.
-    await expect(form.getByLabel(/^Time/)).toHaveCount(0);
-    await expect(form.getByLabel(/^Date/)).toHaveCount(0);
-    await expect(form.getByText("No reminders. As-needed medications don't have a schedule.")).toBeVisible();
+    // Simple form: "How often?" -> "When needed". The schedule is gone (no time chips, no
+    // start date); the one optional note is here; no limit fields.
+    await form.getByRole('radio', { name: 'When needed' }).click();
+    await expect(form.getByRole('radiogroup', { name: /time/i })).toHaveCount(0);
+    await expect(form.getByTestId('add-another-dose')).toHaveCount(0);
+    await form.getByRole('button', { name: /More details/ }).click();
+    await expect(form.getByLabel(/^Start date/)).toHaveCount(0);
     await expect(form.getByLabel(/minimum|maximum|interval/i)).toHaveCount(0);
-    // The Repeat hint is tied to the select (read with it, WCAG 1.3.1), and the
-    // As-needed state of the open dialog passes axe.
-    await expect(form.getByLabel('Repeat')).toHaveAccessibleDescription("No set times. Log each dose when it's given.");
-    await checkA11y(page, 'add medication dialog (Repeat: As needed)', testInfo, { wcag22: true });
+    await checkA11y(page, 'add medication dialog (How often: When needed)', testInfo, { wcag22: true });
     await form.getByLabel(/What is it for\?/).fill('back pain');
-    await form.getByRole('button', { name: 'Create' }).click();
+    await form.getByRole('button', { name: 'Add medication' }).click();
     await expect(page.getByText('Medication added')).toBeVisible({ timeout: 20_000 });
 
     // Real DB row: no schedule, no reminders.
@@ -155,7 +154,7 @@ test('add a PRN medication in the form: As needed hides the schedule, saves the 
     });
 
     // It lives in the As needed section, with "Not given yet" and a Gave a dose button.
-    const section = page.getByRole('region', { name: 'As needed' });
+    const section = page.getByRole('region', { name: 'When needed' });
     await expect(section.getByText(name)).toBeVisible();
     await expect(section.getByText('for back pain')).toBeVisible();
     await expect(section.getByTestId('as-needed-last-given')).toHaveText('Not given yet');
@@ -344,7 +343,7 @@ test('two people: the second member\'s stale card gets 409 -> "Marco just logged
   }
 });
 
-test('Home: the As needed section is its own list and never makes "all done"; Spanish copy', async ({
+test('Meds: the As needed section is its own list; Today never lists it as a dose; Spanish copy', async ({
   browser,
   request,
   baseURL,
@@ -355,20 +354,25 @@ test('Home: the As needed section is its own list and never makes "all done"; Sp
   const ctx = await newCtx(browser, baseURL, s.owner);
   try {
     const page = await ctx.newPage();
+    // Today: an as-needed medication is no dose to answer, so Next up has no row for it.
     await page.goto(`/circles/${s.circleId}`, { waitUntil: 'domcontentloaded' });
-    const section = page.getByRole('region', { name: 'As needed' });
+    await expect(page.getByRole('region', { name: 'Next up' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('next-up-row').filter({ hasText: name })).toHaveCount(0);
+    await expect(page.getByTestId('quick-access-grid')).toBeVisible();
+
+    await page.goto(`/circles/${s.circleId}/meds`, { waitUntil: 'domcontentloaded' });
+    const section = page.getByRole('region', { name: 'When needed' });
     await expect(section.getByText(name)).toBeVisible({ timeout: 30_000 });
     // A circle with only an as-needed medication is NOT a first-run circle and has no dose to answer.
-    await expect(page.getByText(/No medications yet|Nothing scheduled for .* today yet/)).toHaveCount(0);
-    await expect(page.getByText('All medications answered for today')).toHaveCount(0);
+    await expect(page.getByText(/No medications yet/)).toHaveCount(0);
     await expect(section.getByRole('button', { name: /^Confirm|^Skip/ })).toHaveCount(0);
     // Overview with the As needed section: headings, names, contrast.
-    await checkA11y(page, `/circles/${s.circleId} (As needed section)`, testInfo, { wcag22: true });
+    await checkA11y(page, `/circles/${s.circleId} (Meds, As needed section)`, testInfo, { wcag22: true });
 
     // Spanish.
     sqlExec(`update public.users set language = 'es' where id = ${sqlStr(s.owner.userId)}::uuid;`);
-    await page.goto(`/circles/${s.circleId}`, { waitUntil: 'domcontentloaded' });
-    const seccion = page.getByRole('region', { name: 'Según se necesite' });
+    await page.goto(`/circles/${s.circleId}/meds`, { waitUntil: 'domcontentloaded' });
+    const seccion = page.getByRole('region', { name: 'Cuando se necesite' });
     await expect(seccion.getByText(name)).toBeVisible({ timeout: 30_000 });
     await expect(seccion.getByText('para dolor')).toBeVisible();
     await expect(seccion.getByTestId('as-needed-last-given')).toHaveText('Aún no se ha dado');

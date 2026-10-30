@@ -11,13 +11,13 @@ import { checkA11y } from '../helpers';
 //   - ArrowRight/ArrowDown and ArrowLeft/ArrowUp cycle (wrap), Home / End jump
 //   - Escape closes + returns focus to the trigger; a backdrop click closes
 //
-// The pill lays its four options out in a ROW, which is why both axes move the
+// The pill lays its five options out in a ROW, which is why both axes move the
 // focus — a horizontal menu is arrowed left/right, and the vertical keys are
 // kept as the familiar menu-button affordance.
 //
 // The menu carries mobile's four options in mobile's order, addressed by the
 // VISIBLE short label that is also their accessible name — "Med", "Appt",
-// "Task", "Note" (first = Med, last = Note); a full-word aria-label over a
+// "Task", "Note", "Shift" (first = Med, last = Shift); a full-word aria-label over a
 // short visible label fails WCAG 2.5.3, so the full word is the `title`.
 // Document upload and Invite member left this menu in Task 11 (spec §5.2) and
 // are covered on their own pages (documents.spec.ts, members.spec.ts).
@@ -38,7 +38,7 @@ test.use({ viewport: { width: 1440, height: 900 } });
 
 const FIRST_ITEM = 'Med';
 const SECOND_ITEM = 'Appt';
-const LAST_ITEM = 'Note';
+const LAST_ITEM = 'Shift';
 
 function newTrigger(page: import('@playwright/test').Page) {
   return page.locator('aside').getByRole('button', { name: 'New', exact: true });
@@ -65,7 +65,7 @@ test.describe('create menu — keyboard a11y, ARIA, validation', () => {
     await expect(trigger).toHaveAttribute('aria-expanded', 'true');
     const menu = page.getByRole('menu');
     await expect(menu).toBeVisible({ timeout: 10_000 });
-    await expect(menu.getByRole('menuitem')).toHaveCount(4);
+    await expect(menu.getByRole('menuitem')).toHaveCount(5);
     await expect(menu.getByRole('menuitem', { name: FIRST_ITEM, exact: true })).toBeVisible();
     await expect(menu.getByRole('menuitem', { name: LAST_ITEM, exact: true })).toBeVisible();
   });
@@ -177,7 +177,7 @@ test.describe('create menu — keyboard a11y, ARIA, validation', () => {
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 10_000 });
-    await expect(dialog.locator('#event_type')).toHaveValue('task');
+    await expect(dialog.locator('#event_type')).toHaveCount(0);
 
     // Create (pinned in the dialog footer) is always the solid, enabled button.
     // Pressing it with an empty or spaces-only title focuses the title and

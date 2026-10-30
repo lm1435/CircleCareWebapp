@@ -3,8 +3,8 @@ import type { Page } from '@playwright/test';
 import { expandAllDayOverflow } from '../helpers';
 
 // Global create flows. The authenticated shell (AppLayout + Sidebar) shows a
-// moss "New" button that opens the `AddMenu` — a role="menu" of four
-// role="menuitem" options (Medication, Appointment, Task, Note), gated by edit
+// moss "New" button that opens the `AddMenu` — a role="menu" of five
+// role="menuitem" options (Med, Appt, Task, Note, Shift), gated by edit
 // access. Each opens `AddEventModal` with the matching initialType, except Note,
 // which navigates to the Notes page where the composer lives (spec §4.5, §5.2).
 //
@@ -51,7 +51,7 @@ function rx(value: string): RegExp {
  * next quarter hour, so creating a medication with today's date doesn't trip
  * the "time already passed" path. Returns null when even a 2-hour cushion
  * would land at/after 23:00 — the caller falls back to a fixed time and
- * handles the "Starts with the next dose" branch explicitly instead.
+ * handles the inline "Starts with the next dose" note branch explicitly instead.
  */
 function futureDoseTimeToday(): string | null {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -139,7 +139,7 @@ async function deleteCalendarEventByTitle(
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
 }
 
-test('the create menu shows exactly the four create options', async ({ page, circleId }) => {
+test('the create menu shows exactly the five create options', async ({ page, circleId }) => {
   await page.goto(`/circles/${circleId}`, { waitUntil: 'domcontentloaded' });
 
   const trigger = newTrigger(page);
@@ -154,7 +154,9 @@ test('the create menu shows exactly the four create options', async ({ page, cir
   await expect(menu.getByRole('menuitem', { name: 'Appt', exact: true })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Task', exact: true })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: 'Note', exact: true })).toBeVisible();
-  await expect(menu.getByRole('menuitem')).toHaveCount(4);
+  // Shift is offered to everyone with edit access (a free owner's opens the teaser).
+  await expect(menu.getByRole('menuitem', { name: 'Shift', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem')).toHaveText(['Med', 'Appt', 'Task', 'Note', 'Shift']);
 
   // Removed in Task 11 (spec §5.2) — see the file header for where each moved.
   await expect(menu.getByRole('menuitem', { name: 'Document' })).toHaveCount(0);
@@ -172,8 +174,8 @@ test('create a task end-to-end via the global create menu', async ({ page, circl
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  // The menu pre-selects 'task' as the event type.
-  await expect(dialog.locator('#event_type')).toHaveValue('task');
+  // Opened for a type: the type switch is gone.
+  await expect(dialog.locator('#event_type')).toHaveCount(0);
 
   await dialog.locator('#title').fill(title);
   await dialog.locator('#scheduled_date').fill(todayISO());
@@ -201,13 +203,13 @@ test('create an appointment end-to-end via the global create menu', async ({ pag
   // --- Create via the menu ---
   await openCreateOption(page, 'Appt', true);
 
-  const dialog = page.getByRole('dialog');
+  const dialog = page.getByRole('dialog', { name: 'New appointment' });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator('#event_type')).toHaveValue('appointment');
+  await expect(dialog.locator('#event_type')).toHaveCount(0);
 
   await dialog.locator('#title').fill(title);
   await dialog.locator('#scheduled_date').fill(todayISO());
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  await dialog.getByRole('button', { name: 'Add appointment' }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
   // --- Verify on the calendar ---
@@ -239,9 +241,9 @@ test('create a medication end-to-end via the global create menu', async ({ page,
   // --- Create via the menu ---
   await openCreateOption(page, 'Med', true);
 
-  const dialog = page.getByRole('dialog');
+  const dialog = page.getByRole('dialog', { name: 'New medication' });
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator('#event_type')).toHaveValue('medication');
+  await expect(dialog.locator('#event_type')).toHaveCount(0);
 
   // Medication requires name + date + time (time is mandatory for meds, unlike
   // tasks). Dosage is optional but we fill it for realism. A fixed time can be
@@ -254,21 +256,22 @@ test('create a medication end-to-end via the global create menu', async ({ page,
   const doseTime = futureDoseTimeToday();
   await dialog.locator('#medication_name').fill(title);
   await dialog.locator('#medication_dosage').fill('1 tablet');
+  // The simple form: the start date lives in "More details", a custom time behind "Other time".
+  await dialog.getByRole('button', { name: /More details/ }).click();
   await dialog.locator('#scheduled_date').fill(todayISO());
+  await dialog.getByRole('button', { name: 'Other time' }).click();
   await dialog.locator('#scheduled_time').fill(doseTime ?? '09:00');
-  await dialog.getByRole('button', { name: 'Create' }).click();
-
-  // Saving a med whose time already passed TODAY (in the circle's timezone)
-  // interposes a non-blocking "Starts with the next dose" (create) or "Time
-  // already passed" (edit) notice — Continue proceeds with the save. With a
-  // future `doseTime` this should never fire; it's only expected in the
+  // A med whose time already passed TODAY (in the circle's timezone) shows an inline
+  // "Starts with the next dose" note under the time field - NO prompt (create), so Save
+  // proceeds directly. With a future `doseTime` it never shows; it is only expected in the
   // `doseTime === null` fallback.
-  const pastNotice = page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ });
-  const noticeShown = await pastNotice
-    .waitFor({ state: 'visible', timeout: 2_500 })
-    .then(() => true)
-    .catch(() => false);
-  if (noticeShown) await pastNotice.getByRole('button', { name: 'Continue' }).click();
+  const pastNote = dialog.getByTestId('dose-past-time-note');
+  const noticeShown = await pastNote.isVisible();
+  if (noticeShown) {
+    await expect(pastNote).toHaveText('Starts with the next dose. This time has already passed today.');
+  }
+  await dialog.getByRole('button', { name: 'Add medication' }).click();
+  await expect(page.getByRole('dialog', { name: /^(Time already passed|Starts with the next dose)$/ })).toHaveCount(0);
 
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
@@ -298,7 +301,10 @@ test('create a medication end-to-end via the global create menu', async ({ page,
   const actionsMenu = page.getByRole('menu');
   await expect(actionsMenu).toBeVisible();
   await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
-  const confirm = page.getByRole('dialog');
+  // A new medication from the simple form repeats every day: remove the whole series.
+  const confirm = page.getByRole('dialog', { name: 'Delete medication' });
+  await expect(confirm).toBeVisible({ timeout: 10_000 });
+  await confirm.getByRole('radio', { name: 'This and all future doses' }).check();
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
 });

@@ -191,6 +191,7 @@ export function OpenTasksCard({
         <AddEventModal
           circleId={circleId}
           initialType="task"
+          entry="empty_state"
           onClose={() => setCreatingTask(false)}
         />
       )}

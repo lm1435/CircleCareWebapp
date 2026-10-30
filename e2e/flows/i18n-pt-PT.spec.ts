@@ -57,7 +57,7 @@ test.beforeEach(async ({ page }) => {
 // Sidebar nav is pure chrome (no user data), so it's a false-positive-free
 // signal that the language actually switched on every page.
 const PT_NAV = [
-  'Início',
+  'Hoje',
   'Calendário',
   'Tarefas',
   'Atividade',
@@ -82,7 +82,7 @@ async function expectPortugueseNav(page: Page): Promise<void> {
   await expect(nav).toBeVisible({ timeout: NAV_TIMEOUT });
   for (const label of PT_NAV) {
     // .first(): the "Home" group's Eyebrow label and its single NavLink render
-    // the SAME text ("Início") inside the nav (Sidebar.tsx groups a single-item
+    // the SAME text ("Hoje") inside the nav (Sidebar.tsx groups a single-item
     // section under an eyebrow named after that item) — either match proves
     // the label is translated.
     await expect(nav.getByText(label, { exact: true }).first()).toBeVisible();
@@ -100,7 +100,7 @@ async function expectPortugueseNav(page: Page): Promise<void> {
 // `heading: null` ⇒ heading is dynamic (month / recipient name), so we lean on
 // the nav assertion for that page.
 const CIRCLE_PAGES: { path: string; heading: string | RegExp | null }[] = [
-  { path: '', heading: 'Equipa de cuidado' }, // overview (h1 is the recipient name)
+  { path: '', heading: /^Hoje para / }, // Today (h1 is "Hoje para {{name}}")
   { path: '/calendar', heading: null }, // heading is the current month
   { path: '/tasks', heading: 'Tarefas' },
   { path: '/activity', heading: 'Atividade' },

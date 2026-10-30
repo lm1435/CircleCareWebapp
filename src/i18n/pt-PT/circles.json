@@ -47,10 +47,11 @@
     "discardMessage": "Nada será guardado.",
     "ready": {
       "titleSelf": "O seu círculo está pronto.",
-      "lede": "Adicione o primeiro medicamento de {{name}}. É o lembrete que todo o círculo vai partilhar.",
+      "lede": "Comece pelo que vai verificar mais.",
       "ledeSelf": "Adicione o seu primeiro medicamento. É o lembrete que todo o seu círculo vai partilhar.",
       "appointmentHelper": "As consultas médicas num só calendário que a família vê.",
-      "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre si."
+      "inviteHelper": "Dividam a carga, para que nem tudo recaia sobre si.",
+      "eyebrowSelf": "O SEU CÍRCULO"
     },
     "nextPreview": {
       "everyMorning": "Todas as manhãs às {{time}}. Pode alterar no ecrã seguinte.",
@@ -66,7 +67,9 @@
       "inviteHeadingSelf": "Quem ajuda no seu dia a dia?"
     },
     "choose": {
-      "primarySelf": "Adicionar o seu primeiro medicamento"
+      "primarySelf": "Adicione o seu primeiro medicamento",
+      "promise": "Cerca de um minuto. Todos os que ajudam veem, com um lembrete à hora certa.",
+      "promiseSelf": "Cerca de um minuto. Vai vê-lo aqui, com um lembrete à hora certa."
     }
   },
   "accessLost": {

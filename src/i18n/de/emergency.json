@@ -409,7 +409,7 @@
       "earlierLoaded": "Frühere Besuche geladen.",
       "earlierFailed": "Frühere Besuche konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
       "emptyTitle": "Noch keine Besuche bei {{name}}",
-      "emptyBody": "Wählen Sie {{name}} als Ärztin bzw. Arzt, wenn Sie einen Termin hinzufügen oder bearbeiten. Besuche und die zugehörigen Notizen erscheinen dann hier.",
+      "emptyBody": "Besuche erscheinen hier, sobald Sie {{name}} bei einem Termin als Ärztin oder Arzt wählen.",
       "addAppointment": "Termin hinzufügen",
       "unnamedAuthor": "Jemand"
     }

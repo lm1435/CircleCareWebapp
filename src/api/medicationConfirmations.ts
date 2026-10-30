@@ -71,6 +71,13 @@ export interface ConfirmMedicationRequest {
    */
   overwrite?: true;
   expected_status?: 'taken' | 'skipped';
+  /**
+   * Onboarding 1.3.1 "Already given today? Mark it": opt-in. With it the server moves a
+   * just-created, start-rolled medication ROOT back to today and records ONE Taken at the
+   * scheduled time (`event_id` must be that root; 409 NOT_FIRST_DAY otherwise). Old servers
+   * reject the unknown key (400) and the line shows the generic error.
+   */
+  mark_first_day?: true;
 }
 
 /**

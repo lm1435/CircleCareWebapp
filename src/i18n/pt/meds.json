@@ -3,8 +3,8 @@
   "empty": "Nenhum medicamento agendado para hoje.",
   "emptyFirstRun": "Ainda não há medicamentos. Adicione o primeiro e todos do círculo receberão o lembrete.",
   "emptyCard": {
-    "body": "Ainda não há nada programado para {{name}} hoje. Adicione um medicamento e todos no círculo o veem aqui, com Tomado e Pular.",
-    "bodySelfCare": "Ainda não há nada programado para você hoje. Adicione um medicamento e ele aparece aqui, com Tomado e Pular."
+    "body": "Nada programado para {{name}} hoje.",
+    "bodySelfCare": "Nada programado para você hoje."
   },
   "addFirst": "Adicionar um medicamento",
   "loadError": "Não foi possível carregar os medicamentos de hoje",
@@ -62,7 +62,6 @@
     "loading": "Carregando medicamentos…",
     "errorTitle": "Não foi possível carregar os medicamentos",
     "errorHint": "Verifique sua conexão e tente novamente.",
-    "active": "Ativos",
     "inactive": "Inativos / Medicamentos anteriores",
     "inactiveHint": "Mantido para consulta. Os lembretes estão desativados.",
     "noTime": "Sem horário agendado",
@@ -91,7 +90,19 @@
       "viewLabel": "Ver detalhes de {{name}}",
       "repeat": "Repetição",
       "refill": "Reposição"
-    }
+    },
+    "titleNamed": "Medicamentos de {{name}}",
+    "titleSelf": "Meus medicamentos",
+    "recipientFallback": "a pessoa cuidada",
+    "zoneBehind_one": "Os horários são os de {{name}} · {{hours}} h a menos que você",
+    "zoneBehind_other": "Os horários são os de {{name}} · {{hours}} h a menos que você",
+    "zoneAhead_one": "Os horários são os de {{name}} · {{hours}} h a mais que você",
+    "zoneAhead_other": "Os horários são os de {{name}} · {{hours}} h a mais que você",
+    "weekSummary": "Esta semana {{pct}}% tomado",
+    "weekReport": "Relatório",
+    "anytime": "Qualquer hora",
+    "zoneBehindHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min a menos que você",
+    "zoneAheadHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min a mais que você"
   },
   "needsAttention": "Requer atenção",
   "needsAttentionHint": "Doses de ontem que ninguém respondeu",
@@ -103,7 +114,6 @@
   },
   "history": {
     "title": "Histórico de medicamentos",
-    "subtitle": "Acompanhe a adesão e veja o que foi tomado e quando.",
     "loading": "Carregando histórico…",
     "today": "Hoje",
     "yesterday": "Ontem",
