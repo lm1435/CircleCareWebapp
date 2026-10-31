@@ -7,18 +7,19 @@ import type { HourCycle } from '@/utils/hourCycle';
 import { CHIP_SELECTED, CHIP_UNSELECTED } from '@/components/ui/inputStyles';
 
 // The four quick times under "When?" on the new-medication form (simple UI 1.3.1):
-// Morning 8:00 AM, Midday 12:00 PM, Evening 6:00 PM, Bedtime 9:00 PM. "Other time"
-// is a separate quiet button beside the group (it reveals the regular time field).
-// The group is a radiogroup with a roving tab stop; the selected chip is the one
-// whose time EXACTLY matches the form's time. Large text / narrow containers go to
-// one column (see lib/largeText).
+// Morning 8:00 AM, Midday 12:00 PM, Evening 6:00 PM, Bedtime 9:00 PM, on the CARE
+// RECIPIENT's clock (mobile parity; the form converts them to the viewer's fields).
+// "Other time" is a separate quiet button beside the group (it reveals the regular
+// time field). The group is a radiogroup with a roving tab stop; the selected chip is
+// the one whose time EXACTLY matches the recipient's clock for the form's time. Large
+// text / narrow containers go to one column (see lib/largeText).
 
 export interface TimeChipsProps {
   id: string;
-  /** The form's viewer-frame HH:MM ('' = unset). */
+  /** The RECIPIENT's HH:MM the form's time names ('' = unset), not the viewer-frame field. */
   value: string;
   hourCycle: HourCycle;
-  /** Pick a chip (its HH:MM), or null when the selected chip is tapped again. */
+  /** Pick a chip (its recipient-frame HH:MM), or null when the selected chip is tapped again. */
   onChange: (chip: MedTimeChipId | null, time: string) => void;
   describedBy?: string;
 }

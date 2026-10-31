@@ -600,7 +600,7 @@ function AddEventForm({
    * the viewer's; the viewer's default put a Midway caregiver's task for a
    * Kiritimati recipient a day before the recipient's today.)
    */
-  const hydrated = useMemo(() => {
+  const hydrated = useMemo<ReturnType<typeof eventDatesFromApi>>(() => {
     if (event) {
       // GATE: no recipient zone yet means no frame to convert OUT of, so the
       // fields stay EMPTY rather than being filled through a guessed zone. The
@@ -633,6 +633,14 @@ function AddEventForm({
 
   const [dateStr, setDateStr] = useState(hydrated.dateStr);
   const [timeStr, setTimeStr] = useState(hydrated.timeStr);
+  /**
+   * The exact instant a time chip filled the fields with (see `chooseTimeChip`). The fields alone are the
+   * viewer's wall clock, which cannot name the SECOND reading of a repeated (fall-back) hour; an edit's
+   * hydrated time has the same problem and carries `hydrated.instant`. Either is passed to every
+   * conversion as `heldInstant`, which only applies while the fields still read exactly that instant.
+   */
+  const [chipInstant, setChipInstant] = useState<Date | null>(null);
+  const heldInstant = chipInstant ?? hydrated.instant ?? null;
   const [endTimeStr, setEndTimeStr] = useState(() => {
     // `duration_minutes` is a DELTA, so it is frame-independent: the viewer's
     // end time is the viewer's start time plus the duration. Derived from the
@@ -1035,9 +1043,9 @@ function AddEventForm({
       timezonesAreDifferent(
         deviceTimezone,
         timezone,
-        dateStr ? viewerInstant(dateStr, timeStr || '12:00') : undefined
+        dateStr ? viewerInstant(dateStr, timeStr || '12:00', heldInstant) : undefined
       ),
-    [deviceTimezone, timezone, dateStr, timeStr]
+    [deviceTimezone, timezone, dateStr, timeStr, heldInstant]
   );
   // The recipient's zone by NAME — its city ("New York", "Ciudad de México"),
   // localised for the reader. Bare rather than parenthesised: both places this
@@ -1064,7 +1072,7 @@ function AddEventForm({
     // recipient-frame conversions below are provably never run on a guess.
     if (!showDualTimezone || !timezone || !timeStr || !dateStr) return null;
     try {
-      const instant = viewerInstant(dateStr, timeStr);
+      const instant = viewerInstant(dateStr, timeStr, heldInstant);
       const render = (clock: string): string => {
         const [hh, mm] = clock.split(':').map(Number);
         return formatTimeOfDay(hh, mm, hourCycle);
@@ -1091,7 +1099,17 @@ function AddEventForm({
     } catch {
       return null;
     }
-  }, [showDualTimezone, dateStr, timeStr, deviceTimezone, timezone, hourCycle, recipientZone, t]);
+  }, [
+    showDualTimezone,
+    dateStr,
+    timeStr,
+    deviceTimezone,
+    timezone,
+    hourCycle,
+    recipientZone,
+    t,
+    heldInstant,
+  ]);
 
   /** The label above the time field: "Your time / Margaret's time (New York)". */
   const daysTimezoneNote = recipientName
@@ -1165,11 +1183,29 @@ function AddEventForm({
         timeStr: timeStr || null,
         recurrenceEndDateStr: null,
         timezone,
+        heldInstant,
       }).scheduledDate;
     } catch {
       return null;
     }
-  }, [timezone, dateStr, timeStr]);
+  }, [timezone, dateStr, timeStr, heldInstant]);
+  /**
+   * The RECIPIENT's wall clock the form's time names (`HH:MM`, what the save sends), or '' with no time
+   * or no zone yet. The time chips mean the recipient's clock (mobile parity), so this is what lights one.
+   */
+  const recipientClock = useMemo(() => {
+    if (!timezone || !dateStr || !timeStr) return '';
+    try {
+      return (
+        eventDatesForApi({ dateStr, timeStr, recurrenceEndDateStr: null, timezone, heldInstant })
+          .scheduledTime ?? ''
+      );
+    } catch {
+      return '';
+    }
+  }, [timezone, dateStr, timeStr, heldInstant]);
+  /** The time chip the form's time sits on, or null ("Other time" / no time). */
+  const litChip = chipForTime(recipientClock);
   /**
    * CREATE only: this medication's start rolls to the next dose (the backend does it,
    * `medicationStartRoll.ts`) because its time already passed today in the recipient's zone.
@@ -1184,6 +1220,7 @@ function AddEventForm({
           timeStr: time,
           recurrenceEndDateStr: null,
           timezone,
+          heldInstant,
         });
         return (
           !!api.scheduledTime &&
@@ -1194,7 +1231,7 @@ function AddEventForm({
         return false;
       }
     },
-    [isEditing, isMedication, isAsNeeded, timezone, dateStr]
+    [isEditing, isMedication, isAsNeeded, timezone, dateStr, heldInstant]
   );
   const startsNextDose = useMemo(() => doseStartsNext(timeStr), [doseStartsNext, timeStr]);
   /** "Today" in the circle's (recipient's) timezone — never the device's. */
@@ -1372,6 +1409,8 @@ function AddEventForm({
       recurrenceEndDateStr:
         recurrence !== 'none' && recurrenceEndDate ? recurrenceEndDate : null,
       timezone: tz,
+      // The instant an edit opened with, or a chip set, while the fields still read it (fall-back hour).
+      heldInstant,
     });
     let scheduled_date = apiDates.scheduledDate;
     const scheduled_time = apiDates.scheduledTime;
@@ -1665,7 +1704,7 @@ function AddEventForm({
         if (firstRun && data.event_type === 'medication') {
           Analytics.firstRunMedicationSaved({
             circleId,
-            preset: chipForTime(timeStr) ?? 'other',
+            preset: litChip ?? 'other',
             recurrence:
               recurrence === 'days_of_week' || recurrence === 'as_needed' ? recurrence : 'daily',
             dosageFilled: dosage.trim().length > 0,
@@ -2282,7 +2321,7 @@ function AddEventForm({
   // ── SIMPLE LAYOUT (new medication / new appointment) ─────────────────────────
   // Same state, same `buildPayload`, same Save: only the arrangement differs, so
   // the API payload for a given set of answers is IDENTICAL to the full form's.
-  const showOtherTime = otherTimeOpen || (timeStr !== '' && chipForTime(timeStr) === null);
+  const showOtherTime = otherTimeOpen || (timeStr !== '' && litChip === null);
   const timeErrorText = errors.scheduled_time ?? missingErrorFor('time');
   const sectionHeading = (headingId: string, text: string): ReactElement => (
     <Text variant="sectionTitle" as="h3" id={headingId} className="text-lg">
@@ -2290,23 +2329,65 @@ function AddEventForm({
     </Text>
   );
 
+  /**
+   * A chip names the RECIPIENT's wall clock ("Evening 6:00 PM" is 6 PM where the person lives), exactly
+   * as on mobile. The fields hold the viewer's clock and the save converts, so the chip is converted the
+   * other way with the inverse the edit hydration uses (`eventDatesFromApi`). The day is the recipient's
+   * day the form is on: the start date while there is no time (it opens on the recipient's today), else
+   * the recipient's day of the current time, since a chip in a far zone moves the viewer-frame date. The
+   * exact instant is kept too (`chipInstant`): inside the viewer's repeated hour the fields cannot name it.
+   */
   function chooseTimeChip(chip: TimeChipId | null, time: string): void {
     datesTouched.current = true;
     if (chip === null) {
       setTimeStr('');
+      setChipInstant(null);
       setExtraTimes([]);
       return;
     }
-    setTimeStr(time);
+    if (!timezone) return;
+    const viewer = eventDatesFromApi({
+      // A cleared start date falls back to the recipient's today, the day the form opened on.
+      scheduledDate: recipientStartDate ?? defaultNewEventDate(timezone),
+      scheduledTime: time,
+      timezone,
+    });
+    if (!viewer.timeStr) return;
+    setDateStr(viewer.dateStr);
+    setTimeStr(viewer.timeStr);
+    setChipInstant(viewer.instant ?? null);
     clearError('scheduled_time');
     completeStep('when');
     Analytics.timeChipSelected({ chip });
   }
 
-  /** The first chip time not already used, so a new row starts on something sensible. */
+  /**
+   * The first chip not already used, so a new row starts on something sensible. Chips are the
+   * recipient's clock, so "used" is read in that frame and the new row gets the chip's viewer clock.
+   */
   function addExtraDose(): void {
-    const used = new Set([timeStr, ...extraTimes]);
-    const next = MED_TIME_CHIPS.find((chip) => !used.has(chip.time))?.time ?? '12:00';
+    const toRecipient = (time: string): string => {
+      if (!timezone || !dateStr) return time;
+      try {
+        return (
+          eventDatesForApi({ dateStr, timeStr: time, recurrenceEndDateStr: null, timezone })
+            .scheduledTime ?? time
+        );
+      } catch {
+        return time;
+      }
+    };
+    const used = new Set([recipientClock, ...extraTimes.map(toRecipient)]);
+    const chip = MED_TIME_CHIPS.find((candidate) => !used.has(candidate.time));
+    let next = '12:00';
+    if (chip && timezone && recipientStartDate) {
+      next =
+        eventDatesFromApi({
+          scheduledDate: recipientStartDate,
+          scheduledTime: chip.time,
+          timezone,
+        }).timeStr || next;
+    }
     setExtraTimes((prev) => (prev.length < 3 ? [...prev, next] : prev));
   }
 
@@ -2415,7 +2496,7 @@ function AddEventForm({
           {sectionHeading('sf-when', t('addEvent.simple.when'))}
           <TimeChips
             id="time-chips"
-            value={timeStr}
+            value={recipientClock}
             hourCycle={hourCycle}
             describedBy={timeErrorText ? 'scheduled_time-error' : undefined}
             onChange={chooseTimeChip}
@@ -2462,15 +2543,11 @@ function AddEventForm({
               {timeErrorText}
             </p>
           )}
-          {!showOtherTime && conversionText && (
-            <Text variant="caption" data-testid="time-conversion">
-              {conversionText}
-            </Text>
-          )}
           <DoseQuietHoursNote
             applies={isMedication && notificationsEnabled && reminderAtDue}
             dateStr={dateStr}
             timeStr={timeStr}
+            heldInstant={heldInstant}
             members={members}
             ownerId={circle?.owner_id}
           />
@@ -3087,6 +3164,7 @@ function AddEventForm({
             applies={isMedication && notificationsEnabled && reminderAtDue}
             dateStr={dateStr}
             timeStr={timeStr}
+            heldInstant={heldInstant}
             members={members}
             ownerId={circle?.owner_id}
           />

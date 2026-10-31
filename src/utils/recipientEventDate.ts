@@ -89,11 +89,30 @@ export function addDaysToIsoDay(isoDay: string, days: number): string {
   return `${shifted.getUTCFullYear()}-${mm}-${dd}`;
 }
 
-/** The device-local instant meant by a viewer-frame `YYYY-MM-DD` + `HH:MM`. */
-export function viewerInstant(dateStr: string, timeStr: string): Date {
+/**
+ * The device-local instant meant by a viewer-frame `YYYY-MM-DD` + `HH:MM`.
+ *
+ * `held` is the exact instant the fields were last filled with: an edit's hydrated time, or a time chip's
+ * (both `eventDatesFromApi().instant`). A fall-back repeats an hour of the viewer's clock and the Date
+ * constructor names the FIRST reading, so a time on the SECOND one (Pago Pago 21:00 on 2026-10-31 = the
+ * second 01:00 in Denver) read back as the first, and the dose saved an hour early. When the fields still
+ * read exactly `held`'s own day and clock, `held` is returned (to the minute). Outside a repeated hour that
+ * is the very instant the constructor builds, so nothing else changes; a changed field never matches, so it
+ * is converted as before. Mirrors mobile `deviceInstantOn`.
+ */
+export function viewerInstant(dateStr: string, timeStr: string, held?: Date | null): Date {
   const [y, m, d] = dateStr.split('-').map(Number);
   const [hh, mm] = timeStr.split(':').map(Number);
-  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+  const built = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+  if (
+    held &&
+    Number.isFinite(held.getTime()) &&
+    deviceDay(held) === dateStr &&
+    deviceClock(held) === deviceClock(built)
+  ) {
+    return new Date(Math.floor(held.getTime() / 60000) * 60000);
+  }
+  return built;
 }
 
 /** Device-local `YYYY-MM-DD` for an instant — the viewer's own calendar day. */
@@ -187,6 +206,8 @@ export interface EventDatesForApiInput {
   recurrenceEndDateStr: string | null;
   /** The CARE RECIPIENT's IANA timezone. */
   timezone: string;
+  /** The instant the fields were filled with (an edit or a time chip); see `viewerInstant`. */
+  heldInstant?: Date | null;
 }
 
 /**
@@ -228,16 +249,16 @@ export function eventDatesForApi(input: EventDatesForApiInput): {
   scheduledTime?: string;
   recurrenceEndDate?: string;
 } {
-  const { dateStr, timeStr, recurrenceEndDateStr, timezone } = input;
+  const { dateStr, timeStr, recurrenceEndDateStr, timezone, heldInstant } = input;
 
   // No time means no instant to re-express: the calendar day the user picked is
   // exactly what they mean. Mirrors the null-time branch of the inverse below.
   const hasTime = !!timeStr;
   const scheduledDate = hasTime
-    ? dayInZone(viewerInstant(dateStr, timeStr as string), timezone)
+    ? dayInZone(viewerInstant(dateStr, timeStr as string, heldInstant), timezone)
     : dateStr;
   const scheduledTime = hasTime
-    ? clockInZone(viewerInstant(dateStr, timeStr as string), timezone)
+    ? clockInZone(viewerInstant(dateStr, timeStr as string, heldInstant), timezone)
     : undefined;
 
   if (!recurrenceEndDateStr) {
@@ -282,6 +303,12 @@ export function eventDatesFromApi(input: EventDatesFromApiInput): {
   dateStr: string;
   timeStr: string;
   recurrenceEndDateStr: string;
+  /**
+   * The exact instant the stored pair names (absent without a time). `timeStr` is its viewer wall clock,
+   * which cannot tell the two readings of a repeated (fall-back) hour apart; pass this back as
+   * `heldInstant` so the save can.
+   */
+  instant?: Date;
 } {
   const { scheduledDate, scheduledTime, recurrenceEndDate, timezone } = input;
 
@@ -310,6 +337,7 @@ export function eventDatesFromApi(input: EventDatesFromApiInput): {
   return {
     dateStr,
     timeStr: deviceClock(startInstant),
+    instant: startInstant,
     // Inverted by the SAME span arithmetic the save used, not by re-resolving a
     // second instant: the stored pair carries the span directly, so this is
     // exact by construction and cannot need a correction pass.

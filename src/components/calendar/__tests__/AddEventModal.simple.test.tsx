@@ -175,9 +175,14 @@ describe('new medication: structure', () => {
     for (const radio of within(timeChips()).getAllByRole('radio')) {
       expect(radio).not.toBeChecked();
     }
-    // ...and typing a chip's exact time selects that chip.
+    // A chip is the RECIPIENT's clock, so typing the chip's own time on the viewer's clock does NOT light
+    // it (12:00 Denver is 14:00 New York)...
     await user.clear(time);
     await user.type(time, '12:00');
+    expect(chip(/Midday/)).not.toBeChecked();
+    // ...and typing the viewer time that IS 12:00 in New York does.
+    await user.clear(time);
+    await user.type(time, '10:00');
     expect(chip(/Midday/)).toBeChecked();
   });
 
@@ -196,11 +201,11 @@ describe('new medication: structure', () => {
     const user = userEvent.setup();
     renderMed();
     expect(screen.queryByTestId('dose-past-time-note')).toBeNull();
-    await user.click(chip(/Morning/)); // 8:00 Denver = 10:00 New York: already passed today
+    await user.click(chip(/Morning/)); // 8:00 New York (the recipient's clock): already passed today
     expect(screen.getByTestId('dose-past-time-note')).toHaveTextContent(
       'Starts with the next dose. This time has already passed today.'
     );
-    await user.click(chip(/Evening/)); // 18:00 Denver = 20:00 New York: still ahead
+    await user.click(chip(/Evening/)); // 18:00 New York: still ahead
     expect(screen.queryByTestId('dose-past-time-note')).toBeNull();
   });
 
@@ -254,7 +259,7 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
     await user.type(screen.getByLabelText('Dosage'), '500 mg');
   };
 
-  it('Evening chip + Every day == Time 18:00 + Repeat Daily', async () => {
+  it('Evening chip + Every day == Time 16:00 (Denver) + Repeat Daily', async () => {
     const simple = await savedPayload(
       async (user) => {
         await nameAndDose(user);
@@ -265,9 +270,10 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
     const full = await savedPayload(
       async (user) => {
         await nameAndDose(user);
+        // The full form's field is the viewer's clock: 4:00 PM Denver is 6:00 PM in New York.
         const time = screen.getByLabelText(/^Time/);
         await user.clear(time);
-        await user.type(time, '18:00');
+        await user.type(time, '16:00');
         await user.selectOptions(screen.getByLabelText('Repeat'), 'daily');
       },
       { layout: 'full', saveLabel: 'Create' }
@@ -279,7 +285,7 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
       title: 'Metformin',
       medication_name: 'Metformin',
       medication_dosage: '500 mg',
-      scheduled_time: '20:00', // 6:00 PM Denver is 8:00 PM in the recipient's New York
+      scheduled_time: '18:00', // the chip is the recipient's clock: 6:00 PM in New York
       recurrence_rule: 'daily',
       notifications_enabled: true,
       reminder_at_due: true,
@@ -310,7 +316,7 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
         await nameAndDose(user);
         const time = screen.getByLabelText(/^Time/);
         await user.clear(time);
-        await user.type(time, '08:00');
+        await user.type(time, '06:00'); // Morning: 8:00 New York = 6:00 Denver
         await user.selectOptions(screen.getByLabelText('Repeat'), 'days_of_week');
         await pickDays(user);
       },
@@ -354,7 +360,7 @@ describe('new medication: API payload is IDENTICAL to the full form for the same
     expect(mutateCreate.mock.calls[0][0]).toMatchObject({
       description: 'With food',
       notifications_enabled: false,
-      scheduled_time: '23:00',
+      scheduled_time: '21:00',
     });
   });
 });
@@ -370,7 +376,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     const user = userEvent.setup();
     renderMed();
     await fillName(user);
-    await user.click(chip(/Morning/)); // 8:00 Denver = 10:00 New York
+    await user.click(chip(/Morning/)); // 8:00 New York (the recipient's clock)
     await user.click(screen.getByTestId('add-another-dose')); // starts on the first unused chip: Midday
     await user.click(screen.getByRole('button', { name: '+ Another dose' }));
     await user.click(screen.getByTestId('add-event-save'));
@@ -380,7 +386,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     expect(primary).toMatchObject({
       event_type: 'medication',
       medication_name: 'Metformin',
-      scheduled_time: '10:00',
+      scheduled_time: '08:00',
       recurrence_rule: 'daily',
     });
     expect(primary.refill_group_id).toBeUndefined();
@@ -399,8 +405,8 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
         recurrence_end_date: primary.recurrence_end_date,
         refill_group_id: 'primary-1',
       });
-    expectSibling(second, '14:00'); // Midday 12:00 Denver
-    expectSibling(third, '20:00'); // next unused chip: Evening 6:00 PM Denver
+    expectSibling(second, '12:00'); // Midday, on the recipient's clock like the chips
+    expectSibling(third, '18:00'); // next unused chip: Evening 6:00 PM New York
   });
 
   it('the request sequence equals the first-run wizard / mobile helper for the same answers', async () => {
@@ -417,7 +423,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     const todayStr = (primary.scheduled_date as string) ?? '';
     const expected = buildSiblingDoseRequests({
       primary,
-      additionalTimes: ['12:00'],
+      additionalTimes: ['10:00'], // the wizard's viewer-frame field: Midday 12:00 New York = 10:00 Denver
       timezone: RECIPIENT_TZ,
       todayStr,
       refillGroupId: 'p',
@@ -447,9 +453,9 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     vi.setSystemTime(new Date('2026-06-15T18:00:00Z')); // 12:00 Denver / 14:00 New York
     const user = userEvent.setup();
     renderMed();
-    await user.click(chip(/Bedtime/)); // 9 PM Denver: still ahead
+    await user.click(chip(/Bedtime/)); // 9 PM New York: still ahead
     await user.click(screen.getByTestId('add-another-dose'));
-    // The new row starts on the first unused chip: Morning 8:00 Denver, already passed today.
+    // The new row starts on the first unused chip: Morning 8:00 New York, already passed today.
     expect(screen.getByTestId('dose-past-time-note-1')).toHaveTextContent(
       'Starts with the next dose. This time has already passed today.'
     );
@@ -481,7 +487,7 @@ describe('new medication: + Another dose (mobile AddEventScreen / first-run wiza
     await user.click(screen.getByTestId('add-another-dose'));
     await user.click(screen.getByTestId('add-event-save'));
     await waitFor(() => expect(failed).toHaveBeenCalledWith('circle-1', 'medication', 'additional_dose_create_failed'));
-    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('14:00'), 'error');
+    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('12:00'), 'error');
   });
 });
 

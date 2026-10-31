@@ -28,6 +28,8 @@ export interface DoseQuietHoursNoteProps {
   /** Viewer-frame `YYYY-MM-DD` and `HH:MM`, exactly as the form holds them. */
   dateStr: string;
   timeStr: string;
+  /** The exact instant the form holds for those fields, if any (a repeated hour; see `viewerInstant`). */
+  heldInstant?: Date | null;
   members: readonly ReminderRecipientMember[] | null | undefined;
   ownerId: string | null | undefined;
 }
@@ -36,6 +38,7 @@ export function DoseQuietHoursNote({
   applies,
   dateStr,
   timeStr,
+  heldInstant,
   members,
   ownerId,
 }: DoseQuietHoursNoteProps) {
@@ -50,7 +53,7 @@ export function DoseQuietHoursNote({
 
   if (!applies || !dateStr || !timeStr || !user) return null;
   const inside = doseFallsInOwnQuietHours({
-    instant: viewerInstant(dateStr, timeStr),
+    instant: viewerInstant(dateStr, timeStr, heldInstant),
     members,
     ownerId,
     viewerId,

@@ -204,6 +204,15 @@ describe('save events', () => {
 });
 
 describe('past time on create (inline note, no prompt)', () => {
+  // The typed times below are a DENVER viewer's clock (10:00 = 12:00 New York). Without pinning the viewer
+  // zone they named other instants under the sweep: from Honolulu, 10:00 is 16:00 New York, still ahead.
+  const ORIGINAL_TZ = process.env.TZ;
+  beforeAll(() => {
+    process.env.TZ = 'America/Denver';
+  });
+  afterAll(() => {
+    process.env.TZ = ORIGINAL_TZ;
+  });
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-06-15T18:00:00Z'));

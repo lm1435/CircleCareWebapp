@@ -3,7 +3,10 @@
 // MORNING / MIDDAY / EVENING / BEDTIME groups can never disagree about what
 // "evening" means. Mobile mirrors these exact values.
 
-/** The four quick times offered under "When?". `time` is a viewer-frame HH:MM. */
+/**
+ * The four quick times offered under "When?". `time` is the CARE RECIPIENT's HH:MM (the stored frame), as
+ * on mobile (`TIME_CHIPS`): "Evening 6:00 PM" is 6 PM where the person lives, whatever the viewer's zone.
+ */
 export const MED_TIME_CHIPS = [
   { id: 'morning', time: '08:00' },
   { id: 'midday', time: '12:00' },
