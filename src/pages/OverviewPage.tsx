@@ -22,6 +22,13 @@ import {
   peekOnboardingPaywallPending,
 } from '@/lib/onboardingPaywall';
 import { handOffFocusSoon } from '@/lib/focusHandoff';
+import {
+  findLandingItem,
+  landingFallbackPath,
+  parseDoseLanding,
+  stripLandingParams,
+  type DoseLanding,
+} from '@/lib/doseLanding';
 import { DoseHint } from '@/components/overview/DoseHint';
 import { ShiftsNudgeCard, pickShiftsNudgeMember } from '@/components/overview/ShiftsNudgeCard';
 import { resolveShiftsEntry } from '@/lib/shiftsAccess';
@@ -138,6 +145,43 @@ export default function OverviewPage(): ReactElement {
   }, [firstRun, showAddMed, circleId, subscription, recipientName, navigate]);
 
   const nextUp = useNextUp(circleId, timezone);
+
+  // DOSE LANDING (an inbox row for a dose that is not marked yet): `?dose=&date=&time=`. The
+  // params are read into state ONCE per landing and only for the circle in the URL. When Next up
+  // has answered, the dose's row is highlighted (NextUp scrolls, focuses, announces); when Today
+  // does not list it (already marked, another day, removed) the calendar's event sheet takes over.
+  // Either way the params leave the URL, so a refresh or Back never replays the landing.
+  const [pendingLanding, setPendingLanding] = useState<(DoseLanding & { circleId: string }) | null>(
+    null
+  );
+  const [landed, setLanded] = useState<{ circleId: string; key: string } | null>(null);
+  useEffect(() => {
+    const parsed = parseDoseLanding(location.search);
+    if (!parsed || !circleId) return;
+    setLanded(null);
+    setPendingLanding({ ...parsed, circleId });
+  }, [location.search, circleId]);
+  useEffect(() => {
+    if (!pendingLanding) return;
+    if (pendingLanding.circleId !== circleId) {
+      setPendingLanding(null); // the page was reused for another circle: that landing is void
+      setLanded(null);
+      return;
+    }
+    if (!nextUp.settled || nextUp.isError) return;
+    const hit = findLandingItem(nextUp.items, pendingLanding);
+    setPendingLanding(null);
+    if (hit) {
+      setLanded({ circleId, key: hit.key });
+      navigate(
+        { pathname: location.pathname, search: stripLandingParams(location.search) },
+        { replace: true }
+      );
+    } else {
+      navigate(landingFallbackPath(circleId, pendingLanding), { replace: true });
+    }
+  }, [pendingLanding, circleId, nextUp.settled, nextUp.isError, nextUp.items, navigate, location.pathname, location.search]);
+
   const nextStep = useNextStep(circleId, timezone);
 
   // Shifts nudge (mobile's rule): PREMIUM circles (a setup prompt) and the OWNER of a FREE circle
@@ -299,6 +343,7 @@ export default function OverviewPage(): ReactElement {
               error={nextUp.isError}
               onRetry={nextUp.refetch}
               stacked={largeText}
+              landing={landed && landed.circleId === circleId ? { key: landed.key, entry: 'inbox' } : null}
               hint={
                 coaching === 'dose_hint' ? (
                   <DoseHint

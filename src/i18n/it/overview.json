@@ -87,7 +87,8 @@
       "allOfToday_other": "Tutto di oggi · {{count}} elementi",
       "empty": "Nient’altro in programma per {{name}} oggi.",
       "emptySelf": "Nient’altro in programma per te oggi.",
-      "loadError": "Impossibile caricare l’elenco di oggi"
+      "loadError": "Impossibile caricare l’elenco di oggi",
+      "landingNotMarked": "Questa dose non è ancora stata segnata."
     },
     "nextStep": {
       "eyebrow": "Prossimo passo · {{current}} di {{total}}",

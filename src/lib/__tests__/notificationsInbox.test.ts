@@ -126,12 +126,86 @@ describe('resolveInboxDestination (same place a push tap goes)', () => {
   const dest = (over: Parameters<typeof makeItem>[0]) => resolveInboxDestination(makeItem(over));
 
   it('event types -> calendar with date and eventId', () => {
-    for (const type of ['medication_reminder', 'task_assigned', 'appointment_created', 'note_added']) {
+    for (const type of [
+      'medication_confirmation',
+      'task_assigned',
+      'task_reminder',
+      'appointment_created',
+      'note_added',
+    ]) {
       expect(dest({ type, data: { eventId: EVENT_ID, scheduledDate: '2026-10-29' } })).toEqual({
         kind: 'route',
         to: `${base}/calendar?date=2026-10-29&eventId=${EVENT_ID}`,
       });
     }
+  });
+  describe('an unanswered dose reminder lands on Today with that dose', () => {
+    const doseState = (status: 'due' | 'late' | 'not_marked' | 'taken' | 'skipped') => ({
+      status,
+      medication_name: 'Metformin',
+      scheduled_time: '08:00:00',
+      scheduled_date: '2026-10-28',
+    });
+    it.each(['medication_reminder', 'medication_late', 'medication_missed'])(
+      '%s -> /circles/:id?dose=&date=&time=',
+      (type) => {
+        expect(
+          dest({ type, data: { eventId: EVENT_ID, scheduledDate: '2026-10-29', scheduledTime: '09:30:00' } })
+        ).toEqual({ kind: 'route', to: `${base}?dose=${EVENT_ID}&date=2026-10-29&time=09:30:00` });
+      }
+    );
+    it.each(['due', 'late', 'not_marked'] as const)('state %s -> Today, date and time from the state', (status) => {
+      expect(dest({ type: 'medication_late', data: { eventId: EVENT_ID }, state: doseState(status) })).toEqual({
+        kind: 'route',
+        to: `${base}?dose=${EVENT_ID}&date=2026-10-28&time=08:00:00`,
+      });
+    });
+    it('data.scheduledTime wins over the state time; HH:MM is a valid clock', () => {
+      expect(
+        dest({
+          type: 'medication_reminder',
+          data: { eventId: EVENT_ID, scheduledDate: '2026-10-29', scheduledTime: '07:15' },
+          state: doseState('due'),
+        })
+      ).toEqual({ kind: 'route', to: `${base}?dose=${EVENT_ID}&date=2026-10-29&time=07:15` });
+    });
+    it('an invalid time is left out; a missing date too', () => {
+      expect(
+        dest({ type: 'medication_reminder', data: { eventId: EVENT_ID, scheduledTime: '25:99' } })
+      ).toEqual({ kind: 'route', to: `${base}?dose=${EVENT_ID}` });
+      expect(
+        dest({
+          type: 'medication_reminder',
+          data: { eventId: EVENT_ID, scheduledDate: '2026-10-29', scheduledTime: '8am' },
+        })
+      ).toEqual({ kind: 'route', to: `${base}?dose=${EVENT_ID}&date=2026-10-29` });
+    });
+    it('an already taken or skipped dose keeps the calendar sheet (it shows the status)', () => {
+      for (const status of ['taken', 'skipped'] as const) {
+        expect(
+          dest({
+            type: 'medication_reminder',
+            data: { eventId: EVENT_ID, scheduledDate: '2026-10-28' },
+            state: doseState(status),
+          })
+        ).toEqual({ kind: 'route', to: `${base}/calendar?date=2026-10-28&eventId=${EVENT_ID}` });
+      }
+    });
+    it('medication_confirmation always stays on the calendar', () => {
+      expect(
+        dest({
+          type: 'medication_confirmation',
+          data: { eventId: EVENT_ID, scheduledDate: '2026-10-28' },
+          state: doseState('due'),
+        })
+      ).toEqual({ kind: 'route', to: `${base}/calendar?date=2026-10-28&eventId=${EVENT_ID}` });
+    });
+    it('invalid event ids are dropped: no dose param, the calendar as before', () => {
+      expect(
+        dest({ type: 'medication_late', data: { eventId: '../x', scheduledDate: '2026-10-28' } })
+      ).toEqual({ kind: 'route', to: `${base}/calendar?date=2026-10-28` });
+      expect(dest({ type: 'medication_late', data: {} })).toEqual({ kind: 'route', to: `${base}/calendar` });
+    });
   });
   it('a dose row without data.scheduledDate falls back to state.scheduled_date', () => {
     expect(

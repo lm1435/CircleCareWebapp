@@ -9,7 +9,7 @@ import type {
   ConfirmableStatus,
   TodaysMedication,
 } from '@/api/medicationConfirmations';
-import type { MedicationConfirmSource } from '@/lib/analytics';
+import type { MedicationConfirmEntry, MedicationConfirmSource } from '@/lib/analytics';
 
 /**
  * Optimistic "confirm with a 5-second undo window" for medication doses — the
@@ -55,6 +55,8 @@ interface PendingEntry {
    * when the send happens. See the note in `useMedicationUndo` below.
    */
   circleId: string;
+  /** How a notification brought the person to this dose (analytics only), when it did. */
+  entry?: MedicationConfirmEntry;
   /** Holdable: paused while the badge is hovered / focused (`lib/undoTimer`). */
   timer: UndoTimer;
   /**
@@ -90,7 +92,12 @@ export interface UseMedicationUndoOptions {
 export interface UseMedicationUndoResult {
   /** event id → the status it is pending in. Drives the UndoBadge. */
   pending: Record<string, ConfirmableStatus>;
-  confirm: (med: TodaysMedication, status: ConfirmableStatus) => void;
+  confirm: (
+    med: TodaysMedication,
+    status: ConfirmableStatus,
+    /** `entry` rides on `medication_confirmed` only; omit it for an ordinary press. */
+    options?: { entry?: MedicationConfirmEntry }
+  ) => void;
   /** `true` when it actually cancelled — `false` once the request is away. */
   undo: (eventId: string) => boolean;
   /**
@@ -183,6 +190,7 @@ export function useMedicationUndo({
           status: entry.status,
           scheduled_time: entry.scheduledTime,
           circleId: entry.circleId,
+          ...(entry.entry ? { entry: entry.entry } : {}),
           // The dose's day, so an AMBIGUOUS rejection is verified against the
           // server before anyone is told it failed (lib/confirmVerify.ts).
           dose: {
@@ -261,7 +269,11 @@ export function useMedicationUndo({
   );
 
   const confirm = useCallback(
-    (med: TodaysMedication, status: ConfirmableStatus): void => {
+    (
+      med: TodaysMedication,
+      status: ConfirmableStatus,
+      options?: { entry?: MedicationConfirmEntry }
+    ): void => {
       if (!med.scheduled_time) return;
       // Already counting down (or in flight) — a second click is a mis-click,
       // never a second dose.
@@ -272,6 +284,7 @@ export function useMedicationUndo({
         status,
         scheduledTime: med.scheduled_time,
         circleId,
+        ...(options?.entry ? { entry: options.entry } : {}),
         fired: false,
         timer: startUndoTimer(() => {
           const live = entriesRef.current.get(med.id);

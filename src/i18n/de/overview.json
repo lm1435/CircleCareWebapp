@@ -87,7 +87,8 @@
       "allOfToday_other": "Alles von heute · {{count}} Einträge",
       "empty": "Heute ist für {{name}} nichts weiter geplant.",
       "emptySelf": "Heute ist für Sie nichts weiter geplant.",
-      "loadError": "Die Liste für heute konnte nicht geladen werden"
+      "loadError": "Die Liste für heute konnte nicht geladen werden",
+      "landingNotMarked": "Diese Dosis wurde noch nicht markiert."
     },
     "nextStep": {
       "eyebrow": "Nächster Schritt · {{current}} von {{total}}",

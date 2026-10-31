@@ -87,7 +87,8 @@
       "allOfToday_other": "All of today · {{count}} items",
       "empty": "Nothing else scheduled for {{name}} today.",
       "emptySelf": "Nothing else scheduled for you today.",
-      "loadError": "Couldn't load today's list"
+      "loadError": "Couldn't load today's list",
+      "landingNotMarked": "This dose hasn't been marked yet."
     },
     "nextStep": {
       "eyebrow": "Next step · {{current}} of {{total}}",

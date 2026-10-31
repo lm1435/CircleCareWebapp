@@ -227,7 +227,9 @@ describe('NotificationsPage', () => {
   });
 
   it.each([
-    ['medication_reminder', { eventId: EVENT_ID, scheduledDate: '2026-10-29' }, `/circles/${CIRCLE_A}/calendar?date=2026-10-29&eventId=${EVENT_ID}`],
+    // An unmarked dose lands on Today with its row highlighted (OverviewPage falls back to the sheet).
+    ['medication_reminder', { eventId: EVENT_ID, scheduledDate: '2026-10-29' }, `/circles/${CIRCLE_A}?dose=${EVENT_ID}&date=2026-10-29`],
+    ['medication_confirmation', { eventId: EVENT_ID, scheduledDate: '2026-10-29' }, `/circles/${CIRCLE_A}/calendar?date=2026-10-29&eventId=${EVENT_ID}`],
     ['refill_reminder', { medicationId: EVENT_ID }, `/circles/${CIRCLE_A}/meds?medication=${EVENT_ID}`],
     ['care_note_added', { noteDate: '2026-10-28' }, `/circles/${CIRCLE_A}/notes?date=2026-10-28`],
     ['daily_update', { date: '2026-10-28' }, `/circles/${CIRCLE_A}/daily-update/2026-10-28`],

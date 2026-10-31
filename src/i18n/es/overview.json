@@ -87,7 +87,8 @@
       "allOfToday_other": "Todo lo de hoy · {{count}} elementos",
       "empty": "No hay nada más programado para {{name}} hoy.",
       "emptySelf": "No hay nada más programado para ti hoy.",
-      "loadError": "No se pudo cargar la lista de hoy"
+      "loadError": "No se pudo cargar la lista de hoy",
+      "landingNotMarked": "Esta dosis todavía no se ha marcado."
     },
     "nextStep": {
       "eyebrow": "Siguiente paso · {{current}} de {{total}}",

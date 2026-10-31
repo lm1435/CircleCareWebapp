@@ -90,7 +90,8 @@
       "allOfToday_other": "Tudo de hoje · itens: {{count}}",
       "empty": "Nada mais agendado para {{name}} hoje.",
       "emptySelf": "Nada mais agendado para você hoje.",
-      "loadError": "Não foi possível carregar a lista de hoje"
+      "loadError": "Não foi possível carregar a lista de hoje",
+      "landingNotMarked": "Esta dose ainda não foi marcada."
     },
     "nextStep": {
       "eyebrow": "Próximo passo · {{current}} de {{total}}",

@@ -87,7 +87,8 @@
       "allOfToday_other": "Toute la journée · {{count}} éléments",
       "empty": "Rien d’autre de prévu pour {{name}} aujourd’hui.",
       "emptySelf": "Rien d’autre de prévu pour vous aujourd’hui.",
-      "loadError": "Impossible de charger la liste du jour"
+      "loadError": "Impossible de charger la liste du jour",
+      "landingNotMarked": "Cette prise n’a pas encore été notée."
     },
     "nextStep": {
       "eyebrow": "Prochaine étape · {{current}} sur {{total}}",

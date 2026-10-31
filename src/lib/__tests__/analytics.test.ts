@@ -156,6 +156,23 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(capture).toHaveBeenCalledWith('circle_created', { is_self_care: true });
   });
 
+  it('medication_confirmed adds entry only when a notification landed the person on the dose', async () => {
+    const { Analytics } = await loadWithKey('phc_test_key');
+    Analytics.medicationConfirmed('circle-123', 'taken', 'care_profile', 'inbox');
+    expect(capture).toHaveBeenLastCalledWith('medication_confirmed', {
+      circle_id: 'circle-123',
+      status: 'taken',
+      source: 'care_profile',
+      entry: 'inbox',
+    });
+    Analytics.medicationConfirmed('circle-123', 'taken', 'care_profile');
+    expect(capture).toHaveBeenLastCalledWith('medication_confirmed', {
+      circle_id: 'circle-123',
+      status: 'taken',
+      source: 'care_profile',
+    });
+  });
+
   it('medication_confirmed carries circle_id + status + source, and no PHI', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.medicationConfirmed('circle-123', 'taken_late', 'care_profile');

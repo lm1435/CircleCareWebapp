@@ -1,4 +1,4 @@
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button, Eyebrow, Icon, Sheet, Skeleton, UndoBadge, useToast } from '@/components/ui';
@@ -21,7 +21,8 @@ import {
   type ConfirmableStatus,
   type TodaysMedication,
 } from '@/api/medicationConfirmations';
-import { Analytics } from '@/lib/analytics';
+import { Analytics, type MedicationConfirmEntry } from '@/lib/analytics';
+import { prefersReducedMotion } from '@/components/ui/motion';
 import {
   formatEventTimeCompact,
   getDateInTimezone,
@@ -39,6 +40,17 @@ import type { NextUpItem } from './nextUpItems';
 
 /** Rows shown before "All of today". */
 export const NEXT_UP_VISIBLE = 3;
+
+/** How long the row a notification landed on stays highlighted. */
+export const LANDING_HIGHLIGHT_MS = 3000;
+
+/** The dose row a notification landed on (OverviewPage resolved it from the URL). */
+export interface NextUpLanding {
+  /** `NextUpItem.key` of the row. */
+  key: string;
+  /** How the person got here, for `medication_confirmed`. */
+  entry: MedicationConfirmEntry;
+}
 
 export interface NextUpProps {
   circleId: string;
@@ -60,6 +72,12 @@ export interface NextUpProps {
   hintAfterKey?: string | null;
   /** Fired when Taken is pressed (the hint reads it to count as acted). */
   onTakenPressed?: () => void;
+  /**
+   * A notification landed on this row: it is rendered even past the first
+   * NEXT_UP_VISIBLE, scrolled into view, highlighted for a moment, and focus
+   * moves to its Taken button (its link when it has none: view-only).
+   */
+  landing?: NextUpLanding | null;
 }
 
 /** Whole calendar days `date` lies before `today` (both YYYY-MM-DD); 0 for today or later. */
@@ -88,6 +106,7 @@ export function NextUp({
   hint,
   hintAfterKey = null,
   onTakenPressed,
+  landing = null,
 }: NextUpProps): ReactElement {
   const { t } = useTranslation(['overview', 'meds', 'common']);
   const { showToast } = useToast();
@@ -100,6 +119,14 @@ export function NextUp({
     mine: ConfirmableStatus;
     theirs: DoseAlreadyRecorded;
   } | null>(null);
+
+  // LANDING: the highlight lasts a moment; the ENTRY (for analytics) lasts as long as the page.
+  const [highlightKey, setHighlightKey] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  const landedRef = useRef<NextUpLanding | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const landingKey = landing?.key ?? null;
+  const landingEntry = landing?.entry ?? null;
 
   const undoFlow = useMedicationUndo({
     circleId,
@@ -142,8 +169,42 @@ export function NextUp({
   });
   const tasks = useTaskCompletion(circleId);
 
-  const visible = items.slice(0, NEXT_UP_VISIBLE);
+  // The landed row is always shown, even when it is past the first NEXT_UP_VISIBLE.
+  const landedIndex = landingKey ? items.findIndex((i) => i.key === landingKey) : -1;
+  const visible = items.slice(0, Math.max(NEXT_UP_VISIBLE, landedIndex + 1));
   const today = getDateInTimezone(timezone);
+
+  // The entry belongs to the circle it was set in.
+  useEffect(() => {
+    landedRef.current = null;
+  }, [circleId]);
+
+  // A notification landed on a row: bring it into view, mark it for a moment, put focus on the
+  // action (the link for a view-only member, who gets no Taken button), and say why in a polite
+  // live region. Runs when the landing key changes, once the rows are on screen.
+  useEffect(() => {
+    if (!landingKey || !landingEntry || loading) return;
+    const row = Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>('[data-next-up-key]') ?? []
+    ).find((el) => el.dataset.nextUpKey === landingKey);
+    if (!row) return;
+    landedRef.current = { key: landingKey, entry: landingEntry };
+    setHighlightKey(landingKey);
+    setAnnouncement(t('today.nextUp.landingNotMarked'));
+    if (typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    }
+    (
+      row.querySelector<HTMLElement>('[data-next-up-taken]') ?? row.querySelector<HTMLElement>('a')
+    )?.focus({ preventScroll: true });
+    const timer = window.setTimeout(() => {
+      setHighlightKey(null);
+      setAnnouncement('');
+    }, LANDING_HIGHLIGHT_MS);
+    return () => window.clearTimeout(timer);
+    // `t` is stable per language; a language switch must not replay the landing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [landingKey, landingEntry, loading]);
 
   if (loading) {
     return (
@@ -219,12 +280,19 @@ export function NextUp({
           size="sm"
           aria-label={t('today.nextUp.takenLabel', { name: item.title, when })}
           className={stacked ? 'w-full' : 'flex-none'}
+          data-next-up-taken=""
           {...offlineDisabledProps(offline)}
           onClick={() => {
             if (blockOfflineWrite('mark')) return;
             Analytics.nextUpAction({ action: 'taken', item_type: 'medication', position });
             onTakenPressed?.();
-            undoFlow.confirm(item.med!, 'taken');
+            // Taken on the row a notification landed on: the event says how they got here.
+            const landed = landedRef.current;
+            if (landed && landed.key === item.key) {
+              undoFlow.confirm(item.med!, 'taken', { entry: landed.entry });
+            } else {
+              undoFlow.confirm(item.med!, 'taken');
+            }
           }}
         >
           {t('today.nextUp.taken')}
@@ -249,13 +317,19 @@ export function NextUp({
     }
 
     return (
-      <li key={item.key} className="border-t border-line-2 first:border-t-0" data-testid="next-up-row">
+      <li
+        key={item.key}
+        className="border-t border-line-2 first:border-t-0"
+        data-testid="next-up-row"
+        data-next-up-key={item.key}
+      >
+        {/* The inset (-mx-2 px-2) gives the landing highlight room around the text; the
+            highlight is a tint plus a ring from the theme tokens, so it reads in light and dark. */}
         <div
-          className={
-            stacked
-              ? 'flex flex-col items-stretch gap-2 py-3'
-              : 'flex items-center gap-4 py-3'
-          }
+          data-highlighted={highlightKey === item.key ? 'true' : undefined}
+          className={`-mx-2 rounded-lg px-2 transition-colors duration-500 motion-reduce:transition-none ${
+            highlightKey === item.key ? 'bg-moss-soft ring-2 ring-moss' : ''
+          } ${stacked ? 'flex flex-col items-stretch gap-2 py-3' : 'flex items-center gap-4 py-3'}`}
         >
           {time ? (
             <span
@@ -308,7 +382,9 @@ export function NextUp({
   } else {
     body = (
       <Sheet padding="none" className="px-4">
-        <ul className="m-0 list-none p-0">{visible.map(renderRow)}</ul>
+        <ul ref={listRef} className="m-0 list-none p-0">
+          {visible.map(renderRow)}
+        </ul>
         <Link
           to={`${base}/calendar`}
           onClick={() => Analytics.todayAllItemsOpened()}
@@ -327,6 +403,10 @@ export function NextUp({
         {t('today.nextUp.heading')}
       </Eyebrow>
       {body}
+      {/* Polite live region for the landing line; always mounted so the text change is announced. */}
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
       {changing && (
         <ChangeAnswerDialog
           circleId={circleId}

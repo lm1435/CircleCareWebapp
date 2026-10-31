@@ -263,9 +263,14 @@ export type InboxDestination =
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID_RE.test(v);
+const CLOCK_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
-function isRealDate(v: unknown): v is string {
+export const isUuid = (v: unknown): v is string => typeof v === 'string' && UUID_RE.test(v);
+
+/** 'HH:MM' or 'HH:MM:SS' (24h), nothing else. */
+export const isClock = (v: unknown): v is string => typeof v === 'string' && CLOCK_RE.test(v);
+
+export function isRealDate(v: unknown): v is string {
   if (typeof v !== 'string' || !DATE_RE.test(v)) return false;
   const d = new Date(`${v}T12:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
@@ -283,6 +288,15 @@ const EVENT_TYPES: ReadonlySet<string> = new Set([
   'task_assigned',
   'note_added',
   'note_nudge',
+]);
+/**
+ * The dose reminders: a tap lands on Today with that dose's row in view (the
+ * place to tap Taken), unless the dose was already answered.
+ */
+const DOSE_NUDGE_TYPES: ReadonlySet<string> = new Set([
+  'medication_reminder',
+  'medication_late',
+  'medication_missed',
 ]);
 const MEDS_TYPES: ReadonlySet<string> = new Set([
   'refill_reminder',
@@ -309,6 +323,29 @@ export function resolveInboxDestination(item: InboxItem): InboxDestination {
     : isRealDate(item.state?.scheduled_date)
       ? item.state.scheduled_date
       : null;
+
+  // An UNANSWERED dose reminder lands on the circle's Today with the dose's row
+  // highlighted (OverviewPage reads dose/date/time and falls back to the
+  // calendar sheet when the row is not on Today). An answered dose keeps the
+  // calendar sheet, which shows its status.
+  if (
+    DOSE_NUDGE_TYPES.has(item.type) &&
+    eventId &&
+    item.state?.status !== 'taken' &&
+    item.state?.status !== 'skipped'
+  ) {
+    // Every value is validated above (uuid / real date / 24h clock), so the URL is built
+    // literally: the colons of the clock stay readable instead of becoming %3A.
+    const parts = [`dose=${eventId}`];
+    if (scheduledDate) parts.push(`date=${scheduledDate}`);
+    const clock = isClock(data.scheduledTime)
+      ? data.scheduledTime
+      : isClock(item.state?.scheduled_time)
+        ? item.state.scheduled_time
+        : null;
+    if (clock) parts.push(`time=${clock}`);
+    return { kind: 'route', to: `${base}?${parts.join('&')}` };
+  }
 
   if (EVENT_TYPES.has(item.type)) {
     const params = new URLSearchParams();

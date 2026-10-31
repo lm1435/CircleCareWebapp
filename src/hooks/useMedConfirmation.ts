@@ -32,7 +32,11 @@ import { classifyFailureCode, failureContext } from '@/lib/apiErrors';
 import { withRefetchCap } from '@/lib/refetchCap';
 import { useToast } from '@/components/ui';
 import { getDateInTimezone } from '@/utils/timezone';
-import { Analytics, type MedicationConfirmSource } from '@/lib/analytics';
+import {
+  Analytics,
+  type MedicationConfirmEntry,
+  type MedicationConfirmSource,
+} from '@/lib/analytics';
 import {
   isAmbiguousConfirmFailure,
   markConfirmFailure,
@@ -139,6 +143,11 @@ export type ConfirmMedicationVariables = ConfirmMedicationRequest & {
    * it is (the old behaviour). Stripped before the POST, like `circleId`.
    */
   dose?: { scheduled_date: string; parent_event_id?: string | null };
+  /**
+   * How a notification brought the person to this dose (analytics only: it
+   * rides on `medication_confirmed` and is stripped before the POST).
+   */
+  entry?: MedicationConfirmEntry;
 };
 
 /**
@@ -161,6 +170,7 @@ export function useConfirmMedication(
     mutationFn: async ({
       circleId: sentCircleId,
       dose,
+      entry: _entry,
       ...data
     }: ConfirmMedicationVariables): Promise<MedicationConfirmation> => {
       const circleId = sentCircleId ?? hookCircleId;
@@ -199,7 +209,11 @@ export function useConfirmMedication(
     onSuccess: (confirmation, variables) => {
       const circleId = variables.circleId ?? hookCircleId;
       // PHI-safe: only circle_id + the status enum (never the medication name).
-      Analytics.medicationConfirmed(circleId, variables.status, source);
+      if (variables.entry) {
+        Analytics.medicationConfirmed(circleId, variables.status, source, variables.entry);
+      } else {
+        Analytics.medicationConfirmed(circleId, variables.status, source);
+      }
       const recoveredFrom =
         confirmation && typeof confirmation === 'object' ? RECOVERED.get(confirmation) : undefined;
       if (recoveredFrom !== undefined) {

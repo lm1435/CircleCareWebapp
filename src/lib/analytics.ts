@@ -388,6 +388,13 @@ type MedicationStatus = 'taken' | 'taken_late' | 'skipped';
 export type MedicationConfirmSource = 'calendar' | 'care_profile';
 
 /**
+ * How the person got to the dose they answered, when a notification brought them
+ * (mobile's `entry`: 'push' | 'inbox'). Web has no push, so only 'inbox' is sent.
+ * A closed enum; the property is OMITTED for an ordinary press.
+ */
+export type MedicationConfirmEntry = 'push' | 'inbox';
+
+/**
  * The surfaces a medication LIFECYCLE action (open the action set / discontinue
  * / reactivate / delete) can actually be triggered from on the web companion.
  *
@@ -835,8 +842,16 @@ export const Analytics = {
   medicationConfirmed: (
     circleId: string,
     status: MedicationStatus,
-    source: MedicationConfirmSource
-  ) => capture('medication_confirmed', { circle_id: circleId, status, source }),
+    source: MedicationConfirmSource,
+    /** Set only when a notification landed the person on this dose (enum, never free text). */
+    entry?: MedicationConfirmEntry
+  ) =>
+    capture('medication_confirmed', {
+      circle_id: circleId,
+      status,
+      source,
+      ...(entry ? { entry } : {}),
+    }),
 
   /**
    * A confirm whose POST REJECTED ambiguously (timeout, network, 5xx) but whose
