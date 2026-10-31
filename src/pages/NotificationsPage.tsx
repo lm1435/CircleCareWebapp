@@ -7,6 +7,7 @@ import { useCircles } from '@/hooks/useCircles';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useInbox, useMarkInboxRead } from '@/hooks/useInbox';
 import { Analytics } from '@/lib/analytics';
+import { useRowFit } from '@/lib/largeText';
 import {
   groupInbox,
   inboxSourceFromState,
@@ -89,6 +90,13 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
   );
   const visible = useMemo(() => sections.flatMap((s) => s.items), [sections]);
   const unreadVisible = visible.filter((item) => !item.read_at).length;
+  // Eyebrow + "Mark all read" share one row only while both fit on it unwrapped (German
+  // "Alle als gelesen markieren" squeezed the eyebrow into two lines at phone width); else the
+  // action moves to its own line under the title. Measured, never a locale check (mobile twin:
+  // useTitleActionFit in NotificationsScreen).
+  const headerFit = useRowFit(
+    `${t('inbox.eyebrow')}\u0001${!gone && !isLoading && !isError && visible.length > 0 ? t('inbox.markAllRead') : ''}`
+  );
   // Every row on a circle's own inbox is that circle: naming it on each row is noise.
   const showCircle = !scoped && (circles?.length ?? 0) >= 2;
   const circle = circleId ? circles?.find((c) => c.id === circleId) : undefined;
@@ -309,26 +317,31 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
 
   const TitleTag = gone?.reason === 'no_access' ? 'p' : 'h1';
 
+  const showMarkAll = !gone && !isLoading && !isError && visible.length > 0;
+  const markAllButton = showMarkAll ? (
+    // aria-disabled, NOT disabled: the button is what the user just pressed, and a
+    // natively disabled button drops keyboard focus to <body> (2.4.3).
+    <button
+      type="button"
+      onClick={handleMarkAll}
+      aria-disabled={unreadVisible === 0 || markRead.isPending}
+      data-testid="inbox-mark-all"
+      className={`min-h-[44px] shrink-0 whitespace-nowrap rounded-md px-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink aria-disabled:cursor-default aria-disabled:opacity-50${headerFit.stacked ? ' -ml-2 self-start' : ''}`}
+    >
+      {t('inbox.markAllRead')}
+    </button>
+  ) : null;
+
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8" data-testid="notifications-page">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <Eyebrow color="moss" dot>
+          <div ref={headerFit.ref} data-testid="inbox-header-row" className="flex items-center justify-between gap-3">
+            {/* Unwrapped while measuring inline, so a squeeze shows as overflow, not as a wrap. */}
+            <Eyebrow color="moss" dot className={headerFit.stacked ? undefined : 'shrink-0 whitespace-nowrap'}>
               {t('inbox.eyebrow')}
             </Eyebrow>
-            {!gone && !isLoading && !isError && visible.length > 0 ? (
-              // aria-disabled, NOT disabled: the button is what the user just pressed, and a
-              // natively disabled button drops keyboard focus to <body> (2.4.3).
-              <button
-                type="button"
-                onClick={handleMarkAll}
-                aria-disabled={unreadVisible === 0 || markRead.isPending}
-                className="min-h-[44px] rounded-md px-2 text-sm font-medium text-ink-2 transition-colors hover:text-ink aria-disabled:cursor-default aria-disabled:opacity-50"
-              >
-                {t('inbox.markAllRead')}
-              </button>
-            ) : null}
+            {headerFit.stacked ? null : markAllButton}
           </div>
           {scoped && circleId ? (
             <div className="-mt-1 flex items-start gap-2">
@@ -344,6 +357,7 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
                 <Text variant="editorialTitleCompact" as={TitleTag}>
                   {t('inbox.title')}
                 </Text>
+                {headerFit.stacked ? markAllButton : null}
                 {circle ? (
                   <Text
                     variant="body"
@@ -359,9 +373,12 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
               </div>
             </div>
           ) : (
-            <Text variant="editorialTitleCompact" as={TitleTag} className="-mt-1">
-              {t('inbox.title')}
-            </Text>
+            <>
+              <Text variant="editorialTitleCompact" as={TitleTag} className="-mt-1">
+                {t('inbox.title')}
+              </Text>
+              {headerFit.stacked ? markAllButton : null}
+            </>
           )}
           {content}
           {scoped && (circles?.length ?? 0) >= 2 ? (

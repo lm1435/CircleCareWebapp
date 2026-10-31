@@ -226,6 +226,47 @@ describe('NotificationsPage', () => {
     expect(button).not.toBeDisabled();
   });
 
+  describe('header fit: eyebrow + Mark all read share a row only when both fit', () => {
+    // jsdom has no layout (memory: jsdom geometry blind): the row's widths are stubbed. What is
+    // under test is the RULE; the real geometry is pinned in a browser (Playwright, German, 390px).
+    function stubRowWidths(scrollWidth: number, clientWidth: number) {
+      const sw = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(scrollWidth);
+      const cw = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(clientWidth);
+      return () => {
+        sw.mockRestore();
+        cw.mockRestore();
+      };
+    }
+    const follows = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    it('too wide for the row (German at phone width): the action moves under the title', async () => {
+      const restore = stubRowWidths(420, 358);
+      serve([makeItem(), makeItem()]);
+      renderPage();
+      await screen.findAllByTestId('inbox-row');
+      const button = screen.getByRole('button', { name: 'Mark all read' });
+      const heading = screen.getByRole('heading', { level: 1, name: 'Notifications' });
+      expect(screen.getByTestId('inbox-header-row')).not.toContainElement(button);
+      expect(follows(heading, button)).toBe(true);
+      // Same button: aria-disabled behaviour and the click are unchanged.
+      expect(button).toHaveAttribute('aria-disabled', 'false');
+      await userEvent.setup({ advanceTimers: () => {} }).click(button);
+      expect(mockMark).toHaveBeenCalledWith({ all: true });
+      restore();
+    });
+
+    it('fits: the action stays on the eyebrow row, above the title', async () => {
+      const restore = stubRowWidths(300, 358);
+      serve([makeItem(), makeItem()]);
+      renderPage();
+      await screen.findAllByTestId('inbox-row');
+      const button = screen.getByRole('button', { name: 'Mark all read' });
+      expect(screen.getByTestId('inbox-header-row')).toContainElement(button);
+      expect(follows(button, screen.getByRole('heading', { level: 1, name: 'Notifications' }))).toBe(true);
+      restore();
+    });
+  });
+
   it.each([
     // An unmarked dose lands on Today with its row highlighted (OverviewPage falls back to the sheet).
     ['medication_reminder', { eventId: EVENT_ID, scheduledDate: '2026-10-29' }, `/circles/${CIRCLE_A}?dose=${EVENT_ID}&date=2026-10-29`],

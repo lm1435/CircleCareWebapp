@@ -98,3 +98,51 @@ export function useLargeTextLayoutEvent(screen: LargeTextScreen, enabled = true)
   }, [enabled, screen, active]);
   return active;
 }
+
+/**
+ * A heading row with a trailing action (the inbox's eyebrow + "Mark all read"), fitted on
+ * MEASURED layout — the twin of mobile's `useTitleActionFit` (hooks/useLargeTextLayout).
+ * Attach `ref` to the row; its children must not wrap inside themselves (`whitespace-nowrap`,
+ * `shrink-0`). Before paint, a row whose content is wider than the row (German "Alle als
+ * gelesen markieren" beside "BENACHRICHTIGUNGEN" at phone width) flips to `stacked`, and the
+ * caller renders the action on its own line under the title instead. Locale-agnostic: it
+ * reacts to the rendered width, never to a language code. The verdict is keyed to the row's
+ * width and `contentKey` (the strings, whether the action is shown), so a resize, zoom, text
+ * size or language switch drops it and the row is re-measured inline first (same keyed pattern
+ * as `useChipRowCap`).
+ */
+export function useRowFit(contentKey: string): {
+  ref: RefObject<HTMLDivElement>;
+  stacked: boolean;
+} {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [stackedKey, setStackedKey] = useState<string | null>(null);
+  const measureKey = `${width}|${readRootFontPx()}|${contentKey}`;
+  const stacked = stackedKey === measureKey;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (stacked || !el) return;
+    // +1: sub-pixel widths round differently in scrollWidth and clientWidth.
+    if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1) setStackedKey(measureKey);
+  });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = (): void => setWidth(el.clientWidth);
+    update();
+    window.addEventListener('resize', update);
+    if (typeof ResizeObserver === 'undefined') return () => window.removeEventListener('resize', update);
+    // Width only: the row loses the action when stacked, and reacting to that would flip it back.
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      window.removeEventListener('resize', update);
+      observer.disconnect();
+    };
+  }, []);
+
+  return { ref, stacked };
+}
