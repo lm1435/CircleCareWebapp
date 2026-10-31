@@ -118,6 +118,13 @@ test.describe("time chips are the recipient's clock", () => {
     const evening = dialog.getByRole('radio', { name: /Evening/ });
     await evening.click();
     await expect(evening).toBeChecked();
+    // The zones differ (Denver browser, New York recipient): the conversion line sits under the lit chip, and the
+    // chip group is described by it so a screen reader reads it with the chip.
+    const line = dialog.getByTestId('time-conversion');
+    await expect(line).toHaveText('4:00 PM Denver = 6:00 PM New York');
+    await expect(dialog.getByRole('radiogroup', { name: 'Common dose times' })).toHaveAccessibleDescription(
+      '4:00 PM Denver = 6:00 PM New York'
+    );
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
     const rows = medRoots(a.circleId, name);
@@ -198,6 +205,8 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     const morning = dialog.getByRole('radio', { name: /Morning/ });
     await morning.click();
     await expect(morning).toBeChecked();
+    // The line names the instant that is saved: 08:00 London is the SECOND 01:00 in Denver (the first would read 7:00 AM).
+    await expect(dialog.getByTestId('time-conversion')).toHaveText('1:00 AM Denver = 8:00 AM London');
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
     const rows = medRoots(a.circleId, name);

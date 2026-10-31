@@ -174,16 +174,57 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
     });
   });
 
-  it('a lit chip shows no conversion line (as on mobile); Other time shows the live conversion', async () => {
-    const user = userEvent.setup();
-    renderMed();
-    await user.click(chip(/Evening/));
-    expect(screen.queryByText(/ = /)).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Other time' }));
-    const time = await screen.findByLabelText(/^Time/);
-    await user.clear(time);
-    await user.type(time, '16:30');
-    expect(screen.getByText(/4:30 PM .* = 6:30 PM New York/)).toBeInTheDocument();
+  describe('the conversion line under a lit chip (mobile parity)', () => {
+    // Denver viewer. Chips are the recipient's clock, so Evening 6:00 PM New York is 4:00 PM Denver.
+    it('zones differ: a lit chip shows the line with both clocks, described by the chip group', async () => {
+      const user = userEvent.setup();
+      renderMed();
+      await user.click(chip(/Evening/));
+      const line = screen.getByTestId('time-conversion');
+      expect(line).toHaveTextContent(/^4:00 PM Denver = 6:00 PM New York$/);
+      // Read with the chip: the radiogroup is described by the line.
+      expect(screen.getByRole('radiogroup', { name: 'Common dose times' })).toHaveAccessibleDescription(
+        '4:00 PM Denver = 6:00 PM New York'
+      );
+      await user.click(chip(/Morning/));
+      expect(screen.getByTestId('time-conversion')).toHaveTextContent(/^6:00 AM Denver = 8:00 AM New York$/);
+    });
+
+    it('no time yet: no line', () => {
+      renderMed();
+      expect(screen.queryByTestId('time-conversion')).toBeNull();
+    });
+
+    it('zones equal: a lit chip shows no line', async () => {
+      useCircleResult.timezone = 'America/Denver';
+      const user = userEvent.setup();
+      renderMed();
+      await user.click(chip(/Evening/));
+      expect(chip(/Evening/)).toBeChecked();
+      expect(screen.queryByTestId('time-conversion')).toBeNull();
+      expect(screen.queryByText(/ = /)).toBeNull();
+    });
+
+    it('the repeated-hour chip names the stored 9:00 PM (the second 01:00), not 8:00 PM', async () => {
+      useCircleResult.timezone = 'Pacific/Pago_Pago';
+      const user = userEvent.setup();
+      renderMed();
+      await user.click(chip(/Bedtime/));
+      expect(screen.getByTestId('time-conversion')).toHaveTextContent(/^1:00 AM Denver = 9:00 PM Pago Pago \(-1 day\)$/);
+      expect(screen.getByTestId('time-conversion')).not.toHaveTextContent('8:00 PM');
+    });
+
+    it('Other time shows the live conversion as the field hint (once, not also as the chip line)', async () => {
+      const user = userEvent.setup();
+      renderMed();
+      await user.click(chip(/Evening/));
+      await user.click(screen.getByRole('button', { name: 'Other time' }));
+      const time = await screen.findByLabelText(/^Time/);
+      await user.clear(time);
+      await user.type(time, '16:30');
+      expect(screen.getAllByText(/4:30 PM .* = 6:30 PM New York/)).toHaveLength(1);
+      expect(screen.queryByTestId('time-conversion')).toBeNull();
+    });
   });
 
   it('a chip after the start date was cleared lands on the recipient today', async () => {

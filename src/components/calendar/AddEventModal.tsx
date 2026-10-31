@@ -2322,6 +2322,13 @@ function AddEventForm({
   // Same state, same `buildPayload`, same Save: only the arrangement differs, so
   // the API payload for a given set of answers is IDENTICAL to the full form's.
   const showOtherTime = otherTimeOpen || (timeStr !== '' && litChip === null);
+  /**
+   * The conversion line under a LIT chip, when the viewer's zone differs from the recipient's (mobile parity:
+   * the same line "Other time" shows as the time field's hint, which is why it is not repeated while that
+   * field is open). It names the instant the save sends (`heldInstant`), and the chip group is described by it
+   * so a screen reader reads it with the chip.
+   */
+  const chipConversion = showOtherTime ? null : conversionText;
   const timeErrorText = errors.scheduled_time ?? missingErrorFor('time');
   const sectionHeading = (headingId: string, text: string): ReactElement => (
     <Text variant="sectionTitle" as="h3" id={headingId} className="text-lg">
@@ -2498,7 +2505,11 @@ function AddEventForm({
             id="time-chips"
             value={recipientClock}
             hourCycle={hourCycle}
-            describedBy={timeErrorText ? 'scheduled_time-error' : undefined}
+            describedBy={
+              [timeErrorText ? 'scheduled_time-error' : '', chipConversion ? 'time-conversion' : '']
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
             onChange={chooseTimeChip}
           />
           <div className="flex items-center justify-between gap-3">
@@ -2593,6 +2604,11 @@ function AddEventForm({
               />
             </div>
           ))}
+          {chipConversion && (
+            <Text variant="caption" id="time-conversion" data-testid="time-conversion">
+              {chipConversion}
+            </Text>
+          )}
         </section>
       )}
 
