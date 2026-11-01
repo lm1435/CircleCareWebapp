@@ -320,6 +320,35 @@ describe('NextUp', () => {
       expect(screen.getByRole('button', { name: /^Taken, Med 1, 12:00/ })).toHaveClass('w-full');
     });
 
+    // Mobile's owner report (1.4.0): the undo badge must never become a full-width row. Web
+    // stacks only on zoom / root font size (useLargeTextLayout), never on the badge's width, and
+    // its badge has no "Saving…" state, so it cannot flip; but a stacked row is
+    // `flex-col items-stretch`, which stretched the badge across the card.
+    it('stacked, the Taken button is full width but the Undo badge keeps its own width', () => {
+      medPending = { '1': 'taken' };
+      taskPending = new Set(['t1']);
+      renderNextUp({ items: [dose('1'), task('t1')], stacked: true });
+      for (const name of ['Undo Med 1', 'Undo Task t1']) {
+        const badge = screen.getByRole('button', { name }).closest('[role="status"]');
+        expect(badge).toHaveClass('self-start');
+        expect(badge).not.toHaveClass('w-full');
+      }
+      for (const row of screen.getAllByTestId('next-up-row')) {
+        expect(row.firstElementChild).toHaveClass('flex-col');
+      }
+    });
+
+    it('a pending badge never changes the layout: inline stays inline', () => {
+      medPending = { '1': 'taken' };
+      renderNextUp({ items: [dose('1'), dose('2')] });
+      for (const row of screen.getAllByTestId('next-up-row')) {
+        expect(row.firstElementChild).not.toHaveClass('flex-col');
+      }
+      const badge = screen.getByRole('button', { name: 'Undo Med 1' }).closest('[role="status"]');
+      expect(badge).toHaveClass('flex-none');
+      expect(badge).not.toHaveClass('self-start');
+    });
+
     it('is a single line otherwise', () => {
       renderNextUp({ items: [dose('1')] });
       const row = screen.getByTestId('next-up-row');

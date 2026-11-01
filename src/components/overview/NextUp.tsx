@@ -251,6 +251,10 @@ export function NextUp({
       ? [day, time].filter(Boolean).join(', ')
       : (time ?? t('today.nextUp.anyTime'));
 
+    // The undo badge keeps its own width: a stacked row is `flex-col items-stretch` (for the
+    // full-width Taken / Done), which stretched the status pill across the card as a new row
+    // (mobile NextUpCard, owner report 1.4.0). Inline it never shrinks into the text column.
+    const badgeClass = stacked ? 'self-start' : 'flex-none';
     let action: ReactElement | null = null;
     if (pendingMed) {
       action = (
@@ -261,6 +265,7 @@ export function NextUp({
           itemLabel={item.title}
           onUndo={() => undoFlow.undo(item.med!.id)}
           onHoldChange={(held) => undoFlow.hold(item.med!.id, held)}
+          className={badgeClass}
         />
       );
     } else if (pendingTask) {
@@ -272,6 +277,7 @@ export function NextUp({
           itemLabel={item.title}
           onUndo={() => tasks.handleUndo(item.id)}
           onHoldChange={(held) => tasks.handleHoldUndo(item.id, held)}
+          className={badgeClass}
         />
       );
     } else if (item.med && medConfirmable(item)) {
