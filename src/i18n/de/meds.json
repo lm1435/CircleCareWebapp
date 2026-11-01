@@ -13,6 +13,8 @@
   "skip": "Auslassen",
   "confirmLabel": "{{name}} bestätigen",
   "skipLabel": "{{name}} auslassen",
+  "taken": "Eingenommen",
+  "takenLabel": "{{name}} als eingenommen eintragen",
   "showAll": "Alle {{count}} anzeigen",
   "showLess": "Weniger anzeigen",
   "status": {

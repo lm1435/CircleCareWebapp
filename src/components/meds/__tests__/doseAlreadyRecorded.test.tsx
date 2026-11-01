@@ -146,7 +146,7 @@ async function takeViaTodaysMeds(): Promise<void> {
     </MemoryRouter>
   );
   await screen.findByText('Atorvastatin');
-  const take = within(doseRow()).getAllByRole('button', { name: /^(Confirm|Confirmar) Atorvastatin$/ })[0];
+  const take = within(doseRow()).getAllByRole('button', { name: /^(Mark Atorvastatin as taken|Marcar Atorvastatin como tomado)$/ })[0];
   vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: NOW });
   fireEvent.click(take);
   await act(async () => {

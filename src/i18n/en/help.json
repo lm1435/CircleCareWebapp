@@ -7,7 +7,7 @@
       "items": [
         {
           "question": "What is a care circle?",
-          "answer": "A care circle is a private group for coordinating care for one person (like a parent or grandparent). Family members join the circle to share updates, track medications, and stay connected."
+          "answer": "A care circle is a private group for coordinating care for one person (like a parent or grandparent). Family, friends or paid caregivers join the circle to share updates, track medications, and stay connected."
         },
         {
           "question": "How many circles can I create?",
@@ -24,7 +24,7 @@
       "items": [
         {
           "question": "What's the difference between Owner, Caregiver, and Care recipient?",
-          "answer": "The Owner creates the circle and can invite members, manage settings, and delete the circle. Caregivers are family members who help coordinate care — they can view and update information. The Care recipient is the person being cared for — they receive medication reminders and can confirm when they've taken them."
+          "answer": "The Owner creates the circle and can invite members, manage settings, and delete the circle. Caregivers are the people who help coordinate care: family, a friend or a paid caregiver — they can view and update information. The Care recipient is the person being cared for — they receive medication reminders and can confirm when they've taken them."
         },
         {
           "question": "Can I be in multiple circles?",
@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "How do medication reminders work?",
-          "answer": "When you add a medication, the reminder goes to the member the owner chose to receive medication reminders (one per circle). If no one is chosen, it goes to the care recipient, or to the owner if there is no care recipient. They tap 'I took it' to confirm, and all family members in the circle are notified. If the dose isn't confirmed within 15 minutes, a gentle follow-up reminder is sent. After 30 minutes, all caregivers in the circle are notified. After 1 hour, everyone in the circle is alerted. Nothing is recorded automatically: until someone marks it as Taken or Skipped, the dose simply shows as Not marked."
+          "answer": "When you add a medication, the reminder goes to the member the owner chose to receive medication reminders (one per circle). If no one is chosen, it goes to the care recipient, or to the owner if there is no care recipient. They tap 'I took it' to confirm, and the rest of the circle is notified. If the dose isn't confirmed within 15 minutes, a gentle follow-up reminder is sent. After 30 minutes, all caregivers in the circle are notified. After 1 hour, everyone in the circle is alerted. Nothing is recorded automatically: until someone marks it as Taken or Skipped, the dose simply shows as Not marked."
         },
         {
           "question": "What happens if a dose isn't marked?",

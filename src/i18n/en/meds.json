@@ -13,6 +13,8 @@
   "skip": "Skip",
   "confirmLabel": "Confirm {{name}}",
   "skipLabel": "Skip {{name}}",
+  "taken": "Taken",
+  "takenLabel": "Mark {{name}} as taken",
   "showAll": "Show all {{count}}",
   "showLess": "Show less",
   "status": {

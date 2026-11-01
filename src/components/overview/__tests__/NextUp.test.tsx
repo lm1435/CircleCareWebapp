@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
-import { NextUp, NEXT_UP_VISIBLE } from '../NextUp';
+import { NextUp, NEXT_UP_VISIBLE, BADGE_ROW_NAME_BASIS } from '../NextUp';
 import { ToastProvider } from '@/components/ui/Toast';
 import { useMedicationUndo } from '@/components/meds/useMedicationUndo';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
@@ -347,6 +347,39 @@ describe('NextUp', () => {
       const badge = screen.getByRole('button', { name: 'Undo Med 1' }).closest('[role="status"]');
       expect(badge).toHaveClass('flex-none');
       expect(badge).not.toHaveClass('self-start');
+    });
+
+    // Owner report (1.4.0, mobile parity): a long name beside the Undo badge wrapped to ~5
+    // lines. While a badge shows the row wraps and the name keeps a 12rem basis, so the badge
+    // drops below the name (own width) whenever both cannot share one line.
+    it('with a badge the row wraps and the name keeps a sane basis; badge stays own width', () => {
+      medPending = { '1': 'taken' };
+      renderNextUp({ items: [dose('1'), dose('2')] });
+      const [pendingRow, plainRow] = screen.getAllByTestId('next-up-row');
+      const inner = pendingRow.firstElementChild as HTMLElement;
+      expect(inner).toHaveClass('flex-wrap');
+      expect(inner).not.toHaveClass('flex-col');
+      const name = pendingRow.querySelector('[data-next-up-name]') as HTMLElement;
+      expect(name).toHaveClass(BADGE_ROW_NAME_BASIS);
+      expect(name).not.toHaveClass('flex-1');
+      const badge = screen.getByRole('button', { name: 'Undo Med 1' }).closest('[role="status"]');
+      expect(badge).toHaveClass('flex-none');
+      expect(badge).not.toHaveClass('w-full');
+      // A row without a badge is untouched: one line, name flex-1, no wrap.
+      expect(plainRow.firstElementChild).not.toHaveClass('flex-wrap');
+      expect(plainRow.querySelector('[data-next-up-name]')).toHaveClass('flex-1');
+    });
+
+    it('the basis token is a real 12rem flex basis (grow + shrink)', () => {
+      expect(BADGE_ROW_NAME_BASIS).toBe('flex-[1_1_12rem]');
+    });
+
+    it('stacked rows ignore the badge basis (the stacked column already gives full width)', () => {
+      medPending = { '1': 'taken' };
+      renderNextUp({ items: [dose('1')], stacked: true });
+      const name = screen.getByTestId('next-up-row').querySelector('[data-next-up-name]');
+      expect(name).toHaveClass('flex-1');
+      expect(name).not.toHaveClass(BADGE_ROW_NAME_BASIS);
     });
 
     it('is a single line otherwise', () => {

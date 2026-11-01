@@ -13,6 +13,8 @@
   "skip": "Pular",
   "confirmLabel": "Confirmar {{name}}",
   "skipLabel": "Pular {{name}}",
+  "taken": "Tomado",
+  "takenLabel": "Marcar {{name}} como tomado",
   "showAll": "Mostrar todos os {{count}}",
   "showLess": "Mostrar menos",
   "status": {

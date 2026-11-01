@@ -1,6 +1,6 @@
 {
   "title": "Activity",
-  "subtitle": "Everything happening in the care circle — from everyone in the family.",
+  "subtitle": "Everything happening in the care circle — from everyone in it.",
   "loading": "Loading activity...",
   "noActivity": "No Activity Yet",
   "noActivityHint": "Activity for {{name}} will appear here.",

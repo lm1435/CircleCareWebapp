@@ -7,7 +7,7 @@
       "items": [
         {
           "question": "Was ist ein Pflegekreis?",
-          "answer": "Ein Pflegekreis ist eine private Gruppe, in der die Pflege einer Person (zum Beispiel eines Elternteils oder Großelternteils) gemeinsam organisiert wird. Familienmitglieder treten dem Kreis bei, um sich auszutauschen, Medikamente im Blick zu behalten und in Verbindung zu bleiben."
+          "answer": "Ein Pflegekreis ist eine private Gruppe, in der die Pflege einer Person (zum Beispiel eines Elternteils oder Großelternteils) gemeinsam organisiert wird. Familie, Freunde oder bezahlte Pflegekräfte treten dem Kreis bei, um sich auszutauschen, Medikamente im Blick zu behalten und in Verbindung zu bleiben."
         },
         {
           "question": "Wie viele Kreise kann ich erstellen?",
@@ -24,7 +24,7 @@
       "items": [
         {
           "question": "Was ist der Unterschied zwischen Kreis-Inhaber, Pflegeperson und umsorgter Person?",
-          "answer": "Der Kreis-Inhaber erstellt den Kreis und kann Mitglieder einladen, Einstellungen verwalten und den Kreis löschen. Pflegepersonen sind Familienmitglieder, die bei der Organisation der Pflege helfen – sie können Informationen ansehen und aktualisieren. Die umsorgte Person ist die Person, um die man sich kümmert – sie erhält Medikamenten-Erinnerungen und kann bestätigen, wenn sie ein Medikament eingenommen hat."
+          "answer": "Der Kreis-Inhaber erstellt den Kreis und kann Mitglieder einladen, Einstellungen verwalten und den Kreis löschen. Pflegepersonen sind alle, die bei der Organisation der Pflege helfen (Familie, Freunde oder eine bezahlte Pflegekraft) – sie können Informationen ansehen und aktualisieren. Die umsorgte Person ist die Person, um die man sich kümmert – sie erhält Medikamenten-Erinnerungen und kann bestätigen, wenn sie ein Medikament eingenommen hat."
         },
         {
           "question": "Kann ich in mehreren Kreisen sein?",
@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "Wie funktionieren Medikamenten-Erinnerungen?",
-          "answer": "Wenn Sie ein Medikament hinzufügen, geht die Erinnerung an das Mitglied, das der Kreis-Inhaber für die Medikamentenerinnerungen ausgewählt hat (eines pro Kreis). Ist niemand ausgewählt, geht sie an die umsorgte Person oder, falls es keine gibt, an den Kreis-Inhaber. Mit „Ich habe es eingenommen“ bestätigt sie die Einnahme, und alle Familienmitglieder im Kreis werden benachrichtigt. Wird die Dosis innerhalb von 15 Minuten nicht bestätigt, wird eine sanfte Erinnerung gesendet. Nach 30 Minuten werden alle Pflegepersonen im Kreis benachrichtigt. Nach 1 Stunde werden alle im Kreis informiert. Nichts wird automatisch eingetragen: Solange niemand die Dosis als Eingenommen oder Ausgelassen markiert, wird sie einfach als Noch nicht eingetragen angezeigt."
+          "answer": "Wenn Sie ein Medikament hinzufügen, geht die Erinnerung an das Mitglied, das der Kreis-Inhaber für die Medikamentenerinnerungen ausgewählt hat (eines pro Kreis). Ist niemand ausgewählt, geht sie an die umsorgte Person oder, falls es keine gibt, an den Kreis-Inhaber. Mit „Ich habe es eingenommen“ bestätigt sie die Einnahme, und der Rest des Kreises wird benachrichtigt. Wird die Dosis innerhalb von 15 Minuten nicht bestätigt, wird eine sanfte Erinnerung gesendet. Nach 30 Minuten werden alle Pflegepersonen im Kreis benachrichtigt. Nach 1 Stunde werden alle im Kreis informiert. Nichts wird automatisch eingetragen: Solange niemand die Dosis als Eingenommen oder Ausgelassen markiert, wird sie einfach als Noch nicht eingetragen angezeigt."
         },
         {
           "question": "Was passiert, wenn eine Dosis nicht eingetragen wird?",

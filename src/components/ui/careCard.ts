@@ -76,11 +76,16 @@ export const careCardStatusPill =
 export const careCardActionsInline = 'ml-auto flex items-center gap-1 @max-[360px]:hidden';
 
 /** Stacked, right-aligned action row — shown only when the card's own width can't fit the inline actions. */
-export const careCardActionsRow = 'mt-2 hidden items-center justify-end gap-1 @max-[360px]:flex';
+// `flex-wrap`: on a very narrow card (high zoom) the longer 1.4.0 "Taken" word (de
+// "Eingenommen") plus Skip can be wider than the card; the pair wraps instead of overflowing.
+export const careCardActionsRow =
+  'mt-2 hidden flex-wrap items-center justify-end gap-1 @max-[360px]:flex';
 
 /** Shared action pill: min-height 44, min-width 88, padding 8/18, r-full, text 14/600. */
+// `max-w-full text-center`: a pill alone on its line never exceeds the card; its label wraps
+// inside it instead of being clipped (mobile `button.maxWidth: '100%'`).
 export const careCardActionBtn =
-  'inline-flex items-center justify-center min-h-[44px] min-w-[88px] px-[18px] py-2 rounded-full gap-1.5 text-sm font-semibold transition-transform duration-fast ease-spring active:scale-[0.97]';
+  'inline-flex items-center justify-center min-h-[44px] min-w-[88px] max-w-full px-[18px] py-2 rounded-full gap-1.5 text-sm font-semibold text-center transition-transform duration-fast ease-spring active:scale-[0.97]';
 
 /**
  * The COMPACT pill modifier — TaskRow's single Done, which shares the content

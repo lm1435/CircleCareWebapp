@@ -82,7 +82,7 @@ describe('HowItWorksPage', () => {
     const heading = screen.getByRole('heading', { level: 1, name: 'Activity' });
     expect(heading).toHaveFocus();
     expect(screen.getByText('Everything the family did, in one feed')).toBeInTheDocument();
-    expect(screen.getByText('Siblings, spouses, and helpers stay in sync')).toBeInTheDocument();
+    expect(screen.getByText('Family, friends and paid caregivers stay in sync')).toBeInTheDocument();
     // Real ActivityItem rows, localized through the feed's own renderer.
     expect(screen.getByText(/Metformin 500mg/)).toBeInTheDocument();
     expect(screen.getByText('You joined the circle as Caregiver')).toBeInTheDocument();

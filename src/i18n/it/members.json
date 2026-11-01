@@ -178,7 +178,7 @@
     "heading": "I tuoi inviti",
     "subheading": "Le cerchie di cura che ti hanno chiesto di dare una mano.",
     "invitedYou": "{{inviter}} ti ha mandato un invito per aiutare nella cura di {{recipient}}",
-    "invitedYouRecipient": "{{inviter}} ti ha invitato a unirti alla cerchia di cura della tua famiglia su CircleCare",
+    "invitedYouRecipient": "{{inviter}} ti ha invitato a unirti alla tua cerchia di cura su CircleCare",
     "yourCareCircle": "La tua cerchia di cura",
     "accept": "Accetta",
     "accepting": "Ingresso in corso…",

@@ -7,7 +7,7 @@
       "items": [
         {
           "question": "Qu’est-ce qu’un cercle de soins ?",
-          "answer": "Un cercle de soins est un groupe privé pour coordonner les soins d’une personne (un parent ou un grand-parent, par exemple). Les membres de la famille rejoignent le cercle pour partager des nouvelles, suivre les médicaments et rester en contact."
+          "answer": "Un cercle de soins est un groupe privé pour coordonner les soins d’une personne (un parent ou un grand-parent, par exemple). Les proches, les amis ou les aidants rémunérés rejoignent le cercle pour partager des nouvelles, suivre les médicaments et rester en contact."
         },
         {
           "question": "Combien de cercles puis-je créer ?",
@@ -24,7 +24,7 @@
       "items": [
         {
           "question": "Quelle est la différence entre propriétaire, aidant et personne aidée ?",
-          "answer": "Le propriétaire crée le cercle ; il peut inviter des membres, gérer les paramètres et supprimer le cercle. Les aidants sont des proches qui aident à coordonner les soins : ils peuvent consulter et mettre à jour les informations. La personne aidée est celle dont on prend soin : elle reçoit les rappels de médicaments et peut confirmer qu’elle les a pris."
+          "answer": "Le propriétaire crée le cercle ; il peut inviter des membres, gérer les paramètres et supprimer le cercle. Les aidants sont les personnes qui aident à coordonner les soins : un proche, un ami ou un aidant rémunéré : ils peuvent consulter et mettre à jour les informations. La personne aidée est celle dont on prend soin : elle reçoit les rappels de médicaments et peut confirmer qu’elle les a pris."
         },
         {
           "question": "Puis-je faire partie de plusieurs cercles ?",
@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "Comment fonctionnent les rappels de médicaments ?",
-          "answer": "Lorsque vous ajoutez un médicament, le rappel est envoyé au membre que le propriétaire a choisi pour recevoir les rappels de médicaments (un seul par cercle). Si personne n’est choisi, il est envoyé à la personne aidée ou, à défaut, au propriétaire. Elle appuie sur « Je l’ai pris » pour confirmer, et tous les membres de la famille du cercle en sont informés. Si la dose n’est pas confirmée au bout de 15 minutes, un rappel discret est envoyé. Au bout de 30 minutes, tous les aidants du cercle sont prévenus. Au bout d’1 heure, tout le cercle est alerté. Rien n’est enregistré automatiquement : tant que personne ne l’indique comme Prise ou Sautée, la dose apparaît simplement comme Non renseignée."
+          "answer": "Lorsque vous ajoutez un médicament, le rappel est envoyé au membre que le propriétaire a choisi pour recevoir les rappels de médicaments (un seul par cercle). Si personne n’est choisi, il est envoyé à la personne aidée ou, à défaut, au propriétaire. Elle appuie sur « Je l’ai pris » pour confirmer, et le reste du cercle en est informé. Si la dose n’est pas confirmée au bout de 15 minutes, un rappel discret est envoyé. Au bout de 30 minutes, tous les aidants du cercle sont prévenus. Au bout d’1 heure, tout le cercle est alerté. Rien n’est enregistré automatiquement : tant que personne ne l’indique comme Prise ou Sautée, la dose apparaît simplement comme Non renseignée."
         },
         {
           "question": "Que se passe-t-il si une dose n’est pas renseignée ?",

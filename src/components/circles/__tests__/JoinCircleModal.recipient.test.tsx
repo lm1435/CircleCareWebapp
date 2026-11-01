@@ -48,7 +48,7 @@ describe('JoinCircleModal — care recipient copy', () => {
   it('EN recipient', async () => {
     await preview('care_recipient');
     expect(await screen.findByText('Your care circle')).toBeInTheDocument();
-    expect(screen.getByText("Ada invited you to join your family's care circle on CircleCare")).toBeInTheDocument();
+    expect(screen.getByText("Ada invited you to join your care circle on CircleCare")).toBeInTheDocument();
     expect(screen.queryByText('Caring for')).not.toBeInTheDocument();
     expect(screen.getByText('Care recipient')).toBeInTheDocument();
   });
@@ -58,7 +58,7 @@ describe('JoinCircleModal — care recipient copy', () => {
     await preview('care_recipient');
     expect(await screen.findByText('Tu círculo de cuidado')).toBeInTheDocument();
     expect(
-      screen.getByText('Ada te invitó a unirte al círculo de cuidado de tu familia en CircleCare')
+      screen.getByText('Ada te invitó a unirte a tu círculo de cuidado en CircleCare')
     ).toBeInTheDocument();
   });
 

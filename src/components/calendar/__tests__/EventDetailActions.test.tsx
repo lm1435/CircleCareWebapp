@@ -1019,7 +1019,7 @@ describe('EventDetailActions', () => {
         />
       );
 
-      await user.click(screen.getByRole('button', { name: 'Mark taken' }));
+      await user.click(screen.getByRole('button', { name: 'Mark Metformin as taken' }));
       expect(onConfirmDose).toHaveBeenCalledWith('taken');
 
       await user.click(screen.getByRole('button', { name: 'Skip dose' }));
@@ -1050,7 +1050,7 @@ describe('EventDetailActions', () => {
       // Only ACTIONABILITY of the dose changed — the medication is still
       // inactive, and every other action behaves exactly as before (now
       // behind the overflow menu, alongside Mark taken/Skip dose inline).
-      expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Mark Metformin as taken' })).toBeInTheDocument();
       await openMore(user);
       expect(screen.getByRole('menuitem', { name: 'Reactivate' })).toBeInTheDocument();
       expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
@@ -1074,7 +1074,7 @@ describe('EventDetailActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Mark Metformin as taken' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Skip dose' })).toBeInTheDocument();
     });
 
@@ -1100,7 +1100,7 @@ describe('EventDetailActions', () => {
       );
 
       expect(medicationActionBar()).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Mark Metformin as taken' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Skip dose' })).toBeNull();
     });
 
@@ -1125,7 +1125,7 @@ describe('EventDetailActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Mark Metformin as taken' })).toBeInTheDocument();
     });
 
     it('a dose whose DAY has not arrived in the care recipient timezone offers no controls', () => {
@@ -1142,7 +1142,7 @@ describe('EventDetailActions', () => {
       );
 
       expect(medicationActionBar()).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Mark Metformin as taken' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Skip dose' })).toBeNull();
     });
 
@@ -1183,14 +1183,14 @@ describe('EventDetailActions', () => {
         renderAt(NOON_ET, makeMed({ scheduled_date: '2026-08-05', scheduled_time: '20:00:00' }));
 
         expect(medicationActionBar()).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Mark Metformin as taken' })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Skip dose' })).toBeNull();
       });
 
       it('offers the pair once the dose is inside the 2h window', () => {
         renderAt(NOON_ET, makeMed({ scheduled_date: '2026-08-05', scheduled_time: '13:00:00' }));
 
-        expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Mark Metformin as taken' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Skip dose' })).toBeInTheDocument();
       });
 
@@ -1200,17 +1200,17 @@ describe('EventDetailActions', () => {
           NOON_ET,
           makeMed({ scheduled_date: '2026-08-05', scheduled_time: '14:07:00' })
         );
-        expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Mark Metformin as taken' })).toBeInTheDocument();
         atBoundary.unmount();
 
         renderAt(NOON_ET, makeMed({ scheduled_date: '2026-08-05', scheduled_time: '14:08:00' }));
-        expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Mark Metformin as taken' })).toBeNull();
       });
 
       it('keeps the pair on an overdue dose earlier the same day', () => {
         renderAt(NOON_ET, makeMed({ scheduled_date: '2026-08-05', scheduled_time: '08:00:00' }));
 
-        expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Mark Metformin as taken' })).toBeInTheDocument();
       });
 
       // The window is measured in the CARE RECIPIENT's timezone. Same instant,
@@ -1233,7 +1233,7 @@ describe('EventDetailActions', () => {
           />
         );
         // 30 minutes away in New York → open.
-        expect(screen.getByRole('button', { name: 'Mark taken' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Mark Metformin as taken' })).toBeInTheDocument();
         ny.unmount();
 
         render(
@@ -1248,7 +1248,7 @@ describe('EventDetailActions', () => {
           />
         );
         // 2.5 hours away in Denver → still closed.
-        expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Mark Metformin as taken' })).toBeNull();
       });
 
       // isDoseConfirmable allows a TIMELESS dose on its own day, but the
@@ -1258,7 +1258,7 @@ describe('EventDetailActions', () => {
         renderAt(NOON_ET, makeMed({ scheduled_date: '2026-08-05', scheduled_time: null }));
 
         expect(medicationActionBar()).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Mark Metformin as taken' })).toBeNull();
       });
     });
 
@@ -1282,7 +1282,7 @@ describe('EventDetailActions', () => {
         />
       );
 
-      expect(screen.queryByRole('button', { name: 'Mark taken' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Mark Metformin as taken' })).toBeNull();
       expect(screen.getByRole('button', { name: 'Mark complete' })).toBeInTheDocument();
     });
 
@@ -1301,7 +1301,7 @@ describe('EventDetailActions', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: 'Marcar como tomada' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Marcar Metformin como tomado' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Omitir dosis' })).toBeInTheDocument();
     });
   });
@@ -1363,7 +1363,9 @@ describe('EventDetailActions', () => {
 
       const filled = filledButtons();
       expect(filled).toHaveLength(1);
-      expect(filled[0]).toHaveTextContent('Mark taken');
+      // The visible word is Today's "Taken" (1.4.0 owner decision); its name is the action.
+      expect(filled[0]).toHaveTextContent(/^Taken$/);
+      expect(filled[0]).toHaveAccessibleName('Mark Metformin as taken');
       expectFilledIsLastAction(filled[0]);
     });
 

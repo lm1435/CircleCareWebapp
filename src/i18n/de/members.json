@@ -178,7 +178,7 @@
     "heading": "Ihre Einladungen",
     "subheading": "Pflegekreise, die Sie zur Mithilfe eingeladen haben.",
     "invitedYou": "{{inviter}} hat Sie eingeladen, bei der Pflege von {{recipient}} zu helfen",
-    "invitedYouRecipient": "{{inviter}} hat Sie eingeladen, dem Pflegekreis Ihrer Familie auf CircleCare beizutreten",
+    "invitedYouRecipient": "{{inviter}} hat Sie eingeladen, Ihrem Pflegekreis auf CircleCare beizutreten",
     "yourCareCircle": "Ihr Pflegekreis",
     "accept": "Annehmen",
     "accepting": "Beitritt läuft …",

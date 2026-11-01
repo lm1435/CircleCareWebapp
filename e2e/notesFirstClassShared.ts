@@ -269,7 +269,7 @@ export async function deleteViaMoreMenu(
 
 /** Mark a dose Taken from its (already-open) detail dialog's action row. */
 export async function markDoseTaken(page: Page, detailDialog: Locator): Promise<void> {
-  await detailDialog.getByRole('button', { name: 'Mark taken' }).click();
+  await detailDialog.getByRole('button', { name: /^Mark .+ as taken$/ }).click();
   const confirmDialog = page.getByRole('dialog', { name: 'Confirm medication' });
   await expect(confirmDialog).toBeVisible({ timeout: 10_000 });
   await confirmDialog.getByRole('button', { name: 'Save' }).click();

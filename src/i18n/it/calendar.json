@@ -71,6 +71,8 @@
     "missed": "Non segnata",
     "markComplete": "Segna come completato",
     "markTaken": "Segna come presa",
+    "taken": "Presa",
+    "takenLabel": "Segna {{name}} come presa",
     "skipDose": "Salta la dose",
     "completedToast": "Segnato come completato",
     "close": "Chiudi i dettagli dell'evento",
@@ -284,7 +286,7 @@
       "reason": "A cosa serve?",
       "reasonPlaceholder": "es. dolore, nausea",
       "optional": "(facoltativo)",
-      "repeatHint": "Nessun orario fisso. I familiari ricevono una notifica quando qualcuno registra una dose.",
+      "repeatHint": "Nessun orario fisso. Tutta la cerchia riceve una notifica quando qualcuno registra una dose.",
       "lockedRepeat": "Al bisogno · non modificabile. Per programmare questo farmaco a orari fissi, interrompilo e aggiungilo di nuovo.",
       "remindersNone": "Nessun promemoria. I farmaci al bisogno non hanno un programma.",
       "updateOldBackend": "Non è ancora possibile aggiungere un farmaco al bisogno: aggiorna l'app e riprova."

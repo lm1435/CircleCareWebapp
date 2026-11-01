@@ -55,7 +55,7 @@ interface Arranged {
 async function arrange(
   request: import('@playwright/test').APIRequestContext,
   label: string,
-  opts: { med?: boolean } = {}
+  opts: { med?: boolean; medName?: string } = {}
 ): Promise<Arranged> {
   const m = minutesIntoDay(TZ);
   test.skip(m < 5 || m > 24 * 60 - 5, 'within 5 minutes of midnight in the recipient zone');
@@ -69,7 +69,7 @@ async function arrange(
   expect(tz, 'recipient zone follows the owner profile zone').toBe(TZ);
   let medName: string | null = null;
   if (opts.med) {
-    medName = `ZZ_E2E_TODAY_${uniqueSuffix()}`;
+    medName = opts.medName ?? `ZZ_E2E_TODAY_${uniqueSuffix()}`;
     await createDailyMedication(session, circleId, medName, dateInTz(tz, -1), { time: '00:01' });
   }
   return { owner, session, circleId, recipient, today: dateInTz(tz, 0), medName };
@@ -161,6 +161,46 @@ test.describe('Today: header, nav and Next up', () => {
         `select count(*)::text as n from medication_confirmations where circle_id = ${sqlStr(a.circleId)}::uuid`
       )[0].n
     ).toBe('0');
+  });
+
+  // Owner report (1.4.0): beside the Undo badge a very long name wrapped to ~5 lines. While the
+  // badge shows, a row that cannot give the name 12rem drops the badge onto its own line BELOW
+  // the name, at its own width (NextUp BADGE_ROW_NAME_BASIS; mobile NextUpCard parity).
+  test('phone width: a long name keeps a sane width while the Undo badge shows (badge drops below)', async ({
+    page,
+    context,
+    request,
+    baseURL,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    const longName = `ZZ E2E Hydrochlorothiazide extended release combination ${uniqueSuffix()}`;
+    const a = await arrange(request, 'todayl', { med: true, medName: longName });
+    await cookieLogin(context, a.owner, baseURL);
+    await openToday(page, a);
+    const rowsForMed = page.getByTestId('next-up-row').filter({ hasText: longName });
+    await expect(rowsForMed).toHaveCount(2, { timeout: 30_000 });
+    const row = rowsForMed.last();
+    await row.getByRole('button', { name: `Taken, ${longName}` }).click();
+    const undo = row.getByRole('button', { name: /^Undo/ });
+    await expect(undo).toBeVisible();
+    // Focus inside the badge holds the undo countdown (UndoBadge onHoldChange), so it stays
+    // on screen while we measure; Undo below cancels the write.
+    await undo.focus();
+    const badge = undo.locator('xpath=ancestor::*[@role="status"][1]');
+    const name = row.locator('[data-next-up-name]');
+    const [nb, bb, rb] = await Promise.all([name.boundingBox(), badge.boundingBox(), row.boundingBox()]);
+    expect(nb && bb && rb).toBeTruthy();
+    // The badge sits below the name, not squeezed beside it ...
+    expect(bb!.y).toBeGreaterThanOrEqual(nb!.y + nb!.height - 1);
+    // ... the name keeps most of the row (not a sliver) ...
+    expect(nb!.width).toBeGreaterThan(rb!.width * 0.55);
+    // The name runs to the row's trailing edge: it has the whole width beside the time column,
+    // exactly as a row without a badge would (before: a ~50px sliver beside the badge).
+    expect(nb!.x + nb!.width).toBeGreaterThanOrEqual(rb!.x + rb!.width - 16);
+    // ... and the badge keeps its own width (never stretched across the card).
+    expect(bb!.width).toBeLessThan(rb!.width * 0.8);
+    await undo.click();
+    await expect(row.getByRole('button', { name: `Taken, ${longName}` })).toBeVisible();
   });
 
   test('meds, appointments and tasks merge in time order; only the first 3 show, then "All of today · N items" opens the calendar', async ({

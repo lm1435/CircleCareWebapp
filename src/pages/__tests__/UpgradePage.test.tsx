@@ -169,11 +169,11 @@ describe('UpgradePage', () => {
   // capacity paywall converts 2x onboarding), so unlimited family members lead
   // and the circle-count cap is LAST. The old "Full access to the calendar,
   // tasks, medications, documents, and vitals" overclaimed: free users have it.
-  it('lists the six Premium benefits mobile lists, family members first, circles last', () => {
+  it('lists the six Premium benefits mobile lists, caregivers first, circles last', () => {
     renderPage();
     const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
     expect(items.map((li) => li.textContent)).toEqual([
-      'Unlimited family membersEveryone who helps, in one circle. One person pays.',
+      'Unlimited caregiversEveryone who helps, in one circle. One person pays.',
       'Add by voiceSay a medication, task or appointment and we fill in the form. On supported phones.',
       'Adherence reports & calendar importShare medication history with providers, import appointments from your calendar',
       '1GB of documents per circleRoom for records, photos, and paperwork',
@@ -190,7 +190,7 @@ describe('UpgradePage', () => {
       const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
       const titles = items.map((li) => li.querySelector('.font-medium')?.textContent);
       expect(titles).toEqual([
-        'Familiares ilimitados',
+        'Cuidadores ilimitados',
         'Agregar por voz',
         'Informes de adherencia e importación de calendario',
         '1GB de documentos por círculo',

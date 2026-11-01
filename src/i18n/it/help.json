@@ -7,7 +7,7 @@
       "items": [
         {
           "question": "Che cos'è una cerchia di cura?",
-          "answer": "Una cerchia di cura è un gruppo privato per coordinare la cura di una persona (come un genitore o un nonno). I familiari entrano nella cerchia per condividere aggiornamenti, monitorare i farmaci e restare in contatto."
+          "answer": "Una cerchia di cura è un gruppo privato per coordinare la cura di una persona (come un genitore o un nonno). Familiari, amici o assistenti a pagamento entrano nella cerchia per condividere aggiornamenti, monitorare i farmaci e restare in contatto."
         },
         {
           "question": "Quante cerchie posso creare?",
@@ -24,7 +24,7 @@
       "items": [
         {
           "question": "Qual è la differenza tra Titolare, Caregiver e Persona assistita?",
-          "answer": "Il Titolare crea la cerchia e può invitare membri, gestire le impostazioni ed eliminare la cerchia. I Caregiver sono familiari che aiutano a coordinare la cura: possono visualizzare e aggiornare le informazioni. La Persona assistita è la persona di cui ci si prende cura: riceve i promemoria dei farmaci e può confermare quando li ha presi."
+          "answer": "Il Titolare crea la cerchia e può invitare membri, gestire le impostazioni ed eliminare la cerchia. I Caregiver sono le persone che aiutano a coordinare la cura (famiglia, un amico o un assistente a pagamento): possono visualizzare e aggiornare le informazioni. La Persona assistita è la persona di cui ci si prende cura: riceve i promemoria dei farmaci e può confermare quando li ha presi."
         },
         {
           "question": "Posso far parte di più cerchie?",
@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "Come funzionano i promemoria dei farmaci?",
-          "answer": "Quando aggiungi un farmaco, il promemoria arriva al membro che il titolare ha scelto per ricevere i promemoria dei farmaci (uno per cerchia). Se nessuno è stato scelto, arriva alla persona assistita o, se non c'è, al titolare. Tocca 'L'ho presa' per confermare, e tutti i familiari della cerchia vengono avvisati. Se la dose non viene confermata entro 15 minuti, viene inviato un promemoria gentile. Dopo 30 minuti vengono avvisati tutti i caregiver della cerchia. Dopo 1 ora viene avvisata l'intera cerchia. Nulla viene registrato in automatico: finché qualcuno non la segna come Presa o Saltata, la dose risulta semplicemente Non segnata."
+          "answer": "Quando aggiungi un farmaco, il promemoria arriva al membro che il titolare ha scelto per ricevere i promemoria dei farmaci (uno per cerchia). Se nessuno è stato scelto, arriva alla persona assistita o, se non c'è, al titolare. Tocca 'L'ho presa' per confermare, e il resto della cerchia viene avvisato. Se la dose non viene confermata entro 15 minuti, viene inviato un promemoria gentile. Dopo 30 minuti vengono avvisati tutti i caregiver della cerchia. Dopo 1 ora viene avvisata l'intera cerchia. Nulla viene registrato in automatico: finché qualcuno non la segna come Presa o Saltata, la dose risulta semplicemente Non segnata."
         },
         {
           "question": "Cosa succede se una dose non viene segnata?",

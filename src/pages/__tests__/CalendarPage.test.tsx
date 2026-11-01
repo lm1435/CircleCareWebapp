@@ -727,7 +727,7 @@ describe('CalendarPage', () => {
     expect(within(detail).getByText('Inactive')).toBeInTheDocument();
 
     // ...and the dose can still be answered.
-    await user.click(within(detail).getByRole('button', { name: 'Mark taken' }));
+    await user.click(within(detail).getByRole('button', { name: 'Mark Warfarin as taken' }));
 
     // The detail modal steps aside so the confirm dialog is never a modal
     // inside a modal (two focus traps fighting over Tab/Escape).

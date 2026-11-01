@@ -71,6 +71,8 @@
     "missed": "Sin marcar",
     "markComplete": "Marcar como completada",
     "markTaken": "Marcar como tomada",
+    "taken": "Tomado",
+    "takenLabel": "Marcar {{name}} como tomado",
     "skipDose": "Omitir dosis",
     "completedToast": "Marcada como completada",
     "close": "Cerrar detalles del evento",
@@ -284,7 +286,7 @@
       "reason": "¿Para qué es?",
       "reasonPlaceholder": "p. ej., dolor, náuseas",
       "optional": "(opcional)",
-      "repeatHint": "Sin horarios fijos. La familia recibe un aviso cuando alguien registra una dosis.",
+      "repeatHint": "Sin horarios fijos. Todo el círculo recibe un aviso cuando alguien registra una dosis.",
       "lockedRepeat": "Según se necesite · no se puede cambiar. Para ponerle horario, suspéndelo y agrégalo de nuevo.",
       "remindersNone": "Sin recordatorios. Los medicamentos según se necesite no tienen horario.",
       "updateOldBackend": "Aún no se pudo agregar un medicamento según se necesite. Actualiza la app e inténtalo de nuevo."

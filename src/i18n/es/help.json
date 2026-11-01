@@ -7,7 +7,7 @@
       "items": [
         {
           "question": "¿Qué es un círculo de cuidado?",
-          "answer": "Un círculo de cuidado es un grupo privado para coordinar el cuidado de una persona (como un padre o abuelo). Los familiares se unen al círculo para compartir actualizaciones, dar seguimiento a medicamentos y mantenerse conectados."
+          "answer": "Un círculo de cuidado es un grupo privado para coordinar el cuidado de una persona (como un padre o abuelo). Familiares, amigos o cuidadores contratados se unen al círculo para compartir actualizaciones, dar seguimiento a medicamentos y mantenerse conectados."
         },
         {
           "question": "¿Cuántos círculos puedo crear?",
@@ -24,7 +24,7 @@
       "items": [
         {
           "question": "¿Cuál es la diferencia entre Propietario, Cuidador y Receptor de cuidado?",
-          "answer": "El Propietario crea el círculo y puede invitar miembros, administrar la configuración y eliminar el círculo. Los Cuidadores son familiares que ayudan a coordinar el cuidado: pueden ver y actualizar la información. El Receptor de cuidado es la persona que recibe el cuidado: recibe recordatorios de medicamentos y puede confirmar cuando los ha tomado."
+          "answer": "El Propietario crea el círculo y puede invitar miembros, administrar la configuración y eliminar el círculo. Los Cuidadores son quienes ayudan a coordinar el cuidado (familia, un amigo o un cuidador contratado): pueden ver y actualizar la información. El Receptor de cuidado es la persona que recibe el cuidado: recibe recordatorios de medicamentos y puede confirmar cuando los ha tomado."
         },
         {
           "question": "¿Puedo estar en varios círculos?",
@@ -37,7 +37,7 @@
       "items": [
         {
           "question": "¿Cómo funcionan los recordatorios de medicamentos?",
-          "answer": "Cuando agregas un medicamento, el recordatorio llega al miembro que el propietario eligió para recibir los recordatorios de medicamentos (uno por círculo). Si no hay ninguno elegido, llega al receptor de cuidado o, si no lo hay, al propietario. Toca 'Lo tomé' para confirmar, y todos los familiares del círculo son notificados. Si la dosis no se confirma en 15 minutos, se envía un amable recordatorio de seguimiento. Después de 30 minutos, todos los cuidadores del círculo son notificados. Después de 1 hora, todos los miembros del círculo reciben una alerta. Nada se registra automáticamente: mientras nadie la marque como Tomado u Omitido, la dosis aparece como Sin marcar."
+          "answer": "Cuando agregas un medicamento, el recordatorio llega al miembro que el propietario eligió para recibir los recordatorios de medicamentos (uno por círculo). Si no hay ninguno elegido, llega al receptor de cuidado o, si no lo hay, al propietario. Toca 'Lo tomé' para confirmar, y el resto del círculo recibe un aviso. Si la dosis no se confirma en 15 minutos, se envía un amable recordatorio de seguimiento. Después de 30 minutos, todos los cuidadores del círculo son notificados. Después de 1 hora, todos los miembros del círculo reciben una alerta. Nada se registra automáticamente: mientras nadie la marque como Tomado u Omitido, la dosis aparece como Sin marcar."
         },
         {
           "question": "¿Qué pasa si una dosis no se marca?",

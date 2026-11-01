@@ -330,7 +330,7 @@ test.describe('event notes: series-leak regression', () => {
       // --- Mark the first-day dose Taken ---
       {
         const dialog = await openChip(page, S, titleRe);
-        await dialog.getByRole('button', { name: 'Mark taken' }).click();
+        await dialog.getByRole('button', { name: /^Mark .+ as taken$/ }).click();
         const confirmDialog = page.getByRole('dialog', { name: 'Confirm medication' });
         await expect(confirmDialog).toBeVisible({ timeout: 10_000 });
         await confirmDialog.getByRole('button', { name: 'Save' }).click();

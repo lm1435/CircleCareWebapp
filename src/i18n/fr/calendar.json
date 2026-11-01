@@ -71,6 +71,8 @@
     "missed": "Non renseignée",
     "markComplete": "Marquer comme terminé",
     "markTaken": "Indiquer comme prise",
+    "taken": "Prise",
+    "takenLabel": "Noter {{name}} comme prise",
     "skipDose": "Sauter la dose",
     "completedToast": "Marqué comme terminé",
     "close": "Fermer les détails de l’événement",
@@ -284,7 +286,7 @@
       "reason": "À quoi sert-il ?",
       "reasonPlaceholder": "p. ex. douleur, nausées",
       "optional": "(facultatif)",
-      "repeatHint": "Pas d’heure fixe. Les proches sont avertis quand quelqu’un enregistre une dose.",
+      "repeatHint": "Pas d’heure fixe. Tout le cercle est averti quand quelqu’un enregistre une dose.",
       "lockedRepeat": "Si besoin · non modifiable. Pour placer ce médicament sur un horaire, arrêtez-le et ajoutez-le de nouveau.",
       "remindersNone": "Aucun rappel. Les médicaments si besoin n’ont pas d’horaire.",
       "updateOldBackend": "Impossible d’ajouter un médicament si besoin pour l’instant : mettez l’application à jour et réessayez."

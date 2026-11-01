@@ -38,6 +38,23 @@ function longDate(date: string): string {
   }).format(new Date(`${date}T12:00:00Z`));
 }
 
+/** YYYY-MM-DD shifted by whole calendar days (pure date maths, no zone). */
+function shiftDate(date: string, days: number): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * A neighbour of `today` inside today's month grid: yesterday when it is in the same month,
+ * otherwise tomorrow (today is the 1st). No month has one day, so one is always in the grid.
+ */
+function monthNeighbour(today: string): { date: string; word: 'Yesterday' | 'Tomorrow' } {
+  const yesterday = shiftDate(today, -1);
+  if (yesterday.slice(0, 7) === today.slice(0, 7)) return { date: yesterday, word: 'Yesterday' };
+  return { date: shiftDate(today, 1), word: 'Tomorrow' };
+}
+
 interface Scene {
   session: ApiSession;
   circleId: string;
@@ -139,7 +156,7 @@ test.describe('Day view', () => {
     await row.click();
     const detail = page.getByRole('dialog');
     await expect(detail).toBeVisible({ timeout: 10_000 });
-    await detail.getByRole('button', { name: 'Mark taken' }).click();
+    await detail.getByRole('button', { name: /^Mark .+ as taken$/ }).click();
     const confirm = page.getByRole('dialog', { name: 'Confirm medication' });
     await expect(confirm).toBeVisible({ timeout: 10_000 });
     await confirm.getByRole('button', { name: 'Save' }).click();
@@ -168,6 +185,13 @@ test.describe('Day view', () => {
     await expect(title(page)).toHaveText(`Today, ${weekdayOf(target)}`);
   });
 
+  test('Month neighbour never leaves the month grid (1st, mid-month, last day)', () => {
+    expect(monthNeighbour('2026-11-01')).toEqual({ date: '2026-11-02', word: 'Tomorrow' });
+    expect(monthNeighbour('2026-03-01')).toEqual({ date: '2026-03-02', word: 'Tomorrow' });
+    expect(monthNeighbour('2026-11-15')).toEqual({ date: '2026-11-14', word: 'Yesterday' });
+    expect(monthNeighbour('2026-10-31')).toEqual({ date: '2026-10-30', word: 'Yesterday' });
+  });
+
   test('Month: a day cell opens Day for that date', async ({ page }) => {
     await page.goto(`/circles/${s.circleId}/calendar`, { waitUntil: 'domcontentloaded' });
     await page
@@ -175,11 +199,15 @@ test.describe('Day view', () => {
       .getByRole('tab', { name: 'Month' })
       .click({ timeout: 20_000 });
     await expect(page.getByRole('grid', { name: 'Month view calendar' })).toBeVisible();
-    const yesterday = dateInTz(s.tz, -1);
+    // Date-independent: the month grid only holds this month, so on the 1st yesterday is not in
+    // it. Use yesterday when it shares today's month, else tomorrow (both carry a dose: the
+    // daily series started 2 days ago and repeats forever). No month has only one day, so one
+    // of the two is always in the grid.
+    const { date: target, word } = monthNeighbour(s.today);
     // The cell label is "<weekday>, <month> <day>, <N events>"; address the cell by its data-date.
-    await page.locator(`button[data-date="${yesterday}"]`).click();
+    await page.locator(`button[data-date="${target}"]`).click();
     await expect(page.getByRole('tab', { name: 'Day' })).toHaveAttribute('aria-selected', 'true');
-    await expect(title(page)).toHaveText(`Yesterday, ${weekdayOf(yesterday)}`);
+    await expect(title(page)).toHaveText(`${word}, ${weekdayOf(target)}`);
     await expect(page.getByTestId('day-event').filter({ hasText: s.medName })).toBeVisible();
   });
 

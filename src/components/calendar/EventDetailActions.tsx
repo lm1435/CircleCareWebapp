@@ -462,8 +462,17 @@ export function EventDetailActions({
         </Button>
       )}
       {canConfirmDose && (
-        <Button variant="primary" onClick={() => onConfirmDose('taken')} offlineKind="mark">
-          {t('eventDetail.markTaken')}
+        <Button
+          variant="primary"
+          onClick={() => onConfirmDose('taken')}
+          offlineKind="mark"
+          // Visible word = Today's "Taken" (owner decision, 1.4.0, mobile parity); the
+          // name stays an action that says WHICH medication, and contains the visible word.
+          aria-label={t('eventDetail.takenLabel', {
+            name: event.medication_name || event.title,
+          })}
+        >
+          {t('eventDetail.taken')}
         </Button>
       )}
       {useOverflowMenu && <MoreMenu items={overflowItems} />}

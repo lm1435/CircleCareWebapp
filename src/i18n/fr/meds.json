@@ -13,6 +13,8 @@
   "skip": "Sauter",
   "confirmLabel": "Confirmer {{name}}",
   "skipLabel": "Sauter {{name}}",
+  "taken": "Prise",
+  "takenLabel": "Noter {{name}} comme prise",
   "showAll": "Tout afficher ({{count}})",
   "showLess": "Afficher moins",
   "status": {

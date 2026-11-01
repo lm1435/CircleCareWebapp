@@ -53,7 +53,7 @@
       "searching": "A pesquisar medicamentos"
     },
     "asNeeded": {
-      "repeatHint": "Sem horários fixos. Os familiares são notificados quando alguém regista uma dose.",
+      "repeatHint": "Sem horários fixos. Todo o círculo é notificado quando alguém regista uma dose.",
       "updateOldBackend": "Ainda não foi possível adicionar um medicamento se necessário — atualize a app e tente novamente."
     },
     "doctor": {

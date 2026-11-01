@@ -367,7 +367,7 @@ test.describe('medication lifecycle', () => {
     const doseDetail = page.getByRole('dialog').filter({ hasText: name });
     await expect(doseDetail).toBeVisible({ timeout: 20_000 });
     await expect(doseDetail.getByText('Inactive').first()).toBeVisible();
-    await expect(doseDetail.getByRole('button', { name: 'Mark taken' })).toBeVisible();
+    await expect(doseDetail.getByRole('button', { name: /^Mark .+ as taken$/ })).toBeVisible();
     await expect(doseDetail.getByRole('button', { name: 'Skip dose' })).toBeVisible();
     // Leave the dose unlogged — the reactivate assertions below expect the
     // series untouched.

@@ -4,7 +4,7 @@
       "items": [
         {
           "question": "O que é um círculo de cuidado?",
-          "answer": "Um círculo de cuidado é um grupo privado para coordenar o cuidado de uma pessoa (como um pai, uma mãe ou um avô). Os familiares entram no círculo para partilhar novidades, acompanhar medicamentos e manter-se em contacto."
+          "answer": "Um círculo de cuidado é um grupo privado para coordenar o cuidado de uma pessoa (como um pai, uma mãe ou um avô). Familiares, amigos ou cuidadores contratados entram no círculo para partilhar novidades, acompanhar medicamentos e manter-se em contacto."
         },
         {
           "question": "Quantos círculos posso criar?",
@@ -20,7 +20,7 @@
       "items": [
         {
           "question": "Qual é a diferença entre Proprietário, Cuidador e Pessoa cuidada?",
-          "answer": "O Proprietário cria o círculo e pode convidar membros, gerir as definições e eliminar o círculo. Os Cuidadores são familiares que ajudam a coordenar o cuidado e podem ver e atualizar as informações. A Pessoa cuidada é quem recebe o cuidado: recebe lembretes de medicamentos e pode confirmar quando os tomou."
+          "answer": "O Proprietário cria o círculo e pode convidar membros, gerir as definições e eliminar o círculo. Os Cuidadores são as pessoas que ajudam a coordenar o cuidado (família, um amigo ou um cuidador contratado) e podem ver e atualizar as informações. A Pessoa cuidada é quem recebe o cuidado: recebe lembretes de medicamentos e pode confirmar quando os tomou."
         },
         {
           "question": "Posso participar em vários círculos?",
@@ -32,7 +32,7 @@
       "items": [
         {
           "question": "Como funcionam os lembretes de medicamentos?",
-          "answer": "Ao adicionar um medicamento, o lembrete vai para o membro que o proprietário escolheu para receber os lembretes de medicamentos (um por círculo). Se ninguém tiver sido escolhido, vai para a pessoa cuidada ou, se não existir, para o proprietário. Ela toca em 'Tomei' para confirmar, e todos os familiares do círculo são notificados. Se a dose não for confirmada em 15 minutos, é enviado um lembrete gentil. Após 30 minutos, todos os cuidadores do círculo são notificados. Após 1 hora, todos no círculo são avisados. Nada é registado automaticamente: até que alguém marque a dose como Tomado ou Saltado, ela aparece como Não marcado."
+          "answer": "Ao adicionar um medicamento, o lembrete vai para o membro que o proprietário escolheu para receber os lembretes de medicamentos (um por círculo). Se ninguém tiver sido escolhido, vai para a pessoa cuidada ou, se não existir, para o proprietário. Ela toca em 'Tomei' para confirmar, e o resto do círculo é notificado. Se a dose não for confirmada em 15 minutos, é enviado um lembrete gentil. Após 30 minutos, todos os cuidadores do círculo são notificados. Após 1 hora, todos no círculo são avisados. Nada é registado automaticamente: até que alguém marque a dose como Tomado ou Saltado, ela aparece como Não marcado."
         },
         {
           "question": "O que acontece se uma dose não for marcada?",

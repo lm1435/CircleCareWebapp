@@ -1,6 +1,6 @@
 {
   "title": "Aktivität",
-  "subtitle": "Alles, was im Pflegekreis passiert – von allen in der Familie.",
+  "subtitle": "Alles, was im Pflegekreis passiert – von allen Mitgliedern.",
   "loading": "Aktivität wird geladen …",
   "noActivity": "Noch keine Aktivität",
   "noActivityHint": "Die Aktivität für {{name}} erscheint hier.",

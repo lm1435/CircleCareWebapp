@@ -518,9 +518,12 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
       // reader four buttons all called "Confirm", with the drug each answers
       // knowable only from the surrounding card — and answering the wrong one
       // writes the wrong medication into the adherence record a doctor reads.
-      // The visible word is the FIRST word of the accessible name in both
-      // locales ("Confirm"/"Confirmar", "Skip"/"Omitir"), so SC 2.5.3 Label in
-      // Name holds and voice control still works on the visible label.
+      // The primary action's visible word is Today's "Taken" (owner decision,
+      // 1.4.0: one word for the dose action everywhere, mobile too); its name
+      // stays an action ("Mark Metformin as taken") so it is not heard as a
+      // status. Every locale's name contains the visible word ("Skip"/"Omitir",
+      // "Taken"/"Tomado"), so SC 2.5.3 Label in Name holds — pinned per locale
+      // by i18n/__tests__/labelInName.test.ts.
       const actionPair = (
         <>
           <button
@@ -535,11 +538,11 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
           <button
             type="button"
             onClick={() => handleConfirm(med, 'taken')}
-            aria-label={t('confirmLabel', { name: medName })}
+            aria-label={t('takenLabel', { name: medName })}
             {...offlineDisabledProps(offline)}
             className={careCardActionPrimary}
           >
-            {t('confirm')}
+            {t('taken')}
           </button>
         </>
       );

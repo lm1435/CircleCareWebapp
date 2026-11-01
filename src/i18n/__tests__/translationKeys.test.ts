@@ -769,6 +769,16 @@ describe('W5: no unreferenced en keys', () => {
     'circles:firstRun.whatTitleSelf',
     'circles:firstRun.whenTitle',
     'circles:firstRun.whenTitleSelf',
+    // 1.4.0 owner decision: the dose action reads "Taken" everywhere (Today's word). The
+    // Meds-page row and the calendar detail now read `meds:taken`/`meds:takenLabel` and
+    // `calendar:eventDetail.taken`/`takenLabel`; the old copy stays in place (unused keys
+    // stay, locale files are append-only for concurrent sessions).
+    'calendar:eventDetail.markTaken',
+    'meds:confirm',
+    'meds:confirmLabel',
+    // Only ever "referenced" by TodaysMeds' bare t('confirm') (the scanner credits a bare key
+    // to every namespace the component loads); that call is now t('taken').
+    'common:confirm',
   ];
 
   it('has no unreferenced en keys beyond the pinned dead-key allowlist', () => {

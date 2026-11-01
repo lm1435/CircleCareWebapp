@@ -71,6 +71,8 @@
     "missed": "Nicht eingetragen",
     "markComplete": "Als erledigt markieren",
     "markTaken": "Als eingenommen eintragen",
+    "taken": "Eingenommen",
+    "takenLabel": "{{name}} als eingenommen eintragen",
     "skipDose": "Dosis auslassen",
     "completedToast": "Als erledigt markiert",
     "close": "Details zum Eintrag schließen",

@@ -79,6 +79,6 @@
     "banner": {
       "count_one": "Tem 1 convite pendente"
     },
-    "invitedYouRecipient": "{{inviter}} convidou-o para se juntar ao círculo de cuidado da sua família no CircleCare"
+    "invitedYouRecipient": "{{inviter}} convidou-o para se juntar ao seu círculo de cuidado no CircleCare"
   }
 }

@@ -13,6 +13,8 @@
   "skip": "Salta",
   "confirmLabel": "Conferma {{name}}",
   "skipLabel": "Salta {{name}}",
+  "taken": "Presa",
+  "takenLabel": "Segna {{name}} come presa",
   "showAll": "Mostra tutti ({{count}})",
   "showLess": "Mostra meno",
   "status": {

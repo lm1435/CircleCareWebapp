@@ -178,7 +178,7 @@
     "heading": "Your invitations",
     "subheading": "Care circles that have invited you to help.",
     "invitedYou": "{{inviter}} invited you to help care for {{recipient}}",
-    "invitedYouRecipient": "{{inviter}} invited you to join your family's care circle on CircleCare",
+    "invitedYouRecipient": "{{inviter}} invited you to join your care circle on CircleCare",
     "yourCareCircle": "Your care circle",
     "accept": "Accept",
     "accepting": "Joining…",

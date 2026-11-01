@@ -232,9 +232,9 @@ function medRow(name: string): HTMLElement {
  * through this, and the length check pins the pair count so a regression that
  * dropped one of the two layouts would still fail.
  *
- * The buttons are queried BY THE MEDICATION THEY ANSWER ("Confirm Metformin"),
- * which is also the assertion that they carry that name at all: a day of doses
- * offering four identically-named "Confirm" buttons is how a screen-reader user
+ * The buttons are queried BY THE MEDICATION THEY ANSWER ("Mark Metformin as
+ * taken"), which is also the assertion that they carry that name at all: a day of
+ * doses offering four identically-named "Taken" buttons is how a screen-reader user
  * answers the wrong drug.
  */
 function medOf(row: HTMLElement): string {
@@ -243,14 +243,20 @@ function medOf(row: HTMLElement): string {
   return name;
 }
 
-function action(row: HTMLElement, verb: 'Confirm' | 'Skip'): HTMLElement {
-  const buttons = within(row).getAllByRole('button', { name: `${verb} ${medOf(row)}` });
+// The primary action's visible word is "Taken" (Today's word, 1.4.0 owner decision); its
+// accessible name is the action "Mark <med> as taken". Skip keeps "Skip <med>".
+function actionName(row: HTMLElement, verb: 'Taken' | 'Skip'): string {
+  return verb === 'Taken' ? `Mark ${medOf(row)} as taken` : `Skip ${medOf(row)}`;
+}
+
+function action(row: HTMLElement, verb: 'Taken' | 'Skip'): HTMLElement {
+  const buttons = within(row).getAllByRole('button', { name: actionName(row, verb) });
   expect(buttons).toHaveLength(2);
   return buttons[0];
 }
 
-function hasAction(row: HTMLElement, verb: 'Confirm' | 'Skip'): boolean {
-  return within(row).queryAllByRole('button', { name: `${verb} ${medOf(row)}` }).length > 0;
+function hasAction(row: HTMLElement, verb: 'Taken' | 'Skip'): boolean {
+  return within(row).queryAllByRole('button', { name: actionName(row, verb) }).length > 0;
 }
 
 beforeEach(() => {
@@ -304,12 +310,16 @@ describe('TodaysMeds', () => {
     // Confirm/skip only on unconfirmed meds (not-confirmed + pending) — two
     // answerable doses, each carrying the inline AND stacked copy of the pair,
     // and each pair named after ITS medication.
-    expect(screen.getAllByRole('button', { name: /^Confirm / })).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: /^Mark .+ as taken$/ })).toHaveLength(4);
     expect(screen.getAllByRole('button', { name: /^Skip / })).toHaveLength(4);
-    expect(screen.getAllByRole('button', { name: 'Confirm Atorvastatin' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Mark Atorvastatin as taken' })).toHaveLength(2);
+    // The VISIBLE word is Today's "Taken" (1.4.0 owner decision), never "Confirm".
+    for (const b of screen.getAllByRole('button', { name: /^Mark .+ as taken$/ })) {
+      expect(b).toHaveTextContent(/^Taken$/);
+    }
     expect(screen.getAllByRole('button', { name: 'Skip Levothyroxine' })).toHaveLength(2);
-    // A bare "Confirm" names nothing — the failure this labelling exists to stop.
-    expect(screen.queryByRole('button', { name: 'Confirm' })).toBeNull();
+    // A bare "Taken" names nothing — the failure this labelling exists to stop.
+    expect(screen.queryByRole('button', { name: 'Taken' })).toBeNull();
     expect(within(medRow('Lisinopril')).queryByRole('button')).not.toBeInTheDocument();
   });
 
@@ -337,7 +347,7 @@ describe('TodaysMeds', () => {
     // The state is still conveyed in TEXT (WCAG 2.1 AA 1.4.1) — only the
     // actionability changed.
     expect(within(row).getByText('Inactive')).toBeInTheDocument();
-    expect(action(row, 'Confirm')).toBeInTheDocument();
+    expect(action(row, 'Taken')).toBeInTheDocument();
     expect(action(row, 'Skip')).toBeInTheDocument();
   });
 
@@ -373,7 +383,7 @@ describe('TodaysMeds', () => {
 
       await screen.findByText('Levothyroxine');
       const row = medRow('Levothyroxine');
-      expect(action(row, 'Confirm')).toBeInTheDocument();
+      expect(action(row, 'Taken')).toBeInTheDocument();
       expect(action(row, 'Skip')).toBeInTheDocument();
     });
 
@@ -396,7 +406,7 @@ describe('TodaysMeds', () => {
 
       await screen.findByText('Levothyroxine');
       const row = medRow('Levothyroxine');
-      expect(hasAction(row, 'Confirm')).toBe(false);
+      expect(hasAction(row, 'Taken')).toBe(false);
       expect(hasAction(row, 'Skip')).toBe(false);
     });
   });
@@ -413,7 +423,7 @@ describe('TodaysMeds', () => {
       await screen.findByText('Levothyroxine');
       const row = medRow('Levothyroxine');
       expect(within(row).getByText('Upcoming')).toBeInTheDocument();
-      expect(hasAction(row, 'Confirm')).toBe(false);
+      expect(hasAction(row, 'Taken')).toBe(false);
       expect(hasAction(row, 'Skip')).toBe(false);
     });
 
@@ -430,11 +440,11 @@ describe('TodaysMeds', () => {
       await screen.findByText('Boundary');
       const inWindow = medRow('Boundary');
       expect(within(inWindow).getByText('Due soon')).toBeInTheDocument();
-      expect(action(inWindow, 'Confirm')).toBeInTheDocument();
+      expect(action(inWindow, 'Taken')).toBeInTheDocument();
 
       const outside = medRow('JustOutside');
       expect(within(outside).getByText('Upcoming')).toBeInTheDocument();
-      expect(hasAction(outside, 'Confirm')).toBe(false);
+      expect(hasAction(outside, 'Taken')).toBe(false);
     });
 
     it('keeps the pair on an overdue dose earlier today', async () => {
@@ -446,7 +456,7 @@ describe('TodaysMeds', () => {
       await screen.findByText('Atorvastatin');
       const row = medRow('Atorvastatin');
       expect(within(row).getByText('Not marked')).toBeInTheDocument();
-      expect(action(row, 'Confirm')).toBeInTheDocument();
+      expect(action(row, 'Taken')).toBeInTheDocument();
     });
 
     // The window is measured in the CARE RECIPIENT's timezone, never the
@@ -487,7 +497,7 @@ describe('TodaysMeds', () => {
       await screen.findByText('Lisinopril');
       const row = medRow('Lisinopril');
       expect(within(row).getByText('Upcoming')).toBeInTheDocument();
-      expect(hasAction(row, 'Confirm')).toBe(false);
+      expect(hasAction(row, 'Taken')).toBe(false);
     });
   });
 
@@ -1202,7 +1212,7 @@ describe('TodaysMeds', () => {
      * faked span, `runOutWindow()` closes it. `fireEvent` rather than
      * `userEvent` for the same reason — userEvent schedules its own timers.
      */
-    function answer(row: HTMLElement, name: 'Confirm' | 'Skip') {
+    function answer(row: HTMLElement, name: 'Taken' | 'Skip') {
       const button = action(row, name);
       vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: NOW });
       fireEvent.click(button);
@@ -1224,14 +1234,14 @@ describe('TodaysMeds', () => {
       renderWidget();
 
       await screen.findByText('Levothyroxine');
-      answer(medRow('Levothyroxine'), 'Confirm');
+      answer(medRow('Levothyroxine'), 'Taken');
 
       // The badge replaces the pair immediately, and NOTHING has been sent.
       const row = medRow('Levothyroxine');
       expect(
         within(row).getByRole('button', { name: 'Undo Levothyroxine' })
       ).toBeInTheDocument();
-      expect(hasAction(row, 'Confirm')).toBe(false);
+      expect(hasAction(row, 'Taken')).toBe(false);
       expect(mockedPost).not.toHaveBeenCalled();
 
       await runOutWindow();
@@ -1298,7 +1308,7 @@ describe('TodaysMeds', () => {
       renderWidget();
 
       await screen.findByText('Levothyroxine');
-      answer(medRow('Levothyroxine'), 'Confirm');
+      answer(medRow('Levothyroxine'), 'Taken');
       fireEvent.click(
         within(medRow('Levothyroxine')).getByRole('button', { name: 'Undo Levothyroxine' })
       );
@@ -1307,7 +1317,7 @@ describe('TodaysMeds', () => {
 
       expect(mockedPost).not.toHaveBeenCalled();
       // ...and the dose is asking again.
-      expect(action(medRow('Levothyroxine'), 'Confirm')).toBeInTheDocument();
+      expect(action(medRow('Levothyroxine'), 'Taken')).toBeInTheDocument();
     });
 
     // WCAG 2.2.1: the countdown PAUSES while the pointer is over the badge and
@@ -1322,7 +1332,7 @@ describe('TodaysMeds', () => {
       renderWidget();
 
       await screen.findByText('Levothyroxine');
-      answer(medRow('Levothyroxine'), 'Confirm');
+      answer(medRow('Levothyroxine'), 'Taken');
       const badge = within(medRow('Levothyroxine'))
         .getByRole('button', { name: 'Undo Levothyroxine' })
         .closest('[role="status"]') as HTMLElement;
@@ -1362,7 +1372,7 @@ describe('TodaysMeds', () => {
       const { unmount } = renderWidget();
 
       await screen.findByText('Levothyroxine');
-      answer(medRow('Levothyroxine'), 'Confirm');
+      answer(medRow('Levothyroxine'), 'Taken');
       expect(mockedPost).not.toHaveBeenCalled();
 
       vi.useFakeTimers({ toFake: ['Date'], now: NOW });
@@ -1385,7 +1395,7 @@ describe('TodaysMeds', () => {
     renderWidget();
 
     expect(await screen.findByText('Levothyroxine')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Confirm / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Mark .+ as taken$/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Skip / })).not.toBeInTheDocument();
     expect(
       screen.getByText('View-only — you can see everything, but changes are off.')
@@ -1399,7 +1409,7 @@ describe('TodaysMeds', () => {
     renderWidget();
 
     expect(await screen.findByText('Levothyroxine')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Confirm / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Mark .+ as taken$/ })).not.toBeInTheDocument();
     expect(
       screen.getByText(
         'Your subscription ended, so this circle is view-only for now. Everything is saved — re-subscribe to pick up where you left off.'
@@ -1436,7 +1446,7 @@ describe('TodaysMeds', () => {
     // Same trick as the block above: `setTimeout` is faked across the click
     // that arms the undo window and the advance that closes it, then restored
     // so the assertions below can poll on a real clock.
-    const take = action(medRow('Levothyroxine'), 'Confirm');
+    const take = action(medRow('Levothyroxine'), 'Taken');
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], now: NOW });
     fireEvent.click(take);
     await act(async () => {
@@ -1514,7 +1524,7 @@ describe('TodaysMeds', () => {
 
     await screen.findByText('Warfarin');
     // Live at render time: 01:45 is inside the window that opened at 01:30.
-    const take = action(medRow('Warfarin'), 'Confirm');
+    const take = action(medRow('Warfarin'), 'Taken');
 
     // The clock falls back with no render in between, then the stale button
     // is pressed. The undo window is run out so a POST that slipped through
@@ -1677,20 +1687,20 @@ describe('TodaysMeds', () => {
 describe('TodaysMeds — offline', () => {
   afterEach(() => onlineManager.setOnline(true));
 
-  it('Confirm/Skip are aria-disabled offline; a press explains and nothing is marked or sent', async () => {
+  it('Taken/Skip are aria-disabled offline; a press explains and nothing is marked or sent', async () => {
     mockApi();
     renderWidget();
     await screen.findByText('Atorvastatin');
     const row = medRow('Atorvastatin');
 
     act(() => onlineManager.setOnline(false));
-    for (const verb of ['Confirm', 'Skip'] as const) {
-      for (const b of within(row).getAllByRole('button', { name: `${verb} Atorvastatin` })) {
+    for (const name of ['Mark Atorvastatin as taken', 'Skip Atorvastatin']) {
+      for (const b of within(row).getAllByRole('button', { name })) {
         expect(b).toHaveAttribute('aria-disabled', 'true');
       }
     }
 
-    fireEvent.click(action(row, 'Confirm'));
+    fireEvent.click(action(row, 'Taken'));
     expect(await screen.findByText("You're offline. Connect to mark this.")).toBeInTheDocument();
     // No optimistic answer, no undo window.
     expect(within(row).queryByRole('button', { name: 'Undo Atorvastatin' })).toBeNull();
@@ -1706,7 +1716,7 @@ describe('TodaysMeds — offline', () => {
     });
     expect(mockedPost).not.toHaveBeenCalled();
     for (const b of within(medRow('Atorvastatin')).getAllByRole('button', {
-      name: 'Confirm Atorvastatin',
+      name: 'Mark Atorvastatin as taken',
     })) {
       expect(b).not.toHaveAttribute('aria-disabled');
     }

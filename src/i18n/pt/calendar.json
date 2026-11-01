@@ -71,6 +71,8 @@
     "missed": "Não marcado",
     "markComplete": "Marcar como concluído",
     "markTaken": "Marcar como tomado",
+    "taken": "Tomado",
+    "takenLabel": "Marcar {{name}} como tomado",
     "skipDose": "Pular dose",
     "completedToast": "Marcado como concluído",
     "close": "Fechar detalhes do evento",
@@ -284,7 +286,7 @@
       "reason": "Para que serve?",
       "reasonPlaceholder": "ex.: dor, náusea",
       "optional": "(opcional)",
-      "repeatHint": "Sem horários fixos. Os familiares são notificados quando alguém registra uma dose.",
+      "repeatHint": "Sem horários fixos. Todo o círculo é notificado quando alguém registra uma dose.",
       "lockedRepeat": "Se necessário · não pode ser alterado. Para definir horários fixos para este medicamento, suspenda-o e adicione-o novamente.",
       "remindersNone": "Sem lembretes. Medicamentos se necessário não têm horários fixos.",
       "updateOldBackend": "Ainda não foi possível adicionar um medicamento se necessário — atualize o app e tente novamente."

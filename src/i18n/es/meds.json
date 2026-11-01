@@ -13,6 +13,8 @@
   "skip": "Omitir",
   "confirmLabel": "Confirmar {{name}}",
   "skipLabel": "Omitir {{name}}",
+  "taken": "Tomado",
+  "takenLabel": "Marcar {{name}} como tomado",
   "showAll": "Ver todos ({{count}})",
   "showLess": "Ver menos",
   "status": {

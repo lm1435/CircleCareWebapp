@@ -431,8 +431,8 @@ export const SURFACES: Surface[] = [
       await expect(dialog.getByText(name).first()).toBeVisible();
       return [
         {
-          label: `Mark taken / Skip dose for "${name}"`,
-          locator: dialog.getByRole('button', { name: /^(Mark taken|Skip dose)$/ }),
+          label: `Taken / Skip dose for "${name}"`,
+          locator: dialog.getByRole('button', { name: /^(Mark .+ as taken|Skip dose)$/ }),
         },
       ];
     },

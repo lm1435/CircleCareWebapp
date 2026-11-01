@@ -500,7 +500,7 @@ test('2. the same writes through the app UI succeed and persist (event edit, tas
   );
   await page.goto(`/circles/${o.circleId}`, { waitUntil: 'domcontentloaded' });
   const today = page.locator('section[aria-labelledby="todays-meds-heading"] > ul');
-  await today.getByRole('button', { name: `Confirm ${medName}` }).first().click({ timeout: 30_000 });
+  await today.getByRole('button', { name: `Mark ${medName} as taken` }).first().click({ timeout: 30_000 });
   expect((await confirmed).status(), 'dose confirm through the armed gate').toBe(201);
   await expect.poll(() => eventRow(medId).quantity_remaining, { timeout: 15_000 }).toBe(29);
   const medEv = await o.api.get(`/api/circles/${o.circleId}/events/${medId}`);
@@ -850,7 +850,7 @@ const SURFACES: Surface[] = [
       await ctx.page.goto(`/circles/${ctx.o.circleId}`, { waitUntil: 'domcontentloaded' });
       const btn = ctx.page
         .locator('section[aria-labelledby="todays-meds-heading"] > ul')
-        .getByRole('button', { name: `Confirm ${ctx.state.name}` })
+        .getByRole('button', { name: `Mark ${ctx.state.name} as taken` })
         .first();
       await expect(btn).toBeVisible({ timeout: 30_000 });
       return btn;
@@ -859,7 +859,7 @@ const SURFACES: Surface[] = [
       await expect(
         ctx.page
           .locator('section[aria-labelledby="todays-meds-heading"] > ul')
-          .getByRole('button', { name: `Confirm ${ctx.state.name}` })
+          .getByRole('button', { name: `Mark ${ctx.state.name} as taken` })
           .first()
       ).toBeVisible({ timeout: 30_000 });
     },

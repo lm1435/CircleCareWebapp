@@ -192,7 +192,7 @@ test('Calendar, stale detail: Skip over a dose another caregiver TOOK -> 409, ca
     const again = await openChip(page, s.yesterday, new RegExp(escapeRegExp(s.name)));
     await expect(again.getByText(/(Taken|Taken late) at /).first()).toBeVisible({ timeout: 15_000 });
     await expect(again.getByRole('button', { name: 'Skip dose' })).toHaveCount(0);
-    await expect(again.getByRole('button', { name: 'Mark taken' })).toHaveCount(0);
+    await expect(again.getByRole('button', { name: /^Mark .+ as taken$/ })).toHaveCount(0);
   } finally {
     await deleteSeries(s.ownerSession, s.circleId, s.root);
   }
@@ -209,7 +209,7 @@ test('Calendar, stale detail: Mark taken over a dose another caregiver TOOK (sam
     await cookieLogin(context, s.owner, baseURL);
     await gotoWeekContaining(page, s.circleId, dateInTz(s.tz, 0), s.yesterday);
     const detail = await openChip(page, s.yesterday, new RegExp(escapeRegExp(s.name)));
-    await expect(detail.getByRole('button', { name: 'Mark taken' })).toBeVisible();
+    await expect(detail.getByRole('button', { name: /^Mark .+ as taken$/ })).toBeVisible();
 
     await memberAnswers(s.memberSession, s.circleId, s.root, 'taken');
     const first = rowsOf(s.circleId, s.root);
@@ -217,7 +217,7 @@ test('Calendar, stale detail: Mark taken over a dose another caregiver TOOK (sam
     const feedBefore = feedRows(s.circleId);
 
     const posts = countRequests(page, 'POST', CONFIRM);
-    await detail.getByRole('button', { name: 'Mark taken' }).click();
+    await detail.getByRole('button', { name: /^Mark .+ as taken$/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Confirm medication' });
     await expect(dialog).toBeVisible();
     const agreed = page.waitForResponse((r) => r.request().method() === 'POST' && CONFIRM_RE.test(new URL(r.url()).pathname));

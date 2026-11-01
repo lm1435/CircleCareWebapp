@@ -71,6 +71,8 @@
     "missed": "Not marked",
     "markComplete": "Mark complete",
     "markTaken": "Mark taken",
+    "taken": "Taken",
+    "takenLabel": "Mark {{name}} as taken",
     "skipDose": "Skip dose",
     "completedToast": "Marked complete",
     "close": "Close event details",
@@ -284,7 +286,7 @@
       "reason": "What is it for?",
       "reasonPlaceholder": "e.g. pain, nausea",
       "optional": "(optional)",
-      "repeatHint": "No set times. Family members are notified when someone logs a dose.",
+      "repeatHint": "No set times. Everyone in the circle is notified when someone logs a dose.",
       "lockedRepeat": "As needed · can't be changed. To put this medication on a schedule, discontinue it and add it again.",
       "remindersNone": "No reminders. As-needed medications don't have a schedule.",
       "updateOldBackend": "Couldn't add an as-needed medication yet — please update the app and try again."

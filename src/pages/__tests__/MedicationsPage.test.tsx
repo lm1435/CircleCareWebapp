@@ -274,9 +274,11 @@ describe('MedicationsPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    for (const label of ['Mark taken', 'Skip dose', 'Confirm', 'Skip']) {
+    for (const label of ['Mark taken', 'Skip dose', 'Confirm', 'Skip', 'Taken']) {
       expect(screen.queryByRole('button', { name: label })).toBeNull();
     }
+    // The dose action's current name shape ("Mark <med> as taken", 1.4.0) is absent too.
+    expect(screen.queryByRole('button', { name: /as taken$/ })).toBeNull();
     // ...while the medication-level action set is intact on the inactive card.
     const inactiveSection = screen.getByRole('region', { name: 'Inactive / Past medications' });
     await user.click(

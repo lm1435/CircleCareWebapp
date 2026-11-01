@@ -2,6 +2,7 @@ import {
   careCardShell,
   careCardActionsInline,
   careCardActionsRow,
+  careCardActionBtn,
   STATUS_PILL,
   careCardStatusPill,
   careCardSurface,
@@ -40,6 +41,15 @@ describe('careCard action row container query', () => {
   it('shows the stacked row only once the card narrows past 360px', () => {
     expect(careCardActionsRow).toContain('@max-[360px]:flex');
     expect(careCardActionsRow).toContain('hidden');
+  });
+
+  // 1.4.0 "Taken" is longer than "Take" (de "Eingenommen"): the stacked pair wraps rather
+  // than overflowing a narrow card, and a pill never exceeds the card.
+  it('the stacked row wraps and a pill is clamped to the card width', () => {
+    expect(careCardActionsRow.split(' ')).toContain('flex-wrap');
+    expect(careCardActionBtn.split(' ')).toContain('max-w-full');
+    expect(careCardActionBtn.split(' ')).toContain('text-center');
+    expect(careCardActionBtn).not.toMatch(/\btruncate\b|whitespace-nowrap|line-clamp/);
   });
 });
 

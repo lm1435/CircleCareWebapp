@@ -103,7 +103,7 @@ async function closeAllDialogs(page: Page): Promise<void> {
 async function assertRecorded(
   page: Page,
   a: { date: string; titleRe: RegExp; row: Row; tz: string },
-  copy: { badge: RegExp; markTaken: string; skipDose: string }
+  copy: { badge: RegExp; markTaken: string | RegExp; skipDose: string }
 ): Promise<Locator> {
   await closeAllDialogs(page);
   const detail = await openChip(page, a.date, a.titleRe);
@@ -116,7 +116,8 @@ async function assertRecorded(
   return detail;
 }
 
-const EN = { markTaken: 'Mark taken', skipDose: 'Skip dose' };
+// 1.4.0: the visible word is Today's "Taken"; the button's NAME is "Mark <med> as taken".
+const EN = { markTaken: /^Mark .+ as taken$/, skipDose: 'Skip dose' };
 
 test('(a) Skip dose on day -2: dialog pre-checks Skipped, DB skipped by the owner, reopened detail shows "Skipped at" and no actions', async ({
   page,
@@ -230,7 +231,7 @@ test('(c) Spanish: Omitir dosis on day -3 writes skipped; copy and badge are Spa
     await assertRecorded(
       page,
       { date: day, titleRe: s.titleRe, row: rows[0], tz: s.tz },
-      { badge: /^Omitido a las /, markTaken: 'Marcar como tomada', skipDose: 'Omitir dosis' }
+      { badge: /^Omitido a las /, markTaken: /^Marcar .+ como tomado$/, skipDose: 'Omitir dosis' }
     );
   } finally {
     await closeAllDialogs(page).catch(() => undefined);

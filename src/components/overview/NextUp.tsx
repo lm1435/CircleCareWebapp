@@ -80,6 +80,13 @@ export interface NextUpProps {
   landing?: NextUpLanding | null;
 }
 
+
+/**
+ * The name column's flex basis while an undo badge shows: grow and shrink from 12rem, so a
+ * row that cannot give the name 12rem beside the badge wraps the badge below instead.
+ */
+export const BADGE_ROW_NAME_BASIS = 'flex-[1_1_12rem]';
+
 /** Whole calendar days `date` lies before `today` (both YYYY-MM-DD); 0 for today or later. */
 function daysBefore(date: string, today: string): number {
   const ms = Date.parse(`${today}T00:00:00Z`) - Date.parse(`${date}T00:00:00Z`);
@@ -255,6 +262,11 @@ export function NextUp({
     // full-width Taken / Done), which stretched the status pill across the card as a new row
     // (mobile NextUpCard, owner report 1.4.0). Inline it never shrinks into the text column.
     const badgeClass = stacked ? 'self-start' : 'flex-none';
+    // A long name beside the badge (wider than Taken) wrapped to ~5 lines (owner report,
+    // 1.4.0, mobile NextUpCard parity). While a badge shows, the row wraps and the name
+    // claims at least BADGE_ROW_NAME_BASIS: when name + badge do not fit on one line the
+    // badge drops onto its own line below, at its own width. Pure CSS, so it cannot flip-flop.
+    const badgeShown = !!pendingMed || pendingTask;
     let action: ReactElement | null = null;
     if (pendingMed) {
       action = (
@@ -335,7 +347,13 @@ export function NextUp({
           data-highlighted={highlightKey === item.key ? 'true' : undefined}
           className={`-mx-2 rounded-lg px-2 transition-colors duration-500 motion-reduce:transition-none ${
             highlightKey === item.key ? 'bg-moss-soft ring-2 ring-moss' : ''
-          } ${stacked ? 'flex flex-col items-stretch gap-2 py-3' : 'flex items-center gap-4 py-3'}`}
+          } ${
+            stacked
+              ? 'flex flex-col items-stretch gap-2 py-3'
+              : badgeShown
+                ? 'flex flex-wrap items-center gap-x-4 gap-y-2 py-3'
+                : 'flex items-center gap-4 py-3'
+          }`}
         >
           {time ? (
             <span
@@ -351,7 +369,10 @@ export function NextUp({
             onClick={() =>
               Analytics.nextUpAction({ action: 'open', item_type: item.type, position })
             }
-            className="flex min-h-11 min-w-0 flex-1 flex-col justify-center no-underline"
+            className={`flex min-h-11 min-w-0 flex-col justify-center no-underline ${
+              badgeShown && !stacked ? BADGE_ROW_NAME_BASIS : 'flex-1'
+            }`}
+            data-next-up-name=""
           >
             <span className="break-words text-lg font-semibold text-ink">{item.title}</span>
             {sub ? <span className="break-words text-sm text-ink-2">{sub}</span> : null}

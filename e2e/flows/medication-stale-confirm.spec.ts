@@ -57,7 +57,7 @@ test.describe('a stale Confirm dialog on a removed dose', () => {
     try {
       await gotoWeekContaining(page, circleId, today, target);
       const detailDialog = await openChip(page, target, titleRe);
-      await detailDialog.getByRole('button', { name: 'Mark taken' }).click();
+      await detailDialog.getByRole('button', { name: /^Mark .+ as taken$/ }).click();
       const confirmDialog = page.getByRole('dialog', { name: 'Confirm medication' });
       await expect(confirmDialog).toBeVisible({ timeout: 10_000 });
 
@@ -113,7 +113,7 @@ test.describe('a stale Confirm dialog on a removed dose', () => {
     try {
       await gotoWeekContaining(page, circleId, today, S);
       const detailDialog = await openChip(page, S, titleRe);
-      await detailDialog.getByRole('button', { name: 'Mark taken' }).click();
+      await detailDialog.getByRole('button', { name: /^Mark .+ as taken$/ }).click();
       const confirmDialog = page.getByRole('dialog', { name: 'Confirm medication' });
       await expect(confirmDialog).toBeVisible({ timeout: 10_000 });
 
