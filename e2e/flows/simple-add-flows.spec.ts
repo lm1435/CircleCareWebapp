@@ -4,6 +4,7 @@ import { sqlExec } from '../db';
 import { countRequests, dbQuery, sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 import { dateInTz, uniqueSuffix } from '../notesFirstClassShared';
+import { checkA11y } from '../helpers';
 
 // THE ADD MENU AND THE TWO SIMPLE FORMS (docs/plans/simple-ui-1-3-1.md).
 //
@@ -357,6 +358,82 @@ test.describe('New medication (simple form)', () => {
     await expect(group).toHaveAttribute('data-columns', '1');
     const xs = await group.getByRole('radio').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().x)));
     expect(new Set(xs).size).toBe(1);
+  });
+
+  // Owner 1.4.0 (mobile parity): the four time chips and "Other time" are ONE grid of equal columns --
+  // Morning/Midday/Evening, then Bedtime/Other time -- and "Other time" is the same chip (height, radius,
+  // border), not a short pill or a text link. Measured in a real browser: jsdom has no layout.
+  test('time chips + Other time: aligned rows of equal columns, Other time the same chip, at desktop and 375px', async ({
+    page,
+    context,
+    request,
+    baseURL,
+  }, testInfo) => {
+    const a = await arrange(request, 'medgrid');
+    await cookieLogin(context, a.owner, baseURL);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const dialog = await openMedForm(page, a.circleId);
+    const grid = dialog.getByTestId('time-chip-grid');
+    const other = dialog.getByRole('button', { name: 'Other time' });
+    await expect(other).toBeVisible();
+
+    async function cells() {
+      const chips = await dialog
+        .getByRole('radiogroup', { name: /time/i })
+        .getByRole('radio')
+        .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as DOMRect));
+      const box = (await other.boundingBox())!;
+      const style = await other.evaluate((e) => {
+        const cs = getComputedStyle(e);
+        return { radius: cs.borderTopLeftRadius, border: cs.borderTopWidth, padLeft: cs.paddingLeft };
+      });
+      const chipStyle = await dialog.getByRole('radio', { name: /Morning/ }).evaluate((e) => {
+        const cs = getComputedStyle(e);
+        return { radius: cs.borderTopLeftRadius, border: cs.borderTopWidth, padLeft: cs.paddingLeft };
+      });
+      const overflow = await grid.evaluate((g) =>
+        Array.from(g.querySelectorAll<HTMLElement>('[data-fit-cell]')).some((c) => c.scrollWidth > c.clientWidth + 1)
+      );
+      return { chips, other: box, style, chipStyle, overflow };
+    }
+
+    const near = (a: number, b: number) => Math.abs(a - b) <= 1;
+
+    // Desktop: Morning/Midday/Evening, then Bedtime/Other time. 375px: the dialog's content is ~300px, so
+    // three columns would squeeze "Morning" -- the grid fits two (still aligned rows), never a staircase.
+    for (const [width, expected] of [
+      [1280, 3],
+      [375, 2],
+    ] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(grid).toHaveAttribute('data-columns', String(expected));
+      const c = await cells();
+      const all = [...c.chips, c.other];
+      // Cell i sits at row floor(i / columns), column i % columns: same top per row, same left per
+      // column, one width and one height for every cell (Other time included).
+      for (let i = 0; i < all.length; i++) {
+        const row = Math.floor(i / expected);
+        const col = i % expected;
+        expect(near(all[i].y, all[row * expected].y), `cell ${i} top`).toBe(true);
+        expect(near(all[i].x, all[col].x), `cell ${i} left`).toBe(true);
+        expect(near(all[i].width, all[0].width), `cell ${i} width`).toBe(true);
+        expect(near(all[i].height, all[0].height), `cell ${i} height`).toBe(true);
+        if (row > 0) expect(all[i].y).toBeGreaterThan(all[(row - 1) * expected].y + all[0].height - 1);
+      }
+      // The same chip: radius, border, padding.
+      expect(c.style).toEqual(c.chipStyle);
+      // Nothing is cut or squeezed onto a second line.
+      expect(c.overflow).toBe(false);
+      // The grid (Other time outside the radiogroup, placed by subgrid) passes axe incl. WCAG 2.2 target size.
+      await checkA11y(page, `med-form-time-grid-${width}`, testInfo, { include: '[data-testid="time-chip-grid"]', wcag22: true });
+    }
+
+    // The chips and Other time still work in the grid.
+    await dialog.getByRole('radio', { name: /Evening/ }).click();
+    await expect(dialog.getByRole('radio', { name: /Evening/ })).toBeChecked();
+    await other.click();
+    await expect(other).toHaveAttribute('aria-expanded', 'true');
+    await expect(dialog.getByLabel(/^Time/)).toBeVisible();
   });
 });
 

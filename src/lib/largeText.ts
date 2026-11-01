@@ -146,3 +146,58 @@ export function useRowFit(contentKey: string): {
 
   return { ref, stacked };
 }
+
+/** Pure: one fewer column after a measured overflow, never below one. */
+export function nextFitColumns(current: number, overflowing: boolean): number {
+  return overflowing && current > 1 ? current - 1 : current;
+}
+
+/**
+ * Equal-column grid whose column count is fitted on MEASURED layout — the twin of mobile's
+ * `StackedChoice layout="grid"` (the "When?" time chips + "Other time"). It starts at `max`
+ * columns (ONE at large text, as `chipColumns`), and before paint drops a column while any cell
+ * marked `data-fit-cell` overflows (its content is kept on one line with `whitespace-nowrap` and
+ * clipped, so an overflow is a `scrollWidth` past its `clientWidth`). So a label or time is never
+ * squeezed into wrapping or cut. Keyed to the container width, root font size and `contentKey`
+ * (the strings), so a resize, zoom, text size or language switch re-fits from `max`.
+ */
+export function useFitColumns(
+  max: number,
+  contentKey: string
+): { ref: RefObject<HTMLDivElement>; columns: number } {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const rootPx = readRootFontPx();
+  const start = isLargeTextRoot(rootPx) ? 1 : Math.max(1, max);
+  const measureKey = `${width}|${rootPx}|${contentKey}`;
+  const [fit, setFit] = useState<{ key: string; columns: number } | null>(null);
+  const columns = fit?.key === measureKey ? fit.columns : start;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || columns <= 1 || el.clientWidth === 0) return;
+    const cells = Array.from(el.querySelectorAll<HTMLElement>('[data-fit-cell]'));
+    // +1: sub-pixel widths round differently in scrollWidth and clientWidth.
+    const overflowing = cells.some((c) => c.scrollWidth > c.clientWidth + 1);
+    const next = nextFitColumns(columns, overflowing);
+    if (next !== columns) setFit({ key: measureKey, columns: next });
+  });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = (): void => setWidth(el.clientWidth);
+    update();
+    window.addEventListener('resize', update);
+    if (typeof ResizeObserver === 'undefined') return () => window.removeEventListener('resize', update);
+    // Width only: a column change alters the height, and reacting to that would loop.
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      window.removeEventListener('resize', update);
+      observer.disconnect();
+    };
+  }, []);
+
+  return { ref, columns };
+}

@@ -2511,17 +2511,16 @@ function AddEventForm({
                 .join(' ') || undefined
             }
             onChange={chooseTimeChip}
+            other={{
+              label: t('addEvent.simple.otherTime'),
+              expanded: showOtherTime,
+              // Lit like a chosen chip when a custom (non-chip) time is the answer (mobile parity).
+              selected: timeStr !== '' && litChip === null,
+              onClick: openOtherTime,
+            }}
           />
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              aria-expanded={showOtherTime}
-              onClick={openOtherTime}
-              className="min-h-[44px] cursor-pointer border-0 bg-transparent p-0 text-base font-semibold text-moss-deep underline-offset-2 hover:underline"
-            >
-              {t('addEvent.simple.otherTime')}
-            </button>
-            {timeStr && extraTimes.length < 3 && (
+          {timeStr && extraTimes.length < 3 && (
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 data-testid="add-another-dose"
@@ -2530,8 +2529,8 @@ function AddEventForm({
               >
                 {t('addEvent.simple.anotherDose')}
               </button>
-            )}
-          </div>
+            </div>
+          )}
           {showOtherTime && (
             <TimeField
               id="scheduled_time"
