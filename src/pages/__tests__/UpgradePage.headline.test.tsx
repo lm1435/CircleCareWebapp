@@ -193,3 +193,18 @@ describe('UpgradePage accent contrast', () => {
     expect((l1 + 0.05) / (l2 + 0.05)).toBeGreaterThanOrEqual(3);
   });
 });
+
+// Owner copy 1.4.0: the sub-line under "Better care, together." no longer assumes the buyer
+// is a family, and the circles benefit no longer assumes who the circles are for.
+describe.each([
+  ['en', 'Everything you need to coordinate care for the people who matter most.', 'One for each person you care for', /your family needs|Mom, Dad/],
+  ['es', 'Todo lo que necesitas para coordinar el cuidado de quienes más importan.', 'Uno para cada persona que cuidas', /tu familia necesita|mamá, papá/],
+] as const)('UpgradePage onboarding copy (%s)', (lng, subtitle, circlesSub, old) => {
+  it('renders the approved sub-line and circles benefit, not the family-only wording', async () => {
+    await i18n.changeLanguage(lng);
+    const { container } = renderAt({ paywallContext: 'onboarding' });
+    expect(screen.getByText(subtitle)).toBeInTheDocument();
+    expect(screen.getByText(circlesSub)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(old);
+  });
+});

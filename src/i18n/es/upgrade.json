@@ -30,7 +30,7 @@
       "accent": "turno por turno."
     }
   },
-  "subtitle": "Todo lo que tu familia necesita para coordinar el cuidado, en cada círculo del que formas parte.",
+  "subtitle": "Todo lo que necesitas para coordinar el cuidado, en cada círculo del que formas parte.",
   "trialHook": "Comienza con una prueba gratis: hoy no pagas nada.",
   "benefits": {
     "caregivers": {
@@ -55,7 +55,7 @@
     },
     "circles": {
       "title": "Hasta 5 círculos de cuidado",
-      "sub": "Uno para mamá, papá o toda la familia"
+      "sub": "Uno para cada persona que cuidas"
     }
   },
   "plans": {
@@ -122,7 +122,7 @@
     "year_other": "{{count}} años"
   },
   "onboarding": {
-    "subtitle": "Todo lo que tu familia necesita para coordinar el cuidado de quienes más importan.",
+    "subtitle": "Todo lo que necesitas para coordinar el cuidado de quienes más importan.",
     "continueFree": "Continuar con plan gratuito",
     "continueFreeSub": "1 círculo, 2 cuidadores — mejora en cualquier momento",
     "notNow": "Ahora no"

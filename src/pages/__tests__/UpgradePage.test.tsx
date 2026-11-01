@@ -178,7 +178,7 @@ describe('UpgradePage', () => {
       'Adherence reports & calendar importShare medication history with providers, import appointments from your calendar',
       '1GB of documents per circleRoom for records, photos, and paperwork',
       'AI care assistantSummarizes visits and surfaces what matters',
-      'Up to 5 care circlesOne for Mom, Dad, or the whole family',
+      'Up to 5 care circlesOne for each person you care for',
     ]);
     expect(screen.queryByText(/Full access to the calendar/)).toBeNull();
   });
@@ -361,7 +361,7 @@ describe('UpgradePage', () => {
   // EN desktop broke "…for every circle you're part / of." — a one-word widow.
   it('balances the subtitle so it never leaves a one-word last line', () => {
     renderPage();
-    const subtitle = screen.getByText(/Everything your family needs to coordinate care/);
+    const subtitle = screen.getByText(/Everything you need to coordinate care, for every circle/);
     expect(subtitle.className.split(/\s+/)).toContain('text-balance');
   });
 

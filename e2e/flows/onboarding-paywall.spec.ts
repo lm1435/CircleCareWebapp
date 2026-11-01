@@ -97,6 +97,10 @@ test.describe('onboarding paywall (web)', () => {
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(offerHeading(page)).toBeVisible();
     expect(await page.evaluate((k) => window.localStorage.getItem(k), `${SEEN_KEY}:${a.userId}`)).toBe('1');
+    // Owner copy 1.4.0: never assumes the buyer is a family or who the circles are for.
+    await expect(page.getByText('Everything you need to coordinate care for the people who matter most.')).toBeVisible();
+    await expect(page.getByText('One for each person you care for')).toBeVisible();
+    await expect(page.getByText(/your family needs|Mom, Dad/)).toHaveCount(0);
 
     await page.getByRole('button', { name: /Continue with free plan/ }).click();
     await page.waitForURL(/\/circles\/[0-9a-f-]{36}$/, { timeout: 30_000 });

@@ -30,7 +30,7 @@
       "accent": "Schicht für Schicht."
     }
   },
-  "subtitle": "Alles, was Ihre Familie braucht, um die Pflege zu koordinieren – für jeden Kreis, in dem Sie dabei sind.",
+  "subtitle": "Alles, was Sie brauchen, um die Pflege zu koordinieren – für jeden Kreis, in dem Sie dabei sind.",
   "trialHook": "Starten Sie mit einem kostenlosen Testzeitraum – heute fällt keine Zahlung an.",
   "benefits": {
     "caregivers": {
@@ -55,7 +55,7 @@
     },
     "circles": {
       "title": "Bis zu 5 Pflegekreise",
-      "sub": "Einer für Mama, Papa oder die ganze Familie"
+      "sub": "Einer für jede Person, die Sie betreuen"
     }
   },
   "plans": {
@@ -122,7 +122,7 @@
     "year_other": "{{count}} Jahre"
   },
   "onboarding": {
-    "subtitle": "Alles, was Ihre Familie braucht, um die Pflege der Menschen zu koordinieren, die Ihnen am meisten bedeuten.",
+    "subtitle": "Alles, was Sie brauchen, um die Pflege der Menschen zu koordinieren, die Ihnen am meisten bedeuten.",
     "continueFree": "Mit dem kostenlosen Tarif fortfahren",
     "continueFreeSub": "1 Kreis, 2 Pflegepersonen – jederzeit upgraden",
     "notNow": "Nicht jetzt"

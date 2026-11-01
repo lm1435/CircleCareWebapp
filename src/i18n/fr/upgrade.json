@@ -30,7 +30,7 @@
       "accent": "garde par garde."
     }
   },
-  "subtitle": "Tout ce dont votre famille a besoin pour coordonner les soins, pour chaque cercle dont vous faites partie.",
+  "subtitle": "Tout ce dont vous avez besoin pour coordonner les soins, pour chaque cercle dont vous faites partie.",
   "trialHook": "Commencez par un essai gratuit : rien à payer aujourd’hui.",
   "benefits": {
     "caregivers": {
@@ -55,7 +55,7 @@
     },
     "circles": {
       "title": "Jusqu’à 5 cercles de soins",
-      "sub": "Un pour maman, papa ou toute la famille"
+      "sub": "Un pour chaque personne que vous aidez"
     }
   },
   "plans": {
@@ -122,7 +122,7 @@
     "year_other": "{{count}} ans"
   },
   "onboarding": {
-    "subtitle": "Tout ce dont votre famille a besoin pour coordonner les soins des personnes qui comptent le plus.",
+    "subtitle": "Tout ce dont vous avez besoin pour coordonner les soins des personnes qui comptent le plus.",
     "continueFree": "Continuer avec la formule gratuite",
     "continueFreeSub": "1 cercle, 2 aidants : passez à Premium quand vous voulez",
     "notNow": "Pas maintenant"

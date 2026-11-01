@@ -916,7 +916,7 @@ describe('InviteMemberModal — a MANAGER at the seat cap', () => {
 describe('InviteMemberModal — manager hint (docs/plans/manager-role.md)', () => {
   const HINT = 'After they join, you can make them a manager to help invite and manage members.';
 
-  it('shows under the email field for a Family caregiver when the parent allows it', () => {
+  it('shows under the email field for a Caregiver when the parent allows it', () => {
     render(
       <InviteMemberModal viewerIsOwner canSuggestManager circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
     );

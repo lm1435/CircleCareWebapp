@@ -30,7 +30,7 @@
       "accent": "shift by shift."
     }
   },
-  "subtitle": "Everything your family needs to coordinate care, for every circle you're part of.",
+  "subtitle": "Everything you need to coordinate care, for every circle you're part of.",
   "trialHook": "Start with a free trial — nothing due today.",
   "benefits": {
     "caregivers": {
@@ -55,7 +55,7 @@
     },
     "circles": {
       "title": "Up to 5 care circles",
-      "sub": "One for Mom, Dad, or the whole family"
+      "sub": "One for each person you care for"
     }
   },
   "plans": {
@@ -122,7 +122,7 @@
     "year_other": "{{count}}-year"
   },
   "onboarding": {
-    "subtitle": "Everything your family needs to coordinate care for the people who matter most.",
+    "subtitle": "Everything you need to coordinate care for the people who matter most.",
     "continueFree": "Continue with free plan",
     "continueFreeSub": "1 circle, 2 caregivers — upgrade anytime",
     "notNow": "Not now"

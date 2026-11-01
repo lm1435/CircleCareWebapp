@@ -8,7 +8,7 @@
       "accent": "a crescer."
     }
   },
-  "subtitle": "Tudo o que a sua família precisa para coordenar o cuidado, em cada círculo de que faz parte.",
+  "subtitle": "Tudo o que precisa para coordenar o cuidado, em cada círculo de que faz parte.",
   "trialHook": "Comece com um período experimental gratuito: nada a pagar hoje.",
   "benefits": {
     "caregivers": {
@@ -22,6 +22,9 @@
     },
     "storage": {
       "sub": "Espaço para processos clínicos, fotografias e papéis"
+    },
+    "circles": {
+      "sub": "Um para cada pessoa de quem cuida"
     }
   },
   "plans": {
@@ -61,6 +64,6 @@
   "legalJoin": "e a nossa",
   "trialHookWithDuration": "Comece com um período experimental gratuito de {{period}}: nada a pagar hoje.",
   "onboarding": {
-    "subtitle": "Tudo o que a sua família precisa para coordenar o cuidado de quem mais importa."
+    "subtitle": "Tudo o que precisa para coordenar o cuidado de quem mais importa."
   }
 }

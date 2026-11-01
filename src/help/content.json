@@ -90,7 +90,7 @@
         ],
         "video": {
           "file": "create-a-care-circle-en.mp4",
-          "durationSec": 54
+          "durationSec": 74
         },
         "poster": "create-a-care-circle-en.jpg"
       },
@@ -102,11 +102,11 @@
         "steps": [
           "Open the circle and stay on the \"Today\" tab.",
           "Scroll to \"Care team\" and tap \"Add family member\".",
-          "Under \"Who are you inviting?\", choose \"Family caregiver\" or \"Care recipient\".",
+          "Under \"Who are you inviting?\", choose \"Caregiver\" or \"Care recipient\".",
           "Type their email address and tap \"Send invitation\".",
           "Optional: tap \"Share invite link\" or \"Copy link\" to send the link by text message or chat, so they can join right away."
         ],
-        "body": "## What the invited person gets\n\nCircleCare emails them a link and an invite code. When they open the link on a phone with CircleCare installed, the app opens. Without the app, the link opens in their web browser, and they can join there. They need a free account. See [Join a circle you were invited to](/help/join-a-circle/).\n\n## Caregiver or care recipient\n\n- **Family caregiver** is for anyone who helps with care: family, a friend or a paid caregiver.\n- **Care recipient** is the person being cared for. They join with their own account and get medication reminders, unless another member is set to receive them. They can confirm each dose. A circle can have only one care recipient. The care recipient does not need an account for the circle to work.\n\n## Limits on the free plan\n\n- A free circle includes you plus 1 caregiver. A pending invitation holds that spot until it is accepted, cancelled or expires.\n- If the spot is taken by a pending invite, the app shows \"Your invitation is already in use\". Cancel that invitation to free the spot, or upgrade.\n- Inviting the care recipient is never limited. They do not count toward the caregiver limit.\n- With Premium, you can invite as many caregivers as you need. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Pending invitations\n\nInvitations last 7 days. Under \"Care team\", \"Pending invitations\" shows each one and when it expires. Once an invitation has expired, tap \"Resend\" to send it again for another 7 days. To withdraw one, tap the X next to it.\n\n## Good to know\n\n- If no one else is in the circle yet, the **Next step** card on Today also has an **Invite** button.\n- Only the circle owner and managers can invite people. Other caregivers cannot send invitations. See [Owners, caregivers, care recipients and view-only](/help/roles-and-permissions/).\n- On a computer at my.circlecare.app, open the circle, choose \"Members\" and then \"Invite member\".",
+        "body": "## What the invited person gets\n\nCircleCare emails them a link and an invite code. When they open the link on a phone with CircleCare installed, the app opens. Without the app, the link opens in their web browser, and they can join there. They need a free account. See [Join a circle you were invited to](/help/join-a-circle/).\n\n## Caregiver or care recipient\n\n- **Caregiver** is for anyone who helps with care: family, a friend or a paid caregiver.\n- **Care recipient** is the person being cared for. They join with their own account and get medication reminders, unless another member is set to receive them. They can confirm each dose. A circle can have only one care recipient. The care recipient does not need an account for the circle to work.\n\n## Limits on the free plan\n\n- A free circle includes you plus 1 caregiver. A pending invitation holds that spot until it is accepted, cancelled or expires.\n- If the spot is taken by a pending invite, the app shows \"Your invitation is already in use\". Cancel that invitation to free the spot, or upgrade.\n- Inviting the care recipient is never limited. They do not count toward the caregiver limit.\n- With Premium, you can invite as many caregivers as you need. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Pending invitations\n\nInvitations last 7 days. Under \"Care team\", \"Pending invitations\" shows each one and when it expires. Once an invitation has expired, tap \"Resend\" to send it again for another 7 days. To withdraw one, tap the X next to it.\n\n## Good to know\n\n- If no one else is in the circle yet, the **Next step** card on Today also has an **Invite** button.\n- Only the circle owner and managers can invite people. Other caregivers cannot send invitations. See [Owners, caregivers, care recipients and view-only](/help/roles-and-permissions/).\n- On a computer at my.circlecare.app, open the circle, choose \"Members\" and then \"Invite member\".",
         "related": [
           "join-a-circle",
           "roles-and-permissions",
@@ -125,7 +125,7 @@
         ],
         "video": {
           "file": "invite-family-en.mp4",
-          "durationSec": 55
+          "durationSec": 61
         },
         "poster": "invite-family-en.jpg"
       },
@@ -160,7 +160,7 @@
         ],
         "video": {
           "file": "join-a-circle-en.mp4",
-          "durationSec": 118
+          "durationSec": 134
         },
         "poster": "join-a-circle-en.jpg"
       },
@@ -169,7 +169,7 @@
         "category": "getting-started",
         "title": "Owners, caregivers, care recipients and view-only",
         "summary": "Each circle has one owner, who created it. Caregivers can see and update care information. A manager is a caregiver who can also invite and remove people. The care recipient gets reminders and confirms their doses. View-only means you can see everything but not make changes.",
-        "body": "## Circle owner\n\nThe person who created the circle. The owner can invite people, cancel or resend invitations, and remove members, and is the only one who can:\n\n- change the circle's details (**Edit circle**)\n- delete the circle (**Delete circle**)\n- choose who gets medication reminders\n- make or remove a manager\n- pay for Premium for the circle\n\n## Manager\n\nA manager is a caregiver the owner has chosen to help run the circle. Managers can:\n\n- invite people, and resend or cancel any pending invitation\n- see the pending invitations\n- remove caregivers from the circle (never the owner or another manager)\n- put someone else on a care shift or take someone off one (see [Plan who is on care shifts](/help/care-shifts/))\n\nManagers cannot change the circle's details, delete the circle, choose who gets medication reminders, handle billing, or make other managers. A circle can have more than one manager.\n\nTo make someone a manager, the owner opens the circle, taps the person in the list of members (on the web, uses the menu on their row in **Members**), and chooses **Make manager**. To undo it, choose **Remove as manager**. The person stays in the circle as a caregiver.\n\nGood to know:\n\n- Managers are a Premium feature. It follows the owner's plan, so only the owner needs Premium. If the owner's Premium ends, every manager goes back to being a caregiver. Invitations they already sent stay valid. If the owner subscribes again, the owner has to choose managers again.\n- The care recipient and view-only members cannot be managers.\n- Seat limits are still the owner's. On the free plan the circle has room for the owner plus 1 caregiver, whoever sends the invitation.\n- A manager sees the manager tools in CircleCare 1.3.0 or later, and on the website. Older app versions show a manager as a regular caregiver.\n\n## Caregiver\n\nFamily, friends and paid caregivers who help. When you invite someone, this is the **Family caregiver** choice. Caregivers can see and update care information: medications, doses, appointments, tasks, notes, vitals, documents and emergency info. A caregiver can leave a circle at any time with **Leave circle**, at the bottom of Today.\n\n## Care recipient\n\nThe person being cared for. If they join with their own account, they get medication reminders and can confirm when they have taken a dose, and the family is notified. A circle has at most one care recipient. They do not count toward the free plan's caregiver limit. In a circle you create for yourself (\"Myself\"), you are both the owner and the care recipient.\n\n## View-only\n\nA person with view-only access can see everything in the circle but cannot make changes. They see a \"You have view-only access\" notice, and the **New** button is dimmed. This happens when:\n\n- a free circle has more caregivers than the free plan allows, for example after the owner's Premium ends. The caregiver who joined first keeps editing, and the others become view-only.\n- the owner's Premium ended while they had more than one circle. The circles they did not keep become read-only for everyone.\n\nWhen the owner upgrades again, editing comes back for everyone. Nothing is deleted. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Where this is enforced\n\nThese rules are checked on CircleCare's servers, not only in the app. Someone without permission cannot get around them by using a different device or the website.",
+        "body": "## Circle owner\n\nThe person who created the circle. The owner can invite people, cancel or resend invitations, and remove members, and is the only one who can:\n\n- change the circle's details (**Edit circle**)\n- delete the circle (**Delete circle**)\n- choose who gets medication reminders\n- make or remove a manager\n- pay for Premium for the circle\n\n## Manager\n\nA manager is a caregiver the owner has chosen to help run the circle. Managers can:\n\n- invite people, and resend or cancel any pending invitation\n- see the pending invitations\n- remove caregivers from the circle (never the owner or another manager)\n- put someone else on a care shift or take someone off one (see [Plan who is on care shifts](/help/care-shifts/))\n\nManagers cannot change the circle's details, delete the circle, choose who gets medication reminders, handle billing, or make other managers. A circle can have more than one manager.\n\nTo make someone a manager, the owner opens the circle, taps the person in the list of members (on the web, uses the menu on their row in **Members**), and chooses **Make manager**. To undo it, choose **Remove as manager**. The person stays in the circle as a caregiver.\n\nGood to know:\n\n- Managers are a Premium feature. It follows the owner's plan, so only the owner needs Premium. If the owner's Premium ends, every manager goes back to being a caregiver. Invitations they already sent stay valid. If the owner subscribes again, the owner has to choose managers again.\n- The care recipient and view-only members cannot be managers.\n- Seat limits are still the owner's. On the free plan the circle has room for the owner plus 1 caregiver, whoever sends the invitation.\n- A manager sees the manager tools in CircleCare 1.3.0 or later, and on the website. Older app versions show a manager as a regular caregiver.\n\n## Caregiver\n\nFamily, friends and paid caregivers who help. When you invite someone, this is the **Caregiver** choice. Caregivers can see and update care information: medications, doses, appointments, tasks, notes, vitals, documents and emergency info. A caregiver can leave a circle at any time with **Leave circle**, at the bottom of Today.\n\n## Care recipient\n\nThe person being cared for. If they join with their own account, they get medication reminders and can confirm when they have taken a dose, and the family is notified. A circle has at most one care recipient. They do not count toward the free plan's caregiver limit. In a circle you create for yourself (\"Myself\"), you are both the owner and the care recipient.\n\n## View-only\n\nA person with view-only access can see everything in the circle but cannot make changes. They see a \"You have view-only access\" notice, and the **New** button is dimmed. This happens when:\n\n- a free circle has more caregivers than the free plan allows, for example after the owner's Premium ends. The caregiver who joined first keeps editing, and the others become view-only.\n- the owner's Premium ended while they had more than one circle. The circles they did not keep become read-only for everyone.\n\nWhen the owner upgrades again, editing comes back for everyone. Nothing is deleted. See [What is free and what Premium adds](/help/free-and-premium/).\n\n## Where this is enforced\n\nThese rules are checked on CircleCare's servers, not only in the app. Someone without permission cannot get around them by using a different device or the website.",
         "related": [
           "invite-family",
           "free-and-premium",
@@ -188,7 +188,7 @@
         ],
         "video": {
           "file": "roles-and-permissions-en.mp4",
-          "durationSec": 60
+          "durationSec": 66
         },
         "poster": "roles-and-permissions-en.jpg"
       },
@@ -449,7 +449,7 @@
         ],
         "video": {
           "file": "routine-reminders-en.mp4",
-          "durationSec": 99
+          "durationSec": 94
         },
         "poster": "routine-reminders-en.jpg"
       },
@@ -484,7 +484,7 @@
         ],
         "video": {
           "file": "appointments-en.mp4",
-          "durationSec": 101
+          "durationSec": 152
         },
         "poster": "appointments-en.jpg"
       },
@@ -519,7 +519,7 @@
         ],
         "video": {
           "file": "tasks-en.mp4",
-          "durationSec": 81
+          "durationSec": 92
         },
         "poster": "tasks-en.jpg"
       },
@@ -554,7 +554,7 @@
         ],
         "video": {
           "file": "care-shifts-en.mp4",
-          "durationSec": 124
+          "durationSec": 123
         },
         "poster": "care-shifts-en.jpg"
       },
@@ -587,7 +587,7 @@
         ],
         "video": {
           "file": "doctor-visits-and-notes-en.mp4",
-          "durationSec": 91
+          "durationSec": 85
         },
         "poster": "doctor-visits-and-notes-en.jpg"
       },
@@ -622,7 +622,7 @@
         ],
         "video": {
           "file": "daily-care-notes-en.mp4",
-          "durationSec": 63
+          "durationSec": 59
         },
         "poster": "daily-care-notes-en.jpg"
       },
@@ -654,7 +654,7 @@
         ],
         "video": {
           "file": "find-older-notes-en.mp4",
-          "durationSec": 84
+          "durationSec": 83
         },
         "poster": "find-older-notes-en.jpg"
       },
@@ -689,7 +689,7 @@
         ],
         "video": {
           "file": "care-info-and-summary-en.mp4",
-          "durationSec": 77
+          "durationSec": 76
         },
         "poster": "care-info-and-summary-en.jpg"
       },
@@ -724,7 +724,7 @@
         ],
         "video": {
           "file": "documents-en.mp4",
-          "durationSec": 75
+          "durationSec": 57
         },
         "poster": "documents-en.jpg"
       },
@@ -759,7 +759,7 @@
         ],
         "video": {
           "file": "vitals-en.mp4",
-          "durationSec": 70
+          "durationSec": 65
         },
         "poster": "vitals-en.jpg"
       },
@@ -794,7 +794,7 @@
         ],
         "video": {
           "file": "export-your-data-en.mp4",
-          "durationSec": 54
+          "durationSec": 44
         },
         "poster": "export-your-data-en.jpg"
       },
@@ -866,7 +866,7 @@
         ],
         "video": {
           "file": "log-a-past-incident-en.mp4",
-          "durationSec": 56
+          "durationSec": 60
         },
         "poster": "log-a-past-incident-en.jpg"
       },
@@ -902,7 +902,7 @@
         ],
         "video": {
           "file": "notifications-not-arriving-en.mp4",
-          "durationSec": 68
+          "durationSec": 79
         },
         "poster": "notifications-not-arriving-en.jpg"
       },
@@ -965,7 +965,7 @@
         ],
         "video": {
           "file": "free-and-premium-en.mp4",
-          "durationSec": 107
+          "durationSec": 96
         },
         "poster": "free-and-premium-en.jpg"
       },
@@ -998,7 +998,7 @@
         ],
         "video": {
           "file": "second-circle-en.mp4",
-          "durationSec": 67
+          "durationSec": 79
         },
         "poster": "second-circle-en.jpg"
       },
@@ -1080,7 +1080,7 @@
         ],
         "video": {
           "file": "privacy-and-security-en.mp4",
-          "durationSec": 80
+          "durationSec": 83
         },
         "poster": "privacy-and-security-en.jpg"
       }
@@ -1116,7 +1116,7 @@
         ],
         "video": {
           "file": "create-a-care-circle-es.mp4",
-          "durationSec": 55
+          "durationSec": 74
         },
         "poster": "create-a-care-circle-es.jpg"
       },
@@ -1128,11 +1128,11 @@
         "steps": [
           "Abre el círculo y quédate en la pestaña \"Hoy\".",
           "Baja hasta \"Equipo de cuidado\" y toca \"Agregar familiar\".",
-          "En \"¿A quién estás invitando?\", elige \"Cuidador familiar\" o \"Receptor de cuidado\".",
+          "En \"¿A quién estás invitando?\", elige \"Cuidador\" o \"Receptor de cuidado\".",
           "Escribe su correo electrónico y toca \"Enviar invitación\".",
           "Si quieres, toca \"Compartir enlace de invitación\" o \"Copiar enlace\" para mandarlo por mensaje o chat, y así pueda unirse de inmediato."
         ],
-        "body": "## Qué recibe la persona invitada\n\nCircleCare le manda un correo con un enlace y un código de invitación. Si abre el enlace en un celular que tiene CircleCare, se abre la app. Si no tiene la app, el enlace se abre en su navegador y puede unirse desde ahí. Necesita una cuenta gratuita. Consulta [Únete a un círculo al que te invitaron](/help/join-a-circle/).\n\n## Cuidador o receptor de cuidado\n\n- **Cuidador familiar** es para cualquier persona que ayuda con el cuidado: alguien de la familia, un amigo o un cuidador pagado.\n- **Receptor de cuidado** es la persona a la que cuidan. Se une con su propia cuenta y recibe los recordatorios de medicamentos, salvo que otro miembro esté asignado para recibirlos. Puede confirmar cada dosis. Un círculo solo puede tener un receptor de cuidado. El círculo funciona aunque esa persona no tenga cuenta.\n\n## Límites del plan gratuito\n\n- Un círculo gratuito te incluye a ti y a 1 cuidador. Una invitación pendiente ocupa ese lugar hasta que la aceptan, la cancelas o vence.\n- Si el lugar está ocupado por una invitación pendiente, la app muestra \"Tu invitación ya está en uso\". Cancela esa invitación para liberar el lugar, o mejora tu plan.\n- Invitar al receptor de cuidado nunca tiene límite. No cuenta dentro del límite de cuidadores.\n- Con Premium puedes invitar a todos los cuidadores que necesites. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Invitaciones pendientes\n\nLas invitaciones duran 7 días. En \"Equipo de cuidado\", la sección \"Invitaciones pendientes\" muestra cada una y cuándo vence. Cuando una invitación ya venció, toca \"Reenviar\" para mandarla otra vez por 7 días más. Para retirar una, toca la X junto a ella.\n\n## Bueno saber\n\n- Si todavía no hay nadie más en el círculo, la tarjeta de **Siguiente paso** en Hoy también tiene el botón **Invitar**.\n- Solo el propietario del círculo y los gestores pueden invitar. Los demás cuidadores no pueden enviar invitaciones. Consulta [Propietario, cuidadores, receptor de cuidado y solo lectura](/help/roles-and-permissions/).\n- Desde la computadora, en my.circlecare.app, abre el círculo, entra a \"Miembros\" y luego a \"Invitar miembro\".",
+        "body": "## Qué recibe la persona invitada\n\nCircleCare le manda un correo con un enlace y un código de invitación. Si abre el enlace en un celular que tiene CircleCare, se abre la app. Si no tiene la app, el enlace se abre en su navegador y puede unirse desde ahí. Necesita una cuenta gratuita. Consulta [Únete a un círculo al que te invitaron](/help/join-a-circle/).\n\n## Cuidador o receptor de cuidado\n\n- **Cuidador** es para cualquier persona que ayuda con el cuidado: alguien de la familia, un amigo o un cuidador pagado.\n- **Receptor de cuidado** es la persona a la que cuidan. Se une con su propia cuenta y recibe los recordatorios de medicamentos, salvo que otro miembro esté asignado para recibirlos. Puede confirmar cada dosis. Un círculo solo puede tener un receptor de cuidado. El círculo funciona aunque esa persona no tenga cuenta.\n\n## Límites del plan gratuito\n\n- Un círculo gratuito te incluye a ti y a 1 cuidador. Una invitación pendiente ocupa ese lugar hasta que la aceptan, la cancelas o vence.\n- Si el lugar está ocupado por una invitación pendiente, la app muestra \"Tu invitación ya está en uso\". Cancela esa invitación para liberar el lugar, o mejora tu plan.\n- Invitar al receptor de cuidado nunca tiene límite. No cuenta dentro del límite de cuidadores.\n- Con Premium puedes invitar a todos los cuidadores que necesites. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Invitaciones pendientes\n\nLas invitaciones duran 7 días. En \"Equipo de cuidado\", la sección \"Invitaciones pendientes\" muestra cada una y cuándo vence. Cuando una invitación ya venció, toca \"Reenviar\" para mandarla otra vez por 7 días más. Para retirar una, toca la X junto a ella.\n\n## Bueno saber\n\n- Si todavía no hay nadie más en el círculo, la tarjeta de **Siguiente paso** en Hoy también tiene el botón **Invitar**.\n- Solo el propietario del círculo y los gestores pueden invitar. Los demás cuidadores no pueden enviar invitaciones. Consulta [Propietario, cuidadores, receptor de cuidado y solo lectura](/help/roles-and-permissions/).\n- Desde la computadora, en my.circlecare.app, abre el círculo, entra a \"Miembros\" y luego a \"Invitar miembro\".",
         "related": [
           "join-a-circle",
           "roles-and-permissions",
@@ -1151,7 +1151,7 @@
         ],
         "video": {
           "file": "invite-family-es.mp4",
-          "durationSec": 55
+          "durationSec": 63
         },
         "poster": "invite-family-es.jpg"
       },
@@ -1186,7 +1186,7 @@
         ],
         "video": {
           "file": "join-a-circle-es.mp4",
-          "durationSec": 118
+          "durationSec": 132
         },
         "poster": "join-a-circle-es.jpg"
       },
@@ -1195,7 +1195,7 @@
         "category": "getting-started",
         "title": "Propietario, cuidadores, receptor de cuidado y solo lectura",
         "summary": "Cada círculo tiene un propietario, que es quien lo creó. Los cuidadores pueden ver y actualizar la información de cuidado. Un gestor es un cuidador que además puede invitar y quitar personas. El receptor de cuidado recibe recordatorios y confirma sus dosis. Solo lectura significa que puedes ver todo pero no hacer cambios.",
-        "body": "## Propietario del círculo\n\nEs la persona que creó el círculo. El propietario puede invitar personas, cancelar o reenviar invitaciones y quitar miembros, y es el único que puede:\n\n- cambiar los datos del círculo (**Editar círculo**)\n- eliminar el círculo (**Eliminar círculo**)\n- elegir quién recibe los recordatorios de medicamentos\n- dar o quitar el rol de gestor\n- pagar Premium para el círculo\n\n## Gestor\n\nUn gestor es un cuidador a quien el propietario eligió para ayudar a administrar el círculo. Los gestores pueden:\n\n- invitar personas, y reenviar o cancelar cualquier invitación pendiente\n- ver las invitaciones pendientes\n- quitar cuidadores del círculo (nunca al propietario ni a otro gestor)\n- poner a otra persona en un turno de cuidado o quitarla de uno (consulta [Organiza quién cubre cada turno de cuidado](/help/care-shifts/))\n\nLos gestores no pueden cambiar los datos del círculo, eliminar el círculo, elegir quién recibe los recordatorios de medicamentos, manejar la facturación ni dar el rol de gestor a otras personas. Un círculo puede tener más de un gestor.\n\nPara dar el rol de gestor a alguien, el propietario abre el círculo, toca a la persona en la lista de miembros (en la web, usa el menú de su fila en **Miembros**) y elige **Dar rol de gestor**. Para deshacerlo, elige **Quitar rol de gestor**. La persona sigue en el círculo como cuidador.\n\nConviene saber:\n\n- Los gestores son una función Premium. Depende del plan del propietario, así que solo el propietario necesita Premium. Si se termina el Premium del propietario, todos los gestores vuelven a ser cuidadores. Las invitaciones que ya enviaron siguen vigentes. Si el propietario se suscribe de nuevo, tiene que elegir otra vez a los gestores.\n- El receptor de cuidado y los miembros de solo lectura no pueden ser gestores.\n- Los límites de lugares siguen siendo los del propietario. En el plan gratuito el círculo tiene espacio para el propietario y 1 cuidador, sin importar quién envíe la invitación.\n- Un gestor ve las herramientas de gestor en CircleCare 1.3.0 o posterior, y en el sitio web. Las versiones anteriores de la app muestran a un gestor como un cuidador normal.\n\n## Cuidador\n\nFamilia, amigos y cuidadores pagados que ayudan. Al invitar a alguien, es la opción **Cuidador familiar**. Los cuidadores pueden ver y actualizar la información de cuidado: medicamentos, dosis, citas, tareas, notas, signos vitales, documentos e información de emergencia. Un cuidador puede salir del círculo cuando quiera con **Salir del círculo**, al final de Hoy.\n\n## Receptor de cuidado\n\nEs la persona a la que cuidan. Si se une con su propia cuenta, recibe recordatorios de medicamentos y puede confirmar cuando tomó una dosis; la familia recibe el aviso. Un círculo tiene como máximo un receptor de cuidado, y no cuenta dentro del límite de cuidadores del plan gratuito. En un círculo que creas para ti (\"A mí\"), eres a la vez propietario y receptor de cuidado.\n\n## Solo lectura\n\nUna persona con acceso de solo lectura puede ver todo en el círculo, pero no puede hacer cambios. Ve el aviso \"Tienes acceso de solo lectura\" y el botón **Nuevo** aparece atenuado. Esto pasa cuando:\n\n- un círculo gratuito tiene más cuidadores de los que permite el plan gratuito, por ejemplo cuando se termina el Premium del propietario. El cuidador que se unió primero sigue editando y los demás quedan en solo lectura.\n- se terminó el Premium del propietario y tenía más de un círculo. Los círculos que no conservó quedan en solo lectura para todos.\n\nCuando el propietario vuelve a suscribirse, todos pueden editar otra vez. No se borra nada. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Dónde se aplican estas reglas\n\nEstas reglas se revisan en los servidores de CircleCare, no solo en la app. Nadie sin permiso puede saltárselas usando otro dispositivo o el sitio web.",
+        "body": "## Propietario del círculo\n\nEs la persona que creó el círculo. El propietario puede invitar personas, cancelar o reenviar invitaciones y quitar miembros, y es el único que puede:\n\n- cambiar los datos del círculo (**Editar círculo**)\n- eliminar el círculo (**Eliminar círculo**)\n- elegir quién recibe los recordatorios de medicamentos\n- dar o quitar el rol de gestor\n- pagar Premium para el círculo\n\n## Gestor\n\nUn gestor es un cuidador a quien el propietario eligió para ayudar a administrar el círculo. Los gestores pueden:\n\n- invitar personas, y reenviar o cancelar cualquier invitación pendiente\n- ver las invitaciones pendientes\n- quitar cuidadores del círculo (nunca al propietario ni a otro gestor)\n- poner a otra persona en un turno de cuidado o quitarla de uno (consulta [Organiza quién cubre cada turno de cuidado](/help/care-shifts/))\n\nLos gestores no pueden cambiar los datos del círculo, eliminar el círculo, elegir quién recibe los recordatorios de medicamentos, manejar la facturación ni dar el rol de gestor a otras personas. Un círculo puede tener más de un gestor.\n\nPara dar el rol de gestor a alguien, el propietario abre el círculo, toca a la persona en la lista de miembros (en la web, usa el menú de su fila en **Miembros**) y elige **Dar rol de gestor**. Para deshacerlo, elige **Quitar rol de gestor**. La persona sigue en el círculo como cuidador.\n\nConviene saber:\n\n- Los gestores son una función Premium. Depende del plan del propietario, así que solo el propietario necesita Premium. Si se termina el Premium del propietario, todos los gestores vuelven a ser cuidadores. Las invitaciones que ya enviaron siguen vigentes. Si el propietario se suscribe de nuevo, tiene que elegir otra vez a los gestores.\n- El receptor de cuidado y los miembros de solo lectura no pueden ser gestores.\n- Los límites de lugares siguen siendo los del propietario. En el plan gratuito el círculo tiene espacio para el propietario y 1 cuidador, sin importar quién envíe la invitación.\n- Un gestor ve las herramientas de gestor en CircleCare 1.3.0 o posterior, y en el sitio web. Las versiones anteriores de la app muestran a un gestor como un cuidador normal.\n\n## Cuidador\n\nFamilia, amigos y cuidadores pagados que ayudan. Al invitar a alguien, es la opción **Cuidador**. Los cuidadores pueden ver y actualizar la información de cuidado: medicamentos, dosis, citas, tareas, notas, signos vitales, documentos e información de emergencia. Un cuidador puede salir del círculo cuando quiera con **Salir del círculo**, al final de Hoy.\n\n## Receptor de cuidado\n\nEs la persona a la que cuidan. Si se une con su propia cuenta, recibe recordatorios de medicamentos y puede confirmar cuando tomó una dosis; la familia recibe el aviso. Un círculo tiene como máximo un receptor de cuidado, y no cuenta dentro del límite de cuidadores del plan gratuito. En un círculo que creas para ti (\"A mí\"), eres a la vez propietario y receptor de cuidado.\n\n## Solo lectura\n\nUna persona con acceso de solo lectura puede ver todo en el círculo, pero no puede hacer cambios. Ve el aviso \"Tienes acceso de solo lectura\" y el botón **Nuevo** aparece atenuado. Esto pasa cuando:\n\n- un círculo gratuito tiene más cuidadores de los que permite el plan gratuito, por ejemplo cuando se termina el Premium del propietario. El cuidador que se unió primero sigue editando y los demás quedan en solo lectura.\n- se terminó el Premium del propietario y tenía más de un círculo. Los círculos que no conservó quedan en solo lectura para todos.\n\nCuando el propietario vuelve a suscribirse, todos pueden editar otra vez. No se borra nada. Consulta [Qué es gratis y qué agrega Premium](/help/free-and-premium/).\n\n## Dónde se aplican estas reglas\n\nEstas reglas se revisan en los servidores de CircleCare, no solo en la app. Nadie sin permiso puede saltárselas usando otro dispositivo o el sitio web.",
         "related": [
           "invite-family",
           "free-and-premium",
@@ -1214,7 +1214,7 @@
         ],
         "video": {
           "file": "roles-and-permissions-es.mp4",
-          "durationSec": 61
+          "durationSec": 69
         },
         "poster": "roles-and-permissions-es.jpg"
       },
@@ -1475,7 +1475,7 @@
         ],
         "video": {
           "file": "routine-reminders-es.mp4",
-          "durationSec": 100
+          "durationSec": 92
         },
         "poster": "routine-reminders-es.jpg"
       },
@@ -1510,7 +1510,7 @@
         ],
         "video": {
           "file": "appointments-es.mp4",
-          "durationSec": 121
+          "durationSec": 149
         },
         "poster": "appointments-es.jpg"
       },
@@ -1545,7 +1545,7 @@
         ],
         "video": {
           "file": "tasks-es.mp4",
-          "durationSec": 81
+          "durationSec": 84
         },
         "poster": "tasks-es.jpg"
       },
@@ -1580,7 +1580,7 @@
         ],
         "video": {
           "file": "care-shifts-es.mp4",
-          "durationSec": 124
+          "durationSec": 125
         },
         "poster": "care-shifts-es.jpg"
       },
@@ -1613,7 +1613,7 @@
         ],
         "video": {
           "file": "doctor-visits-and-notes-es.mp4",
-          "durationSec": 92
+          "durationSec": 89
         },
         "poster": "doctor-visits-and-notes-es.jpg"
       },
@@ -1648,7 +1648,7 @@
         ],
         "video": {
           "file": "daily-care-notes-es.mp4",
-          "durationSec": 57
+          "durationSec": 58
         },
         "poster": "daily-care-notes-es.jpg"
       },
@@ -1680,7 +1680,7 @@
         ],
         "video": {
           "file": "find-older-notes-es.mp4",
-          "durationSec": 81
+          "durationSec": 93
         },
         "poster": "find-older-notes-es.jpg"
       },
@@ -1715,7 +1715,7 @@
         ],
         "video": {
           "file": "care-info-and-summary-es.mp4",
-          "durationSec": 74
+          "durationSec": 75
         },
         "poster": "care-info-and-summary-es.jpg"
       },
@@ -1750,7 +1750,7 @@
         ],
         "video": {
           "file": "documents-es.mp4",
-          "durationSec": 79
+          "durationSec": 55
         },
         "poster": "documents-es.jpg"
       },
@@ -1820,7 +1820,7 @@
         ],
         "video": {
           "file": "export-your-data-es.mp4",
-          "durationSec": 61
+          "durationSec": 45
         },
         "poster": "export-your-data-es.jpg"
       },
@@ -1892,7 +1892,7 @@
         ],
         "video": {
           "file": "log-a-past-incident-es.mp4",
-          "durationSec": 56
+          "durationSec": 60
         },
         "poster": "log-a-past-incident-es.jpg"
       },
@@ -1928,7 +1928,7 @@
         ],
         "video": {
           "file": "notifications-not-arriving-es.mp4",
-          "durationSec": 68
+          "durationSec": 79
         },
         "poster": "notifications-not-arriving-es.jpg"
       },
@@ -1991,7 +1991,7 @@
         ],
         "video": {
           "file": "free-and-premium-es.mp4",
-          "durationSec": 95
+          "durationSec": 96
         },
         "poster": "free-and-premium-es.jpg"
       },
@@ -2024,7 +2024,7 @@
         ],
         "video": {
           "file": "second-circle-es.mp4",
-          "durationSec": 69
+          "durationSec": 78
         },
         "poster": "second-circle-es.jpg"
       },
@@ -2106,7 +2106,7 @@
         ],
         "video": {
           "file": "privacy-and-security-es.mp4",
-          "durationSec": 81
+          "durationSec": 83
         },
         "poster": "privacy-and-security-es.jpg"
       }

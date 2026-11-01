@@ -30,7 +30,7 @@
       "accent": "turno per turno."
     }
   },
-  "subtitle": "Tutto ciò che serve alla tua famiglia per coordinare la cura, per ogni cerchia di cui fai parte.",
+  "subtitle": "Tutto ciò che ti serve per coordinare la cura, per ogni cerchia di cui fai parte.",
   "trialHook": "Inizia con una prova gratuita: oggi non paghi nulla.",
   "benefits": {
     "caregivers": {
@@ -55,7 +55,7 @@
     },
     "circles": {
       "title": "Fino a 5 cerchie di cura",
-      "sub": "Una per la mamma, per il papà o per tutta la famiglia"
+      "sub": "Una per ogni persona di cui ti prendi cura"
     }
   },
   "plans": {
@@ -122,7 +122,7 @@
     "year_other": "{{count}} anni"
   },
   "onboarding": {
-    "subtitle": "Tutto ciò che serve alla tua famiglia per coordinare la cura delle persone più importanti.",
+    "subtitle": "Tutto ciò che ti serve per coordinare la cura delle persone più importanti.",
     "continueFree": "Continua con il piano gratuito",
     "continueFreeSub": "1 cerchia, 2 caregiver: puoi passare a Premium quando vuoi",
     "notNow": "Non ora"

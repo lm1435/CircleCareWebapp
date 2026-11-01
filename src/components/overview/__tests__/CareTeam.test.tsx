@@ -448,15 +448,27 @@ describe('CareTeam — manager role', () => {
     expect(within(named).getByText('Manager')).toBeInTheDocument();
     // Same filled moss badge as the owner (owner decision 2026-10-18), not dusk.
     expect(within(named).getByText('Manager')).toHaveClass('bg-moss-soft', 'text-moss-deep');
-    // Unnamed: the role line reads Manager (not "Family member").
+    // Unnamed: the role line reads Manager (not "Member").
     expect(screen.getAllByText('Manager')).toHaveLength(2);
-    expect(screen.queryByText('Family member')).toBeNull();
+    expect(screen.queryByText('Member')).toBeNull();
   });
 
   it('an unnamed owner\'s role line reads "Circle owner" (never "admin")', () => {
     renderTeam({ members: [member({ id: OWNER, role: 'owner', email: 'o@example.com' })] });
     expect(screen.getByText('Circle owner')).toBeInTheDocument();
     expect(screen.queryByText(/admin/i)).toBeNull();
+  });
+
+  // Owner copy 1.4.0: role names never assume relatives. "Family member" -> "Member".
+  it('an unnamed caregiver\'s role line reads "Member" (never "Family member")', () => {
+    renderTeam({
+      members: [
+        member({ id: OWNER, first_name: 'Pat', role: 'owner' }),
+        member({ id: 'u-c', role: 'member', email: 'c@example.com' }),
+      ],
+    });
+    expect(screen.getByText('Member')).toBeInTheDocument();
+    expect(screen.queryByText(/Family member/i)).toBeNull();
   });
 
   it('shows the Owner pill on the owner row only, in the Manager pill\'s filled style', () => {
