@@ -135,6 +135,55 @@ test('create a task on the recipient\'s tomorrow at 7:15 AM their time, weekly, 
   }
 });
 
+/** Minutes the recipient's clock runs ahead of the viewer's at the instant `day` 12:00Z (wrapped to 0..1439). */
+function recipientAheadMinutes(day: string): number {
+  const at = new Date(`${day}T12:00:00Z`);
+  const clock = (zone: string) => {
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', hour: 'numeric', minute: 'numeric' })
+        .formatToParts(at)
+        .map((x) => [x.type, x.value])
+    );
+    return (+p.hour % 24) * 60 + +p.minute;
+  };
+  return (((clock(RECIPIENT_TZ) - clock(VIEWER_TZ)) % 1440) + 1440) % 1440;
+}
+
+test('"2 hrs" on a start that is the BROWSER\'s 10:30 PM saves the full 120 minutes (was capped at the browser\'s 23:59: 89)', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  const a = await arrange(request, 'taskdur');
+  await cookieLogin(context, a.owner, baseURL);
+  const title = `ZZ_E2E_TASK_DURATION_${uniqueSuffix()}`;
+  const tomorrow = recipientDay(1);
+  // The recipient clock that reads as the browser's 22:30 (today: Auckland 18:30 = Denver 22:30).
+  const total = (22 * 60 + 30 + recipientAheadMinutes(tomorrow)) % 1440;
+  const start = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  try {
+    const dialog = await openNewTask(page, a.circleId);
+    await dialog.locator('#title').fill(title);
+    await dialog.getByRole('radiogroup', { name: 'When?' }).getByRole('radio', { name: `Tomorrow, ${shortDay(tomorrow)}` }).click();
+    await dialog.getByRole('button', { name: 'Pick a time' }).click();
+    await dialog.locator('#scheduled_time').fill(start);
+    await dialog.getByRole('button', { name: /^More details/ }).click();
+    await dialog.getByRole('radio', { name: '2 hrs' }).click();
+    await expect(dialog.getByRole('radio', { name: '2 hrs' })).toBeChecked();
+    await dialog.getByRole('button', { name: 'Add task' }).click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+
+    await expect.poll(() => taskRows(a.circleId, title).length, { timeout: 15_000 }).toBe(1);
+    const [row] = taskRows(a.circleId, title);
+    expect(row.scheduled_date).toBe(tomorrow);
+    expect(row.scheduled_time?.slice(0, 5)).toBe(start);
+    expect(row.duration_minutes).toBe(120);
+  } finally {
+    sqlExec(`delete from calendar_events where circle_id = ${sqlStr(a.circleId)}::uuid and title = ${sqlStr(title)};`);
+  }
+});
+
 test.describe('at phone width', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 

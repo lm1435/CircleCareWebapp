@@ -442,7 +442,7 @@
     "description": "20 minutes",
     "scheduled_date": "2027-02-15",
     "scheduled_time": "18:30",
-    "duration_minutes": 89,
+    "duration_minutes": 120,
     "notifications_enabled": true,
     "reminder_at_due": false,
     "reminder_24h": false,

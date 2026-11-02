@@ -10,6 +10,7 @@ import {
   hydratedReminder15m,
   matchingDurationIndex,
   minutesBetween,
+  presetEndTimeStr,
   shiftEndTimeStr,
   spanMinutes,
   reminderFlagsForSave,
@@ -330,6 +331,36 @@ describe('addMinutesToTimeStr', () => {
   it('returns empty for a malformed time', () => {
     expect(addMinutesToTimeStr('', 30)).toBe('');
     expect(addMinutesToTimeStr('not-a-time', 30)).toBe('');
+  });
+});
+
+describe('presetEndTimeStr: the chip length on the RECIPIENT clock, laid onto the viewer start', () => {
+  it('same clock on both sides (same zone, or no recipient clock yet): exactly addMinutesToTimeStr', () => {
+    for (const start of ['00:00', '09:45', '14:00', '22:00', '22:30', '23:00', '23:45', '23:50', '23:59']) {
+      for (const mins of [...DURATION_PRESETS, 7, 600]) {
+        expect(presetEndTimeStr(start, start, mins)).toBe(addMinutesToTimeStr(start, mins));
+        expect(presetEndTimeStr(start, '', mins)).toBe(addMinutesToTimeStr(start, mins));
+      }
+    }
+  });
+
+  it("the viewer's late evening is not the recipient's: the full length, rolling over the viewer's midnight", () => {
+    // Denver viewer 22:30, Auckland recipient 18:30: was 23:59 (89 minutes).
+    expect(presetEndTimeStr('22:30', '18:30', 120)).toBe('00:30');
+    expect(spanMinutes('22:30', presetEndTimeStr('22:30', '18:30', 120))).toBe(120);
+  });
+
+  it("past the recipient's midnight: carried to the next day (mobile's rule), the full length", () => {
+    // Denver viewer 03:00, Auckland recipient 23:00 + 2 hrs.
+    expect(presetEndTimeStr('03:00', '23:00', 120)).toBe('05:00');
+    for (const mins of DURATION_PRESETS) {
+      expect(spanMinutes('23:30', presetEndTimeStr('23:30', '02:30', mins))).toBe(mins);
+    }
+  });
+
+  it('returns empty for a malformed viewer start', () => {
+    expect(presetEndTimeStr('', '10:00', 30)).toBe('');
+    expect(presetEndTimeStr('nope', '10:00', 30)).toBe('');
   });
 });
 

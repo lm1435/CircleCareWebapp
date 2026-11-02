@@ -51,7 +51,6 @@ import { deriveTitleSuggestions } from '@/lib/titleSuggestions';
 import {
   DEFAULT_DURATION_MINUTES,
   DURATION_PRESETS,
-  addMinutesToTimeStr,
   assignedToForSave,
   defaultReminder15mFor,
   hydratedReminder15m,
@@ -59,6 +58,7 @@ import {
   reminderFlagsForSave,
   remindersApply,
   shiftEndTimeStr,
+  presetEndTimeStr,
   spanMinutes,
 } from '@/lib/eventForm';
 import { INPUT_ERROR } from '@/components/ui/inputStyles';
@@ -325,10 +325,10 @@ const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
 /**
  * The viewer's end time for a stored `duration_minutes`, ROLLING OVER midnight.
  *
- * Deliberately NOT `addMinutesToTimeStr`, which clamps at 23:59. That clamp is
- * right where it is used — prefilling a default end when the user picks a start
- * — because it keeps the picker inside the one day the event has. It is wrong
- * here, because this is reconstructing a duration that was already stored.
+ * Deliberately NOT `addMinutesToTimeStr`, which clamps at 23:59. That clamp
+ * survives only for a duration chip / the default end while the viewer's clock
+ * reads the recipient's (`presetEndTimeStr`). It is wrong here, because this is
+ * reconstructing a duration that was already stored.
  *
  * With the clamp, a 22:00 appointment of 180 minutes hydrates as 23:59, passes
  * the `end > start` check, and an untouched Save writes `duration_minutes: 119`
@@ -1281,6 +1281,26 @@ function AddEventForm({
       return '';
     }
   }, [timezone, dateStr, timeStr, heldInstant]);
+  /**
+   * The end a duration chip or the default length gives the viewer-frame start `viewerStart`, the length counted
+   * on the RECIPIENT's clock, the frame the save is in (an end past midnight carries to the next day; the legacy
+   * 23:59 cap only where the two clocks agree): see `presetEndTimeStr`. A caller
+   * that has just resolved the recipient's wall clock for that start (and is setting the date in the same
+   * render, so `dateStr` here is still the old one) passes it as `knownRecipientStart`.
+   */
+  function presetEndFor(viewerStart: string, minutes: number, knownRecipientStart?: string): string {
+    let recipientStart = knownRecipientStart ?? '';
+    if (knownRecipientStart === undefined && timezone && dateStr && viewerStart) {
+      try {
+        recipientStart =
+          eventDatesForApi({ dateStr, timeStr: viewerStart, recurrenceEndDateStr: null, timezone, heldInstant })
+            .scheduledTime ?? '';
+      } catch {
+        recipientStart = '';
+      }
+    }
+    return presetEndTimeStr(viewerStart, recipientStart, minutes);
+  }
   /** The time chip the form's time sits on, or null ("Other time" / no time). */
   const litChip = chipForTime(recipientClock);
   // The simple medication form's time field ("Other time"). Once it is showing (an edit's stored
@@ -2466,7 +2486,7 @@ function AddEventForm({
    * end; a moved start moves the end (the duration is kept, PK21); a first start gets the default duration,
    * except on an edit of a row saved without one. A medication has no end.
    */
-  function followEndTime(prevStart: string, nextStart: string): void {
+  function followEndTime(prevStart: string, nextStart: string, nextRecipientStart?: string): void {
     if (!nextStart) {
       setEndTimeStr('');
     } else if (!isMedication && endTimeStr && prevStart) {
@@ -2474,7 +2494,7 @@ function AddEventForm({
       if (shifted) setEndTimeStr(shifted);
       clearError('endTime');
     } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
-      setEndTimeStr(addMinutesToTimeStr(nextStart, DEFAULT_DURATION_MINUTES));
+      setEndTimeStr(presetEndFor(nextStart, DEFAULT_DURATION_MINUTES, nextRecipientStart));
       clearError('endTime');
     }
   }
@@ -2588,7 +2608,7 @@ function AddEventForm({
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
     // A task's end follows its start exactly as the full form's time field made it (the med form has none).
-    if (!isMedication) followEndTime(timeStr, viewer.timeStr);
+    if (!isMedication) followEndTime(timeStr, viewer.timeStr, next);
   }
 
   /**
@@ -2611,7 +2631,7 @@ function AddEventForm({
     setDateStr(viewer.dateStr);
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
-    followEndTime(timeStr, viewer.timeStr);
+    followEndTime(timeStr, viewer.timeStr, recipientClock);
   }
 
   function openOtherDay(): void {
@@ -3009,7 +3029,7 @@ function AddEventForm({
               })()}
               onChange={(next) => {
                 if (!next) return;
-                setEndTimeStr(addMinutesToTimeStr(timeStr, Number(next)));
+                setEndTimeStr(presetEndFor(timeStr, Number(next)));
                 clearError('endTime');
               }}
             />
@@ -3326,7 +3346,7 @@ function AddEventForm({
               onChange={(next) => {
                 // Deselect is a no-op: once there is a start the end is required.
                 if (!next) return;
-                setEndTimeStr(addMinutesToTimeStr(timeStr, Number(next)));
+                setEndTimeStr(presetEndFor(timeStr, Number(next)));
                 clearError('endTime');
               }}
             />
@@ -3687,7 +3707,7 @@ function AddEventForm({
                 // An end time is required (the calendar renders these as
                 // blocks), so prefill the default rather than making the user
                 // supply a second value before they can save.
-                setEndTimeStr(addMinutesToTimeStr(next, DEFAULT_DURATION_MINUTES));
+                setEndTimeStr(presetEndFor(next, DEFAULT_DURATION_MINUTES));
                 clearError('endTime');
               }
             }}
@@ -3744,7 +3764,7 @@ function AddEventForm({
               // Deselect is a no-op: the end time is required once a start
               // time exists, so a chip can be changed but not cleared.
               if (!next) return;
-              setEndTimeStr(addMinutesToTimeStr(timeStr, Number(next)));
+              setEndTimeStr(presetEndFor(timeStr, Number(next)));
               clearError('endTime');
             }}
           />
