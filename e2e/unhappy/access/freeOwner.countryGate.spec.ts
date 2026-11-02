@@ -109,6 +109,11 @@ test.describe('account abroad, machine allowlisted', () => {
 
 test.describe('account details unreadable', () => {
   test.use({ timezoneId: 'America/Denver' });
+  // 1.4.0: the session-start sync writes the browser's zone into a NULL one, so this state heals itself a moment
+  // after load (the card then flips, a race); the spec is about the unreadable state, so the write is refused.
+  test.beforeEach(async ({ page }) => {
+    await refuseZoneSync(page);
+  });
 
   test('an account with no timezone shows retry, never the store card', async ({
     page,
