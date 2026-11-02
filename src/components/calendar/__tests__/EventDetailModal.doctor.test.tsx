@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -128,5 +128,38 @@ describe('EventDetailModal: the appointment doctor link', () => {
   it('only appointments carry the row', () => {
     renderModal(appt({ event_type: 'task', provider_id: PATEL_ID }));
     expect(screen.queryByRole('link', { name: /See all visits/ })).toBeNull();
+  });
+});
+
+// Stack-loop guard: visits -> appointment -> "See all visits" goes BACK, it does not push another copy.
+describe('EventDetailModal: doctor link when the appointment was opened from that doctor\'s visits', () => {
+  it('pops back to the visits entry instead of pushing (history never grows)', async () => {
+    const PROVIDER_PATH = `/circles/circle-1/providers/${PATEL_ID}`;
+    function Where() {
+      const loc = useLocation();
+      const type = useNavigationType();
+      return <div data-testid="where">{loc.pathname}{loc.search}|{type}</div>;
+    }
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: PROVIDER_PATH, state: { source: 'appointment' } },
+          { pathname: '/circles/circle-1/calendar', search: '?eventId=ev-1', state: { fromProviderId: PATEL_ID } },
+        ]}
+        initialIndex={1}
+      >
+        <Where />
+        <Routes>
+          <Route
+            path="/circles/:circleId/calendar"
+            element={<EventDetailModal event={appt({ provider_id: PATEL_ID })} careRecipientTimezone="America/Chicago" onClose={vi.fn()} />}
+          />
+          <Route path="/circles/:circleId/providers/:providerId" element={<h1>visits</h1>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await userEvent.click(screen.getByRole('link', { name: 'Dr. Patel · See all visits' }));
+    expect(screen.getByTestId('where')).toHaveTextContent(PROVIDER_PATH);
+    expect(screen.getByTestId('where')).toHaveTextContent('|POP');
   });
 });

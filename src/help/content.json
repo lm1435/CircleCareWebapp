@@ -562,15 +562,15 @@
         "slug": "doctor-visits-and-notes",
         "category": "calendar",
         "title": "See every visit and note for one doctor",
-        "summary": "Choose the doctor when you add or edit an appointment. Then open that doctor under Doctors to see the next visit, past visits and their notes in one place.",
+        "summary": "Choose the doctor when you add or edit an appointment. Then open that doctor under Doctors to see its upcoming visits, every note and past visits in one place.",
         "steps": [
           "Add the doctor under Doctors in the Health tab, if they aren't there yet.",
           "Add or edit an appointment and tap Doctor.",
           "Choose the doctor, or tap Add a doctor, then save the appointment.",
           "To see everything for that doctor, open Doctors and tap Visits & notes on their card.",
-          "Tap Add a note on any visit to write what was said."
+          "Tap Add a note on any visit, upcoming or past, to write what was said or a question to ask."
         ],
-        "body": "## What you see\n\n**Visits & notes** shows the **Next visit**, then **Past visits**, newest first, with each visit's notes. Tap **Show earlier visits** to go further back. From a linked appointment, **See all visits** opens the same page.\n\n## Good to know\n\n- **Free for everyone.**\n- **Past appointments are not linked for you.** CircleCare doesn't guess which doctor an old appointment was with. To add one, edit it and choose the doctor.\n- **Repeating appointments** use one doctor for the whole series.\n- **View-only members** can see visits and notes but can't add notes.\n- The web app has the same doctor picker and **Visits & notes** page.",
+        "body": "## What you see\n\n**Visits & notes** has three sections, each with a count. Tap a section's title to open or close it.\n\n- **Upcoming visits** (open) lists every visit still ahead, soonest first. You can add a note before a visit, for example questions to ask.\n- **Notes** (open) lists every note for this doctor, newest first, each labelled with its visit date. Tap a note to open that visit.\n- **Past visits** (closed) lists earlier visits, newest first. Tap **Show earlier visits** to go further back.\n\nEvery visit shows how many notes it has and an **Add a note** button. From a linked appointment, **See all visits** opens the same page.\n\n## Good to know\n\n- **Free for everyone.**\n- **Past appointments are not linked for you.** CircleCare doesn't guess which doctor an old appointment was with. To add one, edit it and choose the doctor.\n- **Repeating appointments** use one doctor for the whole series.\n- **View-only members** can see visits and notes but can't add notes.\n- The web app has the same doctor picker and **Visits & notes** page.",
         "related": [
           "appointments",
           "care-info-and-summary",

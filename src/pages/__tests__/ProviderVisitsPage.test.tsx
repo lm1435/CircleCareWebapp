@@ -24,7 +24,7 @@ vi.mock('@/api/providers', async (importOriginal) => ({
 
 vi.mock('@/lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/analytics')>()),
-  Analytics: { providerVisitsOpened: vi.fn(), errorOccurred: vi.fn() },
+  Analytics: { providerVisitsOpened: vi.fn(), providerVisitsSectionToggled: vi.fn(), errorOccurred: vi.fn() },
 }));
 
 const circle = { canEdit: true, timezone: 'America/Chicago' };
@@ -106,6 +106,11 @@ function page(over: Partial<VisitsPayload> = {}): VisitsPayload {
   };
 }
 
+/** Past visits start COLLAPSED: open them. */
+async function openPast(): Promise<void> {
+  await userEvent.click(await screen.findByTestId('provider-visits-section-past'));
+}
+
 function renderPage(state?: unknown, providerId = 'p1') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -171,6 +176,7 @@ describe('header and states', () => {
     expect(await screen.findByText("Couldn't load visits")).toBeInTheDocument();
     mockVisits.mockResolvedValue(page({ visits: [visit()] }));
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await openPast();
     expect(await screen.findByText(/Oct 2 · Follow-up/)).toBeInTheDocument();
     expect(mockVisits).toHaveBeenCalledTimes(2);
   });
@@ -221,18 +227,33 @@ describe('next visit and past visits', () => {
     is_upcoming: true,
   });
 
-  it('the Next visit card carries date, time, title and place, and opens the appointment', async () => {
-    mockVisits.mockResolvedValue(page({ next_visit: next, upcoming: [next], visits: [visit()] }));
+  it('Upcoming visits lists EVERY upcoming visit soonest first: date, time, title, place, count and Add a note', async () => {
+    const later = visit({ id: 'ev-later', title: 'Labs', scheduled_date: '2026-12-03', scheduled_time: '09:00:00', is_upcoming: true });
+    mockVisits.mockResolvedValue(page({ next_visit: next, upcoming: [next, later], upcoming_visits: [next, later], visits: [visit()] }));
     renderPage();
-    const card = await screen.findByTestId('provider-next-visit');
-    expect(card).toHaveTextContent(/Nov 12/);
-    expect(card).toHaveTextContent(/10:30/);
-    expect(card).toHaveTextContent('Follow-up · Heart Center, Suite 300');
-    expect(card).toHaveAttribute('href', `/circles/${CIRCLE}/calendar?date=2026-11-12&eventId=ev-next`);
-    expect(screen.getByRole('heading', { level: 2, name: 'Next visit' })).toBeInTheDocument();
+    const section = await screen.findByTestId('provider-visits-upcoming');
+    expect(within(section).getByRole('button', { name: 'Upcoming visits (2)' })).toHaveAttribute('aria-expanded', 'true');
+    const cards = within(section).getAllByTestId('provider-visit');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent(/Nov 12/);
+    expect(cards[0]).toHaveTextContent(/10:30/);
+    expect(cards[0]).toHaveTextContent('Follow-up');
+    expect(cards[0]).toHaveTextContent('Heart Center, Suite 300');
+    expect(cards[0]).toHaveTextContent('No notes yet');
+    expect(within(cards[0]).getByRole('link', { name: /Follow-up/ })).toHaveAttribute('href', `/circles/${CIRCLE}/calendar?date=2026-11-12&eventId=ev-next`);
+    expect(within(cards[0]).getByRole('link', { name: /Add a note/ })).toHaveAttribute('href', `/circles/${CIRCLE}/calendar?date=2026-11-12&eventId=ev-next&panel=notes`);
+    expect(cards[1]).toHaveTextContent(/Dec 3/);
+    expect(screen.queryByRole('heading', { name: 'Next visit' })).toBeNull();
   });
 
-  it('a VIRTUAL next visit opens through its series root and its own date', async () => {
+  it('an older server (next_visit only) still shows its one upcoming visit', async () => {
+    mockVisits.mockResolvedValue(page({ next_visit: next, upcoming: undefined as unknown as ProviderVisit[] }));
+    renderPage();
+    const section = await screen.findByTestId('provider-visits-upcoming');
+    expect(within(section).getAllByTestId('provider-visit')).toHaveLength(1);
+  });
+
+  it('a VIRTUAL upcoming visit opens through its series root and its own date', async () => {
     const virtual = visit({
       id: 'root-1_2026-11-19',
       series_id: 'root-1',
@@ -242,10 +263,64 @@ describe('next visit and past visits', () => {
     });
     mockVisits.mockResolvedValue(page({ next_visit: virtual, upcoming: [virtual] }));
     renderPage();
-    expect(await screen.findByTestId('provider-next-visit')).toHaveAttribute(
+    const section = await screen.findByTestId('provider-visits-upcoming');
+    expect(within(section).getByRole('link', { name: /Follow-up/ })).toHaveAttribute(
       'href',
       `/circles/${CIRCLE}/calendar?date=2026-11-19&eventId=root-1`
     );
+  });
+
+  it('three sections: Upcoming and Notes open, Past collapsed; each toggle reports section + expanded', async () => {
+    mockVisits.mockResolvedValue(
+      page({ next_visit: next, upcoming: [next], visits: [visit({ note_count: 1, notes: [note('n1', 'Ask about dose', 'Ana')] })] })
+    );
+    renderPage();
+    const up = await screen.findByTestId('provider-visits-section-upcoming');
+    const notes = screen.getByTestId('provider-visits-section-notes');
+    const past = screen.getByTestId('provider-visits-section-past');
+    expect(up).toHaveAttribute('aria-expanded', 'true');
+    expect(notes).toHaveAttribute('aria-expanded', 'true');
+    expect(past).toHaveAttribute('aria-expanded', 'false');
+    expect(notes).toHaveTextContent('Notes (1)');
+    expect(past).toHaveTextContent('Past visits (1)');
+    expect(screen.queryByText(/Oct 2 · Follow-up/)).toBeNull();
+    await userEvent.click(past);
+    expect(past).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByText(/Oct 2 · Follow-up/)).toBeInTheDocument();
+    await userEvent.click(up);
+    expect(screen.queryByTestId('provider-visits-upcoming')?.querySelector('[data-testid="provider-visit"]')).toBeNull();
+    expect(vi.mocked(Analytics.providerVisitsSectionToggled).mock.calls).toEqual([
+      [{ section: 'past', expanded: true }],
+      [{ section: 'upcoming', expanded: false }],
+    ]);
+  });
+
+  it('Notes lists every note across upcoming and past visits, newest first, labelled with its visit date', async () => {
+    const upNoted = visit({ id: 'ev-u', is_upcoming: true, scheduled_date: '2026-12-01', note_count: 1, notes: [note('n2', 'Bring the list', 'Ben', { created_at: '2026-10-20T12:00:00.000Z' })] });
+    mockVisits.mockResolvedValue(
+      page({ next_visit: upNoted, upcoming: [upNoted], visits: [visit({ id: 'ev-p', note_count: 1, notes: [note('n1', 'Ask about dose', 'Ana')] })] })
+    );
+    renderPage();
+    const cards = await screen.findAllByTestId('provider-note');
+    expect(cards.map((c) => c.textContent)).toEqual([
+      expect.stringContaining('Bring the list'),
+      expect.stringContaining('Ask about dose'),
+    ]);
+    expect(cards[0]).toHaveTextContent('Dec 1 visit');
+    expect(cards[1]).toHaveTextContent('Oct 2 visit');
+    expect(within(cards[1]).getByRole('link', { name: 'Oct 2 visit' })).toHaveAttribute('href', `/circles/${CIRCLE}/calendar?date=2026-10-02&eventId=ev-p`);
+  });
+
+  it('no notes anywhere: the empty line; and while more pages exist the count says N+ with Show earlier notes', async () => {
+    mockVisits.mockResolvedValueOnce(
+      page({ visits: [visit()], page: { limit: 20, has_more: true, next_before: '2026-10-02' } })
+    );
+    renderPage();
+    expect(await screen.findByTestId('provider-notes-empty')).toHaveTextContent('No notes yet. Add one from a visit.');
+    expect(screen.getByTestId('provider-visits-section-notes')).toHaveTextContent('Notes (0+)');
+    mockVisits.mockResolvedValueOnce(page({ visits: [visit({ id: 'old', scheduled_date: '2026-01-01' })], page: { limit: 20, has_more: false, next_before: null } }));
+    await userEvent.click(screen.getByTestId('provider-notes-show-earlier'));
+    await waitFor(() => expect(mockVisits).toHaveBeenLastCalledWith(CIRCLE, 'p1', { before: '2026-10-02', limit: 20 }));
   });
 
   it('groups past visits by year, newest first, one heading per year', async () => {
@@ -259,17 +334,18 @@ describe('next visit and past visits', () => {
       })
     );
     renderPage();
+    await openPast();
     await screen.findByText(/Oct 2 · Follow-up/);
     const years = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(years).toEqual(['2026', '2025']);
     const g2026 = screen.getByRole('group', { name: '2026' });
     expect(within(g2026).getAllByTestId('provider-visit')).toHaveLength(2);
     expect(within(screen.getByRole('group', { name: '2025' })).getByText(/Dec 3 · First visit/)).toBeInTheDocument();
-    // No running total in the heading (same as mobile).
-    expect(screen.getByRole('heading', { level: 2, name: 'Past visits' })).toBeInTheDocument();
+    // The heading carries the section count (same as mobile).
+    expect(screen.getByRole('heading', { level: 2, name: 'Past visits (3)' })).toBeInTheDocument();
   });
 
-  it('shows notes inline with author and date, and a count', async () => {
+  it('shows notes in the Notes section with author and date, and the visit card counts them', async () => {
     mockVisits.mockResolvedValue(
       page({
         visits: [
@@ -285,6 +361,7 @@ describe('next visit and past visits', () => {
     );
     renderPage();
     expect(await screen.findByText('BP looks better. Keep lisinopril at 10 mg.')).toBeInTheDocument();
+    await openPast();
     expect(screen.getByText('Wants fasting labs a week before.')).toBeInTheDocument();
     expect(screen.getByText('Ana')).toBeInTheDocument();
     expect(screen.getByText('Luis')).toBeInTheDocument();
@@ -306,6 +383,7 @@ describe('next visit and past visits', () => {
       page({ visits: [visit({ id: 'ev-7', scheduled_date: '2026-07-18', title: 'Checkup' })] })
     );
     renderPage();
+    await openPast();
     expect(await screen.findByText('No notes yet')).toBeInTheDocument();
     const add = screen.getByRole('link', { name: /Add a note to the visit on July 18, 2026/ });
     expect(add).toHaveTextContent('Add a note');
@@ -319,6 +397,7 @@ describe('next visit and past visits', () => {
     circle.canEdit = false;
     mockVisits.mockResolvedValue(page({ visits: [visit()] }));
     renderPage();
+    await openPast();
     expect(await screen.findByText('No notes yet')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Add a note/ })).toBeNull();
   });
@@ -344,6 +423,7 @@ describe('Show earlier visits', () => {
         })
       );
     renderPage();
+    await openPast();
     const more = await screen.findByRole('button', { name: 'Show earlier visits' });
 
     await userEvent.click(more);
@@ -371,6 +451,7 @@ describe('Show earlier visits', () => {
       )
       .mockRejectedValueOnce({ success: false, error: { code: 'SERVER_ERROR' } });
     renderPage();
+    await openPast();
     await userEvent.click(await screen.findByRole('button', { name: 'Show earlier visits' }));
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load earlier visits");
     expect(screen.getByRole('button', { name: 'Show earlier visits' })).toBeInTheDocument();
@@ -388,12 +469,14 @@ describe('analytics: provider_visits_opened', () => {
       })
     );
     renderPage({ source: 'appointment' });
-    await screen.findByTestId('provider-next-visit');
+    await screen.findByTestId('provider-visits-upcoming');
     await waitFor(() => expect(Analytics.providerVisitsOpened).toHaveBeenCalledTimes(1));
     // Two PAST visits (the upcoming one is not counted): bucket 1-5. No raw count.
     expect(Analytics.providerVisitsOpened).toHaveBeenCalledWith({
       source: 'appointment',
       visit_count_bucket: '1-5',
+      upcoming_count_bucket: '1-5',
+      notes_count_bucket: '1-5',
       has_notes: true,
     });
   });
@@ -416,10 +499,12 @@ describe('analytics: provider_visits_opened', () => {
   it('defaults to medical_info when the page is opened directly', async () => {
     mockVisits.mockResolvedValue(page({ visits: [visit()] }));
     renderPage();
-    await screen.findByText(/Oct 2 · Follow-up/);
+    await screen.findByTestId('provider-visits-section-past');
     expect(Analytics.providerVisitsOpened).toHaveBeenCalledWith({
       source: 'medical_info',
       visit_count_bucket: '1-5',
+      upcoming_count_bucket: '0',
+      notes_count_bucket: '0',
       has_notes: false,
     });
   });

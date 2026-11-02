@@ -2,7 +2,8 @@ import { useMemo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { isPlainLeftClick, readFromProviderId } from '@/lib/stackLoop';
 import { MapsLink } from '@/components/MapsLink';
 import { Badge, Card, Eyebrow, Modal, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -40,11 +41,19 @@ function memberDisplayName(member: CircleMember): string {
 function EventDoctorLink({
   circleId,
   providerId,
+  eventId,
+  eventDate,
 }: {
   circleId: string;
   providerId: string;
+  eventId: string;
+  eventDate: string;
 }): ReactElement {
   const { t } = useTranslation(['calendar', 'emergency']);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Reached from this very doctor's Visits & notes? "See all visits" is Back, not another push.
+  const cameFromThisDoctor = readFromProviderId(location.state) === providerId;
   const { providers } = useProviders(circleId, { includeArchived: true });
   const provider = providers.find((p) => p.id === providerId);
   const name = provider
@@ -56,7 +65,12 @@ function EventDoctorLink({
   return (
     <Link
       to={`/circles/${circleId}/providers/${encodeURIComponent(providerId)}`}
-      state={{ source: 'appointment' }}
+      state={{ source: 'appointment', fromEvent: { id: eventId, date: eventDate } }}
+      onClick={(e) => {
+        if (!cameFromThisDoctor || !isPlainLeftClick(e)) return;
+        e.preventDefault();
+        navigate(-1);
+      }}
       className="inline-flex min-h-[44px] items-center gap-1.5 font-medium text-ink underline underline-offset-2"
     >
       {name ? `${name} · ${seeAll}` : seeAll}
@@ -281,7 +295,12 @@ export function EventDetailModal({
     rows.push({
       key: 'doctor',
       label: t('calendar:eventDetail.doctor'),
-      value: <EventDoctorLink circleId={circleId ?? event.circle_id} providerId={event.provider_id} />,
+      value: <EventDoctorLink
+          circleId={circleId ?? event.circle_id}
+          providerId={event.provider_id}
+          eventId={event.id}
+          eventDate={event.scheduled_date}
+        />,
     });
   }
   if (event.location) {

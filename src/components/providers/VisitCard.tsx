@@ -1,11 +1,13 @@
-import { useLayoutEffect, useRef, useState, type ReactElement } from 'react';
-import { Link } from 'react-router-dom';
+import { useLayoutEffect, useRef, useState, type MouseEvent, type ReactElement } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { isPlainLeftClick, readFromEvent } from '@/lib/stackLoop';
 import { useTranslation } from 'react-i18next';
 import type { ProviderVisit, VisitNote } from '@/api/providers';
-import { Card, Text } from '@/components/ui';
+import { Card, Icon, Text } from '@/components/ui';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
-import { getDateInTimezone } from '@/utils/timezone';
-import { noteAuthorName, visitCalendarPath } from './visitFormat';
+import { formatEventTimeForDisplay, getDateInTimezone, zoneReferenceInstant } from '@/utils/timezone';
+import { noteAuthorName, visitCalendarPath, visitEventId } from './visitFormat';
 
 // A note's text is collapsed to ~3 lines with "more" (docs/plans/notes-by-doctor.md
 // user flow 2). Whether it NEEDS the control is measured (the clamp only matters
@@ -13,7 +15,7 @@ import { noteAuthorName, visitCalendarPath } from './visitFormat';
 
 const CLAMP_LINES = 'line-clamp-3';
 
-function VisitNoteItem({
+export function VisitNoteItem({
   note,
   timezone,
 }: {
@@ -66,7 +68,7 @@ function VisitNoteItem({
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
-          className="min-h-[44px] self-start bg-transparent p-0 text-sm font-semibold text-moss-deep underline underline-offset-2"
+          className="relative z-10 min-h-[44px] self-start bg-transparent p-0 text-sm font-semibold text-moss-deep underline underline-offset-2"
         >
           {expanded ? t('providers.visits.less') : t('providers.visits.more')}
         </button>
@@ -75,12 +77,39 @@ function VisitNoteItem({
   );
 }
 
+/**
+ * Link behavior for a visit's calendar link: when the page was opened from THIS visit's appointment, the
+ * link is Back (history -1) so the appointment <-> visits loop never grows the history stack.
+ */
+export function useVisitLinkLoop(
+  visit: Pick<ProviderVisit, 'id' | 'series_id' | 'is_virtual' | 'scheduled_date'>
+): { state: { fromProviderId: string }; onClick: (e: MouseEvent) => void } {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const from = readFromEvent(location.state);
+  const sameVisit =
+    !!from &&
+    from.date === visit.scheduled_date &&
+    (from.id === visit.id || from.id === visitEventId(visit));
+  const { providerId = '' } = useParams<{ providerId: string }>();
+  return {
+    state: { fromProviderId: providerId },
+    onClick: (e: MouseEvent): void => {
+      if (!sameVisit || !isPlainLeftClick(e)) return;
+      e.preventDefault();
+      navigate(-1);
+    },
+  };
+}
+
 export interface VisitCardProps {
   circleId: string;
   visit: ProviderVisit;
   timezone: string | null;
   /** Edit rights: a view-only member sees "No notes yet" without the Add link. */
   canEdit: boolean;
+  /** An upcoming visit leads with weekday and time. */
+  upcoming?: boolean;
 }
 
 /**
@@ -88,8 +117,16 @@ export interface VisitCardProps {
  * "No notes yet · Add a note". The title opens the appointment; "Add a note"
  * opens it at its notes panel (the existing appointment / note flow).
  */
-export function VisitCard({ circleId, visit, timezone, canEdit }: VisitCardProps): ReactElement {
+export function VisitCard({
+  circleId,
+  visit,
+  timezone,
+  canEdit,
+  upcoming = false,
+}: VisitCardProps): ReactElement {
   const { t, i18n } = useTranslation('emergency');
+  const hourCycle = useHourCycle();
+  const { onClick: backIfCameFromVisit, state: linkState } = useVisitLinkLoop(visit);
   const dateLabel = formatDateForDisplay(
     visit.scheduled_date,
     { month: 'short', day: 'numeric' },
@@ -101,44 +138,124 @@ export function VisitCard({ circleId, visit, timezone, canEdit }: VisitCardProps
     i18n.language
   );
   const hasNotes = visit.notes.length > 0;
+  const when = upcoming
+    ? [
+        formatDateForDisplay(
+          visit.scheduled_date,
+          { weekday: 'short', month: 'short', day: 'numeric' },
+          i18n.language
+        ),
+        visit.scheduled_time && timezone
+          ? formatEventTimeForDisplay(
+              visit.scheduled_time,
+              timezone,
+              undefined,
+              zoneReferenceInstant(visit.scheduled_date),
+              hourCycle
+            )
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : dateLabel;
 
   return (
     <Card as="li" variant="outlined" padding="sm" data-testid="provider-visit">
-      <div className="flex items-baseline justify-between gap-3">
-        <Text variant="h3" as="h4" className="min-w-0 break-words">
+      <Text variant="h3" as="h4" className="min-w-0 break-words">
+        <Link
+          to={visitCalendarPath(circleId, visit)}
+          state={linkState}
+          onClick={backIfCameFromVisit}
+          className="text-ink no-underline hover:underline"
+        >
+          {when} · {visit.title}
+        </Link>
+      </Text>
+      {visit.location && <p className="m-0 mt-0.5 break-words text-sm text-ink-2">{visit.location}</p>}
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3">
+        <span className="text-sm text-ink-3">
+          {hasNotes
+            ? t('providers.visits.noteCount', { count: visit.note_count })
+            : t('providers.visits.noNotes')}
+        </span>
+        {canEdit && (
           <Link
-            to={visitCalendarPath(circleId, visit)}
-            className="text-ink no-underline hover:underline"
+            to={visitCalendarPath(circleId, visit, 'notes')}
+            state={linkState}
+            aria-label={t('providers.visits.addNoteFor', { date: fullDate })}
+            className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss-deep underline underline-offset-2"
           >
-            {dateLabel} · {visit.title}
+            {t('providers.visits.addNote')}
           </Link>
-        </Text>
-        {hasNotes && (
-          <span className="shrink-0 text-sm text-ink-3">
-            {t('providers.visits.noteCount', { count: visit.note_count })}
-          </span>
         )}
       </div>
-      {hasNotes ? (
-        <ul className="m-0 mt-2.5 flex list-none flex-col gap-3 p-0">
-          {visit.notes.map((note) => (
-            <VisitNoteItem key={note.id} note={note} timezone={timezone} />
-          ))}
-        </ul>
-      ) : (
-        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3">
-          <span className="text-sm text-ink-3">{t('providers.visits.noNotes')}</span>
-          {canEdit && (
-            <Link
-              to={visitCalendarPath(circleId, visit, 'notes')}
-              aria-label={t('providers.visits.addNoteFor', { date: fullDate })}
-              className="inline-flex min-h-[44px] items-center text-sm font-semibold text-moss-deep underline underline-offset-2"
-            >
-              {t('providers.visits.addNote')}
-            </Link>
-          )}
-        </div>
-      )}
     </Card>
+  );
+}
+
+/** One note in the Notes section: its visit's date, then the note; the whole card opens that visit. */
+export function VisitNoteCard({
+  circleId,
+  note,
+  visit,
+  timezone,
+}: {
+  circleId: string;
+  note: VisitNote;
+  visit: ProviderVisit;
+  timezone: string | null;
+}): ReactElement {
+  const { t, i18n } = useTranslation('emergency');
+  const { onClick, state } = useVisitLinkLoop(visit);
+  const date = formatDateForDisplay(
+    visit.scheduled_date,
+    { month: 'short', day: 'numeric' },
+    i18n.language
+  );
+  return (
+    <Card as="li" variant="outlined" padding="sm" className="relative" data-testid="provider-note">
+      <Link
+        to={visitCalendarPath(circleId, visit)}
+        state={state}
+        onClick={onClick}
+        className="text-xs font-semibold text-ink-3 no-underline after:absolute after:inset-0 after:content-[''] hover:underline"
+      >
+        {t('providers.visits.noteVisitLabel', { date })}
+      </Link>
+      <ul className="m-0 mt-1 list-none p-0">
+        <VisitNoteItem note={note} timezone={timezone} />
+      </ul>
+    </Card>
+  );
+}
+
+/** A section header that is one button: title, count and a chevron; announces expanded/collapsed. */
+export function VisitsSectionHeader({
+  id,
+  title,
+  count,
+  open,
+  onToggle,
+}: {
+  id: 'upcoming' | 'notes' | 'past';
+  title: string;
+  count: string;
+  open: boolean;
+  onToggle: () => void;
+}): ReactElement {
+  return (
+    <Text variant="label" as="h2" className="uppercase tracking-wide">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={`provider-visits-panel-${id}`}
+        onClick={onToggle}
+        data-testid={`provider-visits-section-${id}`}
+        className="flex min-h-[44px] w-full items-center justify-between gap-2 bg-transparent p-0 text-left uppercase tracking-wide"
+      >
+        <span>{`${title} (${count})`}</span>
+        <Icon name="chevron-down" size="row" className={open ? 'rotate-180' : ''} />
+      </button>
+    </Text>
   );
 }

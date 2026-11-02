@@ -235,21 +235,25 @@ test.describe('Visits & notes: the main journey', () => {
     await expect(h1).toBeFocused();
 
     // Next visit: the soonest upcoming linked appointment is the one created in the form (today, all day).
-    const next = page.getByTestId('provider-next-visit');
+    const next = page.getByTestId('provider-visits-upcoming');
     await expect(next).toContainText(linkedTitle);
     await expect(next).toContainText('100 Heart Center Way, Suite 300');
 
-    // Notes inline, with author and count; the other doctor's visit is not here.
+    // Notes live in the Notes section (open); Past visits start collapsed: open it.
+    const notesSection = page.getByTestId('provider-visits-notes');
+    await expect(notesSection).toContainText('BP looks better. Keep lisinopril at 10 mg.');
+    await expect(notesSection).toContainText('Wants fasting labs a week before the next visit.');
+    await expect(page.getByTestId('provider-visits-section-past')).toHaveAttribute('aria-expanded', 'false');
+    await page.getByTestId('provider-visits-section-past').click();
+    // Each past card carries its notes count; the other doctor's visit is not here.
     const visitA = page.getByTestId('provider-visit').filter({ hasText: followUp });
     await expect(visitA).toContainText('2 notes');
-    await expect(visitA).toContainText('BP looks better. Keep lisinopril at 10 mg.');
-    await expect(visitA).toContainText('Wants fasting labs a week before the next visit.');
     await expect(page.getByText(`E2E Kim only ${sfx}`)).toHaveCount(0);
 
     // Year grouping: one heading per year, newest first; the 400-day-old visit is still ahead of us.
     const thisYear = Number(s.today.slice(0, 4));
     await expect(page.getByRole('group', { name: String(thisYear) })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'Past visits', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: /^Past visits \(/ })).toBeVisible();
     await expect(page.getByText(oldVisit)).toHaveCount(0);
 
     // A visit with no notes offers "Add a note" into the existing flow.
@@ -266,7 +270,7 @@ test.describe('Visits & notes: the main journey', () => {
     const oldCard = page.getByTestId('provider-visit').filter({ hasText: oldVisit });
     await expect(oldCard).toBeVisible({ timeout: 25_000 });
     await expect(more).toHaveCount(0);
-    await expect(page.getByRole('heading', { level: 2, name: 'Past visits', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: /^Past visits \(/ })).toBeVisible();
     // Focus moved onto the FIRST newly loaded visit (the button is gone), not to <body>.
     expect(await allVisits.count()).toBeGreaterThan(loadedBefore);
     await expect(allVisits.nth(loadedBefore).getByRole('link').first()).toBeFocused();
@@ -276,12 +280,13 @@ test.describe('Visits & notes: the main journey', () => {
     await expect(page.getByRole('group', { name: String(oldYear) })).toBeVisible();
 
     // The long note is clamped with "more" and expands.
-    const longNote = oldCard.locator('p', { hasText: 'Referred for palpitations.' });
-    const toggle = oldCard.getByRole('button', { name: 'more' });
+    const oldNote = page.getByTestId('provider-note').filter({ hasText: 'Referred for palpitations.' });
+    const longNote = oldNote.locator('p', { hasText: 'Referred for palpitations.' });
+    const toggle = oldNote.getByRole('button', { name: 'more' });
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
-    await expect(oldCard.getByRole('button', { name: 'less' })).toHaveAttribute('aria-expanded', 'true');
+    await expect(oldNote.getByRole('button', { name: 'less' })).toHaveAttribute('aria-expanded', 'true');
     await expect(longNote).toContainText('END-OF-LONG-NOTE');
 
     // --- 6. "Add a note" on a visit with none -> the appointment's notes -> back, and it shows inline. -------
@@ -299,9 +304,7 @@ test.describe('Visits & notes: the main journey', () => {
     expect((await posted).status()).toBeLessThan(300);
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`${escapeRegExp(visitsPath(s.circleId, patel.id))}$`));
-    await expect(
-      page.getByTestId('provider-visit').filter({ hasText: noNotes }).getByText(noteText)
-    ).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('provider-visits-notes').getByText(noteText)).toBeVisible({ timeout: 25_000 });
 
     // --- 7. The second entry point: the appointment -> "See all visits". ------
     await gotoWeekContaining(page, s.circleId, s.today, s.today);
@@ -340,7 +343,7 @@ test.describe('Visits & notes: a removed doctor', () => {
     // The page still opens for a removed doctor, with the visit and its note.
     await gotoVisits(page, s.circleId, gone.id);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${gone.name} (removed)`);
-    await expect(page.getByTestId('provider-next-visit')).toContainText(title);
+    await expect(page.getByTestId('provider-visits-upcoming')).toContainText(title);
     await checkA11y(page, 'doctor-visits-removed', testInfo);
 
     // The appointment says "(removed) - See all visits".
@@ -380,7 +383,7 @@ test.describe('Visits & notes: a removed doctor', () => {
     expect((await moved).request().postDataJSON()).toMatchObject({ provider_id: keep.id });
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 });
     await gotoVisits(page, s.circleId, keep.id);
-    await expect(page.getByTestId('provider-next-visit')).toContainText(title);
+    await expect(page.getByTestId('provider-visits-upcoming')).toContainText(title);
   });
 });
 
@@ -426,7 +429,7 @@ test.describe('Visits & notes: the empty state', () => {
     await form.getByRole('button', { name: 'Add appointment' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 20_000 });
     // The page refreshed itself: the new appointment is now the next visit.
-    await expect(page.getByTestId('provider-next-visit')).toContainText(title, { timeout: 25_000 });
+    await expect(page.getByTestId('provider-visits-upcoming')).toContainText(title, { timeout: 25_000 });
     await expect(page.getByTestId('provider-visits-empty')).toHaveCount(0);
   });
 });
@@ -477,8 +480,10 @@ test.describe('Visits & notes: a view-only member', () => {
     await row.click();
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(doc.name, { timeout: 25_000 });
+    await page.getByTestId('provider-visits-section-past').click();
     const withNoteCard = page.getByTestId('provider-visit').filter({ hasText: `E2E With note ${sfx}` });
-    await expect(withNoteCard).toContainText('Visible to everyone in the circle.');
+    await expect(withNoteCard).toContainText('1 note');
+    await expect(page.getByTestId('provider-visits-notes')).toContainText('Visible to everyone in the circle.');
     const withoutNoteCard = page.getByTestId('provider-visit').filter({ hasText: `E2E Without note ${sfx}` });
     await expect(withoutNoteCard).toContainText('No notes yet');
     await expect(withoutNoteCard.getByRole('link', { name: /Add a note/ })).toHaveCount(0);
@@ -533,8 +538,9 @@ test.describe('Visits & notes: Spanish', () => {
     await row.click();
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(doc.name, { timeout: 25_000 });
-    await expect(page.getByRole('heading', { level: 2, name: 'Próxima visita' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'Visitas anteriores', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: /^Próximas visitas \(/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: /^Visitas anteriores \(/ })).toBeVisible();
+    await page.getByTestId('provider-visits-section-past').click();
     await expect(page.getByTestId('provider-visit').filter({ hasText: `Cita ${sfx}` })).toContainText('1 nota');
     await expect(page.getByText('Aún no hay notas')).toBeVisible();
     await expect(page.getByRole('link', { name: /Agregar nota a la visita del/ })).toBeVisible();
@@ -598,7 +604,7 @@ test.describe('Visits & notes: dark mode', () => {
     await checkA11y(page, 'doctor-visits-dark-medical-info', testInfo);
 
     await gotoVisits(page, s.circleId, doc.id);
-    await expect(page.getByTestId('provider-next-visit')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('provider-visits-upcoming')).toBeVisible({ timeout: 25_000 });
     await expect(page.getByText('A note shown on the dark palette.')).toBeVisible();
     await checkA11y(page, 'doctor-visits-dark-page', testInfo);
 

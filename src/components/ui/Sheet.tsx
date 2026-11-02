@@ -61,6 +61,8 @@ export function SheetRow({ as, className, children, ...rest }: SheetRowProps): R
 export interface SheetRowPressableProps extends HTMLAttributes<HTMLElement> {
   /** Route destination — renders a react-router `Link` unless `as` overrides. */
   to?: string;
+  /** Router location state for the `to` Link. */
+  state?: unknown;
   /** Override the element (e.g. `as={Link}` explicitly, or an `<a>`). */
   as?: ElementType;
   onClick?: HTMLAttributes<HTMLElement>['onClick'];

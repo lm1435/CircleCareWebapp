@@ -62,13 +62,31 @@ describe('providerVisitBucket', () => {
 });
 
 describe('Analytics.provider*', () => {
+  it('section toggles are an enum + boolean only', async () => {
+    const A = await load();
+    A.providerVisitsSectionToggled({ section: 'notes', expanded: false });
+    A.providerVisitsSectionToggled({ section: 'Dr. Patel', expanded: true });
+    expect(capture.mock.calls).toEqual([
+      ['provider_visits_section_toggled', { section: 'notes', expanded: false }],
+      ['provider_visits_section_toggled', { section: 'upcoming', expanded: true }],
+    ]);
+  });
+  it('carries the upcoming-visits bucket, coerced to the closed set', async () => {
+    const A = await load();
+    A.providerVisitsOpened({ source: 'appointment', visit_count_bucket: '1-5', upcoming_count_bucket: '6-20', notes_count_bucket: '0', has_notes: false });
+    A.providerVisitsOpened({ source: 'appointment', visit_count_bucket: '1-5', upcoming_count_bucket: 'Dr. Patel', notes_count_bucket: '0', has_notes: false });
+    expect(capture.mock.calls).toEqual([
+      ['provider_visits_opened', { source: 'appointment', visit_count_bucket: '1-5', upcoming_count_bucket: '6-20', notes_count_bucket: '0', has_notes: false }],
+      ['provider_visits_opened', { source: 'appointment', visit_count_bucket: '1-5', upcoming_count_bucket: '0', notes_count_bucket: '0', has_notes: false }],
+    ]);
+  });
   it('fires each event with exactly its documented properties', async () => {
     const A = await load();
     A.providerVisitsOpened({ source: 'appointment', visit_count_bucket: '6-20', has_notes: true });
     A.providerLinked({ source: 'edit' });
     A.providerUnlinked();
     expect(capture.mock.calls).toEqual([
-      ['provider_visits_opened', { source: 'appointment', visit_count_bucket: '6-20', has_notes: true }],
+      ['provider_visits_opened', { source: 'appointment', visit_count_bucket: '6-20', upcoming_count_bucket: '0', notes_count_bucket: '0', has_notes: true }],
       ['provider_linked', { source: 'edit' }],
       ['provider_unlinked', {}],
     ]);
@@ -84,8 +102,8 @@ describe('Analytics.provider*', () => {
     A.providerVisitsOpened({ source: 'medical_info', visit_count_bucket: '21+', has_notes: false });
     A.providerLinked({ source: 'a note about knee surgery' });
     expect(capture.mock.calls).toEqual([
-      ['provider_visits_opened', { source: 'medical_info', visit_count_bucket: '0', has_notes: false }],
-      ['provider_visits_opened', { source: 'medical_info', visit_count_bucket: '21+', has_notes: false }],
+      ['provider_visits_opened', { source: 'medical_info', visit_count_bucket: '0', upcoming_count_bucket: '0', notes_count_bucket: '0', has_notes: false }],
+      ['provider_visits_opened', { source: 'medical_info', visit_count_bucket: '21+', upcoming_count_bucket: '0', notes_count_bucket: '0', has_notes: false }],
       ['provider_linked', { source: 'add' }],
     ]);
   });
@@ -96,7 +114,7 @@ describe('Analytics.provider*', () => {
     A.providerLinked({ source: 'add' });
     for (const [, props] of capture.mock.calls) {
       for (const key of Object.keys(props as object)) {
-        expect(['source', 'visit_count_bucket', 'has_notes']).toContain(key);
+        expect(['source', 'visit_count_bucket', 'upcoming_count_bucket', 'notes_count_bucket', 'has_notes', 'section', 'expanded']).toContain(key);
       }
       for (const value of Object.values(props as object)) {
         expect(['string', 'boolean']).toContain(typeof value);

@@ -54,7 +54,7 @@ describe('Analytics.aiNotesPath*', () => {
     expect(capture.mock.calls).toEqual([
       ['ai_notes_path_suggested', { target: 'doctor', doctor_named: true, doctor_matched: true, action_count: 1 }],
       ['ai_notes_path_action_tapped', { action: 'open_provider' }],
-      ['provider_visits_opened', { source: 'ai_chat', visit_count_bucket: '1-5', has_notes: true }],
+      ['provider_visits_opened', { source: 'ai_chat', visit_count_bucket: '1-5', upcoming_count_bucket: '0', notes_count_bucket: '0', has_notes: true }],
     ]);
   });
 

@@ -66,6 +66,8 @@ export interface ProviderVisitsPage {
   next_visit: ProviderVisit | null;
   /** First page only (soonest 5, first === next_visit); [] afterwards. */
   upcoming: ProviderVisit[];
+  /** First page only: the same list as `upcoming` (every upcoming visit, soonest first) under the 1.4.0 name. */
+  upcoming_visits?: ProviderVisit[];
   /** PAST visits, newest first. A page is cut between whole dates. */
   visits: ProviderVisit[];
   page: { limit: number; has_more: boolean; next_before: string | null };

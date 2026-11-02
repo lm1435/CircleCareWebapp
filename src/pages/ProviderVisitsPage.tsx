@@ -2,33 +2,25 @@ import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { ProviderVisit } from '@/api/providers';
+import type { ProviderVisit, VisitNote } from '@/api/providers';
 import { AddEventModal } from '@/components/calendar/AddEventModal';
-import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { PhoneLink } from '@/components/emergency/PhoneLink';
 import { PageMasthead } from '@/components/layout/PageMasthead';
-import { VisitCard } from '@/components/providers/VisitCard';
-import {
-  groupVisitsByYear,
-  visitCalendarPath,
-} from '@/components/providers/visitFormat';
+import { VisitCard, VisitNoteCard, VisitsSectionHeader } from '@/components/providers/VisitCard';
+import { groupVisitsByYear } from '@/components/providers/visitFormat';
 import {
   Button,
   Card,
   EmptyState,
   Icon,
-  Sheet,
-  SheetRowPressable,
   Skeleton,
   Text,
 } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
-import { useHourCycle } from '@/hooks/useHourCycle';
 import { providerDisplayName, useProviderVisits } from '@/hooks/useProviders';
 import { Analytics, providerVisitBucket } from '@/lib/analytics';
 import { isNotFoundError } from '@/lib/apiErrors';
 import { isSafeRouteId } from '@/lib/routeIds';
-import { formatEventTimeForDisplay, getDateInTimezone, zoneReferenceInstant } from '@/utils/timezone';
 
 // Visits & notes for ONE doctor (docs/plans/notes-by-doctor.md, flow 2;
 // PROVIDERS_API_CONTRACT §1.5). Header, "Next visit", past visits by year with
@@ -55,9 +47,8 @@ function sourceFromState(state: unknown): VisitsSource {
 export default function ProviderVisitsPage(): ReactElement {
   const { circleId = '', providerId = '' } = useParams<{ circleId: string; providerId: string }>();
   const location = useLocation();
-  const { t, i18n } = useTranslation(['emergency', 'common', 'calendar']);
+  const { t } = useTranslation(['emergency', 'common', 'calendar']);
   const { canEdit, timezone } = useCircle(circleId);
-  const hourCycle = useHourCycle();
 
   // The id is a route param someone can type: refuse anything that is not an id
   // before it reaches a request path (lib/routeIds.ts).
@@ -80,11 +71,44 @@ export default function ProviderVisitsPage(): ReactElement {
   const firstPage = data?.pages[0];
   const provider = firstPage?.provider;
   const nextVisit = firstPage?.next_visit ?? null;
+  // Every upcoming visit, soonest first (an older server sends only `next_visit`).
+  const upcomingVisits = useMemo<ProviderVisit[]>(
+    () => firstPage?.upcoming_visits ?? firstPage?.upcoming ?? (nextVisit ? [nextVisit] : []),
+    [firstPage, nextVisit]
+  );
   const pastVisits = useMemo<ProviderVisit[]>(
     () => (data ? data.pages.flatMap((page) => page.visits) : []),
     [data]
   );
   const yearGroups = useMemo(() => groupVisitsByYear(pastVisits), [pastVisits]);
+  // Every note for this doctor (upcoming + loaded past visits), newest first. Past visits load in
+  // pages, so while more remain this is a prefix and says so ("N+", "Show earlier notes").
+  const allNotes = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { note: VisitNote; visit: ProviderVisit }[] = [];
+    for (const v of [...upcomingVisits, ...pastVisits]) {
+      for (const n of v.notes) {
+        if (seen.has(n.id)) continue;
+        seen.add(n.id);
+        out.push({ note: n, visit: v });
+      }
+    }
+    return out.sort((a, b) =>
+      a.note.created_at !== b.note.created_at
+        ? a.note.created_at < b.note.created_at
+          ? 1
+          : -1
+        : a.note.id < b.note.id
+          ? 1
+          : -1
+    );
+  }, [upcomingVisits, pastVisits]);
+  // Open/closed is remembered for this visit of the page only.
+  const [open, setOpen] = useState({ upcoming: true, notes: true, past: false });
+  const toggleSection = (id: 'upcoming' | 'notes' | 'past'): void => {
+    Analytics.providerVisitsSectionToggled({ section: id, expanded: !open[id] });
+    setOpen((cur) => ({ ...cur, [id]: !cur[id] }));
+  };
 
   // provider_visits_opened: once per doctor, when the first page lands. An enum, a
   // bucket and a boolean only: `visit_count_bucket` is the PAST visits that first page
@@ -97,9 +121,13 @@ export default function ProviderVisitsPage(): ReactElement {
     Analytics.providerVisitsOpened({
       source,
       visit_count_bucket: providerVisitBucket(firstPage.visits.length),
-      has_notes: firstPage.visits.some((visit) => visit.note_count > 0),
+      upcoming_count_bucket: providerVisitBucket(upcomingVisits.length),
+      notes_count_bucket: providerVisitBucket(
+        [...upcomingVisits, ...firstPage.visits].reduce((n, v) => n + v.notes.length, 0)
+      ),
+      has_notes: [...firstPage.visits, ...upcomingVisits].some((visit) => visit.note_count > 0),
     });
-  }, [firstPage, providerId, source]);
+  }, [firstPage, providerId, source, upcomingVisits]);
 
   // "Show earlier visits" moves the page under the user's pointer: land focus on
   // the first newly loaded visit (the button may be gone when history ends) and
@@ -199,36 +227,7 @@ export default function ProviderVisitsPage(): ReactElement {
     );
   }
 
-  const isEmpty = pastVisits.length === 0 && !nextVisit;
-  const todayYear = timezone ? getDateInTimezone(timezone).slice(0, 4) : null;
-
-  const nextVisitLabel = (visit: ProviderVisit): string => {
-    const date = formatDateForDisplay(
-      visit.scheduled_date,
-      {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        // The year only when it is not the current one, so "Thu, Nov 12" stays short.
-        ...(todayYear && visit.scheduled_date.slice(0, 4) !== todayYear
-          ? { year: 'numeric' as const }
-          : {}),
-      },
-      i18n.language
-    );
-    if (!visit.scheduled_time) return `${date} · ${t('calendar:allDay')}`;
-    // The time is the recipient's wall clock; withheld until the zone is known
-    // rather than shown in a guessed zone.
-    if (!timezone) return date;
-    const time = formatEventTimeForDisplay(
-      visit.scheduled_time,
-      timezone,
-      undefined,
-      zoneReferenceInstant(visit.scheduled_date),
-      hourCycle
-    );
-    return `${date} · ${time}`;
-  };
+  const isEmpty = pastVisits.length === 0 && upcomingVisits.length === 0;
 
   return (
     <section className="mx-auto max-w-3xl pb-10">
@@ -268,38 +267,89 @@ export default function ProviderVisitsPage(): ReactElement {
           </Card>
         ) : (
           <>
-            {nextVisit && (
-              <section className="mt-6" aria-labelledby="provider-next-visit">
-                <Text variant="label" as="h2" id="provider-next-visit" className="uppercase tracking-wide">
-                  {t('providers.visits.nextVisit')}
-                </Text>
-                <Sheet padding="none" className="mt-2">
-                  <SheetRowPressable
-                    to={visitCalendarPath(circleId, nextVisit)}
-                    data-testid="provider-next-visit"
-                    className="justify-between gap-3 py-3.5 text-ink no-underline"
-                  >
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="text-md font-semibold">{nextVisitLabel(nextVisit)}</span>
-                      <span className="break-words text-sm text-ink-2">
-                        {[nextVisit.title, nextVisit.location].filter(Boolean).join(' · ')}
-                      </span>
-                    </span>
-                    <Icon name="chevron-forward" size="row" />
-                  </SheetRowPressable>
-                </Sheet>
+            {upcomingVisits.length > 0 && (
+              <section className="mt-6" data-testid="provider-visits-upcoming">
+                <VisitsSectionHeader
+                  id="upcoming"
+                  title={t('providers.visits.upcomingVisits')}
+                  count={String(upcomingVisits.length)}
+                  open={open.upcoming}
+                  onToggle={() => toggleSection('upcoming')}
+                />
+                {open.upcoming && (
+                  <ul id="provider-visits-panel-upcoming" className="m-0 mt-2 flex list-none flex-col gap-3 p-0">
+                    {upcomingVisits.map((visit) => (
+                      <VisitCard
+                        key={visit.id}
+                        circleId={circleId}
+                        visit={visit}
+                        timezone={timezone}
+                        canEdit={canEdit}
+                        upcoming
+                      />
+                    ))}
+                  </ul>
+                )}
               </section>
             )}
 
-            <section className="mt-6" aria-labelledby="provider-past-visits">
-              <Text variant="label" as="h2" id="provider-past-visits" className="uppercase tracking-wide">
-                {t('providers.visits.pastVisits')}
-              </Text>
+            <section className="mt-6" data-testid="provider-visits-notes">
+              <VisitsSectionHeader
+                id="notes"
+                title={t('providers.visits.notesSection')}
+                count={`${allNotes.length}${hasNextPage ? '+' : ''}`}
+                open={open.notes}
+                onToggle={() => toggleSection('notes')}
+              />
+              {open.notes && (
+                <div id="provider-visits-panel-notes">
+                  {allNotes.length === 0 ? (
+                    <p className="m-0 mt-2 text-sm text-ink-3" data-testid="provider-notes-empty">
+                      {t('providers.visits.notesEmpty')}
+                    </p>
+                  ) : (
+                    <ul className="m-0 mt-2 flex list-none flex-col gap-3 p-0">
+                      {allNotes.map(({ note, visit }) => (
+                        <VisitNoteCard
+                          key={note.id}
+                          circleId={circleId}
+                          note={note}
+                          visit={visit}
+                          timezone={timezone}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                  {hasNextPage && (
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      className="mt-3"
+                      loading={isFetchingNextPage}
+                      data-testid="provider-notes-show-earlier"
+                      onClick={() => void fetchNextPage()}
+                    >
+                      {t('providers.visits.showEarlierNotes')}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </section>
 
-              {pastVisits.length === 0 ? (
+            <section className="mt-6" data-testid="provider-visits-past">
+              <VisitsSectionHeader
+                id="past"
+                title={t('providers.visits.pastVisits')}
+                count={`${pastVisits.length}${hasNextPage ? '+' : ''}`}
+                open={open.past}
+                onToggle={() => toggleSection('past')}
+              />
+
+              {open.past && pastVisits.length === 0 ? (
                 <p className="m-0 mt-2 text-sm text-ink-3">{t('providers.visits.noPast')}</p>
-              ) : (
-                <div ref={listRef} className="mt-2 flex flex-col gap-4">
+              ) : null}
+              {open.past && pastVisits.length > 0 && (
+                <div id="provider-visits-panel-past" ref={listRef} className="mt-2 flex flex-col gap-4">
                   {yearGroups.map((group) => (
                     <div key={group.year} role="group" aria-label={group.year}>
                       <Text variant="mono" as="h3" className="mb-2 font-bold text-ink-3">
@@ -326,7 +376,7 @@ export default function ProviderVisitsPage(): ReactElement {
                   {t('providers.visits.earlierFailed')}
                 </p>
               )}
-              {hasNextPage && (
+              {open.past && hasNextPage && (
                 <Button
                   variant="secondary"
                   fullWidth

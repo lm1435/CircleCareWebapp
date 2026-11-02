@@ -1556,12 +1556,24 @@ export const Analytics = {
   providerVisitsOpened: (opts: {
     source?: string;
     visit_count_bucket?: string;
+    /** Upcoming visits listed (bucketed, same buckets). */
+    upcoming_count_bucket?: string;
+    /** Notes across the upcoming + first page of past visits (bucketed). */
+    notes_count_bucket?: string;
     has_notes?: boolean;
   }) =>
     capture('provider_visits_opened', {
       source: pickEnum(opts.source, ['medical_info', 'appointment', 'ai_chat'], 'medical_info'),
       visit_count_bucket: pickEnum(opts.visit_count_bucket, PROVIDER_VISIT_BUCKETS, '0'),
+      upcoming_count_bucket: pickEnum(opts.upcoming_count_bucket, PROVIDER_VISIT_BUCKETS, '0'),
+      notes_count_bucket: pickEnum(opts.notes_count_bucket, PROVIDER_VISIT_BUCKETS, '0'),
       has_notes: opts.has_notes === true,
+    }),
+  /** A section of the Visits & notes page was opened or collapsed. Enum + boolean only. */
+  providerVisitsSectionToggled: (opts: { section?: string; expanded?: boolean }) =>
+    capture('provider_visits_section_toggled', {
+      section: pickEnum(opts.section, ['upcoming', 'notes', 'past'], 'upcoming'),
+      expanded: opts.expanded === true,
     }),
   /** An appointment was saved WITH a (new) doctor. `source` = the add or edit form. */
   providerLinked: (opts: { source?: string }) =>
