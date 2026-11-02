@@ -32,11 +32,14 @@ export function DeviceTimezoneSync(): null {
     ran.current = key;
     void syncDeviceTimezone(stored, device).then((outcome) => {
       if (outcome === 'written') {
-        // Everything on screen, not only the user: a circle with no care-recipient account runs on its
-        // OWNER's zone, so this write moved the frame of every such circle the user owns. A cached
-        // circle detail (`care_recipient_timezone`) would keep date-math in the old zone while the server
-        // answers in the new one (a Day view asked for the old zone's day got the new zone's doses).
-        void queryClient.invalidateQueries();
+        // The user AND the circles: a circle with no care-recipient account runs on its OWNER's zone, so this
+        // write moved the frame of every such circle the user owns. A cached circle detail
+        // (`care_recipient_timezone`) would keep date-math in the old zone while the server answers in the new
+        // one (a Day view asked for the old zone's day got the new zone's doses). Reads keyed by dates in the
+        // frame follow on their own once the frame changes; nothing else is refetched.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+        void queryClient.invalidateQueries({ queryKey: ['circle'] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.circles });
       }
     });
   }, [userId, stored]);
