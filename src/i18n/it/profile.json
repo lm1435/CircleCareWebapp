@@ -21,22 +21,8 @@
     "save": "Salva",
     "cancel": "Annulla",
     "nameSuccess": "Nome aggiornato.",
-    "timezoneSuccess": "Fuso orario aggiornato.",
     "namePlaceholder": "Aggiungi il tuo nome",
     "changePasswordHint": "Per cambiare la password, esci e scegli 'Hai dimenticato la password?' nella pagina di accesso."
-  },
-  "timezones": {
-    "America/New_York": "Ora orientale USA (ET)",
-    "America/Chicago": "Ora centrale USA (CT)",
-    "America/Denver": "Ora delle Montagne Rocciose (MT)",
-    "America/Los_Angeles": "Ora del Pacifico USA (PT)",
-    "America/Phoenix": "Arizona (senza ora legale)",
-    "America/Anchorage": "Ora dell'Alaska (AKT)",
-    "Pacific/Honolulu": "Ora delle Hawaii (HST)",
-    "Europe/London": "Londra (GMT/BST)",
-    "Europe/Paris": "Europa centrale (CET)",
-    "Asia/Tokyo": "Giappone (JST)",
-    "Australia/Sydney": "Sydney (AEST)"
   },
   "language": {
     "description": "Scegli la lingua usata in tutta l'app.",
@@ -193,12 +179,6 @@
     },
     "selected": "selezionato"
   },
-  "timezoneImpact": {
-    "impactTitle": "Cambiare il tuo fuso orario?",
-    "impactMessage_one": "Gli orari delle dosi di {{names}} seguono il tuo fuso orario perché non ha un account personale. Se lo cambi in {{zone}}, quei promemoria passano allo stesso orario sull'orologio di {{zone}}.",
-    "impactMessage_other": "Gli orari delle dosi di {{names}} seguono il tuo fuso orario perché non hanno un account personale. Se lo cambi in {{zone}}, quei promemoria passano allo stesso orario sull'orologio di {{zone}}.",
-    "impactConfirm": "Cambia fuso orario"
-  },
   "appearance": {
     "title": "Aspetto",
     "themeLabel": "Tema",
@@ -206,5 +186,9 @@
     "themeLight": "Chiaro",
     "themeDark": "Scuro",
     "hint": "Sistema segue il tuo dispositivo. Questa scelta vale solo per questo dispositivo."
+  },
+  "timezoneAuto": {
+    "helper": "Impostato dal tuo dispositivo. Usato per le tue ore di silenzio e per gli orari nei promemoria e nelle email.",
+    "otherZone": "Fuso orario personalizzato"
   }
 }

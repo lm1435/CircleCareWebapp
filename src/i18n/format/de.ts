@@ -39,6 +39,12 @@ const placeNames: Record<string, string> = {
   Kolkata: 'Kalkutta',
   Calcutta: 'Kalkutta',
   'New Delhi': 'Neu-Delhi',
+  // Time zone picker cities (utils/timezoneOptions.ts)
+  'St Johns': "St. John's",
+  Canary: 'Kanarische Inseln',
+  Jamaica: 'Jamaika',
+  Cancun: 'Cancún',
+  Tehran: 'Teheran',
 };
 
 /**

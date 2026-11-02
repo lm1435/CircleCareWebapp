@@ -9,15 +9,16 @@ import {
   uniq,
 } from '../unhappy/auth-invites/_helpers';
 
-// approved-recs-2026-09-30 B6 / PK10: changing the Profile time zone ASKS FIRST
-// when an owned circle's recipient has no zone of their own (their dose times
-// follow the owner's zone). Cancel keeps the old zone; confirm saves; with no
-// such circle there is no prompt. Mobile twin:
-// mobile/.maestro/parity/profile/pk10-tz-warning.yaml.
+// approved-recs-2026-09-30 B6 / PK10, REPLACED in 1.4.0 ("their phone dictates"):
+// the profile zone follows the device with NO confirmation and NO exception for
+// circles whose recipient has no zone of their own (their dose times follow the
+// owner's zone and move with it). Profile shows it read-only with a helper line.
+// Mobile twin: mobile/.maestro/parity/profile/pk10-tz-warning.yaml (+ unit tests;
+// a simulator cannot change its own zone).
 //
-// Run-scoped accounts only.
+// Run-scoped accounts only. The browser runs in Asia/Tokyo; the seeded zone is Denver.
 
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ storageState: { cookies: [], origins: [] }, timezoneId: 'Asia/Tokyo' });
 test.setTimeout(120_000);
 
 const zoneOf = (userId: string): string | null =>
@@ -25,7 +26,7 @@ const zoneOf = (userId: string): string | null =>
     `select timezone from users where id = ${sqlStr(userId)}::uuid`
   )[0]?.timezone ?? null;
 
-test('owner with a recipient-without-account circle: prompt, cancel keeps, confirm saves', async ({
+test('owner with a recipient-without-account circle: the zone follows the browser, no prompt, read-only row', async ({
   page,
   context,
   request,
@@ -33,26 +34,24 @@ test('owner with a recipient-without-account circle: prompt, cancel keeps, confi
 }) => {
   const owner = await createScopedAccount('tz-owner');
   const ownerSession = await ownerApi(request, owner);
-  const recipient = uniq('tzrecipient');
-  const circleId = await createCircle(ownerSession, recipient);
+  const circleId = await createCircle(ownerSession, uniq('tzrecipient'));
   expect(circleId).toBeTruthy();
-  const before = zoneOf(owner.userId);
-  const target = before === 'America/Chicago' ? 'America/Los_Angeles' : 'America/Chicago';
-  const targetLabel = target === 'America/Chicago' ? 'Central' : 'Pacific';
+  expect(zoneOf(owner.userId)).not.toBe('Asia/Tokyo');
 
   await cookieLogin(context, owner, baseURL);
   await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-  const select = page.getByLabel('Time zone');
-  await expect(select).toBeVisible({ timeout: 20_000 });
+  const row = page.getByTestId('profile-timezone');
+  await expect(row).toContainText('Tokyo', { timeout: 20_000 });
+  await expect(row).toContainText(
+    'Set by your device. Used for your quiet hours and the times in your reminders and emails.'
+  );
+  await expect.poll(() => zoneOf(owner.userId), { timeout: 20_000 }).toBe('Asia/Tokyo');
+  // No prompt, no controls.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(row.getByRole('button')).toHaveCount(0);
+  await expect(row.getByRole('combobox')).toHaveCount(0);
 
-  // 1. Cancel keeps the old zone.
-  await select.selectOption(target);
-  const dialog = page.getByRole('dialog');
-  await expect(dialog.getByText('Change your time zone?')).toBeVisible({ timeout: 20_000 });
-  await expect(dialog).toContainText(`E2E ${recipient}`);
-  await expect(dialog).toContainText(targetLabel);
-  // Let the dialog's entrance animation finish: axe reads the mid-fade blended
-  // colours as a contrast failure that never exists once it settles.
+  // axe on the settled page.
   await page.evaluate(() =>
     Promise.all(
       document
@@ -67,21 +66,9 @@ test('owner with a recipient-without-account circle: prompt, cancel keeps, confi
       (v) => `${v.id}: ${v.nodes.map((n) => `${n.html.slice(0, 140)} :: ${n.any[0]?.message ?? ''}`).join(' ;; ')}`
     )
   ).toEqual([]);
-  await dialog.getByRole('button', { name: 'Cancel' }).last().click();
-  await expect(dialog).toBeHidden();
-  await expect(select).toHaveValue(before ?? 'America/New_York');
-  expect(zoneOf(owner.userId)).toBe(before);
-
-  // 2. Confirm saves.
-  await select.selectOption(target);
-  await expect(dialog.getByText('Change your time zone?')).toBeVisible({ timeout: 20_000 });
-  await dialog.getByRole('button', { name: 'Change time zone' }).click();
-  await expect(dialog).toBeHidden();
-  await expect.poll(() => zoneOf(owner.userId), { timeout: 20_000 }).toBe(target);
-  await expect(select).toHaveValue(target);
 });
 
-test('owner with no dependent circle: the zone saves with no prompt', async ({
+test('owner with no dependent circle: the zone follows the device with no prompt', async ({
   page,
   context,
   request,
@@ -89,14 +76,9 @@ test('owner with no dependent circle: the zone saves with no prompt', async ({
 }) => {
   const owner = await createScopedAccount('tz-solo');
   await ownerApi(request, owner); // no circles at all
-  const before = zoneOf(owner.userId);
-  const target = before === 'America/Chicago' ? 'America/Los_Angeles' : 'America/Chicago';
-
   await cookieLogin(context, owner, baseURL);
   await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-  const select = page.getByLabel('Time zone');
-  await expect(select).toBeVisible({ timeout: 20_000 });
-  await select.selectOption(target);
-  await expect.poll(() => zoneOf(owner.userId), { timeout: 20_000 }).toBe(target);
+  await expect.poll(() => zoneOf(owner.userId), { timeout: 20_000 }).toBe('Asia/Tokyo');
+  await expect(page.getByTestId('profile-timezone')).toContainText('Tokyo', { timeout: 20_000 });
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });

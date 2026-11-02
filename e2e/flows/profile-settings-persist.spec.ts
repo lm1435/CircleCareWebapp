@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures';
 import { dbQuery, failRequest, sqlStr } from '../unhappy';
 import { setProfileLanguage } from '../notesFirstClassShared';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
-import { errorToast, successToast } from '../unhappy/writes/_helpers';
+import { successToast } from '../unhappy/writes/_helpers';
 
 // K4 — Profile settings persist and take effect (timezone, quiet hours, units,
 // language, and the failure path). Run-scoped premium account (tz America/Denver,
@@ -36,7 +36,7 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
   test.describe(`profile settings persist (browser zone ${browserZone ?? 'project default'})`, () => {
     if (browserZone) test.use({ timezoneId: browserZone });
 
-    test('timezone: saved, persisted across reload, and it is the circle recipient frame when no recipient account (PARKED P4)', async ({
+    test('timezone: follows the browser even with dependent circles, read-only on Profile, persisted across reload, and it is the circle recipient frame (PARKED P4)', async ({
       page,
       request,
       context,
@@ -44,31 +44,32 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
     }) => {
       const acct = await createScopedAccount('prof-tz');
       const api = await ownerApi(request, acct);
+      // A circle with no recipient account: its dose times follow the owner's zone.
       const circleId = await createCircle(api, uniq('prof-tz'));
       await cookieLogin(context, acct, baseURL);
       await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-      const select = page.locator('#profile-timezone');
-      await expect(select).toHaveValue('America/Denver', { timeout: 20_000 });
+      const device = browserZone ?? 'America/Denver';
+      const city = device.split('/').pop()!.replace(/_/g, ' ');
 
-      await select.selectOption('America/Los_Angeles');
-      // PK10 (approved-recs-2026-09-30): this owner's circle has no recipient
-      // account, so the change moves its dose times and is CONFIRMED first.
-      // (flows/profile-timezone-impact.spec.ts covers cancel + the no-prompt case.)
-      const dialog = page.getByRole('dialog');
-      await expect(dialog.getByText('Change your time zone?')).toBeVisible({ timeout: 15_000 });
-      await dialog.getByRole('button', { name: 'Change time zone' }).click();
-      await expect(successToast(page, 'Time zone updated.')).toBeVisible({ timeout: 15_000 });
-      expect(userRow(acct.userId).timezone).toBe('America/Los_Angeles');
+      // "Their phone dictates": the session start writes the browser zone with no
+      // prompt and no exception for the dependent circle.
+      const row = page.getByTestId('profile-timezone');
+      await expect(row).toContainText(city, { timeout: 20_000 });
+      await expect(row).toContainText('Set by your device.');
+      await expect(row.getByRole('button')).toHaveCount(0);
+      await expect(row.getByRole('combobox')).toHaveCount(0);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect.poll(() => userRow(acct.userId).timezone, { timeout: 20_000 }).toBe(device);
 
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.locator('#profile-timezone')).toHaveValue('America/Los_Angeles', { timeout: 20_000 });
+      await expect(page.getByTestId('profile-timezone')).toContainText(city, { timeout: 20_000 });
 
       // PARKED P4: with no recipient account, the owner's profile zone IS the
-      // circle's frame, so this profile change moves every dose time in it.
+      // circle's frame, so following the browser moves every dose time in it.
       const res = await api.get(`/api/circles/${circleId}`);
       expect(res.status()).toBe(200);
       const body = (await res.json()) as { data: { circle: { care_recipient_timezone: string } } };
-      expect(body.data.circle.care_recipient_timezone).toBe('America/Los_Angeles');
+      expect(body.data.circle.care_recipient_timezone).toBe(device);
     });
 
     test('quiet hours: on, HH:MM normalized after reload, end-only edit keeps start as HH:MM, off clears both', async ({
@@ -153,27 +154,22 @@ for (const browserZone of [null, 'Pacific/Kiritimati'] as const) {
       await expect(page.getByText('Time zone', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
     });
 
-    test('failure: a 500 on the timezone PATCH toasts, the select reverts, the DB is unchanged', async ({
+    test('failure: a 500 on the sync PATCH leaves the stored zone unchanged and the page still renders it', async ({
       page,
       context,
       baseURL,
     }) => {
+      test.skip(!browserZone, 'needs a browser zone that differs from the seeded zone');
       const acct = await createScopedAccount('prof-fail');
       await cookieLogin(context, acct, baseURL);
-      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-      const select = page.locator('#profile-timezone');
-      await expect(select).toHaveValue('America/Denver', { timeout: 20_000 });
-      await select.selectOption('America/Los_Angeles');
-      await expect(successToast(page, 'Time zone updated.')).toBeVisible({ timeout: 15_000 });
-
       const fault = await failRequest(page, 'PATCH', USER_ME, { status: 500, times: 1 });
-      await select.selectOption('America/Chicago');
+      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
       await fault.expectHits(1);
-      await expect(errorToast(page, "Couldn't save your changes. Please try again.")).toBeVisible({ timeout: 15_000 });
-      await expect(select).toHaveValue('America/Los_Angeles');
-      expect(userRow(acct.userId).timezone).toBe('America/Los_Angeles');
+      await expect(page.getByTestId('profile-timezone')).toContainText('Denver', { timeout: 20_000 });
+      expect(userRow(acct.userId).timezone).toBe('America/Denver');
+      // The next session start retries and succeeds.
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.locator('#profile-timezone')).toHaveValue('America/Los_Angeles', { timeout: 20_000 });
+      await expect.poll(() => userRow(acct.userId).timezone, { timeout: 20_000 }).toBe(browserZone);
     });
   });
 }

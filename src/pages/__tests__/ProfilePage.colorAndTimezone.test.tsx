@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -127,15 +127,12 @@ vi.mock('@/lib/analyticsConsentSync', () => ({
   syncAnalyticsConsent: (enabled: boolean, userId: string) => syncAnalyticsConsent(enabled, userId),
 }));
 
+
 const mockLanguageChanged = vi.fn();
-const mockTimezoneChanged = vi.fn();
-const mockTzWarning = vi.fn();
 const mockAccountDeleted = vi.fn();
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     languageChanged: (...args: unknown[]) => mockLanguageChanged(...args),
-    timezoneChanged: (...args: unknown[]) => mockTimezoneChanged(...args),
-    timezoneChangeWarning: (...args: unknown[]) => mockTzWarning(...args),
     accountDeleted: (...args: unknown[]) => mockAccountDeleted(...args),
     errorOccurred: vi.fn(),
     themePreferenceChanged: vi.fn(),
@@ -180,67 +177,46 @@ beforeEach(() => {
   __resetAnalyticsConsentCache();
 });
 
-async function pickZone(zone: string) {
-  const user = userEvent.setup();
-  const select = await screen.findByLabelText('Time zone');
-  await user.selectOptions(select, zone);
-  return user;
-}
+const zoneRow = () => screen.getByTestId('profile-timezone');
 
-describe('ProfilePage time-zone change warning (PK10)', () => {
-  it('saves straight away, with no prompt, when no circle depends on the owner zone', async () => {
+// The profile zone FOLLOWS THE DEVICE and is read-only ("their phone dictates";
+// App.tsx DeviceTimezoneSync, utils/deviceTimezoneSync.ts). The page only shows it.
+describe('ProfilePage time zone row: read-only, set by the device', () => {
+  it('shows the label, the city and the helper line', async () => {
     renderPage();
-    await pickZone('America/Chicago');
-    await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith({ timezone: 'America/Chicago' }, expect.anything())
+    const row = await screen.findByTestId('profile-timezone');
+    expect(row).toHaveTextContent('Time zone');
+    expect(row).toHaveTextContent('Denver');
+    expect(row).not.toHaveTextContent('America/Denver');
+    expect(row).toHaveTextContent(
+      'Set by your device. Used for your quiet hours and the times in your reminders and emails.'
     );
-    expect(screen.queryByText('Change your time zone?')).not.toBeInTheDocument();
-    expect(mockTzWarning).not.toHaveBeenCalled();
   });
 
-  it('asks first, naming recipients and the new zone; saves only after confirming', async () => {
-    mockDependent.mockResolvedValue([
-      { id: 'c1', recipient_name: 'Mom' },
-      { id: 'c2', recipient_name: 'Dad' },
-    ]);
-    renderPage();
-    const user = await pickZone('America/Chicago');
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Change your time zone?')).toBeInTheDocument();
-    expect(dialog).toHaveTextContent('Dose times for Mom, Dad follow your time zone');
-    expect(dialog).toHaveTextContent('Central');
-    expect(updateProfile).not.toHaveBeenCalled();
-
-    await user.click(within(dialog).getByRole('button', { name: 'Change time zone' }));
-    expect(updateProfile).toHaveBeenCalledWith({ timezone: 'America/Chicago' }, expect.anything());
-    expect(mockTzWarning).toHaveBeenCalledWith(2, true);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('Cancel keeps the old zone: nothing saved, the select snaps back', async () => {
+  it('is not a control and offers no change flow, even with dependent circles', async () => {
     mockDependent.mockResolvedValue([{ id: 'c1', recipient_name: 'Mom' }]);
     renderPage();
-    const user = await pickZone('America/Chicago');
-    const dialog = await screen.findByRole('dialog');
-    // The × close button shares the accessible name; press the footer button.
-    const cancel = within(dialog)
-      .getAllByRole('button', { name: 'Cancel' })
-      .find((b) => b.textContent === 'Cancel')!;
-    await user.click(cancel);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await screen.findByTestId('profile-timezone');
+    expect(within(zoneRow()).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(zoneRow()).queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('timezone-device-notice')).not.toBeInTheDocument();
+    expect(screen.queryByText('Change your time zone?')).not.toBeInTheDocument();
+    expect(mockDependent).not.toHaveBeenCalled();
     expect(updateProfile).not.toHaveBeenCalled();
-    expect(mockTzWarning).toHaveBeenCalledWith(1, false);
-    expect(screen.getByLabelText('Time zone')).toHaveValue('America/Denver');
   });
 
-  it('never blocks a change on a failed helper read', async () => {
-    mockDependent.mockRejectedValue(new Error('network'));
+  it('names an off-list stored zone by its city, never the raw id', async () => {
+    currentUser = { ...USER, timezone: 'America/Boise' };
     renderPage();
-    await pickZone('America/Chicago');
-    await waitFor(() =>
-      expect(updateProfile).toHaveBeenCalledWith({ timezone: 'America/Chicago' }, expect.anything())
-    );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const row = await screen.findByTestId('profile-timezone');
+    expect(row).toHaveTextContent('Boise');
+    expect(row).not.toHaveTextContent('America/Boise');
+  });
+
+  it('falls back to a generic name for an id with no city', async () => {
+    currentUser = { ...USER, timezone: 'Etc/GMT+5' };
+    renderPage();
+    expect(await screen.findByTestId('profile-timezone')).toHaveTextContent('Custom time zone');
   });
 });
 
@@ -300,17 +276,6 @@ describe('ProfilePage saves in flight keep keyboard focus', () => {
     expect(control).not.toBeDisabled();
     expect(control).toHaveAttribute('aria-disabled', 'true');
   }
-
-  it('time zone select', async () => {
-    pending = { profile: true };
-    renderPage();
-    const select = await screen.findByLabelText('Time zone');
-    expectBusyButFocusable(select);
-    await userEvent.setup().selectOptions(select, 'America/Chicago');
-    expect(select).toHaveValue('America/Denver');
-    expect(mockDependent).not.toHaveBeenCalled();
-    expect(updateProfile).not.toHaveBeenCalled();
-  });
 
   it('digest delivery-day select', async () => {
     currentUser = { ...USER, email_digest_enabled: true, email_digest_day: 1 };

@@ -21,22 +21,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "nameSuccess": "Name updated.",
-    "timezoneSuccess": "Time zone updated.",
     "namePlaceholder": "Add your name",
     "changePasswordHint": "To change your password, sign out and choose 'Forgot password?' on the sign-in page."
-  },
-  "timezones": {
-    "America/New_York": "Eastern Time (ET)",
-    "America/Chicago": "Central Time (CT)",
-    "America/Denver": "Mountain Time (MT)",
-    "America/Los_Angeles": "Pacific Time (PT)",
-    "America/Phoenix": "Arizona (no DST)",
-    "America/Anchorage": "Alaska Time (AKT)",
-    "Pacific/Honolulu": "Hawaii Time (HST)",
-    "Europe/London": "London (GMT/BST)",
-    "Europe/Paris": "Central European (CET)",
-    "Asia/Tokyo": "Japan (JST)",
-    "Australia/Sydney": "Sydney (AEST)"
   },
   "language": {
     "description": "Choose the language used across the app.",
@@ -193,12 +179,6 @@
     },
     "selected": "selected"
   },
-  "timezoneImpact": {
-    "impactTitle": "Change your time zone?",
-    "impactMessage_one": "Dose times for {{names}} follow your time zone because they don't have their own account. Changing it to {{zone}} moves those reminders to the same clock time in {{zone}}.",
-    "impactMessage_other": "Dose times for {{names}} follow your time zone because they don't have their own account. Changing it to {{zone}} moves those reminders to the same clock time in {{zone}}.",
-    "impactConfirm": "Change time zone"
-  },
   "appearance": {
     "title": "Appearance",
     "themeLabel": "Theme",
@@ -206,5 +186,9 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "hint": "System follows your device. This choice applies to this device only."
+  },
+  "timezoneAuto": {
+    "helper": "Set by your device. Used for your quiet hours and the times in your reminders and emails.",
+    "otherZone": "Custom time zone"
   }
 }

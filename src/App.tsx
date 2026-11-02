@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useAuthStore } from '@/store/authStore';
 import { router } from '@/router';
 import i18n from '@/i18n';
+import { DeviceTimezoneSync } from '@/components/DeviceTimezoneSync';
 
 /**
  * Fallback for the single app-wide <Suspense> boundary below. It covers two
@@ -106,6 +107,7 @@ export default function App(): ReactElement {
         <Suspense fallback={<FullPageSpinner />}>
           <QueryClientProvider client={queryClient}>
             <LanguageSync />
+            <DeviceTimezoneSync />
             <ToastProvider>
               {/*
                 v7_startTransition: navigating to a not-yet-loaded lazy page

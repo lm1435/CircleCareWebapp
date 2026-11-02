@@ -40,6 +40,15 @@ const placeNames: Record<string, string> = {
   Jakarta: 'Giacarta',
   'New Delhi': 'Nuova Delhi',
   Kolkata: 'Calcutta',
+  // Time zone picker cities (utils/timezoneOptions.ts)
+  'St Johns': "St. John's",
+  'Puerto Rico': 'Porto Rico',
+  Jamaica: 'Giamaica',
+  Canary: 'Isole Canarie',
+  Kyiv: 'Kiev',
+  Jerusalem: 'Gerusalemme',
+  Tehran: 'Teheran',
+  Kathmandu: 'Katmandu',
 };
 
 export const format: LocaleFormat = {

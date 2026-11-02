@@ -30,6 +30,21 @@ const placeNames: Record<string, string> = {
   Seoul: 'Séoul',
   Singapore: 'Singapour',
   Kolkata: 'Calcutta',
+  // Time zone picker cities (utils/timezoneOptions.ts)
+  'St Johns': 'Saint-Jean de Terre-Neuve',
+  'Santo Domingo': 'Saint-Domingue',
+  'Puerto Rico': 'Porto Rico',
+  Jamaica: 'Jamaïque',
+  Bogota: 'Bogotá',
+  Asuncion: 'Asunción',
+  Cancun: 'Cancún',
+  Canary: 'Îles Canaries',
+  Kyiv: 'Kiev',
+  Jerusalem: 'Jérusalem',
+  Tehran: 'Téhéran',
+  Kathmandu: 'Katmandou',
+  Manila: 'Manille',
+  Adelaide: 'Adélaïde',
 };
 
 /** CLDR fr 12-hour marker (lockstep with backend/mobile; French clocks default to 24h). */

@@ -17,5 +17,8 @@
       "shifts": "Quarts",
       "shiftsDesc": "Nouveaux quarts à pourvoir, rappels et changements de vos quarts"
     }
+  },
+  "timezoneAuto": {
+    "helper": "Définie par votre appareil. Utilisée pour vos heures de silence et les heures de vos rappels et courriels."
   }
 }

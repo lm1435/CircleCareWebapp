@@ -21,22 +21,8 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "nameSuccess": "Nom mis à jour.",
-    "timezoneSuccess": "Fuseau horaire mis à jour.",
     "namePlaceholder": "Ajoutez votre nom",
     "changePasswordHint": "Pour changer votre mot de passe, déconnectez-vous et choisissez « Mot de passe oublié ? » sur la page de connexion."
-  },
-  "timezones": {
-    "America/New_York": "Heure de l’Est (ET)",
-    "America/Chicago": "Heure du Centre (CT)",
-    "America/Denver": "Heure des Rocheuses (MT)",
-    "America/Los_Angeles": "Heure du Pacifique (PT)",
-    "America/Phoenix": "Arizona (sans heure d’été)",
-    "America/Anchorage": "Heure de l’Alaska (AKT)",
-    "Pacific/Honolulu": "Heure d’Hawaï (HST)",
-    "Europe/London": "Londres (GMT/BST)",
-    "Europe/Paris": "Europe centrale (CET)",
-    "Asia/Tokyo": "Japon (JST)",
-    "Australia/Sydney": "Sydney (AEST)"
   },
   "language": {
     "description": "Choisissez la langue utilisée dans toute l’application.",
@@ -193,12 +179,6 @@
     },
     "selected": "sélectionnée"
   },
-  "timezoneImpact": {
-    "impactTitle": "Changer de fuseau horaire ?",
-    "impactMessage_one": "Les heures de dose pour {{names}} suivent votre fuseau horaire, car cette personne n’a pas son propre compte. Passer à {{zone}} déplace ces rappels à la même heure d’horloge, selon {{zone}}.",
-    "impactMessage_other": "Les heures de dose pour {{names}} suivent votre fuseau horaire, car ces personnes n’ont pas leur propre compte. Passer à {{zone}} déplace ces rappels à la même heure d’horloge, selon {{zone}}.",
-    "impactConfirm": "Changer de fuseau horaire"
-  },
   "appearance": {
     "title": "Apparence",
     "themeLabel": "Thème",
@@ -206,5 +186,9 @@
     "themeLight": "Clair",
     "themeDark": "Sombre",
     "hint": "Système suit votre appareil. Ce choix s’applique uniquement à cet appareil."
+  },
+  "timezoneAuto": {
+    "helper": "Définie par votre appareil. Utilisée pour vos heures de silence et les heures de vos rappels et e-mails.",
+    "otherZone": "Fuseau horaire personnalisé"
   }
 }

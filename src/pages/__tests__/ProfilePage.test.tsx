@@ -130,13 +130,11 @@ vi.mock('@/lib/analyticsConsentSync', () => ({
 
 const mockGroupToggled = vi.fn();
 const mockLanguageChanged = vi.fn();
-const mockTimezoneChanged = vi.fn();
 const mockAccountDeleted = vi.fn();
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     notificationGroupToggled: (...args: unknown[]) => mockGroupToggled(...args),
     languageChanged: (...args: unknown[]) => mockLanguageChanged(...args),
-    timezoneChanged: (...args: unknown[]) => mockTimezoneChanged(...args),
     accountDeleted: (...args: unknown[]) => mockAccountDeleted(...args),
     errorOccurred: vi.fn(),
     themePreferenceChanged: vi.fn(),
@@ -465,19 +463,6 @@ describe('ProfilePage', () => {
     await user.click(spanish);
 
     expect(mockLanguageChanged).toHaveBeenCalledWith('es');
-  });
-
-  it('fires Analytics.timezoneChanged on a successful timezone update', async () => {
-    updateProfile.mockImplementation((_vars, opts?: { onSuccess?: () => void }) => {
-      opts?.onSuccess?.();
-    });
-    const user = userEvent.setup();
-    renderPage();
-
-    const timezoneSelect = await screen.findByLabelText('Time zone');
-    await user.selectOptions(timezoneSelect, 'America/Chicago');
-
-    expect(mockTimezoneChanged).toHaveBeenCalledWith('America/Chicago');
   });
 
   it('delete-account confirm runs useDeleteAccount, clears cache, signs out, and redirects', async () => {

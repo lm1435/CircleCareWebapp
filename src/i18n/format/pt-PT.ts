@@ -18,5 +18,9 @@ export const format: LocaleFormatOverride = {
   'New York': 'Nova Iorque',
   Moscow: 'Moscovo',
   Copenhagen: 'Copenhaga',
+  Amsterdam: 'Amesterdão',
+  Tehran: 'Teerão',
+  Bangkok: 'Banguecoque',
+  Montevideo: 'Montevideu',
   },
 };

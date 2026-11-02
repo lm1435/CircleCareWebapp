@@ -69,6 +69,19 @@ async function fillSimpleMedTimes(dialog: import('@playwright/test').Locator, da
   await dialog.locator('#scheduled_time').fill(time);
 }
 
+/**
+ * The profile zone follows the browser (1.4.0, DeviceTimezoneSync). This spec's
+ * recipient is a SHARED seeded account whose stored zone (Asia/Tokyo) is the
+ * thing under test, and three viewer zones run against it in parallel, so the
+ * session-start zone write is refused here: the conversion disclosure is about a
+ * viewer whose browser zone differs from the stored one.
+ */
+test.beforeEach(async ({ page }) => {
+  await page.route(/\/api\/users\/me$/, (route) =>
+    route.request().method() === 'PATCH' ? route.abort() : route.continue()
+  );
+});
+
 /** "8:00 PM Denver = 5:00 PM Tokyo" — the conversion line's shape. */
 const CONVERSION_TEXT = 'text=/\\d{1,2}:\\d{2}.*=.*\\d{1,2}:\\d{2}/';
 

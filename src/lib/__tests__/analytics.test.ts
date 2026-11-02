@@ -398,13 +398,16 @@ describe('analytics wrapper — active path (key set)', () => {
     expect(capture).toHaveBeenCalledWith('activity_feed_viewed', { circle_id: 'circle-123' });
   });
 
-  it('language_changed / timezone_changed carry the raw setting value', async () => {
+  it('language_changed carries the raw value; timezone_synced carries an enum + boolean, no zone', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.languageChanged('es');
     expect(capture).toHaveBeenCalledWith('language_changed', { language: 'es' });
     capture.mockClear();
-    Analytics.timezoneChanged('America/Denver');
-    expect(capture).toHaveBeenCalledWith('timezone_changed', { timezone: 'America/Denver' });
+    Analytics.timezoneSynced(true);
+    expect(capture).toHaveBeenCalledWith('timezone_synced', {
+      source: 'auto',
+      had_dependent_circles: true,
+    });
   });
 
   it('theme_preference_changed carries enums and a boolean only', async () => {

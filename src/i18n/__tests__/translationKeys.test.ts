@@ -249,8 +249,12 @@ const TRANS_KEY = /i18nKey=\s*(['"])([^'"\n]+)\1/g;
  * 65 -> 63 (notification settings: 8 switches -> 4 groups): the
  * `NOTIFICATION_KEYS` table rendered `t(label)` / `t(desc)` (2 dynamic sites);
  * `ProfilePage.tsx` now calls literal `t('notifications.groups.*')`.
+ *
+ * 63 -> 62 (1.4.0, time zone follows the device): the Profile `t(`timezones.${value}`)`
+ * option labels are gone with the picker; the row names the zone from the IANA city +
+ * `i18n/format` placeNames.
  */
-const EXPECTED_DYNAMIC_KEY_CALL_SITES = 63;
+const EXPECTED_DYNAMIC_KEY_CALL_SITES = 62;
 
 /**
  * Comments are stripped before scanning — a `t(key)` inside a JSDoc block is

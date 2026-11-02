@@ -241,6 +241,24 @@ export function getDeviceTimezone(): string {
 }
 
 /**
+ * Are two IANA ids the same zone? Compares what ICU resolves each to, so the
+ * legacy and current spellings of one zone (Asia/Calcutta vs Asia/Kolkata)
+ * never read as a change. Unknown ids compare by string. Twin of mobile's.
+ */
+export function isSameTimezone(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  try {
+    return (
+      new Intl.DateTimeFormat('en', { timeZone: a }).resolvedOptions().timeZone ===
+      new Intl.DateTimeFormat('en', { timeZone: b }).resolvedOptions().timeZone
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * THE NAME OF A ZONE: its city. "Berlin", "Mexico City", "Denver",
  * "Buenos Aires" — "Berlín", "Ciudad de México" for a Spanish reader. `''`
  * when the id holds no city (the `Etc/*` family, a bare offset).

@@ -6,5 +6,9 @@ import type { LocaleFormat } from './types';
  */
 export const format: LocaleFormat = {
   meridiem: { am: 'AM', pm: 'PM' },
-  placeNames: {},
+  placeNames: {
+    // Only the names that are not just the IANA city.
+    'St Johns': "St. John's",
+    Canary: 'Canary Islands',
+  },
 };

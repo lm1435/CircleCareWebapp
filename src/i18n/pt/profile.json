@@ -21,22 +21,8 @@
     "save": "Salvar",
     "cancel": "Cancelar",
     "nameSuccess": "Nome atualizado.",
-    "timezoneSuccess": "Fuso horário atualizado.",
     "namePlaceholder": "Adicione seu nome",
     "changePasswordHint": "Para alterar a sua senha, saia da conta e escolha 'Esqueceu a senha?' na página de login."
-  },
-  "timezones": {
-    "America/New_York": "Horário do Leste (ET)",
-    "America/Chicago": "Horário Central (CT)",
-    "America/Denver": "Horário das Montanhas (MT)",
-    "America/Los_Angeles": "Horário do Pacífico (PT)",
-    "America/Phoenix": "Arizona (sem horário de verão)",
-    "America/Anchorage": "Horário do Alasca (AKT)",
-    "Pacific/Honolulu": "Horário do Havaí (HST)",
-    "Europe/London": "Londres (GMT/BST)",
-    "Europe/Paris": "Europa Central (CET)",
-    "Asia/Tokyo": "Japão (JST)",
-    "Australia/Sydney": "Sydney (AEST)"
   },
   "language": {
     "description": "Escolha o idioma usado em todo o app.",
@@ -193,12 +179,6 @@
     },
     "selected": "selecionada"
   },
-  "timezoneImpact": {
-    "impactTitle": "Alterar seu fuso horário?",
-    "impactMessage_one": "Os horários das doses de {{names}} seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para {{zone}} move esses lembretes para o mesmo horário em {{zone}}.",
-    "impactMessage_other": "Os horários das doses de {{names}} seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para {{zone}} move esses lembretes para o mesmo horário em {{zone}}.",
-    "impactConfirm": "Alterar fuso horário"
-  },
   "appearance": {
     "title": "Aparência",
     "themeLabel": "Tema",
@@ -206,5 +186,9 @@
     "themeLight": "Claro",
     "themeDark": "Escuro",
     "hint": "Sistema acompanha o seu dispositivo. Esta escolha vale apenas para este dispositivo."
+  },
+  "timezoneAuto": {
+    "helper": "Definido pelo seu dispositivo. Usado para o seu horário de silêncio e para os horários nos seus lembretes e e-mails.",
+    "otherZone": "Fuso horário personalizado"
   }
 }

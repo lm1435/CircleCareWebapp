@@ -21,22 +21,8 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "nameSuccess": "Nombre actualizado.",
-    "timezoneSuccess": "Zona horaria actualizada.",
     "namePlaceholder": "Agrega tu nombre",
     "changePasswordHint": "Para cambiar tu contraseña, cierra sesión y elige '¿Olvidaste tu contraseña?' en la página de inicio de sesión."
-  },
-  "timezones": {
-    "America/New_York": "Hora del Este (ET)",
-    "America/Chicago": "Hora Central (CT)",
-    "America/Denver": "Hora de la Montaña (MT)",
-    "America/Los_Angeles": "Hora del Pacífico (PT)",
-    "America/Phoenix": "Arizona (sin horario de verano)",
-    "America/Anchorage": "Hora de Alaska (AKT)",
-    "Pacific/Honolulu": "Hora de Hawái (HST)",
-    "Europe/London": "Londres (GMT/BST)",
-    "Europe/Paris": "Hora de Europa Central (CET)",
-    "Asia/Tokyo": "Japón (JST)",
-    "Australia/Sydney": "Sídney (AEST)"
   },
   "language": {
     "description": "Elige el idioma que se usa en toda la aplicación.",
@@ -193,12 +179,6 @@
     },
     "selected": "seleccionado"
   },
-  "timezoneImpact": {
-    "impactTitle": "¿Cambiar tu zona horaria?",
-    "impactMessage_one": "Los horarios de las dosis de {{names}} siguen tu zona horaria porque no tiene su propia cuenta. Si la cambias a {{zone}}, esos recordatorios pasarán a la misma hora en {{zone}}.",
-    "impactMessage_other": "Los horarios de las dosis de {{names}} siguen tu zona horaria porque no tienen su propia cuenta. Si la cambias a {{zone}}, esos recordatorios pasarán a la misma hora en {{zone}}.",
-    "impactConfirm": "Cambiar zona horaria"
-  },
   "appearance": {
     "title": "Apariencia",
     "themeLabel": "Tema",
@@ -206,5 +186,9 @@
     "themeLight": "Claro",
     "themeDark": "Oscuro",
     "hint": "Sistema sigue tu dispositivo. Esta opción solo se aplica a este dispositivo."
+  },
+  "timezoneAuto": {
+    "helper": "Definida por tu dispositivo. Se usa para tus horas de silencio y las horas en tus recordatorios y correos.",
+    "otherZone": "Zona horaria personalizada"
   }
 }

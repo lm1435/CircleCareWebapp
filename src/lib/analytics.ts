@@ -898,12 +898,6 @@ export const Analytics = {
    */
   avatarColorChanged: (color: string) => capture('avatar_color_changed', { color }),
 
-  /**
-   * PK10 (2026-09-30): profile time-zone change prompt. `circles` = how many
-   * circles were listed, `confirmed` = the user went ahead. No ids, names, zones.
-   */
-  timezoneChangeWarning: (circles: number, confirmed: boolean) =>
-    capture('timezone_change_warning', { circles, confirmed }),
 
   // --- Value-gated upsell (PK28(1), 2026-09-30) ---
   //
@@ -1596,7 +1590,12 @@ export const Analytics = {
   translatePromptShown: (suggested: string) => capture('translate_prompt_shown', { suggested }),
   translatePromptResolved: (action: 'accepted' | 'dismissed', suggested: string) =>
     capture('translate_prompt_resolved', { action, suggested }),
-  timezoneChanged: (timezone: string) => capture('timezone_changed', { timezone }),
+  /** The profile time zone follows the browser and is read-only. Fired once the
+   *  silent sync's PATCH lands. `source` is an enum (only 'auto' today);
+   *  `had_dependent_circles`: circles whose schedule follows this zone moved with
+   *  it. No zone value: enum + boolean only. */
+  timezoneSynced: (hadDependentCircles: boolean) =>
+    capture('timezone_synced', { source: 'auto', had_dependent_circles: hadDependentCircles }),
   /** Profile > Appearance > Theme. Enums + a boolean only: `theme` is the NEW
    *  preference, `previous` the old one, `effective` what is now painted. */
   themePreferenceChanged: (props: {

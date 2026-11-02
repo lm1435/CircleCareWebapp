@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getCurrentUser,
-  getTimezoneDependentCircles,
   getUnitPreferences,
   updateProfile as updateProfileRequest,
   type NotificationPreferences,
@@ -26,7 +25,11 @@ import {
   type NotificationGroup,
   type NotificationPrefs,
 } from '@/lib/notificationGroups';
-import { normalizeTimeOfDay, formatTimeOfDay } from '@/utils/timezone';
+import {
+  normalizeTimeOfDay,
+  formatTimeOfDay,
+  getTimezoneLabel,
+} from '@/utils/timezone';
 import { quietHoursCoverAlmostAllDay } from '@/utils/quietHours';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
@@ -81,21 +84,6 @@ import { blockOfflineWrite } from '@/lib/offlineWrite';
 // The current user + unit prefs are read with direct useQuery calls keyed by the
 // pre-mirrored queryKeys (the mutation hooks invalidate the same keys), since no
 // shared read-hook exists yet for either.
-
-// Mirror mobile TIMEZONES (ProfileScreen.tsx ~line 55). Labels come from i18n.
-const TIMEZONE_VALUES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'America/Phoenix',
-  'America/Anchorage',
-  'Pacific/Honolulu',
-  'Europe/London',
-  'Europe/Paris',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-] as const;
 
 // Notification settings are four GROUPS over the per-key stored prefs (spec:
 // docs/plans/notification-settings-4-groups.md). The pure group logic lives in
@@ -251,14 +239,9 @@ export default function ProfilePage(): ReactElement {
 
   // PK10: a time-zone change that would move dose times waits here for the
   // user's answer. `zone` is the zone they picked; `names` the recipients whose
-  // reminders follow the owner's zone. Cancel drops it: the Select is
-  // controlled by the saved zone, so it snaps back on its own.
+  // reminders follow the owner's zone. Cancel drops it: nothing was written.
   // "Color updated." live-region confirmation after a colour save lands.
   const [colorSaved, setColorSaved] = useState(false);
-  const [pendingZone, setPendingZone] = useState<{ zone: string; names: string[]; count: number } | null>(
-    null
-  );
-
   // Seed local state from the loaded user once.
   useEffect(() => {
     if (!user) return;
@@ -321,53 +304,6 @@ export default function ProfilePage(): ReactElement {
         onError: () => setNameError(t('common:errors.saveFailed')),
       }
     );
-  };
-
-  const saveTimezone = (tz: string): void => {
-    updateProfile.mutate(
-      { timezone: tz },
-      {
-        onSuccess: () => {
-          Analytics.timezoneChanged(tz);
-          showToast(t('account.timezoneSuccess'), 'success');
-        },
-      }
-    );
-  };
-
-  const handleTimezone = async (tz: string): Promise<void> => {
-    if (blockOfflineWrite('save')) return;
-    if (tz === user.timezone) return;
-    // Recipients without their own account follow THIS zone, so a change moves
-    // their dose reminders: ask first. Never block a change on a failed read.
-    let dependent: { id: string; recipient_name: string }[] = [];
-    try {
-      dependent = await getTimezoneDependentCircles();
-    } catch {
-      dependent = [];
-    }
-    if (dependent.length === 0) {
-      saveTimezone(tz);
-      return;
-    }
-    setPendingZone({
-      zone: tz,
-      names: Array.from(new Set(dependent.map((c) => c.recipient_name))),
-      count: dependent.length,
-    });
-  };
-
-  const confirmTimezone = (): void => {
-    if (!pendingZone) return;
-    Analytics.timezoneChangeWarning(pendingZone.count, true);
-    const { zone } = pendingZone;
-    setPendingZone(null);
-    saveTimezone(zone);
-  };
-
-  const cancelTimezone = (): void => {
-    if (pendingZone) Analytics.timezoneChangeWarning(pendingZone.count, false);
-    setPendingZone(null);
   };
 
   const handleLanguage = (lang: string): void => {
@@ -558,11 +494,6 @@ export default function ProfilePage(): ReactElement {
   const glucoseUnit = unitsQuery.data?.glucose_unit ?? 'mg/dL';
   const temperatureUnit = resolveTemperatureUnit(unitsQuery.data);
 
-  const timezoneOptions: SelectOption[] = TIMEZONE_VALUES.map((value) => ({
-    value,
-    label: t(`timezones.${value}`),
-  }));
-
   const dayOptions: SelectOption[] = Array.from({ length: 7 }, (_, i) => ({
     value: String(i),
     label: t(`emailDigest.days.${i}`),
@@ -674,14 +605,19 @@ export default function ProfilePage(): ReactElement {
           </>
         ) : null}
 
-        <Select
-          id="profile-timezone"
-          label={t('account.timezone')}
-          options={timezoneOptions}
-          value={user.timezone ?? 'America/New_York'}
-          onChange={(e) => void handleTimezone(e.target.value)}
-          busy={updateProfile.isPending || saveName.isPending}
-        />
+        <div data-testid="profile-timezone">
+          <div className="flex items-baseline justify-between gap-4">
+            <Text variant="label" as="p" id="profile-timezone-label">
+              {t('account.timezone')}
+            </Text>
+            <Text variant="body" as="p" id="profile-timezone-value">
+              {getTimezoneLabel(user.timezone ?? '') || t('timezoneAuto.otherZone')}
+            </Text>
+          </div>
+          <Text variant="caption" className="mt-1">
+            {t('timezoneAuto.helper')}
+          </Text>
+        </div>
 
         {/* Password changes happen through the sign-in reset flow — point there. */}
         <Text variant="caption">{t('account.changePasswordHint')}</Text>
@@ -1002,23 +938,7 @@ export default function ProfilePage(): ReactElement {
         />
       ) : null}
 
-      {pendingZone ? (
-        <ConfirmDialog
-          offlineKind="save"
-          title={t('timezoneImpact.impactTitle')}
-          message={t('timezoneImpact.impactMessage', {
-            count: pendingZone.count,
-            names: pendingZone.names.join(', '),
-            zone:
-              timezoneOptions.find((o) => o.value === pendingZone.zone)?.label ??
-              pendingZone.zone,
-          })}
-          confirmLabel={t('timezoneImpact.impactConfirm')}
-          cancelLabel={t('common:cancel')}
-          onConfirm={confirmTimezone}
-          onCancel={cancelTimezone}
-        />
-      ) : null}
+
 
       {showDelete ? (
         <ConfirmDialog

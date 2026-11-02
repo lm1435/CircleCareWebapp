@@ -21,22 +21,8 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "nameSuccess": "Name aktualisiert.",
-    "timezoneSuccess": "Zeitzone aktualisiert.",
     "namePlaceholder": "Namen hinzufügen",
     "changePasswordHint": "Um Ihr Passwort zu ändern, melden Sie sich ab und wählen Sie auf der Anmeldeseite „Passwort vergessen?“."
-  },
-  "timezones": {
-    "America/New_York": "Ostküstenzeit (ET)",
-    "America/Chicago": "Zentralzeit (CT)",
-    "America/Denver": "Rocky-Mountain-Zeit (MT)",
-    "America/Los_Angeles": "Pazifische Zeit (PT)",
-    "America/Phoenix": "Arizona (keine Sommerzeit)",
-    "America/Anchorage": "Alaska-Zeit (AKT)",
-    "Pacific/Honolulu": "Hawaii-Zeit (HST)",
-    "Europe/London": "London (GMT/BST)",
-    "Europe/Paris": "Mitteleuropäische Zeit (MEZ)",
-    "Asia/Tokyo": "Japan (JST)",
-    "Australia/Sydney": "Sydney (AEST)"
   },
   "language": {
     "description": "Wählen Sie die Sprache für die gesamte App.",
@@ -193,12 +179,6 @@
     },
     "selected": "ausgewählt"
   },
-  "timezoneImpact": {
-    "impactTitle": "Zeitzone ändern?",
-    "impactMessage_one": "Die Dosiszeiten für {{names}} richten sich nach Ihrer Zeitzone, da diese Person kein eigenes Konto hat. Wenn Sie auf {{zone}} wechseln, werden diese Erinnerungen auf dieselbe Uhrzeit in {{zone}} verschoben.",
-    "impactMessage_other": "Die Dosiszeiten für {{names}} richten sich nach Ihrer Zeitzone, da diese Personen kein eigenes Konto haben. Wenn Sie auf {{zone}} wechseln, werden diese Erinnerungen auf dieselbe Uhrzeit in {{zone}} verschoben.",
-    "impactConfirm": "Zeitzone ändern"
-  },
   "appearance": {
     "title": "Darstellung",
     "themeLabel": "Farbschema",
@@ -206,5 +186,9 @@
     "themeLight": "Hell",
     "themeDark": "Dunkel",
     "hint": "System folgt Ihrem Gerät. Diese Auswahl gilt nur für dieses Gerät."
+  },
+  "timezoneAuto": {
+    "helper": "Von Ihrem Gerät festgelegt. Wird für Ihre Ruhezeiten und die Uhrzeiten in Ihren Erinnerungen und E-Mails verwendet.",
+    "otherZone": "Benutzerdefinierte Zeitzone"
   }
 }

@@ -67,9 +67,6 @@
       "message": "Não será avisado quando uma dose não for marcada. Desativar mesmo assim?"
     }
   },
-  "timezoneImpact": {
-    "impactTitle": "Alterar o seu fuso horário?"
-  },
   "appearance": {
     "title": "Aspeto",
     "hint": "Sistema acompanha o seu dispositivo. Esta escolha aplica-se apenas a este dispositivo."

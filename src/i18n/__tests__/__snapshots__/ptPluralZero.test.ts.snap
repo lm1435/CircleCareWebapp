@@ -277,11 +277,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 hora de atraso",
     "2 horas de atraso",
   ],
-  "pt profile:timezoneImpact.impactMessage": [
-    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
-    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
-    "Os horários das doses de Ana seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
-  ],
   "pt shifts:duration.hours": [
     "0 hora",
     "1 hora",
@@ -606,11 +601,6 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 horas de atraso",
     "1 hora de atraso",
     "2 horas de atraso",
-  ],
-  "pt-PT profile:timezoneImpact.impactMessage": [
-    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
-    "Os horários das doses de Ana seguem o seu fuso horário porque a pessoa não tem conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
-    "Os horários das doses de Ana seguem o seu fuso horário porque essas pessoas não têm conta própria. Alterar para Lisboa move esses lembretes para o mesmo horário em Lisboa.",
   ],
   "pt-PT shifts:duration.hours": [
     "0 hora",

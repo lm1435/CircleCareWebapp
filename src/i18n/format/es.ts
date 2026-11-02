@@ -62,6 +62,15 @@ const placeNames: Record<string, string> = {
   Calcutta: 'Calcuta',
   'New Delhi': 'Nueva Delhi',
   Sydney: 'Sídney',
+  // Time zone picker cities (utils/timezoneOptions.ts)
+  'St Johns': 'San Juan de Terranova',
+  Canary: 'Islas Canarias',
+  Amsterdam: 'Ámsterdam',
+  Jerusalem: 'Jerusalén',
+  Tehran: 'Teherán',
+  Adelaide: 'Adelaida',
+  Kathmandu: 'Katmandú',
+  Kyiv: 'Kiev',
 };
 
 /**
