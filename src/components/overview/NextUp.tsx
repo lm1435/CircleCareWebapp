@@ -87,6 +87,18 @@ export interface NextUpProps {
  */
 export const BADGE_ROW_NAME_BASIS = 'flex-[1_1_12rem]';
 
+/**
+ * A name never breaks INSIDE a word (owner report, mobile 1.4.0 build 8: "Escitalopra / m" beside
+ * the undo badge, with the zone-labelled time "9:00 PM (Denver)" in the first column). The name
+ * column's minimum is its longest word (`min-width: auto`, capped at the row by `max-w-full`;
+ * `overflow-wrap: break-word` does not lower it), and every inline row WRAPS: when time + longest
+ * word + action do not fit on one line, the action (or the name) moves to the next line instead
+ * of the browser cutting the word. A single word wider than the whole row is the only one ever
+ * broken. The time column is 5rem but never narrower than its own longest word (a long zone
+ * label such as "(Johannesburg)" no longer overflows into the name).
+ */
+export const NAME_COLUMN_MIN = 'max-w-full';
+
 /** Whole calendar days `date` lies before `today` (both YYYY-MM-DD); 0 for today or later. */
 function daysBefore(date: string, today: string): number {
   const ms = Date.parse(`${today}T00:00:00Z`) - Date.parse(`${date}T00:00:00Z`);
@@ -350,26 +362,24 @@ export function NextUp({
           } ${
             stacked
               ? 'flex flex-col items-stretch gap-2 py-3'
-              : badgeShown
-                ? 'flex flex-wrap items-center gap-x-4 gap-y-2 py-3'
-                : 'flex items-center gap-4 py-3'
+              : 'flex flex-wrap items-center gap-x-4 gap-y-2 py-3'
           }`}
         >
           {time ? (
             <span
-              className={`text-md font-semibold tabular-nums text-ink-2 ${stacked ? '' : 'w-20 flex-none'}`}
+              className={`text-md font-semibold tabular-nums text-ink-2 ${stacked ? '' : 'flex-[0_0_5rem]'}`}
             >
               {time}
             </span>
           ) : (
-            <span aria-hidden="true" className={stacked ? 'hidden' : 'w-20 flex-none'} />
+            <span aria-hidden="true" className={stacked ? 'hidden' : 'flex-[0_0_5rem]'} />
           )}
           <Link
             to={`${base}/${PAGE_FOR[item.type]}`}
             onClick={() =>
               Analytics.nextUpAction({ action: 'open', item_type: item.type, position })
             }
-            className={`flex min-h-11 min-w-0 flex-col justify-center no-underline ${
+            className={`flex min-h-11 ${NAME_COLUMN_MIN} flex-col justify-center no-underline ${
               badgeShown && !stacked ? BADGE_ROW_NAME_BASIS : 'flex-1'
             }`}
             data-next-up-name=""

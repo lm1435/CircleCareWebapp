@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
-import { NextUp, NEXT_UP_VISIBLE, BADGE_ROW_NAME_BASIS } from '../NextUp';
+import { NextUp, NEXT_UP_VISIBLE, BADGE_ROW_NAME_BASIS, NAME_COLUMN_MIN } from '../NextUp';
 import { ToastProvider } from '@/components/ui/Toast';
 import { useMedicationUndo } from '@/components/meds/useMedicationUndo';
 import { useTaskCompletion } from '@/hooks/useTaskCompletion';
@@ -365,9 +365,24 @@ describe('NextUp', () => {
       const badge = screen.getByRole('button', { name: 'Undo Med 1' }).closest('[role="status"]');
       expect(badge).toHaveClass('flex-none');
       expect(badge).not.toHaveClass('w-full');
-      // A row without a badge is untouched: one line, name flex-1, no wrap.
-      expect(plainRow.firstElementChild).not.toHaveClass('flex-wrap');
+      // A row without a badge keeps name flex-1; it wraps too (a name never breaks inside a
+      // word: when the longest word does not fit beside Taken, Taken moves to the next line).
+      expect(plainRow.firstElementChild).toHaveClass('flex-wrap');
       expect(plainRow.querySelector('[data-next-up-name]')).toHaveClass('flex-1');
+    });
+
+    // Owner report (mobile 1.4.0 build 8, web parity): "Escitalopra / m". The name column may
+    // not shrink below its longest word (no min-w-0), capped at the row, and the time column
+    // is never narrower than its own longest word. The real-layout proof is
+    // e2e/flows/next-up-long-name-geometry.spec.ts (jsdom has no layout).
+    it('the name column keeps min-width:auto (longest word), capped at the row', () => {
+      medPending = { '1': 'taken' };
+      renderNextUp({ items: [dose('1'), dose('2')] });
+      for (const name of document.querySelectorAll<HTMLElement>('[data-next-up-name]')) {
+        expect(name).not.toHaveClass('min-w-0');
+        expect(name).toHaveClass(NAME_COLUMN_MIN);
+      }
+      expect(NAME_COLUMN_MIN).toBe('max-w-full');
     });
 
     it('the basis token is a real 12rem flex basis (grow + shrink)', () => {
