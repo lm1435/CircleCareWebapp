@@ -211,6 +211,11 @@ await rest('POST', 'push_tokens?on_conflict=user_id,device_token',
   { prefer: 'resolution=merge-duplicates,return=minimal' });
 // Creation rows would crowd the Overview's activity with "X added Y" from one second ago.
 await dbDelete('activity_feed', `circle_id=eq.${circleId}`);
+// Owner decision 2026-11-01 (as baseline.mjs markDemoNotificationsRead): the header bell shows no unread pill. The seed's
+// own joins/notes fan out inbox rows a moment later, so wait, then mark every demo member's inbox read.
+await new Promise((r) => setTimeout(r, 2500));
+await rest('PATCH', `user_notifications?read_at=is.null&user_id=in.(${Object.values(people).map((p) => p.id).join(',')})`,
+  { read_at: new Date().toISOString() }, { prefer: 'return=minimal' });
 
 const state = {
   lang, password: PASSWORD, tz, today, circleId, primaryId, cardioId, recipient: SETS.recipient,
