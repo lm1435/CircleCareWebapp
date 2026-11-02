@@ -1,5 +1,5 @@
 /**
- * EDIT USES THE SIMPLE LAYOUT (owner decision, 1.4.0): editing a medication or an appointment looks
+ * EDIT USES THE SIMPLE LAYOUT (owner decision, 1.4.0): editing a medication, an appointment or a task looks
  * exactly like adding one, prefilled. The simple layout keeps optional fields behind disclosures
  * ("More details" on a medication; the Doctor / Place / Notes / Repeat rows on an appointment), so on an
  * edit a SAVED value behind one of them opens it — an edit must never hide what is stored. Mobile parity:
@@ -44,4 +44,33 @@ export function simpleAppointmentOpenRows(source: SimpleEditDisclosureSource): R
   if (source.description?.trim()) rows.notes = true;
   if (source.recurrence_rule) rows.repeat = true;
   return rows;
+}
+
+/** What the simple task form's "More details" needs from a saved task, beyond the repeat fields. */
+export interface SimpleTaskDisclosureSource extends SimpleEditDisclosureSource {
+  scheduled_time?: string | null;
+  duration_minutes?: number | null;
+}
+
+/**
+ * A repeat the task form's "How often?" tiles cannot name (Once, Every day, Every week, Some days are its
+ * answers): every other day, monthly, yearly, a cycle. Weekly is named with or without days.
+ */
+export function isTaskRepeatHowOftenCannotName(source: SimpleEditDisclosureSource): boolean {
+  const rule = source.recurrence_rule ?? null;
+  return rule !== null && rule !== 'daily' && rule !== 'weekly';
+}
+
+/**
+ * The simple task form's "More details" (details, duration + end time, the full Repeat select + end date,
+ * reminders): opened on an edit by details, a duration other than the default a new time gets, a repeat end
+ * date, or a repeat the tiles cannot name. Mobile twin: the same rule in AddEventScreen.
+ */
+export function simpleTaskMoreOpen(source: SimpleTaskDisclosureSource, defaultDurationMinutes: number): boolean {
+  return !!(
+    source.description?.trim() ||
+    (source.scheduled_time && source.duration_minutes && source.duration_minutes !== defaultDurationMinutes) ||
+    (source.recurrence_rule && source.recurrence_end_date) ||
+    isTaskRepeatHowOftenCannotName(source)
+  );
 }

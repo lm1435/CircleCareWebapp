@@ -1,0 +1,1184 @@
+{
+  "create-date-only-today": {
+    "event_type": "task",
+    "title": "Water the plants",
+    "scheduled_date": "2027-02-10",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-date-only-tomorrow": {
+    "event_type": "task",
+    "title": "Water the plants",
+    "scheduled_date": "2027-02-11",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-date-only-later": {
+    "event_type": "task",
+    "title": "Water the plants",
+    "scheduled_date": "2027-03-15",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-date-only-today-kiritimati": {
+    "event_type": "task",
+    "title": "Call the pharmacy",
+    "scheduled_date": "2027-02-11",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-date-only-tomorrow-midway": {
+    "event_type": "task",
+    "title": "Call the pharmacy",
+    "scheduled_date": "2027-02-11",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-timed-ny-tomorrow": {
+    "event_type": "task",
+    "title": "Pick up prescription",
+    "scheduled_date": "2027-02-11",
+    "scheduled_time": "09:00",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-timed-same-zone": {
+    "event_type": "task",
+    "title": "Pick up prescription",
+    "scheduled_date": "2027-02-10",
+    "scheduled_time": "14:30",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-timed-auckland-other-day": {
+    "event_type": "task",
+    "title": "Book a ride",
+    "scheduled_date": "2027-02-14",
+    "scheduled_time": "07:15",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-timed-kiritimati-today-late": {
+    "event_type": "task",
+    "title": "Book a ride",
+    "scheduled_date": "2027-02-11",
+    "scheduled_time": "23:30",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-timed-kiritimati-time-first": {
+    "event_type": "task",
+    "title": "Book a ride",
+    "scheduled_date": "2027-02-12",
+    "scheduled_time": "23:30",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-timed-midway-today": {
+    "event_type": "task",
+    "title": "Book a ride",
+    "scheduled_date": "2027-02-10",
+    "scheduled_time": "23:45",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-timed-ny-dst-day": {
+    "event_type": "task",
+    "title": "Book a ride",
+    "scheduled_date": "2027-03-14",
+    "scheduled_time": "08:00",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-duration-1hr": {
+    "event_type": "task",
+    "title": "Clean the kitchen",
+    "scheduled_date": "2027-02-11",
+    "scheduled_time": "10:00",
+    "duration_minutes": 60,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-duration-time-first-across-dst": {
+    "event_type": "task",
+    "title": "Clean the kitchen",
+    "scheduled_date": "2027-04-10",
+    "scheduled_time": "09:00",
+    "duration_minutes": 60,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-custom-end-time": {
+    "event_type": "task",
+    "title": "Clean the kitchen",
+    "scheduled_date": "2027-02-11",
+    "scheduled_time": "10:00",
+    "duration_minutes": 105,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-daily": {
+    "event_type": "task",
+    "title": "Walk",
+    "scheduled_date": "2027-02-11",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "daily",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-weekly": {
+    "event_type": "task",
+    "title": "Walk",
+    "scheduled_date": "2027-02-11",
+    "scheduled_time": "08:00",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "weekly",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-some-days": {
+    "event_type": "task",
+    "title": "Walk",
+    "scheduled_date": "2027-02-11",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "weekly",
+    "recurrence_days": [
+      1,
+      4,
+      6
+    ],
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-every-other-day": {
+    "event_type": "task",
+    "title": "Walk",
+    "scheduled_date": "2027-02-11",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "every_other_day",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-monthly": {
+    "event_type": "task",
+    "title": "Pay the rent",
+    "scheduled_date": "2027-03-15",
+    "scheduled_time": "09:00",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "monthly",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-yearly": {
+    "event_type": "task",
+    "title": "Renew the license",
+    "scheduled_date": "2027-03-15",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "yearly",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-cycle": {
+    "event_type": "task",
+    "title": "Rotate",
+    "scheduled_date": "2027-02-11",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "cycle:5:2",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-end": {
+    "event_type": "task",
+    "title": "Walk",
+    "scheduled_date": "2027-02-11",
+    "scheduled_time": "08:00",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "daily",
+    "recurrence_end_date": "2027-03-31",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-repeat-end-kiritimati": {
+    "event_type": "task",
+    "title": "Walk",
+    "scheduled_date": "2027-02-12",
+    "scheduled_time": "06:00",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "weekly",
+    "recurrence_end_date": "2027-03-26",
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-who-anyone": {
+    "event_type": "task",
+    "title": "Groceries",
+    "scheduled_date": "2027-02-10",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-who-me": {
+    "event_type": "task",
+    "title": "Groceries",
+    "scheduled_date": "2027-02-10",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": "aaaaaaaa-1111-4111-8111-111111111111",
+    "entry_source": "form"
+  },
+  "create-who-other": {
+    "event_type": "task",
+    "title": "Groceries",
+    "scheduled_date": "2027-02-10",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222",
+    "entry_source": "form"
+  },
+  "create-who-care-recipient": {
+    "event_type": "task",
+    "title": "Groceries",
+    "scheduled_date": "2027-02-10",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": "cccccccc-3333-4333-8333-333333333333",
+    "entry_source": "form"
+  },
+  "create-details": {
+    "event_type": "task",
+    "title": "Groceries",
+    "description": "Milk, eggs, bread",
+    "scheduled_date": "2027-02-10",
+    "notifications_enabled": true,
+    "reminder_at_due": true,
+    "reminder_24h": false,
+    "reminder_1h": false,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-reminders": {
+    "event_type": "task",
+    "title": "Groceries",
+    "scheduled_date": "2027-02-11",
+    "scheduled_time": "16:00",
+    "duration_minutes": 30,
+    "notifications_enabled": true,
+    "reminder_at_due": false,
+    "reminder_24h": false,
+    "reminder_1h": true,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "assigned_to": null,
+    "entry_source": "form"
+  },
+  "create-everything": {
+    "event_type": "task",
+    "title": "Physio exercises",
+    "description": "20 minutes",
+    "scheduled_date": "2027-02-15",
+    "scheduled_time": "18:30",
+    "duration_minutes": 89,
+    "notifications_enabled": true,
+    "reminder_at_due": false,
+    "reminder_24h": false,
+    "reminder_1h": true,
+    "reminder_30m": false,
+    "reminder_15m": false,
+    "recurrence_rule": "weekly",
+    "recurrence_end_date": "2027-05-01",
+    "recurrence_days": [
+      1,
+      3
+    ],
+    "assigned_to": "cccccccc-3333-4333-8333-333333333333",
+    "entry_source": "form"
+  },
+  "edit-untouched-dateOnly": {
+    "eventId": "task-1",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-timed": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "10:00",
+      "duration_minutes": 45,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-untouched-dailyEnd": {
+    "eventId": "task-3",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "08:00",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-03-31",
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-someDays": {
+    "eventId": "task-4",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        1,
+        3,
+        5
+      ],
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-everyOther": {
+    "eventId": "task-5",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "every_other_day",
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-monthly": {
+    "eventId": "task-6",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "09:00",
+      "duration_minutes": 60,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "monthly",
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-yearly": {
+    "eventId": "task-7",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "yearly",
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-cycle": {
+    "eventId": "task-8",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "cycle:21:7",
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-weekly": {
+    "eventId": "task-9",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-rosaReminders": {
+    "eventId": "task-10",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "17:00",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": false,
+      "reminder_24h": false,
+      "reminder_1h": true,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "cccccccc-3333-4333-8333-333333333333"
+    }
+  },
+  "edit-untouched-noDuration": {
+    "eventId": "task-11",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "11:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-kiritimati": {
+    "eventId": "task-12",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "23:30",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-mine": {
+    "eventId": "task-13",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "aaaaaaaa-1111-4111-8111-111111111111"
+    }
+  },
+  "edit-untouched-kiriDaily": {
+    "eventId": "task-15",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "06:00",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-03-31",
+      "assigned_to": null
+    }
+  },
+  "edit-untouched-past": {
+    "eventId": "task-14",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-01-20",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        3
+      ],
+      "assigned_to": null
+    }
+  },
+  "edit-title": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up the new prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "10:00",
+      "duration_minutes": 45,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-day-tomorrow": {
+    "eventId": "task-1",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-11",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-day-today": {
+    "eventId": "task-1",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-10",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-day-other-keeps-time": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-20",
+      "scheduled_time": "10:00",
+      "duration_minutes": 45,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-time": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "15:30",
+      "duration_minutes": 45,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-clear-time": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-12",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-add-time": {
+    "eventId": "task-1",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "09:15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-add-time-no-duration-row": {
+    "eventId": "task-11",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "12:00",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-repeat-weekly": {
+    "eventId": "task-1",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "assigned_to": null
+    }
+  },
+  "edit-repeat-once": {
+    "eventId": "task-3",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "08:00",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-repeat-some-days": {
+    "eventId": "task-9",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        1,
+        3
+      ],
+      "assigned_to": null
+    }
+  },
+  "edit-some-days-to-daily": {
+    "eventId": "task-4",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_days": null,
+      "assigned_to": null
+    }
+  },
+  "edit-some-days-change-days": {
+    "eventId": "task-4",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "recurrence_days": [
+        0,
+        1,
+        3
+      ],
+      "assigned_to": null
+    }
+  },
+  "edit-monthly-to-yearly": {
+    "eventId": "task-6",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "09:00",
+      "duration_minutes": 60,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "yearly",
+      "assigned_to": null
+    }
+  },
+  "edit-every-other-day-to-weekly": {
+    "eventId": "task-5",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "weekly",
+      "assigned_to": null
+    }
+  },
+  "edit-repeat-end": {
+    "eventId": "task-3",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "08:00",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-04-30",
+      "assigned_to": null
+    }
+  },
+  "edit-who-anyone": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "10:00",
+      "duration_minutes": 45,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-who-me": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "10:00",
+      "duration_minutes": 45,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "aaaaaaaa-1111-4111-8111-111111111111"
+    }
+  },
+  "edit-who-care-recipient": {
+    "eventId": "task-1",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "cccccccc-3333-4333-8333-333333333333"
+    }
+  },
+  "edit-who-other-from-me": {
+    "eventId": "task-13",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-details": {
+    "eventId": "task-1",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Bring the card",
+      "scheduled_date": "2027-02-15",
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-details-cleared": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "10:00",
+      "duration_minutes": 45,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-duration": {
+    "eventId": "task-2",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "description": "Ask about refills",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "10:00",
+      "duration_minutes": 120,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": "bbbbbbbb-2222-4222-8222-222222222222"
+    }
+  },
+  "edit-reminders": {
+    "eventId": "task-3",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-15",
+      "scheduled_time": "08:00",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": false,
+      "reminder_24h": false,
+      "reminder_1h": true,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-03-31",
+      "assigned_to": null
+    }
+  },
+  "edit-kiritimati-other-day": {
+    "eventId": "task-12",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-14",
+      "scheduled_time": "23:30",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  },
+  "edit-kiritimati-repeat-end": {
+    "eventId": "task-15",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-12",
+      "scheduled_time": "06:00",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "recurrence_rule": "daily",
+      "recurrence_end_date": "2027-04-15",
+      "assigned_to": null
+    }
+  },
+  "edit-kiritimati-today": {
+    "eventId": "task-12",
+    "data": {
+      "event_type": "task",
+      "title": "Pick up prescription",
+      "scheduled_date": "2027-02-11",
+      "scheduled_time": "23:30",
+      "duration_minutes": 30,
+      "notifications_enabled": true,
+      "reminder_at_due": true,
+      "reminder_24h": false,
+      "reminder_1h": false,
+      "reminder_30m": false,
+      "reminder_15m": false,
+      "assigned_to": null
+    }
+  }
+}

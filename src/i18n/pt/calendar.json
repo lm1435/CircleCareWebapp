@@ -321,6 +321,7 @@
       "startDate": "Data de início",
       "addMedication": "Adicionar medicamento",
       "addAppointment": "Adicionar consulta",
+      "addTask": "Adicionar tarefa",
       "otherTime": "Outro horário",
       "everyDay": "Todos os dias",
       "someDays": "Alguns dias",
@@ -332,7 +333,24 @@
       "notesAndReminders": "Notas e lembretes",
       "repeat": "Repetir",
       "anotherDose": "+ Outra dose",
-      "removeDose": "Remover a dose {{number}}"
+      "removeDose": "Remover a dose {{number}}",
+      "new": {
+        "task": "Nova tarefa"
+      },
+      "edit": {
+        "task": "Editar tarefa"
+      },
+      "whatNeedsDoing": "O que precisa ser feito?",
+      "today": "Hoje",
+      "tomorrow": "Amanhã",
+      "otherDay": "Outro dia",
+      "anyTime": "A qualquer hora",
+      "pickTime": "Escolher horário",
+      "once": "Uma vez",
+      "everyWeek": "Toda semana",
+      "whoDoingIt": "Quem vai fazer?",
+      "me": "Eu",
+      "taskMoreHint": "Detalhes, lembretes, data de término"
     },
     "timeChips": {
       "label": "Horários comuns",

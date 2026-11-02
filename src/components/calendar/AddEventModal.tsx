@@ -37,7 +37,12 @@ import {
   type TimeChipId,
 } from '@/lib/analytics';
 import { MED_TIME_CHIPS, chipForTime } from '@/lib/medTimeOfDay';
-import { simpleAppointmentOpenRows, simpleMedicationMoreOpen } from '@/utils/simpleEditDisclosure';
+import {
+  simpleAppointmentOpenRows,
+  simpleMedicationMoreOpen,
+  simpleTaskMoreOpen,
+} from '@/utils/simpleEditDisclosure';
+import { useAuthStore } from '@/store/authStore';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
 import { TimeChips } from './TimeChips';
 import { DisclosureRow } from './DisclosureRow';
@@ -62,6 +67,7 @@ import {
   Card,
   Checkbox,
   ChipSelect,
+  ChoiceTileButton,
   ConfirmDialog,
   DateField,
   Eyebrow,
@@ -202,10 +208,12 @@ export interface AddEventModalProps {
    */
   entry?: EntryFormOrigin;
   /**
-   * 'auto' (default): a NEW medication / appointment opened for its type, and an EDIT of
-   * one (owner 1.4.0), gets the short form ("What is it? / When? / ..."). 'full' forces the
-   * all-fields layout, which tasks and a type-less open always use (tests compare the two).
-   * Same state and payload either way.
+   * 'auto' (default): a NEW medication / appointment / task opened for its type, and an EDIT of
+   * one (owner 1.4.0), gets the short form ("What is it? / When? / ..."; a task: "What needs
+   * doing? / When? / How often? / Who's doing it?"). 'full' forces the all-fields layout, which
+   * a type-less open always uses (tests compare the two). Same state and payload either way.
+   * (Mobile also keeps the full layout for a voice/AI-drafted entry and a follow-up; the web has
+   * neither entry point.)
    */
   layout?: 'auto' | 'full';
 }
@@ -569,10 +577,12 @@ function AddEventForm({
   // opened for that type gets the short "What is it? / When? / ..." form, and so does
   // an EDIT of one (owner 1.4.0: editing looks exactly like adding, prefilled; only the
   // title and the Save label differ). Every field the full form has sits where the add
-  // form puts it. A task and a type-less open keep the full form.
+  // form puts it. A type-less open keeps the full form. A TASK too (owner 1.4.0, mobile parity):
+  // a new one opened for 'task' and every task edit.
   const simpleType = isEditing ? event.event_type : initialType;
-  const simpleKind: 'medication' | 'appointment' | null =
-    layout !== 'full' && (simpleType === 'medication' || simpleType === 'appointment')
+  const simpleKind: 'medication' | 'appointment' | 'task' | null =
+    layout !== 'full' &&
+    (simpleType === 'medication' || simpleType === 'appointment' || simpleType === 'task')
       ? simpleType
       : null;
   const firstRun = firstRunProp && simpleKind === 'medication';
@@ -911,22 +921,34 @@ function AddEventForm({
   const stepsDoneRef = useRef(new Set<EntryFormStep>());
   function completeStep(step: EntryFormStep): void {
     if (isEditing || stepsDoneRef.current.has(step)) return;
-    if (eventType !== 'medication' && eventType !== 'appointment') return;
+    // The task funnel is the simple task form's (a full-layout task has no such steps).
+    const funnelType =
+      eventType === 'medication' ||
+      eventType === 'appointment' ||
+      (eventType === 'task' && simpleKind === 'task');
+    if (!funnelType) return;
     stepsDoneRef.current.add(step);
     Analytics.entryFormStepCompleted({ type: eventType, step });
   }
   // `large_text_layout` for the two simple forms (once per screen per session).
+  // The task form has no `large_text_layout` screen of its own (the enum is shared with mobile).
   const largeText = useLargeTextLayoutEvent(
     simpleKind === 'appointment' ? 'appt_form' : 'med_form',
-    simpleKind !== null
+    simpleKind === 'medication' || simpleKind === 'appointment'
   );
   // The simple forms' disclosure state. The panels stay mounted; these only show them.
   // On an edit a saved value behind one opens it (utils/simpleEditDisclosure); the
   // repeat half is re-checked once the series root lands (the effect below).
   const [moreOpen, setMoreOpen] = useState(
-    () => isEditing && simpleKind === 'medication' && simpleMedicationMoreOpen(event)
+    () =>
+      isEditing &&
+      ((simpleKind === 'medication' && simpleMedicationMoreOpen(event)) ||
+        (simpleKind === 'task' && simpleTaskMoreOpen(event, DEFAULT_DURATION_MINUTES)))
   );
   const [otherTimeOpen, setOtherTimeOpen] = useState(false);
+  // The task form's "Other day" (reveals the date field) and "Pick a time" (reveals the time field).
+  const [otherDayOpen, setOtherDayOpen] = useState(false);
+  const [pickTimeOpen, setPickTimeOpen] = useState(false);
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
   // the first-run wizard), pointing at the primary's bottle through `refill_group_id`.
@@ -945,6 +967,7 @@ function AddEventForm({
     const source = { ...event, ...scheduleSource };
     if (simpleKind === 'medication' && simpleMedicationMoreOpen(source)) setMoreOpen(true);
     if (simpleKind === 'appointment' && simpleAppointmentOpenRows(source).repeat) setRowOpen('repeat', true);
+    if (simpleKind === 'task' && simpleTaskMoreOpen(source, DEFAULT_DURATION_MINUTES)) setMoreOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the root resolves
   }, [scheduleSource]);
   /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
@@ -1179,6 +1202,31 @@ function AddEventForm({
     return [{ value: '', label: t('addEvent.anyone') }, ...opts];
   }, [members, t]);
 
+  /**
+   * The simple task form's "Who's doing it?" tiles (mobile parity): Anyone (unassigned), Me (the signed-in
+   * viewer, when a member), then every other member in the circle's order, the care recipient included with
+   * the "Care recipient" caption as the tile's second line. The same values as the Assigned-to select.
+   */
+  const viewerId = useAuthStore((s) => s.user?.id ?? null);
+  const taskWhoOptions = useMemo(() => {
+    const role = t('members:roles.careRecipient');
+    const me = viewerId ? members.find((m) => m.id === viewerId) : undefined;
+    const others = members
+      .filter((m) => m.id !== viewerId)
+      .map((m) => ({
+        value: m.id,
+        label: m.first_name || m.email.split('@')[0],
+        sub: m.is_care_recipient ? role : undefined,
+      }));
+    return [
+      { value: '', label: t('addEvent.anyone') },
+      ...(me
+        ? [{ value: me.id, label: t('addEvent.simple.me'), sub: me.is_care_recipient ? role : undefined }]
+        : []),
+      ...others,
+    ];
+  }, [members, viewerId, t]);
+
   const recurrenceOptions = useMemo(
     () =>
       // "As needed" is offered on a NEW medication only: it is locked after
@@ -1273,6 +1321,46 @@ function AddEventForm({
   /** "Today" in the circle's (recipient's) timezone — never the device's. */
   const recipientToday = timezone ? getDateInTimezone(timezone) : null;
   /**
+   * The simple task form's "When?" day, on the RECIPIENT's calendar: the day the save sends
+   * (`recipientStartDate`), matched against the recipient's today and tomorrow (string date arithmetic,
+   * never an instant + 24h). Any other day lights "Other day", which then names it.
+   */
+  const recipientTomorrow = recipientToday ? addDays(recipientToday, 1) : null;
+  const taskDayValue: 'today' | 'tomorrow' | null = !recipientStartDate
+    ? null
+    : recipientStartDate === recipientToday
+      ? 'today'
+      : recipientStartDate === recipientTomorrow
+        ? 'tomorrow'
+        : null;
+  const taskOtherDay = !!recipientStartDate && taskDayValue === null;
+  // Once shown (a tap, or an edit on another day), the date field stays: typing today's date into it
+  // must not make it vanish under the cursor. Today / Tomorrow fold it.
+  useEffect(() => {
+    if (taskOtherDay) setOtherDayOpen(true);
+  }, [taskOtherDay]);
+  useEffect(() => {
+    if (timeStr) setPickTimeOpen(true);
+  }, [timeStr]);
+  const showTaskDateField = otherDayOpen || taskOtherDay;
+  const showTaskTimeField = pickTimeOpen || timeStr !== '';
+  /** The task form's pickers ring the RECIPIENT's today (its fields name recipient days). */
+  const recipientPickerToday = defaultNewEventDate(timezone) || undefined;
+  /**
+   * The repeat end date on the RECIPIENT's calendar, for the task form: the save keeps the span counted on
+   * the viewer's side (`eventDatesForApi`), so the recipient's end is their start plus that span, and a typed
+   * one converts back by the same span. Identity whenever the two start days agree (no time, or near zones).
+   */
+  const recipientRepeatEnd =
+    recurrenceEndDate && dateStr && recipientStartDate
+      ? addDays(recipientStartDate, daysBetween(dateStr, recurrenceEndDate))
+      : recurrenceEndDate;
+  function chooseRecipientRepeatEnd(next: string): void {
+    setRecurrenceEndDate(
+      next && dateStr && recipientStartDate ? addDays(dateStr, daysBetween(recipientStartDate, next)) : next
+    );
+  }
+  /**
    * The series ANCHOR: the ROOT's stored `scheduled_date` when editing (never
    * the tapped occurrence's — see `useSeriesRoot`); the form's own start date
    * when creating.
@@ -1311,11 +1399,13 @@ function AddEventForm({
     if (!next || next === recipientStartDate) return null;
     return daysBetween(recipientStartDate, next);
   }, [recurrence, recipientStartDate, selectedDays]);
-  // Displayed in the VIEWER's frame, the same frame as the Date field above it.
+  // Displayed in the same frame as the form's Date field: the VIEWER's, except on the simple task
+  // form, whose day tiles and date field name the RECIPIENT's day (the frame `recurrence_days` is in).
+  const firstTimeBase = simpleKind === 'task' ? recipientStartDate : dateStr;
   const firstTimeLabel =
-    firstTimeShiftDays !== null && dateStr
+    firstTimeShiftDays !== null && firstTimeBase
       ? formatDateForDisplay(
-          addDays(dateStr, firstTimeShiftDays),
+          addDays(firstTimeBase, firstTimeShiftDays),
           { weekday: 'short', month: 'short', day: 'numeric' },
           language
         )
@@ -1792,6 +1882,20 @@ function AddEventForm({
         setMoreOpen(true);
         revealed = true;
       }
+    } else if (simpleKind === 'task') {
+      const hidden = ['description', 'endTime', 'recurrence_rule', 'recurrence_end_date'];
+      if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
+        setMoreOpen(true);
+        revealed = true;
+      }
+      if (fieldErrors.scheduled_date && !showTaskDateField) {
+        setOtherDayOpen(true);
+        revealed = true;
+      }
+      if (fieldErrors.scheduled_time && !showTaskTimeField) {
+        setPickTimeOpen(true);
+        revealed = true;
+      }
     } else {
       const rows: Record<string, string[]> = {
         place: ['location'],
@@ -1996,6 +2100,12 @@ function AddEventForm({
       setTimeout(focusIt, 0);
       return;
     }
+    // On the simple task form it is behind "Other day".
+    if (simpleKind === 'task' && missingField === 'date' && !showTaskDateField) {
+      setOtherDayOpen(true);
+      setTimeout(focusIt, 0);
+      return;
+    }
     focusIt();
   }
 
@@ -2143,13 +2253,16 @@ function AddEventForm({
           <DateField
             id="recurrence_end_date"
             label={t('addEvent.fields.endDate')}
-            value={recurrenceEndDate}
-            today={pickerToday}
+            // The simple task form names every day on the RECIPIENT's calendar (its day tiles and date
+            // field), so its end date is shown and typed there too; the state stays the viewer-side span.
+            value={simpleKind === 'task' ? recipientRepeatEnd : recurrenceEndDate}
+            today={simpleKind === 'task' ? recipientPickerToday : pickerToday}
             hint={t('addEvent.hints.endDate')}
             error={errors.recurrence_end_date}
             onChange={(e) => {
               datesTouched.current = true;
-              setRecurrenceEndDate(e.target.value);
+              if (simpleKind === 'task') chooseRecipientRepeatEnd(e.target.value);
+              else setRecurrenceEndDate(e.target.value);
               clearError('recurrence_end_date');
             }}
           />
@@ -2345,14 +2458,23 @@ function AddEventForm({
     datesTouched.current = true;
     setTimeStr(next);
     clearError('scheduled_time');
-    if (!next) {
+    followEndTime(timeStr, next);
+  }
+
+  /**
+   * The end time a NEW viewer-frame start brings (the full form's time-field rules, verbatim): no start, no
+   * end; a moved start moves the end (the duration is kept, PK21); a first start gets the default duration,
+   * except on an edit of a row saved without one. A medication has no end.
+   */
+  function followEndTime(prevStart: string, nextStart: string): void {
+    if (!nextStart) {
       setEndTimeStr('');
-    } else if (!isMedication && endTimeStr && timeStr) {
-      const shifted = shiftEndTimeStr(timeStr, next, endTimeStr);
+    } else if (!isMedication && endTimeStr && prevStart) {
+      const shifted = shiftEndTimeStr(prevStart, nextStart, endTimeStr);
       if (shifted) setEndTimeStr(shifted);
       clearError('endTime');
     } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
-      setEndTimeStr(addMinutesToTimeStr(next, DEFAULT_DURATION_MINUTES));
+      setEndTimeStr(addMinutesToTimeStr(nextStart, DEFAULT_DURATION_MINUTES));
       clearError('endTime');
     }
   }
@@ -2465,10 +2587,64 @@ function AddEventForm({
     setDateStr(viewer.dateStr);
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
+    // A task's end follows its start exactly as the full form's time field made it (the med form has none).
+    if (!isMedication) followEndTime(timeStr, viewer.timeStr);
   }
 
-  function openOtherTime(): void {
-    if (!otherTimeOpen && !isEditing) Analytics.timeChipSelected({ chip: 'other' });
+  /**
+   * The simple task form's day ("Today" / "Tomorrow" / the "Other day" field): a day on the RECIPIENT's
+   * calendar, the day the save sends. With no time a date-only value IS the recipient's day. With a time, the
+   * same recipient wall clock is re-resolved on the new day (as a chip or the time field resolves one), which
+   * can move the viewer-frame date and, across a DST change, the viewer clock; the end follows so the
+   * duration is kept.
+   */
+  function chooseTaskDay(day: string): void {
+    datesTouched.current = true;
+    clearError('scheduled_date');
+    if (day) completeStep('when');
+    if (!day || !timeStr || !timezone || !recipientClock) {
+      setDateStr(day);
+      return;
+    }
+    const viewer = eventDatesFromApi({ scheduledDate: day, scheduledTime: recipientClock, timezone });
+    if (!viewer.timeStr) return;
+    setDateStr(viewer.dateStr);
+    setTimeStr(viewer.timeStr);
+    setChipInstant(viewer.instant ?? null);
+    followEndTime(timeStr, viewer.timeStr);
+  }
+
+  function openOtherDay(): void {
+    setOtherDayOpen(true);
+    requestAnimationFrame(() => document.getElementById('scheduled_date')?.focus());
+  }
+
+  function openPickTime(): void {
+    setPickTimeOpen(true);
+    requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
+  }
+
+  /**
+   * The task's end on the RECIPIENT's clock (the clock its start is typed on): the recipient start plus the
+   * duration the viewer-frame pair holds (a delta, frame-independent). Typing one converts back the same way,
+   * so the saved `duration_minutes` is the span between the two times as typed.
+   */
+  const recipientEndClock = (() => {
+    if (!recipientClock || !timeStr || !endTimeStr) return '';
+    const span = spanMinutes(timeStr, endTimeStr);
+    return span === null ? '' : endTimeForDuration(recipientClock, span);
+  })();
+  function chooseRecipientEndTime(next: string): void {
+    clearError('endTime');
+    if (!next || !recipientClock || !timeStr) {
+      setEndTimeStr(next);
+      return;
+    }
+    const span = spanMinutes(recipientClock, next);
+    setEndTimeStr(span === null ? next : endTimeForDuration(timeStr, span));
+  }
+
+  function openOtherTime(): void {    if (!otherTimeOpen && !isEditing) Analytics.timeChipSelected({ chip: 'other' });
     setOtherTimeOpen(true);
     requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
   }
@@ -2928,7 +3104,258 @@ function AddEventForm({
     </div>
   );
 
-  const simpleFields = simpleKind === 'medication' ? simpleMedicationFields : simpleAppointmentFields;
+  // ── SIMPLE TASK FORM (owner 1.4.0, mobile parity: AddEventScreen) ─────────────────────────────────
+  // "What needs doing? / When? / How often? / Who's doing it? / More details". Every day it names is the
+  // RECIPIENT's (the tiles, the Other day field, the repeat end), and its times are typed on the recipient's
+  // clock (job 1's "Time in <city>" field), so nothing on it is in the viewer's frame except the conversion
+  // line. Same state and payload as the full form (AddEventModal.taskPayloadEquality pins it).
+  const taskDayOpts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+  const taskHowOftenValue = ['none', 'daily', 'weekly', 'days_of_week'].includes(recurrence)
+    ? recurrence
+    : null;
+  const taskTimeLabel = showDualTimezone
+    ? t('addEvent.timeInZone', { zone: recipientZone || timezone })
+    : t('addEvent.fields.time');
+  const simpleTaskFields = (
+    <div className="flex flex-col gap-6" data-testid="simple-task-form">
+      <section
+        aria-labelledby="sf-what"
+        className="flex flex-col gap-3"
+        onBlur={() => {
+          if (title.trim()) completeStep('what');
+        }}
+      >
+        {sectionHeading('sf-what', t('addEvent.simple.whatNeedsDoing'))}
+        <TextField
+          id={titleFieldId}
+          label={t('addEvent.fields.title')}
+          required
+          value={title}
+          maxLength={150}
+          error={errors[titleFieldId] ?? errors.title ?? missingErrorFor('title')}
+          placeholder={t('addEvent.placeholders.taskTitle')}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            clearError(titleFieldId, 'title');
+          }}
+        />
+        {showTitleSuggestions && (
+          <ChipSelect
+            id="title-suggestions"
+            label={t('addEvent.titleSuggestions.label')}
+            options={titleSuggestions}
+            value={title}
+            onChange={(next) => {
+              setTitle(next ?? '');
+              if (next) {
+                clearError(titleFieldId, 'title');
+                completeStep('what');
+              }
+            }}
+          />
+        )}
+      </section>
+
+      <section aria-labelledby="sf-when" className="flex flex-col gap-3">
+        {sectionHeading('sf-when', t('addEvent.simple.when'))}
+        {/* One content-sized wrapping row: the two day radios, then "Other day" OUTSIDE the radiogroup (a
+            button that reveals the date field), as "Other time" sits after the time chips. */}
+        <div className="flex flex-wrap gap-2" data-testid="task-day-row">
+          <ChipSelect
+            id="task-day"
+            label={t('addEvent.simple.when')}
+            variant="tile"
+            contents
+            allowDeselect={false}
+            options={[
+              {
+                value: 'today',
+                label: t('addEvent.simple.today'),
+                sub: recipientToday ? formatDateForDisplay(recipientToday, taskDayOpts, language) : undefined,
+              },
+              {
+                value: 'tomorrow',
+                label: t('addEvent.simple.tomorrow'),
+                sub: recipientTomorrow
+                  ? formatDateForDisplay(recipientTomorrow, taskDayOpts, language)
+                  : undefined,
+              },
+            ]}
+            value={taskDayValue}
+            onChange={(next) => {
+              const day = next === 'today' ? recipientToday : next === 'tomorrow' ? recipientTomorrow : null;
+              if (!day) return;
+              setOtherDayOpen(false);
+              chooseTaskDay(day);
+            }}
+          />
+          <ChoiceTileButton
+            label={t('addEvent.simple.otherDay')}
+            sub={
+              taskOtherDay && recipientStartDate
+                ? formatDateForDisplay(recipientStartDate, taskDayOpts, language)
+                : undefined
+            }
+            subSpacer
+            selected={taskOtherDay}
+            expanded={showTaskDateField}
+            testId="task-other-day"
+            onClick={openOtherDay}
+          />
+        </div>
+        {showTaskDateField && (
+          <DateField
+            id="scheduled_date"
+            // The RECIPIENT's day, the same day the tiles name and the save sends (with a time the form's
+            // own date field is the viewer's; this one is not, and says so when the zones differ).
+            label={t('addEvent.fields.date')}
+            required
+            value={recipientStartDate ?? ''}
+            today={recipientPickerToday}
+            error={errors.scheduled_date ?? missingErrorFor('date')}
+            hint={showDualTimezone ? daysTimezoneNote : undefined}
+            onChange={(e) => chooseTaskDay(e.target.value)}
+          />
+        )}
+        <div className="flex flex-wrap gap-2" data-testid="task-time-row">
+          <ChipSelect
+            id="task-time"
+            label={t('addEvent.fields.time')}
+            variant="tile"
+            contents
+            allowDeselect={false}
+            options={[{ value: 'any', label: t('addEvent.simple.anyTime') }]}
+            value={timeStr ? null : 'any'}
+            onChange={() => {
+              setPickTimeOpen(false);
+              chooseRecipientTime('');
+              completeStep('when');
+            }}
+          />
+          <ChoiceTileButton
+            label={t('addEvent.simple.pickTime')}
+            sub={timeStr ? otherTimeClock : undefined}
+            selected={timeStr !== ''}
+            expanded={showTaskTimeField}
+            testId="task-pick-time"
+            onClick={openPickTime}
+          />
+        </div>
+        {showTaskTimeField && (
+          <TimeField
+            id="scheduled_time"
+            // Typed on the RECIPIENT's clock, labelled "Time in <city>" when the viewer's zone differs; the
+            // viewer's clock is only in the conversion line (job 1).
+            label={taskTimeLabel}
+            value={recipientClock}
+            error={errors.scheduled_time}
+            hint={conversionText ?? undefined}
+            onChange={(e) => {
+              chooseRecipientTime(e.target.value);
+              if (e.target.value) completeStep('when');
+            }}
+          />
+        )}
+      </section>
+
+      <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
+        {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
+        <ChipSelect
+          id="how-often"
+          label={t('addEvent.simple.howOften')}
+          variant="tile"
+          allowDeselect={false}
+          options={[
+            { value: 'none', label: t('addEvent.simple.once') },
+            { value: 'daily', label: t('addEvent.simple.everyDay') },
+            { value: 'weekly', label: t('addEvent.simple.everyWeek') },
+            { value: 'days_of_week', label: t('addEvent.simple.someDays') },
+          ]}
+          value={taskHowOftenValue}
+          onChange={(next) => {
+            if (!next) return;
+            chooseRecurrence(next as RecurrenceChoice);
+            completeStep('how_often');
+          }}
+        />
+        {/* A repeat the tiles cannot name (every other day, monthly, yearly, a cycle) is named here and stays
+            editable in the Repeat select under More details: never converted (med form parity). */}
+        {taskHowOftenValue === null && (
+          <Text variant="caption" data-testid="how-often-summary">
+            {recurrenceOptions.find((o) => o.value === recurrence)?.label}
+          </Text>
+        )}
+        {daysBlock}
+      </section>
+
+      <section aria-labelledby="sf-who" className="flex flex-col gap-3">
+        {sectionHeading('sf-who', t('addEvent.simple.whoDoingIt'))}
+        <ChipSelect
+          id="assigned_to"
+          label={t('addEvent.simple.whoDoingIt')}
+          variant="tile"
+          allowDeselect={false}
+          options={taskWhoOptions}
+          value={assignedTo ?? ''}
+          onChange={(next) => {
+            setAssignedTo(next || null);
+            completeStep('who');
+          }}
+        />
+      </section>
+
+      <DisclosureRow
+        id="more-details"
+        title={t('addEvent.simple.moreDetails')}
+        summary={t('addEvent.simple.taskMoreHint')}
+        wrapSummary
+        open={moreOpen}
+        onToggle={setMoreOpen}
+      >
+        {detailsBlock}
+        {timeStr && (
+          <>
+            <ChipSelect
+              id="duration-presets"
+              label={t('addEvent.fields.duration')}
+              options={durationOptions}
+              value={(() => {
+                const index = matchingDurationIndex(timeStr, endTimeStr);
+                return index === -1 ? null : String(DURATION_PRESETS[index]);
+              })()}
+              onChange={(next) => {
+                // Deselect is a no-op: once there is a start the end is required.
+                if (!next) return;
+                setEndTimeStr(addMinutesToTimeStr(timeStr, Number(next)));
+                clearError('endTime');
+              }}
+            />
+            <TimeField
+              id="endTime"
+              label={t('addEvent.fields.endTime')}
+              required={!isEditingWithoutDuration}
+              // The recipient's clock, like the start; named when the viewer's zone differs.
+              value={recipientEndClock}
+              error={errors.endTime}
+              hint={showDualTimezone ? taskTimeLabel : undefined}
+              onChange={(e) => chooseRecipientEndTime(e.target.value)}
+            />
+          </>
+        )}
+        {repeatSelectBlock}
+        {cycleBlock}
+        {endDateBlock}
+        {reminderBlock}
+      </DisclosureRow>
+    </div>
+  );
+
+  const simpleFields =
+    simpleKind === 'medication'
+      ? simpleMedicationFields
+      : simpleKind === 'task'
+        ? simpleTaskFields
+        : simpleAppointmentFields;
 
 
   return (
@@ -2940,12 +3367,16 @@ function AddEventForm({
             ? t('addEvent.simple.editMedication')
             : simpleKind === 'appointment'
               ? t('addEvent.simple.editAppointment')
-              : t('addEvent.editTitle')
+              : simpleKind === 'task'
+                ? t('addEvent.simple.edit.task')
+                : t('addEvent.editTitle')
           : simpleKind === 'medication'
             ? t('addEvent.simple.newMedication')
             : simpleKind === 'appointment'
               ? t('addEvent.simple.newAppointment')
-              : t('addEvent.newTitle')
+              : simpleKind === 'task'
+                ? t('addEvent.simple.new.task')
+                : t('addEvent.newTitle')
       }
       hideTitle={firstRun}
       onClose={handleClose}
@@ -2992,7 +3423,9 @@ function AddEventForm({
                 ? t('addEvent.simple.addMedication')
                 : simpleKind === 'appointment'
                   ? t('addEvent.simple.addAppointment')
-                  : t('addEvent.create')}
+                  : simpleKind === 'task'
+                    ? t('addEvent.simple.addTask')
+                    : t('addEvent.create')}
           </Button>
         </>
       }

@@ -1539,6 +1539,8 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          // The full task form (layout-agnostic logic; the simple one has its own suite).
+          layout="full"
           event={makeReminderEvent(
             { event_type: 'task', duration_minutes: 30 },
             { notifications_enabled: true, reminder_24h: true, reminder_15m: false }
@@ -1743,6 +1745,8 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          // The full task form (layout-agnostic logic; the simple one has its own suite).
+          layout="full"
           event={makeReminderEvent(
             { event_type: 'task', duration_minutes: 30 },
             {
@@ -1779,6 +1783,8 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          // The full task form (layout-agnostic logic; the simple one has its own suite).
+          layout="full"
           event={makeReminderEvent(
             { event_type: 'task', duration_minutes: 30 },
             {
@@ -1896,6 +1902,8 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          // The full task form (layout-agnostic logic; the simple one has its own suite).
+          layout="full"
           // duration_minutes so the end-time field prefills — without it the
           // form blocks on the pre-existing "end time required" rule.
           event={makeEvent({
@@ -1996,6 +2004,8 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          // The full task form (layout-agnostic logic; the simple one has its own suite).
+          layout="full"
           event={makeEvent({ event_type: 'task', assigned_to: RECIPIENT_ID, duration_minutes: 30 })}
           onClose={vi.fn()}
         />
@@ -2015,6 +2025,8 @@ describe('AddEventModal', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          // The full task form (layout-agnostic logic; the simple one has its own suite).
+          layout="full"
           event={makeEvent({ event_type: 'task', assigned_to: OWNER_ID, duration_minutes: 30 })}
           onClose={vi.fn()}
         />
@@ -2083,6 +2095,8 @@ describe('AddEventModal — the 15-minute default', () => {
     render(
       <AddEventModal
         circleId={CIRCLE_ID}
+          // The full task form (layout-agnostic logic; the simple one has its own suite).
+          layout="full"
         event={makeReminderEvent(
           { event_type: 'task', duration_minutes: 30 },
           { notifications_enabled: true, reminder_15m: true }

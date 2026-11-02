@@ -16,7 +16,7 @@ import { expandAllDayOverflow } from '../helpers';
 //  - The desktop sidebar is still in the DOM at mobile width (CSS-hidden) and
 //    has a "New" button of its own — hence the testid scope on the pill.
 //  - The sidebar/pill "New" trigger and the modal submit button read
-//    differently ("New" vs "Create"), but the modal submit is still queried
+//    differently ("New" vs "Add task"), but the modal submit is still queried
 //    dialog-scoped so it can never collide.
 //  - Menu options are named by their VISIBLE short label ("Med", "Appt",
 //    "Task", "Note") — that label IS the accessible name, because a full-word
@@ -97,6 +97,8 @@ test('create a task end-to-end from the pill NEW cell', async ({ page, circleId 
   // it should: a passing `fill` would mean touch had been handed back to the
   // OS picker. The desktop flows in `e2e/flows/` still type, correctly — they
   // run under a fine pointer, where the field is still a text control.
+  // The simple task form (owner 1.4.0): "Other day" reveals the date field.
+  await dialog.getByRole('button', { name: /^Other day/ }).tap();
   await dialog.locator('#scheduled_date').tap();
   const datePicker = page.getByRole('dialog', { name: 'Date picker' });
   await expect(datePicker).toBeVisible();
@@ -108,8 +110,8 @@ test('create a task end-to-end from the pill NEW cell', async ({ page, circleId 
   await expect(datePicker).toBeHidden();
   await expect(dialog.locator('#scheduled_date')).toHaveValue(todayISO());
 
-  // The modal's own Create button (dialog-scoped, never the nav trigger).
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  // The modal's own "Add task" button (dialog-scoped, never the nav trigger).
+  await dialog.getByRole('button', { name: 'Add task' }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
   // --- Verify it was really created (Tasks page) ---

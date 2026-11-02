@@ -49,7 +49,9 @@ test('create, edit, and delete a calendar task', async ({ page, circleId }) => {
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Edit event' }).click();
-  const editDialog = page.getByRole('dialog');
+  // A task edit is the simple task form (owner 1.4.0), even when it was created from the full one.
+  const editDialog = page.getByRole('dialog', { name: 'Edit task' });
+  await expect(editDialog.getByRole('heading', { name: 'What needs doing?' })).toBeVisible();
   await editDialog.locator('#title').fill(editedTitle);
   await editDialog.getByRole('button', { name: 'Save changes' }).click();
   await expect(editDialog).toBeHidden({ timeout: 20_000 });

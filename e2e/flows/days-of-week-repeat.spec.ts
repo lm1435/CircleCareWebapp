@@ -291,9 +291,12 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const taskDialog = page.getByRole('dialog');
   await expect(taskDialog).toBeVisible();
+  // The simple task form (owner 1.4.0): "Other day" reveals the date field; "How often?" Some days reveals
+  // the same day picker inline.
   await taskDialog.locator('#title').fill(task);
+  await taskDialog.getByRole('button', { name: /^Other day/ }).click();
   await taskDialog.locator('#scheduled_date').fill(monday);
-  await taskDialog.locator('#recurrence_rule').selectOption('days_of_week');
+  await taskDialog.getByRole('radio', { name: 'Some days', exact: true }).click();
   const taskGroup = chipGroup(taskDialog);
   await taskGroup.getByRole('checkbox', { name: 'Tuesday' }).click();
   await taskGroup.getByRole('checkbox', { name: 'Thursday' }).click();
@@ -307,7 +310,7 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
     timeZone: 'UTC',
   }).format(new Date(`${d(1)}T12:00:00Z`));
   await expect(taskDialog.getByText(`First time: ${firstTime}`, { exact: true })).toBeVisible();
-  await submitAndClose(page, taskDialog, 'Create');
+  await submitAndClose(page, taskDialog, 'Add task');
 
   // --- Stored rows: rule weekly + the day sets; the task's anchor moved to Tuesday ---
   await expect
@@ -558,15 +561,17 @@ test('0 days selected: inline error, no request', async ({ page, circleId }) => 
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
+  // The simple task form (owner 1.4.0): "Other day" + "Some days".
   await dialog.locator('#title').fill(name);
+  await dialog.getByRole('button', { name: /^Other day/ }).click();
   await dialog.locator('#scheduled_date').fill(monday);
-  await dialog.locator('#recurrence_rule').selectOption('days_of_week');
+  await dialog.getByRole('radio', { name: 'Some days', exact: true }).click();
   const group = chipGroup(dialog);
   await group.getByRole('checkbox', { name: 'Monday' }).click();
   await expect(group.getByRole('checkbox', { checked: true })).toHaveCount(0);
 
   const posts = countRequests(page, 'POST', '/api/circles/:id/events');
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  await dialog.getByRole('button', { name: 'Add task' }).click();
   await expect(dialog.getByText('Choose at least one day', { exact: true })).toBeVisible();
   await expect(dialog).toBeVisible();
   // Focus moves to the errored group; the group is described by the error.
@@ -594,7 +599,8 @@ async function openDaysPicker(page: Page, circleId: string): Promise<Locator> {
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  await dialog.locator('#recurrence_rule').selectOption('days_of_week');
+  // The task form is the simple layout (1.4.0): "Some days" under "How often?" opens the day picker.
+  await dialog.getByRole('radio', { name: 'Some days' }).click();
   await expect(chipGroup(dialog).getByRole('checkbox')).toHaveCount(7);
   return dialog;
 }
@@ -649,8 +655,10 @@ test('chips are >=44px targets and wrap without horizontal scroll at 375px', asy
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
+  // Simple task form (1.4.0): "Other day" reveals the date field; "Some days" opens the day picker.
+  await dialog.getByRole('button', { name: /^Other day/ }).click();
   await dialog.locator('#scheduled_date').fill(monday);
-  await dialog.locator('#recurrence_rule').selectOption('days_of_week');
+  await dialog.getByRole('radio', { name: 'Some days' }).click();
   const group = chipGroup(dialog);
   await expect(group.getByRole('checkbox')).toHaveCount(7);
 

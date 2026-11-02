@@ -216,10 +216,15 @@ describe('it looks like the add form', () => {
     for (const id of ['row-doctor', 'row-place', 'row-notes', 'row-repeat']) expect(row(id)).toBeInTheDocument();
   });
 
-  it('a task edit keeps the full form', () => {
-    renderEdit({ ...appt(), id: 't-1', event_type: 'task', title: 'Pick up' } as CalendarEvent);
+  it('a task edit gets the simple task form too (owner 1.4.0); layout="full" keeps the old one', () => {
+    const view = renderEdit({ ...appt(), id: 't-1', event_type: 'task', title: 'Pick up' } as CalendarEvent);
     expect(screen.queryByTestId('simple-medication-form')).toBeNull();
     expect(screen.queryByTestId('simple-appointment-form')).toBeNull();
+    expect(screen.getByTestId('simple-task-form')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Edit task' })).toBeInTheDocument();
+    view.unmount();
+    renderEdit({ ...appt(), id: 't-1', event_type: 'task', title: 'Pick up' } as CalendarEvent, 'full');
+    expect(screen.queryByTestId('simple-task-form')).toBeNull();
     expect(screen.getByRole('dialog', { name: 'Edit event' })).toBeInTheDocument();
   });
 });

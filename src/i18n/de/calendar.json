@@ -321,6 +321,7 @@
       "startDate": "Startdatum",
       "addMedication": "Medikament hinzufügen",
       "addAppointment": "Termin hinzufügen",
+      "addTask": "Aufgabe hinzufügen",
       "otherTime": "Andere Uhrzeit",
       "everyDay": "Jeden Tag",
       "someDays": "An bestimmten Tagen",
@@ -332,7 +333,24 @@
       "notesAndReminders": "Notizen und Erinnerungen",
       "repeat": "Wiederholen",
       "anotherDose": "+ Weitere Einnahme",
-      "removeDose": "Dosis {{number}} entfernen"
+      "removeDose": "Dosis {{number}} entfernen",
+      "new": {
+        "task": "Neue Aufgabe"
+      },
+      "edit": {
+        "task": "Aufgabe bearbeiten"
+      },
+      "whatNeedsDoing": "Was ist zu tun?",
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "otherDay": "Anderer Tag",
+      "anyTime": "Jederzeit",
+      "pickTime": "Uhrzeit wählen",
+      "once": "Einmal",
+      "everyWeek": "Jede Woche",
+      "whoDoingIt": "Wer übernimmt das?",
+      "me": "Ich",
+      "taskMoreHint": "Details, Erinnerungen, Enddatum"
     },
     "timeChips": {
       "label": "Übliche Einnahmezeiten",

@@ -95,7 +95,8 @@ async function openSeriesEditor(
   const detail = await openChip(page, date, titleMatch(chipTitle));
   await detail.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
-  const editor = page.getByRole('dialog', { name: 'Edit event' });
+  // A task edit is the simple task form, titled "Edit task" (owner 1.4.0).
+  const editor = page.getByRole('dialog', { name: 'Edit task' });
   await expect(editor).toBeVisible({ timeout: 10_000 });
   // Hydration gate: the form appears only once the root is resolved.
   await expect(editor.locator('#title')).toHaveValue(expectedTitle, { timeout: 15_000 });

@@ -29,7 +29,7 @@ import { checkA11y } from '../helpers';
 //
 // Gotchas: the FloatingNavBar also has a "New" button (CSS-hidden at this
 // width), so the trigger is scoped to `<aside>`. The AddEventModal submit button
-// reads "Create", which no longer collides with the trigger's "New", but stays
+// reads "Add task" on a task, which never collides with the trigger's "New", but stays
 // dialog-scoped anyway. The "Task" menuitem needs exact:true (otherwise it also
 // matches "Tasks"-style names). The desktop sidebar only renders at the xl
 // breakpoint, so widen the viewport above it.
@@ -179,10 +179,10 @@ test.describe('create menu — keyboard a11y, ARIA, validation', () => {
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.locator('#event_type')).toHaveCount(0);
 
-    // Create (pinned in the dialog footer) is always the solid, enabled button.
-    // Pressing it with an empty or spaces-only title focuses the title and
+    // "Add task" (pinned in the dialog footer; the simple task form, owner 1.4.0) is always the solid,
+    // enabled button. Pressing it with an empty or spaces-only title focuses the title and
     // shows its inline error instead of creating anything.
-    const create = dialog.getByRole('button', { name: 'Create', exact: true });
+    const create = dialog.getByRole('button', { name: 'Add task', exact: true });
     const title = dialog.locator('#title');
     await expect(create).toBeEnabled();
     await create.click();

@@ -177,10 +177,13 @@ test('create a task end-to-end via the global create menu', async ({ page, circl
   // Opened for a type: the type switch is gone.
   await expect(dialog.locator('#event_type')).toHaveCount(0);
 
+  // The simple task form (owner 1.4.0): "New task", and "Other day" reveals the date field.
+  await expect(page.getByRole('dialog', { name: 'New task' })).toBeVisible();
   await dialog.locator('#title').fill(title);
+  await dialog.getByRole('button', { name: /^Other day/ }).click();
   await dialog.locator('#scheduled_date').fill(todayISO());
-  // The modal's own Create button (scoped to the dialog, not the sidebar one).
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  // The modal's own "Add task" button (scoped to the dialog, not the sidebar one).
+  await dialog.getByRole('button', { name: 'Add task' }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
   // --- Verify it was really created (Tasks page) ---

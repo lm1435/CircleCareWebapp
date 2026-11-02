@@ -115,6 +115,8 @@ test('offline: banner, writes explained not sent, input kept; reconnect hides it
     const dialog = page.getByRole('dialog');
     await expect(dialog.locator('#title')).toBeVisible();
     await dialog.locator('#title').fill(taskTitle);
+    // The simple task form (owner 1.4.0): "Other day" reveals the date field.
+    await dialog.getByRole('button', { name: /^Other day/ }).click();
     await dialog.locator('#scheduled_date').fill(dateInTz(tz, 0));
 
     const api = recordApi(page);
@@ -130,8 +132,8 @@ test('offline: banner, writes explained not sent, input kept; reconnect hides it
     const bannerBox = await banner.boundingBox();
     expect(bannerBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height - 1);
 
-    // The open form: Create explains, input stays, dialog stays.
-    const create = dialog.getByRole('button', { name: 'Create' });
+    // The open form: "Add task" explains, input stays, dialog stays.
+    const create = dialog.getByRole('button', { name: 'Add task' });
     await expect(create).toHaveAttribute('aria-disabled', 'true');
     // `force`: Playwright treats aria-disabled as "not enabled" and would wait
     // forever; a person can still press it — and is told why it did nothing.

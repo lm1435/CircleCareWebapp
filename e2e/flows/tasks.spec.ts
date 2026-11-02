@@ -35,10 +35,13 @@ test('create, complete, and delete a task', async ({ page, circleId }) => {
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
 
-  // Tasks page opens AddEventModal pre-typed as 'task'. Fill title + due date.
+  // Tasks page opens AddEventModal pre-typed as 'task': the simple task form (owner 1.4.0).
+  // Fill title + due date ("Other day" reveals the date field).
+  await expect(dialog.getByRole('heading', { name: 'What needs doing?' })).toBeVisible();
   await dialog.locator('#title').fill(title);
+  await dialog.getByRole('button', { name: /^Other day/ }).click();
   await dialog.locator('#scheduled_date').fill(todayISO());
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  await dialog.getByRole('button', { name: 'Add task' }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 
   // The new task appears in the (default: Open) list. The complete control is a

@@ -104,9 +104,12 @@ test.describe('Add menu', () => {
 
     menu = await openAddMenu(page);
     await menu.getByRole('menuitem', { name: 'Task', exact: true }).click();
-    dialog = page.getByRole('dialog');
+    // The simple task form too (owner 1.4.0): "New task", "What needs doing?", "Add task".
+    dialog = page.getByRole('dialog', { name: 'New task' });
+    await expect(dialog.getByTestId('simple-task-form')).toBeVisible();
     await expect(dialog.locator('#title')).toBeVisible();
     await expect(dialog.locator('#event_type')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Add task' })).toBeVisible();
     await dialog.getByRole('button', { name: 'Cancel' }).click();
 
     // Shift: opens the shifts surface of the calendar.

@@ -73,6 +73,12 @@
     "firstRun": {
       "eyebrowSelf": "O SEU PRIMEIRO MEDICAMENTO",
       "hint": "Só o nome, a palavra grande na embalagem. A dose é opcional."
+    },
+    "simple": {
+      "whatNeedsDoing": "O que é preciso fazer?",
+      "pickTime": "Escolher hora",
+      "everyWeek": "Todas as semanas",
+      "taskMoreHint": "Detalhes, lembretes, data de fim"
     }
   },
   "deleteEvent": {

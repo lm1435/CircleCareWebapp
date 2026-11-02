@@ -321,6 +321,7 @@
       "startDate": "Start date",
       "addMedication": "Add medication",
       "addAppointment": "Add appointment",
+      "addTask": "Add task",
       "otherTime": "Other time",
       "everyDay": "Every day",
       "someDays": "Some days",
@@ -332,7 +333,24 @@
       "notesAndReminders": "Notes and reminders",
       "repeat": "Repeat",
       "anotherDose": "+ Another dose",
-      "removeDose": "Remove dose {{number}}"
+      "removeDose": "Remove dose {{number}}",
+      "new": {
+        "task": "New task"
+      },
+      "edit": {
+        "task": "Edit task"
+      },
+      "whatNeedsDoing": "What needs doing?",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "otherDay": "Other day",
+      "anyTime": "Any time",
+      "pickTime": "Pick a time",
+      "once": "Once",
+      "everyWeek": "Every week",
+      "whoDoingIt": "Who's doing it?",
+      "me": "Me",
+      "taskMoreHint": "Details, reminders, end date"
     },
     "timeChips": {
       "label": "Common dose times",

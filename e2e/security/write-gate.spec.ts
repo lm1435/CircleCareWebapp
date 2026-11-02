@@ -440,7 +440,8 @@ test('2. the same writes through the app UI succeed and persist (event edit, tas
   const detail = await openCalendarEvent(page, o.circleId, taskDate, taskTitle);
   await detail.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
-  const edit = page.getByRole('dialog', { name: 'Edit event' });
+  // A task edit is the simple task form, titled "Edit task" (owner 1.4.0).
+  const edit = page.getByRole('dialog', { name: 'Edit task' });
   await expect(edit).toBeVisible();
   await expect(edit.locator('#title')).toHaveValue(taskTitle, { timeout: 20_000 });
   await edit.locator('#title').fill(edited);
@@ -610,19 +611,19 @@ const SURFACES: Surface[] = [
       const detail = await openCalendarEvent(ctx.page, ctx.o.circleId, date, ctx.state.original);
       await detail.getByRole('button', { name: 'More', exact: true }).click();
       await ctx.page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
-      const edit = ctx.page.getByRole('dialog', { name: 'Edit event' });
+      const edit = ctx.page.getByRole('dialog', { name: 'Edit task' });
       await expect(edit.locator('#title')).toHaveValue(ctx.state.original, { timeout: 20_000 });
       await edit.locator('#title').fill(ctx.label);
       return edit.getByRole('button', { name: 'Save changes' });
     },
     async kept({ page, label }) {
-      await expect(page.getByRole('dialog', { name: 'Edit event' }).locator('#title')).toHaveValue(label);
+      await expect(page.getByRole('dialog', { name: 'Edit task' }).locator('#title')).toHaveValue(label);
     },
     rows: ({ o, label }) => `select 1 from calendar_events where circle_id = ${c(o.circleId)} and title = ${sqlStr(label)}`,
     before: 0,
     after: 1,
     async succeeded({ page }) {
-      await expect(page.getByRole('dialog', { name: 'Edit event' })).toBeHidden({ timeout: 20_000 });
+      await expect(page.getByRole('dialog', { name: 'Edit task' })).toBeHidden({ timeout: 20_000 });
     },
   },
   {

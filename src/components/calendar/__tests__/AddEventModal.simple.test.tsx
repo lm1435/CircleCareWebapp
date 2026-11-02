@@ -738,10 +738,17 @@ describe('where the full form still applies', () => {
     expect(screen.queryByTestId('simple-medication-form')).toBeNull();
   });
 
-  it('a task opened for tasks has no type switch but keeps the full layout', () => {
+  it('a task opened for tasks has no type switch and gets the simple task form (owner 1.4.0)', () => {
     render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
     expect(screen.queryByLabelText('Type')).toBeNull();
     expect(title()).toBeInTheDocument();
+    expect(screen.getByTestId('simple-task-form')).toBeInTheDocument();
+    expect(screen.getByTestId('add-event-save')).toHaveTextContent('Add task');
+  });
+
+  it('layout="full" still forces the full task form', () => {
+    render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
+    expect(screen.queryByTestId('simple-task-form')).toBeNull();
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Create');
   });
 });

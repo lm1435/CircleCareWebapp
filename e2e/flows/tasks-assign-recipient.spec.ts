@@ -1,5 +1,5 @@
 import { test, expect, uniqueLabel } from '../fixtures';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { dbQuery, sqlStr } from '../unhappy';
 import { sqlExec } from '../db';
 
@@ -33,9 +33,17 @@ function recipientOf(circleId: string): Recipient {
   return rows[0];
 }
 
-/** How the picker labels the recipient's option (AddEventModal assigneeOptions). */
-function optionLabel(r: Recipient): string {
-  return `${r.first_name || r.email.split('@')[0]} · Care recipient`;
+/**
+ * How the task form's "Who's doing it?" tile names the recipient (AddEventModal taskWhoOptions): the name,
+ * then the "Care recipient" caption as the tile's second line, read together.
+ */
+function tileName(r: Recipient): string {
+  return `${r.first_name || r.email.split('@')[0]}, Care recipient`;
+}
+
+/** The task form's "Who's doing it?" tiles (owner 1.4.0: the simple task form, add and edit). */
+function whoGroup(dialog: Locator): Locator {
+  return dialog.getByRole('radiogroup', { name: "Who's doing it?" });
 }
 
 /** How a task row names its assignee (TaskRow memberDisplayName). */
@@ -74,12 +82,14 @@ async function createTask(page: Page, title: string, assigneeLabel?: string): Pr
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.locator('#title').fill(title);
+  // The day: "Other day" reveals the date field (the recipient's calendar; date-only, so no conversion).
+  await dialog.getByRole('button', { name: /^Other day/ }).click();
   await dialog.locator('#scheduled_date').fill(todayISO());
-  const picker = dialog.getByLabel('Assigned to');
+  const picker = whoGroup(dialog);
   // The default is still "Anyone" (unassigned).
-  await expect(picker).toHaveValue('');
-  if (assigneeLabel) await picker.selectOption({ label: assigneeLabel });
-  await dialog.getByRole('button', { name: 'Create' }).click();
+  await expect(picker.getByRole('radio', { name: 'Anyone', exact: true })).toBeChecked();
+  if (assigneeLabel) await picker.getByRole('radio', { name: assigneeLabel, exact: true }).click();
+  await dialog.getByRole('button', { name: 'Add task' }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });
 }
 
@@ -94,7 +104,7 @@ test('create a task assigned to the care recipient', async ({ page, circleId }) 
   const title = uniqueLabel('Recipient task');
   try {
     await openTasks(page, circleId);
-    await createTask(page, title, optionLabel(recipient));
+    await createTask(page, title, tileName(recipient));
 
     // Persisted with the recipient's user id.
     await expect.poll(() => savedAssignee(circleId, title)).toBe(recipient.user_id);
@@ -108,7 +118,7 @@ test('create a task assigned to the care recipient', async ({ page, circleId }) 
     // Reopening the task keeps the recipient selected (edit hydration).
     await page.getByRole('button', { name: `Edit "${title}"` }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByLabel('Assigned to')).toHaveValue(recipient.user_id);
+    await expect(whoGroup(dialog).getByRole('radio', { name: tileName(recipient), exact: true })).toBeChecked();
   } finally {
     deleteTask(circleId, title);
   }
@@ -129,7 +139,7 @@ test('edit a task and reassign it to the care recipient', async ({ page, circleI
     await page.getByRole('button', { name: `Edit "${title}"` }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    await dialog.getByLabel('Assigned to').selectOption({ label: optionLabel(recipient) });
+    await whoGroup(dialog).getByRole('radio', { name: tileName(recipient), exact: true }).click();
     await dialog.getByRole('button', { name: 'Save changes' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
 
