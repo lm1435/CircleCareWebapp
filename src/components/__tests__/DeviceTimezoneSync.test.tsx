@@ -49,6 +49,13 @@ describe('DeviceTimezoneSync (session start)', () => {
     await waitFor(() => expect(spy).toHaveBeenCalled());
   });
 
+  it("after a write, a cached circle's detail is stale too (a circle with no recipient account follows the owner's zone)", async () => {
+    mockSync.mockResolvedValue('written');
+    queryClient.setQueryData(['circle', 'c1'], { id: 'c1', care_recipient_timezone: 'America/New_York' });
+    mount();
+    await waitFor(() => expect(queryClient.getQueryState(['circle', 'c1'])?.isInvalidated).toBe(true));
+  });
+
   it('does not refetch when nothing was written', async () => {
     mockSync.mockResolvedValue('same');
     const spy = vi.spyOn(queryClient, 'invalidateQueries');

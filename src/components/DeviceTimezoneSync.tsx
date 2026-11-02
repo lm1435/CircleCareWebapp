@@ -32,7 +32,11 @@ export function DeviceTimezoneSync(): null {
     ran.current = key;
     void syncDeviceTimezone(stored, device).then((outcome) => {
       if (outcome === 'written') {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.currentUser });
+        // Everything on screen, not only the user: a circle with no care-recipient account runs on its
+        // OWNER's zone, so this write moved the frame of every such circle the user owns. A cached
+        // circle detail (`care_recipient_timezone`) would keep date-math in the old zone while the server
+        // answers in the new one (a Day view asked for the old zone's day got the new zone's doses).
+        void queryClient.invalidateQueries();
       }
     });
   }, [userId, stored]);
