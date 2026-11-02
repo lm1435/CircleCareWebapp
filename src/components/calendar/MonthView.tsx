@@ -13,6 +13,7 @@ import {
   getEventCardClass,
   getEventTextClass,
   getMedicationStatus,
+  hidesUnloggedDoseTime,
   isInactiveMedication,
 } from './eventStyles';
 
@@ -206,7 +207,11 @@ export function MonthView({
                 {selectedEvents.map((event) => {
                   const status = getMedicationStatus(event, careRecipientTimezone);
                   const title = event.medication_name || event.title;
-                  const timeLabel = event.scheduled_time
+                  // A past day nobody answered prints no clock time (its
+                  // virtual occurrence carries the NEW time after a time edit).
+                  const timeLabel = hidesUnloggedDoseTime(event, careRecipientTimezone)
+                    ? null
+                    : event.scheduled_time
                     ? formatEventTimeCompact(
                         event.scheduled_time,
                         careRecipientTimezone,
@@ -268,11 +273,13 @@ export function MonthView({
                               {inactiveLabel}
                             </span>
                           )}
-                          <span
-                            className={`shrink-0 text-[11px] font-normal leading-tight tracking-wider ${getEventTextClass(event, status)}`}
-                          >
-                            {timeLabel}
-                          </span>
+                          {timeLabel && (
+                            <span
+                              className={`shrink-0 text-[11px] font-normal leading-tight tracking-wider ${getEventTextClass(event, status)}`}
+                            >
+                              {timeLabel}
+                            </span>
+                          )}
                           {noteCount > 0 && (
                             <span
                               data-testid="event-chip-notes"

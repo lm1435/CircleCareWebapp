@@ -16,6 +16,7 @@ import {
   getEventCardClass,
   getEventTextClass,
   getMedicationStatus,
+  hidesUnloggedDoseTime,
   isInactiveMedication,
   type MedicationStatus,
 } from './eventStyles';
@@ -194,7 +195,11 @@ export function DayView({
               {dayEvents.map((event) => {
                 const status = getMedicationStatus(event, timezone, now);
                 const name = event.medication_name || event.title;
-                const timeLabel = event.scheduled_time
+                // A past day nobody answered prints no clock time (its virtual
+                // occurrence carries the NEW time after a time edit).
+                const timeLabel = hidesUnloggedDoseTime(event, timezone, now)
+                  ? null
+                  : event.scheduled_time
                   ? formatEventTimeCompact(
                       event.scheduled_time,
                       timezone,
@@ -241,7 +246,7 @@ export function DayView({
                         >
                           {name}
                         </span>
-                        <span className="shrink-0 text-xs">{timeLabel}</span>
+                        {timeLabel && <span className="shrink-0 text-xs">{timeLabel}</span>}
                       </span>
                       <span className={`mt-0.5 flex flex-wrap items-center gap-x-2 text-xs ${text}`}>
                         <span>{typeLabel}</span>

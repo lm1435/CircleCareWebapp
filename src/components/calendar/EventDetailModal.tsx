@@ -13,6 +13,7 @@ import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
 import {
   EVENT_TYPE_DOT_CLASS,
   getMedicationStatus,
+  hidesUnloggedDoseTime,
   isInactiveMedication,
 } from './eventStyles';
 import { formatRecurrenceLabel } from './recurrenceLabel';
@@ -259,7 +260,12 @@ export function EventDetailModal({
 
   const rows: Array<{ key: string; label: string; value: ReactNode }> = [
     { key: 'date', label: t('calendar:eventDetail.date'), value: dateLabel },
-    { key: 'time', label: t('calendar:eventDetail.time'), value: timeLabel },
+    // A past day's dose nobody answered has no Time row: its virtual
+    // occurrence carries the medication's CURRENT time, which after a time edit
+    // is not the time it was due (`hidesUnloggedDoseTime`; 1.4.1 fixes it).
+    ...(hidesUnloggedDoseTime(event, careRecipientTimezone)
+      ? []
+      : [{ key: 'time', label: t('calendar:eventDetail.time'), value: timeLabel }]),
   ];
   if (event.event_type === 'task') {
     rows.push({

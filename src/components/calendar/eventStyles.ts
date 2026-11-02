@@ -1,5 +1,5 @@
 import type { CalendarEvent, EventType } from '@/api/calendarEvents';
-import { isEventPastDue } from '@/utils/timezone';
+import { getDateInTimezone, isEventPastDue } from '@/utils/timezone';
 
 // Color coding mirrored from mobile's design system: medication → clay,
 // appointment → dusk, task → moss. The web tokens share the mobile vocabulary.
@@ -99,6 +99,31 @@ export function getMedicationStatus(
   )
     ? 'missed'
     : 'pending';
+}
+
+/**
+ * Whether a scheduled dose is from a PAST day (care recipient's zone) and was
+ * never answered — no taken and no skipped record. Such a dose shows NO clock
+ * time (1.4.0 owner decision).
+ *
+ * Why: after a medication's time is edited (7:00 -> 7:15), an unanswered past
+ * day is a VIRTUAL occurrence built from the parent row, so it carries the NEW
+ * time and would claim the dose was due at 7:15 on a day it was due at 7:00.
+ * Taken and skipped doses are frozen into their own row when answered, so they
+ * keep their time; today's and future doses keep theirs too. The real fix (a
+ * time-history record) is 1.4.1. Mobile: `hidesUnloggedDoseTime` in
+ * mobile/src/utils/unloggedPastDose.ts — keep the two in step.
+ */
+export function hidesUnloggedDoseTime(
+  event: CalendarEvent,
+  careRecipientTimezone: string,
+  now: Date = new Date()
+): boolean {
+  if (event.event_type !== 'medication' || event.as_needed) return false;
+  const status = event.confirmation?.status;
+  if (status === 'taken' || status === 'taken_late' || status === 'skipped') return false;
+  if (!event.scheduled_date) return false;
+  return event.scheduled_date < getDateInTimezone(careRecipientTimezone, now);
 }
 
 /**

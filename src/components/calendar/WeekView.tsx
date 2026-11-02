@@ -16,6 +16,7 @@ import {
   getEventCardClass,
   getEventTextClass,
   getMedicationStatus,
+  hidesUnloggedDoseTime,
   isInactiveMedication,
 } from './eventStyles';
 import { overlapKey, resolveOverlaps, type OverlapInfo } from './overlap';
@@ -194,7 +195,12 @@ export function WeekView({
   ): ReactElement => {
     const status = getMedicationStatus(event, careRecipientTimezone, now);
     const title = event.medication_name || event.title;
-    const timeLabel = event.scheduled_time
+    // A past day nobody answered prints no clock time (its virtual occurrence
+    // carries the NEW time after a time edit). The chip keeps its grid slot.
+    const hideTime = hidesUnloggedDoseTime(event, careRecipientTimezone, now);
+    const timeLabel = hideTime
+      ? null
+      : event.scheduled_time
       ? formatEventTimeCompact(
           event.scheduled_time,
           careRecipientTimezone,
@@ -263,7 +269,7 @@ export function WeekView({
     const stacked = fitLines >= 2;
     // At 3+ lanes a chip is too narrow for both; the title is what identifies it,
     // and the time is still in the aria-label and the hour axis.
-    const showTime = !!event.scheduled_time && totalColumns < 3;
+    const showTime = !!event.scheduled_time && !hideTime && totalColumns < 3;
     // The assignee + note badge line (mobile's meta row). Mobile renders it
     // only when it FITS below the title (TimelineEventBlock META_MIN_HEIGHT);
     // here the time already owns the second line, so the meta line needs a
