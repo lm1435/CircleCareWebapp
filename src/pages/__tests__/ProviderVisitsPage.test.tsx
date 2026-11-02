@@ -177,7 +177,7 @@ describe('header and states', () => {
     mockVisits.mockResolvedValue(page({ visits: [visit()] }));
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
     await openPast();
-    expect(await screen.findByText(/Oct 2 · Follow-up/)).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Oct 2 Follow-up' })).toBeInTheDocument();
     expect(mockVisits).toHaveBeenCalledTimes(2);
   });
 
@@ -283,10 +283,10 @@ describe('next visit and past visits', () => {
     expect(past).toHaveAttribute('aria-expanded', 'false');
     expect(notes).toHaveTextContent('Notes (1)');
     expect(past).toHaveTextContent('Past visits (1)');
-    expect(screen.queryByText(/Oct 2 · Follow-up/)).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Oct 2 Follow-up' })).toBeNull();
     await userEvent.click(past);
     expect(past).toHaveAttribute('aria-expanded', 'true');
-    expect(await screen.findByText(/Oct 2 · Follow-up/)).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Oct 2 Follow-up' })).toBeInTheDocument();
     await userEvent.click(up);
     expect(screen.queryByTestId('provider-visits-upcoming')?.querySelector('[data-testid="provider-visit"]')).toBeNull();
     expect(vi.mocked(Analytics.providerVisitsSectionToggled).mock.calls).toEqual([
@@ -335,12 +335,12 @@ describe('next visit and past visits', () => {
     );
     renderPage();
     await openPast();
-    await screen.findByText(/Oct 2 · Follow-up/);
+    await screen.findByRole('link', { name: 'Oct 2 Follow-up' });
     const years = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(years).toEqual(['2026', '2025']);
     const g2026 = screen.getByRole('group', { name: '2026' });
     expect(within(g2026).getAllByTestId('provider-visit')).toHaveLength(2);
-    expect(within(screen.getByRole('group', { name: '2025' })).getByText(/Dec 3 · First visit/)).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: '2025' })).getByRole('link', { name: 'Dec 3 First visit' })).toBeInTheDocument();
     // The heading carries the section count (same as mobile).
     expect(screen.getByRole('heading', { level: 2, name: 'Past visits (3)' })).toBeInTheDocument();
   });
@@ -441,7 +441,7 @@ describe('Show earlier visits', () => {
     const more = await screen.findByRole('button', { name: 'Show earlier visits' });
 
     await userEvent.click(more);
-    expect(await screen.findByText(/Dec 3 · First visit/)).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Dec 3 First visit' })).toBeInTheDocument();
     expect(mockVisits).toHaveBeenLastCalledWith(CIRCLE, 'p1', { before: '2026-10-02', limit: 20 });
     // 2026 stays ONE group (Oct + Mar), 2025 is new.
     expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['2026', '2025']);
@@ -450,7 +450,7 @@ describe('Show earlier visits', () => {
     expect(screen.queryByRole('button', { name: 'Show earlier visits' })).toBeNull();
     // Focus lands on the first newly loaded visit, not on <body>.
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: /Mar 1 · Spring check/ })).toHaveFocus()
+      expect(screen.getByRole('link', { name: /Mar 1 Spring check/ })).toHaveFocus()
     );
     expect(screen.getByRole('status', { name: '' })).toBeDefined();
   });

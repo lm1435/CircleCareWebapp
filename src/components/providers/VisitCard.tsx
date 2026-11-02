@@ -6,7 +6,7 @@ import type { ProviderVisit, VisitNote } from '@/api/providers';
 import { Card, Icon, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
-import { formatEventTimeForDisplay, getDateInTimezone, zoneReferenceInstant } from '@/utils/timezone';
+import { formatEventTimeForDisplay, getDateInTimezone } from '@/utils/timezone';
 import { noteAuthorName, visitCalendarPath, visitEventId } from './visitFormat';
 
 // A note's text is collapsed to ~3 lines with "more" (docs/plans/notes-by-doctor.md
@@ -113,7 +113,8 @@ export interface VisitCardProps {
 }
 
 /**
- * One PAST visit: "Oct 2 · Follow-up", its notes inline (author, date, text) or
+ * One visit: its date (and, upcoming, weekday and time) on one line, the title under it
+ * ("Oct 2" / "Follow-up"), its notes inline (author, date, text) or
  * "No notes yet · Add a note". The title opens the appointment; "Add a note"
  * opens it at its notes panel (the existing appointment / note flow).
  */
@@ -150,7 +151,9 @@ export function VisitCard({
               visit.scheduled_time,
               timezone,
               undefined,
-              zoneReferenceInstant(visit.scheduled_date),
+              // The DAY itself: the viewer half names its weekday when it
+              // falls on another calendar day ("/ Tue 5:00 AM (Auckland)").
+              visit.scheduled_date,
               hourCycle
             )
           : null,
@@ -170,7 +173,17 @@ export function VisitCard({
           onClick={backIfCameFromVisit}
           className="text-ink no-underline hover:underline"
         >
-          {when} · {visit.title}
+          {/* Date · time on its own line, the title under it: a dual-zone time
+              ("9:00 AM (Denver) / Tue 5:00 AM (Auckland)") is long enough to
+              push a shared line's title into a bad wrap. */}
+          <span className="block text-sm font-semibold text-ink-2" data-testid="provider-visit-when">
+            {when}
+          </span>
+          {/* Collapses visually between the two blocks; keeps the link's name "Oct 2 Follow-up". */}
+          {' '}
+          <span className="block" data-testid="provider-visit-title">
+            {visit.title}
+          </span>
         </Link>
       </Text>
       {visit.location && <p className="m-0 mt-0.5 break-words text-sm text-ink-2">{visit.location}</p>}

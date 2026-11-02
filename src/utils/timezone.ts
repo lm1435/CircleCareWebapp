@@ -696,6 +696,73 @@ export function timezonesAreDifferent(
 }
 
 /**
+ * What a dual-time formatter is told about WHEN a naive time happens.
+ *
+ * - a `YYYY-MM-DD` wire day (`scheduled_date`): the event's own day in the
+ *   recipient's frame. The conversion runs at the event's real instant and the
+ *   viewer half names its weekday when it lands on a different calendar day.
+ * - a `Date`: an instant to judge the zone comparison at, nothing more. It says
+ *   nothing about which day the time is on, so NO day marker is ever derived
+ *   from it (a "daily at 8 AM" label must not grow a weekday).
+ * - `null` / `undefined`: a row with no date. Judged at now, never marked.
+ *
+ * Mirrors `mobile/src/utils/timezone.ts`.
+ */
+export type EventTimeReference = Date | string | null | undefined;
+
+/** `YYYY-MM-DD` -> its parts, or null for anything that is not a real wire day. */
+function parseWireDay(value: unknown): { y: number; m: number; d: number } | null {
+  if (typeof value !== 'string') return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  const probe = new Date(Date.UTC(y, m - 1, d, 12));
+  if (probe.getUTCMonth() !== m - 1 || probe.getUTCDate() !== d) return null;
+  return { y, m, d };
+}
+
+/**
+ * The real instant of a naive `hours:minutes` on `day` in `timezone`.
+ *
+ * Two passes: the offset at noon UTC of the day gives a first guess, then the
+ * offset AT that guess corrects it. Noon alone is an hour out on a DST-change
+ * day for any time on the other side of the change, which is exactly where a
+ * day boundary can move.
+ */
+function eventInstant(
+  day: { y: number; m: number; d: number },
+  hours: number,
+  minutes: number,
+  timezone: string
+): Date {
+  const wallAsUtc = Date.UTC(day.y, day.m - 1, day.d, hours, minutes);
+  const noon = new Date(Date.UTC(day.y, day.m - 1, day.d, 12));
+  const guess = new Date(wallAsUtc - getTimezoneOffsetMinutes(timezone, noon) * 60000);
+  return new Date(wallAsUtc - getTimezoneOffsetMinutes(timezone, guess) * 60000);
+}
+
+/**
+ * The short weekday of `day` shifted by `delta` calendar days, in `language`
+ * ("Tue", "mar", "Di", "mar.", "ter.", "terça"). UTC calendar arithmetic,
+ * rendered pinned to UTC, so the device zone can never move the day.
+ */
+function shortWeekdayOf(
+  day: { y: number; m: number; d: number },
+  delta: number,
+  language: TimeLanguage
+): string {
+  try {
+    return dateTimeFormat(language, { weekday: 'short', timeZone: 'UTC' }).format(
+      new Date(Date.UTC(day.y, day.m - 1, day.d + delta, 12))
+    );
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Format an event time for display throughout the app.
  * Times are stored in care recipient's timezone (already converted on save).
  * Shows: "2:00 PM CT" or "2:00 PM CT / 1:00 PM MT" if viewer is in different TZ
@@ -703,7 +770,10 @@ export function timezonesAreDifferent(
  * @param timeString - Time from database (HH:MM or HH:MM:SS format) - already in care recipient's TZ
  * @param careRecipientTimezone - The care recipient's IANA timezone
  * @param showDualTimezone - Whether to show viewer's local time too (`undefined` auto-detects)
- * @param referenceDate - Date for DST calculations (`undefined` = today)
+ * @param referenceDate - The event's `YYYY-MM-DD` day (preferred: converts at the
+ *   event's real instant and lets the viewer half name its weekday when it falls on
+ *   another calendar day), or a bare instant / undefined for rows with no date
+ *   (judged at that instant or today, never day-marked)
  * @param cycle - Viewer's hour cycle from resolveHourCycle() — REQUIRED
  * @returns Formatted time string with timezone(s)
  *
@@ -716,7 +786,7 @@ export function formatEventTimeForDisplay(
   timeString: string,
   careRecipientTimezone: string,
   showDualTimezone: boolean | undefined,
-  referenceDate: Date | undefined,
+  referenceDate: EventTimeReference,
   cycle: HourCycle
 ): string {
   try {
@@ -734,7 +804,17 @@ export function formatEventTimeForDisplay(
     // second time is must be decided at the SAME instant, or the pairs that
     // only diverge seasonally (Phoenix/Denver in July) get converted without
     // being disclosed.
-    const refDate = referenceDate || new Date();
+    //
+    // A `YYYY-MM-DD` is the event's OWN DAY: the instant becomes the event's
+    // real moment (so a DST change on that day is honoured) and the viewer half
+    // may name its weekday. A `Date` (or nothing) is only an instant to judge
+    // at, so no day is ever invented from it.
+    const eventDay = parseWireDay(referenceDate);
+    const refDate = eventDay
+      ? eventInstant(eventDay, hours, minutes, careRecipientTimezone)
+      : referenceDate instanceof Date
+        ? referenceDate
+        : new Date();
     const zonesDiffer = timezonesAreDifferent(deviceTimezone, careRecipientTimezone, refDate);
     const shouldShowDual = showDualTimezone ?? zonesDiffer;
     // WHETHER TO NAME THE ZONES IS NOT THE SAME QUESTION AS WHETHER TO SHOW TWO
@@ -769,11 +849,20 @@ export function formatEventTimeForDisplay(
     // apart (Kiritimati +14 against Niue -11), which one correction cannot
     // close: this is what rendered a negative hour like "-1:00 AM".
     const DAY = 24 * 60;
-    const viewerMinuteOfDay = viewerTotalMinutes - Math.floor(viewerTotalMinutes / DAY) * DAY;
+    // THE DAY THE WRAP DROPS: how many calendar days the viewer's reading sits
+    // from the recipient's (-2..+2 across -11..+14). When it is not zero AND the
+    // caller named the event's day, the viewer half leads with its own short
+    // weekday: "9:00 AM (Denver) / Tue 5:00 AM (Auckland)". Without it a Monday
+    // visit read as Monday 5 AM in Auckland when it is Tuesday there (owner
+    // report, TestFlight 1.4.0 (8)). Same rule as mobile.
+    const dayDelta = Math.floor(viewerTotalMinutes / DAY);
+    const viewerMinuteOfDay = viewerTotalMinutes - dayDelta * DAY;
 
     const viewerHours = Math.floor(viewerMinuteOfDay / 60);
     const viewerMinutes = viewerMinuteOfDay % 60;
-    const viewerTime = `${formatTimeOfDay(viewerHours, viewerMinutes, cycle, language)}${zoneSuffix(deviceTimezone)}`;
+    const viewerWeekday =
+      eventDay && dayDelta !== 0 ? shortWeekdayOf(eventDay, dayDelta, language) : '';
+    const viewerTime = `${viewerWeekday ? `${viewerWeekday} ` : ''}${formatTimeOfDay(viewerHours, viewerMinutes, cycle, language)}${zoneSuffix(deviceTimezone)}`;
 
     return `${recipientTime} / ${viewerTime}`;
   } catch {

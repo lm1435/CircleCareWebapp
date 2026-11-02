@@ -8,7 +8,7 @@ import { MapsLink } from '@/components/MapsLink';
 import { Badge, Card, Eyebrow, Modal, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useProviders } from '@/hooks/useProviders';
-import { formatEventTimeForDisplay, getDateInTimezone, zoneReferenceInstant } from '@/utils/timezone';
+import { formatEventTimeForDisplay, getDateInTimezone } from '@/utils/timezone';
 import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
 import {
   EVENT_TYPE_DOT_CLASS,
@@ -154,8 +154,9 @@ export function EventDetailModal({
         undefined,
         // The event's OWN day governs both halves: whether a second time is
         // shown at all, and what that time says. Passing `undefined` judged the
-        // first at today and converted at today too.
-        zoneReferenceInstant(event.scheduled_date),
+        // first at today and converted at today too. The DAY itself, so the
+        // viewer half names its weekday when it falls on another calendar day.
+        event.scheduled_date,
         hourCycle
       )
     : t('calendar:allDay');

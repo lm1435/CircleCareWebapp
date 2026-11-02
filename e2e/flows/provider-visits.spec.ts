@@ -619,3 +619,63 @@ test.describe('Visits & notes: dark mode', () => {
     await checkA11y(page, 'doctor-visits-dark-form', testInfo);
   });
 });
+
+// Owner report (TestFlight 1.4.0 (8)): phone a day ahead of the recipient, and the
+// Visits card's viewer half read as the recipient's day. The viewer half now names
+// its own weekday when it differs, and the title sits on its own line under it.
+test.describe('Visits & notes: a viewer a day ahead of the recipient', () => {
+  test.use({ timezoneId: 'Pacific/Auckland' });
+
+  test('the upcoming card names the viewer\'s day and keeps the title on its own line', async ({
+    page,
+    context,
+    request,
+    baseURL,
+  }) => {
+    // The profile zone follows the browser; keep the recipient's frame as created.
+    await page.route(/\/api\/users\/me$/, (route) =>
+      route.request().method() === 'PATCH' ? route.abort() : route.continue()
+    );
+    const s = await seed(context, request, baseURL, 'docdayahead');
+    const sfx = uniqueSuffix().replace(/[^0-9a-z]/gi, '');
+    const doc = await apiCreateDoctor(s.api, s.circleId, { name: `Dr. Ahead ${sfx}` });
+    const date = s.at(6);
+    const title = `E2E Follow-up: Doctor visit ${sfx}`;
+    await apiCreateEvent(s.api, s.circleId, {
+      event_type: 'appointment',
+      title,
+      scheduled_date: date,
+      scheduled_time: '09:00',
+      provider_id: doc.id,
+    });
+
+    // The viewer's (Auckland) reading of 09:00 on `date` in the recipient's zone, by plain Intl.
+    const wall = Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10), 9, 0);
+    const offsetAt = (zone: string, at: number): number => {
+      const p = Object.fromEntries(
+        new Intl.DateTimeFormat('en-US', {
+          timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+        }).formatToParts(new Date(at)).map((x) => [x.type, x.value])
+      );
+      return (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute) - at) / 60000;
+    };
+    const instant = wall - offsetAt(s.tz, wall - offsetAt(s.tz, wall) * 60000) * 60000;
+    const viewerDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Pacific/Auckland' }).format(new Date(instant));
+    const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Pacific/Auckland', weekday: 'short' }).format(
+      new Date(instant)
+    );
+    test.skip(viewerDay === date, `recipient zone ${s.tz} shares Auckland's day at 09:00`);
+
+    await gotoVisits(page, s.circleId, doc.id);
+    const card = page.getByTestId('provider-visit').filter({ hasText: title });
+    await expect(card).toBeVisible({ timeout: 25_000 });
+    const when = card.getByTestId('provider-visit-when');
+    await expect(when).toContainText(new RegExp(`/ ${weekday} \\d{1,2}:\\d{2}`));
+    await expect(when).toContainText('(Auckland)');
+    await expect(card.getByTestId('provider-visit-title')).toHaveText(title);
+    // The title is BELOW the date/time line, not beside it.
+    const whenBox = await when.boundingBox();
+    const titleBox = await card.getByTestId('provider-visit-title').boundingBox();
+    expect(titleBox!.y).toBeGreaterThanOrEqual(whenBox!.y + whenBox!.height - 1);
+  });
+});
