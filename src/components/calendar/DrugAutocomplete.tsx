@@ -2,6 +2,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -13,6 +14,11 @@ import { useTranslation } from 'react-i18next';
 import { Icon, TextField } from '@/components/ui';
 import { Analytics } from '@/lib/analytics';
 import { DRUG_SEARCH_MIN_CHARS, searchDrugs, type DrugSearchResult } from '@/api/drugs';
+
+/** Case- and accent-insensitive form of a query or drug name, for matching rows against the typed text. */
+function foldDrugQuery(text: string): string {
+  return text.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
 
 /** Mobile `DrugAutocomplete` waits 300ms after the last keystroke; same here. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -130,6 +136,9 @@ export function DrugAutocomplete({
   // The search has ANSWERED for the current text (even with no rows): the "as typed" row
   // can then stand alone, so an unknown drug always has a way forward.
   const [answered, setAnswered] = useState(false);
+  // The (folded) query `suggestions` answered. While a newer search is in flight the list shows only
+  // the rows that still match what is typed, so "Zy" results never sit under "Ibuprofen".
+  const [resultsFor, setResultsFor] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -158,9 +167,14 @@ export function DrugAutocomplete({
   // `region` failed on a body-level list). `document.body` is only the
   // fallback for a host that is not in a dialog. The price is repositioning,
   // since a fixed box does not follow a scrolling ancestor.
-  const listVisible = open && (suggestions.length > 0 || answered);
+  const shownSuggestions = useMemo(() => {
+    const q = foldDrugQuery(value);
+    if (q === resultsFor) return suggestions;
+    return suggestions.filter((d) => foldDrugQuery(d.name).includes(q));
+  }, [suggestions, resultsFor, value]);
+  const listVisible = open && (shownSuggestions.length > 0 || answered);
   // Options = the suggestions, then the "as typed" row.
-  const optionCount = suggestions.length + 1;
+  const optionCount = shownSuggestions.length + 1;
   useLayoutEffect(() => {
     if (!listVisible) {
       setPlacement(null);
@@ -176,7 +190,7 @@ export function DrugAutocomplete({
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
     };
-  }, [listVisible, suggestions.length]);
+  }, [listVisible, shownSuggestions.length]);
 
   const cancelPending = (): void => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -206,6 +220,7 @@ export function DrugAutocomplete({
         .then((results) => {
           if (seq !== requestSeq.current) return;
           setSuggestions(results);
+          setResultsFor(foldDrugQuery(value));
           setActiveIndex(-1);
           setAnswered(true);
           // Kept either way, so focusing the field again shows them.
@@ -240,7 +255,7 @@ export function DrugAutocomplete({
   };
 
   const pickAsTyped = (): void => {
-    Analytics.drugSuggestionUseAsTyped(suggestions.length > 0, value.trim().length);
+    Analytics.drugSuggestionUseAsTyped(shownSuggestions.length > 0, value.trim().length);
     cancelPending();
     userTypedRef.current = false;
     setSuggestions([]);
@@ -273,7 +288,7 @@ export function DrugAutocomplete({
       // Closed (Escape, or picked and edited back): Down / Alt+Down reopens
       // the suggestions already fetched for this text. Anything else —
       // Escape included — is left to the field and the dialog.
-      if (event.key === 'ArrowDown' && (suggestions.length > 0 || answered) && !selectedDrug) {
+      if (event.key === 'ArrowDown' && (shownSuggestions.length > 0 || answered) && !selectedDrug) {
         event.preventDefault();
         setOpen(true);
         if (!event.altKey) setActiveIndex(0);
@@ -300,7 +315,7 @@ export function DrugAutocomplete({
       case 'Enter':
         if (activeIndex >= 0) {
           event.preventDefault();
-          if (activeIndex < suggestions.length) pick(suggestions[activeIndex]);
+          if (activeIndex < shownSuggestions.length) pick(shownSuggestions[activeIndex]);
           else pickAsTyped();
         }
         break;
@@ -344,7 +359,7 @@ export function DrugAutocomplete({
         onKeyDown={handleKeyDown}
         onFocus={() => {
           focusedRef.current = true;
-          if ((suggestions.length > 0 || answered) && !selectedDrug) setOpen(true);
+          if ((shownSuggestions.length > 0 || answered) && !selectedDrug) setOpen(true);
         }}
         onBlur={() => {
           focusedRef.current = false;
@@ -363,7 +378,9 @@ export function DrugAutocomplete({
       {/* Result count for screen readers — the visible list is a listbox the
           combobox already announces, this says how many arrived. */}
       <span aria-live="polite" className="sr-only">
-        {listVisible ? t('addEvent.drugSearch.resultCount', { count: suggestions.length }) : ''}
+        {listVisible
+          ? t('addEvent.drugSearch.resultCount', { count: shownSuggestions.length })
+          : ''}
       </span>
 
       {listVisible &&
@@ -384,7 +401,7 @@ export function DrugAutocomplete({
           }}
           className="z-[60] m-0 list-none overflow-y-auto rounded-lg bg-cream p-1 shadow-lg ring-1 ring-line"
         >
-          {suggestions.map((drug, index) => {
+          {shownSuggestions.map((drug, index) => {
             const active = index === activeIndex;
             return (
               <li
@@ -409,18 +426,18 @@ export function DrugAutocomplete({
             );
           })}
           <li
-            id={`${listboxId}-${suggestions.length}`}
+            id={`${listboxId}-${shownSuggestions.length}`}
             role="option"
-            aria-selected={activeIndex === suggestions.length}
+            aria-selected={activeIndex === shownSuggestions.length}
             data-testid="drug-use-as-typed"
             onMouseDown={(event) => {
               event.preventDefault();
               pickAsTyped();
             }}
-            onMouseEnter={() => setActiveIndex(suggestions.length)}
+            onMouseEnter={() => setActiveIndex(shownSuggestions.length)}
             className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-md text-ink ${
-              activeIndex === suggestions.length ? 'bg-bg-2' : ''
-            } ${suggestions.length > 0 ? 'mt-1 border-t border-line-2' : ''}`}
+              activeIndex === shownSuggestions.length ? 'bg-bg-2' : ''
+            } ${shownSuggestions.length > 0 ? 'mt-1 border-t border-line-2' : ''}`}
           >
             <span className="min-w-0 flex-1 truncate">
               {t('addEvent.drugSearch.useAsTyped', { name: value.trim() })}

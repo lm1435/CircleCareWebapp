@@ -71,6 +71,39 @@ describe('DrugAutocomplete', () => {
     expect(search.mock.calls[0][0]).toBe('me');
   });
 
+  it('while a newer search loads, rows that no longer match the typed text are hidden (Zy -> Ibuprofen)', async () => {
+    const ZY: DrugSearchResult = { rxcui: '5', name: 'Zy-19489', strength: null, dosageForm: null };
+    const ZYRTEC: DrugSearchResult = { rxcui: '6', name: 'Zyrtec', strength: null, dosageForm: null };
+    const IBU: DrugSearchResult = { rxcui: '7', name: 'Ibuprofen 200 MG', strength: null, dosageForm: null };
+    let resolveZyr: (rows: DrugSearchResult[]) => void = () => {};
+    search
+      .mockResolvedValueOnce([ZY, ZYRTEC])
+      .mockImplementationOnce(() => new Promise((r) => (resolveZyr = r)))
+      .mockResolvedValueOnce([IBU]);
+    const user = userEvent.setup();
+    render(<Host onSelectDrug={vi.fn()} />);
+
+    const input = screen.getByRole('combobox', { name: /Medication name/ });
+    await user.type(input, 'zy');
+    expect(await screen.findByRole('option', { name: 'Zy-19489' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Zyrtec' })).toBeInTheDocument();
+
+    await user.type(input, 'r'); // in flight: "Zyrtec" still matches, "Zy-19489" does not
+    await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('option', { name: 'Zy-19489' })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Zyrtec' })).toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, 'Ibuprofen'); // nothing old matches
+    expect(screen.queryByRole('option', { name: 'Zyrtec' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Zy-19489' })).toBeNull();
+
+    await waitFor(() => expect(search).toHaveBeenCalledTimes(3));
+    resolveZyr([ZYRTEC]); // the superseded "zyr" answer lands late and is dropped
+    expect(await screen.findByRole('option', { name: 'Ibuprofen 200 MG' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Zyrtec' })).toBeNull();
+  });
+
   it('picks with the keyboard: the name fills in and the drug is reported', async () => {
     const user = userEvent.setup();
     const onSelectDrug = vi.fn();
