@@ -24,7 +24,6 @@ vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
 } as Intl.ResolvedDateTimeFormatOptions);
 
 const HOUR_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * HOUR_MS;
 
 function makeActivity(overrides: Partial<ActivityFeedItem> = {}): ActivityFeedItem {
   return {
@@ -146,17 +145,26 @@ describe('ActivityItem', () => {
   });
 
   it('shows the "Scheduled for" note when a med was confirmed on a later day', () => {
-    const now = new Date();
-    const yesterdayKey = dateKeyInNY(new Date(now.getTime() - DAY_MS));
+    // PINNED CLOCK: 23:30 EST on 2026-11-01, New York's 25-hour fall-back day. "Now minus 24 hours" is 00:30 EDT
+    // the SAME day there, so deriving yesterday by instant arithmetic made this a date bomb (it went red on
+    // every DST day near midnight). Yesterday is the calendar day before, as a string.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-02T04:30:00Z') });
+    try {
+      const now = new Date();
+      expect(dateKeyInNY(now)).toBe('2026-11-01');
+      const yesterdayKey = '2026-10-31';
 
-    renderItem(
-      makeActivity({
-        created_at: now.toISOString(),
-        metadata: { scheduled_date: yesterdayKey },
-      })
-    );
+      renderItem(
+        makeActivity({
+          created_at: now.toISOString(),
+          metadata: { scheduled_date: yesterdayKey },
+        })
+      );
 
-    expect(screen.getByText('Scheduled for Yesterday')).toBeInTheDocument();
+      expect(screen.getByText('Scheduled for Yesterday')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('omits the "Scheduled for" note when confirmed on the scheduled day', () => {
