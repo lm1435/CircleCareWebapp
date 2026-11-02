@@ -34,6 +34,7 @@ export { TextField, type TextFieldProps } from './TextField';
 export { TextArea, type TextAreaProps } from './TextArea';
 export { TagInput, type TagInputProps } from './TagInput';
 export { ChipSelect, type ChipSelectProps, type ChipSelectOption } from './ChipSelect';
+export { ChoiceTileButton, type ChoiceTileButtonProps } from './ChoiceTileButton';
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { DateField, type DateFieldProps } from './DateField';
 export { TimeField, type TimeFieldProps } from './TimeField';

@@ -82,11 +82,39 @@ function created(over: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-const setDate = (value: string) =>
-  fireEvent.change(screen.getByLabelText(/^Date/), { target: { value } });
+const field = (id: string): HTMLInputElement => {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`#${id} is not on screen`);
+  return el as HTMLInputElement;
+};
 
-const setTime = (label: RegExp, value: string) =>
-  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const nameField = () => field('shift_name');
+
+const setDate = (value: string) => fireEvent.change(field('shift_date'), { target: { value } });
+
+/** The Starts / Ends tiles reveal their time input in place; open it if it is folded, then type. */
+const setTime = (which: 'start' | 'end', value: string) => {
+  const id = which === 'start' ? 'shift_start' : 'shift_end';
+  if (!document.getElementById(id)) fireEvent.click(screen.getByTestId(`shift-${which}-tile`));
+  fireEvent.change(field(id), { target: { value } });
+};
+
+const chooseRepeat = async (user: ReturnType<typeof userEvent.setup>, label: string) =>
+  user.click(
+    within(screen.getByRole('radiogroup', { name: 'How often?' })).getByRole('radio', { name: label })
+  );
+
+const openMore = async (user: ReturnType<typeof userEvent.setup>) => {
+  const toggle = screen.getByRole('button', { name: /^More details/ });
+  if (toggle.getAttribute('aria-expanded') !== 'true') await user.click(toggle);
+};
+
+const chooseReminder = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
+  await openMore(user);
+  await user.click(
+    within(screen.getByRole('radiogroup', { name: 'Reminder' })).getByRole('radio', { name: label })
+  );
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -104,13 +132,13 @@ describe('ShiftFormModal (create)', () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
     expect(screen.getByRole('radiogroup', { name: "Who's with Rosa?" })).toBeInTheDocument();
     expect(screen.getByText('Sent to whoever is on the shift.')).toBeInTheDocument();
-    setTime(/^Starts/, '20:00');
-    setTime(/^Ends/, '08:00');
-    expect(screen.getByText('next day')).toBeInTheDocument();
-    expect(screen.getByTestId('shift-duration')).toHaveTextContent('12 hours');
-    setTime(/^Ends/, '23:30');
-    expect(screen.queryByText('next day')).not.toBeInTheDocument();
-    expect(screen.getByTestId('shift-duration')).toHaveTextContent('3 h 30 min');
+    setTime('start', '20:00');
+    setTime('end', '08:00');
+    expect(screen.getByTestId('shift-end-tile')).toHaveTextContent('8:00 AM next day');
+    expect(screen.getByTestId('shift-form-duration')).toHaveTextContent('12 hours');
+    setTime('end', '23:30');
+    expect(screen.getByTestId('shift-end-tile')).not.toHaveTextContent('next day');
+    expect(screen.getByTestId('shift-form-duration')).toHaveTextContent('3 h 30 min');
   });
 
   it('validates the name, the times and the 15 min floor', async () => {
@@ -121,15 +149,15 @@ describe('ShiftFormModal (create)', () => {
     expect(mockCreate).not.toHaveBeenCalled();
 
     // Defaults are 08:00 - 14:00; clearing them asks again.
-    setTime(/^Starts/, '');
-    setTime(/^Ends/, '');
+    setTime('start', '');
+    setTime('end', '');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByText('Choose when the shift starts.')).toBeInTheDocument();
     expect(screen.getByText('Choose when the shift ends.')).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText(/^Name/), 'Short');
-    setTime(/^Starts/, '08:00');
-    setTime(/^Ends/, '08:10');
+    await user.type(nameField(), 'Short');
+    setTime('start', '08:00');
+    setTime('end', '08:10');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByText('A shift lasts from 15 minutes to 24 hours.')).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
@@ -175,10 +203,10 @@ describe('ShiftFormModal (create)', () => {
   it('saves a daily open shift with the contract payload and fires shift_created (no circle id)', async () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" source="empty_state" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Name/), 'Night');
-    setTime(/^Starts/, '20:00');
-    setTime(/^Ends/, '08:00');
-    await user.selectOptions(screen.getByLabelText('Repeats'), 'daily');
+    await user.type(nameField(), 'Night');
+    setTime('start', '20:00');
+    setTime('end', '08:00');
+    await chooseRepeat(user, 'Every day');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     expect(mockCreate).toHaveBeenCalledWith('c', {
@@ -199,18 +227,19 @@ describe('ShiftFormModal (create)', () => {
       overnight: true,
       durationMinutes: 720,
       source: 'empty_state',
+      layout: 'simple',
     });
   });
 
   it('chosen days send weekly + recurrence_days; "Me" is assigned_self', async () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Name/), 'Weekend');
-    setTime(/^Starts/, '09:00');
-    setTime(/^Ends/, '17:00');
-    await user.selectOptions(screen.getByLabelText('Repeats'), 'days_of_week');
+    await user.type(nameField(), 'Weekend');
+    setTime('start', '09:00');
+    setTime('end', '17:00');
+    await chooseRepeat(user, 'Some days');
     await user.click(screen.getByRole('radio', { name: 'Me' }));
-    await user.selectOptions(screen.getByLabelText('Reminder'), '1440');
+    await chooseReminder(user, '1 day');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     const body = mockCreate.mock.calls[0][1];
@@ -226,10 +255,10 @@ describe('ShiftFormModal (create)', () => {
   it('all 7 days saves weekly + all 7 days (as mobile), not daily', async () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Name/), 'Every day');
-    setTime(/^Starts/, '09:00');
-    setTime(/^Ends/, '17:00');
-    await user.selectOptions(screen.getByLabelText('Repeats'), 'days_of_week');
+    await user.type(nameField(), 'Every day');
+    setTime('start', '09:00');
+    setTime('end', '17:00');
+    await chooseRepeat(user, 'Some days');
     for (const box of screen.getAllByRole('checkbox')) {
       if (box.getAttribute('aria-checked') !== 'true') await user.click(box);
     }
@@ -244,8 +273,8 @@ describe('ShiftFormModal (create)', () => {
   it('no day chosen blocks save with the shifts copy', async () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Name/), 'None');
-    await user.selectOptions(screen.getByLabelText('Repeats'), 'days_of_week');
+    await user.type(nameField(), 'None');
+    await chooseRepeat(user, 'Some days');
     await user.click(screen.getByRole('checkbox', { name: 'Tuesday' }));
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByText('Choose at least one day.')).toBeInTheDocument();
@@ -256,25 +285,34 @@ describe('ShiftFormModal (create)', () => {
 describe('ShiftFormModal (defaults, order, hydration)', () => {
   it('a new shift starts at 08:00 - 14:00, and the reminder says who gets it', () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
-    expect(screen.getByLabelText(/^Starts/)).toHaveValue('08:00');
-    expect(screen.getByLabelText(/^Ends/)).toHaveValue('14:00');
-    expect(screen.getByLabelText('Reminder')).toHaveAccessibleDescription('Sent to whoever is on the shift.');
+    // The tiles name the times; their inputs are folded until a tile is pressed.
+    expect(screen.getByTestId('shift-start-tile')).toHaveTextContent('8:00 AM');
+    expect(screen.getByTestId('shift-end-tile')).toHaveTextContent('2:00 PM');
+    expect(document.getElementById('shift_start')).toBeNull();
+    fireEvent.click(screen.getByTestId('shift-start-tile'));
+    expect(field('shift_start')).toHaveValue('08:00');
+    expect(screen.getByText('Sent to whoever is on the shift.')).toBeInTheDocument();
   });
 
-  it('fields follow the agreed order: name, times, date, repeats, repeat ends, reminder, who', async () => {
-    const user = userEvent.setup();
+  it('sections follow the agreed order: name, when, how often, who, then More details', async () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
-    await user.selectOptions(screen.getByLabelText('Repeats'), 'daily');
+    const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+    expect(headings).toEqual([
+      "What's the shift called?",
+      'When?',
+      'How often?',
+      "Who's with Rosa?",
+    ]);
     const pos = (el: HTMLElement) => Array.from(document.querySelectorAll('*')).indexOf(el);
     const order = [
-      screen.getByLabelText(/^Name/),
-      screen.getByLabelText(/^Starts/),
-      screen.getByLabelText(/^Ends/),
-      screen.getByLabelText(/^Date/),
-      screen.getByLabelText('Repeats'),
-      screen.getByLabelText(/^Repeat ends/),
-      screen.getByLabelText('Reminder'),
+      nameField(),
+      field('shift_date'),
+      screen.getByTestId('shift-start-tile'),
+      screen.getByTestId('shift-end-tile'),
+      screen.getByTestId('shift-form-duration'),
+      screen.getByRole('radiogroup', { name: 'How often?' }),
       screen.getByRole('radiogroup', { name: "Who's with Rosa?" }),
+      screen.getByRole('button', { name: /^More details/ }),
     ].map(pos);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
@@ -294,7 +332,7 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
       } as unknown as ReturnType<typeof useCircle>);
       const view = shell(<ShiftFormModal circleId="c" onClose={vi.fn()} />);
       expect(screen.getByTestId('shift-form-loading')).toBeInTheDocument();
-      expect(screen.queryByLabelText(/^Name/)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/^What's the shift called/)).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Save shift' })).not.toBeInTheDocument();
 
       circle();
@@ -309,7 +347,7 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
       );
       expect(screen.queryByTestId('shift-form-loading')).not.toBeInTheDocument();
       // Never '' and never New York's day: the recipient's (Chicago) today.
-      expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-10-19');
+      expect(field('shift_date')).toHaveValue('2026-10-19');
     } finally {
       vi.useRealTimers();
     }
@@ -319,7 +357,7 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
     circle({ isPremiumCircle: false, hasShifts: true, isOwner: true });
     const onClose = vi.fn();
     shell(<ShiftFormModal circleId="c" onClose={onClose} />);
-    expect(screen.queryByLabelText(/^Name/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^What's the shift called/)).not.toBeInTheDocument();
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('Premium has ended. Your shifts are read-only.')).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
@@ -345,7 +383,7 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
     } as unknown as ReturnType<typeof useCircle>);
     shell(<ShiftFormModal circleId="c" onClose={vi.fn()} />);
     expect(screen.getByText("We couldn't load the shifts.")).toBeInTheDocument();
-    expect(screen.queryByLabelText(/^Name/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^What's the shift called/)).not.toBeInTheDocument();
   });
 
   it('assignee list: Leave open, Me, then roster order; the current holder is marked, even when the editor could not pick them', () => {
@@ -361,8 +399,11 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
     expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual([
       'Leave open',
       'Me',
-      'Ana · on it now',
+      'Anaon it now',
     ]);
+    // A holder this editor could not pick is shown, not pickable.
+    expect(within(group).getByRole('radio', { name: 'Ana, on it now' })).toBeDisabled();
+    expect(within(group).getByRole('radio', { name: 'Ana, on it now' })).toBeChecked();
   });
 
   it('marks "Me" when the editor holds it', () => {
@@ -376,18 +417,19 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
     const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
     expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual([
       'Leave open',
-      'Me · on it now',
+      'Meon it now',
       'Ana',
     ]);
+    expect(within(group).getByRole('radio', { name: 'Me, on it now' })).toBeEnabled();
   });
 
   it('names the zone when the viewer\'s clock differs at THE SHIFT\'S date, not today\'s', () => {
     // Viewer = Chicago (mocked). Recipient = Mexico City (no DST): same clock in winter, 1 h apart in summer.
     circle({ timezone: 'America/Mexico_City' });
     shell(<ShiftFormModal circleId="c" initialDate="2026-01-15" onClose={vi.fn()} />);
-    expect(screen.queryByText(/These times are for/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Times are for/)).not.toBeInTheDocument();
     setDate('2026-07-15');
-    expect(screen.getByText(/These times are for/)).toBeInTheDocument();
+    expect(screen.getByTestId('shift-form-duration')).toHaveTextContent(/Times are for/);
   });
 });
 
@@ -395,11 +437,11 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
   it('after save shows the summary, and Add next re-opens the form pre-filled (start = previous end, same date, repeat + reminder; name and end empty)', async () => {
     const user = userEvent.setup();
     shell(<ShiftComposer circleId="c" initialDate="2026-10-20" source="shifts_view" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Name/), 'Morning');
-    setTime(/^Starts/, '08:00');
-    setTime(/^Ends/, '14:00');
-    await user.selectOptions(screen.getByLabelText('Repeats'), 'daily');
-    await user.selectOptions(screen.getByLabelText('Reminder'), '120');
+    await user.type(nameField(), 'Morning');
+    setTime('start', '08:00');
+    setTime('end', '14:00');
+    await chooseRepeat(user, 'Every day');
+    await chooseReminder(user, '2 hours');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
 
     expect(await screen.findByRole('heading', { name: '"Morning" saved' })).toBeInTheDocument();
@@ -411,16 +453,17 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
 
     await user.click(addNext);
     expect(Analytics.shiftAddNextTapped).toHaveBeenCalled();
-    expect(await screen.findByLabelText(/^Starts/)).toHaveValue('14:00');
-    expect(screen.getByLabelText(/^Name/)).toHaveValue('');
-    expect(screen.getByLabelText(/^Ends/)).toHaveValue('');
-    expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-10-20');
-    expect(screen.getByLabelText('Repeats')).toHaveValue('daily');
-    expect(screen.getByLabelText('Reminder')).toHaveValue('120');
+    expect(await screen.findByTestId('shift-start-tile')).toHaveTextContent('2:00 PM');
+    expect(nameField()).toHaveValue('');
+    expect(screen.getByTestId('shift-end-tile')).toHaveTextContent('Choose a time');
+    expect(field('shift_date')).toHaveValue('2026-10-20');
+    expect(screen.getByRole('radio', { name: 'Every day' })).toBeChecked();
+    await openMore(user);
+    expect(screen.getByRole('radio', { name: '2 hours' })).toBeChecked();
 
     // The second save is attributed to add_next.
-    await user.type(screen.getByLabelText(/^Name/), 'Afternoon');
-    setTime(/^Ends/, '20:00');
+    await user.type(nameField(), 'Afternoon');
+    setTime('end', '20:00');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     await waitFor(() => expect(Analytics.shiftCreated).toHaveBeenCalledTimes(2));
     expect(vi.mocked(Analytics.shiftCreated).mock.calls[1][0]).toEqual(
@@ -432,7 +475,7 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     const user = userEvent.setup();
     mockCreate.mockResolvedValue(created({ recurrence_rule: null, assigned_to: 'u-me' }));
     shell(<ShiftComposer circleId="c" initialDate="2026-10-20" source="add_menu" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Name/), 'Morning');
+    await user.type(nameField(), 'Morning');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByText("8:00 AM – 2:00 PM · You're on it.")).toBeInTheDocument();
   });
@@ -442,9 +485,9 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     const onClose = vi.fn();
     mockCreate.mockResolvedValue(created({ recurrence_rule: null }));
     shell(<ShiftComposer circleId="c" initialDate="2026-10-20" source="add_menu" onClose={onClose} />);
-    await user.type(screen.getByLabelText(/^Name/), 'Morning');
-    setTime(/^Starts/, '08:00');
-    setTime(/^Ends/, '14:00');
+    await user.type(nameField(), 'Morning');
+    setTime('start', '08:00');
+    setTime('end', '14:00');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByText('8:00 AM – 2:00 PM · Open for anyone to take.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Done' }));
@@ -467,27 +510,30 @@ describe('ShiftFormModal (edit)', () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" shift={occurrence} onClose={vi.fn()} />);
     expect(screen.getByRole('radio', { name: 'This shift' })).toBeChecked();
-    // Date / repeat are not editable on a series.
-    expect(screen.queryByLabelText('Repeat')).not.toBeInTheDocument();
-    setTime(/^Starts/, '21:00');
-    await user.click(screen.getByRole('button', { name: 'Save shift' }));
+    // Date / repeat are not editable on a series: the date is text, the repeat tiles are locked.
+    expect(document.getElementById('shift_date')).toBeNull();
+    expect(screen.getByTestId('shift-form-date-locked')).toHaveTextContent('Wed, Oct 21');
+    expect(screen.getByRole('radio', { name: 'Every day' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Every day' })).toBeDisabled();
+    setTime('start', '21:00');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
     expect(mockUpdate.mock.calls[0][1]).toBe('root_2026-10-21');
     expect(mockUpdate.mock.calls[0][2]).toEqual(
       expect.objectContaining({ scheduled_time: '21:00', duration_minutes: 660 })
     );
     expect(mockUpdate.mock.calls[0][2]).not.toHaveProperty('assigned_to');
-    expect(Analytics.shiftEdited).toHaveBeenCalledWith({ timeChanged: true, scope: 'occurrence' });
+    expect(Analytics.shiftEdited).toHaveBeenCalledWith({ timeChanged: true, scope: 'occurrence', layout: 'simple' });
   });
 
   it('this and future PATCHes the series root', async () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" shift={occurrence} onClose={vi.fn()} />);
     await user.click(screen.getByRole('radio', { name: 'All upcoming shifts' }));
-    await user.click(screen.getByRole('button', { name: 'Save shift' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
     expect(mockUpdate.mock.calls[0][1]).toBe('root');
-    expect(Analytics.shiftEdited).toHaveBeenCalledWith({ timeChanged: false, scope: 'future' });
+    expect(Analytics.shiftEdited).toHaveBeenCalledWith({ timeChanged: false, scope: 'future', layout: 'simple' });
   });
 
   it('a one-off has no scope question and keeps its date editable', async () => {
@@ -499,6 +545,6 @@ describe('ShiftFormModal (edit)', () => {
       />
     );
     expect(screen.queryByRole('radio', { name: 'This shift' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-10-20');
+    expect(field('shift_date')).toHaveValue('2026-10-20');
   });
 });

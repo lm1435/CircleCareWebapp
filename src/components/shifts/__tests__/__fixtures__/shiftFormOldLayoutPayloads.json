@@ -1,0 +1,431 @@
+{
+  "_comment": "Captured from the OLD (dropdown) shift form with CAPTURE_OLD_SHIFT_FORM=1. Create = [circleId, body]; edit = [circleId, eventId, data].",
+  "creates": {
+    "once-open": [
+      "c",
+      {
+        "title": "Day",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null
+      }
+    ],
+    "once-open-default-times": [
+      "c",
+      {
+        "title": "Defaults",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null
+      }
+    ],
+    "once-me": [
+      "c",
+      {
+        "title": "Mine",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "09:00",
+        "duration_minutes": 510,
+        "reminder_lead_minutes": 60,
+        "assigned_to": "u-me"
+      }
+    ],
+    "once-ana": [
+      "c",
+      {
+        "title": "Hers",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "09:00",
+        "duration_minutes": 180,
+        "reminder_lead_minutes": 60,
+        "assigned_to": "u-ana"
+      }
+    ],
+    "daily-open": [
+      "c",
+      {
+        "title": "Morning",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "06:00",
+        "duration_minutes": 240,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null,
+        "recurrence_rule": "daily"
+      }
+    ],
+    "daily-ana-end": [
+      "c",
+      {
+        "title": "Aide",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": "u-ana",
+        "recurrence_rule": "daily",
+        "recurrence_end_date": "2027-06-30"
+      }
+    ],
+    "weekly-me": [
+      "c",
+      {
+        "title": "Sundays",
+        "scheduled_date": "2027-03-14",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": "u-me",
+        "recurrence_rule": "weekly"
+      }
+    ],
+    "weekly-end": [
+      "c",
+      {
+        "title": "Weekly",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 1440,
+        "assigned_to": null,
+        "recurrence_rule": "weekly",
+        "recurrence_end_date": "2027-09-01"
+      }
+    ],
+    "days-default": [
+      "c",
+      {
+        "title": "Tuesdays",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null,
+        "recurrence_rule": "weekly",
+        "recurrence_days": [
+          2
+        ]
+      }
+    ],
+    "days-many": [
+      "c",
+      {
+        "title": "Mon Thu Sat",
+        "scheduled_date": "2027-03-11",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": "u-ana",
+        "recurrence_rule": "weekly",
+        "recurrence_days": [
+          1,
+          4,
+          6
+        ]
+      }
+    ],
+    "days-end": [
+      "c",
+      {
+        "title": "Days",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null,
+        "recurrence_rule": "weekly",
+        "recurrence_days": [
+          2,
+          5
+        ],
+        "recurrence_end_date": "2027-05-01"
+      }
+    ],
+    "overnight-daily": [
+      "c",
+      {
+        "title": "Night",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "20:00",
+        "duration_minutes": 720,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null,
+        "recurrence_rule": "daily"
+      }
+    ],
+    "overnight-24h": [
+      "c",
+      {
+        "title": "Full day",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 1440,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null
+      }
+    ],
+    "short-15": [
+      "c",
+      {
+        "title": "Quick",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "10:00",
+        "duration_minutes": 15,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null
+      }
+    ],
+    "reminder-off": [
+      "c",
+      {
+        "title": "R0",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": null,
+        "assigned_to": null
+      }
+    ],
+    "reminder-60": [
+      "c",
+      {
+        "title": "R1",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null
+      }
+    ],
+    "reminder-120": [
+      "c",
+      {
+        "title": "R2",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 120,
+        "assigned_to": null
+      }
+    ],
+    "reminder-240": [
+      "c",
+      {
+        "title": "R4",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 240,
+        "assigned_to": null
+      }
+    ],
+    "reminder-1440": [
+      "c",
+      {
+        "title": "R24",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 1440,
+        "assigned_to": null
+      }
+    ]
+  },
+  "edits": {
+    "oneoff-date": [
+      "c",
+      "one",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "scheduled_date": "2027-03-11"
+      }
+    ],
+    "oneoff-time": [
+      "c",
+      "one",
+      {
+        "title": "Day",
+        "scheduled_time": "09:00",
+        "duration_minutes": 270,
+        "reminder_lead_minutes": 60,
+        "scheduled_date": "2027-03-09"
+      }
+    ],
+    "oneoff-end-only": [
+      "c",
+      "one",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 480,
+        "reminder_lead_minutes": 60,
+        "scheduled_date": "2027-03-09"
+      }
+    ],
+    "oneoff-rename": [
+      "c",
+      "one",
+      {
+        "title": "Renamed",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "scheduled_date": "2027-03-09"
+      }
+    ],
+    "oneoff-assign-me": [
+      "c",
+      "one",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "scheduled_date": "2027-03-09",
+        "assigned_to": "u-me"
+      }
+    ],
+    "oneoff-assign-ana": [
+      "c",
+      "one",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 60,
+        "scheduled_date": "2027-03-09",
+        "assigned_to": "u-ana"
+      }
+    ],
+    "oneoff-reminder-240": [
+      "c",
+      "one",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 240,
+        "scheduled_date": "2027-03-09"
+      }
+    ],
+    "oneoff-reminder-off": [
+      "c",
+      "one",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": null,
+        "scheduled_date": "2027-03-09"
+      }
+    ],
+    "held-to-open": [
+      "c",
+      "held",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 120,
+        "scheduled_date": "2027-03-09",
+        "assigned_to": null
+      }
+    ],
+    "held-to-me": [
+      "c",
+      "held",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 120,
+        "scheduled_date": "2027-03-09",
+        "assigned_to": "u-me"
+      }
+    ],
+    "held-untouched": [
+      "c",
+      "held",
+      {
+        "title": "Day",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 120,
+        "scheduled_date": "2027-03-09"
+      }
+    ],
+    "occurrence-time": [
+      "c",
+      "root_2027-03-10",
+      {
+        "title": "Night",
+        "scheduled_time": "21:00",
+        "duration_minutes": 660,
+        "reminder_lead_minutes": 60
+      }
+    ],
+    "occurrence-assign-open": [
+      "c",
+      "root_2027-03-10",
+      {
+        "title": "Night",
+        "scheduled_time": "20:00",
+        "duration_minutes": 720,
+        "reminder_lead_minutes": 60,
+        "assigned_to": null
+      }
+    ],
+    "future-reminder": [
+      "c",
+      "root",
+      {
+        "title": "Night owl",
+        "scheduled_time": "20:00",
+        "duration_minutes": 720,
+        "reminder_lead_minutes": 1440
+      }
+    ],
+    "future-untouched": [
+      "c",
+      "root",
+      {
+        "title": "Night",
+        "scheduled_time": "20:00",
+        "duration_minutes": 720,
+        "reminder_lead_minutes": 60
+      }
+    ]
+  },
+  "addNext": [
+    [
+      "c",
+      {
+        "title": "Morning",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "08:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 120,
+        "assigned_to": null,
+        "recurrence_rule": "daily"
+      }
+    ],
+    [
+      "c",
+      {
+        "title": "Afternoon",
+        "scheduled_date": "2027-03-09",
+        "scheduled_time": "14:00",
+        "duration_minutes": 360,
+        "reminder_lead_minutes": 120,
+        "assigned_to": null,
+        "recurrence_rule": "daily"
+      }
+    ]
+  ]
+}

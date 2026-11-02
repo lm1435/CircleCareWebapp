@@ -91,6 +91,20 @@ describe('shifts analytics', () => {
     }
   });
 
+  it('shift_created and shift_edited carry the form layout enum only when the caller sends "simple"', async () => {
+    const A = await load();
+    const base = { repeats: false, recurrence: 'none', assigned: false, assignedSelf: false, reminder: 'off', overnight: false, durationMinutes: 60, source: 'shifts_view' };
+    A.shiftCreated({ ...base, layout: 'simple' });
+    expect(last()[1].layout).toBe('simple');
+    A.shiftCreated(base);
+    expect(last()[1]).not.toHaveProperty('layout');
+    A.shiftEdited({ timeChanged: false, scope: 'occurrence', layout: 'simple' });
+    expect(last()).toEqual(['shift_edited', { time_changed: false, scope: 'occurrence', layout: 'simple' }]);
+    // Anything but the known enum is dropped (never free text).
+    A.shiftEdited({ timeChanged: false, scope: 'occurrence', layout: 'Mom needs help' as never });
+    expect(last()[1]).not.toHaveProperty('layout');
+  });
+
   it('the rest of the events, with the exact names and no ids', async () => {
     const A = await load();
     A.shiftAddNextTapped();

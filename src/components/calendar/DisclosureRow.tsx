@@ -10,6 +10,10 @@ export interface DisclosureRowProps {
   title: string;
   /** Right-hand text while collapsed: "Add", a short value, or a hint line. */
   summary?: string;
+  /** Test id on the collapsed summary text (the shift form's reminder / repeat-end line). */
+  summaryTestId?: string;
+  /** Let a long summary wrap onto more lines instead of truncating (large text must never be cut). */
+  wrapSummary?: boolean;
   open: boolean;
   onToggle: (next: boolean) => void;
   children: ReactNode;
@@ -19,6 +23,8 @@ export function DisclosureRow({
   id,
   title,
   summary,
+  summaryTestId,
+  wrapSummary = false,
   open,
   onToggle,
   children,
@@ -39,7 +45,11 @@ export function DisclosureRow({
           {title}
         </span>
         <span className="flex min-w-0 items-center gap-1 text-sm font-semibold text-moss-deep">
-          {!open && summary ? <span className="truncate">{summary}</span> : null}
+          {!open && summary ? (
+            <span data-testid={summaryTestId} className={wrapSummary ? 'text-right' : 'truncate'}>
+              {summary}
+            </span>
+          ) : null}
           <Icon name={open ? 'chevron-down' : 'chevron-forward'} size="inline" />
         </span>
       </button>

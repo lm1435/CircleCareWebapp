@@ -100,18 +100,31 @@ test.describe('premium owner', () => {
 
     await empty.getByRole('button', { name: 'Add a shift' }).click();
     const form = page.getByRole('dialog', { name: 'New shift' });
-    await expect(form.getByText(/^Who's with E2E/)).toBeVisible();
-    await form.getByLabel(/^Name/).fill('Night');
-    await form.getByLabel(/^Starts/).fill('20:00');
-    await form.getByLabel(/^Ends/).fill('08:00');
-    await expect(form.getByText('next day')).toBeVisible();
-    await expect(form.getByTestId('shift-duration')).toHaveText('12 hours');
+    // The simple layout: four headed sections, tiles for the choices, a folded "More details".
+    await expect(form.getByRole('heading', { name: /^Who's with E2E/ })).toBeVisible();
+    await expect(form.getByRole('heading', { level: 3 })).toHaveText([
+      "What's the shift called?",
+      'When?',
+      'How often?',
+      /^Who's with E2E/,
+    ]);
+    await form.locator('#shift_name').fill('Night');
+    // The Starts / Ends tiles name the times; pressing one reveals its time input.
+    await form.getByTestId('shift-start-tile').click();
+    await form.locator('#shift_start').fill('20:00');
+    await form.getByTestId('shift-end-tile').click();
+    await form.locator('#shift_end').fill('08:00');
+    await expect(form.getByTestId('shift-end-tile')).toContainText('8:00 AM next day');
+    await expect(form.getByTestId('shift-form-duration')).toHaveText(/^12 hours/);
     // DETERMINISTIC COUNTS: the series start TOMORROW (recipient zone), so no
     // occurrence can have ended "now" whatever time the suite runs: the badge
     // window is today .. today+6, i.e. exactly 6 days x 2 series = 12 open.
     const tomorrow = dateInTz(s.tz, 1);
     await form.locator('#shift_date').fill(tomorrow);
-    await form.getByLabel('Repeats').selectOption('daily');
+    await form.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Every day' }).click();
+    await expect(form.getByTestId('shift-form-more-summary')).toHaveText(
+      'Reminder: 1 hour before · Repeat ends: never'
+    );
     await checkA11y(page, 'shifts-form-light', testInfo);
     await form.getByRole('button', { name: 'Save shift' }).click();
 
@@ -126,13 +139,16 @@ test.describe('premium owner', () => {
     // Add the next: pre-filled start = previous end, repeat + reminder kept; name and end empty.
     await addNext.click();
     const second = page.getByRole('dialog', { name: 'New shift' });
-    await expect(second.getByLabel(/^Starts/)).toHaveValue('08:00');
-    await expect(second.getByLabel(/^Name/)).toHaveValue('');
-    await expect(second.getByLabel(/^Ends/)).toHaveValue('');
-    await expect(second.getByLabel('Repeats')).toHaveValue('daily');
+    await expect(second.getByTestId('shift-start-tile')).toContainText('8:00 AM');
+    await expect(second.locator('#shift_name')).toHaveValue('');
+    await expect(second.getByTestId('shift-end-tile')).toContainText('Choose a time');
+    await expect(
+      second.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Every day' })
+    ).toBeChecked();
     await expect(second.locator('#shift_date')).toHaveValue(tomorrow);
-    await second.getByLabel(/^Name/).fill('Day');
-    await second.getByLabel(/^Ends/).fill('20:00');
+    await second.locator('#shift_name').fill('Day');
+    await second.getByTestId('shift-end-tile').click();
+    await second.locator('#shift_end').fill('20:00');
     await second.getByRole('button', { name: 'Save shift' }).click();
     const savedTwo = page.getByRole('dialog', { name: '"Day" saved' });
     await expect(savedTwo).toBeVisible({ timeout: 20_000 });

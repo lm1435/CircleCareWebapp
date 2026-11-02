@@ -7,13 +7,17 @@ import {
   type ReactElement,
   type RefObject,
 } from 'react';
-import { CHOICE_TILE_LABEL, chipClass, choiceTileClass } from './inputStyles';
+import { CHOICE_TILE_LABEL, chipClass, choiceTileClass, choiceTileSubClass } from './inputStyles';
 
 export interface ChipSelectOption {
   /** Value reported through onChange and matched against `value`. */
   value: string;
   /** Visible chip text; defaults to the value. */
   label?: string;
+  /** Tile variant only: a second line under the label ("Today" over "Sun, Nov 1"), read with it. */
+  sub?: string;
+  /** Shown, not pickable (this option only). */
+  disabled?: boolean;
 }
 
 export interface ChipSelectProps {
@@ -45,6 +49,14 @@ export interface ChipSelectProps {
    * chips (rounded rect, 56 tall, label in the tile font): "How often?" (owner 1.4.0, mobile parity).
    */
   variant?: 'chip' | 'tile';
+  /**
+   * The radiogroup is `display: contents`: its radios join the CALLER's flex row, so a trailing button tile
+   * ("Other day", "Pick a time") can share the row while staying outside the radiogroup in the DOM (as TimeChips
+   * does with "Other time"). The caller supplies the wrapping row. Default false (the group is its own row).
+   */
+  contents?: boolean;
+  /** `aria-describedby` on the radiogroup (an error line, a hint). */
+  describedBy?: string;
 }
 
 /** Wrapped chip row; the default. */
@@ -141,6 +153,8 @@ export function ChipSelect({
   maxRows,
   disabled = false,
   variant = 'chip',
+  contents = false,
+  describedBy,
 }: ChipSelectProps): ReactElement {
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const count = options.length;
@@ -148,6 +162,8 @@ export function ChipSelect({
   const normalized = options.map((option) => ({
     value: typeof option === 'string' ? option : option.value,
     label: typeof option === 'string' ? option : (option.label ?? option.value),
+    sub: typeof option === 'string' ? undefined : option.sub,
+    disabled: typeof option === 'string' ? false : option.disabled === true,
   }));
 
   const { ref: rowRef, overflow } = useChipRowCap(
@@ -163,7 +179,7 @@ export function ChipSelect({
 
   function selectIndex(index: number, focus: boolean): void {
     const target = normalized[index];
-    if (!target) return;
+    if (!target || target.disabled) return;
     if (focus) buttonsRef.current[index]?.focus();
     onChange(target.value);
   }
@@ -187,10 +203,12 @@ export function ChipSelect({
       aria-label={label}
       aria-disabled={disabled || undefined}
       data-layout={overflow ? 'scroll' : 'wrap'}
-      className={chipRowClass(overflow)}
+      aria-describedby={describedBy}
+      className={contents ? 'contents' : chipRowClass(overflow)}
     >
       {normalized.map((option, index) => {
         const selected = index === selectedIndex;
+        const off = disabled || option.disabled;
         return (
           <button
             key={option.value}
@@ -201,7 +219,9 @@ export function ChipSelect({
             role="radio"
             aria-checked={selected}
             tabIndex={index === tabbableIndex ? 0 : -1}
-            disabled={disabled}
+            disabled={off}
+            // A second line is read with its label ("Today, Sun, Nov 1"), not as a separate phrase.
+            aria-label={variant === 'tile' && option.sub ? `${option.label}, ${option.sub}` : undefined}
             onClick={() => {
               if (selected) {
                 if (allowDeselect) onChange(null);
@@ -210,9 +230,16 @@ export function ChipSelect({
               }
             }}
             onKeyDown={(event) => onKeyDown(index, event)}
-            className={`${variant === 'tile' ? choiceTileClass(selected) : chipClass(selected)}${disabled ? ' cursor-default disabled:pointer-events-none' : ''}${disabled && !selected ? ' opacity-50' : ''}`}
+            className={`${variant === 'tile' ? choiceTileClass(selected) : chipClass(selected)}${off ? ' cursor-default disabled:pointer-events-none' : ''}${off && !selected ? ' opacity-50' : ''}`}
           >
-            {variant === 'tile' ? <span className={CHOICE_TILE_LABEL}>{option.label}</span> : option.label}
+            {variant === 'tile' ? (
+              <>
+                <span className={CHOICE_TILE_LABEL}>{option.label}</span>
+                {option.sub ? <span className={choiceTileSubClass(selected)}>{option.sub}</span> : null}
+              </>
+            ) : (
+              option.label
+            )}
           </button>
         );
       })}

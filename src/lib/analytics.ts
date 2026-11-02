@@ -1437,6 +1437,8 @@ export const Analytics = {
     overnight: boolean;
     durationMinutes: number;
     source: string;
+    /** 1.4.0 (enum, mobile parity): the form layout. Sent only when the caller knows it. */
+    layout?: 'simple';
   }) =>
     capture('shift_created', {
       repeats: opts.repeats === true,
@@ -1447,6 +1449,7 @@ export const Analytics = {
       overnight: opts.overnight === true,
       duration_bucket: shiftDurationBucket(opts.durationMinutes),
       source: pickEnum(opts.source, SHIFT_SOURCES, 'shifts_view'),
+      ...(opts.layout === 'simple' ? { layout: 'simple' } : {}),
     }),
   shiftAddNextTapped: () => capture('shift_add_next_tapped', {}),
   shiftTaken: (opts: { scope: string; reminderChanged?: boolean }) =>
@@ -1467,10 +1470,11 @@ export const Analytics = {
       scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence'),
       by_role: pickEnum(opts.byRole, SHIFT_ASSIGN_ROLES, 'manager'),
     }),
-  shiftEdited: (opts: { timeChanged: boolean; scope: string }) =>
+  shiftEdited: (opts: { timeChanged: boolean; scope: string; layout?: 'simple' }) =>
     capture('shift_edited', {
       time_changed: opts.timeChanged === true,
       scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence'),
+      ...(opts.layout === 'simple' ? { layout: 'simple' } : {}),
     }),
   shiftDeleted: (opts: { scope: string }) =>
     capture('shift_deleted', { scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence') }),

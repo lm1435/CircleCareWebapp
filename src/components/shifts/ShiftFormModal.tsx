@@ -5,37 +5,41 @@ import type { ShiftScope } from '@/api/shifts';
 import {
   Button,
   ChipSelect,
+  ChoiceTileButton,
   DateField,
   Icon,
   Modal,
   RadioGroup,
-  Select,
+  Text,
   TextField,
   TimeField,
-  focusFirstError,
   useToast,
   type FieldErrors,
 } from '@/components/ui';
 import { INPUT_ERROR } from '@/components/ui/inputStyles';
 import { DaysOfWeekPicker } from '@/components/calendar/DaysOfWeekPicker';
+import { DisclosureRow } from '@/components/calendar/DisclosureRow';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
-import { getDayOfWeek, nextDateOnWeekdays } from '@/components/calendar/dateMath';
+import { formatDateForDisplay, getDayOfWeek, nextDateOnWeekdays } from '@/components/calendar/dateMath';
 import { useCircle } from '@/hooks/useCircle';
 import { useCreateShift, useHandleShiftFailure, useUpdateShift } from '@/hooks/useShifts';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
+import { useHourCycle } from '@/hooks/useHourCycle';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
 import { resolveShiftsEntry } from '@/lib/shiftsAccess';
 import { ShiftInlineError } from './ShiftInlineError';
 import { spanMinutes } from '@/lib/eventForm';
 import { defaultNewEventDate } from '@/utils/recipientEventDate';
-import { getTimezoneLabel } from '@/utils/timezone';
+import { formatTimeOfDay, getTimezoneLabel } from '@/utils/timezone';
 import {
   DEFAULT_SHIFT_REMINDER_LEAD,
   MAX_SHIFT_MINUTES,
   MIN_SHIFT_MINUTES,
   SHIFT_NAME_MAX,
   formatShiftDuration,
+  formatShiftReminder,
+  formatShiftReminderChip,
   isShiftRepeating,
   memberShortName,
   recurrenceEnum,
@@ -144,6 +148,33 @@ export function ShiftFormModal(props: ShiftFormModalProps): ReactElement | null 
   return <ShiftFormBody {...props} />;
 }
 
+/** The repeat a stored shift carries, as the form's tiles name it; null = a series whose rule this row does not hold. */
+function storedRepeat(shift: CalendarEvent): ShiftRepeatChoice | null {
+  const rule = shift.recurrence_rule;
+  if (rule === 'daily') return 'daily';
+  if (rule === 'weekly') {
+    return shift.recurrence_days && shift.recurrence_days.length > 0 ? 'days_of_week' : 'weekly';
+  }
+  return isShiftRepeating(shift) ? null : 'none';
+}
+
+/** A form field that can carry an error, in the order the first one is focused. */
+const FOCUS_ORDER = [
+  'shift_name',
+  'shift_date',
+  'shift_start',
+  'shift_end',
+  'shift_days',
+  'shift_repeat_end',
+] as const;
+
+/** Section heading, the med / appointment simple form's pattern (an h3 the section is named by). */
+const sectionHeading = (headingId: string, text: string): ReactElement => (
+  <Text variant="sectionTitle" as="h3" id={headingId} className="text-lg">
+    {text}
+  </Text>
+);
+
 function ShiftFormBody({
   circleId,
   shift,
@@ -157,6 +188,7 @@ function ShiftFormBody({
   const { t, i18n } = useTranslation(['shifts', 'calendar', 'common']);
   const { circle, timezone, members, canEdit, canManageMembers } = useCircle(circleId);
   const viewerId = useAuthStore((s) => s.user?.id ?? null);
+  const hourCycle = useHourCycle();
   const createShift = useCreateShift(circleId);
   const updateShift = useUpdateShift(circleId);
 
@@ -178,7 +210,11 @@ function ShiftFormBody({
     }
     return prefill ? (prefill.endTime ?? '') : DEFAULT_END;
   });
-  const [repeat, setRepeat] = useState<ShiftRepeatChoice>(prefill?.repeat ?? 'none');
+  // EDIT shows the stored repeat (locked); CREATE starts from the prefill ("add next") or Once.
+  const lockedRepeat = shift ? storedRepeat(shift) : null;
+  const [repeat, setRepeat] = useState<ShiftRepeatChoice>(
+    shift ? (lockedRepeat ?? 'none') : (prefill?.repeat ?? 'none')
+  );
   const [days, setDays] = useState<number[]>(prefill?.days ?? []);
   const [repeatEndDate, setRepeatEndDate] = useState(prefill?.repeatEndDate ?? '');
   const [reminder, setReminder] = useState<string>(() => {
@@ -189,6 +225,16 @@ function ShiftFormBody({
   const [assignedTo, setAssignedTo] = useState<string>(initialAssignee);
   const [editScope, setEditScope] = useState<ShiftScope>('occurrence');
   const [errors, setErrors] = useState<FieldErrors>({});
+  // The Starts / Ends tiles reveal their time input in place; a field with an error stays open.
+  const [timeOpen, setTimeOpen] = useState({ start: false, end: false });
+  const [moreOpen, setMoreOpen] = useState(false);
+  // An element to focus once the render that mounted / revealed it has happened.
+  const [focusAfter, setFocusAfter] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusAfter) return;
+    document.getElementById(focusAfter)?.focus();
+    setFocusAfter(null);
+  }, [focusAfter]);
 
   // Dropping the dialog entirely for someone who cannot write (the page gates
   // every entry point, this is defence in depth).
@@ -196,26 +242,37 @@ function ShiftFormBody({
 
   const span = startTime && endTime ? spanMinutes(startTime, endTime) : null;
   const nextDay = !!startTime && !!endTime && endTime <= startTime;
+  const spanValid = span !== null && span >= MIN_SHIFT_MINUTES && span <= MAX_SHIFT_MINUTES;
 
   // Leave open, Me, then the other members in roster order. The CURRENT holder
-  // is always listed (even if this editor could not pick them) and marked.
+  // is always listed ("on it now"); one this editor could not pick is shown, not pickable.
   const assigneeOptions = useMemo(() => {
-    const mark = (label: string, id: string): string =>
-      initialAssignee && id === initialAssignee ? `${label} · ${t('shifts:assign.current')}` : label;
-    const opts = [{ value: '', label: t('shifts:form.leaveOpen') }];
-    if (viewerId && canCoverShifts(members, viewerId)) opts.push({ value: viewerId, label: mark(t('shifts:form.me'), viewerId) });
+    const current = t('shifts:assign.current');
+    const mark = (id: string): string | undefined =>
+      initialAssignee && id === initialAssignee ? current : undefined;
+    const opts: Array<{ value: string; label: string; sub?: string; disabled?: boolean }> = [
+      { value: '', label: t('shifts:form.leaveOpen') },
+    ];
+    if (viewerId && canCoverShifts(members, viewerId)) {
+      opts.push({ value: viewerId, label: t('shifts:form.me'), sub: mark(viewerId) });
+    }
     for (const m of members) {
       if (m.id === viewerId) continue;
       if (m.is_care_recipient === true) continue;
       const isHolder = m.id === initialAssignee;
-      if (!isHolder && (!canManageMembers || m.view_only === true)) continue;
-      const label = memberShortName(m);
-      opts.push({ value: m.id, label: mark(label, m.id) });
+      const pickable = canManageMembers && m.view_only !== true;
+      if (!isHolder && !pickable) continue;
+      opts.push({
+        value: m.id,
+        label: memberShortName(m),
+        sub: mark(m.id),
+        ...(pickable ? {} : { disabled: true }),
+      });
     }
-    // A holder who has left the circle still reads.
+    // A holder who has left the circle still reads (and cannot be picked back).
     if (initialAssignee && !opts.some((o) => o.value === initialAssignee)) {
-      const name = shift?.assigned_to_user?.first_name?.trim() || t('shifts:someone');
-      opts.push({ value: initialAssignee, label: mark(name, initialAssignee) });
+      const holder = shift?.assigned_to_user?.first_name?.trim() || t('shifts:someone');
+      opts.push({ value: initialAssignee, label: holder, sub: current, disabled: true });
     }
     return opts;
   }, [t, viewerId, canManageMembers, members, initialAssignee, shift]);
@@ -269,14 +326,13 @@ function ShiftFormBody({
     const found = validate();
     if (Object.keys(found).length > 0) {
       setErrors(found);
-      focusFirstError(found, [
-        'shift_name',
-        'shift_date',
-        'shift_start',
-        'shift_end',
-        'shift_days',
-        'shift_repeat_end',
-      ]);
+      // Reveal whatever is folded away so every error is on screen, then focus the first one.
+      setTimeOpen((prev) => ({
+        start: prev.start || !!found.shift_start,
+        end: prev.end || !!found.shift_end,
+      }));
+      if (found.shift_repeat_end) setMoreOpen(true);
+      setFocusAfter(FOCUS_ORDER.find((key) => found[key]) ?? null);
       return;
     }
     const duration = span as number;
@@ -300,7 +356,11 @@ function ShiftFormBody({
       const eventId = repeatingEdit && scope === 'future' ? shiftRootId(shift) : shift.id;
       try {
         await updateShift.mutateAsync({ eventId, data });
-        Analytics.shiftEdited({ timeChanged, scope: repeatingEdit ? scope : 'occurrence' });
+        Analytics.shiftEdited({
+          timeChanged,
+          scope: repeatingEdit ? scope : 'occurrence',
+          layout: 'simple',
+        });
         onUpdated?.();
         onClose();
       } catch (err) {
@@ -343,6 +403,7 @@ function ShiftFormBody({
         overnight: nextDay,
         durationMinutes: duration,
         source,
+        layout: 'simple',
       });
       onCreated?.(created, {
         date,
@@ -365,17 +426,60 @@ function ShiftFormBody({
   if (!canEdit) return null;
 
   const repeatOptions = [
-    { value: 'none', label: t('calendar:addEvent.recurrence.never') },
-    { value: 'daily', label: t('calendar:addEvent.recurrence.daily') },
-    { value: 'weekly', label: t('calendar:addEvent.recurrence.weekly') },
-    { value: 'days_of_week', label: t('calendar:addEvent.recurrence.daysOfWeek') },
+    { value: 'none', label: t('shifts:form.once') },
+    { value: 'daily', label: t('shifts:form.everyDay') },
+    { value: 'weekly', label: t('shifts:form.everyWeek') },
+    { value: 'days_of_week', label: t('shifts:form.someDays') },
   ];
 
   const coveringHeading = recipientName
     ? t('shifts:form.heading', { name: recipientName })
     : t('shifts:form.covering');
-  const showScheduleFields = !repeatingEdit;
-  const showRepeat = !isEditing;
+  const lockedDate = repeatingEdit;
+  const repeats = repeat !== 'none';
+  const clock = (time: string): string => {
+    const [h, m] = time.split(':').map((n) => parseInt(n, 10));
+    return formatTimeOfDay(h, m, hourCycle);
+  };
+  const startOpen = timeOpen.start || !!errors.shift_start;
+  const endOpen = timeOpen.end || !!errors.shift_end;
+  const toggleTime = (which: 'start' | 'end'): void => {
+    const open = which === 'start' ? startOpen : endOpen;
+    setTimeOpen((prev) => ({ ...prev, [which]: !open }));
+    if (!open) setFocusAfter(which === 'start' ? 'shift_start' : 'shift_end');
+  };
+
+  // "8 hours · Times are for Denver." - the duration only while valid, the zone only when it differs.
+  const captionText = [
+    spanValid ? formatShiftDuration(span as number, t) : '',
+    zonesDiffer && timezone ? t('shifts:form.timezoneNote', { zone: getTimezoneLabel(timezone) }) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  // The folded "More details" line: the reminder, then (only when it repeats) when the repeat ends.
+  const reminderLead = REMINDER_OPTIONS.find((o) => o.value === reminder)?.lead ?? null;
+  const reminderSummary =
+    reminderLead === null
+      ? t('shifts:form.summaryReminderOff')
+      : t('shifts:form.summaryReminder', { reminder: formatShiftReminder(reminderLead, t) });
+  // The repeat-end FIELD exists on create only; the summary also names a repeating shift's stored end (read-only).
+  const showRepeatEnd = !isEditing && repeats;
+  const summaryRepeats = isEditing ? repeatingEdit : repeats;
+  const summaryEndDate = isEditing ? (shift?.recurrence_end_date ?? '') : repeatEndDate;
+  const moreSummary = summaryRepeats
+    ? `${reminderSummary} · ${
+        summaryEndDate
+          ? t('shifts:form.summaryRepeatEnds', {
+              date: formatDateForDisplay(
+                summaryEndDate,
+                { month: 'short', day: 'numeric', year: 'numeric' },
+                language
+              ),
+            })
+          : t('shifts:form.summaryRepeatEndsNever')
+      }`
+    : reminderSummary;
 
   return (
     <Modal
@@ -390,7 +494,7 @@ function ShiftFormBody({
             {t('common:cancel')}
           </Button>
           <Button type="submit" form="shift-form" loading={busy} offlineKind="save">
-            {t('shifts:form.save')}
+            {isEditing ? t('shifts:form.saveChanges') : t('shifts:form.save')}
           </Button>
         </>
       }
@@ -399,7 +503,8 @@ function ShiftFormBody({
         id="shift-form"
         noValidate
         onSubmit={(event: FormEvent) => void guardedSubmit(event)}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-6"
+        data-testid="shift-form"
       >
         {repeatingEdit && (
           <RadioGroup
@@ -413,171 +518,258 @@ function ShiftFormBody({
           />
         )}
 
-        <TextField
-          id="shift_name"
-          label={t('shifts:form.name')}
-          required
-          value={name}
-          maxLength={SHIFT_NAME_MAX + 20}
-          placeholder={t('shifts:form.namePlaceholder')}
-          error={errors.shift_name}
-          onChange={(e) => {
-            setName(e.target.value);
-            clearError('shift_name');
-          }}
-        />
+        <section aria-labelledby="sf-name" className="flex flex-col gap-3">
+          {sectionHeading('sf-name', t('shifts:form.nameQuestion'))}
+          {/* The heading above IS the question; the field's own label repeats it for assistive tech only. */}
+          <div className="[&_label]:mb-0">
+            <TextField
+              id="shift_name"
+              label={<span className="sr-only">{t('shifts:form.nameQuestion')}</span>}
+              required
+              value={name}
+              maxLength={SHIFT_NAME_MAX + 20}
+              placeholder={t('shifts:form.namePlaceholder')}
+              error={errors.shift_name}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearError('shift_name');
+              }}
+            />
+          </div>
+        </section>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TimeField
-            id="shift_start"
-            label={t('shifts:form.starts')}
-            required
-            value={startTime}
-            error={errors.shift_start}
-            onChange={(e) => {
-              setStartTime(e.target.value);
-              clearError('shift_start', 'shift_end');
-            }}
-          />
-          <TimeField
-            id="shift_end"
-            label={t('shifts:form.ends')}
-            required
-            value={endTime}
-            error={errors.shift_end}
-            hint={nextDay ? t('shifts:nextDay') : undefined}
-            onChange={(e) => {
-              setEndTime(e.target.value);
-              clearError('shift_end');
-            }}
-          />
-        </div>
+        <section aria-labelledby="sf-when" className="flex flex-col gap-3">
+          {sectionHeading('sf-when', t('shifts:form.whenQuestion'))}
+          {lockedDate ? (
+            <div>
+              <Text variant="label" as="p" className="mb-2 ml-1">
+                {t('shifts:form.date')}
+              </Text>
+              <p
+                data-testid="shift-form-date-locked"
+                className="m-0 text-base text-ink"
+              >
+                {formatDateForDisplay(
+                  date,
+                  { weekday: 'short', month: 'short', day: 'numeric' },
+                  language
+                )}
+              </p>
+            </div>
+          ) : (
+            <DateField
+              id="shift_date"
+              label={t('shifts:form.date')}
+              required
+              value={date}
+              today={recipientToday}
+              error={errors.shift_date}
+              onChange={(e) => {
+                setDate(e.target.value);
+                clearError('shift_date');
+              }}
+            />
+          )}
+          <div className="flex flex-wrap gap-2" data-testid="shift-form-times">
+            <ChoiceTileButton
+              id="shift-start-tile"
+              testId="shift-start-tile"
+              label={t('shifts:form.starts')}
+              sub={startTime ? clock(startTime) : t('shifts:form.chooseTime')}
+              expanded={startOpen}
+              invalid={!!errors.shift_start}
+              describedBy="shift-form-duration"
+              onClick={() => toggleTime('start')}
+            />
+            <ChoiceTileButton
+              id="shift-end-tile"
+              testId="shift-end-tile"
+              label={t('shifts:form.ends')}
+              sub={
+                endTime
+                  ? `${clock(endTime)}${nextDay ? ` ${t('shifts:nextDay')}` : ''}`
+                  : t('shifts:form.chooseTime')
+              }
+              expanded={endOpen}
+              invalid={!!errors.shift_end}
+              describedBy="shift-form-duration"
+              onClick={() => toggleTime('end')}
+            />
+          </div>
+          {(startOpen || endOpen) && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {startOpen && (
+                <TimeField
+                  id="shift_start"
+                  label={t('shifts:form.starts')}
+                  required
+                  value={startTime}
+                  error={errors.shift_start}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    clearError('shift_start', 'shift_end');
+                  }}
+                />
+              )}
+              {endOpen && (
+                <TimeField
+                  id="shift_end"
+                  label={t('shifts:form.ends')}
+                  required
+                  value={endTime}
+                  error={errors.shift_end}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    clearError('shift_end');
+                  }}
+                />
+              )}
+            </div>
+          )}
+          <Text
+            variant="caption"
+            as="p"
+            id="shift-form-duration"
+            data-testid="shift-form-duration"
+            aria-live="polite"
+            className="min-h-[1.25rem]"
+          >
+            {captionText}
+          </Text>
+        </section>
 
-        <p
-          aria-live="polite"
-          data-testid="shift-duration"
-          className="m-0 min-h-[1.25rem] text-sm text-ink-2"
-        >
-          {span !== null && span >= MIN_SHIFT_MINUTES && span <= MAX_SHIFT_MINUTES
-            ? formatShiftDuration(span, t)
-            : ''}
-        </p>
-
-        {zonesDiffer && timezone && (
-          <p className="m-0 text-sm text-ink-3">
-            {t('shifts:form.timezoneNote', { zone: getTimezoneLabel(timezone) })}
-          </p>
-        )}
-
-        {showScheduleFields && (
-          <DateField
-            id="shift_date"
-            label={t('shifts:form.date')}
-            required
-            value={date}
-            today={recipientToday}
-            error={errors.shift_date}
-            onChange={(e) => {
-              setDate(e.target.value);
-              clearError('shift_date');
-            }}
-          />
-        )}
-
-        {showRepeat && (
-          <Select
+        <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
+          {sectionHeading('sf-how-often', t('shifts:form.howOften'))}
+          <ChipSelect
             id="shift_repeat"
-            label={t('shifts:form.repeats')}
+            label={t('shifts:form.howOften')}
+            variant="tile"
+            allowDeselect={false}
+            // A series' date and repeat are fixed once it exists (delete it and add a new one).
+            disabled={isEditing}
             options={repeatOptions}
-            value={repeat}
-            onChange={(e) => {
-              const next = e.target.value as ShiftRepeatChoice;
-              setRepeat(next);
-              if (next === 'days_of_week' && days.length === 0 && date) {
+            value={isEditing ? lockedRepeat : repeat}
+            onChange={(next) => {
+              if (!next) return;
+              const choice = next as ShiftRepeatChoice;
+              setRepeat(choice);
+              if (choice === 'days_of_week' && days.length === 0 && date) {
                 setDays([getDayOfWeek(date)]);
               }
               clearError('shift_days');
             }}
           />
-        )}
+          {repeatingEdit && (
+            <Text variant="caption" as="p" data-testid="shift-form-series-note">
+              {t('shifts:form.seriesNote')}
+            </Text>
+          )}
+          {!isEditing && repeat === 'days_of_week' && (
+            <div className="flex flex-col gap-2">
+              <DaysOfWeekPicker
+                id="shift_days"
+                label={t('calendar:addEvent.daysOfWeek.title')}
+                selected={days}
+                language={language}
+                onChange={(next) => {
+                  setDays(next);
+                  clearError('shift_days');
+                }}
+              />
+              {errors.shift_days && (
+                <p className={INPUT_ERROR}>
+                  <Icon name="alert-circle-outline" size="inline" />
+                  {errors.shift_days}
+                </p>
+              )}
+              {days.length > 0 && (
+                <p aria-live="polite" className="m-0 ml-1 text-sm text-ink-2">
+                  {formatWeekdayList(days, language)}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
 
-        {showRepeat && repeat === 'days_of_week' && (
-          <div className="flex flex-col gap-2">
-            <DaysOfWeekPicker
-              id="shift_days"
-              label={t('calendar:addEvent.daysOfWeek.title')}
-              selected={days}
-              language={language}
+        <section aria-labelledby="sf-who" className="flex flex-col gap-3">
+          {sectionHeading('sf-who', coveringHeading)}
+          <ChipSelect
+            id="shift_assignee"
+            label={coveringHeading}
+            variant="tile"
+            options={assigneeOptions}
+            value={assignedTo}
+            allowDeselect={false}
+            onChange={(next) => setAssignedTo(next ?? '')}
+          />
+          <Text variant="caption" as="p" data-testid="shift-form-open-hint">
+            {t('shifts:form.openHint')}
+          </Text>
+        </section>
+
+        <DisclosureRow
+          id="shift-more-details"
+          title={t('shifts:form.moreDetails')}
+          summary={moreSummary}
+          summaryTestId="shift-form-more-summary"
+          wrapSummary
+          open={moreOpen}
+          onToggle={setMoreOpen}
+        >
+          <div className="flex flex-col gap-3">
+            <Text variant="label" as="h4" id="sf-reminder">
+              {t('shifts:form.reminder')}
+            </Text>
+            <ChipSelect
+              id="shift_reminder"
+              label={t('shifts:form.reminder')}
+              variant="tile"
+              allowDeselect={false}
+              options={REMINDER_OPTIONS.map((o) => ({
+                value: o.value,
+                // The short chip wording mobile shows ("1 hour"); the read-only rows
+                // elsewhere say "1 hour before".
+                label: formatShiftReminderChip(o.lead, t),
+              }))}
+              value={reminder}
               onChange={(next) => {
-                setDays(next);
-                clearError('shift_days');
+                if (next) setReminder(next);
               }}
             />
-            {errors.shift_days && (
-              <p className={INPUT_ERROR}>
-                <Icon name="alert-circle-outline" size="inline" />
-                {errors.shift_days}
-              </p>
-            )}
-            {days.length > 0 && (
-              <p aria-live="polite" className="m-0 ml-1 text-sm text-ink-2">
-                {formatWeekdayList(days, language)}
-              </p>
-            )}
+            <Text variant="caption" as="p" id="shift_reminder-hint">
+              {t('shifts:form.reminderHint')}
+            </Text>
           </div>
-        )}
-
-        {showRepeat && repeat !== 'none' && (
-          <DateField
-            id="shift_repeat_end"
-            label={t('shifts:form.endsOn')}
-            value={repeatEndDate}
-            today={recipientToday}
-            hint={t('calendar:addEvent.hints.endDate')}
-            error={errors.shift_repeat_end}
-            onChange={(e) => {
-              setRepeatEndDate(e.target.value);
-              clearError('shift_repeat_end');
-            }}
-          />
-        )}
-
-        {repeatingEdit && <p className="m-0 text-sm text-ink-3">{t('shifts:form.seriesNote')}</p>}
-
-        <Select
-          id="shift_reminder"
-          label={t('shifts:form.reminder')}
-          options={REMINDER_OPTIONS.map((o) => ({
-            value: o.value,
-            // The short chip wording mobile shows ("1 hour"); the read-only rows
-            // elsewhere say "1 hour before".
-            label:
-              o.lead === null
-                ? t('shifts:reminder.off')
-                : o.lead === 60
-                  ? t('shifts:reminder.chip1h')
-                  : o.lead === 120
-                    ? t('shifts:reminder.chip2h')
-                    : o.lead === 240
-                      ? t('shifts:reminder.chip4h')
-                      : t('shifts:reminder.chip1d'),
-          }))}
-          value={reminder}
-          hint={t('shifts:form.reminderHint')}
-          onChange={(e) => setReminder(e.target.value)}
-        />
-
-        <div className="flex flex-col gap-2">
-        <p className="m-0 font-display text-lg font-medium text-ink">{coveringHeading}</p>
-        <ChipSelect
-          id="shift_assignee"
-          label={coveringHeading}
-          options={assigneeOptions}
-          value={assignedTo}
-          allowDeselect={false}
-          onChange={(next) => setAssignedTo(next ?? '')}
-        />
-        </div>
+          {showRepeatEnd && (
+            <div className="flex flex-col gap-2">
+              <DateField
+                id="shift_repeat_end"
+                label={t('shifts:form.endsOn')}
+                value={repeatEndDate}
+                today={recipientToday}
+                hint={t('calendar:addEvent.hints.endDate')}
+                error={errors.shift_repeat_end}
+                onChange={(e) => {
+                  setRepeatEndDate(e.target.value);
+                  clearError('shift_repeat_end');
+                }}
+              />
+              {repeatEndDate && (
+                <button
+                  type="button"
+                  data-testid="shift-form-clear-end"
+                  onClick={() => {
+                    setRepeatEndDate('');
+                    clearError('shift_repeat_end');
+                  }}
+                  className="min-h-[44px] cursor-pointer self-start border-0 bg-transparent p-0 text-base font-semibold text-moss-deep underline-offset-2 hover:underline"
+                >
+                  {t('shifts:form.clearEnd')}
+                </button>
+              )}
+            </div>
+          )}
+        </DisclosureRow>
         <ShiftInlineError message={saveError} testId="shift-form-error" />
       </form>
     </Modal>
