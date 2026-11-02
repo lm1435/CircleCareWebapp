@@ -345,6 +345,20 @@ describe('next visit and past visits', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Past visits (3)' })).toBeInTheDocument();
   });
 
+  it('heading order never skips a level: upcoming cards are h3 under the h2, past cards h4 under the year h3', async () => {
+    mockVisits.mockResolvedValue(
+      page({ next_visit: next, upcoming: [next], visits: [visit({ id: 'a', scheduled_date: '2026-10-02', title: 'Checkup' })] })
+    );
+    renderPage();
+    const section = await screen.findByTestId('provider-visits-upcoming');
+    expect(within(section).getByRole('heading', { level: 3, name: /Follow-up/ })).toBeInTheDocument();
+    expect(within(section).queryByRole('heading', { level: 4 })).toBeNull();
+    await openPast();
+    const year = await screen.findByRole('group', { name: '2026' });
+    expect(within(year).getByRole('heading', { level: 3, name: '2026' })).toBeInTheDocument();
+    expect(within(year).getByRole('heading', { level: 4, name: /Checkup/ })).toBeInTheDocument();
+  });
+
   it('shows notes in the Notes section with author and date, and the visit card counts them', async () => {
     mockVisits.mockResolvedValue(
       page({

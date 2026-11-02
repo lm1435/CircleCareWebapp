@@ -14,8 +14,14 @@ import { dateInTz, uniqueSuffix } from '../notesFirstClassShared';
 //      HH:MM. The Date constructor names the FIRST reading, so both used to save an hour early.
 //
 // The browser is pinned to America/Denver. Case 2 needs a day on which Denver falls back, so it is computed from
-// the clock (the next one after today), never hard-coded: the recipient is Europe/London, on GMT for every US
-// fall-back, where 08:00 London is the second 01:00 on the Denver clock.
+// the clock, never hard-coded: the recipient is Europe/London, on GMT for every US fall-back, where 08:00 London
+// is the second 01:00 on the Denver clock.
+//
+// WHICH fall-back (date bomb, 2026-11-01): the untouched-edit case opens the med from the Meds roster, which reads
+// the server's default window (today-15 .. today+30). A series starting on the NEXT fall-back is only listed in
+// the ~30 days before it; on every other day (from the fall-back itself until early October) it is not, so that
+// case seeds a daily med that started on the most RECENT fall-back, which always has doses in the window. The
+// create case types its date into the form, so it keeps the next one (any date within the year is accepted).
 
 const VIEWER_TZ = 'America/Denver';
 test.use({ storageState: { cookies: [], origins: [] }, timezoneId: VIEWER_TZ });
@@ -40,17 +46,29 @@ function offsetMin(zone: string, t: number): number {
   return Math.round((asUtc - Math.floor(t / 60000) * 60000) / 60000);
 }
 
-/** The next instant after now at which `zone` falls back: the first minute of the SECOND reading. */
-function nextFallBack(zone: string): number {
-  const start = Date.now();
-  for (let t = start; t < start + 400 * 86_400_000; t += 15 * 60000) {
-    if (offsetMin(zone, t + 15 * 60000) < offsetMin(zone, t)) {
-      let at = t + 15 * 60000;
+/** The first minute of the SECOND reading of the fall-back nearest `from` going `dir` (+1 next, -1 most recent). */
+function fallBack(zone: string, dir: 1 | -1, from = Date.now()): number {
+  const step = 15 * 60000;
+  for (let i = 0; i < (400 * 86_400_000) / step; i++) {
+    // The 15-minute slice [a, a + step) that holds the offset drop.
+    const a = dir === 1 ? from + i * step : from - (i + 1) * step;
+    if (offsetMin(zone, a + step) < offsetMin(zone, a)) {
+      let at = a + step;
       while (offsetMin(zone, at - 60000) === offsetMin(zone, at)) at -= 60000;
-      return at;
+      if (dir === 1 ? at > from : at <= from) return at;
     }
   }
   throw new Error(`no fall-back in ${zone} within 400 days`);
+}
+
+/** The next instant after now at which `zone` falls back: the first minute of the SECOND reading. */
+function nextFallBack(zone: string): number {
+  return fallBack(zone, 1);
+}
+
+/** The most recent instant at or before now at which `zone` fell back (the first minute of the SECOND reading). */
+function lastFallBack(zone: string): number {
+  return fallBack(zone, -1);
 }
 
 function wallIn(t: number, zone: string): { date: string; hhmm: string } {
@@ -139,12 +157,20 @@ test.describe("time chips are the recipient's clock", () => {
 test.describe("the browser's repeated (fall-back) hour", () => {
   const second = nextFallBack(VIEWER_TZ);
   const recipient = wallIn(second, 'Europe/London');
-  const viewer = wallIn(second, VIEWER_TZ);
+  // The untouched edit's series started on the most recent fall-back (see the header: the roster window).
+  const pastSecond = lastFallBack(VIEWER_TZ);
+  const pastRecipient = wallIn(pastSecond, 'Europe/London');
+  const pastViewer = wallIn(pastSecond, VIEWER_TZ);
 
-  test('the scenario: 08:00 London is the second 01:00 in Denver on the next fall-back day', () => {
-    expect(recipient.hhmm).toBe('08:00');
-    expect(viewer.hhmm).toBe('01:00');
-    expect(wallIn(second - 3_600_000, VIEWER_TZ).hhmm).toBe('01:00'); // the first 01:00, an hour earlier
+  test('the scenario: 08:00 London is the second 01:00 in Denver on the next and the last fall-back day', () => {
+    for (const t of [second, pastSecond]) {
+      expect(wallIn(t, 'Europe/London').hhmm).toBe('08:00');
+      expect(wallIn(t, VIEWER_TZ).hhmm).toBe('01:00');
+      expect(wallIn(t - 3_600_000, VIEWER_TZ).hhmm).toBe('01:00'); // the first 01:00, an hour earlier
+    }
+    expect(pastSecond).toBeLessThanOrEqual(Date.now());
+    expect(second).toBeGreaterThan(Date.now());
+    expect(second - pastSecond).toBeLessThan(400 * 86_400_000);
   });
 
   test('an untouched edit of a dose on the second reading saves it back unchanged', async ({
@@ -161,8 +187,8 @@ test.describe("the browser's repeated (fall-back) hour", () => {
       title: name,
       medication_name: name,
       medication_dosage: '5 mg',
-      scheduled_date: recipient.date,
-      scheduled_time: recipient.hhmm,
+      scheduled_date: pastRecipient.date,
+      scheduled_time: pastRecipient.hhmm,
       recurrence_rule: 'daily',
       notifications_enabled: false,
     });
@@ -178,7 +204,7 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     // chip is the recipient's clock); the start date (More details) is the viewer's day of that instant.
     const dialog = page.getByRole('dialog', { name: 'Edit medication' });
     await expect(dialog).toBeVisible({ timeout: 15_000 });
-    await expect(dialog.locator('#scheduled_date')).toHaveValue(viewer.date, { timeout: 20_000 });
+    await expect(dialog.locator('#scheduled_date')).toHaveValue(pastViewer.date, { timeout: 20_000 });
     await expect(
       dialog.getByRole('radiogroup', { name: 'Common dose times' }).getByRole('radio', { name: /Morning/ })
     ).toBeChecked();
@@ -192,9 +218,16 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     await expect(dialog).toBeHidden({ timeout: 20_000 });
     const row = medRoots(a.circleId, name)[0];
     expect({ date: row.scheduled_date, time: row.scheduled_time?.slice(0, 5) }).toEqual({
-      date: recipient.date,
+      date: pastRecipient.date,
       time: '08:00',
     });
+    // An untouched edit moves nothing, so the started series' first dose is not frozen into a child on its
+    // start date either (a time edit of a started series would freeze one there).
+    const children = dbQuery<{ n: string }>(
+      `select count(*)::text as n from calendar_events
+        where parent_event_id = ${sqlStr(row.id)}::uuid and scheduled_date = ${sqlStr(pastRecipient.date)}::date`
+    );
+    expect(children[0]?.n).toBe('0');
   });
 
   test('Morning on that day lights and stores 08:00 London', async ({ page, context, request, baseURL }) => {

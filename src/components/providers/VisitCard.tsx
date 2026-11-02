@@ -161,7 +161,9 @@ export function VisitCard({
 
   return (
     <Card as="li" variant="outlined" padding="sm" data-testid="provider-visit">
-      <Text variant="h3" as="h4" className="min-w-0 break-words">
+      {/* Heading order (axe heading-order): upcoming cards sit straight under the
+          section's h2; past cards sit under a year h3. */}
+      <Text variant="h3" as={upcoming ? 'h3' : 'h4'} className="min-w-0 break-words">
         <Link
           to={visitCalendarPath(circleId, visit)}
           state={linkState}

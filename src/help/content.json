@@ -1588,15 +1588,15 @@
         "slug": "doctor-visits-and-notes",
         "category": "calendar",
         "title": "Ve todas las visitas y notas de un doctor",
-        "summary": "Elige al doctor cuando agregues o edites una cita. Luego abre ese doctor en Doctores para ver la próxima visita, las visitas pasadas y sus notas en un solo lugar.",
+        "summary": "Elige al doctor cuando agregues o edites una cita. Luego abre ese doctor en Doctores para ver sus próximas visitas, todas las notas y las visitas pasadas en un solo lugar.",
         "steps": [
           "Agrega al doctor en Doctores, en la pestaña Salud, si todavía no está.",
           "Agrega o edita una cita y toca Doctor.",
           "Elige al doctor, o toca Agregar un doctor, y guarda la cita.",
           "Para ver todo lo de ese doctor, abre Doctores y toca Visitas y notas en su tarjeta.",
-          "Toca Agregar una nota en cualquier visita para escribir lo que se dijo."
+          "Toca Agregar una nota en cualquier visita, próxima o pasada, para escribir lo que se dijo o una pregunta que quieras hacer."
         ],
-        "body": "## Lo que vas a ver\n\n**Visitas y notas** muestra la **Próxima visita** y luego las **Visitas pasadas**, de la más reciente a la más antigua, con las notas de cada una. Toca **Mostrar visitas más antiguas** para ir más atrás. Desde una cita vinculada, **Ver todas las visitas** abre la misma página.\n\n## Lo que conviene saber\n\n- **Gratis para todos.**\n- **Las citas pasadas no se vinculan solas.** CircleCare no adivina con qué doctor fue una cita antigua. Para vincular una, edítala y elige al doctor.\n- **Las citas que se repiten** usan un solo doctor para toda la serie.\n- **Los miembros de solo lectura** pueden ver las visitas y las notas, pero no agregar notas.\n- La app web tiene el mismo selector de doctor y la página **Visitas y notas**.",
+        "body": "## Lo que vas a ver\n\n**Visitas y notas** tiene tres secciones, cada una con su número. Toca el título de una sección para abrirla o cerrarla.\n\n- **Próximas visitas** (abierta) muestra todas las visitas que faltan, de la más cercana a la más lejana. Puedes agregar una nota antes de una visita, por ejemplo, preguntas para el doctor.\n- **Notas** (abierta) muestra todas las notas de este doctor, de la más reciente a la más antigua, cada una con la fecha de su visita. Toca una nota para abrir esa visita.\n- **Visitas pasadas** (cerrada) muestra las visitas anteriores, de la más reciente a la más antigua. Toca **Mostrar visitas más antiguas** para ir más atrás.\n\nCada visita muestra cuántas notas tiene y un botón **Agregar una nota**. Desde una cita vinculada, **Ver todas las visitas** abre la misma página.\n\n## Lo que conviene saber\n\n- **Gratis para todos.**\n- **Las citas pasadas no se vinculan solas.** CircleCare no adivina con qué doctor fue una cita antigua. Para vincular una, edítala y elige al doctor.\n- **Las citas que se repiten** usan un solo doctor para toda la serie.\n- **Los miembros de solo lectura** pueden ver las visitas y las notas, pero no agregar notas.\n- La app web tiene el mismo selector de doctor y la página **Visitas y notas**.",
         "related": [
           "appointments",
           "care-info-and-summary",

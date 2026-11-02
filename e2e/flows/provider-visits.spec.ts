@@ -542,8 +542,10 @@ test.describe('Visits & notes: Spanish', () => {
     await expect(page.getByRole('heading', { level: 2, name: /^Visitas anteriores \(/ })).toBeVisible();
     await page.getByTestId('provider-visits-section-past').click();
     await expect(page.getByTestId('provider-visit').filter({ hasText: `Cita ${sfx}` })).toContainText('1 nota');
-    await expect(page.getByText('Aún no hay notas')).toBeVisible();
-    await expect(page.getByRole('link', { name: /Agregar nota a la visita del/ })).toBeVisible();
+    // Every card without notes (the upcoming one too) says so: scope to the past one.
+    const noNotes = page.getByTestId('provider-visit').filter({ hasText: `Cita sin notas ${sfx}` });
+    await expect(noNotes.getByText('Aún no hay notas')).toBeVisible();
+    await expect(noNotes.getByRole('link', { name: /Agregar nota a la visita del/ })).toBeVisible();
     // A raw i18n key (a missing string) would read like `providers.visits.x`.
     await expect(page.locator('main')).not.toContainText(/providers\.visits\./);
     await checkA11y(page, 'doctor-visits-es', testInfo);
