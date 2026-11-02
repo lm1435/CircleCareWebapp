@@ -65,6 +65,12 @@ interface Kind {
   secondInput: string;
   phoneInput: string;
   make: (name: string, second: string, phone: string) => Json;
+  /**
+   * The request the editor's Save sends for an EXISTING entry. Contacts and insurance: the full-array PUT.
+   * Doctors (1.3.0, notes by doctor): an entry with a `care_providers` id saves through
+   * PATCH /providers/:id; the PUT only serves an entry without one.
+   */
+  save: { method: 'PUT' | 'PATCH'; path: string };
 }
 
 const PHONES: [string, string, string] = ['(303) 555-0101', '(303) 555-0102', '(303) 555-0103'];
@@ -80,6 +86,7 @@ const KINDS: Kind[] = [
     secondInput: '#contact-relationship',
     phoneInput: '#contact-phone',
     make: (name, relationship, phone) => ({ name, relationship, phone, country_code: '+1', is_primary: false }),
+    save: { method: 'PUT', path: '/api/circles/:id/emergency-info' },
   },
   {
     noun: 'doctor',
@@ -91,6 +98,7 @@ const KINDS: Kind[] = [
     secondInput: '#doctor-specialty',
     phoneInput: '#doctor-phone',
     make: (name, specialty, phone) => ({ name, specialty, phone, country_code: '+1', address: null }),
+    save: { method: 'PATCH', path: '/api/circles/:id/providers/:providerId' },
   },
   {
     noun: 'insurance',
@@ -109,6 +117,7 @@ const KINDS: Kind[] = [
       country_code: '+1',
       is_primary: false,
     }),
+    save: { method: 'PUT', path: '/api/circles/:id/emergency-info' },
   },
 ];
 
@@ -210,7 +219,7 @@ for (const kind of KINDS) {
       code: 'UNAUTHORIZED',
       times: 5,
     });
-    const write = await failRequest(page, 'PUT', '/api/circles/:id/emergency-info', {
+    const write = await failRequest(page, kind.save.method, kind.save.path, {
       status: 401,
       code: 'UNAUTHORIZED',
       times: 1,

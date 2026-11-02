@@ -474,7 +474,6 @@ function recordProof(record: ProofRecord): void {
 // ---------------------------------------------------------------------------
 
 const MONTH_GRID = 'Month view calendar';
-const DAY_PANEL = 'Events for the selected day';
 
 async function openMonthView(page: Page): Promise<void> {
   await page.goto(`/circles/${CIRCLE_ID}/calendar`, { waitUntil: 'domcontentloaded' });
@@ -512,7 +511,9 @@ async function completeOccurrence(
   await expect(cell).toBeAttached({ timeout: 20_000 });
   await cell.click();
 
-  const panel = page.getByLabel(DAY_PANEL);
+  // Since the 1.3.0 Day view (care shifts W10) a Month cell OPENS that date's Day view; the old in-page
+  // "Events for the selected day" panel only exists without that handler.
+  const panel = page.getByTestId('day-view');
   const row = panel.getByRole('button', { name: new RegExp(escapeRegExp(title)) }).first();
   await expect(row, `an occurrence of "${title}" is drawn on ${date}`).toBeVisible({
     timeout: 20_000,

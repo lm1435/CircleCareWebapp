@@ -75,9 +75,11 @@ async function newCtx(browser: Browser, baseURL: string | undefined, acc: Scoped
   // The profile zone follows the browser (1.4.0, DeviceTimezoneSync): signing in from a Denver browser would
   // rewrite the owner's pinned America/New_York and, with no care-recipient account, move the circle's frame
   // to Denver. These tests are about a RECIPIENT zone that differs from the viewer's, so the session-start
-  // zone write is refused (as in timezone-frame.spec.ts).
+  // zone write (only that PATCH) is refused, as in timezone-frame.spec.ts.
   await ctx.route(/\/api\/users\/me$/, (route) =>
-    route.request().method() === 'PATCH' ? route.abort() : route.continue()
+    route.request().method() === 'PATCH' && /"timezone"/.test(route.request().postData() ?? '')
+      ? route.abort()
+      : route.continue()
   );
   await cookieLogin(ctx, acc, baseURL);
   return ctx;

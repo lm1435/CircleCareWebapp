@@ -73,9 +73,11 @@ async function arrange(request: APIRequestContext): Promise<Scene> {
   const tz = await circleTimezone(session, circleId);
   const today = dateInTz(tz, 0);
   const medName = `ZZ_E2E_DAY_${uniqueSuffix()}`;
-  // Daily from 2 days ago at 08:00: today, yesterday and the day before all have a dose.
+  // Daily from 2 days ago at 00:01: today, yesterday and the day before all have a dose, and today's is
+  // confirmable whenever the spec runs (overdue, or inside the 2 h early window just after midnight). At
+  // 08:00 the "confirm from the row" test failed every night between 00:00 and 06:00 (no Mark as taken yet).
   const medRoot = await createDailyMedication(session, circleId, medName, dateInTz(tz, -2), {
-    time: '08:00',
+    time: '00:01',
   });
   const taskTitle = `ZZ_E2E_DAYTASK_${uniqueSuffix()}`;
   const res = await session.post(`/api/circles/${circleId}/events`, {

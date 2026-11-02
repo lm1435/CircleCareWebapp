@@ -294,6 +294,14 @@ test.describe('export content: hard dataset (recipient Pacific/Kiritimati)', () 
 
   test.beforeEach(async ({ page: _page, context, baseURL }) => {
     void _page;
+    // The profile zone follows the browser (1.4.0, DeviceTimezoneSync): the owner has no care-recipient
+    // account, so a Denver browser's session-start write would move the whole fixture circle out of its
+    // seeded zone (the report then counts in Denver's frame). Refuse that write (only the zone PATCH; a language PATCH goes through).
+    await context.route(/\/api\/users\/me$/, (route) =>
+      route.request().method() === 'PATCH' && /"timezone"/.test(route.request().postData() ?? '')
+      ? route.abort()
+      : route.continue()
+    );
     await cookieLogin(context, owner, baseURL);
   });
 
