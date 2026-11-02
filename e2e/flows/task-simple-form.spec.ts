@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { sqlExec } from '../db';
-import { checkA11y } from '../helpers';
+import { checkA11y, refuseZoneSync } from '../helpers';
 import { dbQuery, sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 import { uniqueSuffix } from '../notesFirstClassShared';
@@ -17,6 +17,11 @@ import { uniqueSuffix } from '../notesFirstClassShared';
 const VIEWER_TZ = 'America/Denver';
 const RECIPIENT_TZ = 'Pacific/Auckland';
 test.use({ storageState: { cookies: [], origins: [] }, timezoneId: VIEWER_TZ });
+// 1.4.0: the account / recipient zone here differs from the browser's on purpose; keep the session-start sync from
+// rewriting it (helpers.ts refuseZoneSync).
+test.beforeEach(async ({ page }) => {
+  await refuseZoneSync(page);
+});
 test.setTimeout(120_000);
 
 /** The recipient's calendar day `offset` days from today: today in the zone FIRST, then string arithmetic. */

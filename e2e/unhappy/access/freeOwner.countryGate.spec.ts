@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../fixtures';
 import { sqlExec, sqlStr } from '../../db';
+import { refuseZoneSync } from '../../helpers';
 
 // ===========================================================================
 // WEB CHECKOUT COUNTRY GATE — against the REAL backend and a REAL browser.
@@ -80,6 +81,10 @@ test.describe('allowlisted account, machine abroad', () => {
 
 test.describe('account abroad, machine allowlisted', () => {
   test.use({ timezoneId: 'America/Denver' });
+  // 1.4.0: the session-start sync would write the Denver machine's zone over the account's abroad zone.
+  test.beforeEach(async ({ page }) => {
+    await refuseZoneSync(page);
+  });
 
   test('Mexico City account on a Denver machine is still blocked', async ({
     page,

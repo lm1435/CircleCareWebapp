@@ -1,4 +1,4 @@
-import { expect, type Page, type TestInfo } from '@playwright/test';
+import { expect, type BrowserContext, type Page, type TestInfo } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { sqlExec, sqlStr } from './db';
 
@@ -289,4 +289,18 @@ export async function pinRecipientZoneToBrowser(
         or id in (select user_id from circle_memberships where circle_id = ${sqlStr(circleId)}::uuid);`
   );
   return viewerTz;
+}
+
+/**
+ * Refuse the session-start profile-zone write (1.4.0 DeviceTimezoneSync: the stored zone follows the BROWSER's).
+ * For specs whose subject is an account / recipient zone that DIFFERS from the browser's: without this, signing in
+ * rewrites the seeded zone to the browser's, and a circle with no care-recipient account (its frame is the owner's
+ * zone) moves with it. Only the zone PATCH is refused; any other PATCH /users/me (language, units) goes through.
+ */
+export async function refuseZoneSync(target: Page | BrowserContext): Promise<void> {
+  await target.route(/\/api\/users\/me$/, (route) =>
+    route.request().method() === 'PATCH' && /"timezone"/.test(route.request().postData() ?? '')
+      ? route.abort()
+      : route.continue()
+  );
 }

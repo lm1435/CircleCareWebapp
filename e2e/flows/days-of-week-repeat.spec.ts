@@ -1,7 +1,7 @@
 import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import type { IsolatedAccount } from '../isolation';
-import { checkA11y, expandAllDayOverflow, pinRecipientZoneToBrowser } from '../helpers';
+import { checkA11y, expandAllDayOverflow, pinRecipientZoneToBrowser, refuseZoneSync } from '../helpers';
 import { apiSession, countRequests, errorCodeOf } from '../unhappy';
 import { sqlExec, sqlStr } from '../db';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
@@ -632,6 +632,8 @@ test('PK23: viewer in a DIFFERENT zone than the recipient: the note names the re
   // now; with no recipient account the owner's zone IS the recipient frame.
   const owner = await createScopedAccount('dowpk23');
   const circleId = await createCircle(await ownerApi(request, owner), uniq('dowpk23'));
+  // 1.4.0: keep the session-start sync from writing the browser's zone over the recipient zone set below.
+  await refuseZoneSync(context);
   await cookieLogin(context, owner, baseURL);
   await page.goto(`/circles/${circleId}/tasks`, { waitUntil: 'domcontentloaded' });
   const viewerTz = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);

@@ -3,6 +3,7 @@ import { sqlExec } from '../db';
 import { sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 import { createDailyMedication, dateInTz, uniqueSuffix } from '../notesFirstClassShared';
+import { refuseZoneSync } from '../helpers';
 
 // CARE > MEDS (docs/plans/simple-ui-1-3-1.md "Care > Meds"):
 //   header "{name}'s meds"; ONE zone line "Times are {name}'s time . N hours
@@ -13,6 +14,11 @@ import { createDailyMedication, dateInTz, uniqueSuffix } from '../notesFirstClas
 
 const BROWSER_TZ = 'America/Denver';
 test.use({ storageState: { cookies: [], origins: [] }, timezoneId: BROWSER_TZ });
+// 1.4.0: the account / recipient zone here differs from the browser's on purpose; keep the session-start sync from
+// rewriting it (helpers.ts refuseZoneSync).
+test.beforeEach(async ({ page }) => {
+  await refuseZoneSync(page);
+});
 test.setTimeout(90_000);
 
 async function arrangeCircle(

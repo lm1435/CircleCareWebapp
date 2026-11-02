@@ -4,6 +4,7 @@ import { sqlExec } from '../db';
 import { dbQuery, sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 import { dateInTz, uniqueSuffix } from '../notesFirstClassShared';
+import { refuseZoneSync } from '../helpers';
 
 // 1.4.0 TIME FIXES, against the real backend and database (mobile/docs/plans/repeated-hour-1-4-1/).
 //
@@ -25,6 +26,11 @@ import { dateInTz, uniqueSuffix } from '../notesFirstClassShared';
 
 const VIEWER_TZ = 'America/Denver';
 test.use({ storageState: { cookies: [], origins: [] }, timezoneId: VIEWER_TZ });
+// 1.4.0: the account / recipient zone here differs from the browser's on purpose; keep the session-start sync from
+// rewriting it (helpers.ts refuseZoneSync).
+test.beforeEach(async ({ page }) => {
+  await refuseZoneSync(page);
+});
 test.setTimeout(120_000);
 
 /** UTC offset of `zone` at `t`, in minutes. */
