@@ -112,6 +112,40 @@ test('no zone line when the viewer and the recipient share a zone', async ({ pag
   await expect(page.getByText(/Times are .* time ·/)).toHaveCount(0);
 });
 
+// OWNER REPORT 1.4.0 (7), 2026-11-01: a daily med's dose TAKEN today, then its time edited; the roster card
+// kept the taken dose's old time. Today's taken dose stays a child at the OLD time (it must not move, and
+// GET /events returns it), so a roster reading times off rows put it on the card. The card describes the
+// SERIES: only the new time, in the new time's group. The old time is 00:01 (past in every zone the whole
+// day bar one minute, so the dose is answerable), which is BEDTIME: the bug showed as a second row there.
+test('after a time edit, the card shows the series NEW time and group, not today\'s taken dose\'s old one', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  const a = await arrangeCircle(request, 'medsedit', BROWSER_TZ);
+  const name = `ZZ_E2E_EDIT_${uniqueSuffix()}`;
+  const today = dateInTz(BROWSER_TZ, 0);
+  const id = await createDailyMedication(a.session, a.circleId, name, dateInTz(BROWSER_TZ, -3), { time: '00:01' });
+  const confirm = await a.session.post(`/api/circles/${a.circleId}/medications/confirm`, {
+    event_id: `${id}_${today}`,
+    status: 'taken',
+    scheduled_time: '00:01:00',
+  });
+  expect(confirm.ok(), await confirm.text()).toBe(true);
+  const edit = await a.session.patch(`/api/circles/${a.circleId}/events/${id}`, { scheduled_time: '07:15' });
+  expect(edit.ok(), await edit.text()).toBe(true);
+
+  await cookieLogin(context, a.owner, baseURL);
+  await page.goto(`/circles/${a.circleId}/meds`, { waitUntil: 'domcontentloaded' });
+  const rows = page.getByTestId('med-time-row').filter({ hasText: name });
+  const morning = page.locator('section[aria-labelledby="meds-part-morning"]').getByTestId('med-time-row').filter({ hasText: name });
+  await expect(morning).toContainText('7:15 AM', { timeout: 30_000 });
+  await expect(morning).not.toContainText('12:01 AM');
+  await expect(rows).toHaveCount(1);
+  await expect(page.locator('section[aria-labelledby="meds-part-bedtime"]')).toHaveCount(0);
+});
+
 test.describe('signed in as the worker premium owner', () => {
   // The file-level empty storageState is for the scoped-account tests above.
   test.use({ storageState: undefined });

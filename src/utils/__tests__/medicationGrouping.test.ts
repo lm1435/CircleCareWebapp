@@ -1,6 +1,7 @@
 import {
   getMedKey,
   getMedSeriesAnalyticsFacts,
+  getRosterDoseTime,
   getRosterMedKey,
   indexSeriesContent,
   getSeriesRoot,
@@ -198,5 +199,27 @@ describe('getMedSeriesAnalyticsFacts', () => {
       daysActive: 0,
       hadConfirmations: false,
     });
+  });
+});
+
+describe('getRosterDoseTime (roster card = the SERIES time, owner report 1.4.0)', () => {
+  const root = med({ id: 'p', medication_name: 'Zyrtec', scheduled_time: '07:15:00', recurrence_rule: 'daily' });
+  const frozen = med({ id: 'c', parent_event_id: 'p', medication_name: 'Zyrtec', scheduled_time: '07:00:00' });
+  const virt = med({ id: 'p_2099-01-02', parent_event_id: 'p', is_virtual: true, medication_name: 'Zyrtec', scheduled_time: '07:15:00' });
+
+  it('a materialized child (a logged dose) takes its series root\'s current time', () => {
+    expect(getRosterDoseTime(frozen, indexSeriesContent([frozen, root]))).toBe('07:15:00');
+  });
+  it('with the root outside the window, a virtual instance stands in for it', () => {
+    expect(getRosterDoseTime(frozen, indexSeriesContent([frozen, virt]))).toBe('07:15:00');
+  });
+  it('roots and virtual rows keep their own time', () => {
+    const idx = indexSeriesContent([frozen, root, virt]);
+    expect(getRosterDoseTime(root, idx)).toBe('07:15:00');
+    expect(getRosterDoseTime(virt, idx)).toBe('07:15:00');
+  });
+  it('falls back to the row\'s own time when nothing of its series is loaded', () => {
+    expect(getRosterDoseTime(frozen, indexSeriesContent([frozen]))).toBe('07:00:00');
+    expect(getRosterDoseTime(med({ id: 'x' }), new Map())).toBeNull();
   });
 });

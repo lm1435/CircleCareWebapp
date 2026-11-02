@@ -38,7 +38,12 @@ import { DiscontinueMedDialog } from '@/components/calendar/DiscontinueMedDialog
 import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 import { useMedicationRoster, useMedicationStatus } from '@/hooks/useCalendarEvents';
 import { useCircle } from '@/hooks/useCircle';
-import { getRosterMedKey, getSeriesRoot, indexSeriesContent } from '@/utils/medicationGrouping';
+import {
+  getRosterDoseTime,
+  getRosterMedKey,
+  getSeriesRoot,
+  indexSeriesContent,
+} from '@/utils/medicationGrouping';
 // THE shared "ended" definition (synced from mobile/src/pdf/shared): the Care
 // Summary PDF uses the same helper, so the roster and the printout can never
 // disagree about whether a medication is current.
@@ -302,13 +307,15 @@ function groupMedications(
     ) {
       group.recurrenceEvent = e;
     }
-    if (e.scheduled_time) {
-      const hhmm = e.scheduled_time.slice(0, 5);
+    // The card describes the SERIES, so a row counts at its series' CURRENT time
+    // (`getRosterDoseTime`): a materialized child keeps the time its dose had
+    // when it was logged, and after a time edit (7:00 -> 7:15) it put the
+    // pre-edit 7:00 on the card, in the sheet's Time row and in the group.
+    const rowTime = getRosterDoseTime(e, seriesContent);
+    if (rowTime) {
+      const hhmm = rowTime.slice(0, 5);
       if (!group.times.includes(hhmm)) group.times.push(hhmm);
-    }
-    if (live && e.scheduled_time) {
-      const liveHhmm = e.scheduled_time.slice(0, 5);
-      if (!group.liveTimes.includes(liveHhmm)) group.liveTimes.push(liveHhmm);
+      if (live && !group.liveTimes.includes(hhmm)) group.liveTimes.push(hhmm);
     }
     // Any LIVE event of this key makes the whole med Active — a multi-series
     // med (8am + 8pm) stays Active while any one series still runs.

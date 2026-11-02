@@ -73,6 +73,31 @@ const getSeriesRootId = (e: Pick<CalendarEvent, 'id' | 'parent_event_id'>): stri
   e.parent_event_id ?? e.id;
 
 /**
+ * The dose time a row stands for on the Meds ROSTER: its series' CURRENT time.
+ *
+ * The roster card describes the SERIES ("7:15 AM · 10mg · Daily"), not one dose.
+ * A recurring-med time edit moves only the parent + unlogged doses; a dose
+ * already taken/skipped (and every past one) keeps its point-in-time time in a
+ * materialized child, and the anchor occurrence is frozen into one. Read off
+ * those children, the card kept the pre-edit time (owner report 1.4.0, 7:00 vs
+ * the sheet's 7:15). A materialized child therefore takes its series' current
+ * content (root, else a virtual instance; see `indexSeriesContent`); roots and
+ * virtual rows already carry it. Falls back to the row's own time when nothing
+ * of its series' current content is loaded. The logged dose itself stays at
+ * its real time in History / Today.
+ */
+export function getRosterDoseTime(
+  event: Pick<CalendarEvent, 'id' | 'parent_event_id' | 'is_virtual' | 'scheduled_time'>,
+  seriesContent: ReadonlyMap<string, CalendarEvent>
+): string | null {
+  if (event.parent_event_id && !event.is_virtual) {
+    const series = seriesContent.get(event.parent_event_id);
+    if (series?.scheduled_time) return series.scheduled_time;
+  }
+  return event.scheduled_time ?? null;
+}
+
+/**
  * Series-root id for a single event: the parent series root when the event is a
  * child/virtual instance, otherwise its own id. Discontinue/reactivate target
  * the root (the backend also resolves the root from any child id).

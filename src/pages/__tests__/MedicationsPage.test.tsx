@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import i18n from '@/i18n';
 import MedicationsPage from '../MedicationsPage';
 import type { CalendarEvent } from '@/api/calendarEvents';
+import { getDateInTimezone } from '@/utils/timezone';
+import { addDaysToIsoDay } from '@/utils/recipientEventDate';
 
 // Pin the "device" timezone. A rendered time is labelled with the care
 // recipient's zone only when the VIEWER is elsewhere, so without this the
@@ -1776,5 +1778,78 @@ describe('MedicationsPage — simple UI', () => {
         unmount();
       }
     });
+  });
+});
+
+// OWNER REPORT 1.4.0 (7), 2026-11-01: "Zyrtec 10mg" daily at 7:00 AM, today's dose
+// TAKEN, then edited to 7:15 AM; the roster card kept the old 7:00. The shapes are
+// what local GET /events returned for that sequence: no root in the pool (the
+// anchor occurrence is frozen into a child), materialized children keep the time
+// they had when logged, virtual rows carry the new time. Web also folded every
+// PAST child's time in, so "7:00 AM · 7:15 AM" showed even with nothing taken.
+describe('MedicationsPage — roster after a time edit shows the SERIES time', () => {
+  const TZ = 'America/New_York';
+  const today = () => getDateInTimezone(TZ);
+  const zyrtec = { medication_name: 'Zyrtec', title: 'Zyrtec', medication_dosage: '10mg' };
+  const child = (id: string, root: string, date: string, time: string) =>
+    makeMed({ ...zyrtec, id, parent_event_id: root, scheduled_date: date, scheduled_time: time, recurrence_rule: null, is_virtual: false });
+  const virtual = (root: string, date: string, time: string) =>
+    makeMed({ ...zyrtec, id: `${root}_${date}`, parent_event_id: root, scheduled_date: date, scheduled_time: time, recurrence_rule: 'daily', is_virtual: true });
+  const editedSeries = (root: string, oldTime: string, newTime: string, takenToday = true) => [
+    child(`${root}-anchor`, root, addDaysToIsoDay(today(), -3), oldTime),
+    virtual(root, addDaysToIsoDay(today(), -2), newTime),
+    virtual(root, addDaysToIsoDay(today(), -1), newTime),
+    takenToday ? child(`${root}-today`, root, today(), oldTime) : virtual(root, today(), newTime),
+    virtual(root, addDaysToIsoDay(today(), 1), newTime),
+    virtual(root, addDaysToIsoDay(today(), 2), newTime),
+  ];
+
+  beforeEach(() => {
+    mockUseCircle.mockReturnValue({ canEdit: true, timezone: TZ });
+  });
+
+  it('the card and its detail sheet read the new time (7:15), never the logged 7:00', async () => {
+    const user = userEvent.setup();
+    mockUseMedicationRoster.mockReturnValue(rosterResult(editedSeries('z1', '07:00:00', '07:15:00')));
+    renderPage();
+    const morning = screen.getByRole('region', { name: 'Morning' });
+    const rows = within(morning).getAllByTestId('med-time-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('7:15 AM');
+    expect(rows[0]).not.toHaveTextContent('7:00 AM');
+    await user.click(within(morning).getByRole('button', { name: 'View details for Zyrtec' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('7:15 AM');
+    expect(dialog).not.toHaveTextContent('7:00 AM');
+  });
+
+  it('nothing taken today: a past frozen child does not add its old time either', () => {
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult(editedSeries('z1', '07:00:00', '07:15:00', false))
+    );
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Morning' })).not.toHaveTextContent('7:00 AM');
+  });
+
+  it('the group follows the new time: 10:45 AM -> 4:30 PM moves the med to Evening', () => {
+    mockUseMedicationRoster.mockReturnValue(rosterResult(editedSeries('z1', '10:45:00', '16:30:00')));
+    renderPage();
+    expect(within(screen.getByRole('region', { name: 'Evening' })).getByText('Zyrtec')).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Morning' })).toBeNull();
+  });
+
+  it('multi-time med: editing the 8 AM series to 8:15 keeps the 8 PM series', () => {
+    mockUseMedicationRoster.mockReturnValue(
+      rosterResult([
+        ...editedSeries('am', '08:00:00', '08:15:00'),
+        child('pm-today', 'pm', today(), '20:00:00'),
+        virtual('pm', addDaysToIsoDay(today(), 1), '20:00:00'),
+      ])
+    );
+    renderPage();
+    const morning = screen.getByRole('region', { name: 'Morning' });
+    expect(morning).toHaveTextContent('8:15 AM');
+    expect(morning).not.toHaveTextContent('8:00 AM');
+    expect(screen.getByRole('region', { name: 'Evening' })).toHaveTextContent('8:00 PM');
   });
 });
