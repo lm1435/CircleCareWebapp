@@ -25,6 +25,16 @@ describe('PageMasthead', () => {
     expect(dot).toHaveClass('bg-terracotta');
   });
 
+  // Mobile 1.4.0: the Shell bar label and a hero eyebrow repeating it ("NEW" x3) read as a bug. The masthead
+  // carries the section label ONCE, in the chrome strip; the editorial block holds only the title (and subtitle).
+  it('shows the section label once: no second eyebrow repeating it above the title', () => {
+    renderMasthead({ section: 'Medications', title: "Jennie Test's meds" });
+
+    expect(screen.getAllByText('Medications')).toHaveLength(1);
+    const title = screen.getByRole('heading', { level: 1, name: "Jennie Test's meds" });
+    expect(title.parentElement?.querySelector('[class*="uppercase"]')).toBeNull();
+  });
+
   // Every page under a masthead pads its content `px-5`. At `px-7` the title
   // and the right-hand action sat 8px inside the content edges on both sides —
   // title left of the first card, "Upload document" short of the card's edge.
