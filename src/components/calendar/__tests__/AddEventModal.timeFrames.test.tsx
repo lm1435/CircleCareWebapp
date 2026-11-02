@@ -223,9 +223,10 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
       renderMed();
       await user.click(chip(/Evening/));
       await user.click(screen.getByRole('button', { name: 'Other time' }));
-      const time = await screen.findByLabelText(/^Time/);
+      // The field is typed on the RECIPIENT's clock (owner 1.4.0), and says whose.
+      const time = await screen.findByLabelText(/^Time in New York/);
       await user.clear(time);
-      await user.type(time, '16:30');
+      await user.type(time, '18:30');
       expect(screen.getAllByText(/^6:30 PM in New York is 4:30 PM for you/)).toHaveLength(1);
       expect(screen.queryByTestId('time-conversion')).toBeNull();
     });

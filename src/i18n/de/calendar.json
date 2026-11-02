@@ -269,6 +269,7 @@
     },
     "dualTimezoneHint": "Ihre Zeit / Zeit von {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Ihre Zeit / Zeit der umsorgten Person ({{timezone}})",
+    "timeInZone": "Uhrzeit in {{zone}}",
     "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Profil im Bereich Ruhezeiten ändern.",
     "pastTimeInline": "Beginnt mit der nächsten Dosis. Diese Uhrzeit ist heute bereits vorbei.",
     "conversion": {

@@ -858,7 +858,7 @@ describe('AddEventModal', () => {
 
       const timeInput = screen.getByLabelText(/^Time/) as HTMLInputElement;
       await user.clear(timeInput);
-      await user.type(timeInput, '10:00'); // 12:00 New York — already past.
+      await user.type(timeInput, '12:00'); // typed on the recipient's (New York) clock — already past.
       await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
       // No roll on the edit path: the row stays on today, only the reminder is

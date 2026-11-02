@@ -240,17 +240,17 @@ describe('the time chips light from the stored time', () => {
   it('a time that is no chip lights "Other time", which names it; the time field shows it', async () => {
     renderEdit(EVENTS.medDays); // 7:30 New York = 5:30 Denver
     for (const radio of within(timeChips()).getAllByRole('radio')) expect(radio).not.toBeChecked();
-    // ONE clock on the control (owner 1.4.0): the cell names the RECIPIENT's 7:30, like the chips' times;
-    // the viewer's 5:30 is in the field and the conversion line only.
+    // ONE clock on the control (owner 1.4.0): the cell AND the field name the RECIPIENT's 7:30, like the
+    // chips' times; the viewer's 5:30 is in the conversion line only.
     expect(screen.getByTestId('time-chip-other-time')).toHaveTextContent(/^7:30 AM$/);
     expect(screen.getByRole('button', { name: 'Other time, 7:30 AM' })).toBeInTheDocument();
     expect(screen.getByTestId('time-chip-other')).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByLabelText(/^Time/)).toHaveValue('05:30');
+    expect(screen.getByLabelText(/^Time in New York/)).toHaveValue('07:30');
     // Typing a chip's time keeps the field (it must not vanish under the cursor), and lights the chip.
     const user = userEvent.setup();
     const field = screen.getByLabelText(/^Time/);
     await user.clear(field);
-    await user.type(field, '06:00');
+    await user.type(field, '08:00');
     expect(chip(/Morning/)).toBeChecked();
     expect(screen.getByLabelText(/^Time/)).toBeInTheDocument();
   });

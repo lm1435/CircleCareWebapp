@@ -269,6 +269,7 @@
     },
     "dualTimezoneHint": "Seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Seu horário / horário da pessoa ({{timezone}})",
+    "timeInZone": "Hora em {{zone}}",
     "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Você pode alterar o horário de silêncio em Perfil, na seção Horário de silêncio.",
     "pastTimeInline": "Começa na próxima dose. Este horário já passou hoje.",
     "conversion": {

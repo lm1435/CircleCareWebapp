@@ -175,15 +175,16 @@ describe('new medication: structure', () => {
     for (const radio of within(timeChips()).getAllByRole('radio')) {
       expect(radio).not.toBeChecked();
     }
-    // A chip is the RECIPIENT's clock, so typing the chip's own time on the viewer's clock does NOT light
-    // it (12:00 Denver is 14:00 New York)...
-    await user.clear(time);
-    await user.type(time, '12:00');
-    expect(chip(/Midday/)).not.toBeChecked();
-    // ...and typing the viewer time that IS 12:00 in New York does.
+    // The field is the RECIPIENT's clock, like the chips (owner 1.4.0): the viewer time that IS 12:00 in
+    // New York (10:00 Denver) does NOT light Midday...
     await user.clear(time);
     await user.type(time, '10:00');
+    expect(chip(/Midday/)).not.toBeChecked();
+    // ...and typing the chip's own time does, the field naming whose clock it is.
+    await user.clear(time);
+    await user.type(time, '12:00');
     expect(chip(/Midday/)).toBeChecked();
+    expect(screen.getByLabelText(/^Time in New York/)).toHaveValue('12:00');
   });
 
   it('tapping the selected chip again clears the time', async () => {

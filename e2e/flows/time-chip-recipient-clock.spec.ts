@@ -156,7 +156,7 @@ test.describe("time chips are the recipient's clock", () => {
 });
 
 test.describe('"Other time" is on the same clock as the chips (owner 1.4.0)', () => {
-  test('Denver browser, New York recipient: a typed 07:30 reads "Other time, 9:30 AM" (the recipient), the line names both', async ({
+  test('Denver browser, New York recipient: the field is typed on the recipient clock ("Time in New York"); 07:30 reads "Other time, 7:30 AM", the line names both', async ({
     page,
     context,
     request,
@@ -166,14 +166,23 @@ test.describe('"Other time" is on the same clock as the chips (owner 1.4.0)', ()
     await cookieLogin(context, a.owner, baseURL);
     const dialog = await openMedForm(page, a.circleId);
     await dialog.getByRole('button', { name: 'Other time' }).click();
+    // ONE clock on the control: the field, the cell and every chip are the RECIPIENT's clock, and the field says so.
+    await expect(dialog.getByLabel(/^Time in New York/)).toBeVisible();
     await dialog.locator('#scheduled_time').fill('07:30');
-    // The field is the viewer's clock; the cell, like every chip, the recipient's.
     const other = dialog.getByTestId('time-chip-other');
-    await expect(other).toHaveAccessibleName('Other time, 9:30 AM');
-    await expect(dialog.getByTestId('time-chip-other-time')).toHaveText('9:30 AM');
+    await expect(other).toHaveAccessibleName('Other time, 7:30 AM');
+    await expect(dialog.getByTestId('time-chip-other-time')).toHaveText('7:30 AM');
+    await expect(dialog.locator('#scheduled_time')).toHaveValue('07:30');
     await expect(other).not.toContainText('·');
     // The viewer's own clock only in the conversion line (here the time field's hint).
-    await expect(dialog.getByText('9:30 AM in New York is 7:30 AM for you (Denver)')).toBeVisible();
+    await expect(dialog.getByText('7:30 AM in New York is 5:30 AM for you (Denver)')).toBeVisible();
+    const name = `ZZ_E2E_OTHER_${uniqueSuffix()}`;
+    await dialog.locator('#medication_name').fill(name);
+    await dialog.getByRole('button', { name: 'Add medication' }).click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+    const rows = medRoots(a.circleId, name);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].scheduled_time?.slice(0, 5)).toBe('07:30');
   });
 });
 

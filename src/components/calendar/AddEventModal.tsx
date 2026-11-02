@@ -2438,6 +2438,35 @@ function AddEventForm({
     setExtraTimes((prev) => (prev.length < 3 ? [...prev, next] : prev));
   }
 
+  /**
+   * The "Other time" field's value, typed on the RECIPIENT's clock: the SAME conversion a chip makes
+   * (`chooseTimeChip`), so typing 7:15 saves exactly what a "7:15" chip would, and exactly what typing the viewer's
+   * converted clock in the old viewer-frame field saved (the stored pair is the recipient's naive `HH:MM` on the
+   * recipient's day either way). The day is the recipient's day the form is on; the viewer-frame date moves with it
+   * in far-apart zones. The exact instant is held (`chipInstant`), so a time in the VIEWER's repeated hour keeps its
+   * own reading. Re-typing the current value changes nothing.
+   */
+  function chooseRecipientTime(next: string): void {
+    datesTouched.current = true;
+    clearError('scheduled_time');
+    if (!next) {
+      setTimeStr('');
+      setChipInstant(null);
+      setEndTimeStr('');
+      return;
+    }
+    if (!timezone || next === recipientClock) return;
+    const viewer = eventDatesFromApi({
+      scheduledDate: recipientStartDate ?? defaultNewEventDate(timezone),
+      scheduledTime: next,
+      timezone,
+    });
+    if (!viewer.timeStr) return;
+    setDateStr(viewer.dateStr);
+    setTimeStr(viewer.timeStr);
+    setChipInstant(viewer.instant ?? null);
+  }
+
   function openOtherTime(): void {
     if (!otherTimeOpen && !isEditing) Analytics.timeChipSelected({ chip: 'other' });
     setOtherTimeOpen(true);
@@ -2584,15 +2613,20 @@ function AddEventForm({
           {showOtherTime && (
             <TimeField
               id="scheduled_time"
-              label={t('addEvent.fields.time')}
+              // ONE clock on the control (owner 1.4.0): this field is typed in the RECIPIENT's clock, like the chips and
+              // the "Other time" tile, and says so when the viewer's zone differs ("Time in Denver"); the viewer's own
+              // clock is only in the conversion line under it.
+              label={
+                showDualTimezone
+                  ? t('addEvent.timeInZone', { zone: recipientZone || timezone })
+                  : t('addEvent.fields.time')
+              }
               required
-              value={timeStr}
+              value={recipientClock}
               error={errors.scheduled_time ?? missingErrorFor('time')}
               hint={conversionText ?? undefined}
               onChange={(e) => {
-                datesTouched.current = true;
-                setTimeStr(e.target.value);
-                clearError('scheduled_time');
+                chooseRecipientTime(e.target.value);
                 if (e.target.value) completeStep('when');
               }}
             />

@@ -269,6 +269,7 @@
     },
     "dualTimezoneHint": "Il tuo orario / l'orario di {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Il tuo orario / il suo orario ({{timezone}})",
+    "timeInZone": "Ora a {{zone}}",
     "quietHoursDoseWarning": "Questo orario rientra nelle ore di silenzio, quindi in quel momento non verrà inviato alcun promemoria. Puoi modificare le ore di silenzio in Profilo, nella sezione Ore di silenzio.",
     "pastTimeInline": "Inizia dalla prossima dose. Questo orario è già passato oggi.",
     "conversion": {

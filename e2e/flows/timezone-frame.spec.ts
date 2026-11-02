@@ -139,8 +139,11 @@ for (const timezoneId of VIEWER_ZONES) {
 
       await fillSimpleMedTimes(dialog, '2026-09-01', '20:00');
 
-      await expect(dialog.locator('#scheduled_date')).toHaveValue('2026-09-01');
+      // The "Other time" field is typed on the RECIPIENT's clock (1.4.0) and holds what was typed. The start date
+      // row is the viewer's day of that time, as after a chip: 20:00 Tokyo on 09-01 is 11:00Z.
       await expect(dialog.locator('#scheduled_time')).toHaveValue('20:00');
+      const viewerDay = new Intl.DateTimeFormat('en-CA', { timeZone: timezoneId }).format(new Date('2026-09-01T11:00:00Z'));
+      await expect(dialog.locator('#scheduled_date')).toHaveValue(viewerDay);
     });
   });
 }
