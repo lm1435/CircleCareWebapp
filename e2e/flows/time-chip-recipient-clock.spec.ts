@@ -139,9 +139,10 @@ test.describe("time chips are the recipient's clock", () => {
     // The zones differ (Denver browser, New York recipient): the conversion line sits under the lit chip, and the
     // chip group is described by it so a screen reader reads it with the chip.
     const line = dialog.getByTestId('time-conversion');
-    await expect(line).toHaveText('4:00 PM Denver = 6:00 PM New York');
+    // Recipient first, the viewer second, in plain words (owner 1.4.0).
+    await expect(line).toHaveText('6:00 PM in New York is 4:00 PM for you (Denver)');
     await expect(dialog.getByRole('radiogroup', { name: 'Common dose times' })).toHaveAccessibleDescription(
-      '4:00 PM Denver = 6:00 PM New York'
+      '6:00 PM in New York is 4:00 PM for you (Denver)'
     );
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
@@ -151,6 +152,28 @@ test.describe("time chips are the recipient's clock", () => {
     // The start date is the recipient's today, or the next day when 6 PM there has already passed
     // (the backend starts the series with its next dose).
     expect([dateInTz('America/New_York', 0), dateInTz('America/New_York', 1)]).toContain(rows[0].scheduled_date);
+  });
+});
+
+test.describe('"Other time" is on the same clock as the chips (owner 1.4.0)', () => {
+  test('Denver browser, New York recipient: a typed 07:30 reads "Other time, 9:30 AM" (the recipient), the line names both', async ({
+    page,
+    context,
+    request,
+    baseURL,
+  }) => {
+    const a = await arrange(request, 'otherny', 'America/New_York');
+    await cookieLogin(context, a.owner, baseURL);
+    const dialog = await openMedForm(page, a.circleId);
+    await dialog.getByRole('button', { name: 'Other time' }).click();
+    await dialog.locator('#scheduled_time').fill('07:30');
+    // The field is the viewer's clock; the cell, like every chip, the recipient's.
+    const other = dialog.getByTestId('time-chip-other');
+    await expect(other).toHaveAccessibleName('Other time, 9:30 AM');
+    await expect(dialog.getByTestId('time-chip-other-time')).toHaveText('9:30 AM');
+    await expect(other).not.toContainText('·');
+    // The viewer's own clock only in the conversion line (here the time field's hint).
+    await expect(dialog.getByText('9:30 AM in New York is 7:30 AM for you (Denver)')).toBeVisible();
   });
 });
 
@@ -243,7 +266,7 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     await morning.click();
     await expect(morning).toBeChecked();
     // The line names the instant that is saved: 08:00 London is the SECOND 01:00 in Denver (the first would read 7:00 AM).
-    await expect(dialog.getByTestId('time-conversion')).toHaveText('1:00 AM Denver = 8:00 AM London');
+    await expect(dialog.getByTestId('time-conversion')).toHaveText('8:00 AM in London is 1:00 AM for you (Denver)');
     await dialog.getByRole('button', { name: 'Add medication' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });
     const rows = medRoots(a.circleId, name);

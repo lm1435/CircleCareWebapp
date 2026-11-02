@@ -600,10 +600,11 @@ describe('new medication: analytics', () => {
     expect(largeText).toHaveBeenCalledWith('med_form', true);
   });
 
-  it('large text puts the time chips in ONE column', () => {
+  it('large text keeps the time chips in the same content-sized wrapping row (never a one-column list)', () => {
     document.documentElement.style.fontSize = '32px';
     renderMed();
-    expect(timeChips()).toHaveAttribute('data-columns', '1');
+    expect(timeChips()).toHaveClass('contents');
+    expect(screen.getByTestId('time-chip-row')).toHaveClass('flex', 'flex-wrap');
     expect(screen.getByTestId('simple-medication-form')).toHaveAttribute('data-large-text', 'true');
   });
 });

@@ -181,13 +181,14 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
       renderMed();
       await user.click(chip(/Evening/));
       const line = screen.getByTestId('time-conversion');
-      expect(line).toHaveTextContent(/^4:00 PM Denver = 6:00 PM New York$/);
+      // Recipient first, the viewer second, in plain words (owner 1.4.0); same day here.
+      expect(line).toHaveTextContent(/^6:00 PM in New York is 4:00 PM for you \(Denver\)$/);
       // Read with the chip: the radiogroup is described by the line.
       expect(screen.getByRole('radiogroup', { name: 'Common dose times' })).toHaveAccessibleDescription(
-        '4:00 PM Denver = 6:00 PM New York'
+        '6:00 PM in New York is 4:00 PM for you (Denver)'
       );
       await user.click(chip(/Morning/));
-      expect(screen.getByTestId('time-conversion')).toHaveTextContent(/^6:00 AM Denver = 8:00 AM New York$/);
+      expect(screen.getByTestId('time-conversion')).toHaveTextContent(/^8:00 AM in New York is 6:00 AM for you \(Denver\)$/);
     });
 
     it('no time yet: no line', () => {
@@ -202,7 +203,7 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
       await user.click(chip(/Evening/));
       expect(chip(/Evening/)).toBeChecked();
       expect(screen.queryByTestId('time-conversion')).toBeNull();
-      expect(screen.queryByText(/ = /)).toBeNull();
+      expect(screen.queryByText(/ for you /)).toBeNull();
     });
 
     it('the repeated-hour chip names the stored 9:00 PM (the second 01:00), not 8:00 PM', async () => {
@@ -210,7 +211,10 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
       const user = userEvent.setup();
       renderMed();
       await user.click(chip(/Bedtime/));
-      expect(screen.getByTestId('time-conversion')).toHaveTextContent(/^1:00 AM Denver = 9:00 PM Pago Pago \(-1 day\)$/);
+      // 9 PM in Pago Pago is after midnight in Denver: the NEXT day for the viewer (build 8 said "(+1 day)" the wrong way).
+      expect(screen.getByTestId('time-conversion')).toHaveTextContent(
+        /^9:00 PM in Pago Pago is 1:00 AM the next day for you \(Denver\)$/
+      );
       expect(screen.getByTestId('time-conversion')).not.toHaveTextContent('8:00 PM');
     });
 
@@ -222,7 +226,7 @@ describe("the chips are the recipient's clock (mobile parity)", () => {
       const time = await screen.findByLabelText(/^Time/);
       await user.clear(time);
       await user.type(time, '16:30');
-      expect(screen.getAllByText(/4:30 PM .* = 6:30 PM New York/)).toHaveLength(1);
+      expect(screen.getAllByText(/^6:30 PM in New York is 4:30 PM for you/)).toHaveLength(1);
       expect(screen.queryByTestId('time-conversion')).toBeNull();
     });
   });
@@ -300,7 +304,7 @@ describe("the viewer's repeated hour: an untouched edit saves the stored pair ba
   it('the conversion line names the stored 9:00 PM, not 8:00 PM', () => {
     useCircleResult.timezone = 'Pacific/Pago_Pago';
     render(<AddEventModal circleId={CIRCLE_ID} event={stored('medication')} onClose={vi.fn()} />);
-    expect(screen.getByText(/1:00 AM .* = 9:00 PM/)).toBeInTheDocument();
+    expect(screen.getByText(/^9:00 PM in .* is 1:00 AM the next day for you/)).toBeInTheDocument();
   });
 });
 

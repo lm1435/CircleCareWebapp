@@ -1,22 +1,24 @@
-import { type CSSProperties, type ReactElement } from 'react';
+import { type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MED_TIME_CHIPS, chipForTime, type MedTimeChipId } from '@/lib/medTimeOfDay';
 import { formatTimeOfDay } from '@/utils/timezone';
-import { useFitColumns } from '@/lib/largeText';
 import type { HourCycle } from '@/utils/hourCycle';
-import { CHIP_SELECTED, CHIP_UNSELECTED } from '@/components/ui/inputStyles';
+import { CHOICE_TILE_LABEL, choiceTileClass, choiceTileSubClass } from '@/components/ui/inputStyles';
 
-// The four quick times under "When?" on the new-medication form (simple UI 1.3.1):
+// The four quick times under "When?" on the medication form (simple UI 1.3.1):
 // Morning 8:00 AM, Midday 12:00 PM, Evening 6:00 PM, Bedtime 9:00 PM, on the CARE
 // RECIPIENT's clock (mobile parity; the form converts them to the viewer's fields).
-// "Other time" (it reveals the regular time field) is a button, not a radio, but it is
-// drawn as the SAME chip and sits as the fifth cell of the same grid (owner 1.4.0, mobile
-// parity): Morning/Midday/Evening, then Bedtime/Other time, in equal columns. The column
-// count is fitted on measured layout (lib/largeText `useFitColumns`): 3, fewer while any
-// label or time would not fit on one line, ONE at large text. The group is a radiogroup
-// with a roving tab stop; the selected chip is the one whose time EXACTLY matches the
-// recipient's clock for the form's time. "Other time" stays OUTSIDE the radiogroup in the
-// DOM (a radiogroup owns radios only) and is placed into the shared grid with CSS subgrid.
+// "Other time" (it reveals the regular time field) is a button, not a radio, drawn as the
+// SAME tile at the end of the same row: its label, and once a custom time is the answer,
+// that time under it on the RECIPIENT's clock (one clock on the control).
+//
+// LAYOUT (owner 1.4.0, mobile StackedChoice parity): ONE wrapping row of content-sized tiles,
+// always: never an equal-column grid and never a full-width list, whatever is selected and on
+// add or edit alike. Large text only wraps onto more lines; a tile wider than the row wraps
+// its own text. The radiogroup is `display: contents` so its radios and "Other time" share
+// the one flex row while "Other time" stays OUTSIDE the radiogroup in the DOM (a radiogroup
+// owns radios only). The group has a roving tab stop; the selected chip is the one whose
+// time EXACTLY matches the recipient's clock for the form's time.
 
 export interface TimeChipsProps {
   id: string;
@@ -26,7 +28,7 @@ export interface TimeChipsProps {
   /** Pick a chip (its recipient-frame HH:MM), or null when the selected chip is tapped again. */
   onChange: (chip: MedTimeChipId | null, time: string) => void;
   describedBy?: string;
-  /** "Other time": the fifth cell, same chip shape, a button that reveals the time field. */
+  /** "Other time": the last tile of the row, same shape, a button that reveals the time field. */
   other?: TimeChipsOther;
 }
 
@@ -36,30 +38,9 @@ export interface TimeChipsOther {
   expanded: boolean;
   /** Lit like a selected chip: a custom (non-chip) time is the answer. */
   selected: boolean;
-  /** That custom time, formatted: shown under the label as a chip shows its own (mobile parity). */
+  /** That custom time on the RECIPIENT's clock, formatted: shown under the label as a chip shows its own. */
   time?: string;
   onClick: () => void;
-}
-
-/** Most columns the time-chip grid uses (mobile parity: 3). */
-export const TIME_CHIP_MAX_COLUMNS = 3;
-
-/** Pure: where cell `index` (0-based) of a `columns`-wide grid sits (1-based CSS grid lines). */
-export function gridCellPlacement(index: number, columns: number): { row: number; column: number } {
-  const c = Math.max(1, columns);
-  return { row: Math.floor(index / c) + 1, column: (index % c) + 1 };
-}
-
-/** The chip box shared by the time chips and "Other time" (same radius, height, border, padding). */
-export const TIME_CHIP_BOX =
-  'flex min-h-[56px] min-w-0 flex-col items-start justify-center gap-px overflow-hidden rounded-2xl border px-3.5 py-2 text-left transition-colors duration-fast';
-
-function supportsSubgrid(): boolean {
-  return (
-    typeof CSS !== 'undefined' &&
-    typeof CSS.supports === 'function' &&
-    CSS.supports('grid-template-columns', 'subgrid')
-  );
 }
 
 /** Literal keys (no template) so the translation audit can see every one. */
@@ -92,19 +73,6 @@ export function TimeChips({
     const [h, m] = chip.time.split(':').map(Number);
     return { label: dayPartLabel(t, chip.id), time: formatTimeOfDay(h, m, hourCycle) };
   });
-  const { ref, columns } = useFitColumns(
-    TIME_CHIP_MAX_COLUMNS,
-    [...chipTexts.map((c) => `${c.label}\u0002${c.time}`), `${other?.label ?? ''}\u0002${other?.time ?? ''}`].join(
-      '\u0001'
-    )
-  );
-  const subgrid = !!other && supportsSubgrid();
-  const chipRows = Math.ceil(MED_TIME_CHIPS.length / columns);
-  const otherCell = gridCellPlacement(MED_TIME_CHIPS.length, columns);
-  const tracks = `repeat(${columns}, minmax(0, 1fr))`;
-  // One line per label/time while there is more than one column (so an overflow is measurable and the
-  // column count drops instead); at one column the text may wrap.
-  const line = columns > 1 ? 'whitespace-nowrap' : '';
   const selected = chipForTime(value);
   const tabbable = selected ?? MED_TIME_CHIPS[0].id;
 
@@ -116,25 +84,14 @@ export function TimeChips({
     );
   }
 
-  const groupStyle: CSSProperties = subgrid
-    ? {
-        gridColumn: '1 / -1',
-        gridRow: `1 / span ${chipRows}`,
-        gridTemplateColumns: 'subgrid',
-        gridTemplateRows: 'subgrid',
-      }
-    : { gridTemplateColumns: tracks };
-
   const group = (
     <div
-      ref={other ? undefined : ref}
       id={id}
       role="radiogroup"
       aria-label={t('addEvent.timeChips.label')}
       aria-describedby={describedBy}
-      data-columns={columns}
-      className={subgrid ? 'grid' : 'grid gap-2'}
-      style={groupStyle}
+      // Alone: the wrapping row itself. With "Other time": its children join the outer row.
+      className={other ? 'contents' : 'flex flex-wrap gap-2'}
     >
       {MED_TIME_CHIPS.map((chip, index) => {
         const on = selected === chip.id;
@@ -146,7 +103,6 @@ export function TimeChips({
             role="radio"
             aria-checked={on}
             tabIndex={tabbable === chip.id ? 0 : -1}
-            data-fit-cell=""
             onClick={() => onChange(on ? null : chip.id, chip.time)}
             onKeyDown={(event) => {
               if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
@@ -157,12 +113,10 @@ export function TimeChips({
                 move(index, -1);
               }
             }}
-            className={`${TIME_CHIP_BOX} ${on ? CHIP_SELECTED : CHIP_UNSELECTED}`}
+            className={choiceTileClass(on)}
           >
-            <span className={`max-w-full text-base font-semibold ${line}`}>{chipTexts[index].label}</span>
-            <span className={`max-w-full text-sm ${line} ${on ? 'text-cream/80' : 'text-ink-2'}`}>
-              {chipTexts[index].time}
-            </span>
+            <span className={CHOICE_TILE_LABEL}>{chipTexts[index].label}</span>
+            <span className={choiceTileSubClass(on)}>{chipTexts[index].time}</span>
           </button>
         );
       })}
@@ -175,43 +129,31 @@ export function TimeChips({
     <button
       type="button"
       aria-expanded={other.expanded}
-      data-fit-cell=""
+      // Spoken like the mobile cell: "Other time, 7:15 AM" (the two lines run together otherwise).
+      aria-label={other.time ? `${other.label}, ${other.time}` : undefined}
       data-testid="time-chip-other"
       onClick={other.onClick}
-      className={`${TIME_CHIP_BOX} ${other.selected ? CHIP_SELECTED : CHIP_UNSELECTED}`}
-      style={subgrid ? { gridRow: otherCell.row, gridColumn: otherCell.column } : undefined}
+      className={choiceTileClass(other.selected)}
     >
-      <span className={`max-w-full text-base font-semibold ${line}`}>{other.label}</span>
+      <span className={CHOICE_TILE_LABEL}>{other.label}</span>
       {other.time ? (
-        <span
-          className={`max-w-full text-sm ${line} ${other.selected ? 'text-cream/80' : 'text-ink-2'}`}
-          data-testid="time-chip-other-time"
-        >
+        <span className={choiceTileSubClass(other.selected)} data-testid="time-chip-other-time">
           {other.time}
         </span>
-      ) : null}
+      ) : (
+        // An empty second line (no width, no name): "Other time" alone is as tall as the two-line chips at
+        // every text size, so a row it shares or a line it is alone on keeps their height.
+        <span aria-hidden="true" className={`${choiceTileSubClass(false)} invisible`} data-testid="time-chip-other-spacer">
+          {'\u00a0'}
+        </span>
+      )}
     </button>
   );
 
   return (
-    <div
-      ref={ref}
-      data-testid="time-chip-grid"
-      data-columns={columns}
-      className={subgrid ? 'grid gap-2' : 'flex flex-col gap-2'}
-      // 1fr rows: every row as tall as the tallest cell, so a one-line "Other time" alone on its row
-      // keeps the two-line chips' height.
-      style={subgrid ? { gridTemplateColumns: tracks, gridAutoRows: '1fr' } : undefined}
-    >
+    <div data-testid="time-chip-row" className="flex flex-wrap gap-2">
       {group}
-      {subgrid ? (
-        otherButton
-      ) : (
-        // No subgrid (older browsers): "Other time" takes the next row, still in the same columns.
-        <div className="grid gap-2" style={{ gridTemplateColumns: tracks }}>
-          {otherButton}
-        </div>
-      )}
+      {otherButton}
     </div>
   );
 }

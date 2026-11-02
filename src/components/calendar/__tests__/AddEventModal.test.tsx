@@ -2137,8 +2137,8 @@ describe('AddEventModal — the 15-minute default', () => {
       await user.clear(timeInput);
       await user.type(timeInput, '20:00');
 
-      // 8 PM in Denver is 10 PM in New York, same day.
-      expect(await screen.findByText('8:00 PM Denver = 10:00 PM New York')).toBeInTheDocument();
+      // 8 PM in Denver is 10 PM in New York, same day: recipient first, the viewer second.
+      expect(await screen.findByText('10:00 PM in New York is 8:00 PM for you (Denver)')).toBeInTheDocument();
     });
 
     it('never shows an abbreviation or a GMT offset', async () => {
@@ -2149,7 +2149,7 @@ describe('AddEventModal — the 15-minute default', () => {
       await user.clear(timeInput);
       await user.type(timeInput, '20:00');
 
-      const line = await screen.findByText(/=/);
+      const line = await screen.findByText(/ for you /);
       expect(line.textContent).not.toMatch(/\bMT\b|\bET\b|GMT/);
     });
   });

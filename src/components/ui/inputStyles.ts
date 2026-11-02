@@ -247,6 +247,25 @@ export function chipClass(selected: boolean): string {
 }
 
 /**
+ * The choice TILE of the simple add/edit forms (owner 1.4.0, mobile StackedChoice tile parity): the "When?"
+ * time chips, "Other time" and the "How often?" answers. A rounded rect sized to its content, never wider
+ * than its row (its text wraps inside it instead), 56 tall so a one-line answer lines up with the two-line
+ * time chips. Border color excluded (see CHIP_BOX); pair with CHIP_SELECTED / CHIP_UNSELECTED.
+ */
+export const CHOICE_TILE_BOX =
+  'flex min-h-[56px] max-w-full min-w-[44px] flex-col items-start justify-center gap-px rounded-2xl border px-3.5 py-2 text-left transition-colors duration-fast';
+
+/** A choice tile's label line ("Morning", "Every day") and second line ("8:00 AM"). */
+export const CHOICE_TILE_LABEL = 'max-w-full text-base font-semibold';
+export function choiceTileSubClass(selected: boolean): string {
+  return `max-w-full text-sm ${selected ? 'text-cream/80' : 'text-ink-2'}`;
+}
+
+export function choiceTileClass(selected: boolean): string {
+  return `${CHOICE_TILE_BOX} ${selected ? CHIP_SELECTED : CHIP_UNSELECTED}`;
+}
+
+/**
  * A radio/checkbox option row (RadioGroup), border color excluded for the same
  * reason as the chip. `py-2` is not extra height — the row's 44 is a FLOOR, and
  * an option carrying a hint is two lines that would otherwise sit flush against

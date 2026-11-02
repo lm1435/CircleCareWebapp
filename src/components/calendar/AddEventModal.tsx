@@ -1079,7 +1079,7 @@ function AddEventForm({
   const recipientName = circle?.recipient_name;
 
   /**
-   * "8:00 PM Denver = 9:00 PM Chicago (+1 day)" — the conversion, live, as the user
+   * "8:00 PM in Denver is 9:00 PM for you (Chicago)" — the conversion, live, as the user
    * types. Nothing about the frame is hidden: the caregiver types their own
    * clock and sees the recipient's.
    *
@@ -1098,25 +1098,33 @@ function AddEventForm({
         const [hh, mm] = clock.split(':').map(Number);
         return formatTimeOfDay(hh, mm, hourCycle);
       };
-      const viewerTime = render(clockInZone(instant, deviceTimezone));
+      const viewerClock = clockInZone(instant, deviceTimezone);
+      const viewerTime = render(viewerClock);
       const recipientTime = render(clockInZone(instant, timezone));
 
+      // Recipient first (the stored frame), viewer second, in plain words (owner 1.4.0, mobile parity):
+      // "7:15 AM in Denver is 3:15 AM the next day for you (Auckland)". The day word is the VIEWER's day
+      // relative to the recipient's, from the two zones' YYYY-MM-DD readings of the one instant; the med
+      // repeats, so it is a relative day, never a weekday.
       const viewerDay = dayInZone(instant, deviceTimezone);
       const recipientDay = dayInZone(instant, timezone);
-      let dayIndicator = '';
-      if (viewerDay !== recipientDay) {
-        dayIndicator = ` (${t(
-          recipientDay > viewerDay ? 'addEvent.dayOffsetNext' : 'addEvent.dayOffsetPrevious'
-        )})`;
-      }
-
-      // A zone with no city in it (the `Etc/*` family, a bare offset) yields no
-      // name at all, and a dangling space is worse than no label.
-      const withZone = (time: string, zone: string): string => (zone ? `${time} ${zone}` : time);
-      return `${withZone(viewerTime, getTimezoneLabel(deviceTimezone))} = ${withZone(
+      const key =
+        viewerDay > recipientDay
+          ? 'addEvent.conversion.nextDay'
+          : viewerDay < recipientDay
+            ? 'addEvent.conversion.previousDay'
+            : 'addEvent.conversion.sameDay';
+      // The viewer hour as it reads: Spanish "es la 1:15" / "son las 3:15" (pt, it) agree with it.
+      const h23 = Number(viewerClock.split(':')[0]) % 24;
+      const count = hourCycle === '24h' ? h23 : h23 % 12 === 0 ? 12 : h23 % 12;
+      // A zone with no city in it (the `Etc/*` family, a bare offset) says its id.
+      return t(key, {
         recipientTime,
-        recipientZone
-      )}${dayIndicator}`;
+        recipientZone: recipientZone || timezone,
+        viewerTime,
+        viewerZone: getTimezoneLabel(deviceTimezone) || deviceTimezone,
+        count,
+      });
     } catch {
       return null;
     }
@@ -2436,9 +2444,9 @@ function AddEventForm({
     requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
   }
 
-  /** The form's own (viewer-frame) time, as "Other time" names it once it is the answer. */
+  /** The form's time on the RECIPIENT's clock (the chips' frame), as "Other time" names it once it is the answer. */
   const otherTimeClock = (() => {
-    const [h, m] = timeStr.split(':').map(Number);
+    const [h, m] = recipientClock.split(':').map(Number);
     return Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
   })();
 
@@ -2553,7 +2561,8 @@ function AddEventForm({
               label: t('addEvent.simple.otherTime'),
               expanded: showOtherTime,
               // Lit like a chosen chip when a custom (non-chip) time is the answer (mobile parity),
-              // and then it names that time, as a chip names its own ("Other time · 7:30 AM").
+              // and then it names that time under its label, as a chip names its own. ONE clock on the
+              // control: the RECIPIENT's, like the chips' times (the viewer's is only in the line).
               selected: timeStr !== '' && litChip === null,
               time: timeStr !== '' && litChip === null ? otherTimeClock : undefined,
               onClick: openOtherTime,
@@ -2658,6 +2667,8 @@ function AddEventForm({
           id="how-often"
           label={t('addEvent.simple.howOften')}
           allowDeselect={false}
+          // The SAME tiles and wrap as the "When?" chips, on add and edit alike (owner 1.4.0).
+          variant="tile"
           // Scheduled <-> as needed is locked after create (the server refuses it): an edit of a
           // scheduled medication never offers "When needed"; an as-needed one shows it, disabled.
           disabled={isAsNeededEdit}

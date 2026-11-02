@@ -22,6 +22,14 @@
     "providerUnavailable": "Este médico já não está disponível. Escolha outro médico ou Nenhum."
   },
   "addEvent": {
+    "conversion": {
+      "sameDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} para si ({{viewerZone}})",
+      "sameDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} para si ({{viewerZone}})",
+      "nextDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia seguinte para si ({{viewerZone}})",
+      "nextDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia seguinte para si ({{viewerZone}})",
+      "previousDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia anterior para si ({{viewerZone}})",
+      "previousDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia anterior para si ({{viewerZone}})"
+    },
     "saveChanges": "Guardar alterações",
     "creating": "A guardar…",
     "updated": "Alterações guardadas",

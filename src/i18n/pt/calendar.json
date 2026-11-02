@@ -271,8 +271,14 @@
     "dualTimezoneHintGeneric": "Seu horário / horário da pessoa ({{timezone}})",
     "quietHoursDoseWarning": "Este horário está dentro do horário de silêncio, então nenhum lembrete será enviado nele. Você pode alterar o horário de silêncio em Perfil, na seção Horário de silêncio.",
     "pastTimeInline": "Começa na próxima dose. Este horário já passou hoje.",
-    "dayOffsetNext": "+1 dia",
-    "dayOffsetPrevious": "-1 dia",
+    "conversion": {
+      "sameDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} para você ({{viewerZone}})",
+      "sameDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} para você ({{viewerZone}})",
+      "nextDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia seguinte para você ({{viewerZone}})",
+      "nextDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia seguinte para você ({{viewerZone}})",
+      "previousDay_one": "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia anterior para você ({{viewerZone}})",
+      "previousDay_other": "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia anterior para você ({{viewerZone}})"
+    },
     "timezoneUnresolvedNotice": "Ainda carregando o fuso horário deste círculo. O salvamento está em pausa para que as datas não sejam gravadas no fuso errado.",
     "drugSearch": {
       "searching": "Buscando medicamentos",

@@ -82,8 +82,8 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-/** "8:00 PM Denver = 5:00 PM Tokyo" — the conversion line's shape. */
-const CONVERSION_TEXT = 'text=/\\d{1,2}:\\d{2}.*=.*\\d{1,2}:\\d{2}/';
+/** "11:00 AM in Tokyo is 8:00 PM the day before for you (Denver)" — the conversion line's shape (1.4.0). */
+const CONVERSION_TEXT = 'text=/\\d{1,2}:\\d{2}.* in .* is .*\\d{1,2}:\\d{2}.* for you/';
 
 /**
  * Viewer zones chosen for what they expose, not for coverage: Denver is the dev
@@ -114,7 +114,7 @@ for (const timezoneId of VIEWER_ZONES) {
        * The conversion must be VISIBLE.
        *
        * Its absence is the product failure: the save converts either way, so no
-       * hint means the time moved silently. Asserting the SHAPE ("X = Y") not
+       * hint means the time moved silently. Asserting the SHAPE ("X in Z is Y for you") not
        * exact digits — the arithmetic is owned by the Postgres-backed unit
        * suite, and re-deriving it here would just be a second implementation to
        * keep in step. This test's job is that the user is told.

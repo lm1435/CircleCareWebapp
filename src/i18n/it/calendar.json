@@ -271,8 +271,14 @@
     "dualTimezoneHintGeneric": "Il tuo orario / il suo orario ({{timezone}})",
     "quietHoursDoseWarning": "Questo orario rientra nelle ore di silenzio, quindi in quel momento non verrà inviato alcun promemoria. Puoi modificare le ore di silenzio in Profilo, nella sezione Ore di silenzio.",
     "pastTimeInline": "Inizia dalla prossima dose. Questo orario è già passato oggi.",
-    "dayOffsetNext": "+1 giorno",
-    "dayOffsetPrevious": "-1 giorno",
+    "conversion": {
+      "sameDay_one": "{{recipientTime}} a {{recipientZone}}: per te è l'{{viewerTime}} ({{viewerZone}})",
+      "sameDay_other": "{{recipientTime}} a {{recipientZone}}: per te sono le {{viewerTime}} ({{viewerZone}})",
+      "nextDay_one": "{{recipientTime}} a {{recipientZone}}: per te è l'{{viewerTime}} del giorno dopo ({{viewerZone}})",
+      "nextDay_other": "{{recipientTime}} a {{recipientZone}}: per te sono le {{viewerTime}} del giorno dopo ({{viewerZone}})",
+      "previousDay_one": "{{recipientTime}} a {{recipientZone}}: per te è l'{{viewerTime}} del giorno prima ({{viewerZone}})",
+      "previousDay_other": "{{recipientTime}} a {{recipientZone}}: per te sono le {{viewerTime}} del giorno prima ({{viewerZone}})"
+    },
     "timezoneUnresolvedNotice": "Stiamo ancora caricando il fuso orario di questa cerchia. Il salvataggio è in pausa per non memorizzare le date nel fuso sbagliato.",
     "drugSearch": {
       "searching": "Ricerca dei farmaci",

@@ -12,6 +12,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Salvo, mas horários de dose não adicionados: 1 (08:00). Abra o medicamento e adicione novamente.",
     "Salvo, mas 2 horários de dose não puderam ser adicionados (08:00). Abra o medicamento e adicione-os novamente.",
   ],
+  "pt calendar:addEvent.conversion.nextDay": [
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia seguinte para você ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia seguinte para você ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia seguinte para você ({{viewerZone}})",
+  ],
+  "pt calendar:addEvent.conversion.previousDay": [
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia anterior para você ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia anterior para você ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia anterior para você ({{viewerZone}})",
+  ],
+  "pt calendar:addEvent.conversion.sameDay": [
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} para você ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} para você ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} para você ({{viewerZone}})",
+  ],
   "pt calendar:addEvent.drugSearch.resultCount": [
     "Sugestões: 0",
     "Sugestões: 1",
@@ -336,6 +351,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Guardado, mas 0 horários de dose não puderam ser adicionados (08:00). Abra o medicamento e adicione-os novamente.",
     "Guardado, mas horários de dose não adicionados: 1 (08:00). Abra o medicamento e adicione novamente.",
     "Guardado, mas 2 horários de dose não puderam ser adicionados (08:00). Abra o medicamento e adicione-os novamente.",
+  ],
+  "pt-PT calendar:addEvent.conversion.nextDay": [
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia seguinte para si ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia seguinte para si ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia seguinte para si ({{viewerZone}})",
+  ],
+  "pt-PT calendar:addEvent.conversion.previousDay": [
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia anterior para si ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} do dia anterior para si ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} do dia anterior para si ({{viewerZone}})",
+  ],
+  "pt-PT calendar:addEvent.conversion.sameDay": [
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} para si ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} é {{viewerTime}} para si ({{viewerZone}})",
+    "{{recipientTime}} em {{recipientZone}} são {{viewerTime}} para si ({{viewerZone}})",
   ],
   "pt-PT calendar:addEvent.drugSearch.resultCount": [
     "Sugestões: 0",

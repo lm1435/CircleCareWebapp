@@ -271,8 +271,14 @@
     "dualTimezoneHintGeneric": "Your time / their time ({{timezone}})",
     "quietHoursDoseWarning": "This time is during quiet hours, so no reminder will be sent then. You can change quiet hours in Profile, under Quiet hours.",
     "pastTimeInline": "Starts with the next dose. This time has already passed today.",
-    "dayOffsetNext": "+1 day",
-    "dayOffsetPrevious": "-1 day",
+    "conversion": {
+      "sameDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} for you ({{viewerZone}})",
+      "sameDay_other": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} for you ({{viewerZone}})",
+      "nextDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the next day for you ({{viewerZone}})",
+      "nextDay_other": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the next day for you ({{viewerZone}})",
+      "previousDay_one": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the day before for you ({{viewerZone}})",
+      "previousDay_other": "{{recipientTime}} in {{recipientZone}} is {{viewerTime}} the day before for you ({{viewerZone}})"
+    },
     "timezoneUnresolvedNotice": "Still loading this circle's time zone. Saving is paused so dates aren't stored in the wrong one.",
     "drugSearch": {
       "searching": "Searching medications",

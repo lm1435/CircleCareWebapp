@@ -7,7 +7,7 @@ import {
   type ReactElement,
   type RefObject,
 } from 'react';
-import { chipClass } from './inputStyles';
+import { CHOICE_TILE_LABEL, chipClass, choiceTileClass } from './inputStyles';
 
 export interface ChipSelectOption {
   /** Value reported through onChange and matched against `value`. */
@@ -40,6 +40,11 @@ export interface ChipSelectProps {
   maxRows?: number;
   /** Shown, not offered: every chip is disabled (e.g. a choice locked after create). */
   disabled?: boolean;
+  /**
+   * 'chip' (default): the pill. 'tile': the simple forms' choice tile, the SAME box as the "When?" time
+   * chips (rounded rect, 56 tall, label in the tile font): "How often?" (owner 1.4.0, mobile parity).
+   */
+  variant?: 'chip' | 'tile';
 }
 
 /** Wrapped chip row; the default. */
@@ -135,6 +140,7 @@ export function ChipSelect({
   allowDeselect = true,
   maxRows,
   disabled = false,
+  variant = 'chip',
 }: ChipSelectProps): ReactElement {
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const count = options.length;
@@ -204,9 +210,9 @@ export function ChipSelect({
               }
             }}
             onKeyDown={(event) => onKeyDown(index, event)}
-            className={`${chipClass(selected)}${disabled ? ' cursor-default disabled:pointer-events-none' : ''}${disabled && !selected ? ' opacity-50' : ''}`}
+            className={`${variant === 'tile' ? choiceTileClass(selected) : chipClass(selected)}${disabled ? ' cursor-default disabled:pointer-events-none' : ''}${disabled && !selected ? ' opacity-50' : ''}`}
           >
-            {option.label}
+            {variant === 'tile' ? <span className={CHOICE_TILE_LABEL}>{option.label}</span> : option.label}
           </button>
         );
       })}

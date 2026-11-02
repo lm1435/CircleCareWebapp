@@ -271,8 +271,14 @@
     "dualTimezoneHintGeneric": "Votre heure / son heure ({{timezone}})",
     "quietHoursDoseWarning": "Cette heure tombe pendant les heures de silence : aucun rappel ne sera envoyé. Vous pouvez modifier les heures de silence dans Profil, section Heures de silence.",
     "pastTimeInline": "Commence à la prochaine dose. Cette heure est déjà passée aujourd’hui.",
-    "dayOffsetNext": "+1 jour",
-    "dayOffsetPrevious": "-1 jour",
+    "conversion": {
+      "sameDay_one": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} pour vous ({{viewerZone}})",
+      "sameDay_other": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} pour vous ({{viewerZone}})",
+      "nextDay_one": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} le lendemain pour vous ({{viewerZone}})",
+      "nextDay_other": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} le lendemain pour vous ({{viewerZone}})",
+      "previousDay_one": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} la veille pour vous ({{viewerZone}})",
+      "previousDay_other": "{{recipientTime}} à {{recipientZone}}, c’est {{viewerTime}} la veille pour vous ({{viewerZone}})"
+    },
     "timezoneUnresolvedNotice": "Chargement du fuseau horaire de ce cercle. L’enregistrement est suspendu pour éviter de stocker des dates dans le mauvais fuseau.",
     "drugSearch": {
       "searching": "Recherche de médicaments",

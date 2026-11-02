@@ -271,8 +271,14 @@
     "dualTimezoneHintGeneric": "Ihre Zeit / Zeit der umsorgten Person ({{timezone}})",
     "quietHoursDoseWarning": "Diese Uhrzeit liegt in den Ruhezeiten, daher wird dann keine Erinnerung gesendet. Sie können die Ruhezeiten unter Profil im Bereich Ruhezeiten ändern.",
     "pastTimeInline": "Beginnt mit der nächsten Dosis. Diese Uhrzeit ist heute bereits vorbei.",
-    "dayOffsetNext": "+1 Tag",
-    "dayOffsetPrevious": "-1 Tag",
+    "conversion": {
+      "sameDay_one": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} ({{viewerZone}})",
+      "sameDay_other": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} ({{viewerZone}})",
+      "nextDay_one": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am nächsten Tag ({{viewerZone}})",
+      "nextDay_other": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am nächsten Tag ({{viewerZone}})",
+      "previousDay_one": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am Vortag ({{viewerZone}})",
+      "previousDay_other": "{{recipientTime}} in {{recipientZone}} ist für Sie {{viewerTime}} am Vortag ({{viewerZone}})"
+    },
     "timezoneUnresolvedNotice": "Die Zeitzone dieses Kreises wird noch geladen. Das Speichern ist pausiert, damit Daten nicht in der falschen Zeitzone gespeichert werden.",
     "drugSearch": {
       "searching": "Medikamente werden gesucht",
