@@ -1,11 +1,12 @@
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { HourCycle } from '@/utils/hourCycle';
 import {
-  getEventTimeParts,
+  getTimezoneOffsetMinutes,
   getTimezoneSuffix,
   formatTimeOfDay,
   getDeviceTimezone,
   timezonesAreDifferent,
+  viewerDayMarker,
   zoneReferenceInstant,
 } from '@/utils/timezone';
 import { instantFromNaiveTimeInZone } from '@/utils/recipientEventDate';
@@ -351,12 +352,34 @@ export function formatShiftRangeViewer(
 ): string | null {
   const start = shift.scheduled_time ?? '00:00';
   const end = shiftEnd(shift.scheduled_date, start, shift.duration_minutes ?? MIN_SHIFT_MINUTES);
-  const startParts = getEventTimeParts(start, tz, zoneReferenceInstant(shift.scheduled_date), cycle);
-  // The end is converted at ITS OWN date (an overnight shift can cross a DST change).
-  const endParts = getEventTimeParts(end.time, tz, zoneReferenceInstant(end.date), cycle);
-  if (!startParts.secondaryTime && !endParts.secondaryTime) return null;
-  // One end may share the viewer's clock on its date while the other does not.
-  return `${startParts.secondaryTime ?? startParts.primaryTime} – ${endParts.secondaryTime ?? endParts.primaryTime}`;
+  const device = getDeviceTimezone();
+  // Each end is converted at ITS OWN date (an overnight shift can cross a DST change).
+  const startRef = zoneReferenceInstant(shift.scheduled_date);
+  const endRef = zoneReferenceInstant(end.date);
+  if (!timezonesAreDifferent(device, tz, startRef) && !timezonesAreDifferent(device, tz, endRef)) {
+    return null;
+  }
+  const clock = (hm: string, at: Date) => {
+    const total = (parseHm(hm) ?? 0) - getTimezoneOffsetMinutes(tz, at) + getTimezoneOffsetMinutes(device, at);
+    const wrapped = ((total % 1440) + 1440) % 1440;
+    return {
+      text: formatTimeOfDay(Math.floor(wrapped / 60), wrapped % 60, cycle),
+      dayDelta: Math.floor(total / 1440),
+    };
+  };
+  const vs = clock(start, startRef);
+  const ve = clock(end.time, endRef);
+  // A DAY IS NAMED only when the viewer's reading is on another calendar day than the
+  // recipient's (the same short weekday as the dual time). The start names its own day; the
+  // end names its day whenever it is not the viewer's start day, so "Mon 11:00 PM – Tue 7:00 AM"
+  // is never read as one night. A shift that only crosses midnight in the recipient's zone
+  // (viewer 0 days apart) keeps no marker; the "next day" tag covers that. Mirrors mobile.
+  const marked = vs.dayDelta !== 0 || ve.dayDelta !== 0;
+  const endOffset = (end.nextDay ? 1 : 0) + ve.dayDelta;
+  const startTag = vs.dayDelta !== 0 ? viewerDayMarker(shift.scheduled_date, vs.dayDelta) : '';
+  const endTag =
+    marked && endOffset !== vs.dayDelta ? viewerDayMarker(end.date, ve.dayDelta) : '';
+  return `${startTag ? `${startTag} ` : ''}${vs.text} – ${endTag ? `${endTag} ` : ''}${ve.text}`;
 }
 
 export function shiftDurationHm(minutes: number): { hours: number; minutes: number } {

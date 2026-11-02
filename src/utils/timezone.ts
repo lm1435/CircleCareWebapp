@@ -763,6 +763,19 @@ function shortWeekdayOf(
 }
 
 /**
+ * The short weekday ("Tue", es "mar", de "Di") of the wire day `day` shifted by
+ * `delta` calendar days, in the active language: the SAME marker the dual-time
+ * viewer half uses. '' when `day` is not a real YYYY-MM-DD. Delta 0 is named too: the
+ * caller decides when a day is worth naming (never on the same day). For callers that do their own viewer conversion
+ * (the care-shift "Your time" range).
+ */
+export function viewerDayMarker(day: string, delta: number): string {
+  const parsed = parseWireDay(day);
+  if (!parsed) return '';
+  return shortWeekdayOf(parsed, delta, activeLanguage());
+}
+
+/**
  * Format an event time for display throughout the app.
  * Times are stored in care recipient's timezone (already converted on save).
  * Shows: "2:00 PM CT" or "2:00 PM CT / 1:00 PM MT" if viewer is in different TZ
