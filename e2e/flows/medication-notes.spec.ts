@@ -74,13 +74,16 @@ function weekOffset(fromDate: string, toDate: string): number {
 }
 
 function dateInTz(tz: string, offsetDays: number): string {
-  const now = new Date(Date.now() + offsetDays * 86_400_000);
-  return new Intl.DateTimeFormat('en-CA', {
+  // Today in the zone, THEN calendar arithmetic (not now ± n * 24 h: a DST day is 23 or 25 hours long).
+  const today = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(now);
+  }).format(new Date());
+  const d = new Date(`${today}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
 }
 
 async function circleTimezone(session: ApiSession, circleId: string): Promise<string> {

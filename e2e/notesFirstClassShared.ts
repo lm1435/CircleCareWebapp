@@ -40,14 +40,19 @@ export function weekOffset(fromDate: string, toDate: string): number {
   return Math.round((toUTCms(toWeekStart) - toUTCms(fromWeekStart)) / (7 * 86_400_000));
 }
 
+/**
+ * The calendar day `offsetDays` from TODAY IN `tz`: today in the zone first, then calendar arithmetic.
+ * Not `now ± offsetDays * 24 h` read in the zone: across a DST change a day is 23 or 25 hours, so in the last
+ * hour of a 25-hour day (Denver 2026-11-01 23:00-24:00 MST) "now - 24 h" is still the SAME day.
+ */
 export function dateInTz(tz: string, offsetDays: number): string {
-  const now = new Date(Date.now() + offsetDays * 86_400_000);
-  return new Intl.DateTimeFormat('en-CA', {
+  const today = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(now);
+  }).format(new Date());
+  return addDaysISO(today, offsetDays);
 }
 
 export async function circleTimezone(session: ApiSession, circleId: string): Promise<string> {
