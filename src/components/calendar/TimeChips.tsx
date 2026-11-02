@@ -36,6 +36,8 @@ export interface TimeChipsOther {
   expanded: boolean;
   /** Lit like a selected chip: a custom (non-chip) time is the answer. */
   selected: boolean;
+  /** That custom time, formatted: shown under the label as a chip shows its own (mobile parity). */
+  time?: string;
   onClick: () => void;
 }
 
@@ -92,7 +94,9 @@ export function TimeChips({
   });
   const { ref, columns } = useFitColumns(
     TIME_CHIP_MAX_COLUMNS,
-    [...chipTexts.map((c) => `${c.label}\u0002${c.time}`), other?.label ?? ''].join('\u0001')
+    [...chipTexts.map((c) => `${c.label}\u0002${c.time}`), `${other?.label ?? ''}\u0002${other?.time ?? ''}`].join(
+      '\u0001'
+    )
   );
   const subgrid = !!other && supportsSubgrid();
   const chipRows = Math.ceil(MED_TIME_CHIPS.length / columns);
@@ -178,6 +182,14 @@ export function TimeChips({
       style={subgrid ? { gridRow: otherCell.row, gridColumn: otherCell.column } : undefined}
     >
       <span className={`max-w-full text-base font-semibold ${line}`}>{other.label}</span>
+      {other.time ? (
+        <span
+          className={`max-w-full text-sm ${line} ${other.selected ? 'text-cream/80' : 'text-ink-2'}`}
+          data-testid="time-chip-other-time"
+        >
+          {other.time}
+        </span>
+      ) : null}
     </button>
   );
 

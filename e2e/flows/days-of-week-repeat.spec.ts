@@ -493,8 +493,14 @@ test('started series: anchor chip locked (+axe); switching back to Weekly stores
   await expect(card).toBeVisible({ timeout: 20_000 });
   await card.getByRole('button', { name: `More actions for ${med}` }).click();
   await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Edit event' });
+  const dialog = page.getByRole('dialog', { name: 'Edit medication' });
   await expect(dialog).toBeVisible();
+  // The edit is the add form's simple layout (owner 1.4.0): "How often?" reads Some days, the day chips
+  // open under it; the Repeat select is in More details.
+  await expect(
+    dialog.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Some days' })
+  ).toBeChecked({ timeout: 20_000 });
+  await dialog.getByRole('button', { name: /More details/ }).click();
   await expect(dialog.locator('#recurrence_rule')).toHaveValue('days_of_week', { timeout: 20_000 });
 
   const group = chipGroup(dialog);

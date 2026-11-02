@@ -174,10 +174,14 @@ test.describe("the browser's repeated (fall-back) hour", () => {
     await expect(card).toBeVisible({ timeout: 20_000 });
     await card.getByRole('button', { name: `More actions for ${name}` }).click();
     await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Edit event' });
+    // The edit is the add form's simple layout (owner 1.4.0): the stored 08:00 London lights Morning (the
+    // chip is the recipient's clock); the start date (More details) is the viewer's day of that instant.
+    const dialog = page.getByRole('dialog', { name: 'Edit medication' });
     await expect(dialog).toBeVisible({ timeout: 15_000 });
     await expect(dialog.locator('#scheduled_date')).toHaveValue(viewer.date, { timeout: 20_000 });
-    await expect(dialog.locator('#scheduled_time')).toHaveValue('01:00');
+    await expect(
+      dialog.getByRole('radiogroup', { name: 'Common dose times' }).getByRole('radio', { name: /Morning/ })
+    ).toBeChecked();
 
     const patch = page.waitForResponse(
       (r) => r.request().method() === 'PATCH' && new URL(r.url()).pathname.startsWith(`/api/circles/${a.circleId}/events/`),

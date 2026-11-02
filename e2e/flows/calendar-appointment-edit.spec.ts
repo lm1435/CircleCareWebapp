@@ -201,7 +201,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await gotoWeekContaining(page, k.circleId, k.today, k.at(0));
     const detail = await openChip(page, k.at(0), k.reA);
     await moreMenu(page, detail, 'Edit event');
-    const edit = page.getByRole('dialog', { name: 'Edit event' });
+    const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.getByText('This event repeats. Changes you save here will apply to the whole series.')).toBeVisible();
     // The form hydrates its schedule from the series ROOT, which it may still be
@@ -357,7 +357,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await gotoWeekContaining(page, k.circleId, k.today, k.at(0));
     const detail = await openChip(page, k.at(0), k.reA);
     await moreMenu(page, detail, 'Edit event');
-    const edit = page.getByRole('dialog', { name: 'Edit event' });
+    const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
     await edit.locator('#scheduled_time').fill('23:45');
@@ -393,7 +393,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await gotoWeekContaining(page, k.circleId, k.today, k.at(1));
     const detail = await openChip(page, k.at(1), new RegExp(escapeRegExp(D)));
     await moreMenu(page, detail, 'Edit event');
-    const edit = page.getByRole('dialog', { name: 'Edit event' });
+    const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
     // No end is invented, and none is demanded.
@@ -425,7 +425,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await gotoWeekContaining(page, k.circleId, k.today, k.at(0));
     const detail = await openChip(page, k.at(0), k.reA);
     await moreMenu(page, detail, 'Edit event');
-    const edit = page.getByRole('dialog', { name: 'Edit event' });
+    const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
     const patches = countRequests(page, 'PATCH', '/api/circles/:id/events/:eventId');

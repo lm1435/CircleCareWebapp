@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
@@ -149,8 +149,20 @@ function appt(over: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-const doctorSelect = () => screen.getByLabelText('Doctor') as HTMLSelectElement;
-const locationInput = () => screen.getByLabelText(/^Location/) as HTMLInputElement;
+// An EDIT uses the simple layout (owner 1.4.0): the select sits in the "Doctor" row, open when a
+// doctor is stored, and Location in the "Place" row. The create tests here pin the full layout.
+function openRow(rowId: string): void {
+  const row = document.getElementById(rowId);
+  if (row && row.getAttribute('aria-expanded') === 'false') fireEvent.click(row);
+}
+const doctorSelect = () => {
+  openRow('row-doctor');
+  return screen.getByRole('combobox', { name: 'Doctor' }) as HTMLSelectElement;
+};
+const locationInput = () => {
+  openRow('row-place');
+  return screen.getByLabelText(/^Location/) as HTMLInputElement;
+};
 
 beforeEach(() => {
   vi.clearAllMocks();

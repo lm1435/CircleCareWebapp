@@ -159,11 +159,16 @@ test('add a PRN medication in the form: As needed hides the schedule, saves the 
     await expect(section.getByText('for back pain')).toBeVisible();
     await expect(section.getByTestId('as-needed-last-given')).toHaveText('Not given yet');
 
-    // LOCKED after create: edit shows Repeat read-only, only the reason is editable.
+    // LOCKED after create: the edit (the add form's simple layout, owner 1.4.0) shows "How often?" on
+    // "When needed", every choice disabled, with the locked line under it; only the reason is editable.
     await cardOf(page, name).getByRole('button', { name: `More actions for ${name}` }).click();
     await page.getByRole('menuitem', { name: 'Edit' }).click();
-    const edit = page.getByRole('dialog');
-    await expect(edit.getByTestId('as-needed-locked-repeat')).toBeVisible();
+    const edit = page.getByRole('dialog', { name: 'Edit medication' });
+    const howOften = edit.getByRole('radiogroup', { name: 'How often?' });
+    await expect(howOften.getByRole('radio', { name: 'When needed' })).toBeChecked();
+    await expect(howOften.getByRole('radio', { name: 'When needed' })).toBeDisabled();
+    await expect(howOften.getByRole('radio', { name: 'Every day' })).toBeDisabled();
+    await expect(edit.getByTestId('as-needed-locked-how-often')).toBeVisible();
     await expect(edit.getByRole('combobox', { name: 'Repeat' })).toHaveCount(0);
     await edit.getByLabel(/What is it for\?/).fill('headache');
     await edit.getByRole('button', { name: 'Save changes' }).click();

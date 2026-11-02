@@ -5,6 +5,12 @@ import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { AddEventModal } from '../AddEventModal';
 
+/** An edit uses the simple layout (owner 1.4.0): its date, repeat and reminders sit under More details. */
+function openMoreDetails(): void {
+  const toggle = document.getElementById('more-details');
+  if (toggle && toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
+}
+
 // This file PINS the device zone, unconditionally — including under
 // scripts/run-unit-timezones.sh.
 //
@@ -1687,6 +1693,7 @@ describe('AddEventModal', () => {
         />
       );
 
+      openMoreDetails();
       await user.click(screen.getByRole('switch', { name: 'Send reminders' }));
 
       for (const name of [
@@ -1712,6 +1719,7 @@ describe('AddEventModal', () => {
         />
       );
 
+      openMoreDetails();
       const master = screen.getByRole('switch', { name: 'Send reminders' });
       await user.click(master);
       await user.click(master);
@@ -2099,6 +2107,7 @@ describe('AddEventModal — the 15-minute default', () => {
         onClose={vi.fn()}
       />
     );
+    openMoreDetails();
     expect(screen.getByRole('checkbox', { name: '15 minutes before' })).toHaveAttribute(
       'aria-checked',
       'false'
@@ -2947,7 +2956,7 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
           onClose={vi.fn()}
         />
       );
-      expect(screen.getByLabelText(/^Date/)).toBeInTheDocument();
+      expect(screen.getByTestId('simple-medication-form')).toBeInTheDocument();
       expect(screen.queryByTestId('series-edit-note')).toBeNull();
     });
 

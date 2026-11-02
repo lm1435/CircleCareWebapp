@@ -37,6 +37,7 @@ import {
   type TimeChipId,
 } from '@/lib/analytics';
 import { MED_TIME_CHIPS, chipForTime } from '@/lib/medTimeOfDay';
+import { simpleAppointmentOpenRows, simpleMedicationMoreOpen } from '@/utils/simpleEditDisclosure';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
 import { TimeChips } from './TimeChips';
 import { DisclosureRow } from './DisclosureRow';
@@ -201,9 +202,10 @@ export interface AddEventModalProps {
    */
   entry?: EntryFormOrigin;
   /**
-   * 'auto' (default): a NEW medication / appointment opened for its type gets the short
-   * form ("What is it? / When? / ..."). 'full' forces the all-fields layout, which
-   * edits, tasks and a type-less open always use. Same state and payload either way.
+   * 'auto' (default): a NEW medication / appointment opened for its type, and an EDIT of
+   * one (owner 1.4.0), gets the short form ("What is it? / When? / ..."). 'full' forces the
+   * all-fields layout, which tasks and a type-less open always use (tests compare the two).
+   * Same state and payload either way.
    */
   layout?: 'auto' | 'full';
 }
@@ -564,13 +566,14 @@ function AddEventForm({
     event?.event_type ?? initialType ?? 'medication'
   );
   // SIMPLE LAYOUT (docs/plans/simple-ui-1-3-1.md): a NEW medication or appointment
-  // opened for that type gets the short "What is it? / When? / ..." form. Everything
-  // else (edit, task, a type-less open) keeps the full form, so no field is lost.
+  // opened for that type gets the short "What is it? / When? / ..." form, and so does
+  // an EDIT of one (owner 1.4.0: editing looks exactly like adding, prefilled; only the
+  // title and the Save label differ). Every field the full form has sits where the add
+  // form puts it. A task and a type-less open keep the full form.
+  const simpleType = isEditing ? event.event_type : initialType;
   const simpleKind: 'medication' | 'appointment' | null =
-    layout !== 'full' &&
-    !isEditing &&
-    (initialType === 'medication' || initialType === 'appointment')
-      ? initialType
+    layout !== 'full' && (simpleType === 'medication' || simpleType === 'appointment')
+      ? simpleType
       : null;
   const firstRun = firstRunProp && simpleKind === 'medication';
   const [title, setTitle] = useState(event?.medication_name || event?.title || initialTitle || '');
@@ -692,8 +695,9 @@ function AddEventForm({
     isAsNeededEdit
       ? 'as_needed'
       : // A new simple medication starts on "Every day" (the wizard's explicit
-        // null / rule still wins): the pills below always have one answer.
-        simpleKind === 'medication' && initialRecurrence === undefined
+        // null / rule still wins): the pills below always have one answer. An edit
+        // keeps its stored rule.
+        !isEditing && simpleKind === 'medication' && initialRecurrence === undefined
         ? 'daily'
         : initialRecurrenceState.choice
   );
@@ -917,15 +921,32 @@ function AddEventForm({
     simpleKind !== null
   );
   // The simple forms' disclosure state. The panels stay mounted; these only show them.
-  const [moreOpen, setMoreOpen] = useState(false);
+  // On an edit a saved value behind one opens it (utils/simpleEditDisclosure); the
+  // repeat half is re-checked once the series root lands (the effect below).
+  const [moreOpen, setMoreOpen] = useState(
+    () => isEditing && simpleKind === 'medication' && simpleMedicationMoreOpen(event)
+  );
   const [otherTimeOpen, setOtherTimeOpen] = useState(false);
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
   // the first-run wizard), pointing at the primary's bottle through `refill_group_id`.
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
-  const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
+  const [openRows, setOpenRows] = useState<Record<string, boolean>>(() =>
+    isEditing && simpleKind === 'appointment' ? simpleAppointmentOpenRows(event) : {}
+  );
   const setRowOpen = (rowId: string, open: boolean): void =>
     setOpenRows((prev) => ({ ...prev, [rowId]: open }));
+  // The schedule (rule, days, end date) is the series ROOT's, which may land after mount:
+  // once it does, a repeat stored there opens its disclosure too. Once per form, opening only.
+  const editDisclosureRootRef = useRef(false);
+  useEffect(() => {
+    if (!isEditing || simpleKind === null || !scheduleSource || editDisclosureRootRef.current) return;
+    editDisclosureRootRef.current = true;
+    const source = { ...event, ...scheduleSource };
+    if (simpleKind === 'medication' && simpleMedicationMoreOpen(source)) setMoreOpen(true);
+    if (simpleKind === 'appointment' && simpleAppointmentOpenRows(source).repeat) setRowOpen('repeat', true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the root resolves
+  }, [scheduleSource]);
   /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
   const isAsNeeded = isMedication && recurrence === 'as_needed';
   const isPending = createEvent.isPending || updateEvent.isPending;
@@ -1206,6 +1227,13 @@ function AddEventForm({
   }, [timezone, dateStr, timeStr, heldInstant]);
   /** The time chip the form's time sits on, or null ("Other time" / no time). */
   const litChip = chipForTime(recipientClock);
+  // The simple medication form's time field ("Other time"). Once it is showing (an edit's stored
+  // custom time, a hand-off's), it stays: typing a chip's time into it must not make the field
+  // vanish under the cursor. (Above the `!canEdit` return: a hook.)
+  const customTimeShown = timeStr !== '' && litChip === null;
+  useEffect(() => {
+    if (customTimeShown) setOtherTimeOpen(true);
+  }, [customTimeShown]);
   /**
    * CREATE only: this medication's start rolls to the next dose (the backend does it,
    * `medicationStartRoll.ts`) because its time already passed today in the recipient's zone.
@@ -1326,6 +1354,9 @@ function AddEventForm({
     setLocation(address);
     setLocationFilledFrom(provider.name);
     clearError('location');
+    // The simple form's Place row opens on what it was filled with (mobile parity); its
+    // toggle folds it again like any other row, the address shown in the row.
+    setRowOpen('place', true);
   }
 
   useEffect(() => {
@@ -1781,7 +1812,7 @@ function AddEventForm({
     if (!canEdit || !timezone || isPending || seriesRootPending) return;
 
     // Before validation, so it counts EVERY attempt (mobile parity).
-    Analytics.entrySaveTapped(circleId, eventType, 'form', isEditing);
+    Analytics.entrySaveTapped(circleId, eventType, 'form', isEditing, simpleKind ? 'simple' : 'full');
 
     const built = buildPayload(timezone);
     if (!built.ok) {
@@ -2365,7 +2396,8 @@ function AddEventForm({
     setChipInstant(viewer.instant ?? null);
     clearError('scheduled_time');
     completeStep('when');
-    Analytics.timeChipSelected({ chip });
+    // The add-form funnel only: an edit never counts as a chip pick.
+    if (!isEditing) Analytics.timeChipSelected({ chip });
   }
 
   /**
@@ -2399,10 +2431,16 @@ function AddEventForm({
   }
 
   function openOtherTime(): void {
-    if (!otherTimeOpen) Analytics.timeChipSelected({ chip: 'other' });
+    if (!otherTimeOpen && !isEditing) Analytics.timeChipSelected({ chip: 'other' });
     setOtherTimeOpen(true);
     requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
   }
+
+  /** The form's own (viewer-frame) time, as "Other time" names it once it is the answer. */
+  const otherTimeClock = (() => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? formatTimeOfDay(h, m, hourCycle) : undefined;
+  })();
 
   const howOftenValue = ['daily', 'days_of_week', 'as_needed'].includes(recurrence)
     ? recurrence
@@ -2514,12 +2552,15 @@ function AddEventForm({
             other={{
               label: t('addEvent.simple.otherTime'),
               expanded: showOtherTime,
-              // Lit like a chosen chip when a custom (non-chip) time is the answer (mobile parity).
+              // Lit like a chosen chip when a custom (non-chip) time is the answer (mobile parity),
+              // and then it names that time, as a chip names its own ("Other time · 7:30 AM").
               selected: timeStr !== '' && litChip === null,
+              time: timeStr !== '' && litChip === null ? otherTimeClock : undefined,
               onClick: openOtherTime,
             }}
           />
-          {timeStr && extraTimes.length < 3 && (
+          {/* Create only, as on the full form: each extra dose is saved as its own medication. */}
+          {!isEditing && timeStr && extraTimes.length < 3 && (
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -2617,10 +2658,15 @@ function AddEventForm({
           id="how-often"
           label={t('addEvent.simple.howOften')}
           allowDeselect={false}
+          // Scheduled <-> as needed is locked after create (the server refuses it): an edit of a
+          // scheduled medication never offers "When needed"; an as-needed one shows it, disabled.
+          disabled={isAsNeededEdit}
           options={[
             { value: 'daily', label: t('addEvent.simple.everyDay') },
             { value: 'days_of_week', label: t('addEvent.simple.someDays') },
-            { value: 'as_needed', label: t('addEvent.simple.whenNeeded') },
+            ...(isEditing && !isAsNeededEdit
+              ? []
+              : [{ value: 'as_needed', label: t('addEvent.simple.whenNeeded') }]),
           ]}
           value={howOftenValue}
           onChange={(next) => {
@@ -2629,6 +2675,18 @@ function AddEventForm({
             completeStep('how_often');
           }}
         />
+        {isAsNeededEdit && (
+          <p className="m-0 text-sm text-ink-2" data-testid="as-needed-locked-how-often">
+            {t('addEvent.asNeeded.lockedRepeat')}
+          </p>
+        )}
+        {/* A repeat the three answers cannot name (monthly, a cycle...) is named here, and
+            stays editable under More details (mobile parity: never converted). */}
+        {!isAsNeeded && howOftenValue === null && recurrence !== 'none' && (
+          <Text variant="caption" data-testid="how-often-summary">
+            {recurrenceOptions.find((o) => o.value === recurrence)?.label}
+          </Text>
+        )}
         {asNeededReasonBlock}
         {daysBlock}
       </section>
@@ -2764,8 +2822,8 @@ function AddEventForm({
           <DoctorField
             circleId={circleId}
             value={providerId}
-            storedValue={null}
-            appliesToSeries={false}
+            storedValue={isEditing ? storedProviderId : null}
+            appliesToSeries={isRecurringEdit}
             busy={isPending}
             onChange={(id, provider) => {
               setProviderId(id);
@@ -2802,7 +2860,7 @@ function AddEventForm({
         <DisclosureRow
           id="row-notes"
           title={t('addEvent.simple.notesAndReminders')}
-          summary={t('addEvent.simple.add')}
+          summary={description.trim() ? t('addEvent.simple.added') : t('addEvent.simple.add')}
           open={!!openRows.notes}
           onToggle={(open) => setRowOpen('notes', open)}
         >
@@ -2833,7 +2891,11 @@ function AddEventForm({
     <Modal
       title={
         isEditing
-          ? t('addEvent.editTitle')
+          ? simpleKind === 'medication'
+            ? t('addEvent.simple.editMedication')
+            : simpleKind === 'appointment'
+              ? t('addEvent.simple.editAppointment')
+              : t('addEvent.editTitle')
           : simpleKind === 'medication'
             ? t('addEvent.simple.newMedication')
             : simpleKind === 'appointment'

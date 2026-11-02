@@ -98,7 +98,7 @@ describe('save events', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
-    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false);
+    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false, 'full');
     // as-needed has no recurrence
     expect(created).toHaveBeenCalledWith(CIRCLE_ID, false, 'form', false);
     expect(blocked).not.toHaveBeenCalled();
@@ -125,7 +125,7 @@ describe('save events', () => {
     renderMed();
     fireEvent.submit(document.getElementById('add-event-form') as HTMLFormElement);
 
-    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false);
+    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', false, 'full');
     expect(blocked).toHaveBeenCalledWith('missing_name', 'medication');
     expect(failed).not.toHaveBeenCalled();
     expect(mutateCreate).not.toHaveBeenCalled();
@@ -198,7 +198,7 @@ describe('save events', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mutateUpdate).toHaveBeenCalled());
-    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', true);
+    expect(tapped).toHaveBeenCalledWith(CIRCLE_ID, 'medication', 'form', true, 'simple');
     expect(created).not.toHaveBeenCalled();
   });
 });

@@ -1148,18 +1148,23 @@ export const Analytics = {
    * A save was attempted (fired before validation, so it counts EVERY attempt).
    * `is_editing` separates creates from revisions — the same split mobile uses,
    * so `entry_save_tapped ÷ event_created` is only read with `is_editing: false`.
+   * `layout` (1.4.0, enum, mobile parity): 'simple' = the short medication /
+   * appointment form, which adding AND editing one now use; 'full' = the
+   * all-fields form (tasks, a type-less open). Sent only when the caller knows it.
    */
   entrySaveTapped: (
     circleId: string,
     entityType: string,
     source: 'form' | 'wizard' = 'form',
-    isEditing = false
+    isEditing = false,
+    layout?: 'simple' | 'full'
   ) =>
     capture('entry_save_tapped', {
       circle_id: circleId,
       entity_type: entityType,
       source,
       is_editing: isEditing,
+      ...(layout ? { layout } : {}),
     }),
 
   /**

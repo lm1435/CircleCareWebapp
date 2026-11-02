@@ -428,7 +428,7 @@ test.describe('medication lifecycle', () => {
     const guard = page.getByRole('dialog', { name: 'Medication is inactive' });
     await expect(guard).toBeVisible();
     await expect(guard).toContainText('Reactivate it to make changes');
-    await expect(page.getByRole('dialog', { name: 'Edit event' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'Edit medication' })).toHaveCount(0);
 
     // Decline — the med stays inactive.
     await guard.getByRole('button', { name: 'Cancel' }).click();

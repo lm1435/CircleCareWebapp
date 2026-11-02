@@ -303,6 +303,8 @@
     "simple": {
       "newMedication": "Novo medicamento",
       "newAppointment": "Nova consulta",
+      "editMedication": "Editar medicamento",
+      "editAppointment": "Editar consulta",
       "whatIsIt": "O que é?",
       "when": "Quando?",
       "howOften": "Com que frequência?",

@@ -38,6 +38,8 @@ export interface ChipSelectProps {
    * freely (every existing caller).
    */
   maxRows?: number;
+  /** Shown, not offered: every chip is disabled (e.g. a choice locked after create). */
+  disabled?: boolean;
 }
 
 /** Wrapped chip row; the default. */
@@ -132,6 +134,7 @@ export function ChipSelect({
   onChange,
   allowDeselect = true,
   maxRows,
+  disabled = false,
 }: ChipSelectProps): ReactElement {
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const count = options.length;
@@ -176,6 +179,7 @@ export function ChipSelect({
       id={id}
       role="radiogroup"
       aria-label={label}
+      aria-disabled={disabled || undefined}
       data-layout={overflow ? 'scroll' : 'wrap'}
       className={chipRowClass(overflow)}
     >
@@ -191,6 +195,7 @@ export function ChipSelect({
             role="radio"
             aria-checked={selected}
             tabIndex={index === tabbableIndex ? 0 : -1}
+            disabled={disabled}
             onClick={() => {
               if (selected) {
                 if (allowDeselect) onChange(null);
@@ -199,7 +204,7 @@ export function ChipSelect({
               }
             }}
             onKeyDown={(event) => onKeyDown(index, event)}
-            className={chipClass(selected)}
+            className={`${chipClass(selected)}${disabled ? ' cursor-default disabled:pointer-events-none' : ''}${disabled && !selected ? ' opacity-50' : ''}`}
           >
             {option.label}
           </button>

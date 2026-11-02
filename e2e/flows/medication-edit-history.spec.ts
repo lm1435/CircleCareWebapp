@@ -113,9 +113,15 @@ async function openEditFromMedsPage(page: Page, circleId: string, name: string):
   await expect(card).toBeVisible({ timeout: 20_000 });
   await card.getByRole('button', { name: `More actions for ${name}` }).click();
   await page.getByRole('menu').getByRole('menuitem', { name: 'Edit', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Edit event' });
+  // The edit is the add form's simple layout (owner 1.4.0); its date and Repeat sit under More details.
+  const dialog = page.getByRole('dialog', { name: 'Edit medication' });
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   return dialog;
+}
+
+async function openMoreDetails(dialog: Locator): Promise<void> {
+  const toggle = dialog.getByRole('button', { name: /More details/ });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
 }
 
 async function saveChanges(page: Page, dialog: Locator, circleId: string, rootId: string): Promise<void> {
@@ -177,9 +183,15 @@ test('time + dosage edit of a started series older than 15 days from the Meds pa
   const dialog = await openEditFromMedsPage(page, circleId, name);
   // The editor shows the SERIES' values.
   await expect(dialog.locator('#medication_dosage')).toHaveValue('10mg', { timeout: 20_000 });
-  await expect(dialog.locator('#scheduled_time')).toHaveValue('08:00');
+  // 08:00 lights the Morning chip; 09:00 is no chip, so it goes through "Other time" (the time field).
+  await expect(
+    dialog.getByRole('radiogroup', { name: 'Common dose times' }).getByRole('radio', { name: /Morning/ })
+  ).toBeChecked();
+  await openMoreDetails(dialog);
   await expect(dialog.locator('#scheduled_date')).toHaveValue(start);
   await dialog.locator('#medication_dosage').fill('20mg');
+  await dialog.getByRole('button', { name: 'Other time' }).click();
+  await expect(dialog.locator('#scheduled_time')).toHaveValue('08:00');
   await dialog.locator('#scheduled_time').fill('09:00');
   await saveChanges(page, dialog, circleId, rootId);
 
@@ -237,6 +249,7 @@ test('frequency edit (daily -> weekly) keeps the taken history and prunes the of
   expect(takenRows).toHaveLength(3);
 
   const dialog = await openEditFromMedsPage(page, circleId, name);
+  await openMoreDetails(dialog);
   await expect(dialog.locator('#recurrence_rule')).toHaveValue('daily', { timeout: 20_000 });
   await dialog.locator('#recurrence_rule').selectOption('weekly');
   await saveChanges(page, dialog, circleId, rootId);
