@@ -334,33 +334,38 @@ describe('addMinutesToTimeStr', () => {
   });
 });
 
-describe('presetEndTimeStr: the chip length on the RECIPIENT clock, laid onto the viewer start', () => {
-  it('same clock on both sides (same zone, or no recipient clock yet): exactly addMinutesToTimeStr', () => {
+describe('presetEndTimeStr: the chip\'s full length, an end past midnight carrying to the next day', () => {
+  it('same zone 22:30 + "2 hrs" ends at 00:30 the next day: 120 minutes, not the legacy 23:59 cap (89)', () => {
+    // Mobile parity: the phone saves 120 for a same-zone 22:30 + "2 hrs".
+    expect(presetEndTimeStr('22:30', 120)).toBe('00:30');
+    expect(spanMinutes('22:30', presetEndTimeStr('22:30', 120))).toBe(120);
+  });
+
+  it('every chip and the default length keep their full length at any start, midnight included', () => {
     for (const start of ['00:00', '09:45', '14:00', '22:00', '22:30', '23:00', '23:45', '23:50', '23:59']) {
-      for (const mins of [...DURATION_PRESETS, 7, 600]) {
-        expect(presetEndTimeStr(start, start, mins)).toBe(addMinutesToTimeStr(start, mins));
-        expect(presetEndTimeStr(start, '', mins)).toBe(addMinutesToTimeStr(start, mins));
+      for (const mins of [...DURATION_PRESETS, DEFAULT_DURATION_MINUTES, 7, 600]) {
+        expect(spanMinutes(start, presetEndTimeStr(start, mins))).toBe(mins);
       }
     }
   });
 
-  it("the viewer's late evening is not the recipient's: the full length, rolling over the viewer's midnight", () => {
-    // Denver viewer 22:30, Auckland recipient 18:30: was 23:59 (89 minutes).
-    expect(presetEndTimeStr('22:30', '18:30', 120)).toBe('00:30');
-    expect(spanMinutes('22:30', presetEndTimeStr('22:30', '18:30', 120))).toBe(120);
-  });
-
-  it("past the recipient's midnight: carried to the next day (mobile's rule), the full length", () => {
-    // Denver viewer 03:00, Auckland recipient 23:00 + 2 hrs.
-    expect(presetEndTimeStr('03:00', '23:00', 120)).toBe('05:00');
-    for (const mins of DURATION_PRESETS) {
-      expect(spanMinutes('23:30', presetEndTimeStr('23:30', '02:30', mins))).toBe(mins);
+  it('same as addMinutesToTimeStr wherever the end stays on the same day', () => {
+    for (const start of ['00:00', '09:45', '14:00', '21:00']) {
+      for (const mins of DURATION_PRESETS) {
+        expect(presetEndTimeStr(start, mins)).toBe(addMinutesToTimeStr(start, mins));
+      }
     }
   });
 
+  it("the viewer's late evening (a recipient zone behind): the full length, rolling over the viewer's midnight", () => {
+    // Denver viewer 22:30, Auckland recipient 18:30: was 23:59 (89 minutes).
+    expect(presetEndTimeStr('22:30', 120)).toBe('00:30');
+    expect(presetEndTimeStr('03:00', 120)).toBe('05:00');
+  });
+
   it('returns empty for a malformed viewer start', () => {
-    expect(presetEndTimeStr('', '10:00', 30)).toBe('');
-    expect(presetEndTimeStr('nope', '10:00', 30)).toBe('');
+    expect(presetEndTimeStr('', 30)).toBe('');
+    expect(presetEndTimeStr('nope', 30)).toBe('');
   });
 });
 

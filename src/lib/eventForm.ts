@@ -172,25 +172,22 @@ export function addMinutesToTimeStr(timeStr: string, minutes: number): string {
 }
 
 /**
- * The VIEWER-frame end a duration chip (or the default length) gives a start: the length is the chip's, counted
- * on the CARE RECIPIENT's clock.
+ * The VIEWER-frame end a duration chip (or the default length) gives a start: the chip's full length.
  *
  * The form holds its times on the viewer's clock (`timeStr` / `endTimeStr`) but works in the recipient's frame:
- * the save sends the recipient's start and `duration_minutes` = the viewer-frame span (`spanMinutes`). In that
- * frame the app's rule for an end past midnight is CARRY to the next day: mobile's chips and `resolveEndTime`,
- * this form's `spanMinutes` / `shiftEndTimeStr`, the recipient-clock end row (`endTimeForDuration`) and the
- * calendar's "next day" continuation. So the full length is laid onto the viewer's start, rolling over midnight.
+ * the save sends the recipient's start and `duration_minutes` = the viewer-frame span (`spanMinutes`). An end past
+ * midnight CARRIES to the next day, the app's rule everywhere: mobile's chips and `resolveEndTime`, this form's
+ * `spanMinutes` / `shiftEndTimeStr`, the recipient-clock end row (`endTimeForDuration`) and the calendar's
+ * "next day" continuation. An absolute length lands the same on either clock, so the full length is laid onto
+ * the viewer's start, rolling over midnight.
  *
- * The one exception is the legacy same-zone cap (`addMinutesToTimeStr`: stop at 23:59): kept, byte for byte, when
- * the two clocks read the same (same zone, or no recipient clock yet: pass ''), so a same-zone save is unchanged.
- * It used to apply to the VIEWER's clock whatever the recipient's read, which cut lengths for anyone far from
- * the recipient: a Denver viewer adding "2 hrs" to an 18:30 Auckland task (the viewer's 22:30) saved 89 minutes.
+ * No 23:59 cap, the same zone included (mobile parity: a same-zone 22:30 + "2 hrs" saves 120 on the phone). The
+ * legacy cap (`addMinutesToTimeStr`) cut lengths: a same-zone 22:30 + "2 hrs" saved 89 minutes, and so did a
+ * Denver viewer adding "2 hrs" to an 18:30 Auckland task (the viewer's 22:30).
  */
-export function presetEndTimeStr(viewerStart: string, recipientStart: string, minutes: number): string {
+export function presetEndTimeStr(viewerStart: string, minutes: number): string {
   const viewer = parseTimeStr(viewerStart);
   if (viewer === null) return '';
-  const recipient = parseTimeStr(recipientStart);
-  if (recipient === null || recipient === viewer) return addMinutesToTimeStr(viewerStart, minutes);
   const total = (((viewer + minutes) % 1440) + 1440) % 1440;
   const h = Math.floor(total / 60);
   const m = total % 60;

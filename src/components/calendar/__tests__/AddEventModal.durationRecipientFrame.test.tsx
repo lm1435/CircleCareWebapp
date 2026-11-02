@@ -13,8 +13,8 @@ import { AddEventModal } from '../AddEventModal';
 // the default length used to cap the end at 23:59 on the VIEWER's clock, so a viewer far from the recipient lost
 // minutes: a Denver viewer adding "2 hrs" to an 18:30 Auckland task (the viewer's 22:30) saved 89. Now the chip's
 // full length is counted on the recipient's clock and an end past the recipient's midnight carries to the next
-// day (mobile's rule, and this form's recipient-clock end row's). Same zone: byte-identical to HEAD, the legacy
-// 23:59 cap included (see `presetEndTimeStr`).
+// day (mobile's rule, and this form's recipient-clock end row's). Same zone too: no 23:59 cap, the end carries
+// past midnight as on the phone (a same-zone 22:30 + "2 hrs" saved 89 on web, 120 on mobile; see `presetEndTimeStr`).
 //
 // The viewer zone is set per block (process.env.TZ); the recipient zone is the circle's. Date pinned 2027-02-10.
 
@@ -95,12 +95,14 @@ function viewerZone(zone: string) {
 }
 
 /** The same-zone request bodies HEAD (before the fix) posted, captured from it: the fix must not move a byte. */
-const SAME_ZONE_HEAD: Record<string, unknown> = {
+// Captured HEAD bodies with the duration corrected: HEAD saved 89 / 14 / 1440 / 89 here (the 23:59 cap; 23:59 +
+// "30 min" capped to an equal end, which reads as a 24-hour span). Every other byte is unchanged.
+const SAME_ZONE_EXPECTED: Record<string, unknown> = {
   '10:00|1 hr': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"10:00","duration_minutes":60,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
-  '22:30|2 hrs': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":89,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
-  '23:45|null': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:45","duration_minutes":14,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
-  '23:59|30 min': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:59","duration_minutes":1440,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
-  'appt|22:30|2 hrs': {"eventId":"appt-1","data":{"event_type":"appointment","title":"Cardiology","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":89,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"provider_id":null}},
+  '22:30|2 hrs': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":120,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
+  '23:45|null': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:45","duration_minutes":30,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
+  '23:59|30 min': {"event_type":"task","title":"Physio","scheduled_date":"2027-02-15","scheduled_time":"23:59","duration_minutes":30,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"entry_source":"form"},
+  'appt|22:30|2 hrs': {"eventId":"appt-1","data":{"event_type":"appointment","title":"Cardiology","scheduled_date":"2027-02-15","scheduled_time":"22:30","duration_minutes":120,"notifications_enabled":true,"reminder_at_due":true,"reminder_24h":false,"reminder_1h":false,"reminder_30m":false,"reminder_15m":false,"assigned_to":null,"provider_id":null}},
 };
 
 const DEN = 'America/Denver';
@@ -209,7 +211,7 @@ describe('Honolulu viewing Auckland', () => {
   });
 });
 
-describe('same zone (Denver viewing Denver): byte-identical to HEAD', () => {
+describe('same zone (Denver viewing Denver): the full length, carried past midnight (mobile parity)', () => {
   viewerZone(DEN);
   it.each([
     ['10:00', '1 hr' as Chip],
@@ -218,10 +220,14 @@ describe('same zone (Denver viewing Denver): byte-identical to HEAD', () => {
     ['23:59', '30 min' as Chip],
   ])('task %s + %s', async (time, chip) => {
     const body = await createTask(DEN, '2027-02-15', time, chip);
-    expect(JSON.stringify(body)).toBe(JSON.stringify(SAME_ZONE_HEAD[`${time}|${chip}`]));
+    expect(JSON.stringify(body)).toBe(JSON.stringify(SAME_ZONE_EXPECTED[`${time}|${chip}`]));
+  });
+  it('same zone 22:30 + "2 hrs" saves 120 (was 89 on web; 120 on mobile)', async () => {
+    const body = await createTask(DEN, '2027-02-15', '22:30', '2 hrs');
+    expect(body).toMatchObject({ scheduled_date: '2027-02-15', scheduled_time: '22:30', duration_minutes: 120 });
   });
   it('appointment edit 22:30 + "2 hrs"', async () => {
     const body = await editAppointmentChip(DEN, '2027-02-15', '22:30', '2 hrs');
-    expect(JSON.stringify(body)).toBe(JSON.stringify(SAME_ZONE_HEAD['appt|22:30|2 hrs']));
+    expect(JSON.stringify(body)).toBe(JSON.stringify(SAME_ZONE_EXPECTED['appt|22:30|2 hrs']));
   });
 });

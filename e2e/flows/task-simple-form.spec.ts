@@ -37,9 +37,13 @@ function shortDay(day: string): string {
   );
 }
 
-async function arrange(request: import('@playwright/test').APIRequestContext, label: string) {
+async function arrange(
+  request: import('@playwright/test').APIRequestContext,
+  label: string,
+  zone: string = RECIPIENT_TZ
+) {
   const owner = await createScopedAccount(label);
-  sqlExec(`update users set timezone = ${sqlStr(RECIPIENT_TZ)} where id = ${sqlStr(owner.userId)}::uuid;`);
+  sqlExec(`update users set timezone = ${sqlStr(zone)} where id = ${sqlStr(owner.userId)}::uuid;`);
   const session = await ownerApi(request, owner);
   const circleId = await createCircle(session, uniq(label));
   return { owner, circleId };
@@ -179,6 +183,52 @@ test('"2 hrs" on a start that is the BROWSER\'s 10:30 PM saves the full 120 minu
     expect(row.scheduled_date).toBe(tomorrow);
     expect(row.scheduled_time?.slice(0, 5)).toBe(start);
     expect(row.duration_minutes).toBe(120);
+  } finally {
+    sqlExec(`delete from calendar_events where circle_id = ${sqlStr(a.circleId)}::uuid and title = ${sqlStr(title)};`);
+  }
+});
+
+test('same zone: 10:30 PM + "2 hrs" saves the full 120 minutes, carried past midnight (mobile parity; was 89)', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  // Circle in the browser's own zone (Denver): no recipient/viewer gap. The phone saves 120 here; web used to
+  // keep the legacy 23:59 cap for the same zone and saved 89.
+  const a = await arrange(request, 'taskdursame', VIEWER_TZ);
+  await cookieLogin(context, a.owner, baseURL);
+  const title = `ZZ_E2E_TASK_DURATION_SAME_${uniqueSuffix()}`;
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: VIEWER_TZ }).format(new Date());
+  const d = new Date(`${today}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  const tomorrow = d.toISOString().slice(0, 10);
+  try {
+    const dialog = await openNewTask(page, a.circleId);
+    await dialog.locator('#title').fill(title);
+    await dialog.getByRole('radiogroup', { name: 'When?' }).getByRole('radio', { name: `Tomorrow, ${shortDay(tomorrow)}` }).click();
+    await dialog.getByRole('button', { name: 'Pick a time' }).click();
+    await dialog.locator('#scheduled_time').fill('22:30');
+    await dialog.getByRole('button', { name: /^More details/ }).click();
+    await dialog.getByRole('radio', { name: '2 hrs' }).click();
+    await expect(dialog.getByRole('radio', { name: '2 hrs' })).toBeChecked();
+    await dialog.getByRole('button', { name: 'Add task' }).click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+
+    await expect.poll(() => taskRows(a.circleId, title).length, { timeout: 15_000 }).toBe(1);
+    const [row] = taskRows(a.circleId, title);
+    expect(row.scheduled_date).toBe(tomorrow);
+    expect(row.scheduled_time?.slice(0, 5)).toBe('22:30');
+    expect(row.duration_minutes).toBe(120);
+
+    // The edit reopens the past-midnight end and an untouched save keeps the full length.
+    await page.getByRole('button', { name: `Edit "${title}"` }).first().click();
+    const editor = page.getByRole('dialog', { name: 'Edit task' });
+    await expect(editor).toBeVisible();
+    await expect(editor.locator('#title')).toHaveValue(title, { timeout: 15_000 });
+    await editor.getByRole('button', { name: 'Save changes' }).click();
+    await expect(editor).toBeHidden({ timeout: 20_000 });
+    await expect.poll(() => taskRows(a.circleId, title)[0], { timeout: 15_000 }).toEqual(row);
   } finally {
     sqlExec(`delete from calendar_events where circle_id = ${sqlStr(a.circleId)}::uuid and title = ${sqlStr(title)};`);
   }

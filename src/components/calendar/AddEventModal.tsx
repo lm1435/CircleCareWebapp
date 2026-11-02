@@ -325,10 +325,9 @@ const RECURRENCE_DAYS_NOTE_ID = 'recurrence_days-tznote';
 /**
  * The viewer's end time for a stored `duration_minutes`, ROLLING OVER midnight.
  *
- * Deliberately NOT `addMinutesToTimeStr`, which clamps at 23:59. That clamp
- * survives only for a duration chip / the default end while the viewer's clock
- * reads the recipient's (`presetEndTimeStr`). It is wrong here, because this is
- * reconstructing a duration that was already stored.
+ * Deliberately NOT `addMinutesToTimeStr`, which clamps at 23:59. That clamp is
+ * wrong here, because this is reconstructing a duration that was already stored
+ * (the duration chips / default end do not clamp either: `presetEndTimeStr`).
  *
  * With the clamp, a 22:00 appointment of 180 minutes hydrates as 23:59, passes
  * the `end > start` check, and an untouched Save writes `duration_minutes: 119`
@@ -1282,24 +1281,11 @@ function AddEventForm({
     }
   }, [timezone, dateStr, timeStr, heldInstant]);
   /**
-   * The end a duration chip or the default length gives the viewer-frame start `viewerStart`, the length counted
-   * on the RECIPIENT's clock, the frame the save is in (an end past midnight carries to the next day; the legacy
-   * 23:59 cap only where the two clocks agree): see `presetEndTimeStr`. A caller
-   * that has just resolved the recipient's wall clock for that start (and is setting the date in the same
-   * render, so `dateStr` here is still the old one) passes it as `knownRecipientStart`.
+   * The end a duration chip or the default length gives the viewer-frame start `viewerStart`: the full length,
+   * an end past midnight carrying to the next day (mobile's rule, no 23:59 cap): see `presetEndTimeStr`.
    */
-  function presetEndFor(viewerStart: string, minutes: number, knownRecipientStart?: string): string {
-    let recipientStart = knownRecipientStart ?? '';
-    if (knownRecipientStart === undefined && timezone && dateStr && viewerStart) {
-      try {
-        recipientStart =
-          eventDatesForApi({ dateStr, timeStr: viewerStart, recurrenceEndDateStr: null, timezone, heldInstant })
-            .scheduledTime ?? '';
-      } catch {
-        recipientStart = '';
-      }
-    }
-    return presetEndTimeStr(viewerStart, recipientStart, minutes);
+  function presetEndFor(viewerStart: string, minutes: number): string {
+    return presetEndTimeStr(viewerStart, minutes);
   }
   /** The time chip the form's time sits on, or null ("Other time" / no time). */
   const litChip = chipForTime(recipientClock);
@@ -2486,7 +2472,7 @@ function AddEventForm({
    * end; a moved start moves the end (the duration is kept, PK21); a first start gets the default duration,
    * except on an edit of a row saved without one. A medication has no end.
    */
-  function followEndTime(prevStart: string, nextStart: string, nextRecipientStart?: string): void {
+  function followEndTime(prevStart: string, nextStart: string): void {
     if (!nextStart) {
       setEndTimeStr('');
     } else if (!isMedication && endTimeStr && prevStart) {
@@ -2494,7 +2480,7 @@ function AddEventForm({
       if (shifted) setEndTimeStr(shifted);
       clearError('endTime');
     } else if (!isMedication && !endTimeStr && !isEditingWithoutDuration) {
-      setEndTimeStr(presetEndFor(nextStart, DEFAULT_DURATION_MINUTES, nextRecipientStart));
+      setEndTimeStr(presetEndFor(nextStart, DEFAULT_DURATION_MINUTES));
       clearError('endTime');
     }
   }
@@ -2608,7 +2594,7 @@ function AddEventForm({
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
     // A task's end follows its start exactly as the full form's time field made it (the med form has none).
-    if (!isMedication) followEndTime(timeStr, viewer.timeStr, next);
+    if (!isMedication) followEndTime(timeStr, viewer.timeStr);
   }
 
   /**
@@ -2631,7 +2617,7 @@ function AddEventForm({
     setDateStr(viewer.dateStr);
     setTimeStr(viewer.timeStr);
     setChipInstant(viewer.instant ?? null);
-    followEndTime(timeStr, viewer.timeStr, recipientClock);
+    followEndTime(timeStr, viewer.timeStr);
   }
 
   function openOtherDay(): void {
