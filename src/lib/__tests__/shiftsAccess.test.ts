@@ -13,7 +13,9 @@ describe('resolveShiftsEntry', () => {
     ['free manager / member WITH shifts -> readonly', { viewOnly: false, isPremiumCircle: false, isOwner: false, hasShifts: true }, 'readonly'],
     ['free circle, hasShifts false -> unchanged (teaser / hidden)', { viewOnly: false, isPremiumCircle: false, isOwner: true, hasShifts: false }, 'teaser'],
     ['premium circle with the flag present stays available', { viewOnly: false, isPremiumCircle: true, isOwner: false, hasShifts: true }, 'available'],
-    ['view-only seat stays hidden even with shifts', { viewOnly: true, isPremiumCircle: false, isOwner: false, hasShifts: true }, 'hidden'],
+    // 1.4.0 lapse audit #4: a view-only seat sees a lapsed circle's shifts read-only, like an active member.
+    ['view-only seat of a circle WITH shifts -> readonly', { viewOnly: true, isPremiumCircle: false, isOwner: false, hasShifts: true }, 'readonly'],
+    ['view-only seat with hasShifts false -> nothing', { viewOnly: true, isPremiumCircle: false, isOwner: false, hasShifts: false }, 'hidden'],
     ['view-only owner flag is never sold the teaser', { viewOnly: true, isPremiumCircle: false, isOwner: true }, 'hidden'],
   ];
   it.each(cases)('%s', (_name, input, expected) => {

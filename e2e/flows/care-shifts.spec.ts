@@ -620,4 +620,38 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
     );
     expect(ownerRes.status()).toBe(402);
   });
+
+  test('a VIEW-ONLY member sees the shifts read-only too (incl. one assigned to them), never a paywall (1.4.0 lapse audit #4)', async ({
+    request,
+    browser,
+    baseURL,
+  }) => {
+    const s = await lapsedScene(request);
+    const member = await createRunAccount('shlapsedviewonly', 'Noa', 'Viewonly');
+    addMembership(s.circleId, member.userId, 'member');
+    sqlExec(`
+      update circle_memberships set view_only = true
+       where circle_id = ${sqlStr(s.circleId)}::uuid and user_id = ${sqlStr(member.userId)}::uuid;
+      update calendar_events set assigned_to = ${sqlStr(member.userId)}::uuid
+       where circle_id = ${sqlStr(s.circleId)}::uuid and event_type = 'shift' and title = 'Night';
+    `);
+
+    const context = await browser.newContext();
+    await cookieLogin(context, member, baseURL);
+    const page = await context.newPage();
+    try {
+      await openShifts(page, s.circleId);
+      const week = page.getByTestId('shifts-week-view');
+      await expect(week).toBeVisible({ timeout: 20_000 });
+      await expect(week.getByRole('button', { name: /^Night, / })).toBeVisible();
+      await expect(page.getByTestId('shifts-readonly-notice')).toContainText('Shifts are read-only right now.');
+      await expect(page.getByRole('button', { name: 'Renew Premium' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Add shift' })).toHaveCount(0);
+      await expect(week.getByRole('button', { name: /^Take/ })).toHaveCount(0);
+      await expect(page.getByRole('dialog', { name: 'Share the care, shift by shift' })).toHaveCount(0);
+      await expect(page).not.toHaveURL(/\/upgrade/);
+    } finally {
+      await context.close();
+    }
+  });
 });

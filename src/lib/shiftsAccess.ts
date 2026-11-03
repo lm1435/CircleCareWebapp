@@ -2,7 +2,8 @@
 // User Flow step 1). Same inputs and fail-closed shape as `lib/aiAccess.ts`:
 // every input is already on the client from `useCircle(circleId)`.
 //
-//   view-only seat                     -> hidden
+//   view-only seat, circle has shifts  -> readonly    (1.4.0: sees them like an active member)
+//   view-only seat, no shifts          -> hidden
 //   premium benefits apply here        -> available   (every role)
 //   free circle, viewer is the OWNER   -> teaser      (-> paywall context 'shifts')
 //   free circle, manager / member      -> hidden      (never sold a paywall)
@@ -26,7 +27,10 @@ export function resolveShiftsEntry({
   isOwner,
   hasShifts = false,
 }: ShiftsEntryInput): ShiftsEntryState {
-  if (viewOnly) return 'hidden';
+  // A view-only seat (free-plan caregiver cap) sees existing shifts read-only, including
+  // the ones assigned to it; never a teaser or a paywall. The server sends `has_shifts`
+  // for this seat from 1.4.0.
+  if (viewOnly) return hasShifts ? 'readonly' : 'hidden';
   if (isPremiumCircle) return 'available';
   if (hasShifts) return 'readonly';
   return isOwner ? 'teaser' : 'hidden';
