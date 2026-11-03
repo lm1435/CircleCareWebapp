@@ -100,5 +100,13 @@
     "side": {
       "body": "Lembretes, doses tomadas, notas, compromissos e pessoas que entram, em todos os seus círculos, durante 3 dias. Abrir uma leva-o ao mesmo sítio que uma notificação no telemóvel."
     }
+  },
+  "trialCharge": {
+    "endsSentence": "O seu período experimental gratuito termina a {{date}}.",
+    "profileEnds": "O período experimental gratuito termina a {{date}}",
+    "chargeNoteStore": "Se não cancelar, a {{store}} vai cobrar {{price}} quando terminar. A {{store}} pode cobrar até 24 horas antes, por isso cancele pelo menos um dia antes se não quiser continuar.",
+    "chargeNoteStoreNoPrice": "Se não cancelar, a {{store}} vai cobrar o preço do seu plano quando terminar. A {{store}} pode cobrar até 24 horas antes, por isso cancele pelo menos um dia antes se não quiser continuar.",
+    "chargeNoteWeb": "A cobrança de {{price}} será feita a {{date}}, a menos que cancele antes.",
+    "chargeNoteWebNoPrice": "A cobrança do preço do seu plano será feita a {{date}}, a menos que cancele antes."
   }
 }

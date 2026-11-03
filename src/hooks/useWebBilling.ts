@@ -13,8 +13,10 @@ import {
   getWebOffering,
   purchasePackage,
   getManagementUrl,
+  getWebCustomerInfo,
   toWebPlan,
   type WebPlan,
+  type CustomerInfo,
 } from '@/lib/purchases';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 
@@ -32,13 +34,14 @@ export interface WebPlans {
 }
 
 /** Fetch the web offering's monthly/annual packages (with live Stripe prices). */
-export function useWebPlans(): UseQueryResult<WebPlans> {
+export function useWebPlans(enabled = true): UseQueryResult<WebPlans> {
   const userId = useAuthStore((s) => s.user?.id);
   return useQuery({
     queryKey: queryKeys.webOfferings,
     // Only run when billing is configured AND a user is logged in (the RC app
-    // user id must be the Supabase user id).
-    enabled: isWebBillingConfigured() && Boolean(userId),
+    // user id must be the Supabase user id). `enabled` lets the profile card
+    // read prices only while a web trial is showing.
+    enabled: enabled && isWebBillingConfigured() && Boolean(userId),
     staleTime: 5 * 60 * 1000, // prices rarely change; avoid refetch churn
     queryFn: async (): Promise<WebPlans> => {
       const offering = await getWebOffering(userId as string);
@@ -50,12 +53,16 @@ export function useWebPlans(): UseQueryResult<WebPlans> {
   });
 }
 
-/** Purchase a plan; on success refresh entitlement-dependent caches. */
-export function usePurchasePlan(): UseMutationResult<void, Error, WebPlan> {
+/**
+ * Purchase a plan; on success refresh entitlement-dependent caches. Resolves
+ * with RevenueCat's CustomerInfo from the purchase, so the success state can
+ * state the exact trial end / first charge (lib/trialCharge.ts).
+ */
+export function usePurchasePlan(): UseMutationResult<CustomerInfo | null, Error, WebPlan> {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   return useMutation({
-    mutationFn: async (plan: WebPlan): Promise<void> => {
+    mutationFn: async (plan: WebPlan): Promise<CustomerInfo | null> => {
       if (!user?.id) throw new Error('Not authenticated');
       // Pre-fill RC's checkout with the REGISTERED email so the user can't pay
       // under a different address (RC skips its email field when one is passed).
@@ -63,7 +70,8 @@ export function usePurchasePlan(): UseMutationResult<void, Error, WebPlan> {
       // through the cached current user to a live fetch.
       const cached = queryClient.getQueryData<{ email?: string }>(queryKeys.currentUser);
       const email = user.email || cached?.email || (await getCurrentUser()).email;
-      await purchasePackage(user.id, plan.rcPackage, email || undefined);
+      const result = await purchasePackage(user.id, plan.rcPackage, email || undefined);
+      return result?.customerInfo ?? null;
     },
     onSuccess: async () => {
       // Re-sync the cached tier with RevenueCat BEFORE refetching: the status
@@ -80,6 +88,29 @@ export function usePurchasePlan(): UseMutationResult<void, Error, WebPlan> {
         queryClient.invalidateQueries({ queryKey: queryKeys.subscriptionStatus }),
         queryClient.invalidateQueries({ queryKey: queryKeys.circles }),
       ]);
+    },
+  });
+}
+
+/**
+ * RevenueCat's CustomerInfo for the signed-in user, for the trial line on the
+ * profile's subscription card. RevenueCat holds every store's entitlement, so
+ * an App Store / Play trial shows here too. Only with Web Billing configured
+ * (the SDK needs its key) and only while the cached tier is premium.
+ */
+export function useWebCustomerInfo(enabled: boolean): UseQueryResult<CustomerInfo | null> {
+  const userId = useAuthStore((s) => s.user?.id);
+  return useQuery({
+    queryKey: ['webCustomerInfo', userId],
+    enabled: enabled && isWebBillingConfigured() && Boolean(userId),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await getWebCustomerInfo(userId as string);
+      } catch {
+        return null;
+      }
     },
   });
 }

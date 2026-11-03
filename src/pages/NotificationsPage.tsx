@@ -7,6 +7,7 @@ import { useCircles } from '@/hooks/useCircles';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useInbox, useMarkInboxRead } from '@/hooks/useInbox';
 import { Analytics } from '@/lib/analytics';
+import { noteAlertOpened } from '@/lib/reviewMoments';
 import { useRowFit } from '@/lib/largeText';
 import {
   groupInbox,
@@ -148,6 +149,11 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
       targetFound: destination.kind !== 'gone',
     });
     if (!item.read_at) markRead.mutate({ ids: [item.id] });
+    // A "not marked yet" alert opened: answering that circle's dose next is
+    // the "alert handled" store-review moment (lib/reviewMoments.ts).
+    if (item.type === 'medication_late' || item.type === 'medication_missed') {
+      noteAlertOpened(item.circle_id ?? null);
+    }
     if (destination.kind === 'gone') {
       returnFocusTo.current = item.id;
       setGone({ item, reason: destination.reason });

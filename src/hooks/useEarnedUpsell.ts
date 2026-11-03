@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Analytics } from '@/lib/analytics';
+import { notePaywallShown } from '@/lib/reviewMoments';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
@@ -71,6 +72,8 @@ export function useEarnedUpsell(enabled: boolean): void {
 
       const shownAt = Date.now();
       Analytics.upsellShown(trigger, impressionNumber);
+      // An upgrade ask is on screen: no store-review ask this session.
+      notePaywallShown();
       // Starts the server cooldown and advances the shared lifetime cap.
       void recordUpsellEvent('shown', trigger);
       // The ask is answered on /upgrade, so the outcome handlers close over THIS

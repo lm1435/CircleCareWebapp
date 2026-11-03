@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { captureException } from '@/lib/posthog';
+import { noteReviewBlockingError } from '@/lib/reviewMoments';
 import { Button, Text } from '@/components/ui';
 
 // Web ErrorBoundary (parity with mobile's components/ui/ErrorBoundary). Without
@@ -98,6 +99,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Never ask for a review right after the user saw something break.
+    noteReviewBlockingError();
     // Forward to PostHog ($exception) so it feeds the admin error digest; a
     // boundary "handles" the error, so capture_exceptions wouldn't see it.
     //

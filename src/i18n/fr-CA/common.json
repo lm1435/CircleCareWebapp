@@ -28,5 +28,11 @@
     "fromEmailDate": "Depuis votre courriel · {{date}}",
     "ok": "OK",
     "seeCircles": "Voir vos cercles"
+  },
+  "trialCharge": {
+    "chargeNoteStore": "Sauf annulation, {{store}} facturera {{price}} à la fin de l’essai. {{store}} peut facturer jusqu’à 24 heures plus tôt : annulez au moins un jour avant si vous ne souhaitez pas continuer.",
+    "chargeNoteStoreNoPrice": "Sauf annulation, {{store}} facturera le prix de votre forfait à la fin de l’essai. {{store}} peut facturer jusqu’à 24 heures plus tôt : annulez au moins un jour avant si vous ne souhaitez pas continuer.",
+    "chargeNoteWeb": "{{price}} vous sera facturé le {{date}}, sauf si vous annulez avant.",
+    "chargeNoteWebNoPrice": "Le prix de votre forfait vous sera facturé le {{date}}, sauf si vous annulez avant."
   }
 }

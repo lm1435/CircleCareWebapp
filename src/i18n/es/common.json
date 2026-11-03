@@ -254,5 +254,15 @@
     "scopedSubtitle_one": "{{name}} · {{count}} nueva",
     "scopedSubtitle_other": "{{name}} · {{count}} nuevas",
     "allNotifications": "Todas las notificaciones"
+  },
+  "trialCharge": {
+    "endsSentence": "Tu prueba gratis termina el {{date}}.",
+    "profileEnds": "La prueba gratis termina el {{date}}",
+    "chargeNoteStore": "Si no cancelas, {{store}} te cobrará {{price}} cuando termine. {{store}} puede cobrar hasta 24 horas antes, así que cancela al menos un día antes si no quieres continuar.",
+    "chargeNoteStoreNoPrice": "Si no cancelas, {{store}} te cobrará el precio de tu plan cuando termine. {{store}} puede cobrar hasta 24 horas antes, así que cancela al menos un día antes si no quieres continuar.",
+    "chargeNoteWeb": "Se te cobrará {{price}} el {{date}}, a menos que canceles antes.",
+    "chargeNoteWebNoPrice": "Se te cobrará el precio de tu plan el {{date}}, a menos que canceles antes.",
+    "storeApple": "Apple",
+    "storeGoogle": "Google Play"
   }
 }

@@ -27,6 +27,7 @@ import { classifyShiftFailure, describeShiftFailure } from '@/lib/shiftErrors';
 import { failureContext, type FailureAction } from '@/lib/apiErrors';
 import { queryKeys } from '@/lib/queryKeys';
 import { Analytics } from '@/lib/analytics';
+import { raiseReviewMoment } from '@/lib/reviewMoments';
 import { useAuthStore } from '@/store/authStore';
 import {
   canTakeFuture,
@@ -345,6 +346,8 @@ export function useTakeShift(
     },
     onSuccess: (_result, { scope, reminder }) => {
       Analytics.shiftTaken({ scope, reminderChanged: reminder !== undefined });
+      // Covering a shift is a store-review moment (lib/reviewMoments.ts).
+      raiseReviewMoment('shift_covered');
     },
     onError: (error, _vars, context) => {
       rollback(queryClient, context?.snapshot);

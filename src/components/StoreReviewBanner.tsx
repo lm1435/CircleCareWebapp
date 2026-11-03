@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui';
 import { useDevicePlatforms } from '@/hooks/useDevicePlatforms';
 import { Analytics } from '@/lib/analytics';
 import type { DevicePlatform } from '@/api/pushTokens';
+import {
+  consumeReviewMoment,
+  getReadyReviewTrigger,
+  subscribeReviewMoments,
+} from '@/lib/reviewMoments';
 
 export const STORE_REVIEW_STATE_KEY = 'cc_store_review_state';
 
@@ -14,7 +19,9 @@ const STORE_LINKS: Record<DevicePlatform, string> = {
   android: 'https://play.google.com/store/apps/details?id=com.circlecare.circlecare',
 };
 
-const MIN_DAYS_SINCE_FIRST_SEEN = 3;
+const MIN_DAYS_SINCE_FIRST_SEEN = 2;
+/** Web has no OS cap, so it keeps its own: one showing per 30 days at most. */
+const MIN_DAYS_BETWEEN_SHOWS = 30;
 const SNOOZE_DAYS_AFTER_DISMISS = 90;
 const MAX_DISMISSALS = 3;
 const DAY_MS = 1000 * 60 * 60 * 24;
@@ -24,6 +31,7 @@ interface StoreReviewState {
   dismissedAt?: string;
   dismissCount?: number;
   done?: boolean;
+  lastShownAt?: string;
 }
 
 function readState(): StoreReviewState {
@@ -55,6 +63,10 @@ function eligible(state: StoreReviewState, now: Date): boolean {
     const days = (now.getTime() - new Date(state.dismissedAt).getTime()) / DAY_MS;
     if (!(days >= SNOOZE_DAYS_AFTER_DISMISS)) return false;
   }
+  if (state.lastShownAt) {
+    const days = (now.getTime() - new Date(state.lastShownAt).getTime()) / DAY_MS;
+    if (!(days >= MIN_DAYS_BETWEEN_SHOWS)) return false;
+  }
   if (!state.firstSeenAt) return false;
   const sinceFirst = (now.getTime() - new Date(state.firstSeenAt).getTime()) / DAY_MS;
   return sinceFirst >= MIN_DAYS_SINCE_FIRST_SEEN;
@@ -67,9 +79,14 @@ function eligible(state: StoreReviewState, now: Date): boolean {
  * no silent suppression. Gates:
  *  - the user has the app (an active push token row → `useDevicePlatforms`);
  *    a web-only user is NEVER asked — there is nothing for them to rate;
- *  - first eligibility only starts a 3-day clock (no ask on the visit that
- *    discovers the device), mirroring mobile's "not on day one" spirit;
- *  - dismiss snoozes 90 days, 3 dismissals end it, rating ends it.
+ *  - it waits for a GOOD MOMENT (lib/reviewMoments.ts, the same four as
+ *    mobile: first invitee joined, a week of doses, a shift covered, an alert
+ *    handled), after the user has paused, never after a failure or in a tab
+ *    session that showed a paywall;
+ *  - first eligibility only starts a 2-day clock (no ask on the visit that
+ *    discovers the device), mirroring mobile's "not on day one" gate;
+ *  - at most one showing per 30 days; dismiss snoozes 90 days, 3 dismissals
+ *    end it, rating ends it.
  * State is per-browser localStorage: independent of mobile's install budget,
  * which the OS enforces separately anyway.
  */
@@ -93,19 +110,30 @@ export function StoreReviewBanner(): ReactElement | null {
     setState(next);
   }, [platform, state]);
 
-  const visible = platform !== null && eligible(state, new Date());
+  const trigger = useSyncExternalStore(subscribeReviewMoments, getReadyReviewTrigger, () => null);
+  // `shownTrigger` keeps the banner up once it has appeared, even though
+  // showing it stamps `lastShownAt` (which would otherwise fail `eligible`).
+  const [shownTrigger, setShownTrigger] = useState<typeof trigger>(null);
+  const visible =
+    platform !== null && (shownTrigger !== null || (trigger !== null && eligible(state, new Date())));
 
   useEffect(() => {
-    if (visible && platform && !shown.current) {
+    if (visible && platform && trigger && !shown.current) {
       shown.current = true;
-      Analytics.storeReviewAskShown(platform);
+      setShownTrigger(trigger);
+      Analytics.reviewPromptShown(trigger, platform);
+      const next = { ...state, lastShownAt: new Date().toISOString() };
+      writeState(next);
+      setState(next);
     }
-  }, [visible, platform]);
+  }, [visible, platform, trigger, state]);
 
   if (!visible || !platform) return null;
 
   const resolve = (action: 'rated' | 'dismissed'): void => {
     Analytics.storeReviewAskResolved(action, platform);
+    consumeReviewMoment();
+    setShownTrigger(null);
     const next: StoreReviewState =
       action === 'rated'
         ? { ...state, done: true }

@@ -24,6 +24,8 @@ vi.mock('@/components/ui', async (importOriginal) => {
   return { ...actual, useToast: () => ({ showToast }) };
 });
 
+const mockNoteDoseAnswered = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/reviewMoments', () => ({ noteDoseAnswered: mockNoteDoseAnswered }));
 vi.mock('@/lib/analytics', () => ({
   Analytics: { medicationConfirmed: vi.fn(), errorOccurred: vi.fn() },
 }));
@@ -284,6 +286,8 @@ describe('useConfirmMedication', () => {
     // forever. Awaiting those would have deadlocked this assertion.
     expect(confirmation).toEqual({ id: 'conf-2' });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // Store-review bookkeeping (lib/reviewMoments.ts): the circle and the status enum only.
+    expect(mockNoteDoseAnswered).toHaveBeenCalledWith(CIRCLE_ID, 'taken');
   });
 
   // THE CAP. This QueryClient runs `networkMode: 'online'` in production

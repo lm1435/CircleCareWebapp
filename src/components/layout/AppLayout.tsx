@@ -23,6 +23,7 @@ import { resolveShiftsEntry } from '@/lib/shiftsAccess';
 import { ShiftComposer } from '@/components/shifts/ShiftComposer';
 import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
 import { trackCirclesLoaded } from '@/lib/onboardingAnalytics';
+import { observeCircleMembers } from '@/lib/reviewMoments';
 import { hasEmailLinkItemTarget, reportEmailLinkLanding } from '@/lib/emailLinkLanding';
 
 /**
@@ -229,6 +230,10 @@ export function AppLayout(): ReactElement {
   // CircleSwitcher already runs this query (same React Query key) — this adds
   // no extra fetch. Guards in the module make it once-per-browser.
   const { data: allCircles } = useCircles();
+  // Store-review moment: the first person joining a circle this user owns.
+  useEffect(() => {
+    observeCircleMembers(allCircles);
+  }, [allCircles]);
   useEffect(() => {
     if (allCircles) trackCirclesLoaded(allCircles.length);
   }, [allCircles]);

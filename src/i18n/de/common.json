@@ -254,5 +254,15 @@
     "scopedSubtitle_one": "{{name}} · {{count}} neu",
     "scopedSubtitle_other": "{{name}} · {{count}} neu",
     "allNotifications": "Alle Benachrichtigungen"
+  },
+  "trialCharge": {
+    "endsSentence": "Ihr kostenloser Testzeitraum endet am {{date}}.",
+    "profileEnds": "Testzeitraum endet am {{date}}",
+    "chargeNoteStore": "Wenn Sie nicht kündigen, berechnet {{store}} zum Ende {{price}}. {{store}} kann bis zu 24 Stunden früher abbuchen. Kündigen Sie also mindestens einen Tag vorher, wenn Sie nicht weitermachen möchten.",
+    "chargeNoteStoreNoPrice": "Wenn Sie nicht kündigen, berechnet {{store}} zum Ende den Preis Ihres Tarifs. {{store}} kann bis zu 24 Stunden früher abbuchen. Kündigen Sie also mindestens einen Tag vorher, wenn Sie nicht weitermachen möchten.",
+    "chargeNoteWeb": "Am {{date}} werden Ihnen {{price}} berechnet, wenn Sie nicht vorher kündigen.",
+    "chargeNoteWebNoPrice": "Am {{date}} wird Ihnen der Preis Ihres Tarifs berechnet, wenn Sie nicht vorher kündigen.",
+    "storeApple": "Apple",
+    "storeGoogle": "Google Play"
   }
 }

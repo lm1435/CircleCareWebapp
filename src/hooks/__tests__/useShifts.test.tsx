@@ -30,6 +30,8 @@ vi.mock('@/hooks/useCircle', () => ({
     members: [{ id: 'u-bo', first_name: 'Bo', last_name: 'R', email: 'bo@x.test' }],
   }),
 }));
+const mockRaiseReviewMoment = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/reviewMoments', () => ({ raiseReviewMoment: mockRaiseReviewMoment }));
 vi.mock('@/hooks/usePremiumGate', () => ({ usePremiumGate: () => ({ promptUpgrade: vi.fn() }) }));
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
@@ -171,7 +173,8 @@ describe('optimistic take / drop / assign only move the rows the server will mov
     await waitFor(() => expect(assignees(cached())).toEqual(assignees(ROWS())));
     expect(Analytics.shiftTakeConflict).toHaveBeenCalled();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.shifts(CIRCLE) });
-    expect(Analytics.shiftTaken).not.toHaveBeenCalled();
+    expect(Analytics.shiftTaken).not.toHaveBeenCalled();    // A failed take is never a review moment.
+    expect(mockRaiseReviewMoment).not.toHaveBeenCalled();
   });
 
   it('a success invalidates every shifts range (a future split re-keys the series)', async () => {
@@ -182,6 +185,8 @@ describe('optimistic take / drop / assign only move the rows the server will mov
       await result.current.mutateAsync({ shift: ROWS()[0], scope: 'future' });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.shifts(CIRCLE) });
+    // Covering a shift is a store-review moment (lib/reviewMoments.ts).
+    expect(mockRaiseReviewMoment).toHaveBeenCalledWith('shift_covered');
   });
 });
 

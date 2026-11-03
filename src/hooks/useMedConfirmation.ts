@@ -43,6 +43,7 @@ import {
   verifyConfirmLanded,
 } from '@/lib/confirmVerify';
 import { doseAlreadyRecorded } from '@/lib/doseAlreadyRecorded';
+import { noteDoseAnswered } from '@/lib/reviewMoments';
 
 // Plan Tasks 23 + 39 — confirm mutation + today's meds query.
 //
@@ -208,6 +209,9 @@ export function useConfirmMedication(
     },
     onSuccess: (confirmation, variables) => {
       const circleId = variables.circleId ?? hookCircleId;
+      // Store-review moments (lib/reviewMoments.ts): a week of dose days, an
+      // alert answered; any answer is also activity (no ask mid-batch).
+      noteDoseAnswered(circleId, variables.status);
       // PHI-safe: only circle_id + the status enum (never the medication name).
       if (variables.entry) {
         Analytics.medicationConfirmed(circleId, variables.status, source, variables.entry);

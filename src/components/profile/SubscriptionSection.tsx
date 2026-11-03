@@ -1,11 +1,13 @@
-import type { ReactElement } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Skeleton, Text, useToast } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
-import { useManageSubscription } from '@/hooks/useWebBilling';
+import { useManageSubscription, useWebCustomerInfo, useWebPlans } from '@/hooks/useWebBilling';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
+import { trialChargeFrom, trialChargeNote, trialEndsLine } from '@/lib/trialCharge';
+import { Analytics } from '@/lib/analytics';
 
 /**
  * Subscription card on the profile page.
@@ -20,13 +22,34 @@ import { isWebBillingConfigured } from '@/lib/webBillingConfig';
  * original in-app upgrade pointer + store badges.
  */
 export function SubscriptionSection(): ReactElement {
-  const { t } = useTranslation('profile');
+  const { t, i18n } = useTranslation(['profile', 'common']);
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { data, isLoading } = useSubscriptionStatus();
   const manage = useManageSubscription();
   const isPremium = data?.tier === 'premium';
   const webBilling = isWebBillingConfigured();
+
+  // IN A FREE TRIAL: when it ends and what the first charge is, from
+  // RevenueCat's entitlement (any store; lib/trialCharge.ts). The price is
+  // stated only for a web plan, whose localized Stripe price this page knows.
+  const { data: customerInfo } = useWebCustomerInfo(isPremium);
+  const trialCharge = isPremium ? trialChargeFrom(customerInfo) : null;
+  const { data: webPlans } = useWebPlans(trialCharge?.store === 'web');
+  const trialPrice =
+    trialCharge?.store === 'web'
+      ? [webPlans?.annual, webPlans?.monthly].find(
+          (p) => p && p.rcPackage.webBillingProduct.identifier === trialCharge.productIdentifier
+        )?.formattedPrice ?? null
+      : null;
+  const trialStore = trialCharge?.store;
+  const trialNoticeSent = useRef(false);
+  useEffect(() => {
+    if (trialStore && !trialNoticeSent.current) {
+      trialNoticeSent.current = true;
+      Analytics.trialChargeNoticeShown('profile', trialStore);
+    }
+  }, [trialStore]);
 
   // A web-managed (Stripe) subscription returns a portal URL; an Apple/Google
   // sub purchased in the mobile app has no web-manageable URL — point the user
@@ -54,6 +77,14 @@ export function SubscriptionSection(): ReactElement {
               {t('subscription.premium')}
             </Badge>
             <Text variant="caption">{t('subscription.premiumDescription')}</Text>
+            {trialCharge && (
+              <div data-testid="subscription-trial-charge" className="flex flex-col gap-1">
+                <Text variant="bodyMedium">{trialEndsLine(t, i18n.language, trialCharge)}</Text>
+                <Text variant="caption">
+                  {trialChargeNote(t, i18n.language, trialCharge, trialPrice)}
+                </Text>
+              </div>
+            )}
             {/* Always rendered. This used to be gated on web billing being
                 configured, which meant a premium subscriber could see their
                 plan with no cancellation affordance at all. If the sub was

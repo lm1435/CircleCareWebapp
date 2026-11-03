@@ -28,7 +28,7 @@ import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAccountTimezone } from '@/hooks/useAccountTimezone';
 import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { readBrowserTimezone, webCheckoutVerdict } from '@/lib/checkoutCountry';
-import { isUserCancelledError, PREMIUM_ENTITLEMENT, type WebPlan } from '@/lib/purchases';
+import { isUserCancelledError, type WebPlan } from '@/lib/purchases';
 import { notePaywallShown } from '@/lib/reviewMoments';
 import { trialChargeFrom, trialStartedMessage } from '@/lib/trialCharge';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
@@ -293,7 +293,7 @@ export default function UpgradePage(): ReactElement {
         if (plan.hasFreeTrial) Analytics.planSelectionTrialStarted(planKey, paywallContext);
         // A TRIAL started: the exact end date and first charge, from the
         // entitlement RevenueCat returned, never from what the page advertised.
-        const charge = trialChargeFrom(customerInfo, PREMIUM_ENTITLEMENT);
+        const charge = trialChargeFrom(customerInfo);
         if (charge) {
           Analytics.trialChargeNoticeShown('paywall', charge.store);
           setTrialNotice(trialStartedMessage(t, i18n.language, charge, plan.formattedPrice));

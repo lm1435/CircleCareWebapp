@@ -254,5 +254,15 @@
     "scopedSubtitle_one": "{{name}} · {{count}} nouvelle",
     "scopedSubtitle_other": "{{name}} · {{count}} nouvelles",
     "allNotifications": "Toutes les notifications"
+  },
+  "trialCharge": {
+    "endsSentence": "Votre essai gratuit prend fin le {{date}}.",
+    "profileEnds": "Fin de l’essai gratuit le {{date}}",
+    "chargeNoteStore": "Sauf résiliation, {{store}} prélèvera {{price}} à la fin de l’essai. {{store}} peut prélever jusqu’à 24 heures plus tôt : résiliez au moins un jour avant si vous ne souhaitez pas continuer.",
+    "chargeNoteStoreNoPrice": "Sauf résiliation, {{store}} prélèvera le prix de votre formule à la fin de l’essai. {{store}} peut prélever jusqu’à 24 heures plus tôt : résiliez au moins un jour avant si vous ne souhaitez pas continuer.",
+    "chargeNoteWeb": "{{price}} vous sera facturé le {{date}}, sauf si vous résiliez avant.",
+    "chargeNoteWebNoPrice": "Le prix de votre formule vous sera facturé le {{date}}, sauf si vous résiliez avant.",
+    "storeApple": "Apple",
+    "storeGoogle": "Google Play"
   }
 }

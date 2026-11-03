@@ -50,6 +50,7 @@ type PurchasesInstance = import('@revenuecat/purchases-js').Purchases;
 type Offering = import('@revenuecat/purchases-js').Offering;
 type Package = import('@revenuecat/purchases-js').Package;
 type PurchaseResult = import('@revenuecat/purchases-js').PurchaseResult;
+export type CustomerInfo = import('@revenuecat/purchases-js').CustomerInfo;
 
 // Cached dynamic-import promise so repeated calls share one fetch, plus a
 // synchronous snapshot of the resolved module for `isUserCancelledError`
@@ -204,6 +205,12 @@ export async function purchasePackage(
 ): Promise<PurchaseResult> {
   const purchases = await getPurchases(userId);
   return purchases.purchase({ rcPackage: pkg, customerEmail });
+}
+
+/** RevenueCat's CustomerInfo for the user (every store's entitlements). */
+export async function getWebCustomerInfo(userId: string): Promise<CustomerInfo> {
+  const purchases = await getPurchases(userId);
+  return purchases.getCustomerInfo();
 }
 
 /** Stripe/RevenueCat subscription-management URL for the user, if any. */

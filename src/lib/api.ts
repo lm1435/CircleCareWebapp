@@ -6,6 +6,7 @@ import { API_TIMEOUT } from '@/constants/config';
 import { isOfflineNow } from '@/hooks/useIsOffline';
 import { offlineWriteRejection } from './offlineWrite';
 import { noteIdempotencyHeaders } from './idempotentWrite';
+import { noteReviewBlockingError } from './reviewMoments';
 
 // PORT of mobile/src/api/client.ts adapted for the web threat model:
 // - Access token: in memory only (tokenAccessor). Authorization: Bearer on every call.
@@ -231,6 +232,23 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
+
+    // No store-review banner right after something failed (lib/reviewMoments.ts):
+    // no answer, a server error, or a refused write. Not a 401 (refreshed), not
+    // a 402 (the paywall reports itself), not a failed read (often a stale row).
+    const failedStatus = error.response?.status;
+    const isWrite = (originalRequest?.method ?? 'get').toLowerCase() !== 'get';
+    if (
+      failedStatus === undefined ||
+      failedStatus >= 500 ||
+      (isWrite && failedStatus >= 400 && failedStatus !== 401 && failedStatus !== 402)
+    ) {
+      try {
+        noteReviewBlockingError();
+      } catch {
+        // Never change what the caller's handler receives.
+      }
+    }
 
     // 402 Payment Required — no purchase flow on web. The caller's own error
     // handler shows contextual feedback (banner/toast + "open the app" CTA).

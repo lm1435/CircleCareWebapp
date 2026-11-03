@@ -254,5 +254,15 @@
     "scopedSubtitle_one": "{{name}} · {{count}} new",
     "scopedSubtitle_other": "{{name}} · {{count}} new",
     "allNotifications": "All notifications"
+  },
+  "trialCharge": {
+    "endsSentence": "Your free trial ends {{date}}.",
+    "profileEnds": "Free trial ends {{date}}",
+    "chargeNoteStore": "Unless you cancel, {{store}} will charge {{price}} when it ends. {{store}} can charge up to 24 hours early, so cancel at least a day before if you don't want to continue.",
+    "chargeNoteStoreNoPrice": "Unless you cancel, {{store}} will charge your plan's price when it ends. {{store}} can charge up to 24 hours early, so cancel at least a day before if you don't want to continue.",
+    "chargeNoteWeb": "You'll be charged {{price}} on {{date}} unless you cancel before then.",
+    "chargeNoteWebNoPrice": "You'll be charged your plan's price on {{date}} unless you cancel before then.",
+    "storeApple": "Apple",
+    "storeGoogle": "Google Play"
   }
 }

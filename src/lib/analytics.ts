@@ -614,6 +614,17 @@ export const Analytics = {
   planSelectionTrialStarted: (plan: PlanKey, paywallContext: PaywallContext = DEFAULT_PAYWALL_CONTEXT) =>
     capture('plan_selection_trial_started', { plan, paywall_context: paywallContext }),
 
+  /**
+   * The exact trial-end / first-charge notice was shown (lib/trialCharge.ts):
+   * on the purchase success state ('paywall') or the profile subscription card
+   * ('profile', once per visit). Enums only: never the date or the price.
+   */
+  trialChargeNoticeShown: (surface: 'paywall' | 'profile', store: 'apple' | 'google' | 'web') =>
+    capture('trial_charge_notice_shown', {
+      surface: pickEnum(surface, ['paywall', 'profile'], 'paywall'),
+      store: pickEnum(store, ['apple', 'google', 'web'], 'web'),
+    }),
+
   /** The user opened checkout and backed out of it. Distinct from
    *  `paywall_dismissed`: they engaged with the offer and then declined at the
    *  payment step, which is a different signal from never starting. */
@@ -1640,9 +1651,21 @@ export const Analytics = {
 
   // --- Settings (web-new) ---
   languageChanged: (language: string) => capture('language_changed', { language }),
-  /** Store-review ask (web): shown only to users with a registered mobile device. */
-  storeReviewAskShown: (platform: 'ios' | 'android') =>
-    capture('store_review_ask_shown', { platform }),
+  /**
+   * Store-review ask (web banner, lib/reviewMoments.ts): shown only to users
+   * with a registered mobile device, at one of the four good moments. Same
+   * event name and trigger enum as mobile's native prompt; `platform` is the
+   * store the banner links to. Replaced `store_review_ask_shown` 2026-11-03.
+   */
+  reviewPromptShown: (
+    trigger: 'member_joined' | 'doses_week' | 'shift_covered' | 'alert_handled',
+    platform: 'ios' | 'android'
+  ) =>
+    capture('review_prompt_shown', {
+      trigger: pickEnum(trigger, ['member_joined', 'doses_week', 'shift_covered', 'alert_handled'], 'member_joined'),
+      platform,
+      surface: 'web_banner',
+    }),
   storeReviewAskResolved: (action: 'rated' | 'dismissed', platform: 'ios' | 'android') =>
     capture('store_review_ask_resolved', { action, platform }),
   /** Browser auto-translate detected; banner offered switching the account language. */

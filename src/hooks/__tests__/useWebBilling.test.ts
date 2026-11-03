@@ -108,7 +108,8 @@ describe('usePurchasePlan', () => {
     const { result } = renderHook(() => usePurchasePlan(), { wrapper: wrapper(client) });
     await expect(
       result.current.mutateAsync({ rcPackage: { identifier: '$rc_monthly' } } as never)
-    ).resolves.toBeUndefined();
+      // Resolves with the purchase's CustomerInfo (null when RevenueCat sent none).
+    ).resolves.toBeNull();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['subscription-status'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['circles'] });
   });
