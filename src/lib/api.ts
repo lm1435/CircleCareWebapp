@@ -5,6 +5,7 @@ import { hasTraversalSegment } from './routeIds';
 import { API_TIMEOUT } from '@/constants/config';
 import { isOfflineNow } from '@/hooks/useIsOffline';
 import { offlineWriteRejection } from './offlineWrite';
+import { noteIdempotencyHeaders } from './idempotentWrite';
 
 // PORT of mobile/src/api/client.ts adapted for the web threat model:
 // - Access token: in memory only (tokenAccessor). Authorization: Bearer on every call.
@@ -204,8 +205,14 @@ apiClient.interceptors.request.use(
 
 // Response interceptor: unwrap `{ success, data, error }` envelope + 401 retry
 apiClient.interceptors.response.use(
-  (response) => response.data, // Extract envelope from success responses
+  (response) => {
+    // Records `Idempotency-Supported` (and marks a replayed body) before the
+    // envelope is extracted — see lib/idempotentWrite.ts.
+    noteIdempotencyHeaders(response.headers, response.data);
+    return response.data; // Extract envelope from success responses
+  },
   async (error: AxiosError) => {
+    noteIdempotencyHeaders(error.response?.headers);
     const originalRequest = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;

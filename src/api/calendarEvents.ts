@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiClient } from '@/lib/api';
+import { sendIdempotentWrite } from '@/lib/idempotentWrite';
 import { ENTRY_SOURCES, type EntrySource } from '@/utils/entrySource';
 
 // PORT of mobile/src/api/calendarEvents.ts (read-only subset needed by the web
@@ -603,9 +604,12 @@ export async function createEvent(
   circleId: string,
   data: CreateEventRequest
 ): Promise<CalendarEvent> {
-  const response = (await apiClient.post(
-    `/circles/${circleId}/events`,
-    data
+  // One Idempotency-Key per save: a lost response is retried with it and the
+  // backend replays the first answer instead of writing a second event.
+  const response = (await sendIdempotentWrite('event_create', (config) =>
+    config
+      ? apiClient.post(`/circles/${circleId}/events`, data, config)
+      : apiClient.post(`/circles/${circleId}/events`, data)
   )) as unknown as SingleEventEnvelope;
   return response.data.event;
 }
@@ -621,9 +625,10 @@ export async function updateEvent(
   eventId: string,
   data: UpdateEventRequest
 ): Promise<CalendarEvent> {
-  const response = (await apiClient.patch(
-    `/circles/${circleId}/events/${eventId}`,
-    data
+  const response = (await sendIdempotentWrite('event_update', (config) =>
+    config
+      ? apiClient.patch(`/circles/${circleId}/events/${eventId}`, data, config)
+      : apiClient.patch(`/circles/${circleId}/events/${eventId}`, data)
   )) as unknown as SingleEventEnvelope;
   return response.data.event;
 }

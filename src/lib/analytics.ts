@@ -1251,6 +1251,31 @@ export const Analytics = {
    * through `sanitizeErrorText` so a future call site that reaches for
    * `err.message` cannot publish an email, a JWT or an invite code.
    */
+  /**
+   * `api_write_retried` — mobile parity (mobile/src/services/analytics.ts). A
+   * create/edit whose first attempt failed AMBIGUOUSLY (no answer, 5xx-family,
+   * "still in progress") was retried with the same Idempotency-Key
+   * (lib/idempotentWrite.ts). `replayed` = the first attempt had landed. On web
+   * `backgrounded` means the tab was hidden or offline when it failed. Enums,
+   * counts, booleans only: no circle id, no names.
+   */
+  apiWriteRetried: (props: {
+    operation: 'event_create' | 'event_update';
+    cause: string;
+    attempts: number;
+    outcome: 'recovered' | 'failed';
+    replayed: boolean;
+    backgrounded: boolean;
+  }) =>
+    capture('api_write_retried', {
+      operation: props.operation,
+      cause: sanitizeErrorText(props.cause),
+      attempts: props.attempts,
+      outcome: props.outcome,
+      replayed: props.replayed,
+      backgrounded: props.backgrounded,
+    }),
+
   entrySaveFailed: (
     circleId: string,
     entityType: string,
