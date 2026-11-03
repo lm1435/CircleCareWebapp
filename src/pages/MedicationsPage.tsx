@@ -151,6 +151,13 @@ interface MedGroup {
    * deep link (a daily-update dose row) opens the group holding that id.
    */
   ids: Set<string>;
+  /**
+   * N1 — per LIVE dose time (HH:MM), that time's own series row (a root when one
+   * is loaded, same preference as `event`). A twice-daily med is two series, so
+   * Edit from the 8:00 PM row must open the 20:00 series, never `event` (which
+   * is whichever series won the card). Delete stays whole-med via `event`.
+   */
+  timeEvents: Map<string, CalendarEvent>;
 }
 
 /**
@@ -283,6 +290,7 @@ function groupMedications(
         asNeeded: e.as_needed === true,
         reason: e.as_needed === true ? (e.as_needed_reason ?? null) : null,
         ids: new Set<string>(),
+        timeEvents: new Map<string, CalendarEvent>(),
       };
       groups.set(key, group);
     }
@@ -316,6 +324,12 @@ function groupMedications(
       const hhmm = rowTime.slice(0, 5);
       if (!group.times.includes(hhmm)) group.times.push(hhmm);
       if (live && !group.liveTimes.includes(hhmm)) group.liveTimes.push(hhmm);
+      if (live) {
+        const current = group.timeEvents.get(hhmm);
+        if (!current || representativeScore(e, true) > representativeScore(current, true)) {
+          group.timeEvents.set(hhmm, e);
+        }
+      }
     }
     // Any LIVE event of this key makes the whole med Active — a multi-series
     // med (8am + 8pm) stays Active while any one series still runs.
@@ -942,7 +956,7 @@ export default function MedicationsPage(): ReactElement {
     setDetailGroup(group);
   }
 
-  function handleEdit(group: MedGroup): void {
+  function handleEdit(group: MedGroup, target?: CalendarEvent): void {
     // Only a DISCONTINUED med is guarded (mobile's useMedicationActions keys on
     // `discontinued_at` too): reactivating an ENDED one is a no-op, so the
     // prompt would promise "Reactivated" and leave the editor closed.
@@ -951,7 +965,8 @@ export default function MedicationsPage(): ReactElement {
       setInactiveEditGroup(group);
       return;
     }
-    setEditingEvent(group.event);
+    // A time row edits THAT time's series (N1); a card edits the representative.
+    setEditingEvent(target ?? group.event);
   }
 
   async function handleReactivateForEdit(): Promise<void> {
@@ -1105,7 +1120,7 @@ export default function MedicationsPage(): ReactElement {
                     language={i18n.language}
                     canEdit={canEdit}
                     stacked={largeText}
-                    onEdit={handleEdit}
+                    onEdit={(g) => handleEdit(g, g.timeEvents.get(time))}
                     onToggleStatus={setStatusGroup}
                     onDelete={(g) => setDeletingEvent(g.event)}
                     onViewDetails={openMedDetail}

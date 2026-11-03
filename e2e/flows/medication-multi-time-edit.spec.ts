@@ -18,7 +18,7 @@ import { dayCell, gotoWeekContaining } from '../notesFirstClassShared';
 //   - the edited series' taken doses keep their old time and confirmations;
 //   - neither time is lost: both rows stay on the Meds page and both series
 //     keep producing future doses (E8).
-// The third test pins a NEW BUG (test.fail): the Meds page's 8:00 PM row opens
+// The third test pins bug N1 (was test.fail, now fixed): the Meds page's 8:00 PM row opened
 // the 8:00 AM series in the editor.
 //
 // Seeded through the real API on this worker's circle (confirm endpoint for the
@@ -276,21 +276,21 @@ test('editing the evening time of a twice-daily medication from the Calendar kee
   await assertOnlyOneTimeMoved(page, circleId, s, s.evening, '20:00', '21:00', s.morning, '08:00', otherBefore, confs, ['8:00 AM', '9:00 PM']);
 });
 
-// NEW BUG (2026-11-02): on the Meds page every time row of a multi-time medication
+// BUG N1 (found 2026-11-02, fixed): on the Meds page every time row of a multi-time medication
 // carries the medication's GROUP, and Edit opens `group.event` — the first time's
 // series (MedicationsPage.tsx `handleEdit` -> `setEditingEvent(group.event)`;
 // the rows are built in `timedGroups` with `item: group` for each time). So "More
 // actions -> Edit" on the 8:00 PM row opens the editor on 08:00, and a caregiver who
 // changes that time to move the evening dose moves the MORNING dose instead.
 // Mobile builds its rows the same way (MedicationHistoryScreen `dayPartGroups`).
-// Marked test.fail so the suite stays honest; remove the marker when fixed.
+// Pinned as test.fail in 482c031 (bug N1); fixed: each time row carries its own
+// series (`MedGroup.timeEvents`) and Edit opens it.
 test('the Meds page Edit on the 8:00 PM row of a twice-daily medication edits the 8:00 PM time', async ({
   page,
   request,
   account,
   circleId,
 }) => {
-  test.fail(true, 'NEW BUG: the Meds page edits the first time series from every time row');
   test.slow();
   const s = await arrange(page, request, account, circleId);
   const dialog = await openEditForTime(page, circleId, s.name, '8:00 PM');

@@ -317,6 +317,30 @@ describe('MedicationsPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('N1: Edit from the evening row of a two-time med opens the evening series', async () => {
+    const user = userEvent.setup();
+    const evening = makeMed({ id: 'active-2', scheduled_time: '20:00:00', refill_group_id: 'active-1' });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, evening]));
+    renderPage();
+
+    const eveningRow = screen.getByRole('region', { name: 'Evening' });
+    await user.click(within(eveningRow).getByRole('button', { name: 'More actions for Metformin' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveTextContent('editing-active-2');
+  });
+
+  it('N1: Edit from the morning row of a two-time med opens the morning series', async () => {
+    const user = userEvent.setup();
+    const evening = makeMed({ id: 'active-2', scheduled_time: '20:00:00', refill_group_id: 'active-1' });
+    mockUseMedicationRoster.mockReturnValue(rosterResult([activeMed, evening]));
+    renderPage();
+
+    const morningRow = screen.getByRole('region', { name: 'Morning' });
+    await user.click(within(morningRow).getByRole('button', { name: 'More actions for Metformin' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    expect(screen.getByRole('dialog', { name: 'add-event-modal' })).toHaveTextContent('editing-active-1');
+  });
+
   it('Edit on an ACTIVE med opens the edit modal directly', async () => {
     const user = userEvent.setup();
     renderPage();
