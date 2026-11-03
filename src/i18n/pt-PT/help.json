@@ -19,8 +19,8 @@
     "roles": {
       "items": [
         {
-          "question": "Qual é a diferença entre Proprietário, Cuidador e Pessoa cuidada?",
-          "answer": "O Proprietário cria o círculo e pode convidar membros, gerir as definições e eliminar o círculo. Os Cuidadores são as pessoas que ajudam a coordenar o cuidado (família, um amigo ou um cuidador contratado) e podem ver e atualizar as informações. A Pessoa cuidada é quem recebe o cuidado: recebe lembretes de medicamentos e pode confirmar quando os tomou."
+          "question": "Qual é a diferença entre Titular, Pessoa cuidadora e Pessoa cuidada?",
+          "answer": "Quem é Titular cria o círculo e pode convidar membros, gerir as definições e eliminar o círculo. As Pessoas cuidadoras são as que ajudam a coordenar o cuidado (família, um amigo ou um cuidador contratado) e podem ver e atualizar as informações. A Pessoa cuidada é quem recebe o cuidado: recebe lembretes de medicamentos e pode confirmar quando os tomou."
         },
         {
           "question": "Posso participar em vários círculos?",

@@ -220,6 +220,55 @@ export function countOpenUpcoming(
   );
 }
 
+export interface ShiftCoverage {
+  total: number;
+  /** Unfilled and not yet ended: someone can still take it. */
+  open: number;
+  /** Unfilled and already ENDED (the card's "Not covered"): nothing left to take. */
+  notCovered: number;
+}
+
+/**
+ * Counts for one set of shifts (a day). An unfilled shift that has ended is "not covered",
+ * never "open": the card says "Not covered" and the server refuses a take (409 SHIFT_ENDED).
+ * Mirrors mobile's `summariseShifts`.
+ */
+export function summariseShifts(
+  shifts: readonly CalendarEvent[],
+  timezone: string,
+  now: Date = new Date()
+): ShiftCoverage {
+  const out: ShiftCoverage = { total: 0, open: 0, notCovered: 0 };
+  for (const s of shifts) {
+    out.total += 1;
+    if (!isShiftOpen(s)) continue;
+    if (hasShiftEnded(s, timezone, now)) out.notCovered += 1;
+    else out.open += 1;
+  }
+  return out;
+}
+
+/** The month dot for a day: an open shift wins, then an ended unfilled one, else covered. */
+export function coverageState(c: ShiftCoverage): 'open' | 'notCovered' | 'covered' {
+  if (c.open > 0) return 'open';
+  if (c.notCovered > 0) return 'notCovered';
+  return 'covered';
+}
+
+/**
+ * The coverage half of a day summary (keys namespaced, so any `t` works): "1 open", "none open",
+ * "1 not covered", "1 open · 1 not covered". Mirrors mobile's `coverageLabel`.
+ */
+export function coverageLabel(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  c: Pick<ShiftCoverage, 'open' | 'notCovered'>
+): string {
+  const parts: string[] = [];
+  if (c.open > 0 || c.notCovered === 0) parts.push(t('shifts:openCount', { count: c.open }));
+  if (c.notCovered > 0) parts.push(t('shifts:notCoveredCount', { count: c.notCovered }));
+  return parts.join(' · ');
+}
+
 /**
  * Start within 24 h from now (or already under way): the `shift_dropped.within_24h`
  * flag. Exact instant, same as mobile's `isWithin24hOfStart`.

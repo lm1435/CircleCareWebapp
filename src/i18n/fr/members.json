@@ -41,7 +41,7 @@
   },
   "roles": {
     "owner": "Propriétaire",
-    "caregiver": "Aidant",
+    "caregiver": "Personne aidante",
     "careRecipient": "Personne aidée",
     "manager": "Gestionnaire"
   },

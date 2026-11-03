@@ -40,10 +40,10 @@
     "takenOverdue": "{{taken}}/{{total}} tomados · {{overdue}} em atraso"
   },
   "roles": {
-    "owner": "Proprietário",
-    "caregiver": "Cuidador",
+    "owner": "Titular",
+    "caregiver": "Pessoa cuidadora",
     "careRecipient": "Pessoa cuidada",
-    "manager": "Gestor"
+    "manager": "Pessoa gestora"
   },
   "access": {
     "readOnly": "Somente leitura",

@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18n from '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { Card, Icon, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
-import type { HourCycle } from '@/utils/hourCycle';
 import {
   formatEventTimeCompact,
+  formatHourOfDay,
   getCurrentHoursInTimezone,
   zoneReferenceInstant,
 } from '@/utils/timezone';
@@ -70,23 +69,6 @@ function parseTimeToHours(time: string): number {
   return Number.parseInt(h, 10) + Number.parseInt(m, 10) / 60;
 }
 
-function formatHourLabel(
-  hour: number,
-  cycle: HourCycle,
-  locale: string = i18n.language
-): string {
-  // Hour-axis labels are pure clock labels — fixed UTC reference, no TZ math.
-  // `hour12` follows the VIEWER's resolved cycle, not the locale's default:
-  // otherwise a 24h viewer reads "14:30" chips against a "2 PM" axis. This is
-  // a module-level helper, so the cycle is threaded in as a parameter rather
-  // than read from the hook here.
-  return new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    hour12: cycle === '12h',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(2024, 0, 7, hour)));
-}
-
 /**
  * Week view (plan Task 18): 7-column grid with a time axis. Events are
  * positioned by their naive scheduled_time (already in the care recipient's
@@ -105,8 +87,8 @@ export function WeekView({
   onDayOpen,
 }: WeekViewProps): ReactElement {
   const { t } = useTranslation(['calendar', 'common', 'meds']);
-  // Viewer's 12h/24h clock — every rendered time goes through it. (The hour-axis
-  // labels below are Intl-locale-formatted, a separate concern.)
+  // Viewer's 12h/24h clock — every rendered time goes through it, the hour axis included
+  // (formatHourOfDay: the app's MERIDIEM table, same rule as mobile's week rail).
   const hourCycle = useHourCycle();
 
   // Re-render the current-time indicator every minute.
@@ -569,7 +551,7 @@ export function WeekView({
                     className="absolute right-1 -translate-y-1/2 normal-case"
                     style={{ top: hour * HOUR_HEIGHT }}
                   >
-                    {hour === 0 ? '' : formatHourLabel(hour, hourCycle)}
+                    {hour === 0 ? '' : formatHourOfDay(hour, hourCycle)}
                   </Text>
                 ))}
               </div>

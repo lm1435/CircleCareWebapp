@@ -23,8 +23,8 @@
       "title": "Círculos y roles",
       "items": [
         {
-          "question": "¿Cuál es la diferencia entre Propietario, Cuidador y Receptor de cuidado?",
-          "answer": "El Propietario crea el círculo y puede invitar miembros, administrar la configuración y eliminar el círculo. Los Cuidadores son quienes ayudan a coordinar el cuidado (familia, un amigo o un cuidador contratado): pueden ver y actualizar la información. El Receptor de cuidado es la persona que recibe el cuidado: recibe recordatorios de medicamentos y puede confirmar cuando los ha tomado."
+          "question": "¿Cuál es la diferencia entre Titular, Persona cuidadora y Persona cuidada?",
+          "answer": "Quien es Titular crea el círculo y puede invitar miembros, administrar la configuración y eliminar el círculo. Las Personas cuidadoras son quienes ayudan a coordinar el cuidado (familia, un amigo o un cuidador contratado): pueden ver y actualizar la información. La Persona cuidada es quien recibe el cuidado: recibe recordatorios de medicamentos y puede confirmar cuando los ha tomado."
         },
         {
           "question": "¿Puedo estar en varios círculos?",

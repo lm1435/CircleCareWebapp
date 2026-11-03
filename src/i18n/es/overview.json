@@ -47,11 +47,11 @@
     "count_one": "{{count}} miembro",
     "count_other": "{{count}} miembros",
     "invite": "Invitar miembro",
-    "careRecipient": "Receptor de cuidado",
-    "circleAdmin": "Propietario del círculo",
+    "careRecipient": "Persona cuidada",
+    "circleAdmin": "Titular del círculo",
     "familyMember": "Miembro",
     "you": "(Tú)",
-    "recipientBadge": "Receptor de cuidado",
+    "recipientBadge": "Persona cuidada",
     "medManagerBadge": "Recordatorios"
   },
   "solo": {

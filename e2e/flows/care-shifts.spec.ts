@@ -369,6 +369,8 @@ test.describe('an ended shift is read-only', () => {
     const card = list.getByRole('button', { name: /^Evening, 2:00 PM to 8:00 PM, not covered$/ });
     await expect(card).toBeVisible();
     await expect(list.getByTestId('shift-open-word')).toHaveText('Not covered');
+    // Owner screenshot (2026-11-02): the header read "2 shifts · 1 open." over that "Not covered" card.
+    await expect(page.getByTestId('day-view-summary')).toHaveText('2 shifts · 1 not covered.');
     await checkA11y(page, 'shifts-ended-day-light', testInfo);
 
     // The unfilled one: no Take, no Assign (the owner could assign an upcoming one); Edit / Delete stay.

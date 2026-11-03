@@ -5,7 +5,7 @@ import type { CircleMember } from '@/api/circleMembers';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { Button, Icon } from '@/components/ui';
 import { ShiftCard } from './ShiftCard';
-import { countOpen, groupShiftsByDay } from './shiftUtils';
+import { coverageLabel, groupShiftsByDay, summariseShifts } from './shiftUtils';
 
 export interface ShiftsWeekViewProps {
   /** The 7 `YYYY-MM-DD` days of the week. */
@@ -49,7 +49,8 @@ export function ShiftsWeekView({
       {days.map((day) => {
         const list = byDay.get(day) ?? NONE;
         const headingId = `shifts-week-${day}`;
-        const summary = t('summaryShort', { count: list.length, open: t('openCount', { count: countOpen(list) }) });
+        // Ended unfilled shifts read "not covered", never "open" (they match the card).
+        const summary = t('summaryShort', { count: list.length, open: coverageLabel(t, summariseShifts(list, timezone)) });
         const label = formatDateForDisplay(day, { weekday: 'long', month: 'short', day: 'numeric' });
         const isToday = day === todayStr;
         const headline = isToday ? `${t('week.today')} · ${label}` : label;

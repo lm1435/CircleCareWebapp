@@ -581,6 +581,22 @@ export function formatTimeOfDay(
 }
 
 /**
+ * An HOUR-AXIS label (the week grid's time axis): the hour alone, on the viewer's clock, with the
+ * language's own period marker. '12h' -> "12 p. m." in Spanish, "12 PM" in English; '24h' -> "14"
+ * (the hour-only form mobile's timeline uses). Built on {@link formatTimeOfDay}, so midnight-as-24
+ * and the {@link MERIDIEM} table are shared. Port of mobile's utils/timezone `formatHourOfDay`.
+ */
+export function formatHourOfDay(
+  hour: number,
+  cycle: HourCycle,
+  language: TimeLanguage = activeLanguage()
+): string {
+  const full = formatTimeOfDay(hour, 0, cycle, language);
+  const colon = full.indexOf(':');
+  return full.slice(0, colon) + full.slice(colon + 3);
+}
+
+/**
  * Format a time for display (AM/PM, or HH:MM under a 24-hour cycle)
  */
 export function formatTimeDisplay(hours: number, minutes: number, cycle: HourCycle): string {

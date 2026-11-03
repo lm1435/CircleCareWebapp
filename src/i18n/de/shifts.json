@@ -230,5 +230,7 @@
   },
   "openCount_zero": "keine offen",
   "openCount_one": "{{count}} offen",
-  "openCount_other": "{{count}} offen"
+  "openCount_other": "{{count}} offen",
+  "notCoveredCount_one": "{{count}} nicht besetzt",
+  "notCoveredCount_other": "{{count}} nicht besetzt"
 }

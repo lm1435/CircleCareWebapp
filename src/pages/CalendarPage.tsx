@@ -56,7 +56,7 @@ import { ShiftsWeekView } from '@/components/shifts/ShiftsWeekView';
 import { ShiftsLegend, ShiftsMonthView } from '@/components/shifts/ShiftsMonthView';
 import { ShiftsEmptyState } from '@/components/shifts/ShiftsEmptyState';
 import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
-import { canCoverShifts, countOpen } from '@/components/shifts/shiftUtils';
+import { canCoverShifts, coverageLabel, summariseShifts } from '@/components/shifts/shiftUtils';
 
 type CalendarView = 'day' | 'week' | 'month';
 type CalendarMode = 'schedule' | 'shifts';
@@ -722,7 +722,10 @@ export default function CalendarPage(): ReactElement {
                 shiftsSummary={(() => {
                   const day = shifts.filter((sh) => sh.scheduled_date === anchor);
                   return day.length > 0
-                    ? t('shifts:summary', { count: day.length, open: t('shifts:openCount', { count: countOpen(day) }) })
+                    ? t('shifts:summary', {
+                        count: day.length,
+                        open: coverageLabel(t, summariseShifts(day, timezone)),
+                      })
                     : '';
                 })()}
                 shiftsSlot={
@@ -769,6 +772,7 @@ export default function CalendarPage(): ReactElement {
                 gridDays={getMonthGridDays(anchor)}
                 monthStart={startOfMonth(anchor)}
                 shifts={shifts}
+                timezone={timezone}
                 todayStr={todayStr}
                 onDayOpen={handleOpenDay}
               />

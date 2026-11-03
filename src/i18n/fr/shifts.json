@@ -230,5 +230,7 @@
   },
   "openCount_zero": "aucune à pourvoir",
   "openCount_one": "{{count}} à pourvoir",
-  "openCount_other": "{{count}} à pourvoir"
+  "openCount_other": "{{count}} à pourvoir",
+  "notCoveredCount_one": "{{count}} non pourvue",
+  "notCoveredCount_other": "{{count}} non pourvues"
 }

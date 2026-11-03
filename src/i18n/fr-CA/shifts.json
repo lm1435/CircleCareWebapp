@@ -111,5 +111,7 @@
     "other": "Les quarts sont en lecture seule pour le moment."
   },
   "openCount_zero": "aucun à pourvoir",
-  "notCovered": "Non pourvu"
+  "notCovered": "Non pourvu",
+  "notCoveredCount_one": "{{count}} non pourvu",
+  "notCoveredCount_other": "{{count}} non pourvus"
 }

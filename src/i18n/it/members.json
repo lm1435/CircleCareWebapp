@@ -43,7 +43,7 @@
     "owner": "Titolare",
     "caregiver": "Caregiver",
     "careRecipient": "Persona assistita",
-    "manager": "Gestore"
+    "manager": "Responsabile"
   },
   "access": {
     "readOnly": "Sola lettura",

@@ -74,7 +74,7 @@ const COPY: Record<'en' | 'es', Copy> = {
     inviteActions: (e) => `Acciones para la invitación a ${e}`,
     makeManager: 'Dar rol de gestor',
     madeManager: (n) => `${n} ahora ayuda a administrar el círculo.`,
-    managerBadge: 'Gestor',
+    managerBadge: 'Persona gestora',
     inviteCta: 'Invitar miembro',
     emailLabel: 'Correo electrónico',
     send: 'Enviar invitación',
@@ -84,7 +84,7 @@ const COPY: Record<'en' | 'es', Copy> = {
     remove: 'Eliminar',
     membersHeading: 'Miembros',
     managerHint: 'Cuando se una, puedes darle el rol de gestor para que te ayude a invitar y administrar miembros.',
-    careRecipient: 'Receptor de cuidado',
+    careRecipient: 'Persona cuidada',
   },
 };
 

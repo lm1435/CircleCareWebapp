@@ -230,5 +230,7 @@
   },
   "openCount_zero": "nessuno scoperto",
   "openCount_one": "{{count}} scoperto",
-  "openCount_other": "{{count}} scoperti"
+  "openCount_other": "{{count}} scoperti",
+  "notCoveredCount_one": "{{count}} non coperto",
+  "notCoveredCount_other": "{{count}} non coperti"
 }

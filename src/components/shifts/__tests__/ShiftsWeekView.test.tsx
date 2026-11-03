@@ -23,6 +23,15 @@ function shift(id: string, date: string, assigned: string | null): CalendarEvent
   } as CalendarEvent;
 }
 
+// The fixtures are dated Oct 2026: pin the clock BEFORE them, or the open fixture shift has ENDED
+// on the real clock and (correctly) reads "not covered" (ended shifts: ShiftsSummaryEnded.test.tsx).
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-17T12:00:00Z') });
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 const DAYS = ['2026-10-18', '2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24'];
 
 describe('ShiftsWeekView day header', () => {

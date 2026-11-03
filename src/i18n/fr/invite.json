@@ -6,7 +6,7 @@
   "circleLabel": "Cercle de soins",
   "appDescription": "CircleCare aide les familles à coordonner ensemble les médicaments, les rendez-vous et les soins du quotidien.",
   "roles": {
-    "caregiver": "Aidant",
+    "caregiver": "Personne aidante",
     "care_recipient": "Personne aidée"
   },
   "accept": "Accepter l’invitation",

@@ -253,7 +253,7 @@
     "generating": "Generando...",
     "error": "Error al generar el resumen. Intenta de nuevo.",
     "sections": {
-      "careRecipient": "Receptor de cuidado",
+      "careRecipient": "Persona cuidada",
       "emergencyContacts": "Contactos de emergencia",
       "medications": "Medicamentos actuales",
       "healthcareProviders": "Proveedores de salud",

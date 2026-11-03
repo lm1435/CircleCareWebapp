@@ -307,6 +307,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "{{date}}, 1 plantão, {{open}}",
     "{{date}}, 2 plantões, {{open}}",
   ],
+  "pt shifts:notCoveredCount": [
+    "0 sem cobertura",
+    "1 sem cobertura",
+    "2 sem cobertura",
+  ],
   "pt shifts:openCount": [
     "nenhum em aberto",
     "1 em aberto",
@@ -646,6 +651,11 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "{{date}}, 0 turnos, {{open}}",
     "{{date}}, 1 turno, {{open}}",
     "{{date}}, 2 turnos, {{open}}",
+  ],
+  "pt-PT shifts:notCoveredCount": [
+    "0 não preenchidos",
+    "1 não preenchido",
+    "2 não preenchidos",
   ],
   "pt-PT shifts:openCount": [
     "nenhum por preencher",

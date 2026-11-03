@@ -230,5 +230,7 @@
   },
   "openCount_zero": "none open",
   "openCount_one": "{{count}} open",
-  "openCount_other": "{{count}} open"
+  "openCount_other": "{{count}} open",
+  "notCoveredCount_one": "{{count}} not covered",
+  "notCoveredCount_other": "{{count}} not covered"
 }

@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { Card, Text } from '@/components/ui';
 import { formatDateForDisplay, getWeekdayName, isSameMonth } from '@/components/calendar/dateMath';
-import { countOpen, groupShiftsByDay } from './shiftUtils';
+import { coverageLabel, coverageState, groupShiftsByDay, summariseShifts } from './shiftUtils';
 
 export interface ShiftsMonthViewProps {
   /** 42 `YYYY-MM-DD` strings (6 Sunday-first weeks). */
   gridDays: readonly string[];
   monthStart: string;
   shifts: readonly CalendarEvent[];
+  /** The care recipient's zone: an unfilled shift whose end has passed there is "not covered", not open. */
+  timezone: string;
   todayStr: string;
   /** A day cell opens that day in Shifts. */
   onDayOpen: (day: string) => void;
@@ -17,10 +19,16 @@ export interface ShiftsMonthViewProps {
 
 const WEEKDAY_INDEXES = [0, 1, 2, 3, 4, 5, 6];
 const NONE: CalendarEvent[] = [];
+const DOT_CLASS = {
+  open: 'border-[1.5px] border-moss bg-transparent',
+  notCovered: 'border-[1.5px] border-ink-3 bg-transparent',
+  covered: 'bg-moss',
+} as const;
 
 /**
- * Month: shifts are NOT drawn as blocks. A cell carries an AMBER dot when the
- * day has an open shift and a MOSS dot when it is fully covered. The dots are
+ * Month: shifts are NOT drawn as blocks. A cell carries a hollow moss ring when the
+ * day has an open shift (not yet ended), a hollow grey ring when its only unfilled
+ * shifts have ended ("Not covered") and a filled MOSS dot when it is fully covered. The dots are
  * decorative: the cell's accessible name says "3 shifts, 1 open" and a text
  * legend sits under the grid, so colour is never the only cue.
  */
@@ -28,6 +36,7 @@ export function ShiftsMonthView({
   gridDays,
   monthStart,
   shifts,
+  timezone,
   todayStr,
   onDayOpen,
 }: ShiftsMonthViewProps): ReactElement {
@@ -55,7 +64,8 @@ export function ShiftsMonthView({
           <div key={week} role="row" className="grid grid-cols-7">
             {gridDays.slice(week * 7, week * 7 + 7).map((day, col) => {
               const list = byDay.get(day) ?? NONE;
-              const open = countOpen(list);
+              const coverage = summariseShifts(list, timezone);
+              const state = coverageState(coverage);
               const inMonth = isSameMonth(day, monthStart);
               const isToday = day === todayStr;
               const dayLabel = formatDateForDisplay(day, {
@@ -65,7 +75,7 @@ export function ShiftsMonthView({
               });
               const label =
                 list.length > 0
-                  ? t('month.cell', { date: dayLabel, count: list.length, open: t('openCount', { count: open }) })
+                  ? t('month.cell', { date: dayLabel, count: list.length, open: coverageLabel(t, coverage) })
                   : t('month.none', { date: dayLabel });
               return (
                 <div
@@ -78,7 +88,7 @@ export function ShiftsMonthView({
                   <button
                     type="button"
                     data-date={day}
-                    data-shift-dots={list.length === 0 ? 'none' : open > 0 ? 'open' : 'covered'}
+                    data-shift-dots={list.length === 0 ? 'none' : state}
                     aria-current={isToday ? 'date' : undefined}
                     aria-label={label}
                     onClick={() => onDayOpen(day)}
@@ -99,8 +109,8 @@ export function ShiftsMonthView({
                     {list.length > 0 && (
                       <span
                         aria-hidden="true"
-                        data-dot={open > 0 ? 'open' : 'covered'}
-                        className={`h-2 w-2 rounded-full ${open > 0 ? 'border-[1.5px] border-moss bg-transparent' : 'bg-moss'}`}
+                        data-dot={state}
+                        className={`h-2 w-2 rounded-full ${DOT_CLASS[state]}`}
                       />
                     )}
                   </button>
@@ -134,6 +144,14 @@ export function ShiftsLegend(): ReactElement {
       <li className="flex items-center gap-1.5 text-xs text-ink-3">
         <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-moss" />
         {t('legend.covered')}
+      </li>
+      <li className="flex items-center gap-1.5 text-xs text-ink-3">
+        <span
+          aria-hidden="true"
+          data-dot="notCovered"
+          className="h-2.5 w-2.5 rounded-full border-[1.5px] border-ink-3 bg-transparent"
+        />
+        {t('notCovered')}
       </li>
     </ul>
   );

@@ -131,5 +131,7 @@
   },
   "openCount_zero": "nenhum por preencher",
   "openCount_one": "{{count}} por preencher",
-  "openCount_other": "{{count}} por preencher"
+  "openCount_other": "{{count}} por preencher",
+  "notCoveredCount_one": "{{count}} não preenchido",
+  "notCoveredCount_other": "{{count}} não preenchidos"
 }

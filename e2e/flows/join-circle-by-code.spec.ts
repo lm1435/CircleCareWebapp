@@ -105,7 +105,7 @@ const COPY = {
     welcome: (inviter: string, name: string) => `${inviter} te invitó a ayudar con ${name}.`,
     goToToday: 'Ir a Hoy',
     switcher: (name: string) => `Cambiar de círculo: ${name}`,
-    caregiver: 'Cuidador',
+    caregiver: 'Persona cuidadora',
   },
 } as const;
 

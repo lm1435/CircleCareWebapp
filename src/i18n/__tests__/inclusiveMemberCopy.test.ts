@@ -79,11 +79,11 @@ describe('member and role descriptions never assume relatives', () => {
   // Role display names (1.4.0). Keys keep their old names; only the values changed.
   const ROLE_NAMES: Record<string, { caregiver: string; member: string }> = {
     en: { caregiver: 'Caregiver', member: 'Member' },
-    es: { caregiver: 'Cuidador', member: 'Miembro' },
-    fr: { caregiver: 'Aidant', member: 'Membre' },
+    es: { caregiver: 'Persona cuidadora', member: 'Miembro' },
+    fr: { caregiver: 'Personne aidante', member: 'Membre' },
     de: { caregiver: 'Pflegeperson', member: 'Mitglied' },
     it: { caregiver: 'Caregiver', member: 'Membro' },
-    pt: { caregiver: 'Cuidador', member: 'Membro' },
+    pt: { caregiver: 'Pessoa cuidadora', member: 'Membro' },
   };
   it.each(Object.keys(ROLE_NAMES))('%s: role names are "Caregiver" / "Member", never family-only', (code) => {
     expect(get(load(code, 'overview'), 'team.familyMember')).toBe(ROLE_NAMES[code].member);
@@ -199,5 +199,84 @@ describe('member and role descriptions never assume relatives', () => {
       ([k, v]) => (k.startsWith('upgrade:') || k.startsWith('profile:')) && OLD_FAMILY_BUYER.test(v)
     );
     expect(hits).toEqual([]);
+  });
+});
+
+/**
+ * Owner screenshot (2026-11-02): the app's Care team invite button read "Add family member"
+ * ("Agregar familiar"). Mobile now uses this page's wording ("Invite member" / "Invite a member");
+ * the web's own button and dialog title stay neutral, and the shared help steps (rendered by the
+ * web Help center too) name the real button.
+ */
+describe('the invite button and dialog title never assume a relative', () => {
+  const RELATIVE = /family|famil|proche|Angehörig|parente/i;
+  const FALLBACK: Record<string, string[]> = { 'fr-CA': ['fr-CA', 'fr', 'en'], 'pt-PT': ['pt-PT', 'pt', 'en'] };
+  const resolve = (code: string, path: string): string | undefined => {
+    for (const c of FALLBACK[code] ?? [code, 'en']) {
+      const v = get(load(c, 'members'), path);
+      if (v !== undefined) return v;
+    }
+    return undefined;
+  };
+  it.each(LOCALES)('%s: members invite.cta / invite.title carry no relative word', (code) => {
+    for (const k of ['invite.cta', 'invite.title']) {
+      const v = resolve(code, k);
+      expect(v).toBeTruthy();
+      expect([k, v]).toEqual([k, expect.not.stringMatching(RELATIVE)]);
+    }
+  });
+
+  it('the help steps name the real (neutral) button', () => {
+    const help = readFileSync(join(I18N_DIR, '..', 'help', 'content.json'), 'utf8');
+    expect(help).not.toMatch(/Add family member|Agregar familiar/);
+    expect(help).toContain('tap \\"Invite member\\"');
+    expect(help).toContain('toca \\"Invitar miembro\\"');
+  });
+});
+
+/**
+ * Owner screenshot (2026-11-02): a woman who owns her circle was tagged "Propietario". Role labels
+ * use an epicene noun or the "Persona …" form (same values as mobile's inclusiveMemberCopy test).
+ */
+describe('role labels are not masculine-only (es / pt / fr / it)', () => {
+  const ROLE_KEYS: Array<[string, string]> = [
+    ['members', 'roles.owner'],
+    ['members', 'roles.caregiver'],
+    ['members', 'roles.careRecipient'],
+    ['members', 'roles.manager'],
+    ['overview', 'team.careRecipient'],
+    ['overview', 'team.circleAdmin'],
+    ['overview', 'team.recipientBadge'],
+    ['invite', 'roles.caregiver'],
+    ['invite', 'roles.care_recipient'],
+    ['circles', 'joinModal.roleCaregiver'],
+    ['circles', 'joinModal.roleCareRecipient'],
+  ];
+  const MASCULINE: Record<string, RegExp> = {
+    es: /^(Propietario|Dueño|Cuidador|Receptor|Gestor|Administrador)\b/,
+    pt: /^(Proprietário|Dono|Cuidador|Gestor|Administrador)\b/,
+    fr: /^(Aidant|Administrateur)\b/,
+    it: /^(Gestore|Proprietario|Amministratore)\b/,
+  };
+  MASCULINE['pt-PT'] = MASCULINE.pt;
+  MASCULINE['fr-CA'] = MASCULINE.fr;
+
+  it.each(Object.keys(MASCULINE))('%s: no role label is a masculine-only noun', (code) => {
+    const hits = ROLE_KEYS.map(([ns, k]) => [`${ns}:${k}`, get(load(code, ns), k)] as const).filter(
+      ([, v]) => typeof v === 'string' && MASCULINE[code].test(v)
+    );
+    expect(hits).toEqual([]);
+  });
+
+  const APPROVED: Record<string, Record<string, string>> = {
+    es: { owner: 'Titular', caregiver: 'Persona cuidadora', careRecipient: 'Persona cuidada', manager: 'Persona gestora' },
+    pt: { owner: 'Titular', caregiver: 'Pessoa cuidadora', careRecipient: 'Pessoa cuidada', manager: 'Pessoa gestora' },
+    fr: { owner: 'Propriétaire', caregiver: 'Personne aidante' },
+    it: { owner: 'Titolare', manager: 'Responsabile' },
+  };
+  it.each(Object.keys(APPROVED))('%s: the member list role labels read as approved (mobile parity)', (code) => {
+    for (const [k, v] of Object.entries(APPROVED[code])) {
+      expect([k, get(load(code, 'members'), `roles.${k}`)]).toEqual([k, v]);
+    }
   });
 });

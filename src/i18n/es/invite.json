@@ -6,8 +6,8 @@
   "circleLabel": "Círculo de cuidado",
   "appDescription": "CircleCare ayuda a las familias a coordinar juntas los medicamentos, las citas y el cuidado diario.",
   "roles": {
-    "caregiver": "Cuidador",
-    "care_recipient": "Receptor de cuidado"
+    "caregiver": "Persona cuidadora",
+    "care_recipient": "Persona cuidada"
   },
   "accept": "Aceptar invitación",
   "accepting": "Uniéndote…",

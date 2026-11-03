@@ -31,6 +31,7 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'shifts:month.cell': 'month cell uses month.none for an empty day',
   'shifts:duration.hours': 'durationLabel renders hours only when hours > 0',
   'shifts:duration.minutes': 'durationLabel renders minutes only for a 15-minute-or-longer shift',
+  'shifts:notCoveredCount': 'coverageLabel asks for it only when notCovered > 0',
   // Notifications inbox per-circle counts: the card count / bell only renders when count > 0
   // (CircleCard `unread > 0`), and the scoped subtitle falls back to the bare circle name at 0
   // (NotificationsPage `scopedUnread > 0`).

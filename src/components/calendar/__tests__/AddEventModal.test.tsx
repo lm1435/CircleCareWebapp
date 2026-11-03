@@ -1977,7 +1977,7 @@ describe('AddEventModal', () => {
       useCircleResult.members = MEMBERS;
       render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
 
-      expect(optionLabels()).toContain('Ray · Receptor de cuidado');
+      expect(optionLabels()).toContain('Ray · Persona cuidada');
       expect(optionLabels()).toContain('Tess');
     });
 
