@@ -415,7 +415,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     ).toBeNull();
   });
 
-  test('(d) PATCH 500: the modal stays with the typed title, nothing saved, the retry saves (2 PATCHes)', async ({
+  test('(d) PATCH 500 on every automatic retry: the modal stays with the typed title, nothing saved, Save again saves (5 PATCHes)', async ({
     page,
     context,
     request,
@@ -429,10 +429,18 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
     const patches = countRequests(page, 'PATCH', '/api/circles/:id/events/:eventId');
-    const fault = await failRequest(page, 'PATCH', '/api/circles/:id/events/:eventId', { status: 500 });
+    // A 500 is an AMBIGUOUS failure: since 9e4cfce (1.4.0) the save retries it
+    // up to 3 times with the same Idempotency-Key (1 s, 2 s, 4 s apart), so a
+    // single 500 now heals on its own (save-lost-response-idempotency.spec.ts).
+    // Fail all four attempts to reach the persistent-failure state this test is
+    // about.
+    const fault = await failRequest(page, 'PATCH', '/api/circles/:id/events/:eventId', { status: 500, times: 4 });
     await edit.locator('#title').fill(k.C);
     await edit.getByRole('button', { name: 'Save changes' }).click();
-    await fault.expectHits(1);
+    await fault.expectHits(4, { timeoutMs: 20_000 });
+    const keys = fault.requests.map((r) => r.headers()['idempotency-key']);
+    expect(keys[0], 'the save carries an Idempotency-Key').toBeTruthy();
+    expect(new Set(keys).size, 'every automatic retry reuses the one key').toBe(1);
     await expect(errorToast(page, "Couldn't save your changes. Please try again.")).toHaveCount(1, { timeout: 10_000 });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#title')).toHaveValue(k.C);
@@ -440,6 +448,6 @@ test.describe('recurring appointment: edit + delete scope', () => {
     await edit.getByRole('button', { name: 'Save changes' }).click();
     await expect(edit).toBeHidden({ timeout: 20_000 });
     await expect.poll(() => k.rootRow().title, { timeout: 15_000 }).toBe(k.C);
-    await patches.expectCount(2);
+    await patches.expectCount(5);
   });
 });
