@@ -80,6 +80,7 @@
     "pendingInviteSeatUnknown": "Sie haben Ihre Einladung bereits verwendet – der kostenlose Platz ist durch eine andere ausstehende Einladung belegt. Ziehen Sie diese Einladung zurück, um den Platz freizugeben, oder wechseln Sie zu Premium, um weitere Pflegepersonen hinzuzufügen.",
     "circleArchived": "Dieser Pflegekreis ist nicht mehr aktiv, daher können Einladungen weder gesendet noch angenommen werden.",
     "careRecipientExists": "In diesem Kreis gibt es bereits eine umsorgte Person.",
+    "careRecipientInvitePending": "Für die umsorgte Person steht bereits eine Einladung aus.",
     "managerUnavailable": "Die Mitverwaltung ist gerade nicht verfügbar. Bitte versuchen Sie es später erneut.",
     "careRecipientCannotManage": "Die umsorgte Person kann den Kreis nicht mitverwalten.",
     "viewOnlyCannotManage": "Mitglieder mit „Nur Ansicht“-Zugriff können den Kreis nicht mitverwalten.",

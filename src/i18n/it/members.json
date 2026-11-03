@@ -80,6 +80,7 @@
     "pendingInviteSeatUnknown": "Hai già usato il tuo invito: il posto gratuito è occupato da un altro invito in sospeso. Annulla quell'invito per liberarlo, oppure passa a Premium per aggiungere altri caregiver.",
     "circleArchived": "Questa cerchia di cura non è più attiva, quindi non è possibile inviare né accettare inviti.",
     "careRecipientExists": "Questa cerchia ha già una persona assistita.",
+    "careRecipientInvitePending": "C'è già un invito in sospeso per la persona assistita.",
     "managerUnavailable": "Il ruolo di gestore non è disponibile al momento. Riprova più tardi.",
     "careRecipientCannotManage": "La persona assistita non può essere gestore.",
     "viewOnlyCannotManage": "I membri con accesso in sola lettura non possono essere gestori.",

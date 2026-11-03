@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -411,6 +414,48 @@ describe('useCreateInvite', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(showToast).toHaveBeenCalledWith('errors.careRecipientExists', 'error');
     expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+  });
+
+  // A second care-recipient invite while the first is still pending (409
+  // CARE_RECIPIENT_INVITE_PENDING). Mobile says exactly that
+  // (InviteMemberScreen, circles.invite.errors.recipientPendingMessage); web
+  // used to fall through to "something went wrong" — a retry prompt for
+  // something that can never succeed. A real Android user hit this code twice
+  // in the week of 2026-10-26.
+  it('surfaces a CARE_RECIPIENT_INVITE_PENDING error as the recipient-pending toast', async () => {
+    const { wrapper } = setup();
+    mockCreate.mockRejectedValue({
+      success: false,
+      error: {
+        code: 'CARE_RECIPIENT_INVITE_PENDING',
+        message: 'An invite is already pending for the care recipient',
+      },
+    });
+
+    const { result } = renderHook(() => useCreateInvite(CIRCLE_ID), { wrapper });
+    result.current.mutate({ email: 'jane@example.com', member_type: 'care_recipient' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(showToast).toHaveBeenCalledWith('errors.careRecipientInvitePending', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('errors.saveFailed', 'error');
+  });
+
+  it('the recipient-pending toast says what mobile says, in every base locale', () => {
+    const mobileLocales = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      '../../../../mobile/src/i18n/locales'
+    );
+    const webLocales = resolve(dirname(fileURLToPath(import.meta.url)), '../../i18n');
+    const read = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
+    for (const lang of ['en', 'es', 'de', 'fr', 'it', 'pt']) {
+      const web = read(`${webLocales}/${lang}/members.json`).errors?.careRecipientInvitePending;
+      expect(web, `${lang} web key`).toEqual(expect.any(String));
+      if (existsSync(mobileLocales)) {
+        const mobile = read(`${mobileLocales}/${lang}.json`).circles.invite.errors
+          .recipientPendingMessage;
+        expect(web, lang).toBe(mobile);
+      }
+    }
   });
 
   // The fallback the two new branches were carved out of stays put.

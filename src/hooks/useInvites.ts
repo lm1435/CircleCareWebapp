@@ -119,6 +119,10 @@ function useInviteMutationOnError(
       // A second care-recipient invite into a circle that already has one,
       // backstopped by a partial unique index.
       showToast(t('errors.careRecipientExists'), 'error');
+    } else if (code === 'CARE_RECIPIENT_INVITE_PENDING') {
+      // A care-recipient invite is already out for this circle (mobile parity:
+      // InviteMemberScreen's recipientPendingMessage).
+      showToast(t('errors.careRecipientInvitePending'), 'error');
     } else {
       showToast(t(fallbackMessageKey), 'error');
     }

@@ -80,6 +80,7 @@
     "pendingInviteSeatUnknown": "Ya usaste tu invitación: el lugar gratuito lo tiene otra invitación pendiente. Cancela esa invitación para liberarlo o mejora a Premium para agregar más cuidadores.",
     "circleArchived": "Este círculo de cuidado ya no está activo, así que no se pueden enviar ni aceptar invitaciones.",
     "careRecipientExists": "Este círculo ya tiene un receptor de cuidado.",
+    "careRecipientInvitePending": "Ya hay una invitación pendiente para el receptor de cuidado.",
     "managerUnavailable": "El rol de gestor no está disponible en este momento. Inténtalo de nuevo más tarde.",
     "careRecipientCannotManage": "El receptor de cuidado no puede tener el rol de gestor.",
     "viewOnlyCannotManage": "Los miembros con acceso de solo visualización no pueden tener el rol de gestor.",

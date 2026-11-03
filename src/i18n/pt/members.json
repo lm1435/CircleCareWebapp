@@ -80,6 +80,7 @@
     "pendingInviteSeatUnknown": "Você já usou o seu convite — a vaga gratuita está ocupada por outro convite pendente. Cancele esse convite para liberar a vaga ou faça upgrade para o Premium para adicionar mais cuidadores.",
     "circleArchived": "Este círculo de cuidado não está mais ativo, então convites não podem ser enviados nem aceitos.",
     "careRecipientExists": "Este círculo já tem uma pessoa cuidada.",
+    "careRecipientInvitePending": "Já existe um convite pendente para a pessoa cuidada.",
     "managerUnavailable": "O papel de gestor não está disponível no momento. Tente novamente mais tarde.",
     "careRecipientCannotManage": "A pessoa cuidada não pode ser gestora.",
     "viewOnlyCannotManage": "Membros com acesso somente de visualização não podem ser gestores.",

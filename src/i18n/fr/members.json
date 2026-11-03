@@ -80,6 +80,7 @@
     "pendingInviteSeatUnknown": "Votre invitation gratuite est déjà utilisée : la place est réservée par une autre invitation en attente. Annulez cette invitation pour libérer la place, ou passez à Premium pour ajouter d’autres aidants.",
     "circleArchived": "Ce cercle de soins n’est plus actif : les invitations ne peuvent donc plus être envoyées ni acceptées.",
     "careRecipientExists": "Ce cercle a déjà une personne aidée.",
+    "careRecipientInvitePending": "Une invitation est déjà en attente pour la personne aidée.",
     "managerUnavailable": "Le rôle de gestionnaire n’est pas disponible pour le moment. Réessayez plus tard.",
     "careRecipientCannotManage": "La personne aidée ne peut pas être gestionnaire.",
     "viewOnlyCannotManage": "Les membres en lecture seule ne peuvent pas être gestionnaires.",
