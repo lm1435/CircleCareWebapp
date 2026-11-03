@@ -163,13 +163,15 @@ beforeEach(() => {
 });
 
 describe('UpgradePage', () => {
-  // The benefits are what Premium ADDS, the same six, in the same order and
+  // The benefits are what Premium ADDS, the same eight, in the same order and
   // wording, as mobile's paywall (planSelection.feature*). ORDER IS THE POINT
   // (owner-approved 2026-10-10): people pay for more people in ONE circle (the
   // capacity paywall converts 2x onboarding), so unlimited family members lead
   // and the circle-count cap is LAST. The old "Full access to the calendar,
   // tasks, medications, documents, and vitals" overclaimed: free users have it.
-  it('lists the six Premium benefits mobile lists, caregivers first, circles last', () => {
+  // Shifts and managers + the weekly care summary (2026-11-03): Premium-gated on the server
+  // (shiftTier.requirePremiumCircle, the manager-role 402, digestService premium circles).
+  it('lists the eight Premium benefits mobile lists, caregivers first, circles last', () => {
     renderPage();
     const items = screen.getAllByRole('listitem').filter((li) => li.closest('[data-benefits]'));
     expect(items.map((li) => li.textContent)).toEqual([
@@ -178,6 +180,8 @@ describe('UpgradePage', () => {
       'Adherence reports & calendar importShare medication history with providers, import appointments from your calendar',
       '1GB of documents per circleRoom for records, photos, and paperwork',
       'AI care assistantSummarizes visits and surfaces what matters',
+      "Care shiftsPlan who covers when. Everyone in the circle sees who's on.",
+      'Managers & weekly care summarySomeone can help you invite and manage members, plus a weekly summary by email',
       'Up to 5 care circlesOne for each person you care for',
     ]);
     expect(screen.queryByText(/Full access to the calendar/)).toBeNull();
@@ -195,6 +199,8 @@ describe('UpgradePage', () => {
         'Informes de adherencia e importación de calendario',
         '1GB de documentos por círculo',
         'Asistente de IA',
+        'Turnos de cuidado',
+        'Personas gestoras y resumen semanal',
         'Hasta 5 círculos de cuidado',
       ]);
     } finally {

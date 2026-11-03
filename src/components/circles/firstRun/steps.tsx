@@ -274,3 +274,54 @@ export function FirstMedPayoffStep({
     </div>
   );
 }
+
+// ── Invite step ─────────────────────────────────────────────────────────────
+
+export interface InviteStepProps {
+  recipientName: string;
+  isSelfCare: boolean;
+  /** "Your free plan includes one person." Free owners only (lib/onboardingInviteStep). */
+  freePlanLine: boolean;
+  headingRef?: RefObject<HTMLHeadingElement>;
+}
+
+/**
+ * The setup invite step (pricing report 2026-11-02): after the payoff, before the onboarding
+ * paywall. "Invite someone to help" and one sentence; the wizard's footer carries "Invite
+ * someone" (opens the existing InviteMemberModal) and "Not now". Never a price, never an
+ * upgrade: the free plan already includes this person. Mobile parity:
+ * `mobile/src/components/onboarding/OnboardingInviteStep.tsx`.
+ */
+export function InviteStep({
+  recipientName,
+  isSelfCare,
+  freePlanLine,
+  headingRef: headingRefProp,
+}: InviteStepProps): ReactElement {
+  const { t } = useTranslation('circles');
+  const ownHeadingRef = useRef<HTMLHeadingElement>(null);
+  const headingRef = headingRefProp ?? ownHeadingRef;
+  useEffect(() => {
+    headingRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-3" data-testid="first-run-invite-step">
+      <Eyebrow>{t('firstRun.inviteStep.eyebrow')}</Eyebrow>
+      <h3 ref={headingRef} tabIndex={-1} className={`${TEXT_CLASS.h2} m-0 outline-none`}>
+        {t('firstRun.inviteStep.title')}
+      </h3>
+      <Text variant="body" className="text-ink-2!">
+        {isSelfCare
+          ? t('firstRun.inviteStep.bodySelf')
+          : t('firstRun.inviteStep.body', { name: recipientName })}
+      </Text>
+      {freePlanLine && (
+        <Text variant="bodyMedium" data-testid="first-run-invite-free-line">
+          {t('firstRun.inviteStep.freePlan')}
+        </Text>
+      )}
+    </div>
+  );
+}

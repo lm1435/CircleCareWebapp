@@ -53,6 +53,14 @@
       "title": "AI care assistant",
       "sub": "Summarizes visits and surfaces what matters"
     },
+    "shifts": {
+      "title": "Care shifts",
+      "sub": "Plan who covers when. Everyone in the circle sees who's on."
+    },
+    "team": {
+      "title": "Managers & weekly care summary",
+      "sub": "Someone can help you invite and manage members, plus a weekly summary by email"
+    },
     "circles": {
       "title": "Up to 5 care circles",
       "sub": "One for each person you care for"

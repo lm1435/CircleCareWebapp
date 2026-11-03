@@ -53,6 +53,14 @@
       "title": "Assistente de cuidado com IA",
       "sub": "Resume consultas e destaca o que importa"
     },
+    "shifts": {
+      "title": "Plantões",
+      "sub": "Organize quem cobre cada horário. O círculo todo vê quem está de plantão."
+    },
+    "team": {
+      "title": "Pessoas gestoras e resumo semanal",
+      "sub": "Alguém pode ajudar você a convidar e gerenciar membros, além de um resumo semanal por e-mail"
+    },
     "circles": {
       "title": "Até 5 círculos de cuidado",
       "sub": "Um para cada pessoa de quem você cuida"

@@ -183,6 +183,11 @@ test.describe('first-run wizard (onboarding 1.3.1: Setup -> the ONE simple form 
     await expect(wizard.getByRole('button', { name: 'Invite someone' })).toHaveCount(0);
     await expect(wizard.getByText(/who.s usually there/i)).toHaveCount(0);
     await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    // The setup invite step (pricing report 2026-11-02): a premium owner gets it without the
+    // free-plan line. "Not now" goes on.
+    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible();
+    await expect(wizard.getByTestId('first-run-invite-free-line')).toHaveCount(0);
+    await wizard.getByTestId('first-run-invite-not-now').click();
     // Premium scoped account: no paywall, straight to Today.
     await expect(wizard).toHaveCount(0, { timeout: 15_000 });
 

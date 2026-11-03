@@ -53,6 +53,14 @@
       "title": "Assistente di cura con IA",
       "sub": "Riassume le visite e mette in evidenza ciò che conta"
     },
+    "shifts": {
+      "title": "Turni di cura",
+      "sub": "Organizza chi copre quando. Tutta la cerchia vede chi è di turno."
+    },
+    "team": {
+      "title": "Responsabili e riepilogo settimanale",
+      "sub": "Qualcuno può aiutarti a invitare e gestire i membri, più un riepilogo settimanale via email"
+    },
     "circles": {
       "title": "Fino a 5 cerchie di cura",
       "sub": "Una per ogni persona di cui ti prendi cura"

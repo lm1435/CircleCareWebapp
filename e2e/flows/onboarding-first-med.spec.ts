@@ -104,9 +104,12 @@ test.describe('onboarding first med (web)', () => {
     // ONE Taken, by the opt-in flag, on the primary root.
     await expect.poll(() => confirmations(root.id).map((c) => c.status)).toEqual(['taken']);
 
-    // Not asked yet: the paywall is the Continue's next step.
+    // Not asked yet: Continue leads to the setup invite step (never a paywall), then the paywall.
     expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBeNull();
     await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(wizard(page).getByRole('heading', { name: 'Invite someone to help' })).toBeVisible();
+    expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBeNull();
+    await wizard(page).getByTestId('first-run-invite-not-now').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(offerHeading(page)).toBeVisible();
     expect(await ls(page, `${SEEN_KEY}:${a.userId}`)).toBe('1');
@@ -135,6 +138,7 @@ test.describe('onboarding first med (web)', () => {
     await page.getByRole('dialog').last().getByRole('button', { name: 'Add medication' }).click();
     await expect(wizard(page).getByTestId('mark-it-button')).toBeVisible({ timeout: 20_000 });
     await wizard(page).getByRole('button', { name: 'Continue', exact: true }).click();
+    await wizard(page).getByTestId('first-run-invite-not-now').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     expect(confirmations(rootMed(circleId)!.id)).toHaveLength(0);
   });

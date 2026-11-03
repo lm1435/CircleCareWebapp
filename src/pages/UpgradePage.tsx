@@ -28,7 +28,9 @@ import { useSubmitGuard } from '@/hooks/useGuardedSubmit';
 import { useAccountTimezone } from '@/hooks/useAccountTimezone';
 import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { readBrowserTimezone, webCheckoutVerdict } from '@/lib/checkoutCountry';
-import { isUserCancelledError, type WebPlan } from '@/lib/purchases';
+import { isUserCancelledError, PREMIUM_ENTITLEMENT, type WebPlan } from '@/lib/purchases';
+import { notePaywallShown } from '@/lib/reviewMoments';
+import { trialChargeFrom, trialStartedMessage } from '@/lib/trialCharge';
 import { isWebBillingConfigured } from '@/lib/webBillingConfig';
 import { legalUrl } from '@/lib/legalLinks';
 import { Analytics } from '@/lib/analytics';
@@ -55,7 +57,7 @@ import { clearDeferredFirstRun, takeDeferredFirstRun } from '@/lib/onboardingPay
  * with the mobile cohorts that motivated the paywall in the first place.
  */
 export default function UpgradePage(): ReactElement {
-  const { t } = useTranslation('upgrade');
+  const { t, i18n } = useTranslation('upgrade');
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
@@ -78,6 +80,8 @@ export default function UpgradePage(): ReactElement {
   const purchaseGuard = useSubmitGuard();
   const manage = useManageSubscription();
   const [purchased, setPurchased] = useState(false);
+  /** The exact trial end + first charge, when the purchase started a trial (lib/trialCharge.ts). */
+  const [trialNotice, setTrialNotice] = useState<string | null>(null);
 
   // ── Analytics ────────────────────────────────────────────────────────────
   //
@@ -89,6 +93,8 @@ export default function UpgradePage(): ReactElement {
    *  put this page in front of someone, exactly as mobile does. */
   useEffect(() => {
     Analytics.planSelectionViewed(paywallContext);
+    // No store-review ask in the same tab session as a paywall (lib/reviewMoments.ts).
+    notePaywallShown();
   }, [paywallContext]);
 
   /**
@@ -270,7 +276,7 @@ export default function UpgradePage(): ReactElement {
     notifyEarnedPaywallAccepted(paywallContext);
     purchase.mutate(plan, {
       onSettled: purchaseGuard.release,
-      onSuccess: () => {
+      onSuccess: (customerInfo) => {
         // Bought. Recorded BEFORE any state change so the unmount cleanup can
         // never read a stale `false` and log the exit as a dismissal.
         purchasedRef.current = true;
@@ -285,6 +291,13 @@ export default function UpgradePage(): ReactElement {
         // annual plan that advertises a trial is counted as a trial start on
         // web and would not be on mobile. `subscribed` is unaffected.
         if (plan.hasFreeTrial) Analytics.planSelectionTrialStarted(planKey, paywallContext);
+        // A TRIAL started: the exact end date and first charge, from the
+        // entitlement RevenueCat returned, never from what the page advertised.
+        const charge = trialChargeFrom(customerInfo, PREMIUM_ENTITLEMENT);
+        if (charge) {
+          Analytics.trialChargeNoticeShown('paywall', charge.store);
+          setTrialNotice(trialStartedMessage(t, i18n.language, charge, plan.formattedPrice));
+        }
         setPurchased(true);
       },
       onError: (err) => {
@@ -333,7 +346,18 @@ export default function UpgradePage(): ReactElement {
           // Terminal, whole-page state — no other heading renders alongside
           // it, so this IS the page's <h1> (spec: page-has-heading-one).
           titleAs="h1"
-          description={t('success.body')}
+          description={
+            trialNotice ? (
+              <>
+                {t('success.body')}
+                <span data-testid="upgrade-trial-charge" className="mt-3 block">
+                  {trialNotice}
+                </span>
+              </>
+            ) : (
+              t('success.body')
+            )
+          }
           actions={
             <Button variant="primary" onClick={handlePurchasedContinue}>
               {t('success.cta')}
@@ -679,7 +703,9 @@ function PlansView({
           same title + subline as mobile's paywall (PlanSelectionScreen
           PREMIUM_FEATURES / planSelection.feature*Title/Sub). ORDER IS
           DELIBERATE (owner-approved 2026-10-10): lead with what people pay for
-          (more people in one circle), the circle-count cap LAST. Voice is
+          (more people in one circle), the circle-count cap LAST. Shifts and
+          managers + the weekly care summary added 2026-11-03 (Premium-gated on
+          the server but listed nowhere before). Voice is
           generic Premium copy; its sub carries the "on supported phones"
           caveat. Literal keys so the static key audit resolves each one. */}
       <ul
@@ -696,6 +722,8 @@ function PlansView({
           { id: 'exports', title: t('benefits.exports.title'), sub: t('benefits.exports.sub') },
           { id: 'storage', title: t('benefits.storage.title'), sub: t('benefits.storage.sub') },
           { id: 'ai', title: t('benefits.ai.title'), sub: t('benefits.ai.sub') },
+          { id: 'shifts', title: t('benefits.shifts.title'), sub: t('benefits.shifts.sub') },
+          { id: 'team', title: t('benefits.team.title'), sub: t('benefits.team.sub') },
           { id: 'circles', title: t('benefits.circles.title'), sub: t('benefits.circles.sub') },
         ].map((benefit) => (
           <li key={benefit.id} className="flex items-start gap-2 text-sm">

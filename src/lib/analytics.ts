@@ -1380,6 +1380,31 @@ export const Analytics = {
    */
   onboardingPayoffViewed: () => capture('onboarding_payoff_viewed'),
 
+  /**
+   * The setup invite step (after the first med's payoff, before the onboarding paywall).
+   * Booleans and enums ONLY: no circle_id, no names, no email (CLAUDE.md 4). Mobile parity:
+   * mobile/src/services/analytics.ts, same names and properties.
+   */
+  onboardingInviteStepShown: (props: { freePlan: boolean; selfCare: boolean }) =>
+    capture('onboarding_invite_step_shown', {
+      free_plan: props.freePlan === true,
+      self_care: props.selfCare === true,
+    }),
+
+  onboardingInviteStepSent: (memberType: string) =>
+    capture('onboarding_invite_step_sent', {
+      member_type: pickEnum(memberType, ['caregiver', 'care_recipient'] as const, 'caregiver'),
+    }),
+
+  /**
+   * `via`: 'not_now' (the button), 'close' (the x or Escape), 'form_closed' (the invite form
+   * was opened and left without sending).
+   */
+  onboardingInviteStepSkipped: (via: 'not_now' | 'close' | 'form_closed') =>
+    capture('onboarding_invite_step_skipped', {
+      via: pickEnum(via, ['not_now', 'close', 'form_closed'] as const, 'close'),
+    }),
+
   firstRunInvitePromptAction: (action: 'invite' | 'not_now' | 'close') =>
     capture('first_run_invite_prompt_action', { action }),
 

@@ -55,8 +55,11 @@ export interface InviteMemberModalProps {
   /** Hide the care_recipient option — the owner is already the recipient. */
   isSelfCare: boolean;
   onClose: () => void;
-  /** Called after a successful invite (parent typically refetches members). */
-  onInvited?: () => void;
+  /**
+   * Called after a successful invite (parent typically refetches members), with the role the
+   * invite was sent as (enum only; the setup invite step records it).
+   */
+  onInvited?: (memberType: InviteMemberType) => void;
   /** Names for the share message. Optional — the message degrades gracefully. */
   circleName?: string;
   recipientName?: string;
@@ -273,7 +276,7 @@ export function InviteMemberModal({
             created?.invite?.invite_url ??
             (code ? `${window.location.origin}/invite/${encodeURIComponent(code)}` : null);
           setSentInvite({ email: result.data, url });
-          onInvited?.();
+          onInvited?.(memberType);
         },
         onError: (error: unknown) => {
           // Mirror the hook's classification EXACTLY: a pending-invite seat is

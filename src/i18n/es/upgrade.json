@@ -53,6 +53,14 @@
       "title": "Asistente de IA",
       "sub": "Resume visitas y destaca lo importante"
     },
+    "shifts": {
+      "title": "Turnos de cuidado",
+      "sub": "Planifica quién cubre cada horario. Todo el círculo ve quién está a cargo."
+    },
+    "team": {
+      "title": "Personas gestoras y resumen semanal",
+      "sub": "Alguien puede ayudarte a invitar y gestionar miembros, y llega un resumen semanal por correo"
+    },
     "circles": {
       "title": "Hasta 5 círculos de cuidado",
       "sub": "Uno para cada persona que cuidas"

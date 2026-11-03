@@ -70,6 +70,9 @@
       "primarySelf": "Adicione o seu primeiro medicamento",
       "promise": "Cerca de um minuto. Todos os que ajudam veem, com um lembrete à hora certa.",
       "promiseSelf": "Cerca de um minuto. Vai vê-lo aqui, com um lembrete à hora certa."
+    },
+    "inviteStep": {
+      "freePlan": "O seu plano gratuito inclui uma pessoa."
     }
   },
   "accessLost": {

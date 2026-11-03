@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
+import { useAuthStore } from '@/store/authStore';
 import { FirstRunWizardModal } from '../FirstRunWizardModal';
 import type { SavedMedicationInfo } from '@/utils/firstMedSaved';
 import { isNextStepSnoozed } from '@/lib/todayCoaching';
@@ -113,10 +114,13 @@ vi.mock('@/components/calendar/AddEventModal', () => ({
   ),
 }));
 vi.mock('@/components/members/InviteMemberModal', () => ({
-  InviteMemberModal: (props: { onInvited?: () => void; onClose: () => void }) => (
+  InviteMemberModal: (props: { onInvited?: (memberType: string) => void; onClose: () => void }) => (
     <div data-testid="invite-modal">
       <button type="button" onClick={props.onClose}>
         stub-cancel
+      </button>
+      <button type="button" onClick={() => props.onInvited?.('caregiver')}>
+        stub-send
       </button>
     </div>
   ),
@@ -133,6 +137,9 @@ const analytics = vi.hoisted(() => ({
   medicationCreationStarted: vi.fn(),
   markItShown: vi.fn(),
   markItTapped: vi.fn(),
+  onboardingInviteStepShown: vi.fn(),
+  onboardingInviteStepSent: vi.fn(),
+  onboardingInviteStepSkipped: vi.fn(),
 }));
 vi.mock('@/lib/analytics', () => ({ Analytics: analytics, default: analytics }));
 
@@ -163,6 +170,7 @@ beforeEach(() => {
   };
   useCircleResult.canEdit = true;
   subscription.tier = 'free';
+  useAuthStore.setState({ user: null });
   markHook.pending = false;
   markHook.done = false;
   savedPayload.value = SAVED;
@@ -479,6 +487,191 @@ describe('payoff -> paywall (exactly once)', () => {
     expect(navigate).toHaveBeenCalledWith('/upgrade', {
       state: { paywallContext: 'onboarding', paywallTrigger: 'after_first_med' },
     });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe('the setup invite step (pricing report 2026-11-02)', () => {
+  /** A brand-new circle the signed-in user owns: only the owner, nothing pending. */
+  function ownCircle(over: Record<string, unknown> = {}) {
+    useAuthStore.setState({ user: { id: 'u1' } as never });
+    useCircleResult.circle = {
+      ...useCircleResult.circle,
+      owner_id: 'u1',
+      view_only: false,
+      members: [{ user_id: 'u1', role: 'owner', is_care_recipient: false, first_name: 'Ana' }],
+      pending_invites: [],
+      ...over,
+    };
+  }
+
+  async function toInviteStep(user: ReturnType<typeof userEvent.setup>) {
+    await saveFirstMed(user);
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+  }
+
+  it('free owner: Continue shows the step (with the free-plan line) and does NOT claim the paywall', async () => {
+    ownCircle();
+    markOnboardingPaywallPending(CIRCLE_ID);
+    const user = userEvent.setup();
+    const { onClose } = renderWizard();
+    await toInviteStep(user);
+    expect(screen.getByTestId('first-run-invite-step')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Invite someone to help' })).toHaveFocus();
+    expect(
+      screen.getByText("Add someone who helps with Rosa's care. You'll both see what's due and what's done.")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('first-run-invite-free-line')).toHaveTextContent(
+      'Your free plan includes one person.'
+    );
+    expect(screen.getByTestId('first-run-invite-send')).toHaveTextContent('Invite someone');
+    expect(screen.getByTestId('first-run-invite-not-now')).toHaveTextContent('Not now');
+    expect(analytics.onboardingInviteStepShown).toHaveBeenCalledTimes(1);
+    expect(analytics.onboardingInviteStepShown).toHaveBeenCalledWith({ freePlan: true, selfCare: false });
+    // Never a paywall here.
+    expect(navigate).not.toHaveBeenCalled();
+    expect(hasSeenOnboardingPaywall()).toBe(false);
+    expect(peekOnboardingPaywallPending()).toBe(CIRCLE_ID);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('premium owner: the step without the free-plan line', async () => {
+    ownCircle();
+    subscription.tier = 'premium';
+    const user = userEvent.setup();
+    renderWizard();
+    await toInviteStep(user);
+    expect(screen.getByTestId('first-run-invite-step')).toBeInTheDocument();
+    expect(screen.queryByTestId('first-run-invite-free-line')).not.toBeInTheDocument();
+    expect(analytics.onboardingInviteStepShown).toHaveBeenCalledWith({ freePlan: false, selfCare: false });
+  });
+
+  it('self-care: the "your care" body', async () => {
+    ownCircle({ is_self_care: true });
+    const user = userEvent.setup();
+    renderWizard();
+    await toInviteStep(user);
+    expect(
+      screen.getByText("Add someone who helps with your care. You'll both see what's due and what's done.")
+    ).toBeInTheDocument();
+  });
+
+  it('"Not now": skipped(not_now), then the paywall exactly once', async () => {
+    ownCircle();
+    markOnboardingPaywallPending(CIRCLE_ID);
+    const user = userEvent.setup();
+    const { onClose } = renderWizard();
+    await toInviteStep(user);
+    await user.click(screen.getByTestId('first-run-invite-not-now'));
+    expect(analytics.onboardingInviteStepSkipped).toHaveBeenCalledWith('not_now');
+    expect(hasSeenOnboardingPaywall()).toBe(true);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('/upgrade', {
+      state: { paywallContext: 'onboarding', paywallTrigger: 'after_first_med' },
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('the x on the step: skipped(close), then finish', async () => {
+    ownCircle();
+    const user = userEvent.setup();
+    const { onClose } = renderWizard();
+    await toInviteStep(user);
+    await user.click(screen.getByRole('button', { name: 'Close setup' }));
+    expect(analytics.onboardingInviteStepSkipped).toHaveBeenCalledWith('close');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Invite someone" opens the existing invite modal; a send records _sent, and its close finishes (paywall once)', async () => {
+    ownCircle();
+    markOnboardingPaywallPending(CIRCLE_ID);
+    const user = userEvent.setup();
+    const { onClose } = renderWizard();
+    await toInviteStep(user);
+    await user.click(screen.getByTestId('first-run-invite-send'));
+    expect(screen.getByTestId('invite-modal')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'stub-send' }));
+    await user.click(screen.getByRole('button', { name: 'stub-send' }));
+    expect(analytics.onboardingInviteStepSent).toHaveBeenCalledTimes(1);
+    expect(analytics.onboardingInviteStepSent).toHaveBeenCalledWith('caregiver');
+    expect(navigate).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'stub-cancel' }));
+    expect(analytics.onboardingInviteStepSkipped).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('/upgrade', {
+      state: { paywallContext: 'onboarding', paywallTrigger: 'after_first_med' },
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('the invite modal closed without a send: skipped(form_closed), then finish', async () => {
+    ownCircle();
+    const user = userEvent.setup();
+    const { onClose } = renderWizard();
+    await toInviteStep(user);
+    await user.click(screen.getByTestId('first-run-invite-send'));
+    await user.click(screen.getByRole('button', { name: 'stub-cancel' }));
+    expect(analytics.onboardingInviteStepSkipped).toHaveBeenCalledWith('form_closed');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('an as-needed first med (no payoff) still gets the step before the exit', async () => {
+    ownCircle();
+    savedPayload.value = undefined;
+    markOnboardingPaywallPending(CIRCLE_ID);
+    const user = userEvent.setup();
+    renderWizard();
+    await saveFirstMed(user);
+    expect(screen.getByTestId('first-run-invite-step')).toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('a double click on Continue does not skip the step', async () => {
+    ownCircle();
+    const user = userEvent.setup();
+    renderWizard();
+    await saveFirstMed(user);
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    // Two clicks with a render in between: the second lands on whatever node is under the
+    // pointer now. It must not be a reused node that became "Not now".
+    await act(async () => {
+      continueButton.click();
+    });
+    await act(async () => {
+      continueButton.click();
+    });
+    expect(screen.getByTestId('first-run-invite-step')).toBeInTheDocument();
+    expect(analytics.onboardingInviteStepSkipped).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a caregiver already joined', { members: [
+      { user_id: 'u1', role: 'owner', is_care_recipient: false },
+      { user_id: 'u2', role: 'member', is_care_recipient: false },
+    ] }],
+    ['a caregiver invite is pending', { pending_invites: [
+      { id: 'i1', invited_email: 'x@example.invalid', created_at: '2026-11-01T00:00:00Z', expires_at: '2099-01-01T00:00:00Z', member_type: 'caregiver' },
+    ] }],
+    ['the viewer is not the owner', { owner_id: 'someone-else' }],
+    ['a view-only seat', { view_only: true }],
+  ])('no step when %s', async (_label, over) => {
+    ownCircle(over);
+    const user = userEvent.setup();
+    const { onClose } = renderWizard();
+    await toInviteStep(user);
+    expect(screen.queryByTestId('first-run-invite-step')).not.toBeInTheDocument();
+    expect(analytics.onboardingInviteStepShown).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('no step while the tier is unknown', async () => {
+    ownCircle();
+    subscription.tier = undefined;
+    const user = userEvent.setup();
+    const { onClose } = renderWizard();
+    await toInviteStep(user);
+    expect(screen.queryByTestId('first-run-invite-step')).not.toBeInTheDocument();
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

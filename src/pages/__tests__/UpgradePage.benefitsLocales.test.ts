@@ -21,11 +21,12 @@ function table(code: string): UpgradeTable {
   return t;
 }
 
-const ORDER = ['caregivers', 'voice', 'exports', 'storage', 'ai', 'circles'];
+// Shifts + managers/weekly summary (2026-11-03): Premium-gated server-side, now listed.
+const ORDER = ['caregivers', 'voice', 'exports', 'storage', 'ai', 'shifts', 'team', 'circles'];
 
 describe('upgrade benefits: every locale', () => {
   it.each(LOCALE_REGISTRY.map((l) => [l.code, 'base' in l ? l.base : null] as const))(
-    '%s resolves all six benefits and the free baseline',
+    '%s resolves all eight benefits and the free baseline',
     (code, base) => {
       const own = table(code);
       const fallback = base ? table(base) : {};

@@ -23,6 +23,13 @@
     "storage": {
       "sub": "Espaço para processos clínicos, fotografias e papéis"
     },
+    "shifts": {
+      "title": "Turnos",
+      "sub": "Organize quem fica com cada horário. Todo o círculo vê quem está de turno."
+    },
+    "team": {
+      "sub": "Alguém pode ajudar a convidar e gerir membros, além de um resumo semanal por e-mail"
+    },
     "circles": {
       "sub": "Um para cada pessoa de quem cuida"
     }

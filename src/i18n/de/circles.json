@@ -174,6 +174,15 @@
       "question": "Heute schon gegeben?",
       "action": "Abhaken",
       "done": "Als eingenommen markiert."
+    },
+    "inviteStep": {
+      "eyebrow": "Pflege teilen",
+      "title": "Jemanden zum Helfen einladen",
+      "body": "Fügen Sie eine Person hinzu, die bei der Pflege von {{name}} hilft. So sehen Sie beide, was ansteht und was erledigt ist.",
+      "bodySelf": "Fügen Sie eine Person hinzu, die Ihnen bei Ihrer Pflege hilft. So sehen Sie beide, was ansteht und was erledigt ist.",
+      "freePlan": "Ihr kostenloser Tarif umfasst eine Person.",
+      "primary": "Jemanden einladen",
+      "notNow": "Nicht jetzt"
     }
   },
   "accessLost": {

@@ -53,6 +53,14 @@
       "title": "Assistant de soins IA",
       "sub": "Résume les visites et fait ressortir l’essentiel"
     },
+    "shifts": {
+      "title": "Gardes",
+      "sub": "Planifiez qui s’occupe de quand. Tout le cercle voit qui est de garde."
+    },
+    "team": {
+      "title": "Gestionnaires et récapitulatif hebdomadaire",
+      "sub": "Une personne peut vous aider à inviter et gérer les membres, plus un récapitulatif chaque semaine par e-mail"
+    },
     "circles": {
       "title": "Jusqu’à 5 cercles de soins",
       "sub": "Un pour chaque personne que vous aidez"

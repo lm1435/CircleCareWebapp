@@ -53,6 +53,14 @@
       "title": "KI-Pflegeassistent",
       "sub": "Fasst Besuche zusammen und hebt hervor, was wichtig ist"
     },
+    "shifts": {
+      "title": "Schichten",
+      "sub": "Planen Sie, wer wann übernimmt. Der ganze Kreis sieht, wer gerade dran ist."
+    },
+    "team": {
+      "title": "Mitverwalter und Wochenzusammenfassung",
+      "sub": "Eine weitere Person hilft beim Einladen und Verwalten von Mitgliedern, dazu jede Woche eine Zusammenfassung per E-Mail"
+    },
     "circles": {
       "title": "Bis zu 5 Pflegekreise",
       "sub": "Einer für jede Person, die Sie betreuen"
