@@ -132,3 +132,5 @@ export const isShiftNotFoundError = (err: unknown): boolean =>
   shiftErrorCode(err) === 'SHIFT_NOT_FOUND';
 export const isShiftInvalidDateError = (err: unknown): boolean =>
   shiftErrorCode(err) === 'SHIFT_INVALID_DATE';
+/** 409 SHIFT_ENDED — the occurrence's end (recipient zone) has passed: it is read-only. */
+export const isShiftEndedError = (err: unknown): boolean => shiftErrorCode(err) === 'SHIFT_ENDED';

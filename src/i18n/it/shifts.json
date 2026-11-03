@@ -2,6 +2,7 @@
   "eyebrow": "Turni",
   "close": "Chiudi",
   "open": "Scoperto",
+  "notCovered": "Non coperto",
   "you": "Tu",
   "takeButton": "Prendi",
   "takeAria": "Prendi {{name}}",
@@ -192,7 +193,8 @@
     "alreadyTakenUnknown": "Qualcuno ha appena preso questo turno.",
     "alreadyOpen": "Questo turno è già scoperto.",
     "notFound": "Questo turno non è più disponibile.",
-    "notAssigned": "Nessuno ha più questo turno."
+    "notAssigned": "Nessuno ha più questo turno.",
+    "ended": "Questo turno è già finito."
   },
   "someone": "Qualcuno",
   "rangeSpoken": "dalle {{start}} alle {{end}}",
@@ -202,7 +204,8 @@
     "statusOpen": "scoperto",
     "statusCovered": "se ne occupa {{name}}",
     "statusMine": "hai tu questo turno",
-    "openDetailsHint": "Apre i dettagli del turno"
+    "openDetailsHint": "Apre i dettagli del turno",
+    "statusNotCovered": "non coperto"
   },
   "loadError": "Non siamo riusciti a caricare i turni.",
   "error": {

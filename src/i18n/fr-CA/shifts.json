@@ -84,7 +84,8 @@
     "updated": "Quart mis à jour.",
     "deleted": "Quart supprimé.",
     "notFound": "Ce quart n’est plus disponible.",
-    "notAssigned": "Plus personne n’assure ce quart."
+    "notAssigned": "Plus personne n’assure ce quart.",
+    "ended": "Ce quart est déjà terminé."
   },
   "error": {
     "take": "Impossible de prendre le quart. Réessayez.",
@@ -101,12 +102,14 @@
   "summaryShort_other": "{{count}} quarts · {{open}}",
   "card": {
     "statusMine": "vous assurez ce quart",
-    "openDetailsHint": "Ouvre les détails du quart"
+    "openDetailsHint": "Ouvre les détails du quart",
+    "statusNotCovered": "non pourvu"
   },
   "loadError": "Impossible de charger les quarts.",
   "readOnly": {
     "owner": "Votre abonnement Premium est terminé. Vos quarts sont en lecture seule.",
     "other": "Les quarts sont en lecture seule pour le moment."
   },
-  "openCount_zero": "aucun à pourvoir"
+  "openCount_zero": "aucun à pourvoir",
+  "notCovered": "Non pourvu"
 }

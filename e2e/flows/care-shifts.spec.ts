@@ -251,7 +251,9 @@ test.describe('a member takes and drops a shift', () => {
     const member = await createRunAccount('shiftmember', 'Mia', 'Member');
     addMembership(s.circleId, member.userId, 'member');
     await seedShift(s, { recurrence_rule: 'daily' });
-    await seedShift(s, { title: 'Weekend cover', scheduled_time: '09:00', duration_minutes: 480 });
+    // 23:00 - 07:00 (next day): still ahead or in progress whenever today runs. A daytime shift on today
+    // would have ENDED by the evening, and an ended shift is read-only (no Take): a time-of-day bomb.
+    await seedShift(s, { title: 'Weekend cover', scheduled_time: '23:00', duration_minutes: 480 });
 
     const context = await browser.newContext();
     await cookieLogin(context, member, baseURL);
@@ -329,6 +331,83 @@ test.describe('a member takes and drops a shift', () => {
     } finally {
       await context.close();
     }
+  });
+});
+
+// Owner report (TestFlight 1.4.0 build 9): Shifts > Week offered Take on yesterday's ended "Evening 2:00 PM -
+// 8:00 PM · Open". An ended shift is history: an unfilled one reads "Not covered", nobody may take, drop or
+// assign it (the server answers 409 SHIFT_ENDED), and Edit / Delete stay. "Yesterday" is the recipient's.
+test.describe('an ended shift is read-only', () => {
+  test('yesterday\'s shifts: "Not covered", no Take / Drop / Assign; the server refuses with 409 SHIFT_ENDED', async ({
+    request,
+    context,
+    baseURL,
+    page,
+  }, testInfo) => {
+    const s = await premiumScene(request);
+    await cookieLogin(context, s.owner, baseURL);
+    const yesterday = dateInTz(s.tz, -1);
+    const evening = await seedShift(s, {
+      title: 'Evening',
+      scheduled_date: yesterday,
+      scheduled_time: '14:00',
+      duration_minutes: 360,
+    });
+    const morning = await seedShift(s, {
+      title: 'Morning',
+      scheduled_date: yesterday,
+      scheduled_time: '08:00',
+      duration_minutes: 240,
+      assigned_to: s.owner.userId,
+    });
+
+    await openShifts(page, s.circleId, 'Day');
+    await page.getByRole('button', { name: 'Previous day', exact: true }).click();
+    const list = page.getByTestId('shifts-day-list');
+    await expect(list.getByTestId('shift-card')).toHaveCount(2, { timeout: 20_000 });
+    await expect(list.getByRole('button', { name: /^Take / })).toHaveCount(0);
+    const card = list.getByRole('button', { name: /^Evening, 2:00 PM to 8:00 PM, not covered$/ });
+    await expect(card).toBeVisible();
+    await expect(list.getByTestId('shift-open-word')).toHaveText('Not covered');
+    await checkA11y(page, 'shifts-ended-day-light', testInfo);
+
+    // The unfilled one: no Take, no Assign (the owner could assign an upcoming one); Edit / Delete stay.
+    await card.click();
+    const detail = page.getByRole('dialog', { name: 'Evening' });
+    await expect(detail.getByTestId('shift-detail-status')).toHaveText('Not covered');
+    await expect(detail.getByTestId('shift-detail-who')).toHaveText('Not covered');
+    for (const name of ['Take', 'Drop shift', 'Assign']) {
+      await expect(detail.getByRole('button', { name, exact: true })).toHaveCount(0);
+    }
+    await expect(detail.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
+    await expect(detail.getByRole('button', { name: 'Delete', exact: true })).toBeVisible();
+    await checkA11y(page, 'shifts-ended-detail-light', testInfo);
+    await detail.getByRole('button', { name: 'Close' }).last().click();
+
+    // The owner's own ended shift: their name stays, no Drop.
+    await list.getByRole('button', { name: /^Morning, 8:00 AM to 12:00 PM, you are on this shift$/ }).click();
+    const mine = page.getByRole('dialog', { name: 'Morning' });
+    await expect(mine.getByTestId('shift-detail-who')).toHaveText('You');
+    for (const name of ['Take', 'Drop shift', 'Assign']) {
+      await expect(mine.getByRole('button', { name, exact: true })).toHaveCount(0);
+    }
+    await mine.getByRole('button', { name: 'Close' }).last().click();
+
+    // The server refuses an old client that still offers the buttons, and writes nothing.
+    const take = await s.session.post(`/api/circles/${s.circleId}/events/${evening.id}/shift/take`, {
+      scope: 'occurrence',
+      scheduledDate: yesterday,
+    });
+    expect(take.status()).toBe(409);
+    expect(((await take.json()) as { error: { code: string } }).error.code).toBe('SHIFT_ENDED');
+    const drop = await s.session.post(`/api/circles/${s.circleId}/events/${morning.id}/shift/drop`, {
+      scope: 'occurrence',
+      scheduledDate: yesterday,
+    });
+    expect(drop.status()).toBe(409);
+    const rows = sqlShiftRows(s.circleId);
+    expect(rows.find((r) => r.title === 'Evening')?.assigned_to).toBeNull();
+    expect(rows.find((r) => r.title === 'Morning')?.assigned_to).toBe(s.owner.userId);
   });
 });
 

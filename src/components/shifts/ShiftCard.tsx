@@ -9,6 +9,7 @@ import {
   formatShiftRange,
   formatShiftRangeParts,
   formatShiftRangeViewer,
+  hasShiftEnded,
   isShiftOpen,
 } from './shiftUtils';
 
@@ -19,7 +20,10 @@ export interface ShiftCardProps {
   viewerId: string | null | undefined;
   /** Opens the Shift detail. */
   onOpen: (shift: CalendarEvent) => void;
-  /** Present only for someone who may take (edit rights); an open card then shows Take. */
+  /**
+   * Present only for someone who may take (edit rights); an open card then shows Take,
+   * unless the shift has ENDED (recipient zone): then it reads "Not covered", no Take.
+   */
   onTake?: (shift: CalendarEvent) => void;
 }
 
@@ -43,6 +47,8 @@ export function ShiftCard({
   const { t } = useTranslation('shifts');
   const cycle = useHourCycle();
   const open = isShiftOpen(shift);
+  // Unfilled and already over (owner report, 1.4.0): "Not covered", nothing left to take.
+  const unfilledEnded = open && hasShiftEnded(shift, timezone);
   const assignee = shiftAssignee(shift, members, viewerId);
   const range = formatShiftRange(shift, timezone, cycle);
   const viewerRange = formatShiftRangeViewer(shift, timezone, cycle);
@@ -51,7 +57,9 @@ export function ShiftCard({
   const hintId = useId();
   // "{{name}}, {{start}} to {{end}}[, next day], open" / ", {{who}} is on it". The
   // action lives in the description, never in the label.
-  const status = open
+  const status = unfilledEnded
+    ? t('card.statusNotCovered')
+    : open
     ? t('card.statusOpen')
     : assignee?.isYou
       ? t('card.statusMine')
@@ -96,8 +104,11 @@ export function ShiftCard({
             {open && (
               <>
                 {' · '}
-                <span data-testid="shift-open-word" className="font-semibold text-moss">
-                  {t('open')}
+                <span
+                  data-testid="shift-open-word"
+                  className={`font-semibold ${unfilledEnded ? 'text-ink-2' : 'text-moss'}`}
+                >
+                  {unfilledEnded ? t('notCovered') : t('open')}
                 </span>
               </>
             )}
@@ -110,7 +121,7 @@ export function ShiftCard({
           {t('card.openDetailsHint')}
         </span>
       </button>
-      {open && onTake && (
+      {open && !unfilledEnded && onTake && (
         <Button
           size="sm"
           variant="primary"

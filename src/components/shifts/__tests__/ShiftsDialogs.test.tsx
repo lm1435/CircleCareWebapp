@@ -11,6 +11,16 @@ import { useCircle } from '@/hooks/useCircle';
 import { useAuthStore } from '@/store/authStore';
 import { useShiftsDialogs } from '../ShiftsDialogs';
 
+// The fixtures are dated Oct 2026: pin the wall clock (Date only) BEFORE them, or every open fixture
+// shift has ENDED on the real clock and (correctly) loses Take / Drop / Assign. Ended shifts have their own cases.
+const PINNED_NOW = new Date('2026-10-17T12:00:00Z');
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ['Date'], now: PINNED_NOW });
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
+
 vi.mock('@/api/calendarEvents', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/api/calendarEvents')>()),
   deleteEvent: vi.fn(),
@@ -451,5 +461,48 @@ describe('Delete', () => {
     await waitFor(() => expect(deleteEvent).toHaveBeenCalled());
     expect(screen.queryByText('Couldn’t update the shift. Please try again.')).not.toBeInTheDocument();
     expect(screen.queryByText("Couldn't update the shift. Please try again.")).not.toBeInTheDocument();
+  });
+});
+
+// Owner report (TestFlight 1.4.0 build 9): an ENDED shift is history. No Take, no Drop, no Assign (the server
+// answers 409 SHIFT_ENDED); Edit and Delete stay. An unfilled one reads "Not covered". In progress still offers
+// Take. The recipient is in Tokyo: Sun 2026-11-01 14:00-20:00 Tokyo ends at 11:00Z.
+describe('Shift detail: an ended shift is read-only', () => {
+  const actionNames = (dialog: HTMLElement) =>
+    within(dialog)
+      .getAllByRole('button')
+      .map((b) => b.textContent)
+      .filter((n) => ['Take', 'Drop shift', 'Edit', 'Assign', 'Delete'].includes(n ?? ''));
+  const sunday = (over: Partial<CalendarEvent> = {}) =>
+    shift({ id: 'root_2026-11-01', scheduled_date: '2026-11-01', scheduled_time: '14:00:00', duration_minutes: 360, ...over });
+
+  beforeEach(() => {
+    circle({ timezone: 'Asia/Tokyo' });
+  });
+  afterEach(() => {
+    vi.setSystemTime(PINNED_NOW);
+  });
+
+  it('unfilled and over: no Take / Assign, "Not covered" chip and who row; Edit and Delete remain', async () => {
+    vi.setSystemTime(new Date('2026-11-01T11:00:00Z'));
+    const { dialog } = await openDetail(sunday({ assigned_to: null }));
+    expect(actionNames(dialog)).toEqual(['Edit', 'Delete']);
+    expect(within(dialog).getByTestId('shift-detail-status')).toHaveTextContent('Not covered');
+    expect(within(dialog).getByTestId('shift-detail-who')).toHaveTextContent('Not covered');
+    expect(within(dialog).queryByText('Open')).not.toBeInTheDocument();
+  });
+
+  it('mine and over: no Drop', async () => {
+    vi.setSystemTime(new Date('2026-11-02T00:00:00Z'));
+    const { dialog } = await openDetail(sunday());
+    expect(actionNames(dialog)).toEqual(['Edit', 'Delete']);
+    expect(within(dialog).getByTestId('shift-detail-who')).toHaveTextContent('You');
+  });
+
+  it('in progress (one minute before the end): Take and Assign are still offered', async () => {
+    vi.setSystemTime(new Date('2026-11-01T10:59:00Z'));
+    const { dialog } = await openDetail(sunday({ assigned_to: null }));
+    expect(actionNames(dialog)).toEqual(['Take', 'Edit', 'Assign', 'Delete']);
+    expect(within(dialog).getByTestId('shift-detail-status')).toHaveTextContent('Open');
   });
 });

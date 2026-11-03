@@ -2,6 +2,7 @@
   "eyebrow": "Turnos",
   "close": "Cerrar",
   "open": "Abierto",
+  "notCovered": "Sin cubrir",
   "you": "Tú",
   "takeButton": "Tomar",
   "takeAria": "Tomar {{name}}",
@@ -192,7 +193,8 @@
     "alreadyTakenUnknown": "Alguien acaba de tomar este turno.",
     "alreadyOpen": "Este turno ya está abierto.",
     "notFound": "Este turno ya no está disponible.",
-    "notAssigned": "Ya no hay nadie en ese turno."
+    "notAssigned": "Ya no hay nadie en ese turno.",
+    "ended": "Este turno ya terminó."
   },
   "someone": "Alguien",
   "rangeSpoken": "de {{start}} a {{end}}",
@@ -202,7 +204,8 @@
     "statusOpen": "abierto",
     "statusCovered": "{{name}} lo tiene",
     "statusMine": "tú tienes este turno",
-    "openDetailsHint": "Abre los detalles del turno"
+    "openDetailsHint": "Abre los detalles del turno",
+    "statusNotCovered": "sin cubrir"
   },
   "loadError": "No pudimos cargar los turnos.",
   "error": {

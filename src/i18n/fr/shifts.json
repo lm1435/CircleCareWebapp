@@ -2,6 +2,7 @@
   "eyebrow": "Gardes",
   "close": "Fermer",
   "open": "À pourvoir",
+  "notCovered": "Non pourvue",
   "you": "Vous",
   "takeButton": "Prendre",
   "takeAria": "Prendre {{name}}",
@@ -192,7 +193,8 @@
     "alreadyTakenUnknown": "Quelqu’un vient de prendre cette garde.",
     "alreadyOpen": "Cette garde est déjà à pourvoir.",
     "notFound": "Cette garde n’est plus disponible.",
-    "notAssigned": "Plus personne n’assure cette garde."
+    "notAssigned": "Plus personne n’assure cette garde.",
+    "ended": "Cette garde est déjà terminée."
   },
   "someone": "Quelqu’un",
   "rangeSpoken": "de {{start}} à {{end}}",
@@ -202,7 +204,8 @@
     "statusOpen": "à pourvoir",
     "statusCovered": "{{name}} s’en charge",
     "statusMine": "vous assurez cette garde",
-    "openDetailsHint": "Ouvre les détails de la garde"
+    "openDetailsHint": "Ouvre les détails de la garde",
+    "statusNotCovered": "non pourvue"
   },
   "loadError": "Impossible de charger les gardes.",
   "error": {

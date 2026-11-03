@@ -1,6 +1,7 @@
 {
   "eyebrow": "Turnos",
   "open": "Por preencher",
+  "notCovered": "Não preenchido",
   "you": "Eu",
   "addShift": "Adicionar turno",
   "summary_one": "{{count}} turno · {{open}}.",
@@ -101,7 +102,8 @@
     "updated": "Turno atualizado.",
     "deleted": "Turno eliminado.",
     "notFound": "Este turno já não está disponível.",
-    "notAssigned": "Já ninguém está nesse turno."
+    "notAssigned": "Já ninguém está nesse turno.",
+    "ended": "Este turno já terminou."
   },
   "error": {
     "take": "Não foi possível assumir o turno. Tente novamente.",
@@ -119,7 +121,8 @@
   "card": {
     "statusOpen": "por preencher",
     "statusMine": "está neste turno",
-    "openDetailsHint": "Abre os detalhes do turno"
+    "openDetailsHint": "Abre os detalhes do turno",
+    "statusNotCovered": "não preenchido"
   },
   "loadError": "Não foi possível carregar os turnos.",
   "readOnly": {

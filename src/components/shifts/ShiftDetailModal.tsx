@@ -19,6 +19,7 @@ import { holdsOnlyThisDay,
   isShiftRepeating,
   shiftEnd,
   canCoverShifts,
+  hasShiftEnded,
 } from './shiftUtils';
 
 export type ShiftDetailAction = 'take' | 'drop' | 'assign' | 'edit' | 'delete';
@@ -36,6 +37,9 @@ export interface ShiftDetailModalProps {
  * Shift detail (step 4): name, date, times (dual when zones differ), repeat,
  * who is on it, reminder. Actions by role: Take (open), Drop (the assignee, or
  * an owner / manager), Edit, Assign (owner / manager), Delete (mobile's order).
+ * An ENDED shift (recipient zone, naive start + duration) is history: no Take,
+ * Drop or Assign (the server answers 409 SHIFT_ENDED), and an unfilled one reads
+ * "Not covered". Edit and Delete stay. In progress is not ended.
  */
 export function ShiftDetailModal({
   circleId,
@@ -61,7 +65,8 @@ export function ShiftDetailModal({
   const end = shiftEnd(shift.scheduled_date, shift.scheduled_time ?? '00:00', shift.duration_minutes ?? 15);
   const ruleSource = useShiftSeriesRoot(circleId, shift);
   const repeat = formatShiftRepeat(ruleSource ?? shift, isShiftRepeating(shift), t, (days) => formatWeekdayList(days, i18n.language));
-  const canDrop = !open && canWrite && (assignee?.isYou === true || canManageMembers);
+  const ended = hasShiftEnded(shift, timezone);
+  const canDrop = !open && !ended && canWrite && (assignee?.isYou === true || canManageMembers);
   // Took "Just this one" of a repeating shift: say so, or "Repeats: Daily" + "You" reads as every day.
   const onlyThisDay = holdsOnlyThisDay(shift, ruleSource);
   const whoName = assignee?.isYou ? t('shifts:you') : (assignee?.name ?? '');
@@ -97,8 +102,15 @@ export function ShiftDetailModal({
                 // card-shell-ok: the empty avatar ring (a circle), not a card
                 className="inline-flex h-12 w-12 shrink-0 rounded-full border-[1.5px] border-line bg-bg"
               />
-              <span className="rounded-full bg-moss-soft px-3 py-1 text-sm font-semibold text-moss">
-                {t('shifts:open')}
+              <span
+                data-testid="shift-detail-status"
+                className={
+                  ended
+                    ? 'rounded-full border border-line px-3 py-1 text-sm font-semibold text-ink-2'
+                    : 'rounded-full bg-moss-soft px-3 py-1 text-sm font-semibold text-moss'
+                }
+              >
+                {ended ? t('shifts:notCovered') : t('shifts:open')}
               </span>
             </>
           ) : (
@@ -131,7 +143,7 @@ export function ShiftDetailModal({
           {row(t('shifts:detail.repeats'), repeat, 'shift-detail-repeat')}
           {row(
             t('shifts:detail.coveredBy'),
-            open ? t('shifts:detail.openValue') : whoValue,
+            open ? (ended ? t('shifts:notCovered') : t('shifts:detail.openValue')) : whoValue,
             'shift-detail-who'
           )}
           {row(
@@ -143,7 +155,7 @@ export function ShiftDetailModal({
 
         {canWrite && (
           <div className="flex flex-wrap gap-2">
-            {open && canCoverShifts(members, viewerId) && (
+            {open && !ended && canCoverShifts(members, viewerId) && (
               <Button size="sm" offlineKind="change" onClick={() => onAction('take', shift)}>
                 {t('shifts:takeButton')}
               </Button>
@@ -166,7 +178,7 @@ export function ShiftDetailModal({
             >
               {t('shifts:edit')}
             </Button>
-            {canManageMembers && (
+            {canManageMembers && !ended && (
               <Button
                 size="sm"
                 variant="secondary"

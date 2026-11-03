@@ -2,6 +2,7 @@
   "eyebrow": "Shifts",
   "close": "Close",
   "open": "Open",
+  "notCovered": "Not covered",
   "you": "You",
   "takeButton": "Take",
   "takeAria": "Take {{name}}",
@@ -192,7 +193,8 @@
     "alreadyTakenUnknown": "Someone just took this shift.",
     "alreadyOpen": "This shift is already open.",
     "notFound": "This shift is no longer available.",
-    "notAssigned": "Nobody is on that shift anymore."
+    "notAssigned": "Nobody is on that shift anymore.",
+    "ended": "This shift has already ended."
   },
   "someone": "Someone",
   "rangeSpoken": "{{start}} to {{end}}",
@@ -202,7 +204,8 @@
     "statusOpen": "open",
     "statusCovered": "{{name}} is on it",
     "statusMine": "you are on this shift",
-    "openDetailsHint": "Opens the shift details"
+    "openDetailsHint": "Opens the shift details",
+    "statusNotCovered": "not covered"
   },
   "loadError": "We couldn't load the shifts.",
   "error": {

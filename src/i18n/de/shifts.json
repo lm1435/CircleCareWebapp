@@ -2,6 +2,7 @@
   "eyebrow": "Schichten",
   "close": "Schließen",
   "open": "Offen",
+  "notCovered": "Nicht besetzt",
   "you": "Sie",
   "takeButton": "Übernehmen",
   "takeAria": "{{name}} übernehmen",
@@ -192,7 +193,8 @@
     "alreadyTakenUnknown": "Jemand hat diese Schicht gerade übernommen.",
     "alreadyOpen": "Diese Schicht ist bereits offen.",
     "notFound": "Diese Schicht ist nicht mehr verfügbar.",
-    "notAssigned": "Bei dieser Schicht ist niemand mehr eingeteilt."
+    "notAssigned": "Bei dieser Schicht ist niemand mehr eingeteilt.",
+    "ended": "Diese Schicht ist bereits vorbei."
   },
   "someone": "Jemand",
   "rangeSpoken": "{{start}} bis {{end}}",
@@ -202,7 +204,8 @@
     "statusOpen": "offen",
     "statusCovered": "{{name}} übernimmt sie",
     "statusMine": "Sie haben diese Schicht",
-    "openDetailsHint": "Öffnet die Schichtdetails"
+    "openDetailsHint": "Öffnet die Schichtdetails",
+    "statusNotCovered": "nicht besetzt"
   },
   "loadError": "Die Schichten konnten nicht geladen werden.",
   "error": {

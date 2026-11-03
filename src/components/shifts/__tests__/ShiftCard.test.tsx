@@ -5,6 +5,16 @@ import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
 import { ShiftCard } from '../ShiftCard';
 
+// The fixtures are dated Oct 2026: pin the wall clock (Date only) BEFORE them, or every open fixture
+// shift has ENDED on the real clock and (correctly) loses Take / Drop / Assign. Ended shifts have their own cases.
+const PINNED_NOW = new Date('2026-10-17T12:00:00Z');
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ['Date'], now: PINNED_NOW });
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
+
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 
 // The viewer shares the recipient's zone here, so no dual time is shown.
@@ -113,5 +123,48 @@ describe('ShiftCard', () => {
     renderCard(shift(), { onTake: undefined });
     expect(screen.queryByRole('button', { name: /^Take/ })).not.toBeInTheDocument();
     expect(screen.getAllByText('Open').length).toBeGreaterThan(0);
+  });
+});
+
+// Owner report (TestFlight 1.4.0 build 9): Week showed Sunday's ended "Evening 2:00 PM – 8:00 PM · Open"
+// with Take. An unfilled shift whose END (recipient zone) has passed reads "Not covered" and offers no Take;
+// one in progress still offers it. The recipient is in Tokyo: Sun 14:00-20:00 Tokyo ends at 11:00Z.
+describe('ShiftCard: ended shifts', () => {
+  const sunday = (over: Partial<CalendarEvent> = {}) =>
+    shift({ scheduled_date: '2026-11-01', scheduled_time: '14:00:00', duration_minutes: 360, ...over });
+  afterEach(() => {
+    vi.setSystemTime(PINNED_NOW);
+  });
+
+  it('ended + unfilled: "Not covered" (not moss), no Take, the accessible name says not covered', () => {
+    vi.setSystemTime(new Date('2026-11-01T11:00:00Z'));
+    renderCard(sunday(), { timezone: 'Asia/Tokyo' });
+    const word = screen.getByTestId('shift-open-word');
+    expect(word).toHaveTextContent('Not covered');
+    expect(word).not.toHaveClass('text-moss');
+    expect(screen.queryByText('Open')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Take/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /, not covered$/ })).toBeInTheDocument();
+  });
+
+  it('in progress (one minute before the end): still Open with Take', async () => {
+    vi.setSystemTime(new Date('2026-11-01T10:59:00Z'));
+    const { onTake } = renderCard(sunday(), { timezone: 'Asia/Tokyo' });
+    expect(screen.getByTestId('shift-open-word')).toHaveTextContent('Open');
+    screen.getByRole('button', { name: /^Take/ }).click();
+    expect(onTake).toHaveBeenCalled();
+  });
+
+  it('the recipient zone decides: the same instant with a Chicago recipient is still takeable', () => {
+    vi.setSystemTime(new Date('2026-11-01T11:00:00Z'));
+    renderCard(sunday(), { timezone: 'America/Chicago' });
+    expect(screen.getByRole('button', { name: /^Take/ })).toBeInTheDocument();
+  });
+
+  it('an overnight shift that ended this morning (Sat 8 PM - Sun 8 AM Tokyo = 23:00Z Sat): no Take', () => {
+    vi.setSystemTime(new Date('2026-10-31T23:00:00Z'));
+    renderCard(shift({ scheduled_date: '2026-10-31' }), { timezone: 'Asia/Tokyo' });
+    expect(screen.queryByRole('button', { name: /^Take/ })).not.toBeInTheDocument();
+    expect(screen.getByTestId('shift-open-word')).toHaveTextContent('Not covered');
   });
 });

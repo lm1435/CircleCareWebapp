@@ -2,6 +2,7 @@
   "eyebrow": "Plantões",
   "close": "Fechar",
   "open": "Em aberto",
+  "notCovered": "Sem cobertura",
   "you": "Você",
   "takeButton": "Assumir",
   "takeAria": "Assumir {{name}}",
@@ -192,7 +193,8 @@
     "alreadyTakenUnknown": "Alguém acabou de assumir este plantão.",
     "alreadyOpen": "Este plantão já está em aberto.",
     "notFound": "Este plantão não está mais disponível.",
-    "notAssigned": "Ninguém mais está nesse plantão."
+    "notAssigned": "Ninguém mais está nesse plantão.",
+    "ended": "Este plantão já terminou."
   },
   "someone": "Alguém",
   "rangeSpoken": "das {{start}} às {{end}}",
@@ -202,7 +204,8 @@
     "statusOpen": "em aberto",
     "statusCovered": "{{name}} está nele",
     "statusMine": "você está neste plantão",
-    "openDetailsHint": "Abre os detalhes do plantão"
+    "openDetailsHint": "Abre os detalhes do plantão",
+    "statusNotCovered": "sem cobertura"
   },
   "loadError": "Não foi possível carregar os plantões.",
   "error": {

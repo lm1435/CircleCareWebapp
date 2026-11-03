@@ -2,6 +2,7 @@ import {
   isInvalidAssigneeError,
   isShiftAssignForbiddenError,
   isShiftDropForbiddenError,
+  isShiftEndedError,
   isShiftInvalidDateError,
   isShiftNotAssignedError,
   isShiftNotFoundError,
@@ -23,6 +24,7 @@ export type ShiftFailureKind =
   | 'assign_forbidden'
   | 'invalid_assignee'
   | 'not_found'
+  | 'ended'
   | 'permission'
   | 'subscription'
   | 'other';
@@ -36,6 +38,7 @@ export function classifyShiftFailure(err: unknown): ShiftFailureKind {
   if (isShiftAssignForbiddenError(err)) return 'assign_forbidden';
   if (isInvalidAssigneeError(err)) return 'invalid_assignee';
   if (isShiftNotFoundError(err) || isShiftInvalidDateError(err)) return 'not_found';
+  if (isShiftEndedError(err)) return 'ended';
   if (isSubscriptionRequiredError(err)) return 'subscription';
   if (isPermissionDeniedError(err)) return 'permission';
   return 'other';
@@ -68,6 +71,8 @@ export function describeShiftFailure(
       };
     case 'not_found':
       return { kind, specific: true, message: t('toast.notFound') };
+    case 'ended':
+      return { kind, specific: true, message: t('toast.ended') };
     case 'drop_forbidden':
       return { kind, specific: true, message: t('error.dropForbidden') };
     case 'assign_forbidden':
