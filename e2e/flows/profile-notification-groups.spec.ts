@@ -244,4 +244,35 @@ test.describe('Profile: notification groups', () => {
       await setProfileLanguage(page, 'en').catch(() => {});
     }
   });
+
+  // The Shifts switch PATCHes `shift_alerts`, the key backend
+  // services/shiftNotifications.ts gates every shift push on. The backend's Zod
+  // allow-list did not list it, so the key was STRIPPED: a 200, the switch
+  // flipped, and nothing was stored — a reload showed it ON again.
+  test('Shifts off is STORED (shift_alerts=false) and survives a reload', async ({ page, account }) => {
+    const original = readPrefs(account.userId);
+    try {
+      const base = without(original, 'shift_alerts');
+      writePrefs(account.userId, base);
+
+      await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+      const shifts = page.getByRole('switch', { name: 'Shifts', exact: true });
+      await expect(shifts).toBeVisible({ timeout: 15_000 });
+      await expect(shifts).toHaveAttribute('aria-checked', 'true');
+
+      await shifts.click();
+      await expect
+        .poll(() => readPrefs(account.userId).shift_alerts, { timeout: 10_000 })
+        .toBe(false);
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.getByRole('switch', { name: 'Shifts', exact: true })).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 15_000 }
+      );
+    } finally {
+      writePrefs(account.userId, original);
+    }
+  });
 });

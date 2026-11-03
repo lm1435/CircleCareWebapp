@@ -125,6 +125,21 @@ async function refreshAccessToken(): Promise<void> {
   tokenAccessor.setToken(session.access_token, session.expires_at ?? null);
 }
 
+/**
+ * True when a refresh failure says nothing about the session: no answer at all
+ * (offline, timeout, dropped connection), the backend throttled it (429
+ * AUTH_RATE_LIMITED), or the server/auth service was unavailable (5xx, incl.
+ * 503 AUTH_UNAVAILABLE when Supabase could not be reached). Only a REFUSED
+ * refresh (401 REFRESH_FAILED: the refresh token is dead) may sign the user
+ * out. Mobile twin: mobile/src/api/client.ts `isTransientRefreshFailure`.
+ */
+export function isTransientRefreshFailure(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  if (!error.response) return true;
+  const { status } = error.response;
+  return status === 429 || status >= 500;
+}
+
 /** Single-flight refresh — concurrent callers share one in-flight request. */
 function refreshTokenDeduped(): Promise<void> {
   if (isRefreshing && refreshPromise) {
@@ -243,10 +258,11 @@ apiClient.interceptors.response.use(
 
         // Retry the original request
         return apiClient(originalRequest);
-      } catch {
+      } catch (refreshError) {
         // Only log out if the user actually had a token
-        // (don't sign out unauthenticated visitors).
-        if (tokenAccessor.getAuthToken()) {
+        // (don't sign out unauthenticated visitors) — and only when the
+        // refresh was REFUSED, never when it simply was not answered.
+        if (tokenAccessor.getAuthToken() && !isTransientRefreshFailure(refreshError)) {
           tokenAccessor.clear();
           await onAuthFailure?.();
         }

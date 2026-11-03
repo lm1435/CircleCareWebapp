@@ -113,6 +113,9 @@ function vitalsResult(vitals: HealthVital[], overrides: Record<string, unknown> 
  */
 const PREVIOUS_WINDOW_SLACK_MS = 60_000;
 
+/** How far past "now" the active window's `to` reaches (VitalsPage VITALS_FUTURE_WINDOW_MS). */
+const FUTURE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 function isPreviousWindow(params: { to?: string } | undefined): boolean {
   if (!params?.to) return false;
   return Date.now() - Date.parse(params.to) > PREVIOUS_WINDOW_SLACK_MS;
@@ -419,6 +422,73 @@ describe('VitalsPage', () => {
     expect(lastCurrentParams()).toMatchObject({ type: 'blood_pressure' });
   });
 
+  // ── A reading added while the page is open ───────────────────────────────
+
+  // The active window's `to` used to be `now` captured at MOUNT and memoised on
+  // the range, and the backend filters `recorded_at <= to`. A reading recorded
+  // a few minutes after the page opened was therefore outside the frozen
+  // window: the add mutation invalidated, the refetch ran with the SAME
+  // stale `to`, and the server (correctly) left the new reading out. It only
+  // appeared after leaving and re-entering the page. Mobile fixed the same bug
+  // with FUTURE_WINDOW_MS (mobile/src/utils/vitalsDateRange.ts).
+  it('shows a reading recorded 10 minutes after the page opened, after the refetch', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const opened = new Date('2026-06-20T15:00:00.000Z');
+      vi.setSystemTime(opened);
+
+      // Model the BACKEND: only readings with from <= recorded_at <= to.
+      const store: HealthVital[] = [
+        makeVital({ id: 'old', value1: 72, recorded_at: '2026-06-19T15:00:00.000Z' }),
+      ];
+      // "All types" disables the previous-window read (circleId undefined), so
+      // every call WITH a circleId is the active window. (isPreviousWindow()
+      // judges by distance from Date.now(), which this test moves on purpose.)
+      const activeCalls: Array<{ from: string; to: string }> = [];
+      mockUseVitals.mockImplementation(
+        (c: string | undefined, params: { from?: string; to?: string }) => {
+          if (!c) return vitalsResult([]);
+          activeCalls.push(params as { from: string; to: string });
+          const from = Date.parse(params.from!);
+          const to = Date.parse(params.to!);
+          return vitalsResult(
+            store.filter((v) => {
+              const at = Date.parse(v.recorded_at);
+              return at >= from && at <= to;
+            })
+          );
+        }
+      );
+
+      // A fresh element each time, so rerender() really re-runs the page (and
+      // its hooks) the way a query-state change does.
+      const tree = () => (
+        <MemoryRouter initialEntries={['/circles/circle-1/vitals']}>
+          <Routes>
+            <Route path="/circles/:circleId/vitals" element={<VitalsPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      const { rerender } = render(tree());
+      expect(screen.getByText('72 bpm')).toBeInTheDocument();
+
+      // Ten minutes later the caregiver records a new reading "now".
+      const added = new Date(opened.getTime() + 10 * 60_000);
+      vi.setSystemTime(added);
+      store.push(makeVital({ id: 'new', value1: 91, recorded_at: added.toISOString() }));
+
+      // The add mutation's invalidation -> the query re-renders/refetches.
+      rerender(tree());
+      expect(activeCalls.length).toBeGreaterThan(1);
+
+      const params = activeCalls[activeCalls.length - 1]!;
+      expect(Date.parse(params.to)).toBeGreaterThanOrEqual(added.getTime());
+      expect(screen.getByText('91 bpm')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // ── Range pill ────────────────────────────────────────────────────────────
 
   it('names the range pill by its label and current value', () => {
@@ -433,14 +503,15 @@ describe('VitalsPage', () => {
     renderPage();
 
     const before = lastCurrentParams() as { from: string; to: string };
-    const spanBefore = Date.parse(before.to) - Date.parse(before.from);
+    // Period length = from .. now; `to` itself reaches FUTURE_WINDOW_MS ahead.
+    const spanBefore = Date.parse(before.to) - FUTURE_WINDOW_MS - Date.parse(before.from);
 
     await user.click(screen.getByRole('button', { name: /Time range/ }));
     await user.click(screen.getByRole('menuitem', { name: 'Last 7 days' }));
 
     expect(screen.getByRole('button', { name: 'Time range: Last 7 days' })).toBeInTheDocument();
     const after = lastCurrentParams() as { from: string; to: string };
-    const spanAfter = Date.parse(after.to) - Date.parse(after.from);
+    const spanAfter = Date.parse(after.to) - FUTURE_WINDOW_MS - Date.parse(after.from);
     expect(Math.round(spanAfter / 86_400_000)).toBe(7);
     expect(spanAfter).toBeLessThan(spanBefore);
   });
@@ -495,19 +566,27 @@ describe('VitalsPage', () => {
     ) => {
       // Adjacent to the millisecond: no gap, no overlap.
       expect(previous.to).toBe(current.from);
-      // The active window ends at "now" — built as instants, sent as UTC ISO.
-      expect(current.to).toBe(now.toISOString());
+      // The active window's QUERY bound reaches FUTURE_WINDOW_MS past "now".
+      // This assertion used to be `current.to === now`, which pinned the bug:
+      // `to` is memoised at mount, so a bound of exactly `now` excluded every
+      // reading recorded while the page stayed open (see "shows a reading
+      // recorded 10 minutes after the page opened"). Mobile parity:
+      // FUTURE_WINDOW_MS in mobile/src/utils/vitalsDateRange.ts.
+      expect(current.to).toBe(new Date(now.getTime() + FUTURE_WINDOW_MS).toISOString());
       for (const iso of [current.from, current.to, previous.from, previous.to]) {
         expect(iso).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
       }
-      // Same number of calendar days, same wall-clock time.
-      expect(calendarDaysBetween(current.from, current.to)).toBe(days);
+      // The PERIOD (what "Last N days" means, and what the previous window
+      // mirrors) still runs from `from` to "now": same number of calendar days,
+      // same wall-clock time.
+      const currentPeriod = { from: current.from, to: now.toISOString() };
+      expect(calendarDaysBetween(currentPeriod.from, currentPeriod.to)).toBe(days);
       expect(calendarDaysBetween(previous.from, previous.to)).toBe(days);
       expect(wall(current.from).hm).toBe('12:0');
       expect(wall(previous.from).hm).toBe('12:0');
       // And therefore NOT a fixed ms length when DST changes inside a window —
       // spelled out so a switch to `now - days * DAY_MS` goes red.
-      for (const w of [current, previous]) {
+      for (const w of [currentPeriod, previous]) {
         expect(Date.parse(w.to) - Date.parse(w.from)).toBe(days * DAY_MS + offsetShiftMs(w.from, w.to));
       }
     };

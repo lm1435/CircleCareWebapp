@@ -100,6 +100,14 @@ type RangeChoice = '7d' | '30d' | '90d';
 const RANGE_CHOICES: RangeChoice[] = ['7d', '30d', '90d'];
 const RANGE_DAYS: Record<RangeChoice, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
+/**
+ * How far past `now` the active window's `to` reaches, so it cannot go stale
+ * while the page is open (see the window memo below). Safe: the backend refuses
+ * a `recorded_at` more than 5 minutes ahead (routes/vitals.ts FUTURE_SKEW_MS),
+ * so nothing that should be hidden can land in it. Mobile: FUTURE_WINDOW_MS.
+ */
+const VITALS_FUTURE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 /** The range window's start instant, `days` before `now`. */
 function rangeStartDate(range: RangeChoice, now: Date): Date {
   const start = new Date(now);
@@ -482,6 +490,12 @@ export default function VitalsPage(): ReactElement {
   // The active window, plus the window of the SAME LENGTH immediately before it
   // — the trend sentence compares the two periods' averages (mobile
   // `getPreviousDateRange`).
+  //
+  // The active window's `to` reaches VITALS_FUTURE_WINDOW_MS past `now`. It is
+  // memoised on the range, so a `to` of exactly `now` froze at mount and the
+  // backend (`recorded_at <= to`) left out every reading recorded while the
+  // page sat open — the add's invalidation refetched the same stale window.
+  // Mobile twin: FUTURE_WINDOW_MS in mobile/src/utils/vitalsDateRange.ts.
   const { from, to, prevFrom, prevTo } = useMemo(() => {
     const days = RANGE_DAYS[range];
     const now = new Date();
@@ -491,7 +505,7 @@ export default function VitalsPage(): ReactElement {
     prevFromDate.setDate(prevFromDate.getDate() - days);
     return {
       from: fromDate.toISOString(),
-      to: now.toISOString(),
+      to: new Date(now.getTime() + VITALS_FUTURE_WINDOW_MS).toISOString(),
       prevFrom: prevFromDate.toISOString(),
       prevTo: fromDate.toISOString(),
     };

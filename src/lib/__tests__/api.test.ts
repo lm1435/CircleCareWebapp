@@ -147,6 +147,72 @@ describe('api client', () => {
       expect(tokenAccessor.getAuthToken()).toBeNull();
     });
 
+    // A refresh that was never ANSWERED (offline, timeout, dropped connection)
+    // or that the backend answered "auth service unavailable" / "throttled"
+    // says nothing about the session. Signing out there turned every Wi-Fi
+    // drop or Supabase blip into a forced logout. Only a REFUSED refresh
+    // (401 REFRESH_FAILED: the refresh token is dead) may sign the user out.
+    function refreshHttpError(status: number, code: string): AxiosError {
+      const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
+      return new AxiosError(code, AxiosError.ERR_BAD_RESPONSE, config, null, {
+        data: { success: false, error: { code, message: code } },
+        status,
+        statusText: code,
+        headers: {},
+        config,
+      });
+    }
+
+    async function runStale401WithRefresh(refreshFailure: unknown) {
+      tokenAccessor.setToken('stale-token', null);
+      vi.spyOn(axios, 'post').mockRejectedValue(refreshFailure);
+      const onAuthFailure = vi.fn();
+      setOnAuthFailure(onAuthFailure);
+      apiClient.defaults.adapter = async (config) => unauthorized(config);
+      const settled = await Promise.allSettled([apiClient.get('/circles')]);
+      expect(settled[0].status).toBe('rejected');
+      return onAuthFailure;
+    }
+
+    it('keeps the session when the refresh fails with ERR_NETWORK (offline)', async () => {
+      const onAuthFailure = await runStale401WithRefresh(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK)
+      );
+      expect(onAuthFailure).not.toHaveBeenCalled();
+      expect(tokenAccessor.getAuthToken()).toBe('stale-token');
+    });
+
+    it('keeps the session when the refresh times out (ECONNABORTED)', async () => {
+      const onAuthFailure = await runStale401WithRefresh(
+        new AxiosError('timeout of 15000ms exceeded', AxiosError.ECONNABORTED)
+      );
+      expect(onAuthFailure).not.toHaveBeenCalled();
+    });
+
+    it('keeps the session when the backend answers 503 AUTH_UNAVAILABLE', async () => {
+      const onAuthFailure = await runStale401WithRefresh(refreshHttpError(503, 'AUTH_UNAVAILABLE'));
+      expect(onAuthFailure).not.toHaveBeenCalled();
+      expect(tokenAccessor.getAuthToken()).toBe('stale-token');
+    });
+
+    it('keeps the session when the backend answers 429 AUTH_RATE_LIMITED', async () => {
+      const onAuthFailure = await runStale401WithRefresh(refreshHttpError(429, 'AUTH_RATE_LIMITED'));
+      expect(onAuthFailure).not.toHaveBeenCalled();
+    });
+
+    it('keeps the session when the Railway edge answers 502 (non-envelope body)', async () => {
+      const err = refreshHttpError(502, 'BAD_GATEWAY');
+      err.response!.data = '<html>Bad Gateway</html>';
+      const onAuthFailure = await runStale401WithRefresh(err);
+      expect(onAuthFailure).not.toHaveBeenCalled();
+    });
+
+    it('STILL signs out when the refresh token is dead (401 REFRESH_FAILED)', async () => {
+      const onAuthFailure = await runStale401WithRefresh(refreshHttpError(401, 'REFRESH_FAILED'));
+      expect(onAuthFailure).toHaveBeenCalledTimes(1);
+      expect(tokenAccessor.getAuthToken()).toBeNull();
+    });
+
     it('does not attempt a refresh for 401s on auth endpoints (no deadlock)', async () => {
       const refreshSpy = vi.spyOn(axios, 'post');
       apiClient.defaults.adapter = async (config) => unauthorized(config);
