@@ -13,7 +13,12 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon, TextField } from '@/components/ui';
 import { Analytics } from '@/lib/analytics';
-import { DRUG_SEARCH_MIN_CHARS, searchDrugs, type DrugSearchResult } from '@/api/drugs';
+import {
+  DRUG_SEARCH_MIN_CHARS,
+  drugSearchFailureKind,
+  searchDrugs,
+  type DrugSearchResult,
+} from '@/api/drugs';
 
 /** Case- and accent-insensitive form of a query or drug name, for matching rows against the typed text. */
 function foldDrugQuery(text: string): string {
@@ -22,6 +27,21 @@ function foldDrugQuery(text: string): string {
 
 /** Mobile `DrugAutocomplete` waits 300ms after the last keystroke; same here. */
 const SEARCH_DEBOUNCE_MS = 300;
+/**
+ * "Searching medications" is only for a lookup that is actually SLOW: it shows when the answer has
+ * not arrived this long after the request was SENT, never while typing or during the debounce
+ * (mobile `SLOW_SEARCH_SPINNER_MS`; TestFlight 1.4.0 (13) feedback: an always-on spinner confused).
+ */
+export const SLOW_SEARCH_HINT_MS = 500;
+
+/** `drug_search_completed`, guarded: an analytics failure must never cost the caregiver the lookup. */
+function reportSearchCompleted(startedAt: number, result: 'matches' | 'no_match' | 'error' | 'timeout'): void {
+  try {
+    Analytics.drugSearchCompleted(Date.now() - startedAt, result);
+  } catch {
+    // ignore
+  }
+}
 
 /** Gap between the field and its list, and to the edge of the room it may use. */
 const LIST_GAP = 4;
@@ -141,6 +161,7 @@ export function DrugAutocomplete({
   const [resultsFor, setResultsFor] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const requestSeq = useRef(0);
   // Suggestions only ever follow the USER's typing — never a prefilled value
@@ -195,6 +216,8 @@ export function DrugAutocomplete({
   const cancelPending = (): void => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
+    if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    slowTimerRef.current = null;
     abortRef.current?.abort();
     abortRef.current = null;
   };
@@ -205,20 +228,27 @@ export function DrugAutocomplete({
     if (!userTypedRef.current || selectedDrug) return;
     cancelPending();
     setAnswered(false);
+    // A keystroke supersedes whatever was in flight: no "Searching" while typing or debouncing.
+    setSearching(false);
     if (value.trim().length < DRUG_SEARCH_MIN_CHARS) {
       setSuggestions([]);
       setOpen(false);
-      setSearching(false);
       return;
     }
-    setSearching(true);
     timerRef.current = setTimeout(() => {
       const controller = new AbortController();
       abortRef.current = controller;
       const seq = ++requestSeq.current;
+      // The request is SENT now: the hint waits to see whether the answer is slow.
+      slowTimerRef.current = setTimeout(() => {
+        slowTimerRef.current = null;
+        if (seq === requestSeq.current) setSearching(true);
+      }, SLOW_SEARCH_HINT_MS);
+      const startedAt = Date.now();
       searchDrugs(value, controller.signal)
         .then((results) => {
           if (seq !== requestSeq.current) return;
+          reportSearchCompleted(startedAt, results.length > 0 ? 'matches' : 'no_match');
           setSuggestions(results);
           setResultsFor(foldDrugQuery(value));
           setActiveIndex(-1);
@@ -226,16 +256,21 @@ export function DrugAutocomplete({
           // Kept either way, so focusing the field again shows them.
           setOpen(focusedRef.current);
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           // Aborted, offline, or rate limited: the field still works as a
           // plain text input, which is all a failed lookup should cost.
-          if (seq !== requestSeq.current) return;
+          if (seq !== requestSeq.current || controller.signal.aborted) return;
+          reportSearchCompleted(startedAt, drugSearchFailureKind(error));
           setSuggestions([]);
           setAnswered(false);
           setOpen(false);
         })
         .finally(() => {
-          if (seq === requestSeq.current) setSearching(false);
+          if (seq === requestSeq.current) {
+            if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+            slowTimerRef.current = null;
+            setSearching(false);
+          }
         });
     }, SEARCH_DEBOUNCE_MS);
     // `cancelPending` is stable module logic over refs; listing it would

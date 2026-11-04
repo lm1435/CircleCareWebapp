@@ -525,6 +525,15 @@ function bucketSecondsOpen(seconds: number): number {
   return s <= 60 ? Math.round(s / 5) * 5 : Math.round(s / 30) * 30;
 }
 
+/** Coarse latency buckets for `drug_search_completed` (same edges on mobile). */
+export function drugSearchDurationBucket(ms: number): '<500ms' | '500-1000ms' | '1-2s' | '2-5s' | '>5s' {
+  if (ms < 500) return '<500ms';
+  if (ms < 1000) return '500-1000ms';
+  if (ms < 2000) return '1-2s';
+  if (ms <= 5000) return '2-5s';
+  return '>5s';
+}
+
 export const Analytics = {
   // --- Auth ---
   signupStarted: (method: AuthMethod) => capture('signup_started', { method }),
@@ -1434,6 +1443,16 @@ export const Analytics = {
     capture('drug_suggestion_use_as_typed', {
       had_suggestions: hadSuggestions,
       typed_length_bucket: typedLength <= 3 ? '1-3' : typedLength <= 10 ? '4-10' : '11+',
+    }),
+
+  /**
+   * A medication-name lookup finished (the one whose answer the field uses; superseded or aborted
+   * keystrokes are not reported): duration bucket + outcome enum only, never the query or a name.
+   */
+  drugSearchCompleted: (durationMs: number, result: 'matches' | 'no_match' | 'error' | 'timeout') =>
+    capture('drug_search_completed', {
+      duration_bucket: drugSearchDurationBucket(durationMs),
+      result,
     }),
 
   /**

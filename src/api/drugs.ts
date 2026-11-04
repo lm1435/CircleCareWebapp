@@ -32,3 +32,16 @@ export async function searchDrugs(query: string, signal?: AbortSignal): Promise<
   })) as unknown as DrugSearchEnvelope;
   return response.data?.drugs ?? [];
 }
+
+/**
+ * Outcome of a FAILED lookup for `drug_search_completed` (mobile `api/drugs.ts`): 'timeout' when the
+ * backend's RxNorm deadline passed (504 RXNORM_API_TIMEOUT) or the client gave up (axios ECONNABORTED /
+ * ETIMEDOUT); else 'error'. The client rejects with the unwrapped body (`err.error.code`) or the raw error.
+ */
+export function drugSearchFailureKind(error: unknown): 'timeout' | 'error' {
+  const e = error as { error?: { code?: unknown }; code?: unknown; name?: unknown } | null | undefined;
+  const code = e?.error?.code ?? e?.code;
+  if (code === 'RXNORM_API_TIMEOUT' || code === 'ECONNABORTED' || code === 'ETIMEDOUT') return 'timeout';
+  if (e?.name === 'TimeoutError') return 'timeout';
+  return 'error';
+}

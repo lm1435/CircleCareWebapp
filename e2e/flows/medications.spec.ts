@@ -621,4 +621,53 @@ test.describe('medication name suggestions', () => {
     await name.focus();
     await expect(page.getByRole('listbox', { name: 'Medication suggestions' }).getByRole('option')).toHaveCount(4); // 3 drugs + the "Use as typed" row
   });
+
+  // TestFlight 1.4.0 (13) feedback (parity): "Searching" showed on every keystroke, and a name the
+  // directory does not know must still offer a way forward.
+  test('typing shows no "Searching" for a fast answer; no match offers the "as typed" row alone', async ({
+    page,
+    circleId,
+  }) => {
+    await page.route('**/api/drugs/search**', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: { drugs: [] } }) })
+    );
+    const dialog = await openAddMedication(page, circleId);
+    const name = dialog.getByRole('combobox', { name: /Medication name/i });
+    // Records whether the status line EVER appears while the caregiver types.
+    await page.evaluate(() => {
+      (window as unknown as { __sawSearching: boolean }).__sawSearching = false;
+      new MutationObserver(() => {
+        if (document.body.innerText.includes('Searching medications')) {
+          (window as unknown as { __sawSearching: boolean }).__sawSearching = true;
+        }
+      }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+    await name.pressSequentially('Tylon', { delay: 120 });
+    const list = page.getByRole('listbox', { name: 'Medication suggestions' });
+    await expect(list.getByRole('option')).toHaveCount(1);
+    await expect(list.getByRole('option')).toHaveText('Use \u201CTylon\u201D as typed');
+    expect(await page.evaluate(() => (window as unknown as { __sawSearching: boolean }).__sawSearching)).toBe(false);
+    await list.getByRole('option').click();
+    await expect(list).toHaveCount(0);
+    await expect(name).toHaveValue('Tylon');
+  });
+
+  test('a SLOW answer shows "Searching" (clear still offered) until it lands', async ({ page, circleId }) => {
+    let release: () => void = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    await page.route('**/api/drugs/search**', async (route) => {
+      await held;
+      await route.fulfill({ status: 200, contentType: 'application/json', body });
+    });
+    const dialog = await openAddMedication(page, circleId);
+    const name = dialog.getByRole('combobox', { name: /Medication name/i });
+    const request = page.waitForRequest('**/api/drugs/search**');
+    await name.fill('ibu');
+    await request;
+    await expect(dialog.getByText('Searching medications')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Clear name' })).toBeVisible();
+    release();
+    await expect(page.getByRole('listbox', { name: 'Medication suggestions' }).getByRole('option')).toHaveCount(4);
+    await expect(dialog.getByText('Searching medications')).toHaveCount(0);
+  });
 });

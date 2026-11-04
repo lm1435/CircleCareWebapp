@@ -724,6 +724,25 @@ describe('onboarding 1.3.1 events (spec analytics contract)', () => {
     });
   });
 
+  it('drug_search_completed carries only a duration bucket and an outcome enum (mobile edges)', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    const cases: Array<[number, 'matches' | 'no_match' | 'error' | 'timeout', string]> = [
+      [0, 'matches', '<500ms'],
+      [499, 'no_match', '<500ms'],
+      [500, 'matches', '500-1000ms'],
+      [999, 'matches', '500-1000ms'],
+      [1000, 'error', '1-2s'],
+      [1999, 'matches', '1-2s'],
+      [2000, 'matches', '2-5s'],
+      [5000, 'timeout', '2-5s'],
+      [5001, 'timeout', '>5s'],
+    ];
+    cases.forEach(([ms, result]) => Analytics.drugSearchCompleted(ms, result));
+    cases.forEach(([, result, bucket], i) =>
+      expect(capture).toHaveBeenNthCalledWith(i + 1, 'drug_search_completed', { duration_bucket: bucket, result })
+    );
+  });
+
   it('med_name_suggestion_outcome carries only the outcome enum', async () => {
     const { Analytics } = await loadWithKey('phc_test');
     Analytics.medNameSuggestionOutcome('as_typed');

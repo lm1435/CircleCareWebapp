@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { searchDrugs, type DrugSearchResult } from '@/api/drugs';
 import { DrugAutocomplete } from '../DrugAutocomplete';
 
-const { capture } = vi.hoisted(() => ({ capture: vi.fn() }));
+const { capture, searchCompleted } = vi.hoisted(() => ({ capture: vi.fn(), searchCompleted: vi.fn() }));
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     drugSuggestionUseAsTyped: (...a: unknown[]) => capture(...a),
+    drugSearchCompleted: (...a: unknown[]) => searchCompleted(...a),
   },
 }));
 
@@ -433,6 +434,154 @@ describe('DrugAutocomplete', () => {
       // below: floor 300 - anchor bottom 194 - 8 = 98 (< 132), above: 150 - 50 - 8 = 92 -> below wins (98 >= 92)
       expect(listbox.style.top).toBe('198px');
       expect(listbox.style.maxHeight).toBe('98px');
+    });
+  });
+});
+
+// TestFlight 1.4.0 (13) feedback, web parity: "Searching medications" showed on every keystroke.
+describe('DrugAutocomplete lookup feedback (fake clock)', () => {
+  const ZY: DrugSearchResult = { rxcui: '5', name: 'Zy-19489', strength: null, dosageForm: null };
+  const ZYRTEC: DrugSearchResult = { rxcui: '6', name: 'Zyrtec', strength: null, dosageForm: null };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    search.mockReset();
+    searchCompleted.mockReset();
+    capture.mockReset();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** A pending answer that, like axios, rejects with a cancel when its signal aborts. */
+  function pendingSearch() {
+    let resolve: (rows: DrugSearchResult[]) => void = () => {};
+    let reject: (e: unknown) => void = () => {};
+    const impl = (_q: string, signal?: AbortSignal) =>
+      new Promise<DrugSearchResult[]>((res, rej) => {
+        resolve = res;
+        reject = rej;
+        signal?.addEventListener('abort', () => rej(Object.assign(new Error('canceled'), { name: 'CanceledError' })));
+      });
+    return { impl, resolve: (rows: DrugSearchResult[]) => resolve(rows), reject: (e: unknown) => reject(e) };
+  }
+  const box = () => screen.getByRole('combobox', { name: /Medication name/ });
+  const typeText = (text: string) => {
+    fireEvent.focus(box());
+    fireEvent.change(box(), { target: { value: text } });
+  };
+  const advance = async (ms: number) => {
+    await act(async () => {
+      vi.advanceTimersByTime(ms);
+    });
+  };
+
+  it('shows no "Searching medications" while typing or during the 300 ms debounce', async () => {
+    const p = pendingSearch();
+    search.mockImplementation(p.impl);
+    render(<Host onSelectDrug={vi.fn()} />);
+    for (const text of ['Ty', 'Tyl', 'Tylo', 'Tylon']) {
+      typeText(text);
+      expect(screen.queryByText('Searching medications')).toBeNull();
+      await advance(100);
+      expect(screen.queryByText('Searching medications')).toBeNull();
+    }
+    await advance(299);
+    expect(screen.queryByText('Searching medications')).toBeNull();
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(search.mock.calls[0][0]).toBe('Tylon');
+  });
+
+  it('an answer within 500 ms of being SENT never shows it', async () => {
+    const p = pendingSearch();
+    search.mockImplementation(p.impl);
+    render(<Host onSelectDrug={vi.fn()} />);
+    typeText('met');
+    await advance(300 + 499);
+    expect(screen.queryByText('Searching medications')).toBeNull();
+    await act(async () => p.resolve([METFORMIN]));
+    await advance(1000);
+    expect(screen.queryByText('Searching medications')).toBeNull();
+    expect(screen.getByRole('option', { name: 'Metformin' })).toBeInTheDocument();
+  });
+
+  it('a SLOW lookup shows it after 500 ms with the clear control still there; the answer removes it', async () => {
+    const p = pendingSearch();
+    search.mockImplementation(p.impl);
+    render(<Host onSelectDrug={vi.fn()} />);
+    typeText('met');
+    await advance(300 + 500);
+    expect(screen.getByText('Searching medications')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear name' })).toBeInTheDocument();
+    await act(async () => p.resolve([METFORMIN]));
+    expect(screen.queryByText('Searching medications')).toBeNull();
+  });
+
+  it('a keystroke while a lookup is in flight keeps the rows that still match on screen (no close/reopen)', async () => {
+    const p = pendingSearch();
+    search.mockResolvedValueOnce([ZY, ZYRTEC]).mockImplementation(p.impl);
+    render(<Host onSelectDrug={vi.fn()} />);
+    typeText('zy');
+    await advance(300);
+    expect(screen.getByRole('option', { name: 'Zyrtec' })).toBeInTheDocument();
+    typeText('zyr');
+    await advance(300); // "zyr" sent, pending
+    typeText('zyrt'); // aborts the "zyr" request
+    await advance(0);
+    expect(screen.getByRole('option', { name: 'Zyrtec' })).toBeInTheDocument();
+    expect(box()).toHaveAttribute('aria-expanded', 'true');
+    expect(searchCompleted).toHaveBeenCalledTimes(1); // the aborted request is not a completion
+  });
+
+  it('no match: the "as typed" row stands alone and reports had_suggestions=false', async () => {
+    search.mockResolvedValue([]);
+    render(<Host onSelectDrug={vi.fn()} />);
+    typeText('Tylon');
+    await advance(300);
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveTextContent('Use \u201CTylon\u201D as typed');
+    fireEvent.mouseDown(options[0]);
+    expect(capture).toHaveBeenCalledWith(false, 5);
+  });
+
+  it('a failed lookup (timeout) shows no row and no hint', async () => {
+    search.mockRejectedValue({ success: false, error: { code: 'RXNORM_API_TIMEOUT' } });
+    render(<Host onSelectDrug={vi.fn()} />);
+    typeText('Tylon');
+    await advance(300);
+    await advance(1000);
+    expect(screen.queryByRole('option')).toBeNull();
+    expect(screen.queryByText('Searching medications')).toBeNull();
+  });
+
+  describe('drug_search_completed', () => {
+    it('reports the duration from SEND and "matches"', async () => {
+      const p = pendingSearch();
+      search.mockImplementation(p.impl);
+      render(<Host onSelectDrug={vi.fn()} />);
+      typeText('met');
+      await advance(300);
+      await advance(1200);
+      await act(async () => p.resolve([METFORMIN]));
+      expect(searchCompleted).toHaveBeenCalledTimes(1);
+      const [ms, result] = searchCompleted.mock.calls[0];
+      expect(result).toBe('matches');
+      expect(ms).toBeGreaterThanOrEqual(1200);
+      expect(ms).toBeLessThan(1300);
+    });
+
+    it('"no_match", "timeout" (backend deadline / axios), "error"; never the query', async () => {
+      search
+        .mockResolvedValueOnce([])
+        .mockRejectedValueOnce({ error: { code: 'RXNORM_API_TIMEOUT' } })
+        .mockRejectedValueOnce({ code: 'ECONNABORTED' })
+        .mockRejectedValueOnce({ error: { code: 'RATE_LIMIT' } });
+      render(<Host onSelectDrug={vi.fn()} />);
+      for (const text of ['xq', 'xqz', 'xqzz', 'xqzzz']) {
+        typeText(text);
+        await advance(300);
+      }
+      expect(searchCompleted.mock.calls.map((c) => c[1])).toEqual(['no_match', 'timeout', 'timeout', 'error']);
+      expect(JSON.stringify(searchCompleted.mock.calls)).not.toContain('xq');
     });
   });
 });
