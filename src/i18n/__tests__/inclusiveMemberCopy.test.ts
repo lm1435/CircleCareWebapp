@@ -280,3 +280,36 @@ describe('role labels are not masculine-only (es / pt / fr / it)', () => {
     }
   });
 });
+
+/**
+ * Made-up people in shipped copy never assume a relative (owner, 2026-11-04): the pre-signup
+ * preview's demo member was "Dad" ("Papá", "Papa", "Pai"), and the help answer about belonging
+ * to several circles said "your mom's circle ... your dad's circle". Mobile pins the same keys
+ * (plus the Say It voice examples) in mobile/src/__tests__/i18n/placeholderNoRelatives.test.ts.
+ */
+describe('demo people and examples never assume a relative', () => {
+  const RELATIVES =
+    /(^|[^\p{L}])(mom|mommy|mother|dad|daddy|father|grandma|grandpa|granny|mam[áa]|pap[aáà]|mam[ãa]e|m[ãa]e|pai|papai|vov[óô]|maman|mamie|papi|mamma|nonna|nonno|abuel[ao]|oma|opa|mutter|vater|madre|padre|mère|père)(?=$|[^\p{L}])/iu;
+
+  it('the regex is not vacuous (the old strings fail it)', () => {
+    expect(RELATIVES.test('Dad')).toBe(true);
+    expect(RELATIVES.test('Papá')).toBe(true);
+    expect(RELATIVES.test('Papa')).toBe(true);
+    expect(RELATIVES.test("an owner of your mom's circle and a caregiver in your dad's circle")).toBe(true);
+    expect(RELATIVES.test('du cercle de votre mère')).toBe(true);
+    expect(RELATIVES.test('Robert')).toBe(false);
+    expect(RELATIVES.test('Por ejemplo, puedes ser titular de un círculo')).toBe(false);
+  });
+
+  it.each(LOCALES)('%s: preview demo members and the multi-circle help answer', (code) => {
+    const members = get(load(code, 'auth'), 'preview.demo.members') as Record<string, string> | undefined;
+    const answer = get(load(code, 'help'), 'sections.roles.items.1.answer');
+    const values = [...Object.values(members ?? {}), ...(answer ? [answer] : [])];
+    expect(values.filter((v) => RELATIVES.test(v))).toEqual([]);
+  });
+
+  it('the en demo member is a name', () => {
+    expect(get(load('en', 'auth'), 'preview.demo.members.robert')).toBe('Robert');
+    expect(get(load('es', 'auth'), 'preview.demo.members.robert')).toBe('Roberto');
+  });
+});

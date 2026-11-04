@@ -36,7 +36,7 @@ export function PreviewActivityStep({ headingId }: PreviewActivityStepProps): Re
     const now = Date.now();
     const at = (hoursAgo: number): string => new Date(now - hoursAgo * HOUR_MS).toISOString();
     const sarah = demoActor('demo-sarah', t('auth:preview.demo.members.sarah'));
-    const dad = demoActor('demo-dad', t('auth:preview.demo.members.dad'));
+    const robert = demoActor('demo-robert', t('auth:preview.demo.members.robert'));
     const you = demoActor('demo-you', t('auth:preview.demo.members.you'));
 
     // Legacy description rows: the English leading phrase is localized by the
@@ -58,7 +58,7 @@ export function PreviewActivityStep({ headingId }: PreviewActivityStepProps): Re
         action_type: 'appointment_created',
         description: `Added Appointment: ${t('auth:preview.demo.activities.appointment')}`,
         created_at: at(5),
-        actor: dad,
+        actor: robert,
       },
     ];
     const yesterdayRows: ActivityFeedItem[] = [
