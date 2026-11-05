@@ -34,10 +34,20 @@ const SEARCH_DEBOUNCE_MS = 300;
  */
 export const SLOW_SEARCH_HINT_MS = 500;
 
+/** One lookup that left the debounce: when its last keystroke landed and when the request went out. */
+interface SentLookup {
+  keystrokeAt: number;
+  sentAt: number;
+}
+
 /** `drug_search_completed`, guarded: an analytics failure must never cost the caregiver the lookup. */
-function reportSearchCompleted(startedAt: number, result: 'matches' | 'no_match' | 'error' | 'timeout'): void {
+function reportSearchCompleted(
+  lookup: SentLookup,
+  result: 'matches' | 'no_match' | 'error' | 'timeout' | 'superseded'
+): void {
   try {
-    Analytics.drugSearchCompleted(Date.now() - startedAt, result);
+    const now = Date.now();
+    Analytics.drugSearchCompleted(now - lookup.keystrokeAt, now - lookup.sentAt, result);
   } catch {
     // ignore
   }
@@ -163,6 +173,11 @@ export function DrugAutocomplete({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // drug_search_completed's clocks. The last keystroke not yet sent, and the sent lookup not yet
+  // ended: whoever ends it (its answer, or a keystroke that replaces it) clears this, so it is
+  // reported exactly once.
+  const lastKeystrokeAtRef = useRef<number | null>(null);
+  const inFlightRef = useRef<SentLookup | null>(null);
   const requestSeq = useRef(0);
   // Suggestions only ever follow the USER's typing — never a prefilled value
   // (an edit, a wizard hand-off), which would pop a list over a field nobody
@@ -235,7 +250,16 @@ export function DrugAutocomplete({
       setOpen(false);
       return;
     }
+    const scheduledAt = Date.now();
     timerRef.current = setTimeout(() => {
+      const lookup: SentLookup = { keystrokeAt: lastKeystrokeAtRef.current ?? scheduledAt, sentAt: Date.now() };
+      lastKeystrokeAtRef.current = null;
+      inFlightRef.current = lookup;
+      const endLookup = (result: Parameters<typeof reportSearchCompleted>[1]): void => {
+        if (inFlightRef.current !== lookup) return; // a newer keystroke already reported it
+        inFlightRef.current = null;
+        reportSearchCompleted(lookup, result);
+      };
       const controller = new AbortController();
       abortRef.current = controller;
       const seq = ++requestSeq.current;
@@ -244,11 +268,10 @@ export function DrugAutocomplete({
         slowTimerRef.current = null;
         if (seq === requestSeq.current) setSearching(true);
       }, SLOW_SEARCH_HINT_MS);
-      const startedAt = Date.now();
       searchDrugs(value, controller.signal)
         .then((results) => {
           if (seq !== requestSeq.current) return;
-          reportSearchCompleted(startedAt, results.length > 0 ? 'matches' : 'no_match');
+          endLookup(results.length > 0 ? 'matches' : 'no_match');
           setSuggestions(results);
           setResultsFor(foldDrugQuery(value));
           setActiveIndex(-1);
@@ -260,7 +283,7 @@ export function DrugAutocomplete({
           // Aborted, offline, or rate limited: the field still works as a
           // plain text input, which is all a failed lookup should cost.
           if (seq !== requestSeq.current || controller.signal.aborted) return;
-          reportSearchCompleted(startedAt, drugSearchFailureKind(error));
+          endLookup(drugSearchFailureKind(error));
           setSuggestions([]);
           setAnswered(false);
           setOpen(false);
@@ -279,6 +302,7 @@ export function DrugAutocomplete({
   }, [value, selectedDrug]);
 
   const pick = (drug: DrugSearchResult): void => {
+    inFlightRef.current = null;
     cancelPending();
     userTypedRef.current = false;
     onChange(drug.name);
@@ -291,6 +315,7 @@ export function DrugAutocomplete({
 
   const pickAsTyped = (): void => {
     Analytics.drugSuggestionUseAsTyped(shownSuggestions.length > 0, value.trim().length);
+    inFlightRef.current = null;
     cancelPending();
     userTypedRef.current = false;
     setSuggestions([]);
@@ -303,11 +328,17 @@ export function DrugAutocomplete({
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>): void => {
     userTypedRef.current = true;
+    lastKeystrokeAtRef.current = Date.now();
+    if (inFlightRef.current) {
+      reportSearchCompleted(inFlightRef.current, 'superseded');
+      inFlightRef.current = null;
+    }
     onChange(event.target.value);
     if (selectedDrug) onSelectDrug(null);
   };
 
   const handleClear = (): void => {
+    inFlightRef.current = null;
     cancelPending();
     userTypedRef.current = false;
     onChange('');

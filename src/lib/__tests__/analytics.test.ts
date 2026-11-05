@@ -724,22 +724,24 @@ describe('onboarding 1.3.1 events (spec analytics contract)', () => {
     });
   });
 
-  it('drug_search_completed carries only a duration bucket and an outcome enum (mobile edges)', async () => {
+  it('drug_search_completed carries only two latency buckets and an outcome enum (mobile edges)', async () => {
     const { Analytics } = await loadWithKey('phc_test');
-    const cases: Array<[number, 'matches' | 'no_match' | 'error' | 'timeout', string]> = [
-      [0, 'matches', '<500ms'],
-      [499, 'no_match', '<500ms'],
-      [500, 'matches', '500-1000ms'],
-      [999, 'matches', '500-1000ms'],
-      [1000, 'error', '1-2s'],
-      [1999, 'matches', '1-2s'],
-      [2000, 'matches', '2-5s'],
-      [5000, 'timeout', '2-5s'],
-      [5001, 'timeout', '>5s'],
+    type Result = 'matches' | 'no_match' | 'error' | 'timeout' | 'superseded';
+    const cases: Array<[number, number, Result, string, string]> = [
+      [0, 0, 'matches', '<500ms', '<500ms'],
+      [499, 499, 'no_match', '<500ms', '<500ms'],
+      [500, 100, 'matches', '500-1000ms', '<500ms'],
+      [999, 500, 'matches', '500-1000ms', '500-1000ms'],
+      [1000, 999, 'error', '1-2s', '500-1000ms'],
+      [1999, 1000, 'matches', '1-2s', '1-2s'],
+      [2000, 1999, 'superseded', '2-5s', '1-2s'],
+      [5000, 2000, 'timeout', '2-5s', '2-5s'],
+      [5001, 5000, 'timeout', '>5s', '2-5s'],
+      [8000, 5001, 'superseded', '>5s', '>5s'],
     ];
-    cases.forEach(([ms, result]) => Analytics.drugSearchCompleted(ms, result));
-    cases.forEach(([, result, bucket], i) =>
-      expect(capture).toHaveBeenNthCalledWith(i + 1, 'drug_search_completed', { duration_bucket: bucket, result })
+    cases.forEach(([ms, req, result]) => Analytics.drugSearchCompleted(ms, req, result));
+    cases.forEach(([, , result, duration_bucket, request_bucket], i) =>
+      expect(capture).toHaveBeenNthCalledWith(i + 1, 'drug_search_completed', { duration_bucket, request_bucket, result })
     );
   });
 

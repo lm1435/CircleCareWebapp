@@ -528,7 +528,7 @@ describe('DrugAutocomplete lookup feedback (fake clock)', () => {
     await advance(0);
     expect(screen.getByRole('option', { name: 'Zyrtec' })).toBeInTheDocument();
     expect(box()).toHaveAttribute('aria-expanded', 'true');
-    expect(searchCompleted).toHaveBeenCalledTimes(1); // the aborted request is not a completion
+    expect(searchCompleted.mock.calls.map((c) => c[2])).toEqual(['matches', 'superseded']); // reported once, as replaced
   });
 
   it('no match: the "as typed" row stands alone and reports had_suggestions=false', async () => {
@@ -554,7 +554,7 @@ describe('DrugAutocomplete lookup feedback (fake clock)', () => {
   });
 
   describe('drug_search_completed', () => {
-    it('reports the duration from SEND and "matches"', async () => {
+    it('duration runs from the LAST KEYSTROKE, request from SEND', async () => {
       const p = pendingSearch();
       search.mockImplementation(p.impl);
       render(<Host onSelectDrug={vi.fn()} />);
@@ -563,10 +563,66 @@ describe('DrugAutocomplete lookup feedback (fake clock)', () => {
       await advance(1200);
       await act(async () => p.resolve([METFORMIN]));
       expect(searchCompleted).toHaveBeenCalledTimes(1);
-      const [ms, result] = searchCompleted.mock.calls[0];
+      const [durationMs, requestMs, result] = searchCompleted.mock.calls[0];
       expect(result).toBe('matches');
-      expect(ms).toBeGreaterThanOrEqual(1200);
-      expect(ms).toBeLessThan(1300);
+      expect(durationMs).toBeGreaterThanOrEqual(1500);
+      expect(durationMs).toBeLessThan(1600);
+      expect(requestMs).toBeGreaterThanOrEqual(1200);
+      expect(requestMs).toBeLessThan(1300);
+    });
+
+    it('a debounce that fires LATE shows in the duration, not in the request', async () => {
+      const p = pendingSearch();
+      search.mockImplementation(p.impl);
+      render(<Host onSelectDrug={vi.fn()} />);
+      typeText('met');
+      vi.setSystemTime(Date.now() + 6000); // a busy main thread: the clock moves, the timer has not run
+      await advance(300);
+      await advance(100);
+      await act(async () => p.resolve([METFORMIN]));
+      const [durationMs, requestMs, result] = searchCompleted.mock.calls[0];
+      expect(result).toBe('matches');
+      expect(durationMs).toBeGreaterThan(6000);
+      expect(requestMs).toBeLessThan(200);
+    });
+
+    it('a lookup replaced before it answers reports "superseded" once, never the query', async () => {
+      const p = pendingSearch();
+      search.mockImplementationOnce(p.impl).mockResolvedValueOnce([METFORMIN]);
+      render(<Host onSelectDrug={vi.fn()} />);
+      typeText('met');
+      await advance(300);
+      await advance(900);
+      typeText('metf');
+      await advance(300);
+      expect(searchCompleted.mock.calls.map((c) => c[2])).toEqual(['superseded', 'matches']);
+      const [durationMs, requestMs] = searchCompleted.mock.calls[0];
+      expect(durationMs).toBeGreaterThanOrEqual(1200);
+      expect(requestMs).toBeGreaterThanOrEqual(900);
+      expect(requestMs).toBeLessThan(1000);
+      expect(JSON.stringify(searchCompleted.mock.calls)).not.toMatch(/met/i);
+    });
+
+    it('a keystroke inside the debounce sent nothing, so nothing is reported for it', async () => {
+      search.mockResolvedValue([METFORMIN]);
+      render(<Host onSelectDrug={vi.fn()} />);
+      typeText('met');
+      await advance(100);
+      typeText('metf');
+      await advance(300);
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(searchCompleted.mock.calls.map((c) => c[2])).toEqual(['matches']);
+    });
+
+    it('the clear (X) while a lookup runs is not "superseded", and the next keystroke does not report it', async () => {
+      const p = pendingSearch();
+      search.mockImplementation(p.impl);
+      render(<Host onSelectDrug={vi.fn()} />);
+      typeText('met');
+      await advance(300);
+      fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+      typeText('m');
+      expect(searchCompleted).not.toHaveBeenCalled();
     });
 
     it('"no_match", "timeout" (backend deadline / axios), "error"; never the query', async () => {
@@ -580,7 +636,7 @@ describe('DrugAutocomplete lookup feedback (fake clock)', () => {
         typeText(text);
         await advance(300);
       }
-      expect(searchCompleted.mock.calls.map((c) => c[1])).toEqual(['no_match', 'timeout', 'timeout', 'error']);
+      expect(searchCompleted.mock.calls.map((c) => c[2])).toEqual(['no_match', 'timeout', 'timeout', 'error']);
       expect(JSON.stringify(searchCompleted.mock.calls)).not.toContain('xq');
     });
   });

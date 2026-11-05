@@ -1446,12 +1446,21 @@ export const Analytics = {
     }),
 
   /**
-   * A medication-name lookup finished (the one whose answer the field uses; superseded or aborted
-   * keystrokes are not reported): duration bucket + outcome enum only, never the query or a name.
+   * A medication-name lookup that was SENT has ended, once per request. `duration_bucket` is the wait the
+   * caregiver felt: LAST KEYSTROKE to answer, so a debounce that fired late counts. `request_bucket` is send
+   * to answer, the same edges, so waiting on the app can be told from waiting on the network. `superseded`:
+   * a newer keystroke replaced it before it answered, and both buckets stop at that keystroke (the request
+   * is aborted there). One still in the debounce sent nothing and is not reported. Same event on mobile.
+   * Buckets and an outcome enum only, never the query, a drug name or a circle id.
    */
-  drugSearchCompleted: (durationMs: number, result: 'matches' | 'no_match' | 'error' | 'timeout') =>
+  drugSearchCompleted: (
+    durationMs: number,
+    requestMs: number,
+    result: 'matches' | 'no_match' | 'error' | 'timeout' | 'superseded'
+  ) =>
     capture('drug_search_completed', {
       duration_bucket: drugSearchDurationBucket(durationMs),
+      request_bucket: drugSearchDurationBucket(requestMs),
       result,
     }),
 
