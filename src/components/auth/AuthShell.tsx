@@ -37,8 +37,11 @@ export function AuthShell({ children }: AuthShellProps): ReactElement {
 
   return (
     <main className="flex min-h-screen bg-bg">
-      {/* Hero panel — ≥1024px only. Image lives in /public (copied from mobile). */}
-      <aside className="relative hidden w-1/2 overflow-hidden xl:block">
+      {/* Hero panel — ≥1024px only. Image lives in /public (copied from mobile).
+          Sticky at the viewport (h-dvh): when the form column overflows a short
+          window, the page scroll moves the FORM only — the photo and its
+          caption stay fully in view instead of panning off-screen. */}
+      <aside className="relative hidden w-1/2 overflow-hidden xl:sticky xl:top-0 xl:block xl:h-dvh">
         <img
           src={hero.src}
           alt={t(hero.altKey)}
@@ -77,7 +80,7 @@ export function AuthShell({ children }: AuthShellProps): ReactElement {
       </aside>
 
       {/* Form column — sits directly on paper, no card border. */}
-      <div className="mx-auto flex w-full max-w-[448px] flex-1 flex-col justify-center px-6 py-10">
+      <div className="mx-auto flex w-full max-w-[448px] flex-1 flex-col justify-center px-6 py-8">
         {children}
       </div>
     </main>
