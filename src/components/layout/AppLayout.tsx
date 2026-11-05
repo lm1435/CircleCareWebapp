@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { Outlet, useLocation, useNavigate, useNavigationType, useParams } from 'react-router-dom';
+import { useEffect, useState, type ReactElement } from 'react';
+import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -57,29 +57,9 @@ export function AppLayout(): ReactElement {
   );
   const createKind = createFor && createFor.circleId === circleId ? createFor.kind : null;
   const location = useLocation();
-  const navigationType = useNavigationType();
-
-  // A new page starts at its top. The window keeps its scroll offset across
-  // client-side route changes, so with a sticky rail a click on "Activity"
-  // from the foot of the overview used to land mid-feed. PUSH/REPLACE only:
-  // Back and Forward (POP) keep the browser's own restoration, and a hash
-  // navigation is a jump to a section, which the page itself handles.
-  //
-  // Gated on the PATHNAME actually changing (not just `navigationType`): a
-  // page-owned `setSearchParams(..., { replace: true })` — e.g. NotesPage's
-  // `?date=` deep-link effect clearing its own param after scrolling to a
-  // day group — is also a REPLACE navigation, and used to reset the window
-  // to (0, 0) here even though the pathname never changed. That's more than
-  // cosmetic: it can cancel an in-flight smooth `scrollIntoView` the page
-  // just started (confirmed — the deep-link scroll landed at 0 every time
-  // until this was scoped to real page changes).
-  const previousPathnameRef = useRef(location.pathname);
-  useEffect(() => {
-    const pathnameChanged = previousPathnameRef.current !== location.pathname;
-    previousPathnameRef.current = location.pathname;
-    if (!pathnameChanged || navigationType === 'POP' || location.hash) return;
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
-  }, [location.pathname, location.hash, navigationType]);
+  // Scroll reset on page change lives in ScrollReset, rendered once in the
+  // router's root layout so routes outside AppLayout (help, standalone pages)
+  // reset too.
   const navigate = useNavigate();
 
   // Write actions need an editable circle. Resolved once here so the sidebar's

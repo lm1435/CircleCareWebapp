@@ -18,7 +18,8 @@ import { useLocation } from 'react-router-dom';
  *    or is the daily update's day arrows (`dailyUpdateArrow`, 71684d8).
  *  - Never steals focus from an open dialog, and never from a control the
  *    visitor (or the page) has focused since the navigation started.
- *  - `preventScroll`: the layout owns scrolling (AppLayout resets to the top).
+ *  - `preventScroll`: the layout owns scrolling (ScrollReset, in the same root
+ *    layout, resets to the top).
  *
  * Target: the first `<h1>` in `<main>` (made programmatically focusable with
  * `tabIndex=-1`, so it never joins the Tab order), else `<main>` itself. Lazy

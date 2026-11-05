@@ -206,7 +206,10 @@ export default function ActivityFeedPage(): ReactElement {
 
           {dayGroups.map((group) => (
             <div key={group.date}>
-              <Text variant="sectionTitle" as="h2" className="px-5 pt-7 pb-3">
+              {/* sectionTitle (24px) at phone width, 18px at desktop density:
+                  these repeat per day group, so the feed otherwise stacks
+                  dozens of 24px headers (same owner call as the today grid). */}
+              <Text variant="sectionTitle" as="h2" className="px-5 pt-7 pb-3 xl:text-base">
                 {formatDayLabel(group.date, t)}
               </Text>
               <ul className="m-0 list-none p-0">

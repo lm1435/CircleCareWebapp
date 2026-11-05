@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/build-locale-html.mjs",
     "preview": "vite preview",
+    "deploy": "npm run build && rsync -avz --delete --exclude .well-known dist/ namecheap:~/my.circlecare.app/",
     "test": "vitest run",
     "test:timezones": "bash scripts/run-unit-timezones.sh",
     "test:timezones:full": "TZ_TIER=all bash scripts/run-unit-timezones.sh",

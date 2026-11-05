@@ -1,7 +1,7 @@
 import { type ReactElement } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Card, Icon, IconTile, SectionHeader, Skeleton } from '@/components/ui';
+import { Card, Eyebrow, Icon, IconTile, Skeleton } from '@/components/ui';
 import { addDays } from '@/components/calendar/dateMath';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -68,6 +68,23 @@ export function upcomingAppointments(
     });
 }
 
+/**
+ * Whether the overview has upcoming appointments to show — shared with
+ * OverviewPage, which arranges the today grid around it (Quick access fills
+ * the right column when this section would render nothing). While the window
+ * is loading it reports true, so the section's skeleton holds the column
+ * instead of the layout jumping twice. Same query key as the component (and
+ * the calendar page), so this costs no extra fetch.
+ */
+export function useHasUpcomingAppointments(circleId: string, timezone: string | null): boolean {
+  const now = new Date();
+  const today = timezone ? getDateInTimezone(timezone, now) : '';
+  const windowEnd = timezone ? dateOffsetInTimezone(timezone, WINDOW_DAYS, now) : '';
+  const { events, isLoading } = useCalendarEvents(circleId, today, windowEnd);
+  if (!timezone) return false;
+  return isLoading || upcomingAppointments(events, timezone, now).length > 0;
+}
+
 export interface UpcomingAppointmentsProps {
   circleId: string;
   /** The care recipient's IANA timezone — all date/time math runs in it. */
@@ -106,7 +123,9 @@ export function UpcomingAppointments({
   if (isLoading) {
     return (
       <section aria-busy="true">
-        <SectionHeader title={t('appointments.title')} tone="dusk" />
+        <Eyebrow color="ink-2" className="mb-3">
+          {t('appointments.title')}
+        </Eyebrow>
         <span role="status" className="sr-only">
           {t('common:loading')}
         </span>
@@ -141,13 +160,22 @@ export function UpcomingAppointments({
 
   return (
     <section aria-labelledby="upcoming-appointments-heading">
-      <SectionHeader
-        id="upcoming-appointments-heading"
-        title={t('appointments.title')}
-        tone="dusk"
-        to={`${base}/calendar`}
-        linkLabel={t('appointments.viewAll')}
-      />
+      {/* Eyebrow header, matching NEXT UP / QUICK ACCESS on the today grid
+          (not SectionHeader's big title — owner call, 2026-11-04). The link
+          keeps its 44px hit area; -my-3 stops that height from pushing the
+          eyebrow row taller than its siblings'. */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3">
+        <Eyebrow id="upcoming-appointments-heading" color="ink-2">
+          {t('appointments.title')}
+        </Eyebrow>
+        <Link
+          to={`${base}/calendar`}
+          className="-my-3 inline-flex min-h-[44px] items-center gap-1 text-sm font-medium text-dusk"
+        >
+          {t('appointments.viewAll')}
+          <Icon name="chevron-forward" size="inline" />
+        </Link>
+      </div>
       <Card padding="none" className="overflow-hidden">
         {visible.map((event) => {
           const time = event.scheduled_time

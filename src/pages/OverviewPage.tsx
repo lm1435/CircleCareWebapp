@@ -12,6 +12,10 @@ import { FirstRunWizardModal } from '@/components/circles/firstRun/FirstRunWizar
 import { Hero } from '@/components/overview/Hero';
 import { QuickAccess } from '@/components/overview/QuickAccess';
 import { DailyUpdateCard } from '@/components/overview/DailyUpdateCard';
+import {
+  UpcomingAppointments,
+  useHasUpcomingAppointments,
+} from '@/components/overview/UpcomingAppointments';
 import { NextUp, NEXT_UP_VISIBLE } from '@/components/overview/NextUp';
 import { NextStepCard } from '@/components/overview/NextStepCard';
 import { FirstMedMarkIt } from '@/components/overview/FirstMedMarkIt';
@@ -190,6 +194,19 @@ export default function OverviewPage(): ReactElement {
   // (read-only) circle gets nothing to set up. The viewer can edit, and the circle got a 2nd
   // caregiver in the last 14 days and has no shifts yet. Once per user per circle.
   const shiftsEntry = resolveShiftsEntry({ viewOnly, isPremiumCircle, isOwner, hasShifts });
+
+  // Today-grid arrangement: appointments on the right when there are any
+  // (loading counts — the skeleton holds the column), Quick access under Next
+  // up; with no appointments Quick access takes the right column instead.
+  const hasUpcomingAppts = useHasUpcomingAppointments(circleId, timezone);
+  const quickAccess = (
+    <QuickAccess
+      circleId={circleId}
+      timezone={timezone}
+      showShiftsLink={shiftsEntry !== 'hidden'}
+      stacked={largeText}
+    />
+  );
   const shiftsMember =
     circle && (shiftsEntry === 'available' || shiftsEntry === 'teaser') && canEdit && !hasShifts
       ? pickShiftsNudgeMember(members, currentUserId)
@@ -362,14 +379,17 @@ export default function OverviewPage(): ReactElement {
               }}
             />
           )}
+          {/* With appointments on the right, Quick access sits under Next up
+              (owner call, 2026-11-04); without them it moves to the right
+              column below, so neither column is ever empty. */}
+          {hasUpcomingAppts && <div className="mt-6">{quickAccess}</div>}
         </div>
         <div className="min-w-0">
-          <QuickAccess
-            circleId={circleId}
-            timezone={timezone}
-            showShiftsLink={shiftsEntry !== 'hidden'}
-            stacked={largeText}
-          />
+          {hasUpcomingAppts && timezone !== null ? (
+            <UpcomingAppointments circleId={circleId} timezone={timezone} />
+          ) : (
+            quickAccess
+          )}
         </div>
       </div>
 

@@ -98,7 +98,7 @@ export function FirstMedMarkIt({
             >
               <span className={labelClass}>{t('today.markIt.today')}</span>
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="break-words text-lg font-semibold text-ink">{note.name}</span>
+                <span className="break-words text-lg font-semibold text-ink xl:text-base">{note.name}</span>
                 <span className="break-words text-sm text-ink-2">
                   {[dose, t('today.markIt.takenByYou')].filter(Boolean).join(' · ')}
                 </span>
@@ -113,7 +113,7 @@ export function FirstMedMarkIt({
           <div className={rowClass}>
             <span className={labelClass}>{t('today.markIt.tomorrow')}</span>
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="break-words text-lg font-semibold text-ink">{note.name}</span>
+              <span className="break-words text-lg font-semibold text-ink xl:text-base">{note.name}</span>
               <span className="break-words text-sm text-ink-2">
                 {[dose, time].filter(Boolean).join(' · ')}
               </span>

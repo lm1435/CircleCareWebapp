@@ -22,6 +22,10 @@ vi.mock('@/hooks/useNextUp', () => ({ useNextUp: vi.fn() }));
 vi.mock('@/hooks/useNextStep', () => ({ useNextStep: vi.fn() }));
 vi.mock('@/components/calendar/AddEventModal', () => ({ AddEventModal: () => null }));
 vi.mock('@/components/overview/QuickAccess', () => ({ QuickAccess: () => null }));
+vi.mock('@/components/overview/UpcomingAppointments', () => ({
+  UpcomingAppointments: () => null,
+  useHasUpcomingAppointments: () => false,
+}));
 vi.mock('@/components/overview/DailyUpdateCard', () => ({ DailyUpdateCard: () => null }));
 vi.mock('@/components/overview/FirstMedMarkIt', () => ({ FirstMedMarkIt: () => null }));
 vi.mock('@/components/circles/firstRun/FirstRunWizardModal', () => ({ FirstRunWizardModal: () => null }));

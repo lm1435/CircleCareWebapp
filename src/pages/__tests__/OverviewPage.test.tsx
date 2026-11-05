@@ -65,6 +65,14 @@ vi.mock('@/components/overview/QuickAccess', () => ({
     />
   ),
 }));
+const { mockUseHasUpcomingAppts } = vi.hoisted(() => ({
+  mockUseHasUpcomingAppts: vi.fn((): boolean => false),
+}));
+vi.mock('@/components/overview/UpcomingAppointments', () => ({
+  UpcomingAppointments: () => <div data-testid="upcoming-appointments" />,
+  useHasUpcomingAppointments: mockUseHasUpcomingAppts,
+}));
+
 vi.mock('@/components/overview/DailyUpdateCard', () => ({
   DailyUpdateCard: ({ circleId, timezone, isOwner, isRecipient }: Record<string, unknown>) => (
     <div
@@ -263,12 +271,32 @@ describe('Today (OverviewPage)', () => {
     setCircle();
     setNextUp([]);
     setNextStep({ status: 'none' });
+    mockUseHasUpcomingAppts.mockReturnValue(false);
     vi.spyOn(Analytics, 'todayViewed').mockImplementation(() => {});
     vi.spyOn(Analytics, 'largeTextLayout').mockImplementation(() => {});
   });
 
   afterEach(() => {
     document.documentElement.style.fontSize = '';
+  });
+
+  it('with upcoming appointments: Quick access sits under Next up, appointments take the right column', () => {
+    mockUseHasUpcomingAppts.mockReturnValue(true);
+    renderToday();
+    const grid = screen.getByTestId('today-grid');
+    const [left, right] = Array.from(grid.children);
+    expect(left.querySelector('[data-testid="quick-access"]')).not.toBeNull();
+    expect(right.querySelector('[data-testid="upcoming-appointments"]')).not.toBeNull();
+    expect(right.querySelector('[data-testid="quick-access"]')).toBeNull();
+  });
+
+  it('without upcoming appointments: Quick access takes the right column, so neither column is empty', () => {
+    renderToday();
+    expect(screen.queryByTestId('upcoming-appointments')).toBeNull();
+    const grid = screen.getByTestId('today-grid');
+    const [left, right] = Array.from(grid.children);
+    expect(left.querySelector('[data-testid="quick-access"]')).toBeNull();
+    expect(right.querySelector('[data-testid="quick-access"]')).not.toBeNull();
   });
 
   it('titles the page "Today for {name}" with a date eyebrow', () => {

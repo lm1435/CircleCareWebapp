@@ -4,6 +4,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { PageviewTracker } from '@/components/PageviewTracker';
 import { RouteFocus } from '@/components/RouteFocus';
 import { RouteTitle } from '@/components/RouteTitle';
+import { ScrollReset } from '@/components/ScrollReset';
 import { CircleRoute } from '@/components/layout/CircleRoute';
 import { StandalonePageLayout } from '@/components/layout/StandalonePageLayout';
 import { HelpRouteLayout } from '@/components/layout/HelpRouteLayout';
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
       <>
         <RouteTitle />
         <RouteFocus />
+        <ScrollReset />
         <PageviewTracker />
         <Outlet />
       </>

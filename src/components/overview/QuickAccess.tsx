@@ -220,7 +220,8 @@ export function QuickAccess({
                   .filter(Boolean)
                   .join(' ')}
               >
-                <span className="text-lg font-semibold text-ink">{tileLabel[tile.id]}</span>
+                {/* text-lg at phone width (mobile parity); 18px at desktop density. */}
+                <span className="text-lg font-semibold text-ink xl:text-base">{tileLabel[tile.id]}</span>
                 <span className="break-words text-sm text-ink-2">{status[tile.id]}</span>
               </Link>
             );

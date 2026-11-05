@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import '@/i18n';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { ScrollReset } from '@/components/ScrollReset';
 // AppLayout now raises the premium gate itself for a frozen circle's owner
 // (the AI entry), and `usePremiumGate` -> `useToast` requires the provider that
 // App.tsx already wraps the whole authenticated tree in.
@@ -75,6 +76,10 @@ const initialAuthState = useAuthStore.getState();
 function renderLayout(path = '/circles/c1/calendar'): ReturnType<typeof render> {
   return render(
     <MemoryRouter initialEntries={[path]}>
+      {/* In the app, ScrollReset sits in the router's root layout above
+          AppLayout; mounted here so the scroll-on-navigation test below keeps
+          asserting the user-visible behavior through the layout's own nav. */}
+      <ScrollReset />
       <ToastProvider>
         <Routes>
           <Route path="/circles/:circleId" element={<AppLayout />}>

@@ -191,6 +191,10 @@ export function NextUp({
   // The landed row is always shown, even when it is past the first NEXT_UP_VISIBLE.
   const landedIndex = landingKey ? items.findIndex((i) => i.key === landingKey) : -1;
   const visible = items.slice(0, Math.max(NEXT_UP_VISIBLE, landedIndex + 1));
+  // The 5rem leading column exists so timed and untimed rows align on the
+  // title. When nothing visible has a time (e.g. only late, dateless tasks),
+  // the whole column would be dead space — collapse it instead.
+  const anyVisibleTimed = visible.some((i) => i.time);
   const today = getDateInTimezone(timezone);
 
   // The entry belongs to the circle it was set in.
@@ -371,9 +375,9 @@ export function NextUp({
             >
               {time}
             </span>
-          ) : (
+          ) : anyVisibleTimed ? (
             <span aria-hidden="true" className={stacked ? 'hidden' : 'flex-[0_0_5rem]'} />
-          )}
+          ) : null}
           <Link
             to={`${base}/${PAGE_FOR[item.type]}`}
             onClick={() =>
@@ -384,7 +388,9 @@ export function NextUp({
             }`}
             data-next-up-name=""
           >
-            <span className="break-words text-lg font-semibold text-ink">{item.title}</span>
+            {/* text-lg matches mobile's Today card at phone width; at xl the
+                desktop density steps item titles down to the 18px body size. */}
+            <span className="break-words text-lg font-semibold text-ink xl:text-base">{item.title}</span>
             {sub ? <span className="break-words text-sm text-ink-2">{sub}</span> : null}
           </Link>
           {action}

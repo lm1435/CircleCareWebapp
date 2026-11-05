@@ -444,3 +444,24 @@ describe('NextUp', () => {
     });
   });
 });
+
+describe('leading time column', () => {
+  const rowHasSpacer = (row: HTMLElement): boolean =>
+    Array.from(row.querySelectorAll('span[aria-hidden="true"]')).some((s) =>
+      s.className.includes('flex-[0_0_5rem]')
+    );
+
+  it('collapses when nothing visible has a time (only late, dateless tasks)', () => {
+    renderNextUp({ items: [task('t1'), task('t2'), task('t3')] });
+    for (const row of screen.getAllByTestId('next-up-row')) {
+      expect(rowHasSpacer(row)).toBe(false);
+    }
+  });
+
+  it('keeps the untimed rows aligned when a timed item is visible', () => {
+    renderNextUp({ items: [appt('a1'), task('t1')] });
+    const rows = screen.getAllByTestId('next-up-row');
+    const taskRow = rows.find((r) => r.getAttribute('data-next-up-key') === 'task:t1')!;
+    expect(rowHasSpacer(taskRow)).toBe(true);
+  });
+});
