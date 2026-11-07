@@ -148,7 +148,7 @@ describe('"How often?" uses the same tile (ChipSelect variant="tile")', () => {
     const tile = screen.getByRole('radio', { name: 'Every day' });
     for (const cls of CHOICE_TILE_BOX.split(' ')) expect(tile).toHaveClass(cls);
     expect(tile).not.toHaveClass('rounded-full');
-    expect(tile.querySelector('span')).toHaveClass('text-base', 'font-semibold');
+    expect(tile.querySelector('span')).toHaveClass('text-base', 'font-medium');
     rerender(<ChipSelect label="How often?" options={['Every day', 'Some days']} value="Every day" onChange={vi.fn()} />);
     expect(screen.getByRole('radio', { name: 'Every day' })).toHaveClass('rounded-full');
   });

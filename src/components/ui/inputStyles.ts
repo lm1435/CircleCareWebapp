@@ -256,7 +256,7 @@ export const CHOICE_TILE_BOX =
   'flex min-h-[56px] max-w-full min-w-[44px] flex-col items-start justify-center gap-px rounded-2xl border px-3.5 py-2 text-left transition-colors duration-fast';
 
 /** A choice tile's label line ("Morning", "Every day") and second line ("8:00 AM"). */
-export const CHOICE_TILE_LABEL = 'max-w-full text-base font-semibold';
+export const CHOICE_TILE_LABEL = 'max-w-full text-base font-medium';
 export function choiceTileSubClass(selected: boolean): string {
   return `max-w-full text-sm ${selected ? 'text-cream/80' : 'text-ink-2'}`;
 }
