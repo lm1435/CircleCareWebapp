@@ -180,14 +180,15 @@ export function useShiftSeriesRoot(
   event: CalendarEvent | null
 ): Pick<
   CalendarEvent,
-  'id' | 'assigned_to' | 'recurrence_rule' | 'recurrence_days' | 'scheduled_date'
+  'id' | 'assigned_to' | 'recurrence_rule' | 'recurrence_days' | 'scheduled_date' | 'recurrence_anchor_date'
 > | null {
   const rootId = event ? shiftRootId(event) : '';
   // A rotation (`cycle:N:M`) counts from the ROOT's date, which an occurrence row does not carry.
   const needsRoot =
     !!event &&
     !!event.parent_event_id &&
-    (!event.recurrence_rule || event.recurrence_rule.startsWith('cycle:'));
+    (!event.recurrence_rule ||
+      (event.recurrence_rule.startsWith('cycle:') && !event.recurrence_anchor_date));
   const { data: root } = useQuery({
     queryKey: [...queryKeys.shifts(circleId), 'seriesRoot', rootId],
     queryFn: () => getSeriesRoot(circleId, rootId),

@@ -70,7 +70,10 @@ export function ShiftDetailModal({
   // "Day 3 of 14 · back on Sun, Nov 29": a rotation counts from the series ROOT's date (day 1);
   // an off day has no line. The anchor is known only once the root row is (never guessed from the occurrence).
   const rule = ruleSource?.recurrence_rule ?? shift.recurrence_rule;
-  const anchor = ruleSource && ruleSource.id === shiftRootId(shift) ? ruleSource.scheduled_date : '';
+  const anchor =
+    shift.recurrence_anchor_date ||
+    ruleSource?.recurrence_anchor_date ||
+    (ruleSource && ruleSource.id === shiftRootId(shift) ? ruleSource.scheduled_date : '');
   const rotation = rotationPosition(rule, anchor, shift.scheduled_date);
   const rotationLine = rotation
     ? t('shifts:detail.rotationDay', {

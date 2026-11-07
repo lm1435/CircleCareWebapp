@@ -109,3 +109,25 @@ describe('shift detail: rotation', () => {
     expect(screen.queryByTestId('shift-detail-rotation')).not.toBeInTheDocument();
   });
 });
+
+describe('shift detail: rotation anchor from the server', () => {
+  it('a remainder root starting on day 5 shows "Day 5 of 14", not day 1, with no root fetch', () => {
+    renderDetail(
+      shift({
+        id: 'root2',
+        parent_event_id: null,
+        is_virtual: false,
+        scheduled_date: '2026-11-12',
+        recurrence_anchor_date: '2026-11-08',
+      })
+    );
+    expect(screen.getByTestId('shift-detail-rotation')).toHaveTextContent('Day 5 of 14 · back on Sun, Nov 29');
+    expect(getSeriesRoot).not.toHaveBeenCalled();
+  });
+
+  it('a virtual row carrying the anchor needs no root fetch', () => {
+    renderDetail(shift({ recurrence_anchor_date: '2026-11-08' }));
+    expect(screen.getByTestId('shift-detail-rotation')).toHaveTextContent('Day 8 of 14');
+    expect(getSeriesRoot).not.toHaveBeenCalled();
+  });
+});
