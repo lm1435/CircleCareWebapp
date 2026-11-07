@@ -33,7 +33,10 @@ import {
 //   - the error is surfaced with the surface's own copy (exactly one toast),
 //   - the user's input is still in the form and the button is enabled again,
 //   - nothing reached the database,
-//   - a second click goes through: exactly TWO requests in total, ONE row.
+//   - a second click goes through: exactly TWO saves in total, ONE row. (A save
+//     that auto-resends an ambiguous failure — event creates, `autoRetries` —
+//     sends its resends first, all with one Idempotency-Key; the user's retry is
+//     a new save with a new key.)
 
 test.use({ persona: 'premiumOwner' });
 // Two full saves per test (plus a calendar open for event notes).
@@ -62,6 +65,14 @@ interface Surface {
    * toast band cleared it — toast-page-overlap.spec.ts.)
    */
   inline?: boolean;
+  /**
+   * Automatic resends of ONE save after an ambiguous failure (5xx / no answer) before the
+   * error reaches the user. Event creates go through `sendIdempotentWrite`
+   * (src/lib/idempotentWrite.ts, MAX_RETRIES = 3, 9e4cfce): a single failure is retried with
+   * the same Idempotency-Key and never surfaces, so the fault must outlast every resend.
+   * Omitted = 0 (the surface does not auto-retry).
+   */
+  autoRetries?: number;
   /** Open + fill the form; return the save control. */
   prepare(ctx: Ctx): Promise<Locator>;
   /** The user's input is still in place after the failure. */
@@ -81,6 +92,7 @@ const SURFACES: Surface[] = [
     method: 'POST',
     path: '/api/circles/:id/events',
     toast: "Couldn't save your changes. Please try again.",
+    autoRetries: 3,
     async prepare({ page, circleId, label }) {
       await gotoCalendarSettled(page, circleId);
       await page.getByRole('button', { name: 'Add event' }).first().click();
@@ -275,6 +287,7 @@ const SURFACES: Surface[] = [
     method: 'POST',
     path: '/api/circles/:id/events',
     toast: "Couldn't save your changes. Please try again.",
+    autoRetries: 3,
     async prepare({ page, circleId, label }) {
       await gotoCalendarSettled(page, circleId);
       await page.getByRole('button', { name: 'Add event' }).first().click();
@@ -305,6 +318,7 @@ const SURFACES: Surface[] = [
     method: 'POST',
     path: '/api/circles/:id/events',
     toast: "Couldn't save your changes. Please try again.",
+    autoRetries: 3,
     async prepare({ page, circleId, label }) {
       await gotoCalendarSettled(page, circleId);
       await page.getByRole('button', { name: 'Add event' }).first().click();
@@ -378,16 +392,24 @@ for (const surface of SURFACES) {
       const ctx: Ctx = { page, circleId, userId: account.userId, api, label: uniqueLabel('RT'), state: {} };
       try {
         const save = await surface.prepare(ctx);
-        const injected = await failRequest(page, surface.method, surface.path, { ...fault, times: 1 });
+        // One save = the first attempt plus the surface's automatic resends; the fault outlasts them all.
+        const perSave = 1 + (surface.autoRetries ?? 0);
+        const injected = await failRequest(page, surface.method, surface.path, { ...fault, times: perSave });
         const sent = countRequests(page, surface.method, surface.path);
+        const idempotencyKeys = () => sent.requests.map((r) => r.headers()['idempotency-key']);
 
         await save.click();
-        await injected.expectHits(1);
+        await injected.expectHits(perSave, { timeoutMs: 20_000 });
         await expect(errorToast(page, surface.toast)).toBeVisible({ timeout: 15_000 });
         await expect(errorToast(page, surface.toast)).toHaveCount(1);
         await surface.inputKept(ctx);
         await expect(save).toBeEnabled();
-        expect(sent.count, 'one request so far').toBe(1);
+        expect(sent.count, 'one save (and its automatic resends) so far').toBe(perSave);
+        if (perSave > 1) {
+          const keys = idempotencyKeys();
+          expect(keys[0], 'the save carries an Idempotency-Key').toBeTruthy();
+          expect(new Set(keys).size, `the resends reuse the save's key: ${keys.join(', ')}`).toBe(1);
+        }
         expect(dbCount(surface.rows(ctx)), 'nothing written by the failed attempt').toBe(0);
 
         if (surface.inline) {
@@ -455,7 +477,10 @@ for (const surface of SURFACES) {
           'the retry was clicked while the error toast was still up'
         ).toBe(true);
         await surface.succeeded(ctx);
-        await sent.expectCount(2);
+        await sent.expectCount(perSave + 1);
+        if (perSave > 1) {
+          expect(idempotencyKeys()[perSave], 'the user\'s retry is a NEW save with a new key').not.toBe(idempotencyKeys()[0]);
+        }
         expect(dbCount(surface.rows(ctx)), 'exactly one row after the retry').toBe(1);
         sent.dispose();
       } finally {

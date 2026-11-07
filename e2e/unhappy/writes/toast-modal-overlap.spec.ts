@@ -49,6 +49,20 @@ interface ModalCase {
   fill(dialog: Locator): Promise<void>;
   /** The longest real toast this dialog raises on a 402, per language. */
   gate(lang: Lang): { fault: FaultOptions; text: string };
+  /**
+   * Automatic resends of ONE save after an ambiguous failure (5xx / no answer) before the
+   * error reaches the user. Event creates go through `sendIdempotentWrite`
+   * (src/lib/idempotentWrite.ts, MAX_RETRIES = 3, 9e4cfce): a single 500 is retried with the
+   * same Idempotency-Key and never surfaces, so the fault must outlast every resend.
+   */
+  autoRetries: number;
+}
+
+/** Every request of one save carries the SAME Idempotency-Key (the resends cannot write twice). */
+function expectOneIdempotencyKey(requests: { headers(): Record<string, string> }[], from: number, to: number): void {
+  const keys = requests.slice(from, to).map((r) => r.headers()['idempotency-key']);
+  expect(keys[0], 'the save carries an Idempotency-Key').toBeTruthy();
+  expect(new Set(keys).size, `one key across the save's resends: ${keys.join(', ')}`).toBe(1);
 }
 
 const BLOCKING_EMAIL = 'lucia.fernandez-arriaga@example.com';
@@ -72,6 +86,7 @@ const MODALS: ModalCase[] = [
       await dialog.locator('#scheduled_date').fill(localDate(3));
     },
     gate: lapseGate,
+    autoRetries: 3,
   },
   {
     name: 'EditMedicalInfoModal',
@@ -88,6 +103,7 @@ const MODALS: ModalCase[] = [
       await expect(dialog.getByText(label, { exact: true })).toBeVisible();
     },
     gate: plainGate,
+    autoRetries: 0,
   },
   {
     name: 'InviteMemberModal',
@@ -111,6 +127,7 @@ const MODALS: ModalCase[] = [
       },
       text: tr(lang, 'members', 'errors.pendingInviteSeat', { email: BLOCKING_EMAIL }),
     }),
+    autoRetries: 0,
   },
   {
     name: 'VitalFormModal',
@@ -125,6 +142,7 @@ const MODALS: ModalCase[] = [
       await dialog.locator('#notes').fill(uniqueLabel('TOV'));
     },
     gate: lapseGate,
+    autoRetries: 0,
   },
 ];
 
@@ -277,9 +295,11 @@ for (const vp of VIEWPORTS) {
     for (const modal of MODALS) {
       test(`${modal.name}: one error toast covers none of the dialog's interactive elements`, async ({ page, circleId }) => {
         const { save } = await openModal(page, circleId, modal, 'en');
-        const injected = await failRequest(page, modal.method, modal.path, { status: 500, times: 1 });
+        const perSave = 1 + modal.autoRetries;
+        const injected = await failRequest(page, modal.method, modal.path, { status: 500, times: perSave });
         await save.click();
-        await injected.expectHits(1);
+        await injected.expectHits(perSave, { timeoutMs: 20_000 });
+        if (modal.autoRetries > 0) expectOneIdempotencyKey(injected.requests, 0, perSave);
         await expect(errorToast(page, modal.toast)).toBeVisible({ timeout: 15_000 });
         await expect(save).toBeEnabled();
         await settledToast(page);
@@ -290,16 +310,23 @@ for (const vp of VIEWPORTS) {
     for (const modal of MODALS.filter((m) => m.name !== 'InviteMemberModal')) {
       test(`${modal.name}: a retry that fails AGAIN leaves ONE (new) toast, still clear of every control`, async ({ page, circleId }) => {
         const { save } = await openModal(page, circleId, modal, 'en');
-        const injected = await failRequest(page, modal.method, modal.path, { status: 500, times: 2 });
+        const perSave = 1 + modal.autoRetries;
+        const injected = await failRequest(page, modal.method, modal.path, { status: 500, times: 2 * perSave });
         await save.click();
-        await injected.expectHits(1);
+        await injected.expectHits(perSave, { timeoutMs: 20_000 });
         const first = errorToast(page, modal.toast);
         await expect(first).toBeVisible({ timeout: 15_000 });
         await first.evaluate((el) => el.setAttribute('data-e2e-first-toast', ''));
         await expect(save).toBeEnabled();
 
         await save.click({ timeout: 3_000 });
-        await injected.expectHits(2);
+        await injected.expectHits(2 * perSave, { timeoutMs: 20_000 });
+        if (modal.autoRetries > 0) {
+          expectOneIdempotencyKey(injected.requests, 0, perSave);
+          expectOneIdempotencyKey(injected.requests, perSave, 2 * perSave);
+          const [a, b] = [injected.requests[0], injected.requests[perSave]].map((r) => r.headers()['idempotency-key']);
+          expect(a, 'a NEW save (the user pressed again) gets a new key').not.toBe(b);
+        }
         // The second failure's toast REPLACED the first: one node, and not the old one.
         await expect(page.locator('[data-e2e-first-toast]')).toHaveCount(0, { timeout: 15_000 });
         await expect(errorToast(page, modal.toast)).toHaveCount(1);
