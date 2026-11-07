@@ -1,5 +1,5 @@
 import { test, expect, uniqueLabel } from '../../fixtures';
-import { apiSession, countRequests } from '../../unhappy';
+import { apiSession, countRequests, dbQuery, sqlStr } from '../../unhappy';
 import { apiCreateEvent, dateInZone, errorToast, purgeEventsTitled, recipientTimezone } from './_helpers';
 
 // A TASK DELETED BEHIND THE OPEN PAGE, COMPLETED FROM A TASKS SURFACE (plan
@@ -19,6 +19,21 @@ test.use({ persona: 'premiumOwner' });
 
 const TASKS_LIST = '/api/circles/:id/tasks';
 const TOAST = 'That event no longer exists. Someone else may have deleted it.';
+
+/**
+ * A date OLDER than every open task already in the circle, so the new task sorts first in
+ * Today's Next up (it shows only the 3 oldest). The persona's seeded tasks carry FIXED dates
+ * cloned from the demo seed and keep aging, so no fixed offset stays ahead of them: -30 did
+ * until they turned 32-35 days overdue (Nov 2026). At most 30 days back.
+ */
+function olderThanEveryOpenTask(circleId: string, tz: string): string {
+  const floor = dateInZone(tz, -30);
+  const [{ oldest }] = dbQuery<{ oldest: string | null }>(
+    `select (min(scheduled_date) - 1)::text as oldest from calendar_events
+       where circle_id = ${sqlStr(circleId)}::uuid and event_type = 'task' and completed_at is null`
+  );
+  return oldest && oldest < floor ? oldest : floor;
+}
 
 const SURFACES = [
   {
@@ -48,10 +63,10 @@ for (const s of SURFACES) {
     const task = await apiCreateEvent(api, circleId, {
       event_type: 'task',
       title,
-      // Dated well in the PAST: Today's Next up shows only the first 3 items (oldest first)
-      // so a task, so a task dated today fell off it once the persona seed's own open
-      // tasks aged into overdue (a date bomb, not an app change). Oldest sorts first.
-      scheduled_date: dateInZone(tz, -30),
+      // Dated before every open task: Today's Next up shows only the first 3 items (oldest
+      // first), so a task dated today, and later one dated -30, fell off it once the persona
+      // seed's own open tasks aged past it (a date bomb, not an app change).
+      scheduled_date: olderThanEveryOpenTask(circleId, tz),
     });
     try {
       await page.goto(s.path(circleId), { waitUntil: 'domcontentloaded' });

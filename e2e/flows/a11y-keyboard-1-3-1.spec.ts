@@ -488,6 +488,15 @@ test.describe('first-run wizard, keyboard only', () => {
     await expect(cont).toBeFocused();
 
     await page.keyboard.press('Enter');
+    // The setup invite step (93b1335, mobile parity) comes before the paywall: focus moves to its
+    // heading (never <body>), and "Not now" is reachable by Tab and goes on by Enter.
+    const inviteHeading = wizard.getByRole('heading', { name: 'Invite someone to help' });
+    await expect(inviteHeading).toBeFocused({ timeout: 20_000 });
+    await expect(wizard.getByTestId('first-run-invite-free-line')).toBeVisible();
+    const notNow = wizard.getByTestId('first-run-invite-not-now');
+    await tabTo(page, notNow);
+    await expectVisibleRing(page);
+    await page.keyboard.press('Enter');
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     // The paywall is a page: its "Continue with free plan" is reachable by Tab.
     const free = page.getByRole('button', { name: /Continue with free plan/ });

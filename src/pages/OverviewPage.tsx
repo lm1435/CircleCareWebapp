@@ -230,9 +230,13 @@ export default function OverviewPage(): ReactElement {
       : null;
   const doseHintAvailable = firstDose !== null && !doseHintGone && !hasSeenDoseHint();
 
-  // ONE coaching element at a time. Priority: next-step > shifts > dose hint.
+  // ONE coaching element at a time. Priority: next-step > shifts > dose hint. Nothing while the
+  // next step is still unknown: a lower card drawn first was swapped for the next-step card
+  // under the pointer once it loaded (e2e today-shifts-nudge, ~3 in 10 runs).
   const coaching: Coaching =
-    nextStep.status === 'step'
+    nextStep.status === 'unknown'
+      ? 'none'
+      : nextStep.status === 'step'
       ? 'next_step'
       : showShiftsNudge
         ? 'shifts'

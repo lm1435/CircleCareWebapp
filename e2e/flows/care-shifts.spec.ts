@@ -10,7 +10,7 @@ import {
 } from '../unhappy/auth-invites/_helpers';
 import { apiSession, dbQuery, sqlStr, type ApiSession } from '../unhappy';
 import { sqlExec } from '../db';
-import { circleTimezone, dateInTz } from '../notesFirstClassShared';
+import { circleTimezone, dateInTz, weekOffset } from '../notesFirstClassShared';
 import { ACCOUNT_PASSWORD, createAccount, runScopedEmail } from '../isolation';
 import { addMembership, createRunAccount, ensureManagerSwitchOn, waitForViewer } from '../managerRole';
 
@@ -65,6 +65,30 @@ async function openShifts(page: Page, circleId: string, view: 'Day' | 'Week' | '
   if (view !== 'Week') {
     await page.getByRole('tablist', { name: 'Calendar view' }).getByRole('tab', { name: view }).click();
   }
+}
+
+/**
+ * Step the Shifts week view (Sunday-start, opens on today's week) to the week holding `date`, then
+ * require that day's region on screen, so an assertion on `date` can never run against another week.
+ * A shift seeded for TOMORROW is in NEXT week every Saturday.
+ */
+async function showWeekOf(page: Page, today: string, date: string): Promise<void> {
+  const weeks = weekOffset(today, date);
+  const range = page.getByRole('heading', { level: 2, name: /\d{4}$/ });
+  for (let i = 0; i < Math.abs(weeks); i++) {
+    await expect(range).toBeVisible({ timeout: 20_000 });
+    const from = (await range.textContent())?.trim() ?? '';
+    await page.getByRole('button', { name: weeks < 0 ? 'Previous week' : 'Next week', exact: true }).click();
+    await expect(range, `week range moved off "${from}"`).not.toHaveText(from, { timeout: 20_000 });
+  }
+  const day = new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {
+    timeZone: 'UTC',
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+  // "Sunday, Nov 8" or "Sunday, Nov 8, 2 shifts · 1 open".
+  await expect(page.getByRole('region', { name: new RegExp(`^${day}(,|$)`) })).toBeVisible({ timeout: 20_000 });
 }
 
 function sqlShiftRows(
@@ -511,8 +535,11 @@ test.describe('free circles', () => {
 });
 
 test.describe('lapsed Premium: shifts stay visible, read-only', () => {
-  /** A premium owner with two shifts (one open, one the owner's), downgraded to free afterwards. */
-  async function lapsedScene(request: APIRequestContext): Promise<Scene> {
+  /**
+   * A premium owner with two shifts (one open, one the owner's) TOMORROW, so neither has ended
+   * whatever the hour, downgraded to free afterwards. Open the view with `openLapsedWeek`.
+   */
+  async function lapsedScene(request: APIRequestContext): Promise<Scene & { shiftDate: string }> {
     const s = await premiumScene(request);
     const tomorrow = dateInTz(s.tz, 1);
     await seedShift(s, { title: 'Night', scheduled_date: tomorrow });
@@ -524,7 +551,13 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
       assigned_to: s.owner.userId,
     });
     sqlExec(`update public.users set plan_tier = 'free' where id = ${sqlStr(s.owner.userId)}::uuid;`);
-    return s;
+    return { ...s, shiftDate: tomorrow };
+  }
+
+  /** The Shifts view on the week holding the scene's shifts (next week on a Saturday). */
+  async function openLapsedWeek(page: Page, s: Scene & { shiftDate: string }): Promise<void> {
+    await openShifts(page, s.circleId);
+    await showWeekOf(page, s.today, s.shiftDate);
   }
 
   test('the OWNER keeps the Shifts view with a Renew notice; no write control anywhere; Renew goes to /upgrade', async ({
@@ -535,7 +568,7 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
   }, testInfo) => {
     const s = await lapsedScene(request);
     await cookieLogin(context, s.owner, baseURL);
-    await openShifts(page, s.circleId);
+    await openLapsedWeek(page, s);
 
     // Not the teaser: the lists are there, with the notice.
     await expect(page.getByRole('dialog', { name: 'Share the care, shift by shift' })).toHaveCount(0);
@@ -587,9 +620,10 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
     await cookieLogin(context, member, baseURL);
     const page = await context.newPage();
     try {
-      await openShifts(page, s.circleId);
+      await openLapsedWeek(page, s);
       const week = page.getByTestId('shifts-week-view');
       await expect(week).toBeVisible({ timeout: 20_000 });
+      await expect(week.getByRole('button', { name: /^Night, .*open/ })).toBeVisible();
       await expect(page.getByTestId('shifts-readonly-notice')).toContainText('Shifts are read-only right now.');
       await expect(page.getByRole('button', { name: 'Renew Premium' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Add shift' })).toHaveCount(0);
@@ -640,7 +674,7 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
     await cookieLogin(context, member, baseURL);
     const page = await context.newPage();
     try {
-      await openShifts(page, s.circleId);
+      await openLapsedWeek(page, s);
       const week = page.getByTestId('shifts-week-view');
       await expect(week).toBeVisible({ timeout: 20_000 });
       await expect(week.getByRole('button', { name: /^Night, / })).toBeVisible();

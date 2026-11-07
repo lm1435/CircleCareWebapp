@@ -456,6 +456,41 @@ describe('Today (OverviewPage)', () => {
       });
     });
 
+    // e2e today-shifts-nudge flaked ~3 in 10: the next step loads after the members, so the
+    // shifts card drew first and was swapped for "Add the first medication" under the cursor.
+    it('shows NO lower-priority card while the next step is still unknown, then the winner only', () => {
+      setNextStep({ status: 'unknown' });
+      setNextUp([dose('m1')]);
+      const { rerender } = render(
+        <MemoryRouter initialEntries={['/circles/c1']}>
+          <Routes>
+            <Route path="/circles/:circleId" element={<OverviewPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.queryByTestId('shifts-nudge-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dose-hint')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('next-step-card')).not.toBeInTheDocument();
+
+      setNextStep(step);
+      rerender(
+        <MemoryRouter initialEntries={['/circles/c1']}>
+          <Routes>
+            <Route path="/circles/:circleId" element={<OverviewPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.getByTestId('next-step-card')).toBeInTheDocument();
+      expect(screen.queryByTestId('shifts-nudge-card')).not.toBeInTheDocument();
+    });
+
+    it('once the next step resolves to none, the shifts nudge shows', () => {
+      setNextStep({ status: 'none' });
+      setNextUp([dose('m1')]);
+      renderToday();
+      expect(screen.getByTestId('shifts-nudge-card')).toBeInTheDocument();
+    });
+
     it('never renders two coaching elements together, whatever the combination', () => {
       for (const withStep of [false, true]) {
         for (const shiftsEligible of [false, true]) {

@@ -142,11 +142,22 @@ test('a dose Today does not list falls back to the calendar event sheet (replace
     ]);
     await cookieLogin(context, s.owner, baseURL);
     await page.goto('/notifications', { waitUntil: 'domcontentloaded' });
+    // Every URL the tab passes through. CalendarPage consumes `?date&eventId` and strips them
+    // (replace) as soon as that week's events settle, so the deep-link URL can live for only a
+    // few ms: polling `toHaveURL` for it raced the strip (~1 in 10 runs saw only the bare
+    // /calendar). The navigation itself is recorded instead, then its outcome is asserted.
+    const visited: string[] = [];
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) visited.push(frame.url());
+    });
     await page.getByTestId('inbox-row').first().click({ timeout: 30_000 });
-    await expect(page).toHaveURL(
-      new RegExp(`/circles/${s.circleId}/calendar\\?date=${s.today}&eventId=${missing}`),
-      { timeout: 30_000 }
-    );
+    const deepLink = new RegExp(`/circles/${s.circleId}/calendar\\?date=${s.today}&eventId=${missing}$`);
+    await expect
+      .poll(() => visited.some((u) => deepLink.test(u)), { message: `navigated to the calendar deep link: ${visited.join(' > ')}`, timeout: 30_000 })
+      .toBe(true);
+    // The calendar received the link and, finding no such event, shows the removed state.
+    await expect(page).toHaveURL(new RegExp(`/circles/${s.circleId}/calendar$`), { timeout: 30_000 });
+    await expect(page.getByTestId('removed-state')).toBeVisible({ timeout: 30_000 });
     // replace, not push: Back returns to the inbox, never to the dose-landing URL.
     await page.goBack();
     await expect(page).toHaveURL(/\/notifications$/);
