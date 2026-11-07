@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
 import { shiftAssignee } from './shiftPeople';
+import { rotationPosition } from './shiftRotation';
 import { holdsOnlyThisDay,
   formatShiftRange,
   formatShiftRangeViewer,
@@ -18,6 +19,7 @@ import { holdsOnlyThisDay,
   isShiftOpen,
   isShiftRepeating,
   shiftEnd,
+  shiftRootId,
   canCoverShifts,
   hasShiftEnded,
 } from './shiftUtils';
@@ -48,7 +50,7 @@ export function ShiftDetailModal({
   onClose,
   onAction,
 }: ShiftDetailModalProps): ReactElement {
-  const { t, i18n } = useTranslation(['shifts', 'common']);
+  const { t, i18n } = useTranslation(['shifts', 'common', 'calendar']);
   const cycle = useHourCycle();
   const { members, canEdit, canManageMembers, viewOnly, isPremiumCircle, isOwner, hasShifts } =
     useCircle(circleId);
@@ -65,6 +67,22 @@ export function ShiftDetailModal({
   const end = shiftEnd(shift.scheduled_date, shift.scheduled_time ?? '00:00', shift.duration_minutes ?? 15);
   const ruleSource = useShiftSeriesRoot(circleId, shift);
   const repeat = formatShiftRepeat(ruleSource ?? shift, isShiftRepeating(shift), t, (days) => formatWeekdayList(days, i18n.language));
+  // "Day 3 of 14 · back on Sun, Nov 29": a rotation counts from the series ROOT's date (day 1);
+  // an off day has no line. The anchor is known only once the root row is (never guessed from the occurrence).
+  const rule = ruleSource?.recurrence_rule ?? shift.recurrence_rule;
+  const anchor = ruleSource && ruleSource.id === shiftRootId(shift) ? ruleSource.scheduled_date : '';
+  const rotation = rotationPosition(rule, anchor, shift.scheduled_date);
+  const rotationLine = rotation
+    ? t('shifts:detail.rotationDay', {
+        n: rotation.day,
+        on: rotation.on,
+        date: formatDateForDisplay(
+          rotation.backOn,
+          { weekday: 'short', month: 'short', day: 'numeric' },
+          i18n.language
+        ),
+      })
+    : '';
   const ended = hasShiftEnded(shift, timezone);
   const canDrop = !open && !ended && canWrite && (assignee?.isYou === true || canManageMembers);
   // Took "Just this one" of a repeating shift: say so, or "Repeats: Daily" + "You" reads as every day.
@@ -72,12 +90,23 @@ export function ShiftDetailModal({
   const whoName = assignee?.isYou ? t('shifts:you') : (assignee?.name ?? '');
   const whoValue = onlyThisDay && whoName ? t('shifts:detail.whoThisDayOnly', { name: whoName }) : whoName;
 
-  const row = (label: string, value: string, testId: string): ReactElement => (
+  const row = (
+    label: string,
+    value: string,
+    testId: string,
+    secondary?: string,
+    secondaryTestId?: string
+  ): ReactElement => (
     <div className="flex flex-col gap-0.5 border-t border-line-2 py-3 first:border-t-0">
       <dt className="text-xs font-medium text-ink-3">{label}</dt>
       <dd data-testid={testId} className="m-0 text-base text-ink">
         {value}
       </dd>
+      {secondary && (
+        <dd data-testid={secondaryTestId} className="m-0 text-sm text-ink-2">
+          {secondary}
+        </dd>
+      )}
     </div>
   );
 
@@ -140,7 +169,7 @@ export function ShiftDetailModal({
           )}
           {viewerRange &&
             row(t('shifts:detail.yourTimeRow'), viewerRange, 'shift-detail-viewer-time')}
-          {row(t('shifts:detail.repeats'), repeat, 'shift-detail-repeat')}
+          {row(t('shifts:detail.repeats'), repeat, 'shift-detail-repeat', rotationLine, 'shift-detail-rotation')}
           {row(
             t('shifts:detail.coveredBy'),
             open ? (ended ? t('shifts:notCovered') : t('shifts:detail.openValue')) : whoValue,

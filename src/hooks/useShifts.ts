@@ -12,13 +12,21 @@ import {
   createShift,
   dropShift,
   getShifts,
+  rescheduleShiftSeries,
   takeShift,
   updateShift,
   type CreateShiftRequest,
+  type RescheduleShiftBody,
   type ShiftActionResult,
   type ShiftScope,
 } from '@/api/shifts';
-import { deleteEvent, getSeriesRoot, type CalendarEvent, type UpdateEventRequest } from '@/api/calendarEvents';
+import {
+  deleteEvent,
+  getSeriesRoot,
+  type CalendarEvent,
+  type SeriesRoot,
+  type UpdateEventRequest,
+} from '@/api/calendarEvents';
 import { useToast } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
 import { usePremiumGate } from '@/hooks/usePremiumGate';
@@ -170,9 +178,16 @@ export function useCanTakeFuture(
 export function useShiftSeriesRoot(
   circleId: string,
   event: CalendarEvent | null
-): Pick<CalendarEvent, 'id' | 'assigned_to' | 'recurrence_rule' | 'recurrence_days'> | null {
+): Pick<
+  CalendarEvent,
+  'id' | 'assigned_to' | 'recurrence_rule' | 'recurrence_days' | 'scheduled_date'
+> | null {
   const rootId = event ? shiftRootId(event) : '';
-  const needsRoot = !!event && !!event.parent_event_id && !event.recurrence_rule;
+  // A rotation (`cycle:N:M`) counts from the ROOT's date, which an occurrence row does not carry.
+  const needsRoot =
+    !!event &&
+    !!event.parent_event_id &&
+    (!event.recurrence_rule || event.recurrence_rule.startsWith('cycle:'));
   const { data: root } = useQuery({
     queryKey: [...queryKeys.shifts(circleId), 'seriesRoot', rootId],
     queryFn: () => getSeriesRoot(circleId, rootId),
@@ -180,8 +195,30 @@ export function useShiftSeriesRoot(
     staleTime: OPEN_COUNT_STALE_MS,
   });
   if (!event) return null;
-  if (event.recurrence_rule) return event;
-  return root ?? null;
+  if (event.recurrence_rule && !needsRoot) return event;
+  return root ?? (event.recurrence_rule ? event : null);
+}
+
+/**
+ * The full series root (rule, days, end date) of an occurrence being EDITED: a virtual
+ * occurrence carries neither the root's `recurrence_days` nor its anchor date, so the
+ * edit form hydrates its repeat from this. Shares the cache entry of `useShiftSeriesRoot`.
+ * `pending` = a fetch is still needed and running.
+ */
+export function useShiftSeriesRootForEdit(
+  circleId: string,
+  event: CalendarEvent | null,
+  enabled: boolean
+): { root: SeriesRoot | null; pending: boolean } {
+  const rootId = event ? shiftRootId(event) : '';
+  const needsRoot = enabled && !!event?.parent_event_id;
+  const { data, isPending } = useQuery({
+    queryKey: [...queryKeys.shifts(circleId), 'seriesRoot', rootId],
+    queryFn: () => getSeriesRoot(circleId, rootId),
+    enabled: needsRoot && !!circleId && !!rootId,
+    staleTime: OPEN_COUNT_STALE_MS,
+  });
+  return { root: data ?? null, pending: needsRoot && isPending };
 }
 
 function invalidateShifts(queryClient: ReturnType<typeof useQueryClient>, circleId: string): void {
@@ -461,6 +498,29 @@ export function useUpdateShift(
   const onError = useShiftMutationOnError(circleId, 'update');
   return useMutation({
     mutationFn: ({ eventId, data }: UpdateShiftVariables) => updateShift(circleId, eventId, data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+      invalidateShifts(queryClient, circleId);
+    },
+    onError,
+  });
+}
+
+export interface RescheduleShiftVariables {
+  /** Any row of the series; the request goes to its root. */
+  shift: CalendarEvent;
+  body: RescheduleShiftBody;
+}
+
+/** POST .../shift/reschedule — change the date / repeat of "All upcoming shifts". */
+export function useRescheduleShiftSeries(
+  circleId: string
+): UseMutationResult<CalendarEvent, unknown, RescheduleShiftVariables> {
+  const queryClient = useQueryClient();
+  const onError = useShiftMutationOnError(circleId, 'update');
+  return useMutation({
+    mutationFn: ({ shift, body }: RescheduleShiftVariables) =>
+      rescheduleShiftSeries(circleId, shiftRootId(shift), body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
       invalidateShifts(queryClient, circleId);

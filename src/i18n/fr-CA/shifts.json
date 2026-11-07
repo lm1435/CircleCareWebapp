@@ -54,7 +54,6 @@
   "form": {
     "newTitle": "Nouveau quart",
     "editTitle": "Modifier le quart",
-    "seriesNote": "La date et la répétition d’une série ne se modifient pas ici. Votre modification s’applique aux quarts choisis.",
     "save": "Enregistrer le quart",
     "reminderHint": "Envoyé à la personne qui assure le quart.",
     "editScopeLabel": "Quels quarts ?",

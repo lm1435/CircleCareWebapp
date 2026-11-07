@@ -94,14 +94,16 @@
     "coveredBy": "Chi se ne occupa",
     "whoThisDayOnly": "{{name}} · solo questo giorno",
     "openValue": "Ancora nessuno",
-    "reminder": "Promemoria"
+    "reminder": "Promemoria",
+    "rotationDay": "Giorno {{n}} di {{on}} · si ricomincia il {{date}}"
   },
   "repeat": {
     "never": "Mai",
     "daily": "Ogni giorno",
     "weekly": "Ogni settimana",
     "weeklyOn": "Ogni settimana: {{days}}",
-    "series": "Ripetuto"
+    "series": "Ripetuto",
+    "cycle": "{{on}} giorni di turno, {{off}} di riposo"
   },
   "reminder": {
     "off": "Disattivato",
@@ -135,7 +137,6 @@
     "leaveOpen": "Lascia scoperto",
     "me": "Io",
     "timezoneNote": "Questi orari sono di {{zone}}.",
-    "seriesNote": "Qui non si possono cambiare la data e la ripetizione di una serie. La modifica vale per i turni scelti.",
     "save": "Salva turno",
     "date": "Data",
     "endsOn": "La ripetizione termina",
@@ -154,7 +155,22 @@
     "summaryReminderOff": "Promemoria: disattivato",
     "summaryRepeatEnds": "Fine ripetizione: {{date}}",
     "summaryRepeatEndsNever": "Fine ripetizione: mai",
-    "saveChanges": "Salva le modifiche"
+    "saveChanges": "Salva le modifiche",
+    "everyOtherDay": "A giorni alterni",
+    "monthly": "Ogni mese",
+    "yearly": "Ogni anno",
+    "daysOnOff": "Giorni di turno / riposo",
+    "daysOn": "Giorni di turno",
+    "daysOff": "Giorni di riposo",
+    "legendOn": "Di turno",
+    "legendOff": "Riposo",
+    "cycleHint24": "Ogni giorno è un turno dalle {{start}} alle {{end}}. Si susseguono senza interruzioni.",
+    "cycleWas": "prima {{old}}",
+    "starting": "Dal",
+    "firstTime": "Prima volta: {{date}}",
+    "fromNote": "I turni prima del {{date}} restano come sono, compreso chi li ha coperti. Il nuovo piano inizia il {{date}}.",
+    "invalidStart": "Questa data non rientra nel nuovo piano. Scegli un’altra data di inizio.",
+    "rescheduleRequired": "Questo piano è stato modificato altrove. Chiudi e riapri il turno."
   },
   "saved": {
     "title": "«{{name}}» salvato",
@@ -170,7 +186,10 @@
     "summarySelfOnce": "{{range}} · Te ne occupi tu.",
     "repeatDaily": "ogni giorno",
     "repeatWeekly": "ogni settimana",
-    "repeatDays": "{{days}}"
+    "repeatDays": "{{days}}",
+    "repeatMonthly": "ogni mese",
+    "repeatYearly": "ogni anno",
+    "repeatEveryOtherDay": "a giorni alterni"
   },
   "validation": {
     "nameRequired": "Dai un nome al turno.",
@@ -181,7 +200,9 @@
     "tooShort": "Un turno dura da 15 minuti a 24 ore.",
     "tooLong": "Un turno dura da 15 minuti a 24 ore.",
     "repeatEndBeforeStart": "La data di fine deve essere uguale o successiva alla prima data.",
-    "daysRequired": "Scegli almeno un giorno."
+    "daysRequired": "Scegli almeno un giorno.",
+    "cycleCounts": "I giorni di turno e di riposo devono essere numeri interi da 1 a 999.",
+    "startingBefore": "La data di inizio non può essere prima del {{date}}."
   },
   "toast": {
     "taken": "Hai il turno «{{name}}».",

@@ -88,7 +88,10 @@
     "weekly": "Ogni settimana",
     "weeklyOn": "Ogni settimana: {{days}}",
     "everyNDays_one": "Ogni giorno",
-    "everyNDays_other": "Ogni {{count}} giorni"
+    "everyNDays_other": "Ogni {{count}} giorni",
+    "monthly": "Ogni mese",
+    "yearly": "Ogni anno",
+    "cycle": "{{on}} giorni di assunzione, {{off}} di pausa"
   },
   "errors": {
     "permissionDenied": "Non hai il permesso di apportare modifiche in questa cerchia.",

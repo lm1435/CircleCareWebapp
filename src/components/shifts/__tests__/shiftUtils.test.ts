@@ -13,6 +13,7 @@ import {
   targetFor,
   formatShiftDuration,
   formatShiftRange,
+  formatShiftRepeat,
   groupShiftsByDay,
   isShiftOpen,
   isShiftRepeating,
@@ -245,5 +246,30 @@ describe('canCoverShifts (may put THEMSELVES on a shift)', () => {
   });
   it('is false for the care recipient', () => {
     expect(canCoverShifts(people, 'u-rosa')).toBe(false);
+  });
+});
+
+describe('formatShiftRepeat uses the shared label for every rule', () => {
+  const t = (key: string, opts?: Record<string, unknown>): string =>
+    opts && Object.keys(opts).length ? `${key}(${JSON.stringify(opts)})` : key;
+  const list = (days: readonly number[]): string => days.join(',');
+  const label = (rule: string | null) =>
+    formatShiftRepeat({ recurrence_rule: rule, recurrence_days: null }, !!rule, t, list);
+
+  it('keeps daily / weekly / never', () => {
+    expect(label('daily')).toBe('shifts:repeat.daily');
+    expect(label('weekly')).toBe('shifts:repeat.weekly');
+    expect(label(null)).toBe('shifts:repeat.never');
+  });
+
+  it('names every other day, monthly, yearly and days on / off instead of "Repeats"', () => {
+    expect(label('every_other_day')).toBe('calendar:recurrence.everyOtherDay');
+    expect(label('monthly')).toBe('calendar:recurrence.monthly');
+    expect(label('yearly')).toBe('calendar:recurrence.yearly');
+    expect(label('cycle:14:7')).toBe('shifts:repeat.cycle({"on":14,"off":7})');
+  });
+
+  it('still says "Repeats" when the rule is simply not known (child row, root loading)', () => {
+    expect(formatShiftRepeat(null, true, t, list)).toBe('shifts:repeat.series');
   });
 });

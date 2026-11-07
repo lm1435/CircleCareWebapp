@@ -6,6 +6,7 @@ import { useCircle } from '@/hooks/useCircle';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
 import { shiftAssignee } from './shiftPeople';
+import { parseCycleRule } from './shiftRotation';
 import { formatShiftRange, isShiftOpen, shiftEnd } from './shiftUtils';
 import { formatTimeOfDay } from '@/utils/timezone';
 import { useAuthStore } from '@/store/authStore';
@@ -29,7 +30,7 @@ export function ShiftSavedDialog({
   onAddNext,
   onDone,
 }: ShiftSavedDialogProps): ReactElement {
-  const { t, i18n } = useTranslation('shifts');
+  const { t, i18n } = useTranslation(['shifts', 'calendar']);
   const cycle = useHourCycle();
   const { timezone, members } = useCircle(circleId);
   const viewerId = useAuthStore((s) => s.user?.id);
@@ -38,13 +39,23 @@ export function ShiftSavedDialog({
   // Mobile's wording: "every day" / "every week" / "on Mon, Wed", and full
   // templates per case below (a person's name is never glued onto a fragment).
   const days = shift.recurrence_days;
+  const rule = shift.recurrence_rule ?? '';
+  const rotation = parseCycleRule(rule);
   const repeat = !repeating
     ? ''
-    : shift.recurrence_rule === 'daily'
+    : rule === 'daily'
       ? t('saved.repeatDaily')
-      : days && days.length > 0
-        ? t('saved.repeatDays', { days: formatWeekdayList(days, i18n.language) })
-        : t('saved.repeatWeekly');
+      : rule === 'every_other_day'
+        ? t('saved.repeatEveryOtherDay')
+        : rule === 'monthly'
+          ? t('saved.repeatMonthly')
+          : rule === 'yearly'
+            ? t('saved.repeatYearly')
+            : rotation
+              ? t('repeat.cycle', { on: rotation.on, off: rotation.off })
+              : days && days.length > 0
+                ? t('saved.repeatDays', { days: formatWeekdayList(days, i18n.language) })
+                : t('saved.repeatWeekly');
   // The composer only mounts this after the form (which is gated on the circle),
   // so the zone is known; never guess one.
   if (!timezone) return <></>;

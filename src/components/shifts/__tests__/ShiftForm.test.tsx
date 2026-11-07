@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
-import type { CalendarEvent } from '@/api/calendarEvents';
+import { getSeriesRoot, type CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
 import { createShift, updateShift } from '@/api/shifts';
 import { ToastProvider } from '@/components/ui';
@@ -18,12 +18,17 @@ vi.mock('@/api/shifts', async (importOriginal) => ({
   createShift: vi.fn(),
   updateShift: vi.fn(),
 }));
+vi.mock('@/api/calendarEvents', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/calendarEvents')>()),
+  getSeriesRoot: vi.fn(),
+}));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     shiftCreated: vi.fn(),
     shiftEdited: vi.fn(),
+    shiftSeriesRescheduled: vi.fn(),
     shiftAddNextTapped: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -125,6 +130,7 @@ beforeEach(() => {
   circle();
   mockCreate.mockResolvedValue(created());
   mockUpdate.mockResolvedValue(created());
+  vi.mocked(getSeriesRoot).mockRejectedValue(new Error('no root'));
 });
 
 describe('ShiftFormModal (create)', () => {
@@ -510,11 +516,9 @@ describe('ShiftFormModal (edit)', () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" shift={occurrence} onClose={vi.fn()} />);
     expect(screen.getByRole('radio', { name: 'This shift' })).toBeChecked();
-    // Date / repeat are not editable on a series: the date is text, the repeat tiles are locked.
-    expect(document.getElementById('shift_date')).toBeNull();
-    expect(screen.getByTestId('shift-form-date-locked')).toHaveTextContent('Wed, Oct 21');
-    expect(screen.getByRole('radio', { name: 'Every day' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Every day' })).toBeDisabled();
+    // "This shift": the date is a field (it moves this occurrence), the repeat is not offered.
+    expect(field('shift_date')).toHaveValue('2026-10-21');
+    expect(screen.queryByRole('radiogroup', { name: 'How often?' })).not.toBeInTheDocument();
     setTime('start', '21:00');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
@@ -523,6 +527,7 @@ describe('ShiftFormModal (edit)', () => {
       expect.objectContaining({ scheduled_time: '21:00', duration_minutes: 660 })
     );
     expect(mockUpdate.mock.calls[0][2]).not.toHaveProperty('assigned_to');
+    expect(mockUpdate.mock.calls[0][2]).not.toHaveProperty('scheduled_date');
     expect(Analytics.shiftEdited).toHaveBeenCalledWith({ timeChanged: true, scope: 'occurrence', layout: 'simple' });
   });
 

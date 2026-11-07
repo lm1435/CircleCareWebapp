@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent, CreateEventRequest } from '@/api/calendarEvents';
-import type { ShiftScope } from '@/api/shifts';
+import {
+  isShiftInvalidStartError,
+  isShiftRescheduleRequiredError,
+  type RescheduleShiftBody,
+  type ShiftScope,
+} from '@/api/shifts';
 import {
   Button,
   ChipSelect,
@@ -20,15 +25,32 @@ import { INPUT_ERROR } from '@/components/ui/inputStyles';
 import { DaysOfWeekPicker } from '@/components/calendar/DaysOfWeekPicker';
 import { DisclosureRow } from '@/components/calendar/DisclosureRow';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
-import { formatDateForDisplay, getDayOfWeek, nextDateOnWeekdays } from '@/components/calendar/dateMath';
+import {
+  formatDateForDisplay,
+  getDayOfWeek,
+  nextDateOnWeekdays,
+} from '@/components/calendar/dateMath';
 import { useCircle } from '@/hooks/useCircle';
-import { useCreateShift, useHandleShiftFailure, useUpdateShift } from '@/hooks/useShifts';
+import {
+  useCreateShift,
+  useHandleShiftFailure,
+  useRescheduleShiftSeries,
+  useShiftSeriesRootForEdit,
+  useUpdateShift,
+} from '@/hooks/useShifts';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useAuthStore } from '@/store/authStore';
 import { Analytics } from '@/lib/analytics';
 import { resolveShiftsEntry } from '@/lib/shiftsAccess';
+import { ShiftCyclePanel } from './ShiftCyclePanel';
 import { ShiftInlineError } from './ShiftInlineError';
+import {
+  cycleBucket,
+  cycleRule,
+  parseCycleCount,
+  parseCycleRule,
+} from './shiftRotation';
 import { spanMinutes } from '@/lib/eventForm';
 import { defaultNewEventDate } from '@/utils/recipientEventDate';
 import { formatTimeOfDay, getTimezoneLabel } from '@/utils/timezone';
@@ -38,6 +60,7 @@ import {
   MIN_SHIFT_MINUTES,
   SHIFT_NAME_MAX,
   formatShiftDuration,
+  formatShiftRepeat,
   formatShiftReminder,
   formatShiftReminderChip,
   isShiftRepeating,
@@ -50,7 +73,15 @@ import {
   canCoverShifts,
 } from './shiftUtils';
 
-export type ShiftRepeatChoice = 'none' | 'daily' | 'weekly' | 'days_of_week';
+export type ShiftRepeatChoice =
+  | 'none'
+  | 'daily'
+  | 'every_other_day'
+  | 'weekly'
+  | 'monthly'
+  | 'yearly'
+  | 'cycle'
+  | 'days_of_week';
 
 export interface ShiftFormPrefill {
   name?: string;
@@ -60,6 +91,9 @@ export interface ShiftFormPrefill {
   endTime?: string;
   repeat?: ShiftRepeatChoice;
   days?: number[];
+  /** Days on / off counts ('add next' keeps the rotation). */
+  cycleOn?: string;
+  cycleOff?: string;
   repeatEndDate?: string;
   reminder?: number | null;
 }
@@ -103,8 +137,9 @@ const hm = (time: string | null | undefined): string => (time ? time.slice(0, 5)
  * and a conversion would also rotate the weekdays of a days-of-week series.
  *
  * EDIT: a repeating shift asks "This shift / All upcoming shifts" first.
- * This shift PATCHes that occurrence's own id; future PATCHes the series root.
- * Date and repeat are not editable on a series (delete it and add a new one).
+ * This shift PATCHes that occurrence's own id (its date can move). All upcoming PATCHes the
+ * series root for content, but a new START DATE or REPEAT goes to POST .../shift/reschedule
+ * (the backend splits the series at the date: earlier shifts and their cover are untouched).
  */
 export function ShiftFormModal(props: ShiftFormModalProps): ReactElement | null {
   const { t } = useTranslation(['shifts', 'common']);
@@ -148,14 +183,36 @@ export function ShiftFormModal(props: ShiftFormModalProps): ReactElement | null 
   return <ShiftFormBody {...props} />;
 }
 
-/** The repeat a stored shift carries, as the form's tiles name it; null = a series whose rule this row does not hold. */
-function storedRepeat(shift: CalendarEvent): ShiftRepeatChoice | null {
+type StoredSeries = Pick<
+  CalendarEvent,
+  'recurrence_rule' | 'recurrence_days' | 'recurrence_end_date' | 'parent_event_id'
+>;
+
+/** The repeat a stored shift carries, as the form's tiles name it; null = a rule no tile names (custom:N). */
+function storedRepeat(shift: StoredSeries): ShiftRepeatChoice | null {
   const rule = shift.recurrence_rule;
-  if (rule === 'daily') return 'daily';
+  if (rule === 'daily' || rule === 'every_other_day' || rule === 'monthly' || rule === 'yearly') {
+    return rule;
+  }
   if (rule === 'weekly') {
     return shift.recurrence_days && shift.recurrence_days.length > 0 ? 'days_of_week' : 'weekly';
   }
+  if (parseCycleRule(rule)) return 'cycle';
   return isShiftRepeating(shift) ? null : 'none';
+}
+
+/** The rule string a tile choice stores (days of the week = weekly + days). */
+function ruleOf(choice: ShiftRepeatChoice, on: number | null, off: number | null): string | undefined {
+  switch (choice) {
+    case 'none':
+      return undefined;
+    case 'days_of_week':
+      return 'weekly';
+    case 'cycle':
+      return on !== null && off !== null ? cycleRule(on, off) : undefined;
+    default:
+      return choice;
+  }
 }
 
 /** A form field that can carry an error, in the order the first one is focused. */
@@ -165,6 +222,7 @@ const FOCUS_ORDER = [
   'shift_start',
   'shift_end',
   'shift_days',
+  'cycle_days_on',
   'shift_repeat_end',
 ] as const;
 
@@ -191,10 +249,16 @@ function ShiftFormBody({
   const hourCycle = useHourCycle();
   const createShift = useCreateShift(circleId);
   const updateShift = useUpdateShift(circleId);
+  const rescheduleShift = useRescheduleShiftSeries(circleId);
 
   const isEditing = !!shift;
   const repeatingEdit = isEditing && isShiftRepeating(shift);
   const language = i18n.language;
+  // A virtual occurrence carries neither the root's days nor its rule shape: hydrate the repeat from the root.
+  const rootEdit = useShiftSeriesRootForEdit(circleId, shift ?? null, repeatingEdit);
+  const stored: StoredSeries | null = shift ? (rootEdit.root ?? shift) : null;
+  const storedChoice = stored ? storedRepeat(stored) : null;
+  const storedCycle = parseCycleRule(stored?.recurrence_rule);
 
   const [name, setName] = useState(shift?.title ?? prefill?.name ?? '');
   const [date, setDate] = useState(
@@ -210,12 +274,31 @@ function ShiftFormBody({
     }
     return prefill ? (prefill.endTime ?? '') : DEFAULT_END;
   });
-  // EDIT shows the stored repeat (locked); CREATE starts from the prefill ("add next") or Once.
-  const lockedRepeat = shift ? storedRepeat(shift) : null;
+  // EDIT starts from the stored repeat (editable under "All upcoming shifts"); CREATE from the prefill ("add next") or Once.
   const [repeat, setRepeat] = useState<ShiftRepeatChoice>(
-    shift ? (lockedRepeat ?? 'none') : (prefill?.repeat ?? 'none')
+    shift ? (storedChoice ?? 'none') : (prefill?.repeat ?? 'none')
   );
-  const [days, setDays] = useState<number[]>(prefill?.days ?? []);
+  const [days, setDays] = useState<number[]>(prefill?.days ?? stored?.recurrence_days ?? []);
+  const [cycleOn, setCycleOn] = useState(
+    storedCycle ? String(storedCycle.on) : (prefill?.cycleOn ?? '7')
+  );
+  const [cycleOff, setCycleOff] = useState(
+    storedCycle ? String(storedCycle.off) : (prefill?.cycleOff ?? '7')
+  );
+  // Once the person touches the tiles, the root arriving late must not overwrite their choice.
+  const repeatTouched = useRef(false);
+  const rootRule = rootEdit.root;
+  useEffect(() => {
+    if (!rootRule || repeatTouched.current) return;
+    const choice = storedRepeat(rootRule);
+    if (choice) setRepeat(choice);
+    setDays(rootRule.recurrence_days ?? []);
+    const cy = parseCycleRule(rootRule.recurrence_rule);
+    if (cy) {
+      setCycleOn(String(cy.on));
+      setCycleOff(String(cy.off));
+    }
+  }, [rootRule]);
   const [repeatEndDate, setRepeatEndDate] = useState(prefill?.repeatEndDate ?? '');
   const [reminder, setReminder] = useState<string>(() => {
     const lead = shift ? (shift.reminder_lead_minutes ?? null) : (prefill?.reminder ?? DEFAULT_SHIFT_REMINDER_LEAD);
@@ -224,6 +307,9 @@ function ShiftFormBody({
   const initialAssignee = shift?.assigned_to ?? '';
   const [assignedTo, setAssignedTo] = useState<string>(initialAssignee);
   const [editScope, setEditScope] = useState<ShiftScope>('occurrence');
+  // "All upcoming shifts" may change the start date and the repeat (the reschedule route).
+  const futureEdit = repeatingEdit && editScope === 'future';
+  const repeatEditable = !isEditing || futureEdit;
   const [errors, setErrors] = useState<FieldErrors>({});
   // The Starts / Ends tiles reveal their time input in place; a field with an error stays open.
   const [timeOpen, setTimeOpen] = useState({ start: false, end: false });
@@ -304,20 +390,63 @@ function ShiftFormBody({
     const trimmed = name.trim();
     if (!trimmed) e.shift_name = t('shifts:validation.nameRequired');
     else if (trimmed.length > SHIFT_NAME_MAX) e.shift_name = t('shifts:validation.nameTooLong');
-    if (!repeatingEdit && !date) e.shift_date = t('shifts:validation.dateRequired');
+    if (!date) e.shift_date = t('shifts:validation.dateRequired');
+    else if (futureEdit && shift && date < shift.scheduled_date) {
+      e.shift_date = t('shifts:validation.startingBefore', {
+        date: formatDateForDisplay(
+          shift.scheduled_date,
+          { month: 'short', day: 'numeric', year: 'numeric' },
+          language
+        ),
+      });
+    }
     if (!startTime) e.shift_start = t('shifts:validation.startRequired');
     if (!endTime) e.shift_end = t('shifts:validation.endRequired');
     if (span !== null) {
       if (span < MIN_SHIFT_MINUTES) e.shift_end = t('shifts:validation.tooShort');
       else if (span > MAX_SHIFT_MINUTES) e.shift_end = t('shifts:validation.tooLong');
     }
-    if (!isEditing && repeat === 'days_of_week' && days.length === 0) {
+    if (repeatEditable && repeat === 'days_of_week' && days.length === 0) {
       e.shift_days = t('shifts:validation.daysRequired');
+    }
+    if (repeatEditable && repeat === 'cycle') {
+      if (parseCycleCount(cycleOn) === null || parseCycleCount(cycleOff) === null) {
+        e.cycle_days_on = t('shifts:validation.cycleCounts');
+      }
     }
     if (!isEditing && repeat !== 'none' && repeatEndDate && date && repeatEndDate < date) {
       e.shift_repeat_end = t('shifts:validation.repeatEndBeforeStart');
     }
     return e;
+  }
+
+  /** The rule (+ sorted days, + cycle counts) the tiles currently name; `rule` undefined = Once. */
+  function chosenRule(): {
+    rule: string | undefined;
+    days: number[] | undefined;
+    cycle: { on: number; off: number } | null;
+  } {
+    const on = parseCycleCount(cycleOn);
+    const off = parseCycleCount(cycleOff);
+    // Same as mobile: days of the week are always weekly + the (sorted) days, even with all 7.
+    const sorted = repeat === 'days_of_week' ? [...days].sort((a, b) => a - b) : undefined;
+    return {
+      rule: ruleOf(repeat, on, off),
+      days: sorted,
+      cycle: repeat === 'cycle' && on !== null && off !== null ? { on, off } : null,
+    };
+  }
+
+  /** Did the repeat (rule or days) differ from what the series stores? An unknown stored rule counts only once touched. */
+  function patternChanged(rule: string | undefined, nextDays: number[] | undefined): boolean {
+    if (storedChoice === null && !repeatTouched.current) return false;
+    const storedRule = stored?.recurrence_rule ?? undefined;
+    if ((rule ?? undefined) !== storedRule) return true;
+    const a = [...(nextDays ?? [])].sort((x, y) => x - y).join(',');
+    const b = [...(storedChoice === 'days_of_week' ? (stored?.recurrence_days ?? []) : [])]
+      .sort((x, y) => x - y)
+      .join(',');
+    return a !== b;
   }
 
   async function handleSubmit(_event?: FormEvent): Promise<void> {
@@ -342,15 +471,68 @@ function ShiftFormBody({
     if (isEditing && shift) {
       const timeChanged =
         startTime !== hm(shift.scheduled_time) || duration !== (shift.duration_minutes ?? duration);
+      const scope: ShiftScope = repeatingEdit ? editScope : 'occurrence';
+
+      // ALL UPCOMING with a new start date and / or repeat: the reschedule route splits the
+      // series at the date (earlier shifts and who covered them stay as they are).
+      if (futureEdit) {
+        const next = chosenRule();
+        const startDate = next.days ? (nextDateOnWeekdays(date, next.days) ?? date) : date;
+        const dateChanged = startDate !== shift.scheduled_date;
+        const repeatChanged = patternChanged(next.rule, next.days);
+        const keepStoredRule = storedChoice === null && !repeatTouched.current;
+        if (dateChanged || repeatChanged) {
+          const body: RescheduleShiftBody = {
+            from_date: shift.scheduled_date,
+            start_date: startDate,
+            // An unknown stored rule (custom:N / RRULE) the tiles were never touched on keeps its rule.
+            recurrence_rule: keepStoredRule ? (stored?.recurrence_rule ?? null) : (next.rule ?? null),
+            title: name.trim(),
+            scheduled_time: startTime,
+            duration_minutes: duration,
+            reminder_lead_minutes: lead,
+          };
+          if (next.days && !keepStoredRule) body.recurrence_days = next.days;
+          if ((keepStoredRule || next.rule) && stored?.recurrence_end_date) {
+            body.recurrence_end_date = stored.recurrence_end_date;
+          }
+          if (assignee !== (shift.assigned_to ?? null)) body.assigned_to = assignee;
+          try {
+            await rescheduleShift.mutateAsync({ shift, body });
+            Analytics.shiftSeriesRescheduled({
+              changed: dateChanged && repeatChanged ? 'both' : dateChanged ? 'date' : 'repeat',
+              fromRecurrence: recurrenceEnum(stored?.recurrence_rule, stored?.recurrence_days),
+              toRecurrence: recurrenceEnum(next.rule, next.days),
+            });
+            Analytics.shiftEdited({ timeChanged, scope: 'future', layout: 'simple' });
+            onUpdated?.();
+            onClose();
+          } catch (err) {
+            if (isShiftInvalidStartError(err)) {
+              setErrors({ shift_date: t('shifts:form.invalidStart') });
+              setFocusAfter('shift_date');
+            } else if (isShiftRescheduleRequiredError(err)) {
+              setSaveError(t('shifts:form.rescheduleRequired'));
+            } else {
+              failSave(err, 'edit');
+            }
+          }
+          return;
+        }
+      }
+
       const data: Parameters<typeof updateShift.mutateAsync>[0]['data'] = {
         title: name.trim(),
         scheduled_time: startTime,
         duration_minutes: duration,
         reminder_lead_minutes: lead,
       };
-      if (!repeatingEdit) data.scheduled_date = date;
+      // A one-off always sends its date; "This shift" of a series sends it only when it MOVED
+      // (that occurrence alone moves). "All upcoming" never sends a date here (see above).
+      if (!repeatingEdit || (scope === 'occurrence' && date !== shift.scheduled_date)) {
+        data.scheduled_date = date;
+      }
       if (assignee !== (shift.assigned_to ?? null)) data.assigned_to = assignee;
-      const scope: ShiftScope = repeatingEdit ? editScope : 'occurrence';
       // A virtual / physical id edits ONLY that occurrence; the root id edits the
       // series (today and future).
       const eventId = repeatingEdit && scope === 'future' ? shiftRootId(shift) : shift.id;
@@ -377,16 +559,10 @@ function ShiftFormBody({
       reminder_lead_minutes: lead,
       assigned_to: assignee,
     };
-    let rule: string | undefined;
-    let ruleDays: number[] | undefined;
-    if (repeat === 'daily') rule = 'daily';
-    else if (repeat === 'weekly') rule = 'weekly';
-    else if (repeat === 'days_of_week') {
-      // Same as mobile: always weekly + the (sorted) days, even with all 7.
-      rule = 'weekly';
-      ruleDays = [...days].sort((a, b) => a - b);
-      payload.scheduled_date = nextDateOnWeekdays(date, ruleDays) ?? date;
-    }
+    const chosen = chosenRule();
+    const rule = chosen.rule;
+    const ruleDays = chosen.days;
+    if (ruleDays) payload.scheduled_date = nextDateOnWeekdays(date, ruleDays) ?? date;
     if (rule) {
       payload.recurrence_rule = rule;
       if (ruleDays) payload.recurrence_days = ruleDays;
@@ -397,6 +573,12 @@ function ShiftFormBody({
       Analytics.shiftCreated({
         repeats: !!rule,
         recurrence: recurrenceEnum(rule, ruleDays),
+        ...(rule?.startsWith('cycle:') && chosen.cycle
+          ? {
+              cycleOnBucket: cycleBucket(chosen.cycle.on),
+              cycleOffBucket: cycleBucket(chosen.cycle.off),
+            }
+          : {}),
         assigned: !!assignee,
         assignedSelf: !!assignee && assignee === viewerId,
         reminder: reminderEnum(lead),
@@ -410,6 +592,8 @@ function ShiftFormBody({
         startTime: endTime,
         repeat,
         days,
+        cycleOn,
+        cycleOff,
         repeatEndDate,
         reminder: lead,
       });
@@ -421,26 +605,43 @@ function ShiftFormBody({
   }
 
   const guardedSubmit = useGuardedSubmit(handleSubmit);
-  const busy = createShift.isPending || updateShift.isPending;
+  const busy = createShift.isPending || updateShift.isPending || rescheduleShift.isPending;
 
   if (!canEdit) return null;
 
+  // The medication picker's order.
   const repeatOptions = [
     { value: 'none', label: t('shifts:form.once') },
     { value: 'daily', label: t('shifts:form.everyDay') },
+    { value: 'every_other_day', label: t('shifts:form.everyOtherDay') },
     { value: 'weekly', label: t('shifts:form.everyWeek') },
+    { value: 'monthly', label: t('shifts:form.monthly') },
+    { value: 'yearly', label: t('shifts:form.yearly') },
+    { value: 'cycle', label: t('shifts:form.daysOnOff') },
     { value: 'days_of_week', label: t('shifts:form.someDays') },
   ];
+  // The days-of-week start moves to the first selected weekday ("First time: ...").
+  const firstTime =
+    repeatEditable && repeat === 'days_of_week' && days.length > 0 && date
+      ? nextDateOnWeekdays(date, days)
+      : null;
+  const wasLabel =
+    futureEdit && stored && patternChanged(chosenRule().rule, chosenRule().days)
+      ? formatShiftRepeat(stored, true, t, (d) => formatWeekdayList(d, language))
+      : null;
 
   const coveringHeading = recipientName
     ? t('shifts:form.heading', { name: recipientName })
     : t('shifts:form.covering');
-  const lockedDate = repeatingEdit;
   const repeats = repeat !== 'none';
   const clock = (time: string): string => {
     const [h, m] = time.split(':').map((n) => parseInt(n, 10));
     return formatTimeOfDay(h, m, hourCycle);
   };
+  const dayHint =
+    span === MAX_SHIFT_MINUTES && startTime && endTime
+      ? { start: clock(startTime), end: clock(endTime) }
+      : null;
   const startOpen = timeOpen.start || !!errors.shift_start;
   const endOpen = timeOpen.end || !!errors.shift_end;
   const toggleTime = (which: 'start' | 'end'): void => {
@@ -510,7 +711,13 @@ function ShiftFormBody({
           <RadioGroup
             label={t('shifts:form.editScopeLabel')}
             value={editScope}
-            onChange={(v) => setEditScope(v as ShiftScope)}
+            onChange={(v) => {
+              setEditScope(v as ShiftScope);
+              // The date means a different thing per scope (moves THIS shift / starts the new schedule): reset it.
+              if (shift) setDate(shift.scheduled_date);
+              setErrors({});
+              setSaveError('');
+            }}
             options={[
               { value: 'occurrence', label: t('shifts:scope.occurrence') },
               { value: 'future', label: t('shifts:scope.allUpcoming') },
@@ -540,35 +747,29 @@ function ShiftFormBody({
 
         <section aria-labelledby="sf-when" className="flex flex-col gap-3">
           {sectionHeading('sf-when', t('shifts:form.whenQuestion'))}
-          {lockedDate ? (
-            <div>
-              <Text variant="label" as="p" className="mb-2 ml-1">
-                {t('shifts:form.date')}
-              </Text>
-              <p
-                data-testid="shift-form-date-locked"
-                className="m-0 text-base text-ink"
-              >
-                {formatDateForDisplay(
-                  date,
+          <DateField
+            id="shift_date"
+            label={futureEdit ? t('shifts:form.starting') : t('shifts:form.date')}
+            required
+            value={date}
+            today={recipientToday}
+            min={futureEdit ? shift?.scheduled_date : undefined}
+            error={errors.shift_date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              clearError('shift_date');
+            }}
+          />
+          {firstTime && firstTime !== date && (
+            <Text variant="caption" as="p" aria-live="polite" data-testid="shift-form-first-time">
+              {t('shifts:form.firstTime', {
+                date: formatDateForDisplay(
+                  firstTime,
                   { weekday: 'short', month: 'short', day: 'numeric' },
                   language
-                )}
-              </p>
-            </div>
-          ) : (
-            <DateField
-              id="shift_date"
-              label={t('shifts:form.date')}
-              required
-              value={date}
-              today={recipientToday}
-              error={errors.shift_date}
-              onChange={(e) => {
-                setDate(e.target.value);
-                clearError('shift_date');
-              }}
-            />
+                ),
+              })}
+            </Text>
           )}
           <div className="flex flex-wrap gap-2" data-testid="shift-form-times">
             <ChoiceTileButton
@@ -638,58 +839,97 @@ function ShiftFormBody({
           </Text>
         </section>
 
-        <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
-          {sectionHeading('sf-how-often', t('shifts:form.howOften'))}
-          <ChipSelect
-            id="shift_repeat"
-            label={t('shifts:form.howOften')}
-            variant="tile"
-            allowDeselect={false}
-            // A series' date and repeat are fixed once it exists (delete it and add a new one).
-            disabled={isEditing}
-            options={repeatOptions}
-            value={isEditing ? lockedRepeat : repeat}
-            onChange={(next) => {
-              if (!next) return;
-              const choice = next as ShiftRepeatChoice;
-              setRepeat(choice);
-              if (choice === 'days_of_week' && days.length === 0 && date) {
-                setDays([getDayOfWeek(date)]);
-              }
-              clearError('shift_days');
-            }}
-          />
-          {repeatingEdit && (
-            <Text variant="caption" as="p" data-testid="shift-form-series-note">
-              {t('shifts:form.seriesNote')}
-            </Text>
-          )}
-          {!isEditing && repeat === 'days_of_week' && (
-            <div className="flex flex-col gap-2">
-              <DaysOfWeekPicker
-                id="shift_days"
-                label={t('calendar:addEvent.daysOfWeek.title')}
-                selected={days}
-                language={language}
+        {(!repeatingEdit || futureEdit) && (
+          <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
+            {sectionHeading('sf-how-often', t('shifts:form.howOften'))}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[role=radio]]:w-full">
+              <ChipSelect
+                id="shift_repeat"
+                label={t('shifts:form.howOften')}
+                variant="tile"
+                contents
+                allowDeselect={false}
+                // A one-off's repeat is fixed; a series' can change under "All upcoming shifts".
+                disabled={!repeatEditable || rootEdit.pending}
+                options={repeatOptions}
+                value={!repeatTouched.current && isEditing && storedChoice === null ? null : repeat}
                 onChange={(next) => {
-                  setDays(next);
-                  clearError('shift_days');
+                  if (!next) return;
+                  const choice = next as ShiftRepeatChoice;
+                  repeatTouched.current = true;
+                  setRepeat(choice);
+                  if (choice === 'days_of_week' && days.length === 0 && date) {
+                    setDays([getDayOfWeek(date)]);
+                  }
+                  clearError('shift_days', 'cycle_days_on');
                 }}
               />
-              {errors.shift_days && (
-                <p className={INPUT_ERROR}>
-                  <Icon name="alert-circle-outline" size="inline" />
-                  {errors.shift_days}
-                </p>
-              )}
-              {days.length > 0 && (
-                <p aria-live="polite" className="m-0 ml-1 text-sm text-ink-2">
-                  {formatWeekdayList(days, language)}
-                </p>
-              )}
             </div>
-          )}
-        </section>
+            {repeatEditable && repeat === 'cycle' && (
+              <ShiftCyclePanel
+                daysOn={cycleOn}
+                daysOff={cycleOff}
+                onDaysOn={(v) => {
+                  repeatTouched.current = true;
+                  setCycleOn(v);
+                  clearError('cycle_days_on');
+                }}
+                onDaysOff={(v) => {
+                  repeatTouched.current = true;
+                  setCycleOff(v);
+                  clearError('cycle_days_on');
+                }}
+                error={errors.cycle_days_on}
+                startDate={date}
+                language={language}
+                was={wasLabel ?? undefined}
+                dayHint={dayHint}
+              />
+            )}
+            {repeatEditable && repeat !== 'cycle' && wasLabel && (
+              <Text variant="caption" as="p" data-testid="shift-form-was">
+                {t('shifts:form.cycleWas', { old: wasLabel })}
+              </Text>
+            )}
+            {repeatEditable && repeat === 'days_of_week' && (
+              <div className="flex flex-col gap-2">
+                <DaysOfWeekPicker
+                  id="shift_days"
+                  label={t('calendar:addEvent.daysOfWeek.title')}
+                  selected={days}
+                  language={language}
+                  onChange={(next) => {
+                    repeatTouched.current = true;
+                    setDays(next);
+                    clearError('shift_days');
+                  }}
+                />
+                {errors.shift_days && (
+                  <p className={INPUT_ERROR}>
+                    <Icon name="alert-circle-outline" size="inline" />
+                    {errors.shift_days}
+                  </p>
+                )}
+                {days.length > 0 && (
+                  <p aria-live="polite" className="m-0 ml-1 text-sm text-ink-2">
+                    {formatWeekdayList(days, language)}
+                  </p>
+                )}
+              </div>
+            )}
+            {futureEdit && shift && (
+              <Text variant="caption" as="p" data-testid="shift-form-from-note">
+                {t('shifts:form.fromNote', {
+                  date: formatDateForDisplay(
+                    (firstTime ?? date) >= shift.scheduled_date ? (firstTime ?? date) : shift.scheduled_date,
+                    { month: 'short', day: 'numeric', year: 'numeric' },
+                    language
+                  ),
+                })}
+              </Text>
+            )}
+          </section>
+        )}
 
         <section aria-labelledby="sf-who" className="flex flex-col gap-3">
           {sectionHeading('sf-who', coveringHeading)}

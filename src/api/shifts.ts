@@ -15,6 +15,7 @@ import {
 //   POST  /circles/:id/events   (event_type 'shift')
 //   PATCH /circles/:id/events/:eventId
 //   POST  /circles/:id/events/:eventId/shift/{take,drop,assign}
+//   POST  /circles/:id/events/:eventId/shift/reschedule   (date / repeat of "All upcoming")
 //
 // `:eventId` of an action may be the series root, a physical child, or the
 // virtual `<root>_<YYYY-MM-DD>` id the list returns, so callers pass `shift.id`
@@ -69,6 +70,36 @@ export function updateShift(
   data: UpdateEventRequest
 ): Promise<CalendarEvent> {
   return updateEvent(circleId, eventId, data);
+}
+
+/** Body of the series reschedule: the new schedule starts at `start_date`; everything before `from_date` is untouched. */
+export interface RescheduleShiftBody {
+  /** The occurrence being edited (`YYYY-MM-DD`, recipient frame). Earlier shifts keep their schedule and cover. */
+  from_date: string;
+  /** Where the new schedule starts (>= `from_date`, on the new pattern). */
+  start_date: string;
+  /** `daily | every_other_day | weekly | monthly | yearly | cycle:N:M`; null = a single shift (Once). */
+  recurrence_rule: string | null;
+  recurrence_days?: number[];
+  recurrence_end_date?: string;
+  title?: string;
+  scheduled_time?: string;
+  duration_minutes?: number;
+  assigned_to?: string | null;
+  reminder_lead_minutes?: number | null;
+}
+
+/** POST .../shift/reschedule -> the new series root. Errors: 400 INVALID_START, 409 RESCHEDULE_REQUIRED. */
+export async function rescheduleShiftSeries(
+  circleId: string,
+  eventId: string,
+  body: RescheduleShiftBody
+): Promise<CalendarEvent> {
+  const response = (await apiClient.post(
+    `/circles/${circleId}/events/${encodeURIComponent(eventId)}/shift/reschedule`,
+    body
+  )) as unknown as { success: boolean; data: { event: CalendarEvent } };
+  return response.data.event;
 }
 
 async function postShiftAction(
@@ -134,3 +165,9 @@ export const isShiftInvalidDateError = (err: unknown): boolean =>
   shiftErrorCode(err) === 'SHIFT_INVALID_DATE';
 /** 409 SHIFT_ENDED — the occurrence's end (recipient zone) has passed: it is read-only. */
 export const isShiftEndedError = (err: unknown): boolean => shiftErrorCode(err) === 'SHIFT_ENDED';
+/** 400 INVALID_START — the new start date is not on the new pattern (or before `from_date`). */
+export const isShiftInvalidStartError = (err: unknown): boolean =>
+  shiftErrorCode(err) === 'INVALID_START';
+/** 409 RESCHEDULE_REQUIRED — a date / repeat change must go through the reschedule route. */
+export const isShiftRescheduleRequiredError = (err: unknown): boolean =>
+  shiftErrorCode(err) === 'RESCHEDULE_REQUIRED';
