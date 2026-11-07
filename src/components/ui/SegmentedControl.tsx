@@ -32,6 +32,11 @@ export interface SegmentedControlProps {
    * it. Consulted once, on mount, and ignored on later prop changes.
    */
   focusOnMount?: boolean;
+  /**
+   * Calendar header density (design 2026-11-07, mobile toggle 40 tall): the VISIBLE track is 40 tall; each
+   * segment's hit area is still 44 (an invisible ::before reaches 2px past the track).
+   */
+  compact?: boolean;
 }
 
 /**
@@ -129,6 +134,7 @@ export function SegmentedControl({
   label,
   className,
   focusOnMount = false,
+  compact = false,
 }: SegmentedControlProps): ReactElement {
   const count = options.length;
   // An unknown `value` (a stale tab id, say) must not park the thumb off-screen
@@ -169,21 +175,21 @@ export function SegmentedControl({
       <div
         role="tablist"
         aria-label={label}
-        className={`relative flex bg-cream rounded-[14px] border border-line-2 p-1 ${
+        className={`relative flex bg-cream rounded-[14px] border border-line-2 ${compact ? 'p-0.5' : 'p-1'} ${
           STACK_CONTROL[count] ?? ''
         }`.trim()}
       >
         <span
           aria-hidden="true"
           data-testid="segmented-thumb"
-          className={`absolute top-1 bottom-1 left-1 rounded-[10px] bg-primary-fill transition-transform duration-normal ease-spring motion-reduce:transition-none ${
+          className={`absolute ${compact ? 'top-0.5 bottom-0.5 left-0.5' : 'top-1 bottom-1 left-1'} rounded-[10px] bg-primary-fill transition-transform duration-normal ease-spring motion-reduce:transition-none ${
             STACK_HIDE_THUMB[count] ?? ''
           }`.trim()}
           style={{
             // `100% - 8px` removes the container's 4px padding on each side, so
             // the thumb is exactly one segment wide and `translateX(i * 100%)`
             // (percent of the THUMB's own width) lands it on segment i.
-            width: `calc((100% - 8px) / ${count})`,
+            width: `calc((100% - ${compact ? 4 : 8}px) / ${count})`,
             transform: `translateX(${selectedIndex * 100}%)`,
           }}
         />
@@ -203,7 +209,11 @@ export function SegmentedControl({
               // cannot drift apart (the roving tab stop follows either way).
               onClick={() => select(index)}
               onKeyDown={onKeyDown}
-              className={`relative z-[1] flex-1 min-h-[44px] px-3 py-2.5 rounded-[10px] text-sm font-medium tracking-[-0.1px] transition-colors duration-normal ${
+              className={`relative z-[1] flex-1 ${
+                compact
+                  ? 'min-h-[34px] py-1.5 before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-[""]'
+                  : 'min-h-[44px] py-2.5'
+              } px-3 rounded-[10px] text-sm font-medium tracking-[-0.1px] transition-colors duration-normal ${
                 SQUEEZE_PADDING[count] ?? ''
               } ${
                 selected

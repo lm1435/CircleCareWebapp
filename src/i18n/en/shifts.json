@@ -253,5 +253,17 @@
   "openCount_one": "{{count}} open",
   "openCount_other": "{{count}} open",
   "notCoveredCount_one": "{{count}} not covered",
-  "notCoveredCount_other": "{{count}} not covered"
+  "notCoveredCount_other": "{{count}} not covered",
+  "pageSummary": {
+    "noneToday": "No shifts today.",
+    "noneDay": "No shifts on this day.",
+    "noneWeek": "No shifts this week.",
+    "noneMonth": "No shifts this month.",
+    "covered_one": "{{count}} shift · all covered",
+    "covered_other": "{{count}} shifts · all covered",
+    "open_one": "{{count}} shift · {{open}}",
+    "open_other": "{{count}} shifts · {{open}}",
+    "count_one": "{{count}} shift",
+    "count_other": "{{count}} shifts"
+  }
 }

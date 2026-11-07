@@ -124,6 +124,23 @@ describe('NextUp', () => {
     expect(screen.queryByText('Med 4')).not.toBeInTheDocument();
   });
 
+  // Build 2 (owner 2026-11-07): the time sits on the TITLE's first-line baseline, never centred against
+  // the title+sub block; the footer link is 16/500 like mobile.
+  it('time aligns to the first-line baseline of the title (row is items-baseline, not items-center)', () => {
+    renderNextUp({ items: [dose('1'), dose('2')] });
+    const row = screen.getAllByTestId('next-up-row')[0].firstElementChild as HTMLElement;
+    expect(row).toHaveClass('items-baseline');
+    expect(row).not.toHaveClass('items-center');
+    expect(screen.getAllByTestId('next-up-row')[0].querySelector('[data-next-up-name]')).toHaveClass('flex-col');
+  });
+
+  it('"All of today" footer is text-md font-medium (500), not semibold', () => {
+    renderNextUp({ items: [dose('1')] });
+    const link = screen.getByRole('link', { name: /All of today/ });
+    expect(link).toHaveClass('text-md', 'font-medium');
+    expect(link).not.toHaveClass('font-semibold');
+  });
+
   it('singular: "All of today · 1 item"', () => {
     renderNextUp({ items: [dose('1')] });
     expect(screen.getByRole('link', { name: /All of today · 1 item$/ })).toBeInTheDocument();

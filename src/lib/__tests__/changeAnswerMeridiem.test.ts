@@ -24,14 +24,14 @@ describe('changeAnswerCopy: no double period after a Spanish meridiem', () => {
   ] as const)('ES 12h, %s', async (_label, details, mine) => {
     await i18n.changeLanguage('es');
     const copy = changeAnswerCopy(i18n.t.bind(i18n) as never, details, mine, '12h' as never)!;
-    expect(copy.message).toMatch(/a las 8:02\s[a]\.\s?m\. ¿Cambiarla a /);
+    expect(copy.message).toMatch(/^A las 8:02\s[a]\.\s?m\., .+\. ¿Cambiarla a /);
     expect(copy.message).not.toMatch(/m\.\./);
   });
 
   it('ES 24h and EN are unchanged', async () => {
     await i18n.changeLanguage('es');
     const es24 = changeAnswerCopy(i18n.t.bind(i18n) as never, ana('taken', 'Ana'), 'skipped', '24h' as never)!;
-    expect(es24.message).toContain('a las 08:02. ¿Cambiarla a omitida?');
+    expect(es24.message).toContain('A las 08:02, Ana marcó esta dosis como tomada. ¿Cambiarla a omitida?');
     await i18n.changeLanguage('en');
     const en = changeAnswerCopy(i18n.t.bind(i18n) as never, ana('taken', 'Ana'), 'skipped', '12h' as never)!;
     expect(en.message).toContain('taken at 8:02 AM. Change it to skipped?');

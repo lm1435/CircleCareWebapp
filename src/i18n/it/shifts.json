@@ -253,5 +253,17 @@
   "openCount_one": "{{count}} scoperto",
   "openCount_other": "{{count}} scoperti",
   "notCoveredCount_one": "{{count}} non coperto",
-  "notCoveredCount_other": "{{count}} non coperti"
+  "notCoveredCount_other": "{{count}} non coperti",
+  "pageSummary": {
+    "noneToday": "Nessun turno oggi.",
+    "noneDay": "Nessun turno in questo giorno.",
+    "noneWeek": "Nessun turno questa settimana.",
+    "noneMonth": "Nessun turno questo mese.",
+    "covered_one": "{{count}} turno · tutto coperto",
+    "covered_other": "{{count}} turni · tutto coperto",
+    "open_one": "{{count}} turno · {{open}}",
+    "open_other": "{{count}} turni · {{open}}",
+    "count_one": "{{count}} turno",
+    "count_other": "{{count}} turni"
+  }
 }

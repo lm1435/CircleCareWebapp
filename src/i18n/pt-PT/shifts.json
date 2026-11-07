@@ -132,5 +132,17 @@
   "openCount_one": "{{count}} por preencher",
   "openCount_other": "{{count}} por preencher",
   "notCoveredCount_one": "{{count}} não preenchido",
-  "notCoveredCount_other": "{{count}} não preenchidos"
+  "notCoveredCount_other": "{{count}} não preenchidos",
+  "pageSummary": {
+    "noneToday": "Nenhum turno hoje.",
+    "noneDay": "Nenhum turno neste dia.",
+    "noneWeek": "Nenhum turno esta semana.",
+    "noneMonth": "Nenhum turno este mês.",
+    "covered_one": "{{count}} turno · tudo coberto",
+    "covered_other": "{{count}} turnos · tudo coberto",
+    "open_one": "{{count}} turno · {{open}}",
+    "open_other": "{{count}} turnos · {{open}}",
+    "count_one": "{{count}} turno",
+    "count_other": "{{count}} turnos"
+  }
 }

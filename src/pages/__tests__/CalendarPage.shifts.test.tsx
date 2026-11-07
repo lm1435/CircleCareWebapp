@@ -267,19 +267,49 @@ describe('Shifts mode', () => {
     expect(within(week).getAllByRole('button', { name: 'Add shift' })).toHaveLength(1);
   });
 
-  it('Day: hero summary "N shifts · M open." and cards by start time', async () => {
+  it('Day: header summary "N shifts · M open" (page slot, not the hero) and cards by start time', async () => {
     const user = userEvent.setup();
     renderPage();
     await openShifts(user);
     await user.click(screen.getByRole('tab', { name: 'Day' }));
     expect(await screen.findByTestId('shifts-day-list')).toBeInTheDocument();
-    expect(screen.getByTestId('day-view-summary')).toHaveTextContent('2 shifts · 1 open.');
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^2 shifts · 1 open$/);
+    expect(screen.queryByTestId('day-view-summary')).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('shifts-day-list')).getAllByTestId('shift-card').map((c) => c.textContent)
     ).toEqual([expect.stringContaining('Morning'), expect.stringContaining('Night')]);
     expect(
       within(screen.getByTestId('shifts-day-list')).getByRole('button', { name: 'Add shift' })
     ).toBeInTheDocument();
+  });
+
+  it('Week header summary counts the visible week; Month counts the visible month', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openShifts(user);
+    await screen.findByTestId('shifts-week-view');
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^3 shifts · 1 open$/);
+    await user.click(screen.getByRole('tab', { name: 'Month' }));
+    await screen.findByRole('grid', { name: 'Shifts month calendar' });
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(/^3 shifts · 1 open$/);
+  });
+
+  it('header keeps the Schedule subtitle in Schedule mode and reserves the same height (no layout shift)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const sub = await screen.findByTestId('page-subtitle');
+    expect(sub).toHaveTextContent('Medications, appointments, and tasks in one place.');
+    expect(sub).toHaveClass('mt-1', 'min-h-[45px]');
+    await openShifts(user);
+    expect(screen.getByTestId('page-subtitle')).toHaveClass('mt-1', 'min-h-[45px]');
+  });
+
+  it('the Schedule | Shifts toggle is the compact 40px track with a 44px hit area', async () => {
+    renderPage();
+    const wrap = await screen.findByTestId('calendar-mode-wrap');
+    const tab = within(wrap).getAllByRole('tab')[0] as HTMLElement;
+    expect(tab).toHaveClass('min-h-[34px]', 'before:-inset-y-[5px]');
+    expect(wrap).toHaveClass('pb-2');
   });
 
   it('Month: a hollow moss dot for a day with an open shift, a filled moss dot when fully covered, a text legend, per-cell labels; a day opens Day', async () => {
@@ -386,7 +416,9 @@ describe('Shifts mode', () => {
     await user.click(screen.getByRole('tab', { name: 'Day' }));
     await user.click(screen.getByRole('button', { name: 'Next day' }));
     await user.click(screen.getByRole('button', { name: 'Next day' }));
-    expect(await screen.findByText('No shifts on this day.')).toBeInTheDocument();
+    // Header summary + the list's own empty line both read it.
+    expect((await screen.findAllByText('No shifts on this day.')).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent('No shifts on this day.');
     expect(
       within(screen.getByTestId('shifts-day-list')).getByRole('button', { name: 'Add shift' })
     ).toBeInTheDocument();

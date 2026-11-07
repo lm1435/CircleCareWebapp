@@ -112,5 +112,17 @@
   "openCount_zero": "aucun à pourvoir",
   "notCovered": "Non pourvu",
   "notCoveredCount_one": "{{count}} non pourvu",
-  "notCoveredCount_other": "{{count}} non pourvus"
+  "notCoveredCount_other": "{{count}} non pourvus",
+  "pageSummary": {
+    "noneToday": "Aucun quart aujourd’hui.",
+    "noneDay": "Aucun quart ce jour-là.",
+    "noneWeek": "Aucun quart cette semaine.",
+    "noneMonth": "Aucun quart ce mois-ci.",
+    "covered_one": "{{count}} quart · tout est couvert",
+    "covered_other": "{{count}} quarts · tout est couvert",
+    "open_one": "{{count}} quart · {{open}}",
+    "open_other": "{{count}} quarts · {{open}}",
+    "count_one": "{{count}} quart",
+    "count_other": "{{count}} quarts"
+  }
 }

@@ -22,7 +22,7 @@ export function ThemePreferenceSelector(): ReactElement | null {
 
   return (
     <div className="mt-6" data-testid="theme-preference">
-      <Text variant="h3" as="h2">
+      <Text variant="sectionLabel" as="h2">
         {t('appearance.title')}
       </Text>
       <SegmentedControl

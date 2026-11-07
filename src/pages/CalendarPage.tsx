@@ -56,7 +56,7 @@ import { ShiftsWeekView } from '@/components/shifts/ShiftsWeekView';
 import { ShiftsLegend, ShiftsMonthView } from '@/components/shifts/ShiftsMonthView';
 import { ShiftsEmptyState } from '@/components/shifts/ShiftsEmptyState';
 import { ShiftsTeaserDialog } from '@/components/shifts/ShiftsTeaserDialog';
-import { canCoverShifts, coverageLabel, summariseShifts } from '@/components/shifts/shiftUtils';
+import { canCoverShifts, shiftsPageSummary } from '@/components/shifts/shiftUtils';
 
 type CalendarView = 'day' | 'week' | 'month';
 type CalendarMode = 'schedule' | 'shifts';
@@ -388,6 +388,23 @@ export default function CalendarPage(): ReactElement {
     shiftsPeek !== undefined &&
     shiftsPeek.length === 0;
 
+  // Header summary (Shifts mode), from the rows already loaded for the visible range. While the
+  // first load is in flight it holds a non-breaking space so the header keeps its height.
+  const shiftsHeaderSummary =
+    shiftsMode && range && timezone && todayStr && anchor && !shiftsQuery.isLoading && !shiftsQuery.isError
+      ? shiftsPageSummary(t, shifts, {
+          view,
+          isToday: anchor === todayStr,
+          timezone,
+          inRange:
+            view === 'day'
+              ? (d) => d === anchor
+              : view === 'week'
+                ? (d) => d >= range.start && d <= range.end
+                : (d) => d.slice(0, 7) === anchor.slice(0, 7),
+        })
+      : '\u00a0';
+
   const readonlyNotice =
     shiftsMode && shiftsEntry === 'readonly' ? (
       <ShiftsReadOnlyNotice
@@ -502,7 +519,8 @@ export default function CalendarPage(): ReactElement {
         section={shiftsMode ? t('shifts:eyebrow') : t('common:nav.calendar')}
         tone="dusk"
         title={t('calendar:title')}
-        subtitle={t('calendar:subtitle')}
+        subtitle={shiftsMode ? shiftsHeaderSummary : t('calendar:subtitle')}
+        tight
         rightAction={
           (shiftsMode ? shiftsCanWrite : canEdit)
             ? {
@@ -533,7 +551,7 @@ export default function CalendarPage(): ReactElement {
           toolbar and grid 12px inside the title and "Add event" button. */}
       <div className="px-5 pb-8">
         {shiftsEntry !== 'hidden' && (
-          <div data-testid="calendar-mode-wrap" className="max-w-sm py-1.5">
+          <div data-testid="calendar-mode-wrap" className="max-w-sm pb-2">
             <SegmentedControl
               label={t('shifts:mode.label')}
               value={shiftsMode ? 'shifts' : 'schedule'}
@@ -544,6 +562,7 @@ export default function CalendarPage(): ReactElement {
                 }
                 setMode(next as CalendarMode);
               }}
+              compact
               options={[
                 { value: 'schedule', label: t('shifts:mode.schedule') },
                 {
@@ -570,7 +589,7 @@ export default function CalendarPage(): ReactElement {
             below 480px removes the ambiguity: below that width the two
             children ALWAYS stack as separate blocks, full width, regardless
             of any min-width override. */}
-        <div className="flex flex-wrap items-center gap-y-2 min-h-[44px] py-1.5 max-[480px]:flex-col max-[480px]:items-stretch">
+        <div className="flex flex-wrap items-center gap-y-2 min-h-[44px] max-[480px]:flex-col max-[480px]:items-stretch">
           {/* Day owns its own prev/next/Today inside DayView's hero, so the
               page cluster is only drawn for Week and Month. */}
           {view !== 'day' && (
@@ -636,7 +655,7 @@ export default function CalendarPage(): ReactElement {
             slot (below the nav, as on mobile); Week / Month show it here, under their toolbar. */}
         {readonlyNotice && view !== 'day' && readonlyNotice}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 pt-1.5">
           {timezone && (
             <p className="m-0 text-sm text-ink-3">
               {/* One name, not a name plus its own abbreviation in brackets:
@@ -719,15 +738,6 @@ export default function CalendarPage(): ReactElement {
                 onPrev={handlePrev}
                 onNext={handleNext}
                 onToday={handleToday}
-                shiftsSummary={(() => {
-                  const day = shifts.filter((sh) => sh.scheduled_date === anchor);
-                  return day.length > 0
-                    ? t('shifts:summary', {
-                        count: day.length,
-                        open: coverageLabel(t, summariseShifts(day, timezone)),
-                      })
-                    : '';
-                })()}
                 shiftsSlot={
                   <>
                   {readonlyNotice}

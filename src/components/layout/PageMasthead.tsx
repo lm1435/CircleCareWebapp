@@ -76,6 +76,8 @@ export interface PageMastheadProps {
    * a `rightAction` — a lone secondary action is just the right action.
    */
   secondaryAction?: MastheadAction;
+  /** Calendar header density: subtitle 4 under the title, 18 above what follows; reserves its lines so swapping text never moves the controls. */
+  tight?: boolean;
   /** 32/600 title instead of 42/600, for titles that would wrap to three lines. */
   compact?: boolean;
   /**
@@ -122,6 +124,7 @@ export function PageMasthead({
   rightAction,
   secondaryAction: secondaryActionProp,
   compact = false,
+  tight = false,
   leading,
   children,
 }: PageMastheadProps): ReactElement {
@@ -191,7 +194,7 @@ export function PageMasthead({
           separates the two — the full 28 read as a hole between them.
           px-5, the gutter every masthead page pads its content with: at px-7
           the title and the labelled action sat 8px inside the content edges. */}
-      <div className="px-5 pb-5 pt-4">
+      <div className={`px-5 pt-4 ${tight ? 'pb-[18px]' : 'pb-5'}`}>
         <div className="flex items-start justify-between gap-4">
           {leading ? (
             <div className="flex min-w-0 items-center gap-4">
@@ -266,7 +269,14 @@ export function PageMasthead({
           )}
         </div>
         {subtitle && (
-          <p className="mt-3.5 text-md font-medium leading-[22.5px] text-ink">{subtitle}</p>
+          <p
+            data-testid="page-subtitle"
+            className={`text-md font-medium leading-[22.5px] text-ink ${
+              tight ? 'mt-1 min-h-[45px] min-[560px]:min-h-[22.5px]' : 'mt-3.5'
+            }`}
+          >
+            {subtitle}
+          </p>
         )}
       </div>
 

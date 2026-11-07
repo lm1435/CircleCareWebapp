@@ -4,7 +4,7 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const ALLOW_11PX = ['components/calendar/WeekView.tsx', 'components/calendar/MonthView.tsx'];
 // Files allowed to use arbitrary text-[...] sizes because they DEFINE the scale/primitives:
-const ALLOW_ARBITRARY = ['components/ui/Text.tsx', 'components/ui/Button.tsx'];
+const ALLOW_ARBITRARY = ['components/ui/Text.tsx', 'components/ui/Button.tsx', 'components/ui/ChoiceTileButton.tsx'];
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

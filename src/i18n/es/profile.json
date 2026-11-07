@@ -67,7 +67,7 @@
     "start": "Hora de inicio",
     "end": "Hora de fin",
     "success": "Horas de silencio actualizadas.",
-    "almostAllDayWarning": "Las horas de silencio cubren casi todo el día, así que las notificaciones se retendrán hasta las {{endTime}}."
+    "almostAllDayWarning": "Las horas de silencio cubren casi todo el día, así que hasta las {{endTime}} las notificaciones se retendrán."
   },
   "units": {
     "description": "Elige cómo se muestran los valores de peso, glucosa y temperatura.",

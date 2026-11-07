@@ -775,6 +775,7 @@ function ShiftFormBody({
             <ChoiceTileButton
               id="shift-start-tile"
               testId="shift-start-tile"
+              hierarchy="value"
               label={t('shifts:form.starts')}
               sub={startTime ? clock(startTime) : t('shifts:form.chooseTime')}
               expanded={startOpen}
@@ -785,6 +786,7 @@ function ShiftFormBody({
             <ChoiceTileButton
               id="shift-end-tile"
               testId="shift-end-tile"
+              hierarchy="value"
               label={t('shifts:form.ends')}
               sub={
                 endTime

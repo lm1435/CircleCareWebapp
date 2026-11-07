@@ -679,7 +679,7 @@ describe('accessibility', () => {
       screen.getByTestId('task-pick-time'),
     ];
     for (const tile of tiles) {
-      expect(tile).toHaveClass('min-h-[56px]', 'min-w-[44px]', 'max-w-full');
+      expect(tile).toHaveClass('min-h-[48px]', 'min-w-[44px]', 'max-w-full');
       expect(tile.className).not.toMatch(/truncate|whitespace-nowrap/);
     }
     // The day and time rows wrap; their trailing button shares the row outside the radiogroup.

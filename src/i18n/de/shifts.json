@@ -253,5 +253,17 @@
   "openCount_one": "{{count}} offen",
   "openCount_other": "{{count}} offen",
   "notCoveredCount_one": "{{count}} nicht besetzt",
-  "notCoveredCount_other": "{{count}} nicht besetzt"
+  "notCoveredCount_other": "{{count}} nicht besetzt",
+  "pageSummary": {
+    "noneToday": "Heute keine Schichten.",
+    "noneDay": "Keine Schichten an diesem Tag.",
+    "noneWeek": "Diese Woche keine Schichten.",
+    "noneMonth": "Diesen Monat keine Schichten.",
+    "covered_one": "{{count}} Schicht · alles besetzt",
+    "covered_other": "{{count}} Schichten · alles besetzt",
+    "open_one": "{{count}} Schicht · {{open}}",
+    "open_other": "{{count}} Schichten · {{open}}",
+    "count_one": "{{count}} Schicht",
+    "count_other": "{{count}} Schichten"
+  }
 }

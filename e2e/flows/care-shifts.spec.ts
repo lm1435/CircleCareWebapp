@@ -193,7 +193,7 @@ test.describe('premium owner', () => {
     await page.getByRole('button', { name: 'Next day', exact: true }).click();
     const list = page.getByTestId('shifts-day-list');
     await expect(list.getByTestId('shift-card')).toHaveCount(2);
-    await expect(page.getByTestId('day-view-summary')).toHaveText('2 shifts · 2 open.');
+    await expect(page.getByTestId('page-subtitle')).toHaveText('2 shifts · 2 open');
     const cards = await list.getByTestId('shift-card').allTextContents();
     expect(cards[0]).toContain('Day'); // sorted by start time: 08:00 before 20:00
     expect(cards[1]).toContain('Night');
@@ -394,7 +394,7 @@ test.describe('an ended shift is read-only', () => {
     await expect(card).toBeVisible();
     await expect(list.getByTestId('shift-open-word')).toHaveText('Not covered');
     // Owner screenshot (2026-11-02): the header read "2 shifts · 1 open." over that "Not covered" card.
-    await expect(page.getByTestId('day-view-summary')).toHaveText('2 shifts · 1 not covered.');
+    await expect(page.getByTestId('page-subtitle')).toHaveText('2 shifts');
     await checkA11y(page, 'shifts-ended-day-light', testInfo);
 
     // The unfilled one: no Take, no Assign (the owner could assign an upcoming one); Edit / Delete stay.

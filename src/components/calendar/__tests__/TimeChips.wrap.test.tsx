@@ -71,7 +71,7 @@ describe('TimeChips row', () => {
       expect(other).toHaveClass(cls);
       expect(chip).toHaveClass(cls);
     }
-    expect(other).toHaveClass('rounded-2xl', 'min-h-[56px]', 'border', 'px-3.5', 'py-2', 'justify-center');
+    expect(other).toHaveClass('rounded-2xl', 'min-h-[48px]', 'border', 'px-3.5', 'py-2', 'justify-center');
     expect(other).not.toHaveClass('rounded-full');
   });
 

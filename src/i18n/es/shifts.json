@@ -164,7 +164,7 @@
     "daysOff": "Días libres",
     "legendOn": "Con turno",
     "legendOff": "Libre",
-    "cycleHint24": "Cada día es un turno de {{start}} a {{end}}. Van uno tras otro.",
+    "cycleHint24": "Cada día es un turno de {{start}} a {{end}}, uno tras otro.",
     "cycleWas": "antes {{old}}",
     "starting": "Desde",
     "firstTime": "Primera vez: {{date}}",
@@ -253,5 +253,17 @@
   "openCount_one": "{{count}} abierto",
   "openCount_other": "{{count}} abiertos",
   "notCoveredCount_one": "{{count}} sin cubrir",
-  "notCoveredCount_other": "{{count}} sin cubrir"
+  "notCoveredCount_other": "{{count}} sin cubrir",
+  "pageSummary": {
+    "noneToday": "Hoy no hay turnos.",
+    "noneDay": "No hay turnos este día.",
+    "noneWeek": "No hay turnos esta semana.",
+    "noneMonth": "No hay turnos este mes.",
+    "covered_one": "{{count}} turno · todo cubierto",
+    "covered_other": "{{count}} turnos · todo cubierto",
+    "open_one": "{{count}} turno · {{open}}",
+    "open_other": "{{count}} turnos · {{open}}",
+    "count_one": "{{count}} turno",
+    "count_other": "{{count}} turnos"
+  }
 }

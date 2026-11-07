@@ -366,7 +366,7 @@ export function NextUp({
           } ${
             stacked
               ? 'flex flex-col items-stretch gap-2 py-3'
-              : 'flex flex-wrap items-center gap-x-4 gap-y-2 py-3'
+              : 'flex flex-wrap items-baseline gap-x-4 gap-y-2 py-3'
           }`}
         >
           {time ? (
@@ -431,7 +431,7 @@ export function NextUp({
         <Link
           to={`${base}/calendar`}
           onClick={() => Analytics.todayAllItemsOpened()}
-          className="flex min-h-11 items-center justify-between gap-2 border-t border-line-2 py-3 text-md font-semibold text-ink no-underline"
+          className="flex min-h-11 items-center justify-between gap-2 border-t border-line-2 py-3 text-md font-medium text-ink no-underline"
         >
           <span>{t('today.nextUp.allOfToday', { count: items.length })}</span>
           <Icon name="chevron-forward" size="inline" className="text-ink-3" />

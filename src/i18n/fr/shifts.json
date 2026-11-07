@@ -253,5 +253,17 @@
   "openCount_one": "{{count}} à pourvoir",
   "openCount_other": "{{count}} à pourvoir",
   "notCoveredCount_one": "{{count}} non pourvue",
-  "notCoveredCount_other": "{{count}} non pourvues"
+  "notCoveredCount_other": "{{count}} non pourvues",
+  "pageSummary": {
+    "noneToday": "Aucune garde aujourd’hui.",
+    "noneDay": "Aucune garde ce jour-là.",
+    "noneWeek": "Aucune garde cette semaine.",
+    "noneMonth": "Aucune garde ce mois-ci.",
+    "covered_one": "{{count}} garde · tout est couvert",
+    "covered_other": "{{count}} gardes · tout est couvert",
+    "open_one": "{{count}} garde · {{open}}",
+    "open_other": "{{count}} gardes · {{open}}",
+    "count_one": "{{count}} garde",
+    "count_other": "{{count}} gardes"
+  }
 }

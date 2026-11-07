@@ -577,6 +577,10 @@ describe('W5: no unreferenced en keys', () => {
    * going dead that is NOT already here does — that's the guard.
    */
   const DEAD_KEY_ALLOWLIST = [
+    // Build 2 (2026-11-07): the Day hero summary moved to the page header (`shifts:pageSummary.*`).
+    // The old key stays: mobile's copy and shiftsCopy.test.ts still pin it for parity.
+    'shifts:summary_one',
+    'shifts:summary_other',
     // Task 15 — `AddEventModal`'s Create/Save-changes button now renders
     // through `Button`'s own `loading` prop (a spinner over the resting
     // label, per spec §6.4's Modal footer convention) instead of manually

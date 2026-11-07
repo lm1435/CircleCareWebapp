@@ -148,11 +148,11 @@
     "addDosage": "+ Agregar dosis",
     "nextEyebrow": "Siguiente",
     "nextPreview": {
-      "everyMorning": "Todas las mañanas a las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
-      "everyEvening": "Todas las noches a las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
-      "twiceDaily": "Dos veces al día, desde las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
-      "threeTimesDaily": "Tres veces al día, desde las {{time}}. Puedes cambiarlo en la siguiente pantalla.",
-      "custom": "A las {{time}}. Puedes cambiarlo en la siguiente pantalla."
+      "everyMorning": "Todas las mañanas a las {{time}}; puedes cambiarlo en la siguiente pantalla.",
+      "everyEvening": "Todas las noches a las {{time}}; puedes cambiarlo en la siguiente pantalla.",
+      "twiceDaily": "Dos veces al día, desde las {{time}}; puedes cambiarlo en la siguiente pantalla.",
+      "threeTimesDaily": "Tres veces al día, desde las {{time}}; puedes cambiarlo en la siguiente pantalla.",
+      "custom": "A las {{time}}; puedes cambiarlo en la siguiente pantalla."
     },
     "payoff": {
       "title": "El recordatorio de las {{time}} de {{name}} está listo.",

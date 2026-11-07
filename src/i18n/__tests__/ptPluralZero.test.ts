@@ -27,6 +27,9 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   // shown only for a day that HAS shifts (an empty day reads "No shifts"), and a shift lasts
   // 15 minutes to 24 hours, so a duration part is never 0.
   'shifts:summary': 'day summary only for a day with shifts',
+  'shifts:pageSummary.covered': 'header summary shows the none-copy at 0, so a count is always >= 1',
+  'shifts:pageSummary.count': 'header summary shows the none-copy at 0, so a count is always >= 1',
+  'shifts:pageSummary.open': 'header summary shows the none-copy at 0, so a count is always >= 1',
   'shifts:summaryShort': 'week day summary only for a day with shifts',
   'shifts:month.cell': 'month cell uses month.none for an empty day',
   'shifts:duration.hours': 'durationLabel renders hours only when hours > 0',

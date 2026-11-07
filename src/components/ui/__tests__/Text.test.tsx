@@ -22,13 +22,14 @@ const EXPECTED_TAG: Record<TextVariant, string> = {
   button: 'SPAN',
   mono: 'SPAN',
   eyebrow: 'SPAN',
+  sectionLabel: 'H2',
 };
 
 const VARIANTS = Object.keys(TEXT_CLASS) as TextVariant[];
 
 describe('Text', () => {
   it('covers every variant in the scale (spec §4.2)', () => {
-    expect(VARIANTS).toHaveLength(20);
+    expect(VARIANTS).toHaveLength(21);
     expect(Object.keys(EXPECTED_TAG).sort()).toEqual([...VARIANTS].sort());
   });
 

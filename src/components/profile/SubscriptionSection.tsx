@@ -65,7 +65,7 @@ export function SubscriptionSection(): ReactElement {
 
   return (
     <Card padding="lg" className="mt-6">
-      <Text variant="h3" as="h2">
+      <Text variant="sectionLabel" as="h2">
         {t('subscription.title')}
       </Text>
       <div className="mt-5 flex flex-col gap-5">

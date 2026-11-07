@@ -20,7 +20,8 @@ export type TextVariant =
   | 'label'
   | 'button'
   | 'mono'
-  | 'eyebrow';
+  | 'eyebrow'
+  | 'sectionLabel';
 
 /** Spec §4.2. Values are mobile's Text.tsx StyleSheet, verbatim. */
 export const TEXT_CLASS: Record<TextVariant, string> = {
@@ -53,6 +54,8 @@ export const TEXT_CLASS: Record<TextVariant, string> = {
   button: 'text-base font-semibold leading-normal',
   mono: 'text-xs font-normal leading-normal tracking-wider text-ink-3',
   eyebrow: 'text-xs font-normal leading-normal tracking-[1.2px] uppercase text-ink-3',
+  // Profile section headings (mobile Eyebrow): 12/600, 0.15em, uppercase, muted ink-3 (>= 4.5:1 light and dark).
+  sectionLabel: 'text-xs font-semibold leading-normal tracking-[0.15em] uppercase text-ink-3',
 };
 
 const DEFAULT_TAG: Record<TextVariant, ElementType> = {
@@ -76,6 +79,7 @@ const DEFAULT_TAG: Record<TextVariant, ElementType> = {
   button: 'span',
   mono: 'span',
   eyebrow: 'span',
+  sectionLabel: 'h2',
 };
 
 export interface TextProps extends HTMLAttributes<HTMLElement> {

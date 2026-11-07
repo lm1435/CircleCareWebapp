@@ -253,5 +253,17 @@
   "openCount_one": "{{count}} em aberto",
   "openCount_other": "{{count}} em aberto",
   "notCoveredCount_one": "{{count}} sem cobertura",
-  "notCoveredCount_other": "{{count}} sem cobertura"
+  "notCoveredCount_other": "{{count}} sem cobertura",
+  "pageSummary": {
+    "noneToday": "Nenhum plantão hoje.",
+    "noneDay": "Nenhum plantão neste dia.",
+    "noneWeek": "Nenhum plantão esta semana.",
+    "noneMonth": "Nenhum plantão este mês.",
+    "covered_one": "{{count}} plantão · tudo coberto",
+    "covered_other": "{{count}} plantões · tudo coberto",
+    "open_one": "{{count}} plantão · {{open}}",
+    "open_other": "{{count}} plantões · {{open}}",
+    "count_one": "{{count}} plantão",
+    "count_other": "{{count}} plantões"
+  }
 }

@@ -101,7 +101,7 @@ function SettingsCard({
 }): ReactElement {
   return (
     <Card padding="lg" className="mt-6">
-      <Text variant="h3" as="h2">
+      <Text variant="sectionLabel" as="h2">
         {title}
       </Text>
       {description ? (
@@ -126,7 +126,7 @@ function SettingsSheetSection({
 }): ReactElement {
   return (
     <div className="mt-6">
-      <Text variant="h3" as="h2">
+      <Text variant="sectionLabel" as="h2">
         {title}
       </Text>
       {description ? (
@@ -905,7 +905,7 @@ export default function ProfilePage(): ReactElement {
 
       {/* ── Danger zone ───────────────────────────────────────────────── */}
       <Card variant="outlined" padding="lg" className="mt-6 border-terracotta-deep/30">
-        <Text variant="h3" as="h2">
+        <Text variant="sectionLabel" as="h2">
           {t('delete.title')}
         </Text>
         <Text variant="caption" className="mt-1">

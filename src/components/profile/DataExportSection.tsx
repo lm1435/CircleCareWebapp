@@ -53,7 +53,7 @@ export function DataExportSection(): ReactElement {
 
   return (
     <Card padding="lg" className="mt-6">
-      <Text variant="h3" as="h2">
+      <Text variant="sectionLabel" as="h2">
         {t('dataExport.title')}
       </Text>
       <Text variant="caption" className="mt-1">

@@ -317,6 +317,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 em aberto",
     "2 em aberto",
   ],
+  "pt shifts:pageSummary.count": [
+    "0 plantão",
+    "1 plantão",
+    "2 plantões",
+  ],
+  "pt shifts:pageSummary.covered": [
+    "0 plantão · tudo coberto",
+    "1 plantão · tudo coberto",
+    "2 plantões · tudo coberto",
+  ],
+  "pt shifts:pageSummary.open": [
+    "0 plantão · {{open}}",
+    "1 plantão · {{open}}",
+    "2 plantões · {{open}}",
+  ],
   "pt shifts:summary": [
     "0 plantão · {{open}}.",
     "1 plantão · {{open}}.",
@@ -661,6 +676,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "nenhum por preencher",
     "1 por preencher",
     "2 por preencher",
+  ],
+  "pt-PT shifts:pageSummary.count": [
+    "0 turnos",
+    "1 turno",
+    "2 turnos",
+  ],
+  "pt-PT shifts:pageSummary.covered": [
+    "0 turnos · tudo coberto",
+    "1 turno · tudo coberto",
+    "2 turnos · tudo coberto",
+  ],
+  "pt-PT shifts:pageSummary.open": [
+    "0 turnos · {{open}}",
+    "1 turno · {{open}}",
+    "2 turnos · {{open}}",
   ],
   "pt-PT shifts:summary": [
     "0 turnos · {{open}}.",

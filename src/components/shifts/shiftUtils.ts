@@ -575,3 +575,39 @@ export function memberShortName(m: {
 }): string {
   return m.first_name?.trim() || (m.email ? m.email.split('@')[0] : '');
 }
+
+/**
+ * The page-level summary line under the Calendar title in Shifts mode (design 2026-11-07, shared copy
+ * with mobile): "No shifts today." / "3 shifts · all covered" / "3 shifts · 1 open". Computed from the
+ * shifts already loaded for the visible range; `inRange` narrows them to the day / week / month shown.
+ */
+export function shiftsPageSummary(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  shifts: readonly CalendarEvent[],
+  opts: {
+    view: 'day' | 'week' | 'month';
+    /** Day view only: the shown day is today in the recipient's zone. */
+    isToday: boolean;
+    inRange: (date: string) => boolean;
+    timezone: string;
+    now?: Date;
+  }
+): string {
+  const visible = shifts.filter((s) => opts.inRange(s.scheduled_date));
+  if (visible.length === 0) {
+    if (opts.view === 'week') return t('shifts:pageSummary.noneWeek');
+    if (opts.view === 'month') return t('shifts:pageSummary.noneMonth');
+    return t(opts.isToday ? 'shifts:pageSummary.noneToday' : 'shifts:pageSummary.noneDay');
+  }
+  const coverage = summariseShifts(visible, opts.timezone, opts.now);
+  if (coverage.open === 0 && coverage.notCovered === 0) {
+    return t('shifts:pageSummary.covered', { count: visible.length });
+  }
+  // "open" = unfilled AND not yet ended (ShiftCard's "Not covered" test, recipient zone). Ended unfilled
+  // shifts are in the total but neither open nor "all covered".
+  if (coverage.open === 0) return t('shifts:pageSummary.count', { count: visible.length });
+  return t('shifts:pageSummary.open', {
+    count: visible.length,
+    open: t('shifts:openCount', { count: coverage.open }),
+  });
+}
