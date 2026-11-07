@@ -395,7 +395,7 @@ describe("simple shift form: Who's with Rosa?", () => {
       isAuthenticated: true,
     } as never);
     open();
-    expect(within(group("Who's with Rosa?")).queryByRole('radio', { name: 'Me' })).not.toBeInTheDocument();
+    expect(within(group("Who's covering?")).queryByRole('radio', { name: 'Me' })).not.toBeInTheDocument();
   });
 
   it('a care-recipient holder (should never happen) is shown as someone, disabled', () => {

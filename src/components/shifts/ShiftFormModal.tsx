@@ -630,7 +630,9 @@ function ShiftFormBody({
       ? formatShiftRepeat(stored, true, t, (d) => formatWeekdayList(d, language))
       : null;
 
-  const coveringHeading = recipientName
+  // "Who's covering?" when the viewer IS the care recipient (self circle) or there is no name to say.
+  const viewerIsRecipient = !!viewerId && members.some((m) => m.id === viewerId && m.is_care_recipient === true);
+  const coveringHeading = recipientName && !viewerIsRecipient
     ? t('shifts:form.heading', { name: recipientName })
     : t('shifts:form.covering');
   const repeats = repeat !== 'none';

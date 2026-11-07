@@ -194,7 +194,7 @@ describe('ShiftFormModal (create)', () => {
       isAuthenticated: true,
     } as never);
     const { unmount } = shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
-    const group = screen.getByRole('radiogroup', { name: "Who's with Rosa?" });
+    const group = screen.getByRole('radiogroup', { name: "Who's covering?" });
     expect(within(group).queryByRole('radio', { name: 'Me' })).not.toBeInTheDocument();
     expect(within(group).getByRole('radio', { name: 'Leave open' })).toBeInTheDocument();
     unmount();

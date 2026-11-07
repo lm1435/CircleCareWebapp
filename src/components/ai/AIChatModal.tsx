@@ -15,6 +15,7 @@ import {
   Icon,
   IconTile,
   INPUT_TEXT,
+  INPUT_TEXT_CHAT,
   Modal,
   Sheet,
   Spinner,
@@ -454,7 +455,7 @@ export function AIChatModal({
             maxLength={MESSAGE_MAX}
             rows={1}
             disabled={mutation.isPending}
-            className={`${INPUT_TEXT} max-h-40 resize-none py-2`}
+            className={`${INPUT_TEXT} ${INPUT_TEXT_CHAT} max-h-40 resize-none py-2`}
           />
           <button
             type="submit"

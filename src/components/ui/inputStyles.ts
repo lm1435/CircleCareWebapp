@@ -6,7 +6,7 @@ import type { MouseEvent } from 'react';
  *
  * Mobile numbers, verbatim: white ground, 1px hair border (`line-2`), radius 12
  * (`rounded-md`), padding 14 horizontal / 12 vertical, min-height 44, gap 10
- * between the text and an icon slot, 16pt type. Focus animates the border to
+ * between the text and an icon slot. Value type is 18/500 (= CHOICE_TILE_LABEL, owner 2026-11-07). Focus animates the border to
  * `moss-light` over 200ms — on mobile that is an `Animated.Value`; here it is
  * `focus-within` + `transition-colors`, which is why the bordered box is a
  * `<div>` wrapping the native control rather than the control itself. The
@@ -118,7 +118,13 @@ export function fieldShell({ error, disabled, multiline, extra }: FieldShellOpti
  * shell's own `px-3.5` as the only horizontal inset.
  */
 export const INPUT_TEXT =
-  'flex-1 min-w-0 self-stretch bg-transparent border-0 px-0 py-3 m-0 text-md leading-normal text-ink placeholder:text-placeholder outline-none';
+  'flex-1 min-w-0 self-stretch bg-transparent border-0 px-0 py-3 m-0 text-base font-medium leading-6 text-ink placeholder:text-placeholder placeholder:font-medium outline-none';
+
+/**
+ * Chat-style free-text surfaces (AI chat, notes composer) keep the compact 16/400 reading size (owner 2026-11-07:
+ * only FORM VALUES share the tile's 18/500). `!` so they beat INPUT_TEXT regardless of emit order.
+ */
+export const INPUT_TEXT_CHAT = 'text-md! font-normal! placeholder:font-normal!';
 
 /**
  * The trailing 44×44 slot (mobile `INPUT_TRAILING_SLOT`). Only the horizontal

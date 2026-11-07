@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ChipSelect, DateField, TextArea, chipClass } from '@/components/ui';
+import { Button, ChipSelect, DateField, INPUT_TEXT_CHAT, TextArea, chipClass } from '@/components/ui';
 import {
   CARE_NOTE_CATEGORIES,
   CARE_NOTE_MOODS,
@@ -158,6 +158,7 @@ export function NoteComposer({
         onChange={(e) => onChange({ ...draft, body: e.target.value })}
         maxLength={MAX_CARE_NOTE_LENGTH}
         rows={3}
+        className={INPUT_TEXT_CHAT}
       />
 
       {/* Date row: defaults to Today; a past day shows "Reset to today". The
