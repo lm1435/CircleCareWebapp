@@ -68,6 +68,23 @@ describe('ShiftSavedDialog templates (mobile parity)', () => {
     expect(screen.getByText('Starts at 2:00 PM · every day')).toBeInTheDocument();
   });
 
+  it('names monthly, yearly, every other day and days on / off instead of "every week"', () => {
+    const cases: Array<[string, string]> = [
+      ['monthly', 'every month'],
+      ['yearly', 'every year'],
+      ['every_other_day', 'every other day'],
+      ['cycle:14:7', '14 days on, 7 days off'],
+    ];
+    for (const [rule, words] of cases) {
+      const { unmount } = render(
+        <ShiftSavedDialog circleId="c" shift={shift({ recurrence_rule: rule })} onAddNext={vi.fn()} onDone={vi.fn()} />
+      );
+      expect(screen.getByText(`8:00 AM – 2:00 PM (${CITY}), ${words}. Open for anyone to take.`)).toBeInTheDocument();
+      expect(screen.queryByText(/every week/)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it('assigned to someone: "{who} is on it."; to the viewer: "You\'re on it." (never "You is on it")', () => {
     const { unmount } = render(
       <ShiftSavedDialog

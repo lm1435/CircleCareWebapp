@@ -94,14 +94,16 @@
     "coveredBy": "Wer sie hat",
     "whoThisDayOnly": "{{name}} · nur dieser Tag",
     "openValue": "Noch niemand",
-    "reminder": "Erinnerung"
+    "reminder": "Erinnerung",
+    "rotationDay": "Tag {{n}} von {{on}} · wieder am {{date}}"
   },
   "repeat": {
     "never": "Nie",
     "daily": "Täglich",
     "weekly": "Wöchentlich",
     "weeklyOn": "Wöchentlich am {{days}}",
-    "series": "Wiederkehrend"
+    "series": "Wiederkehrend",
+    "cycle": "{{on}} Tage Schicht, {{off}} Tage frei"
   },
   "reminder": {
     "off": "Aus",
@@ -135,7 +137,6 @@
     "leaveOpen": "Offen lassen",
     "me": "Ich",
     "timezoneNote": "Diese Zeiten gelten für {{zone}}.",
-    "seriesNote": "Datum und Wiederholung einer Serie lassen sich hier nicht ändern. Ihre Änderung gilt für die gewählten Schichten.",
     "save": "Schicht speichern",
     "date": "Datum",
     "endsOn": "Wiederholung endet",
@@ -154,7 +155,22 @@
     "summaryReminderOff": "Erinnerung: aus",
     "summaryRepeatEnds": "Wiederholung endet: {{date}}",
     "summaryRepeatEndsNever": "Wiederholung endet: nie",
-    "saveChanges": "Änderungen speichern"
+    "saveChanges": "Änderungen speichern",
+    "everyOtherDay": "Jeden zweiten Tag",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "daysOnOff": "Tage mit / ohne Schicht",
+    "daysOn": "Tage mit Schicht",
+    "daysOff": "Freie Tage",
+    "legendOn": "Schicht",
+    "legendOff": "Frei",
+    "cycleHint24": "Jeder Tag ist eine Schicht von {{start}} bis {{end}}. Sie schließen nahtlos aneinander an.",
+    "cycleWas": "vorher {{old}}",
+    "starting": "Ab",
+    "firstTime": "Erstes Mal: {{date}}",
+    "fromNote": "Schichten vor dem {{date}} bleiben unverändert, auch wer sie übernommen hat. Der neue Plan beginnt am {{date}}.",
+    "invalidStart": "Dieses Datum passt nicht zum neuen Plan. Wählen Sie ein anderes Startdatum.",
+    "rescheduleRequired": "Dieser Plan wurde an anderer Stelle geändert. Schließen Sie dies und öffnen Sie die Schicht erneut."
   },
   "saved": {
     "title": "„{{name}}“ gespeichert",
@@ -170,7 +186,10 @@
     "summarySelfOnce": "{{range}} · Sie haben sie.",
     "repeatDaily": "jeden Tag",
     "repeatWeekly": "jede Woche",
-    "repeatDays": "{{days}}"
+    "repeatDays": "{{days}}",
+    "repeatMonthly": "jeden Monat",
+    "repeatYearly": "jedes Jahr",
+    "repeatEveryOtherDay": "jeden zweiten Tag"
   },
   "validation": {
     "nameRequired": "Geben Sie der Schicht einen Namen.",
@@ -181,7 +200,9 @@
     "tooShort": "Eine Schicht dauert zwischen 15 Minuten und 24 Stunden.",
     "tooLong": "Eine Schicht dauert zwischen 15 Minuten und 24 Stunden.",
     "repeatEndBeforeStart": "Das Enddatum muss auf oder nach dem ersten Datum liegen.",
-    "daysRequired": "Wählen Sie mindestens einen Tag."
+    "daysRequired": "Wählen Sie mindestens einen Tag.",
+    "cycleCounts": "Tage mit Schicht und freie Tage müssen ganze Zahlen von 1 bis 999 sein.",
+    "startingBefore": "Der Beginn darf nicht vor dem {{date}} liegen."
   },
   "toast": {
     "taken": "Sie haben die Schicht „{{name}}“.",

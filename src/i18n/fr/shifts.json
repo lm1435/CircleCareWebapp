@@ -94,14 +94,16 @@
     "coveredBy": "Qui s’en charge",
     "whoThisDayOnly": "{{name}} · ce jour seulement",
     "openValue": "Personne pour l’instant",
-    "reminder": "Rappel"
+    "reminder": "Rappel",
+    "rotationDay": "Jour {{n}} sur {{on}} · retour le {{date}}"
   },
   "repeat": {
     "never": "Jamais",
     "daily": "Tous les jours",
     "weekly": "Chaque semaine",
     "weeklyOn": "Chaque semaine : {{days}}",
-    "series": "Récurrent"
+    "series": "Récurrent",
+    "cycle": "{{on}} jours de garde, {{off}} jours de repos"
   },
   "reminder": {
     "off": "Désactivé",
@@ -135,7 +137,6 @@
     "leaveOpen": "Laisser à pourvoir",
     "me": "Moi",
     "timezoneNote": "Ces heures sont celles de {{zone}}.",
-    "seriesNote": "La date et la répétition d’une série ne se modifient pas ici. Votre modification s’applique aux gardes choisies.",
     "save": "Enregistrer la garde",
     "date": "Date",
     "endsOn": "La répétition s’arrête",
@@ -154,7 +155,22 @@
     "summaryReminderOff": "Rappel : désactivé",
     "summaryRepeatEnds": "Fin de la répétition : {{date}}",
     "summaryRepeatEndsNever": "Fin de la répétition : jamais",
-    "saveChanges": "Enregistrer les modifications"
+    "saveChanges": "Enregistrer les modifications",
+    "everyOtherDay": "Un jour sur deux",
+    "monthly": "Chaque mois",
+    "yearly": "Chaque année",
+    "daysOnOff": "Jours de garde / repos",
+    "daysOn": "Jours de garde",
+    "daysOff": "Jours de repos",
+    "legendOn": "De garde",
+    "legendOff": "Repos",
+    "cycleHint24": "Chaque jour est une garde de {{start}} à {{end}}. Elles s’enchaînent.",
+    "cycleWas": "avant : {{old}}",
+    "starting": "À partir du",
+    "firstTime": "Première fois : {{date}}",
+    "fromNote": "Les gardes avant le {{date}} restent telles quelles, y compris la personne qui les a assurées. Le nouveau planning commence le {{date}}.",
+    "invalidStart": "Cette date ne correspond pas au nouveau planning. Choisissez une autre date de début.",
+    "rescheduleRequired": "Ce planning a été modifié ailleurs. Fermez cette fenêtre et rouvrez la garde."
   },
   "saved": {
     "title": "« {{name}} » enregistrée",
@@ -170,7 +186,10 @@
     "summarySelfOnce": "{{range}} · Vous vous en chargez.",
     "repeatDaily": "tous les jours",
     "repeatWeekly": "chaque semaine",
-    "repeatDays": "les {{days}}"
+    "repeatDays": "les {{days}}",
+    "repeatMonthly": "chaque mois",
+    "repeatYearly": "chaque année",
+    "repeatEveryOtherDay": "un jour sur deux"
   },
   "validation": {
     "nameRequired": "Donnez un nom à la garde.",
@@ -181,7 +200,9 @@
     "tooShort": "Une garde dure de 15 minutes à 24 heures.",
     "tooLong": "Une garde dure de 15 minutes à 24 heures.",
     "repeatEndBeforeStart": "La date de fin doit être égale ou postérieure à la première date.",
-    "daysRequired": "Choisissez au moins un jour."
+    "daysRequired": "Choisissez au moins un jour.",
+    "cycleCounts": "Les jours de garde et de repos doivent être des nombres entiers de 1 à 999.",
+    "startingBefore": "La date de début ne peut pas être antérieure au {{date}}."
   },
   "toast": {
     "taken": "Vous assurez la garde « {{name}} ».",

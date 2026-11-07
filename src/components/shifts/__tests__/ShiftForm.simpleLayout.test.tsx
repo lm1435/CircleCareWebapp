@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
-import type { CalendarEvent } from '@/api/calendarEvents';
+import { getSeriesRoot, type CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
 import { createShift, updateShift } from '@/api/shifts';
 import { ToastProvider } from '@/components/ui';
@@ -22,12 +22,17 @@ vi.mock('@/api/shifts', async (importOriginal) => ({
   createShift: vi.fn(),
   updateShift: vi.fn(),
 }));
+vi.mock('@/api/calendarEvents', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/calendarEvents')>()),
+  getSeriesRoot: vi.fn(),
+}));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
     shiftCreated: vi.fn(),
     shiftEdited: vi.fn(),
+    shiftSeriesRescheduled: vi.fn(),
     shiftAddNextTapped: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -116,6 +121,8 @@ beforeEach(() => {
   circle();
   mockCreate.mockResolvedValue(shift({ id: 'new-1', recurrence_rule: 'daily' }));
   mockUpdate.mockResolvedValue(shift());
+  // A row that is not itself the root hydrates its repeat from the root; by default there is none to read.
+  vi.mocked(getSeriesRoot).mockRejectedValue(new Error('no root'));
 });
 
 describe('simple shift form: header, sections, button', () => {
@@ -271,12 +278,13 @@ describe('simple shift form: When?', () => {
     expect(endTile()).toHaveAccessibleDescription('6 hours');
   });
 
-  it('a repeating shift edit shows its date as text, not a field', () => {
+  it('a repeating shift edit keeps its date editable ("This shift" moves that occurrence)', () => {
     open({
       shift: shift({ id: 'root_2027-03-10', parent_event_id: 'root', recurrence_rule: 'daily', scheduled_date: '2027-03-10' }),
     });
-    expect(document.getElementById('shift_date')).toBeNull();
-    expect(screen.getByTestId('shift-form-date-locked')).toHaveTextContent('Wed, Mar 10');
+    expect(field('shift_date')).toHaveValue('2027-03-10');
+    expect(screen.getByText('Date')).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-form-date-locked')).not.toBeInTheDocument();
   });
 
   it('a one-off edit keeps an editable date', () => {
@@ -287,10 +295,19 @@ describe('simple shift form: When?', () => {
 });
 
 describe('simple shift form: How often?', () => {
-  it('offers Once / Every day / Every week / Some days as tiles, Once checked', () => {
+  it('offers the medication options in order as tiles, Once checked', () => {
     open();
     const radios = within(group('How often?')).getAllByRole('radio');
-    expect(radios.map((r) => r.textContent)).toEqual(['Once', 'Every day', 'Every week', 'Some days']);
+    expect(radios.map((r) => r.textContent)).toEqual([
+      'Once',
+      'Every day',
+      'Every other day',
+      'Every week',
+      'Monthly',
+      'Yearly',
+      'Days on / off',
+      'Some days',
+    ]);
     expect(radio('How often?', 'Once')).toBeChecked();
     for (const r of radios) expect(r).toBeEnabled();
   });
@@ -318,37 +335,45 @@ describe('simple shift form: How often?', () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['a one-off', {}, 'Once'],
-    ['a daily series', { recurrence_rule: 'daily' }, 'Every day'],
-    ['a weekly series', { recurrence_rule: 'weekly' }, 'Every week'],
-    ['a days-of-week series', { recurrence_rule: 'weekly', recurrence_days: [1, 4] }, 'Some days'],
-  ] as const)('an edit of %s shows the stored mode, locked', (_label, over, checked) => {
-    open({ shift: shift(over as Partial<CalendarEvent>) });
-    const radios = within(group('How often?')).getAllByRole('radio');
-    expect(radio('How often?', checked)).toBeChecked();
-    for (const r of radios) expect(r).toBeDisabled();
-    // Nothing to pick days from in an edit.
-    expect(screen.queryByRole('checkbox', { name: 'Monday' })).not.toBeInTheDocument();
-  });
-
-  it('the series note shows for a repeating edit only', () => {
-    const { unmount } = open({ shift: shift({ recurrence_rule: 'daily' }) });
-    expect(screen.getByTestId('shift-form-series-note')).toHaveTextContent(
-      "The date and repeat of a series can't be changed here."
-    );
-    unmount();
+  it('a one-off edit shows Once, locked', () => {
     open({ shift: shift() });
-    expect(screen.queryByTestId('shift-form-series-note')).not.toBeInTheDocument();
+    expect(radio('How often?', 'Once')).toBeChecked();
+    for (const r of within(group('How often?')).getAllByRole('radio')) expect(r).toBeDisabled();
   });
 
-  it('an occurrence whose rule this row does not hold selects nothing, still locked', () => {
+  it.each([
+    ['a daily series', { recurrence_rule: 'daily' }, 'Every day'],
+    ['an every-other-day series', { recurrence_rule: 'every_other_day' }, 'Every other day'],
+    ['a weekly series', { recurrence_rule: 'weekly' }, 'Every week'],
+    ['a monthly series', { recurrence_rule: 'monthly' }, 'Monthly'],
+    ['a yearly series', { recurrence_rule: 'yearly' }, 'Yearly'],
+    ['a rotation', { recurrence_rule: 'cycle:14:7' }, 'Days on / off'],
+    ['a days-of-week series', { recurrence_rule: 'weekly', recurrence_days: [1, 4] }, 'Some days'],
+  ] as const)('an edit of %s: the tiles are hidden for "This shift", enabled and preselected for "All upcoming shifts"', async (_label, over, checked) => {
+    const user = userEvent.setup();
+    open({ shift: shift(over as Partial<CalendarEvent>) });
+    expect(screen.queryByRole('radiogroup', { name: 'How often?' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'All upcoming shifts' }));
+    expect(radio('How often?', checked)).toBeChecked();
+    for (const r of within(group('How often?')).getAllByRole('radio')) expect(r).toBeEnabled();
+  });
+
+  it('the old "can\'t be changed here" note is gone; "All upcoming shifts" says what stays', async () => {
+    const user = userEvent.setup();
+    open({ shift: shift({ recurrence_rule: 'daily' }) });
+    expect(screen.queryByTestId('shift-form-series-note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/can't be changed here/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'All upcoming shifts' }));
+    expect(screen.getByTestId('shift-form-from-note')).toHaveTextContent(
+      'Shifts before Mar 9, 2027 stay as they are, including who covered them. The new schedule starts on Mar 9, 2027.'
+    );
+  });
+
+  it('an occurrence whose rule this row does not hold selects nothing until the root says', async () => {
+    const user = userEvent.setup();
     open({ shift: shift({ id: 'root_2027-03-10', parent_event_id: 'root', recurrence_rule: null }) });
-    for (const r of within(group('How often?')).getAllByRole('radio')) {
-      expect(r).not.toBeChecked();
-      expect(r).toBeDisabled();
-    }
-    expect(screen.getByTestId('shift-form-series-note')).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'All upcoming shifts' }));
+    for (const r of within(group('How often?')).getAllByRole('radio')) expect(r).not.toBeChecked();
   });
 });
 

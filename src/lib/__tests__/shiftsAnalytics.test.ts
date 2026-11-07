@@ -105,6 +105,34 @@ describe('shifts analytics', () => {
     expect(last()[1]).not.toHaveProperty('layout');
   });
 
+  it('shift_created names the new repeats and buckets a rotation\'s on / off counts', async () => {
+    const A = await load();
+    const base = { repeats: true, assigned: false, assignedSelf: false, reminder: 'off', overnight: false, durationMinutes: 1440, source: 'shifts_view' };
+    for (const r of ['every_other_day', 'monthly', 'yearly'] as const) {
+      A.shiftCreated({ ...base, recurrence: r });
+      expect(last()[1].recurrence).toBe(r);
+      expect(last()[1]).not.toHaveProperty('cycle_on_bucket');
+    }
+    A.shiftCreated({ ...base, recurrence: 'cycle', cycleOnBucket: '8-14', cycleOffBucket: '4-7' });
+    expect(last()[1]).toMatchObject({ recurrence: 'cycle', cycle_on_bucket: '8-14', cycle_off_bucket: '4-7' });
+    // Never the raw count, never free text.
+    A.shiftCreated({ ...base, recurrence: 'cycle', cycleOnBucket: '14', cycleOffBucket: 'abc' });
+    expect(last()[1]).toMatchObject({ cycle_on_bucket: '1-3', cycle_off_bucket: '1-3' });
+    A.shiftCreated({ ...base, recurrence: 'bogus' });
+    expect(last()[1].recurrence).toBe('none');
+  });
+
+  it('shift_series_rescheduled carries enums and the platform only', async () => {
+    const A = await load();
+    A.shiftSeriesRescheduled({ changed: 'both', fromRecurrence: 'cycle', toRecurrence: 'weekly' });
+    expect(last()).toEqual([
+      'shift_series_rescheduled',
+      { changed: 'both', from_recurrence: 'cycle', to_recurrence: 'weekly', platform: 'web' },
+    ]);
+    A.shiftSeriesRescheduled({ changed: 'Mom', fromRecurrence: 'x', toRecurrence: 'y' });
+    expect(last()[1]).toEqual({ changed: 'date', from_recurrence: 'none', to_recurrence: 'none', platform: 'web' });
+  });
+
   it('the rest of the events, with the exact names and no ids', async () => {
     const A = await load();
     A.shiftAddNextTapped();

@@ -88,7 +88,10 @@
     "weekly": "Weekly",
     "weeklyOn": "Weekly on {{days}}",
     "everyNDays_one": "Every day",
-    "everyNDays_other": "Every {{count}} days"
+    "everyNDays_other": "Every {{count}} days",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "cycle": "{{on}} days on, {{off}} days off"
   },
   "errors": {
     "permissionDenied": "You don't have permission to make changes in this circle.",

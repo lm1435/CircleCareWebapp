@@ -58,6 +58,33 @@ describe('formatRecurrenceLabel — weekly with days', () => {
   });
 });
 
+describe('formatRecurrenceLabel — monthly, yearly, days on / off (never the raw rule)', () => {
+  it('monthly and yearly have their own labels', () => {
+    expect(formatRecurrenceLabel({ recurrence_rule: 'monthly', recurrence_days: null }, t, 'en')).toBe(
+      'calendar:recurrence.monthly'
+    );
+    expect(formatRecurrenceLabel({ recurrence_rule: 'yearly', recurrence_days: null }, t, 'en')).toBe(
+      'calendar:recurrence.yearly'
+    );
+  });
+
+  it('cycle:N:M reads as days on / days off', () => {
+    expect(formatRecurrenceLabel({ recurrence_rule: 'cycle:14:7', recurrence_days: null }, t, 'en')).toBe(
+      'calendar:recurrence.cycle({"on":14,"off":7})'
+    );
+  });
+
+  it('renders the real English words through the app i18n', async () => {
+    const { default: i18n } = await import('@/i18n');
+    const real = i18n.getFixedT('en');
+    expect(formatRecurrenceLabel({ recurrence_rule: 'cycle:14:7', recurrence_days: null }, real, 'en')).toBe(
+      '14 days on, 7 days off'
+    );
+    expect(formatRecurrenceLabel({ recurrence_rule: 'monthly', recurrence_days: null }, real, 'en')).toBe('Monthly');
+    expect(formatRecurrenceLabel({ recurrence_rule: 'yearly', recurrence_days: null }, real, 'en')).toBe('Yearly');
+  });
+});
+
 describe('nextDateOnWeekdays (string date math, 0=Sun)', () => {
   it('returns the date itself when it is on the set', () => {
     expect(nextDateOnWeekdays('2026-06-15', [1])).toBe('2026-06-15'); // Monday

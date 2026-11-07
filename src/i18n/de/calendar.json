@@ -88,7 +88,10 @@
     "weekly": "Wöchentlich",
     "weeklyOn": "Wöchentlich am {{days}}",
     "everyNDays_one": "Jeden Tag",
-    "everyNDays_other": "Alle {{count}} Tage"
+    "everyNDays_other": "Alle {{count}} Tage",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "cycle": "{{on}} Tage an, {{off}} Tage Pause"
   },
   "errors": {
     "permissionDenied": "Sie haben keine Berechtigung, in diesem Kreis Änderungen vorzunehmen.",

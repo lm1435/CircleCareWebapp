@@ -30,7 +30,7 @@ export function formatWeekdayList(
  * mobile/src/utils/recurrenceFormat.ts extended with weekly day names.
  *
  * recurrence_rule values (backend/src/routes/calendarEvents.ts):
- *   'daily' | 'every_other_day' | 'weekly' | 'custom:N'
+ *   'daily' | 'every_other_day' | 'weekly' | 'monthly' | 'yearly' | 'custom:N' | 'cycle:N:M'
  * recurrence_days: 0=Sun..6=Sat — NEVER convert Sunday 0→7.
  * Weekday names come from Intl with the active locale, not hand-written arrays.
  */
@@ -52,6 +52,18 @@ export function formatRecurrenceLabel(
       if (names) return t('calendar:recurrence.weeklyOn', { days: names });
     }
     return t('calendar:recurrence.weekly');
+  }
+
+  if (rule === 'monthly') return t('calendar:recurrence.monthly');
+  if (rule === 'yearly') return t('calendar:recurrence.yearly');
+
+  if (rule.startsWith('cycle:')) {
+    const [, on, off] = rule.split(':');
+    const onDays = Number.parseInt(on ?? '', 10);
+    const offDays = Number.parseInt(off ?? '', 10);
+    if (onDays > 0 && offDays > 0) {
+      return t('calendar:recurrence.cycle', { on: onDays, off: offDays });
+    }
   }
 
   if (rule.startsWith('custom:')) {

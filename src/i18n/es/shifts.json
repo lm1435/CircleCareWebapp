@@ -94,14 +94,16 @@
     "coveredBy": "Quién lo tiene",
     "whoThisDayOnly": "{{name}} · solo este día",
     "openValue": "Nadie todavía",
-    "reminder": "Recordatorio"
+    "reminder": "Recordatorio",
+    "rotationDay": "Día {{n}} de {{on}} · vuelve el {{date}}"
   },
   "repeat": {
     "never": "Nunca",
     "daily": "Diario",
     "weekly": "Semanal",
     "weeklyOn": "Semanal los {{days}}",
-    "series": "Se repite"
+    "series": "Se repite",
+    "cycle": "{{on}} días de turno, {{off}} días libres"
   },
   "reminder": {
     "off": "Desactivado",
@@ -135,7 +137,6 @@
     "leaveOpen": "Dejar abierto",
     "me": "Yo",
     "timezoneNote": "Estas horas son de {{zone}}.",
-    "seriesNote": "Aquí no se puede cambiar la fecha ni la repetición de una serie. Tu cambio se aplica a los turnos que elegiste.",
     "save": "Guardar turno",
     "date": "Fecha",
     "endsOn": "La repetición termina",
@@ -154,7 +155,22 @@
     "summaryReminderOff": "Recordatorio: desactivado",
     "summaryRepeatEnds": "Fin de la repetición: {{date}}",
     "summaryRepeatEndsNever": "Fin de la repetición: nunca",
-    "saveChanges": "Guardar cambios"
+    "saveChanges": "Guardar cambios",
+    "everyOtherDay": "Cada dos días",
+    "monthly": "Mensual",
+    "yearly": "Anual",
+    "daysOnOff": "Días con / sin turno",
+    "daysOn": "Días con turno",
+    "daysOff": "Días libres",
+    "legendOn": "Con turno",
+    "legendOff": "Libre",
+    "cycleHint24": "Cada día es un turno de {{start}} a {{end}}. Van uno tras otro.",
+    "cycleWas": "antes {{old}}",
+    "starting": "Desde",
+    "firstTime": "Primera vez: {{date}}",
+    "fromNote": "Los turnos anteriores al {{date}} se quedan como están, incluido quién los cubrió. El nuevo horario empieza el {{date}}.",
+    "invalidStart": "Esa fecha no encaja en el nuevo horario. Elige otra fecha de inicio.",
+    "rescheduleRequired": "Este horario se cambió en otro lugar. Cierra esto y abre el turno de nuevo."
   },
   "saved": {
     "title": "\"{{name}}\" guardado",
@@ -170,7 +186,10 @@
     "summarySelfOnce": "{{range}} · Tú lo tienes.",
     "repeatDaily": "todos los días",
     "repeatWeekly": "cada semana",
-    "repeatDays": "los {{days}}"
+    "repeatDays": "los {{days}}",
+    "repeatMonthly": "cada mes",
+    "repeatYearly": "cada año",
+    "repeatEveryOtherDay": "cada dos días"
   },
   "validation": {
     "nameRequired": "Ponle un nombre al turno.",
@@ -181,7 +200,9 @@
     "tooShort": "Un turno dura de 15 minutos a 24 horas.",
     "tooLong": "Un turno dura de 15 minutos a 24 horas.",
     "repeatEndBeforeStart": "La fecha final debe ser igual o posterior a la primera fecha.",
-    "daysRequired": "Elige al menos un día."
+    "daysRequired": "Elige al menos un día.",
+    "cycleCounts": "Los días con turno y los días libres deben ser números enteros del 1 al 999.",
+    "startingBefore": "La fecha de inicio no puede ser anterior al {{date}}."
   },
   "toast": {
     "taken": "Tienes el turno \"{{name}}\".",

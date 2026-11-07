@@ -465,7 +465,18 @@ const AS_NEEDED_SURFACES = ['home', 'meds_tab', 'detail'] as const;
 // Care shifts: the closed enums behind the `shift*` events (identical on mobile).
 const SHIFT_RANGES = ['day', 'week', 'month'] as const;
 const SHIFT_ACCESS = ['full', 'readonly'] as const;
-const SHIFT_RECURRENCES = ['none', 'daily', 'weekly', 'days'] as const;
+const SHIFT_RECURRENCES = [
+  'none',
+  'daily',
+  'every_other_day',
+  'weekly',
+  'days',
+  'monthly',
+  'yearly',
+  'cycle',
+] as const;
+const SHIFT_CYCLE_BUCKETS = ['1-3', '4-7', '8-14', '15+'] as const;
+const SHIFT_RESCHEDULE_CHANGED = ['date', 'repeat', 'both'] as const;
 const SHIFT_REMINDERS = ['off', '1h', '2h', '4h', '1d'] as const;
 const SHIFT_SOURCES = ['add_menu', 'shifts_view', 'empty_state', 'add_next'] as const;
 const SHIFT_SCOPES = ['occurrence', 'future'] as const;
@@ -1528,6 +1539,9 @@ export const Analytics = {
     source: string;
     /** 1.4.0 (enum, mobile parity): the form layout. Sent only when the caller knows it. */
     layout?: 'simple';
+    /** Days on / off only: 1-3 | 4-7 | 8-14 | 15+ (buckets, never the counts). */
+    cycleOnBucket?: string;
+    cycleOffBucket?: string;
   }) =>
     capture('shift_created', {
       repeats: opts.repeats === true,
@@ -1539,6 +1553,20 @@ export const Analytics = {
       duration_bucket: shiftDurationBucket(opts.durationMinutes),
       source: pickEnum(opts.source, SHIFT_SOURCES, 'shifts_view'),
       ...(opts.layout === 'simple' ? { layout: 'simple' } : {}),
+      ...(opts.recurrence === 'cycle'
+        ? {
+            cycle_on_bucket: pickEnum(opts.cycleOnBucket, SHIFT_CYCLE_BUCKETS, '1-3'),
+            cycle_off_bucket: pickEnum(opts.cycleOffBucket, SHIFT_CYCLE_BUCKETS, '1-3'),
+          }
+        : {}),
+    }),
+  /** "All upcoming shifts" got a new date and / or repeat (POST .../shift/reschedule). Enums only. */
+  shiftSeriesRescheduled: (opts: { changed: string; fromRecurrence: string; toRecurrence: string }) =>
+    capture('shift_series_rescheduled', {
+      changed: pickEnum(opts.changed, SHIFT_RESCHEDULE_CHANGED, 'date'),
+      from_recurrence: pickEnum(opts.fromRecurrence, SHIFT_RECURRENCES, 'none'),
+      to_recurrence: pickEnum(opts.toRecurrence, SHIFT_RECURRENCES, 'none'),
+      platform: 'web',
     }),
   shiftAddNextTapped: () => capture('shift_add_next_tapped', {}),
   shiftTaken: (opts: { scope: string; reminderChanged?: boolean }) =>

@@ -94,14 +94,16 @@
     "coveredBy": "Who's on it",
     "whoThisDayOnly": "{{name}} · this day only",
     "openValue": "Nobody yet",
-    "reminder": "Reminder"
+    "reminder": "Reminder",
+    "rotationDay": "Day {{n}} of {{on}} · back on {{date}}"
   },
   "repeat": {
     "never": "Never",
     "daily": "Daily",
     "weekly": "Weekly",
     "weeklyOn": "Weekly on {{days}}",
-    "series": "Repeats"
+    "series": "Repeats",
+    "cycle": "{{on}} days on, {{off}} days off"
   },
   "reminder": {
     "off": "Off",
@@ -135,7 +137,6 @@
     "leaveOpen": "Leave open",
     "me": "Me",
     "timezoneNote": "Times are for {{zone}}.",
-    "seriesNote": "The date and repeat of a series can't be changed here. Your edit applies to the shifts you chose.",
     "save": "Save shift",
     "date": "Date",
     "endsOn": "Repeat ends",
@@ -154,7 +155,22 @@
     "summaryReminderOff": "Reminder: off",
     "summaryRepeatEnds": "Repeat ends: {{date}}",
     "summaryRepeatEndsNever": "Repeat ends: never",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "everyOtherDay": "Every other day",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "daysOnOff": "Days on / off",
+    "daysOn": "Days on",
+    "daysOff": "Days off",
+    "legendOn": "On shift",
+    "legendOff": "Off",
+    "cycleHint24": "Each day is one {{start}} to {{end}} shift. They run back to back.",
+    "cycleWas": "was {{old}}",
+    "starting": "Starting",
+    "firstTime": "First time: {{date}}",
+    "fromNote": "Shifts before {{date}} stay as they are, including who covered them. The new schedule starts on {{date}}.",
+    "invalidStart": "That date doesn't fit the new schedule. Choose another start date.",
+    "rescheduleRequired": "This schedule was changed elsewhere. Close this and open the shift again."
   },
   "saved": {
     "title": "\"{{name}}\" saved",
@@ -170,7 +186,10 @@
     "summarySelfOnce": "{{range}} · You're on it.",
     "repeatDaily": "every day",
     "repeatWeekly": "every week",
-    "repeatDays": "on {{days}}"
+    "repeatDays": "on {{days}}",
+    "repeatMonthly": "every month",
+    "repeatYearly": "every year",
+    "repeatEveryOtherDay": "every other day"
   },
   "validation": {
     "nameRequired": "Give the shift a name.",
@@ -181,7 +200,9 @@
     "tooShort": "A shift lasts from 15 minutes to 24 hours.",
     "tooLong": "A shift lasts from 15 minutes to 24 hours.",
     "repeatEndBeforeStart": "The end date must be on or after the first date.",
-    "daysRequired": "Choose at least one day."
+    "daysRequired": "Choose at least one day.",
+    "cycleCounts": "Days on and days off must be whole numbers from 1 to 999.",
+    "startingBefore": "Starting can't be earlier than {{date}}."
   },
   "toast": {
     "taken": "You're on the shift \"{{name}}\".",

@@ -117,6 +117,8 @@ export interface CalendarEvent {
   recurrence_days?: number[] | null;
   recurrence_end_date?: string | null;
   parent_event_id?: string | null;
+  /** Read-only, never sent. True day 1 of a rotation (recipient frame); null/absent = fall back to the root's date. */
+  recurrence_anchor_date?: string | null;
   is_virtual?: boolean;
 
   related_event_id?: string | null;
@@ -490,6 +492,7 @@ export type SeriesRoot = Pick<
   | 'recurrence_rule'
   | 'recurrence_days'
   | 'recurrence_end_date'
+  | 'recurrence_anchor_date'
 > &
   Partial<Pick<CalendarEvent, SeriesRootContentField>>;
 
@@ -550,6 +553,7 @@ export async function getSeriesRoot(circleId: string, eventId: string): Promise<
     recurrence_rule: event.recurrence_rule ?? null,
     recurrence_days: event.recurrence_days ?? null,
     recurrence_end_date: event.recurrence_end_date ?? null,
+    recurrence_anchor_date: event.recurrence_anchor_date ?? null,
     // Series CONTENT (never the signed photo URL). Explicit keys, nulls
     // included, so "the root has no description" is told apart from "unknown".
     title: event.title,

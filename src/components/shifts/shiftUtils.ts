@@ -11,6 +11,7 @@ import {
 } from '@/utils/timezone';
 import { instantFromNaiveTimeInZone } from '@/utils/recipientEventDate';
 import { addDays } from '@/components/calendar/dateMath';
+import { formatRecurrenceLabel } from '@/components/calendar/recurrenceLabel';
 
 // Pure helpers for the care-shifts feature (docs/plans/care-shifts.md). A shift
 // is a `calendar_events` row with `event_type = 'shift'`; `scheduled_date` +
@@ -455,14 +456,26 @@ export function reminderEnum(lead: number | null | undefined): ReminderEnum {
   }
 }
 
-export type ShiftRecurrenceEnum = 'none' | 'daily' | 'weekly' | 'days';
+export type ShiftRecurrenceEnum =
+  | 'none'
+  | 'daily'
+  | 'every_other_day'
+  | 'weekly'
+  | 'days'
+  | 'monthly'
+  | 'yearly'
+  | 'cycle';
 export function recurrenceEnum(
   rule: string | null | undefined,
   days: readonly number[] | null | undefined
 ): ShiftRecurrenceEnum {
   if (!rule) return 'none';
   if (rule === 'daily') return 'daily';
+  if (rule === 'every_other_day') return 'every_other_day';
   if (rule === 'weekly') return days && days.length > 0 ? 'days' : 'weekly';
+  if (rule === 'monthly') return 'monthly';
+  if (rule === 'yearly') return 'yearly';
+  if (rule.startsWith('cycle:')) return 'cycle';
   return 'none';
 }
 
@@ -498,8 +511,21 @@ export function formatShiftRepeat(
     if (list) return t('shifts:repeat.weeklyOn', { days: list });
     return t('shifts:repeat.weekly');
   }
+  const cy = /^cycle:(\d+):(\d+)$/.exec(rule ?? '');
+  if (cy) return t('shifts:repeat.cycle', { on: Number(cy[1]), off: Number(cy[2]) });
+  // Every other rule (every other day, monthly, yearly, days on / off) reads through the shared label.
+  const shared = formatRecurrenceLabel(
+    { recurrence_rule: rule ?? null, recurrence_days: source?.recurrence_days ?? null },
+    t
+  );
+  if (shared && rule !== undefined && rule !== null && !isRawRule(rule, shared)) return shared;
   if (rule || repeating) return t('shifts:repeat.series');
   return t('shifts:repeat.never');
+}
+
+/** True when the shared label fell through to the raw rule (an unknown rule), which must never be shown. */
+function isRawRule(rule: string, label: string): boolean {
+  return label === rule;
 }
 
 /** The reminder label ("1 hour before" / "Off"). Literal keys only. */
