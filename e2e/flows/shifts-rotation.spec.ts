@@ -49,14 +49,26 @@ async function openMonth(page: Page, circleId: string): Promise<void> {
   await expect(modes).toBeVisible({ timeout: 20_000 });
   await modes.getByRole('tab', { name: /^Shifts/ }).click();
   await page.getByRole('tablist', { name: 'Calendar view' }).getByRole('tab', { name: 'Month' }).click();
-  await expect(page.getByTestId('shifts-month-view')).toBeVisible();
+  // An empty circle shows the empty state in place of the grid.
+  await expect(
+    page.getByTestId('shifts-month-view').or(page.getByTestId('shifts-empty-state'))
+  ).toBeVisible({ timeout: 20_000 });
 }
 
-/** The month cell of a date, stepping to the next month until it is on the grid. */
+/**
+ * The month cell of a date. Opening a day switches the calendar to Day view, so this goes back to
+ * Month first, then steps to the month on the grid (either way) until the date is on it.
+ */
 async function dayCell(page: Page, iso: string) {
-  const cell = page.getByRole('grid', { name: 'Shifts month calendar' }).locator(`[data-date="${iso}"]`);
-  for (let i = 0; i < 3 && (await cell.count()) === 0; i++) {
-    await page.getByRole('button', { name: 'Next month', exact: true }).click();
+  const monthTab = page.getByRole('tablist', { name: 'Calendar view' }).getByRole('tab', { name: 'Month' });
+  if ((await monthTab.getAttribute('aria-selected')) !== 'true') await monthTab.click();
+  const grid = page.getByRole('grid', { name: 'Shifts month calendar' });
+  await expect(grid).toBeVisible({ timeout: 20_000 });
+  const cell = grid.locator(`[data-date="${iso}"]`);
+  for (let i = 0; i < 4 && (await cell.count()) === 0; i++) {
+    const first = await grid.locator('[data-date]').first().getAttribute('data-date');
+    const before = (first ?? '') > iso;
+    await page.getByRole('button', { name: before ? 'Previous month' : 'Next month', exact: true }).click();
   }
   await expect(cell).toHaveCount(1);
   return cell;
@@ -211,5 +223,55 @@ test.describe('shift rotations', () => {
     await expect(after.getByTestId('shift-detail-rotation')).toHaveText(
       `Day 1 of 7 · back on ${shortDate(addDays(start, 35))}`
     );
+  });
+  test('Edit > This shift > a new date moves only that shift; the rest of the series stays', async ({ page }) => {
+    const start = dateInTz(s.tz, 1);
+    const moved = addDays(start, 2);
+    const target = addDays(start, 3);
+    const seeded = await s.session.post(`/api/circles/${s.circleId}/events`, {
+      event_type: 'shift',
+      title: 'Alt',
+      scheduled_date: start,
+      scheduled_time: '09:00',
+      duration_minutes: 240,
+      recurrence_rule: 'every_other_day',
+    });
+    expect(seeded.ok(), `seed shift: ${await seeded.text()}`).toBeTruthy();
+
+    await openMonth(page, s.circleId);
+    // Before: start, +2, +4, +6 have a shift; +3 has none.
+    for (const n of [0, 2, 4, 6]) await expectDots(page, addDays(start, n), 'open');
+    await expectDots(page, target, 'none');
+
+    const detail = await openDetail(page, moved, 'Alt');
+    await detail.getByRole('button', { name: 'Edit' }).click();
+    const form = page.getByRole('dialog', { name: 'Edit shift' });
+    await expect(form.getByRole('radio', { name: 'This shift' })).toBeChecked();
+    await expect(form.locator('#shift_date')).toHaveValue(moved);
+    await form.locator('#shift_date').fill(target);
+    const patch = page.waitForResponse(
+      (r) => r.request().method() === 'PATCH' && /\/api\/circles\/[^/]+\/events\//.test(r.url())
+    );
+    await form.getByRole('button', { name: 'Save changes' }).click();
+    const res = await patch;
+    expect(res.ok(), `PATCH: ${res.status()}`).toBeTruthy();
+    // The server detaches the moved occurrence: it is a standalone shift now.
+    const body = (await res.json()) as { data: { event: { parent_event_id: string | null; scheduled_date: string } } };
+    expect(body.data.event.parent_event_id).toBeNull();
+    expect(body.data.event.scheduled_date).toBe(target);
+    await expect(form).toBeHidden({ timeout: 20_000 });
+
+    // The moved shift is on its new date, the old date is empty, the rest is unchanged.
+    await expectDots(page, target, 'open');
+    await expectDots(page, moved, 'none');
+    for (const n of [0, 4, 6, 8]) await expectDots(page, addDays(start, n), 'open');
+    for (const n of [1, 5, 7]) await expectDots(page, addDays(start, n), 'none');
+
+    // Its detail opens on the new date and reads as a single shift; a series shift still repeats.
+    const movedDetail = await openDetail(page, target, 'Alt');
+    await expect(movedDetail.getByTestId('shift-detail-repeat')).toHaveText('Never');
+    await movedDetail.getByRole('button', { name: 'Close' }).last().click();
+    const seriesDetail = await openDetail(page, addDays(start, 4), 'Alt');
+    await expect(seriesDetail.getByTestId('shift-detail-repeat')).not.toHaveText('Never');
   });
 });
