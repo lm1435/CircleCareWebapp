@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
 import { sqlExec } from '../db';
-import { sqlStr } from '../unhappy';
+import { holdRequest, sqlStr } from '../unhappy';
 import { cookieLogin, createCircle, createScopedAccount, ownerApi, uniq } from '../unhappy/auth-invites/_helpers';
 
 // TODAY'S SHIFTS NUDGE ("{member} joined {name}'s circle" / "Share the care with shifts").
@@ -60,6 +60,32 @@ test('premium circle: the owner sees it, "Set up shifts" opens the shifts schedu
   await page.goto(`/circles/${a.circleId}`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Today');
   await expect(card(page)).toHaveCount(0);
+});
+
+test('no lower-priority card is drawn while the next step is still loading: the next-step card wins, nothing is swapped', async ({
+  page,
+  context,
+  request,
+  baseURL,
+}) => {
+  // The race that flaked the test above ~3 in 10 runs, made deterministic: the next step
+  // needs GET /events/presence (has a medication?). While it is held, the members and the
+  // circle are known, so the shifts nudge qualifies; it must still not be drawn, because the
+  // higher-priority next-step card ("Add the first medication") is about to replace it.
+  const a = await arrange(request, 'nudgeh', 'premium');
+  const held = await holdRequest(page, 'GET', '/api/circles/:id/events/presence');
+  await cookieLogin(context, a.owner, baseURL);
+  await page.goto(`/circles/${a.circleId}`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Today', { timeout: 30_000 });
+  await held.waitForHeld(1, { timeoutMs: 30_000 });
+  await expect(page.getByTestId('quick-access-grid')).toBeVisible({ timeout: 30_000 });
+  await page.waitForTimeout(1_500);
+  await expect(card(page)).toHaveCount(0);
+  await expect(page.getByTestId('next-step-card')).toHaveCount(0);
+  await held.release();
+  await expect(page.getByTestId('next-step-card')).toBeVisible({ timeout: 30_000 });
+  await expect(card(page)).toHaveCount(0);
+  await held.dispose();
 });
 
 test('free circle: the OWNER sees it and "Set up shifts" opens the shifts teaser (not the schedule)', async ({
