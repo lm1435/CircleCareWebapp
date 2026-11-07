@@ -138,9 +138,13 @@ test.describe('dark: onboarding', () => {
     await expect(wizard.getByTestId('mark-it-button')).toBeVisible();
     await darkScan(page, 'wizard payoff with Mark it', testInfo);
 
-    // Continue -> the onboarding paywall once -> Today (the wizard path's Mark it lives on the payoff only,
-    // docs/plans/onboarding-1-3-1.md section 1).
+    // Continue -> the setup invite step (93b1335) -> the onboarding paywall once -> Today (the wizard
+    // path's Mark it lives on the payoff only, docs/plans/onboarding-1-3-1.md section 1).
     await wizard.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(wizard.getByRole('heading', { name: 'Invite someone to help' })).toBeVisible({ timeout: 20_000 });
+    await expect(wizard.getByTestId('first-run-invite-free-line')).toBeVisible();
+    await darkScan(page, 'wizard invite step', testInfo);
+    await wizard.getByTestId('first-run-invite-not-now').click();
     await page.waitForURL(/\/upgrade$/, { timeout: 30_000 });
     await expect(page.getByText('Better care, together.')).toBeVisible();
     await darkScan(page, 'onboarding paywall', testInfo);
