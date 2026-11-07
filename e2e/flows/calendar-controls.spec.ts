@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures';
+import { checkA11y } from '../helpers';
 
 // Calendar secondary-controls flow (READ-ONLY): exercises the week/month view
 // toggle and the prev / next / today navigation, asserting the heading range
@@ -105,4 +106,22 @@ test('day ↔ week ↔ month tabs', async ({ page, circleId }) => {
   const weekGrid = page.getByRole('grid', { name: 'Week view calendar' });
   const weekEmpty = page.getByText('No events this week');
   await expect(weekGrid.or(weekEmpty).first()).toBeVisible({ timeout: 20_000 });
+});
+
+// Build 2 header (tight spacing, compact Schedule | Shifts toggle, summary line): axe in DARK, both modes.
+test('dark mode: the calendar header passes axe in Schedule and in Shifts mode', async ({ page, circleId }, testInfo) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto(`/circles/${circleId}/calendar`, { waitUntil: 'domcontentloaded' });
+  const modes = page.getByRole('tablist', { name: 'Calendar mode' });
+  await expect(modes).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
+    .toBe('dark');
+  await waitForCalendarBody(page);
+  await checkA11y(page, 'calendar-header-schedule-dark', testInfo);
+
+  await modes.getByRole('tab', { name: /^Shifts/ }).click();
+  await expect(modes.getByRole('tab', { name: /^Shifts/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('page-subtitle')).toContainText(/shift/i, { timeout: 20_000 });
+  await checkA11y(page, 'calendar-header-shifts-dark', testInfo);
 });
