@@ -1,0 +1,124 @@
+{
+  "_note": "PARITY fixture: agreed en wording for the live page-summary lines. Byte-identical copies in mobile/src/__tests__/fixtures and webapp/src/i18n/__tests__/__fixtures__.",
+  "lines": [
+    {
+      "id": "tasks.empty",
+      "mobileKey": "tasks.summaryNone",
+      "webFile": "tasks.json",
+      "webKey": "summary.none",
+      "en": "Nothing open right now"
+    },
+    {
+      "id": "notes.empty",
+      "mobileKey": "notes.summaryEmpty",
+      "webFile": "notes.json",
+      "webKey": "summary.none",
+      "en": "Nothing written yet"
+    },
+    {
+      "id": "documents.empty",
+      "mobileKey": "documents.summaryEmpty",
+      "webFile": "documents.json",
+      "webKey": "summary.none",
+      "en": "Nothing uploaded yet"
+    },
+    {
+      "id": "vitals.empty",
+      "mobileKey": "vitals.detail.summaryEmpty",
+      "webFile": "vitals.json",
+      "webKey": "summary.none",
+      "en": "Nothing logged yet"
+    },
+    {
+      "id": "activity.empty",
+      "mobileKey": "activity.summaryEmpty",
+      "webFile": "activity.json",
+      "webKey": "summary.none",
+      "en": "No updates this week"
+    },
+    {
+      "id": "activity.week.one",
+      "mobileKey": "activity.summaryWeek_one",
+      "webFile": "activity.json",
+      "webKey": "summary.week_one",
+      "en": "{{count}} update this week"
+    },
+    {
+      "id": "activity.week.other",
+      "mobileKey": "activity.summaryWeek_other",
+      "webFile": "activity.json",
+      "webKey": "summary.week_other",
+      "en": "{{count}} updates this week"
+    },
+    {
+      "id": "activity.weekMore.one",
+      "mobileKey": "activity.summaryWeekMore_one",
+      "webFile": "activity.json",
+      "webKey": "summary.weekMore_one",
+      "en": "{{count}}+ update this week"
+    },
+    {
+      "id": "activity.weekMore.other",
+      "mobileKey": "activity.summaryWeekMore_other",
+      "webFile": "activity.json",
+      "webKey": "summary.weekMore_other",
+      "en": "{{count}}+ updates this week"
+    },
+    {
+      "id": "calendar.today",
+      "mobileKey": "calendar.shellSubtitle.today",
+      "webFile": "calendar.json",
+      "webKey": "summary.today",
+      "en": "{{items}} today"
+    },
+    {
+      "id": "calendar.day",
+      "mobileKey": "calendar.shellSubtitle.day",
+      "webFile": "calendar.json",
+      "webKey": "summary.day",
+      "en": "{{items}} on this day"
+    },
+    {
+      "id": "calendar.week",
+      "mobileKey": "calendar.shellSubtitle.week",
+      "webFile": "calendar.json",
+      "webKey": "summary.week",
+      "en": "{{items}} this week"
+    },
+    {
+      "id": "calendar.month",
+      "mobileKey": "calendar.shellSubtitle.month",
+      "webFile": "calendar.json",
+      "webKey": "summary.month",
+      "en": "{{items}} this month"
+    },
+    {
+      "id": "calendar.none.today",
+      "mobileKey": "calendar.shellSubtitle.none.today",
+      "webFile": "calendar.json",
+      "webKey": "summary.none.today",
+      "en": "Nothing scheduled today"
+    },
+    {
+      "id": "calendar.none.day",
+      "mobileKey": "calendar.shellSubtitle.none.day",
+      "webFile": "calendar.json",
+      "webKey": "summary.none.day",
+      "en": "Nothing scheduled on this day"
+    },
+    {
+      "id": "calendar.none.week",
+      "mobileKey": "calendar.shellSubtitle.none.week",
+      "webFile": "calendar.json",
+      "webKey": "summary.none.week",
+      "en": "Nothing scheduled this week"
+    },
+    {
+      "id": "calendar.none.month",
+      "mobileKey": "calendar.shellSubtitle.none.month",
+      "webFile": "calendar.json",
+      "webKey": "summary.none.month",
+      "en": "Nothing scheduled this month"
+    }
+  ]
+}
