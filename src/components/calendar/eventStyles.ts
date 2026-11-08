@@ -32,6 +32,9 @@ export const EVENT_TYPE_BLOCK_CLASS: Record<EventType, string> = {
   shift: 'bg-task-fill',
 };
 
+/** Pending/missed medication block: soft clay tint, deep text (>= 4.5:1), 3px clay bar on the left. */
+export const MEDICATION_SOFT_CLASS = 'bg-clay-soft border-l-[3px] border-clay';
+
 /**
  * Muted "done" treatment per event type: a soft tinted surface with the deep
  * type color for text. Replaces the old whole-block `opacity-70` cue, which
@@ -147,9 +150,11 @@ export function getEventCardClass(
   status: MedicationStatus | null = null
 ): string {
   const isDone = status === 'taken' || status === 'skipped';
-  return isDone
-    ? EVENT_TYPE_DONE_CLASS[event.event_type]
-    : `${EVENT_TYPE_BLOCK_CLASS[event.event_type]} text-on-fill`;
+  if (isDone) return EVENT_TYPE_DONE_CLASS[event.event_type];
+  // Owner 2026-11-07 (one accent): a medication block is a soft clay tint, deep text and a 3px
+  // left bar, not the heavy brown slab (7 of them filled the Day view).
+  if (event.event_type === 'medication') return MEDICATION_SOFT_CLASS;
+  return `${EVENT_TYPE_BLOCK_CLASS[event.event_type]} text-on-fill`;
 }
 
 /**
@@ -166,5 +171,6 @@ export function getEventTextClass(
   status: MedicationStatus | null = null
 ): string {
   const isDone = status === 'taken' || status === 'skipped';
-  return isDone ? EVENT_TYPE_DEEP_TEXT[event.event_type] : 'text-on-fill';
+  if (isDone || event.event_type === 'medication') return EVENT_TYPE_DEEP_TEXT[event.event_type];
+  return 'text-on-fill';
 }

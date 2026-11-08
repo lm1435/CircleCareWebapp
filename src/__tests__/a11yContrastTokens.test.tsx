@@ -239,6 +239,16 @@ describe('dark palette (parsed from the :root[data-theme=dark] block)', () => {
     }
   });
 
+  // Medication blocks on Day/Week are a soft clay tint with deep text (owner 2026-11-07): both themes >= 4.5:1.
+  it.each([['light', LIGHT], ['dark', DARK]] as const)(
+    'medication block text (clay-deep on clay-soft) is >= 4.5:1 in %s',
+    (_name, palette) => {
+      for (const ground of ['bg', 'cream']) {
+        expect(ratioIn(palette, 'clay-deep', 'clay-soft', ground)).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  );
+
   it.each([
     ['on-primary', 'primary-fill'],
     ['on-primary', 'primary-fill-hover'],

@@ -1,5 +1,5 @@
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { getEventCardClass, getMedicationStatus } from '../eventStyles';
+import { getEventCardClass, getEventTextClass, getMedicationStatus } from '../eventStyles';
 
 const TZ = 'America/Chicago';
 // 2026-06-12T15:30:00Z = 10:30 AM in Chicago (CDT, UTC-5)
@@ -75,12 +75,16 @@ describe('getMedicationStatus', () => {
 });
 
 describe('getEventCardClass', () => {
-  it('renders SOLID type-colored blocks with white text (mobile TimelineEventBlock)', () => {
-    // Mirrors mobile: medication → clay, appointment → dusk, task → moss,
-    // always solid with white text regardless of confirmation status.
+  // Owner 2026-11-07 (one accent): medication blocks are a soft clay tint with a 3px left bar and deep
+  // text, not the heavy brown slab. Appointments and tasks keep the solid type colours.
+  it('renders MEDICATION blocks as a soft tint with deep text and a left bar, appointment/task stay solid', () => {
     const med = getEventCardClass(makeEvent({ event_type: 'medication' }));
-    expect(med).toContain('bg-medication-fill');
-    expect(med).toContain('text-on-fill');
+    expect(med).toContain('bg-clay-soft');
+    expect(med).toContain('border-l-[3px]');
+    expect(med).toContain('border-clay');
+    expect(med).not.toContain('bg-medication-fill');
+    expect(med).not.toContain('text-on-fill');
+    expect(getEventTextClass(makeEvent({ event_type: 'medication' }))).toBe('text-clay-deep');
 
     const appt = getEventCardClass(makeEvent({ event_type: 'appointment' }));
     expect(appt).toContain('bg-appointment-fill');
@@ -91,12 +95,13 @@ describe('getEventCardClass', () => {
     expect(task).toContain('text-on-fill');
   });
 
-  it('keeps pending/missed blocks solid type-colored with white text', () => {
+  it('keeps pending/missed medication blocks on the soft tint with the bar', () => {
     const med = makeEvent({ event_type: 'medication' });
-    expect(getEventCardClass(med, 'pending')).toContain('bg-medication-fill');
-    expect(getEventCardClass(med, 'pending')).toContain('text-on-fill');
-    expect(getEventCardClass(med, 'missed')).toContain('bg-medication-fill');
-    expect(getEventCardClass(med, 'missed')).toContain('text-on-fill');
+    for (const status of ['pending', 'missed'] as const) {
+      expect(getEventCardClass(med, status)).toContain('bg-clay-soft');
+      expect(getEventCardClass(med, status)).toContain('border-l-[3px]');
+      expect(getEventCardClass(med, status)).not.toContain('text-on-fill');
+    }
   });
 
   it('uses the muted soft-tint + deep-text treatment for done (taken/skipped) — WCAG AA, no opacity', () => {

@@ -456,12 +456,15 @@ describe('CalendarPage', () => {
 
     const missed = screen.getByRole('button', { name: /Lisinopril/ });
     expect(missed).toHaveAttribute('data-med-status', 'missed');
-    expect(missed.className).toContain('bg-medication-fill');
-    expect(missed.className).toContain('text-on-fill');
+    // Soft clay tint + left bar (owner 2026-11-07), not the heavy brown slab.
+    expect(missed.className).toContain('bg-clay-soft');
+    expect(missed.className).toContain('border-l-[3px]');
+    expect(missed.className).not.toContain('text-on-fill');
 
     const pending = screen.getByRole('button', { name: /Vitamin D/ });
     expect(pending).toHaveAttribute('data-med-status', 'pending');
-    expect(pending.className).toContain('text-on-fill');
+    expect(pending.className).toContain('bg-clay-soft');
+    expect(pending.className).not.toContain('text-on-fill');
 
     const skipped = screen.getByRole('button', { name: /Aspirin/ });
     expect(skipped).toHaveAttribute('data-med-status', 'skipped');
