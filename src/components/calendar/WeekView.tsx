@@ -205,11 +205,8 @@ export function WeekView({
     el.scrollTop = Math.max(0, (targetHour - 1) * HOUR_HEIGHT);
   }, [earliestHour, careRecipientTimezone, days]);
 
-  const renderEventButton = (
-    event: CalendarEvent,
-    positioned: boolean,
-    overlap?: OverlapInfo
-  ): ReactElement => {
+  /** Everything a chip prints or speaks about one event (shared by the chip and the same-slot list). */
+  const describeEvent = (event: CalendarEvent) => {
     const status = getMedicationStatus(event, careRecipientTimezone, now);
     const title = event.medication_name || event.title;
     // A past day nobody answered prints no clock time (its virtual occurrence
@@ -250,6 +247,35 @@ export function WeekView({
       .filter(Boolean)
       .join(', ');
 
+    return {
+      status,
+      title,
+      hideTime,
+      timeLabel,
+      inactive,
+      inactiveLabel,
+      assigneeName,
+      noteCount,
+      ariaLabel,
+    };
+  };
+
+  const renderEventButton = (
+    event: CalendarEvent,
+    positioned: boolean,
+    overlap?: OverlapInfo
+  ): ReactElement => {
+    const {
+      status,
+      title,
+      hideTime,
+      timeLabel,
+      inactive,
+      inactiveLabel,
+      assigneeName,
+      noteCount,
+      ariaLabel,
+    } = describeEvent(event);
     const chipHeight = positioned
       ? Math.max(
           ((event.duration_minutes ?? MIN_EVENT_MINUTES) / 60) * HOUR_HEIGHT,
@@ -716,18 +742,20 @@ export function WeekView({
         >
           <ul className="m-0 flex list-none flex-col p-0">
             {openSlot.events.map((event) => {
-              const status = getMedicationStatus(event, careRecipientTimezone, now);
+              const { status, title, ariaLabel } = describeEvent(event);
               return (
                 <li key={`${event.id}_${event.scheduled_date}`} className="border-t border-line-2 first:border-t-0">
                   <button
                     type="button"
+                    // The same accessible name as the grid chip would have had.
+                    aria-label={ariaLabel}
                     className="flex min-h-[44px] w-full items-center justify-between gap-3 py-2 text-left text-base text-ink hover:bg-bg-2"
                     onClick={() => {
                       setOpenSlot(null);
                       onEventClick(event);
                     }}
                   >
-                    <span className="min-w-0 break-words">{event.medication_name || event.title}</span>
+                    <span className="min-w-0 break-words">{title}</span>
                     {status && (
                       <span className="shrink-0 text-sm text-ink-2">{statusLabel(t, status)}</span>
                     )}

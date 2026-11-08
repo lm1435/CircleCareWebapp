@@ -364,7 +364,8 @@ describe('WeekView same-slot chips', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/8:00 AM/)).toBeInTheDocument();
     expect(within(dialog).getAllByRole('button', { name: /Aspirin|Lisinopril|Metformin/ })).toHaveLength(3);
-    await user.click(within(dialog).getByRole('button', { name: /Lisinopril/ }));
+    // Each list item carries the accessible name its grid chip would have had.
+    await user.click(within(dialog).getByRole('button', { name: /^Lisinopril, Medication/ }));
     expect(onEventClick).toHaveBeenCalledWith(meds[1]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
