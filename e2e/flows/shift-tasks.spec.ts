@@ -253,7 +253,9 @@ test.describe('shift tasks', () => {
     const detail = page.getByRole('dialog', { name: 'Afternoons' });
     await expect(detail.getByTestId('shift-task-list-title')).toHaveText("This shift's list · 0 of 1 done");
     await expect(detail.getByTestId('shift-task-row')).toHaveCount(1);
-    await expect(detail.getByTestId('shift-task-done')).toHaveAttribute('data-variant', 'primary');
+    // ONE filled button per screen: on an open shift that is Take, so the task's Done is an outline.
+    await expect(detail.getByRole('button', { name: 'Take', exact: true })).toHaveClass(/bg-primary-fill/);
+    await expect(detail.getByTestId('shift-task-done')).toHaveAttribute('data-variant', 'outline');
 
     // Add from the detail: a one-off ("Only <date>").
     await detail.getByRole('button', { name: 'Add a task to this shift' }).click();

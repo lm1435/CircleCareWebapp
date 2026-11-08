@@ -86,16 +86,15 @@
     "confirm": "Elimina"
   },
   "detail": {
-    "date": "Data",
-    "time": "Orario",
     "yourTime": "Il tuo orario: {{range}}",
-    "yourTimeRow": "Il tuo orario",
     "repeats": "Ripetizione",
     "coveredBy": "Chi se ne occupa",
     "whoThisDayOnly": "{{name}} · solo questo giorno",
-    "openValue": "Ancora nessuno",
     "reminder": "Promemoria",
-    "rotationDay": "Giorno {{n}} di {{on}} · si ricomincia il {{date}}"
+    "rotationDay": "Giorno {{n}} di {{on}} · si ricomincia il {{date}}",
+    "when": "Quando",
+    "openChip": "Scoperto · ancora nessuno",
+    "openChipSpoken": "Scoperto, ancora nessuno su questo turno"
   },
   "repeat": {
     "never": "Mai",

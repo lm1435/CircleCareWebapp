@@ -124,5 +124,8 @@
     "open_other": "{{count}} quarts · {{open}}",
     "count_one": "{{count}} quart",
     "count_other": "{{count}} quarts"
+  },
+  "detail": {
+    "openChipSpoken": "À pourvoir, personne sur ce quart pour l’instant"
   }
 }

@@ -86,16 +86,15 @@
     "confirm": "Löschen"
   },
   "detail": {
-    "date": "Datum",
-    "time": "Zeit",
     "yourTime": "Ihre Zeit: {{range}}",
-    "yourTimeRow": "Ihre Zeit",
     "repeats": "Wiederholung",
     "coveredBy": "Wer sie hat",
     "whoThisDayOnly": "{{name}} · nur dieser Tag",
-    "openValue": "Noch niemand",
     "reminder": "Erinnerung",
-    "rotationDay": "Tag {{n}} von {{on}} · wieder am {{date}}"
+    "rotationDay": "Tag {{n}} von {{on}} · wieder am {{date}}",
+    "when": "Wann",
+    "openChip": "Offen · noch niemand",
+    "openChipSpoken": "Offen, noch niemand für diese Schicht"
   },
   "repeat": {
     "never": "Nie",

@@ -86,16 +86,15 @@
     "confirm": "Delete"
   },
   "detail": {
-    "date": "Date",
-    "time": "Time",
     "yourTime": "Your time: {{range}}",
-    "yourTimeRow": "Your time",
     "repeats": "Repeats",
     "coveredBy": "Who's on it",
     "whoThisDayOnly": "{{name}} · this day only",
-    "openValue": "Nobody yet",
     "reminder": "Reminder",
-    "rotationDay": "Day {{n}} of {{on}} · back on {{date}}"
+    "rotationDay": "Day {{n}} of {{on}} · back on {{date}}",
+    "when": "When",
+    "openChip": "Open · nobody yet",
+    "openChipSpoken": "Open, nobody on this shift yet"
   },
   "repeat": {
     "never": "Never",

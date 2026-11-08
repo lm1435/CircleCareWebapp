@@ -203,7 +203,10 @@ test.describe('premium owner', () => {
     await list.getByRole('button', { name: /^Day, 8:00 AM to 8:00 PM, open$/ }).click();
     const detail = page.getByRole('dialog', { name: 'Day' });
     await expect(detail.getByTestId('shift-detail-repeat')).toHaveText('Daily');
-    await expect(detail.getByTestId('shift-detail-who')).toHaveText('Nobody yet');
+    // The status chip IS who's on it (approved middle layout): seen as "Open · nobody yet", read as a sentence.
+    await expect(detail.getByTestId('shift-detail-status')).toHaveText('Open · nobody yet');
+    await expect(detail.getByTestId('shift-detail-who')).toContainText('Open, nobody on this shift yet');
+    await expect(detail.getByTestId('shift-detail-card')).toBeVisible();
     await checkA11y(page, 'shifts-detail-light', testInfo);
     await detail.getByRole('button', { name: 'Close' }).last().click();
 
@@ -320,7 +323,7 @@ test.describe('a member takes and drops a shift', () => {
       await night.click();
       const detail = page.getByRole('dialog', { name: 'Night' });
       // Took "Just this one": the detail says so, and Drop asks no "this / future" question.
-      await expect(detail.getByTestId('shift-detail-who')).toHaveText('You · this day only');
+      await expect(detail.getByTestId('shift-detail-chip-name')).toHaveText('You · this day only');
       await detail.getByRole('button', { name: 'Drop shift' }).click();
       const confirm = page.getByRole('dialog', { name: 'Drop this shift?' });
       await expect(confirm.getByRole('radio')).toHaveCount(0);
@@ -401,7 +404,7 @@ test.describe('an ended shift is read-only', () => {
     await card.click();
     const detail = page.getByRole('dialog', { name: 'Evening' });
     await expect(detail.getByTestId('shift-detail-status')).toHaveText('Not covered');
-    await expect(detail.getByTestId('shift-detail-who')).toHaveText('Not covered');
+    await expect(detail.getByTestId('shift-detail-who')).toHaveText("Who's on it, Not covered");
     for (const name of ['Take', 'Drop shift', 'Assign']) {
       await expect(detail.getByRole('button', { name, exact: true })).toHaveCount(0);
     }
@@ -413,7 +416,7 @@ test.describe('an ended shift is read-only', () => {
     // The owner's own ended shift: their name stays, no Drop.
     await list.getByRole('button', { name: /^Morning, 8:00 AM to 12:00 PM, you are on this shift$/ }).click();
     const mine = page.getByRole('dialog', { name: 'Morning' });
-    await expect(mine.getByTestId('shift-detail-who')).toHaveText('You');
+    await expect(mine.getByTestId('shift-detail-chip-name')).toHaveText('You');
     for (const name of ['Take', 'Drop shift', 'Assign']) {
       await expect(mine.getByRole('button', { name, exact: true })).toHaveCount(0);
     }

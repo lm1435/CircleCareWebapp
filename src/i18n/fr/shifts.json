@@ -86,16 +86,15 @@
     "confirm": "Supprimer"
   },
   "detail": {
-    "date": "Date",
-    "time": "Horaire",
     "yourTime": "Votre heure : {{range}}",
-    "yourTimeRow": "Votre heure",
     "repeats": "Répétition",
     "coveredBy": "Qui s’en charge",
     "whoThisDayOnly": "{{name}} · ce jour seulement",
-    "openValue": "Personne pour l’instant",
     "reminder": "Rappel",
-    "rotationDay": "Jour {{n}} sur {{on}} · retour le {{date}}"
+    "rotationDay": "Jour {{n}} sur {{on}} · retour le {{date}}",
+    "when": "Quand",
+    "openChip": "À pourvoir · personne pour l’instant",
+    "openChipSpoken": "À pourvoir, personne sur cette garde pour l’instant"
   },
   "repeat": {
     "never": "Jamais",

@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Avatar, Button, Modal } from '@/components/ui';
+import { Avatar, Button, Card, Eyebrow, Modal } from '@/components/ui';
 import { useCircle } from '@/hooks/useCircle';
 import { canWriteShifts, resolveShiftsEntry } from '@/lib/shiftsAccess';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -24,6 +24,9 @@ import { holdsOnlyThisDay,
   canCoverShifts,
   hasShiftEnded,
 } from './shiftUtils';
+
+/** Titles longer than this step down from the large title size (the approved mock's rule, mobile's too). */
+const LONG_TITLE_CHARS = 14;
 
 export type ShiftDetailAction = 'take' | 'drop' | 'assign' | 'edit' | 'delete' | 'addTask';
 
@@ -94,30 +97,74 @@ export function ShiftDetailModal({
   const whoName = assignee?.isYou ? t('shifts:you') : (assignee?.name ?? '');
   const whoValue = onlyThisDay && whoName ? t('shifts:detail.whoThisDayOnly', { name: whoName }) : whoName;
 
-  const row = (
-    label: string,
-    value: string,
-    testId: string,
-    secondary?: string,
-    secondaryTestId?: string
-  ): ReactElement => (
-    <div className="flex flex-col gap-0.5 border-t border-line-2 py-3 first:border-t-0">
-      <dt className="text-xs font-medium text-ink-3">{label}</dt>
-      <dd data-testid={testId} className="m-0 text-base text-ink">
-        {value}
-      </dd>
-      {secondary && (
-        <dd data-testid={secondaryTestId} className="m-0 text-sm text-ink-2">
-          {secondary}
-        </dd>
-      )}
+  // ONE filled button per screen: on an open shift that is Take, so the list fills no Done.
+  const showTake = canWrite && open && !ended && canCoverShifts(members, viewerId);
+  const longTitle = shift.title.length > LONG_TITLE_CHARS;
+  const whenDate = formatDateForDisplay(shift.scheduled_date, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+  const whenRange = end.nextDay ? `${range} (${t('shifts:nextDay')})` : range;
+
+  // The status chip IS "who's on it": open / not covered, or the person's avatar + name. It is static
+  // text, not a control, so its spoken sentence may say more than the visible words (openChipSpoken).
+  const chip = open ? (
+    <p data-testid="shift-detail-who" className="m-0 max-w-full">
+      {ended ? <span className="sr-only">{`${t('shifts:detail.coveredBy')}, `}</span> : null}
+      <span
+        data-testid="shift-detail-status"
+        aria-hidden={ended ? undefined : 'true'}
+        className={
+          ended
+            ? 'inline-flex rounded-full border border-line px-3 py-1 text-sm font-semibold text-ink-2'
+            : 'inline-flex rounded-full border border-moss-line bg-moss-soft px-3 py-1 text-sm font-semibold text-moss'
+        }
+      >
+        {ended ? t('shifts:notCovered') : t('shifts:detail.openChip')}
+      </span>
+      {ended ? null : <span className="sr-only">{t('shifts:detail.openChipSpoken')}</span>}
+    </p>
+  ) : (
+    <p
+      data-testid="shift-detail-who"
+      className="m-0 inline-flex max-w-full items-center gap-1.5 rounded-full border border-moss-line bg-moss-soft py-0.5 pl-0.5 pr-3 text-sm font-semibold text-ink"
+    >
+      <span data-testid="shift-detail-chip-avatar" className="inline-flex shrink-0">
+        <Avatar name={assignee?.name || shift.title} size="xs" />
+      </span>
+      <span className="sr-only">{`${t('shifts:detail.coveredBy')}, `}</span>
+      <span data-testid="shift-detail-chip-name" className="min-w-0 truncate">
+        {whoValue}
+      </span>
+    </p>
+  );
+
+  // Title + chip on ONE row when they fit; the chip wraps under a title that leaves no room. The visible
+  // title is presentational: the dialog's sr-only <h2> (Modal `title`) names it, once.
+  const header = (
+    <div
+      data-testid="shift-detail-header"
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5"
+    >
+      <p
+        aria-hidden="true"
+        data-testid="shift-detail-title"
+        className={`m-0 min-w-0 break-words font-semibold leading-tight text-ink ${longTitle ? 'text-lg' : 'text-xl'}`}
+      >
+        {shift.title}
+      </p>
+      {chip}
     </div>
   );
 
+  const cellLabel = 'm-0';
   return (
     <Modal
       size="md"
       title={shift.title}
+      hideTitle
+      header={header}
       closeLabel={t('shifts:close')}
       onClose={onClose}
       footer={
@@ -127,64 +174,51 @@ export function ShiftDetailModal({
       }
     >
       <div className="flex flex-col gap-4" data-testid="shift-detail">
-        <div className="flex items-center gap-3">
-          {open ? (
-            <>
-              <span
-                aria-hidden="true"
-                // card-shell-ok: the empty avatar ring (a circle), not a card
-                className="inline-flex h-12 w-12 shrink-0 rounded-full border-[1.5px] border-line bg-bg"
-              />
-              <span
-                data-testid="shift-detail-status"
-                className={
-                  ended
-                    ? 'rounded-full border border-line px-3 py-1 text-sm font-semibold text-ink-2'
-                    : 'rounded-full bg-moss-soft px-3 py-1 text-sm font-semibold text-moss'
-                }
-              >
-                {ended ? t('shifts:notCovered') : t('shifts:open')}
-              </span>
-            </>
-          ) : (
-            <>
-              <Avatar name={assignee?.name || shift.title} size="md" />
-              <span className="text-base font-semibold text-ink">
-                {assignee?.isYou ? t('shifts:you') : assignee?.name}
-              </span>
-            </>
-          )}
-        </div>
-
-        <dl className="m-0">
-          {row(
-            t('shifts:detail.date'),
-            formatDateForDisplay(shift.scheduled_date, {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            }),
-            'shift-detail-date'
-          )}
-          {row(
-            t('shifts:detail.time'),
-            end.nextDay ? `${range} (${t('shifts:nextDay')})` : range,
-            'shift-detail-time'
-          )}
-          {viewerRange &&
-            row(t('shifts:detail.yourTimeRow'), viewerRange, 'shift-detail-viewer-time')}
-          {row(t('shifts:detail.repeats'), repeat, 'shift-detail-repeat', rotationLine, 'shift-detail-rotation')}
-          {row(
-            t('shifts:detail.coveredBy'),
-            open ? (ended ? t('shifts:notCovered') : t('shifts:detail.openValue')) : whoValue,
-            'shift-detail-who'
-          )}
-          {row(
-            t('shifts:detail.reminder'),
-            formatShiftReminder(shift.reminder_lead_minutes, t),
-            'shift-detail-reminder'
-          )}
-        </dl>
+        <Card variant="outlined" padding="none" className="px-4" data-testid="shift-detail-card">
+          <dl className="m-0">
+            <div className="flex flex-col gap-1 py-3.5">
+              <Eyebrow as="dt" className={cellLabel}>
+                {t('shifts:detail.when')}
+              </Eyebrow>
+              <dd data-testid="shift-detail-time" className="m-0 text-base font-medium text-ink tabular-nums">
+                <span data-testid="shift-detail-date">{whenDate}</span>
+                {` · ${whenRange}`}
+              </dd>
+              {viewerRange && (
+                <dd data-testid="shift-detail-viewer-time" className="m-0 text-sm text-ink-2 tabular-nums">
+                  {t('shifts:detail.yourTime', { range: viewerRange })}
+                </dd>
+              )}
+            </div>
+          </dl>
+          {/* A <dl> of its own: a <dl> may only hold <div> groups of <dt>/<dd>, never a nested grid div. */}
+          <dl
+            data-testid="shift-detail-card-grid"
+            className="m-0 grid grid-cols-2 gap-4 border-t border-line-2 py-3.5"
+          >
+            <div className="flex min-w-0 flex-col gap-1">
+              <Eyebrow as="dt" className={cellLabel}>
+                {t('shifts:detail.repeats')}
+              </Eyebrow>
+              <dd data-testid="shift-detail-repeat" className="m-0 break-words text-base font-medium text-ink">
+                {repeat}
+              </dd>
+              {rotationLine && (
+                <dd data-testid="shift-detail-rotation" className="m-0 text-sm text-ink-2">
+                  {rotationLine}
+                </dd>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-col gap-1">
+              <Eyebrow as="dt" className={cellLabel}>
+                {t('shifts:detail.reminder')}
+              </Eyebrow>
+              <dd data-testid="shift-detail-reminder" className="m-0 break-words text-base font-medium text-ink">
+                {formatShiftReminder(shift.reminder_lead_minutes, t)}
+              </dd>
+            </div>
+          </dl>
+        </Card>
 
         <ShiftTaskList
           circleId={circleId}
@@ -195,11 +229,12 @@ export function ShiftDetailModal({
           canWrite={canWrite}
           ended={ended}
           onAdd={() => onAction('addTask', shift)}
+          primaryAllowed={!showTake}
         />
 
         {canWrite && (
           <div className="flex flex-wrap gap-2">
-            {open && !ended && canCoverShifts(members, viewerId) && (
+            {showTake && (
               <Button size="sm" offlineKind="change" onClick={() => onAction('take', shift)}>
                 {t('shifts:takeButton')}
               </Button>

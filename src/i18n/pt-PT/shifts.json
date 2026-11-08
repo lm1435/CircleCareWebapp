@@ -60,7 +60,8 @@
   },
   "detail": {
     "yourTime": "O seu horário: {{range}}",
-    "yourTimeRow": "O seu horário"
+    "openChip": "Por preencher · ninguém ainda",
+    "openChipSpoken": "Por preencher, ninguém neste turno ainda"
   },
   "form": {
     "newTitle": "Novo turno",

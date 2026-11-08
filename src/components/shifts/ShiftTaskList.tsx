@@ -27,6 +27,11 @@ export interface ShiftTaskListProps {
   /** The shift has ended: nothing can be added (the server answers 409 SHIFT_ENDED). */
   ended: boolean;
   onAdd: () => void;
+  /**
+   * May the list fill its first actionable Done / Taken (moss primary)? False when the detail already
+   * shows a primary (an open shift's Take): ONE filled button per screen, every row is then an outline.
+   */
+  primaryAllowed?: boolean;
 }
 
 /**
@@ -44,6 +49,7 @@ export function ShiftTaskList({
   canWrite,
   ended,
   onAdd,
+  primaryAllowed = true,
 }: ShiftTaskListProps): ReactElement {
   const { t } = useTranslation(['shifts', 'meds', 'tasks', 'common']);
   const { showToast } = useToast();
@@ -105,8 +111,8 @@ export function ShiftTaskList({
       ? true
       : isDoseConfirmable(row.event.scheduled_date, row.event.scheduled_time ?? null, timezone);
   };
-  // ONE filled action: the first row that has a button.
-  const primaryKey = model.rows.find(canAct)?.key ?? null;
+  // ONE filled action: the first row that has a button (none when the screen's primary is Take).
+  const primaryKey = primaryAllowed ? (model.rows.find(canAct)?.key ?? null) : null;
 
   const renderAction = (row: ShiftListRow): ReactElement | null => {
     const name = row.event.title;
@@ -158,7 +164,7 @@ export function ShiftTaskList({
       <Button
         size="sm"
         variant={variant}
-        className="flex-none rounded-sm!"
+        className="flex-none"
         aria-label={t(row.kind === 'med' ? 'shifts:tasks.list.takenLabel' : 'shifts:tasks.list.doneLabel', { name })}
         data-testid={row.kind === 'med' ? 'shift-task-taken' : 'shift-task-done'}
         data-variant={variant}

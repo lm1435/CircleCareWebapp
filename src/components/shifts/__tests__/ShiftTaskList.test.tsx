@@ -200,6 +200,22 @@ describe('shift detail list: one accent', () => {
     expect(screen.getAllByTestId('shift-task-done')[1]).toHaveAttribute('data-variant', 'outline');
   });
 
+  it('with another primary on screen (an open shift\'s Take), EVERY Done / Taken is an outline', () => {
+    renderList({ primaryAllowed: false });
+    const buttons = [...screen.getAllByTestId('shift-task-done'), ...screen.queryAllByTestId('shift-task-taken')];
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const b of buttons) expect(b).toHaveAttribute('data-variant', 'outline');
+  });
+
+  it('Done / Taken use the standard sm radius (rounded-md, 12px like mobile), never a nested override', () => {
+    renderList();
+    const buttons = [...screen.getAllByTestId('shift-task-done'), ...screen.queryAllByTestId('shift-task-taken')];
+    for (const b of buttons) {
+      expect(b).toHaveClass('rounded-md');
+      expect(b.className).not.toMatch(/rounded-sm/);
+    }
+  });
+
   it('completing a task and confirming a dose go through the shared hooks', async () => {
     const user = userEvent.setup();
     eventsHook.value = {

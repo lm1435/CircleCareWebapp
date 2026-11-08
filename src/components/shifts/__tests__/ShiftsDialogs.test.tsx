@@ -149,7 +149,7 @@ beforeEach(() => {
 describe('Shift detail', () => {
   it('shows the facts: date, overnight time with "next day", repeat, who, reminder', async () => {
     const { dialog } = await openDetail(shift());
-    expect(within(dialog).getByTestId('shift-detail-date')).toHaveTextContent('Wednesday, October 21');
+    expect(within(dialog).getByTestId('shift-detail-date')).toHaveTextContent('Wed, Oct 21');
     expect(within(dialog).getByTestId('shift-detail-time')).toHaveTextContent('8:00 PM – 8:00 AM (next day)');
     expect(within(dialog).getByTestId('shift-detail-repeat')).toHaveTextContent('Daily');
     expect(within(dialog).getByTestId('shift-detail-who')).toHaveTextContent('You');
