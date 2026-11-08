@@ -6,15 +6,11 @@ import { AddMenu, type AddMenuType } from '@/components/layout/AddMenu';
 import { Button, Eyebrow, Icon, Sheet, Text, type IconName } from '@/components/ui';
 
 /**
- * Active-state classes, one literal per section (spec §5.2). Static map, never
- * `bg-${section}-soft`: Tailwind scans source text and cannot see an
- * interpolation, so a computed name compiles to nothing.
+ * ONE active treatment for every item (owner 2026-11-07, "one accent"): a neutral fill with ink
+ * text, never a per-section dusk/clay/terracotta tint. The icon stays its outline glyph whether
+ * active or not, so the rail has a single icon weight.
  */
-const ACTIVE_DUSK = 'bg-dusk-soft text-dusk-deep';
-const ACTIVE_MOSS = 'bg-moss-soft text-moss-deep';
-const ACTIVE_CLAY = 'bg-clay-soft text-clay-deep';
-const ACTIVE_TERRACOTTA = 'bg-terracotta-soft text-terracotta-deep';
-const ACTIVE_NEUTRAL = 'bg-bg-2 text-ink';
+const ACTIVE = 'bg-bg-2 text-ink';
 
 const LINK_BASE =
   'flex min-h-[44px] items-center gap-3 rounded-full px-4 py-2 text-md font-medium no-underline transition-colors duration-fast';
@@ -25,9 +21,6 @@ interface NavItem {
   segment: string;
   labelKey: string;
   icon: IconName;
-  /** Filled counterpart, painted while the route is active. */
-  activeIcon?: IconName;
-  active: string;
 }
 
 interface NavGroup {
@@ -45,8 +38,6 @@ const GROUPS: readonly NavGroup[] = [
         segment: '',
         labelKey: 'nav.home',
         icon: 'today-outline',
-        activeIcon: 'today',
-        active: ACTIVE_NEUTRAL,
       },
     ],
   },
@@ -57,22 +48,17 @@ const GROUPS: readonly NavGroup[] = [
         segment: 'calendar',
         labelKey: 'nav.calendar',
         icon: 'calendar-outline',
-        activeIcon: 'calendar',
-        active: ACTIVE_DUSK,
       },
-      { segment: 'meds', labelKey: 'nav.meds', icon: 'medkit-outline', active: ACTIVE_CLAY },
+      { segment: 'meds', labelKey: 'nav.meds', icon: 'medkit-outline' },
       {
         segment: 'tasks',
         labelKey: 'nav.tasks',
         icon: 'checkbox-outline',
-        activeIcon: 'checkbox',
-        active: ACTIVE_MOSS,
       },
       {
         segment: 'notes',
         labelKey: 'nav.notes',
         icon: 'document-text-outline',
-        active: ACTIVE_DUSK,
       },
     ],
   },
@@ -83,33 +69,28 @@ const GROUPS: readonly NavGroup[] = [
         segment: 'emergency',
         labelKey: 'nav.emergency',
         icon: 'medical-outline',
-        activeIcon: 'medical',
-        active: ACTIVE_TERRACOTTA,
       },
       {
         segment: 'documents',
         labelKey: 'nav.documents',
         icon: 'document-text-outline',
-        active: ACTIVE_TERRACOTTA,
       },
     ],
   },
   {
     labelKey: null,
     items: [
-      { segment: 'activity', labelKey: 'nav.activity', icon: 'pulse-outline', active: ACTIVE_DUSK },
-      { segment: 'vitals', labelKey: 'nav.vitals', icon: 'heart-outline', active: ACTIVE_NEUTRAL },
+      { segment: 'activity', labelKey: 'nav.activity', icon: 'pulse-outline' },
+      { segment: 'vitals', labelKey: 'nav.vitals', icon: 'heart-outline' },
       {
         segment: 'members',
         labelKey: 'nav.members',
         icon: 'people-outline',
-        active: ACTIVE_NEUTRAL,
       },
       {
         segment: 'settings',
         labelKey: 'nav.settings',
         icon: 'settings-outline',
-        active: ACTIVE_NEUTRAL,
       },
     ],
   },
@@ -218,24 +199,15 @@ export function Sidebar({
                       className={({ isActive }) =>
                         `${LINK_BASE} ${
                           isActive || (item.segment === 'emergency' && onDoctorVisits)
-                            ? item.active
+                            ? ACTIVE
                             : LINK_INACTIVE
                         }`
                       }
                     >
-                      {({ isActive: active }) => {
-                        const isActive =
-                          active || (item.segment === 'emergency' && onDoctorVisits);
-                        return (
-                          <>
-                            <Icon
-                              name={isActive ? (item.activeIcon ?? item.icon) : item.icon}
-                              size="row"
-                            />
-                            {t(item.labelKey)}
-                          </>
-                        );
-                      }}
+                      <>
+                        <Icon name={item.icon} size="row" />
+                        {t(item.labelKey)}
+                      </>
                     </NavLink>
                   </li>
                 ))}

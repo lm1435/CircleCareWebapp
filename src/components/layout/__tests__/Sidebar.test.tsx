@@ -80,28 +80,28 @@ describe('Sidebar', () => {
     expect(within(screen.getByRole('list', { name: 'Today' })).getAllByRole('link')).toHaveLength(1);
   });
 
+  // One accent (owner 2026-11-07): the active item wears the SAME neutral treatment in every section.
   it.each([
-    ['/circles/c1/calendar', 'Calendar', 'bg-dusk-soft text-dusk-deep'],
-    ['/circles/c1/activity', 'Activity', 'bg-dusk-soft text-dusk-deep'],
-    ['/circles/c1/notes', 'Notes', 'bg-dusk-soft text-dusk-deep'],
-    ['/circles/c1/tasks', 'Tasks', 'bg-moss-soft text-moss-deep'],
-    ['/circles/c1/meds', 'Medications', 'bg-clay-soft text-clay-deep'],
-    ['/circles/c1/emergency', 'Emergency Info', 'bg-terracotta-soft text-terracotta-deep'],
-    ['/circles/c1/documents', 'Documents', 'bg-terracotta-soft text-terracotta-deep'],
-    ['/circles/c1', 'Today', 'bg-bg-2 text-ink'],
-    ['/circles/c1/vitals', 'Vitals', 'bg-bg-2 text-ink'],
-    ['/circles/c1/members', 'Members', 'bg-bg-2 text-ink'],
-    ['/circles/c1/settings', 'Circle Settings', 'bg-bg-2 text-ink'],
-  ])('%s paints %s with its section colour', (path, name, activeClass) => {
+    ['/circles/c1/calendar', 'Calendar'],
+    ['/circles/c1/activity', 'Activity'],
+    ['/circles/c1/notes', 'Notes'],
+    ['/circles/c1/tasks', 'Tasks'],
+    ['/circles/c1/meds', 'Medications'],
+    ['/circles/c1/emergency', 'Emergency Info'],
+    ['/circles/c1/documents', 'Documents'],
+    ['/circles/c1', 'Today'],
+    ['/circles/c1/vitals', 'Vitals'],
+    ['/circles/c1/members', 'Members'],
+    ['/circles/c1/settings', 'Circle Settings'],
+  ])('%s paints %s with the one neutral active treatment', (path, name) => {
     renderSidebar(path);
 
     const link = screen.getByRole('link', { name });
     expect(link).toHaveAttribute('aria-current', 'page');
-    expect(link.className).toContain(activeClass);
+    expect(link.className).toContain('bg-bg-2 text-ink');
+    expect(link.className).not.toMatch(/-soft text-(dusk|moss|clay|terracotta)-deep/);
     // Every other link keeps the inactive treatment.
-    expect(screen.getByRole('link', { name: 'Vitals' }).className).toContain(
-      name === 'Vitals' ? activeClass : 'text-ink-2'
-    );
+    expect(screen.getByRole('link', { name: name === 'Vitals' ? 'Members' : 'Vitals' }).className).toContain('text-ink-2');
   });
 
   // Notes by doctor: a doctor's Visits & notes page is part of Medical Info, so that
@@ -110,7 +110,7 @@ describe('Sidebar', () => {
     renderSidebar('/circles/c1/providers/p1');
 
     const link = screen.getByRole('link', { name: 'Emergency Info' });
-    expect(link.className).toContain('bg-terracotta-soft text-terracotta-deep');
+    expect(link.className).toContain('bg-bg-2 text-ink');
     expect(screen.getByRole('link', { name: 'Today' }).className).toContain('text-ink-2');
     expect(screen.getByRole('link', { name: 'Calendar' }).className).toContain('text-ink-2');
   });
@@ -120,16 +120,18 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Today' })).not.toHaveAttribute('aria-current');
   });
 
+  // Consistent icon fill: every item keeps its outline glyph whether active or not.
   it.each([
     ['/circles/c1', 'Today', 'today'],
     ['/circles/c1/calendar', 'Calendar', 'calendar'],
     ['/circles/c1/tasks', 'Tasks', 'checkbox'],
     ['/circles/c1/emergency', 'Emergency Info', 'medical'],
-  ])('%s swaps %s to the filled glyph', (path, name, filled) => {
+  ])('%s keeps %s on its outline glyph while active', (path, name, filled) => {
     renderSidebar(path);
 
     const svg = screen.getByRole('link', { name }).querySelector('svg');
-    expect(svg?.outerHTML).toContain(firstPathData(filled as IconName));
+    expect(svg?.outerHTML).toContain(firstPathData(`${filled}-outline` as IconName));
+    expect(svg?.outerHTML).not.toContain(firstPathData(filled as IconName));
   });
 
   it('an inactive link keeps its outline glyph', () => {
