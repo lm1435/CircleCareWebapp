@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
@@ -87,7 +87,8 @@ describe('departed member, name-only embed (no email) — web', () => {
       />
     );
     // The assignee is the person chip by the title (first name; "Assigned to" is spoken).
-    expect(screen.getByTestId('event-detail-who')).toHaveTextContent(/Assigned to, Lisa$/);
+    expect(within(screen.getByTestId('event-detail-who')).getByText('Assigned to, Lisa Departed')).toHaveClass('sr-only');
+    expect(screen.getByTestId('event-detail-who-name')).toHaveTextContent(/^Lisa$/);
     expect(screen.getByText('Completed by')).toBeInTheDocument();
     expect(screen.getByText(/^Lisa Departed · /)).toBeInTheDocument();
     expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();

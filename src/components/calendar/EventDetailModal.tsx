@@ -318,6 +318,16 @@ export function EventDetailModal({
     return member ? member.first_name?.trim() || member.email.split('@')[0] : null;
   }, [event.assigned_to_user, event.assigned_to, members]);
 
+  // Screen readers hear the FULL name on the chip (mobile parity); the chip shows the first.
+  const assignedToFullName = useMemo(() => {
+    const person =
+      event.assigned_to_user ??
+      (event.assigned_to ? (members ?? []).find((m) => m.id === event.assigned_to) : undefined);
+    if (!person) return null;
+    const full = [person.first_name?.trim(), person.last_name?.trim()].filter(Boolean).join(' ');
+    return full || null;
+  }, [event.assigned_to_user, event.assigned_to, members]);
+
   // WHEN = date · time in ONE cell ("Fri, Jun 12 · 8:00 AM"; "All day" with no time). A past
   // day's dose nobody answered shows the DATE alone: its virtual occurrence carries the
   // medication's CURRENT time, which after a time edit is not the time it was due
@@ -348,6 +358,7 @@ export function EventDetailModal({
     <PersonChip
       data-testid="event-detail-who"
       name={chipName}
+      spokenName={chipHasPerson ? (assignedToFullName ?? undefined) : undefined}
       avatar={chipHasPerson}
       spokenPrefix={t('calendar:eventDetail.assignedTo')}
     />

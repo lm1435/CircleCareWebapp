@@ -106,11 +106,14 @@ export function DetailField({
  */
 export function PersonChip({
   name,
+  spokenName,
   spokenPrefix,
   avatar = true,
   'data-testid': testId,
 }: {
   name: string;
+  /** What screen readers hear instead of `name` (e.g. the full name while the chip shows the first). */
+  spokenName?: string;
   spokenPrefix: string;
   /** False for a chip that names no single person ("Unassigned", "Night · Open shift"). */
   avatar?: boolean;
@@ -128,8 +131,14 @@ export function PersonChip({
           <Avatar name={name} size="xs" />
         </span>
       )}
-      <span className="sr-only">{`${spokenPrefix}, `}</span>
-      <span data-testid={testId ? `${testId}-name` : undefined} className="min-w-0 truncate">
+      <span className="sr-only">
+        {spokenName ? `${spokenPrefix}, ${spokenName}` : `${spokenPrefix}, `}
+      </span>
+      <span
+        data-testid={testId ? `${testId}-name` : undefined}
+        aria-hidden={spokenName ? 'true' : undefined}
+        className="min-w-0 truncate"
+      >
         {name}
       </span>
     </p>

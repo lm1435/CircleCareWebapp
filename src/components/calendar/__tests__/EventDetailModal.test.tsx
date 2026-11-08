@@ -489,10 +489,14 @@ describe('EventDetailModal', () => {
       />
     );
 
-    // The person chip by the title: avatar + FIRST name, spoken "Assigned to, Sam".
+    // The person chip by the title: avatar + FIRST name shown; screen readers hear the FULL
+    // name ("Assigned to, Sam Diaz"), matching mobile's chip. The visible first name is hidden
+    // from assistive tech so the name is not read twice.
     const chip = screen.getByTestId('event-detail-who');
-    expect(chip).toHaveTextContent(/Assigned to, Sam$/);
-    expect(screen.getByTestId('event-detail-who-name')).toHaveTextContent(/^Sam$/);
+    expect(within(chip).getByText('Assigned to, Sam Diaz')).toHaveClass('sr-only');
+    const visibleName = screen.getByTestId('event-detail-who-name');
+    expect(visibleName).toHaveTextContent(/^Sam$/);
+    expect(visibleName).toHaveAttribute('aria-hidden', 'true');
     expect(chip.querySelector('[aria-hidden="true"]')).not.toBeNull();
     // It sits in the header row with the title, not in the card.
     expect(within(screen.getByTestId('event-detail-header')).getByTestId('event-detail-who')).toBe(chip);
@@ -555,7 +559,9 @@ describe('EventDetailModal', () => {
           onClose={vi.fn()}
         />
       );
-      expect(screen.getByTestId('event-detail-who')).toHaveTextContent(/Assigned to, Sam$/);
+      // Spoken full name, shown first name (mobile parity).
+      expect(within(screen.getByTestId('event-detail-who')).getByText('Assigned to, Sam Diaz')).toHaveClass('sr-only');
+      expect(screen.getByTestId('event-detail-who-name')).toHaveTextContent(/^Sam$/);
     });
 
     it('omits the row (no Unassigned label) when the appointment has no assignee', () => {
@@ -601,7 +607,7 @@ describe('EventDetailModal', () => {
             onClose={vi.fn()}
           />
         );
-        expect(screen.getByTestId('event-detail-who')).toHaveTextContent(/Asignado a, Sam$/);
+        expect(within(screen.getByTestId('event-detail-who')).getByText('Asignado a, Sam Diaz')).toHaveClass('sr-only');
       } finally {
         await i18n.changeLanguage('en');
       }
