@@ -96,7 +96,7 @@ export function ActivityItem({ activity, timezone }: ActivityItemProps): ReactEl
           {renderActivityDescription(activity, t, { hourCycle, timezone })}
         </p>
         {lateScheduledDate && (
-          <p className="m-0 mt-1 text-xs italic text-ink-3">
+          <p className="m-0 mt-1 text-xs text-ink-3">
             {t('scheduledFor', { date: formatDateShort(lateScheduledDate, t) })}
           </p>
         )}

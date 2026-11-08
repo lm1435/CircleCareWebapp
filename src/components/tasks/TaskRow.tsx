@@ -212,13 +212,13 @@ export function TaskRow({
       {assigneeName ? (
         <span>{assigneeName}</span>
       ) : (
-        <span className="italic text-ink-3">{t('row.unassigned')}</span>
+        <span className="text-ink-3">{t('row.unassigned')}</span>
       )}
       <span aria-hidden="true" className="h-[3px] w-[3px] rounded-full bg-line" />
       {hasDueDate ? (
         <span>{dueLabel}</span>
       ) : (
-        <span className="italic text-ink-3">{t('row.noDueDate')}</span>
+        <span className="text-ink-3">{t('row.noDueDate')}</span>
       )}
       {isOverdue && <span className={STATUS_PILL.overdue}>{t('row.overdue')}</span>}
     </div>

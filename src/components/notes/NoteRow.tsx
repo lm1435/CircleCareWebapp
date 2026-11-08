@@ -227,7 +227,7 @@ export function NoteRow({
           <span className="text-sm text-ink">{authorName}</span>
           <span aria-hidden="true" className="h-[3px] w-[3px] rounded-full bg-ink-3" />
           <span className="text-xs text-ink-3">{timeLabel}</span>
-          {wasEdited && <span className="text-xs italic text-ink-3">{t('row.edited')}</span>}
+          {wasEdited && <span className="text-xs text-ink-3">{t('row.edited')}</span>}
         </div>
 
         {note.body && (
