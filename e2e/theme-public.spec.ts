@@ -120,7 +120,7 @@ test.describe('explicit preference (per device, localStorage)', () => {
 test.describe('dark rendering of real surfaces', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  test('the primary button is warm white with a charcoal label; Apple is black with a light outline', async ({
+  test('the primary button is moss with a near-black label; Apple is black with a light outline', async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
@@ -128,9 +128,9 @@ test.describe('dark rendering of real surfaces', () => {
     const primary = page.getByRole('button', { name: /^Sign in$/i }).first();
     await expect(primary).toBeVisible();
     expect(await primary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
-      'rgb(239, 233, 222)'
+      'rgb(138, 158, 120)' // --color-primary-fill dark #8a9e78 (ec60f3d, one accent)
     );
-    expect(await primary.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(35, 32, 25)');
+    expect(await primary.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(20, 19, 15)'); // --color-on-primary #14130f
 
     const apple = page.getByRole('button', { name: /apple/i }).first();
     await expect(apple).toBeVisible();
