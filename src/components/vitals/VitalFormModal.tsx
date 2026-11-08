@@ -524,6 +524,7 @@ export function VitalFormModal({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <TextField
                 id="value1"
+                required
                 label={t('fields.systolic')}
                 type="text"
                 inputMode="numeric"
@@ -538,6 +539,7 @@ export function VitalFormModal({
               />
               <TextField
                 id="value2"
+                required
                 label={t('fields.diastolic')}
                 type="text"
                 inputMode="numeric"
@@ -554,6 +556,7 @@ export function VitalFormModal({
           ) : (
             <TextField
               id="value1"
+              required
               label={t(`types.${vitalType}`)}
               type="text"
               inputMode="decimal"
@@ -572,6 +575,7 @@ export function VitalFormModal({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <DateField
               id="recorded_at"
+              required
               label={t('fields.date')}
               value={dateStr}
               error={errors.recorded_at}
@@ -584,6 +588,7 @@ export function VitalFormModal({
             />
             <TimeField
               id="recorded_time"
+              required
               label={t('fields.time')}
               value={timeStr}
               // The live conversion sits on the TIME field, where the digits are.

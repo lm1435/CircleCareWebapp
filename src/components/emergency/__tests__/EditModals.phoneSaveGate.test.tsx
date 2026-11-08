@@ -99,7 +99,7 @@ const save = (): void => {
 const type = (el: HTMLElement, value: string): void => {
   fireEvent.change(el, { target: { value } });
 };
-const nameInput = (): HTMLElement => screen.getByLabelText(/^Name.*required/i);
+const nameInput = (): HTMLElement => screen.getByLabelText(/^Name \*/);
 
 /** The refused-save contract, identical on all three forms. */
 function expectRefused(input: HTMLElement): void {
@@ -211,7 +211,7 @@ describe.each([
     index === undefined ? baseInfo : { ...baseInfo, insurance_plans: [{ carrier: 'Aetna' }] };
   const open = (): HTMLElement => {
     render(wrap(<EditInsuranceModal circleId={CIRCLE_ID} info={info} index={index} onClose={vi.fn()} />));
-    type(screen.getByLabelText(/^Carrier.*required/i), 'Aetna');
+    type(screen.getByLabelText(/^Carrier \*/), 'Aetna');
     return screen.getByLabelText('Phone');
   };
 
@@ -242,7 +242,7 @@ describe('EditInsuranceModal — a plan whose STORED number is already invalid',
     render(wrap(<EditInsuranceModal circleId={CIRCLE_ID} info={storedInvalid} index={0} onClose={vi.fn()} />));
     const phone = screen.getByLabelText('Phone');
     expect(screen.getByText(ERROR)).toBeInTheDocument();
-    type(screen.getByLabelText(/^Carrier.*required/i), 'Aetna PPO');
+    type(screen.getByLabelText(/^Carrier \*/), 'Aetna PPO');
     save();
     expectRefused(phone);
     type(phone, '');
@@ -270,8 +270,8 @@ describe.each([
   const open = (): HTMLElement => {
     render(wrap(<EditContactModal circleId={CIRCLE_ID} info={info} index={index} onClose={vi.fn()} />));
     type(nameInput(), 'Luis');
-    type(screen.getByLabelText(/^Relationship.*required/i), 'Son');
-    return screen.getByLabelText(/^Phone.*required/i);
+    type(screen.getByLabelText(/^Relationship \*/), 'Son');
+    return screen.getByLabelText(/^Phone \*/);
   };
 
   it('a too-long number blocks Save', () => {
@@ -321,7 +321,7 @@ describe.each([
 describe('EditContactModal — a contact whose STORED number is already invalid (required field)', () => {
   const open = (): HTMLElement => {
     render(wrap(<EditContactModal circleId={CIRCLE_ID} info={storedInvalid} index={0} onClose={vi.fn()} />));
-    return screen.getByLabelText(/^Phone.*required/i);
+    return screen.getByLabelText(/^Phone \*/);
   };
 
   it('a rename alone still saves, the number untouched', async () => {

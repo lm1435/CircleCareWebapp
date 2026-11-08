@@ -269,7 +269,7 @@ describe('Doctor field: location prefill', () => {
 
 describe('Doctor field: saving a NEW appointment', () => {
   async function fillAndSave(user: ReturnType<typeof userEvent.setup>) {
-    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Follow-up');
+    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Follow-up');
     await user.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     return mutateCreate.mock.calls[0][0] as Record<string, unknown>;
@@ -299,7 +299,7 @@ describe('Doctor field: saving a NEW appointment', () => {
     const user = userEvent.setup();
     render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
     await user.selectOptions(doctorSelect(), '22222222-2222-4222-8222-222222222222');
-    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Follow-up');
+    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Follow-up');
     await user.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalled());
     expect(Analytics.providerLinked).not.toHaveBeenCalled();

@@ -78,13 +78,19 @@ beforeEach(() => {
 });
 
 describe('InviteMemberModal — email-required', () => {
+  it('the email is required: asterisk on its label, aria-required on the input', () => {
+    render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
+    expect(document.getElementById('invite-email')).toHaveAttribute('aria-required', 'true');
+    expect(document.querySelector('label[for="invite-email"]')).toHaveTextContent('*');
+  });
+
   it('disables the send button until an email is entered', async () => {
     const user = userEvent.setup();
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Send invite' })).toBeDisabled();
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     expect(screen.getByRole('button', { name: 'Send invite' })).toBeEnabled();
   });
 
@@ -92,7 +98,7 @@ describe('InviteMemberModal — email-required', () => {
     const user = userEvent.setup();
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'not-an-email');
+    await user.type(screen.getByLabelText(/^Email address/), 'not-an-email');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     expect(mutate).not.toHaveBeenCalled();
@@ -119,7 +125,7 @@ describe('InviteMemberModal — email-required', () => {
     const onClose = vi.fn();
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
 
-    await user.type(screen.getByLabelText('Email address'), '  ana@example.com  ');
+    await user.type(screen.getByLabelText(/^Email address/), '  ana@example.com  ');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -142,7 +148,7 @@ describe('InviteMemberModal — email-required', () => {
       opts?.onSuccess?.({ invite: { invite_code: 'ABC123', invite_url: 'https://my.circlecare.app/invite/ABC123' } })
     );
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(screen.getByRole('heading', { name: 'Invitation sent' })).toHaveFocus();
   });
@@ -155,7 +161,7 @@ describe('InviteMemberModal — email-required', () => {
     const onClose = vi.fn();
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={onClose} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     expect(screen.queryByRole('button', { name: 'Done' })).toBeNull();
@@ -199,7 +205,7 @@ describe('InviteMemberModal — email-required', () => {
     // Form step: "Send invite" is the one filled primary.
     expect(countFilledInFooter()).toBe(1);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     await screen.findByRole('button', { name: 'Copy link' });
@@ -214,7 +220,7 @@ describe('InviteMemberModal — email-required', () => {
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
     await user.click(screen.getByRole('radio', { name: /Care Recipient/i }));
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     expect(mutate.mock.calls[0][0]).toEqual({
@@ -236,7 +242,7 @@ describe('InviteMemberModal — email-required', () => {
     );
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     await waitFor(() => {
@@ -264,7 +270,7 @@ describe('InviteMemberModal — email-required', () => {
     );
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     // role="alert" — the note is announced, not just visible.
@@ -286,7 +292,7 @@ describe('InviteMemberModal — email-required', () => {
     );
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     const note = await screen.findByRole('alert');
@@ -305,7 +311,7 @@ describe('InviteMemberModal — email-required', () => {
     );
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     await waitFor(() => {
@@ -322,7 +328,7 @@ describe('InviteMemberModal — email-required', () => {
     );
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     const upgrade = await screen.findByRole('button', { name: 'Upgrade' });
@@ -357,7 +363,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
       opts?.onError?.({ error: { code: 'SUBSCRIPTION_REQUIRED', details } });
       opts?.onSettled?.();
     });
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     await screen.findByRole('alert');
   }
@@ -378,7 +384,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
     await rejectWith402();
 
     // Typing re-renders the modal several times; the card stays as it was.
-    await user.type(screen.getByLabelText('Email address'), 'x');
+    await user.type(screen.getByLabelText(/^Email address/), 'x');
     await user.click(screen.getByRole('radio', { name: /Care Recipient/i }));
     expect(screen.getByRole('alert')).toBeInTheDocument();
 
@@ -415,7 +421,7 @@ describe('InviteMemberModal — invite_cap_reached', () => {
     );
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -458,7 +464,7 @@ describe('InviteMemberModal — sharing the link', () => {
     const user = userEvent.setup();
     stubNavigator(navStubs);
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     return user;
   }
@@ -705,7 +711,7 @@ describe('InviteMemberModal — double-submit guard', () => {
       <InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />
     );
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await submitFormTwice(container.querySelector('#invite-member-form') as HTMLFormElement);
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -719,12 +725,12 @@ describe('InviteMemberModal — double-submit guard', () => {
     );
     const form = container.querySelector('#invite-member-form') as HTMLFormElement;
 
-    await user.type(screen.getByLabelText('Email address'), 'not-an-email');
+    await user.type(screen.getByLabelText(/^Email address/), 'not-an-email');
     await submitFormTwice(form);
     expect(mutate).not.toHaveBeenCalled();
 
-    await user.clear(screen.getByLabelText('Email address'));
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.clear(screen.getByLabelText(/^Email address/));
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -743,7 +749,7 @@ describe('InviteMemberModal — double-submit guard', () => {
     });
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(mutate).toHaveBeenCalledTimes(1);
 
@@ -765,7 +771,7 @@ describe('InviteMemberModal — double-submit guard', () => {
     });
     render(<InviteMemberModal viewerIsOwner circleId={CIRCLE_ID} isSelfCare={false} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(mutate).toHaveBeenCalledTimes(1);
 
@@ -777,7 +783,7 @@ describe('InviteMemberModal — double-submit guard', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Invite someone else' }));
 
-    await user.type(screen.getByLabelText('Email address'), 'ben@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ben@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     expect(mutate).toHaveBeenCalledTimes(2);
     expect(mutate.mock.calls[1][0]).toEqual({ email: 'ben@example.com', member_type: 'caregiver' });
@@ -861,7 +867,7 @@ describe('InviteMemberModal — a MANAGER at the seat cap', () => {
         onClose={vi.fn()}
       />
     );
-    await user.type(screen.getByLabelText('Email address'), 'ana@example.com');
+    await user.type(screen.getByLabelText(/^Email address/), 'ana@example.com');
     await user.click(screen.getByRole('button', { name: 'Send invite' }));
     return screen.findByRole('alert');
   }
@@ -923,7 +929,7 @@ describe('InviteMemberModal — manager hint (docs/plans/manager-role.md)', () =
     const hint = screen.getByText(HINT);
     expect(hint).toBeInTheDocument();
     // Plain text, tied to the email field so it is read with it.
-    expect(screen.getByLabelText('Email address')).toHaveAttribute(
+    expect(screen.getByLabelText(/^Email address/)).toHaveAttribute(
       'aria-describedby',
       expect.stringContaining(hint.id)
     );

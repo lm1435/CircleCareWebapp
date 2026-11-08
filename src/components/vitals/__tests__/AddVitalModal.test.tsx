@@ -88,28 +88,38 @@ async function setRecordedTo(user: ReturnType<typeof userEvent.setup>, date: str
 }
 
 describe('AddVitalModal', () => {
+  it('marks the validated fields required (asterisk + aria-required): both BP values, date, time', () => {
+    render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
+    for (const id of ['value1', 'value2', 'recorded_at', 'recorded_time']) {
+      const el = document.getElementById(id);
+      expect(el, id).not.toBeNull();
+      expect(el, id).toHaveAttribute('aria-required', 'true');
+      expect(document.querySelector(`label[for="${id}"]`), id).toHaveTextContent('*');
+    }
+  });
+
   it('defaults to blood pressure and requires both systolic and diastolic', async () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
     // BP shows two value fields.
-    expect(screen.getByLabelText('Systolic')).toBeInTheDocument();
-    expect(screen.getByLabelText('Diastolic')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Systolic/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Diastolic/)).toBeInTheDocument();
 
     await setRecordedTo(user, '2026-06-15', '09:00');
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
     expect(mutateCreate).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Systolic')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByLabelText('Diastolic')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Systolic/)).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Diastolic/)).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('builds a BP payload with two values (no conversion, canonical mmHg)', async () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Systolic'), '120');
-    await user.type(screen.getByLabelText('Diastolic'), '80');
+    await user.type(screen.getByLabelText(/^Systolic/), '120');
+    await user.type(screen.getByLabelText(/^Diastolic/), '80');
     await setRecordedTo(user, '2026-06-15', '09:00');
 
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
@@ -180,8 +190,8 @@ describe('AddVitalModal', () => {
       useCircleResult.canEdit = true;
       rerender(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
-      await user.type(await screen.findByLabelText('Systolic'), '120');
-      await user.type(screen.getByLabelText('Diastolic'), '80');
+      await user.type(await screen.findByLabelText(/^Systolic/), '120');
+      await user.type(screen.getByLabelText(/^Diastolic/), '80');
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
@@ -198,7 +208,7 @@ describe('AddVitalModal', () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} initialType="weight" onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Weight'), '150');
+    await user.type(screen.getByLabelText(/^Weight/), '150');
     await setRecordedTo(user, '2026-06-15', '09:00');
 
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
@@ -217,7 +227,7 @@ describe('AddVitalModal', () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} initialType="glucose" onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Glucose'), '100');
+    await user.type(screen.getByLabelText(/^Glucose/), '100');
     await setRecordedTo(user, '2026-06-15', '09:00');
 
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
@@ -233,7 +243,7 @@ describe('AddVitalModal', () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} initialType="heart_rate" onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Heart rate'), '72');
+    await user.type(screen.getByLabelText(/^Heart rate/), '72');
     // NOW (recipient) is 2026-06-15 12:00 NY; pick a clearly future time.
     await setRecordedTo(user, '2026-06-16', '09:00');
 
@@ -249,13 +259,13 @@ describe('AddVitalModal', () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} initialType="heart_rate" onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Heart rate'), '5');
+    await user.type(screen.getByLabelText(/^Heart rate/), '5');
     await setRecordedTo(user, '2026-06-15', '09:00');
 
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
     expect(mutateCreate).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Heart rate')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Heart rate/)).toHaveAttribute('aria-invalid', 'true');
   });
 
   // PK15: a decimal comma is a decimal; absurd readings are still range-rejected.
@@ -264,7 +274,7 @@ describe('AddVitalModal', () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} initialType="weight" onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Weight'), '72,5');
+    await user.type(screen.getByLabelText(/^Weight/), '72,5');
     await setRecordedTo(user, '2026-06-15', '09:00');
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
@@ -277,24 +287,24 @@ describe('AddVitalModal', () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} initialType="heart_rate" onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Heart rate'), '1,200');
+    await user.type(screen.getByLabelText(/^Heart rate/), '1,200');
     await setRecordedTo(user, '2026-06-15', '09:00');
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
     expect(mutateCreate).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Heart rate')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Heart rate/)).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('PK15: "7,2,1" (two commas) is not guessed at: refused, nothing sent', async () => {
     const user = userEvent.setup();
     render(<AddVitalModal circleId={CIRCLE_ID} initialType="glucose" onClose={vi.fn()} />);
 
-    await user.type(screen.getByLabelText('Glucose'), '7,2,1');
+    await user.type(screen.getByLabelText(/^Glucose/), '7,2,1');
     await setRecordedTo(user, '2026-06-15', '09:00');
     await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
     expect(mutateCreate).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Glucose')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText(/^Glucose/)).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('renders nothing when the user cannot edit', () => {
@@ -327,8 +337,8 @@ describe('AddVitalModal', () => {
       mutateCreate.mockImplementation(() => neverSettles());
       render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
-      await user.type(screen.getByLabelText('Systolic'), '120');
-      await user.type(screen.getByLabelText('Diastolic'), '80');
+      await user.type(screen.getByLabelText(/^Systolic/), '120');
+      await user.type(screen.getByLabelText(/^Diastolic/), '80');
       await setRecordedTo(user, '2026-06-15', '09:00');
 
       await submitFormTwice(vitalForm());
@@ -341,8 +351,8 @@ describe('AddVitalModal', () => {
       mutateCreate.mockRejectedValueOnce(new Error('500'));
       render(<AddVitalModal circleId={CIRCLE_ID} onClose={vi.fn()} />);
 
-      await user.type(screen.getByLabelText('Systolic'), '120');
-      await user.type(screen.getByLabelText('Diastolic'), '80');
+      await user.type(screen.getByLabelText(/^Systolic/), '120');
+      await user.type(screen.getByLabelText(/^Diastolic/), '80');
       await setRecordedTo(user, '2026-06-15', '09:00');
 
       await submitFormTwice(vitalForm());
@@ -382,7 +392,7 @@ describe('AddVitalModal', () => {
 
       await user.selectOptions(screen.getByLabelText('Reading type'), 'Temperature');
       expect(screen.getByText('in °C')).toBeInTheDocument();
-      await user.type(screen.getByLabelText('Temperature'), '37,5');
+      await user.type(screen.getByLabelText(/^Temperature/), '37,5');
       await setRecordedTo(user, '2026-06-15', '09:00');
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
@@ -404,7 +414,7 @@ describe('AddVitalModal', () => {
 
       await user.selectOptions(screen.getByLabelText('Reading type'), 'Temperature');
       expect(screen.getByText('in °F')).toBeInTheDocument();
-      await user.type(screen.getByLabelText('Temperature'), '99.1');
+      await user.type(screen.getByLabelText(/^Temperature/), '99.1');
       await setRecordedTo(user, '2026-06-15', '09:00');
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
@@ -439,7 +449,7 @@ describe('AddVitalModal', () => {
       const user = userEvent.setup();
       render(<AddVitalModal circleId={CIRCLE_ID} initialType="temperature" onClose={vi.fn()} />);
 
-      await user.type(screen.getByLabelText('Temperature'), '98.6');
+      await user.type(screen.getByLabelText(/^Temperature/), '98.6');
       await setRecordedTo(user, '2026-06-15', '09:00');
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
@@ -447,14 +457,14 @@ describe('AddVitalModal', () => {
       expect(
         screen.getByText('That looks outside the expected range. Double-check the number.')
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Temperature')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByLabelText(/^Temperature/)).toHaveAttribute('aria-invalid', 'true');
     });
 
     it('a temperature below the °F range is refused', async () => {
       const user = userEvent.setup();
       render(<AddVitalModal circleId={CIRCLE_ID} initialType="temperature" onClose={vi.fn()} />);
 
-      await user.type(screen.getByLabelText('Temperature'), '37');
+      await user.type(screen.getByLabelText(/^Temperature/), '37');
       await setRecordedTo(user, '2026-06-15', '09:00');
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
@@ -470,7 +480,7 @@ describe('AddVitalModal', () => {
 
       await user.selectOptions(screen.getByLabelText('Reading type'), 'Blood oxygen');
       expect(screen.getByText('in %')).toBeInTheDocument();
-      await user.type(screen.getByLabelText('Blood oxygen'), '96');
+      await user.type(screen.getByLabelText(/^Blood oxygen/), '96');
       await setRecordedTo(user, '2026-06-15', '09:00');
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 
@@ -491,7 +501,7 @@ describe('AddVitalModal', () => {
         <AddVitalModal circleId={CIRCLE_ID} initialType="oxygen_saturation" onClose={vi.fn()} />
       );
 
-      await user.type(screen.getByLabelText('Blood oxygen'), typed);
+      await user.type(screen.getByLabelText(/^Blood oxygen/), typed);
       await setRecordedTo(user, '2026-06-15', '09:00');
       await user.click(screen.getByRole('button', { name: 'Save reading' }));
 

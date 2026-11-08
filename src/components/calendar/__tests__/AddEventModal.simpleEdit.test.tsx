@@ -171,7 +171,7 @@ describe('the PATCH is the one the full edit layout sends', () => {
 
   it.each(['appt', 'apptWeekly'])('a title edit of %s', async (key) => {
     const edit = async (user: ReturnType<typeof userEvent.setup>) => {
-      const field = screen.getByLabelText(/^Title( \* \(required\))?$/);
+      const field = screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
       await user.clear(field);
       await user.type(field, 'Follow-up');
     };

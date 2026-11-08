@@ -108,7 +108,7 @@ function renderAppt(props: Partial<React.ComponentProps<typeof AddEventModal>> =
 }
 
 const timeChips = () => screen.getByRole('radiogroup', { name: 'Common dose times' });
-const title = () => screen.getByLabelText(/^Title( \* \(required\))?$/);
+const title = () => screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
 const chip = (name: RegExp) => within(timeChips()).getByRole('radio', { name });
 
 describe('new medication: structure', () => {

@@ -1,11 +1,10 @@
 import { forwardRef, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { Icon } from './Icon';
-import { RequiredMarker } from './RequiredMarker';
+import { FieldLabel } from './FieldLabel';
 import { Text } from './Text';
 import {
   INPUT_ERROR,
   INPUT_HINT,
-  INPUT_LABEL,
   INPUT_TEXT,
   fieldShell,
   focusControlOnShellPress,
@@ -38,12 +37,9 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
 
   return (
     <div>
-      <label htmlFor={id} className={INPUT_LABEL}>
-        <Text variant="label" as="span">
-          {label}
-          {required ? <RequiredMarker /> : null}
-        </Text>
-      </label>
+      <FieldLabel htmlFor={id} required={required}>
+        {label}
+      </FieldLabel>
       <div className={shell} onMouseDown={focusControlOnShellPress}>
         <textarea
           ref={ref}

@@ -144,7 +144,7 @@ describe('save events', () => {
   it('a missing appointment end time is missing_end_time', async () => {
     const user = userEvent.setup();
     render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={onClose} />);
-    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Checkup');
+    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Checkup');
     const time = screen.getByLabelText(/^Time/) as HTMLInputElement;
     await user.clear(time);
     await user.type(time, '08:00');

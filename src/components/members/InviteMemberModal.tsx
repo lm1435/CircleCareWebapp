@@ -433,6 +433,7 @@ export function InviteMemberModal({
 
         <TextField
           id="invite-email"
+          required
           type="email"
           autoComplete="email"
           label={t('invite.emailLabel')}

@@ -108,7 +108,7 @@ describe('AddEventModal - a NEW event defaults to the recipient\'s today', () =>
     setWorld('Pacific/Midway', 'Pacific/Kiritimati', '2026-09-30T23:30:00Z');
     const user = userEvent.setup({ advanceTimers: () => undefined });
     render(<AddEventModal circleId={CIRCLE_ID} initialType="task" layout="full" onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Water plants');
+    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Water plants');
     await user.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     expect(mutateCreate.mock.calls[0][0].scheduled_date).toBe('2026-10-01');

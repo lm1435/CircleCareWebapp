@@ -16,12 +16,11 @@ import { useCoarsePointer } from '@/hooks/useCoarsePointer';
 import { useMenu } from '@/hooks/useMenu';
 import { Icon } from './Icon';
 import { emitNativeChange, opensNativePicker } from './pickerField';
-import { RequiredMarker } from './RequiredMarker';
+import { FieldLabel } from './FieldLabel';
 import { Text } from './Text';
 import {
   INPUT_ERROR,
   INPUT_HINT,
-  INPUT_LABEL,
   INPUT_TEXT,
   INPUT_TRAILING,
   fieldShell,
@@ -268,12 +267,9 @@ export const TimeField = forwardRef<HTMLInputElement, TimeFieldProps>(function T
 
   return (
     <div>
-      <label htmlFor={id} className={INPUT_LABEL}>
-        <Text variant="label" as="span">
-          {label}
-          {required ? <RequiredMarker /> : null}
-        </Text>
-      </label>
+      <FieldLabel htmlFor={id} required={required}>
+        {label}
+      </FieldLabel>
       <div ref={shellRef} className={shell}>
         <input
           ref={setInputRef}

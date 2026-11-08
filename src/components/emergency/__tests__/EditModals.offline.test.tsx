@@ -65,11 +65,11 @@ it('EditContactModal offline: Save explains, sends nothing, keeps the input; onl
   const onClose = vi.fn();
   render(wrap(<EditContactModal circleId={CIRCLE_ID} info={baseInfo} onClose={onClose} />));
 
-  fireEvent.change(screen.getByLabelText(/^Name.*required/i), { target: { value: 'Sarah Smith' } });
-  fireEvent.change(screen.getByLabelText(/^Relationship.*required/i), {
+  fireEvent.change(screen.getByLabelText(/^Name \*/), { target: { value: 'Sarah Smith' } });
+  fireEvent.change(screen.getByLabelText(/^Relationship \*/), {
     target: { value: 'Daughter' },
   });
-  fireEvent.change(screen.getByLabelText(/^Phone.*required/i), {
+  fireEvent.change(screen.getByLabelText(/^Phone \*/), {
     target: { value: '(303) 555-0101' },
   });
 
@@ -82,8 +82,8 @@ it('EditContactModal offline: Save explains, sends nothing, keeps the input; onl
   expect(mockUpdate).not.toHaveBeenCalled();
   expect(onClose).not.toHaveBeenCalled();
   expect(screen.getByRole('dialog')).toBeInTheDocument();
-  expect(screen.getByLabelText(/^Name.*required/i)).toHaveValue('Sarah Smith');
-  expect(screen.getByLabelText(/^Relationship.*required/i)).toHaveValue('Daughter');
+  expect(screen.getByLabelText(/^Name \*/)).toHaveValue('Sarah Smith');
+  expect(screen.getByLabelText(/^Relationship \*/)).toHaveValue('Daughter');
 
   // Reconnect: nothing replays on its own; the caregiver's own Save sends it once.
   act(() => onlineManager.setOnline(true));

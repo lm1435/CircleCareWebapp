@@ -87,7 +87,7 @@ const type = (el: HTMLElement, value: string): void => {
 };
 const ext = (): HTMLInputElement => screen.getByLabelText('Extension') as HTMLInputElement;
 const phone = (): HTMLElement => screen.getByLabelText('Phone');
-const nameInput = (): HTMLElement => screen.getByLabelText(/^(Name|Carrier).*required/i);
+const nameInput = (): HTMLElement => screen.getByLabelText(/^(Name|Carrier) \*/);
 /** The body of the one PUT. */
 const sent = (): Record<string, unknown> => mockUpdate.mock.calls[0][1] as Record<string, unknown>;
 /** The body of the one POST /providers (an ADD goes through the doctor API, not the array PUT). */

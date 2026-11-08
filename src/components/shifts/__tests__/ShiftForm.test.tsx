@@ -147,6 +147,22 @@ describe('ShiftFormModal (create)', () => {
     expect(screen.getByTestId('shift-form-duration')).toHaveTextContent('3 h 30 min');
   });
 
+  // Owner 2026-11-07: the name is required, so its visible question carries the red asterisk
+  // (aria-hidden; the input says aria-required) and no stray glyph shows above the field.
+  it('marks the name question with a red asterisk and the input aria-required', () => {
+    shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
+    const heading = screen.getByRole('heading', { name: /What.s the shift called\?/ });
+    const star = heading.querySelector('[aria-hidden="true"]');
+    expect(star?.textContent).toContain('*');
+    expect(star?.className).toContain('text-terracotta');
+    const input = document.getElementById('shift_name')!;
+    expect(input).toHaveAttribute('aria-required', 'true');
+    // The whole label is visually hidden (its wrapper's `[&_label]:sr-only`), so no lone "*" shows.
+    expect(document.querySelector('label[for="shift_name"]')?.parentElement?.parentElement).toHaveClass(
+      '[&_label]:sr-only'
+    );
+  });
+
   it('validates the name, the times and the 15 min floor', async () => {
     const user = userEvent.setup();
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
@@ -302,7 +318,10 @@ describe('ShiftFormModal (defaults, order, hydration)', () => {
 
   it('sections follow the agreed order: name, when, how often, who, then More details', async () => {
     shell(<ShiftFormModal circleId="c" initialDate="2026-10-20" onClose={vi.fn()} />);
-    const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+    // `* ` is the aria-hidden required asterisk on the name heading.
+    const headings = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => (h.textContent ?? '').replace(/ \*$/, ''));
     expect(headings).toEqual([
       "What's the shift called?",
       'When?',

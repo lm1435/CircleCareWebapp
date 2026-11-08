@@ -96,7 +96,7 @@ async function saveNoteOnly(v: HealthVital) {
 describe('VitalFormModal edit: weight (kg stored, viewer lbs)', () => {
   it('shows the canonical value in the viewer unit, rounded to one decimal', () => {
     render(<VitalFormModal circleId={CIRCLE_ID} vital={vital({})} onClose={vi.fn()} />);
-    expect(screen.getByLabelText('Weight')).toHaveValue('159.8');
+    expect(screen.getByLabelText(/^Weight/)).toHaveValue('159.8');
   });
 
   // PK8: the display rounding (toFixed(1)) is no longer re-converted on save.
@@ -132,7 +132,7 @@ describe('VitalFormModal edit: weight (kg stored, viewer lbs)', () => {
   it('PK8: retyping the same value (159.80) is not a change', async () => {
     const user = userEvent.setup();
     render(<VitalFormModal circleId={CIRCLE_ID} vital={vital({})} onClose={vi.fn()} />);
-    const weight = screen.getByLabelText('Weight');
+    const weight = screen.getByLabelText(/^Weight/);
     await user.clear(weight);
     await user.type(weight, '159.80');
     const notes = screen.getByLabelText(/^Notes/);
@@ -155,7 +155,7 @@ describe('VitalFormModal edit: weight (kg stored, viewer lbs)', () => {
   it('PK15: a decimal comma in an edit is read as a decimal (160,5 lb)', async () => {
     const user = userEvent.setup();
     render(<VitalFormModal circleId={CIRCLE_ID} vital={vital({})} onClose={vi.fn()} />);
-    const weight = screen.getByLabelText('Weight');
+    const weight = screen.getByLabelText(/^Weight/);
     await user.clear(weight);
     await user.type(weight, '160,5');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -168,7 +168,7 @@ describe('VitalFormModal edit: weight (kg stored, viewer lbs)', () => {
   it('editing the value (160 lb) sends 160 * 0.45359237 kg with unit kg', async () => {
     const user = userEvent.setup();
     render(<VitalFormModal circleId={CIRCLE_ID} vital={vital({})} onClose={vi.fn()} />);
-    const weight = screen.getByLabelText('Weight');
+    const weight = screen.getByLabelText(/^Weight/);
     await user.clear(weight);
     await user.type(weight, '160');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -188,7 +188,7 @@ describe('VitalFormModal edit: weight (kg stored, viewer lbs)', () => {
     unitPrefs.weight_unit = 'kg';
     const user = userEvent.setup();
     render(<VitalFormModal circleId={CIRCLE_ID} vital={vital({})} onClose={vi.fn()} />);
-    const weight = screen.getByLabelText('Weight');
+    const weight = screen.getByLabelText(/^Weight/);
     await user.clear(weight);
     await user.type(weight, '73,2');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -264,14 +264,14 @@ describe('VitalFormModal edit: temperature (°C stored) and blood oxygen', () =>
   it('shows the stored °C value in °F for a °F viewer', () => {
     unitPrefs.temperature_unit = '°F';
     render(<VitalFormModal circleId={CIRCLE_ID} vital={temp()} onClose={vi.fn()} />);
-    expect(screen.getByLabelText('Temperature')).toHaveValue('98.6');
+    expect(screen.getByLabelText(/^Temperature/)).toHaveValue('98.6');
     expect(screen.getByText('in °F')).toBeInTheDocument();
   });
 
   it('shows the stored °C value as it is for a °C viewer', () => {
     unitPrefs.temperature_unit = '°C';
     render(<VitalFormModal circleId={CIRCLE_ID} vital={temp({ value1: 37.5 })} onClose={vi.fn()} />);
-    expect(screen.getByLabelText('Temperature')).toHaveValue('37.5');
+    expect(screen.getByLabelText(/^Temperature/)).toHaveValue('37.5');
   });
 
   it('PK8: a note-only edit sends exactly { notes } (the stored °C is never re-converted)', async () => {
@@ -285,7 +285,7 @@ describe('VitalFormModal edit: temperature (°C stored) and blood oxygen', () =>
     unitPrefs.temperature_unit = '°F';
     const user = userEvent.setup();
     render(<VitalFormModal circleId={CIRCLE_ID} vital={temp()} onClose={vi.fn()} />);
-    const input = screen.getByLabelText('Temperature');
+    const input = screen.getByLabelText(/^Temperature/);
     await user.clear(input);
     await user.type(input, '212');
     // Out of range: nothing is sent.
@@ -311,7 +311,7 @@ describe('VitalFormModal edit: temperature (°C stored) and blood oxygen', () =>
         onClose={vi.fn()}
       />
     );
-    const input = screen.getByLabelText('Blood oxygen');
+    const input = screen.getByLabelText(/^Blood oxygen/);
     expect(input).toHaveValue('96');
     await user.clear(input);
     await user.type(input, '93');

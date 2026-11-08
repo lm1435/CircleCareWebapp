@@ -144,14 +144,16 @@ describe('simple shift form: header, sections, button', () => {
   it('has four headed sections in order, each named by its heading', () => {
     open();
     const headings = screen.getAllByRole('heading', { level: 3 });
-    expect(headings.map((h) => h.textContent)).toEqual([
+    // The name heading carries the aria-hidden required asterisk: compare the readable text.
+    const text = (h: HTMLElement): string => (h.textContent ?? '').replace(/ \*$/, '');
+    expect(headings.map(text)).toEqual([
       "What's the shift called?",
       'When?',
       'How often?',
       "Who's with Rosa?",
     ]);
     for (const h of headings) {
-      expect(h.closest('section')).toHaveAccessibleName(h.textContent as string);
+      expect(h.closest('section')).toHaveAccessibleName(text(h));
     }
     // The old flat labels are gone.
     expect(screen.queryByLabelText('Repeats')).not.toBeInTheDocument();

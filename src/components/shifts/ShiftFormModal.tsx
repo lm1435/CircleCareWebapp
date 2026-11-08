@@ -20,6 +20,7 @@ import {
   TimeField,
   useToast,
   type FieldErrors,
+  RequiredMarker,
 } from '@/components/ui';
 import { INPUT_ERROR } from '@/components/ui/inputStyles';
 import { DaysOfWeekPicker } from '@/components/calendar/DaysOfWeekPicker';
@@ -226,10 +227,15 @@ const FOCUS_ORDER = [
   'shift_repeat_end',
 ] as const;
 
-/** Section heading, the med / appointment simple form's pattern (an h3 the section is named by). */
-const sectionHeading = (headingId: string, text: string): ReactElement => (
+/**
+ * Section heading, the med / appointment simple form's pattern (an h3 the section is named by).
+ * `required`: the heading IS the visible label of a required field (the shift name), so it carries
+ * the red asterisk (the input itself says aria-required).
+ */
+const sectionHeading = (headingId: string, text: string, required = false): ReactElement => (
   <Text variant="sectionTitle" as="h3" id={headingId} className="text-lg">
     {text}
+    {required ? <RequiredMarker /> : null}
   </Text>
 );
 
@@ -728,12 +734,13 @@ function ShiftFormBody({
         )}
 
         <section aria-labelledby="sf-name" className="flex flex-col gap-3">
-          {sectionHeading('sf-name', t('shifts:form.nameQuestion'))}
-          {/* The heading above IS the question; the field's own label repeats it for assistive tech only. */}
-          <div className="[&_label]:mb-0">
+          {sectionHeading('sf-name', t('shifts:form.nameQuestion'), true)}
+          {/* The heading above IS the question; the field's own label repeats it for assistive tech
+              only. The WHOLE label is sr-only, so its asterisk does not show a second time. */}
+          <div className="[&_label]:sr-only">
             <TextField
               id="shift_name"
-              label={<span className="sr-only">{t('shifts:form.nameQuestion')}</span>}
+              label={t('shifts:form.nameQuestion')}
               required
               value={name}
               maxLength={SHIFT_NAME_MAX + 20}

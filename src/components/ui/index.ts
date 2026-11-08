@@ -42,6 +42,7 @@ export { Toggle, type ToggleProps } from './Toggle';
 export { Checkbox, type CheckboxProps } from './Checkbox';
 export { RadioGroup, type RadioGroupProps, type RadioOption } from './RadioGroup';
 export { RequiredMarker } from './RequiredMarker';
+export { FieldLabel, type FieldLabelProps } from './FieldLabel';
 export {
   useZodForm,
   validateWithZod,

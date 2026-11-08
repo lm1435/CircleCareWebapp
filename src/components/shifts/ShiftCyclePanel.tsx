@@ -68,6 +68,7 @@ export function ShiftCyclePanel({
         <TextField
           id="cycle_days_on"
           label={t('shifts:form.daysOn')}
+          required
           inputMode="numeric"
           autoComplete="off"
           value={daysOn}
@@ -77,6 +78,7 @@ export function ShiftCyclePanel({
         <TextField
           id="cycle_days_off"
           label={t('shifts:form.daysOff')}
+          required
           inputMode="numeric"
           autoComplete="off"
           value={daysOff}

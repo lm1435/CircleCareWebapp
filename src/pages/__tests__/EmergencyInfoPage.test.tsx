@@ -682,7 +682,7 @@ describe('EmergencyInfoPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Add doctor' }));
 
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText(/^Name.*\(required\)/), { target: { value: 'Dr. Lee' } });
+    fireEvent.change(within(dialog).getByLabelText(/^Name \*/), { target: { value: 'Dr. Lee' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1));

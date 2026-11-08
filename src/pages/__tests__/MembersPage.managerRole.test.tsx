@@ -414,14 +414,14 @@ describe('MembersPage — invite form manager hint', () => {
   it('is absent for a FREE owner (assign_manager is still served)', async () => {
     setCircle(roster(), { ...OWNER_ON, is_premium_circle: false });
     await openInvite();
-    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Email address/)).toBeInTheDocument();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 
   it('is absent without assign_manager (switch off)', async () => {
     setCircle(roster(), { ...OWNER_OFF, is_premium_circle: true });
     await openInvite();
-    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Email address/)).toBeInTheDocument();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 
@@ -429,7 +429,7 @@ describe('MembersPage — invite form manager hint', () => {
     currentUserId = 'u-mgr';
     setCircle(roster(), { ...MANAGER, is_premium_circle: true });
     await openInvite();
-    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Email address/)).toBeInTheDocument();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 });

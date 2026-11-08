@@ -320,7 +320,7 @@ describe('the end time (mobile fix 3): web has no equivalent of the anchor-day f
     const presets = screen.getByRole('radiogroup', { name: 'Common schedules' });
     await user.click(within(presets).getByRole('radio', { name: 'Every morning (8:00 AM)' }));
     await user.selectOptions(screen.getByLabelText('Type'), 'appointment');
-    await user.type(screen.getByLabelText(/^Title( \* \(required\))?$/), 'Dentist');
+    await user.type(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), 'Dentist');
     const end = screen.getByLabelText(/^End time/);
     await user.clear(end);
     await user.type(end, '09:15');

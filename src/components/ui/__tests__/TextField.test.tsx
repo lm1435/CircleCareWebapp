@@ -18,7 +18,7 @@ function shellOf(control: HTMLElement): HTMLElement {
 describe('TextField', () => {
   it('renders a label associated with the input', () => {
     render(<TextField id="title" label="Title" value="" onChange={() => {}} />);
-    const input = screen.getByLabelText(/^Title( \* \(required\))?$/);
+    const input = screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
     expect(input).toBe(screen.getByRole('textbox'));
   });
 
@@ -26,7 +26,7 @@ describe('TextField', () => {
     render(
       <TextField id="title" label="Title" error="Title is required" value="" onChange={() => {}} />
     );
-    const input = screen.getByLabelText(/^Title( \* \(required\))?$/);
+    const input = screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
     expect(input).toHaveAttribute('aria-invalid', 'true');
     const errorText = screen.getByText('Title is required');
     expect(errorText).toHaveAttribute('id', 'title-error');
@@ -37,20 +37,20 @@ describe('TextField', () => {
     render(
       <TextField id="title" label="Title" hint="Up to 150 characters" value="" onChange={() => {}} />
     );
-    const input = screen.getByLabelText(/^Title( \* \(required\))?$/);
+    const input = screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
     expect(input).not.toHaveAttribute('aria-invalid');
     expect(input.getAttribute('aria-describedby')).toContain('title-hint');
   });
 
   it('reflects the disabled state', () => {
     render(<TextField id="title" label="Title" disabled value="" onChange={() => {}} />);
-    expect(screen.getByLabelText(/^Title( \* \(required\))?$/)).toBeDisabled();
+    expect(screen.getByLabelText(/^Title( \*)?( \(required\))?$/)).toBeDisabled();
   });
 
   it('forwards changes to the controlled handler', () => {
     const onChange = vi.fn();
     render(<TextField id="title" label="Title" value="" onChange={onChange} />);
-    fireEvent.change(screen.getByLabelText(/^Title( \* \(required\))?$/), { target: { value: 'Metformin' } });
+    fireEvent.change(screen.getByLabelText(/^Title( \*)?( \(required\))?$/), { target: { value: 'Metformin' } });
     expect(onChange).toHaveBeenCalled();
   });
 });
@@ -61,7 +61,7 @@ describe('TextField', () => {
 describe('TextField — the §4.5 shell', () => {
   it('puts the border, the 44px floor and the focus transition on the shell, not the input', () => {
     render(<TextField id="title" label="Title" value="" onChange={() => {}} />);
-    const shell = shellOf(screen.getByLabelText(/^Title( \* \(required\))?$/));
+    const shell = shellOf(screen.getByLabelText(/^Title( \*)?( \(required\))?$/));
     expect(shell.className).toContain('border-line-strong');
     expect(shell.className).toContain('min-h-[44px]');
     expect(shell.className).toContain('focus-within:border-moss');
@@ -72,7 +72,7 @@ describe('TextField — the §4.5 shell', () => {
     render(
       <TextField id="title" label="Title" error="Title is required" value="" onChange={() => {}} />
     );
-    const shell = shellOf(screen.getByLabelText(/^Title( \* \(required\))?$/));
+    const shell = shellOf(screen.getByLabelText(/^Title( \*)?( \(required\))?$/));
     expect(shell.className).toContain('border-terracotta');
     // Error REPLACES the resting pair — two border-color utilities in one class
     // string would be resolved by Tailwind's emit order, not by intent.
@@ -85,7 +85,7 @@ describe('TextField — the §4.5 shell', () => {
 
   it('dims the shell at 50% when disabled', () => {
     render(<TextField id="title" label="Title" disabled value="" onChange={() => {}} />);
-    expect(shellOf(screen.getByLabelText(/^Title( \* \(required\))?$/)).className).toContain('opacity-50');
+    expect(shellOf(screen.getByLabelText(/^Title( \*)?( \(required\))?$/)).className).toContain('opacity-50');
   });
 
   // The shell carries NO vertical padding — the input owns it, so a click
@@ -94,7 +94,7 @@ describe('TextField — the §4.5 shell', () => {
   // this only pins the classes that make it true).
   it("gives the input, not the shell, the shell's vertical padding", () => {
     render(<TextField id="title" label="Title" value="" onChange={() => {}} />);
-    const input = screen.getByLabelText(/^Title( \* \(required\))?$/);
+    const input = screen.getByLabelText(/^Title( \*)?( \(required\))?$/);
     const shell = shellOf(input);
     expect(shell.className).not.toContain('py-3');
     expect(input.className).toContain('self-stretch');
