@@ -382,6 +382,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "1 plantão · {{open}}",
     "2 plantões · {{open}}",
   ],
+  "pt shifts:tasks.card.count": [
+    "0 tarefa · {{done}} concluída",
+    "1 tarefa · {{done}} concluída",
+    "2 tarefas · {{done}} concluídas",
+  ],
+  "pt shifts:tasks.deleteImpact": [
+    "Isso também exclui 0 tarefa futura deste plantão. As tarefas concluídas ficam no histórico.",
+    "Isso também exclui 1 tarefa futura deste plantão. As tarefas concluídas ficam no histórico.",
+    "Isso também exclui 2 tarefas futuras deste plantão. As tarefas concluídas ficam no histórico.",
+  ],
+  "pt shifts:tasks.editWarning": [
+    "0 tarefa fica fora do novo horário. Ela continuará no calendário como tarefa para qualquer pessoa.",
+    "1 tarefa fica fora do novo horário. Ela continuará no calendário como tarefa para qualquer pessoa.",
+    "2 tarefas ficam fora do novo horário. Elas continuarão no calendário como tarefas para qualquer pessoa.",
+  ],
   "pt tasks:summary.completed": [
     "Concluídas: 0",
     "Concluídas: 1",
@@ -796,6 +811,21 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "0 turnos · {{open}}",
     "1 turno · {{open}}",
     "2 turnos · {{open}}",
+  ],
+  "pt-PT shifts:tasks.card.count": [
+    "0 tarefa · {{done}} concluída",
+    "1 tarefa · {{done}} concluída",
+    "2 tarefas · {{done}} concluídas",
+  ],
+  "pt-PT shifts:tasks.deleteImpact": [
+    "Isso também exclui 0 tarefa futura deste plantão. As tarefas concluídas ficam no histórico.",
+    "Isso também exclui 1 tarefa futura deste plantão. As tarefas concluídas ficam no histórico.",
+    "Isso também exclui 2 tarefas futuras deste plantão. As tarefas concluídas ficam no histórico.",
+  ],
+  "pt-PT shifts:tasks.editWarning": [
+    "0 tarefa fica fora do novo horário. Ela continuará no calendário como tarefa para qualquer pessoa.",
+    "1 tarefa fica fora do novo horário. Ela continuará no calendário como tarefa para qualquer pessoa.",
+    "2 tarefas ficam fora do novo horário. Elas continuarão no calendário como tarefas para qualquer pessoa.",
   ],
   "pt-PT tasks:summary.completed": [
     "Concluídas: 0",

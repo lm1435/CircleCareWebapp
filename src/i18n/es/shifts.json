@@ -266,5 +266,56 @@
     "open_other": "{{count}} turnos · {{open}}",
     "count_one": "{{count}} turno",
     "count_other": "{{count}} turnos"
+  },
+  "tasks": {
+    "addTask": "Agregar una tarea a este turno",
+    "added": "Tarea agregada",
+    "form": {
+      "title": "Agregar una tarea",
+      "name": "Nombre de la tarea",
+      "namePlaceholder": "p. ej., Ayudar con el almuerzo",
+      "time": "Hora",
+      "timeHint": "Entre {{start}} y {{end}}",
+      "onlyDate": "Solo {{date}}",
+      "onlyDateHint": "Si no, esta tarea se repite con el turno y le toca a quien lo cubra.",
+      "save": "Agregar tarea",
+      "errorName": "Escribe el nombre de la tarea.",
+      "errorOutside": "Elige una hora dentro de este turno.",
+      "errorUnsupported": "Un turno mensual o anual no puede repetir una tarea después de la medianoche. Elige otra hora o marca \"Solo {{date}}\".",
+      "editTitle": "Editar tarea",
+      "explainOnce": "Le toca a quien esté en este turno.",
+      "delete": "Eliminar tarea",
+      "errorEnded": "Este turno ya terminó, así que no se le pueden agregar tareas.",
+      "errorGone": "Este turno ya no existe.",
+      "errorInvalidDate": "Ese día no forma parte de este turno.",
+      "errorGeneric": "No se pudo agregar la tarea. Inténtalo de nuevo."
+    },
+    "list": {
+      "titleNamed": "Lista de {{name}} · {{done}} de {{total}} hechas",
+      "titleYou": "Tu lista · {{done}} de {{total}} hechas",
+      "titleOpen": "Lista de este turno · {{done}} de {{total}} hechas",
+      "empty": "Todavía no hay nada en la lista de este turno.",
+      "error": "No se pudo cargar la lista de este turno.",
+      "retry": "Intentar de nuevo",
+      "alsoHappening": "También sucede durante este turno ({{count}})",
+      "done": "Listo",
+      "taken": "Tomado",
+      "skipped": "Omitido",
+      "doneLabel": "Listo, {{name}}",
+      "takenLabel": "Tomado, {{name}}",
+      "missed": "Sin marcar"
+    },
+    "card": {
+      "count_one": "{{count}} tarea · {{done}} hecha",
+      "count_other": "{{count}} tareas · {{done}} hechas"
+    },
+    "meta": {
+      "line": "Tarea · {{who}} · {{title}}",
+      "open": "Turno abierto"
+    },
+    "editWarning_one": "{{count}} tarea queda fuera del nuevo horario. Seguirá en el calendario como tarea para cualquiera.",
+    "editWarning_other": "{{count}} tareas quedan fuera del nuevo horario. Seguirán en el calendario como tareas para cualquiera.",
+    "deleteImpact_one": "Esto también elimina su {{count}} tarea próxima. Las tareas completadas se quedan en el historial.",
+    "deleteImpact_other": "Esto también elimina sus {{count}} tareas próximas. Las tareas completadas se quedan en el historial."
   }
 }

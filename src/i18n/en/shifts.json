@@ -266,5 +266,56 @@
     "open_other": "{{count}} shifts · {{open}}",
     "count_one": "{{count}} shift",
     "count_other": "{{count}} shifts"
+  },
+  "tasks": {
+    "addTask": "Add a task to this shift",
+    "added": "Task added",
+    "form": {
+      "title": "Add a task",
+      "name": "Task name",
+      "namePlaceholder": "e.g. Help with lunch",
+      "time": "Time",
+      "timeHint": "Between {{start}} and {{end}}",
+      "onlyDate": "Only {{date}}",
+      "onlyDateHint": "Otherwise this task repeats with the shift and goes to whoever covers it.",
+      "save": "Add task",
+      "errorName": "Enter a task name.",
+      "errorOutside": "Pick a time inside this shift.",
+      "errorUnsupported": "A monthly or yearly shift can't repeat a task after midnight. Pick a later time, or choose \"Only {{date}}\".",
+      "editTitle": "Edit task",
+      "explainOnce": "It goes to whoever is on this shift.",
+      "delete": "Delete task",
+      "errorEnded": "This shift has ended, so tasks can't be added to it.",
+      "errorGone": "This shift is no longer here.",
+      "errorInvalidDate": "That day is not part of this shift.",
+      "errorGeneric": "Couldn't add the task. Please try again."
+    },
+    "list": {
+      "titleNamed": "{{name}}'s list · {{done}} of {{total}} done",
+      "titleYou": "Your list · {{done}} of {{total}} done",
+      "titleOpen": "This shift's list · {{done}} of {{total}} done",
+      "empty": "Nothing on this shift's list yet.",
+      "error": "Couldn't load this shift's list.",
+      "retry": "Try again",
+      "alsoHappening": "Also happening during this shift ({{count}})",
+      "done": "Done",
+      "taken": "Taken",
+      "skipped": "Skipped",
+      "doneLabel": "Done, {{name}}",
+      "takenLabel": "Taken, {{name}}",
+      "missed": "Not marked"
+    },
+    "card": {
+      "count_one": "{{count}} task · {{done}} done",
+      "count_other": "{{count}} tasks · {{done}} done"
+    },
+    "meta": {
+      "line": "Task · {{who}} · {{title}}",
+      "open": "Open shift"
+    },
+    "editWarning_one": "{{count}} task falls outside the new hours. It'll stay on the calendar as a task for Anyone.",
+    "editWarning_other": "{{count}} tasks fall outside the new hours. They'll stay on the calendar as tasks for Anyone.",
+    "deleteImpact_one": "This also removes its {{count}} upcoming task. Completed tasks stay in history.",
+    "deleteImpact_other": "This also removes its {{count}} upcoming tasks. Completed tasks stay in history."
   }
 }

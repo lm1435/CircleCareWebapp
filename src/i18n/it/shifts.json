@@ -266,5 +266,56 @@
     "open_other": "{{count}} turni · {{open}}",
     "count_one": "{{count}} turno",
     "count_other": "{{count}} turni"
+  },
+  "tasks": {
+    "addTask": "Aggiungi un'attività a questo turno",
+    "added": "Attività aggiunta",
+    "form": {
+      "title": "Aggiungi un'attività",
+      "name": "Nome dell'attività",
+      "namePlaceholder": "es. Aiutare con il pranzo",
+      "time": "Ora",
+      "timeHint": "Tra le {{start}} e le {{end}}",
+      "onlyDate": "Solo {{date}}",
+      "onlyDateHint": "Altrimenti questa attività si ripete con il turno e va a chi lo copre.",
+      "save": "Aggiungi attività",
+      "errorName": "Scrivi il nome dell'attività.",
+      "errorOutside": "Scegli un'ora dentro questo turno.",
+      "errorUnsupported": "Un turno mensile o annuale non può ripetere un'attività dopo mezzanotte. Scegli un'altra ora o seleziona «Solo {{date}}».",
+      "editTitle": "Modifica attività",
+      "explainOnce": "Va a chi è di turno.",
+      "delete": "Elimina attività",
+      "errorEnded": "Questo turno è finito, quindi non si possono più aggiungere attività.",
+      "errorGone": "Questo turno non esiste più.",
+      "errorInvalidDate": "Quel giorno non fa parte di questo turno.",
+      "errorGeneric": "Impossibile aggiungere l'attività. Riprova."
+    },
+    "list": {
+      "titleNamed": "Elenco di {{name}} · {{done}} di {{total}} fatte",
+      "titleYou": "Il tuo elenco · {{done}} di {{total}} fatte",
+      "titleOpen": "Elenco di questo turno · {{done}} di {{total}} fatte",
+      "empty": "Ancora niente nell'elenco di questo turno.",
+      "error": "Impossibile caricare l'elenco di questo turno.",
+      "retry": "Riprova",
+      "alsoHappening": "Anche durante questo turno ({{count}})",
+      "done": "Fatto",
+      "taken": "Presa",
+      "skipped": "Saltata",
+      "doneLabel": "Fatto, {{name}}",
+      "takenLabel": "Presa, {{name}}",
+      "missed": "Non segnata"
+    },
+    "card": {
+      "count_one": "{{count}} attività · {{done}} fatta",
+      "count_other": "{{count}} attività · {{done}} fatte"
+    },
+    "meta": {
+      "line": "Attività · {{who}} · {{title}}",
+      "open": "Turno scoperto"
+    },
+    "editWarning_one": "{{count}} attività cade fuori dai nuovi orari. Resterà nel calendario come attività per chiunque.",
+    "editWarning_other": "{{count}} attività cadono fuori dai nuovi orari. Resteranno nel calendario come attività per chiunque.",
+    "deleteImpact_one": "Questo elimina anche la sua {{count}} attività in programma. Le attività completate restano nello storico.",
+    "deleteImpact_other": "Questo elimina anche le sue {{count}} attività in programma. Le attività completate restano nello storico."
   }
 }

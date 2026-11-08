@@ -266,5 +266,56 @@
     "open_other": "{{count}} plantões · {{open}}",
     "count_one": "{{count}} plantão",
     "count_other": "{{count}} plantões"
+  },
+  "tasks": {
+    "addTask": "Adicionar uma tarefa a este plantão",
+    "added": "Tarefa adicionada",
+    "form": {
+      "title": "Adicionar uma tarefa",
+      "name": "Nome da tarefa",
+      "namePlaceholder": "ex.: Ajudar com o almoço",
+      "time": "Horário",
+      "timeHint": "Entre {{start}} e {{end}}",
+      "onlyDate": "Só {{date}}",
+      "onlyDateHint": "Caso contrário, esta tarefa se repete com o plantão e fica com quem o cobrir.",
+      "save": "Adicionar tarefa",
+      "errorName": "Digite o nome da tarefa.",
+      "errorOutside": "Escolha um horário dentro deste plantão.",
+      "errorUnsupported": "Um plantão mensal ou anual não pode repetir uma tarefa depois da meia-noite. Escolha outro horário ou marque \"Só {{date}}\".",
+      "editTitle": "Editar tarefa",
+      "explainOnce": "Fica com quem estiver neste plantão.",
+      "delete": "Excluir tarefa",
+      "errorEnded": "Este plantão já terminou, então não é possível adicionar tarefas a ele.",
+      "errorGone": "Este plantão não existe mais.",
+      "errorInvalidDate": "Esse dia não faz parte deste plantão.",
+      "errorGeneric": "Não foi possível adicionar a tarefa. Tente de novo."
+    },
+    "list": {
+      "titleNamed": "Lista de {{name}} · {{done}} de {{total}} concluídas",
+      "titleYou": "Sua lista · {{done}} de {{total}} concluídas",
+      "titleOpen": "Lista deste plantão · {{done}} de {{total}} concluídas",
+      "empty": "Ainda não há nada na lista deste plantão.",
+      "error": "Não foi possível carregar a lista deste plantão.",
+      "retry": "Tentar de novo",
+      "alsoHappening": "Também acontece durante este plantão ({{count}})",
+      "done": "Concluído",
+      "taken": "Tomado",
+      "skipped": "Pulado",
+      "doneLabel": "Concluído, {{name}}",
+      "takenLabel": "Tomado, {{name}}",
+      "missed": "Não marcado"
+    },
+    "card": {
+      "count_one": "{{count}} tarefa · {{done}} concluída",
+      "count_other": "{{count}} tarefas · {{done}} concluídas"
+    },
+    "meta": {
+      "line": "Tarefa · {{who}} · {{title}}",
+      "open": "Plantão em aberto"
+    },
+    "editWarning_one": "{{count}} tarefa fica fora do novo horário. Ela continuará no calendário como tarefa para qualquer pessoa.",
+    "editWarning_other": "{{count}} tarefas ficam fora do novo horário. Elas continuarão no calendário como tarefas para qualquer pessoa.",
+    "deleteImpact_one": "Isso também exclui {{count}} tarefa futura deste plantão. As tarefas concluídas ficam no histórico.",
+    "deleteImpact_other": "Isso também exclui {{count}} tarefas futuras deste plantão. As tarefas concluídas ficam no histórico."
   }
 }

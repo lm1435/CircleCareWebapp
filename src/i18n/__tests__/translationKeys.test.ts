@@ -581,6 +581,11 @@ describe('W5: no unreferenced en keys', () => {
     // The old key stays: mobile's copy and shiftsCopy.test.ts still pin it for parity.
     'shifts:summary_one',
     'shifts:summary_other',
+    // Shift tasks: mobile-canonical leaf keys kept for parity (docs/plans/shift-tasks.md). Mobile edits
+    // and deletes a task from the shift screen; web edits it through the regular task form.
+    'shifts:tasks.form.delete',
+    'shifts:tasks.form.editTitle',
+    'shifts:tasks.form.explainOnce',
     // Task 15 — `AddEventModal`'s Create/Save-changes button now renders
     // through `Button`'s own `loading` prop (a spinner over the resting
     // label, per spec §6.4's Modal footer convention) instead of manually
