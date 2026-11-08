@@ -92,7 +92,7 @@
     "storageFullPremium": "Este círculo atingiu o limite de armazenamento de 1 GB. Libere espaço para adicionar mais.",
     "labelLabel": "Nome",
     "categoryLabel": "Categoria",
-    "noteLabel": "Nota (opcional)",
+    "noteLabel": "Nota",
     "noteHint": "Adicione contexto para os outros cuidadores.",
     "errors": {
       "fileRequired": "Escolha um arquivo para enviar.",

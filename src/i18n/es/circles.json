@@ -109,7 +109,7 @@
     "progressLabel": "Paso {{current}} de {{total}}",
     "whatTitle": "¿Qué toma {{name}}?",
     "whatTitleSelf": "¿Qué tomas?",
-    "dosageLabel": "Dosis (opcional)",
+    "dosageLabel": "Dosis",
     "dosagePlaceholder": "ej. 500mg",
     "whenTitle": "¿Cuándo lo toma {{name}}?",
     "whenTitleSelf": "¿Cuándo lo tomas?",

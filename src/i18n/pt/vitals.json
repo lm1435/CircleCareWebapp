@@ -53,7 +53,7 @@
     "time": "Hora",
     "timesShownIn": "Horários exibidos em {{timezone}}",
     "notes": "Notas",
-    "notesPlaceholder": "Adicione uma nota (opcional)",
+    "notesPlaceholder": "Adicione uma nota",
     "dualTimezoneHint": "Seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Seu horário / horário da pessoa ({{timezone}})",
     "dayOffsetNext": "+1 dia",

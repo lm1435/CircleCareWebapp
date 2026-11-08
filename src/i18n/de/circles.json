@@ -109,7 +109,7 @@
     "progressLabel": "Schritt {{current}} von {{total}}",
     "whatTitle": "Was nimmt {{name}} ein?",
     "whatTitleSelf": "Was nehmen Sie ein?",
-    "dosageLabel": "Dosierung (optional)",
+    "dosageLabel": "Dosierung",
     "dosagePlaceholder": "z. B. 500 mg",
     "whenTitle": "Wann nimmt {{name}} es ein?",
     "whenTitleSelf": "Wann nehmen Sie es ein?",

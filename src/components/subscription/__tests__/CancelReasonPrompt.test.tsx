@@ -438,12 +438,12 @@ describe('CancelReasonPrompt — dialog', () => {
   it('shows a labelled comment field with a per-reason placeholder after a selection', async () => {
     await renderShown();
     fireEvent.click(screen.getByRole('radio', { name: "Something didn't work" }));
-    const box = screen.getByRole('textbox', { name: 'Add a comment (optional)' });
+    const box = screen.getByRole('textbox', { name: 'Add a comment' });
     expect(box).toHaveAttribute('placeholder', 'What happened?');
     fireEvent.click(screen.getByRole('radio', { name: 'Missing a feature I need' }));
     expect(box).toHaveAttribute('placeholder', 'What were you looking for?');
     fireEvent.click(screen.getByRole('radio', { name: 'Too expensive' }));
-    expect(box).toHaveAttribute('placeholder', 'Anything else? (optional)');
+    expect(box).toHaveAttribute('placeholder', 'Anything else?');
     expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
   });
 

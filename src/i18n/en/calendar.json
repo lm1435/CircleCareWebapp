@@ -295,7 +295,6 @@
     "asNeeded": {
       "reason": "What is it for?",
       "reasonPlaceholder": "e.g. pain, nausea",
-      "optional": "(optional)",
       "repeatHint": "No set times. Everyone in the circle is notified when someone logs a dose.",
       "lockedRepeat": "As needed · can't be changed. To put this medication on a schedule, discontinue it and add it again.",
       "remindersNone": "No reminders. As-needed medications don't have a schedule.",

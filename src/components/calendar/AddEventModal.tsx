@@ -2150,12 +2150,8 @@ function AddEventForm({
         {isAsNeeded && (
           <TextField
             id="as_needed_reason"
-            label={
-              <>
-                {t('addEvent.asNeeded.reason')}{' '}
-                <span className="font-normal text-ink-3">{t('addEvent.asNeeded.optional')}</span>
-              </>
-            }
+            // No "(optional)" fragment: required fields carry the red asterisk instead (owner 2026-11-07).
+            label={t('addEvent.asNeeded.reason')}
             value={asNeededReason}
             maxLength={100}
             error={errors.as_needed_reason}

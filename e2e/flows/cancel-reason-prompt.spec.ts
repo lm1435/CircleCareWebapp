@@ -384,7 +384,7 @@ test.describe('cancel reason prompt (web)', () => {
     const send = dialog.getByRole('button', { name: 'Send', exact: true });
     await expect(send).toBeDisabled();
     await expect(dialog.getByRole('button', { name: 'Not now', exact: true })).toBeEnabled();
-    const comment = dialog.getByRole('textbox', { name: 'Add a comment (optional)' });
+    const comment = dialog.getByRole('textbox', { name: 'Add a comment' });
     await expect(comment).toHaveCount(0);
 
     await shoot(page, '01-desktop-initial', testInfo);
@@ -393,7 +393,7 @@ test.describe('cancel reason prompt (web)', () => {
     await dialog.getByRole('radio', { name: 'Too expensive', exact: true }).check();
     await expect(send).toBeEnabled();
     await expect(comment).toBeVisible();
-    await expect(comment).toHaveAttribute('placeholder', 'Anything else? (optional)');
+    await expect(comment).toHaveAttribute('placeholder', 'Anything else?');
 
     await dialog.getByRole('radio', { name: "Something didn't work", exact: true }).check();
     await expect(comment).toHaveAttribute('placeholder', 'What happened?');
@@ -440,7 +440,7 @@ test.describe('cancel reason prompt (web)', () => {
 
     const dialog = promptDialog(page);
     await dialog.getByRole('radio', { name: "I just didn't want to be charged automatically" }).check();
-    await dialog.getByRole('textbox', { name: 'Add a comment (optional)' }).fill('  Prefer to pay yearly.  ');
+    await dialog.getByRole('textbox', { name: 'Add a comment' }).fill('  Prefer to pay yearly.  ');
     await dialog.getByRole('button', { name: 'Send', exact: true }).click();
 
     const date = await renderedDate(page, expiresMs, 'en-US');
@@ -497,7 +497,7 @@ test.describe('cancel reason prompt (web)', () => {
     const dialog = promptDialog(page);
     const broken = dialog.getByRole('radio', { name: "Something didn't work", exact: true });
     await broken.check();
-    const comment = dialog.getByRole('textbox', { name: 'Add a comment (optional)' });
+    const comment = dialog.getByRole('textbox', { name: 'Add a comment' });
     await comment.fill('Reminders came late.');
     await dialog.getByRole('button', { name: 'Send', exact: true }).click();
 
@@ -610,7 +610,7 @@ test.describe('cancel reason prompt (web)', () => {
     const dialog = promptDialog(page);
     await shoot(page, '06-mobile-initial', testInfo);
     await dialog.getByRole('radio', { name: "Something didn't work", exact: true }).check();
-    await dialog.getByRole('textbox', { name: 'Add a comment (optional)' }).fill('The calendar would not load.');
+    await dialog.getByRole('textbox', { name: 'Add a comment' }).fill('The calendar would not load.');
     await shoot(page, '07-mobile-something-broken-comment', testInfo);
 
     // Nothing may overflow the viewport horizontally.
@@ -720,7 +720,7 @@ test.describe('cancel reason prompt (web) — Spanish', () => {
     await expect(dialog.getByRole('button', { name: 'Ahora no', exact: true })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Enviar', exact: true })).toBeDisabled();
     await dialog.getByRole('radio', { name: 'Algo no funcionó', exact: true }).check();
-    await expect(dialog.getByRole('textbox', { name: 'Agrega un comentario (opcional)' })).toHaveAttribute(
+    await expect(dialog.getByRole('textbox', { name: 'Agrega un comentario' })).toHaveAttribute(
       'placeholder',
       '¿Qué pasó?'
     );

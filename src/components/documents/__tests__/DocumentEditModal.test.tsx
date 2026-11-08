@@ -85,7 +85,7 @@ describe('DocumentEditModal', () => {
     const user = userEvent.setup();
     render(<DocumentEditModal circleId={CIRCLE_ID} doc={makeDoc()} onClose={vi.fn()} />);
 
-    await user.clear(screen.getByLabelText('Note (optional)'));
+    await user.clear(screen.getByLabelText('Note'));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));

@@ -153,10 +153,10 @@
       "notNeeded": "I didn't need it",
       "other": "Other"
     },
-    "commentLabel": "Add a comment (optional)",
+    "commentLabel": "Add a comment",
     "placeholderBroken": "What happened?",
     "placeholderMissing": "What were you looking for?",
-    "placeholderDefault": "Anything else? (optional)",
+    "placeholderDefault": "Anything else?",
     "send": "Send",
     "notNow": "Not now",
     "error": "Couldn't send. Try again.",

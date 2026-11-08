@@ -153,10 +153,10 @@
       "notNeeded": "Eu não precisava",
       "other": "Outro"
     },
-    "commentLabel": "Adicionar um comentário (opcional)",
+    "commentLabel": "Adicionar um comentário",
     "placeholderBroken": "O que aconteceu?",
     "placeholderMissing": "O que você estava procurando?",
-    "placeholderDefault": "Mais alguma coisa? (opcional)",
+    "placeholderDefault": "Mais alguma coisa?",
     "send": "Enviar",
     "notNow": "Agora não",
     "error": "Não foi possível enviar. Tente novamente.",

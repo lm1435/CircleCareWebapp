@@ -153,10 +153,10 @@
       "notNeeded": "Non mi serviva",
       "other": "Altro"
     },
-    "commentLabel": "Aggiungi un commento (facoltativo)",
+    "commentLabel": "Aggiungi un commento",
     "placeholderBroken": "Cos'è successo?",
     "placeholderMissing": "Cosa cercavi?",
-    "placeholderDefault": "Altro da aggiungere? (facoltativo)",
+    "placeholderDefault": "Altro da aggiungere?",
     "send": "Invia",
     "notNow": "Non ora",
     "error": "Invio non riuscito. Riprova.",

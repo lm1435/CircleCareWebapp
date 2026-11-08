@@ -295,7 +295,6 @@
     "asNeeded": {
       "reason": "Wofür ist es?",
       "reasonPlaceholder": "z. B. Schmerzen, Übelkeit",
-      "optional": "(optional)",
       "repeatHint": "Keine festen Zeiten. Alle im Kreis werden benachrichtigt, wenn jemand eine Dosis einträgt.",
       "lockedRepeat": "Bei Bedarf · kann nicht geändert werden. Um dieses Medikament auf einen Zeitplan umzustellen, setzen Sie es ab und legen Sie es neu an.",
       "remindersNone": "Keine Erinnerungen. Medikamente bei Bedarf haben keinen Zeitplan.",

@@ -258,7 +258,7 @@
       "submitSelf": "Log that you took a dose",
       "subtitle": "Everyone in the circle will see this.",
       "given": "Given",
-      "noteLabel": "Note (optional)",
+      "noteLabel": "Note",
       "notePlaceholder": "e.g. after dinner",
       "submit": "Log dose",
       "cancel": "Cancel",

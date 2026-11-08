@@ -92,7 +92,7 @@
     "storageFullPremium": "This circle has reached its 1GB storage limit. Free up space to add more.",
     "labelLabel": "Name",
     "categoryLabel": "Category",
-    "noteLabel": "Note (optional)",
+    "noteLabel": "Note",
     "noteHint": "Add context for other caregivers.",
     "errors": {
       "fileRequired": "Choose a file to upload.",

@@ -295,7 +295,6 @@
     "asNeeded": {
       "reason": "A cosa serve?",
       "reasonPlaceholder": "es. dolore, nausea",
-      "optional": "(facoltativo)",
       "repeatHint": "Nessun orario fisso. Tutta la cerchia riceve una notifica quando qualcuno registra una dose.",
       "lockedRepeat": "Al bisogno · non modificabile. Per programmare questo farmaco a orari fissi, interrompilo e aggiungilo di nuovo.",
       "remindersNone": "Nessun promemoria. I farmaci al bisogno non hanno un programma.",

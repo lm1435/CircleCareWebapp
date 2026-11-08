@@ -92,7 +92,7 @@
     "storageFullPremium": "Questa cerchia ha raggiunto il limite di spazio di 1 GB. Libera spazio per aggiungere altro.",
     "labelLabel": "Nome",
     "categoryLabel": "Categoria",
-    "noteLabel": "Nota (facoltativa)",
+    "noteLabel": "Nota",
     "noteHint": "Aggiungi un po' di contesto per gli altri caregiver.",
     "errors": {
       "fileRequired": "Scegli un file da caricare.",

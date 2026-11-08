@@ -92,7 +92,7 @@
     "storageFullPremium": "Dieser Kreis hat sein Speicherlimit von 1 GB erreicht. Schaffen Sie Platz, um mehr hinzuzufügen.",
     "labelLabel": "Name",
     "categoryLabel": "Kategorie",
-    "noteLabel": "Notiz (optional)",
+    "noteLabel": "Notiz",
     "noteHint": "Ergänzen Sie Hinweise für andere Pflegepersonen.",
     "errors": {
       "fileRequired": "Wählen Sie eine Datei zum Hochladen aus.",

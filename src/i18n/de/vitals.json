@@ -53,7 +53,7 @@
     "time": "Uhrzeit",
     "timesShownIn": "Uhrzeiten in {{timezone}}",
     "notes": "Notizen",
-    "notesPlaceholder": "Notiz hinzufügen (optional)",
+    "notesPlaceholder": "Notiz hinzufügen",
     "dualTimezoneHint": "Ihre Zeit / Zeit von {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Ihre Zeit / deren Zeit ({{timezone}})",
     "dayOffsetNext": "+1 Tag",

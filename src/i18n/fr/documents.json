@@ -92,7 +92,7 @@
     "storageFullPremium": "Ce cercle a atteint sa limite de stockage de 1 Go. Libérez de l’espace pour en ajouter.",
     "labelLabel": "Nom",
     "categoryLabel": "Catégorie",
-    "noteLabel": "Note (facultatif)",
+    "noteLabel": "Note",
     "noteHint": "Ajoutez du contexte pour les autres aidants.",
     "errors": {
       "fileRequired": "Choisissez un fichier à importer.",

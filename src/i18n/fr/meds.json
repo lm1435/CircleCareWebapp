@@ -258,7 +258,7 @@
       "submitSelf": "Enregistrer que vous avez pris une dose",
       "subtitle": "Tout le cercle le verra.",
       "given": "Donnée",
-      "noteLabel": "Note (facultatif)",
+      "noteLabel": "Note",
       "notePlaceholder": "p. ex. après le dîner",
       "submit": "Enregistrer la dose",
       "cancel": "Annuler",

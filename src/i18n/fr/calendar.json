@@ -295,7 +295,6 @@
     "asNeeded": {
       "reason": "À quoi sert-il ?",
       "reasonPlaceholder": "p. ex. douleur, nausées",
-      "optional": "(facultatif)",
       "repeatHint": "Pas d’heure fixe. Tout le cercle est averti quand quelqu’un enregistre une dose.",
       "lockedRepeat": "Si besoin · non modifiable. Pour placer ce médicament sur un horaire, arrêtez-le et ajoutez-le de nouveau.",
       "remindersNone": "Aucun rappel. Les médicaments si besoin n’ont pas d’horaire.",

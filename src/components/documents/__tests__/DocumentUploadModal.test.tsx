@@ -53,7 +53,7 @@ describe('DocumentUploadModal', () => {
     await user.type(labelInput, '  Blood Panel  ');
 
     await user.selectOptions(screen.getByLabelText('Category'), 'medical_records');
-    await user.type(screen.getByLabelText('Note (optional)'), '  fasting  ');
+    await user.type(screen.getByLabelText('Note'), '  fasting  ');
 
     await user.click(screen.getByRole('button', { name: 'Upload' }));
 

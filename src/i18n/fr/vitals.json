@@ -53,7 +53,7 @@
     "time": "Heure",
     "timesShownIn": "Heures affichées dans le fuseau {{timezone}}",
     "notes": "Notes",
-    "notesPlaceholder": "Ajouter une note (facultatif)",
+    "notesPlaceholder": "Ajouter une note",
     "dualTimezoneHint": "Votre heure / heure pour {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "Votre heure / heure de la personne aidée ({{timezone}})",
     "dayOffsetNext": "+1 jour",
