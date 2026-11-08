@@ -471,6 +471,13 @@ describe('CareTeam — manager role', () => {
     expect(screen.queryByText(/Family member/i)).toBeNull();
   });
 
+  // Unslop audit 2026-11-07 #1 (mobile parity): the pill is dropped when the role line already says it.
+  it('drops the Owner pill when the role line already reads "Circle owner"', () => {
+    renderTeam({ members: [member({ id: OWNER, role: 'owner', email: 'o@example.com' })] });
+    expect(screen.getByText('Circle owner')).toBeInTheDocument();
+    expect(screen.queryByText('Owner')).toBeNull();
+  });
+
   it('shows the Owner pill on the owner row only, in the Manager pill\'s filled style', () => {
     renderTeam({
       members: [

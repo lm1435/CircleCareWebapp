@@ -293,7 +293,9 @@ export function CareTeam({
               {/* Owner pill on the right of the row, like mobile's care team
                   (CircleDetailScreen adminPill); same filled style as the
                   Manager pill (owner decision 2026-10-18). */}
-              {member.role === 'owner' ? (
+              {/* Dropped when the role line below the name already reads "Circle owner" (an unnamed
+                  owner): the pill would say it twice. Mobile parity. */}
+              {member.role === 'owner' && (member.is_care_recipient || member.first_name) ? (
                 <Badge variant="primary" size="sm" className="shrink-0">
                   {t('members:roles.owner')}
                 </Badge>
