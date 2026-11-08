@@ -16,7 +16,7 @@ import {
   UpcomingAppointments,
   useHasUpcomingAppointments,
 } from '@/components/overview/UpcomingAppointments';
-import { NextUp, NEXT_UP_VISIBLE } from '@/components/overview/NextUp';
+import { NextUp, NEXT_UP_VISIBLE, nextUpHasFilledAction } from '@/components/overview/NextUp';
 import { NextStepCard } from '@/components/overview/NextStepCard';
 import { FirstMedMarkIt } from '@/components/overview/FirstMedMarkIt';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
@@ -149,6 +149,9 @@ export default function OverviewPage(): ReactElement {
   }, [firstRun, showAddMed, circleId, subscription, recipientName, navigate]);
 
   const nextUp = useNextUp(circleId, timezone);
+  // One filled action per region (owner 2026-11-08): when Next up shows a filled Taken / Done, the coaching card's
+  // CTA above it steps down to the outline; the due / overdue item wins (mobile parity).
+  const nextUpFilled = nextUpHasFilledAction(nextUp.items, canEdit, timezone);
 
   // DOSE LANDING (an inbox row for a dose that is not marked yet): `?dose=&date=&time=`. The
   // params are read into state ONCE per landing and only for the circle in the URL. When Next up
@@ -307,6 +310,7 @@ export default function OverviewPage(): ReactElement {
               nextStep.snooze();
               handOffFocusSoon();
             }}
+            primaryAllowed={!nextUpFilled}
             onAction={() => {
               if (nextStep.step === 'first_med') setShowAddMed(true);
               else if (nextStep.step === 'invite') navigate(`${base}/members`);
@@ -323,6 +327,7 @@ export default function OverviewPage(): ReactElement {
             recipientName={recipientName}
             isSelfCare={isSelfCare}
             upsell={shiftsUpsell}
+            primaryAllowed={!nextUpFilled}
             onNotNow={() => {
               dismissShiftsNudge(circleId);
               setShiftsDismissedFor(circleId);

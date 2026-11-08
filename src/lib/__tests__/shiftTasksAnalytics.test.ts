@@ -46,6 +46,19 @@ afterEach(() => vi.resetModules());
 const last = () => capture.mock.calls[capture.mock.calls.length - 1] as [string, Record<string, unknown>];
 
 describe('shift tasks analytics', () => {
+  it('shift flow (2026-11-08): saved-dialog layout, Custom repeat opened, Take reminder expanded: booleans only', async () => {
+    const A = await load();
+    A.shiftSavedSheetAction({ action: 'add_next', repeating: true });
+    expect(last()[0]).toBe('shift_saved_sheet_action');
+    expect(last()[1]).toEqual(expect.objectContaining({ action: 'add_next', repeating: true }));
+    A.shiftRepeatCustomOpened({ editing: 'yes' as unknown as boolean });
+    expect(last()[0]).toBe('shift_repeat_custom_opened');
+    expect(last()[1]).toEqual(expect.objectContaining({ editing: false }));
+    A.shiftTakeReminderExpanded();
+    expect(last()[0]).toBe('shift_take_reminder_expanded');
+    expect(JSON.stringify(capture.mock.calls)).not.toContain('circle_id');
+  });
+
   it('shift_task_added: source enum + two booleans', async () => {
     const A = await load();
     A.shiftTaskAdded({ source: 'saved_sheet', oneOff: true, shiftRepeats: false });

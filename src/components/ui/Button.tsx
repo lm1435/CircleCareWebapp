@@ -38,6 +38,8 @@ const VARIANT = {
   // muddy one with it. Hover borrows the chip's `bg-bg-2` too.
   secondary: 'bg-cream text-ink border-[1.5px] border-line-strong hover:bg-bg-2',
   ghost: 'bg-transparent text-moss hover:bg-moss-soft',
+  // `tone="neutral"` ghost: a quiet "Done" / "Cancel" text button under a filled primary (one-accent rule).
+  ghostNeutral: 'bg-transparent text-ink-2 hover:bg-bg-2',
   danger:
     'bg-terracotta-soft text-terracotta-deep hover:bg-[color-mix(in_oklab,var(--color-terracotta-soft),black_6%)]',
 } as const;
@@ -86,6 +88,10 @@ type ButtonOwnProps = {
    * lib/offlineWrite.ts. Online it is an ordinary button.
    */
   offlineKind?: OfflineWriteKind;
+  /**
+   * `neutral`: a `ghost` button's label in the body ink instead of moss (mobile `tone`). Other variants ignore it.
+   */
+  tone?: 'accent' | 'neutral';
 };
 
 /**
@@ -138,6 +144,7 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
     'aria-busy': ariaBusy,
     onClick,
     offlineKind,
+    tone = 'accent',
     // Everything the caller passed for the underlying element (onClick, href,
     // `to`, aria-*, form, …). The cast only widens the rest bucket — the
     // declared props above keep their real types.
@@ -156,7 +163,9 @@ const ButtonInner = forwardRef<HTMLButtonElement, InnerProps>(function Button(pr
 
   const classes = [
     BASE,
-    VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.primary,
+    variant === 'ghost' && tone === 'neutral'
+      ? VARIANT.ghostNeutral
+      : (VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.primary),
     SIZE[size],
     fullWidth ? 'w-full' : null,
     // Positioning context for the loading overlay. Kept out of BASE because

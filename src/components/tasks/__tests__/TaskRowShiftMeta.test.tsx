@@ -5,9 +5,10 @@ import type { CalendarEvent, ShiftTaskLink } from '@/api/calendarEvents';
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
 const { TaskRow } = await import('../TaskRow');
 
-// docs/plans/shift-tasks.md "Elsewhere": a task added to a shift reads "Task · <first name> · <shift
-// title>" in the Tasks list (and on Calendar / Today); an open shift reads "Open shift"; a task outside
-// the window is a plain task. The name is `shift.assignee`, never `assigned_to`.
+// docs/plans/shift-tasks.md "Elsewhere": a task added to a shift reads "<shift title> · <first name>" in the
+// Tasks list and on Calendar (a Task chip / the list already names the type; the name last, so it is what
+// truncates; owner 2026-11-08); Today's Next up keeps "Task · ...". An open shift reads "Open shift"; a task
+// outside the window is a plain task. The name is `shift.assignee`, never `assigned_to`.
 
 const link = (over: Partial<ShiftTaskLink> = {}): ShiftTaskLink => ({
   root_id: 'root',
@@ -50,15 +51,15 @@ function renderRow(t: CalendarEvent) {
   );
 }
 
-it('covered: "Task · Lucia · Afternoons" instead of Unassigned', () => {
+it('covered: "Afternoons · Lucia" instead of Unassigned', () => {
   renderRow(task(link()));
-  expect(screen.getByTestId('task-shift-meta')).toHaveTextContent('Task · Lucia · Afternoons');
+  expect(screen.getByTestId('task-shift-meta')).toHaveTextContent(/^Afternoons · Lucia$/);
   expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
 });
 
-it('open shift: "Task · Open shift · Night"', () => {
+it('open shift: "Night · Open shift"', () => {
   renderRow(task(link({ status: 'open', assignee: null, title: 'Night' })));
-  expect(screen.getByTestId('task-shift-meta')).toHaveTextContent('Task · Open shift · Night');
+  expect(screen.getByTestId('task-shift-meta')).toHaveTextContent(/^Night · Open shift$/);
 });
 
 it('outside the window: a plain task (Unassigned), no shift label', () => {

@@ -138,7 +138,7 @@ export function TaskRow({
     return member ? memberDisplayName(member) : null;
   }, [members, task.assigned_to, task.assigned_to_user]);
 
-  // A task added to a shift reads "Task · Lucia · Afternoons" ("Open shift" while nobody covers it).
+  // A task added to a shift reads "Afternoons · Lucia" ("Night · Open shift" while nobody covers it).
   // The name is the shift's coverer (`shift.assignee`), never `assigned_to`, which stays empty. Null
   // for a plain task, including one whose time is outside the shift.
   const shiftMeta = shiftTaskMeta(task, t as unknown as (k: string, o?: Record<string, unknown>) => string);

@@ -43,6 +43,8 @@ export interface ShiftsNudgeCardProps {
   upsell?: boolean;
   onSetUp: () => void;
   onNotNow: () => void;
+  /** False when Next up below already shows a filled Taken / Done: Set up is then the outline. Default true. */
+  primaryAllowed?: boolean;
 }
 
 export function ShiftsNudgeCard({
@@ -52,6 +54,7 @@ export function ShiftsNudgeCard({
   upsell = false,
   onSetUp,
   onNotNow,
+  primaryAllowed = true,
 }: ShiftsNudgeCardProps): ReactElement {
   const { t } = useTranslation('overview');
   const name = member.first_name || member.email;
@@ -86,6 +89,8 @@ export function ShiftsNudgeCard({
       </Text>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button
+          variant={primaryAllowed ? 'primary' : 'outline'}
+          data-testid="shifts-nudge-action"
           onClick={() => {
             Analytics.coachingHintActed('shifts_second_caregiver', { upsell });
             onSetUp();

@@ -425,6 +425,39 @@ describe('Today (OverviewPage)', () => {
       });
     });
 
+    // One filled action per region (owner 2026-11-08, mobile parity): the due / overdue item wins.
+    it('next step + a due dose in Next up: the next-step CTA steps down to the outline', () => {
+      setNextStep(step);
+      setNextUp([dose('m1')]);
+      renderToday();
+      const cta = screen.getByTestId('next-step-action');
+      expect(cta.className).toContain('border-primary-outline');
+      expect(cta.className).not.toContain('bg-primary-fill');
+    });
+
+    it('next step with nothing actionable in Next up keeps its filled CTA', () => {
+      setNextStep(step);
+      setNextUp([]);
+      renderToday();
+      expect(screen.getByTestId('next-step-action').className).toContain('bg-primary-fill');
+    });
+
+    it('a viewer who cannot complete anything keeps the filled CTA (Next up shows no Taken / Done)', () => {
+      setCircle({ canEdit: false });
+      setNextStep(step);
+      setNextUp([dose('m1')]);
+      renderToday();
+      expect(screen.getByTestId('next-step-action').className).toContain('bg-primary-fill');
+    });
+
+    it('shifts nudge + a due dose: Set up is the outline', () => {
+      setNextUp([dose('m1')]);
+      renderToday();
+      const cta = screen.getByTestId('shifts-nudge-action');
+      expect(cta.className).toContain('border-primary-outline');
+      expect(cta.className).not.toContain('bg-primary-fill');
+    });
+
     it('shifts nudge shows when no next step is due, and beats the dose hint', () => {
       setNextUp([dose('m1')]);
       renderToday();

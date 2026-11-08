@@ -61,6 +61,10 @@ describe('shifts saved dialog: a formatted time is never sentence-final', () => 
     });
     const out = i18n.t('saved.summaryOpenOnce', { range: '8:00 p. m. – 8:00 a. m.' });
     expect(out).not.toMatch(/\.\./);
-    expect(out).toBe('8:00 p. m. – 8:00 a. m. · Abierto para que cualquiera lo tome.');
+    // The open-for-anyone sentence is gone (owner 2026-11-08): the form says it once.
+    expect(out).toBe('8:00 p. m. – 8:00 a. m.');
+    expect(i18n.t('saved.summaryOpen', { range: '8:00 p. m. – 8:00 a. m.', repeat: 'todos los días' })).toBe(
+      '8:00 p. m. – 8:00 a. m., todos los días.'
+    );
   });
 });

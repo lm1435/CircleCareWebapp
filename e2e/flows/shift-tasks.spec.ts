@@ -209,13 +209,16 @@ test.describe('shift tasks', () => {
     await form.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Every day' }).click();
     await form.getByRole('button', { name: 'Save shift' }).click();
 
-    // The saved dialog: Done is the primary, the two follow-ups are outlines, no checkmark.
+    // The saved dialog (approved mock 2026-11-08): a repeating shift leads with "Add a task to this shift" (the
+    // ONE filled button), "Add another shift" secondary, Done a neutral text button; no checkmark.
     const saved = page.getByRole('dialog', { name: '"Afternoons" saved' });
     await expect(saved).toBeVisible({ timeout: 20_000 });
     const addTask = saved.getByRole('button', { name: 'Add a task to this shift' });
     await expect(addTask).toBeVisible();
-    await expect(saved.getByRole('button', { name: 'Done' })).toHaveClass(/bg-primary-fill/);
-    await expect(addTask).not.toHaveClass(/bg-primary-fill/);
+    await expect(addTask).toHaveClass(/bg-primary-fill/);
+    await expect(saved.getByRole('button', { name: 'Add another shift' })).not.toHaveClass(/bg-primary-fill/);
+    await expect(saved.getByRole('button', { name: 'Done' })).not.toHaveClass(/bg-primary-fill/);
+    await expect(saved.locator('button[class*="bg-primary-fill"]')).toHaveCount(1);
     await expect(addTask.locator('svg')).toHaveCount(0); // no checkmark (owner 2026-11-07)
     await expect(saved.getByRole('button', { name: 'Done' }).locator('svg')).toHaveCount(0);
     await checkA11y(page, 'shift-tasks-saved-light', testInfo);
@@ -248,7 +251,7 @@ test.describe('shift tasks', () => {
     // The card counts it; the detail lists it, and an OPEN shift says so.
     await openShifts(page, s.circleId, 'Day');
     const card = page.getByTestId('shifts-day-list').getByTestId('shift-card');
-    await expect(card.getByTestId('shift-card-task-count')).toHaveText('1 task · 0 done', { timeout: 20_000 });
+    await expect(card.getByTestId('shift-card-task-count')).toHaveText('· 0 of 1 done', { timeout: 20_000 });
     await card.getByRole('button', { name: /^Afternoons, / }).click();
     const detail = page.getByRole('dialog', { name: 'Afternoons' });
     await expect(detail.getByTestId('shift-task-list-title')).toHaveText("This shift's list · 0 of 1 done");
@@ -280,11 +283,11 @@ test.describe('shift tasks', () => {
       ['Walk', null],
     ]);
     await back.getByRole('button', { name: 'Close' }).last().click();
-    await expect(card.getByTestId('shift-card-task-count')).toHaveText('2 tasks · 0 done', { timeout: 20_000 });
+    await expect(card.getByTestId('shift-card-task-count')).toHaveText('· 0 of 2 done', { timeout: 20_000 });
 
     // The Tasks tab names the open shift on both.
     await page.goto(`/circles/${s.circleId}/tasks`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('task-shift-meta').first()).toHaveText('Task · Open shift · Afternoons', {
+    await expect(page.getByTestId('task-shift-meta').first()).toHaveText('Afternoons · Open shift', {
       timeout: 20_000,
     });
   });
@@ -304,7 +307,7 @@ test.describe('shift tasks', () => {
     // 1) the shift detail: one filled Done, the rest outlines.
     await openShifts(page, s.circleId, 'Day');
     const day = page.getByTestId('shifts-day-list');
-    await expect(day.getByTestId('shift-card-task-count')).toHaveText('3 tasks · 0 done', { timeout: 20_000 });
+    await expect(day.getByTestId('shift-card-task-count')).toHaveText('· 0 of 3 done', { timeout: 20_000 });
     await day.getByRole('button', { name: /^Afternoons, / }).click();
     const detail = page.getByRole('dialog', { name: 'Afternoons' });
     await expect(detail.getByTestId('shift-task-list-title')).toHaveText('Your list · 0 of 3 done');
@@ -334,7 +337,7 @@ test.describe('shift tasks', () => {
     // 3) the Tasks tab.
     await page.goto(`/circles/${s.circleId}/tasks`, { waitUntil: 'domcontentloaded' });
     const row = page.getByRole('listitem').filter({ hasText: 'Tasks task' });
-    await expect(row.getByTestId('task-shift-meta')).toHaveText('Task · E2E · Afternoons', { timeout: 20_000 });
+    await expect(row.getByTestId('task-shift-meta')).toHaveText('Afternoons · E2E', { timeout: 20_000 });
     await row.getByRole('button', { name: /Done|Mark/ }).first().click();
     await expect.poll(() => completedRows('Tasks task'), { timeout: 30_000 }).toBeGreaterThan(0);
   });

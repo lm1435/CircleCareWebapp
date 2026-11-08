@@ -43,6 +43,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftEdited: vi.fn(),
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
+    shiftRepeatCustomOpened: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -215,8 +216,15 @@ async function fill(answers: Answers, editing: boolean): Promise<void> {
     if (CAPTURE) {
       await user.selectOptions(screen.getByLabelText('Repeats'), REPEAT_OLD_VALUE[answers.repeat]);
     } else {
-      const group = screen.getByRole('radiogroup', { name: 'How often?' });
-      await user.click(within(group).getByRole('radio', { name: REPEAT_LABEL[answers.repeat] }));
+      const label = REPEAT_LABEL[answers.repeat];
+      const top = within(screen.getByRole('radiogroup', { name: 'How often?' })).queryByRole('radio', { name: label });
+      if (top) {
+        await user.click(top);
+      } else {
+        // The rarer repeats sit behind "Custom…" (approved mock 2026-11-08).
+        if (!screen.queryByRole('radiogroup', { name: 'Custom' })) await user.click(screen.getByTestId('shift-repeat-custom'));
+        await user.click(within(screen.getByRole('radiogroup', { name: 'Custom' })).getByRole('radio', { name: label }));
+      }
     }
   }
   if (answers.days) {
@@ -296,7 +304,7 @@ async function runAddNext(): Promise<Recorded[]> {
   shell(<ShiftComposer circleId="c" initialDate="2027-03-09" source="shifts_view" onClose={vi.fn()} />);
   await fill({ name: 'Morning', start: '08:00', end: '14:00', repeat: 'daily', reminder: '120' }, false);
   await save(false);
-  await user.click(await screen.findByRole('button', { name: /Add the next shift/ }));
+  await user.click(await screen.findByRole('button', { name: /^Add (the next|another) shift$/ }));
   await waitFor(() => byId('shift_name'));
   await fill({ name: 'Afternoon', end: '20:00' }, false);
   await save(false);

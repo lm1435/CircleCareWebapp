@@ -287,7 +287,8 @@ describe('Drop', () => {
     expect(Analytics.shiftDropped).toHaveBeenCalledWith(
       expect.objectContaining({ scope: 'future', byRole: 'self' })
     );
-    expect(await screen.findByText('You dropped "Night". It\'s open again.')).toBeInTheDocument();
+    // No quoted title in the toast (owner 2026-11-08).
+    expect(await screen.findByText("Shift dropped. It's open again.")).toBeInTheDocument();
   });
 
   it('409 SHIFT_NOT_ASSIGNED on a drop reads "already open"; any other failure names the action', async () => {
@@ -295,6 +296,8 @@ describe('Drop', () => {
     const first = await openDetail(shift({ id: 'one', parent_event_id: null, recurrence_rule: null }));
     await first.user.click(within(first.dialog).getByRole('button', { name: 'Drop shift' }));
     const confirm = await screen.findByRole('dialog', { name: 'Drop this shift?' });
+    // The one-off confirm no longer quotes the title (owner 2026-11-08).
+    expect(within(confirm).getByText("Everyone will be told it's open.")).toBeInTheDocument();
     await first.user.click(within(confirm).getByRole('button', { name: 'Drop shift' }));
     expect(await screen.findByText('This shift is already open.')).toBeInTheDocument();
   });

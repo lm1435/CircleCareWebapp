@@ -2,7 +2,7 @@ import { useId, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
-import { Avatar, Button, Card, Icon } from '@/components/ui';
+import { Avatar, Button, Card } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { shiftAssignee } from './shiftPeople';
 import { buildShiftList } from './shiftTasks';
@@ -36,10 +36,10 @@ export interface ShiftCardProps {
 
 /**
  * One shift (docs/plans/care-shifts.md, step 2). FILLED = moss family, solid
- * border, the assignee's avatar. OPEN = the same white card (Owner 2026-10-23: no
- * amber, no dashed edge): a thin hairline avatar ring with a person-add glyph,
- * "Open" in moss on the meta line, and a Take button. Open is conveyed by TEXT
- * (the word and the accessible name), never by colour alone.
+ * border, the assignee's small avatar on the status line. OPEN = the same white card
+ * (Owner 2026-10-23: no amber, no dashed edge): "Open" in moss on the status line and a
+ * Take outline button. Open is conveyed by TEXT (the word and the accessible name),
+ * never by colour alone.
  *
  * The card body and Take are SIBLING controls (no button inside a button).
  */
@@ -80,12 +80,17 @@ export function ShiftCard({
     t('rangeSpoken', { start: parts.start, end: parts.end }),
     parts.nextDay ? t('nextDay') : '',
     status,
-    taskCount > 0 ? t('tasks.card.count', { count: taskCount, done: taskDone }) : '',
+    taskCount > 0 ? t('tasks.card.progress', { total: taskCount, done: taskDone }) : '',
   ]
     .filter(Boolean)
     .join(', ');
 
   const common = 'm-0 flex list-none items-center gap-3 rounded-lg p-3';
+  const progress = taskCount > 0 ? t('tasks.card.progress', { total: taskCount, done: taskDone }) : '';
+  // Approved mock 2026-11-08 (mobile ShiftCard): the title (wraps, never truncated), the range alone ("(next
+  // day)" inline), then ONE status line: "Open · 0 of 3 done" or a small avatar + the name (which truncates)
+  // · "1 of 1 done"; "Your time" only when the viewer's zone differs. Take is an outline Button sm: the list's
+  // one filled button is Add shift.
   const content = (
     <>
       <button
@@ -93,47 +98,40 @@ export function ShiftCard({
         aria-label={ariaLabel}
         aria-describedby={hintId}
         onClick={() => onOpen(shift)}
-        className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 text-left"
+        className="flex min-h-[56px] min-w-0 flex-1 flex-col items-stretch justify-center gap-0.5 text-left"
       >
-        {open ? (
-          <span
-            aria-hidden="true"
-            data-testid="shift-open-ring"
-            // card-shell-ok: the empty avatar ring (a circle), not a card
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[1.5px] border-line bg-bg text-ink-3"
-          >
-            <Icon name="person-add-outline" size="inline" />
-          </span>
-        ) : (
-          <Avatar name={assignee?.name || shift.title} size="sm" />
-        )}
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="break-words text-sm font-semibold text-ink">{shift.title}</span>
-          <span className="text-xs text-ink-2">
-            {range}
-            {parts.nextDay ? ` · ${t('nextDay')}` : ''}
-            {!open && who ? ` · ${who}` : ''}
-            {open && (
-              <>
-                {' · '}
-                <span
-                  data-testid="shift-open-word"
-                  className={`font-semibold ${unfilledEnded ? 'text-ink-2' : 'text-moss'}`}
-                >
-                  {unfilledEnded ? t('notCovered') : t('open')}
-                </span>
-              </>
-            )}
-          </span>
-          {viewerRange && (
-            <span className="text-xs text-ink-3">{t('detail.yourTime', { range: viewerRange })}</span>
+        <span className="break-words text-sm font-semibold text-ink" data-testid="shift-card-title">
+          {shift.title}
+        </span>
+        <span className="text-xs text-ink-2 tabular-nums" data-testid="shift-card-range">
+          {range}
+          {parts.nextDay ? ` (${t('nextDay')})` : ''}
+        </span>
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-ink-2" data-testid="shift-card-status">
+          {open ? (
+            <span
+              data-testid="shift-open-word"
+              className={`shrink-0 font-semibold ${unfilledEnded ? 'text-ink-2' : 'text-moss'}`}
+            >
+              {unfilledEnded ? t('notCovered') : t('open')}
+            </span>
+          ) : (
+            <>
+              <Avatar name={assignee?.name || shift.title} size="xs" className="h-5! w-5!" />
+              <span className="min-w-0 truncate" data-testid="shift-card-assignee">
+                {who}
+              </span>
+            </>
           )}
-          {taskCount > 0 && (
-            <span className="text-xs text-ink-2" data-testid="shift-card-task-count">
-              {t('tasks.card.count', { count: taskCount, done: taskDone })}
+          {progress && (
+            <span className="shrink-0 tabular-nums" data-testid="shift-card-task-count">
+              · {progress}
             </span>
           )}
         </span>
+        {viewerRange && (
+          <span className="text-xs text-ink-3 tabular-nums">{t('detail.yourTime', { range: viewerRange })}</span>
+        )}
         <span id={hintId} className="sr-only">
           {t('card.openDetailsHint')}
         </span>
@@ -141,7 +139,8 @@ export function ShiftCard({
       {open && !unfilledEnded && onTake && (
         <Button
           size="sm"
-          variant="primary"
+          variant="outline"
+          className="shrink-0"
           aria-label={t('takeAria', { name: shift.title })}
           offlineKind="change"
           onClick={() => onTake(shift)}

@@ -9,9 +9,11 @@ import {
 } from '@/api/shifts';
 import {
   Button,
+  Card,
   ChipSelect,
   ChoiceTileButton,
   DateField,
+  Eyebrow,
   Icon,
   Modal,
   RadioGroup,
@@ -297,6 +299,9 @@ function ShiftFormBody({
   );
   // Once the person touches the tiles, the root arriving late must not overwrite their choice.
   const repeatTouched = useRef(false);
+  // "Custom…" (approved mock 2026-11-08): the rarer repeats sit behind one tile, open while the user opened it and
+  // always while one of them is the answer (editing a rotation opens with it shown and selected). Mobile parity.
+  const [customOpen, setCustomOpen] = useState(false);
   const rootRule = rootEdit.root;
   useEffect(() => {
     if (!rootRule || repeatTouched.current) return;
@@ -654,17 +659,34 @@ function ShiftFormBody({
 
   if (!canEdit) return null;
 
-  // The medication picker's order.
+  // The four most people need; "Custom…" opens the rest in place (rotations live there). Mobile parity.
   const repeatOptions = [
     { value: 'none', label: t('shifts:form.once') },
     { value: 'daily', label: t('shifts:form.everyDay') },
-    { value: 'every_other_day', label: t('shifts:form.everyOtherDay') },
     { value: 'weekly', label: t('shifts:form.everyWeek') },
-    { value: 'monthly', label: t('shifts:form.monthly') },
-    { value: 'yearly', label: t('shifts:form.yearly') },
+  ];
+  const customRepeatOptions = [
+    { value: 'every_other_day', label: t('shifts:form.everyOtherDay') },
     { value: 'cycle', label: t('shifts:form.daysOnOff') },
     { value: 'days_of_week', label: t('shifts:form.someDays') },
+    { value: 'monthly', label: t('shifts:form.monthly') },
+    { value: 'yearly', label: t('shifts:form.yearly') },
   ];
+  // A stored rule no tile names stays unselected until the user picks one.
+  const shownRepeat = !repeatTouched.current && isEditing && storedChoice === null ? null : repeat;
+  const customSelected = shownRepeat !== null && customRepeatOptions.some((o) => o.value === shownRepeat);
+  const customShown = customOpen || customSelected;
+  const repeatDisabled = !repeatEditable || rootEdit.pending;
+  const pickRepeat = (next: string | null): void => {
+    if (!next) return;
+    const choice = next as ShiftRepeatChoice;
+    repeatTouched.current = true;
+    setRepeat(choice);
+    if (choice === 'days_of_week' && days.length === 0 && date) {
+      setDays([getDayOfWeek(date)]);
+    }
+    clearError('shift_days', 'cycle_days_on');
+  };
   // The days-of-week start moves to the first selected weekday ("First time: ...").
   const firstTime =
     repeatEditable && repeat === 'days_of_week' && days.length > 0 && date
@@ -892,7 +914,7 @@ function ShiftFormBody({
         {(!repeatingEdit || futureEdit) && (
           <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
             {sectionHeading('sf-how-often', t('shifts:form.howOften'))}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[role=radio]]:w-full">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[role=radio]]:w-full [&>button]:w-full">
               <ChipSelect
                 id="shift_repeat"
                 label={t('shifts:form.howOften')}
@@ -900,21 +922,52 @@ function ShiftFormBody({
                 contents
                 allowDeselect={false}
                 // A one-off's repeat is fixed; a series' can change under "All upcoming shifts".
-                disabled={!repeatEditable || rootEdit.pending}
+                disabled={repeatDisabled}
                 options={repeatOptions}
-                value={!repeatTouched.current && isEditing && storedChoice === null ? null : repeat}
+                value={customSelected ? null : shownRepeat}
                 onChange={(next) => {
-                  if (!next) return;
-                  const choice = next as ShiftRepeatChoice;
-                  repeatTouched.current = true;
-                  setRepeat(choice);
-                  if (choice === 'days_of_week' && days.length === 0 && date) {
-                    setDays([getDayOfWeek(date)]);
-                  }
-                  clearError('shift_days', 'cycle_days_on');
+                  pickRepeat(next);
+                  setCustomOpen(false);
+                }}
+              />
+              <ChoiceTileButton
+                testId="shift-repeat-custom"
+                label={t('shifts:form.custom')}
+                selected={customSelected}
+                expanded={customShown}
+                disabled={repeatDisabled}
+                onClick={() => {
+                  // While a custom repeat is the answer the options stay open (the choice lives there).
+                  if (customSelected) return;
+                  const opening = !customOpen;
+                  setCustomOpen(opening);
+                  if (opening) Analytics.shiftRepeatCustomOpened({ editing: isEditing });
                 }}
               />
             </div>
+            {customShown && (
+              <Card
+                variant="outlined"
+                padding="none"
+                className="flex flex-col gap-2 p-3"
+                data-testid="shift-repeat-custom-panel"
+              >
+                <Eyebrow id="sf-repeat-custom">{t('shifts:form.customHeading')}</Eyebrow>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 [&_[role=radio]]:w-full">
+                  <ChipSelect
+                    id="shift_repeat_custom"
+                    label={t('shifts:form.customHeading')}
+                    variant="tile"
+                    contents
+                    allowDeselect={false}
+                    disabled={repeatDisabled}
+                    options={customRepeatOptions}
+                    value={customSelected ? shownRepeat : null}
+                    onChange={pickRepeat}
+                  />
+                </div>
+              </Card>
+            )}
             {repeatEditable && repeat === 'cycle' && (
               <ShiftCyclePanel
                 daysOn={cycleOn}
@@ -992,9 +1045,12 @@ function ShiftFormBody({
             allowDeselect={false}
             onChange={(next) => setAssignedTo(next ?? '')}
           />
-          <Text variant="caption" as="p" data-testid="shift-form-open-hint">
-            {t('shifts:form.openHint')}
-          </Text>
+          {/* Said only while "Leave open" is the answer (owner 2026-11-08: no openHint repeats). */}
+          {!assignedTo && (
+            <Text variant="caption" as="p" data-testid="shift-form-open-hint">
+              {t('shifts:form.openHint')}
+            </Text>
+          )}
         </section>
 
         <DisclosureRow

@@ -65,19 +65,21 @@ function renderCard(s: CalendarEvent, extra: Partial<React.ComponentProps<typeof
 }
 
 describe('ShiftCard', () => {
-  it('OPEN: the same white card (no amber, no dashed edge), "Open" in moss on the meta line, a Take button and an accessible name that says open', async () => {
+  it('OPEN: the same white card, the range alone, "Open" in moss on the status line, an OUTLINE Take sm, a name that says open', async () => {
     const user = userEvent.setup();
     const { onOpen, onTake } = renderCard(shift());
     const card = screen.getByTestId('shift-card');
     expect(card).toHaveAttribute('data-shift-state', 'open');
     expect(card).toHaveClass('border', 'border-line!', 'bg-cream');
     expect(card.className).not.toMatch(/amber|dashed/);
-    expect(screen.getByTestId('shift-open-ring').className).not.toMatch(/amber|dashed/);
+    // No avatar ring any more (approved mock 2026-11-08); the range is its own line, "(next day)" inline.
+    expect(screen.queryByTestId('shift-open-ring')).not.toBeInTheDocument();
+    expect(within(card).getByTestId('shift-card-range')).toHaveTextContent(/^8:00 PM – 8:00 AM \(next day\)$/);
     // Conveyed by text ("Open" on the meta line, in moss), not by colour or edge style.
     const word = within(card).getByTestId('shift-open-word');
     expect(word).toHaveTextContent('Open');
     expect(word).toHaveClass('text-moss', 'font-semibold');
-    expect(word.parentElement).toHaveTextContent(/8:00 PM – 8:00 AM · next day · Open/);
+    expect(within(card).getByTestId('shift-card-status')).toHaveTextContent(/^Open$/);
     expect(within(card).getAllByText('Open')).toHaveLength(1);
     const body = screen.getByRole('button', { name: 'Night, 8:00 PM to 8:00 AM, next day, open' });
     // The action sits in the description, never in the label.
@@ -85,7 +87,11 @@ describe('ShiftCard', () => {
     expect(body.getAttribute('aria-label')).not.toMatch(/double tap/i);
     await user.click(body);
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }));
-    await user.click(screen.getByRole('button', { name: 'Take Night' }));
+    const take = screen.getByRole('button', { name: 'Take Night' });
+    // Outline, never filled: Add shift is the list's one filled button. Button sm = the standard rounded-md.
+    expect(take).toHaveClass('border-primary-outline', 'rounded-md');
+    expect(take.className).not.toContain('bg-primary-fill');
+    await user.click(take);
     expect(onTake).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }));
   });
 
@@ -96,7 +102,11 @@ describe('ShiftCard', () => {
     expect(card).toHaveClass('bg-cream', 'border-moss-line');
     expect(card).not.toHaveClass('bg-moss-soft');
     expect(card).not.toHaveClass('border-dashed');
-    expect(screen.getByText(/8:00 PM – 8:00 AM · next day · Ana/)).toBeInTheDocument();
+    expect(within(card).getByTestId('shift-card-range')).toHaveTextContent(/^8:00 PM – 8:00 AM \(next day\)$/);
+    expect(within(card).getByTestId('shift-card-assignee')).toHaveTextContent('Ana');
+    // The name truncates (never the title).
+    expect(within(card).getByTestId('shift-card-assignee')).toHaveClass('truncate', 'min-w-0');
+    expect(within(card).getByTestId('shift-card-title').className).not.toContain('truncate');
     expect(
       screen.getByRole('button', { name: 'Night, 8:00 PM to 8:00 AM, next day, Ana is on it' })
     ).toBeInTheDocument();
@@ -107,7 +117,7 @@ describe('ShiftCard', () => {
     renderCard(shift({ assigned_to: 'u-me' }));
     const card = screen.getByTestId('shift-card');
     expect(card).toHaveClass('bg-moss-soft', 'border-moss');
-    expect(screen.getByText(/· You/)).toBeInTheDocument();
+    expect(within(card).getByTestId('shift-card-assignee')).toHaveTextContent(/^You$/);
     expect(screen.getByRole('button', { name: 'Night, 8:00 PM to 8:00 AM, next day, you are on this shift' })).toBeInTheDocument();
   });
 
@@ -169,7 +179,7 @@ describe('ShiftCard: ended shifts', () => {
   });
 });
 
-describe('ShiftCard task count chip (docs/plans/shift-tasks.md)', () => {
+describe('ShiftCard task count on the status line (docs/plans/shift-tasks.md)', () => {
   const DAY = '2026-10-19';
   const onShift = shift({ assigned_to: 'u-ana', parent_event_id: 'root' });
   const link = {
@@ -195,7 +205,7 @@ describe('ShiftCard task count chip (docs/plans/shift-tasks.md)', () => {
       ...over,
     }) as CalendarEvent;
 
-  it('reads "3 tasks · 1 done": linked tasks plus the person\'s overlapping regular task, never others\'', () => {
+  it('reads "Ana · 1 of 3 done" on one status line: linked tasks plus the person\'s overlapping regular task, never others\'', () => {
     renderCard(onShift, {
       events: [
         task('linked-a', { shift: link }),
@@ -205,12 +215,14 @@ describe('ShiftCard task count chip (docs/plans/shift-tasks.md)', () => {
         task('regular-anyone', { scheduled_time: '22:30:00' }),
       ],
     });
-    expect(screen.getByTestId('shift-card-task-count')).toHaveTextContent('3 tasks · 1 done');
+    expect(screen.getByTestId('shift-card-task-count')).toHaveTextContent('· 1 of 3 done');
+    // The avatar's initial is aria-hidden; the visible line reads "Ana · 1 of 3 done".
+    expect(screen.getByTestId('shift-card-status')).toHaveTextContent(/^AAna· 1 of 3 done$/);
   });
 
-  it('one task is singular', () => {
+  it('one task: "0 of 1 done"', () => {
     renderCard(onShift, { events: [task('linked-a', { shift: link })] });
-    expect(screen.getByTestId('shift-card-task-count')).toHaveTextContent('1 task · 0 done');
+    expect(screen.getByTestId('shift-card-task-count')).toHaveTextContent('· 0 of 1 done');
   });
 
   it('is hidden at 0 and while the events have not loaded', () => {
@@ -220,6 +232,6 @@ describe('ShiftCard task count chip (docs/plans/shift-tasks.md)', () => {
 
   it('is part of the card\'s accessible name', () => {
     renderCard(onShift, { events: [task('linked-a', { shift: link })] });
-    expect(screen.getByRole('button', { name: /1 task · 0 done/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /, 0 of 1 done/ })).toBeInTheDocument();
   });
 });

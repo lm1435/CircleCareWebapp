@@ -59,7 +59,7 @@ export function ShiftComposer({
         onDone={onClose}
         onAddTask={() => setStage({ kind: 'task', shift: stage.shift, next: stage.next })}
         onAddNext={() => {
-          Analytics.shiftSavedSheetAction({ action: 'add_next' });
+          Analytics.shiftSavedSheetAction({ action: 'add_next', repeating: !!stage.shift.recurrence_rule });
           Analytics.shiftAddNextTapped();
           setStage({ kind: 'form', prefill: stage.next, source: 'add_next' });
         }}

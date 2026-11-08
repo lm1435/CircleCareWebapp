@@ -98,18 +98,22 @@ async function createRotation(
   await form.getByTestId('shift-end-tile').click();
   await form.locator('#shift_end').fill('18:00');
   await form.locator('#shift_date').fill(o.start);
+  // The four most people need; "Custom…" opens the rest in place (approved mock 2026-11-08).
   const tiles = form.getByRole('radiogroup', { name: 'How often?' });
-  await expect(tiles.getByRole('radio')).toHaveText([
-    'Once',
-    'Every day',
+  await expect(tiles.getByRole('radio')).toHaveText(['Once', 'Every day', 'Every week']);
+  const customTile = form.getByTestId('shift-repeat-custom');
+  await expect(customTile).toHaveText('Custom…');
+  await expect(customTile).toHaveAttribute('aria-expanded', 'false');
+  await customTile.click();
+  const custom = form.getByRole('radiogroup', { name: 'Custom' });
+  await expect(custom.getByRole('radio')).toHaveText([
     'Every other day',
-    'Every week',
-    'Monthly',
-    'Yearly',
     'Days on / off',
     'Some days',
+    'Monthly',
+    'Yearly',
   ]);
-  await tiles.getByRole('radio', { name: 'Days on / off' }).click();
+  await custom.getByRole('radio', { name: 'Days on / off' }).click();
   await form.locator('#cycle_days_on').fill(String(o.on));
   await form.locator('#cycle_days_off').fill(String(o.off));
   const panel = form.getByTestId('shift-cycle-panel');
@@ -199,7 +203,9 @@ test.describe('shift rotations', () => {
     await form.getByRole('radio', { name: 'All upcoming shifts' }).click();
     // Starting defaults to the tapped shift; the stored rotation is preselected with its counts.
     await expect(form.locator('#shift_date')).toHaveValue(from);
-    await expect(form.getByRole('radiogroup', { name: 'How often?' }).getByRole('radio', { name: 'Days on / off' })).toBeChecked();
+    // A stored rotation opens with Custom expanded and Days on / off selected inside it.
+    await expect(form.getByTestId('shift-repeat-custom')).toHaveAttribute('aria-expanded', 'true');
+    await expect(form.getByRole('radiogroup', { name: 'Custom' }).getByRole('radio', { name: 'Days on / off' })).toBeChecked();
     await expect(form.locator('#cycle_days_on')).toHaveValue('14');
     await expect(form.locator('#cycle_days_off')).toHaveValue('7');
     await form.locator('#cycle_days_on').fill('7');

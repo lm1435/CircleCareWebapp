@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useId, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { Button, Modal } from '@/components/ui';
@@ -23,9 +23,9 @@ export interface ShiftSavedDialogProps {
 }
 
 /**
- * After a CREATE: "Morning shift saved - 8:00 AM - 2:00 PM, every day. Open for
- * anyone to take." with "Add the next shift - Starts at 2:00 PM · Every day" and
- * Done.
+ * After a CREATE: ""Morning" saved", the summary ("8:00 AM - 2:00 PM, every day." / "... · Ana is on it."),
+ * then the follow-ups (one filled, see below) and Done. "Starts at 2:00 PM · every day" is the add-next
+ * button's description for assistive tech.
  */
 export function ShiftSavedDialog({
   circleId,
@@ -38,6 +38,7 @@ export function ShiftSavedDialog({
   const cycle = useHourCycle();
   const { timezone, members } = useCircle(circleId);
   const viewerId = useAuthStore((s) => s.user?.id);
+  const hintId = useId();
 
   const repeating = !!shift.recurrence_rule;
   // Mobile's wording: "every day" / "every week" / "on Mon, Wed", and full
@@ -82,48 +83,62 @@ export function ShiftSavedDialog({
         ? t('saved.summaryAssigned', { range, repeat, who })
         : t('saved.summaryAssignedOnce', { range, who });
 
+  const nextHint = repeating
+    ? t('saved.addNextHint', { time: nextStart, repeat })
+    : t('saved.addNextHintOnce', { time: nextStart });
+  const addNextLabel = repeating ? t('saved.addAnother') : t('saved.addNext');
+  // EXACTLY ONE filled button (approved mock 2026-11-08, mobile ShiftSavedSheet): a one-off leads with
+  // "Add the next shift"; a repeating shift already covers its next days, so "Add a task to this shift" leads
+  // and "Add another shift" follows. Done is the quiet neutral text button, last.
+  const addNext = (
+    <Button
+      key="next"
+      variant={repeating ? 'secondary' : 'primary'}
+      fullWidth
+      aria-describedby={hintId}
+      data-testid="shift-saved-add-next"
+      onClick={onAddNext}
+    >
+      {addNextLabel}
+    </Button>
+  );
+  const addTask = (
+    <Button
+      key="task"
+      variant={repeating ? 'primary' : 'secondary'}
+      fullWidth
+      offlineKind="change"
+      data-testid="shift-saved-add-task"
+      onClick={() => {
+        Analytics.shiftSavedSheetAction({ action: 'add_task', repeating });
+        onAddTask();
+      }}
+    >
+      {t('tasks.addTask')}
+    </Button>
+  );
+
   return (
-    <Modal
-      size="sm"
-      title={t('saved.title', { name: shift.title })}
-      closeLabel={t('close')}
-      onClose={onDone}
-      footer={
-        // Done stays the primary action (no check icon, owner 2026-11-07); the two follow-ups are outlines.
+    <Modal size="sm" title={t('saved.title', { name: shift.title })} closeLabel={t('close')} onClose={onDone}>
+      <div className="flex flex-col gap-3">
+        <p className="m-0 mb-1 text-base text-ink-2" data-testid="shift-saved-summary">
+          {summary}
+        </p>
+        {repeating ? [addTask, addNext] : [addNext, addTask]}
+        <span id={hintId} className="sr-only">
+          {nextHint}
+        </span>
         <Button
-          variant="primary"
+          variant="ghost"
+          tone="neutral"
+          fullWidth
+          data-testid="shift-saved-done"
           onClick={() => {
-            Analytics.shiftSavedSheetAction({ action: 'done' });
+            Analytics.shiftSavedSheetAction({ action: 'done', repeating });
             onDone();
           }}
         >
           {t('saved.done')}
-        </Button>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <p className="m-0 text-base text-ink-2">{summary}</p>
-        <Button variant="outline" fullWidth onClick={onAddNext}>
-          <span className="flex flex-col items-center">
-            <span>{t('saved.addNext')}</span>
-            <span className="text-xs font-normal">
-              {repeating
-                ? t('saved.addNextHint', { time: nextStart, repeat })
-                : t('saved.addNextHintOnce', { time: nextStart })}
-            </span>
-          </span>
-        </Button>
-        <Button
-          variant="outline"
-          fullWidth
-          offlineKind="change"
-          data-testid="shift-saved-add-task"
-          onClick={() => {
-            Analytics.shiftSavedSheetAction({ action: 'add_task' });
-            onAddTask();
-          }}
-        >
-          {t('tasks.addTask')}
         </Button>
       </div>
     </Modal>

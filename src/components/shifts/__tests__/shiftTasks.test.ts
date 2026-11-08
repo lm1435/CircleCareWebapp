@@ -203,21 +203,29 @@ describe('buildShiftList: n of N done', () => {
   });
 });
 
-describe('shiftTaskMeta (Task · <first_name> · <shift title>)', () => {
+describe('shiftTaskMeta: "<shift title> · <first_name>" where a Task chip shows; withType keeps "Task ·"', () => {
   const t = (key: string, o?: Record<string, unknown>) =>
     key === 'shifts:tasks.meta.line'
       ? `Task · ${o?.who} · ${o?.title}`
-      : key === 'shifts:tasks.meta.open'
-        ? 'Open shift'
-        : key === 'shifts:someone'
-          ? 'Someone'
-          : key;
+      : key === 'shifts:tasks.meta.compact'
+        ? `${o?.title} · ${o?.who}`
+        : key === 'shifts:tasks.meta.open'
+          ? 'Open shift'
+          : key === 'shifts:someone'
+            ? 'Someone'
+            : key;
 
-  it('names the coverer and the shift', () => {
-    expect(shiftTaskMeta(a, t)).toBe('Task · Lucia · Afternoons');
+  it('names the shift first, then the coverer (the name is what truncates)', () => {
+    expect(shiftTaskMeta(a, t)).toBe('Afternoons · Lucia');
   });
-  it('an open shift reads "Open shift"', () => {
+  it('an open shift reads "<title> · Open shift"', () => {
     expect(shiftTaskMeta(ev('o', { shift: link({ status: 'open', assignee: null }) }), t)).toBe(
+      'Afternoons · Open shift'
+    );
+  });
+  it('withType (Today\'s Next up, no chip) keeps the word: "Task · Lucia · Afternoons"', () => {
+    expect(shiftTaskMeta(a, t, { withType: true })).toBe('Task · Lucia · Afternoons');
+    expect(shiftTaskMeta(ev('o', { shift: link({ status: 'open', assignee: null }) }), t, { withType: true })).toBe(
       'Task · Open shift · Afternoons'
     );
   });

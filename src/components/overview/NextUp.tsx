@@ -112,6 +112,25 @@ const PAGE_FOR: Record<NextUpItem['type'], string> = {
   task: 'tasks',
 };
 
+/**
+ * Next up will show a FILLED Taken / Done (one of its first visible rows has an action: a confirmable dose or an
+ * open task the viewer may complete). Today uses it so a coaching card above (next step, shifts nudge) drops its
+ * own CTA to the outline: one filled action per screen region, and the due / overdue item wins (owner 2026-11-08,
+ * mobile nextUpHasFilledAction). Undo badges are transient and not counted.
+ */
+export function nextUpHasFilledAction(
+  items: readonly NextUpItem[],
+  canEdit: boolean,
+  timezone: string | null
+): boolean {
+  if (!canEdit || !timezone) return false;
+  return items.slice(0, NEXT_UP_VISIBLE).some((item) =>
+    item.med
+      ? isDoseConfirmable(item.med.scheduled_date, item.med.scheduled_time ?? null, timezone)
+      : item.type === 'task' && !!item.event
+  );
+}
+
 export function NextUp({
   circleId,
   timezone,
@@ -273,7 +292,10 @@ export function NextUp({
     // A task added to a shift names who covers it and which shift ("Task · Lucia · Afternoons").
     const shiftMeta =
       item.type === 'task' && item.event
-        ? shiftTaskMeta(item.event, t as unknown as (k: string, o?: Record<string, unknown>) => string)
+        ? shiftTaskMeta(item.event, t as unknown as (k: string, o?: Record<string, unknown>) => string, {
+            // Next up shows no type chip, so the word "Task" stays (elsewhere the chip says it).
+            withType: true,
+          })
         : null;
     const sub = [item.detail, shiftMeta, lateText].filter(Boolean).join(' · ');
     // The action's accessible name carries WHEN (mobile NextUpCard actionWhen): yesterday's and

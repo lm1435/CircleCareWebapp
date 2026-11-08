@@ -155,10 +155,16 @@ test.describe('premium owner', () => {
     // Saved sheet.
     const saved = page.getByRole('dialog', { name: '"Night" saved' });
     await expect(saved).toBeVisible({ timeout: 20_000 });
-    await expect(saved.getByText('8:00 PM – 8:00 AM, every day. Open for anyone to take.')).toBeVisible();
+    // No "Open for anyone to take." repeat (owner 2026-11-08); a repeating shift leads with Add a task (the one
+    // filled button) and offers "Add another shift" as the secondary.
+    await expect(saved.getByText('8:00 PM – 8:00 AM, every day.', { exact: true })).toBeVisible();
+    await expect(saved.getByText(/Open for anyone to take/)).toHaveCount(0);
     await checkA11y(page, 'shifts-saved-light', testInfo);
-    const addNext = saved.getByRole('button', { name: /Add the next shift/ });
-    await expect(addNext).toContainText('Starts at 8:00 AM · every day');
+    await expect(saved.locator('button[class*="bg-primary-fill"]')).toHaveCount(1);
+    await expect(saved.getByRole('button', { name: 'Add a task to this shift' })).toHaveClass(/bg-primary-fill/);
+    const addNext = saved.getByRole('button', { name: 'Add another shift' });
+    await expect(addNext).not.toHaveClass(/bg-primary-fill/);
+    await expect(addNext).toHaveAccessibleDescription('Starts at 8:00 AM · every day');
 
     // Add the next: pre-filled start = previous end, repeat + reminder kept; name and end empty.
     await addNext.click();
@@ -295,14 +301,28 @@ test.describe('a member takes and drops a shift', () => {
       const take = page.getByRole('dialog', { name: 'Take "Night"' });
       await expect(take.getByRole('radio', { name: /Just this one/ })).toBeChecked();
       await expect(take.getByRole('radio', { name: /This and every future one/ })).toBeVisible();
-      // The reminder is a picker starting at the shift's own value; the taker may change it.
-      const reminder = take.getByRole('combobox', { name: 'Reminder' });
-      await expect(reminder).toHaveValue('60');
-      await expect(reminder.locator('option')).toHaveText(['Off', '1 hour', '2 hours', '4 hours', '1 day']);
+      // The reminder is ONE line at the shift's own value + Change (approved mock 2026-11-08); Change opens every
+      // option in place and a pick folds it back. Take shift is the only filled button.
+      await expect(take.getByTestId('take-shift-reminder-value')).toHaveText('Reminder · 1 hour before');
+      await expect(take.locator('button[class*="bg-primary-fill"]')).toHaveCount(1);
       await checkA11y(page, 'shifts-take-light', testInfo);
-      await reminder.selectOption({ label: '4 hours' });
+      const change = take.getByRole('button', { name: 'Change reminder, 1 hour before' });
+      await expect(change).toHaveAttribute('aria-expanded', 'false');
+      await change.click();
+      const reminder = take.getByRole('radiogroup', { name: 'Reminder' });
+      await expect(reminder.getByRole('radio')).toHaveText([
+        'Off',
+        '1 hour before',
+        '2 hours before',
+        '4 hours before',
+        '1 day before',
+      ]);
+      await expect(reminder.getByRole('radio', { name: '1 hour before' })).toBeChecked();
+      await checkA11y(page, 'shifts-take-reminder-open-light', testInfo);
+      await reminder.getByRole('radio', { name: '4 hours before' }).click();
+      await expect(take.getByTestId('take-shift-reminder-value')).toHaveText('Reminder · 4 hours before');
       await take.getByRole('button', { name: 'Take shift' }).click();
-      await expect(page.getByText('You\'re on the shift "Night".')).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("You're on it.", { exact: true })).toBeVisible({ timeout: 20_000 });
 
       const night = list.getByRole('button', { name: /^Night, 8:00 PM to 8:00 AM, next day, you are on this shift$/ });
       await expect(night).toBeVisible();
@@ -329,7 +349,7 @@ test.describe('a member takes and drops a shift', () => {
       await expect(confirm.getByRole('radio')).toHaveCount(0);
       await checkA11y(page, 'shifts-drop-light', testInfo);
       await confirm.getByRole('button', { name: 'Drop shift' }).click();
-      await expect(page.getByText('You dropped "Night". It\'s open again.')).toBeVisible({
+      await expect(page.getByText("Shift dropped. It's open again.", { exact: true })).toBeVisible({
         timeout: 20_000,
       });
       await expect(

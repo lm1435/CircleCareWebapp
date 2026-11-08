@@ -56,7 +56,9 @@
     "scopeLabel": "Quali turni?",
     "justThis": "Solo questo",
     "futureHint": "Potrai lasciarne uno più avanti",
-    "future": "Questo e tutti i futuri"
+    "future": "Questo e tutti i futuri",
+    "change": "Cambia",
+    "changeReminder": "Cambia promemoria"
   },
   "scope": {
     "label": "Quali turni?",
@@ -67,7 +69,7 @@
   "drop": {
     "action": "Lascia il turno",
     "title": "Lasciare questo turno?",
-    "message": "«{{name}}» tornerà scoperto e tutti nella cerchia verranno avvisati.",
+    "message": "Tutti verranno avvisati che è scoperto.",
     "confirm": "Lascia il turno",
     "messageRepeating": "Scegli quali turni lasciare. Torneranno scoperti e tutti nella cerchia verranno avvisati."
   },
@@ -170,12 +172,14 @@
     "firstTime": "Prima volta: {{date}}",
     "fromNote": "I turni prima del {{date}} restano come sono, compreso chi li ha coperti. Il nuovo piano inizia il {{date}}.",
     "invalidStart": "Questa data non rientra nel nuovo piano. Scegli un’altra data di inizio.",
-    "rescheduleRequired": "Questo piano è stato modificato altrove. Chiudi e riapri il turno."
+    "rescheduleRequired": "Questo piano è stato modificato altrove. Chiudi e riapri il turno.",
+    "custom": "Personalizzato…",
+    "customHeading": "Personalizzato"
   },
   "saved": {
     "title": "«{{name}}» salvato",
-    "summaryOpen": "{{range}}, {{repeat}}. Scoperto, chiunque può prenderlo.",
-    "summaryOpenOnce": "{{range}} · Scoperto, chiunque può prenderlo.",
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
     "summaryAssigned": "{{range}}, {{repeat}}. Se ne occupa {{who}}.",
     "summaryAssignedOnce": "{{range}} · Se ne occupa {{who}}.",
     "addNext": "Aggiungi il turno successivo",
@@ -189,7 +193,8 @@
     "repeatDays": "{{days}}",
     "repeatMonthly": "ogni mese",
     "repeatYearly": "ogni anno",
-    "repeatEveryOtherDay": "a giorni alterni"
+    "repeatEveryOtherDay": "a giorni alterni",
+    "addAnother": "Aggiungi un altro turno"
   },
   "validation": {
     "nameRequired": "Dai un nome al turno.",
@@ -205,9 +210,9 @@
     "startingBefore": "La data di inizio non può essere prima del {{date}}."
   },
   "toast": {
-    "taken": "Hai il turno «{{name}}».",
+    "taken": "Il turno è tuo.",
     "alreadyTaken": "{{takenBy}} ha appena preso questo turno.",
-    "dropped": "Hai lasciato «{{name}}». È di nuovo scoperto.",
+    "dropped": "Turno lasciato. È di nuovo scoperto.",
     "assigned": "{{name}} ha il turno.",
     "updated": "Turno aggiornato.",
     "deleted": "Turno eliminato.",
@@ -305,12 +310,12 @@
       "missed": "Non segnata"
     },
     "card": {
-      "count_one": "{{count}} attività · {{done}} fatta",
-      "count_other": "{{count}} attività · {{done}} fatte"
+      "progress": "{{done}} di {{total}} fatte"
     },
     "meta": {
       "line": "Attività · {{who}} · {{title}}",
-      "open": "Turno scoperto"
+      "open": "Turno scoperto",
+      "compact": "{{title}} · {{who}}"
     },
     "editWarning_one": "{{count}} attività cade fuori dai nuovi orari. Resterà nel calendario come attività per chiunque.",
     "editWarning_other": "{{count}} attività cadono fuori dai nuovi orari. Resteranno nel calendario come attività per chiunque.",

@@ -21,7 +21,7 @@ vi.mock('@/api/shifts', async (importOriginal) => ({
 }));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/lib/analytics', () => ({
-  Analytics: { shiftTaken: vi.fn(), shiftTakeConflict: vi.fn(), errorOccurred: vi.fn() },
+  Analytics: { shiftTaken: vi.fn(), shiftTakeConflict: vi.fn(), errorOccurred: vi.fn(), shiftTakeReminderExpanded: vi.fn() },
 }));
 
 const mockTake = vi.mocked(takeShift);
@@ -78,26 +78,72 @@ beforeEach(() => {
 });
 
 describe('TakeShiftDialog', () => {
-  it('a one-off: one Take button, no scope choice, the reminder picker starts on the shift value and unchanged sends none', async () => {
+  // Approved mock 2026-11-08 (mobile TakeShiftSheet): ONE line "Reminder · 1 hour before" + Change; Change opens
+  // every option in place; a pick folds it back, showing the choice. Take shift is the only filled button.
+  const change = () => screen.getByRole('button', { name: /^Change reminder, / });
+  const choices = () => screen.getByRole('radiogroup', { name: 'Reminder' });
+
+  it('a one-off: one Take button, no scope choice, the reminder is one line and unchanged sends none', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
     expect(screen.getByRole('heading', { name: 'Take "Night"' })).toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
-    const picker = screen.getByRole('combobox', { name: 'Reminder' });
-    expect(picker).toHaveValue('60');
-    expect(within(picker).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      'Off', '1 hour', '2 hours', '4 hours', '1 day',
-    ]);
+    expect(screen.getByTestId('take-shift-reminder-value')).toHaveTextContent('Reminder · 1 hour before');
+    expect(change()).toHaveAccessibleName('Change reminder, 1 hour before');
+    expect(change()).toHaveAttribute('aria-expanded', 'false');
+    expect(change().className).not.toContain('bg-primary-fill');
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelectorAll('button[class*="bg-primary-fill"]')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Take shift' }).className).toContain('bg-primary-fill');
     await user.click(screen.getByRole('button', { name: 'Take shift' }));
     await waitFor(() =>
       expect(mockTake).toHaveBeenCalledWith('c', 's1', { scope: 'occurrence', scheduledDate: '2026-10-20' })
     );
   });
 
-  it('changing the reminder sends reminder_lead_minutes (and Off sends null); the event reports reminderChanged', async () => {
+  it('Change opens every option (current one checked, focused), counts it, and a pick folds it back', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Reminder' }), '4 hours');
+    await user.click(change());
+    expect(Analytics.shiftTakeReminderExpanded).toHaveBeenCalledTimes(1);
+    const radios = within(choices()).getAllByRole('radio');
+    expect(radios.map((r) => r.textContent)).toEqual([
+      'Off',
+      '1 hour before',
+      '2 hours before',
+      '4 hours before',
+      '1 day before',
+    ]);
+    const current = within(choices()).getByRole('radio', { name: '1 hour before' });
+    expect(current).toBeChecked();
+    expect(current).toHaveFocus();
+    expect(current.className).toContain('bg-ink');
+    await user.click(within(choices()).getByRole('radio', { name: '4 hours before' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('take-shift-reminder-value')).toHaveTextContent('Reminder · 4 hours before');
+    expect(change()).toHaveFocus();
+    // Tapping the current choice just folds it.
+    await user.click(change());
+    await user.click(within(choices()).getByRole('radio', { name: '4 hours before' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).not.toBeInTheDocument();
+  });
+
+  it('arrow keys move the choice without folding the row (keyboard users are not thrown out)', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
+    await user.click(change());
+    await user.keyboard('{ArrowRight}');
+    expect(within(choices()).getByRole('radio', { name: '2 hours before' })).toBeChecked();
+    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('radiogroup', { name: 'Reminder' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('take-shift-reminder-value')).toHaveTextContent('Reminder · 2 hours before');
+  });
+
+  it('changing the reminder sends reminder_lead_minutes; the event reports reminderChanged', async () => {
+    const user = userEvent.setup();
+    renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
+    await user.click(change());
+    await user.click(within(choices()).getByRole('radio', { name: '4 hours before' }));
     await user.click(screen.getByRole('button', { name: 'Take shift' }));
     await waitFor(() =>
       expect(mockTake).toHaveBeenCalledWith('c', 's1', {
@@ -111,18 +157,19 @@ describe('TakeShiftDialog', () => {
     );
   });
 
-  it('Off sends null; picking the original value again sends nothing', async () => {
+  it('Off sends null', async () => {
     const user = userEvent.setup();
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Reminder' }), 'Off');
+    await user.click(change());
+    await user.click(within(choices()).getByRole('radio', { name: 'Off' }));
     await user.click(screen.getByRole('button', { name: 'Take shift' }));
     await waitFor(() => expect(mockTake).toHaveBeenCalled());
     expect(mockTake.mock.calls[0][2]).toHaveProperty('reminder_lead_minutes', null);
   });
 
-  it('a shift with no reminder starts on Off', () => {
+  it('a shift with no reminder reads "Reminder · Off"', () => {
     renderDialog(shift({ id: 's1', parent_event_id: null, recurrence_rule: null, reminder_lead_minutes: null }));
-    expect(screen.getByRole('combobox', { name: 'Reminder' })).toHaveValue('off');
+    expect(screen.getByTestId('take-shift-reminder-value')).toHaveTextContent('Reminder · Off');
   });
 
   it('repeating + open series: "Just this one" (default) or "This and every future one"; future sends scope future', async () => {
@@ -145,7 +192,8 @@ describe('TakeShiftDialog', () => {
       expect(Analytics.shiftTaken).toHaveBeenCalledWith({ scope: 'future', reminderChanged: false })
     );
     expect(onClose).toHaveBeenCalled();
-    expect(await screen.findByText("You're on the shift \"Night\".")).toBeInTheDocument();
+    // No quoted title in the toast (owner 2026-11-08).
+    expect(await screen.findByText("You're on it.")).toBeInTheDocument();
   });
 
   it('a series whose default is someone else offers no "from now on" to a plain member', async () => {

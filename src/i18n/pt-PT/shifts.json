@@ -44,7 +44,7 @@
   "drop": {
     "action": "Libertar turno",
     "title": "Libertar este turno?",
-    "message": "\"{{name}}\" voltará a ficar por preencher e todos no círculo serão avisados.",
+    "message": "Todos serão avisados de que está por preencher.",
     "confirm": "Libertar turno",
     "messageRepeating": "Escolha quais turnos libertar. Eles voltarão a ficar por preencher e todos no círculo serão avisados."
   },
@@ -78,12 +78,13 @@
   },
   "saved": {
     "title": "\"{{name}}\" guardado",
-    "summaryOpen": "{{range}}, {{repeat}}. Por preencher: qualquer pessoa pode assumir.",
-    "summaryOpenOnce": "{{range}} · Por preencher: qualquer pessoa pode assumir.",
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
     "summarySelf": "{{range}}, {{repeat}}. Está nele.",
     "summarySelfOnce": "{{range}} · Está nele.",
     "addNext": "Adicionar o próximo turno",
-    "repeatWeekly": "todas as semanas"
+    "repeatWeekly": "todas as semanas",
+    "addAnother": "Adicionar outro turno"
   },
   "validation": {
     "nameRequired": "Dê um nome ao turno.",
@@ -93,11 +94,11 @@
     "startRequired": "Escolha quando o turno começa."
   },
   "toast": {
-    "taken": "Está no turno \"{{name}}\".",
+    "taken": "O turno é seu.",
     "alreadyTaken": "{{takenBy}} acabou de assumir este turno.",
     "alreadyTakenUnknown": "Alguém acabou de assumir este turno.",
     "alreadyOpen": "Este turno já está por preencher.",
-    "dropped": "Libertou \"{{name}}\". Voltou a ficar por preencher.",
+    "dropped": "Libertou o turno. Voltou a ficar por preencher.",
     "assigned": "{{name}} está no turno.",
     "updated": "Turno atualizado.",
     "deleted": "Turno eliminado.",

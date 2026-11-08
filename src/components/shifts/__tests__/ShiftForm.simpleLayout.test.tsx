@@ -35,6 +35,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftSeriesRescheduled: vi.fn(),
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
+    shiftRepeatCustomOpened: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -107,8 +108,15 @@ const setTime = (which: 'start' | 'end', value: string) => {
   fireEvent.change(field(id), { target: { value } });
 };
 const group = (name: string) => screen.getByRole('radiogroup', { name });
-const radio = (groupName: string, name: string | RegExp) =>
-  within(group(groupName)).getByRole('radio', { name });
+const CUSTOM_REPEATS = ['Every other day', 'Days on / off', 'Some days', 'Monthly', 'Yearly'];
+const radio = (groupName: string, name: string | RegExp) => {
+  // The rarer repeats sit behind "Custom…" (approved mock 2026-11-08): open it when the tile is not shown.
+  if (groupName === 'How often?' && typeof name === 'string' && CUSTOM_REPEATS.includes(name)) {
+    if (!screen.queryByRole('radiogroup', { name: 'Custom' })) fireEvent.click(screen.getByTestId('shift-repeat-custom'));
+    return within(group('Custom')).getByRole('radio', { name });
+  }
+  return within(group(groupName)).getByRole('radio', { name });
+};
 const moreToggle = () => screen.getByRole('button', { name: /^More details/ });
 const summary = () => screen.getByTestId('shift-form-more-summary').textContent;
 const open = (props: Partial<React.ComponentProps<typeof ShiftFormModal>> = {}) =>
@@ -307,21 +315,48 @@ describe('simple shift form: When?', () => {
 });
 
 describe('simple shift form: How often?', () => {
-  it('offers the medication options in order as tiles, Once checked', () => {
+  it('offers Once / Every day / Every week + Custom…; Custom opens the rest in place (approved mock 2026-11-08)', async () => {
+    const user = userEvent.setup();
+    const { Analytics } = await import('@/lib/analytics');
     open();
     const radios = within(group('How often?')).getAllByRole('radio');
-    expect(radios.map((r) => r.textContent)).toEqual([
-      'Once',
-      'Every day',
-      'Every other day',
-      'Every week',
-      'Monthly',
-      'Yearly',
-      'Days on / off',
-      'Some days',
-    ]);
+    expect(radios.map((r) => r.textContent)).toEqual(['Once', 'Every day', 'Every week']);
     expect(radio('How often?', 'Once')).toBeChecked();
     for (const r of radios) expect(r).toBeEnabled();
+    const custom = screen.getByTestId('shift-repeat-custom');
+    expect(custom).toHaveAccessibleName('Custom…');
+    expect(custom).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('radiogroup', { name: 'Custom' })).not.toBeInTheDocument();
+    await user.click(custom);
+    expect(custom).toHaveAttribute('aria-expanded', 'true');
+    expect(Analytics.shiftRepeatCustomOpened).toHaveBeenCalledWith({ editing: false });
+    expect(within(group('Custom')).getAllByRole('radio').map((r) => r.textContent)).toEqual([
+      'Every other day',
+      'Days on / off',
+      'Some days',
+      'Monthly',
+      'Yearly',
+    ]);
+    // Nothing picked inside yet: Once stays the answer, Custom is not "selected"; a second tap folds it.
+    expect(radio('How often?', 'Once')).toBeChecked();
+    for (const r of within(group('Custom')).getAllByRole('radio')) expect(r).not.toBeChecked();
+    await user.click(custom);
+    expect(screen.queryByRole('radiogroup', { name: 'Custom' })).not.toBeInTheDocument();
+  });
+
+  it('a custom pick selects Custom (neutral dark) and keeps it open; a top tile folds it', async () => {
+    const user = userEvent.setup();
+    open();
+    await user.click(radio('How often?', 'Monthly'));
+    const custom = screen.getByTestId('shift-repeat-custom');
+    expect(custom.className).toContain('bg-ink');
+    expect(radio('How often?', 'Monthly')).toBeChecked();
+    for (const r of within(group('How often?')).getAllByRole('radio')) expect(r).not.toBeChecked();
+    await user.click(custom);
+    expect(screen.getByRole('radiogroup', { name: 'Custom' })).toBeInTheDocument();
+    await user.click(radio('How often?', 'Every week'));
+    expect(screen.queryByRole('radiogroup', { name: 'Custom' })).not.toBeInTheDocument();
+    expect(custom.className).not.toContain('bg-ink');
   });
 
   it('Some days shows the days picker inline, with the date\'s weekday ticked', async () => {
@@ -347,10 +382,11 @@ describe('simple shift form: How often?', () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it('a one-off edit shows Once, locked', () => {
+  it('a one-off edit shows Once, locked (Custom… too)', () => {
     open({ shift: shift() });
     expect(radio('How often?', 'Once')).toBeChecked();
     for (const r of within(group('How often?')).getAllByRole('radio')) expect(r).toBeDisabled();
+    expect(screen.getByTestId('shift-repeat-custom')).toBeDisabled();
   });
 
   it.each([
@@ -366,6 +402,10 @@ describe('simple shift form: How often?', () => {
     open({ shift: shift(over as Partial<CalendarEvent>) });
     expect(screen.queryByRole('radiogroup', { name: 'How often?' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: 'All upcoming shifts' }));
+    // A custom rule opens with Custom expanded and selected (never hidden).
+    const isCustom = CUSTOM_REPEATS.includes(checked);
+    expect(!!screen.queryByRole('radiogroup', { name: 'Custom' })).toBe(isCustom);
+    expect(screen.getByTestId('shift-repeat-custom')).toHaveAttribute('aria-expanded', String(isCustom));
     expect(radio('How often?', checked)).toBeChecked();
     for (const r of within(group('How often?')).getAllByRole('radio')) expect(r).toBeEnabled();
   });
@@ -386,10 +426,21 @@ describe('simple shift form: How often?', () => {
     open({ shift: shift({ id: 'root_2027-03-10', parent_event_id: 'root', recurrence_rule: null }) });
     await user.click(screen.getByRole('radio', { name: 'All upcoming shifts' }));
     for (const r of within(group('How often?')).getAllByRole('radio')) expect(r).not.toBeChecked();
+    expect(screen.queryByRole('radiogroup', { name: 'Custom' })).not.toBeInTheDocument();
   });
 });
 
 describe("simple shift form: Who's with Rosa?", () => {
+  it('"Open shifts can be taken by anyone" shows only while Leave open is the answer (owner 2026-11-08)', async () => {
+    const user = userEvent.setup();
+    open();
+    expect(screen.getByTestId('shift-form-open-hint')).toHaveTextContent('Open shifts can be taken by anyone in the circle.');
+    await user.click(radio("Who's with Rosa?", 'Ana'));
+    expect(screen.queryByTestId('shift-form-open-hint')).not.toBeInTheDocument();
+    await user.click(radio("Who's with Rosa?", 'Leave open'));
+    expect(screen.getByTestId('shift-form-open-hint')).toBeInTheDocument();
+  });
+
   it('lists Leave open, Me, then the members; the care recipient and view-only members are never offered', () => {
     open();
     expect(within(group("Who's with Rosa?")).getAllByRole('radio').map((r) => r.textContent)).toEqual([
@@ -569,7 +620,7 @@ describe('simple shift form: add the next shift', () => {
     await user.click(radio('Reminder', '2 hours'));
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
     expect(await screen.findByRole('heading', { name: '"Morning" saved' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Add the next shift/ }));
+    await user.click(screen.getByRole('button', { name: /^Add (the next|another) shift$/ }));
 
     await waitFor(() => expect(startTile()).toHaveAccessibleName('Starts, 2:00 PM'));
     expect(field('shift_name')).toHaveValue('');

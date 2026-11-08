@@ -56,7 +56,9 @@
     "scopeLabel": "Welche Schichten?",
     "justThis": "Nur diese",
     "futureHint": "Einzelne können Sie später abgeben",
-    "future": "Diese und alle künftigen"
+    "future": "Diese und alle künftigen",
+    "change": "Ändern",
+    "changeReminder": "Erinnerung ändern"
   },
   "scope": {
     "label": "Welche Schichten?",
@@ -67,7 +69,7 @@
   "drop": {
     "action": "Schicht abgeben",
     "title": "Diese Schicht abgeben?",
-    "message": "„{{name}}“ ist dann wieder offen und alle im Kreis werden benachrichtigt.",
+    "message": "Alle werden benachrichtigt, dass sie offen ist.",
     "confirm": "Schicht abgeben",
     "messageRepeating": "Wählen Sie, welche Schichten Sie abgeben. Sie sind dann wieder offen und alle im Kreis werden benachrichtigt."
   },
@@ -170,12 +172,14 @@
     "firstTime": "Erstes Mal: {{date}}",
     "fromNote": "Schichten vor dem {{date}} bleiben unverändert, auch wer sie übernommen hat. Der neue Plan beginnt am {{date}}.",
     "invalidStart": "Dieses Datum passt nicht zum neuen Plan. Wählen Sie ein anderes Startdatum.",
-    "rescheduleRequired": "Dieser Plan wurde an anderer Stelle geändert. Schließen Sie dies und öffnen Sie die Schicht erneut."
+    "rescheduleRequired": "Dieser Plan wurde an anderer Stelle geändert. Schließen Sie dies und öffnen Sie die Schicht erneut.",
+    "custom": "Benutzerdefiniert…",
+    "customHeading": "Benutzerdefiniert"
   },
   "saved": {
     "title": "„{{name}}“ gespeichert",
-    "summaryOpen": "{{range}}, {{repeat}}. Offen für alle, die sie übernehmen möchten.",
-    "summaryOpenOnce": "{{range}} · Offen für alle, die sie übernehmen möchten.",
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
     "summaryAssigned": "{{range}}, {{repeat}}. {{who}} hat sie.",
     "summaryAssignedOnce": "{{range}} · {{who}} hat sie.",
     "addNext": "Nächste Schicht hinzufügen",
@@ -189,7 +193,8 @@
     "repeatDays": "{{days}}",
     "repeatMonthly": "jeden Monat",
     "repeatYearly": "jedes Jahr",
-    "repeatEveryOtherDay": "jeden zweiten Tag"
+    "repeatEveryOtherDay": "jeden zweiten Tag",
+    "addAnother": "Weitere Schicht hinzufügen"
   },
   "validation": {
     "nameRequired": "Geben Sie der Schicht einen Namen.",
@@ -205,9 +210,9 @@
     "startingBefore": "Der Beginn darf nicht vor dem {{date}} liegen."
   },
   "toast": {
-    "taken": "Sie haben die Schicht „{{name}}“.",
+    "taken": "Sie haben die Schicht übernommen.",
     "alreadyTaken": "{{takenBy}} hat diese Schicht gerade übernommen.",
-    "dropped": "Sie haben „{{name}}“ abgegeben. Sie ist wieder offen.",
+    "dropped": "Schicht abgegeben. Sie ist wieder offen.",
     "assigned": "{{name}} hat die Schicht.",
     "updated": "Schicht aktualisiert.",
     "deleted": "Schicht gelöscht.",
@@ -305,12 +310,12 @@
       "missed": "Nicht eingetragen"
     },
     "card": {
-      "count_one": "{{count}} Aufgabe · {{done}} erledigt",
-      "count_other": "{{count}} Aufgaben · {{done}} erledigt"
+      "progress": "{{done}} von {{total}} erledigt"
     },
     "meta": {
       "line": "Aufgabe · {{who}} · {{title}}",
-      "open": "Offene Schicht"
+      "open": "Offene Schicht",
+      "compact": "{{title}} · {{who}}"
     },
     "editWarning_one": "{{count}} Aufgabe liegt außerhalb der neuen Zeiten. Sie bleibt als Aufgabe für Jeden im Kalender.",
     "editWarning_other": "{{count}} Aufgaben liegen außerhalb der neuen Zeiten. Sie bleiben als Aufgaben für Jeden im Kalender.",

@@ -56,7 +56,9 @@
     "scopeLabel": "Quelles gardes ?",
     "justThis": "Celle-ci seulement",
     "futureHint": "Vous pourrez en libérer une plus tard",
-    "future": "Celle-ci et toutes les suivantes"
+    "future": "Celle-ci et toutes les suivantes",
+    "change": "Modifier",
+    "changeReminder": "Modifier le rappel"
   },
   "scope": {
     "label": "Quelles gardes ?",
@@ -67,7 +69,7 @@
   "drop": {
     "action": "Libérer la garde",
     "title": "Libérer cette garde ?",
-    "message": "« {{name}} » sera de nouveau à pourvoir et tout le cercle en sera informé.",
+    "message": "Tout le monde sera informé qu’elle est à pourvoir.",
     "confirm": "Libérer la garde",
     "messageRepeating": "Choisissez les gardes à libérer. Elles seront de nouveau à pourvoir et tout le cercle en sera informé."
   },
@@ -170,12 +172,14 @@
     "firstTime": "Première fois : {{date}}",
     "fromNote": "Les gardes avant le {{date}} restent telles quelles, y compris la personne qui les a assurées. Le nouveau planning commence le {{date}}.",
     "invalidStart": "Cette date ne correspond pas au nouveau planning. Choisissez une autre date de début.",
-    "rescheduleRequired": "Ce planning a été modifié ailleurs. Fermez cette fenêtre et rouvrez la garde."
+    "rescheduleRequired": "Ce planning a été modifié ailleurs. Fermez cette fenêtre et rouvrez la garde.",
+    "custom": "Personnalisé…",
+    "customHeading": "Personnalisé"
   },
   "saved": {
     "title": "« {{name}} » enregistrée",
-    "summaryOpen": "{{range}}, {{repeat}}. Ouverte à quiconque veut la prendre.",
-    "summaryOpenOnce": "{{range}} · Ouverte à quiconque veut la prendre.",
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
     "summaryAssigned": "{{range}}, {{repeat}}. {{who}} s’en charge.",
     "summaryAssignedOnce": "{{range}} · {{who}} s’en charge.",
     "addNext": "Ajouter la garde suivante",
@@ -189,7 +193,8 @@
     "repeatDays": "les {{days}}",
     "repeatMonthly": "chaque mois",
     "repeatYearly": "chaque année",
-    "repeatEveryOtherDay": "un jour sur deux"
+    "repeatEveryOtherDay": "un jour sur deux",
+    "addAnother": "Ajouter une autre garde"
   },
   "validation": {
     "nameRequired": "Donnez un nom à la garde.",
@@ -205,9 +210,9 @@
     "startingBefore": "La date de début ne peut pas être antérieure au {{date}}."
   },
   "toast": {
-    "taken": "Vous assurez la garde « {{name}} ».",
+    "taken": "Vous assurez cette garde.",
     "alreadyTaken": "{{takenBy}} vient de prendre cette garde.",
-    "dropped": "Vous avez libéré « {{name}} ». Elle est de nouveau à pourvoir.",
+    "dropped": "Garde libérée. Elle est de nouveau à pourvoir.",
     "assigned": "{{name}} assure la garde.",
     "updated": "Garde mise à jour.",
     "deleted": "Garde supprimée.",
@@ -305,12 +310,12 @@
       "missed": "Non renseignée"
     },
     "card": {
-      "count_one": "{{count}} tâche · {{done}} faite",
-      "count_other": "{{count}} tâches · {{done}} faites"
+      "progress": "{{done}} sur {{total}} faites"
     },
     "meta": {
       "line": "Tâche · {{who}} · {{title}}",
-      "open": "Garde à pourvoir"
+      "open": "Garde à pourvoir",
+      "compact": "{{title}} · {{who}}"
     },
     "editWarning_one": "{{count}} tâche tombe en dehors des nouveaux horaires. Elle restera au calendrier comme tâche pour tout le monde.",
     "editWarning_other": "{{count}} tâches tombent en dehors des nouveaux horaires. Elles resteront au calendrier comme tâches pour tout le monde.",

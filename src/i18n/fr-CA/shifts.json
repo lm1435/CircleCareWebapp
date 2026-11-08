@@ -42,7 +42,8 @@
     "action": "Libérer le quart",
     "title": "Libérer ce quart ?",
     "confirm": "Libérer le quart",
-    "messageRepeating": "Choisissez les quarts à libérer. Ils seront de nouveau à pourvoir et tout le cercle en sera informé."
+    "messageRepeating": "Choisissez les quarts à libérer. Ils seront de nouveau à pourvoir et tout le cercle en sera informé.",
+    "message": "Tout le monde sera informé qu’il est à pourvoir."
   },
   "assign": {
     "title": "Attribuer le quart"
@@ -62,9 +63,10 @@
   },
   "saved": {
     "title": "« {{name}} » enregistré",
-    "summaryOpen": "{{range}}, {{repeat}}. Ouvert à quiconque veut le prendre.",
-    "summaryOpenOnce": "{{range}} · Ouvert à quiconque veut le prendre.",
-    "addNext": "Ajouter le quart suivant"
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
+    "addNext": "Ajouter le quart suivant",
+    "addAnother": "Ajouter un autre quart"
   },
   "validation": {
     "nameRequired": "Donnez un nom au quart.",
@@ -74,11 +76,11 @@
     "startRequired": "Choisissez l’heure de début du quart."
   },
   "toast": {
-    "taken": "Vous assurez le quart « {{name}} ».",
+    "taken": "Vous assurez ce quart.",
     "alreadyTaken": "{{takenBy}} vient de prendre ce quart.",
     "alreadyTakenUnknown": "Quelqu’un vient de prendre ce quart.",
     "alreadyOpen": "Ce quart est déjà à pourvoir.",
-    "dropped": "Vous avez libéré « {{name}} ». Il est de nouveau à pourvoir.",
+    "dropped": "Quart libéré. Il est de nouveau à pourvoir.",
     "assigned": "{{name}} assure le quart.",
     "updated": "Quart mis à jour.",
     "deleted": "Quart supprimé.",

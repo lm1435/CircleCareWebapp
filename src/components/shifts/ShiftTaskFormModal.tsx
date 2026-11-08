@@ -162,6 +162,10 @@ export function ShiftTaskFormModal({
         className="flex flex-col gap-5"
         data-testid="shift-task-form"
       >
+        {/* Which shift (one line; a long name truncates). Mobile parity. */}
+        <p className="m-0 truncate text-base text-ink-2" data-testid="shift-task-form-shift">
+          {shift.title}
+        </p>
         <TextField
           id="shift_task_name"
           label={t('shifts:tasks.form.name')}
@@ -195,7 +199,13 @@ export function ShiftTaskFormModal({
             label={t('shifts:tasks.form.onlyDate', { date: dateLabel })}
             hint={t('shifts:tasks.form.onlyDateHint')}
           />
-        ) : null}
+        ) : (
+          // A one-off shift has no "Only <date>" choice: say where the task goes (mobile parity; a repeating
+          // shift's explanation is the checkbox's own hint).
+          <p className="m-0 text-base text-ink-2" data-testid="shift-task-form-explain">
+            {t('shifts:tasks.form.explainOnce')}
+          </p>
+        )}
         <ShiftInlineError message={saveError} />
       </form>
     </Modal>

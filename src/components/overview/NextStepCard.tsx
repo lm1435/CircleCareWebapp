@@ -18,6 +18,8 @@ export interface NextStepCardProps {
   isSelfCare: boolean;
   onAction: () => void;
   onNotNow: () => void;
+  /** False when Next up below already shows a filled Taken / Done: this CTA is then the outline. Default true. */
+  primaryAllowed?: boolean;
 }
 
 export function NextStepCard({
@@ -28,6 +30,7 @@ export function NextStepCard({
   isSelfCare,
   onAction,
   onNotNow,
+  primaryAllowed = true,
 }: NextStepCardProps): ReactElement {
   const { t } = useTranslation('overview');
 
@@ -78,6 +81,8 @@ export function NextStepCard({
       </Text>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button
+          variant={primaryAllowed ? 'primary' : 'outline'}
+          data-testid="next-step-action"
           onClick={() => {
             Analytics.nextStepTapped(step);
             onAction();

@@ -56,7 +56,9 @@
     "scopeLabel": "Quais plantões?",
     "justThis": "Só este",
     "futureHint": "Você pode largar qualquer um depois",
-    "future": "Este e todos os próximos"
+    "future": "Este e todos os próximos",
+    "change": "Alterar",
+    "changeReminder": "Alterar lembrete"
   },
   "scope": {
     "label": "Quais plantões?",
@@ -67,7 +69,7 @@
   "drop": {
     "action": "Largar plantão",
     "title": "Largar este plantão?",
-    "message": "\"{{name}}\" voltará a ficar em aberto e todos no círculo serão avisados.",
+    "message": "Todos serão avisados de que está em aberto.",
     "confirm": "Largar plantão",
     "messageRepeating": "Escolha quais plantões largar. Eles voltarão a ficar em aberto e todos no círculo serão avisados."
   },
@@ -170,12 +172,14 @@
     "firstTime": "Primeira vez: {{date}}",
     "fromNote": "Os plantões antes de {{date}} ficam como estão, inclusive quem os cobriu. A nova escala começa em {{date}}.",
     "invalidStart": "Essa data não combina com a nova escala. Escolha outra data de início.",
-    "rescheduleRequired": "Esta escala foi alterada em outro lugar. Feche isto e abra o plantão novamente."
+    "rescheduleRequired": "Esta escala foi alterada em outro lugar. Feche isto e abra o plantão novamente.",
+    "custom": "Personalizado…",
+    "customHeading": "Personalizado"
   },
   "saved": {
     "title": "\"{{name}}\" salvo",
-    "summaryOpen": "{{range}}, {{repeat}}. Em aberto para quem quiser assumir.",
-    "summaryOpenOnce": "{{range}} · Em aberto para quem quiser assumir.",
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
     "summaryAssigned": "{{range}}, {{repeat}}. {{who}} está nele.",
     "summaryAssignedOnce": "{{range}} · {{who}} está nele.",
     "addNext": "Adicionar o próximo plantão",
@@ -189,7 +193,8 @@
     "repeatDays": "{{days}}",
     "repeatMonthly": "todo mês",
     "repeatYearly": "todo ano",
-    "repeatEveryOtherDay": "em dias alternados"
+    "repeatEveryOtherDay": "em dias alternados",
+    "addAnother": "Adicionar outro plantão"
   },
   "validation": {
     "nameRequired": "Dê um nome ao plantão.",
@@ -205,9 +210,9 @@
     "startingBefore": "O início não pode ser anterior a {{date}}."
   },
   "toast": {
-    "taken": "Você está no plantão \"{{name}}\".",
+    "taken": "O plantão é seu.",
     "alreadyTaken": "{{takenBy}} acabou de assumir este plantão.",
-    "dropped": "Você largou \"{{name}}\". Ele voltou a ficar em aberto.",
+    "dropped": "Você largou o plantão. Ele voltou a ficar em aberto.",
     "assigned": "{{name}} está no plantão.",
     "updated": "Plantão atualizado.",
     "deleted": "Plantão excluído.",
@@ -305,12 +310,12 @@
       "missed": "Não marcado"
     },
     "card": {
-      "count_one": "{{count}} tarefa · {{done}} concluída",
-      "count_other": "{{count}} tarefas · {{done}} concluídas"
+      "progress": "{{done}} de {{total}} concluídas"
     },
     "meta": {
       "line": "Tarefa · {{who}} · {{title}}",
-      "open": "Plantão em aberto"
+      "open": "Plantão em aberto",
+      "compact": "{{title}} · {{who}}"
     },
     "editWarning_one": "{{count}} tarefa fica fora do novo horário. Ela continuará no calendário como tarefa para qualquer pessoa.",
     "editWarning_other": "{{count}} tarefas ficam fora do novo horário. Elas continuarão no calendário como tarefas para qualquer pessoa.",

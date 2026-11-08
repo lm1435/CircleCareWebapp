@@ -34,6 +34,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftSeriesRescheduled: vi.fn(),
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
+    shiftRepeatCustomOpened: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
     errorOccurred: vi.fn(),
@@ -105,8 +106,15 @@ const setTime = (which: 'start' | 'end', value: string) => {
   if (!document.getElementById(id)) fireEvent.click(screen.getByTestId(`shift-${which}-tile`));
   fireEvent.change(field(id), { target: { value } });
 };
-const tile = (name: string) =>
-  within(screen.getByRole('radiogroup', { name: 'How often?' })).getByRole('radio', { name });
+const CUSTOM_REPEATS = ['Every other day', 'Days on / off', 'Some days', 'Monthly', 'Yearly'];
+// The rarer repeats sit behind "Custom…" (approved mock 2026-11-08): open it when the tile is not shown.
+const tile = (name: string) => {
+  if (!CUSTOM_REPEATS.includes(name)) {
+    return within(screen.getByRole('radiogroup', { name: 'How often?' })).getByRole('radio', { name });
+  }
+  if (!screen.queryByRole('radiogroup', { name: 'Custom' })) fireEvent.click(screen.getByTestId('shift-repeat-custom'));
+  return within(screen.getByRole('radiogroup', { name: 'Custom' })).getByRole('radio', { name });
+};
 const cells = () => screen.getAllByTestId('shift-cycle-cell');
 const cell = (iso: string) => {
   const start = new Date('2026-11-08T00:00:00Z').getTime();

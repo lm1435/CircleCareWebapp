@@ -272,7 +272,7 @@ export function EventDetailModal({
     rows.push({
       key: 'assignedTo',
       label: t('calendar:eventDetail.assignedTo'),
-      // A task added to a shift: "Task · Lucia · Afternoons" / "Task · Open shift · Night".
+      // A task added to a shift: "Afternoons · Lucia" / "Night · Open shift".
       value:
         shiftTaskMeta(event, t as unknown as (k: string, o?: Record<string, unknown>) => string) ??
         assignedToName ??

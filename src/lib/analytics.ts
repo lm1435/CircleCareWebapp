@@ -1621,10 +1621,17 @@ export const Analytics = {
       done_bucket: pickEnum(opts.doneBucket, SHIFT_TASK_DONE_BUCKETS, 'none'),
     }),
   shiftAlsoHappeningExpanded: () => capture('shift_also_happening_expanded', {}),
-  shiftSavedSheetAction: (opts: { action: string }) =>
+  /** `repeating`: which saved-dialog layout was shown (a repeating shift leads with Add a task). */
+  shiftSavedSheetAction: (opts: { action: string; repeating?: boolean }) =>
     capture('shift_saved_sheet_action', {
       action: pickEnum(opts.action, SHIFT_SAVED_SHEET_ACTIONS, 'done'),
+      ...(typeof opts.repeating === 'boolean' ? { repeating: opts.repeating } : {}),
     }),
+  /** The shift form's "Custom…" repeat tile opened the rarer options in place. */
+  shiftRepeatCustomOpened: (opts: { editing: boolean }) =>
+    capture('shift_repeat_custom_opened', { editing: opts.editing === true }),
+  /** The Take dialog's reminder row "Change" opened the reminder choices. */
+  shiftTakeReminderExpanded: () => capture('shift_take_reminder_expanded', {}),
   shiftTaskDeleted: (opts: { scope: string }) =>
     capture('shift_task_deleted', {
       scope: pickEnum(opts.scope, SHIFT_TASK_DELETE_SCOPES, 'occurrence'),

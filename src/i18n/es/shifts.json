@@ -56,7 +56,9 @@
     "scopeLabel": "¿Qué turnos?",
     "justThis": "Solo este",
     "futureHint": "Después puedes soltar cualquiera",
-    "future": "Este y todos los siguientes"
+    "future": "Este y todos los siguientes",
+    "change": "Cambiar",
+    "changeReminder": "Cambiar recordatorio"
   },
   "scope": {
     "label": "¿Qué turnos?",
@@ -67,7 +69,7 @@
   "drop": {
     "action": "Soltar turno",
     "title": "¿Soltar este turno?",
-    "message": "\"{{name}}\" quedará abierto otra vez y se avisará a todos en el círculo.",
+    "message": "Se avisará a todos que está abierto.",
     "confirm": "Soltar turno",
     "messageRepeating": "Elige qué turnos soltar. Quedarán abiertos otra vez y se avisará a todos en el círculo."
   },
@@ -170,12 +172,14 @@
     "firstTime": "Primera vez: {{date}}",
     "fromNote": "Los turnos anteriores al {{date}} se quedan como están, incluido quién los cubrió. El nuevo horario empieza el {{date}}.",
     "invalidStart": "Esa fecha no encaja en el nuevo horario. Elige otra fecha de inicio.",
-    "rescheduleRequired": "Este horario se cambió en otro lugar. Cierra esto y abre el turno de nuevo."
+    "rescheduleRequired": "Este horario se cambió en otro lugar. Cierra esto y abre el turno de nuevo.",
+    "custom": "Personalizado…",
+    "customHeading": "Personalizado"
   },
   "saved": {
     "title": "\"{{name}}\" guardado",
-    "summaryOpen": "{{range}}, {{repeat}}. Abierto para que cualquiera lo tome.",
-    "summaryOpenOnce": "{{range}} · Abierto para que cualquiera lo tome.",
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
     "summaryAssigned": "{{range}}, {{repeat}}. {{who}} lo tiene.",
     "summaryAssignedOnce": "{{range}} · {{who}} lo tiene.",
     "addNext": "Agregar el siguiente turno",
@@ -189,7 +193,8 @@
     "repeatDays": "los {{days}}",
     "repeatMonthly": "cada mes",
     "repeatYearly": "cada año",
-    "repeatEveryOtherDay": "cada dos días"
+    "repeatEveryOtherDay": "cada dos días",
+    "addAnother": "Agregar otro turno"
   },
   "validation": {
     "nameRequired": "Ponle un nombre al turno.",
@@ -205,9 +210,9 @@
     "startingBefore": "La fecha de inicio no puede ser anterior al {{date}}."
   },
   "toast": {
-    "taken": "Tienes el turno \"{{name}}\".",
+    "taken": "Ya tienes este turno.",
     "alreadyTaken": "{{takenBy}} acaba de tomar este turno.",
-    "dropped": "Soltaste \"{{name}}\". Quedó abierto otra vez.",
+    "dropped": "Soltaste el turno. Quedó abierto otra vez.",
     "assigned": "{{name}} tiene el turno.",
     "updated": "Turno actualizado.",
     "deleted": "Turno eliminado.",
@@ -305,12 +310,12 @@
       "missed": "Sin marcar"
     },
     "card": {
-      "count_one": "{{count}} tarea · {{done}} hecha",
-      "count_other": "{{count}} tareas · {{done}} hechas"
+      "progress": "{{done}} de {{total}} hechas"
     },
     "meta": {
       "line": "Tarea · {{who}} · {{title}}",
-      "open": "Turno abierto"
+      "open": "Turno abierto",
+      "compact": "{{title}} · {{who}}"
     },
     "editWarning_one": "{{count}} tarea queda fuera del nuevo horario. Seguirá en el calendario como tarea para cualquiera.",
     "editWarning_other": "{{count}} tareas quedan fuera del nuevo horario. Seguirán en el calendario como tareas para cualquiera.",

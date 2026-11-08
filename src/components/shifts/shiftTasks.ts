@@ -155,14 +155,17 @@ export function buildShiftList(shift: CalendarEvent, events: readonly CalendarEv
 type T = (key: string, opts?: Record<string, unknown>) => string;
 
 /**
- * The meta line of a task that belongs to a shift: "Task · <first name> · <shift title>", or
- * "Task · Open shift · <shift title>" while nobody covers it. Null for a plain task, including a
- * linked one whose time is outside the shift ("outside"), which is shown as a normal task. The name
- * is `shift.assignee`, never `assigned_to` (which stays null for these rows).
+ * Whose shift a task rides with. Where a "Task" chip already names the type (calendar rows, the event detail,
+ * the Tasks list) the shift title leads and the person's name comes last, so a long name is what truncates:
+ * "Afternoons · Lucia" (nobody on it: "Night · Open shift"). `withType` (Today's Next up, which shows no chip)
+ * keeps the type word: "Task · Lucia · Afternoons". Null for a plain task, including a linked one whose time is
+ * outside the shift ("outside"), which is shown as a normal task. The name is `shift.assignee`, never
+ * `assigned_to` (which stays null for these rows). Mobile twin: utils/shiftTasks.ts.
  */
 export function shiftTaskMeta(
   task: Pick<CalendarEvent, 'shift'>,
-  t: T
+  t: T,
+  opts?: { withType?: boolean }
 ): string | null {
   const link = task.shift;
   if (!link || link.status === 'outside') return null;
@@ -170,7 +173,9 @@ export function shiftTaskMeta(
     link.status === 'open' || !link.assignee
       ? t('shifts:tasks.meta.open')
       : link.assignee.first_name?.trim() || t('shifts:someone');
-  return t('shifts:tasks.meta.line', { who, title: link.title });
+  return opts?.withType
+    ? t('shifts:tasks.meta.line', { who, title: link.title })
+    : t('shifts:tasks.meta.compact', { who, title: link.title });
 }
 
 // ---------------------------------------------------------------------------

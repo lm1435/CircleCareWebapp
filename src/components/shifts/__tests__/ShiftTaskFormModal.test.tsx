@@ -87,9 +87,19 @@ describe('shift task form', () => {
     expect(
       screen.getByText('Otherwise this task repeats with the shift and goes to whoever covers it.')
     ).toBeInTheDocument();
+    expect(screen.queryByTestId('shift-task-form-explain')).not.toBeInTheDocument();
     cleanup();
     setup({ shift: shift({ recurrence_rule: null, parent_event_id: null, id: 'one' }) });
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    // Mobile parity: a one-off says where the task goes.
+    expect(screen.getByTestId('shift-task-form-explain')).toHaveTextContent('It goes to whoever is on this shift.');
+  });
+
+  it('names the shift under the title on ONE line (a long name truncates; mobile parity)', () => {
+    setup();
+    const sub = screen.getByTestId('shift-task-form-shift');
+    expect(sub).toHaveTextContent(/\S/);
+    expect(sub).toHaveClass('truncate');
   });
 
   it('saves {scheduledDate, title, scheduled_time}, fires shift_task_added, and reports back', async () => {

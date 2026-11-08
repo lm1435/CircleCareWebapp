@@ -260,7 +260,9 @@ describe('Shifts mode', () => {
     const friday = within(week).getByRole('region', { name: /Jun 12/ });
     const cards = within(friday).getAllByTestId('shift-card');
     expect(cards.map((c) => c.getAttribute('data-shift-state'))).toEqual(['filled', 'open']);
-    expect(within(friday).getByText(/8:00 AM – 2:00 PM · Ana/)).toBeInTheDocument();
+    // The range is its own line; the person sits on the status line (approved mock 2026-11-08).
+    expect(within(cards[0]).getByTestId('shift-card-range')).toHaveTextContent(/^8:00 AM – 2:00 PM/);
+    expect(within(cards[0]).getByTestId('shift-card-assignee')).toHaveTextContent('Ana');
     expect(within(friday).getByRole('button', { name: 'Take Night' })).toBeInTheDocument();
     // A day with none reads so.
     expect(within(week).getAllByText('No shifts').length).toBeGreaterThan(0);

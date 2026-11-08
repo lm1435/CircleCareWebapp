@@ -209,7 +209,7 @@ export function DayView({
                     )
                   : t('calendar:allDay');
                 const inactive = isInactiveMedication(event);
-                // A shift task reads "Task · Lucia · Afternoons" (the shift's coverer, never `assigned_to`).
+                // A shift task reads "Afternoons · Lucia" (the shift's coverer, never `assigned_to`; the chip says Task).
                 const assignee = shiftTaskMeta(event, (t as unknown as (k: string, o?: Record<string, unknown>) => string)) ?? eventAssigneeName(event);
                 const noteCount = eventNoteCount(event);
                 const typeLabel = typeLabels[event.event_type];

@@ -36,7 +36,6 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'shifts:duration.minutes': 'durationLabel renders minutes only for a 15-minute-or-longer shift',
   'shifts:notCoveredCount': 'coverageLabel asks for it only when notCovered > 0',
   // Shift tasks (docs/plans/shift-tasks.md): each is rendered only above zero.
-  'shifts:tasks.card.count': 'ShiftCard hides the "N tasks · n done" chip at 0 tasks',
   'shifts:tasks.editWarning': 'the edit warning renders only when the count of orphaned tasks is > 0',
   'shifts:tasks.deleteImpact': 'the delete confirm hides the line at 0 upcoming tasks',
   // Meds tab summary line: scheduled / mixed only exist when the roster has >= 1 medication

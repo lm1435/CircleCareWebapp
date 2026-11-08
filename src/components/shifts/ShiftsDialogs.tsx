@@ -130,7 +130,6 @@ function ActiveDialog({
   }
 
   const shift = active.shift;
-  const name = shift.title.trim();
   const repeating = isShiftRepeating(shift);
 
   switch (active.kind) {
@@ -180,7 +179,7 @@ function ActiveDialog({
           message={
             askScope
               ? t('shifts:drop.messageRepeating')
-              : t('shifts:drop.message', { name: shift.title })
+              : t('shifts:drop.message')
           }
           confirmLabel={t('shifts:drop.confirm')}
           repeating={askScope}
@@ -191,7 +190,7 @@ function ActiveDialog({
             setError('');
             try {
               await drop.mutateAsync({ shift, scope });
-              showToast(t('shifts:toast.dropped', { name }), 'success');
+              showToast(t('shifts:toast.dropped'), 'success');
               onClose();
             } catch (err) {
               fail(err, 'drop');

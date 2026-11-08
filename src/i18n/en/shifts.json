@@ -56,7 +56,9 @@
     "scopeLabel": "Which shifts?",
     "justThis": "Just this one",
     "futureHint": "You can drop any one later",
-    "future": "This and every future one"
+    "future": "This and every future one",
+    "change": "Change",
+    "changeReminder": "Change reminder"
   },
   "scope": {
     "label": "Which shifts?",
@@ -67,7 +69,7 @@
   "drop": {
     "action": "Drop shift",
     "title": "Drop this shift?",
-    "message": "\"{{name}}\" will be open again and everyone in the circle will be told.",
+    "message": "Everyone will be told it's open.",
     "confirm": "Drop shift",
     "messageRepeating": "Choose which shifts to drop. They will be open again and everyone in the circle will be told."
   },
@@ -170,12 +172,14 @@
     "firstTime": "First time: {{date}}",
     "fromNote": "Shifts before {{date}} stay as they are, including who covered them. The new schedule starts on {{date}}.",
     "invalidStart": "That date doesn't fit the new schedule. Choose another start date.",
-    "rescheduleRequired": "This schedule was changed elsewhere. Close this and open the shift again."
+    "rescheduleRequired": "This schedule was changed elsewhere. Close this and open the shift again.",
+    "custom": "Custom…",
+    "customHeading": "Custom"
   },
   "saved": {
     "title": "\"{{name}}\" saved",
-    "summaryOpen": "{{range}}, {{repeat}}. Open for anyone to take.",
-    "summaryOpenOnce": "{{range}} · Open for anyone to take.",
+    "summaryOpen": "{{range}}, {{repeat}}.",
+    "summaryOpenOnce": "{{range}}",
     "summaryAssigned": "{{range}}, {{repeat}}. {{who}} is on it.",
     "summaryAssignedOnce": "{{range}} · {{who}} is on it.",
     "addNext": "Add the next shift",
@@ -189,7 +193,8 @@
     "repeatDays": "on {{days}}",
     "repeatMonthly": "every month",
     "repeatYearly": "every year",
-    "repeatEveryOtherDay": "every other day"
+    "repeatEveryOtherDay": "every other day",
+    "addAnother": "Add another shift"
   },
   "validation": {
     "nameRequired": "Give the shift a name.",
@@ -205,9 +210,9 @@
     "startingBefore": "Starting can't be earlier than {{date}}."
   },
   "toast": {
-    "taken": "You're on the shift \"{{name}}\".",
+    "taken": "You're on it.",
     "alreadyTaken": "{{takenBy}} just took this shift.",
-    "dropped": "You dropped \"{{name}}\". It's open again.",
+    "dropped": "Shift dropped. It's open again.",
     "assigned": "{{name}} is on the shift.",
     "updated": "Shift updated.",
     "deleted": "Shift deleted.",
@@ -305,12 +310,12 @@
       "missed": "Not marked"
     },
     "card": {
-      "count_one": "{{count}} task · {{done}} done",
-      "count_other": "{{count}} tasks · {{done}} done"
+      "progress": "{{done}} of {{total}} done"
     },
     "meta": {
       "line": "Task · {{who}} · {{title}}",
-      "open": "Open shift"
+      "open": "Open shift",
+      "compact": "{{title}} · {{who}}"
     },
     "editWarning_one": "{{count}} task falls outside the new hours. It'll stay on the calendar as a task for Anyone.",
     "editWarning_other": "{{count}} tasks fall outside the new hours. They'll stay on the calendar as tasks for Anyone.",

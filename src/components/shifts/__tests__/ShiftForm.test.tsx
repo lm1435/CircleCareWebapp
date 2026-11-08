@@ -31,6 +31,7 @@ vi.mock('@/lib/analytics', () => ({
     shiftSeriesRescheduled: vi.fn(),
     shiftAddNextTapped: vi.fn(),
     shiftSavedSheetAction: vi.fn(),
+    shiftRepeatCustomOpened: vi.fn(),
     shiftEditTasksWarningShown: vi.fn(),
     shiftTakeConflict: vi.fn(),
   },
@@ -106,10 +107,17 @@ const setTime = (which: 'start' | 'end', value: string) => {
   fireEvent.change(field(id), { target: { value } });
 };
 
-const chooseRepeat = async (user: ReturnType<typeof userEvent.setup>, label: string) =>
-  user.click(
-    within(screen.getByRole('radiogroup', { name: 'How often?' })).getByRole('radio', { name: label })
-  );
+const CUSTOM_REPEATS = ['Every other day', 'Days on / off', 'Some days', 'Monthly', 'Yearly'];
+const chooseRepeat = async (user: ReturnType<typeof userEvent.setup>, label: string) => {
+  if (!CUSTOM_REPEATS.includes(label)) {
+    return user.click(
+      within(screen.getByRole('radiogroup', { name: 'How often?' })).getByRole('radio', { name: label })
+    );
+  }
+  // The rarer repeats sit behind "Custom…" (approved mock 2026-11-08).
+  if (!screen.queryByRole('radiogroup', { name: 'Custom' })) await user.click(screen.getByTestId('shift-repeat-custom'));
+  return user.click(within(screen.getByRole('radiogroup', { name: 'Custom' })).getByRole('radio', { name: label }));
+};
 
 const openMore = async (user: ReturnType<typeof userEvent.setup>) => {
   const toggle = screen.getByRole('button', { name: /^More details/ });
@@ -472,11 +480,10 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
 
     expect(await screen.findByRole('heading', { name: '"Morning" saved' })).toBeInTheDocument();
-    expect(
-      screen.getByText('8:00 AM – 2:00 PM, every day. Open for anyone to take.')
-    ).toBeInTheDocument();
-    const addNext = screen.getByRole('button', { name: /Add the next shift/ });
-    expect(addNext).toHaveTextContent('Starts at 2:00 PM · every day');
+    expect(screen.getByText('8:00 AM – 2:00 PM, every day.')).toBeInTheDocument();
+    // A repeating shift: "Add another shift" (secondary); its hint is the button's description.
+    const addNext = screen.getByRole('button', { name: 'Add another shift' });
+    expect(addNext).toHaveAccessibleDescription('Starts at 2:00 PM · every day');
 
     await user.click(addNext);
     expect(Analytics.shiftAddNextTapped).toHaveBeenCalled();
@@ -516,7 +523,7 @@ describe('ShiftComposer: saved sheet and "Add the next shift"', () => {
     setTime('start', '08:00');
     setTime('end', '14:00');
     await user.click(screen.getByRole('button', { name: 'Save shift' }));
-    expect(await screen.findByText('8:00 AM – 2:00 PM · Open for anyone to take.')).toBeInTheDocument();
+    expect(await screen.findByTestId('shift-saved-summary')).toHaveTextContent(/^8:00 AM – 2:00 PM$/);
     await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalled();
   });
