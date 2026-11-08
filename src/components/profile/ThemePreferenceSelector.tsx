@@ -21,7 +21,7 @@ export function ThemePreferenceSelector(): ReactElement | null {
   if (!isDarkModeEnabled()) return null;
 
   return (
-    <div className="mt-6" data-testid="theme-preference">
+    <div className="mt-8" data-testid="theme-preference">
       <Text variant="sectionLabel" as="h2">
         {t('appearance.title')}
       </Text>

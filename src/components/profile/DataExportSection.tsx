@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Text, useToast } from '@/components/ui';
+import { Button, Text, useToast } from '@/components/ui';
 import { exportUserData } from '@/api/users';
 import { isRateLimitError } from '@/lib/apiErrors';
 import { Analytics } from '@/lib/analytics';
@@ -52,7 +52,7 @@ export function DataExportSection(): ReactElement {
   };
 
   return (
-    <Card padding="lg" className="mt-6">
+    <section className="mt-8">
       <Text variant="sectionLabel" as="h2">
         {t('dataExport.title')}
       </Text>
@@ -67,6 +67,6 @@ export function DataExportSection(): ReactElement {
       >
         {isExporting ? t('dataExport.preparing') : t('dataExport.cta')}
       </Button>
-    </Card>
+    </section>
   );
 }

@@ -293,7 +293,15 @@ export const OPTION_ROW_SELECTED = 'border-ink bg-bg-2';
  * row carrying both would still show the pointer — the exact opposite of what
  * the disabled branch exists to say.
  */
-export function optionRow(selected: boolean, disabled?: boolean): string {
+export function optionRow(selected: boolean, disabled?: boolean, plain?: boolean): string {
+  if (plain) {
+    // Borderless (Profile): the selected row is a soft fill, the rest sit on the page.
+    return [
+      'min-h-[44px] rounded-md px-3 py-2 flex items-center gap-3',
+      selected ? 'bg-bg-2' : 'hover:bg-bg-2/60',
+      disabled ? `cursor-not-allowed ${INPUT_SHELL_DISABLED}` : 'cursor-pointer',
+    ].join(' ');
+  }
   return [
     OPTION_BOX,
     selected ? OPTION_ROW_SELECTED : 'border-line-2',

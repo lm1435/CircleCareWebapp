@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, Skeleton, Text, useToast } from '@/components/ui';
+import { Badge, Button, Skeleton, Text, useToast } from '@/components/ui';
 import { StoreBadges } from '@/components/layout/StoreBadges';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useManageSubscription, useWebCustomerInfo, useWebPlans } from '@/hooks/useWebBilling';
@@ -64,7 +64,7 @@ export function SubscriptionSection(): ReactElement {
   };
 
   return (
-    <Card padding="lg" className="mt-6">
+    <section className="mt-8">
       <Text variant="sectionLabel" as="h2">
         {t('subscription.title')}
       </Text>
@@ -150,6 +150,6 @@ export function SubscriptionSection(): ReactElement {
           </div>
         )}
       </div>
-    </Card>
+    </section>
   );
 }

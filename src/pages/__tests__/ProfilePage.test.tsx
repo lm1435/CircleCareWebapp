@@ -629,6 +629,41 @@ describe('ProfilePage', () => {
 // rejected ("editing only the end time fails to save, editing both works").
 // Compact identity header: avatar left, name + edit pencil, email under the
 // name, and a labelled Premium chip on its own line for Premium accounts only.
+// Owner 2026-11-07: fewer boxed cards. Sections are plain groups separated by spacing and the small
+// uppercase labels; option lists lose their inner borders (selected-fill only). The destructive
+// "Delete account" section keeps its outlined box.
+describe('ProfilePage — plain grouped sections', () => {
+  it('boxes only the delete-account section', async () => {
+    renderPage();
+    await screen.findByRole('radiogroup', { name: 'Weight' });
+    const boxed = Array.from(document.querySelectorAll<HTMLElement>('.rounded-xl')).filter((el) =>
+      /\bborder\b/.test(el.className)
+    );
+    expect(boxed).toHaveLength(1);
+    expect(boxed[0]).toHaveTextContent(/delete/i);
+  });
+
+  it('keeps every section label, in order', async () => {
+    renderPage();
+    await screen.findByRole('radiogroup', { name: 'Weight' });
+    const labels = Array.from(document.querySelectorAll('h2')).map((h) => h.textContent);
+    const idx = (re: RegExp): number => labels.findIndex((l) => re.test(l ?? ''));
+    expect(idx(/^Account$/i)).toBeGreaterThanOrEqual(0);
+    expect(idx(/^Account$/i)).toBeLessThan(idx(/language/i));
+    expect(idx(/language/i)).toBeLessThan(idx(/measurement units/i));
+  });
+
+  it('option rows (Language, Units) have no inner border; the selected one is a fill only', async () => {
+    renderPage();
+    const group = await screen.findByRole('radiogroup', { name: 'Weight' });
+    const rows = Array.from(group.querySelectorAll('label'));
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.className).not.toMatch(/\bborder\b/);
+    const checked = rows.find((r) => (r.querySelector('input') as HTMLInputElement).checked)!;
+    expect(checked).toHaveClass('bg-bg-2');
+  });
+});
+
 describe('ProfilePage — compact header', () => {
   afterEach(() => {
     subscriptionTier = 'free';

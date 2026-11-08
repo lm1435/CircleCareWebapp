@@ -28,6 +28,8 @@ export interface RadioGroupProps {
    * focus to <body> (WCAG 2.4.3). Use `disabled` only when unavailable.
    */
   busy?: boolean;
+  /** Borderless option rows (selected = fill only), for lists that sit directly on the page. */
+  plain?: boolean;
   /** Shared name for the underlying radio inputs; auto-generated otherwise. */
   name?: string;
 }
@@ -46,6 +48,7 @@ export function RadioGroup({
   hint,
   disabled = false,
   busy = false,
+  plain = false,
   name,
 }: RadioGroupProps): ReactNode {
   const generatedName = useId();
@@ -75,7 +78,7 @@ export function RadioGroup({
           const optionId = `${groupName}-${option.value}`;
           const optionDisabled = disabled || option.disabled;
           const selected = value === option.value;
-          const row = optionRow(selected, optionDisabled || busy);
+          const row = optionRow(selected, optionDisabled || busy, plain);
           return (
             <label key={option.value} htmlFor={optionId} className={row}>
               <input

@@ -62,7 +62,6 @@ import {
   Icon,
   RadioGroup,
   Select,
-  Sheet,
   SheetRow,
   Skeleton,
   Text,
@@ -89,7 +88,10 @@ import { blockOfflineWrite } from '@/lib/offlineWrite';
 // docs/plans/notification-settings-4-groups.md). The pure group logic lives in
 // `@/lib/notificationGroups` (twin of mobile's utils/notificationGroups.ts).
 
-/** Card-shaped section (spec §6.7): editable, form-like settings. */
+/**
+ * Form-like settings section. Plain group, no box (owner 2026-11-07, fewer cards): the small uppercase
+ * label and 32px of space separate it from its neighbours.
+ */
 function SettingsCard({
   title,
   description,
@@ -100,7 +102,7 @@ function SettingsCard({
   children: ReactNode;
 }): ReactElement {
   return (
-    <Card padding="lg" className="mt-6">
+    <section className="mt-8">
       <Text variant="sectionLabel" as="h2">
         {title}
       </Text>
@@ -109,12 +111,12 @@ function SettingsCard({
           {description}
         </Text>
       ) : null}
-      <div className="mt-5 flex flex-col gap-5">{children}</div>
-    </Card>
+      <div className="mt-4 flex flex-col gap-5">{children}</div>
+    </section>
   );
 }
 
-/** Sheet-shaped section (spec §6.7): grouped toggle/select rows. */
+/** Grouped toggle/select rows: a plain list under its label (no Sheet box). */
 function SettingsSheetSection({
   title,
   description,
@@ -125,7 +127,7 @@ function SettingsSheetSection({
   children: ReactNode;
 }): ReactElement {
   return (
-    <div className="mt-6">
+    <div className="mt-8">
       <Text variant="sectionLabel" as="h2">
         {title}
       </Text>
@@ -134,9 +136,8 @@ function SettingsSheetSection({
           {description}
         </Text>
       ) : null}
-      <Sheet padding="none" className="mt-3">
-        {children}
-      </Sheet>
+      {/* Rows keep their hairline separators; the outer box is gone. */}
+      <div className="mt-2">{children}</div>
     </div>
   );
 }
@@ -654,6 +655,7 @@ export default function ProfilePage(): ReactElement {
       {/* ── Language ──────────────────────────────────────────────────── */}
       <SettingsCard title={t('sections.language')} description={t('language.description')}>
         <RadioGroup
+          plain
           label={t('sections.language')}
           value={(user.language as SupportedLanguage) ?? 'en'}
           onChange={handleLanguage}
@@ -788,6 +790,7 @@ export default function ProfilePage(): ReactElement {
       {/* ── Units ─────────────────────────────────────────────────────── */}
       <SettingsCard title={t('sections.units')} description={t('units.description')}>
         <RadioGroup
+          plain
           label={t('units.weight')}
           value={weightUnit}
           onChange={handleWeightUnit}
@@ -798,6 +801,7 @@ export default function ProfilePage(): ReactElement {
           ]}
         />
         <RadioGroup
+          plain
           label={t('units.glucose')}
           value={glucoseUnit}
           onChange={handleGlucoseUnit}
@@ -808,6 +812,7 @@ export default function ProfilePage(): ReactElement {
           ]}
         />
         <RadioGroup
+          plain
           label={t('units.temperature')}
           value={temperatureUnit}
           onChange={handleTemperatureUnit}
@@ -904,7 +909,7 @@ export default function ProfilePage(): ReactElement {
       <DataExportSection />
 
       {/* ── Danger zone ───────────────────────────────────────────────── */}
-      <Card variant="outlined" padding="lg" className="mt-6 border-terracotta-deep/30">
+      <Card variant="outlined" padding="lg" className="mt-8 border-terracotta-deep/30">
         <Text variant="sectionLabel" as="h2">
           {t('delete.title')}
         </Text>
