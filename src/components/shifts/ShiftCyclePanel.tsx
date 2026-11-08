@@ -101,11 +101,11 @@ export function ShiftCyclePanel({
 
       {preview && (
         <div className="flex flex-col gap-2">
-          {/* Decorative: the summary line above says the same in words. */}
-          <div aria-hidden="true" data-testid="shift-cycle-preview" className="grid grid-cols-7 gap-1">
           <Text variant="caption" as="p" data-testid="shift-cycle-range" className="m-0">
             {range}
           </Text>
+          {/* Decorative: the summary line above says the same in words. */}
+          <div aria-hidden="true" data-testid="shift-cycle-preview" className="grid grid-cols-7 gap-1">
             {weekdays.map((d) => (
               <span key={d} className="text-center text-xs font-semibold text-ink-2">
                 {getWeekdayName(d, 'narrow', language)}
