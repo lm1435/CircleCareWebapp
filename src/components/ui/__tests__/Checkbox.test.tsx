@@ -72,18 +72,18 @@ describe('Checkbox', () => {
     expect(box.className).toContain('w-6');
   });
 
-  it('fills the box with moss and shows a check only when checked', () => {
+  it('fills the box with the selection fill and shows a check only when checked', () => {
     const { rerender } = render(
       <Checkbox checked={false} onChange={vi.fn()} label="15 minutes before" />
     );
     let box = boxOf(screen.getByRole('checkbox', { name: '15 minutes before' }));
     expect(box.className).toContain('border-line');
-    expect(box.className).not.toContain('bg-primary-fill');
+    expect(box.className).not.toContain('bg-selected-fill');
     expect(box.querySelector('svg')).toBeNull();
 
     rerender(<Checkbox checked onChange={vi.fn()} label="15 minutes before" />);
     box = boxOf(screen.getByRole('checkbox', { name: '15 minutes before' }));
-    expect(box.className).toContain('bg-primary-fill');
+    expect(box.className).toContain('bg-selected-fill');
     expect(box.querySelector('svg')).not.toBeNull();
   });
 

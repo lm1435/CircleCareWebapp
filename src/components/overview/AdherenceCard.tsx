@@ -94,7 +94,7 @@ export function AdherenceCard({ circleId }: AdherenceCardProps): ReactElement | 
       className={`flex items-center justify-between ${ADHERENCE_SHEET_PADDING}`}
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <Eyebrow color="moss">{t('adherence.eyebrow')}</Eyebrow>
+        <Eyebrow>{t('adherence.eyebrow')}</Eyebrow>
         {/* 32/600 lh44 tracking -0.5 beside a 24/400 unit on the same 44px
             line box, so the "%" sits on the number's baseline (mobile
             `adherenceNumber`/`adherenceValue`/`adherenceUnit`). */}

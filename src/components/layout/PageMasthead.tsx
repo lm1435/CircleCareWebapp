@@ -151,7 +151,9 @@ export function PageMasthead({
           )}
         </span>
 
-        <Eyebrow dot color={tone} as="p">
+        {/* One accent (owner 2026-11-07): the eyebrow is decoration, so it is muted ink in every
+            section; `tone` no longer paints it (kept on the API so callers name their section). */}
+        <Eyebrow dot as="p" data-tone={tone}>
           {section}
         </Eyebrow>
 

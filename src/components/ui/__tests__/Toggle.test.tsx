@@ -36,7 +36,7 @@ describe('Toggle', () => {
     expect(track.className).toContain('w-11');
   });
 
-  it('moves the track from line to moss and slides the thumb when checked', () => {
+  it('moves the track from line to the selection fill and slides the thumb when checked', () => {
     const { rerender } = render(<Toggle checked={false} onChange={vi.fn()} label="Reminders" />);
     let track = trackOf(screen.getByRole('switch', { name: 'Reminders' }));
     // a11y audit 2026-09-29: off track is line-strong (>=3:1, WCAG 1.4.11), not line.
@@ -45,7 +45,7 @@ describe('Toggle', () => {
 
     rerender(<Toggle checked onChange={vi.fn()} label="Reminders" />);
     track = trackOf(screen.getByRole('switch', { name: 'Reminders' }));
-    expect(track.className).toContain('bg-primary-fill');
+    expect(track.className).toContain('bg-selected-fill');
     expect(track.className).not.toContain('bg-line');
     expect(track.firstElementChild?.className).toContain('translate-x-5');
   });

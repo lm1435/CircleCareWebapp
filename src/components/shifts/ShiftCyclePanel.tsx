@@ -105,7 +105,7 @@ export function ShiftCyclePanel({
                 // card-shell-ok: a calendar day cell of the preview, not a card
                 className={`flex min-h-[40px] flex-col items-center justify-center rounded-md border text-xs leading-tight ${
                   cell.on
-                    ? 'border-primary-fill bg-primary-fill font-semibold text-on-primary'
+                    ? 'border-selected-fill bg-selected-fill font-semibold text-on-selected'
                     : 'border-line-strong bg-cream text-ink'
                 }`}
               >
@@ -117,7 +117,7 @@ export function ShiftCyclePanel({
           </div>
           <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-2">
             <span className="inline-flex items-center gap-1.5">
-              <span aria-hidden="true" className="h-3 w-3 rounded-sm border border-primary-fill bg-primary-fill" />
+              <span aria-hidden="true" className="h-3 w-3 rounded-sm border border-selected-fill bg-selected-fill" />
               {t('shifts:form.legendOn')}
             </span>
             <span className="inline-flex items-center gap-1.5">

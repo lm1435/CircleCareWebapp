@@ -1,6 +1,6 @@
 import { useId, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 
 export interface ShiftsReadOnlyNoticeProps {
   /**
@@ -44,14 +44,15 @@ export function ShiftsReadOnlyNotice({ isOwner, onRenew }: ShiftsReadOnlyNoticeP
         </p>
       </div>
       {isOwner && (
-        <button
-          type="button"
+        // Renew is an upgrade CTA: the shared primary (one accent, owner 2026-11-07), not a dusk pill.
+        <Button
+          size="sm"
           onClick={onRenew}
           data-testid="shifts-readonly-renew"
-          className="ml-[52px] min-h-[44px] self-start rounded-full bg-dusk px-4 py-2 text-sm font-semibold text-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dusk-deep"
+          className="ml-[52px] self-start rounded-full!"
         >
           {t('readOnly.renew')}
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -186,7 +186,8 @@ export function FloatingNavBar({
 
       {/* The assistant is a modal, not a route, so it can never be the router's
           active match — its "active" state is the modal being open. The sparkle
-          stays coral either way: the bar's one warm mark (mobile parity).
+          is the plain nav ink like every other cell (one accent, owner 2026-11-07:
+          the coral mark was decoration).
 
           Dimmed + inert (never absent) when the viewer has no AI access or access
           is still resolving — see `assistantAccess` above. */}
@@ -203,7 +204,7 @@ export function FloatingNavBar({
         <Icon
           name={assistantOpen ? 'sparkles' : 'sparkles-outline'}
           size="chrome"
-          className={inert ? 'text-ink-2' : 'text-coral-deep'}
+          className={inert ? 'text-ink-2' : undefined}
         />
         <span className={`${LABEL} ${assistantOpen ? 'text-ink' : 'text-ink-2'}`}>
           {t('nav.aiShort')}

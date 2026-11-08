@@ -457,15 +457,18 @@ export function AIChatModal({
             disabled={mutation.isPending}
             className={`${INPUT_TEXT} ${INPUT_TEXT_CHAT} max-h-40 resize-none py-2`}
           />
-          <button
+          {/* Send is the composer's primary action: the shared primary (moss), not a hand-rolled
+              coral disc (one accent, owner 2026-11-07). */}
+          <Button
             type="submit"
+            size="sm"
             aria-label={mutation.isPending ? t('sending') : t('send')}
             disabled={!canSend}
             {...offlineDisabledProps(offline && canSend)}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-coral text-cream disabled:bg-line"
+            className="h-11 w-11! shrink-0 rounded-full! px-0!"
           >
             <Icon name="send" size="row" />
-          </button>
+          </Button>
         </Sheet>
       </form>
 

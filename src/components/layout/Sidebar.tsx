@@ -260,8 +260,9 @@ export function Sidebar({
                     onOpenAssistant();
                     onNavigate?.();
                   }}
-                  className={`${LINK_BASE} w-full border-0 bg-transparent text-left hover:bg-bg-2 ${
-                    assistantDisabled ? 'text-ink-2 opacity-50' : 'text-coral-deep'
+                  // One accent (owner 2026-11-07): the inactive nav colour, never coral.
+                  className={`${LINK_BASE} w-full border-0 bg-transparent text-left ${
+                    assistantDisabled ? 'text-ink-2 opacity-50' : LINK_INACTIVE
                   }`}
                 >
                   <Icon name="sparkles-outline" size="row" />

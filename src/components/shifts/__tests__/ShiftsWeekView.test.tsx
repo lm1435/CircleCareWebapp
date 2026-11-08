@@ -69,6 +69,8 @@ describe('ShiftsWeekView day header', () => {
     expect(adds).toHaveLength(1);
     expect(adds[0]).not.toHaveTextContent('+');
     expect(adds[0].querySelector('svg')).not.toBeNull();
+    // One accent (owner 2026-11-07): "Add shift" is THE primary action of the Shifts view, a filled moss button.
+    expect(adds[0].className.split(/\s+/)).toContain('bg-primary-fill');
     await user.click(adds[0]);
     expect(onAdd).toHaveBeenCalledTimes(1);
   });

@@ -1012,10 +1012,10 @@ function RadioDot({ selected }: { selected: boolean }): ReactElement {
       aria-hidden="true"
       className={[
         'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
-        selected ? 'border-primary-fill bg-primary-fill' : 'border-ink/30',
+        selected ? 'border-selected-fill bg-selected-fill' : 'border-ink/30',
       ].join(' ')}
     >
-      {selected && <span className="h-2 w-2 rounded-full bg-on-primary" />}
+      {selected && <span className="h-2 w-2 rounded-full bg-on-selected" />}
     </span>
   );
 }

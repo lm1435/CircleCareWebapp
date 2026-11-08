@@ -11,7 +11,7 @@ import { useIsOffline } from '@/hooks/useIsOffline';
 import { explainOfflineWrite, type OfflineWriteKind } from '@/lib/offlineWrite';
 
 /** Canonical variants (spec §4.5 — mobile parity). */
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'outline' | 'secondary' | 'ghost' | 'danger';
 
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
@@ -22,7 +22,15 @@ const BASE =
   'whitespace-nowrap select-none';
 
 const VARIANT = {
-  primary: 'bg-primary-fill text-on-primary shadow-md hover:bg-primary-fill-hover',
+  // One accent (owner 2026-11-07): moss in BOTH themes, and the ONLY moss fill on a screen. Every
+  // state steps along the moss ramp (globals.css `--color-primary-fill-*`); the focus ring is moss
+  // too (>= 3:1 on page and card); disabled is BASE's opacity over the same fill.
+  primary:
+    'bg-primary-fill text-on-primary shadow-md hover:bg-primary-fill-hover active:bg-primary-fill-active focus-visible:outline-primary-fill',
+  // The SECOND-tier primary: a later row's Taken / Done (NextUp). Moss border + moss label on no
+  // fill, so only the first row's action reads as filled. Text >= 4.5:1 in both themes.
+  outline:
+    'bg-transparent text-primary-outline border-[1.5px] border-primary-outline hover:bg-moss-soft focus-visible:outline-primary-fill',
   // Cream fill + `border-line-strong` (WCAG 1.4.11 control edge): the same resting treatment as an
   // unselected chip, so a secondary button and a chip in one dialog read as
   // one family. The earlier `bg-bg-2` tan fill was 1.09:1 against the page
@@ -43,6 +51,7 @@ const SIZE = {
 /** Every accepted variant name → its class set. */
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: VARIANT.primary,
+  outline: VARIANT.outline,
   secondary: VARIANT.secondary,
   ghost: VARIANT.ghost,
   danger: VARIANT.danger,

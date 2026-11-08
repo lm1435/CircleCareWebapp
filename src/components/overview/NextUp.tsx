@@ -248,7 +248,16 @@ export function NextUp({
     canEdit &&
     isDoseConfirmable(item.med.scheduled_date, item.med.scheduled_time ?? null, timezone);
 
+  // One accent (owner 2026-11-07): ONE filled primary in the card, on the first row that has a
+  // Taken / Done button (an Undo badge or an appointment has none). Later rows get the moss outline.
+  const hasActionButton = (item: NextUpItem): boolean => {
+    if (item.med) return !undoFlow.pending[item.med.id] && medConfirmable(item);
+    return item.type === 'task' && !!item.event && canEdit && !tasks.pendingIds.has(item.id);
+  };
+  const firstActionKey = visible.find(hasActionButton)?.key ?? null;
+
   const renderRow = (item: NextUpItem, index: number): ReactElement => {
+    const actionVariant = item.key === firstActionKey ? 'primary' : 'outline';
     const position = index + 1;
     const pendingMed = item.med ? undoFlow.pending[item.med.id] : undefined;
     const pendingTask = item.type === 'task' && tasks.pendingIds.has(item.id);
@@ -312,6 +321,7 @@ export function NextUp({
       action = (
         <Button
           size="sm"
+          variant={actionVariant}
           aria-label={t('today.nextUp.takenLabel', { name: item.title, when })}
           className={stacked ? 'w-full' : 'flex-none'}
           data-next-up-taken=""
@@ -336,6 +346,7 @@ export function NextUp({
       action = (
         <Button
           size="sm"
+          variant={actionVariant}
           aria-label={t('today.nextUp.doneLabel', { name: item.title, when })}
           className={stacked ? 'w-full' : 'flex-none'}
           {...offlineDisabledProps(offline)}

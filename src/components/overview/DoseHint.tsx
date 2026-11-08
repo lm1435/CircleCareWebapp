@@ -26,7 +26,7 @@ export function DoseHint({ recipientName, isSelfCare, onGotIt }: DoseHintProps):
       data-testid="dose-hint"
       className="rounded-xl bg-moss-soft px-4 py-3"
     >
-      <Eyebrow deep color="moss" className="mb-1">
+      <Eyebrow className="mb-1">
         {t('today.doseHint.eyebrow')}
       </Eyebrow>
       <p className="m-0 text-md text-ink">

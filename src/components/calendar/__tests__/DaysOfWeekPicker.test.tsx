@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import '@/i18n';
 import { DaysOfWeekPicker } from '../DaysOfWeekPicker';
+import { CHIP_SELECTED } from '@/components/ui/inputStyles';
 
 function Harness({
   initial,
@@ -141,5 +142,17 @@ describe('DaysOfWeekPicker', () => {
   it('renders no note element without a note', () => {
     render(<Harness initial={[]} />);
     expect(screen.getByRole('group', { name: 'Repeat on' })).not.toHaveAttribute('aria-describedby');
+  });
+
+  // One accent (owner 2026-11-07): a selected weekday is a SELECTION, so it wears the choice tile's
+  // neutral selected style (ink fill), never a moss tint or the primary token. Shared by the shift
+  // form ("Some days") and the event form ("Repeat on").
+  it('a selected weekday uses the choice-tile selected style, not moss or primary', () => {
+    render(<Harness initial={[1, 3]} />);
+    const mon = screen.getByRole('checkbox', { name: 'Monday' });
+    const tue = screen.getByRole('checkbox', { name: 'Tuesday' });
+    for (const c of CHIP_SELECTED.split(' ')) expect(mon.className.split(/\s+/)).toContain(c);
+    expect(mon.className).not.toMatch(/moss|primary/);
+    expect(tue.className).not.toMatch(/moss|primary|bg-ink/);
   });
 });

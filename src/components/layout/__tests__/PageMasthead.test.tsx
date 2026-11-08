@@ -15,14 +15,16 @@ function renderMasthead(
 }
 
 describe('PageMasthead', () => {
-  it('renders the section eyebrow with a dot in the section colour', () => {
+  // One accent (owner 2026-11-07): the eyebrow is decoration, muted ink in every section.
+  it('renders the section eyebrow with a dot, both muted ink whatever the tone', () => {
     renderMasthead({ section: 'Health', tone: 'terracotta' });
 
     const eyebrow = screen.getByText('Health');
-    expect(eyebrow).toHaveClass('text-terracotta!');
+    expect(eyebrow).toHaveClass('text-ink-3');
+    expect(eyebrow).not.toHaveClass('text-terracotta!');
     const dot = eyebrow.querySelector('span[aria-hidden="true"]');
     expect(dot).not.toBeNull();
-    expect(dot).toHaveClass('bg-terracotta');
+    expect(dot).toHaveClass('bg-ink-3');
   });
 
   // Mobile 1.4.0: the Shell bar label and a hero eyebrow repeating it ("NEW" x3) read as a bug. The masthead

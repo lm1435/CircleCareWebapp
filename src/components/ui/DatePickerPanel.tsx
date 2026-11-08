@@ -629,10 +629,10 @@ export function DatePickerPanel({
                   onClick={() => commit(iso)}
                   className={`relative flex h-11 items-center justify-center rounded-md text-md tabular-nums transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-50 ${
                     chosen
-                      ? // Selected is NOT the moss fill alone (WCAG 1.4.1): the
+                      ? // Selected is NOT the fill alone (WCAG 1.4.1): the
                         // weight carries it without colour, and `aria-selected`
                         // carries it without sight.
-                        'bg-primary-fill font-semibold text-on-primary'
+                        'bg-selected-fill font-semibold text-on-selected'
                       : outside
                         ? 'text-ink-3 hover:bg-bg-2'
                         : 'text-ink hover:bg-bg-2'
@@ -643,7 +643,7 @@ export function DatePickerPanel({
                     <span
                       aria-hidden="true"
                       className={`absolute bottom-1 h-1 w-1 rounded-full ${
-                        chosen ? 'bg-on-primary' : 'bg-primary-fill'
+                        chosen ? 'bg-on-selected' : 'bg-selected-fill'
                       }`}
                     />
                   ) : null}

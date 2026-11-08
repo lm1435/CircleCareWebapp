@@ -344,7 +344,7 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
         <div className="flex min-w-0 flex-col gap-3">
           <div ref={headerFit.ref} data-testid="inbox-header-row" className="flex items-center justify-between gap-3">
             {/* Unwrapped while measuring inline, so a squeeze shows as overflow, not as a wrap. */}
-            <Eyebrow color="moss" dot className={headerFit.stacked ? undefined : 'shrink-0 whitespace-nowrap'}>
+            <Eyebrow dot className={headerFit.stacked ? undefined : 'shrink-0 whitespace-nowrap'}>
               {t('inbox.eyebrow')}
             </Eyebrow>
             {headerFit.stacked ? null : markAllButton}

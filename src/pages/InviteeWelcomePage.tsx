@@ -82,7 +82,7 @@ export default function InviteeWelcomePage(): ReactElement {
   return (
     <div className="mx-auto flex w-full max-w-[560px] flex-col px-4 py-8 sm:py-12">
       <Card variant="elevated" padding="none" className="flex flex-col gap-3.5 p-6 sm:px-9 sm:pb-7 sm:pt-8">
-        <Eyebrow color="moss" deep dot>
+        <Eyebrow dot>
           {t('welcome.eyebrow')}
         </Eyebrow>
         {/* Plain h1 (the display style) so the ref + tabIndex reach the DOM node. */}

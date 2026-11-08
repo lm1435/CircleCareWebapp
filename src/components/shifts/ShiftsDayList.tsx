@@ -64,7 +64,7 @@ export function ShiftsDayList({
       )}
       {day.length > 0 && onAdd && (
         <div>
-          <Button variant="secondary" onClick={onAdd} offlineKind="change">
+          <Button onClick={onAdd} offlineKind="change">
             {t('addShift')}
           </Button>
         </div>

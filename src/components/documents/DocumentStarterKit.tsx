@@ -69,7 +69,7 @@ export function DocumentStarterKit({ onPick, onOther }: DocumentStarterKitProps)
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-5 pt-2">
       <div>
-        <Eyebrow color="moss" as="p">
+        <Eyebrow as="p">
           {t('starter.eyebrow')}
         </Eyebrow>
         <Text variant="h2" as="h2" id={headingId} className="mt-1.5">

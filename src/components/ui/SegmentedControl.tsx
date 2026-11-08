@@ -68,7 +68,7 @@ const STACK_CONTROL: Record<number, string> = {
  * The sliding thumb is only meaningful in the ROW layout: every segment shares
  * one width there, so a single translate can place it under any index. In the
  * column each segment auto-sizes, so the thumb is hidden and the active segment
- * paints its own moss ground instead (mobile does exactly this).
+ * paints its own selection ground instead (mobile does exactly this).
  */
 const STACK_HIDE_THUMB: Record<number, string> = {
   2: '@max-[160px]:hidden',
@@ -77,9 +77,9 @@ const STACK_HIDE_THUMB: Record<number, string> = {
 };
 
 const STACK_ACTIVE_GROUND: Record<number, string> = {
-  2: '@max-[160px]:bg-primary-fill',
-  3: '@max-[240px]:bg-primary-fill',
-  4: '@max-[320px]:bg-primary-fill',
+  2: '@max-[160px]:bg-selected-fill',
+  3: '@max-[240px]:bg-selected-fill',
+  4: '@max-[320px]:bg-selected-fill',
 };
 
 /**
@@ -90,7 +90,7 @@ const STACK_ACTIVE_GROUND: Record<number, string> = {
  * that is `px` + the whole word. So the widest segment does not clip when the
  * row runs out of room: it takes MORE than its 1/n share and squeezes its
  * siblings. The thumb is hard-wired to `(100% - 8px) / n`, so the moment the
- * segments stop being equal the moss pill stops lining up with the label it is
+ * segments stop being equal the selection pill stops lining up with the label it is
  * supposed to sit under — which is the bug this map fixes. `Medications` in a
  * 350px container did exactly that; the short `nav.*Short` labels
  * (`CareTabs.tsx`) cut the worst of it, but Spanish `Medicinas` (68px) still
@@ -182,7 +182,7 @@ export function SegmentedControl({
         <span
           aria-hidden="true"
           data-testid="segmented-thumb"
-          className={`absolute ${compact ? 'top-0.5 bottom-0.5 left-0.5' : 'top-1 bottom-1 left-1'} rounded-[10px] bg-primary-fill transition-transform duration-normal ease-spring motion-reduce:transition-none ${
+          className={`absolute ${compact ? 'top-0.5 bottom-0.5 left-0.5' : 'top-1 bottom-1 left-1'} rounded-[10px] bg-selected-fill transition-transform duration-normal ease-spring motion-reduce:transition-none ${
             STACK_HIDE_THUMB[count] ?? ''
           }`.trim()}
           style={{
@@ -217,7 +217,7 @@ export function SegmentedControl({
                 SQUEEZE_PADDING[count] ?? ''
               } ${
                 selected
-                  ? `text-on-primary ${STACK_ACTIVE_GROUND[count] ?? ''}`
+                  ? `text-on-selected ${STACK_ACTIVE_GROUND[count] ?? ''}`
                   : 'text-ink-2 hover:text-ink'
               }`.trim()}
             >

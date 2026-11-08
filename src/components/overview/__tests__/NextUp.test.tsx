@@ -295,6 +295,31 @@ describe('NextUp', () => {
     expect(Analytics.todayAllItemsOpened).toHaveBeenCalledTimes(1);
   });
 
+  // One accent (owner 2026-11-07): only the FIRST actionable row carries the filled primary; later
+  // rows get the moss outline, so the eye lands on what is next.
+  describe('one filled action', () => {
+    const cls = (el: HTMLElement): string[] => el.className.split(/\s+/);
+
+    it('the first actionable row is filled, the second is the moss outline', () => {
+      renderNextUp({ items: [dose('1'), task('2'), dose('3')] });
+      const taken1 = screen.getByRole('button', { name: /^Taken, Med 1/ });
+      const done2 = screen.getByRole('button', { name: /^Done, Task 2/ });
+      const taken3 = screen.getByRole('button', { name: /^Taken, Med 3/ });
+      expect(cls(taken1)).toContain('bg-primary-fill');
+      for (const later of [done2, taken3]) {
+        expect(cls(later)).not.toContain('bg-primary-fill');
+        expect(cls(later)).toContain('border-primary-outline');
+        expect(cls(later)).toContain('text-primary-outline');
+      }
+    });
+
+    it('a row with no action (appointment) or an Undo badge does not take the filled slot', () => {
+      medPending = { '1': 'taken' };
+      renderNextUp({ items: [dose('1'), appt('a'), task('2'), dose('3')] });
+      expect(cls(screen.getByRole('button', { name: /^Done, Task 2/ }))).toContain('bg-primary-fill');
+    });
+  });
+
   describe('states', () => {
     it('empty: names the person', () => {
       renderNextUp();

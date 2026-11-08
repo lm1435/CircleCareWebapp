@@ -98,7 +98,7 @@ export default function HowItWorksPage(): ReactElement {
             {STEPS.map((s, index) => (
               <span
                 key={s.id}
-                className={`h-2 rounded-full bg-primary-fill transition-all ${
+                className={`h-2 rounded-full bg-selected-fill transition-all ${
                   index === step ? 'w-6' : 'w-2 opacity-30'
                 }`}
               />

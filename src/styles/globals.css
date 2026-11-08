@@ -106,10 +106,19 @@
      which hue plays the role. Every value below equals the utility it replaced
      (bg-moss, text-cream, bg-ink, ...), so light renders as it always did; the
      dark block further down re-points them.
-     primary-fill  solid primary controls (Button, selected segment/day/time,
-                   checked box/switch, primary card action). Sage in light, warm
-                   white in dark.
+     primary-fill  THE primary action and nothing else (Button primary, the
+                   primary card action). Moss in BOTH themes ("one accent",
+                   owner 2026-11-07): light #5c6b4e under white (5.72:1), dark
+                   #8a9e78 under near-black #14130f (6.41:1). -hover / -active
+                   step along the moss ramp (light 7.52 / 9.75:1, dark 7.77 /
+                   5.43:1).
      on-primary    the label/icon on a primary-fill.
+     primary-outline  border + label of the moss OUTLINE button (a later Next up
+                   row): light 5.72:1 on card / 5.44:1 on page, dark 5.61 / 6.11:1.
+     selected-fill, on-selected
+                   SELECTION (segment thumb, chosen day/time, checked box/switch,
+                   radio dot): neutral ink in light, warm white in dark. Never
+                   the primary: a selected tile must not read as the action.
      task-fill, medication-fill, appointment-fill
                    calendar blocks: SOLID section colours with white text in
                    BOTH schemes (the dark accents are lifted tints, which read
@@ -126,7 +135,11 @@
      avatar-*      the name-hashed avatar gradient stops; muted in dark. */
   --color-primary-fill: #5c6b4e;
   --color-primary-fill-hover: #4a5940;
+  --color-primary-fill-active: #3a4832;
   --color-on-primary: #ffffff;
+  --color-primary-outline: #5c6b4e;
+  --color-selected-fill: #1a1916;
+  --color-on-selected: #ffffff;
   --color-task-fill: #5c6b4e;
   --color-medication-fill: #8b5c32;
   --color-appointment-fill: #4a6073;
@@ -341,9 +354,15 @@
     --shadow-avatar-glow: 0 4px 16px rgba(138, 158, 120, 0.2);
 
     /* Semantic roles (see the light @theme block for what each one is). */
-    --color-primary-fill: #efe9de;
-    --color-primary-fill-hover: #ddd6c9;
-    --color-on-primary: #232019;
+    /* One accent (owner 2026-11-07): the primary is the dark moss, never the
+       cream selection fill. on-primary is near-black, not the warm card tone. */
+    --color-primary-fill: #8a9e78;
+    --color-primary-fill-hover: #9aae88;
+    --color-primary-fill-active: #7d916b;
+    --color-on-primary: #14130f;
+    --color-primary-outline: #8a9e78;
+    --color-selected-fill: #efe9de;
+    --color-on-selected: #232019;
     --color-task-fill: #5c6b4e;
     --color-medication-fill: #8b5c32;
     --color-appointment-fill: #4a6073;

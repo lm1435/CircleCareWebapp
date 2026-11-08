@@ -104,7 +104,6 @@ export function ShiftsWeekView({
       {onAdd && (
         <div>
           <Button
-            variant="secondary"
             offlineKind="change"
             data-testid="shifts-week-add"
             leftIcon={<Icon name="add-outline" size="row" />}

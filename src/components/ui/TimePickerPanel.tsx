@@ -498,12 +498,12 @@ export function TimePickerPanel({
                     className={`flex ${
                       sheet ? ROW_MIN_H.touch : ROW_MIN_H.fine
                     } cursor-pointer items-center justify-center rounded-md px-2 text-md tabular-nums transition-colors duration-fast ${
-                      // Selected is NOT signalled by the moss fill alone
+                      // Selected is NOT signalled by the fill alone
                       // (WCAG 1.4.1): the weight change carries it for anyone
                       // who cannot separate the two grounds, and
                       // `aria-selected` carries it for anyone who cannot see
                       // either.
-                      chosen ? 'bg-primary-fill font-semibold text-on-primary' : 'text-ink hover:bg-bg-2'
+                      chosen ? 'bg-selected-fill font-semibold text-on-selected' : 'text-ink hover:bg-bg-2'
                     }`}
                   >
                     {option.label}

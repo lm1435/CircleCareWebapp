@@ -183,8 +183,8 @@ describe('SegmentedControl', () => {
     expect(tablist.className).toContain('@max-[320px]:flex-col');
     expect(screen.getByTestId('segmented-thumb').className).toContain('@max-[320px]:hidden');
     // Stacked, the hidden thumb can't paint the selection — the active segment does.
-    expect(screen.getByRole('tab', { name: 'Meds' }).className).toContain('@max-[320px]:bg-primary-fill');
-    expect(screen.getByRole('tab', { name: 'Tasks' }).className).not.toContain('bg-primary-fill');
+    expect(screen.getByRole('tab', { name: 'Meds' }).className).toContain('@max-[320px]:bg-selected-fill');
+    expect(screen.getByRole('tab', { name: 'Tasks' }).className).not.toContain('bg-selected-fill');
     // …and each of those is a LITERAL in the source, which is the half of the
     // title the DOM cannot see.
     expectLiteralInSource(
@@ -272,13 +272,13 @@ describe('SegmentedControl', () => {
     expect(screen.getByTestId('segmented-thumb').style.transform).toBe('translateX(0%)');
   });
 
-  it('carries the moss thumb and the active/inactive label colors', () => {
+  it('carries the neutral selection thumb and the active/inactive label colors', () => {
     render(<Host />);
     const thumb = screen.getByTestId('segmented-thumb');
-    expect(thumb.className).toContain('bg-primary-fill');
+    expect(thumb.className).toContain('bg-selected-fill');
     expect(thumb.className).toContain('duration-normal');
     expect(thumb.className).toContain('ease-spring');
-    expect(screen.getByRole('tab', { name: 'Week' }).className).toContain('text-on-primary');
+    expect(screen.getByRole('tab', { name: 'Week' }).className).toContain('text-on-selected');
     expect(screen.getByRole('tab', { name: 'Month' }).className).toContain('text-ink-2');
   });
 });
