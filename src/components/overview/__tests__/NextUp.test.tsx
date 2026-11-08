@@ -142,6 +142,12 @@ describe('NextUp', () => {
     expect(title).not.toHaveClass('text-lg');
   });
 
+  // Nested radius: the row is r16 with 8px inset, so its action button is 8 (rounded-sm), not the Button's 12.
+  it('the Taken button radius is the row radius minus the row inset (8px)', () => {
+    renderNextUp({ items: [dose('1')] });
+    expect(screen.getByTestId('next-up-row').querySelector('[data-next-up-taken]')).toHaveClass('rounded-sm!');
+  });
+
   it('"All of today" footer is text-md font-medium (500), not semibold', () => {
     renderNextUp({ items: [dose('1')] });
     const link = screen.getByRole('link', { name: /All of today/ });

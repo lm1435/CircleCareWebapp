@@ -183,7 +183,7 @@ export function SegmentedControl({
         <span
           aria-hidden="true"
           data-testid="segmented-thumb"
-          className={`absolute ${compact ? 'top-0.5 bottom-0.5 left-0.5' : 'top-1 bottom-1 left-1'} rounded-[10px] bg-selected-fill transition-transform duration-normal ease-spring motion-reduce:transition-none ${
+          className={`absolute ${compact ? 'top-0.5 bottom-0.5 left-0.5' : 'top-1 bottom-1 left-1'} ${compact ? 'rounded-[12px]' : 'rounded-[10px]'} bg-selected-fill transition-transform duration-normal ease-spring motion-reduce:transition-none ${
             STACK_HIDE_THUMB[count] ?? ''
           }`.trim()}
           style={{
@@ -214,7 +214,7 @@ export function SegmentedControl({
                 compact
                   ? 'min-h-[34px] py-1.5 before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-[""]'
                   : 'min-h-[44px] py-2.5'
-              } px-3 rounded-[10px] text-sm font-medium tracking-[-0.1px] transition-colors duration-normal ${
+              } px-3 ${compact ? 'rounded-[12px]' : 'rounded-[10px]'} text-sm font-medium tracking-[-0.1px] transition-colors duration-normal ${
                 SQUEEZE_PADDING[count] ?? ''
               } ${
                 selected

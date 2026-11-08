@@ -294,6 +294,16 @@ describe('SegmentedControl', () => {
     expect(screen.getByRole('tablist').className).toContain('p-0.5');
   });
 
+  // Nested radius (visual review 2026-11-07): inner = outer - padding. Outer 14: compact p-0.5 -> 12, roomy p-1 -> 10.
+  it('inner radius is the outer radius minus the padding (compact 12, roomy 10)', () => {
+    const { rerender } = render(<SegmentedControl label="v" options={TWO} value="week" onChange={() => {}} />);
+    expect(screen.getByRole('tab', { name: 'Week' }).className).toContain('rounded-[12px]');
+    expect(screen.getByTestId('segmented-thumb').className).toContain('rounded-[12px]');
+    rerender(<SegmentedControl label="v" options={TWO} value="week" onChange={() => {}} compact={false} />);
+    expect(screen.getByRole('tab', { name: 'Week' }).className).toContain('rounded-[10px]');
+    expect(screen.getByTestId('segmented-thumb').className).toContain('rounded-[10px]');
+  });
+
   it('compact={false} still opts back into the 44px segment', () => {
     render(<SegmentedControl label="v" options={TWO} value="week" onChange={() => {}} compact={false} />);
     expect(screen.getByRole('tab', { name: 'Week' }).className).toContain('min-h-[44px]');
