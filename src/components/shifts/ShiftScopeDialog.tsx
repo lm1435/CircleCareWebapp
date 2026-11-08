@@ -16,6 +16,11 @@ export interface ShiftScopeDialogProps {
   destructive?: boolean;
   loading?: boolean;
   confirmDisabled?: boolean;
+  /**
+   * A line that depends on the CHOSEN scope (the delete confirm's "This also removes its N upcoming
+   * tasks"). Called with the scope a confirm would send; null / empty renders nothing.
+   */
+  scopeNote?: (scope: ShiftScope) => ReactNode;
   /** A retryable failure (network / server), shown inline while the dialog stays open. */
   error?: string;
   onConfirm: (scope: ShiftScope) => void | Promise<unknown>;
@@ -36,6 +41,7 @@ export function ShiftScopeDialog({
   destructive = false,
   loading = false,
   confirmDisabled = false,
+  scopeNote,
   error = '',
   onConfirm,
   onCancel,
@@ -61,6 +67,7 @@ export function ShiftScopeDialog({
               ]}
             />
           )}
+          {scopeNote ? scopeNote(repeating ? scope : 'occurrence') : null}
           <ShiftInlineError message={error} />
         </div>
       }

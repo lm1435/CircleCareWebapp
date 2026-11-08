@@ -1,5 +1,6 @@
 import { useMemo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { shiftTaskMeta } from '@/components/shifts/shiftTasks';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import type { CircleMember } from '@/api/circleMembers';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -124,7 +125,7 @@ export function EventDetailModal({
   circleId,
   members,
 }: EventDetailModalProps): ReactElement {
-  const { t, i18n } = useTranslation(['calendar', 'common']);
+  const { t, i18n } = useTranslation(['calendar', 'common', 'shifts']);
   const locale = i18n.language;
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
@@ -271,7 +272,11 @@ export function EventDetailModal({
     rows.push({
       key: 'assignedTo',
       label: t('calendar:eventDetail.assignedTo'),
-      value: assignedToName ?? t('tasks:row.unassigned'),
+      // A task added to a shift: "Task · Lucia · Afternoons" / "Task · Open shift · Night".
+      value:
+        shiftTaskMeta(event, t as unknown as (k: string, o?: Record<string, unknown>) => string) ??
+        assignedToName ??
+        t('tasks:row.unassigned'),
     });
   } else if (event.event_type === 'appointment' && assignedToName) {
     rows.push({

@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { formatDateForDisplay } from '@/components/calendar/dateMath';
 import { formatWeekdayList } from '@/components/calendar/recurrenceLabel';
 import { shiftAssignee } from './shiftPeople';
+import { ShiftTaskList } from './ShiftTaskList';
 import { rotationPosition } from './shiftRotation';
 import { holdsOnlyThisDay,
   formatShiftRange,
@@ -24,7 +25,7 @@ import { holdsOnlyThisDay,
   hasShiftEnded,
 } from './shiftUtils';
 
-export type ShiftDetailAction = 'take' | 'drop' | 'assign' | 'edit' | 'delete';
+export type ShiftDetailAction = 'take' | 'drop' | 'assign' | 'edit' | 'delete' | 'addTask';
 
 export interface ShiftDetailModalProps {
   circleId: string;
@@ -184,6 +185,17 @@ export function ShiftDetailModal({
             'shift-detail-reminder'
           )}
         </dl>
+
+        <ShiftTaskList
+          circleId={circleId}
+          shift={shift}
+          timezone={timezone}
+          members={members}
+          viewerId={viewerId}
+          canWrite={canWrite}
+          ended={ended}
+          onAdd={() => onAction('addTask', shift)}
+        />
 
         {canWrite && (
           <div className="flex flex-wrap gap-2">

@@ -39,6 +39,8 @@ vi.mock('@/lib/analytics', () => ({
     medicationActionsMenuOpened: vi.fn(),
     shiftTaken: vi.fn(),
     shiftTakeConflict: vi.fn(),
+    shiftTaskListViewed: vi.fn(),
+    shiftAlsoHappeningExpanded: vi.fn(),
   },
 }));
 

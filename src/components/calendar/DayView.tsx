@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { shiftTaskMeta } from '@/components/shifts/shiftTasks';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { Button, Card, CircleButton, EmptyState, Icon } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
@@ -78,7 +79,7 @@ export function DayView({
   shiftsSlot,
   shiftsSummary,
 }: DayViewProps): ReactElement {
-  const { t } = useTranslation(['calendar', 'meds']);
+  const { t } = useTranslation(['calendar', 'meds', 'shifts']);
   const hourCycle = useHourCycle();
   // Literal keys (not a template over the enum) so the key scanner can see them.
   const typeLabels: Record<CalendarEvent['event_type'], string> = {
@@ -208,7 +209,8 @@ export function DayView({
                     )
                   : t('calendar:allDay');
                 const inactive = isInactiveMedication(event);
-                const assignee = eventAssigneeName(event);
+                // A shift task reads "Task · Lucia · Afternoons" (the shift's coverer, never `assigned_to`).
+                const assignee = shiftTaskMeta(event, (t as unknown as (k: string, o?: Record<string, unknown>) => string)) ?? eventAssigneeName(event);
                 const noteCount = eventNoteCount(event);
                 const typeLabel = typeLabels[event.event_type];
                 const statusLabel = status ? statusLabels[status] : null;

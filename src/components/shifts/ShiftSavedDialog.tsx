@@ -10,12 +10,15 @@ import { parseCycleRule } from './shiftRotation';
 import { formatShiftRange, isShiftOpen, shiftEnd } from './shiftUtils';
 import { formatTimeOfDay } from '@/utils/timezone';
 import { useAuthStore } from '@/store/authStore';
+import { Analytics } from '@/lib/analytics';
 
 export interface ShiftSavedDialogProps {
   circleId: string;
   /** The shift just created. */
   shift: CalendarEvent;
   onAddNext: () => void;
+  /** "Add a task to this shift": opens the task form for the shift just created. */
+  onAddTask: () => void;
   onDone: () => void;
 }
 
@@ -28,6 +31,7 @@ export function ShiftSavedDialog({
   circleId,
   shift,
   onAddNext,
+  onAddTask,
   onDone,
 }: ShiftSavedDialogProps): ReactElement {
   const { t, i18n } = useTranslation(['shifts', 'calendar']);
@@ -85,14 +89,21 @@ export function ShiftSavedDialog({
       closeLabel={t('close')}
       onClose={onDone}
       footer={
-        <Button variant="secondary" onClick={onDone}>
+        // Done stays the primary action (no check icon, owner 2026-11-07); the two follow-ups are outlines.
+        <Button
+          variant="primary"
+          onClick={() => {
+            Analytics.shiftSavedSheetAction({ action: 'done' });
+            onDone();
+          }}
+        >
           {t('saved.done')}
         </Button>
       }
     >
       <div className="flex flex-col gap-4">
         <p className="m-0 text-base text-ink-2">{summary}</p>
-        <Button variant="primary" fullWidth onClick={onAddNext}>
+        <Button variant="outline" fullWidth onClick={onAddNext}>
           <span className="flex flex-col items-center">
             <span>{t('saved.addNext')}</span>
             <span className="text-xs font-normal">
@@ -101,6 +112,18 @@ export function ShiftSavedDialog({
                 : t('saved.addNextHintOnce', { time: nextStart })}
             </span>
           </span>
+        </Button>
+        <Button
+          variant="outline"
+          fullWidth
+          offlineKind="change"
+          data-testid="shift-saved-add-task"
+          onClick={() => {
+            Analytics.shiftSavedSheetAction({ action: 'add_task' });
+            onAddTask();
+          }}
+        >
+          {t('tasks.addTask')}
         </Button>
       </div>
     </Modal>

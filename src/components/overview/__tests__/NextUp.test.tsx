@@ -521,3 +521,55 @@ describe('leading time column', () => {
     expect(rowHasSpacer(taskRow)).toBe(true);
   });
 });
+
+describe('shift tasks on Today (docs/plans/shift-tasks.md)', () => {
+  const linked = (status: 'covered' | 'open' | 'outside'): NextUpItem => ({
+    ...task('s1'),
+    event: {
+      id: 's1',
+      event_type: 'task',
+      title: 'Task s1',
+      scheduled_date: TODAY,
+      shift: {
+        root_id: 'root',
+        date: TODAY,
+        title: 'Afternoons',
+        assignee: status === 'covered' ? { id: 'u', first_name: 'Lucia' } : null,
+        status,
+        window_start: status === 'outside' ? null : `${TODAY}T12:00:00`,
+        window_end: status === 'outside' ? null : `${TODAY}T18:00:00`,
+      },
+    } as NextUpItem['event'],
+  });
+
+  beforeEach(() => {
+    vi.mocked(useMedicationUndo).mockImplementation(
+      () => ({ pending: {}, confirm, undo, hold: vi.fn() }) as unknown as ReturnType<typeof useMedicationUndo>
+    );
+    vi.mocked(useTaskCompletion).mockImplementation(
+      () =>
+        ({
+          pendingIds: new Set<string>(),
+          handleComplete,
+          handleUndo: vi.fn(),
+          handleHoldUndo: vi.fn(),
+          flushPending: vi.fn(),
+        }) as unknown as ReturnType<typeof useTaskCompletion>
+    );
+  });
+
+  it('a covered shift task reads "Task · Lucia · Afternoons"', () => {
+    renderNextUp({ items: [linked('covered')] });
+    expect(screen.getByTestId('next-up-row')).toHaveTextContent('Task · Lucia · Afternoons');
+  });
+
+  it('an open shift reads "Task · Open shift · Afternoons"', () => {
+    renderNextUp({ items: [linked('open')] });
+    expect(screen.getByTestId('next-up-row')).toHaveTextContent('Task · Open shift · Afternoons');
+  });
+
+  it('outside the window it is a plain task: no shift label', () => {
+    renderNextUp({ items: [linked('outside')] });
+    expect(screen.getByTestId('next-up-row')).not.toHaveTextContent('Afternoons');
+  });
+});

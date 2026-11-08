@@ -62,7 +62,7 @@ export function OpenTasksCard({
   const tasksLoading =
     tasksQuery.isPending || (openTasks.length === 0 && everTasksQuery.isPending);
 
-  const { pendingIds, handleComplete, handleUndo, handleHoldUndo } = useTaskCompletion(circleId);
+  const { pendingIds, handleComplete, handleUndo, handleHoldUndo } = useTaskCompletion(circleId, 'today');
 
   const visibleTasks = openTasks.slice(0, limit);
   const overflowCount = openTasks.length - visibleTasks.length;

@@ -17,6 +17,8 @@ export interface ShiftsWeekViewProps {
   viewerId: string | null | undefined;
   onOpen: (shift: CalendarEvent) => void;
   onTake?: (shift: CalendarEvent) => void;
+  /** Non-shift events around the range, for each card's task count. */
+  events?: readonly CalendarEvent[];
   /** Day heading press -> that day in Day view. */
   onDayOpen: (day: string) => void;
   /** Present only for editors: the ONE "Add shift" button under the week. */
@@ -35,6 +37,7 @@ export function ShiftsWeekView({
   viewerId,
   onOpen,
   onTake,
+  events,
   onDayOpen,
   onAdd,
 }: ShiftsWeekViewProps): ReactElement {
@@ -92,6 +95,7 @@ export function ShiftsWeekView({
                     viewerId={viewerId}
                     onOpen={onOpen}
                     onTake={onTake}
+              events={events}
                   />
                 ))}
               </ul>

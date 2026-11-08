@@ -32,6 +32,8 @@ import {
   nextDateOnWeekdays,
 } from '@/components/calendar/dateMath';
 import { useCircle } from '@/hooks/useCircle';
+import { useLinkedOpenTasks } from '@/hooks/useShiftTasks';
+import { countTasksAffectedByEdit, editWarningBucket } from './shiftTasks';
 import {
   useCreateShift,
   useHandleShiftFailure,
@@ -256,6 +258,8 @@ function ShiftFormBody({
   const createShift = useCreateShift(circleId);
   const updateShift = useUpdateShift(circleId);
   const rescheduleShift = useRescheduleShiftSeries(circleId);
+  // Tasks added to this shift (only an edit asks): the warning below counts the ones it would orphan.
+  const linkedTasks = useLinkedOpenTasks(circleId, !!shift);
 
   const isEditing = !!shift;
   const repeatingEdit = isEditing && isShiftRepeating(shift);
@@ -609,6 +613,41 @@ function ShiftFormBody({
       failSave(err, 'save');
     }
   }
+
+  // SHIFT TASKS (docs/plans/shift-tasks.md "Shift edits"): a time or duration edit keeps each task's
+  // clock time, and a date move or repeat change leaves tasks on their own dates. Either way a task
+  // that no longer fits drops off the shift's list and stays a normal task for Anyone: say so first.
+  let warnKind: 'time' | 'date' | 'repeat' | null = null;
+  let warnCount = 0;
+  if (isEditing && shift && spanValid && linkedTasks.length > 0) {
+    const timeChanged = startTime !== hm(shift.scheduled_time) || span !== (shift.duration_minutes ?? span);
+    const chosen = futureEdit ? chosenRule() : null;
+    if (futureEdit && chosen && (date !== shift.scheduled_date || patternChanged(chosen.rule, chosen.days))) {
+      warnKind = 'repeat';
+    } else if (!futureEdit && date !== shift.scheduled_date) {
+      warnKind = 'date';
+    } else if (timeChanged) {
+      warnKind = 'time';
+    }
+    if (warnKind) {
+      const scope = futureEdit ? 'future' : 'occurrence';
+      warnCount = countTasksAffectedByEdit(
+        warnKind === 'time'
+          ? { kind: 'time', shift, startTime, durationMinutes: span as number, scope }
+          : { kind: warnKind, shift, scope },
+        linkedTasks
+      );
+    }
+  }
+  const warnShown = warnCount > 0 && warnKind !== null;
+  const warnSignature = warnShown ? `${warnKind}:${editWarningBucket(warnCount)}` : '';
+  const warnedRef = useRef('');
+  useEffect(() => {
+    if (!warnSignature || warnedRef.current === warnSignature) return;
+    warnedRef.current = warnSignature;
+    const [kind, bucket] = warnSignature.split(':');
+    Analytics.shiftEditTasksWarningShown({ kind, countBucket: bucket });
+  }, [warnSignature]);
 
   const guardedSubmit = useGuardedSubmit(handleSubmit);
   const busy = createShift.isPending || updateShift.isPending || rescheduleShift.isPending;
@@ -1021,6 +1060,15 @@ function ShiftFormBody({
             </div>
           )}
         </DisclosureRow>
+        {warnShown && (
+          <p
+            role="status"
+            data-testid="shift-edit-tasks-warning"
+            className="m-0 rounded-xl bg-bg-2 px-4 py-3 text-sm text-ink"
+          >
+            {t('shifts:tasks.editWarning', { count: warnCount })}
+          </p>
+        )}
         <ShiftInlineError message={saveError} testId="shift-form-error" />
       </form>
     </Modal>

@@ -1,5 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { ToastProvider } from '@/components/ui';
 import '@/i18n';
 import { getSeriesRoot, type CalendarEvent } from '@/api/calendarEvents';
 import { useCircle } from '@/hooks/useCircle';
@@ -15,6 +17,10 @@ vi.mock('@/api/calendarEvents', async (importOriginal) => ({
 }));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
+// The detail's task list reads the day's events; it has its own tests (ShiftTaskList.test.tsx).
+vi.mock('@/hooks/useShiftTasks', () => ({
+  useShiftOccurrenceEvents: () => ({ events: [], isLoading: false, isError: false, refetch: vi.fn() }),
+}));
 
 function shift(over: Partial<CalendarEvent>): CalendarEvent {
   return {
@@ -39,7 +45,11 @@ function shift(over: Partial<CalendarEvent>): CalendarEvent {
 function renderDetail(s: CalendarEvent) {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <ShiftDetailModal circleId="c" shift={s} timezone="America/Chicago" onClose={vi.fn()} onAction={vi.fn()} />
+      <ToastProvider>
+        <MemoryRouter>
+          <ShiftDetailModal circleId="c" shift={s} timezone="America/Chicago" onClose={vi.fn()} onAction={vi.fn()} />
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
