@@ -226,11 +226,15 @@ test('a recurring TASK: changing the series time and assignee moves the material
   expect(dayRow(rootId, k.today), 'today (completed) is untouched').toEqual(before.today);
   expect(dayRow(rootId, k.at(-1)), 'yesterday (past, completed) is untouched').toEqual(before.past);
 
-  // UI: the upcoming days read 3:00 PM and the member; today keeps 9:00 AM and the owner.
+  // UI: the upcoming days read 3:00 PM and the member; today keeps 9:00 AM and the owner. The detail's
+  // person chip shows the FIRST name (approved one-card detail, 2026-11-08); Milo vs Olive tell them apart.
+  const first = (name: string) => name.split(' ')[0];
+  const member = first(k.memberName);
+  const owner = first(k.ownerName);
   for (const n of [1, 2]) {
-    await expectDetail(page, k, k.at(n), title, /3:00\s?PM/, /9:00\s?AM/, { is: k.memberName, isNot: k.ownerName });
+    await expectDetail(page, k, k.at(n), title, /3:00\s?PM/, /9:00\s?AM/, { is: member, isNot: owner });
   }
-  await expectDetail(page, k, k.today, title, /9:00\s?AM/, /3:00\s?PM/, { is: k.ownerName, isNot: k.memberName });
+  await expectDetail(page, k, k.today, title, /9:00\s?AM/, /3:00\s?PM/, { is: owner, isNot: member });
 });
 
 test('a recurring APPOINTMENT: moving the series time moves the materialized upcoming days; a past day keeps its time', async ({

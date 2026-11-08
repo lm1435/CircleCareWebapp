@@ -281,7 +281,12 @@ test.describe('1.2.2 locales at 320px', () => {
         await checkA11y(page, `${route} (${locale}@320)`, testInfo, WCAG22);
         await expectReflow(page, `${route} (${locale})`);
       }
-      // Every picker option speaks in its own language, whatever the UI language.
+      // Every picker option speaks in its own language, whatever the UI language. The picker is the
+      // Settings "Language" page since the grouped Settings list (2026-11-08); axe + reflow it too.
+      await visitAndCheck(page, '/profile/language');
+      await expect(page.locator('html')).toHaveAttribute('lang', locale, { timeout: 20_000 });
+      await checkA11y(page, `/profile/language (${locale}@320)`, testInfo, WCAG22);
+      await expectReflow(page, `/profile/language (${locale})`);
       const picker = page.getByRole('radiogroup').filter({ has: page.locator('input[value="de"]') });
       for (const code of ['en', 'es', ...NEW_LOCALES]) {
         await expect(picker.locator(`label:has(input[value="${code}"]) [lang="${code}"]`)).toHaveCount(1);

@@ -297,6 +297,18 @@ describe('When? the day, on the RECIPIENT\'s calendar', () => {
     expect(body.scheduled_time).toBe('07:15');
   });
 
+  it('in a far zone, Some days says whose days they are ONCE (under the chips), not again under the date', async () => {
+    useCircleResult.timezone = 'Pacific/Auckland';
+    const user = userEvent.setup();
+    renderNew();
+    expect(screen.getAllByText("Days are in Rosa's time zone (Auckland)")).toHaveLength(1);
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    await user.click(radio('Some days'));
+    const notes = screen.getAllByText("Days are in Rosa's time zone (Auckland)");
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toHaveAttribute('id', 'recurrence_days-tznote');
+  });
+
   it('picking the time first, then the day, keeps the recipient\'s time on the new day (and the duration)', async () => {
     useCircleResult.timezone = 'Pacific/Auckland';
     const user = userEvent.setup();

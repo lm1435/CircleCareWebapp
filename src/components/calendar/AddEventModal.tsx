@@ -3145,7 +3145,8 @@ function AddEventForm({
           value={recipientStartDate ?? ''}
           today={recipientPickerToday}
           error={errors.scheduled_date ?? missingErrorFor('date')}
-          hint={showDualTimezone ? daysTimezoneNote : undefined}
+          // With Some days the chips carry the same zone note: say it once, under the chips.
+          hint={showDualTimezone && recurrence !== 'days_of_week' ? daysTimezoneNote : undefined}
           onChange={(e) => chooseTaskDay(e.target.value)}
         />
         <div className="flex flex-wrap gap-2" data-testid="task-time-row">

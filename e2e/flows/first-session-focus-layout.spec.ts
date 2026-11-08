@@ -224,7 +224,8 @@ test.describe('Save is solid; pressing it with a field missing takes you to that
       return { bg: cs.backgroundColor, h: (el as HTMLElement).offsetHeight };
     });
     expect(look.bg, 'not the light paper fill').not.toBe('rgb(243, 239, 230)');
-    expect(look.h).toBeGreaterThanOrEqual(48);
+    // The standard md <Button> (design pass 2026-11-08 dropped the footer's 48px override): min 44.
+    expect(look.h).toBeGreaterThanOrEqual(44);
 
     // Scroll the form away from the title, then press Create.
     const scroller = dialog.locator('#add-event-form').locator('xpath=..');
@@ -271,30 +272,27 @@ test.describe('Save is solid; pressing it with a field missing takes you to that
     await expect(dialog).toBeHidden({ timeout: 10_000 });
   });
 
-  test('footer padding is capped in px: a larger root font does not fatten the band', async ({
+  test('footer Save and Cancel are the standard md Button: one height, at least 44px, also at 150% text', async ({
     page,
     circleId,
   }) => {
+    // Design pass 2026-11-08 (f598891): the footer uses the standard <Button> (sm/md/lg, min 44) with no
+    // py-[10px]!/min-h-[48px]! overrides, so its padding scales with the text like every other Button.
     const dialog = await openNewEntry(page, circleId, 'Appointment');
     const save = dialog.getByTestId('add-event-save');
     const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
-    const measure = (el: Locator) =>
-      el.evaluate((node) => {
-        const s = getComputedStyle(node);
-        return { pt: s.paddingTop, pb: s.paddingBottom, h: (node as HTMLElement).offsetHeight };
-      });
-    const before = await measure(save);
-    await page.evaluate(() => {
-      document.documentElement.style.fontSize = '24px'; // 150% text size
-    });
-    // rem padding (the footer's old py-2.5) would now be 15px.
-    for (const button of [save, cancel]) {
-      const m = await measure(button);
-      expect(m.pt).toBe('10px');
-      expect(m.pb).toBe('10px');
-      expect(m.h).toBeGreaterThanOrEqual(48);
+    const height = (el: Locator) => el.evaluate((node) => (node as HTMLElement).offsetHeight);
+    for (const rootSize of [null, '24px']) {
+      if (rootSize) {
+        await page.evaluate((size) => {
+          document.documentElement.style.fontSize = size; // 150% text size
+        }, rootSize);
+      }
+      const [s, c] = [await height(save), await height(cancel)];
+      expect(s).toBeGreaterThanOrEqual(44);
+      expect(s, 'Save and Cancel are one height').toBe(c);
+      await expect(save).toBeInViewport();
     }
-    expect((await measure(save)).h).toBe(before.h);
     await cancel.click();
   });
 });
