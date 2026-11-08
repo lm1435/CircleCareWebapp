@@ -399,9 +399,8 @@ export function NextUp({
             }`}
             data-next-up-name=""
           >
-            {/* text-lg matches mobile's Today card at phone width; at xl the
-                desktop density steps item titles down to the 18px body size. */}
-            <span className="break-words text-lg font-semibold text-ink xl:text-base">{item.title}</span>
+            {/* Body size (text-base) at every width: text-lg wrapped titles to 2-3 lines on a phone. */}
+            <span className="break-words text-base font-semibold text-ink">{item.title}</span>
             {sub ? <span className="break-words text-sm text-ink-2">{sub}</span> : null}
           </Link>
           {action}

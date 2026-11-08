@@ -134,6 +134,14 @@ describe('NextUp', () => {
     expect(screen.getAllByTestId('next-up-row')[0].querySelector('[data-next-up-name]')).toHaveClass('flex-col');
   });
 
+  // Visual review 2026-11-07: text-lg titles wrapped to 2-3 lines at 390 and pushed Quick Access under the nav.
+  it('item titles use the body size (text-base) at phone width too, not text-lg', () => {
+    renderNextUp({ items: [dose('1')] });
+    const title = screen.getByTestId('next-up-row').querySelector('[data-next-up-name] > span') as HTMLElement;
+    expect(title).toHaveClass('text-base', 'font-semibold');
+    expect(title).not.toHaveClass('text-lg');
+  });
+
   it('"All of today" footer is text-md font-medium (500), not semibold', () => {
     renderNextUp({ items: [dose('1')] });
     const link = screen.getByRole('link', { name: /All of today/ });
