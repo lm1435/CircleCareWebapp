@@ -142,10 +142,11 @@ describe('NextUp', () => {
     expect(title).not.toHaveClass('text-lg');
   });
 
-  // Nested radius: the row is r16 with 8px inset, so its action button is 8 (rounded-sm), not the Button's 12.
-  it('the Taken button radius is the row radius minus the row inset (8px)', () => {
+  // Owner 2026-11-08: action buttons use the standard sm radius (rounded-md = 12), not a nested one.
+  it('the Taken button uses the standard sm radius (rounded-md), no rounded-sm! override', () => {
     renderNextUp({ items: [dose('1')] });
-    expect(screen.getByTestId('next-up-row').querySelector('[data-next-up-taken]')).toHaveClass('rounded-sm!');
+    expect(screen.getByTestId('next-up-row').querySelector('[data-next-up-taken]')).toHaveClass('rounded-md');
+    expect(screen.getByTestId('next-up-row').querySelector('[data-next-up-taken]')).not.toHaveClass('rounded-sm!');
   });
 
   it('"All of today" footer is text-md font-medium (500), not semibold', () => {

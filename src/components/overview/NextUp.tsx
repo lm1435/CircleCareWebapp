@@ -329,7 +329,7 @@ export function NextUp({
           size="sm"
           variant={actionVariant}
           aria-label={t('today.nextUp.takenLabel', { name: item.title, when })}
-          className={`rounded-sm! ${stacked ? 'w-full' : 'flex-none'}`}
+          className={`${stacked ? 'w-full' : 'flex-none'}`}
           data-next-up-taken=""
           {...offlineDisabledProps(offline)}
           onClick={() => {
@@ -354,7 +354,7 @@ export function NextUp({
           size="sm"
           variant={actionVariant}
           aria-label={t('today.nextUp.doneLabel', { name: item.title, when })}
-          className={`rounded-sm! ${stacked ? 'w-full' : 'flex-none'}`}
+          className={`${stacked ? 'w-full' : 'flex-none'}`}
           {...offlineDisabledProps(offline)}
           onClick={() => {
             if (blockOfflineWrite('mark')) return;
