@@ -233,7 +233,7 @@ const FOCUS_ORDER = [
  * the red asterisk (the input itself says aria-required).
  */
 const sectionHeading = (headingId: string, text: string, required = false): ReactElement => (
-  <Text variant="sectionTitle" as="h3" id={headingId} className="text-lg">
+  <Text variant="sectionTitle" as="h3" id={headingId} className="text-base!">
     {text}
     {required ? <RequiredMarker /> : null}
   </Text>

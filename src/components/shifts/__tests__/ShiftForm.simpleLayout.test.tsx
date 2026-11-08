@@ -160,6 +160,14 @@ describe('simple shift form: header, sections, button', () => {
     expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
   });
 
+  // Owner 2026-11-07 (feedback_compact_type_18pt): form section headings are 18/600, not the 24px sectionTitle.
+  it('section headings are 18px (text-base!), not the 24px sectionTitle', () => {
+    open();
+    for (const h of screen.getAllByRole('heading', { level: 3 })) {
+      expect(h).toHaveClass('text-base!', 'font-semibold');
+    }
+  });
+
   it('the name field is the answer to the question (id and error kept)', async () => {
     const user = userEvent.setup();
     open();

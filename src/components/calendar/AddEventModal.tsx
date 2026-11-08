@@ -2282,7 +2282,7 @@ function AddEventForm({
         )}
         {remindersApply(eventType, timeStr) && !isAsNeeded && (
         <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
-          <Text variant="sectionTitle" as="legend" className="p-0">
+          <Text variant="sectionTitle" as="legend" className="p-0 text-base!">
             {t('addEvent.reminders.section')}
           </Text>
           {/* WHERE THESE ACTUALLY GO.
@@ -2494,7 +2494,7 @@ function AddEventForm({
   const chipConversion = showOtherTime ? null : conversionText;
   const timeErrorText = errors.scheduled_time ?? missingErrorFor('time');
   const sectionHeading = (headingId: string, text: string): ReactElement => (
-    <Text variant="sectionTitle" as="h3" id={headingId} className="text-lg">
+    <Text variant="sectionTitle" as="h3" id={headingId} className="text-base!">
       {text}
     </Text>
   );
