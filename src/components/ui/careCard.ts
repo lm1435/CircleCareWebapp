@@ -98,6 +98,9 @@ export const careCardActionCompact = 'min-w-[66px] px-4';
 /** Primary action pill (e.g. Take, Done) — moss fill, cream text. */
 export const careCardActionPrimary = `${careCardActionBtn} bg-primary-fill text-on-primary`;
 
+/** The moss OUTLINE pill: a later row's Done, so only the first open row carries the filled CTA. */
+export const careCardActionOutline = `${careCardActionBtn} border-[1.5px] border-primary-outline bg-transparent text-primary-outline hover:bg-moss-soft`;
+
 /** Secondary action pill (e.g. Skip) — bg-2 fill, ink-2 text. */
 export const careCardActionSecondary = `${careCardActionBtn} bg-bg-2 text-ink-2`;
 

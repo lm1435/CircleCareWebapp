@@ -66,6 +66,7 @@ export {
   careCardActionBtn,
   careCardActionCompact,
   careCardActionPrimary,
+  careCardActionOutline,
   careCardActionSecondary,
   careCardActionText,
   careCardListGap,

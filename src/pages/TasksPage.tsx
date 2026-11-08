@@ -176,10 +176,13 @@ export default function TasksPage(): ReactElement {
       </div>
     );
   } else {
+    // Only the first open row's Done is the filled primary; the rest are outline.
+    const firstOpenId = tasks.find((x) => !x.completed_at && !pendingIds.has(x.id))?.id;
     body = (
       <ul className={`${careCardListGap} m-0 list-none p-0 px-5`}>
         {tasks.map((task) => (
           <TaskRow
+            primaryAction={task.id === firstOpenId}
             key={task.id}
             task={task}
             timezone={timezone}

@@ -7,6 +7,7 @@ import {
   UndoBadge,
   careCardActionCompact,
   careCardActionPrimary,
+  careCardActionOutline,
   careCardActionsInline,
   careCardActionsRow,
   careCardLeading,
@@ -89,6 +90,11 @@ export interface TaskRowProps {
    * wrong from the viewer's device clock.
    */
   today?: string;
+  /**
+   * `false` renders Done as the moss outline instead of the filled primary. A list passes `true`
+   * for its first open row only, so the strongest CTA is not repeated on every row. Default `true`.
+   */
+  primaryAction?: boolean;
 }
 
 export function TaskRow({
@@ -103,6 +109,7 @@ export function TaskRow({
   onViewDetails,
   isPendingComplete,
   today,
+  primaryAction = true,
 }: TaskRowProps): ReactElement {
   const { t, i18n } = useTranslation('tasks');
   // Viewer's 12h/24h clock — every rendered time goes through it.
@@ -253,7 +260,7 @@ export function TaskRow({
           }}
           aria-label={t('row.completeLabel', { title: task.title })}
           {...offlineDisabledProps(offline)}
-          className={`${careCardActionPrimary} ${careCardActionCompact}`}
+          className={`${primaryAction ? careCardActionPrimary : careCardActionOutline} ${careCardActionCompact}`}
         >
           {t('row.done')}
         </button>

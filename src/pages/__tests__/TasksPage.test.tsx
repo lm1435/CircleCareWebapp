@@ -914,6 +914,18 @@ describe('TasksPage', () => {
     ).toHaveLength(2);
   });
 
+  // One accent (owner 2026-11-07): four identical filled Done buttons repeat the strongest CTA per row.
+  // Only the first open row is filled primary; the rest use the moss outline, like Today's Next up.
+  it('fills only the FIRST open row\'s Done; every later Done is the outline variant', () => {
+    renderPage();
+
+    const first = action('Mark "Pick up groceries" complete');
+    const second = action('Mark "Call pharmacy" complete');
+    expect(first).toHaveClass('bg-primary-fill');
+    expect(second).not.toHaveClass('bg-primary-fill');
+    expect(second).toHaveClass('border-primary-outline', 'text-primary-outline');
+  });
+
   // The meta row (assignee, due date, overdue pill) is a SIBLING of the
   // title button, so its text is never folded into (and cannot change) the
   // button's accessible NAME — OpenTasksCard's pinned aria-label constant
