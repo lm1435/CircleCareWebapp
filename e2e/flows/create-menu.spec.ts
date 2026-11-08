@@ -126,13 +126,9 @@ async function deleteCalendarEventByTitle(
 
   const chip = page.getByRole('button', { name: titleRe });
   await openChipByTitle(page, titleRe);
-  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
-  // (EventDetailActions.tsx spec §M2) whenever 2+ secondary actions apply —
-  // true for every fresh (non-completed) event this suite creates.
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  const actionsMenu = page.getByRole('menu');
-  await expect(actionsMenu).toBeVisible();
-  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  // Edit / Discontinue / Delete are visible standard buttons in the detail footer (owner design
+  // pass 2026-11-08); there is no More menu.
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
 
@@ -223,12 +219,8 @@ test('create an appointment end-to-end via the global create menu', async ({ pag
 
   // --- Delete (cleanup) ---
   await openChipByTitle(page, titleRe);
-  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
-  // (EventDetailActions.tsx spec §M2).
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  const actionsMenu = page.getByRole('menu');
-  await expect(actionsMenu).toBeVisible();
-  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  // Edit / Discontinue / Delete are visible standard buttons in the detail footer.
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(chip).toHaveCount(0, { timeout: 20_000 });
@@ -297,12 +289,8 @@ test('create a medication end-to-end via the global create menu', async ({ page,
 
   // --- Delete (cleanup) ---
   await openChipByTitle(page, titleRe);
-  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
-  // (EventDetailActions.tsx spec §M2).
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  const actionsMenu = page.getByRole('menu');
-  await expect(actionsMenu).toBeVisible();
-  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  // Edit / Discontinue / Delete are visible standard buttons in the detail footer.
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   // A new medication from the simple form repeats every day: remove the whole series.
   const confirm = page.getByRole('dialog', { name: 'Delete medication' });
   await expect(confirm).toBeVisible({ timeout: 10_000 });

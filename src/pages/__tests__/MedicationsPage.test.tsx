@@ -447,8 +447,7 @@ describe('MedicationsPage', () => {
 
     await user.click(screen.getByRole('button', { name: /^View details for Metformin/ }));
     const sheet = await screen.findByRole('dialog');
-    await user.click(within(sheet).getByRole('button', { name: /more/i }));
-    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(within(sheet).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog', { name: 'delete-event-dialog' });
     expect(dialog).toHaveTextContent('deleting-active-1-doseScoped-false');
   });
@@ -1249,10 +1248,9 @@ describe('MedicationsPage — ended series', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Ended Jan 5, 2026')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: /more/i }));
-    expect(screen.queryByRole('menuitem', { name: 'Reactivate' })).toBeNull();
-    expect(screen.queryByRole('menuitem', { name: 'Discontinue' })).toBeNull();
-    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Reactivate' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Discontinue' })).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
   it('orders Inactive by MOST RECENT STOP first; the discontinue day is read in the recipient zone', () => {

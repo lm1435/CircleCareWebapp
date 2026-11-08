@@ -811,8 +811,7 @@ describe('TasksPage', () => {
 
       await user.click(screen.getByRole('button', { name: COMPLETED_ROW_NAME }));
       const dialog = screen.getByRole('dialog');
-      await user.click(within(dialog).getByRole('button', { name: 'More' }));
-      await user.click(screen.getByRole('menuitem', { name: 'Edit event' }));
+      await user.click(within(dialog).getByRole('button', { name: 'Edit' }));
 
       const editor = screen.getByRole('dialog', { name: 'add-event-modal' });
       expect(editor).toHaveTextContent('edit-mode');

@@ -86,8 +86,8 @@ describe('departed member, name-only embed (no email) — web', () => {
         members={[OWNER]}
       />
     );
-    expect(screen.getByText('Assigned to')).toBeInTheDocument();
-    expect(screen.getByText('Lisa Departed')).toBeInTheDocument();
+    // The assignee is the person chip by the title (first name; "Assigned to" is spoken).
+    expect(screen.getByTestId('event-detail-who')).toHaveTextContent(/Assigned to, Lisa$/);
     expect(screen.getByText('Completed by')).toBeInTheDocument();
     expect(screen.getByText(/^Lisa Departed · /)).toBeInTheDocument();
     expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();

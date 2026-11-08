@@ -123,17 +123,18 @@ test("a past day's unanswered dose shows no clock time while a dose taken that d
   await expect(openRow).not.toHaveAccessibleName(CLOCK);
   await expect(openRow).toHaveAccessibleName(`${unansweredName}, Medication, Not marked`);
 
-  // The detail: no Time row for the unanswered dose, a Time row for the taken one.
+  // The detail: WHEN shows no time for the unanswered dose, and its time for the taken one.
   await openRow.click();
   let detail = page.getByRole('dialog');
   await expect(detail).toBeVisible({ timeout: 10_000 });
   await expect(detail.getByText(unansweredName).first()).toBeVisible();
-  await expect(detail.getByText('Time', { exact: true })).toHaveCount(0);
+  await expect(detail.getByTestId('event-detail-date')).toBeVisible();
+  await expect(detail.getByTestId('event-detail-time')).toHaveCount(0);
   await expect(detail.getByText(/7:15/)).toHaveCount(0);
   await page.getByRole('button', { name: 'Close event details' }).click();
   await takenRow.click();
   detail = page.getByRole('dialog');
-  await expect(detail.getByText('Time', { exact: true })).toBeVisible({ timeout: 10_000 });
+  await expect(detail.getByTestId('event-detail-time')).toBeVisible({ timeout: 10_000 });
   await page.getByRole('button', { name: 'Close event details' }).click();
 
   // Control: today's dose of the edited med keeps its (new) time.

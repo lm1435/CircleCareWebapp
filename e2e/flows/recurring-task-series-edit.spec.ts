@@ -93,8 +93,7 @@ async function openSeriesEditor(
   expectedTitle: string
 ) {
   const detail = await openChip(page, date, titleMatch(chipTitle));
-  await detail.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
+  await detail.getByRole('button', { name: 'Edit', exact: true }).click();
   // A task edit is the simple task form, titled "Edit task" (owner 1.4.0).
   const editor = page.getByRole('dialog', { name: 'Edit task' });
   await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -159,15 +158,14 @@ test('a recurring task series is editable from an upcoming AND a completed occur
   // --- Complete TODAY's occurrence from the Calendar ---
   await gotoWeekContaining(page, circleId, today, today);
   const todayDetail = await openChip(page, today, titleMatch(titleA));
-  await todayDetail.getByRole('button', { name: 'Mark complete' }).click();
+  await todayDetail.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(page.getByText('Marked complete')).toBeVisible({ timeout: 20_000 });
-  await expect(todayDetail.getByRole('button', { name: 'Mark complete' })).toHaveCount(0, {
+  await expect(todayDetail.getByRole('button', { name: 'Done', exact: true })).toHaveCount(0, {
     timeout: 20_000,
   });
-  // Completed — and a RECURRING task, so Edit is still on offer: Edit + Delete
-  // keep the More menu (a locked one-off renders Delete inline, no menu).
-  // Scenario B below opens Edit from this very occurrence.
-  await expect(todayDetail.getByRole('button', { name: 'More', exact: true })).toBeVisible();
+  // Completed — and a RECURRING task, so Edit is still on offer (a locked one-off shows Delete
+  // only). Scenario B below opens Edit from this very occurrence.
+  await expect(todayDetail.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
   await closeDialog(page);
 
   const completedToday = seriesRows(root.id).filter(
@@ -314,9 +312,7 @@ test('a completed ONE-OFF task offers no Edit (the lock stays)', async ({
   await cookieLogin(context, owner, baseURL);
   await gotoWeekContaining(page, circleId, today, today);
   const detail = await openChip(page, today, titleMatch(title));
-  // Edit is the only other secondary action a task has; with it hidden, Delete
-  // renders inline and there is no More menu at all.
+  // A completed one-off task is locked: Delete is its only action.
   await expect(detail.getByRole('button', { name: 'Delete', exact: true })).toBeVisible();
-  await expect(detail.getByRole('button', { name: 'More', exact: true })).toHaveCount(0);
-  await expect(detail.getByRole('button', { name: 'Edit event' })).toHaveCount(0);
+  await expect(detail.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
 });

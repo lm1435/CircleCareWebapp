@@ -439,8 +439,7 @@ test('2. the same writes through the app UI succeed and persist (event edit, tas
   // (a) calendar_events UPDATE — edit the task's title in the calendar.
   const edited = `${taskTitle}_EDITED`;
   const detail = await openCalendarEvent(page, o.circleId, taskDate, taskTitle);
-  await detail.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
+  await detail.getByRole('button', { name: 'Edit', exact: true }).click();
   // A task edit is the simple task form, titled "Edit task" (owner 1.4.0).
   const edit = page.getByRole('dialog', { name: 'Edit task' });
   await expect(edit).toBeVisible();
@@ -610,8 +609,7 @@ const SURFACES: Surface[] = [
       ctx.state.original = `${ctx.label} orig`;
       ctx.state.id = (await apiCreateEvent(ctx.o.api, ctx.o.circleId, { event_type: 'task', title: ctx.state.original, scheduled_date: date })).id;
       const detail = await openCalendarEvent(ctx.page, ctx.o.circleId, date, ctx.state.original);
-      await detail.getByRole('button', { name: 'More', exact: true }).click();
-      await ctx.page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
+      await detail.getByRole('button', { name: 'Edit', exact: true }).click();
       const edit = ctx.page.getByRole('dialog', { name: 'Edit task' });
       await expect(edit.locator('#title')).toHaveValue(ctx.state.original, { timeout: 20_000 });
       await edit.locator('#title').fill(ctx.label);
@@ -642,8 +640,7 @@ const SURFACES: Surface[] = [
         })
       ).id;
       const detail = await openCalendarEvent(ctx.page, ctx.o.circleId, date, ctx.label);
-      await detail.getByRole('button', { name: 'More', exact: true }).click();
-      await ctx.page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+      await detail.getByRole('button', { name: 'Delete', exact: true }).click();
       const del = ctx.page.getByRole('dialog', { name: /^Delete/ }).last();
       await expect(del).toBeVisible();
       return del.getByRole('button', { name: 'Delete', exact: true });

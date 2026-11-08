@@ -176,6 +176,11 @@ export function EventNotesPanel({
     () => (composer.trim() ? composer : null),
     setComposer
   );
+  // COLLAPSED COMPOSER (owner design pass 2026-11-08, mock WebEvent.dc.html; mobile parity): a
+  // single-line "Add a note…" field until it is focused or holds text, then the full textarea and
+  // its Add note button. The SAME <textarea> grows (rows 1 -> 3), so focus never jumps.
+  const [composerFocused, setComposerFocused] = useState(false);
+  const composerOpen = composerFocused || composer.length > 0;
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
@@ -312,15 +317,22 @@ export function EventNotesPanel({
 
       {canEdit && (
         <form onSubmit={handleCreate} className="flex flex-col gap-2">
+          {/* The label stays the field's accessible name (visually hidden: the "Notes" heading
+              and the placeholder say it on screen). */}
           <TextArea
             id="event-note-composer"
-            label={t('calendar:notes.composerLabel')}
+            label={<span className="sr-only">{t('calendar:notes.composerLabel')}</span>}
             placeholder={t('calendar:notes.composerPlaceholder')}
             value={composer}
             onChange={(e) => setComposer(e.target.value)}
+            onFocus={() => setComposerFocused(true)}
+            onBlur={() => setComposerFocused(false)}
             maxLength={MAX_NOTE_LENGTH}
-            rows={3}
+            rows={composerOpen ? 3 : 1}
+            data-expanded={composerOpen ? 'true' : 'false'}
+            className={composerOpen ? undefined : 'min-h-0! resize-none'}
           />
+          {composerOpen && (
           <div className="flex justify-end">
             {/* ONE ACCENT (owner 2026-11-08, mobile parity): while a note is being edited its Save
                 is the filled primary, so Add note steps down to the outline. */}
@@ -334,6 +346,7 @@ export function EventNotesPanel({
               {t('calendar:notes.add')}
             </Button>
           </div>
+          )}
         </form>
       )}
 

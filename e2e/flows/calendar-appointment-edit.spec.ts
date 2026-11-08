@@ -39,9 +39,9 @@ import {
 // account): a viewer-frame bug shows up as a chip on the wrong day.
 if (process.env.PW_E2E_TZ) test.use({ timezoneId: process.env.PW_E2E_TZ });
 
-async function moreMenu(page: Page, detail: Locator, item: 'Edit event' | 'Delete'): Promise<void> {
-  await detail.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: item, exact: true }).click();
+// The detail footer's Edit / Delete are visible standard buttons (owner design pass 2026-11-08).
+async function moreMenu(_page: Page, detail: Locator, item: 'Edit' | 'Delete'): Promise<void> {
+  await detail.getByRole('button', { name: item, exact: true }).click();
 }
 
 interface Seed {
@@ -200,7 +200,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     const k = await seed(page, context, request, baseURL);
     await gotoWeekContaining(page, k.circleId, k.today, k.at(0));
     const detail = await openChip(page, k.at(0), k.reA);
-    await moreMenu(page, detail, 'Edit event');
+    await moreMenu(page, detail, 'Edit');
     const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.getByText('This event repeats. Changes you save here will apply to the whole series.')).toBeVisible();
@@ -356,7 +356,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     const k = await seed(page, context, request, baseURL);
     await gotoWeekContaining(page, k.circleId, k.today, k.at(0));
     const detail = await openChip(page, k.at(0), k.reA);
-    await moreMenu(page, detail, 'Edit event');
+    await moreMenu(page, detail, 'Edit');
     const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
@@ -392,7 +392,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     ).toBeNull();
     await gotoWeekContaining(page, k.circleId, k.today, k.at(1));
     const detail = await openChip(page, k.at(1), new RegExp(escapeRegExp(D)));
-    await moreMenu(page, detail, 'Edit event');
+    await moreMenu(page, detail, 'Edit');
     const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });
@@ -424,7 +424,7 @@ test.describe('recurring appointment: edit + delete scope', () => {
     const k = await seed(page, context, request, baseURL);
     await gotoWeekContaining(page, k.circleId, k.today, k.at(0));
     const detail = await openChip(page, k.at(0), k.reA);
-    await moreMenu(page, detail, 'Edit event');
+    await moreMenu(page, detail, 'Edit');
     const edit = page.getByRole('dialog', { name: 'Edit appointment' });
     await expect(edit).toBeVisible();
     await expect(edit.locator('#scheduled_date')).not.toHaveValue('', { timeout: 20_000 });

@@ -255,8 +255,7 @@ export async function deleteViaMoreMenu(
   detailDialog: Locator,
   scope: 'single' | 'future'
 ): Promise<void> {
-  await detailDialog.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  await detailDialog.getByRole('button', { name: 'Delete', exact: true }).click();
 
   // NOTE: `detailDialog` is a generic `page.getByRole('dialog')` locator, so
   // it matches whichever dialog is on screen — the detail modal closes and

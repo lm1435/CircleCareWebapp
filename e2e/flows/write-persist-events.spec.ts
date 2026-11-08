@@ -195,8 +195,7 @@ async function openDeleteDialog(
 ) {
   await gotoWeekContaining(page, circleId, today, date);
   const detail = await openChip(page, date, titleRe);
-  await detail.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  await detail.getByRole('button', { name: 'Delete', exact: true }).click();
   const del = page.getByRole('dialog', { name: dialogName });
   await expect(del).toBeVisible({ timeout: 10_000 });
   return del;

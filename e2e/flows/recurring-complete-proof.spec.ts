@@ -528,7 +528,8 @@ async function completeOccurrence(
       (r) => r.method() === 'POST' && r.url().includes('/complete'),
       { timeout: 20_000 }
     ),
-    detail.getByRole('button', { name: 'Mark complete' }).click(),
+    // A task's primary reads "Done", an appointment's "Mark complete" (design pass 2026-11-08).
+    detail.getByRole('button', { name: /^(Done|Mark complete)$/ }).click(),
   ]);
   await expect(page.getByText('Marked complete')).toBeVisible({ timeout: 25_000 });
 
@@ -691,7 +692,7 @@ test.describe(`recurring completion — DB-level proof (${MODE} the client fix)`
     // That is exactly how the bug stayed invisible in production.
     const detail = page.getByRole('dialog');
     await expect(detail.getByText(/^Completed (on|by)$/)).toBeVisible({ timeout: 20_000 });
-    await expect(detail.getByRole('button', { name: 'Mark complete' })).toHaveCount(0);
+    await expect(detail.getByRole('button', { name: /^(Done|Mark complete)$/ })).toHaveCount(0);
 
     const observation = observe(series.rootId, before, seriesRows(series.rootId));
     settle({

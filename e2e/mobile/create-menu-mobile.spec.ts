@@ -133,13 +133,9 @@ test('create a task end-to-end from the pill NEW cell', async ({ page, circleId 
 
   await chip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  // Edit/Discontinue/Delete live behind one "More" MoreMenu trigger now
-  // (EventDetailActions.tsx spec §M2) whenever 2+ secondary actions apply —
-  // true for this fresh (non-completed) task.
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  const actionsMenu = page.getByRole('menu');
-  await expect(actionsMenu).toBeVisible();
-  await actionsMenu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  // Edit / Discontinue / Delete are visible standard buttons in the detail footer (owner design
+  // pass 2026-11-08); there is no More menu.
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
 

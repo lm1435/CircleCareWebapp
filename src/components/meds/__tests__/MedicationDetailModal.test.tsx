@@ -8,9 +8,10 @@
 //     component state that dies with the modal, never in the React Query cache —
 //     the rule `api/documents.ts` already follows for `file_url`.
 //
-// Layout mirrors mobile's MedicationDetailModal (2026-09-14): eyebrow → name →
-// dosage header, then one icon-row info card. The recurrence appears ONCE, in
-// Repeat; the Time row carries the dose times alone.
+// Layout = the approved design pass (2026-11-08, mobile parity): eyebrow → name →
+// dosage header, then ONE details card with uppercase labels and no per-row icons:
+// WHEN ("Daily · 8:00 AM"), REFILL | ASSIGNED TO, INSTRUCTIONS. Every action is a
+// visible standard button (no More menu).
 
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -110,27 +111,44 @@ describe('MedicationDetailModal', () => {
 
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.getByText('10mg')).toBeInTheDocument();
-    expect(screen.getByText('8:00 AM')).toBeInTheDocument();
+    expect(screen.getByTestId('med-detail-when')).toHaveTextContent('Daily · 8:00 AM');
   });
 
-  // THE duplicate: the schedule line used to end with the recurrence
-  // ("8:00 PM · Daily") right above a Repeat row saying "Daily" again.
-  it('shows the recurrence exactly once, in the Repeat row, and times alone in the Time row', () => {
+  // WHEN carries the repeat and the times in ONE line, the recurrence exactly once (it used to
+  // end the schedule line, "8:00 PM · Daily", right above a Repeat row saying "Daily" again).
+  it('shows WHEN as repeat · times, the recurrence exactly once', () => {
     render(<MedicationDetailModal {...baseProps} times="8:00 AM · 8:00 PM" repeat="Daily" />);
 
-    expect(screen.getAllByText('Daily')).toHaveLength(1);
-    expect(screen.queryByText(/·\s*Daily/)).toBeNull();
-
-    const timeRow = screen.getByText('meds:page.detail.time').closest('div.flex') as HTMLElement;
-    expect(within(timeRow).getByText('8:00 AM · 8:00 PM')).toBeInTheDocument();
-    const repeatRow = screen.getByText('meds:page.detail.repeat').closest('div.flex') as HTMLElement;
-    expect(within(repeatRow).getByText('Daily')).toBeInTheDocument();
+    expect(screen.getByText('calendar:eventDetail.when').tagName).toBe('DT');
+    expect(screen.getByTestId('med-detail-when')).toHaveTextContent(/^Daily · 8:00 AM · 8:00 PM$/);
+    expect(screen.getAllByText(/Daily/)).toHaveLength(1);
+    // The old separate rows are gone.
+    expect(screen.queryByText('meds:page.detail.repeat')).toBeNull();
+    expect(screen.queryByText('meds:page.detail.time')).toBeNull();
   });
 
-  it('omits the Repeat row for a one-off medication', () => {
+  it('a one-off medication shows its times alone in WHEN', () => {
     render(<MedicationDetailModal {...baseProps} repeat={null} />);
-    expect(screen.queryByText('meds:page.detail.repeat')).toBeNull();
-    expect(screen.getByText('meds:page.detail.time')).toBeInTheDocument();
+    expect(screen.getByTestId('med-detail-when')).toHaveTextContent(/^8:00 AM$/);
+  });
+
+  it('pairs REFILL | ASSIGNED TO in one two-column row, Assigned only when the roster row names someone', () => {
+    const assigned = {
+      ...(event as object),
+      assigned_to: 'u-2',
+      assigned_to_user: { id: 'u-2', first_name: 'Jennie', last_name: 'Ruiz', email: 'j@x.com' },
+    } as never;
+    const { unmount } = render(
+      <MedicationDetailModal {...baseProps} event={assigned} daysLeft={18} />
+    );
+    const grid = screen.getByTestId('med-detail-refill').closest('dl') as HTMLElement;
+    expect(grid.className).toContain('grid-cols-2');
+    expect(within(grid).getByText('calendar:eventDetail.assignedTo')).toBeInTheDocument();
+    expect(screen.getByTestId('med-detail-assigned')).toHaveTextContent(/^Jennie$/);
+    unmount();
+
+    render(<MedicationDetailModal {...baseProps} daysLeft={18} />);
+    expect(screen.queryByText('calendar:eventDetail.assignedTo')).toBeNull();
   });
 
   // Mobile's header: eyebrow → name → dosage. The dialog keeps exactly one
@@ -179,32 +197,28 @@ describe('MedicationDetailModal', () => {
   });
 
   // Valid definition-list structure (axe `definition-list` / `dlitem`, both
-  // serious): each row group holds a <dt> then a <dd> and nothing else. The
-  // decorative icon sits inside the <dt>, hidden from assistive tech.
-  it('builds each info row as a bare dt + dd group with the icon hidden inside the dt', () => {
+  // serious): each group holds a <dt> then a <dd> and nothing else, and no row
+  // carries an icon any more (owner: no per-row icons).
+  it('builds each fact as a bare dt + dd group with no icons', () => {
     const { container } = render(<MedicationDetailModal {...baseProps} daysLeft={20} />);
     const rows = container.ownerDocument.querySelectorAll('dl > div');
-    expect(rows.length).toBe(4);
+    // WHEN, REFILL, INSTRUCTIONS.
+    expect(rows.length).toBe(3);
     rows.forEach((row) => {
       expect(Array.from(row.children).map((c) => c.tagName)).toEqual(['DT', 'DD']);
-      const icon = row.querySelector('dt > [aria-hidden="true"]');
-      expect(icon).not.toBeNull();
-      expect(icon?.textContent).toBe('');
     });
+    expect(screen.getByTestId('med-detail-card').querySelector('svg, ion-icon')).toBeNull();
   });
 
-  // The <dt> labels use the shared `mono` type variant (spec §4.5/§6.4) — the
-  // same label treatment the history cards and the emergency cards use.
-  it('renders detail labels with the shared mono type variant, not local classes', async () => {
+  // The <dt> labels use the shared uppercase Eyebrow label (the shift detail's), not local classes.
+  it('renders detail labels with the shared eyebrow label', async () => {
     render(<MedicationDetailModal {...baseProps} />);
 
     await waitFor(() => expect(getMedicationPhotoUrl).toHaveBeenCalled());
 
-    const label = screen.getByText('meds:page.detail.time');
+    const label = screen.getByText('calendar:eventDetail.when');
     expect(label.tagName).toBe('DT');
-    expect(label.className).toContain(TEXT_CLASS.mono);
-    expect(label.className).not.toContain('section-title-sm');
-    expect(label.className).not.toContain('uppercase');
+    expect(label.className).toContain(TEXT_CLASS.eyebrow);
   });
 
   // Each action closes the sheet before opening its dialog, so the app never
@@ -229,14 +243,15 @@ describe('MedicationDetailModal', () => {
     expect(
       screen.queryByRole('button', { name: 'meds:page.actions.delete' }),
     ).toBeNull();
-    // No More overflow either — there is nothing secondary to offer.
+    expect(
+      screen.queryByRole('button', { name: 'meds:page.actions.discontinue' }),
+    ).toBeNull();
     expect(screen.queryByRole('button', { name: /more/i })).toBeNull();
   });
 
-  // Discontinue/Reactivate and Delete are secondary/destructive actions, so
-  // per the modal footer convention they live inside the More overflow, not
-  // as standalone footer buttons.
-  it('offers Discontinue and Delete inside the More menu', async () => {
+  // Owner design pass 2026-11-08: Edit, Discontinue/Reactivate and Delete are visible
+  // standard buttons, in that order. No More menu.
+  it('offers Edit, Discontinue and Delete as visible buttons, with no More menu', async () => {
     const onToggleStatus = vi.fn();
     const onDelete = vi.fn();
     render(
@@ -247,48 +262,90 @@ describe('MedicationDetailModal', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: /more/i }));
-    await userEvent.click(
-      screen.getByRole('menuitem', { name: 'meds:page.actions.discontinue' }),
-    );
+    expect(screen.queryByRole('button', { name: /more/i })).toBeNull();
+    const footer = screen.getByTestId('med-detail-actions');
+    expect(within(footer).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'meds:page.actions.edit',
+      'meds:page.actions.discontinue',
+      'meds:page.actions.delete',
+    ]);
+    await userEvent.click(screen.getByRole('button', { name: 'meds:page.actions.discontinue' }));
     expect(onToggleStatus).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(screen.getByRole('button', { name: /more/i }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'meds:page.actions.delete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'meds:page.actions.delete' }));
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('an ENDED series keeps Edit and Delete but offers no Discontinue / Reactivate', () => {
+    render(<MedicationDetailModal {...baseProps} inactive endedLabel="Ended Nov 1" />);
+    expect(screen.getByText('Ended Nov 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'meds:page.actions.edit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'meds:page.actions.delete' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'meds:page.actions.reactivate' })).toBeNull();
   });
 
   it('shows Reactivate instead of Discontinue for an inactive medication', async () => {
     render(<MedicationDetailModal {...baseProps} inactive />);
 
-    await userEvent.click(screen.getByRole('button', { name: /more/i }));
     expect(
-      screen.getByRole('menuitem', { name: 'meds:page.actions.reactivate' }),
+      screen.getByRole('button', { name: 'meds:page.actions.reactivate' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('menuitem', { name: 'meds:page.actions.discontinue' }),
+      screen.queryByRole('button', { name: 'meds:page.actions.discontinue' }),
     ).toBeNull();
   });
 
-  // The footer holds exactly two controls — the More overflow trigger and
-  // Edit — with Edit last in DOM order. Edit is `secondary` and NOT moss:
-  // nothing in a READ view is the app's primary action, and a filled moss
-  // button here competed with the Take/Skip pair that means "answer a dose".
-  it('puts Edit last in the footer as a secondary, unfilled action', () => {
+  // A scheduled medication's roster detail logs no dose, so NOTHING in it is filled: Edit and
+  // Discontinue are secondary, Delete the soft danger button (never a filled one).
+  it('fills no button on a scheduled medication', () => {
     render(<MedicationDetailModal {...baseProps} />);
-
-    const buttons = screen.getAllByRole('button');
-    const edit = buttons[buttons.length - 1];
-    expect(edit).toHaveTextContent('meds:page.actions.edit');
-
-    // Exact token match: a ghost button's `hover:bg-moss-soft` class would
-    // also satisfy a naive `/\bbg-moss\b/` substring regex (the word boundary
-    // lands right before the trailing `-soft`), misclassifying it as filled.
-    const FILLED_CLASSES = new Set(['bg-moss', 'bg-terracotta-soft']);
-    const filled = buttons.filter((button) =>
-      button.className.split(/\s+/).some((cls) => FILLED_CLASSES.has(cls)),
+    const footer = screen.getByTestId('med-detail-actions');
+    const buttons = within(footer).getAllByRole('button');
+    expect(buttons.filter((b) => b.className.split(/\s+/).includes('bg-primary-fill'))).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'meds:page.actions.edit' }).className).toContain('bg-cream');
+    expect(screen.getByRole('button', { name: 'meds:page.actions.delete' }).className).toContain(
+      'bg-terracotta-soft'
     );
-    expect(filled).toHaveLength(0);
-    expect(edit.className).toContain('bg-bg-2');
+  });
+
+  describe('as needed', () => {
+    const asNeeded = {
+      reason: 'Headache',
+      lastGiven: <span>Last given 3:00 PM by Rosa</span>,
+      onGive: vi.fn(),
+      onHistory: vi.fn(),
+    };
+
+    it('keeps Last given, What it is for and Reminders in the same card, with no WHEN', () => {
+      render(<MedicationDetailModal {...baseProps} asNeeded={asNeeded} daysLeft={9} />);
+      const card = screen.getByTestId('med-detail-card');
+      expect(within(card).getByText('meds:asNeeded.detail.lastGiven')).toBeInTheDocument();
+      expect(within(card).getByText('Last given 3:00 PM by Rosa')).toBeInTheDocument();
+      expect(within(card).getByText('meds:asNeeded.detail.reason')).toBeInTheDocument();
+      expect(within(card).getByText('Headache')).toBeInTheDocument();
+      expect(within(card).getByText('meds:asNeeded.detail.remindersNone')).toBeInTheDocument();
+      expect(within(card).getByText('meds:page.detail.instructions')).toBeInTheDocument();
+      expect(screen.queryByTestId('med-detail-when')).toBeNull();
+    });
+
+    it('Gave a dose is the one filled button, last, after History', () => {
+      render(<MedicationDetailModal {...baseProps} asNeeded={asNeeded} />);
+      const buttons = within(screen.getByTestId('med-detail-actions')).getAllByRole('button');
+      expect(buttons.map((b) => b.textContent)).toEqual([
+        'meds:page.actions.edit',
+        'meds:page.actions.discontinue',
+        'meds:page.actions.delete',
+        'meds:asNeeded.card.history',
+        'meds:asNeeded.card.give',
+      ]);
+      const filled = buttons.filter((b) => b.className.split(/\s+/).includes('bg-primary-fill'));
+      expect(filled.map((b) => b.textContent)).toEqual(['meds:asNeeded.card.give']);
+    });
+
+    it('an inactive as-needed medication offers no Gave a dose', () => {
+      render(<MedicationDetailModal {...baseProps} asNeeded={asNeeded} inactive />);
+      expect(screen.queryByRole('button', { name: 'meds:asNeeded.card.give' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'meds:asNeeded.card.history' })).toBeInTheDocument();
+    });
   });
 });

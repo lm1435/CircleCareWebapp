@@ -513,8 +513,8 @@ describe('CalendarPage', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: /Dr\. Smith/ })).toBeInTheDocument();
     expect(within(dialog).getByText('Appointment')).toBeInTheDocument();
-    expect(within(dialog).getByText('Friday, June 12, 2026')).toBeInTheDocument();
-    expect(within(dialog).getByText(/2:00 PM \(Chicago\)/)).toBeInTheDocument();
+    expect(within(dialog).getByTestId('event-detail-date')).toHaveTextContent(/^Fri, Jun 12(, 2026)?$/);
+    expect(within(dialog).getByTestId('event-detail-time')).toHaveTextContent(/2:00 PM \(Chicago\)/);
     expect(within(dialog).getByText('Clinic')).toBeInTheDocument();
     expect(within(dialog).getByText('Bring insurance card')).toBeInTheDocument();
     // Read-only: download-the-app CTA in the footer slot
@@ -815,7 +815,7 @@ describe('CalendarPage', () => {
       // Nothing claims completion yet.
       expect(within(detail).queryByText('Completed on')).toBeNull();
 
-      await user.click(within(detail).getByRole('button', { name: 'Mark complete' }));
+      await user.click(within(detail).getByRole('button', { name: 'Done' }));
 
       // The SAME dialog — never closed, never reopened — now carries the row.
       expect(await within(detail).findByText('Completed on')).toBeInTheDocument();
@@ -823,7 +823,7 @@ describe('CalendarPage', () => {
       // timezone, never the viewer's device clock).
       expect(within(detail).getByText(/Jun 12, 2026/)).toBeInTheDocument();
       // ...and the action that just succeeded stops offering itself again.
-      expect(within(detail).queryByRole('button', { name: 'Mark complete' })).toBeNull();
+      expect(within(detail).queryByRole('button', { name: 'Done' })).toBeNull();
     });
 
     it('a VIRTUAL occurrence stamps the open modal from the row the server CREATED', async () => {
@@ -882,7 +882,7 @@ describe('CalendarPage', () => {
       expect(within(detail).getByText('Repeats')).toBeInTheDocument();
       expect(within(detail).getByText('Daily')).toBeInTheDocument();
 
-      await user.click(within(detail).getByRole('button', { name: 'Mark complete' }));
+      await user.click(within(detail).getByRole('button', { name: 'Done' }));
 
       // Request shape unchanged: root + the occurrence's own date.
       await waitFor(() =>
@@ -901,12 +901,12 @@ describe('CalendarPage', () => {
       // And none of the returned row's OTHER fields — a merge that kept the id
       // but spread the rest would retitle the modal, drop its Repeats row and
       // add a description the subject never had.
-      expect(within(detail).getByText('Water the plants')).toBeInTheDocument();
+      expect(within(detail).getByTestId('event-detail-title')).toHaveTextContent(/^Water the plants$/);
       expect(within(detail).queryByText('Water the plants (materialized)')).toBeNull();
       expect(within(detail).getByText('Repeats')).toBeInTheDocument();
       expect(within(detail).getByText('Daily')).toBeInTheDocument();
       expect(within(detail).queryByText('Row created by the completion request')).toBeNull();
-      expect(within(detail).queryByRole('button', { name: 'Mark complete' })).toBeNull();
+      expect(within(detail).queryByRole('button', { name: 'Done' })).toBeNull();
     });
   });
 });

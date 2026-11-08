@@ -68,9 +68,6 @@
   },
   "eventDetail": {
     "title": "Detalhes do evento",
-    "date": "Data",
-    "time": "Horário",
-    "location": "Local",
     "instructions": "Instruções",
     "details": "Detalhes",
     "repeats": "Repete",
@@ -91,7 +88,10 @@
     "completedByValue": "{{name}} · {{when}}",
     "completedLabel": "Concluído em",
     "doctor": "Médico",
-    "seeAllVisits": "Ver todas as visitas"
+    "seeAllVisits": "Ver todas as visitas",
+    "when": "Quando",
+    "where": "Onde",
+    "edit": "Editar"
   },
   "recurrence": {
     "daily": "Diariamente",

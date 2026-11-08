@@ -68,9 +68,6 @@
   },
   "eventDetail": {
     "title": "Details zum Eintrag",
-    "date": "Datum",
-    "time": "Uhrzeit",
-    "location": "Ort",
     "instructions": "Hinweise zur Einnahme",
     "details": "Details",
     "repeats": "Wiederholung",
@@ -91,7 +88,10 @@
     "completedByValue": "{{name}} · {{when}}",
     "completedLabel": "Erledigt am",
     "doctor": "Ärztin/Arzt",
-    "seeAllVisits": "Alle Besuche ansehen"
+    "seeAllVisits": "Alle Besuche ansehen",
+    "when": "Wann",
+    "where": "Wo",
+    "edit": "Bearbeiten"
   },
   "recurrence": {
     "daily": "Täglich",

@@ -352,8 +352,7 @@ test.describe('Visits & notes: a removed doctor', () => {
     await expect(dialog.getByRole('link', { name: `${gone.name} (removed) · See all visits` })).toBeVisible();
 
     // The edit form echoes the stored (removed) doctor and keeps it on an untouched save...
-    await dialog.getByRole('button', { name: 'More', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Edit', exact: true }).click();
     const form = page.getByRole('dialog');
     const select = form.locator('#provider_id');
     await expect(select).toHaveValue(gone.id);
@@ -372,8 +371,7 @@ test.describe('Visits & notes: a removed doctor', () => {
     // ...and the picker can move it to an active doctor.
     await gotoWeekContaining(page, s.circleId, s.today, s.today);
     const dialog2 = await openChip(page, s.today, new RegExp(escapeRegExp(title)));
-    await dialog2.getByRole('button', { name: 'More', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
+    await dialog2.getByRole('button', { name: 'Edit', exact: true }).click();
     const form2 = page.getByRole('dialog');
     await form2.locator('#provider_id').selectOption({ label: keep.name });
     const moved = page.waitForResponse(

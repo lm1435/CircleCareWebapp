@@ -147,8 +147,7 @@ test('delete event (DeleteEventDialog): double confirm while the DELETE is pendi
   const created = await apiCreateEvent(api, circleId, { event_type: 'task', title, scheduled_date: date });
   try {
     const detail = await openCalendarEvent(page, circleId, date, title);
-    await detail.getByRole('button', { name: 'More', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+    await detail.getByRole('button', { name: 'Delete', exact: true }).click();
     // A task, so the dialog names itself "Delete task" (never "event").
     const confirm = page.getByRole('dialog', { name: 'Delete task' });
     await expect(confirm).toBeVisible();

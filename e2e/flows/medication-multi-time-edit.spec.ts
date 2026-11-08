@@ -267,8 +267,7 @@ test('editing the evening time of a twice-daily medication from the Calendar kee
   await clickWeekChip(page, dayCell(page, tomorrow), new RegExp(`^${s.name}.*8:00 PM`));
   const detail = page.getByRole('dialog');
   await expect(detail).toBeVisible({ timeout: 10_000 });
-  await detail.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Edit event' }).click();
+  await detail.getByRole('button', { name: 'Edit', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Edit medication' });
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   await changeTimeAndSave(page, dialog, circleId, s.evening, '20:00', '21:00', s.morning);

@@ -6,13 +6,16 @@ import type { CircleMember } from '@/api/circleMembers';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isPlainLeftClick, readFromProviderId } from '@/lib/stackLoop';
 import { MapsLink } from '@/components/MapsLink';
-import { Badge, Card, Eyebrow, Modal, Text } from '@/components/ui';
+import { Badge, Card, Eyebrow, Modal } from '@/components/ui';
+import { DetailCard, DetailField, DetailSection, PersonChip } from '@/components/ui/DetailCard';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryKeys';
+import { useSeriesRoot } from '@/hooks/useSeriesRoot';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { useProviders } from '@/hooks/useProviders';
 import { formatEventTimeForDisplay, getDateInTimezone } from '@/utils/timezone';
 import { formatDateForDisplay, formatTimestampInTimezone } from './dateMath';
 import {
-  EVENT_TYPE_DOT_CLASS,
   getMedicationStatus,
   hidesUnloggedDoseTime,
   isInactiveMedication,
@@ -31,6 +34,57 @@ const EVENT_TYPE_EYEBROW_COLOR = {
 
 function memberDisplayName(member: CircleMember): string {
   return [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email;
+}
+
+/** Titles longer than this step down from the large title size (the shift detail's rule). */
+const LONG_TITLE_CHARS = 14;
+
+type RuleSource = Pick<CalendarEvent, 'recurrence_rule' | 'recurrence_days'>;
+
+/**
+ * Whether the row on screen cannot say how its series repeats by itself. A MATERIALIZED CHILD
+ * (`parent_event_id` set, one row per day) stores `recurrence_rule = NULL` — the rule lives on the
+ * series root only (see the recurring-instances architecture) — so a daily medication's dose or a
+ * daily task's occurrence read as a one-off: no Repeats at all. A VIRTUAL instance carries the
+ * root's rule but never its `recurrence_days`, so a weekly one lost its day names.
+ */
+export function needsSeriesRule(event: CalendarEvent): boolean {
+  if (!event.parent_event_id) return false;
+  if (!event.recurrence_rule) return true;
+  return event.recurrence_rule === 'weekly' && !(event.recurrence_days?.length);
+}
+
+/**
+ * Resolves the SERIES ROOT's rule for an occurrence (`useSeriesRoot`: the root already in the
+ * calendar cache, else one narrowed GET of the existing single-event endpoint) and hands it to
+ * `children`. Mounted only when `needsSeriesRule` says the row cannot answer for itself, so a
+ * one-off or a root never touches React Query. Until the root is known (or if it fails) the row's
+ * own rule is used, which is what the detail showed before.
+ */
+function SeriesRuleResolver({
+  circleId,
+  event,
+  children,
+}: {
+  circleId: string;
+  event: CalendarEvent;
+  children: (source: RuleSource) => ReactElement;
+}): ReactElement {
+  // The calendar windows already in the cache (what `useCachedCircleEvents` reads), narrowed to the
+  // one row wanted: the root of THIS occurrence.
+  const queryClient = useQueryClient();
+  const cachedRoot = useMemo(() => {
+    for (const [, data] of queryClient.getQueriesData<CalendarEvent[]>({
+      queryKey: queryKeys.calendarEvents(circleId),
+    })) {
+      if (!Array.isArray(data)) continue;
+      const hit = data.find((e) => e?.id === event.parent_event_id && !e.parent_event_id && !e.is_virtual);
+      if (hit) return [hit];
+    }
+    return [];
+  }, [queryClient, circleId, event.parent_event_id]);
+  const { root } = useSeriesRoot(circleId, event, cachedRoot);
+  return children(root && root.recurrence_rule ? root : event);
 }
 
 /**
@@ -142,11 +196,15 @@ export function EventDetailModal({
 
   // scheduled_date is a NAIVE date in the care recipient's timezone — format
   // via the UTC-noon pattern, never new Date(scheduled_date) device-local.
+  // Short, like the shift detail ("Fri, Jun 12"); the year only when it is not the recipient's
+  // current one, so a past or far-future row is never mistaken for this year's.
+  const sameYear =
+    event.scheduled_date.slice(0, 4) === getDateInTimezone(careRecipientTimezone).slice(0, 4);
   const dateLabel = formatDateForDisplay(event.scheduled_date, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
+    weekday: 'short',
+    month: 'short',
     day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' as const }),
   });
 
   const timeLabel = event.scheduled_time
@@ -162,8 +220,6 @@ export function EventDetailModal({
         hourCycle
       )
     : t('calendar:allDay');
-
-  const recurrenceLabel = formatRecurrenceLabel(event, t);
 
   const medStatus = getMedicationStatus(event, careRecipientTimezone);
   let statusLabel: string | null = null;
@@ -245,140 +301,187 @@ export function EventDetailModal({
   // assignee row). Same embed-then-roster-then-fallback shape as
   // `completedByName` above; an unassigned TASK still gets a row (the shared
   // "Unassigned" label) while an unassigned appointment omits it, as mobile does.
+  //
+  // Shown as the PERSON CHIP by the title (owner design pass 2026-11-08): avatar + FIRST name, like
+  // the shift detail. A medication shows one too when its row names an assignee (mobile reads the
+  // same embed); it has no Unassigned fallback.
   const assignedToName = useMemo(() => {
-    if (event.event_type !== 'task' && event.event_type !== 'appointment') return null;
     const embedded = event.assigned_to_user;
     if (embedded) {
-      const name = [embedded.first_name, embedded.last_name].filter(Boolean).join(' ');
+      const name = embedded.first_name?.trim() || embedded.last_name?.trim();
       if (name) return name;
-      if (embedded.email) return embedded.email;
+      if (embedded.email) return embedded.email.split('@')[0];
     }
     const member = event.assigned_to
       ? (members ?? []).find((m) => m.id === event.assigned_to)
       : undefined;
-    return member ? memberDisplayName(member) : null;
-  }, [event.event_type, event.assigned_to_user, event.assigned_to, members]);
+    return member ? member.first_name?.trim() || member.email.split('@')[0] : null;
+  }, [event.assigned_to_user, event.assigned_to, members]);
 
-  const rows: Array<{ key: string; label: string; value: ReactNode }> = [
-    { key: 'date', label: t('calendar:eventDetail.date'), value: dateLabel },
-    // A past day's dose nobody answered has no Time row: its virtual
-    // occurrence carries the medication's CURRENT time, which after a time edit
-    // is not the time it was due (`hidesUnloggedDoseTime`; 1.4.1 fixes it).
-    ...(hidesUnloggedDoseTime(event, careRecipientTimezone)
-      ? []
-      : [{ key: 'time', label: t('calendar:eventDetail.time'), value: timeLabel }]),
-  ];
-  if (event.event_type === 'task') {
-    rows.push({
-      key: 'assignedTo',
-      label: t('calendar:eventDetail.assignedTo'),
-      // A task added to a shift: "Afternoons · Lucia" / "Night · Open shift".
-      value:
-        shiftTaskMeta(event, t as unknown as (k: string, o?: Record<string, unknown>) => string) ??
-        assignedToName ??
-        t('tasks:row.unassigned'),
-    });
-  } else if (event.event_type === 'appointment' && assignedToName) {
-    rows.push({
-      key: 'assignedTo',
-      label: t('calendar:eventDetail.assignedTo'),
-      value: assignedToName,
-    });
-  }
-  if (completedAtLabel) {
-    rows.push(
-      completedByName
-        ? {
-            key: 'completedBy',
-            label: t('calendar:eventDetail.completedByLabel'),
-            value: t('calendar:eventDetail.completedByValue', {
-              name: completedByName,
-              when: completedAtLabel,
-            }),
-          }
-        : {
-            key: 'completedAt',
-            label: t('calendar:eventDetail.completedLabel'),
-            value: completedAtLabel,
-          }
+  // WHEN = date · time in ONE cell ("Fri, Jun 12 · 8:00 AM"; "All day" with no time). A past
+  // day's dose nobody answered shows the DATE alone: its virtual occurrence carries the
+  // medication's CURRENT time, which after a time edit is not the time it was due
+  // (`hidesUnloggedDoseTime`; 1.4.1 fixes it).
+  const hideTime = hidesUnloggedDoseTime(event, careRecipientTimezone);
+  const whenValue = (
+    <>
+      <span data-testid="event-detail-date">{dateLabel}</span>
+      {hideTime ? null : (
+        <>
+          {' · '}
+          <span data-testid="event-detail-time">{timeLabel}</span>
+        </>
+      )}
+    </>
+  );
+
+  // The person chip: a shift task names its shift and who covers it ("Afternoons · Lucia"), a
+  // task its assignee or "Unassigned", an appointment / medication its assignee when it has one.
+  const shiftMeta =
+    event.event_type === 'task'
+      ? shiftTaskMeta(event, t as unknown as (k: string, o?: Record<string, unknown>) => string)
+      : null;
+  const chipName =
+    shiftMeta ?? assignedToName ?? (event.event_type === 'task' ? t('tasks:row.unassigned') : null);
+  const chipHasPerson = !shiftMeta && !!assignedToName;
+  const chip = chipName ? (
+    <PersonChip
+      data-testid="event-detail-who"
+      name={chipName}
+      avatar={chipHasPerson}
+      spokenPrefix={t('calendar:eventDetail.assignedTo')}
+    />
+  ) : null;
+
+  const completedValue = completedAtLabel
+    ? completedByName
+      ? {
+          label: t('calendar:eventDetail.completedByLabel'),
+          value: t('calendar:eventDetail.completedByValue', {
+            name: completedByName,
+            when: completedAtLabel,
+          }),
+        }
+      : { label: t('calendar:eventDetail.completedLabel'), value: completedAtLabel }
+    : null;
+
+  // The first row: WHEN alone, or WHEN | REPEATS side by side when the series repeats.
+  const renderWhenRow = (ruleSource: RuleSource): ReactElement => {
+    const repeats = formatRecurrenceLabel(ruleSource, t);
+    return (
+      <DetailSection columns={repeats ? 2 : 1} data-testid="event-detail-when-row">
+        <DetailField
+          label={t('calendar:eventDetail.when')}
+          valueTestId="event-detail-when"
+          valueClassName="font-medium tabular-nums"
+        >
+          {whenValue}
+        </DetailField>
+        {repeats && (
+          <DetailField label={t('calendar:eventDetail.repeats')} valueTestId="event-detail-repeats">
+            {repeats}
+          </DetailField>
+        )}
+      </DetailSection>
     );
-  }
-  if (event.event_type === 'appointment' && event.provider_id) {
-    rows.push({
-      key: 'doctor',
-      label: t('calendar:eventDetail.doctor'),
-      value: <EventDoctorLink
-          circleId={circleId ?? event.circle_id}
-          providerId={event.provider_id}
-          eventId={event.id}
-          eventDate={event.scheduled_date}
-        />,
-    });
-  }
-  if (event.location) {
-    rows.push({
-      key: 'location',
-      label: t('calendar:eventDetail.location'),
-      value: <MapsLink address={event.location} />,
-    });
-  }
-  if (recurrenceLabel) {
-    rows.push({ key: 'repeats', label: t('calendar:eventDetail.repeats'), value: recurrenceLabel });
-  }
-  if (statusLabel) {
-    rows.push({ key: 'status', label: t('calendar:eventDetail.status'), value: statusLabel });
-  }
-  if (event.description) {
-    // This row is the event's OWN note field, which is a DIFFERENT thing from
-    // the circle-notes panel rendered below (shared, ongoing notes about the
-    // care recipient) — that panel has its own "Notes" heading, so this row
-    // must never also say "Notes", for ANY event type, or the dialog shows
-    // two "Notes" headings. A medication's own note is its dosing
-    // INSTRUCTIONS; a task/appointment's is just its DETAILS.
-    rows.push({
-      key: 'notes',
-      label:
-        event.event_type === 'medication'
-          ? t('calendar:eventDetail.instructions')
-          : t('calendar:eventDetail.details'),
-      value: event.description,
-    });
-  }
+  };
 
-  // Name-first header: the entity name is the primary display (inherits the
-  // Modal h2's tight semibold treatment — no serif face any more, spec §3.1),
-  // with the type as a refined eyebrow accent beneath
-  // — a small type-colored dot + uppercase mono label in the deep type color
-  // (WCAG AA on cream). The dosage trails as a quiet inline detail. The
-  // type-colored rail anchors the whole block to mobile's color-forward
-  // type vocabulary.
-  const titleContent = (
-    <span className="flex items-stretch gap-3.5">
-      <span
-        aria-hidden="true"
-        className={`w-1 shrink-0 self-stretch rounded-full ${EVENT_TYPE_DOT_CLASS[event.event_type]}`}
-      />
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="block break-words leading-tight">
-          {title}
-          {dosage ? (
-            <span className="ml-2 align-baseline font-sans text-base font-normal text-ink-3">
-              {dosage}
-            </span>
-          ) : null}
-        </span>
-        {/* Type eyebrow: shared `Eyebrow` component, dot + label in the type
-            color (spec §6.4 "the type eyebrow uses Eyebrow dot"). */}
-        <Eyebrow dot color={EVENT_TYPE_EYEBROW_COLOR[event.event_type]}>
+  // One details card (owner design pass 2026-11-08, mock WebEvent.dc.html; the shift detail's
+  // pieces): uppercase small labels, no per-row icons, each section only when it has content.
+  const card = (
+    <DetailCard data-testid="event-detail-card">
+      {needsSeriesRule(event) ? (
+        <SeriesRuleResolver circleId={circleId ?? event.circle_id} event={event}>
+          {renderWhenRow}
+        </SeriesRuleResolver>
+      ) : (
+        renderWhenRow(event)
+      )}
+      {event.location && (
+        <DetailSection>
+          <DetailField label={t('calendar:eventDetail.where')} valueTestId="event-detail-where">
+            <MapsLink address={event.location} />
+          </DetailField>
+        </DetailSection>
+      )}
+      {event.event_type === 'appointment' && event.provider_id && (
+        <DetailSection>
+          <DetailField label={t('calendar:eventDetail.doctor')} valueTestId="event-detail-doctor">
+            <EventDoctorLink
+              circleId={circleId ?? event.circle_id}
+              providerId={event.provider_id}
+              eventId={event.id}
+              eventDate={event.scheduled_date}
+            />
+          </DetailField>
+        </DetailSection>
+      )}
+      {statusLabel && (
+        <DetailSection>
+          <DetailField label={t('calendar:eventDetail.status')} valueTestId="event-detail-status">
+            {statusLabel}
+          </DetailField>
+        </DetailSection>
+      )}
+      {completedValue && (
+        <DetailSection>
+          <DetailField label={completedValue.label} valueTestId="event-detail-completed">
+            {completedValue.value}
+          </DetailField>
+        </DetailSection>
+      )}
+      {event.description && (
+        // The event's OWN note field, a DIFFERENT thing from the circle-notes panel below (shared,
+        // ongoing notes), which has its own "Notes" heading — so this label is never "Notes": a
+        // medication's own note is its dosing INSTRUCTIONS, a task/appointment's its DETAILS.
+        <DetailSection>
+          <DetailField
+            label={
+              event.event_type === 'medication'
+                ? t('calendar:eventDetail.instructions')
+                : t('calendar:eventDetail.details')
+            }
+            valueTestId="event-detail-description"
+            valueClassName="whitespace-pre-wrap font-normal"
+          >
+            {event.description}
+          </DetailField>
+        </DetailSection>
+      )}
+    </DetailCard>
+  );
+
+  // Header (the shift detail's): the type eyebrow (+ Inactive badge), then the title (+ dosage)
+  // and the person chip on ONE row when they fit; the chip wraps under a title that leaves no
+  // room. The visible title is presentational: the dialog's sr-only <h2> (Modal `title`) names it.
+  const dialogName = dosage ? `${title} ${dosage}` : title;
+  const longTitle = title.length > LONG_TITLE_CHARS;
+  const header = (
+    <div className="flex min-w-0 flex-col gap-1.5" data-testid="event-detail-header">
+      <div className="flex flex-wrap items-center gap-2">
+        <Eyebrow color={EVENT_TYPE_EYEBROW_COLOR[event.event_type]}>
           {t(`calendar:eventTypes.${event.event_type}`)}
         </Eyebrow>
         {isInactiveMed && (
-          <Badge variant="default" className="self-start">
+          <Badge variant="default" size="sm">
             {t('calendar:discontinueMed.inactiveBadge')}
           </Badge>
         )}
-      </span>
-    </span>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5">
+        <p
+          aria-hidden="true"
+          data-testid="event-detail-title"
+          className={`m-0 min-w-0 break-words font-semibold leading-tight text-ink ${longTitle ? 'text-lg' : 'text-xl'}`}
+        >
+          {title}
+          {dosage ? (
+            <span className="ml-2 align-baseline text-base font-normal text-ink-3">{dosage}</span>
+          ) : null}
+        </p>
+        {chip}
+      </div>
+    </div>
   );
 
   // Footer actions slot — edit buttons slot in here when write features
@@ -397,23 +500,14 @@ export function EventDetailModal({
 
   return (
     <Modal
-      title={titleContent}
+      title={dialogName}
+      hideTitle
+      header={header}
       onClose={onClose}
       closeLabel={t('calendar:eventDetail.close')}
       footer={footer}
     >
-      <dl className="m-0 flex flex-col gap-4">
-        {rows.map((row) => (
-          <div key={row.key}>
-            <Text variant="label" as="dt">
-              {row.label}
-            </Text>
-            <dd className="m-0 mt-1 whitespace-pre-wrap break-words text-base text-ink">
-              {row.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {card}
 
       {/* Inactive medication: say in words what the header badge marks.
           Historical doses stay on the calendar with their confirmation status

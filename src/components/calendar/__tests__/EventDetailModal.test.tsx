@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/i18n';
 import type { CalendarEvent } from '@/api/calendarEvents';
 import { EventDetailModal } from '../EventDetailModal';
@@ -136,21 +137,69 @@ describe('EventDetailModal', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(screen.getByRole('heading', { name: /Metformin/ })).toBeInTheDocument();
     expect(screen.getByText('Medication')).toBeInTheDocument();
-    expect(screen.getByText('Friday, June 12, 2026')).toBeInTheDocument();
+    // WHEN = date · time in one cell; short date (the year only when it is not this year's).
+    expect(screen.getByText('When')).toBeInTheDocument();
+    expect(screen.getByTestId('event-detail-date')).toHaveTextContent(/^Fri, Jun 12(, 2026)?$/);
     // Naive 08:00 in Chicago + dual display for the New_York "device". The
     // zone is named by its city now, not by an invented abbreviation.
-    expect(screen.getByText(/8:00 AM \(Chicago\)/)).toBeInTheDocument();
+    expect(screen.getByTestId('event-detail-time')).toHaveTextContent(/8:00 AM \(Chicago\)/);
     // Confirmation time rendered in the recipient's timezone
     expect(screen.getByText('Taken at 8:05 AM (Chicago)')).toBeInTheDocument();
 
-    // The type eyebrow renders through the shared `Eyebrow` component (spec
-    // §6.4 "the type eyebrow uses Eyebrow dot"): a type-colored dot + label,
-    // colour overridden per event type via `Eyebrow`'s own `color` prop.
+    // The type eyebrow keeps its type colour (shared `Eyebrow`), no dot and no rail any more.
     const eyebrow = screen.getByText('Medication');
     expect(eyebrow.className).toContain('text-clay!');
-    const dot = eyebrow.querySelector('span[aria-hidden="true"]');
-    expect(dot).not.toBeNull();
-    expect(dot).toHaveClass('bg-clay');
+    expect(eyebrow.querySelector('span[aria-hidden="true"]')).toBeNull();
+  });
+
+  it('pairs WHEN | REPEATS in one two-column row, and shows "All day" with no time', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({
+          event_type: 'appointment',
+          title: 'Dr. Smith',
+          medication_name: null,
+          medication_dosage: null,
+          scheduled_time: null,
+          recurrence_rule: 'daily',
+        })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    const row = screen.getByTestId('event-detail-when-row');
+    expect(row.className).toContain('grid-cols-2');
+    expect(within(row).getByText('Repeats')).toBeInTheDocument();
+    expect(within(row).getByText('Daily')).toBeInTheDocument();
+    expect(screen.getByTestId('event-detail-time')).toHaveTextContent('All day');
+  });
+
+  it('a one-off event shows WHEN full width, no Repeats', () => {
+    render(<EventDetailModal event={makeEvent({})} careRecipientTimezone={TZ} onClose={vi.fn()} />);
+    expect(screen.getByTestId('event-detail-when-row').className).not.toContain('grid-cols-2');
+    expect(screen.queryByText('Repeats')).toBeNull();
+  });
+
+  it('draws every fact in ONE card with uppercase labels and no per-row icons', () => {
+    render(
+      <EventDetailModal
+        event={makeEvent({
+          event_type: 'appointment',
+          title: 'Dr. Smith',
+          medication_name: null,
+          medication_dosage: null,
+          location: 'Clinic',
+          description: 'Bring insurance card',
+        })}
+        careRecipientTimezone={TZ}
+        onClose={vi.fn()}
+      />
+    );
+    const card = screen.getByTestId('event-detail-card');
+    for (const label of ['When', 'Where', 'Details']) {
+      expect(within(card).getByText(label).tagName).toBe('DT');
+    }
+    expect(card.querySelector('svg, ion-icon')).toBeNull();
   });
 
   it('shows notes, location, and human-readable weekly recurrence (0=Sun..6=Sat)', () => {
@@ -333,14 +382,12 @@ describe('EventDetailModal', () => {
     expect(screen.queryByRole('button', { name: 'Done' })).toBeNull();
   });
 
-  it('detail row labels use the shared Text label variant, not the raw mono utility', () => {
+  it('detail labels use the shared uppercase eyebrow label (the shift detail\'s)', () => {
     render(<EventDetailModal event={makeEvent({})} careRecipientTimezone={TZ} onClose={vi.fn()} />);
 
-    const dateLabel = screen.getByText('Date');
-    expect(dateLabel.tagName).toBe('DT');
-    expect(dateLabel.className).toContain('text-sm');
-    expect(dateLabel.className).toContain('font-semibold');
-    expect(dateLabel.className).not.toContain('mono');
+    const whenLabel = screen.getByText('When');
+    expect(whenLabel.tagName).toBe('DT');
+    expect(whenLabel.className).toContain('uppercase');
   });
 
   // M2 — the event's OWN description row is a DIFFERENT thing from the
@@ -442,8 +489,13 @@ describe('EventDetailModal', () => {
       />
     );
 
-    expect(screen.getByText('Assigned to')).toBeInTheDocument();
-    expect(screen.getByText('Sam Diaz')).toBeInTheDocument();
+    // The person chip by the title: avatar + FIRST name, spoken "Assigned to, Sam".
+    const chip = screen.getByTestId('event-detail-who');
+    expect(chip).toHaveTextContent(/Assigned to, Sam$/);
+    expect(screen.getByTestId('event-detail-who-name')).toHaveTextContent(/^Sam$/);
+    expect(chip.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    // It sits in the header row with the title, not in the card.
+    expect(within(screen.getByTestId('event-detail-header')).getByTestId('event-detail-who')).toBe(chip);
   });
 
   it('falls back to the shared Unassigned label for a task with no assignee', () => {
@@ -461,8 +513,7 @@ describe('EventDetailModal', () => {
       />
     );
 
-    expect(screen.getByText('Assigned to')).toBeInTheDocument();
-    expect(screen.getByText('Unassigned')).toBeInTheDocument();
+    expect(screen.getByTestId('event-detail-who')).toHaveTextContent(/^Assigned to, Unassigned$/);
   });
 
   it('renders no Assigned to row for a medication or an appointment', () => {
@@ -504,8 +555,7 @@ describe('EventDetailModal', () => {
           onClose={vi.fn()}
         />
       );
-      expect(screen.getByText('Assigned to')).toBeInTheDocument();
-      expect(screen.getByText('Sam Diaz')).toBeInTheDocument();
+      expect(screen.getByTestId('event-detail-who')).toHaveTextContent(/Assigned to, Sam$/);
     });
 
     it('omits the row (no Unassigned label) when the appointment has no assignee', () => {
@@ -551,8 +601,7 @@ describe('EventDetailModal', () => {
             onClose={vi.fn()}
           />
         );
-        expect(screen.getByText('Asignado a')).toBeInTheDocument();
-        expect(screen.getByText('Sam Diaz')).toBeInTheDocument();
+        expect(screen.getByTestId('event-detail-who')).toHaveTextContent(/Asignado a, Sam$/);
       } finally {
         await i18n.changeLanguage('en');
       }
@@ -613,7 +662,9 @@ describe('EventDetailModal', () => {
     });
 
     it('passes the row-own scheduled_date for a persisted child (parent_event_id set)', () => {
+      // A child row resolves its series rule through React Query (EventDetailModal.seriesRepeat).
       render(
+        <QueryClientProvider client={new QueryClient()}>
         <EventDetailModal
           event={makeEvent({
             id: 'child-1',
@@ -625,6 +676,7 @@ describe('EventDetailModal', () => {
           careRecipientTimezone={TZ}
           onClose={vi.fn()}
         />
+        </QueryClientProvider>
       );
 
       expect(notesPanelSpy).toHaveBeenCalledWith(

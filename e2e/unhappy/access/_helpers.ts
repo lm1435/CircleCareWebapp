@@ -414,7 +414,7 @@ export const SURFACES: Surface[] = [
       return [
         {
           label: `edit / delete / complete actions for "${title}"`,
-          locator: dialog.getByRole('button', { name: /^(More|Edit event|Delete|Mark complete)$/ }),
+          locator: dialog.getByRole('button', { name: /^(Edit|Delete|Done|Mark complete)$/ }),
         },
       ];
     },

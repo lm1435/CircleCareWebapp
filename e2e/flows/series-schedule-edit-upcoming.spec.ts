@@ -149,8 +149,7 @@ function titleRe(title: string): RegExp {
 async function openEditor(page: Page, k: Scene, date: string, title: string, dialogName: string): Promise<Locator> {
   await gotoWeekContaining(page, k.circleId, k.today, date);
   const detail = await openChip(page, date, titleRe(title));
-  await detail.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Edit event', exact: true }).click();
+  await detail.getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByRole('dialog', { name: dialogName });
   await expect(editor).toBeVisible({ timeout: 10_000 });
   await expect(editor.locator('#title')).toHaveValue(title, { timeout: 15_000 });

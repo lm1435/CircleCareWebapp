@@ -133,7 +133,7 @@ test('completing a later occurrence of a recurring task stamps THAT day, not the
 
   const detail = page.getByRole('dialog');
   await expect(detail).toBeVisible();
-  await detail.getByRole('button', { name: 'Mark complete' }).click();
+  await detail.getByRole('button', { name: 'Done', exact: true }).click();
   // The completion is a plain POST with no undo window on this surface, so the
   // toast is the commit signal.
   await expect(page.getByText('Marked complete')).toBeVisible({ timeout: 20_000 });
@@ -151,7 +151,7 @@ test('completing a later occurrence of a recurring task stamps THAT day, not the
   // physical row at all, in which case the response carries a row the client
   // has never seen — the only thing that can refresh this dialog.
   await expect(detail.getByText(/^Completed (on|by)$/)).toBeVisible({ timeout: 20_000 });
-  await expect(detail.getByRole('button', { name: 'Mark complete' })).toHaveCount(0);
+  await expect(detail.getByRole('button', { name: 'Done', exact: true })).toHaveCount(0);
 
   // --- WHICH ROW GOT STAMPED? ---
   // The Completed filter is a server-backed read of PHYSICAL rows. The stamped
@@ -190,8 +190,7 @@ test('completing a later occurrence of a recurring task stamps THAT day, not the
   // tasks.spec.ts can click Delete directly and this cannot). Scoped to the
   // dialog and `exact`: the week view's all-day overflow toggle behind it is
   // also named "…more all-day event…".
-  await detailForDelete.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  await detailForDelete.getByRole('button', { name: 'Delete', exact: true }).click();
   // Recurring → a scope picker. "This and all future tasks" from the FIRST
   // occurrence removes the root and every child, including the one completed
   // above, so the run leaves nothing behind.
@@ -270,8 +269,7 @@ test('"This task only" removes just that occurrence of a recurring task and leav
 
   await gotoWeekContaining(page, circleId, today, at(2));
   const detail = await openChip(page, at(2), titleRe);
-  await detail.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  await detail.getByRole('button', { name: 'Delete', exact: true }).click();
   const del = page.getByRole('dialog', { name: 'Delete task' });
   await expect(del).toBeVisible({ timeout: 10_000 });
   await del.getByRole('radio', { name: 'This task only' }).check();

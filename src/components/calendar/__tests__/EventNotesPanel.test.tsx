@@ -206,11 +206,40 @@ describe('EventNotesPanel', () => {
     notesData = [makeNote({ author_id: 'user-1' })];
     renderPanel();
     const add = () => screen.getByRole('button', { name: 'Add note' });
+    // The collapsed composer shows its Add note once it holds text.
+    await user.type(screen.getByLabelText('Add a note'), 'Draft');
     expect(add().className).toContain('bg-primary-fill');
     await user.click(screen.getByRole('button', { name: /^Edit, / }));
     expect(add().className).not.toContain('bg-primary-fill');
     expect(add().className).toContain('border-primary-outline');
     expect(screen.getByRole('button', { name: 'Save' }).className).toContain('bg-primary-fill');
+  });
+
+  // Owner design pass 2026-11-08: the composer is ONE line ("Add a note…") until it is focused or
+  // holds text; then it is the full textarea with its Add note button. Same element throughout.
+  it('collapses the composer to one line until it is focused or typed in', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const field = screen.getByLabelText('Add a note');
+    expect(field).toHaveAttribute('rows', '1');
+    expect(field).toHaveAttribute('placeholder', 'Add a note for the circle…');
+    expect(screen.queryByRole('button', { name: 'Add note' })).toBeNull();
+
+    await user.click(field);
+    expect(field).toHaveFocus();
+    expect(field).toHaveAttribute('rows', '3');
+    expect(screen.getByRole('button', { name: 'Add note' })).toBeDisabled();
+
+    // Leaving it empty collapses it again.
+    await user.tab();
+    expect(field).toHaveAttribute('rows', '1');
+    expect(screen.queryByRole('button', { name: 'Add note' })).toBeNull();
+
+    // Text keeps it open even without focus.
+    await user.type(field, 'Refill Monday');
+    await user.tab();
+    expect(field).toHaveAttribute('rows', '3');
+    expect(screen.getByRole('button', { name: 'Add note' })).toBeEnabled();
   });
 
   it('does NOT offer edit on another member’s note, but the circle owner CAN delete it', () => {

@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { sqlExec, sqlStr } from '../db';
 import {
@@ -32,10 +32,9 @@ test.setTimeout(90_000);
 
 const FALSIFY = (process.env.PW_FALSIFY ?? '').split(',').includes('appointment-detail-assignee');
 
-/** The detail row whose <dt> is exactly `label`, and its <dd>. */
-function detailRow(dialog: Locator, page: Page, label: string): { row: Locator; value: Locator } {
-  const row = dialog.locator('dl > div').filter({ has: page.locator('dt', { hasText: new RegExp(`^\\s*${escapeRegExp(label)}\\s*$`) }) });
-  return { row, value: row.locator('dd') };
+/** The person chip by the title (design pass 2026-11-08): avatar + first name, `label` spoken first. */
+function assigneeChip(dialog: Locator): Locator {
+  return dialog.getByTestId('event-detail-who');
 }
 
 for (const lang of ['en', 'es'] as const) {
@@ -88,16 +87,16 @@ for (const lang of ['en', 'es'] as const) {
     await expect(page.locator('html')).toHaveAttribute('lang', lang === 'es' ? /^es/ : /^en/);
 
     const assigned = await openChip(page, today, new RegExp(escapeRegExp(assignedTitle)));
-    const a = detailRow(assigned, page, label);
-    await expect(a.row).toHaveCount(1, { timeout: 15_000 });
-    await expect(a.value).toHaveText(`${first} ${last}`);
+    const a = assigneeChip(assigned);
+    await expect(a).toHaveCount(1, { timeout: 15_000 });
+    await expect(a).toContainText(`${label}, ${first}`);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
 
     const plain = await openChip(page, today, new RegExp(escapeRegExp(plainTitle)));
-    // The dialog has rendered its rows (date is always there) before "no row" is judged.
-    await expect(plain.locator('dl > div').first()).toBeVisible();
-    await expect(detailRow(plain, page, label).row).toHaveCount(0);
+    // The dialog has rendered its card (WHEN is always there) before "no chip" is judged.
+    await expect(plain.getByTestId('event-detail-when')).toBeVisible();
+    await expect(assigneeChip(plain)).toHaveCount(0);
     // An appointment never borrows the task's "Unassigned" wording.
     await expect(plain.getByText(lang === 'es' ? /Sin asignar/ : /Unassigned/)).toHaveCount(0);
   });

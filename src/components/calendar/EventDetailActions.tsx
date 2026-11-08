@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarEvent } from '@/api/calendarEvents';
-import { Button, ConfirmDialog, MoreMenu, useToast, type MoreMenuItem } from '@/components/ui';
+import { Button, ConfirmDialog, useToast } from '@/components/ui';
 import { useCompleteEvent, useMedicationStatus } from '@/hooks/useCalendarEvents';
 import { useGuardedSubmit } from '@/hooks/useGuardedSubmit';
 import { getSeriesRoot } from '@/utils/medicationGrouping';
@@ -55,17 +55,14 @@ import { Analytics } from '@/lib/analytics';
 //   - `canComplete` stays scoped to task/appointment: "complete" is the task
 //     verb, and a dose is answered through the confirm dialog, not completed.
 //
-// FOOTER CONVENTION (M2): one filled button, last in DOM order; Edit /
-// Discontinue-Reactivate / Delete are SECONDARY actions and live inside a
-// `MoreMenu` (Delete always `danger`) rather than as a row of ghost buttons —
-// Delete in particular must never render filled at rest. When only ONE of
-// those secondary actions would exist (a completed task: Edit is hidden by
-// the guard above, leaving only Delete), a one-item menu is pointless — that
-// single action renders inline instead, far-left, as a `ghost` button with the
-// terracotta-deep warning colour when it is Delete, or a plain `ghost`
-// otherwise. Every handler, confirm dialog, and analytics
-// call below is unchanged; only where the buttons for Edit/Discontinue/Delete
-// render moved.
+// FOOTER (owner design pass 2026-11-08, mock WebEvent.dc.html; supersedes the M2 More menu):
+// every action is a VISIBLE standard button, in this order —
+//   Edit · Discontinue | Reactivate (medications) · Delete (soft danger) · Skip dose · the ONE
+//   filled primary, last: Taken (an unanswered dose in its window), Done (an open task), Mark
+//   complete (an open appointment; its wording is unchanged).
+// Edit disappears on a completed one-off task (the lock below); Delete never does. Every handler,
+// confirm dialog, and analytics call is unchanged; only the labels "Mark complete" -> "Done" (tasks)
+// and "Edit event" -> "Edit" changed, and where the buttons render.
 
 export interface EventDetailActionsProps {
   circleId: string;
@@ -129,7 +126,7 @@ export function EventDetailActions({
   onReactivated,
   onCompleted,
 }: EventDetailActionsProps): ReactElement {
-  const { t } = useTranslation(['calendar', 'common']);
+  const { t } = useTranslation(['calendar', 'common', 'tasks']);
   const { showToast } = useToast();
   const completeEvent = useCompleteEvent(circleId);
   const medicationStatus = useMedicationStatus(circleId);
@@ -405,50 +402,29 @@ export function EventDetailActions({
     }
   }
 
-  // Secondary actions — Edit, Discontinue/Reactivate (medications only), and
-  // Delete (always, always `danger`) — in this fixed order. Built as data so
-  // the "only one left" case below can render it inline without duplicating
-  // any handler.
-  const overflowItems: MoreMenuItem[] = [];
-  if (!isLockedCompletedTask) {
-    overflowItems.push({ id: 'edit', label: t('addEvent.editTitle'), onSelect: handleEditClick });
-  }
-  if (isMedication) {
-    overflowItems.push({
-      id: 'discontinue',
-      label: isDiscontinued ? t('discontinueMed.reactivate') : t('discontinueMed.discontinue'),
-      onSelect: onDiscontinue,
-    });
-  }
-  overflowItems.push({
-    id: 'delete',
-    label: t('deleteEvent.delete'),
-    onSelect: onDelete,
-    danger: true,
-  });
-
-  // A one-item menu is pointless — render that single action inline instead
-  // of behind a click. It goes far-left (`mr-auto` in a `justify-end` row),
-  // matching the destructive-far-left placement the convention uses when
-  // there's no menu to put it in.
-  const soloOverflowItem = overflowItems.length === 1 ? overflowItems[0] : null;
-  const useOverflowMenu = overflowItems.length >= 2;
+  const completeLabel =
+    event.event_type === 'task' ? t('tasks:row.done') : t('eventDetail.markComplete');
 
   return (
-    <div ref={actionsRef} tabIndex={-1} className="flex flex-wrap items-center justify-end gap-3">
-      {soloOverflowItem && (
-        <Button
-          variant="ghost"
-          onClick={soloOverflowItem.onSelect}
-          className={
-            soloOverflowItem.danger
-              ? 'mr-auto text-terracotta-deep hover:bg-terracotta-soft'
-              : 'mr-auto'
-          }
-        >
-          {soloOverflowItem.label}
+    <div
+      ref={actionsRef}
+      tabIndex={-1}
+      data-testid="event-detail-actions"
+      className="flex flex-wrap items-center justify-end gap-2"
+    >
+      {!isLockedCompletedTask && (
+        <Button variant="secondary" onClick={handleEditClick} offlineKind="change">
+          {t('eventDetail.edit')}
         </Button>
       )}
+      {isMedication && (
+        <Button variant="secondary" onClick={onDiscontinue} offlineKind="change">
+          {isDiscontinued ? t('discontinueMed.reactivate') : t('discontinueMed.discontinue')}
+        </Button>
+      )}
+      <Button variant="danger" onClick={onDelete} offlineKind="change">
+        {t('deleteEvent.delete')}
+      </Button>
       {canConfirmDose && (
         <Button variant="secondary" onClick={() => onConfirmDose('skipped')} offlineKind="mark">
           {t('eventDetail.skipDose')}
@@ -462,7 +438,7 @@ export function EventDetailActions({
           onClick={() => void guardedComplete()}
           offlineKind="mark"
         >
-          {t('eventDetail.markComplete')}
+          {completeLabel}
         </Button>
       )}
       {canConfirmDose && (
@@ -479,7 +455,6 @@ export function EventDetailActions({
           {t('eventDetail.taken')}
         </Button>
       )}
-      {useOverflowMenu && <MoreMenu items={overflowItems} />}
 
       {showInactiveEditPrompt && (
         <ConfirmDialog

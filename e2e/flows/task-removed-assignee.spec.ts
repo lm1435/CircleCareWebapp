@@ -129,8 +129,8 @@ test('a removed member who shares no other circle keeps their name as assignee, 
     await row.getByRole('button', { name: new RegExp(title) }).click();
     const detail = page.getByRole('dialog');
     await expect(detail).toBeVisible();
-    await expect(detail.getByText('Assigned to')).toBeVisible();
-    await expect(detail.getByText(name, { exact: true })).toBeVisible();
+    // The assignee is the person chip by the title: first name, "Assigned to" spoken before it.
+    await expect(detail.getByTestId('event-detail-who')).toContainText(`Assigned to, ${first}`);
     await expect(detail.getByText('Completed by')).toBeVisible();
     await expect(detail.getByText(new RegExp(`^${name} · `))).toBeVisible();
     await expect(detail.getByText('Unassigned')).toHaveCount(0);

@@ -98,7 +98,7 @@ for (const c of CASES) {
     const r = `${sqlStr(root.id)}::uuid`;
     try {
       const detail = await openCalendarEvent(page, circleId, occurrence, title);
-      const markComplete = detail.getByRole('button', { name: 'Mark complete', exact: true });
+      const markComplete = detail.getByRole('button', { name: 'Done', exact: true });
       await expect(markComplete).toBeEnabled();
 
       const completes = countRequests(page, 'POST', COMPLETE);

@@ -171,8 +171,8 @@ test.describe('Day view', () => {
     await page.getByTestId('day-event').filter({ hasText: s.taskTitle }).click();
     const detail = page.getByRole('dialog');
     await expect(detail).toBeVisible({ timeout: 10_000 });
-    await detail.getByRole('button', { name: 'Mark complete' }).click();
-    await expect(detail.getByRole('button', { name: 'Mark complete' })).toHaveCount(0, {
+    await detail.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(detail.getByRole('button', { name: 'Done', exact: true })).toHaveCount(0, {
       timeout: 20_000,
     });
   });

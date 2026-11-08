@@ -184,22 +184,20 @@ describe('EventDetailModal', () => {
   const open = (event: CalendarEvent) =>
     render(<EventDetailModal event={event} careRecipientTimezone={TZ} onClose={vi.fn()} />);
 
-  it('a past dose nobody answered has a Date row and no Time row', () => {
+  it('a past dose nobody answered shows WHEN as the date alone, no time', () => {
     open(dose());
-    expect(screen.getByText('Date')).toBeInTheDocument();
-    expect(screen.queryByText('Time')).not.toBeInTheDocument();
+    expect(screen.getByTestId('event-detail-date')).toBeInTheDocument();
+    expect(screen.queryByTestId('event-detail-time')).not.toBeInTheDocument();
     expect(screen.queryByText(/7:15/)).not.toBeInTheDocument();
   });
 
-  it.each(['taken', 'skipped'] as const)('a past %s dose keeps its Time row', (status) => {
+  it.each(['taken', 'skipped'] as const)('a past %s dose keeps its time in WHEN', (status) => {
     open(dose(answered(status)));
-    expect(screen.getByText('Time')).toBeInTheDocument();
-    expect(screen.getAllByText(/7:00 AM/).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('event-detail-time')).toHaveTextContent(/7:00 AM/);
   });
 
-  it("today's untaken dose keeps its Time row", () => {
+  it("today's untaken dose keeps its time in WHEN", () => {
     open(dose({ id: 'root-1_2026-06-13', scheduled_date: TODAY }));
-    expect(screen.getByText('Time')).toBeInTheDocument();
-    expect(screen.getAllByText(/7:15 AM/).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('event-detail-time')).toHaveTextContent(/7:15 AM/);
   });
 });

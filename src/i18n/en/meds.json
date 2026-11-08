@@ -87,10 +87,8 @@
     },
     "detail": {
       "photoAlt": "Photo of {{name}}",
-      "time": "Time",
       "instructions": "Instructions",
       "viewLabel": "View details for {{name}}",
-      "repeat": "Repeat",
       "refill": "Refill"
     },
     "titleNamed": "{{name}}'s meds",

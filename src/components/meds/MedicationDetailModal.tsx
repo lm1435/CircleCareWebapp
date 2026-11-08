@@ -1,17 +1,7 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Badge,
-  Button,
-  Eyebrow,
-  Icon,
-  Modal,
-  MoreMenu,
-  Sheet,
-  Text,
-  type IconName,
-  type MoreMenuItem,
-} from '@/components/ui';
+import { Badge, Button, Eyebrow, Modal } from '@/components/ui';
+import { DetailCard, DetailField, DetailSection } from '@/components/ui/DetailCard';
 import { getMedicationPhotoUrl, type CalendarEvent } from '@/api/calendarEvents';
 import { EntrySourceNote } from '@/components/calendar/EntrySourceNote';
 
@@ -23,8 +13,8 @@ export interface MedicationDetailModalProps {
   dosage: string | null;
   /**
    * The dose times ONLY ("8:00 AM · 8:00 PM"), never the recurrence. The
-   * recurrence has its own Repeat row; putting it here too printed "Daily"
-   * twice ("8:00 PM · Daily" above "Repeat · Daily"). Mobile's sheet never did.
+   * modal joins `repeat` in front of them in the WHEN cell; a caller that put
+   * the recurrence here too printed "Daily" twice. Mobile's sheet never did.
    */
   times: string;
   /**
@@ -47,7 +37,7 @@ export interface MedicationDetailModalProps {
    */
   endedLabel?: string | null;
   /**
-   * AS-NEEDED medication: the sheet drops the Time and Repeat rows (there is no
+   * AS-NEEDED medication: the sheet drops the WHEN cell (there is no
    * schedule), says "Medication · As needed", shows the last-given line and the
    * reason, and offers "Dose history" + "Gave a dose" (the latter only to a
    * writer, on an ACTIVE medication). No limits, no counters.
@@ -71,89 +61,49 @@ export interface MedicationDetailModalProps {
 }
 
 /**
- * Read view for a medication — laid out like mobile's MedicationDetailModal
- * (components/medication/MedicationDetailModal.tsx), top to bottom:
+ * Read view for a medication: the approved detail layout (owner design pass 2026-11-08, mock
+ * WebMed.dc.html; mobile's MedicationDetailModal draws the same card), top to bottom:
  *
- *   • header — MEDICATION eyebrow (+ Inactive badge) → name → dosage
+ *   • header: MEDICATION eyebrow (+ Inactive / Ended badge) → name → dosage
  *   • the medication photo, when one exists
  *   • inactive only: "Kept for reference. Reminders are off."
- *   • ONE info card of icon · label · value rows, each only when it has content:
- *       TIME    — the dose times (mobile shows the next dose's date + time; web
- *                 has no next-occurrence helper, and a roster group can hold
- *                 several times, so the times are the honest answer here)
- *       REPEAT  — the recurrence, the ONLY place it appears
- *       REFILL  — days of supply left, flagged under the low-stock threshold
- *       NOTES   — the medication's description
- *   • footer — More (Discontinue|Reactivate, Delete) + Edit
+ *   • ONE details card (shared `DetailCard`: uppercase small labels, no per-row icons), each
+ *     section only when it has content:
+ *       WHEN          the repeat + the dose times ("Daily · 8:00 AM · 8:00 PM"); a one-off shows
+ *                     the times alone. As-needed: no schedule, so no When.
+ *       LAST GIVEN    as-needed, active only
+ *       REFILL | ASSIGNED TO | REMINDERS   the short facts, two per row
+ *       WHAT IT IS FOR  as-needed reason
+ *       INSTRUCTIONS  the medication's description
+ *   • footer: Edit, Discontinue | Reactivate, Delete as visible standard buttons (no More menu);
+ *     as-needed adds History and Gave a dose, the ONE filled button when shown.
  *
- * The dialog's name is still `name`, as the sr-only `<h2>` the Modal renders
- * for `title` when `hideTitle` is set. The visible name in the header is a
- * plain paragraph, so the dialog has exactly one heading.
+ * The dialog's name is still `name`, as the sr-only `<h2>` the Modal renders for `title` when
+ * `hideTitle` is set. The visible name in the header is a plain paragraph, so the dialog has
+ * exactly one heading.
  *
- * The PHOTO is the reason this fetches anything. It is deliberately absent from
- * the events list response and only exists, signed, on the single-event
- * endpoint — and a signed Storage URL must never reach the React Query cache
- * (same rule `api/documents.ts` follows). So it is fetched on open and held in
- * component state that dies with the modal.
+ * The PHOTO is the reason this fetches anything. It is deliberately absent from the events list
+ * response and only exists, signed, on the single-event endpoint — and a signed Storage URL must
+ * never reach the React Query cache (same rule `api/documents.ts` follows). So it is fetched on
+ * open and held in component state that dies with the modal.
  *
- * NO "ASSIGNED TO" ROW. `assigned_to` exists on `CalendarEvent`, but it is a
- * TASK field: neither medication form ever writes it and mobile's medication
- * surfaces never read it, so the row would be permanently blank.
+ * ASSIGNED TO only when the roster row carries a NAMED assignee (`assigned_to_user`, embedded by
+ * the events list). Neither web medication form writes `assigned_to`, so on most medications the
+ * cell is simply absent, exactly as on mobile, which reads the same embed.
  */
 
-/**
- * One fact in the info card: decorative icon · `mono` label · 14/500 value.
- *
- * `<dt>` and `<dd>` are the ONLY children of the row `<div>` — HTML allows
- * nothing else inside a `<dl>` group, and axe fails anything more as serious
- * (`definition-list` + `dlitem`: the first version wrapped them in an extra
- * `<div>` beside the icon). So the icon lives INSIDE the `<dt>`, hidden from
- * assistive tech, and is positioned into the left gutter the row reserves.
- *
- * THE SEPARATOR IS `SheetRow`'s, COPIED RATHER THAN INHERITED. The rows sit in
- * a `<Sheet>` (spec §4.5, the grouped-row surface), but `SheetRow` itself is
- * `flex items-center`, which would lay `<dt>` beside `<dd>`; this row STACKS
- * them and hangs the icon in an absolute gutter, so it keeps its own metrics
- * and takes only the hairline — `border-t border-line-2 first:border-t-0`,
- * byte-identical to Sheet.tsx's ROW and to mobile's `styles.infoRowBorder`
- * (`borderTopWidth: 1` in `CC.hair` = `--color-line-2`). `first:` is a CSS
- * `:first-child` rule, so the conditional rows below cannot leave a stray rule
- * on top the way a JS index check would.
- */
-function InfoRow({
-  icon,
-  label,
-  children,
-  danger = false,
-}: {
-  icon: IconName;
-  label: string;
-  children: ReactNode;
-  danger?: boolean;
-}): ReactElement {
-  return (
-    <div className="relative border-t border-line-2 py-3 pl-14 pr-4 first:border-t-0">
-      <Text variant="mono" as="dt">
-        <span
-          aria-hidden="true"
-          className="absolute left-4 top-1/2 flex w-7 -translate-y-1/2 justify-center text-ink-3"
-        >
-          <Icon name={icon} size="inline" />
-        </span>
-        {label}
-      </Text>
-      {/* terracotta-DEEP, not base terracotta, for the low-stock value:
-          7.29:1 on the card vs 5.35:1, and base terracotta is reserved for
-          glyphs and large type on web (see the web ADA audit). */}
-      <dd
-        className={`m-0 mt-0.5 break-words text-sm font-medium ${
-          danger ? 'text-terracotta-deep' : 'text-ink'
-        }`}
-      >
-        {children}
-      </dd>
-    </div>
-  );
+/** "Rosa" from the embedded assignee (first name, else the email's local part); null when none. */
+function assigneeFirstName(event: CalendarEvent): string | null {
+  const user = event.assigned_to_user;
+  if (!user) return null;
+  return user.first_name?.trim() || user.email?.split('@')[0] || null;
+}
+
+/** Pairs the short facts two to a row, in order. */
+function pairs<T>(items: T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) out.push(items.slice(i, i + 2));
+  return out;
 }
 
 export function MedicationDetailModal({
@@ -198,21 +148,35 @@ export function MedicationDetailModal({
         : t('meds:page.stock.daysLeft', { count: daysLeft })
       : null;
 
-  // Two-or-more secondary actions (Discontinue/Reactivate + Delete) live
-  // inside the MoreMenu overflow, Delete last as the danger item; Edit is the
-  // named button and stays last in DOM order.
-  const menuItems: MoreMenuItem[] = [
-    ...(endedLabel
-      ? []
-      : [
-          {
-            id: 'toggle-status',
-            label: t(inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue'),
-            onSelect: onToggleStatus,
-          },
-        ]),
-    { id: 'delete', label: t('meds:page.actions.delete'), onSelect: onDelete, danger: true },
-  ];
+  const assignee = assigneeFirstName(event);
+  // WHEN = the repeat and the times in one line ("Daily · 8:00 AM"); the recurrence still appears
+  // exactly once (never "8:00 PM · Daily" above a "Repeat · Daily" row).
+  const when = [repeat, times].filter(Boolean).join(' · ');
+
+  // The short facts, two per row (the approved mock: REFILL | ASSIGNED TO).
+  const shortFacts: Array<{ key: string; label: string; value: ReactNode; danger?: boolean }> = [];
+  if (asNeeded) {
+    shortFacts.push({
+      key: 'reminders',
+      label: t('meds:asNeeded.detail.reminders'),
+      value: t('meds:asNeeded.detail.remindersNone'),
+    });
+  }
+  if (refillText) {
+    shortFacts.push({
+      key: 'refill',
+      label: t('meds:page.detail.refill'),
+      value: refillText,
+      danger: lowStock,
+    });
+  }
+  if (assignee) {
+    shortFacts.push({
+      key: 'assigned',
+      label: t('calendar:eventDetail.assignedTo'),
+      value: assignee,
+    });
+  }
 
   const header = (
     <div className="flex min-w-0 flex-col">
@@ -229,6 +193,43 @@ export function MedicationDetailModal({
     </div>
   );
 
+  // Footer (owner design pass 2026-11-08): every action in the open as a standard button, no More
+  // menu. Edit, then Discontinue | Reactivate (absent on an ENDED series: nothing to stop, and
+  // Reactivate cannot restart it), then Delete (soft danger). As-needed adds History and Gave a
+  // dose; Gave a dose is the ONE filled button and sits last. A scheduled medication's roster
+  // detail logs no dose (see EventDetailActions' header), so it has no filled button at all.
+  const showGive = !!asNeeded && canEdit && !inactive;
+  const footer =
+    canEdit || asNeeded ? (
+      <div className="flex flex-wrap items-center justify-end gap-2" data-testid="med-detail-actions">
+        {canEdit && (
+          <Button variant="secondary" onClick={onEdit} offlineKind="change">
+            {t('meds:page.actions.edit')}
+          </Button>
+        )}
+        {canEdit && !endedLabel && (
+          <Button variant="secondary" onClick={onToggleStatus} offlineKind="change">
+            {t(inactive ? 'meds:page.actions.reactivate' : 'meds:page.actions.discontinue')}
+          </Button>
+        )}
+        {canEdit && (
+          <Button variant="danger" onClick={onDelete} offlineKind="change">
+            {t('meds:page.actions.delete')}
+          </Button>
+        )}
+        {asNeeded && (
+          <Button variant="secondary" onClick={asNeeded.onHistory}>
+            {t('meds:asNeeded.card.history')}
+          </Button>
+        )}
+        {showGive && (
+          <Button onClick={asNeeded.onGive} offlineKind="mark">
+            {t('meds:asNeeded.card.give')}
+          </Button>
+        )}
+      </div>
+    ) : undefined;
+
   return (
     <Modal
       title={name}
@@ -237,28 +238,7 @@ export function MedicationDetailModal({
       onClose={onClose}
       closeLabel={t('common:close')}
       size="md"
-      footer={
-        canEdit || asNeeded ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {canEdit && <MoreMenu items={menuItems} />}
-            {canEdit && (
-              <Button variant="secondary" onClick={onEdit} offlineKind="change">
-                {t('meds:page.actions.edit')}
-              </Button>
-            )}
-            {asNeeded && (
-              <Button variant="secondary" onClick={asNeeded.onHistory}>
-                {t('meds:asNeeded.card.history')}
-              </Button>
-            )}
-            {asNeeded && canEdit && !inactive && (
-              <Button onClick={asNeeded.onGive} offlineKind="mark">
-                {t('meds:asNeeded.card.give')}
-              </Button>
-            )}
-          </div>
-        ) : undefined
-      }
+      footer={footer}
     >
       <div className="flex flex-col gap-4">
         {/* Photo first — it is the fastest way to confirm you have the right
@@ -277,43 +257,63 @@ export function MedicationDetailModal({
           </p>
         )}
 
-        <Sheet as="dl" padding="none" className="m-0 overflow-hidden">
-          {asNeeded && !inactive && (
-            <InfoRow icon="time-outline" label={t('meds:asNeeded.detail.lastGiven')}>
-              {asNeeded.lastGiven}
-            </InfoRow>
-          )}
-          {asNeeded?.reason && (
-            <InfoRow icon="medkit-outline" label={t('meds:asNeeded.detail.reason')}>
-              {asNeeded.reason}
-            </InfoRow>
-          )}
-          {asNeeded && (
-            <InfoRow icon="repeat-outline" label={t('meds:asNeeded.detail.reminders')}>
-              {t('meds:asNeeded.detail.remindersNone')}
-            </InfoRow>
-          )}
-          {!asNeeded && (
-            <InfoRow icon="time-outline" label={t('meds:page.detail.time')}>
-              {times}
-            </InfoRow>
-          )}
-          {!asNeeded && repeat && (
-            <InfoRow icon="repeat-outline" label={t('meds:page.detail.repeat')}>
-              {repeat}
-            </InfoRow>
-          )}
-          {refillText && (
-            <InfoRow icon="medkit-outline" label={t('meds:page.detail.refill')} danger={lowStock}>
-              {refillText}
-            </InfoRow>
-          )}
-          {notes && (
-            <InfoRow icon="document-text-outline" label={t('meds:page.detail.instructions')}>
-              <span className="whitespace-pre-wrap font-normal">{notes}</span>
-            </InfoRow>
-          )}
-        </Sheet>
+        {/* Never empty: a scheduled medication always has WHEN, an as-needed one always REMINDERS. */}
+        <DetailCard data-testid="med-detail-card">
+            {!asNeeded && (
+              <DetailSection>
+                <DetailField
+                  label={t('calendar:eventDetail.when')}
+                  valueTestId="med-detail-when"
+                  valueClassName="font-medium tabular-nums"
+                >
+                  {when}
+                </DetailField>
+              </DetailSection>
+            )}
+            {asNeeded && !inactive && (
+              <DetailSection>
+                <DetailField label={t('meds:asNeeded.detail.lastGiven')} valueTestId="med-detail-last-given">
+                  {asNeeded.lastGiven}
+                </DetailField>
+              </DetailSection>
+            )}
+            {pairs(shortFacts).map((row) => (
+              <DetailSection key={row.map((f) => f.key).join('-')} columns={2}>
+                {row.map((fact) => (
+                  <DetailField
+                    key={fact.key}
+                    label={fact.label}
+                    valueTestId={`med-detail-${fact.key}`}
+                    // terracotta-DEEP, not base terracotta, for the low-stock value: base terracotta
+                    // is reserved for glyphs and large type on web (the web ADA audit).
+                    valueClassName={
+                      fact.danger ? 'font-medium tabular-nums text-terracotta-deep!' : 'font-medium tabular-nums'
+                    }
+                  >
+                    {fact.value}
+                  </DetailField>
+                ))}
+              </DetailSection>
+            ))}
+            {asNeeded?.reason && (
+              <DetailSection>
+                <DetailField label={t('meds:asNeeded.detail.reason')} valueTestId="med-detail-reason">
+                  {asNeeded.reason}
+                </DetailField>
+              </DetailSection>
+            )}
+            {notes && (
+              <DetailSection>
+                <DetailField
+                  label={t('meds:page.detail.instructions')}
+                  valueTestId="med-detail-instructions"
+                  valueClassName="whitespace-pre-wrap font-normal"
+                >
+                  {notes}
+                </DetailField>
+              </DetailSection>
+            )}
+        </DetailCard>
 
         {/* "Added by voice" — only for a medication saved by voice. */}
         <EntrySourceNote event={event} />

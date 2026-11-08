@@ -47,8 +47,7 @@ test('create, edit, and delete a calendar task', async ({ page, circleId }) => {
   // had an overflow. (tasks-recurring.spec.ts already documents the same trap.)
   await chip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Edit event' }).click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
   // A task edit is the simple task form (owner 1.4.0), even when it was created from the full one.
   const editDialog = page.getByRole('dialog', { name: 'Edit task' });
   await expect(editDialog.getByRole('heading', { name: 'What needs doing?' })).toBeVisible();
@@ -66,8 +65,7 @@ test('create, edit, and delete a calendar task', async ({ page, circleId }) => {
   // Delete is the sole danger item in the same overflow menu.
   await editedChip.first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
   // Non-recurring → simple confirm dialog with a Delete button.
   const confirm = page.getByRole('dialog');
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();

@@ -87,10 +87,8 @@
     },
     "detail": {
       "photoAlt": "Foto von {{name}}",
-      "time": "Uhrzeit",
       "instructions": "Hinweise",
       "viewLabel": "Details zu {{name}} anzeigen",
-      "repeat": "Wiederholung",
       "refill": "Nachschub"
     },
     "titleNamed": "Medikamente von {{name}}",
