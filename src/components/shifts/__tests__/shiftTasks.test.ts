@@ -278,6 +278,15 @@ describe('countTasksAffectedByEdit', () => {
     expect(countTasksAffectedByEdit({ kind: 'date', shift, scope: 'occurrence' }, [...tasks, ...regular])).toBe(3);
     expect(countTasksAffectedByEdit({ kind: 'repeat', shift, scope: 'future' }, [...tasks, ...regular])).toBe(3);
   });
+  it('two shifts with the SAME title and time: only the edited shift\'s link (root_id) is counted', () => {
+    const twin = (id: string, time: string) => linked(id, time, 0, { root_id: 'twin-root' }); // same title, date and window
+    const mixed = [tasks[0], tasks[1], twin('tw1', '14:00:00'), twin('tw2', '15:00:00'), twin('tw3', '16:00:00')];
+    expect(
+      countTasksAffectedByEdit({ kind: 'time', shift, startTime: '15:00', durationMinutes: 180, scope: 'future' }, mixed)
+    ).toBe(1); // only our t2pm (14:00); t3pm is inside
+    expect(countTasksAffectedByEdit({ kind: 'date', shift, scope: 'occurrence' }, mixed)).toBe(2);
+    expect(countTasksAffectedByEdit({ kind: 'repeat', shift, scope: 'future' }, mixed)).toBe(2);
+  });
   it('tasks of another shift never count', () => {
     const foreign = linked('foreign', '14:00:00', 0, { root_id: 'other' });
     expect(countTasksAffectedByEdit({ kind: 'repeat', shift, scope: 'future' }, [foreign])).toBe(0);
