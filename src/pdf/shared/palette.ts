@@ -23,7 +23,7 @@ export const PDF_PALETTE = {
   paperDeep: '#F3EFE6',
   ink: '#1A1916',
   inkSoft: '#4A4742',
-  inkMute: '#6E6961',
+  inkMute: '#6A655D',
   hair: 'rgba(26,25,22,0.08)',
   hairStrong: 'rgba(26,25,22,0.14)',
   moss: '#5C6B4E',
