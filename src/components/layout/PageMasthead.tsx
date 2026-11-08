@@ -140,20 +140,21 @@ export function PageMasthead({
           12 the eyebrow row hugged its rule while the title block below kept
           its full 28 — the row read as jammed against the header. */}
       <div className="flex min-h-[44px] items-center justify-between px-5 pb-1 pt-3">
-        <span className={`${endSlot} ${secondaryAction ? 'justify-start' : ''}`}>
-          {backTo && (
+        {backTo && (
+          <span className={`${endSlot} mr-2 justify-start xl:hidden`}>
             <CircleButton
               name="arrow-back"
               label={t('nav.back')}
               to={backTo}
               className="xl:hidden"
             />
-          )}
-        </span>
+          </span>
+        )}
 
         {/* One accent (owner 2026-11-07): the eyebrow is decoration, so it is muted ink in every
-            section; `tone` no longer paints it (kept on the API so callers name their section). */}
-        <Eyebrow dot as="p" data-tone={tone}>
+            section; `tone` no longer paints it (kept on the API so callers name their section).
+            Left-aligned (flex-1) so it sits over the left-aligned title; no dot. */}
+        <Eyebrow as="p" data-tone={tone} className="min-w-0 flex-1 text-left">
           {section}
         </Eyebrow>
 

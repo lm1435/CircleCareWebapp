@@ -16,15 +16,13 @@ function renderMasthead(
 
 describe('PageMasthead', () => {
   // One accent (owner 2026-11-07): the eyebrow is decoration, muted ink in every section.
-  it('renders the section eyebrow with a dot, both muted ink whatever the tone', () => {
+  it('renders the section eyebrow without a dot, muted ink whatever the tone', () => {
     renderMasthead({ section: 'Health', tone: 'terracotta' });
 
     const eyebrow = screen.getByText('Health');
     expect(eyebrow).toHaveClass('text-ink-3');
     expect(eyebrow).not.toHaveClass('text-terracotta!');
-    const dot = eyebrow.querySelector('span[aria-hidden="true"]');
-    expect(dot).not.toBeNull();
-    expect(dot).toHaveClass('bg-ink-3');
+    expect(eyebrow.querySelector('span[aria-hidden="true"]')).toBeNull();
   });
 
   // Mobile 1.4.0: the Shell bar label and a hero eyebrow repeating it ("NEW" x3) read as a bug. The masthead
@@ -76,16 +74,16 @@ describe('PageMasthead', () => {
     expect(screen.getByText('Rosa · 12 upcoming')).toHaveClass('text-md', 'font-medium', 'text-ink');
   });
 
-  it('renders no back control without backTo, but keeps both 44px end spacers', () => {
+  it('left-aligns the eyebrow over the left-aligned title: no leading spacer without backTo', () => {
     renderMasthead();
 
     expect(screen.queryByRole('link', { name: 'Back' })).not.toBeInTheDocument();
-    // Row 1 is [spacer, eyebrow, spacer] whatever it holds, so the eyebrow
-    // stays optically centred.
-    const row = screen.getByText('Care').parentElement as HTMLElement;
-    expect(row.children).toHaveLength(3);
-    expect(row.firstElementChild).toHaveClass('h-11', 'w-11');
-    expect(row.lastElementChild).toHaveClass('h-11', 'w-11');
+    const eyebrow = screen.getByText('Care');
+    expect(eyebrow).toHaveClass('flex-1', 'text-left');
+    const row = eyebrow.parentElement as HTMLElement;
+    // [eyebrow, end slot]: nothing before the eyebrow pushes it off the title's left edge.
+    expect(row.firstElementChild).toBe(eyebrow);
+    expect(row.lastElementChild).toHaveClass('h-11');
   });
 
   it('renders the back control below xl only (the sidebar is the way back at xl)', () => {
