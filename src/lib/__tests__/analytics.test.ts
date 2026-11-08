@@ -132,6 +132,15 @@ describe('analytics wrapper — optional / no-op path', () => {
 });
 
 describe('analytics wrapper — active path (key set)', () => {
+  it('task_completed carries no circle_id (CLAUDE.md analytics rule)', async () => {
+    const { Analytics } = await loadWithKey('phc_test');
+    (Analytics.taskCompleted as (id?: string) => void)('circle-secret');
+    const call = capture.mock.calls.find((c) => c[0] === 'task_completed');
+    expect(call).toBeDefined();
+    expect(call?.[1] ?? {}).not.toHaveProperty('circle_id');
+    expect(JSON.stringify(call?.[1] ?? {})).not.toContain('circle-secret');
+  });
+
   it('inbox_viewed carries unread_bucket + source + scoped only (no circle id)', async () => {
     const { Analytics } = await loadWithKey('phc_test_key');
     Analytics.inboxViewed({ unreadBucket: '1_3', source: 'circle_list', scoped: true });

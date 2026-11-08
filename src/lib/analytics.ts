@@ -1494,7 +1494,8 @@ export const Analytics = {
   // --- Calendar & events ---
   eventCreated: (circleId: string, eventType: string, recurring: boolean) =>
     capture('event_created', { circle_id: circleId, event_type: eventType, recurring }),
-  taskCompleted: (circleId: string) => capture('task_completed', { circle_id: circleId }),
+  // NO circle_id (CLAUDE.md analytics rule): no properties.
+  taskCompleted: () => capture('task_completed'),
   /**
    * A circle was picked from the picker list ('circle_list') or on the
    * downgrade circle-selection modal ('circle_selection') — the same event and

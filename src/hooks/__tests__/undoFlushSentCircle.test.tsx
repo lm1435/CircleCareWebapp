@@ -196,7 +196,7 @@ describe('useTaskCompletion — every send path posts to the circle the task was
     await drain();
 
     expect(postedPaths()).toEqual([`/circles/${A}/events/task-a/complete`]);
-    expect(Analytics.taskCompleted).toHaveBeenCalledWith(A);
+    expect(Analytics.taskCompleted).toHaveBeenCalledWith();
     expect(Analytics.errorOccurred).not.toHaveBeenCalled();
   });
 
@@ -209,7 +209,7 @@ describe('useTaskCompletion — every send path posts to the circle the task was
     await drain();
 
     expect(postedPaths()).toEqual([`/circles/${A}/events/task-a/complete`]);
-    expect(Analytics.taskCompleted).toHaveBeenCalledWith(A);
+    expect(Analytics.taskCompleted).toHaveBeenCalledWith();
     unmount();
     // Nothing left to flush — no second send.
     await drain();
@@ -243,7 +243,7 @@ describe('useTaskCompletion — every send path posts to the circle the task was
     await drain();
 
     expect(postedPaths()).toEqual([`/circles/${A}/events/task-a/complete`]);
-    expect(Analytics.taskCompleted).toHaveBeenCalledWith(A);
+    expect(Analytics.taskCompleted).toHaveBeenCalledWith();
     expect(Analytics.errorOccurred).not.toHaveBeenCalled();
     // Cache work belongs to A too — nothing of B's is touched.
     expect(circlesIn(invalidate.mock.calls)).toEqual(new Set([A]));
@@ -266,8 +266,8 @@ describe('useTaskCompletion — every send path posts to the circle the task was
     expect(postedPaths().sort()).toEqual(
       [`/circles/${A}/events/task-a/complete`, `/circles/${B}/events/task-b/complete`].sort()
     );
-    expect(Analytics.taskCompleted).toHaveBeenCalledWith(A);
-    expect(Analytics.taskCompleted).toHaveBeenCalledWith(B);
+    expect(Analytics.taskCompleted).toHaveBeenCalledWith();
+    expect(Analytics.taskCompleted).toHaveBeenCalledWith();
     expect(Analytics.errorOccurred).not.toHaveBeenCalled();
   });
 
