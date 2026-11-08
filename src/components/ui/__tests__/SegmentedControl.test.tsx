@@ -116,9 +116,10 @@ describe('SegmentedControl', () => {
     );
     const thumb = screen.getByTestId('segmented-thumb');
     expect(thumb.style.transform).toBe('translateX(0%)');
-    // jsdom's CSS serializer rewrites `(100% - 8px) / 4` as `0.25 * (100% - 8px)`;
+    // jsdom's CSS serializer rewrites `(100% - 4px) / 4` as `0.25 * (100% - 4px)`;
     // accept either spelling of that ONE value rather than pinning its version.
-    expect(['calc((100%-8px)/4)', 'calc(0.25*(100%-8px))']).toContain(
+    // (Compact by default: the track's padding is 2px a side, so 4px in all.)
+    expect(['calc((100%-4px)/4)', 'calc(0.25*(100%-4px))']).toContain(
       thumb.style.width.replace(/\s+/g, '')
     );
 
@@ -280,5 +281,21 @@ describe('SegmentedControl', () => {
     expect(thumb.className).toContain('ease-spring');
     expect(screen.getByRole('tab', { name: 'Week' }).className).toContain('text-on-selected');
     expect(screen.getByRole('tab', { name: 'Month' }).className).toContain('text-ink-2');
+  });
+
+  // Owner 2026-11-07: every segmented toggle matches the calendar's compact Schedule | Shifts
+  // (build 2): 40px drawn (34 + 2x2 padding + 2x1 border), the 44px hit area kept by a ::before.
+  it('is COMPACT by default: 34px segments inside 2px padding, with a 44px hit area', () => {
+    render(<SegmentedControl label="v" options={TWO} value="week" onChange={() => {}} />);
+    const tab = screen.getByRole('tab', { name: 'Week' });
+    expect(tab.className).toContain('min-h-[34px]');
+    expect(tab.className).not.toContain('min-h-[44px]');
+    expect(tab.className).toContain('before:-inset-y-[5px]');
+    expect(screen.getByRole('tablist').className).toContain('p-0.5');
+  });
+
+  it('compact={false} still opts back into the 44px segment', () => {
+    render(<SegmentedControl label="v" options={TWO} value="week" onChange={() => {}} compact={false} />);
+    expect(screen.getByRole('tab', { name: 'Week' }).className).toContain('min-h-[44px]');
   });
 });

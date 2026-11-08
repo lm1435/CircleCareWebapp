@@ -562,7 +562,6 @@ export default function CalendarPage(): ReactElement {
                 }
                 setMode(next as CalendarMode);
               }}
-              compact
               options={[
                 { value: 'schedule', label: t('shifts:mode.schedule') },
                 {

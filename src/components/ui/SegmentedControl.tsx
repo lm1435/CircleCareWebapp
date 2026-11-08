@@ -34,7 +34,8 @@ export interface SegmentedControlProps {
   focusOnMount?: boolean;
   /**
    * Calendar header density (design 2026-11-07, mobile toggle 40 tall): the VISIBLE track is 40 tall; each
-   * segment's hit area is still 44 (an invisible ::before reaches 2px past the track).
+   * segment's hit area is still 44 (an invisible ::before reaches 2px past the track). The DEFAULT for every
+   * toggle since owner 2026-11-07 (meds, Care / Health tabs, theme, calendar); `compact={false}` opts out.
    */
   compact?: boolean;
 }
@@ -134,7 +135,7 @@ export function SegmentedControl({
   label,
   className,
   focusOnMount = false,
-  compact = false,
+  compact = true,
 }: SegmentedControlProps): ReactElement {
   const count = options.length;
   // An unknown `value` (a stale tab id, say) must not park the thumb off-screen
