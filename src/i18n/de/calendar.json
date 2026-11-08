@@ -37,6 +37,17 @@
   "errorHint": "Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
   "eventCount_one": "{{count}} Eintrag",
   "eventCount_other": "{{count}} Einträge",
+  "weekSlot": {
+    "medication_one": "{{count}} Medikament",
+    "medication_other": "{{count}} Medikamente",
+    "appointment_one": "{{count}} Termin",
+    "appointment_other": "{{count}} Termine",
+    "task_one": "{{count}} Aufgabe",
+    "task_other": "{{count}} Aufgaben",
+    "shift_one": "{{count}} Schicht",
+    "shift_other": "{{count}} Schichten",
+    "chipLabel": "{{label}}, {{time}}. Öffnet die Liste."
+  },
   "moreEvents": "{{count}} weitere",
   "selectDayHint": "Wählen Sie einen Tag, um seine Einträge zu sehen",
   "dayPanelLabel": "Einträge für den ausgewählten Tag",

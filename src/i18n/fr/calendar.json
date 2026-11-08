@@ -37,6 +37,17 @@
   "errorHint": "Vérifiez votre connexion et réessayez.",
   "eventCount_one": "{{count}} événement",
   "eventCount_other": "{{count}} événements",
+  "weekSlot": {
+    "medication_one": "{{count}} médicament",
+    "medication_other": "{{count}} médicaments",
+    "appointment_one": "{{count}} rendez-vous",
+    "appointment_other": "{{count}} rendez-vous",
+    "task_one": "{{count}} tâche",
+    "task_other": "{{count}} tâches",
+    "shift_one": "{{count}} garde",
+    "shift_other": "{{count}} gardes",
+    "chipLabel": "{{label}}, {{time}}. Ouvre la liste."
+  },
   "moreEvents": "{{count}} de plus",
   "selectDayHint": "Sélectionnez un jour pour voir ses événements",
   "dayPanelLabel": "Événements du jour sélectionné",

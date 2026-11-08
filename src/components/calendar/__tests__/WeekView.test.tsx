@@ -214,7 +214,12 @@ describe('WeekView lane width floor', () => {
 
   it('floors the day column at LANE_MIN_PX per overlapping lane', async () => {
     const { LANE_MIN_PX } = await import('../WeekView');
-    const meds = ['a', 'b', 'c', 'd', 'e'].map((id) => makeTimedMed(id, '08:00'));
+    // Same-type items at one minute collapse into one chip now, so five lanes need five different
+    // minutes that overlap (each med lasts 60 minutes here).
+    const meds = ['a', 'b', 'c', 'd', 'e'].map((id, i) => ({
+      ...makeTimedMed(id, `08:0${i + 1}`),
+      duration_minutes: 60,
+    }));
     const { container } = render(
       <WeekView
         days={DAYS}
@@ -293,5 +298,67 @@ describe('WeekView opening scroll offset', () => {
   it('has nothing to scroll to when the earliest event is within the first hour', () => {
     headIsTall(111);
     expect(openScrollTop(['00:30'])).toBe(0);
+  });
+});
+
+
+// Owner 2026-11-07: timed items of one type at one minute collapse into ONE chip ("5 meds", "2 tasks")
+// that opens a list, instead of five unreadable ~24px lanes.
+describe('WeekView same-slot chips', () => {
+  const DAY = '2026-03-16';
+  function timed(id: string, type: CalendarEvent['event_type'], time: string, title = `Item ${id}`): CalendarEvent {
+    return {
+      ...makeAllDayTask(id, title, DAY),
+      event_type: type,
+      scheduled_time: time,
+      ...(type === 'medication' ? { medication_name: title } : {}),
+    } as CalendarEvent;
+  }
+  function renderDay(events: CalendarEvent[], onEventClick = vi.fn()) {
+    const utils = render(
+      <WeekView
+        days={DAYS}
+        eventsByDay={new Map([[DAY, events]])}
+        careRecipientTimezone="America/Chicago"
+        todayStr={TODAY}
+        onEventClick={onEventClick}
+      />
+    );
+    return { onEventClick, ...utils };
+  }
+
+  it('five meds at 8:00 collapse into ONE "5 meds" chip, no per-med chips, no lane floor', () => {
+    const meds = ['Aspirin', 'Lisinopril', 'Metformin', 'Vitamin D', 'Zinc'].map((n, i) =>
+      timed(`m${i}`, 'medication', '08:00', n)
+    );
+    const { container } = renderDay(meds);
+    expect(screen.getByRole('button', { name: /5 meds/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Aspirin/ })).not.toBeInTheDocument();
+    expect((container.querySelector('[data-day-column-floor]') as HTMLElement).dataset.dayColumnFloor).toBe('0');
+  });
+
+  it('two tasks at one minute read "2 tasks"; a lone item keeps its own chip', () => {
+    renderDay([timed('t1', 'task', '09:00'), timed('t2', 'task', '09:00'), timed('t3', 'task', '11:00', 'Solo errand')]);
+    expect(screen.getByRole('button', { name: /2 tasks/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Solo errand/ })).toBeInTheDocument();
+  });
+
+  it('different types at the same minute stay separate chips', () => {
+    renderDay([timed('m1', 'medication', '08:00', 'Aspirin'), timed('a1', 'appointment', '08:00', 'Dr Lee')]);
+    expect(screen.getByRole('button', { name: /Aspirin/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Dr Lee/ })).toBeInTheDocument();
+  });
+
+  it('the chip opens a list of its items; picking one closes the list and opens that item', async () => {
+    const user = userEvent.setup();
+    const meds = ['Aspirin', 'Lisinopril', 'Metformin'].map((n, i) => timed(`m${i}`, 'medication', '08:00', n));
+    const { onEventClick } = renderDay(meds);
+    await user.click(screen.getByRole('button', { name: /3 meds/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/8:00 AM/)).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('button', { name: /Aspirin|Lisinopril|Metformin/ })).toHaveLength(3);
+    await user.click(within(dialog).getByRole('button', { name: /Lisinopril/ }));
+    expect(onEventClick).toHaveBeenCalledWith(meds[1]);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

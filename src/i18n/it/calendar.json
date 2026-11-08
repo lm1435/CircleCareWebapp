@@ -37,6 +37,17 @@
   "errorHint": "Controlla la connessione e riprova.",
   "eventCount_one": "{{count}} evento",
   "eventCount_other": "{{count}} eventi",
+  "weekSlot": {
+    "medication_one": "{{count}} farmaco",
+    "medication_other": "{{count}} farmaci",
+    "appointment_one": "{{count}} appuntamento",
+    "appointment_other": "{{count}} appuntamenti",
+    "task_one": "{{count}} incarico",
+    "task_other": "{{count}} incarichi",
+    "shift_one": "{{count}} turno",
+    "shift_other": "{{count}} turni",
+    "chipLabel": "{{label}}, {{time}}. Apre l'elenco."
+  },
   "moreEvents": "Altri {{count}}",
   "selectDayHint": "Seleziona un giorno per vederne gli eventi",
   "dayPanelLabel": "Eventi del giorno selezionato",

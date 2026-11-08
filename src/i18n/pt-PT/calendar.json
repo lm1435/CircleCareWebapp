@@ -119,5 +119,9 @@
   "permissionDenied": "Não tem permissão para fazer alterações neste círculo.",
   "eventTypes": {
     "shift": "Turno"
+  },
+  "weekSlot": {
+    "shift_one": "Turnos: {{count}}",
+    "shift_other": "{{count}} turnos"
   }
 }

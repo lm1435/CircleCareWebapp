@@ -37,6 +37,17 @@
   "errorHint": "Revisa tu conexión e intenta de nuevo.",
   "eventCount_one": "{{count}} evento",
   "eventCount_other": "{{count}} eventos",
+  "weekSlot": {
+    "medication_one": "{{count}} medicamento",
+    "medication_other": "{{count}} medicamentos",
+    "appointment_one": "{{count}} cita",
+    "appointment_other": "{{count}} citas",
+    "task_one": "{{count}} tarea",
+    "task_other": "{{count}} tareas",
+    "shift_one": "{{count}} turno",
+    "shift_other": "{{count}} turnos",
+    "chipLabel": "{{label}}, {{time}}, abre la lista"
+  },
   "moreEvents": "{{count}} más",
   "selectDayHint": "Selecciona un día para ver sus eventos",
   "dayPanelLabel": "Eventos del día seleccionado",

@@ -67,6 +67,26 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Todos os dias",
     "A cada 2 dias",
   ],
+  "pt calendar:weekSlot.appointment": [
+    "Consultas: 0",
+    "Consultas: 1",
+    "2 consultas",
+  ],
+  "pt calendar:weekSlot.medication": [
+    "Medicamentos: 0",
+    "Medicamentos: 1",
+    "2 medicamentos",
+  ],
+  "pt calendar:weekSlot.shift": [
+    "Plantões: 0",
+    "Plantões: 1",
+    "2 plantões",
+  ],
+  "pt calendar:weekSlot.task": [
+    "Tarefas: 0",
+    "Tarefas: 1",
+    "2 tarefas",
+  ],
   "pt common:inbox.circleUnreadA11y": [
     "Notificações de Ana, 0 nova",
     "Notificações de Ana, 1 nova",
@@ -436,6 +456,26 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Todos os dias",
     "Todos os dias",
     "A cada 2 dias",
+  ],
+  "pt-PT calendar:weekSlot.appointment": [
+    "Consultas: 0",
+    "Consultas: 1",
+    "2 consultas",
+  ],
+  "pt-PT calendar:weekSlot.medication": [
+    "Medicamentos: 0",
+    "Medicamentos: 1",
+    "2 medicamentos",
+  ],
+  "pt-PT calendar:weekSlot.shift": [
+    "0 turnos",
+    "Turnos: 1",
+    "2 turnos",
+  ],
+  "pt-PT calendar:weekSlot.task": [
+    "Tarefas: 0",
+    "Tarefas: 1",
+    "2 tarefas",
   ],
   "pt-PT common:inbox.circleUnreadA11y": [
     "Notificações de Ana, 0 nova",

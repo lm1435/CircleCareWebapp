@@ -4,5 +4,9 @@
   },
   "eventTypes": {
     "shift": "Quart"
+  },
+  "weekSlot": {
+    "shift_one": "{{count}} quart",
+    "shift_other": "{{count}} quarts"
   }
 }

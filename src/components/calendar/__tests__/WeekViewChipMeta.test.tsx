@@ -140,12 +140,13 @@ describe('WeekView chip: assignee + note count', () => {
   });
 
   it('2 lanes still print the meta line', () => {
-    renderWeek([appt('a'), appt('b', { assigned_to_user: null, note_count: 0 })]);
+    // Staggered minutes: same-minute same-type items collapse into one chip now, overlapping ones share lanes.
+    renderWeek([appt('a'), appt('b', { assigned_to_user: null, note_count: 0, scheduled_time: '10:05' })]);
     expect(within(chipFor('Appt a')).getByTestId('event-chip-meta')).toBeInTheDocument();
   });
 
   it('3 lanes drop the meta line (same rule as the time) but keep it in the name', () => {
-    renderWeek([appt('a'), appt('b'), appt('c')]);
+    renderWeek([appt('a'), appt('b', { scheduled_time: '10:05' }), appt('c', { scheduled_time: '10:10' })]);
     for (const id of ['a', 'b', 'c']) {
       const chip = chipFor(`Appt ${id}`);
       expect(within(chip).queryByTestId('event-chip-meta')).toBeNull();

@@ -37,6 +37,17 @@
   "errorHint": "Check your connection and try again.",
   "eventCount_one": "{{count}} event",
   "eventCount_other": "{{count}} events",
+  "weekSlot": {
+    "medication_one": "{{count}} med",
+    "medication_other": "{{count}} meds",
+    "appointment_one": "{{count}} appointment",
+    "appointment_other": "{{count}} appointments",
+    "task_one": "{{count}} task",
+    "task_other": "{{count}} tasks",
+    "shift_one": "{{count}} shift",
+    "shift_other": "{{count}} shifts",
+    "chipLabel": "{{label}}, {{time}}. Opens the list."
+  },
   "moreEvents": "{{count}} more",
   "selectDayHint": "Select a day to see its events",
   "dayPanelLabel": "Events for the selected day",

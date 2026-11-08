@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { CalendarEvent } from '@/api/calendarEvents';
-import { Card, Icon, Text } from '@/components/ui';
+import type { TFunction } from 'i18next';
+import type { CalendarEvent, EventType } from '@/api/calendarEvents';
+import { Card, Icon, Modal, Text } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import {
   formatEventTimeCompact,
@@ -17,8 +18,10 @@ import {
   getMedicationStatus,
   hidesUnloggedDoseTime,
   isInactiveMedication,
+  type MedicationStatus,
 } from './eventStyles';
 import { overlapKey, resolveOverlaps, type OverlapInfo } from './overlap';
+import { groupSlots, slotOverlapInput, type SlotItem } from './weekSlots';
 import { AsNeededDayRow, AsNeededRing } from './AsNeededDayRow';
 import type { AsNeededDayEntry } from './asNeededByDay';
 
@@ -64,6 +67,34 @@ export const LANE_MIN_PX = 25;
 const CHIP_LINE_HEIGHT = 14;
 const CHIP_PADDING_Y = 8;
 
+/** The collapsed chip's plural label ("5 meds"). Literal keys on purpose: the dynamic-key pin stays put. */
+function slotLabel(t: TFunction, type: EventType, count: number): string {
+  switch (type) {
+    case 'medication':
+      return t('calendar:weekSlot.medication', { count });
+    case 'appointment':
+      return t('calendar:weekSlot.appointment', { count });
+    case 'task':
+      return t('calendar:weekSlot.task', { count });
+    default:
+      return t('calendar:weekSlot.shift', { count });
+  }
+}
+
+/** A dose's status word for the slot list. */
+function statusLabel(t: TFunction, status: MedicationStatus): string {
+  switch (status) {
+    case 'taken':
+      return t('calendar:status.taken');
+    case 'missed':
+      return t('calendar:status.missed');
+    case 'skipped':
+      return t('calendar:status.skipped');
+    default:
+      return t('calendar:status.pending');
+  }
+}
+
 function parseTimeToHours(time: string): number {
   const [h = '0', m = '0'] = time.split(':');
   return Number.parseInt(h, 10) + Number.parseInt(m, 10) / 60;
@@ -107,6 +138,9 @@ export function WeekView({
     () => new Set()
   );
 
+  // The same-slot chip whose list is open (null = closed).
+  const [openSlot, setOpenSlot] = useState<Extract<SlotItem, { kind: 'group' }> | null>(null);
+
   const timedEvents = (day: string): CalendarEvent[] =>
     (eventsByDay.get(day) ?? []).filter((event) => !!event.scheduled_time);
   const allDayEvents = (day: string): CalendarEvent[] =>
@@ -128,7 +162,8 @@ export function WeekView({
     let maxLanes = 1;
     for (const day of days) {
       const timed = (eventsByDay.get(day) ?? []).filter((event) => !!event.scheduled_time);
-      for (const info of resolveOverlaps(timed).values()) {
+      // Same-type items at one minute are ONE chip (groupSlots), so they take one lane.
+      for (const info of resolveOverlaps(groupSlots(timed).map(slotOverlapInput)).values()) {
         maxLanes = Math.max(maxLanes, info.totalColumns);
       }
     }
@@ -350,6 +385,57 @@ export function WeekView({
                   {noteCount}
                 </span>
               )}
+            </span>
+          )}
+        </span>
+      </button>
+    );
+  };
+
+  /** ONE chip for several same-type items at the same minute; opens the list of them. */
+  const renderSlotChip = (
+    slot: Extract<SlotItem, { kind: 'group' }>,
+    overlap?: OverlapInfo
+  ): ReactElement => {
+    const first = slot.events[0];
+    const totalColumns = overlap?.totalColumns ?? 1;
+    const column = overlap?.column ?? 0;
+    const columnPct = 100 / totalColumns;
+    const label = slotLabel(t, slot.type, slot.events.length);
+    const timeLabel = formatEventTimeCompact(
+      slot.time,
+      careRecipientTimezone,
+      hourCycle,
+      zoneReferenceInstant(first.scheduled_date)
+    );
+    return (
+      <button
+        key={`slot_${slot.key}`}
+        type="button"
+        data-event-type={slot.type}
+        data-slot-count={slot.events.length}
+        aria-haspopup="dialog"
+        aria-label={t('calendar:weekSlot.chipLabel', { label, time: timeLabel })}
+        onClick={() => setOpenSlot(slot)}
+        style={{
+          top: parseTimeToHours(slot.time) * HOUR_HEIGHT,
+          height: (MIN_EVENT_MINUTES / 60) * HOUR_HEIGHT,
+          left: `${column * columnPct + 1}%`,
+          width: `${columnPct - 2}%`,
+        }}
+        className={`absolute z-[1] block overflow-hidden rounded p-1 text-left ${getEventCardClass(first, null)}`}
+      >
+        <span className="flex flex-col">
+          <span
+            className={`truncate font-medium tracking-wider text-[11px] leading-[14px] tabular-nums ${getEventTextClass(first, null)}`}
+          >
+            {label}
+          </span>
+          {totalColumns < 3 && (
+            <span
+              className={`truncate font-normal tracking-wider text-[11px] leading-[14px] tabular-nums ${getEventTextClass(first, null)}`}
+            >
+              {timeLabel}
             </span>
           )}
         </span>
@@ -602,9 +688,12 @@ export function WeekView({
                     )}
 
                     {(() => {
-                      const lanes = resolveOverlaps(events);
-                      return events.map((event) =>
-                        renderEventButton(event, true, lanes.get(overlapKey(event)))
+                      const items = groupSlots(events);
+                      const lanes = resolveOverlaps(items.map(slotOverlapInput));
+                      return items.map((item) =>
+                        item.kind === 'event'
+                          ? renderEventButton(item.event, true, lanes.get(overlapKey(item.event)))
+                          : renderSlotChip(item, lanes.get(overlapKey(slotOverlapInput(item))))
                       );
                     })()}
                   </div>
@@ -613,6 +702,42 @@ export function WeekView({
           </div>
         </div>
       </div>
+      {openSlot && (
+        <Modal
+          size="sm"
+          title={`${formatEventTimeCompact(
+            openSlot.time,
+            careRecipientTimezone,
+            hourCycle,
+            zoneReferenceInstant(openSlot.events[0].scheduled_date)
+          )} · ${slotLabel(t, openSlot.type, openSlot.events.length)}`}
+          closeLabel={t('common:close')}
+          onClose={() => setOpenSlot(null)}
+        >
+          <ul className="m-0 flex list-none flex-col p-0">
+            {openSlot.events.map((event) => {
+              const status = getMedicationStatus(event, careRecipientTimezone, now);
+              return (
+                <li key={`${event.id}_${event.scheduled_date}`} className="border-t border-line-2 first:border-t-0">
+                  <button
+                    type="button"
+                    className="flex min-h-[44px] w-full items-center justify-between gap-3 py-2 text-left text-base text-ink hover:bg-bg-2"
+                    onClick={() => {
+                      setOpenSlot(null);
+                      onEventClick(event);
+                    }}
+                  >
+                    <span className="min-w-0 break-words">{event.medication_name || event.title}</span>
+                    {status && (
+                      <span className="shrink-0 text-sm text-ink-2">{statusLabel(t, status)}</span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Modal>
+      )}
     </Card>
   );
 }
