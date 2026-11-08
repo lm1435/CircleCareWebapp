@@ -39,7 +39,7 @@ test('an expired invite shows the Expired badge and can be resent', async ({ pag
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await dialog.locator('#invite-email').fill(email);
-  await dialog.getByRole('button', { name: 'Send invite' }).click();
+  await dialog.getByRole('button', { name: 'Send invitation' }).click();
 
   // The modal no longer auto-closes on success (InviteMemberModal.tsx): it
   // shows the "Invitation sent" share screen (copy/share the link) instead of

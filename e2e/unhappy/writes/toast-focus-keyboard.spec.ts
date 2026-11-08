@@ -29,7 +29,7 @@ async function openInvite(page: Page, circleId: string): Promise<{ dialog: Locat
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   const email = dialog.locator('#invite-email');
   await email.fill(`e2e-tfk-${Date.now()}-${Math.floor(Math.random() * 1e4)}@example.com`);
-  return { dialog, save: dialog.getByRole('button', { name: 'Send invite', exact: true }), email };
+  return { dialog, save: dialog.getByRole('button', { name: 'Send invitation', exact: true }), email };
 }
 
 async function raisePendingSeatGate(page: Page, save: Locator): Promise<Locator> {
@@ -86,7 +86,7 @@ test('the toast region is the SAME node before, during and after a dialog — ne
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await dialog.locator('#invite-email').fill(`e2e-tfk-${Date.now()}@example.com`);
   await failRequest(page, 'POST', '/api/circles/:id/invites', { status: 500, times: 1 });
-  await dialog.getByRole('button', { name: 'Send invite', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Send invitation', exact: true }).click();
   const toast = errorToast(page, 'Something went wrong. Please try again.');
   await expect(toast).toBeVisible({ timeout: 15_000 });
   expect(await sameNode(), 'same region while the dialog is open').toBe(true);

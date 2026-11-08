@@ -58,7 +58,12 @@
     "capReachedAskOwnerNamed": "Os círculos gratuitos incluem até dois cuidadores. Apenas {{ownerName}}, proprietário do círculo, pode fazer upgrade para adicionar mais.",
     "pendingSeatAskOwner": "A vaga gratuita está ocupada por um convite pendente para {{email}}. Cancele-o em Convites pendentes para libertar a vaga ou peça ao proprietário do círculo para fazer upgrade.",
     "pendingSeatAskOwnerUnknown": "A vaga gratuita está ocupada por outro convite pendente. Cancele-o em Convites pendentes para libertar a vaga ou peça ao proprietário do círculo para fazer upgrade.",
-    "managerHint": "Depois de a pessoa entrar, poderá atribuir-lhe o papel de gestor para ajudar a convidar e gerir membros."
+    "managerHint": "Depois de a pessoa entrar, poderá atribuir-lhe o papel de gestor para ajudar a convidar e gerir membros.",
+    "subtitleSelfCare": "Adicione um familiar, um amigo ou um cuidador contratado para o apoiar",
+    "whoInviting": "Quem está a convidar?",
+    "roleHints": {
+      "caregiver": "Família, um amigo ou um cuidador contratado a ajudar a coordenar o cuidado"
+    }
   },
   "manage": {
     "subheading": "Todos neste círculo de cuidado. Convide, remova ou faça a gestão dos membros abaixo.",

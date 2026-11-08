@@ -34,11 +34,18 @@ vi.mock('@/hooks/useCircleMembers', () => ({
 
 const cancelInvite = vi.fn();
 const resendInvite = vi.fn();
+// InviteMemberModal (rendered when "Invite member" is clicked) uses this. A send succeeds, so the
+// "Invitation sent" step (where the manager hint now lives) can be reached.
+const createInvite = vi.fn(
+  (_vars: unknown, opts?: { onSuccess?: (created: unknown) => void; onSettled?: () => void }) => {
+    opts?.onSuccess?.({ invite: { invite_code: 'C1', invite_url: 'https://my.circlecare.app/invite/C1' } });
+    opts?.onSettled?.();
+  }
+);
 vi.mock('@/hooks/useInvites', () => ({
   useCancelInvite: () => ({ mutate: cancelInvite, isPending: false }),
   useResendInvite: () => ({ mutate: resendInvite, isPending: false }),
-  // InviteMemberModal (rendered when "Invite member" is clicked) uses this.
-  useCreateInvite: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateInvite: () => ({ mutate: createInvite, isPending: false }),
 }));
 
 vi.mock('@/lib/analytics', async (importOriginal) => {
@@ -389,7 +396,7 @@ describe('MembersPage — MEMBER (and a demoted manager)', () => {
   });
 });
 
-describe('MembersPage — invite form manager hint', () => {
+describe('MembersPage — invite manager hint (on "Invitation sent")', () => {
   const HINT = 'After they join, you can make them a manager to help invite and manage members.';
 
   async function openInvite(): Promise<void> {
@@ -398,30 +405,41 @@ describe('MembersPage — invite form manager hint', () => {
     await user.click(screen.getAllByRole('button', { name: 'Invite member' })[0]);
   }
 
+  /** Optionally switch to Care recipient, then send and wait for the sent step. */
+  async function send(recipient = false): Promise<void> {
+    const user = userEvent.setup();
+    expect(screen.queryByText(HINT)).toBeNull(); // never on the form itself
+    if (recipient) await user.click(screen.getByRole('button', { name: /Care recipient/, pressed: false }));
+    await user.type(screen.getByLabelText(/^Email/), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+    await screen.findByRole('heading', { name: 'Invitation sent' });
+  }
+
   it('shows for a PREMIUM owner with assign_manager (caregiver is the default type)', async () => {
     setCircle(roster(), { ...OWNER_ON, is_premium_circle: true });
     await openInvite();
+    await send();
     expect(screen.getByText(HINT)).toBeInTheDocument();
   });
 
-  it('hides once Care recipient is chosen', async () => {
+  it('is absent after a Care recipient invite', async () => {
     setCircle(roster(), { ...OWNER_ON, is_premium_circle: true });
     await openInvite();
-    await userEvent.setup().click(screen.getByRole('radio', { name: /Care recipient/ }));
+    await send(true);
     expect(screen.queryByText(HINT)).toBeNull();
   });
 
   it('is absent for a FREE owner (assign_manager is still served)', async () => {
     setCircle(roster(), { ...OWNER_ON, is_premium_circle: false });
     await openInvite();
-    expect(screen.getByLabelText(/^Email address/)).toBeInTheDocument();
+    await send();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 
   it('is absent without assign_manager (switch off)', async () => {
     setCircle(roster(), { ...OWNER_OFF, is_premium_circle: true });
     await openInvite();
-    expect(screen.getByLabelText(/^Email address/)).toBeInTheDocument();
+    await send();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 
@@ -429,7 +447,7 @@ describe('MembersPage — invite form manager hint', () => {
     currentUserId = 'u-mgr';
     setCircle(roster(), { ...MANAGER, is_premium_circle: true });
     await openInvite();
-    expect(screen.getByLabelText(/^Email address/)).toBeInTheDocument();
+    await send();
     expect(screen.queryByText(HINT)).toBeNull();
   });
 });

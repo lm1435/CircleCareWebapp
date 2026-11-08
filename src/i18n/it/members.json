@@ -91,14 +91,15 @@
   "invite": {
     "cta": "Invita un membro",
     "title": "Invita un membro",
-    "subtitle": "Gli invieremo via email un invito a entrare in questa cerchia di cura.",
-    "emailLabel": "Indirizzo email",
-    "emailPlaceholder": "nome@esempio.com",
+    "subtitle": "Aggiungi qualcuno che aiuti a prendersi cura di {{name}}",
+    "subtitleSelfCare": "Aggiungi un familiare, un amico o un assistente a pagamento che ti aiuti",
+    "whoInviting": "Chi vuoi invitare?",
+    "emailLabel": "Email",
+    "emailPlaceholder": "famiglia@esempio.it",
     "managerHint": "Dopo il suo ingresso, potrai nominare questa persona gestore per farti aiutare a invitare e gestire i membri.",
-    "roleLabel": "Il suo ruolo",
     "roleHints": {
-      "caregiver": "Può visualizzare e aiutare a coordinare la cura.",
-      "careRecipient": "La persona che riceve assistenza."
+      "caregiver": "Famiglia, un amico o un assistente a pagamento che aiuta a coordinare la cura",
+      "careRecipient": "{{name}} riceve i promemoria dei farmaci"
     },
     "circleLabel": "Cerchia di cura",
     "send": "Invia invito",

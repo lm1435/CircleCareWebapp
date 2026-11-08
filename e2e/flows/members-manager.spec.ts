@@ -1,4 +1,4 @@
-import type { Browser, Page } from '@playwright/test';
+import type { Browser, Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { dbQuery, sqlStr, apiSession, errorCodeOf } from '../unhappy';
 import {
@@ -47,6 +47,7 @@ interface Copy {
   membersHeading: string;
   managerHint: string;
   careRecipient: string;
+  sendAnother: string;
 }
 
 const COPY: Record<'en' | 'es', Copy> = {
@@ -58,8 +59,8 @@ const COPY: Record<'en' | 'es', Copy> = {
     madeManager: (n) => `${n} is now a manager.`,
     managerBadge: 'Manager',
     inviteCta: 'Invite member',
-    emailLabel: 'Email address',
-    send: 'Send invite',
+    emailLabel: 'Email',
+    send: 'Send invitation',
     sentTitle: 'Invitation sent',
     pendingHeading: 'Pending invites',
     cancelInvite: 'Cancel invite',
@@ -67,6 +68,7 @@ const COPY: Record<'en' | 'es', Copy> = {
     membersHeading: 'Members',
     managerHint: 'After they join, you can make them a manager to help invite and manage members.',
     careRecipient: 'Care recipient',
+    sendAnother: 'Invite someone else',
   },
   es: {
     locale: 'es',
@@ -85,6 +87,7 @@ const COPY: Record<'en' | 'es', Copy> = {
     membersHeading: 'Miembros',
     managerHint: 'Cuando se una, puedes darle el rol de gestor para que te ayude a invitar y administrar miembros.',
     careRecipient: 'Persona cuidada',
+    sendAnother: 'Invitar a alguien más',
   },
 };
 
@@ -166,15 +169,52 @@ for (const lang of ['en', 'es'] as const) {
         const mgrRow = page.getByRole('listitem').filter({ hasText: mgr.name });
         await expect(mgrRow.getByText(S.managerBadge, { exact: true })).toBeVisible({ timeout: 15_000 });
 
-        // ---- OWNER (premium, assign_manager): the invite form's manager hint ----
-        // Shown for a caregiver invite, gone for a care recipient. Nothing is sent.
+        // ---- OWNER (premium, assign_manager): the manager hint ----------------
+        // Invite redesign 2026-11-08: the hint lives on "Invitation sent", after a caregiver
+        // invite only, never on the form. The POST is answered in the browser, so nothing is
+        // created or emailed here (the manager's real invite below covers the server path).
+        const fakeInvite = async (route: Route) => {
+          if (route.request().method() !== 'POST') return route.continue();
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              data: {
+                invite: {
+                  id: 'e2e-fake-invite',
+                  invited_email: `mm-owner-${tag}@example.com`,
+                  member_type: 'caregiver',
+                  expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+                  invite_code: 'E2EFAKE',
+                },
+                message: 'ok',
+              },
+            }),
+          });
+        };
+        await page.route('**/api/circles/*/invites', fakeInvite);
         await visibleButton(page, S.inviteCta).click();
         const ownerModal = page.getByRole('dialog');
-        await expect(ownerModal.getByText(S.managerHint, { exact: true })).toBeVisible({ timeout: 15_000 });
-        await ownerModal.getByRole('radio', { name: new RegExp(`^${S.careRecipient}`) }).check();
+        await expect(ownerModal.getByLabel(S.emailLabel)).toBeVisible({ timeout: 15_000 });
+        await expect(ownerModal.getByText(S.managerHint, { exact: true })).toHaveCount(0);
+        await ownerModal.getByLabel(S.emailLabel).fill(`mm-owner-${tag}@example.com`);
+        await ownerModal.getByRole('button', { name: S.send }).click();
+        await expect(ownerModal.getByRole('heading', { name: S.sentTitle })).toBeVisible({ timeout: 15_000 });
+        await expect(ownerModal.getByText(S.managerHint, { exact: true })).toBeVisible();
+        // "Invite someone else", as a care recipient: no hint (a recipient is never a manager).
+        await ownerModal.getByRole('button', { name: S.sendAnother }).click();
+        await ownerModal.getByRole('button', { name: S.careRecipient, exact: true }).click();
+        await expect(
+          ownerModal.getByRole('button', { name: S.careRecipient, exact: true })
+        ).toHaveAttribute('aria-pressed', 'true');
+        await ownerModal.getByLabel(S.emailLabel).fill(`mm-owner-r-${tag}@example.com`);
+        await ownerModal.getByRole('button', { name: S.send }).click();
+        await expect(ownerModal.getByRole('heading', { name: S.sentTitle })).toBeVisible({ timeout: 15_000 });
         await expect(ownerModal.getByText(S.managerHint, { exact: true })).toHaveCount(0);
         await page.keyboard.press('Escape');
         await expect(ownerModal).toBeHidden();
+        await page.unroute('**/api/circles/*/invites', fakeInvite);
 
         // ---- MANAGER: a separate session ----------------------------------------
         await waitForViewer(request, mgr, circleId, (v) => v.viewer_role === 'manager');

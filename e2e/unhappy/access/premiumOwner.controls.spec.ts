@@ -110,7 +110,7 @@ test('invite is sent for premium: no cap notice, and the invite row exists (cont
     await dialog.locator('#invite-email').fill(email);
 
     const posts = countRequests(page, 'POST', '/api/circles/:id/invites');
-    await dialog.getByRole('button', { name: 'Send invite' }).click();
+    await dialog.getByRole('button', { name: 'Send invitation' }).click();
     await expect(dialog.getByText('Invitation sent')).toBeVisible({ timeout: 20_000 });
     await posts.expectCount(1);
     await expect(dialog.getByText(/Free circles include up to two caregivers/)).toHaveCount(0);

@@ -5,8 +5,7 @@
     }
   },
   "invite": {
-    "subtitle": "Nous lui enverrons par courriel une invitation à rejoindre ce cercle de soins.",
-    "emailLabel": "Adresse courriel",
+    "emailLabel": "Courriel",
     "errors": {
       "emailInvalid": "Saisissez une adresse courriel valide."
     }

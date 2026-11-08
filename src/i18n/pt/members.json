@@ -91,14 +91,15 @@
   "invite": {
     "cta": "Convidar membro",
     "title": "Convidar um membro",
-    "subtitle": "Enviaremos um convite por e-mail para participar deste círculo de cuidado.",
-    "emailLabel": "Endereço de e-mail",
+    "subtitle": "Adicione alguém para ajudar a cuidar de {{name}}",
+    "subtitleSelfCare": "Adicione um familiar, um amigo ou um cuidador contratado para apoiar você",
+    "whoInviting": "Quem você está convidando?",
+    "emailLabel": "E-mail",
     "emailPlaceholder": "nome@exemplo.com",
     "managerHint": "Depois que a pessoa entrar, você poderá dar a ela o papel de gestor para ajudar a convidar e gerenciar membros.",
-    "roleLabel": "Função da pessoa",
     "roleHints": {
-      "caregiver": "Pode visualizar e ajudar a coordenar o cuidado.",
-      "careRecipient": "A pessoa que recebe os cuidados."
+      "caregiver": "Família, um amigo ou um cuidador contratado que ajuda a coordenar o cuidado",
+      "careRecipient": "{{name}} recebe lembretes de medicamentos"
     },
     "circleLabel": "Círculo de cuidado",
     "send": "Enviar convite",

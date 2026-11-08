@@ -91,14 +91,15 @@
   "invite": {
     "cta": "Mitglied einladen",
     "title": "Mitglied einladen",
-    "subtitle": "Wir senden eine Einladung per E-Mail, damit die Person diesem Pflegekreis beitreten kann.",
-    "emailLabel": "E-Mail-Adresse",
-    "emailPlaceholder": "name@example.com",
+    "subtitle": "Fügen Sie jemanden hinzu, der bei der Pflege von {{name}} hilft",
+    "subtitleSelfCare": "Fügen Sie Familie, Freunde oder eine bezahlte Pflegekraft hinzu, die Sie unterstützen",
+    "whoInviting": "Wen laden Sie ein?",
+    "emailLabel": "E-Mail",
+    "emailPlaceholder": "familie@example.com",
     "managerHint": "Sobald die Person beigetreten ist, können Sie sie zum Mitverwalter machen, damit sie beim Einladen und Verwalten von Mitgliedern hilft.",
-    "roleLabel": "Rolle der Person",
     "roleHints": {
-      "caregiver": "Kann ansehen und bei der Koordination der Pflege helfen.",
-      "careRecipient": "Die Person, die gepflegt wird."
+      "caregiver": "Familie, Freunde oder eine bezahlte Pflegekraft, die bei der Koordination der Pflege helfen",
+      "careRecipient": "{{name}} erhält Medikamentenerinnerungen"
     },
     "circleLabel": "Pflegekreis",
     "send": "Einladung senden",

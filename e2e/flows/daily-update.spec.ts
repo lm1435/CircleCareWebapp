@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { checkA11y, pinRecipientZoneToBrowser } from '../helpers';
 import {
@@ -343,26 +344,63 @@ test.describe('daily update', () => {
     expect(await overflow()).toBeLessThanOrEqual(0);
   });
 
-  test('invite modal carries the daily update line while the feature is on', async ({
+  // Invite redesign 2026-11-08: the line moved from the form to the "Invitation sent" step. The
+  // invite POST is answered in the browser, so nothing is created or emailed.
+  async function fakeInviteSend(page: Page): Promise<void> {
+    await page.route('**/api/circles/*/invites', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            invite: {
+              id: 'e2e-fake-invite',
+              invited_email: 'e2e-du-invite@example.com',
+              member_type: 'caregiver',
+              expires_at: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+              invite_code: 'E2EFAKE',
+            },
+            message: 'ok',
+          },
+        }),
+      });
+    });
+  }
+
+  test('invite modal carries the daily update line on "Invitation sent" while the feature is on', async ({
     page,
     circleId,
   }, testInfo) => {
     await mockDailyUpdate(page, TZ, localDateOf(new Date(), TZ));
+    await fakeInviteSend(page);
     await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Invite member' }).first().click({ timeout: NAV_TIMEOUT });
+    const dialog = page.getByRole('dialog', { name: 'Invite a member' });
+    // Not on the form any more.
+    await expect(dialog.locator('#invite-email')).toBeVisible();
+    await expect(page.getByTestId('invite-daily-update-line')).toHaveCount(0);
+    await dialog.locator('#invite-email').fill('e2e-du-invite@example.com');
+    await dialog.getByRole('button', { name: 'Send invitation', exact: true }).click();
+    await expect(dialog.getByRole('heading', { name: 'Invitation sent' })).toBeVisible({ timeout: NAV_TIMEOUT });
     await expect(page.getByTestId('invite-daily-update-line')).toContainText(
       /The people you invite get a daily update on (your day|.+)\./
     );
-    await checkA11y(page, `/circles/${circleId}/members [Invite member open, daily update line]`, testInfo, {
+    await checkA11y(page, `/circles/${circleId}/members [Invitation sent, daily update line]`, testInfo, {
       wcag22: true,
     });
   });
 
   test('invite modal omits the line while rollout is off', async ({ page, circleId }) => {
     await mockDailyUpdate(page, TZ, localDateOf(new Date(), TZ), { enabled: false });
+    await fakeInviteSend(page);
     await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Invite member' }).first().click({ timeout: NAV_TIMEOUT });
-    await expect(page.getByLabel('Email address')).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Invite a member' });
+    await dialog.locator('#invite-email').fill('e2e-du-invite@example.com');
+    await dialog.getByRole('button', { name: 'Send invitation', exact: true }).click();
+    await expect(dialog.getByRole('heading', { name: 'Invitation sent' })).toBeVisible({ timeout: NAV_TIMEOUT });
     await expect(page.getByTestId('invite-daily-update-line')).toHaveCount(0);
   });
 });

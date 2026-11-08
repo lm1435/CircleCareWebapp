@@ -136,7 +136,7 @@ test('invite member: double send while the POST is pending creates one invite', 
     await doubleSubmitWhileHeld(page, {
       method: 'POST',
       path: '/api/circles/:id/invites',
-      submit: dialog.getByRole('button', { name: 'Send invite', exact: true }),
+      submit: dialog.getByRole('button', { name: 'Send invitation', exact: true }),
       form: page.locator('#invite-member-form'),
     });
     await expect(dialog.getByText('Invitation sent')).toBeVisible({ timeout: 20_000 });

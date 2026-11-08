@@ -107,7 +107,7 @@ test('invite at the free caregiver cap: real 402, cap notice in the modal, no in
     (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === `/api/circles/${h.circleId}/invites`,
     { timeout: 20_000 }
   );
-  await dialog.getByRole('button', { name: 'Send invite' }).click();
+  await dialog.getByRole('button', { name: 'Send invitation' }).click();
   expect((await refused).status(), 'POST invites at the cap').toBe(402);
 
   await expect(dialog.getByRole('alert')).toContainText(

@@ -510,6 +510,7 @@ export default function MembersPage(): ReactElement {
           viewerIsOwner={isOwner}
           ownerName={getCircleOwnerName(circle)}
           canSuggestManager={viewerCanSuggestManager(circle, currentUserId)}
+          showHelpLink={careTeamEmpty}
           onClose={() => setShowInvite(false)}
         />
       ) : null}

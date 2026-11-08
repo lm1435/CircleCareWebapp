@@ -162,8 +162,8 @@ test('at the seat cap a manager is told to ask the owner — never an Upgrade ac
   await openMembers(page, h.circleId);
   await page.getByRole('button', { name: 'Invite member', exact: true }).filter({ visible: true }).click();
   const modal = page.getByRole('dialog');
-  await modal.getByLabel('Email address').fill('e2e-mgr-cap@example.com');
-  await modal.getByRole('button', { name: 'Send invite' }).click();
+  await modal.locator('#invite-email').fill('e2e-mgr-cap@example.com');
+  await modal.getByRole('button', { name: 'Send invitation' }).click();
   await expect(modal.getByRole('alert')).toHaveText(
     'Free circles include up to two caregivers. Only Hana, the circle owner, can upgrade to add more.'
   );

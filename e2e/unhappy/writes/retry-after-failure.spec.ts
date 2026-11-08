@@ -265,7 +265,7 @@ const SURFACES: Surface[] = [
       const dialog = ctx.page.getByRole('dialog', { name: 'Invite a member' });
       await expect(dialog).toBeVisible({ timeout: 20_000 });
       await dialog.locator('#invite-email').fill(ctx.state.email);
-      return dialog.getByRole('button', { name: 'Send invite', exact: true });
+      return dialog.getByRole('button', { name: 'Send invitation', exact: true });
     },
     async inputKept(ctx) {
       await expect(ctx.page.locator('#invite-email')).toHaveValue(ctx.state.email);

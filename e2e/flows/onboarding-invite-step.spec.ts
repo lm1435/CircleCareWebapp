@@ -90,8 +90,8 @@ test.describe('setup invite step (web)', () => {
     const form = page.getByRole('dialog', { name: 'Invite a member' });
     await expect(form).toBeVisible();
     const invitee = `e2e-obinv-${Date.now()}@example.com`;
-    await form.getByLabel('Email address').fill(invitee);
-    await form.getByRole('button', { name: 'Send invite' }).click();
+    await form.locator('#invite-email').fill(invitee);
+    await form.getByRole('button', { name: 'Send invitation' }).click();
     await expect(form.getByText('Invitation sent')).toBeVisible({ timeout: 20_000 });
     await expect.poll(() => invites(circleId)).toEqual([{ invited_email: invitee, member_type: 'caregiver' }]);
 

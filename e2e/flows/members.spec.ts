@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures';
 // Members flows — EMAIL invite UI.
 //
 // The invite modal is a simple email-required form: enter an email + role and
-// "Send invite" emails the invitee a link to join.
+// "Send invitation" emails the invitee a link to join.
 //
 // Test 1 — read + client-side validation (no mutation): opens the modal, types
 //   an invalid email and asserts the inline validation error. Never submits a
@@ -29,10 +29,10 @@ test('members list renders, invite-email validation shows inline error, then can
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await expect(dialog.getByRole('heading', { name: 'Invite a member' })).toBeVisible();
 
-  // --- The email field + "Send invite" button ---
+  // --- The email field + "Send invitation" button ---
   const emailField = dialog.locator('#invite-email');
   await expect(emailField).toBeVisible();
-  const sendBtn = dialog.getByRole('button', { name: 'Send invite' });
+  const sendBtn = dialog.getByRole('button', { name: 'Send invitation' });
   // Disabled until an email is typed.
   await expect(sendBtn).toBeDisabled();
 
@@ -71,7 +71,7 @@ test('send an email invite (real), copy its link, then cancel the pending invite
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await dialog.locator('#invite-email').fill(email);
-  await dialog.getByRole('button', { name: 'Send invite' }).click();
+  await dialog.getByRole('button', { name: 'Send invitation' }).click();
 
   // The modal no longer auto-closes on success (InviteMemberModal.tsx): it
   // shows the "Invitation sent" share screen (copy/share the link) instead of

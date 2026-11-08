@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDailyUpdateEnabled } from '@/hooks/useDailyUpdate';
+import { HowDoesThisWork } from '@/components/help/HowDoesThisWork';
 import { z } from 'zod';
 import type { InviteMemberType } from '@/api/invites';
 import { useCreateInvite } from '@/hooks/useInvites';
@@ -16,14 +17,13 @@ import {
   Icon,
   IconTile,
   Modal,
-  RadioGroup,
   TextField,
   validateWithZod,
   fieldShell,
   focusFirstError,
   type FieldErrors,
-  type RadioOption,
 } from '@/components/ui';
+import { CHIP_SELECTED, CHIP_UNSELECTED } from '@/components/ui/inputStyles';
 
 // "Invite a member" form for the owner AND managers — EMAIL-required. The
 // sender enters the invitee's email and role; the backend emails them a link to
@@ -37,8 +37,11 @@ import {
 // `error.details.reason` the hook does, so a recoverable `pending_invite_seat`
 // never leaves a paywall upsell sitting next to an "cancel that invite" toast.
 //
-// Build ONLY on Stage 0 primitives (Modal, TextField, RadioGroup, Button,
-// validateWithZod) + design tokens. No off-palette Tailwind.
+// Layout (owner-approved invite redesign 2026-11-08, same content as mobile):
+// "Who are you inviting?" as a two-tile switch (neutral selection, never moss),
+// ONE description line for the selected role, the email, Send. The daily-update
+// line, the email receipt, the manager hint and the help link live on the
+// "Invitation sent" step. Build ONLY on Stage 0 primitives + design tokens.
 
 const emailSchema = z.string().trim().email();
 
@@ -77,6 +80,12 @@ export interface InviteMemberModalProps {
    * `viewerCanSuggestManager` -- premium owner with `assign_manager`.
    */
   canSuggestManager?: boolean;
+  /**
+   * The care team is still empty (nobody but the viewer, no invite out): the "Invitation sent" step
+   * then offers "How does this work?" (owner 2026-11-08, mobile parity). Read at SEND time, because
+   * the invite just sent makes the team non-empty as soon as the parent refetches.
+   */
+  showHelpLink?: boolean;
 }
 
 export function InviteMemberModal({
@@ -89,6 +98,7 @@ export function InviteMemberModal({
   viewerIsOwner,
   ownerName,
   canSuggestManager = false,
+  showHelpLink = false,
 }: InviteMemberModalProps): ReactElement {
   const { t, i18n } = useTranslation('members');
   const dailyUpdateOn = useDailyUpdateEnabled(circleId);
@@ -123,19 +133,8 @@ export function InviteMemberModal({
     if (capNotice) Analytics.inviteCapReached();
   }, [capNotice]);
 
-  const roleOptions = useMemo<RadioOption[]>(() => {
-    const options: RadioOption[] = [
-      { value: 'caregiver', label: t('roles.caregiver'), hint: t('invite.roleHints.caregiver') },
-    ];
-    if (!isSelfCare) {
-      options.push({
-        value: 'care_recipient',
-        label: t('roles.careRecipient'),
-        hint: t('invite.roleHints.careRecipient'),
-      });
-    }
-    return options;
-  }, [isSelfCare, t]);
+  // The name the subtitle, the recipient description and the daily-update line speak of.
+  const careForName = recipientName?.trim() || circleName?.trim() || '';
 
   // The role the invite was actually sent as, named for the confirmation line.
   // Reuses the same `roles.*` strings the picker renders, so the two can never
@@ -143,7 +142,11 @@ export function InviteMemberModal({
   const roleLabel =
     memberType === 'care_recipient' ? t('roles.careRecipient') : t('roles.caregiver');
 
-  const [sentInvite, setSentInvite] = useState<{ email: string; url: string | null } | null>(null);
+  const [sentInvite, setSentInvite] = useState<{
+    email: string;
+    url: string | null;
+    showHelp: boolean;
+  } | null>(null);
   // The form (and its focused Send button) unmounts when the invite is sent.
   // Focus the "Invitation sent" heading so a screen reader announces the
   // outcome and the keyboard does not fall to <body> (WCAG 4.1.3 / 2.4.3).
@@ -275,7 +278,7 @@ export function InviteMemberModal({
           const url =
             created?.invite?.invite_url ??
             (code ? `${window.location.origin}/invite/${encodeURIComponent(code)}` : null);
-          setSentInvite({ email: result.data, url });
+          setSentInvite({ email: result.data, url, showHelp: showHelpLink });
           onInvited?.(memberType);
         },
         onError: (error: unknown) => {
@@ -400,35 +403,72 @@ export function InviteMemberModal({
               </p>
             </>
           ) : null}
+          {/* Daily update line (docs/plans/daily-update.md §2.3, D10): what the
+              people you invite get. Self-care circles speak to the owner. Only
+              while the server reports the feature on for this viewer, so the
+              line never promises what rollout has switched off. */}
+          {dailyUpdateOn ? (
+            <p className="m-0 text-sm text-ink-2" data-testid="invite-daily-update-line">
+              {isSelfCare
+                ? t('invite.dailyUpdateLineSelfCare')
+                : t('invite.dailyUpdateLine', { name: careForName })}
+            </p>
+          ) : null}
+          {/* Manager role hint (docs/plans/manager-role.md): a care recipient
+              can never be a manager, so only after a Family caregiver invite. */}
+          {canSuggestManager && memberType === 'caregiver' ? (
+            <p className="m-0 text-sm text-ink-2" data-testid="invite-manager-hint">
+              {t('invite.managerHint')}
+            </p>
+          ) : null}
+          {sentInvite.showHelp ? <HowDoesThisWork slug="invite-family" className="self-start" /> : null}
         </div>
       ) : (
       <form id="invite-member-form" onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-        <p className="m-0 text-sm text-ink-2">{t('invite.subtitle')}</p>
-        {/* Daily update line (docs/plans/daily-update.md §2.3, D10): what the
-            people you invite get. Self-care circles speak to the owner. Only
-            while the server reports the feature on for this viewer, so the
-            line never promises what rollout has switched off. */}
-        {dailyUpdateOn ? (
-        <p className="m-0 text-sm text-ink-2" data-testid="invite-daily-update-line">
-          {isSelfCare
-            ? t('invite.dailyUpdateLineSelfCare')
-            : t('invite.dailyUpdateLine', {
-                name: recipientName?.trim() || circleName?.trim() || '',
-              })}
+        <p className="m-0 text-sm text-ink-2">
+          {isSelfCare ? t('invite.subtitleSelfCare') : t('invite.subtitle', { name: careForName })}
         </p>
-        ) : null}
 
-        {/* Self-care circles only ever have caregivers — hide the role picker
-            entirely when there is a single option to choose. */}
-        {roleOptions.length > 1 ? (
-          <RadioGroup
-            name="invite-role"
-            label={t('invite.roleLabel')}
-            options={roleOptions}
-            value={memberType}
-            onChange={(value) => setMemberType(value as InviteMemberType)}
-            error={errors['invite-role'] || undefined}
-          />
+        {/* Self-care circles only ever invite caregivers: no choice to make,
+            and the subtitle already says who they are. */}
+        {!isSelfCare ? (
+          <div className="flex flex-col gap-2">
+            <p id="invite-role-heading" className="m-0 text-base font-semibold text-ink">
+              {t('invite.whoInviting')}
+            </p>
+            {/* Two toggle buttons (aria-pressed), NEUTRAL selection: ink fill
+                on light, cream on dark. Moss stays the one filled action, Send. */}
+            <div role="group" aria-labelledby="invite-role-heading" className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { value: 'caregiver', label: t('roles.caregiver'), testId: 'invite-role-caregiver' },
+                  { value: 'care_recipient', label: t('roles.careRecipient'), testId: 'invite-role-recipient' },
+                ] as const
+              ).map((option) => {
+                const pressed = memberType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={pressed}
+                    data-testid={option.testId}
+                    onClick={() => setMemberType(option.value)}
+                    className={`min-h-[48px] min-w-0 rounded-xl border px-3 py-2 text-base font-semibold transition-colors duration-fast ${
+                      pressed ? CHIP_SELECTED : CHIP_UNSELECTED
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            {/* ONE line, for the selected role only. */}
+            <p className="m-0 text-sm text-ink-2" data-testid="invite-role-description">
+              {memberType === 'care_recipient'
+                ? t('invite.roleHints.careRecipient', { name: careForName })
+                : t('invite.roleHints.caregiver')}
+            </p>
+          </div>
         ) : null}
 
         <TextField
@@ -444,11 +484,6 @@ export function InviteMemberModal({
             if (errors['invite-email']) setErrors((prev) => ({ ...prev, 'invite-email': '' }));
           }}
           error={errors['invite-email'] || undefined}
-          // Manager role hint (docs/plans/manager-role.md): a care recipient
-          // can never be a manager, so only for a Family caregiver invite.
-          hint={
-            canSuggestManager && memberType === 'caregiver' ? t('invite.managerHint') : undefined
-          }
         />
 
         {capNotice ? (

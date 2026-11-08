@@ -143,7 +143,7 @@ export interface DoubleSubmitOptions {
  */
 export async function doubleSubmitWhileHeld(page: Page, opts: DoubleSubmitOptions): Promise<RequestCounter> {
   // Pin the exact element: several controls swap their label while pending
-  // ("Delete" → "Deleting…", "Send invite" → "Sending…"), so a by-name locator
+  // ("Delete" → "Deleting…", "Send invitation" → "Sending…"), so a by-name locator
   // could not find the control again during step 3.
   const token = `ds-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   await expect(opts.submit).toBeVisible();

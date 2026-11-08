@@ -91,17 +91,18 @@
   "invite": {
     "cta": "Invite member",
     "title": "Invite a member",
-    "subtitle": "We'll email them an invitation to join this care circle.",
-    "emailLabel": "Email address",
-    "emailPlaceholder": "name@example.com",
+    "subtitle": "Add someone to help care for {{name}}",
+    "subtitleSelfCare": "Add family, a friend or a paid caregiver to help support you",
+    "whoInviting": "Who are you inviting?",
+    "emailLabel": "Email",
+    "emailPlaceholder": "family@example.com",
     "managerHint": "After they join, you can make them a manager to help invite and manage members.",
-    "roleLabel": "Their role",
     "roleHints": {
-      "caregiver": "Can view and help coordinate care.",
-      "careRecipient": "The person receiving care."
+      "caregiver": "Family, a friend or a paid caregiver helping coordinate care",
+      "careRecipient": "{{name}} gets medication reminders"
     },
     "circleLabel": "Care circle",
-    "send": "Send invite",
+    "send": "Send invitation",
     "sending": "Sending…",
     "success": "Share the link so they can join right away.",
     "capReached": "Free circles include up to two caregivers. Upgrade to Premium to add more.",

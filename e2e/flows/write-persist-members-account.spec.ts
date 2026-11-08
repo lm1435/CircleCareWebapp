@@ -159,7 +159,7 @@ test('cancel an invite through the Members page: invites.status = cancelled, and
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 20_000 });
   await dialog.locator('#invite-email').fill(email);
-  await dialog.getByRole('button', { name: 'Send invite' }).click();
+  await dialog.getByRole('button', { name: 'Send invitation' }).click();
   await expect(dialog.getByText('Invitation sent')).toBeVisible({ timeout: 20_000 });
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(dialog).toBeHidden({ timeout: 20_000 });

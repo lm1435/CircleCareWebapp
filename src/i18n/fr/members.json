@@ -91,14 +91,15 @@
   "invite": {
     "cta": "Inviter un membre",
     "title": "Inviter un membre",
-    "subtitle": "Nous lui enverrons par e-mail une invitation à rejoindre ce cercle de soins.",
-    "emailLabel": "Adresse e-mail",
-    "emailPlaceholder": "nom@exemple.com",
+    "subtitle": "Ajoutez quelqu’un pour vous aider à accompagner {{name}}",
+    "subtitleSelfCare": "Ajoutez un proche, un ami ou un aidant rémunéré pour vous soutenir",
+    "whoInviting": "Qui invitez-vous ?",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "famille@exemple.com",
     "managerHint": "Une fois cette personne dans le cercle, vous pourrez la nommer gestionnaire pour vous aider à inviter et gérer les membres.",
-    "roleLabel": "Son rôle",
     "roleHints": {
-      "caregiver": "Peut consulter et aider à coordonner les soins.",
-      "careRecipient": "La personne qui reçoit les soins."
+      "caregiver": "Un proche, un ami ou un aidant rémunéré qui aide à coordonner les soins",
+      "careRecipient": "{{name}} reçoit les rappels de médicaments"
     },
     "circleLabel": "Cercle de soins",
     "send": "Envoyer l’invitation",
