@@ -31,3 +31,18 @@ describe('RouteTitle: one circle\'s notifications', () => {
     await waitFor(() => expect(document.title).toBe('Notifications · CircleCare'));
   });
 });
+
+// The profile page IS Settings (four grouped lists, approved design 6): its tab reads
+// "Settings", on the list and on every section page it opens.
+describe('RouteTitle: Settings', () => {
+  it.each(['/profile', '/profile/notifications'])('titles %s "Settings"', async (path) => {
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <RouteTitle />
+        </MemoryRouter>
+      </HelmetProvider>
+    );
+    await waitFor(() => expect(document.title).toBe('Settings · CircleCare'));
+  });
+});

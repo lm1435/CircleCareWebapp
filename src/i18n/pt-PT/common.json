@@ -3,6 +3,7 @@
   "loading": "A carregar...",
   "save": "Guardar",
   "pageTitles": {
+    "profile": "Definições",
     "login": "Iniciar sessão",
     "signup": "Registar-se",
     "forgotPassword": "Esqueceu-se da palavra-passe",
