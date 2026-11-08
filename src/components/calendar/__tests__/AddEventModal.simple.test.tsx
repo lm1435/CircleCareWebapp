@@ -187,16 +187,31 @@ describe('new medication: structure', () => {
     expect(screen.queryByLabelText('Type')).toBeNull();
   });
 
-  it('More details holds instructions, the end date and reminders (no start date, no Repeat select)', async () => {
+  it('More details holds the photo, refills, prescription details, instructions, the end date and reminders (no start date, no Repeat select)', async () => {
     const user = userEvent.setup();
     renderMed();
     const toggle = screen.getByRole('button', { name: /More details/ });
-    expect(toggle).toHaveTextContent('Instructions, end date, reminders');
+    // Mobile's addEvent.moreDetailsHint, word for word.
+    expect(toggle).toHaveTextContent('Refills, pharmacy, prescriber, instructions, reminders');
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText('Instructions')).toBeVisible();
     expect(screen.getByLabelText(/^End date/)).toBeVisible();
     expect(screen.getByRole('switch', { name: 'Send reminders' })).toBeVisible();
+    // Mobile's order: photo, Track refills, Prescriber, Pharmacy, Pharmacy phone, Rx number, Instructions.
+    const order = [
+      screen.getByLabelText('Medication photo'),
+      screen.getByRole('checkbox', { name: /Track refills/ }),
+      screen.getByLabelText('Prescriber'),
+      screen.getByLabelText('Pharmacy'),
+      screen.getByLabelText('Pharmacy phone'),
+      screen.getByLabelText('Rx number'),
+      screen.getByLabelText('Instructions'),
+      screen.getByLabelText(/^End date/),
+    ];
+    for (let i = 1; i < order.length; i++) {
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
     expect(screen.queryByLabelText(/^Start date/)).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'Repeat', hidden: true })).toBeNull();
   });

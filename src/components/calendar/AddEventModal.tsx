@@ -6,9 +6,27 @@ import { DoctorField } from './DoctorField';
 import { NotificationInfoModal } from './NotificationInfoModal';
 import { DoseQuietHoursNote } from './DoseQuietHoursNote';
 import { DosePastTimeNote } from './DosePastTimeNote';
+import { MedicationPhotoField, MedicationRefillFields } from './MedicationMoreDetails';
+import {
+  deleteMedicationPhoto,
+  getMedicationFormDetails,
+  uploadMedicationPhoto,
+} from '@/api/medicationPhoto';
+import {
+  EMPTY_MEDICATION_DETAILS,
+  daysSupplyRate,
+  derivedPillsPerDay,
+  isCountableForm,
+  medicationDetailsFromEvent,
+  medicationDetailsOpenMore,
+  medicationDetailsPayload,
+  type MedicationDetailsHydration,
+  type MedicationDetailsState,
+} from '@/utils/medicationDetailsForm';
 import { siblingDosePayload } from '@/utils/firstRunMedication';
 import {
   deleteEvent as deleteEventRequest,
+  updateEvent as updateEventRequest,
   eventFormSchema,
   SERIES_ROOT_CONTENT_FIELDS,
   type CalendarEvent,
@@ -308,6 +326,7 @@ const FOCUS_ORDER = [
   'assigned_to',
   'recurrence_rule',
   'as_needed_reason',
+  'alert_days_before',
   RECURRENCE_DAYS_ID,
   'recurrence_end_date',
 ];
@@ -712,6 +731,61 @@ function AddEventForm({
         : initialRecurrenceState.choice
   );
   const [asNeededReason, setAsNeededReason] = useState(event?.as_needed_reason ?? '');
+
+  // ── More details: photo, refill tracking, prescription details (mobile parity, owner 2026-11-08) ──
+  // An EDIT hydrates them from the single-event GET (the events list omits these columns). Until that lands
+  // (or when it fails) the save sends NONE of these keys: an update is a partial patch, so the stored
+  // values stay, instead of the form's empty defaults overwriting them (`medicationDetailsPayload`).
+  const [medDetails, setMedDetails] = useState<MedicationDetailsState>(EMPTY_MEDICATION_DETAILS);
+  const [medHydration, setMedHydration] = useState<MedicationDetailsHydration | null>(null);
+  const editsMedication = isEditing && event.event_type === 'medication';
+  const [medDetailsLoad, setMedDetailsLoad] = useState<'ready' | 'loading' | 'error'>(
+    editsMedication ? 'loading' : 'ready'
+  );
+  /** A newly picked photo, uploaded after the save (mobile's order). */
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoObjectUrl, setPhotoObjectUrl] = useState<string | null>(null);
+  /** The stored photo's SIGNED url: component state only, never the query cache. */
+  const [storedPhotoUrl, setStoredPhotoUrl] = useState<string | null>(null);
+  /** "Remove photo" on a stored photo: the save then deletes it. */
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  useEffect(() => {
+    if (!editsMedication || !targetEventId) return;
+    let cancelled = false;
+    getMedicationFormDetails(circleId, targetEventId)
+      .then(({ details, photoUrl }) => {
+        if (cancelled) return;
+        const hydrated = medicationDetailsFromEvent(details);
+        setMedDetails(hydrated.state);
+        setMedHydration(hydrated.hydration);
+        setStoredPhotoUrl(photoUrl);
+        setMedDetailsLoad('ready');
+        if (medicationDetailsOpenMore(details)) setMoreOpen(true);
+      })
+      .catch(() => {
+        if (!cancelled) setMedDetailsLoad('error');
+      });
+    return () => {
+      cancelled = true;
+      setStoredPhotoUrl(null);
+    };
+  }, [editsMedication, circleId, targetEventId]);
+  useEffect(
+    () => () => {
+      if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+    },
+    [photoObjectUrl]
+  );
+  function pickPhoto(file: File): void {
+    setPhotoFile(file);
+    setPhotoObjectUrl(URL.createObjectURL(file));
+  }
+  function removePhoto(): void {
+    setPhotoFile(null);
+    setPhotoObjectUrl(null);
+    if (storedPhotoUrl) setPhotoRemoved(true);
+  }
+  const photoPreviewUrl = photoObjectUrl ?? (photoRemoved ? null : storedPhotoUrl);
   const [daysOn, setDaysOn] = useState(initialRecurrenceState.daysOn);
   const [daysOff, setDaysOff] = useState(initialRecurrenceState.daysOff);
   /** The "Days of the week" selection, 0=Sun..6=Sat (used only in that mode). */
@@ -970,6 +1044,17 @@ function AddEventForm({
   /** The medication has NO schedule: no date, time, repeat, end date or reminders. */
   const isAsNeeded = isMedication && recurrence === 'as_needed';
   const isPending = createEvent.isPending || updateEvent.isPending;
+  /** The primary plus each filled extra dose time (create only: an edit cannot see its siblings). */
+  const doseTimeCount = 1 + extraTimes.filter((time) => time !== '').length;
+  const pillsCountable = isCountableForm(selectedDrug?.dosageForm);
+  const derivedPerDay = derivedPillsPerDay(medDetails.pillsPerDose, doseTimeCount);
+  const supplyRate = daysSupplyRate({
+    isEditing,
+    derivedPillsPerDay: derivedPerDay,
+    storedPillsPerDay: medHydration?.storedPillsPerDay ?? null,
+    pillsPerDose: medDetails.pillsPerDose,
+    hydratedPillsPerDose: medHydration?.hydratedPillsPerDose ?? '',
+  });
 
   // ── Reminder messaging (display only — never changes what gets saved) ──────
   // Backend notification semantics are ASYMMETRIC by event type, and the four
@@ -1633,6 +1718,18 @@ function AddEventForm({
       data.medication_dosage = dosage.trim() || undefined;
       // Only a PICKED drug carries its concept id (mobile: `if (selectedDrug?.rxcui)`).
       if (selectedDrug?.rxcui) data.rxcui = selectedDrug.rxcui;
+      // Refill tracking + prescription details: mobile's keys and rules (utils/medicationDetailsForm).
+      Object.assign(
+        data,
+        medicationDetailsPayload(medDetails, {
+          isEditing,
+          asNeeded: isAsNeeded || isAsNeededEdit,
+          hydration: isEditing ? (medDetailsLoad === 'ready' ? medHydration : null) : null,
+          doseTimeCount,
+          recurrenceRule: data.recurrence_rule ?? null,
+          recurrenceDays: data.recurrence_days ?? null,
+        })
+      );
     }
     // Always sent for assignable types, null included — updates are partial
     // patches server-side, so omitting the key left the old assignee in place
@@ -1710,18 +1807,55 @@ function AddEventForm({
       });
   }
 
+  /**
+   * After the medication row saved: upload a newly picked photo (signed upload, then PATCH the storage
+   * path — mobile's sequence), or delete a stored one the user removed. A failure never undoes the save;
+   * it returns what failed, and the caller says so instead of the success toast.
+   */
+  async function savePhoto(eventId: string): Promise<'upload' | 'remove' | null> {
+    if (photoFile) {
+      try {
+        const { storagePath } = await uploadMedicationPhoto(circleId, eventId, photoFile);
+        await updateEventRequest(circleId, eventId, { medication_photo_url: storagePath });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+        return null;
+      } catch {
+        return 'upload';
+      }
+    }
+    if (photoRemoved && isEditing) {
+      try {
+        await deleteMedicationPhoto(circleId, eventId);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
+        return null;
+      } catch {
+        return 'remove';
+      }
+    }
+    return null;
+  }
+
+  function photoFailureMessage(failure: 'upload' | 'remove'): string {
+    return failure === 'upload'
+      ? t('addEvent.alerts.photoUploadFailed')
+      : t('addEvent.alerts.photoRemoveFailed');
+  }
+
   async function persist(data: CreateEventRequest, withExtraDoses = false): Promise<void> {
     let savedInfo: SavedMedicationInfo | undefined;
     try {
       if (isEditing && targetEventId) {
         await updateEvent.mutateAsync({ eventId: targetEventId, data });
+        const photoFailure =
+          data.event_type === 'medication' ? await savePhoto(targetEventId) : null;
         // Notes by doctor: counted once the save succeeded, enums only (never
         // the doctor). Moving to another doctor is a (re)link; None is an unlink.
         if (data.event_type === 'appointment' && data.provider_id !== storedProviderId) {
           if (data.provider_id) Analytics.providerLinked({ source: 'edit' });
           else if (storedProviderId) Analytics.providerUnlinked();
         }
-        showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
+        if (photoFailure) showToast(photoFailureMessage(photoFailure), 'error');
+        else showToast(t(isRecurringEdit ? 'addEvent.updatedSeries' : 'addEvent.updated'), 'success');
       } else {
         const created = await createEvent.mutateAsync(data);
         if (data.event_type === 'appointment' && data.provider_id) {
@@ -1760,6 +1894,9 @@ function AddEventForm({
             selectedDrug?.rxcui ? 'suggestion' : usedAsTypedRef.current ? 'as_typed' : 'typed'
           );
         }
+        // The photo goes onto the PRIMARY row once it exists (mobile: before the extra doses).
+        const photoFailure =
+          data.event_type === 'medication' && created?.id ? await savePhoto(created.id) : null;
         // The extra dose rows, after the primary (the wizard's and mobile's sequence). A miss is
         // NOT a success: the caregiver is told which times are missing.
         const failedDoseTimes: string[] = [];
@@ -1837,6 +1974,8 @@ function AddEventForm({
             }),
             'error'
           );
+        } else if (photoFailure) {
+          showToast(photoFailureMessage(photoFailure), 'error');
         } else {
           showToast(t(createdToastKey(eventType)), 'success');
         }
@@ -1865,7 +2004,7 @@ function AddEventForm({
     if (simpleKind === null) return false;
     let revealed = false;
     if (simpleKind === 'medication') {
-      const hidden = ['description', 'recurrence_end_date'];
+      const hidden = ['description', 'recurrence_end_date', 'alert_days_before'];
       if (hidden.some((k) => fieldErrors[k]) && !moreOpen) {
         setMoreOpen(true);
         revealed = true;
@@ -2743,6 +2882,37 @@ function AddEventForm({
     );
   }
 
+  // The photo, refill tracking and prescription details (mobile's `medPhotoRow` + `medAdditionalFields`).
+  // On an edit they appear once the stored values have loaded; if that read failed they stay hidden
+  // (and the save leaves those columns alone) rather than show empty fields that would not save.
+  const medicationExtraFields =
+    isMedication && medDetailsLoad === 'ready' ? (
+      <>
+        <MedicationPhotoField
+          previewUrl={photoPreviewUrl}
+          onPick={pickPhoto}
+          onRemove={removePhoto}
+          disabled={isPending}
+        />
+        <MedicationRefillFields
+          state={medDetails}
+          onChange={(next) => {
+            setMedDetails((prev) => ({ ...prev, ...next }));
+            if ('alertDaysBefore' in next) clearError('alert_days_before');
+          }}
+          asNeeded={isAsNeeded || isAsNeededEdit}
+          refillsManagedElsewhere={medHydration?.refillsManagedElsewhere ?? false}
+          countable={pillsCountable}
+          isEditing={isEditing}
+          doseTimeCount={doseTimeCount}
+          derivedPerDay={derivedPerDay}
+          supplyRate={supplyRate}
+          alertDaysError={errors.alert_days_before}
+          disabled={isPending}
+        />
+      </>
+    ) : null;
+
   const simpleMedicationFields = (
     <div className="flex flex-col gap-6" data-testid="simple-medication-form" data-large-text={largeText}>
       <section
@@ -2953,6 +3123,7 @@ function AddEventForm({
         open={moreOpen}
         onToggle={setMoreOpen}
       >
+        {medicationExtraFields}
         {detailsBlock}
         {endDateBlock}
         {reminderBlock}
@@ -3808,6 +3979,8 @@ function AddEventForm({
             onChange={(e) => setAssignedTo(e.target.value || null)}
           />
         )}
+
+        {medicationExtraFields}
 
         {/* THE EVENT'S OWN DESCRIPTION FIELD — never labelled "Notes".
             "Notes" already names two other things (the shared event-notes

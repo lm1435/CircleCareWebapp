@@ -286,10 +286,8 @@ export function buildFirstRunMedication(input: FirstRunMedicationInput): FirstRu
  * with the first. `track_refills` stays false for the same reason — the route
  * reads the OWNER's flag.
  *
- * WIRE PARITY WITH MOBILE: mobile also clears `pills_per_dose`, a field this
- * repo's `CreateEventRequest` does not model at all. `undefined` and an absent
- * key serialise identically through `JSON.stringify`, so the request bodies are
- * byte-identical either way.
+ * WIRE PARITY WITH MOBILE: `pills_per_dose` is cleared too (mobile's helper does
+ * the same); `undefined` serialises as an absent key.
  */
 export function siblingDosePayload(
   primary: CreateEventRequest,
@@ -313,6 +311,7 @@ export function siblingDosePayload(
     quantity_in_bottle: undefined,
     quantity_remaining: undefined,
     pills_per_day: undefined,
+    pills_per_dose: undefined,
     alert_days_before: undefined,
     scheduled_time: overrides.scheduledTime,
     scheduled_date: overrides.scheduledDate,

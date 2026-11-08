@@ -154,7 +154,17 @@
       "daysOff": "Giorni di pausa",
       "endDate": "Data di fine",
       "assignedTo": "Assegnato a",
-      "duration": "Durata"
+      "duration": "Durata",
+      "pillsRemaining": "Pastiglie rimaste",
+      "quantityOnHand": "Quantità disponibile",
+      "pillsPerDose": "Pastiglie per dose",
+      "pillsPerDoseHelp": "Quante ne prendi in una volta",
+      "pillsPerDayDerived": "{{perDose}} × {{times}} orari di assunzione = {{perDay}} al giorno",
+      "alertDaysBefore": "Avvisa giorni prima che finisca",
+      "prescriberName": "Medico prescrittore",
+      "pharmacyName": "Farmacia",
+      "pharmacyPhone": "Telefono della farmacia",
+      "rxNumber": "Numero di ricetta"
     },
     "placeholders": {
       "appointmentTitle": "es. Visita dal Dott. Rossi",
@@ -267,7 +277,8 @@
       "locationTooLong": "Il luogo può contenere al massimo 250 caratteri.",
       "descriptionTooLong": "I dettagli possono contenere al massimo 850 caratteri.",
       "invalidRecurrenceRule": "Questa opzione di ripetizione non è valida.",
-      "reasonTooLong": "Il campo \"A cosa serve\" può contenere al massimo 100 caratteri."
+      "reasonTooLong": "Il campo \"A cosa serve\" può contenere al massimo 100 caratteri.",
+      "alertDaysRange": "Inserisci un numero da 1 a 90."
     },
     "alerts": {
       "pastTimeEditTitle": "Orario già passato",
@@ -275,7 +286,9 @@
       "continue": "Continua",
       "closePastTime": "Chiudi l'avviso sull'orario passato",
       "someDoseTimesFailed_one": "Salvato, ma non è stato possibile aggiungere {{count}} orario di dose ({{times}}). Apri il farmaco e aggiungilo di nuovo.",
-      "someDoseTimesFailed_other": "Salvato, ma non è stato possibile aggiungere {{count}} orari di dose ({{times}}). Apri il farmaco e aggiungili di nuovo."
+      "someDoseTimesFailed_other": "Salvato, ma non è stato possibile aggiungere {{count}} orari di dose ({{times}}). Apri il farmaco e aggiungili di nuovo.",
+      "photoUploadFailed": "L'evento è stato salvato, ma il caricamento della foto non è riuscito. Puoi riprovare ad aggiungerla più tardi.",
+      "photoRemoveFailed": "Modifiche salvate, ma non è stato possibile rimuovere la foto. Riprova più tardi."
     },
     "durations": {
       "30": "30 min",
@@ -331,7 +344,7 @@
       "howOften": "Con che frequenza?",
       "whoIsGoing": "Chi va?",
       "moreDetails": "Altri dettagli",
-      "moreDetailsSummary": "Istruzioni, data di fine, promemoria",
+      "moreDetailsSummary": "Scorte, farmacia, medico prescrittore, istruzioni, promemoria",
       "startDate": "Data di inizio",
       "starts": "Inizia",
       "addMedication": "Aggiungi farmaco",
@@ -380,7 +393,20 @@
       "titleSelf": "Cosa prendi?",
       "hint": "Solo il nome, la parola grande sulla confezione. La dose è facoltativa.",
       "skip": "Salta per ora"
-    }
+    },
+    "medicationPhoto": "Foto del farmaco",
+    "photoRowTitle": "Aggiungi una foto",
+    "photoRowHint": "Aiuta tutti a riconoscere la pastiglia giusta",
+    "photoAdded": "Foto aggiunta",
+    "changePhoto": "Cambia foto",
+    "removePhoto": "Rimuovi foto",
+    "trackRefills": "Monitora le scorte",
+    "trackRefillsHelp": "Ricevi una notifica quando il farmaco sta per finire",
+    "refillsManagedOnOwner": "Le scorte di questo farmaco sono monitorate nella sua dose principale. Apri quella dose per aggiornare la confezione.",
+    "refillEstimate": "Scorta per circa {{days}} giorni. Avviso quando mancano {{alertDays}} giorni.",
+    "photoPreviewAlt": "Foto del farmaco",
+    "photoTypeError": "Scegli un'immagine JPEG, PNG o WebP.",
+    "photoSizeError": "Questa foto è troppo grande. Scegline una sotto i 2 MB."
   },
   "deleteEvent": {
     "title": "Elimina evento",

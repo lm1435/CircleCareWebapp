@@ -154,7 +154,17 @@
       "daysOff": "Days off",
       "endDate": "End date",
       "assignedTo": "Assigned to",
-      "duration": "Duration"
+      "duration": "Duration",
+      "pillsRemaining": "Pills remaining",
+      "quantityOnHand": "Quantity on hand",
+      "pillsPerDose": "Pills per dose",
+      "pillsPerDoseHelp": "How many you take at one time",
+      "pillsPerDayDerived": "{{perDose}} × {{times}} dose times = {{perDay}} per day",
+      "alertDaysBefore": "Alert days before empty",
+      "prescriberName": "Prescriber",
+      "pharmacyName": "Pharmacy",
+      "pharmacyPhone": "Pharmacy phone",
+      "rxNumber": "Rx number"
     },
     "placeholders": {
       "appointmentTitle": "e.g. Dr. Smith checkup",
@@ -267,7 +277,8 @@
       "locationTooLong": "Location must be 250 characters or fewer.",
       "descriptionTooLong": "Details must be 850 characters or fewer.",
       "invalidRecurrenceRule": "That repeat option isn't valid.",
-      "reasonTooLong": "What it is for must be 100 characters or fewer."
+      "reasonTooLong": "What it is for must be 100 characters or fewer.",
+      "alertDaysRange": "Enter a number from 1 to 90."
     },
     "alerts": {
       "pastTimeEditTitle": "Time already passed",
@@ -275,7 +286,9 @@
       "continue": "Continue",
       "closePastTime": "Close past-time notice",
       "someDoseTimesFailed_one": "Saved, but {{count}} dose time could not be added ({{times}}). Open the medication and add it again.",
-      "someDoseTimesFailed_other": "Saved, but {{count}} dose times could not be added ({{times}}). Open the medication and add them again."
+      "someDoseTimesFailed_other": "Saved, but {{count}} dose times could not be added ({{times}}). Open the medication and add them again.",
+      "photoUploadFailed": "Event saved but photo upload failed. You can try adding the photo later.",
+      "photoRemoveFailed": "Changes saved, but the photo could not be removed. Try again later."
     },
     "durations": {
       "30": "30 min",
@@ -331,7 +344,7 @@
       "howOften": "How often?",
       "whoIsGoing": "Who's going?",
       "moreDetails": "More details",
-      "moreDetailsSummary": "Instructions, end date, reminders",
+      "moreDetailsSummary": "Refills, pharmacy, prescriber, instructions, reminders",
       "startDate": "Start date",
       "starts": "Starts",
       "addMedication": "Add medication",
@@ -380,7 +393,20 @@
       "titleSelf": "What do you take?",
       "hint": "Just the name, the big word on the bottle. Dose is optional.",
       "skip": "Skip for now"
-    }
+    },
+    "medicationPhoto": "Medication photo",
+    "photoRowTitle": "Add a photo",
+    "photoRowHint": "Helps everyone confirm the right pill",
+    "photoAdded": "Photo added",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove photo",
+    "trackRefills": "Track refills",
+    "trackRefillsHelp": "Get notified when medication is running low",
+    "refillsManagedOnOwner": "Refills for this medication are tracked on its main dose. Open that dose to update the bottle.",
+    "refillEstimate": "~{{days}} days supply. Alert when {{alertDays}} days left.",
+    "photoPreviewAlt": "Photo of the medication",
+    "photoTypeError": "Choose a JPEG, PNG or WebP image.",
+    "photoSizeError": "This photo is too large. Choose one under 2 MB."
   },
   "deleteEvent": {
     "title": "Delete event",

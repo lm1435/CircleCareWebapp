@@ -387,6 +387,8 @@ export interface CreateEventRequest {
   quantity_in_bottle?: number; // Initial quantity
   quantity_remaining?: number; // Current remaining
   pills_per_day?: number; // Pills taken per day
+  /** Pills in ONE dose: what each confirmation deducts from the bottle (mobile sends it from the refill section). */
+  pills_per_dose?: number;
   /**
    * The dose-time row that owns this medication's BOTTLE; null/absent means
    * this row owns it. Several dose times of one medication ("twice daily") are
@@ -858,11 +860,17 @@ export const eventFormSchema = z.object({
   quantity_in_bottle: z.number().int().min(1).optional(),
   quantity_remaining: z.number().int().min(0).optional(),
   pills_per_day: z.number().int().min(1).optional(),
+  pills_per_dose: z.number().int().min(1).optional(),
   // Mirrors the backend's `refill_group_id: z.string().uuid().nullable().optional()`.
   // Sibling dose rows created by the first-run wizard carry the primary row's
   // id here so every dose time decrements ONE bottle.
   refill_group_id: z.string().uuid().nullable().optional(),
-  alert_days_before: z.number().int().min(1).max(90).optional(),
+  alert_days_before: z
+    .number()
+    .int()
+    .min(1, { message: 'alertDaysRange' })
+    .max(90, { message: 'alertDaysRange' })
+    .optional(),
 
   // Scheduling — naive local values in the care recipient's timezone
   scheduled_date: z.string().max(10),

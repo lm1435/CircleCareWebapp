@@ -52,7 +52,9 @@
     },
     "alerts": {
       "someDoseTimesFailed_one": "Guardado, mas horários de dose não adicionados: {{count}} ({{times}}). Abra o medicamento e adicione novamente.",
-      "someDoseTimesFailed_other": "Guardado, mas {{count}} horários de dose não puderam ser adicionados ({{times}}). Abra o medicamento e adicione-os novamente."
+      "someDoseTimesFailed_other": "Guardado, mas {{count}} horários de dose não puderam ser adicionados ({{times}}). Abra o medicamento e adicione-os novamente.",
+      "photoUploadFailed": "O evento foi guardado, mas o envio da fotografia falhou. Pode tentar adicionar a fotografia mais tarde.",
+      "photoRemoveFailed": "As alterações foram guardadas, mas não foi possível remover a fotografia. Tente novamente mais tarde."
     },
     "dualTimezoneHint": "O seu horário / horário de {{name}} ({{timezone}})",
     "dualTimezoneHintGeneric": "O seu horário / horário da pessoa ({{timezone}})",
@@ -81,6 +83,16 @@
       "pickTime": "Escolher hora",
       "everyWeek": "Todas as semanas",
       "taskMoreHint": "Detalhes, lembretes, data de fim"
+    },
+    "refillsManagedOnOwner": "A reposição deste medicamento é acompanhada na dose principal. Abra essa dose para atualizar a embalagem.",
+    "refillEstimate": "Stock para ~{{days}} dias. Alerta quando restarem {{alertDays}} dias.",
+    "fields": {
+      "quantityOnHand": "Quantidade em stock",
+      "pillsPerDoseHelp": "Quantos toma de uma só vez"
+    },
+    "photoSizeError": "Esta fotografia é demasiado grande. Escolha uma com menos de 2 MB.",
+    "validation": {
+      "alertDaysRange": "Introduza um número de 1 a 90."
     }
   },
   "deleteEvent": {

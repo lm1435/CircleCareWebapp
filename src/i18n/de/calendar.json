@@ -154,7 +154,17 @@
       "daysOff": "Pausentage",
       "endDate": "Enddatum",
       "assignedTo": "Zugewiesen an",
-      "duration": "Dauer"
+      "duration": "Dauer",
+      "pillsRemaining": "Verbleibende Tabletten",
+      "quantityOnHand": "Vorrat",
+      "pillsPerDose": "Tabletten pro Dosis",
+      "pillsPerDoseHelp": "Wie viele auf einmal eingenommen werden",
+      "pillsPerDayDerived": "{{perDose}} × {{times}} Einnahmezeiten = {{perDay}} pro Tag",
+      "alertDaysBefore": "Erinnerung Tage vor Vorratsende",
+      "prescriberName": "Verschreibende Ärztin / verschreibender Arzt",
+      "pharmacyName": "Apotheke",
+      "pharmacyPhone": "Telefonnummer der Apotheke",
+      "rxNumber": "Rezeptnummer"
     },
     "placeholders": {
       "appointmentTitle": "z. B. Kontrolle bei Dr. Schmidt",
@@ -267,7 +277,8 @@
       "locationTooLong": "Der Ort darf höchstens 250 Zeichen lang sein.",
       "descriptionTooLong": "Die Details dürfen höchstens 850 Zeichen lang sein.",
       "invalidRecurrenceRule": "Diese Wiederholungsoption ist nicht gültig.",
-      "reasonTooLong": "Die Angabe, wofür es ist, darf höchstens 100 Zeichen lang sein."
+      "reasonTooLong": "Die Angabe, wofür es ist, darf höchstens 100 Zeichen lang sein.",
+      "alertDaysRange": "Geben Sie eine Zahl von 1 bis 90 ein."
     },
     "alerts": {
       "pastTimeEditTitle": "Uhrzeit bereits vorbei",
@@ -275,7 +286,9 @@
       "continue": "Weiter",
       "closePastTime": "Hinweis zur vergangenen Uhrzeit schließen",
       "someDoseTimesFailed_one": "Gespeichert, aber {{count}} Einnahmezeit konnte nicht hinzugefügt werden ({{times}}). Öffnen Sie das Medikament und fügen Sie sie erneut hinzu.",
-      "someDoseTimesFailed_other": "Gespeichert, aber {{count}} Einnahmezeiten konnten nicht hinzugefügt werden ({{times}}). Öffnen Sie das Medikament und fügen Sie sie erneut hinzu."
+      "someDoseTimesFailed_other": "Gespeichert, aber {{count}} Einnahmezeiten konnten nicht hinzugefügt werden ({{times}}). Öffnen Sie das Medikament und fügen Sie sie erneut hinzu.",
+      "photoUploadFailed": "Der Eintrag wurde gespeichert, aber das Foto konnte nicht hochgeladen werden. Sie können es später hinzufügen.",
+      "photoRemoveFailed": "Die Änderungen wurden gespeichert, aber das Foto konnte nicht entfernt werden. Versuchen Sie es später erneut."
     },
     "durations": {
       "30": "30 Min.",
@@ -331,7 +344,7 @@
       "howOften": "Wie oft?",
       "whoIsGoing": "Wer geht mit?",
       "moreDetails": "Weitere Details",
-      "moreDetailsSummary": "Hinweise, Enddatum, Erinnerungen",
+      "moreDetailsSummary": "Nachschub, Apotheke, Ärztin/Arzt, Hinweise, Erinnerungen",
       "startDate": "Startdatum",
       "starts": "Beginnt",
       "addMedication": "Medikament hinzufügen",
@@ -380,7 +393,20 @@
       "titleSelf": "Was nehmen Sie ein?",
       "hint": "Nur der Name, das große Wort auf der Packung. Die Dosis ist optional.",
       "skip": "Vorerst überspringen"
-    }
+    },
+    "medicationPhoto": "Foto des Medikaments",
+    "photoRowTitle": "Foto hinzufügen",
+    "photoRowHint": "Hilft allen, das richtige Medikament zu erkennen",
+    "photoAdded": "Foto hinzugefügt",
+    "changePhoto": "Foto ändern",
+    "removePhoto": "Foto entfernen",
+    "trackRefills": "Nachschub verfolgen",
+    "trackRefillsHelp": "Benachrichtigung erhalten, wenn der Vorrat zur Neige geht",
+    "refillsManagedOnOwner": "Der Nachschub für dieses Medikament wird bei der Hauptdosis verfolgt. Öffnen Sie diese Dosis, um die Packung zu aktualisieren.",
+    "refillEstimate": "Vorrat für ca. {{days}} Tage. Erinnerung, wenn noch {{alertDays}} Tage übrig sind.",
+    "photoPreviewAlt": "Foto des Medikaments",
+    "photoTypeError": "Wählen Sie ein JPEG-, PNG- oder WebP-Bild.",
+    "photoSizeError": "Dieses Foto ist zu groß. Wählen Sie eines unter 2 MB."
   },
   "deleteEvent": {
     "title": "Eintrag löschen",
