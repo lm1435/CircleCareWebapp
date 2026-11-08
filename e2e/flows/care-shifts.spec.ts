@@ -127,7 +127,7 @@ test.describe('premium owner', () => {
     // The simple layout: four headed sections, tiles for the choices, a folded "More details".
     await expect(form.getByRole('heading', { name: /^Who's with E2E/ })).toBeVisible();
     await expect(form.getByRole('heading', { level: 3 })).toHaveText([
-      "What's the shift called?",
+      "What's the shift called? *", // the aria-hidden required asterisk is part of the visible text
       'When?',
       'How often?',
       /^Who's with E2E/,
