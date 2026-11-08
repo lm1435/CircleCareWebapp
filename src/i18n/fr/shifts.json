@@ -166,6 +166,7 @@
     "legendOff": "Repos",
     "cycleHint24": "Chaque jour est une garde de {{start}} à {{end}}. Elles s’enchaînent.",
     "cycleWas": "avant : {{old}}",
+    "cycleRange": "{{from}} – {{to}}",
     "starting": "À partir du",
     "firstTime": "Première fois : {{date}}",
     "fromNote": "Les gardes avant le {{date}} restent telles quelles, y compris la personne qui les a assurées. Le nouveau planning commence le {{date}}.",

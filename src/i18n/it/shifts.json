@@ -166,6 +166,7 @@
     "legendOff": "Riposo",
     "cycleHint24": "Ogni giorno è un turno dalle {{start}} alle {{end}}. Si susseguono senza interruzioni.",
     "cycleWas": "prima {{old}}",
+    "cycleRange": "{{from}} – {{to}}",
     "starting": "Dal",
     "firstTime": "Prima volta: {{date}}",
     "fromNote": "I turni prima del {{date}} restano come sono, compreso chi li ha coperti. Il nuovo piano inizia il {{date}}.",

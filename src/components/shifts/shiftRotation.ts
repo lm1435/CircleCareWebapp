@@ -41,6 +41,8 @@ export interface PreviewCell {
   day: number;
   /** 1..12 on the 1st of a month (the cell carries a month label), else null. */
   firstOfMonth: number | null;
+  /** The cell also names its month ("Nov 7"): the 1st of a month, and the FIRST cell of the preview. */
+  labelled: boolean;
   on: boolean;
 }
 
@@ -66,10 +68,17 @@ export function buildCyclePreview(
       date,
       day,
       firstOfMonth: day === 1 ? Number(date.slice(5, 7)) : null,
+      labelled: day === 1 || i === 0,
       on: i % period < on,
     });
   }
   return { leading: (getDayOfWeek(startDate) - weekStart + 7) % 7, cells };
+}
+
+/** First and last day of the preview and whether they sit in different years (the caption then names the years). */
+export function previewRange(startDate: string): { from: string; to: string; crossesYear: boolean } {
+  const to = addDays(startDate, PREVIEW_WEEKS * 7 - 1);
+  return { from: startDate, to, crossesYear: startDate.slice(0, 4) !== to.slice(0, 4) };
 }
 
 export interface RotationPosition {

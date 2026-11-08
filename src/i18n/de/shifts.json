@@ -166,6 +166,7 @@
     "legendOff": "Frei",
     "cycleHint24": "Jeder Tag ist eine Schicht von {{start}} bis {{end}}. Sie schließen nahtlos aneinander an.",
     "cycleWas": "vorher {{old}}",
+    "cycleRange": "{{from}} – {{to}}",
     "starting": "Ab",
     "firstTime": "Erstes Mal: {{date}}",
     "fromNote": "Schichten vor dem {{date}} bleiben unverändert, auch wer sie übernommen hat. Der neue Plan beginnt am {{date}}.",

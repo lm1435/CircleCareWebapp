@@ -166,6 +166,7 @@
     "legendOff": "Libre",
     "cycleHint24": "Cada día es un turno de {{start}} a {{end}}, uno tras otro.",
     "cycleWas": "antes {{old}}",
+    "cycleRange": "{{from}} – {{to}}",
     "starting": "Desde",
     "firstTime": "Primera vez: {{date}}",
     "fromNote": "Los turnos anteriores al {{date}} se quedan como están, incluido quién los cubrió. El nuevo horario empieza el {{date}}.",

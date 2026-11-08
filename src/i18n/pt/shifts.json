@@ -166,6 +166,7 @@
     "legendOff": "Folga",
     "cycleHint24": "Cada dia é um plantão das {{start}} às {{end}}. Eles seguem um após o outro.",
     "cycleWas": "antes {{old}}",
+    "cycleRange": "{{from}} – {{to}}",
     "starting": "A partir de",
     "firstTime": "Primeira vez: {{date}}",
     "fromNote": "Os plantões antes de {{date}} ficam como estão, inclusive quem os cobriu. A nova escala começa em {{date}}.",

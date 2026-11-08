@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TextField, Text } from '@/components/ui';
 import { formatDateForDisplay, getWeekdayName, orderedWeekdays } from '@/components/calendar/dateMath';
-import { buildCyclePreview, parseCycleCount } from './shiftRotation';
+import { buildCyclePreview, parseCycleCount, previewRange } from './shiftRotation';
 
 export interface ShiftCyclePanelProps {
   /** The typed counts (strings: the field is being edited). */
@@ -45,6 +45,18 @@ export function ShiftCyclePanel({
   const valid = on !== null && off !== null && !!startDate;
   const weekdays = orderedWeekdays(language);
   const preview = valid ? buildCyclePreview(startDate, on, off, weekdays[0]) : null;
+  // "Nov 7 – Dec 18"; both ends carry the year only when the range crosses one.
+  let range = '';
+  if (preview) {
+    const r = previewRange(startDate);
+    const fmt: Intl.DateTimeFormatOptions = r.crossesYear
+      ? { month: 'short', day: 'numeric', year: 'numeric' }
+      : { month: 'short', day: 'numeric' };
+    range = t('shifts:form.cycleRange', {
+      from: formatDateForDisplay(r.from, fmt, language),
+      to: formatDateForDisplay(r.to, fmt, language),
+    });
+  }
 
   return (
     <div
@@ -89,6 +101,9 @@ export function ShiftCyclePanel({
         <div className="flex flex-col gap-2">
           {/* Decorative: the summary line above says the same in words. */}
           <div aria-hidden="true" data-testid="shift-cycle-preview" className="grid grid-cols-7 gap-1">
+          <Text variant="caption" as="p" data-testid="shift-cycle-range" className="m-0">
+            {range}
+          </Text>
             {weekdays.map((d) => (
               <span key={d} className="text-center text-xs font-semibold text-ink-2">
                 {getWeekdayName(d, 'narrow', language)}
@@ -109,7 +124,7 @@ export function ShiftCyclePanel({
                     : 'border-line-strong bg-cream text-ink'
                 }`}
               >
-                {cell.firstOfMonth !== null
+                {cell.labelled
                   ? formatDateForDisplay(cell.date, { month: 'short', day: 'numeric' }, language)
                   : cell.day}
               </span>

@@ -166,6 +166,7 @@
     "legendOff": "Off",
     "cycleHint24": "Each day is one {{start}} to {{end}} shift. They run back to back.",
     "cycleWas": "was {{old}}",
+    "cycleRange": "{{from}} – {{to}}",
     "starting": "Starting",
     "firstTime": "First time: {{date}}",
     "fromNote": "Shifts before {{date}} stay as they are, including who covered them. The new schedule starts on {{date}}.",
