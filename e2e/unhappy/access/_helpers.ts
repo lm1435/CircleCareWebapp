@@ -1,5 +1,6 @@
 import type { APIRequestContext, APIResponse, Locator, Page } from '@playwright/test';
 import { expect, uniqueLabel, type PersonaHandle } from '../../fixtures';
+import { clickWeekChip } from '../../helpers';
 import { sqlExec } from '../../db';
 import { adminUpload } from '../../isolation';
 import { circleTimezone, dateInTz } from '../../notesFirstClassShared';
@@ -424,9 +425,8 @@ export const SURFACES: Surface[] = [
       const { name, inPreviousWeek } = ensurePastDoseYesterday(d);
       await openCalendar(page, d);
       if (inPreviousWeek) await page.getByRole('button', { name: 'Previous week', exact: true }).click();
-      const chip = page.getByRole('button', { name: new RegExp(`^${rx(name)}, Medication`) }).first();
-      await expect(chip).toBeVisible({ timeout: 20_000 });
-      await chip.click();
+      // The seeded 8:00 dose folds into a same-slot "N meds" chip when other meds share the minute.
+      await clickWeekChip(page, page.getByRole('grid'), new RegExp(`^${rx(name)}, Medication`));
       const dialog = page.getByRole('dialog');
       await expect(dialog.getByText(name).first()).toBeVisible();
       return [
@@ -494,8 +494,11 @@ export const SURFACES: Surface[] = [
     async open(page, d) {
       await gotoCirclePage(page, d.circleId, 'notes');
       await expect(page.getByText(need(d.careNoteBody, 'a care note')).first()).toBeVisible({ timeout: 20_000 });
+      // The composer starts collapsed into an "Add a note" button (owner 2026-11-07); open it when offered.
+      const trigger = page.getByRole('button', { name: 'Add a note', exact: true });
+      if ((await trigger.count()) > 0) await trigger.click();
       return [
-        { label: 'note composer', locator: page.getByRole('button', { name: 'Add a note', exact: true }) },
+        { label: 'note composer', locator: page.getByLabel(/^Add a note/) },
         { label: 'Post', locator: page.getByRole('button', { name: 'Post', exact: true }), offered: 'visible' },
         { label: 'note row actions', locator: page.getByRole('button', { name: /^Actions for note by / }) },
       ];

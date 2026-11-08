@@ -1,4 +1,5 @@
 import type { Locator, Page, Route } from '@playwright/test';
+import { clickWeekChip } from '../helpers';
 import { test, expect } from '../fixtures';
 import { apiSession, dbQuery, sqlStr, type ApiSession } from '../unhappy';
 import { sqlExec } from '../db';
@@ -263,9 +264,7 @@ test('editing the evening time of a twice-daily medication from the Calendar kee
   const confs = { edited: confirmationsOf(s.evening), other: confirmationsOf(s.morning) };
   const tomorrow = addDays(s.today, 1);
   await gotoWeekContaining(page, circleId, s.today, tomorrow);
-  const chip = dayCell(page, tomorrow).getByRole('button', { name: new RegExp(`^${s.name}.*8:00 PM`) });
-  await expect(chip).toHaveCount(1, { timeout: 20_000 });
-  await chip.click();
+  await clickWeekChip(page, dayCell(page, tomorrow), new RegExp(`^${s.name}.*8:00 PM`));
   const detail = page.getByRole('dialog');
   await expect(detail).toBeVisible({ timeout: 10_000 });
   await detail.getByRole('button', { name: 'More', exact: true }).click();

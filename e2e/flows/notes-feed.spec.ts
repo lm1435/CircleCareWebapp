@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import { openNoteComposer } from '../helpers';
+import { openNoteComposer, clickWeekChip } from '../helpers';
 import { test, expect } from '../fixtures';
 import { apiSession, dbQuery, sqlStr, type ApiSession } from '../unhappy';
 import { assertLocalDbTargets, sqlExec } from '../db';
@@ -89,9 +89,7 @@ function dayCell(page: Page, date: string): Locator {
 }
 
 async function openChip(page: Page, date: string, titleRe: RegExp): Promise<Locator> {
-  const chip = dayCell(page, date).getByRole('button', { name: titleRe });
-  await expect(chip.first()).toBeVisible({ timeout: 20_000 });
-  await chip.first().click();
+  await clickWeekChip(page, dayCell(page, date), titleRe);
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   // exact: true — the appointment title itself contains "Notes" nowhere, but

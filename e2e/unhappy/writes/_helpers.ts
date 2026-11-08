@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, type Request, type Route } from '@playwright/test';
 import { sqlExec } from '../../db';
-import { expandAllDayOverflow } from '../../helpers';
+import { expandAllDayOverflow, clickWeekChip } from '../../helpers';
 import { gotoCalendarSettled } from '../../notesFirstClassShared';
 import {
   countRequests,
@@ -212,9 +212,7 @@ export async function openCalendarEvent(
   const single = cell.getByRole('button', { name: /more all-day event/i });
   if ((await single.count()) > 0) await single.first().click();
   const titleRe = new RegExp(escapeRe(title));
-  const chip = cell.getByRole('button', { name: titleRe }).first();
-  await expect(chip).toBeVisible({ timeout: 20_000 });
-  await chip.click();
+  await clickWeekChip(page, cell, titleRe);
   const dialog = page.getByRole('dialog', { name: titleRe });
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   return dialog;

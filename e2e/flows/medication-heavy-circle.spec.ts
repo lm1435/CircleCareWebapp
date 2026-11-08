@@ -1,4 +1,5 @@
 import type { Page, Route } from '@playwright/test';
+import { weekChipLabels } from '../helpers';
 import { test, expect } from '../fixtures';
 import { sqlExec } from '../db';
 import { apiSession, dbCount, dbQuery, sqlStr, type ApiSession } from '../unhappy';
@@ -234,9 +235,12 @@ test.describe('heavy circle (25 meds, 29 doses a day, >1000 logged doses)', () =
       await stepWeeks(page, weekOffset(today, day));
       const cell = dayCell(page, day);
       await expect(cell.first()).toBeVisible({ timeout: 20_000 });
-      const chips = cell.getByRole('button', { name: new RegExp(`^${escapeRegExp(prefix)}`) });
-      await expect(chips).toHaveCount(series.length, { timeout: 25_000 });
-      const labels = await chips.evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? ''));
+      // Same-type doses at one minute fold into one "N meds" chip; count and read them through its list.
+      const chipName = new RegExp(`^${escapeRegExp(prefix)}`);
+      await expect
+        .poll(async () => (await weekChipLabels(page, cell, chipName)).length, { timeout: 25_000 })
+        .toBe(series.length);
+      const labels = await weekChipLabels(page, cell, chipName);
       expect(labels.filter((l) => /Not marked|Pending/.test(l)), 'week chips without an answer').toEqual([]);
     });
 

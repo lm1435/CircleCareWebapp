@@ -1,7 +1,7 @@
 import { request as apiRequest, type Locator, type Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import type { IsolatedAccount } from '../isolation';
-import { checkA11y, pinRecipientZoneToBrowser } from '../helpers';
+import { checkA11y, pinRecipientZoneToBrowser, weekChipCount, clickWeekChip } from '../helpers';
 import { gotoCalendarSettled } from '../notesFirstClassShared';
 
 // Medication lifecycle flows (Medications page — /circles/:id/meds).
@@ -282,22 +282,23 @@ test.describe('medication lifecycle', () => {
     test.slow(); // multi-surface round-trip + two axe scans — needs 3x timeout
     const name = uniqueMedName('roundtrip');
     const dosage = '5 mg';
-    const chip = page.getByRole('button', { name: new RegExp(name) });
+    // Same-type doses at one minute fold into one "N meds" chip: count through its list (weekChipCount).
+    const chipCount = (): Promise<number> => weekChipCount(page, page.getByRole('grid'), new RegExp(name));
 
     // Start the series a WEEK AGO so it has real history to check after the
     // discontinue — "the past stays" is only assertable if a past dose exists.
     await createDailyMed(page, circleId, name, dosage, '08:00', daysAgoISO(7));
     // The new series renders on the calendar (recurring → at least one chip).
-    await expect(chip.first()).toBeVisible({ timeout: 20_000 });
+    await expect.poll(chipCount, { timeout: 20_000 }).toBeGreaterThan(0);
 
     // NEXT week HAS doses before the discontinue. Without this, "next week has
     // none" below is an absence that a week which never showed the series
     // would satisfy just as well.
     await gotoCalendarSettled(page, circleId);
     await stepWeeks(page, 1);
-    await expect(chip.first(), 'next week shows the series before it is stopped').toBeVisible({
-      timeout: 20_000,
-    });
+    await expect
+      .poll(chipCount, { timeout: 20_000, message: 'next week shows the series before it is stopped' })
+      .toBeGreaterThan(0);
 
     // --- Active roster shows name + dosage ---
     await page.goto(`/circles/${circleId}/meds`, { waitUntil: 'domcontentloaded' });
@@ -337,7 +338,7 @@ test.describe('medication lifecycle', () => {
 
     // NEXT week is entirely after the stop instant → not a single occurrence.
     await stepWeeks(page, 1);
-    await expect(chip).toHaveCount(0, { timeout: 20_000 });
+    await expect.poll(chipCount, { timeout: 20_000 }).toBe(0);
 
     // PREVIOUS week is entirely before today, and the series started 7 days ago,
     // so it always contains at least one occurrence (see daysAgoISO). Those
@@ -345,11 +346,10 @@ test.describe('medication lifecycle', () => {
     // TEXT (never colour alone — WCAG 2.1 AA 1.4.1) in the chip's accessible
     // name. Under the old behaviour this count was 0 — the bug this asserts.
     await stepWeeks(page, -2);
-    await expect(chip.first()).toBeVisible({ timeout: 20_000 });
-    const inactiveChip = page
-      .getByRole('button', { name: new RegExp(`${name}.*Inactive`) })
-      .first();
-    await expect(inactiveChip).toBeVisible({ timeout: 20_000 });
+    await expect.poll(chipCount, { timeout: 20_000 }).toBeGreaterThan(0);
+    await expect
+      .poll(() => weekChipCount(page, page.getByRole('grid'), new RegExp(`${name}.*Inactive`)), { timeout: 20_000 })
+      .toBeGreaterThan(0);
 
     // ...and that historical dose is still ANSWERABLE. Only the medication is
     // inactive; the dose is one the backend already found due, so the detail
@@ -363,7 +363,7 @@ test.describe('medication lifecycle', () => {
     // DOSE_EARLY_CONFIRM_WINDOW_MINUTES (2h) before the scheduled moment
     // (utils/timezone.ts `isDoseConfirmable`), so a dose further out than that
     // renders no controls at all and this would fail for the wrong reason.
-    await inactiveChip.click();
+    await clickWeekChip(page, page.getByRole('grid'), new RegExp(`${name}.*Inactive`));
     const doseDetail = page.getByRole('dialog').filter({ hasText: name });
     await expect(doseDetail).toBeVisible({ timeout: 20_000 });
     await expect(doseDetail.getByText('Inactive').first()).toBeVisible();
@@ -393,7 +393,7 @@ test.describe('medication lifecycle', () => {
 
     // --- Back on the calendar ---
     await gotoCalendarSettled(page, circleId);
-    await expect(chip.first()).toBeVisible({ timeout: 20_000 });
+    await expect.poll(chipCount, { timeout: 20_000 }).toBeGreaterThan(0);
     // Cleanup: afterEach API sweep.
   });
 
@@ -449,7 +449,8 @@ test.describe('medication lifecycle', () => {
     await pinRecipientZoneToBrowser(page, account, circleId);
     const name = uniqueMedName('wholemed');
     const dosage = '20 mg';
-    const chip = page.getByRole('button', { name: new RegExp(name) });
+    // Same-type doses at one minute fold into one "N meds" chip: count through its list (weekChipCount).
+    const chipCount = (): Promise<number> => weekChipCount(page, page.getByRole('grid'), new RegExp(name));
 
     // Two series of the SAME name + dose at different times (morning/evening).
     // The times are asserted verbatim below ("8:00 AM"/"8:00 PM" on the roster
@@ -462,7 +463,7 @@ test.describe('medication lifecycle', () => {
     await createDailyMed(page, circleId, name, dosage, '20:00');
     await gotoCalendarSettled(page, circleId);
     await stepWeeks(page, 1);
-    await expect(chip.first()).toBeVisible({ timeout: 20_000 });
+    await expect.poll(chipCount, { timeout: 20_000 }).toBeGreaterThan(0);
     // EACH series, by its own time. A bare `chip.count() >= 2` passed with ONE
     // series: a single daily series already puts seven chips in the week. The
     // chip's accessible name carries its time (WeekView.tsx ariaLabel:
@@ -472,11 +473,9 @@ test.describe('medication lifecycle', () => {
       ['8:00', 'AM'],
       ['8:00', 'PM'],
     ] as const) {
-      const seriesChip = page.getByRole('button', {
-        name: new RegExp(`${name}.*\\b${time}\\s*${meridiem}\\b`),
-      });
+      const seriesName = new RegExp(`${name}.*\\b${time}\\s*${meridiem}\\b`);
       await expect
-        .poll(() => seriesChip.count(), {
+        .poll(() => weekChipCount(page, page.getByRole('grid'), seriesName), {
           timeout: 20_000,
           message: `next week shows doses of the ${time} ${meridiem} series`,
         })
@@ -523,7 +522,7 @@ test.describe('medication lifecycle', () => {
     // unambiguously after it, so this is the deterministic form of "gone".
     await gotoCalendarSettled(page, circleId);
     await stepWeeks(page, 1);
-    await expect(chip).toHaveCount(0, { timeout: 20_000 });
+    await expect.poll(chipCount, { timeout: 20_000 }).toBe(0);
     // Cleanup: afterEach API sweep (both series roots).
   });
 });

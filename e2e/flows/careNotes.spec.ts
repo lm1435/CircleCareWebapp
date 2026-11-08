@@ -1,4 +1,5 @@
 import { test, expect, uniqueLabel } from '../fixtures';
+import { openNoteComposer } from '../helpers';
 
 // Daily Care Notes write flow: compose a note (body + mood chip + category
 // chip) on the Notes page → verify it appears in Today with its pills → edit
@@ -23,8 +24,7 @@ test('compose, edit, and delete a daily care note', async ({ page, circleId }) =
   });
 
   // --- Compose: body + mood + one category, then post.
-  const composer = page.getByLabel(/^Add a note/);
-  await expect(composer).toBeVisible({ timeout: 20_000 });
+  const composer = await openNoteComposer(page);
   await composer.fill(body);
   // Mood is a ChipSelect — single-select, so it's role="radio" (aria-checked).
   // Category stays a plain aria-pressed button (multi-select, NoteComposer.tsx).
@@ -111,7 +111,7 @@ test('compose, edit, and delete a daily care note', async ({ page, circleId }) =
   await expect(page.getByRole('heading', { name: 'Notes', exact: true })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByLabel(/^Add a note/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Add a note', exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('ul[aria-busy="true"]')).toHaveCount(0, { timeout: 20_000 });
   await expect(
     page

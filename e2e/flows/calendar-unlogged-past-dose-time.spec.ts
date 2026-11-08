@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures';
+import { weekChipLabels } from '../helpers';
 import { apiSession, sqlStr, type ApiSession } from '../unhappy';
 import { sqlExec } from '../db';
 import { dayCell, escapeRegExp, gotoWeekContaining } from '../notesFirstClassShared';
@@ -99,13 +100,15 @@ test("a past day's unanswered dose shows no clock time while a dose taken that d
 
   // Week view: the chips on the past day.
   await gotoWeekContaining(page, circleId, today, day);
-  const takenChip = dayCell(page, day).getByRole('button', { name: new RegExp(`^${escapeRegExp(takenName)}`) });
-  const openChip = dayCell(page, day).getByRole('button', { name: new RegExp(`^${escapeRegExp(unansweredName)}`) });
-  await expect(takenChip).toHaveCount(1, { timeout: 20_000 });
-  await expect(openChip).toHaveCount(1);
-  await expect(openChip, 'unanswered past chip: no time in its name').not.toHaveAccessibleName(CLOCK);
-  await expect(openChip, 'unanswered past chip: no time on screen').not.toHaveText(CLOCK);
-  await expect(openChip).toHaveAccessibleName(/Not marked/);
+  // Same-type doses at one minute fold into one "N meds" chip, so read the chips through weekChipLabels.
+  const cell = dayCell(page, day);
+  await expect
+    .poll(() => weekChipLabels(page, cell, new RegExp(`^${escapeRegExp(takenName)}`)).then((l) => l.length), { timeout: 20_000 })
+    .toBe(1);
+  const openLabels = await weekChipLabels(page, cell, new RegExp(`^${escapeRegExp(unansweredName)}`));
+  expect(openLabels).toHaveLength(1);
+  expect(openLabels[0], 'unanswered past chip: no time in its name').not.toMatch(CLOCK);
+  expect(openLabels[0]).toMatch(/Not marked/);
 
   // Day view of that day.
   await page.getByRole('button', { name: new RegExp(`^${escapeRegExp(longDate(day))}$`) }).click();

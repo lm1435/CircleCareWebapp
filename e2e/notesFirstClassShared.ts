@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { clickWeekChip, weekChipCount } from './helpers';
 import { expect } from './fixtures';
 import { apiSession, type ApiSession } from './unhappy';
 import { sqlExec } from './db';
@@ -213,9 +214,7 @@ export async function gotoWeekContaining(
 // --- Event detail dialog helpers ---------------------------------------------
 
 export async function openChip(page: Page, date: string, titleRe: RegExp): Promise<Locator> {
-  const chip = dayCell(page, date).getByRole('button', { name: titleRe });
-  await expect(chip.first()).toBeVisible({ timeout: 20_000 });
-  await chip.first().click();
+  await clickWeekChip(page, dayCell(page, date), titleRe);
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   return dialog;
@@ -232,15 +231,16 @@ export async function assertChipAbsent(page: Page, date: string, titleRe: RegExp
   await expect(dayCell(page, date).first(), `day cell ${date} must be rendered`).toBeVisible({
     timeout: 20_000,
   });
-  await expect(dayCell(page, date).getByRole('button', { name: titleRe })).toHaveCount(0, {
-    timeout: 15_000,
-  });
+  // Counts the chips folded into a same-slot chip's list too, so a collapsed day cannot pass vacuously.
+  await expect
+    .poll(() => weekChipCount(page, dayCell(page, date), titleRe), { timeout: 15_000 })
+    .toBe(0);
 }
 
 export async function assertChipPresent(page: Page, date: string, titleRe: RegExp): Promise<void> {
-  await expect(dayCell(page, date).getByRole('button', { name: titleRe }).first()).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect
+    .poll(() => weekChipCount(page, dayCell(page, date), titleRe), { timeout: 15_000 })
+    .toBeGreaterThan(0);
 }
 
 /**

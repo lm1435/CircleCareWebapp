@@ -285,6 +285,12 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
+function minutePast(time: string, n: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + n;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
 function hourLater(time: string): string {
   const [h, m] = time.split(':').map(Number);
   return `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -309,7 +315,8 @@ test.describe('Week view: initial auto-scroll leaves the lead-in visible below t
         // in view at scrollLeft 0 at every width). Monday gets later ones so
         // the week has more than one busy day.
         await appointment(session, circleId, first, sunday, sc.firstTime);
-        await appointment(session, circleId, `${PREFIX}pair_${tag}`, sunday, sc.firstTime);
+        // 5 minutes later, not the same minute: same-type items at one minute fold into one "N appointments" chip.
+        await appointment(session, circleId, `${PREFIX}pair_${tag}`, sunday, minutePast(sc.firstTime, 5));
         if (sc.withHourLater) await appointment(session, circleId, later, sunday, hourLater(sc.firstTime));
         await appointment(session, circleId, `${PREFIX}mon_${tag}`, monday, '23:00');
 

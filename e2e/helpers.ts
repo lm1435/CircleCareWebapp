@@ -318,3 +318,58 @@ export async function openNoteComposer(page: Page): Promise<Locator> {
   await expect(field).toBeVisible({ timeout: 10_000 });
   return field;
 }
+
+/**
+ * Week chips: same-type items that start at the SAME minute collapse into ONE "N meds" / "N tasks" chip that
+ * opens a list (owner 2026-11-07). Specs that need one specific item click it through this helper, which
+ * clicks the item's own chip when it is on the grid and otherwise opens each collapsed slot chip in `scope`
+ * until it finds the item in the list (list items carry the same accessible name the chip would have had).
+ */
+export async function clickWeekChip(page: Page, scope: Locator, name: RegExp, timeout = 20_000): Promise<void> {
+  const chip = scope.getByRole('button', { name }).first();
+  const slots = scope.locator('button[data-slot-count]');
+  await expect(chip.or(slots.first()).first()).toBeVisible({ timeout });
+  if (await chip.isVisible()) {
+    await chip.click();
+    return;
+  }
+  const n = await slots.count();
+  for (let i = 0; i < n; i += 1) {
+    await slots.nth(i).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    const item = dialog.getByRole('button', { name }).first();
+    if ((await item.count()) > 0) {
+      await item.click();
+      return;
+    }
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0, { timeout: 10_000 });
+  }
+  throw new Error(`no Week chip matches ${String(name)} (looked inside ${n} collapsed slot chips)`);
+}
+
+/** The accessible names of every Week chip in `scope` matching `name`, including those folded into a same-slot chip's list. */
+export async function weekChipLabels(page: Page, scope: Locator, name: RegExp): Promise<string[]> {
+  const labels = await scope
+    .getByRole('button', { name })
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? ''));
+  const slots = scope.locator('button[data-slot-count]');
+  const n = await slots.count();
+  for (let i = 0; i < n; i += 1) {
+    await slots.nth(i).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    labels.push(
+      ...(await dialog.getByRole('button', { name }).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? '')))
+    );
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0, { timeout: 10_000 });
+  }
+  return labels;
+}
+
+/** How many Week chips in `scope` match `name`, counting the ones folded into a same-slot chip's list. */
+export async function weekChipCount(page: Page, scope: Locator, name: RegExp): Promise<number> {
+  return (await weekChipLabels(page, scope, name)).length;
+}

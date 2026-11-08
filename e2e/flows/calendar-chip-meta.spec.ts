@@ -134,6 +134,13 @@ interface Seeded {
   triple: [string, string, string]; // 60 min, 3 lanes; first has assignee + 1 note
 }
 
+/** 'HH:MM' + n minutes. */
+function plusMinutes(time: string, n: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + n;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
 async function seedScenario(session: ApiSession, circleId: string, date: string, owner: string): Promise<Seeded> {
   const [s1, s2, s3, s4] = freeSlots(await listDay(session, circleId, date), 4);
   const tag = uniqueSuffix();
@@ -148,8 +155,14 @@ async function seedScenario(session: ApiSession, circleId: string, date: string,
     ids,
     single: await mk('single', s1, 60, owner),
     short: await mk('short', s2, 30, owner),
-    pair: [await mk('pairA', s3, 60, owner), await mk('pairB', s3, 60, null)],
-    triple: [await mk('triA', s4, 60, owner), await mk('triB', s4, 60, null), await mk('triC', s4, 60, null)],
+    // Lanes come from OVERLAP, not from a shared start minute: same-type items at the SAME minute fold
+    // into one "N appointments" chip (owner 2026-11-07), so each lane starts a few minutes after the last and still ends with its slot's hour.
+    pair: [await mk('pairA', s3, 60, owner), await mk('pairB', plusMinutes(s3, 5), 55, null)],
+    triple: [
+      await mk('triA', s4, 60, owner),
+      await mk('triB', plusMinutes(s4, 5), 55, null),
+      await mk('triC', plusMinutes(s4, 10), 50, null),
+    ],
   };
   await addNotes(session, circleId, ids[0], 3);
   await addNotes(session, circleId, ids[1], 1);
