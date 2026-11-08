@@ -137,7 +137,10 @@ test.describe('empty states (list endpoints stubbed empty)', () => {
     );
     const path = `/circles/${circleId}/meds`;
     await page.goto(path, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('No medications yet')).toBeVisible({ timeout: 20_000 });
+    // The masthead summary line also reads "No medications yet." (d0f033c), so name the heading.
+    await expect(page.getByRole('heading', { name: 'No medications yet' })).toBeVisible({
+      timeout: 20_000,
+    });
     await expect(page.getByText('Something went wrong')).toHaveCount(0);
 
     // Two "Add medication" buttons exist on an empty, editable circle (the
