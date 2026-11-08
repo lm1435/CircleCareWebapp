@@ -216,7 +216,7 @@ describe('decoration goes neutral', () => {
     const eyebrow = screen.getByText('Care');
     expect(eyebrow.className).not.toMatch(/text-(dusk|moss|clay|terracotta|coral)/);
     expect(eyebrow.className).toContain('text-ink-3');
-    expect(eyebrow.querySelector('span[aria-hidden="true"]')).toHaveClass('bg-ink-3');
+    expect(eyebrow.querySelector('span[aria-hidden="true"]')).toBeNull(); // dot-less since the left-aligned masthead eyebrow
   });
 
   it('the AI nav mark is the inactive nav colour, not coral', () => {
