@@ -130,7 +130,7 @@
     "updated": "Modifiche salvate",
     "updatedSeries": "Serie aggiornata",
     "recurringEditNotice": "Questo evento si ripete. Le modifiche che salvi qui varranno per l'intera serie.",
-    "seriesEditNote": "Le modifiche valgono per i prossimi incarichi. Quelli completati e passati restano come erano.",
+    "seriesEditNote": "Vale solo per i prossimi incarichi.",
     "viewOnly": "Sola lettura",
     "types": {
       "medication": "Farmaco",
@@ -354,16 +354,19 @@
         "task": "Modifica incarico"
       },
       "whatNeedsDoing": "Cosa c’è da fare?",
-      "today": "Oggi",
-      "tomorrow": "Domani",
-      "otherDay": "Altro giorno",
       "anyTime": "In qualsiasi momento",
       "pickTime": "Scegli l’orario",
       "once": "Una volta",
       "everyWeek": "Ogni settimana",
       "whoDoingIt": "Chi se ne occupa?",
       "me": "Io",
-      "taskMoreHint": "Dettagli, promemoria, data di fine"
+      "taskMoreHint": "Dettagli, promemoria, data di fine",
+      "custom": "Personalizzato…",
+      "customHeading": "Personalizzato",
+      "everyOtherDay": "A giorni alterni",
+      "monthly": "Ogni mese",
+      "yearly": "Ogni anno",
+      "daysOnOff": "Giorni sì / giorni no"
     },
     "timeChips": {
       "label": "Orari comuni",

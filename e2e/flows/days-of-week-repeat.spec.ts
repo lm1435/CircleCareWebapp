@@ -291,11 +291,11 @@ test('EN: Mon/Wed/Fri medication and Tue/Thu task land only on those days and re
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const taskDialog = page.getByRole('dialog');
   await expect(taskDialog).toBeVisible();
-  // The simple task form (owner 1.4.0): "Other day" reveals the date field; "How often?" Some days reveals
+  // The simple task form (owner 1.4.0): the date field is always visible; "How often?" Custom > Some days reveals
   // the same day picker inline.
   await taskDialog.locator('#title').fill(task);
-  await taskDialog.getByRole('button', { name: /^Other day/ }).click();
   await taskDialog.locator('#scheduled_date').fill(monday);
+  await taskDialog.getByTestId('task-repeat-custom').click();
   await taskDialog.getByRole('radio', { name: 'Some days', exact: true }).click();
   const taskGroup = chipGroup(taskDialog);
   await taskGroup.getByRole('checkbox', { name: 'Tuesday' }).click();
@@ -561,10 +561,10 @@ test('0 days selected: inline error, no request', async ({ page, circleId }) => 
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  // The simple task form (owner 1.4.0): "Other day" + "Some days".
+  // The simple task form (owner 1.4.0): date field + Custom > "Some days".
   await dialog.locator('#title').fill(name);
-  await dialog.getByRole('button', { name: /^Other day/ }).click();
   await dialog.locator('#scheduled_date').fill(monday);
+  await dialog.getByTestId('task-repeat-custom').click();
   await dialog.getByRole('radio', { name: 'Some days', exact: true }).click();
   const group = chipGroup(dialog);
   await group.getByRole('checkbox', { name: 'Monday' }).click();
@@ -600,6 +600,7 @@ async function openDaysPicker(page: Page, circleId: string): Promise<Locator> {
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   // The task form is the simple layout (1.4.0): "Some days" under "How often?" opens the day picker.
+  await dialog.getByTestId('task-repeat-custom').click();
   await dialog.getByRole('radio', { name: 'Some days' }).click();
   await expect(chipGroup(dialog).getByRole('checkbox')).toHaveCount(7);
   return dialog;
@@ -657,9 +658,9 @@ test('chips are >=44px targets and wrap without horizontal scroll at 375px', asy
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  // Simple task form (1.4.0): "Other day" reveals the date field; "Some days" opens the day picker.
-  await dialog.getByRole('button', { name: /^Other day/ }).click();
+  // Simple task form (1.4.0): the date field is always visible; Custom > "Some days" opens the day picker.
   await dialog.locator('#scheduled_date').fill(monday);
+  await dialog.getByTestId('task-repeat-custom').click();
   await dialog.getByRole('radio', { name: 'Some days' }).click();
   const group = chipGroup(dialog);
   await expect(group.getByRole('checkbox')).toHaveCount(7);

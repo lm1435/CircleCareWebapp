@@ -130,7 +130,7 @@
     "updated": "Changes saved",
     "updatedSeries": "Series updated",
     "recurringEditNotice": "This event repeats. Changes you save here will apply to the whole series.",
-    "seriesEditNote": "Changes apply to upcoming tasks. Completed and past ones stay as they were.",
+    "seriesEditNote": "Applies to upcoming tasks only.",
     "viewOnly": "View only",
     "types": {
       "medication": "Medication",
@@ -354,16 +354,19 @@
         "task": "Edit task"
       },
       "whatNeedsDoing": "What needs doing?",
-      "today": "Today",
-      "tomorrow": "Tomorrow",
-      "otherDay": "Other day",
       "anyTime": "Any time",
       "pickTime": "Pick a time",
       "once": "Once",
       "everyWeek": "Every week",
       "whoDoingIt": "Who's doing it?",
       "me": "Me",
-      "taskMoreHint": "Details, reminders, end date"
+      "taskMoreHint": "Details, reminders, end date",
+      "custom": "Custom…",
+      "customHeading": "Custom",
+      "everyOtherDay": "Every other day",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "daysOnOff": "Days on / off"
     },
     "timeChips": {
       "label": "Common dose times",

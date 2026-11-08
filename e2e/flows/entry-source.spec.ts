@@ -139,9 +139,8 @@ test('an entry saved by voice says "Added by voice" on its detail; typed, old an
     await page.getByRole('button', { name: 'Add task' }).first().click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
-    // The simple task form (owner 1.4.0): "Other day" reveals the (recipient-day) date field.
+    // The simple task form (owner 1.4.0): the date field (recipient day) is always visible.
     await dialog.locator('#title').fill(titles.web);
-    await dialog.getByRole('button', { name: /^Other day/ }).click();
     await dialog.locator('#scheduled_date').fill(dateInZone(tz, 0));
     await dialog.getByRole('button', { name: 'Add task' }).click();
     await expect(dialog).toBeHidden({ timeout: 20_000 });

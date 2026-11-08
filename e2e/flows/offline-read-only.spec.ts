@@ -115,8 +115,7 @@ test('offline: banner, writes explained not sent, input kept; reconnect hides it
     const dialog = page.getByRole('dialog');
     await expect(dialog.locator('#title')).toBeVisible();
     await dialog.locator('#title').fill(taskTitle);
-    // The simple task form (owner 1.4.0): "Other day" reveals the date field.
-    await dialog.getByRole('button', { name: /^Other day/ }).click();
+    // The simple task form (owner 1.4.0): the date field is always visible.
     await dialog.locator('#scheduled_date').fill(dateInTz(tz, 0));
 
     const api = recordApi(page);

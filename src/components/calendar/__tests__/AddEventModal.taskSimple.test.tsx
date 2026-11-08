@@ -9,9 +9,10 @@ import { AddEventModal } from '../AddEventModal';
 
 // THE NEW / EDIT TASK FORM IN THE SIMPLE STYLE (owner 1.4.0, mockup Task.dc.html, mobile parity:
 // AddEventScreen). Top to bottom: "New task" / "Edit task", "What needs doing?" (Title), "When?" (Today /
-// Tomorrow on the RECIPIENT's calendar + "Other day"; "Any time" / "Pick a time" on the recipient's clock),
-// "How often?" (Once / Every day / Every week / Some days), "Who's doing it?" (Anyone / Me / members),
-// "More details" (details, duration + end time, Repeat select + end date, reminders), "Add task" /
+// one always-visible Date field on the RECIPIENT's calendar, a "Time" tile + "Any time" on the recipient's
+// clock), "How often?" (Once / Every day / Every week + "Custom…" with the five rarer rules, like the shift
+// form), "Who's doing it?" (Anyone / Me / members), "More details" (details, duration + end time, end date,
+// reminders), "Add task" /
 // "Save changes". The bodies it saves are pinned against the old full form in
 // AddEventModal.taskPayloadEquality.test.tsx; this suite pins the layout, the frames, a11y and analytics.
 
@@ -128,6 +129,7 @@ const renderNew = (props: Partial<Parameters<typeof AddEventModal>[0]> = {}) =>
 const renderEdit = (event: CalendarEvent, layout?: 'full') =>
   render(<AddEventModal circleId={CIRCLE_ID} event={event} layout={layout} onClose={vi.fn()} />);
 
+const dateInput = () => screen.getByLabelText(/^Date/, { selector: 'input' }) as HTMLInputElement;
 const radiogroup = (name: string | RegExp) => screen.getByRole('radiogroup', { name });
 const radio = (name: string | RegExp) => screen.getByRole('radio', { name });
 const titleBox = () => screen.getByRole('textbox', { name: /^Title/ });
@@ -159,11 +161,11 @@ describe('layout: the mockup, top to bottom', () => {
     // The controls follow their questions in the document order.
     const order = [
       titleBox(),
-      radiogroup('When?'),
-      screen.getByTestId('task-other-day'),
+      dateInput(),
+      screen.getByTestId('task-time-tile'),
       radiogroup('Time'),
-      screen.getByTestId('task-pick-time'),
       radiogroup('How often?'),
+      screen.getByTestId('task-repeat-custom'),
       radiogroup("Who's doing it?"),
       moreToggle(),
     ];
@@ -183,6 +185,22 @@ describe('layout: the mockup, top to bottom', () => {
     expect(titleBox()).toHaveAttribute('placeholder', 'e.g. Pick up prescription');
     expect(titleBox()).toBeRequired();
     expect(screen.getByRole('radiogroup', { name: 'Title suggestions' })).toBeInTheDocument();
+  });
+
+  it('suggestions: at most 3, only on a NEW task with an empty title, never on an edit', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderNew();
+    const group = screen.getByRole('radiogroup', { name: 'Title suggestions' });
+    const count = within(group).getAllByRole('radio').length;
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThanOrEqual(3);
+    await user.type(titleBox(), 'W');
+    expect(screen.queryByRole('radiogroup', { name: 'Title suggestions' })).toBeNull();
+    await user.clear(titleBox());
+    expect(screen.getByRole('radiogroup', { name: 'Title suggestions' })).toBeInTheDocument();
+    unmount();
+    renderEdit(task({ title: '' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Title suggestions' })).toBeNull();
   });
 
   it('an edit is "Edit task" with "Save changes", the same sections', () => {
@@ -213,7 +231,7 @@ describe('layout: the mockup, top to bottom', () => {
     expect(screen.getByRole('dialog', { name: 'Nueva tarea' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '¿Qué hay que hacer?' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '¿Quién lo hace?' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /^Hoy/ })).toBeChecked();
+    expect(screen.getByLabelText(/^Fecha/, { selector: 'input' })).toHaveValue('2027-02-10');
     expect(screen.getByRole('radio', { name: 'Una vez' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Yo' })).toBeInTheDocument();
     expect(screen.getByTestId('add-event-save')).toHaveTextContent('Agregar tarea');
@@ -221,68 +239,46 @@ describe('layout: the mockup, top to bottom', () => {
 });
 
 describe('When? the day, on the RECIPIENT\'s calendar', () => {
-  it('Today / Tomorrow name the recipient\'s days; Today starts checked', () => {
+  it('one always-visible Date field holds the recipient\'s today; no Today / Tomorrow / Other day tiles', () => {
     renderNew();
-    expect(radio('Today, Wed, Feb 10')).toBeChecked();
-    expect(radio('Tomorrow, Thu, Feb 11')).not.toBeChecked();
-    expect(screen.getByTestId('task-other-day')).toHaveAttribute('aria-expanded', 'false');
+    expect(dateInput()).toHaveValue('2027-02-10');
+    expect(dateInput()).toBeRequired();
+    expect(screen.queryByRole('radio', { name: /^Today/ })).toBeNull();
+    expect(screen.queryByRole('radio', { name: /^Tomorrow/ })).toBeNull();
+    expect(screen.queryByTestId('task-other-day')).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'When?' })).toBeNull();
   });
 
   it('Kiritimati (+14): the recipient is already on Thursday while the viewer is on Wednesday', () => {
     useCircleResult.timezone = 'Pacific/Kiritimati';
     renderNew();
-    expect(radio('Today, Thu, Feb 11')).toBeChecked();
-    expect(radio('Tomorrow, Fri, Feb 12')).toBeInTheDocument();
+    expect(dateInput()).toHaveValue('2027-02-11');
   });
 
   it('Midway (-11): the recipient is still on Wednesday morning', () => {
     setNow(new Date('2027-02-11T06:30:00Z')); // Denver Feb 10 23:30, Midway Feb 10 19:30
     useCircleResult.timezone = 'Pacific/Midway';
     renderNew();
-    expect(radio('Today, Wed, Feb 10')).toBeChecked();
+    expect(dateInput()).toHaveValue('2027-02-10');
   });
 
-  it('Tomorrow is the next calendar DAY, never now + 24 hours (the night the clocks spring forward)', () => {
-    // New York 2027-03-13 23:30 EST. Now + 24h is 2027-03-15 00:30 EDT; tomorrow is Sunday the 14th.
-    setNow(new Date('2027-03-14T04:30:00Z'));
-    renderNew();
-    expect(radio('Today, Sat, Mar 13')).toBeChecked();
-    expect(radio('Tomorrow, Sun, Mar 14')).toBeInTheDocument();
-  });
-
-  it('Tomorrow saves the recipient\'s tomorrow; date-only (no time)', async () => {
+  it('a typed day saves the recipient\'s day; date-only (no time)', async () => {
     useCircleResult.timezone = 'Pacific/Kiritimati';
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Call the pharmacy');
-    await user.click(radio(/^Tomorrow/));
-    expect(radio(/^Tomorrow/)).toBeChecked();
-    expect(radio(/^Today/)).not.toBeChecked();
+    fireEvent.change(dateInput(), { target: { value: '2027-02-12' } });
     const body = await saveCreate(user);
     expect(body.scheduled_date).toBe('2027-02-12');
     expect(body.scheduled_time).toBeUndefined();
   });
 
-  it('"Other day" reveals the date field (focused); a chosen day lights it with that date', async () => {
+  it('an untouched new task saves the recipient\'s today', async () => {
+    useCircleResult.timezone = 'Pacific/Kiritimati';
     const user = userEvent.setup();
     renderNew();
-    expect(screen.queryByLabelText(/^Date/)).toBeNull();
-    await user.click(screen.getByTestId('task-other-day'));
-    const date = screen.getByLabelText(/^Date/, { selector: 'input' });
-    expect(screen.getByTestId('task-other-day')).toHaveAttribute('aria-expanded', 'true');
-    await waitFor(() => expect(date).toHaveFocus());
-    fireEvent.change(date, { target: { value: '2027-03-15' } });
-    const other = screen.getByRole('button', { name: 'Other day, Mon, Mar 15' });
-    expect(other).toHaveClass('bg-ink');
-    expect(radio(/^Today/)).not.toBeChecked();
-    expect(radio(/^Tomorrow/)).not.toBeChecked();
-    // Typing today's date into the open field keeps it open (it never vanishes under the cursor).
-    fireEvent.change(date, { target: { value: '2027-02-10' } });
-    expect(radio(/^Today/)).toBeChecked();
-    expect(screen.getByLabelText(/^Date/, { selector: 'input' })).toBeInTheDocument();
-    // A day tile folds it.
-    await user.click(radio(/^Tomorrow/));
-    expect(screen.queryByLabelText(/^Date/, { selector: 'input' })).toBeNull();
+    await user.type(titleBox(), 'Call the pharmacy');
+    expect((await saveCreate(user)).scheduled_date).toBe('2027-02-11');
   });
 
   it('with a time in a far zone the date field still shows the RECIPIENT\'s day, and says whose', async () => {
@@ -290,15 +286,12 @@ describe('When? the day, on the RECIPIENT\'s calendar', () => {
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Book a ride');
-    await user.click(screen.getByTestId('task-other-day'));
-    fireEvent.change(screen.getByLabelText(/^Date/, { selector: 'input' }), { target: { value: '2027-02-14' } });
-    await user.click(screen.getByTestId('task-pick-time'));
+    fireEvent.change(dateInput(), { target: { value: '2027-02-14' } });
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(timeInput(), { target: { value: '07:15' } });
     // 07:15 Sunday in Auckland is 11:15 Saturday in Denver: the field keeps naming Sunday.
-    const date = screen.getByLabelText(/^Date/, { selector: 'input' });
-    expect(date).toHaveValue('2027-02-14');
+    expect(dateInput()).toHaveValue('2027-02-14');
     expect(screen.getByText("Days are in Rosa's time zone (Auckland)")).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Other day, Sun, Feb 14' })).toBeInTheDocument();
     const body = await saveCreate(user);
     expect(body.scheduled_date).toBe('2027-02-14');
     expect(body.scheduled_time).toBe('07:15');
@@ -309,13 +302,12 @@ describe('When? the day, on the RECIPIENT\'s calendar', () => {
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Clean');
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(timeInput(), { target: { value: '09:00' } });
     await user.click(moreToggle());
     await user.click(screen.getByRole('radio', { name: '1 hr' }));
-    await user.click(screen.getByTestId('task-other-day'));
     // After Auckland's clocks go back (Apr 4) and Denver's go forward (Mar 14): the viewer clock moves 2h.
-    fireEvent.change(screen.getByLabelText(/^Date/, { selector: 'input' }), { target: { value: '2027-04-10' } });
+    fireEvent.change(dateInput(), { target: { value: '2027-04-10' } });
     expect(timeInput()).toHaveValue('09:00');
     expect(screen.getByLabelText(/^End time/, { selector: 'input' })).toHaveValue('10:00');
     const body = await saveCreate(user);
@@ -323,12 +315,14 @@ describe('When? the day, on the RECIPIENT\'s calendar', () => {
   });
 });
 
-describe('When? Any time vs Pick a time (the recipient\'s clock)', () => {
+describe('When? Time tile vs Any time (the recipient\'s clock)', () => {
   it('Any time starts checked; tasks save without a time (no end, no reminders offered)', async () => {
     const user = userEvent.setup();
     renderNew();
     expect(radio('Any time')).toBeChecked();
-    expect(screen.getByTestId('task-pick-time')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('task-time-tile')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByTestId('task-time-tile')).toHaveTextContent('Pick a time');
+    expect(screen.getByTestId('task-time-tile').className).not.toMatch(/\bbg-ink\b/);
     await user.type(titleBox(), 'Water the plants');
     await user.click(moreToggle());
     expect(screen.queryByLabelText(/^End time/)).toBeNull();
@@ -338,17 +332,19 @@ describe('When? Any time vs Pick a time (the recipient\'s clock)', () => {
     expect(body.duration_minutes).toBeUndefined();
   });
 
-  it('Pick a time reveals "Time in <city>" typed on the recipient\'s clock; the tile names it; the line converts', async () => {
+  it('the Time tile reveals "Time in <city>" typed on the recipient\'s clock; the tile names it; the line converts', async () => {
     useCircleResult.timezone = 'Pacific/Auckland';
     const user = userEvent.setup();
     renderNew();
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     const field = screen.getByLabelText(/^Time in Auckland/, { selector: 'input' });
     await waitFor(() => expect(field).toHaveFocus());
-    expect(screen.getByTestId('task-pick-time')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('task-time-tile')).toHaveAttribute('aria-expanded', 'true');
     fireEvent.change(field, { target: { value: '07:15' } });
     expect(field).toHaveValue('07:15');
-    expect(screen.getByRole('button', { name: 'Pick a time, 7:15 AM' })).toHaveClass('bg-ink');
+    expect(screen.getByRole('button', { name: 'Time, 7:15 AM' })).toBeInTheDocument();
+    // Lit (neutral) while a time is the answer, as on mobile.
+    expect(screen.getByTestId('task-time-tile').className).toMatch(/\bbg-ink\b/);
     expect(radio('Any time')).not.toBeChecked();
     expect(screen.getByText(/^7:15 AM in Auckland is 11:15 AM the day before for you/)).toBeInTheDocument();
   });
@@ -357,7 +353,7 @@ describe('When? Any time vs Pick a time (the recipient\'s clock)', () => {
     useCircleResult.timezone = VIEWER_TZ;
     const user = userEvent.setup();
     renderNew();
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     expect(screen.queryByLabelText(/^Time in/, { selector: 'input' })).toBeNull();
     expect(timeInput()).toBeInTheDocument();
   });
@@ -367,7 +363,7 @@ describe('When? Any time vs Pick a time (the recipient\'s clock)', () => {
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Book a ride');
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(timeInput(), { target: { value: '23:30' } });
     await user.click(moreToggle());
     const end = screen.getByLabelText(/^End time/, { selector: 'input' });
@@ -389,7 +385,7 @@ describe('When? Any time vs Pick a time (the recipient\'s clock)', () => {
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Clean');
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(timeInput(), { target: { value: '10:00' } });
     await user.click(moreToggle());
     const end = screen.getByLabelText(/^End time/, { selector: 'input' });
@@ -418,43 +414,132 @@ describe('How often?', () => {
     expect(body.recurrence_days).toBe(days);
   });
 
-  it('Once starts checked; Some days reveals the day picker inline, preselecting the start\'s weekday', async () => {
+  it('Once / Every day / Every week and "Custom…" are one 2-col grid; Custom starts closed', () => {
+    renderNew();
+    const custom = screen.getByTestId('task-repeat-custom');
+    const grid = custom.parentElement as HTMLElement;
+    expect(grid).toHaveClass('grid', 'grid-cols-2');
+    expect(grid).toContainElement(radiogroup('How often?'));
+    expect(within(radiogroup('How often?')).getAllByRole('radio').map((r) => r.textContent)).toEqual([
+      'Once',
+      'Every day',
+      'Every week',
+    ]);
+    expect(custom).toHaveTextContent('Custom…');
+    expect(custom).toHaveAttribute('aria-expanded', 'false');
+    expect(radio('Once')).toBeChecked();
+    expect(screen.queryByTestId('task-repeat-custom-panel')).toBeNull();
+  });
+
+  it('Custom… opens a panel with the five rarer rules, in the shift form\'s order; a main tile closes it', async () => {
     const user = userEvent.setup();
     renderNew();
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    const panel = screen.getByTestId('task-repeat-custom-panel');
+    expect(screen.getByTestId('task-repeat-custom')).toHaveAttribute('aria-expanded', 'true');
+    expect(within(panel).getByText('Custom')).toBeInTheDocument();
+    const group = within(panel).getByRole('radiogroup', { name: 'Custom' });
+    expect(within(group).getAllByRole('radio').map((r) => r.textContent)).toEqual([
+      'Every other day',
+      'Days on / off',
+      'Some days',
+      'Monthly',
+      'Yearly',
+    ]);
+    // Opened by hand, nothing chosen yet: Once is still the answer.
     expect(radio('Once')).toBeChecked();
+    await user.click(radio('Every day'));
+    expect(screen.queryByTestId('task-repeat-custom-panel')).toBeNull();
+    // The toggle closes an empty panel too.
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    expect(screen.queryByTestId('task-repeat-custom-panel')).toBeNull();
+  });
+
+  it('Some days (in Custom) reveals the day picker inline under How often?, preselecting the start\'s weekday', async () => {
+    const user = userEvent.setup();
+    renderNew();
     await user.type(titleBox(), 'Walk');
+    await user.click(screen.getByTestId('task-repeat-custom'));
     await user.click(radio('Some days'));
+    expect(screen.getByTestId('task-repeat-custom')).toHaveClass('bg-ink');
     const picker = screen.getByRole('group', { name: /^Repeat on/ });
     // The picker sits in the How often? section, not behind More details.
-    expect(screen.getByRole('radiogroup', { name: 'How often?' }).closest('section')).toContainElement(picker);
+    expect(radiogroup('How often?').closest('section')).toContainElement(picker);
     expect(within(picker).getByRole('checkbox', { name: 'Wednesday' })).toHaveAttribute('aria-checked', 'true');
     await user.click(within(picker).getByRole('checkbox', { name: 'Friday' }));
     const body = await saveCreate(user);
     expect(body).toMatchObject({ recurrence_rule: 'weekly', recurrence_days: [3, 5] });
   });
 
+  it('Days on / off puts its two inputs under How often? (not behind More details) and saves the cycle', async () => {
+    const user = userEvent.setup();
+    renderNew();
+    await user.type(titleBox(), 'Rotate');
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    await user.click(radio('Days on / off'));
+    const on = screen.getByLabelText(/^Days on/, { selector: 'input' });
+    expect(radiogroup('How often?').closest('section')).toContainElement(on);
+    fireEvent.change(on, { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText(/^Days off/, { selector: 'input' }), { target: { value: '2' } });
+    expect((await saveCreate(user)).recurrence_rule).toBe('cycle:5:2');
+  });
+
+  it.each([
+    ['Every other day', 'every_other_day'],
+    ['Monthly', 'monthly'],
+    ['Yearly', 'yearly'],
+  ])('Custom > %s saves %s', async (label, rule) => {
+    const user = userEvent.setup();
+    renderNew();
+    await user.type(titleBox(), 'Walk');
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    await user.click(radio(label));
+    expect(radio(label)).toBeChecked();
+    expect((await saveCreate(user)).recurrence_rule).toBe(rule);
+  });
+
   it.each([
     ['every_other_day', 'Every other day'],
     ['monthly', 'Monthly'],
     ['yearly', 'Yearly'],
-    ['cycle:21:7', 'Cycle (days on / off)'],
-  ])('a stored %s checks no tile, is named under them, opens More details and saves untouched', async (rule, name) => {
+    ['cycle:5:2', 'Days on / off'],
+  ])('an edit of %s opens Custom with %s lit, no main tile checked, and saves it untouched', async (rule, name) => {
     const user = userEvent.setup();
     renderEdit(task({ recurrence_rule: rule }));
-    for (const label of ['Once', 'Every day', 'Every week', 'Some days']) expect(radio(label)).not.toBeChecked();
-    expect(screen.getByTestId('how-often-summary')).toHaveTextContent(name);
-    expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('combobox', { name: /^Repeat/ })).toHaveValue(rule.startsWith('cycle') ? 'cycle' : rule);
+    expect(screen.getByTestId('task-repeat-custom')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('task-repeat-custom')).toHaveClass('bg-ink');
+    expect(screen.getByTestId('task-repeat-custom-panel')).toBeInTheDocument();
+    for (const label of ['Once', 'Every day', 'Every week']) expect(radio(label)).not.toBeChecked();
+    expect(radio(name)).toBeChecked();
+    expect(screen.queryByTestId('how-often-summary')).toBeNull();
+    // Nothing about the rule sends the user to More details.
+    expect(moreToggle()).toHaveAttribute('aria-expanded', 'false');
     const body = await saveEdit(user);
     expect(body.recurrence_rule).toBe(rule);
   });
 
-  it('an unnamed rule can be replaced by a tile', async () => {
+  it('a cycle edit shows its on / off inputs under How often? with the stored numbers', () => {
+    renderEdit(task({ recurrence_rule: 'cycle:5:2' }));
+    expect(screen.getByLabelText(/^Days on/, { selector: 'input' })).toHaveValue(5);
+    expect(screen.getByLabelText(/^Days off/, { selector: 'input' })).toHaveValue(2);
+  });
+
+  it('a custom rule can be replaced by a main tile (the panel closes)', async () => {
     const user = userEvent.setup();
     renderEdit(task({ recurrence_rule: 'monthly' }));
     await user.click(radio('Every week'));
     expect(screen.queryByTestId('how-often-summary')).toBeNull();
+    expect(screen.queryByTestId('task-repeat-custom-panel')).toBeNull();
     expect((await saveEdit(user)).recurrence_rule).toBe('weekly');
+  });
+
+  it('no custom-open analytics event exists for tasks (nothing but the funnel step fires)', async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(Analytics, 'shiftRepeatCustomOpened').mockImplementation(() => {});
+    renderNew();
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 
@@ -500,38 +585,29 @@ describe("Who's doing it?", () => {
 });
 
 describe('edit prefill: every option kind', () => {
-  it.each([
-    ['2027-02-10', 'Today'],
-    ['2027-02-11', 'Tomorrow'],
-  ])('a task on %s lights %s', (day, label) => {
+  it.each(['2027-02-10', '2027-02-11', '2027-01-20'])('a task on %s fills the Date field with that day', (day) => {
     renderEdit(task({ scheduled_date: day }));
-    expect(radio(new RegExp(`^${label}`))).toBeChecked();
-    expect(screen.getByTestId('task-other-day')).not.toHaveClass('bg-ink');
+    expect(dateInput()).toHaveValue(day);
   });
 
-  it('a task on another day lights Other day with its date and shows the field', () => {
-    renderEdit(task({ scheduled_date: '2027-01-20' }));
-    expect(screen.getByRole('button', { name: 'Other day, Wed, Jan 20' })).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByLabelText(/^Date/, { selector: 'input' })).toHaveValue('2027-01-20');
-  });
-
-  it('a timed task in a far zone: Pick a time names the stored time, the field holds it, the day is the stored day', () => {
+  it('a timed task in a far zone: the Time tile names the stored time, the field holds it, the day is the stored day', () => {
     useCircleResult.timezone = 'Pacific/Kiritimati';
     renderEdit(task({ scheduled_date: '2027-02-12', scheduled_time: '23:30:00', duration_minutes: 30 }));
-    expect(screen.getByRole('button', { name: 'Pick a time, 11:30 PM' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Time, 11:30 PM' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText(/^Time in Kiritimati/, { selector: 'input' })).toHaveValue('23:30');
-    expect(radio(/^Tomorrow/)).toBeChecked();
+    expect(dateInput()).toHaveValue('2027-02-12');
     expect(radio('Any time')).not.toBeChecked();
   });
 
   it.each([
-    [null, null, 'Once'],
-    ['daily', null, 'Every day'],
-    ['weekly', null, 'Every week'],
-    ['weekly', [1, 3], 'Some days'],
-  ] as const)('rule %s days %s lights %s', (rule, days, label) => {
+    [null, null, 'Once', false],
+    ['daily', null, 'Every day', false],
+    ['weekly', null, 'Every week', false],
+    ['weekly', [1, 3], 'Some days', true],
+  ] as const)('rule %s days %s lights %s', (rule, days, label, inCustom) => {
     renderEdit(task({ recurrence_rule: rule, recurrence_days: days } as Partial<CalendarEvent>));
     expect(radio(label)).toBeChecked();
+    expect(screen.queryByTestId('task-repeat-custom-panel') !== null).toBe(inCustom);
     expect(screen.queryByTestId('how-often-summary')).toBeNull();
   });
 
@@ -568,7 +644,8 @@ describe('More details', () => {
     await user.click(moreToggle());
     expect(moreToggle()).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('textbox', { name: /^Details/ })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /^Repeat/ })).toBeInTheDocument();
+    // The Repeat select is gone (How often? offers every rule); the repeat end date stays here.
+    expect(screen.queryByRole('combobox', { name: /^Repeat/ })).toBeNull();
     // Appointment-only fields are not here.
     expect(screen.queryByLabelText(/^Location/)).toBeNull();
     expect(screen.queryByText('Doctor')).toBeNull();
@@ -578,7 +655,8 @@ describe('More details', () => {
     ['details', { description: 'Bring the card' }, true],
     ['a custom duration', { scheduled_time: '10:00:00', duration_minutes: 45 }, true],
     ['a repeat end', { recurrence_rule: 'daily', recurrence_end_date: '2027-03-31' }, true],
-    ['an unnamed rule', { recurrence_rule: 'every_other_day' }, true],
+    ['an untiled rule (every other day)', { recurrence_rule: 'every_other_day' }, false],
+    ['a cycle', { recurrence_rule: 'cycle:5:2' }, false],
     ['the default duration', { scheduled_time: '10:00:00', duration_minutes: 30 }, false],
     ['no duration (PK21)', { scheduled_time: '10:00:00', duration_minutes: null }, false],
     ['a plain weekly rule', { recurrence_rule: 'weekly' }, false],
@@ -594,7 +672,7 @@ describe('More details', () => {
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Walk');
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(timeInput(), { target: { value: '06:00' } });
     await user.click(radio('Every day'));
     await user.click(moreToggle());
@@ -619,7 +697,7 @@ describe('validation', () => {
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Clean');
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(timeInput(), { target: { value: '10:00' } });
     await user.click(moreToggle());
     fireEvent.change(screen.getByLabelText(/^End time/, { selector: 'input' }), { target: { value: '' } });
@@ -631,12 +709,11 @@ describe('validation', () => {
     expect(screen.getByLabelText(/^End time/, { selector: 'input' })).toHaveAttribute('aria-invalid', 'true');
   });
 
-  it('a cleared day: Save opens the date field and focuses it', async () => {
+  it('a cleared day: Save does not save and focuses the date field', async () => {
     const user = userEvent.setup();
     renderNew();
     await user.type(titleBox(), 'Clean');
-    await user.click(screen.getByTestId('task-other-day'));
-    fireEvent.change(screen.getByLabelText(/^Date/, { selector: 'input' }), { target: { value: '' } });
+    fireEvent.change(dateInput(), { target: { value: '' } });
     await user.click(screen.getByTestId('add-event-save'));
     expect(mutateCreate).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.getByLabelText(/^Date/, { selector: 'input' })).toHaveFocus());
@@ -644,27 +721,42 @@ describe('validation', () => {
 });
 
 describe('the series and the completed-task rules stay as they were', () => {
-  it('a recurring task edit (also from a completed occurrence) keeps the series note and saves to the root', async () => {
+  it('a recurring task edit (also from a completed occurrence) keeps the series note in the footer and saves to the root', async () => {
     const user = userEvent.setup();
     const root = task({ id: 'root-1', recurrence_rule: 'daily', scheduled_date: '2027-01-04' });
     renderEdit({ ...root, id: 'child-1', parent_event_id: 'root-1', completed_at: '2027-02-01T15:00:00Z' } as CalendarEvent);
-    expect(screen.getByTestId('series-edit-note')).toHaveTextContent('Changes apply to upcoming tasks.');
+    const note = screen.getByTestId('series-edit-note');
+    expect(note).toHaveTextContent('Applies to upcoming tasks only.');
+    // In the footer beside Save, not on top of the form; the old notice card is gone.
+    expect(note.closest('[data-modal-footer]')).toContainElement(screen.getByTestId('add-event-save'));
+    expect(document.getElementById('add-event-form')).toHaveAttribute('aria-describedby', 'series-edit-note');
+    expect(screen.queryByText(/This event repeats/)).toBeNull();
+    expect(screen.queryByRole('note')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(mutateUpdate).toHaveBeenCalledTimes(1));
     expect((mutateUpdate.mock.calls[0][0] as { eventId: string }).eventId).toBe('root-1');
+  });
+
+  it('no series note on a new task or on an edit of a one-off task', () => {
+    const { unmount } = renderNew();
+    expect(screen.queryByTestId('series-edit-note')).toBeNull();
+    unmount();
+    renderEdit(task());
+    expect(screen.queryByTestId('series-edit-note')).toBeNull();
+    expect(document.getElementById('add-event-form')).not.toHaveAttribute('aria-describedby');
   });
 });
 
 describe('accessibility', () => {
   it('every tile row is a named radiogroup of radios with checked state; the openers are buttons with aria-expanded', () => {
     renderNew();
-    for (const name of ['When?', 'Time', 'How often?', "Who's doing it?"]) {
+    for (const name of ['Time', 'How often?', "Who's doing it?"]) {
       const group = radiogroup(name);
       const radios = within(group).getAllByRole('radio');
       expect(radios.length).toBeGreaterThan(0);
       expect(radios.filter((r) => r.getAttribute('aria-checked') === 'true')).toHaveLength(1);
     }
-    for (const id of ['task-other-day', 'task-pick-time']) {
+    for (const id of ['task-time-tile', 'task-repeat-custom']) {
       expect(screen.getByTestId(id).tagName).toBe('BUTTON');
       expect(screen.getByTestId(id)).toHaveAttribute('aria-expanded');
     }
@@ -675,23 +767,17 @@ describe('accessibility', () => {
     renderNew();
     const tiles = [
       ...within(screen.getByTestId('simple-task-form')).getAllByRole('radio').filter((r) => r.closest('[role="radiogroup"]')?.id !== 'title-suggestions'),
-      screen.getByTestId('task-other-day'),
-      screen.getByTestId('task-pick-time'),
+      screen.getByTestId('task-time-tile'),
+      screen.getByTestId('task-repeat-custom'),
     ];
     for (const tile of tiles) {
       expect(tile).toHaveClass('min-h-[48px]', 'min-w-[44px]', 'max-w-full');
       expect(tile.className).not.toMatch(/truncate|whitespace-nowrap/);
     }
-    // The day and time rows wrap; their trailing button shares the row outside the radiogroup.
-    for (const [row, group, button] of [
-      ['task-day-row', 'When?', 'task-other-day'],
-      ['task-time-row', 'Time', 'task-pick-time'],
-    ]) {
-      expect(screen.getByTestId(row)).toHaveClass('flex', 'flex-wrap');
-      expect(radiogroup(group)).toHaveClass('contents');
-      expect(radiogroup(group)).not.toContainElement(screen.getByTestId(button));
-      expect(screen.getByTestId(row)).toContainElement(screen.getByTestId(button));
-    }
+    // The time row wraps; its tile shares the row with the Any time radiogroup (display: contents).
+    expect(screen.getByTestId('task-time-row')).toHaveClass('flex', 'flex-wrap');
+    expect(radiogroup('Time')).toHaveClass('contents');
+    expect(screen.getByTestId('task-time-row')).toContainElement(screen.getByTestId('task-time-tile'));
   });
 
   it('the More details hint wraps rather than truncating', () => {
@@ -707,10 +793,11 @@ describe('analytics', () => {
     renderNew({ entry: 'add_menu' });
     expect(opened).toHaveBeenCalledWith({ type: 'task', entry: 'add_menu' });
     await user.type(titleBox(), 'Groceries');
-    await user.click(radio(/^Tomorrow/));
+    fireEvent.change(dateInput(), { target: { value: '2027-02-11' } });
     await user.click(radio('Every day'));
     await user.click(radio('Me'));
-    await user.click(radio(/^Today/));
+    await user.click(screen.getByTestId('task-repeat-custom'));
+    await user.click(radio('Monthly'));
     await user.click(radio('Every week'));
     await saveCreate(user);
     const steps = stepDone.mock.calls.map((c: unknown[]) => (c[0] as { step: string }).step);
@@ -724,7 +811,7 @@ describe('analytics', () => {
   it('Any time and Pick a time count as the When step too', async () => {
     const user = userEvent.setup();
     renderNew();
-    await user.click(screen.getByTestId('task-pick-time'));
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(timeInput(), { target: { value: '10:00' } });
     expect(stepDone).toHaveBeenCalledWith({ type: 'task', step: 'when' });
   });
@@ -732,7 +819,7 @@ describe('analytics', () => {
   it('an edit never counts funnel steps and reports layout simple', async () => {
     const user = userEvent.setup();
     renderEdit(task());
-    await user.click(radio(/^Tomorrow/));
+    fireEvent.change(dateInput(), { target: { value: '2027-02-11' } });
     await user.click(radio('Every day'));
     await user.click(radio('Me'));
     await saveEdit(user);

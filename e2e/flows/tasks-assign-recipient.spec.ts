@@ -82,8 +82,7 @@ async function createTask(page: Page, title: string, assigneeLabel?: string): Pr
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.locator('#title').fill(title);
-  // The day: "Other day" reveals the date field (the recipient's calendar; date-only, so no conversion).
-  await dialog.getByRole('button', { name: /^Other day/ }).click();
+  // The day: the date field (the recipient's calendar; date-only, so no conversion).
   await dialog.locator('#scheduled_date').fill(todayISO());
   const picker = whoGroup(dialog);
   // The default is still "Anyone" (unassigned).

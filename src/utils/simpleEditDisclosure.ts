@@ -53,24 +53,13 @@ export interface SimpleTaskDisclosureSource extends SimpleEditDisclosureSource {
 }
 
 /**
- * A repeat the task form's "How often?" tiles cannot name (Once, Every day, Every week, Some days are its
- * answers): every other day, monthly, yearly, a cycle. Weekly is named with or without days.
- */
-export function isTaskRepeatHowOftenCannotName(source: SimpleEditDisclosureSource): boolean {
-  const rule = source.recurrence_rule ?? null;
-  return rule !== null && rule !== 'daily' && rule !== 'weekly';
-}
-
-/**
- * The simple task form's "More details" (details, duration + end time, the full Repeat select + end date,
- * reminders): opened on an edit by details, a duration other than the default a new time gets, a repeat end
- * date, or a repeat the tiles cannot name. Mobile twin: the same rule in AddEventScreen.
+ * The simple task form's "More details" (details, duration + end time, end date, reminders): opened on an edit by details, a duration other than the default a new time gets, a repeat end
+ * date (every repeat rule has a How often? answer). Mobile twin: the same rule in AddEventScreen.
  */
 export function simpleTaskMoreOpen(source: SimpleTaskDisclosureSource, defaultDurationMinutes: number): boolean {
   return !!(
     source.description?.trim() ||
     (source.scheduled_time && source.duration_minutes && source.duration_minutes !== defaultDurationMinutes) ||
-    (source.recurrence_rule && source.recurrence_end_date) ||
-    isTaskRepeatHowOftenCannotName(source)
+    (source.recurrence_rule && source.recurrence_end_date)
   );
 }

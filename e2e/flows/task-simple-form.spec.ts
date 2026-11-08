@@ -36,12 +36,6 @@ function recipientDay(offset: number): string {
   d.setUTCDate(d.getUTCDate() + offset);
   return d.toISOString().slice(0, 10);
 }
-function shortDay(day: string): string {
-  return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }).format(
-    new Date(`${day}T12:00:00Z`)
-  );
-}
-
 async function arrange(
   request: import('@playwright/test').APIRequestContext,
   label: string,
@@ -98,8 +92,8 @@ test('create a task on the recipient\'s tomorrow at 7:15 AM their time, weekly, 
       'How often?',
       "Who's doing it?",
     ]);
-    const when = dialog.getByRole('radiogroup', { name: 'When?' });
-    await expect(when.getByRole('radio', { name: `Today, ${shortDay(recipientDay(0))}` })).toBeChecked();
+    // One always-visible Date field, holding the recipient's today.
+    await expect(dialog.locator('#scheduled_date')).toHaveValue(recipientDay(0));
     await expect(dialog.getByRole('radio', { name: 'Any time' })).toBeChecked();
     await expect(dialog.getByRole('radio', { name: 'Once' })).toBeChecked();
     await expect(dialog.getByRole('radio', { name: 'Anyone' })).toBeChecked();
@@ -107,11 +101,11 @@ test('create a task on the recipient\'s tomorrow at 7:15 AM their time, weekly, 
     await checkA11y(page, 'task-simple-form-new', testInfo);
 
     await dialog.locator('#title').fill(title);
-    await when.getByRole('radio', { name: `Tomorrow, ${shortDay(tomorrow)}` }).click();
-    await dialog.getByRole('button', { name: 'Pick a time' }).click();
+    await dialog.locator('#scheduled_date').fill(tomorrow);
+    await dialog.getByTestId('task-time-tile').click();
     await expect(dialog.getByLabel(/^Time in Auckland/)).toBeVisible();
     await dialog.locator('#scheduled_time').fill('07:15');
-    await expect(dialog.getByRole('button', { name: 'Pick a time, 7:15 AM' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Time, 7:15 AM' })).toBeVisible();
     await dialog.getByRole('radio', { name: 'Every week' }).click();
     await dialog.getByRole('radio', { name: 'Me', exact: true }).click();
     await dialog.getByRole('button', { name: 'Add task' }).click();
@@ -130,8 +124,8 @@ test('create a task on the recipient\'s tomorrow at 7:15 AM their time, weekly, 
     const editor = page.getByRole('dialog', { name: 'Edit task' });
     await expect(editor).toBeVisible();
     await expect(editor.locator('#title')).toHaveValue(title, { timeout: 15_000 });
-    await expect(editor.getByRole('radio', { name: `Tomorrow, ${shortDay(tomorrow)}` })).toBeChecked();
-    await expect(editor.getByRole('button', { name: 'Pick a time, 7:15 AM' })).toBeVisible();
+    await expect(editor.locator('#scheduled_date')).toHaveValue(tomorrow);
+    await expect(editor.getByRole('button', { name: 'Time, 7:15 AM' })).toBeVisible();
     await expect(editor.locator('#scheduled_time')).toHaveValue('07:15');
     await expect(editor.getByRole('radio', { name: 'Every week' })).toBeChecked();
     await expect(editor.getByRole('radio', { name: 'Me', exact: true })).toBeChecked();
@@ -174,8 +168,8 @@ test('"2 hrs" on a start that is the BROWSER\'s 10:30 PM saves the full 120 minu
   try {
     const dialog = await openNewTask(page, a.circleId);
     await dialog.locator('#title').fill(title);
-    await dialog.getByRole('radiogroup', { name: 'When?' }).getByRole('radio', { name: `Tomorrow, ${shortDay(tomorrow)}` }).click();
-    await dialog.getByRole('button', { name: 'Pick a time' }).click();
+    await dialog.locator('#scheduled_date').fill(tomorrow);
+    await dialog.getByTestId('task-time-tile').click();
     await dialog.locator('#scheduled_time').fill(start);
     await dialog.getByRole('button', { name: /^More details/ }).click();
     await dialog.getByRole('radio', { name: '2 hrs' }).click();
@@ -211,8 +205,8 @@ test('same zone: 10:30 PM + "2 hrs" saves the full 120 minutes, carried past mid
   try {
     const dialog = await openNewTask(page, a.circleId);
     await dialog.locator('#title').fill(title);
-    await dialog.getByRole('radiogroup', { name: 'When?' }).getByRole('radio', { name: `Tomorrow, ${shortDay(tomorrow)}` }).click();
-    await dialog.getByRole('button', { name: 'Pick a time' }).click();
+    await dialog.locator('#scheduled_date').fill(tomorrow);
+    await dialog.getByTestId('task-time-tile').click();
     await dialog.locator('#scheduled_time').fill('22:30');
     await dialog.getByRole('button', { name: /^More details/ }).click();
     await dialog.getByRole('radio', { name: '2 hrs' }).click();
@@ -251,8 +245,7 @@ test.describe('at phone width', () => {
     const a = await arrange(request, 'tasksimple375');
     await cookieLogin(context, a.owner, baseURL);
     const dialog = await openNewTask(page, a.circleId);
-    await dialog.getByRole('button', { name: /^Other day/ }).click();
-    for (const id of ['task-day-row', 'task-time-row']) {
+    for (const id of ['task-time-row']) {
       const row = dialog.getByTestId(id);
       const box = await row.boundingBox();
       expect(box).not.toBeNull();

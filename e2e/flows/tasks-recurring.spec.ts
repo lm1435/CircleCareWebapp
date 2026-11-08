@@ -101,9 +101,8 @@ test('completing a later occurrence of a recurring task stamps THAT day, not the
   await page.getByRole('button', { name: 'Add task' }).first().click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  // The simple task form (owner 1.4.0): "Other day" reveals the date field, "How often?" Every day.
+  // The simple task form (owner 1.4.0): the date field is always there, "How often?" Every day.
   await dialog.locator('#title').fill(title);
-  await dialog.getByRole('button', { name: /^Other day/ }).click();
   await dialog.locator('#scheduled_date').fill(startDate);
   await dialog.getByRole('radio', { name: 'Every day', exact: true }).click();
   await dialog.getByRole('button', { name: 'Add task' }).click();

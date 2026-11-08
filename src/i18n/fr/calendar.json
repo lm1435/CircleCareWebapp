@@ -130,7 +130,7 @@
     "updated": "Modifications enregistrées",
     "updatedSeries": "Série mise à jour",
     "recurringEditNotice": "Cet événement se répète. Les modifications enregistrées ici s’appliqueront à toute la série.",
-    "seriesEditNote": "Les modifications s’appliquent aux prochaines tâches. Les tâches terminées et passées restent inchangées.",
+    "seriesEditNote": "S’applique uniquement aux prochaines tâches.",
     "viewOnly": "Lecture seule",
     "types": {
       "medication": "Médicament",
@@ -354,16 +354,19 @@
         "task": "Modifier la tâche"
       },
       "whatNeedsDoing": "Que faut-il faire ?",
-      "today": "Aujourd’hui",
-      "tomorrow": "Demain",
-      "otherDay": "Autre jour",
       "anyTime": "N’importe quand",
       "pickTime": "Choisir l’heure",
       "once": "Une fois",
       "everyWeek": "Chaque semaine",
       "whoDoingIt": "Qui s’en occupe ?",
       "me": "Moi",
-      "taskMoreHint": "Détails, rappels, date de fin"
+      "taskMoreHint": "Détails, rappels, date de fin",
+      "custom": "Personnalisé…",
+      "customHeading": "Personnalisé",
+      "everyOtherDay": "Un jour sur deux",
+      "monthly": "Chaque mois",
+      "yearly": "Chaque année",
+      "daysOnOff": "Jours actifs / de pause"
     },
     "timeChips": {
       "label": "Heures courantes",

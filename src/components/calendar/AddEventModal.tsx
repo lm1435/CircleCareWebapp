@@ -937,9 +937,9 @@ function AddEventForm({
         (simpleKind === 'task' && simpleTaskMoreOpen(event, DEFAULT_DURATION_MINUTES)))
   );
   const [otherTimeOpen, setOtherTimeOpen] = useState(false);
-  // The task form's "Other day" (reveals the date field) and "Pick a time" (reveals the time field).
-  const [otherDayOpen, setOtherDayOpen] = useState(false);
+  // The task form's "Time" tile (reveals the time field) and "Custom…" (reveals the rarer repeat rules).
   const [pickTimeOpen, setPickTimeOpen] = useState(false);
+  const [taskCustomOpen, setTaskCustomOpen] = useState(false);
   // "+ Another dose" (NEW medication only): extra dose times, viewer-frame HH:MM. Each one is saved
   // as its OWN medication row after the primary (the same sequence as mobile's AddEventScreen and
   // the first-run wizard), pointing at the primary's bottle through `refill_group_id`.
@@ -1323,24 +1323,9 @@ function AddEventForm({
    * (`recipientStartDate`), matched against the recipient's today and tomorrow (string date arithmetic,
    * never an instant + 24h). Any other day lights "Other day", which then names it.
    */
-  const recipientTomorrow = recipientToday ? addDays(recipientToday, 1) : null;
-  const taskDayValue: 'today' | 'tomorrow' | null = !recipientStartDate
-    ? null
-    : recipientStartDate === recipientToday
-      ? 'today'
-      : recipientStartDate === recipientTomorrow
-        ? 'tomorrow'
-        : null;
-  const taskOtherDay = !!recipientStartDate && taskDayValue === null;
-  // Once shown (a tap, or an edit on another day), the date field stays: typing today's date into it
-  // must not make it vanish under the cursor. Today / Tomorrow fold it.
-  useEffect(() => {
-    if (taskOtherDay) setOtherDayOpen(true);
-  }, [taskOtherDay]);
   useEffect(() => {
     if (timeStr) setPickTimeOpen(true);
   }, [timeStr]);
-  const showTaskDateField = otherDayOpen || taskOtherDay;
   const showTaskTimeField = pickTimeOpen || timeStr !== '';
   /** The task form's pickers ring the RECIPIENT's today (its fields name recipient days). */
   const recipientPickerToday = defaultNewEventDate(timezone) || undefined;
@@ -1886,10 +1871,6 @@ function AddEventForm({
         setMoreOpen(true);
         revealed = true;
       }
-      if (fieldErrors.scheduled_date && !showTaskDateField) {
-        setOtherDayOpen(true);
-        revealed = true;
-      }
       if (fieldErrors.scheduled_time && !showTaskTimeField) {
         setPickTimeOpen(true);
         revealed = true;
@@ -2095,12 +2076,6 @@ function AddEventForm({
     // The start date lives in "More details" on the simple medication form.
     if (simpleKind === 'medication' && missingField === 'date' && !moreOpen) {
       setMoreOpen(true);
-      setTimeout(focusIt, 0);
-      return;
-    }
-    // On the simple task form it is behind "Other day".
-    if (simpleKind === 'task' && missingField === 'date' && !showTaskDateField) {
-      setOtherDayOpen(true);
       setTimeout(focusIt, 0);
       return;
     }
@@ -2608,14 +2583,11 @@ function AddEventForm({
     followEndTime(timeStr, viewer.timeStr);
   }
 
-  function openOtherDay(): void {
-    setOtherDayOpen(true);
-    requestAnimationFrame(() => document.getElementById('scheduled_date')?.focus());
-  }
-
-  function openPickTime(): void {
-    setPickTimeOpen(true);
-    requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
+  function toggleTaskTime(): void {
+    // A set time keeps its field open (clearing it is "Any time").
+    const opening = timeStr !== '' || !pickTimeOpen;
+    setPickTimeOpen(opening);
+    if (opening) requestAnimationFrame(() => document.getElementById('scheduled_time')?.focus());
   }
 
   /**
@@ -3103,10 +3075,22 @@ function AddEventForm({
   // RECIPIENT's (the tiles, the Other day field, the repeat end), and its times are typed on the recipient's
   // clock (job 1's "Time in <city>" field), so nothing on it is in the viewer's frame except the conversion
   // line. Same state and payload as the full form (AddEventModal.taskPayloadEquality pins it).
-  const taskDayOpts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
-  const taskHowOftenValue = ['none', 'daily', 'weekly', 'days_of_week'].includes(recurrence)
-    ? recurrence
-    : null;
+  const taskHowOftenValue = ['none', 'daily', 'weekly'].includes(recurrence) ? recurrence : null;
+  // The rarer rules live behind "Custom…" (shift form parity); the panel is open while one is the answer.
+  const taskCustomOptions = [
+    { value: 'every_other_day', label: t('addEvent.simple.everyOtherDay') },
+    { value: 'cycle', label: t('addEvent.simple.daysOnOff') },
+    { value: 'days_of_week', label: t('addEvent.simple.someDays') },
+    { value: 'monthly', label: t('addEvent.simple.monthly') },
+    { value: 'yearly', label: t('addEvent.simple.yearly') },
+  ];
+  const taskCustomSelected = taskCustomOptions.some((o) => o.value === recurrence);
+  const taskCustomShown = taskCustomOpen || taskCustomSelected;
+  const pickTaskRepeat = (next: string | null): void => {
+    if (!next) return;
+    chooseRecurrence(next as RecurrenceChoice);
+    completeStep('how_often');
+  };
   const taskTimeLabel = showDualTimezone
     ? t('addEvent.timeInZone', { zone: recipientZone || timezone })
     : t('addEvent.fields.time');
@@ -3133,11 +3117,11 @@ function AddEventForm({
             clearError(titleFieldId, 'title');
           }}
         />
-        {showTitleSuggestions && (
+        {!isEditing && title.trim() === '' && titleSuggestions.length > 0 && (
           <ChipSelect
             id="title-suggestions"
             label={t('addEvent.titleSuggestions.label')}
-            options={titleSuggestions}
+            options={titleSuggestions.slice(0, 3)}
             value={title}
             onChange={(next) => {
               setTitle(next ?? '');
@@ -3152,66 +3136,29 @@ function AddEventForm({
 
       <section aria-labelledby="sf-when" className="flex flex-col gap-3">
         {sectionHeading('sf-when', t('addEvent.simple.when'))}
-        {/* One content-sized wrapping row: the two day radios, then "Other day" OUTSIDE the radiogroup (a
-            button that reveals the date field), as "Other time" sits after the time chips. */}
-        <div className="flex flex-wrap gap-2" data-testid="task-day-row">
-          <ChipSelect
-            id="task-day"
-            label={t('addEvent.simple.when')}
-            variant="tile"
-            contents
-            allowDeselect={false}
-            options={[
-              {
-                value: 'today',
-                label: t('addEvent.simple.today'),
-                sub: recipientToday ? formatDateForDisplay(recipientToday, taskDayOpts, language) : undefined,
-              },
-              {
-                value: 'tomorrow',
-                label: t('addEvent.simple.tomorrow'),
-                sub: recipientTomorrow
-                  ? formatDateForDisplay(recipientTomorrow, taskDayOpts, language)
-                  : undefined,
-              },
-            ]}
-            value={taskDayValue}
-            onChange={(next) => {
-              const day = next === 'today' ? recipientToday : next === 'tomorrow' ? recipientTomorrow : null;
-              if (!day) return;
-              setOtherDayOpen(false);
-              chooseTaskDay(day);
-            }}
-          />
-          <ChoiceTileButton
-            label={t('addEvent.simple.otherDay')}
-            sub={
-              taskOtherDay && recipientStartDate
-                ? formatDateForDisplay(recipientStartDate, taskDayOpts, language)
-                : undefined
-            }
-            subSpacer
-            selected={taskOtherDay}
-            expanded={showTaskDateField}
-            testId="task-other-day"
-            onClick={openOtherDay}
-          />
-        </div>
-        {showTaskDateField && (
-          <DateField
-            id="scheduled_date"
-            // The RECIPIENT's day, the same day the tiles name and the save sends (with a time the form's
-            // own date field is the viewer's; this one is not, and says so when the zones differ).
-            label={t('addEvent.fields.date')}
-            required
-            value={recipientStartDate ?? ''}
-            today={recipientPickerToday}
-            error={errors.scheduled_date ?? missingErrorFor('date')}
-            hint={showDualTimezone ? daysTimezoneNote : undefined}
-            onChange={(e) => chooseTaskDay(e.target.value)}
-          />
-        )}
+        <DateField
+          id="scheduled_date"
+          // The RECIPIENT's day, the same day the save sends (with a time the full form's own date field is
+          // the viewer's; this one is not, and says so when the zones differ).
+          label={t('addEvent.fields.date')}
+          required
+          value={recipientStartDate ?? ''}
+          today={recipientPickerToday}
+          error={errors.scheduled_date ?? missingErrorFor('date')}
+          hint={showDualTimezone ? daysTimezoneNote : undefined}
+          onChange={(e) => chooseTaskDay(e.target.value)}
+        />
         <div className="flex flex-wrap gap-2" data-testid="task-time-row">
+          <ChoiceTileButton
+            hierarchy="value"
+            label={t('addEvent.fields.time')}
+            sub={timeStr ? otherTimeClock : t('addEvent.simple.pickTime')}
+            // Lit (neutral) while a time is the answer, as "Any time" is while none is (mobile parity).
+            selected={timeStr !== ''}
+            expanded={showTaskTimeField}
+            testId="task-time-tile"
+            onClick={toggleTaskTime}
+          />
           <ChipSelect
             id="task-time"
             label={t('addEvent.fields.time')}
@@ -3225,14 +3172,6 @@ function AddEventForm({
               chooseRecipientTime('');
               completeStep('when');
             }}
-          />
-          <ChoiceTileButton
-            label={t('addEvent.simple.pickTime')}
-            sub={timeStr ? otherTimeClock : undefined}
-            selected={timeStr !== ''}
-            expanded={showTaskTimeField}
-            testId="task-pick-time"
-            onClick={openPickTime}
           />
         </div>
         {showTaskTimeField && (
@@ -3254,32 +3193,66 @@ function AddEventForm({
 
       <section aria-labelledby="sf-how-often" className="flex flex-col gap-3">
         {sectionHeading('sf-how-often', t('addEvent.simple.howOften'))}
-        <ChipSelect
-          id="how-often"
-          label={t('addEvent.simple.howOften')}
-          variant="tile"
-          allowDeselect={false}
-          options={[
-            { value: 'none', label: t('addEvent.simple.once') },
-            { value: 'daily', label: t('addEvent.simple.everyDay') },
-            { value: 'weekly', label: t('addEvent.simple.everyWeek') },
-            { value: 'days_of_week', label: t('addEvent.simple.someDays') },
-          ]}
-          value={taskHowOftenValue}
-          onChange={(next) => {
-            if (!next) return;
-            chooseRecurrence(next as RecurrenceChoice);
-            completeStep('how_often');
-          }}
-        />
-        {/* A repeat the tiles cannot name (every other day, monthly, yearly, a cycle) is named here and stays
-            editable in the Repeat select under More details: never converted (med form parity). */}
-        {taskHowOftenValue === null && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 [&_[role=radio]]:w-full [&>button]:w-full">
+          <ChipSelect
+            id="how-often"
+            label={t('addEvent.simple.howOften')}
+            variant="tile"
+            contents
+            allowDeselect={false}
+            options={[
+              { value: 'none', label: t('addEvent.simple.once') },
+              { value: 'daily', label: t('addEvent.simple.everyDay') },
+              { value: 'weekly', label: t('addEvent.simple.everyWeek') },
+            ]}
+            value={taskCustomSelected ? null : taskHowOftenValue}
+            onChange={(next) => {
+              pickTaskRepeat(next);
+              if (next) setTaskCustomOpen(false);
+            }}
+          />
+          <ChoiceTileButton
+            testId="task-repeat-custom"
+            label={t('addEvent.simple.custom')}
+            selected={taskCustomSelected}
+            expanded={taskCustomShown}
+            onClick={() => {
+              // While a custom rule is the answer the options stay open (the choice lives there).
+              if (taskCustomSelected) return;
+              setTaskCustomOpen(!taskCustomOpen);
+            }}
+          />
+        </div>
+        {taskCustomShown && (
+          <Card
+            variant="outlined"
+            padding="none"
+            className="flex flex-col gap-2 p-3"
+            data-testid="task-repeat-custom-panel"
+          >
+            <Eyebrow id="sf-task-repeat-custom">{t('addEvent.simple.customHeading')}</Eyebrow>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 [&_[role=radio]]:w-full">
+              <ChipSelect
+                id="how-often-custom"
+                label={t('addEvent.simple.customHeading')}
+                variant="tile"
+                contents
+                allowDeselect={false}
+                options={taskCustomOptions}
+                value={taskCustomSelected ? recurrence : null}
+                onChange={pickTaskRepeat}
+              />
+            </div>
+          </Card>
+        )}
+        {/* A rule nothing names (a legacy custom:N) lights nothing and is named here. */}
+        {taskHowOftenValue === null && !taskCustomSelected && (
           <Text variant="caption" data-testid="how-often-summary">
             {recurrenceOptions.find((o) => o.value === recurrence)?.label}
           </Text>
         )}
         {daysBlock}
+        {cycleBlock}
       </section>
 
       <section aria-labelledby="sf-who" className="flex flex-col gap-3">
@@ -3336,8 +3309,6 @@ function AddEventForm({
             />
           </>
         )}
-        {repeatSelectBlock}
-        {cycleBlock}
         {endDateBlock}
         {reminderBlock}
       </DisclosureRow>
@@ -3379,6 +3350,16 @@ function AddEventForm({
       closeOnBackdropClick={false}
       footer={
         <>
+          {showSeriesEditNote && simpleKind === 'task' && (
+            <Text
+              variant="caption"
+              id="series-edit-note"
+              data-testid="series-edit-note"
+              className="mr-auto self-center"
+            >
+              {t('addEvent.seriesEditNote')}
+            </Text>
+          )}
           <Button
             variant="secondary"
             onClick={handleClose}
@@ -3432,12 +3413,13 @@ function AddEventForm({
         aria-describedby={showSeriesEditNote ? 'series-edit-note' : undefined}
       >
         {/* Recurring edits rewrite the whole series — keep the warning visible. */}
-        {isRecurringEdit && (
+        {isRecurringEdit && simpleKind !== 'task' && (
           <Card variant="filled" padding="sm" as="p" role="note" className="m-0 text-sm text-ink-2">
             {t('addEvent.recurringEditNotice')}
           </Card>
         )}
-        {showSeriesEditNote && (
+
+        {showSeriesEditNote && simpleKind !== 'task' && (
           <Text variant="caption" id="series-edit-note" data-testid="series-edit-note">
             {t('addEvent.seriesEditNote')}
           </Text>

@@ -129,9 +129,6 @@ function viewerWall(instant: Date): { day: string; time: string } {
   );
   return { day: `${p.year}-${p.month}-${p.day}`, time: `${String(+p.hour % 24).padStart(2, '0')}:${p.minute}` };
 }
-function recipientToday(zone: string): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(NOW);
-}
 function daysFrom(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000);
 }
@@ -246,17 +243,12 @@ function newDriver(user: User): Driver {
     const toggle = screen.getByRole('button', { name: /^More details/ });
     if (toggle.getAttribute('aria-expanded') !== 'true') await user.click(toggle);
   }
-  async function chooseDay(zone: string, day: string) {
-    const today = recipientToday(zone);
-    if (day === today) await user.click(screen.getByRole('radio', { name: /^Today/ }));
-    else if (day === plusDays(today, 1)) await user.click(screen.getByRole('radio', { name: /^Tomorrow/ }));
-    else {
-      await user.click(screen.getByRole('button', { name: /^Other day/ }));
-      fireEvent.change(screen.getByLabelText(/^Date/), { target: { value: day } });
-    }
+  async function chooseDay(_zone: string, day: string) {
+    // The date field is always there (no Today / Tomorrow / Other day tiles any more).
+    fireEvent.change(screen.getByLabelText(/^Date/), { target: { value: day } });
   }
   async function chooseTime(time: string) {
-    await user.click(screen.getByRole('button', { name: /^Pick a time/ }));
+    await user.click(screen.getByTestId('task-time-tile'));
     fireEvent.change(screen.getByLabelText(/^Time/, { selector: 'input' }), { target: { value: time } });
   }
   return {
@@ -274,16 +266,19 @@ function newDriver(user: User): Driver {
       await user.click(screen.getByRole('radio', { name: 'Any time' }));
     },
     async repeat(choice, extra) {
-      const tile: Partial<Record<Repeat, string>> = {
-        none: 'Once', daily: 'Every day', weekly: 'Every week', days_of_week: 'Some days',
+      const tile: Partial<Record<Repeat, string>> = { none: 'Once', daily: 'Every day', weekly: 'Every week' };
+      const custom: Partial<Record<Repeat, string>> = {
+        every_other_day: 'Every other day', cycle: 'Days on / off', days_of_week: 'Some days',
+        monthly: 'Monthly', yearly: 'Yearly',
       };
       if (tile[choice]) {
         await user.click(screen.getByRole('radio', { name: tile[choice] }));
-        await pickDaysAndCycle(user, extra);
       } else {
-        await openMore();
-        await pickRepeatSelect(user, choice, extra);
+        const opener = screen.getByTestId('task-repeat-custom');
+        if (opener.getAttribute('aria-expanded') !== 'true') await user.click(opener);
+        await user.click(screen.getByRole('radio', { name: custom[choice] }));
       }
+      await pickDaysAndCycle(user, extra);
     },
     async repeatEnd(_zone, _start, _time, end) {
       await openMore();

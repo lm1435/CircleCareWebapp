@@ -2489,6 +2489,7 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          layout="full"
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [5, 1, 3] })}
           onClose={vi.fn()}
         />
@@ -2541,6 +2542,7 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          layout="full"
           event={makeSeries({
             id: 'root-1_2026-06-17',
             parent_event_id: 'root-1',
@@ -2601,6 +2603,7 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          layout="full"
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [1, 3, 5] })}
           onClose={vi.fn()}
         />
@@ -2619,6 +2622,7 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          layout="full"
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: [1, 3, 5] })}
           onClose={vi.fn()}
         />
@@ -2637,6 +2641,7 @@ describe('AddEventModal — days of the week', () => {
       render(
         <AddEventModal
           circleId={CIRCLE_ID}
+          layout="full"
           event={makeSeries({ scheduled_date: '2026-06-01', recurrence_days: null })}
           onClose={vi.fn()}
         />
@@ -2654,6 +2659,7 @@ describe('AddEventModal — days of the week', () => {
     render(
       <AddEventModal
         circleId={CIRCLE_ID}
+        layout="full"
         event={makeSeries({ scheduled_date: '2026-06-23', recurrence_days: null })} // Tue, future
         onClose={vi.fn()}
       />
@@ -2865,9 +2871,9 @@ describe('AddEventModal — editing a recurring TASK series from any occurrence'
       expect(titleInput()).toHaveValue('Water the plants');
       expect(screen.getByLabelText(/^Date/)).toHaveValue('2026-06-15');
       const note = screen.getByTestId('series-edit-note');
-      expect(note).toHaveTextContent(
-        'Changes apply to upcoming tasks. Completed and past ones stay as they were.'
-      );
+      expect(note).toHaveTextContent('Applies to upcoming tasks only.');
+      // The simple task form carries it in the footer, beside Save (no notice card on top).
+      expect(note.closest('[data-modal-footer]')).not.toBeNull();
       expect(document.getElementById('add-event-form')).toHaveAttribute(
         'aria-describedby',
         note.id

@@ -100,9 +100,8 @@ async function openSeriesEditor(
   await expect(editor).toBeVisible({ timeout: 10_000 });
   // Hydration gate: the form appears only once the root is resolved.
   await expect(editor.locator('#title')).toHaveValue(expectedTitle, { timeout: 15_000 });
-  await expect(editor.getByTestId('series-edit-note')).toHaveText(
-    'Changes apply to upcoming tasks. Completed and past ones stay as they were.'
-  );
+  // The one-line note sits in the footer beside Save (no notice card on top of the form).
+  await expect(editor.page().getByTestId('series-edit-note')).toHaveText('Applies to upcoming tasks only.');
   return editor;
 }
 

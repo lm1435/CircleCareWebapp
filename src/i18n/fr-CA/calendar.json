@@ -1,6 +1,6 @@
 {
   "addEvent": {
-    "seriesEditNote": "Les changements s’appliquent aux tâches à venir. Les tâches terminées et passées restent telles quelles."
+    "seriesEditNote": "S’applique seulement aux tâches à venir."
   },
   "eventTypes": {
     "shift": "Quart"

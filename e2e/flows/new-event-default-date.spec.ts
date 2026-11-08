@@ -59,12 +59,7 @@ test('a new TASK (Tasks page) defaults to the recipient\'s today and saves on it
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
 
-  // The simple task form (owner 1.4.0): "Today" is the recipient's today and starts checked; the date
-  // field "Other day" reveals holds that same day.
-  await expect(
-    dialog.getByRole('radiogroup', { name: 'When?' }).getByRole('radio', { name: /^Today/ })
-  ).toBeChecked();
-  await dialog.getByRole('button', { name: /^Other day/ }).click();
+  // The simple task form (owner 1.4.0): the always-visible date field holds the recipient's today.
   const date = dialog.locator('#scheduled_date');
   await expect(date).toHaveValue(RECIPIENT_TODAY);
   await expect(date).not.toHaveValue(BROWSER_TODAY);

@@ -110,15 +110,14 @@ const AKL = 'Pacific/Auckland';
 const HNL = 'Pacific/Honolulu';
 type Chip = '30 min' | '1 hr' | '2 hrs';
 
-/** A NEW task on the recipient's `day` at the recipient's `time` (the simple form's Other day + Pick a time). */
+/** A NEW task on the recipient's `day` at the recipient's `time` (the simple form's date field + Time tile). */
 async function createTask(zone: string, day: string, time: string, chip: Chip | null) {
   useCircleResult.timezone = zone;
   const user = userEvent.setup();
   const view = render(<AddEventModal circleId={CIRCLE_ID} initialType="task" onClose={vi.fn()} />);
   await user.type(screen.getByRole('textbox', { name: /^Title/ }), 'Physio');
-  await user.click(screen.getByRole('button', { name: /^Other day/ }));
   fireEvent.change(screen.getByLabelText(/^Date/), { target: { value: day } });
-  await user.click(screen.getByRole('button', { name: /^Pick a time/ }));
+  await user.click(screen.getByTestId('task-time-tile'));
   fireEvent.change(screen.getByLabelText(/^Time/, { selector: 'input' }), { target: { value: time } });
   if (chip) {
     await user.click(screen.getByRole('button', { name: /^More details/ }));
