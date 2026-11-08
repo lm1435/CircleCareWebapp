@@ -672,7 +672,7 @@ export function useCompleteEvent(
       if (event?.event_type === 'appointment') {
         Analytics.appointmentCompleted(sentCircleId);
       } else {
-        Analytics.taskCompleted();
+        Analytics.taskCompleted(sentCircleId);
       }
       void invalidateEventQueries(queryClient, sentCircleId, variables.eventId);
     },
