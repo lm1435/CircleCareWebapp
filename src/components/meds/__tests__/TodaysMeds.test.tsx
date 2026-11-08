@@ -323,6 +323,20 @@ describe('TodaysMeds', () => {
     expect(within(medRow('Lisinopril')).queryByRole('button')).not.toBeInTheDocument();
   });
 
+  // ONE ACCENT (owner 2026-11-08, mobile parity): only the first actionable dose's Taken is filled.
+  it('fills only the first actionable dose\'s Taken; later ones are the moss outline', async () => {
+    mockApi();
+    renderWidget();
+    expect(await screen.findByText('Atorvastatin')).toBeInTheDocument();
+    for (const b of screen.getAllByRole('button', { name: 'Mark Atorvastatin as taken' })) {
+      expect(b.className).toContain('bg-primary-fill');
+    }
+    for (const b of screen.getAllByRole('button', { name: 'Mark Levothyroxine as taken' })) {
+      expect(b.className).not.toContain('bg-primary-fill');
+      expect(b.className).toContain('border-primary-outline');
+    }
+  });
+
   // A dose of a medication that was stopped LATER THE SAME DAY. This widget
   // fetches through the calendar events endpoint with no `includeDiscontinued`,
   // so the backend only sends it because the dose was genuinely DUE — it stays

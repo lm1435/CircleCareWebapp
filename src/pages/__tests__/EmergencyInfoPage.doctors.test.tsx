@@ -160,6 +160,9 @@ beforeEach(() => {
   });
 });
 
+/** The primary doctor's heading reads "<name>, Primary" (the moss pill's screen-reader text, owner 2026-11-08). */
+const CHEN_HEADING = 'Dr. Chen, Primary';
+
 /** The card that holds `name` as its heading. */
 function cardOf(name: string): HTMLElement {
   const heading = screen.getByRole('heading', { level: 3, name });
@@ -170,9 +173,9 @@ describe('Medical Info: Visits & notes row on each doctor card', () => {
   it('every card has the row; the count appears only above 0', async () => {
     mockApi(info, true);
     renderPage();
-    await screen.findByRole('heading', { level: 3, name: 'Dr. Chen' });
+    await screen.findByRole('heading', { level: 3, name: CHEN_HEADING });
 
-    const chen = within(cardOf('Dr. Chen')).getByRole('link', { name: /Visits & notes/ });
+    const chen = within(cardOf(CHEN_HEADING)).getByRole('link', { name: /Visits & notes/ });
     const patel = within(cardOf('Dr. Patel')).getByRole('link', { name: /Visits & notes/ });
     const kim = within(cardOf('Dr. Kim')).getByRole('link', { name: /Visits & notes/ });
 
@@ -197,9 +200,9 @@ describe('Medical Info: Visits & notes row on each doctor card', () => {
   it('a VIEW-ONLY member sees the row too (and no edit affordances)', async () => {
     mockApi(info, false);
     renderPage();
-    await screen.findByRole('heading', { level: 3, name: 'Dr. Chen' });
+    await screen.findByRole('heading', { level: 3, name: CHEN_HEADING });
     expect(
-      within(cardOf('Dr. Chen')).getByRole('link', { name: /Visits & notes/ })
+      within(cardOf(CHEN_HEADING)).getByRole('link', { name: /Visits & notes/ })
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Actions for Dr\. Chen/ })).toBeNull();
   });
@@ -210,8 +213,8 @@ describe('Medical Info: Visits & notes row on each doctor card', () => {
     };
     mockApi(info, true);
     renderPage();
-    await screen.findByRole('heading', { level: 3, name: 'Dr. Chen' });
-    const row = within(cardOf('Dr. Chen')).getByRole('link', { name: /Visits & notes/ });
+    await screen.findByRole('heading', { level: 3, name: CHEN_HEADING });
+    const row = within(cardOf(CHEN_HEADING)).getByRole('link', { name: /Visits & notes/ });
     expect(row).not.toHaveTextContent(/\d/);
   });
 
@@ -223,7 +226,7 @@ describe('Medical Info: Visits & notes row on each doctor card', () => {
     };
     mockApi(legacy, true);
     renderPage();
-    await screen.findByRole('heading', { level: 3, name: 'Dr. Chen' });
+    await screen.findByRole('heading', { level: 3, name: CHEN_HEADING });
     expect(screen.queryByRole('link', { name: /Visits & notes/ })).toBeNull();
   });
 });

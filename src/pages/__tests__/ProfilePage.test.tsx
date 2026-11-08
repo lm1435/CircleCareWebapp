@@ -168,6 +168,21 @@ beforeEach(() => {
 });
 
 describe('ProfilePage', () => {
+  // Owner 2026-11-08 (mobile parity): "How does this work?" only while quiet hours are not set up.
+  describe('quiet hours help link', () => {
+    it('shows while quiet hours are off', async () => {
+      renderPage();
+      expect(await screen.findByTestId('how-does-this-work-quiet-hours')).toBeInTheDocument();
+    });
+
+    it('hides once quiet hours are set', async () => {
+      currentUser = { ...USER, quiet_hours_start: '22:00:00', quiet_hours_end: '07:00:00' };
+      renderPage();
+      await screen.findByRole('heading', { level: 1 });
+      expect(screen.queryByTestId('how-does-this-work-quiet-hours')).toBeNull();
+    });
+  });
+
   // Notification settings: 8 per-key switches -> 4 groups
   // (docs/plans/notification-settings-4-groups.md). Storage is unchanged; a
   // group tap PATCHes every child key (+ the event_notes pin for Tasks).

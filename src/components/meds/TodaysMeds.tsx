@@ -9,6 +9,7 @@ import {
   UndoBadge,
   useToast,
   careCardActionPrimary,
+  careCardActionOutline,
   careCardActionText,
   careCardActionsInline,
   careCardActionsRow,
@@ -460,6 +461,16 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
      * draws the identical row — a dose must not look like a different thing
      * depending on which day it belongs to.
      */
+    // ONE ACCENT (owner 2026-11-08, mobile parity): only the FIRST dose that still offers Taken, in
+    // draw order (Needs Attention first, then today), is the filled primary; later ones outline.
+    // Assigned once the visible lists are known, below, before any row renders.
+    let firstActionId: string | null = null;
+    const offersTaken = (med: TodaysMedication): boolean =>
+      canEdit &&
+      !undoFlow.pending[med.id] &&
+      doseNeedsAnswer(med.confirmation) &&
+      isDoseConfirmable(med.scheduled_date, med.scheduled_time ?? null, timezone);
+
     const renderMed = (med: TodaysMedication): ReactElement => {
       const status = getMedDisplayStatus(med, timezone);
       // A dose that has not come around yet has not happened — marking it
@@ -540,7 +551,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
             onClick={() => handleConfirm(med, 'taken')}
             aria-label={t('takenLabel', { name: medName })}
             {...offlineDisabledProps(offline)}
-            className={careCardActionPrimary}
+            className={med.id === firstActionId ? careCardActionPrimary : careCardActionOutline}
           >
             {t('taken')}
           </button>
@@ -650,6 +661,7 @@ export function TodaysMeds({ circleId, limit }: TodaysMedsProps): ReactElement |
     const visibleAttention = attentionCollapsed
       ? needsAttention.slice(0, NEEDS_ATTENTION_LIMIT)
       : needsAttention;
+    firstActionId = [...visibleAttention, ...visibleMeds].find(offersTaken)?.id ?? null;
 
     // Nothing left to answer today, and there WAS something — mobile's
     // all-done card, so a finished day reads as finished rather than as an

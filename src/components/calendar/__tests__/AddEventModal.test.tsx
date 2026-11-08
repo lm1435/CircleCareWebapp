@@ -326,11 +326,14 @@ describe('AddEventModal', () => {
       await waitFor(() => expect(mutateCreate).toHaveBeenCalledTimes(1));
     });
 
-    it('padding is capped in px (only the label grows with text size), 48px floor', () => {
+    // Owner 2026-11-08: the footer pair is the standard <Button> md (44px floor), no ad-hoc
+    // padding / height overrides.
+    it('the footer pair is the standard md Button, no padding or height override', () => {
       render(<AddEventModal circleId={CIRCLE_ID} initialType="appointment" layout="full" onClose={vi.fn()} />);
       for (const button of [save(), screen.getByRole('button', { name: 'Cancel' })]) {
-        expect(button.className).toContain('py-[10px]!');
-        expect(button.className).toContain('min-h-[48px]!');
+        expect(button.className).toContain('min-h-[44px]');
+        expect(button.className).toContain('rounded-lg');
+        expect(button.className).not.toMatch(/py-\[10px\]!|min-h-\[48px\]!/);
       }
     });
 

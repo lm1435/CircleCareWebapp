@@ -199,6 +199,20 @@ describe('EventNotesPanel', () => {
     });
   });
 
+  // ONE ACCENT (owner 2026-11-08, mobile parity): while a note is being edited, its Save is the
+  // filled primary and the composer's Add note is the moss outline.
+  it('steps Add note down to the outline while a note is being edited', async () => {
+    const user = userEvent.setup();
+    notesData = [makeNote({ author_id: 'user-1' })];
+    renderPanel();
+    const add = () => screen.getByRole('button', { name: 'Add note' });
+    expect(add().className).toContain('bg-primary-fill');
+    await user.click(screen.getByRole('button', { name: /^Edit, / }));
+    expect(add().className).not.toContain('bg-primary-fill');
+    expect(add().className).toContain('border-primary-outline');
+    expect(screen.getByRole('button', { name: 'Save' }).className).toContain('bg-primary-fill');
+  });
+
   it('does NOT offer edit on another member’s note, but the circle owner CAN delete it', () => {
     // Current user is the owner; the note is someone else's.
     currentUserId = 'owner-1';

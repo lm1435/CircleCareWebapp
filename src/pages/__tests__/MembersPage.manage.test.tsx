@@ -160,6 +160,32 @@ beforeEach(() => {
   useCircleResult.members = [];
 });
 
+// Owner 2026-11-08 (mobile parity): "How does this work?" only while the care team is empty —
+// nobody but the owner, and no invite out.
+describe('MembersPage — help link only while the care team is empty', () => {
+  it('shows it to a solo owner with nothing pending', () => {
+    setCircle([makeMember({ id: 'u-owner', role: 'owner' })]);
+    renderPage();
+    expect(screen.getByTestId('how-does-this-work-invite-family')).toBeInTheDocument();
+  });
+
+  it('hides it once a caregiver joined', () => {
+    setCircle([makeMember({ id: 'u-owner', role: 'owner' }), makeMember({ id: 'u2' })]);
+    renderPage();
+    expect(screen.queryByTestId('how-does-this-work-invite-family')).toBeNull();
+  });
+
+  it('hides it once an invite is pending', () => {
+    setCircle([makeMember({ id: 'u-owner', role: 'owner' })], {
+      pending_invites: [
+        { id: 'i1', invited_email: 'pat@example.com', created_at: '2026-01-01T00:00:00Z', expires_at: inDays(5) } as never,
+      ],
+    });
+    renderPage();
+    expect(screen.queryByTestId('how-does-this-work-invite-family')).toBeNull();
+  });
+});
+
 describe('MembersPage — owner management', () => {
   it('shows the Invite member button for the owner', () => {
     setCircle([makeMember({ id: 'u-owner', role: 'owner' })]);

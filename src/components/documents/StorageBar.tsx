@@ -97,7 +97,7 @@ export function StorageBar({
                   : t('storage.fullNonOwner')}
           </span>
           {isOwner && isFreeTier && (
-            <Button variant="primary" size="sm" className="min-h-[32px]!" onClick={onUpgrade}>
+            <Button variant="primary" size="sm" onClick={onUpgrade}>
               {t('storage.upgrade')}
             </Button>
           )}

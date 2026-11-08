@@ -42,6 +42,9 @@ describe('StorageBar', () => {
     expect(screen.getByText('Storage full. Upgrade for more space.')).toBeInTheDocument();
 
     const upgradeButton = screen.getByRole('button', { name: 'Upgrade' });
+    // The standard sm Button: 44px target, never the old 32px override (owner 2026-11-08).
+    expect(upgradeButton.className).toContain('min-h-[44px]');
+    expect(upgradeButton.className).not.toContain('min-h-[32px]');
     upgradeButton.click();
     expect(onUpgrade).toHaveBeenCalledTimes(1);
   });

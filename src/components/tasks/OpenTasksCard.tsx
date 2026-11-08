@@ -128,11 +128,14 @@ export function OpenTasksCard({
       </div>
     );
   } else {
+    // ONE ACCENT (same rule as TasksPage): only the first open task's Done is filled.
+    const firstOpenId = visibleTasks.find((x) => !x.completed_at && !pendingIds.has(x.id))?.id;
     body = (
       <>
         <ul className={`m-0 list-none p-0 ${careCardListGap}`}>
           {visibleTasks.map((task) => (
             <TaskRow
+              primaryAction={task.id === firstOpenId}
               key={task.id}
               task={task}
               timezone={timezone}

@@ -115,6 +115,13 @@ export default function PendingInvitesPage(): ReactElement {
       </div>
     );
   } else {
+    // ONE ACCENT (owner 2026-11-08, mobile parity): only the first invite that can still be accepted
+    // gets the filled Accept; later ones are the moss outline. An unparseable expiry counts as live.
+    const nowMs = Date.now();
+    const firstAcceptId = invites.find((invite) => {
+      const at = invite.expires_at ? Date.parse(invite.expires_at) : NaN;
+      return Number.isNaN(at) || at > nowMs;
+    })?.id;
     content = (
       <ul className="m-0 mt-6 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
         {invites.map((invite) => {
@@ -151,6 +158,7 @@ export default function PendingInvitesPage(): ReactElement {
               </div>
               <div>
                 <Button
+                  variant={invite.id === firstAcceptId ? 'primary' : 'outline'}
                   onClick={() => handleAccept(invite)}
                   offlineKind="change"
                   disabled={acceptInvite.isPending && acceptingId === invite.id}

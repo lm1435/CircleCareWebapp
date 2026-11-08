@@ -296,6 +296,25 @@ describe('OpenTasksCard', () => {
     );
   });
 
+  // ONE ACCENT (owner 2026-11-08): only the first open task's Done is filled; later rows outline.
+  it('fills only the first open task\'s Done; later ones are the moss outline', () => {
+    setTasks({
+      open: [
+        makeTask({ id: 't1', title: 'Refill prescription' }),
+        makeTask({ id: 't2', title: 'Call doctor' }),
+      ],
+    });
+    renderCard();
+    // Each row draws its Done twice (inline + stacked, container queries pick one).
+    for (const b of screen.getAllByRole('button', { name: 'Mark "Refill prescription" complete' })) {
+      expect(b.className).toContain('bg-primary-fill');
+    }
+    for (const b of screen.getAllByRole('button', { name: 'Mark "Call doctor" complete' })) {
+      expect(b.className).not.toContain('bg-primary-fill');
+      expect(b.className).toContain('border-primary-outline');
+    }
+  });
+
   it('shows first-run task copy when the circle has never had a task', () => {
     setTasks({ open: [], ever: [] });
     renderCard();

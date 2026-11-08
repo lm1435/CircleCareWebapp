@@ -183,17 +183,44 @@ test.describe('in-app help (signed in)', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'Still need help? Contact us' })).toBeVisible();
   });
 
-  test('the Members page links "How does this work?" to the invite article', async ({
+  // Owner 2026-11-08 (both platforms): the contextual link shows ONLY while its surface is empty.
+  // The persona's care team is populated, so Members offers no link.
+  test('the Members page hides "How does this work?" once the care team has people', async ({
     page,
     circleId,
   }) => {
-    test.skip(!bySlug('invite-family'), 'no invite-family article in content.json');
     await page.route(MEDIA_PATH, () => undefined);
     await page.goto(`/circles/${circleId}/members`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('link', { name: 'How does this work?' }).click();
-    await expect(page).toHaveURL(/\/help\/invite-family$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('listitem').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'How does this work?' })).toHaveCount(0);
+  });
+
+  // Quiet hours: the link shows while they are off, hides once they are on, and opening it lands on
+  // the article (help_center_opened { source: contextual } is pinned in the unit suite).
+  test('Profile quiet hours: the link shows only while quiet hours are off, and opens the article', async ({
+    page,
+  }) => {
+    test.skip(!bySlug('quiet-hours'), 'no quiet-hours article in content.json');
+    await page.route(MEDIA_PATH, () => undefined);
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+    const toggle = page.getByRole('switch', { name: 'Enable quiet hours' });
+    const link = page.getByTestId('how-does-this-work-quiet-hours');
+    await expect(toggle).toBeVisible();
+    if ((await toggle.getAttribute('aria-checked')) === 'true') {
+      await toggle.click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    }
+    await expect(link).toBeVisible();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await expect(link).toHaveCount(0);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await link.click();
+    await expect(page).toHaveURL(/\/help\/quiet-hours$/);
     await expect(
-      page.getByRole('heading', { level: 1, name: bySlug('invite-family')!.title })
+      page.getByRole('heading', { level: 1, name: bySlug('quiet-hours')!.title })
     ).toBeVisible();
   });
 });

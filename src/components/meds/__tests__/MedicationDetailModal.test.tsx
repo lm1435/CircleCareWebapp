@@ -151,7 +151,7 @@ describe('MedicationDetailModal', () => {
 
     await waitFor(() => expect(getMedicationPhotoUrl).toHaveBeenCalled());
 
-    expect(screen.getByText('meds:page.detail.notes')).toBeInTheDocument();
+    expect(screen.getByText('meds:page.detail.instructions')).toBeInTheDocument();
     expect(screen.getByText('Take with food')).toBeInTheDocument();
   });
 

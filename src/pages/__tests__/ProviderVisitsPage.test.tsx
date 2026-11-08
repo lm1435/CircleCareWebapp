@@ -137,6 +137,22 @@ beforeEach(() => {
   circle.timezone = 'America/Chicago';
 });
 
+// Owner 2026-11-08 (mobile parity): "How does this work?" only while the doctor has no visits.
+describe('help link', () => {
+  it('shows while there are no visits', async () => {
+    mockVisits.mockResolvedValue(page({ visits: [], next_visit: null }));
+    renderPage();
+    expect(await screen.findByTestId('how-does-this-work-doctor-visits-and-notes')).toBeInTheDocument();
+  });
+
+  it('hides once a visit exists', async () => {
+    mockVisits.mockResolvedValue(page({ visits: [visit()] }));
+    renderPage();
+    await screen.findByRole('heading', { level: 1, name: 'Dr. Patel' });
+    expect(screen.queryByTestId('how-does-this-work-doctor-visits-and-notes')).toBeNull();
+  });
+});
+
 describe('header and states', () => {
   it('shows a labelled loading status while the first page is on its way', () => {
     mockVisits.mockReturnValue(new Promise(() => undefined));

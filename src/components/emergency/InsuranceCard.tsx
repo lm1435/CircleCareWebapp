@@ -1,8 +1,9 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Card, Text } from '@/components/ui';
+import { Card, Text } from '@/components/ui';
 import type { InsurancePlan } from '@/api/emergencyInfo';
 import { CardActions } from './CardActions';
+import { PrimaryNameHeading } from './PrimaryNameHeading';
 import { FieldList, type Field } from './FieldList';
 import { PhoneLink } from './PhoneLink';
 
@@ -49,12 +50,15 @@ export function InsuranceCard({ plan, onEdit, onDelete }: InsuranceCardProps): R
   return (
     <Card padding="lg" className="print-card">
       <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Text variant="h3" as="h3">
-            {plan.carrier}
-          </Text>
-          {plan.label && <Badge variant="default">{plan.label}</Badge>}
-          {plan.is_primary && <Badge variant="error">{t('primary')}</Badge>}
+        {/* At most ONE chip beside the name (owner 2026-11-08): Primary. The plan's own label
+            ("Medicare", "Secondary") is a caption line under it, as on mobile. */}
+        <div className="min-w-0">
+          <PrimaryNameHeading name={plan.carrier} isPrimary={plan.is_primary} />
+          {plan.label ? (
+            <Text variant="caption" as="p" className="mt-0.5" data-testid="insurance-plan-label">
+              {plan.label}
+            </Text>
+          ) : null}
         </div>
         {onEdit && onDelete && (
           <CardActions

@@ -88,7 +88,7 @@
     "detail": {
       "photoAlt": "Foto de {{name}}",
       "time": "Horário",
-      "notes": "Notas",
+      "instructions": "Instruções",
       "viewLabel": "Ver detalhes de {{name}}",
       "repeat": "Repetição",
       "refill": "Reposição"

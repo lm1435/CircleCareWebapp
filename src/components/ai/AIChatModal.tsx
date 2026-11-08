@@ -367,10 +367,7 @@ export function AIChatModal({
                         variant="outlined"
                         padding="sm"
                         onPress={() => handleSend(suggestion)}
-                        // `rounded-lg!`: Card's own `rounded-xl` is emitted
-                        // LATER in the compiled stylesheet (verified against
-                        // dist/assets/*.css), so a plain override loses.
-                        className="min-h-[44px] w-full rounded-lg! text-sm text-ink animate-[fade-in_200ms_ease-out] [animation-fill-mode:both] motion-reduce:animate-none"
+                        className="min-h-[44px] w-full text-sm text-ink animate-[fade-in_200ms_ease-out] [animation-fill-mode:both] motion-reduce:animate-none"
                         style={{ animationDelay: `${index * 40}ms` }}
                       >
                         {suggestion}
@@ -404,7 +401,7 @@ export function AIChatModal({
                         padding="sm"
                         onPress={() => handleAction(action)}
                         data-testid={`ai-chat-action-${replyActionKey(action)}`}
-                        className="min-h-[44px] w-full rounded-lg! text-sm font-semibold text-ink"
+                        className="min-h-[44px] w-full text-sm font-semibold text-ink"
                       >
                         {replyActionLabel(t, action)}
                       </Card>

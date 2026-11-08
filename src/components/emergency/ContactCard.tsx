@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Card, Text } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { CardActions } from './CardActions';
+import { PrimaryNameHeading } from './PrimaryNameHeading';
 import { FieldList, type Field } from './FieldList';
 import { PhoneLink } from './PhoneLink';
 
@@ -41,12 +42,7 @@ export function ContactCard({
   return (
     <Card padding="lg" className="print-card">
       <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Text variant="h3" as="h3">
-            {name}
-          </Text>
-          {isPrimary && <Badge variant="error">{t('primary')}</Badge>}
-        </div>
+        <PrimaryNameHeading name={name} isPrimary={isPrimary} />
         {onEdit && onDelete && (
           <CardActions
             onEdit={onEdit}

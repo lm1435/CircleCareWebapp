@@ -92,6 +92,10 @@ export default function MembersPage(): ReactElement {
   // pending list below with its Expired badge + Resend, so the owner has both
   // paths: retry the old one, or invite someone new.
   const liveInvites = pendingInvites.filter((invite) => !isPendingInviteExpired(invite));
+  // "Empty" for the help link (mobile InviteMemberScreen's rule): no caregiver besides the viewer
+  // and no invite out. Unknown (circle not loaded) reads as not empty.
+  const careTeamEmpty =
+    !!circle && members.filter((m) => !m.is_care_recipient).length <= 1 && pendingInvites.length === 0;
 
   const removeMember = useRemoveMember(circleId);
   const leaveCircle = useLeaveCircle(circleId);
@@ -355,7 +359,9 @@ export default function MembersPage(): ReactElement {
         }
       />
 
-      {canManageMembers ? (
+      {/* Help only while the care team is still empty: nobody but you, nothing pending
+          (owner 2026-11-08, mobile parity). */}
+      {canManageMembers && careTeamEmpty ? (
         <div className="px-5">
           <HowDoesThisWork slug="invite-family" />
         </div>

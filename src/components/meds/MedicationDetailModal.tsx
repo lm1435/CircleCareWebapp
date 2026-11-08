@@ -309,7 +309,7 @@ export function MedicationDetailModal({
             </InfoRow>
           )}
           {notes && (
-            <InfoRow icon="document-text-outline" label={t('meds:page.detail.notes')}>
+            <InfoRow icon="document-text-outline" label={t('meds:page.detail.instructions')}>
               <span className="whitespace-pre-wrap font-normal">{notes}</span>
             </InfoRow>
           )}

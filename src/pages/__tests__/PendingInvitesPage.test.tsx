@@ -102,6 +102,24 @@ describe('PendingInvitesPage', () => {
     expect(badge.className).not.toContain('terracotta');
   });
 
+  // ONE ACCENT (owner 2026-11-08, mobile parity): only the first acceptable Accept is filled.
+  it('fills the first invite\'s Accept and outlines the others; an expired one is skipped', () => {
+    const past = new Date(Date.now() - 86400_000).toISOString();
+    const future = new Date(Date.now() + 5 * 86400_000).toISOString();
+    usePendingInvitesResult.data = [
+      makeInvite({ id: 'inv-old', expires_at: past }),
+      makeInvite({ id: 'inv-a', expires_at: future }),
+      makeInvite({ id: 'inv-b', expires_at: future }),
+    ];
+    renderPage();
+    const accepts = screen.getAllByRole('button', { name: 'Accept' });
+    expect(accepts).toHaveLength(3);
+    expect(accepts[0].className).not.toContain('bg-primary-fill');
+    expect(accepts[1].className).toContain('bg-primary-fill');
+    expect(accepts[2].className).not.toContain('bg-primary-fill');
+    expect(accepts[2].className).toContain('border-primary-outline');
+  });
+
   it('falls back to the inviter email when there is no name', () => {
     usePendingInvitesResult.data = [
       makeInvite({ invited_by: { email: 'anon@example.com', first_name: null, last_name: null } }),

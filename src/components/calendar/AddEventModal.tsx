@@ -293,14 +293,6 @@ const EARLIER_REMINDERS_WARNING_ID = 'reminders-earlier-warning';
 // The days-of-week picker: its group id doubles as the field-error focus target.
 const RECURRENCE_DAYS_ID = 'recurrence_days';
 
-/**
- * Footer buttons: only the LABEL grows with the user's text size. The shared
- * footer rule sets `py-2.5` (rem), so at a large browser font the padding grew
- * with the label and the pair ate the dialog. Pixel padding + a 48px floor
- * (>= 44px target) keep the band a constant height until the label itself is
- * taller. `!` wins over the footer's `[&_button]:` rule, which is more specific.
- */
-const FOOTER_BUTTON_CLASS = 'py-[10px]! min-h-[48px]!';
 const RECURRENCE_DAYS_ERROR_ID = 'recurrence_days-error';
 /** Where focus goes first after a refused save: the form's fields in reading order. */
 const FOCUS_ORDER = [
@@ -3391,7 +3383,6 @@ function AddEventForm({
             variant="secondary"
             onClick={handleClose}
             disabled={isPending}
-            className={FOOTER_BUTTON_CLASS}
             data-testid={firstRun ? 'first-run-skip' : undefined}
           >
             {firstRun ? t('addEvent.firstRun.skip') : t('common:cancel')}
@@ -3417,7 +3408,8 @@ function AddEventForm({
                 : undefined
             }
             data-testid="add-event-save"
-            className={`${FOOTER_BUTTON_CLASS} border-[1.5px] border-transparent`}
+            // Same 1.5px edge as the secondary beside it (transparent), so the pair is one height.
+            className="border-[1.5px] border-transparent"
           >
             {isEditing
               ? t('addEvent.saveChanges')

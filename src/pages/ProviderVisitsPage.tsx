@@ -246,9 +246,12 @@ export default function ProviderVisitsPage(): ReactElement {
           </div>
         )}
 
-        <div className="mt-1">
-          <HowDoesThisWork slug="doctor-visits-and-notes" />
-        </div>
+        {/* Help only while the doctor has no visits (owner 2026-11-08, mobile parity). */}
+        {isEmpty ? (
+          <div className="mt-1">
+            <HowDoesThisWork slug="doctor-visits-and-notes" />
+          </div>
+        ) : null}
 
         {isEmpty ? (
           <Card padding="lg" className="mt-6 border-dashed" data-testid="provider-visits-empty">

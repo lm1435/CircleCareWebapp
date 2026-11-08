@@ -322,7 +322,15 @@ export function EventNotesPanel({
             rows={3}
           />
           <div className="flex justify-end">
-            <Button type="submit" offlineKind="save" size="sm" disabled={!composer.trim() || createNote.isPending}>
+            {/* ONE ACCENT (owner 2026-11-08, mobile parity): while a note is being edited its Save
+                is the filled primary, so Add note steps down to the outline. */}
+            <Button
+              type="submit"
+              offlineKind="save"
+              size="sm"
+              variant={editingNoteId !== null ? 'outline' : 'primary'}
+              disabled={!composer.trim() || createNote.isPending}
+            >
               {t('calendar:notes.add')}
             </Button>
           </div>

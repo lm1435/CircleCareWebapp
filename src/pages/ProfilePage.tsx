@@ -739,9 +739,12 @@ export default function ProfilePage(): ReactElement {
             />
           </div>
         </SheetRow>
-        <SheetRow>
-          <HowDoesThisWork slug="quiet-hours" />
-        </SheetRow>
+        {/* Help only while quiet hours are not set up (owner 2026-11-08, mobile parity). */}
+        {!quietEnabled ? (
+          <SheetRow>
+            <HowDoesThisWork slug="quiet-hours" />
+          </SheetRow>
+        ) : null}
         {quietEnabled ? (
           <SheetRow>
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
