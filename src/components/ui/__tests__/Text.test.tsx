@@ -27,6 +27,19 @@ const EXPECTED_TAG: Record<TextVariant, string> = {
 
 const VARIANTS = Object.keys(TEXT_CLASS) as TextVariant[];
 
+// Audit 2026-11-07 #16: headings wrap balanced (no one-word last line).
+describe('Text heading balance', () => {
+  const HEADINGS: TextVariant[] = ['editorialTitle', 'editorialTitleCompact', 'display', 'h1', 'authTitle', 'h2', 'sectionTitle', 'h3', 'h4'];
+  for (const variant of HEADINGS) {
+    it(`${variant} wraps balanced`, () => {
+      expect(TEXT_CLASS[variant].split(' ')).toContain('text-balance');
+    });
+  }
+  it('body text is not balanced', () => {
+    expect(TEXT_CLASS.body.split(' ')).not.toContain('text-balance');
+  });
+});
+
 describe('Text', () => {
   it('covers every variant in the scale (spec §4.2)', () => {
     expect(VARIANTS).toHaveLength(21);

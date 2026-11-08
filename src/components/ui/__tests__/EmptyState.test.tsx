@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { EmptyState } from '../EmptyState';
 
+describe('EmptyState title balance', () => {
+  it('the title heading wraps balanced', () => {
+    render(<EmptyState icon={<svg />} title="Nothing here yet" />);
+    expect(screen.getByRole('heading', { name: 'Nothing here yet' })).toHaveClass('text-balance');
+  });
+});
+
 describe('EmptyState', () => {
   it('renders the icon tile, title, and description', () => {
     render(

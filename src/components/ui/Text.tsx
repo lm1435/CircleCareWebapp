@@ -25,7 +25,7 @@ export type TextVariant =
 
 /** Spec §4.2. Values are mobile's Text.tsx StyleSheet, verbatim. */
 export const TEXT_CLASS: Record<TextVariant, string> = {
-  editorialTitle: 'text-[42px] font-semibold leading-[46px] tracking-[-1.2px] text-ink',
+  editorialTitle: 'text-[42px] font-semibold leading-[46px] tracking-[-1.2px] text-ink text-balance',
   // L3: `compact` (a title long enough to wrap to three lines at 42px) used to
   // render as `editorialTitle` PLUS an appended override className
   // (`text-xl leading-[35px]`). Both class lists land on the same element, and
@@ -34,16 +34,16 @@ export const TEXT_CLASS: Record<TextVariant, string> = {
   // declared after `compact`'s override was ever authored elsewhere, so it
   // always won the cascade and `compact` was a silent no-op. A distinct
   // variant is a single class list, so there is no cascade to lose.
-  editorialTitleCompact: 'text-[32px] font-semibold leading-[35px] tracking-[-1.2px] text-ink',
-  display: 'text-2xl font-bold leading-tight tracking-tight text-ink',
-  h1: 'text-xl font-bold leading-tight tracking-tight text-ink',
+  editorialTitleCompact: 'text-[32px] font-semibold leading-[35px] tracking-[-1.2px] text-ink text-balance',
+  display: 'text-2xl font-bold leading-tight tracking-tight text-ink text-balance',
+  h1: 'text-xl font-bold leading-tight tracking-tight text-ink text-balance',
   // The compact Home hero (avatar LEFT of the name): 26/600, left-aligned.
   heroName: 'text-[26px] font-semibold leading-[31px] tracking-[-0.6px] text-ink',
-  authTitle: 'text-[34px] font-semibold leading-[38px] tracking-tight text-ink',
-  h2: 'text-lg font-semibold leading-tight text-ink',
-  sectionTitle: 'text-lg font-semibold leading-[28px] text-ink',
-  h3: 'text-base font-semibold leading-tight text-ink',
-  h4: 'text-lg font-semibold leading-normal text-ink',
+  authTitle: 'text-[34px] font-semibold leading-[38px] tracking-tight text-ink text-balance',
+  h2: 'text-lg font-semibold leading-tight text-ink text-balance',
+  sectionTitle: 'text-lg font-semibold leading-[28px] text-ink text-balance',
+  h3: 'text-base font-semibold leading-tight text-ink text-balance',
+  h4: 'text-lg font-semibold leading-normal text-ink text-balance',
   body: 'text-base font-normal leading-relaxed text-ink',
   bodyMedium: 'text-base font-medium leading-relaxed text-ink',
   bodySemiBold: 'text-base font-semibold leading-relaxed text-ink',
