@@ -266,5 +266,56 @@
     "open_other": "{{count}} gardes · {{open}}",
     "count_one": "{{count}} garde",
     "count_other": "{{count}} gardes"
+  },
+  "tasks": {
+    "addTask": "Ajouter une tâche à cette garde",
+    "added": "Tâche ajoutée",
+    "form": {
+      "title": "Ajouter une tâche",
+      "name": "Nom de la tâche",
+      "namePlaceholder": "p. ex. Aider pour le déjeuner",
+      "time": "Heure",
+      "timeHint": "Entre {{start}} et {{end}}",
+      "onlyDate": "Seulement le {{date}}",
+      "onlyDateHint": "Sinon, cette tâche se répète avec la garde et revient à la personne qui l’assure.",
+      "save": "Ajouter la tâche",
+      "errorName": "Saisissez le nom de la tâche.",
+      "errorOutside": "Choisissez une heure pendant cette garde.",
+      "errorUnsupported": "Une garde mensuelle ou annuelle ne peut pas répéter une tâche après minuit. Choisissez une autre heure ou cochez « Seulement le {{date}} ».",
+      "editTitle": "Modifier la tâche",
+      "explainOnce": "Elle revient à la personne de garde.",
+      "delete": "Supprimer la tâche",
+      "errorEnded": "Cette garde est terminée, on ne peut donc plus y ajouter de tâches.",
+      "errorGone": "Cette garde n’existe plus.",
+      "errorInvalidDate": "Ce jour ne fait pas partie de cette garde.",
+      "errorGeneric": "Impossible d’ajouter la tâche. Veuillez réessayer."
+    },
+    "list": {
+      "titleNamed": "Liste de {{name}} · {{done}} sur {{total}} faites",
+      "titleYou": "Votre liste · {{done}} sur {{total}} faites",
+      "titleOpen": "Liste de cette garde · {{done}} sur {{total}} faites",
+      "empty": "Rien dans la liste de cette garde pour l’instant.",
+      "error": "Impossible de charger la liste de cette garde.",
+      "retry": "Réessayer",
+      "alsoHappening": "Aussi pendant cette garde ({{count}})",
+      "done": "Terminé",
+      "taken": "Prise",
+      "skipped": "Sautée",
+      "doneLabel": "Terminé, {{name}}",
+      "takenLabel": "Prise, {{name}}",
+      "missed": "Non renseignée"
+    },
+    "card": {
+      "count_one": "{{count}} tâche · {{done}} faite",
+      "count_other": "{{count}} tâches · {{done}} faites"
+    },
+    "meta": {
+      "line": "Tâche · {{who}} · {{title}}",
+      "open": "Garde à pourvoir"
+    },
+    "editWarning_one": "{{count}} tâche tombe en dehors des nouveaux horaires. Elle restera au calendrier comme tâche pour tout le monde.",
+    "editWarning_other": "{{count}} tâches tombent en dehors des nouveaux horaires. Elles resteront au calendrier comme tâches pour tout le monde.",
+    "deleteImpact_one": "Cela supprime aussi sa {{count}} tâche à venir. Les tâches terminées restent dans l’historique.",
+    "deleteImpact_other": "Cela supprime aussi ses {{count}} tâches à venir. Les tâches terminées restent dans l’historique."
   }
 }

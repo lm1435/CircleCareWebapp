@@ -29,6 +29,7 @@ import {
   isDoseConfirmable,
   zoneReferenceInstant,
 } from '@/utils/timezone';
+import { shiftTaskMeta } from '@/components/shifts/shiftTasks';
 import type { NextUpItem } from './nextUpItems';
 
 // "Next up" on Today (docs/plans/simple-ui-1-3-1.md; hi-fi HiToday): today's
@@ -127,7 +128,7 @@ export function NextUp({
   onTakenPressed,
   landing = null,
 }: NextUpProps): ReactElement {
-  const { t } = useTranslation(['overview', 'meds', 'common']);
+  const { t } = useTranslation(['overview', 'meds', 'common', 'shifts']);
   const { showToast } = useToast();
   const offline = useIsOffline();
   const hourCycle = useHourCycle();
@@ -186,7 +187,7 @@ export function NextUp({
       );
     },
   });
-  const tasks = useTaskCompletion(circleId);
+  const tasks = useTaskCompletion(circleId, 'today');
 
   // The landed row is always shown, even when it is past the first NEXT_UP_VISIBLE.
   const landedIndex = landingKey ? items.findIndex((i) => i.key === landingKey) : -1;
@@ -269,7 +270,12 @@ export function NextUp({
         ? t('today.nextUp.lateHours', { count: item.lateHours })
         : t('today.nextUp.late')
       : null;
-    const sub = [item.detail, lateText].filter(Boolean).join(' · ');
+    // A task added to a shift names who covers it and which shift ("Task · Lucia · Afternoons").
+    const shiftMeta =
+      item.type === 'task' && item.event
+        ? shiftTaskMeta(item.event, t as unknown as (k: string, o?: Record<string, unknown>) => string)
+        : null;
+    const sub = [item.detail, shiftMeta, lateText].filter(Boolean).join(' · ');
     // The action's accessible name carries WHEN (mobile NextUpCard actionWhen): yesterday's and
     // today's dose of one med, or a med's two times, would otherwise share "Taken, <med>".
     const overdueDays = daysBefore(item.date, today);

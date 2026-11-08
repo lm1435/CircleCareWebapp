@@ -483,6 +483,15 @@ const SHIFT_SCOPES = ['occurrence', 'future'] as const;
 const SHIFT_DROP_ROLES = ['self', 'manager', 'owner'] as const;
 const SHIFT_ASSIGN_ROLES = ['owner', 'manager'] as const;
 const SHIFT_TEASER_SOURCES = ['toggle', 'add_menu', 'shifts_nudge'] as const;
+// Shift tasks (docs/plans/shift-tasks.md section 8): closed enums, identical on mobile.
+const SHIFT_TASK_SOURCES = ['saved_sheet', 'shift_detail'] as const;
+const SHIFT_TASK_SURFACES = ['shift_detail', 'today', 'tasks', 'calendar'] as const;
+const SHIFT_TASK_TASKS_BUCKETS = ['0', '1', '2-3', '4+'] as const;
+const SHIFT_TASK_DONE_BUCKETS = ['none', 'some', 'all'] as const;
+const SHIFT_TASK_DELETE_SCOPES = ['occurrence', 'future', 'all'] as const;
+const SHIFT_SAVED_SHEET_ACTIONS = ['add_task', 'add_next', 'done'] as const;
+const SHIFT_EDIT_WARNING_KINDS = ['time', 'date', 'repeat'] as const;
+const SHIFT_EDIT_WARNING_BUCKETS = ['1', '2-3', '4+'] as const;
 
 /** `open_count_bucket`: '0' | '1-2' | '3+'. */
 function shiftOpenCountBucket(count: number): '0' | '1-2' | '3+' {
@@ -1595,6 +1604,36 @@ export const Analytics = {
     }),
   shiftDeleted: (opts: { scope: string }) =>
     capture('shift_deleted', { scope: pickEnum(opts.scope, SHIFT_SCOPES, 'occurrence') }),
+  // --- Shift tasks. Enums / booleans / buckets only; NO circle_id, ids, titles or times.
+  shiftTaskAdded: (opts: { source: string; oneOff: boolean; shiftRepeats: boolean }) =>
+    capture('shift_task_added', {
+      source: pickEnum(opts.source, SHIFT_TASK_SOURCES, 'shift_detail'),
+      one_off: opts.oneOff === true,
+      shift_repeats: opts.shiftRepeats === true,
+    }),
+  shiftTaskCompleted: (opts: { surface: string }) =>
+    capture('shift_task_completed', {
+      surface: pickEnum(opts.surface, SHIFT_TASK_SURFACES, 'tasks'),
+    }),
+  shiftTaskListViewed: (opts: { tasksBucket: string; doneBucket: string }) =>
+    capture('shift_task_list_viewed', {
+      tasks_bucket: pickEnum(opts.tasksBucket, SHIFT_TASK_TASKS_BUCKETS, '0'),
+      done_bucket: pickEnum(opts.doneBucket, SHIFT_TASK_DONE_BUCKETS, 'none'),
+    }),
+  shiftAlsoHappeningExpanded: () => capture('shift_also_happening_expanded', {}),
+  shiftSavedSheetAction: (opts: { action: string }) =>
+    capture('shift_saved_sheet_action', {
+      action: pickEnum(opts.action, SHIFT_SAVED_SHEET_ACTIONS, 'done'),
+    }),
+  shiftTaskDeleted: (opts: { scope: string }) =>
+    capture('shift_task_deleted', {
+      scope: pickEnum(opts.scope, SHIFT_TASK_DELETE_SCOPES, 'occurrence'),
+    }),
+  shiftEditTasksWarningShown: (opts: { countBucket: string; kind: string }) =>
+    capture('shift_edit_tasks_warning_shown', {
+      count_bucket: pickEnum(opts.countBucket, SHIFT_EDIT_WARNING_BUCKETS, '1'),
+      kind: pickEnum(opts.kind, SHIFT_EDIT_WARNING_KINDS, 'time'),
+    }),
   shiftsTeaserShown: (opts: { source: string }) =>
     capture('shifts_teaser_shown', { source: pickEnum(opts.source, SHIFT_TEASER_SOURCES, 'toggle') }),
   shiftsTeaserCtaTapped: () => capture('shifts_teaser_cta_tapped', {}),

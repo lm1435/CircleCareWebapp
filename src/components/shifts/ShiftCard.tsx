@@ -5,6 +5,7 @@ import type { CircleMember } from '@/api/circleMembers';
 import { Avatar, Button, Card, Icon } from '@/components/ui';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import { shiftAssignee } from './shiftPeople';
+import { buildShiftList } from './shiftTasks';
 import {
   formatShiftRange,
   formatShiftRangeParts,
@@ -25,6 +26,12 @@ export interface ShiftCardProps {
    * unless the shift has ENDED (recipient zone): then it reads "Not covered", no Take.
    */
   onTake?: (shift: CalendarEvent) => void;
+  /**
+   * The non-shift events around this card's day (the Shifts view loads them for its range). The
+   * "3 tasks · 1 done" chip counts the same tasks the detail's list holds; hidden at 0 and while
+   * they have not loaded.
+   */
+  events?: readonly CalendarEvent[];
 }
 
 /**
@@ -43,6 +50,7 @@ export function ShiftCard({
   viewerId,
   onOpen,
   onTake,
+  events,
 }: ShiftCardProps): ReactElement {
   const { t } = useTranslation('shifts');
   const cycle = useHourCycle();
@@ -55,6 +63,9 @@ export function ShiftCard({
   const parts = formatShiftRangeParts(shift, timezone, cycle);
   const who = assignee ? (assignee.isYou ? t('you') : assignee.name || t('someone')) : '';
   const hintId = useId();
+  const list = events ? buildShiftList(shift, events) : null;
+  const taskCount = list?.taskTotal ?? 0;
+  const taskDone = list?.taskDone ?? 0;
   // "{{name}}, {{start}} to {{end}}[, next day], open" / ", {{who}} is on it". The
   // action lives in the description, never in the label.
   const status = unfilledEnded
@@ -69,6 +80,7 @@ export function ShiftCard({
     t('rangeSpoken', { start: parts.start, end: parts.end }),
     parts.nextDay ? t('nextDay') : '',
     status,
+    taskCount > 0 ? t('tasks.card.count', { count: taskCount, done: taskDone }) : '',
   ]
     .filter(Boolean)
     .join(', ');
@@ -115,6 +127,11 @@ export function ShiftCard({
           </span>
           {viewerRange && (
             <span className="text-xs text-ink-3">{t('detail.yourTime', { range: viewerRange })}</span>
+          )}
+          {taskCount > 0 && (
+            <span className="text-xs text-ink-2" data-testid="shift-card-task-count">
+              {t('tasks.card.count', { count: taskCount, done: taskDone })}
+            </span>
           )}
         </span>
         <span id={hintId} className="sr-only">

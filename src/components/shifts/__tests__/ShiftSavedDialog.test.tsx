@@ -43,7 +43,7 @@ function shift(over: Partial<CalendarEvent>): CalendarEvent {
 }
 
 function renderSaved(s: CalendarEvent) {
-  render(<ShiftSavedDialog circleId="c" shift={s} onAddNext={vi.fn()} onDone={vi.fn()} />);
+  render(<ShiftSavedDialog circleId="c" shift={s} onAddNext={vi.fn()} onAddTask={vi.fn()} onDone={vi.fn()} />);
 }
 
 beforeEach(() => {
@@ -77,7 +77,7 @@ describe('ShiftSavedDialog templates (mobile parity)', () => {
     ];
     for (const [rule, words] of cases) {
       const { unmount } = render(
-        <ShiftSavedDialog circleId="c" shift={shift({ recurrence_rule: rule })} onAddNext={vi.fn()} onDone={vi.fn()} />
+        <ShiftSavedDialog circleId="c" shift={shift({ recurrence_rule: rule })} onAddNext={vi.fn()} onAddTask={vi.fn()} onDone={vi.fn()} />
       );
       expect(screen.getByText(`8:00 AM – 2:00 PM (${CITY}), ${words}. Open for anyone to take.`)).toBeInTheDocument();
       expect(screen.queryByText(/every week/)).not.toBeInTheDocument();
@@ -91,6 +91,7 @@ describe('ShiftSavedDialog templates (mobile parity)', () => {
         circleId="c"
         shift={shift({ assigned_to: 'u-ana', recurrence_rule: 'weekly', recurrence_days: [1, 3] })}
         onAddNext={vi.fn()}
+        onAddTask={vi.fn()}
         onDone={vi.fn()}
       />
     );
@@ -99,5 +100,39 @@ describe('ShiftSavedDialog templates (mobile parity)', () => {
     renderSaved(shift({ assigned_to: 'u-me' }));
     expect(screen.getByText(`8:00 AM – 2:00 PM (${CITY}) · You're on it.`)).toBeInTheDocument();
     expect(screen.queryByText(/You is on it/)).not.toBeInTheDocument();
+  });
+});
+
+describe('ShiftSavedDialog: add a task (docs/plans/shift-tasks.md)', () => {
+  it('offers "Add a task to this shift" as an outline; Done stays the ONE primary; no check icon', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const { Analytics } = await import('@/lib/analytics');
+    const spy = vi.spyOn(Analytics, 'shiftSavedSheetAction');
+    const onAddTask = vi.fn();
+    const onDone = vi.fn();
+    const onAddNext = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ShiftSavedDialog circleId="c" shift={shift({})} onAddNext={onAddNext} onAddTask={onAddTask} onDone={onDone} />
+    );
+    const dialog = screen.getByRole('dialog');
+    const addTask = screen.getByRole('button', { name: 'Add a task to this shift' });
+    expect(addTask.className).toContain('border-primary-outline');
+    expect(addTask.className).not.toContain('bg-primary-fill');
+    expect(screen.getByRole('button', { name: /Add the next shift/ }).className).not.toContain('bg-primary-fill');
+    const done = screen.getByRole('button', { name: 'Done' });
+    expect(done.className).toContain('bg-primary-fill');
+    expect(dialog.querySelectorAll('button.bg-primary-fill, button[class*="bg-primary-fill "]')).toHaveLength(1);
+    expect(done.querySelector('svg')).toBeNull();
+    expect(addTask.querySelector('svg')).toBeNull();
+
+    await user.click(addTask);
+    expect(onAddTask).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith({ action: 'add_task' });
+    await user.click(screen.getByRole('button', { name: /Add the next shift/ }));
+    expect(onAddNext).toHaveBeenCalledTimes(1);
+    await user.click(done);
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenLastCalledWith({ action: 'done' });
   });
 });

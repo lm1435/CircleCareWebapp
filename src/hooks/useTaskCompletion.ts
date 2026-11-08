@@ -23,6 +23,15 @@ export const UNDO_DELAY_MS = 5000;
 
 /** One task inside its undo window. */
 interface PendingCompletion {
+  /**
+   * What the request addresses. A PHYSICAL row (the Tasks tab, Today) is posted by its own id with
+   * no body. A VIRTUAL occurrence (the shift detail reads GET /events, which expands a repeating
+   * shift task) has a composite id no row matches: it is addressed by its root plus the day, the
+   * same address `EventDetailActions` uses.
+   */
+  target: { eventId: string; scheduledDate?: string };
+  /** The task was added to a shift (docs/plans/shift-tasks.md): its completion is measured. */
+  shiftLinked: boolean;
   /** Holdable: paused while the badge is hovered / focused (`lib/undoTimer`). */
   timer: UndoTimer;
   /** The circle the tap was made in — every send path uses THIS, never the
@@ -54,8 +63,16 @@ export interface UseTaskCompletionResult {
  * `useCompleteEvent` — parity with mobile, which completes a task via
  * completeEvent.
  */
-export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
+export type TaskCompletionSurface = 'tasks' | 'today' | 'shift_detail' | 'calendar';
+
+export function useTaskCompletion(
+  circleId: string,
+  /** Where the Done was tapped: rides on `shift_task_completed` for a task that belongs to a shift. */
+  surface: TaskCompletionSurface = 'tasks'
+): UseTaskCompletionResult {
   const completeMutation = useCompleteEvent(circleId);
+  const surfaceRef = useRef(surface);
+  surfaceRef.current = surface;
   const queryClient = useQueryClient();
 
   // ── Undo grace period (mirrors mobile OpenTasks) ──────────────────────────
@@ -96,27 +113,39 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
     // pendingIds, without disturbing any id whose timer already fired
     // naturally and is mid-flight toward its own onSettled cleanup.
     const flushedIds = Array.from(timers.keys());
-    timers.forEach(({ timer, circleId: sentCircleId }, eventId) => {
+    timers.forEach(({ timer, circleId: sentCircleId, target, shiftLinked }) => {
       timer.clear();
+      const { eventId, scheduledDate } = target;
+      const vars = { eventId, scheduledDate, circleId: sentCircleId, source: 'tasks' as const };
       const request = keepalive
-        ? keepalivePost(`/circles/${sentCircleId}/events/${eventId}/complete`)
+        ? keepalivePost(
+            `/circles/${sentCircleId}/events/${eventId}/complete`,
+            scheduledDate ? { scheduled_date: scheduledDate } : undefined
+          )
         : null;
+      const sendOrdinary = (): void =>
+        completeMutationRef.current.mutate(vars, {
+          onSuccess: () => {
+            if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
+          },
+        });
       if (!request) {
-        completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' });
+        sendOrdinary();
         return;
       }
       request.then(
         (response) => {
           if (response.ok) {
+            if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
             // Landed: refresh what the rows read in case the tab comes back.
             void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(sentCircleId) });
             void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(sentCircleId) });
           } else {
             // Refused while the page is alive: the ordinary path reports it.
-            completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' });
+            sendOrdinary();
           }
         },
-        () => completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' })
+        () => sendOrdinary()
       );
     });
     timers.clear();
@@ -187,6 +216,12 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
     // (EventDetailActions) resolves root + date itself. Mobile's Tasks tab draws
     // the same distinction.
     const eventId = task.id;
+    // EXCEPT a virtual occurrence (shift detail): root + day, see `PendingCompletion.target`.
+    const virtual = task.is_virtual === true;
+    const target = virtual
+      ? { eventId: task.parent_event_id ?? task.id, scheduledDate: task.scheduled_date }
+      : { eventId: task.id };
+    const shiftLinked = !!task.shift && task.shift.status !== 'outside';
     const existing = timersRef.current.get(eventId);
     if (existing) existing.timer.clear();
     // The circle this tap was made in — see `circleIdRef`.
@@ -194,7 +229,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
 
     const timer = startUndoTimer(() => {
       timersRef.current.delete(eventId);
-      completeMutationRef.current.mutate({ eventId, circleId: sentCircleId, source: 'tasks' }, {
+      completeMutationRef.current.mutate({ ...target, circleId: sentCircleId, source: 'tasks' }, {
         // SUCCESS: hold the pending id until the TASK ROWS THEMSELVES have
         // refetched, not until the POST settles.
         //
@@ -224,6 +259,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
         // only the list(s) actually mounted (OpenTasksCard's and/or
         // TasksPage's), never a background one nothing on screen reads.
         onSuccess: () => {
+          if (shiftLinked) Analytics.shiftTaskCompleted({ surface: surfaceRef.current });
           const rowsRefetched = queryClient.refetchQueries(
             { queryKey: queryKeys.tasks(sentCircleId), type: 'active' },
             { cancelRefetch: false }
@@ -242,7 +278,7 @@ export function useTaskCompletion(circleId: string): UseTaskCompletionResult {
       });
     }, UNDO_DELAY_MS);
 
-    timersRef.current.set(eventId, { timer, circleId: sentCircleId });
+    timersRef.current.set(eventId, { timer, circleId: sentCircleId, target, shiftLinked });
     setPendingIds((prev) => {
       const next = new Set(prev);
       next.add(eventId);

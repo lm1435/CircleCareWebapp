@@ -17,6 +17,7 @@ import {
   STATUS_PILL,
 } from '@/components/ui';
 import { UNDO_DELAY_MS } from '@/hooks/useTaskCompletion';
+import { shiftTaskMeta } from '@/components/shifts/shiftTasks';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import {
   formatEventTimeCompact,
@@ -111,7 +112,7 @@ export function TaskRow({
   today,
   primaryAction = true,
 }: TaskRowProps): ReactElement {
-  const { t, i18n } = useTranslation('tasks');
+  const { t, i18n } = useTranslation(['tasks', 'shifts']);
   // Viewer's 12h/24h clock — every rendered time goes through it.
   const hourCycle = useHourCycle();
   const offline = useIsOffline();
@@ -136,6 +137,11 @@ export function TaskRow({
       : undefined;
     return member ? memberDisplayName(member) : null;
   }, [members, task.assigned_to, task.assigned_to_user]);
+
+  // A task added to a shift reads "Task · Lucia · Afternoons" ("Open shift" while nobody covers it).
+  // The name is the shift's coverer (`shift.assignee`), never `assigned_to`, which stays empty. Null
+  // for a plain task, including one whose time is outside the shift.
+  const shiftMeta = shiftTaskMeta(task, t as unknown as (k: string, o?: Record<string, unknown>) => string);
 
   const isOverdue =
     !!today &&
@@ -209,7 +215,9 @@ export function TaskRow({
   // into (and duplicating) the button's aria-label.
   const metaRow = (
     <div id={metaRowId} className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-2">
-      {assigneeName ? (
+      {shiftMeta ? (
+        <span data-testid="task-shift-meta">{shiftMeta}</span>
+      ) : assigneeName ? (
         <span>{assigneeName}</span>
       ) : (
         <span className="text-ink-3">{t('row.unassigned')}</span>

@@ -14,6 +14,8 @@ export interface ShiftsDayListProps {
   viewerId: string | null | undefined;
   onOpen: (shift: CalendarEvent) => void;
   onTake?: (shift: CalendarEvent) => void;
+  /** Non-shift events around the range, for each card's task count. */
+  events?: readonly CalendarEvent[];
   /** Present only for editors: shows "Add shift". */
   onAdd?: () => void;
 }
@@ -27,6 +29,7 @@ export function ShiftsDayList({
   viewerId,
   onOpen,
   onTake,
+  events,
   onAdd,
 }: ShiftsDayListProps): ReactElement {
   const { t } = useTranslation('shifts');
@@ -44,6 +47,7 @@ export function ShiftsDayList({
               viewerId={viewerId}
               onOpen={onOpen}
               onTake={onTake}
+              events={events}
             />
           ))}
         </ul>

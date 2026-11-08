@@ -272,7 +272,7 @@ test.describe('a member takes and drops a shift', () => {
     baseURL,
   }, testInfo) => {
     const s = await premiumScene(request);
-    const member = await createRunAccount('shiftmember', 'Mia', 'Member');
+    const member = await createRunAccount(uniq('shiftmember'), 'Mia', 'Member');
     addMembership(s.circleId, member.userId, 'member');
     await seedShift(s, { recurrence_rule: 'daily' });
     // 23:00 - 07:00 (next day): still ahead or in progress whenever today runs. A daytime shift on today
@@ -499,9 +499,9 @@ test.describe('free circles', () => {
   }) => {
     const f = await freeScene(request);
     ensureManagerSwitchOn();
-    const member = await createRunAccount('shfreemember', 'Fran', 'Member');
+    const member = await createRunAccount(uniq('shfreemember'), 'Fran', 'Member');
     addMembership(f.circleId, member.userId, 'member');
-    const manager = await createRunAccount('shfreemgr', 'Max', 'Manager');
+    const manager = await createRunAccount(uniq('shfreemgr'), 'Max', 'Manager');
     addMembership(f.circleId, manager.userId, 'manager');
     await waitForViewer(request, manager, f.circleId, (v) => v.viewer_role === 'manager');
 
@@ -613,7 +613,7 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
     baseURL,
   }) => {
     const s = await lapsedScene(request);
-    const member = await createRunAccount('shlapsedmember', 'Lia', 'Member');
+    const member = await createRunAccount(uniq('shlapsedmember'), 'Lia', 'Member');
     addMembership(s.circleId, member.userId, 'member');
 
     const context = await browser.newContext();
@@ -661,7 +661,7 @@ test.describe('lapsed Premium: shifts stay visible, read-only', () => {
     baseURL,
   }) => {
     const s = await lapsedScene(request);
-    const member = await createRunAccount('shlapsedviewonly', 'Noa', 'Viewonly');
+    const member = await createRunAccount(uniq('shlapsedviewonly'), 'Noa', 'Viewonly');
     addMembership(s.circleId, member.userId, 'member');
     sqlExec(`
       update circle_memberships set view_only = true

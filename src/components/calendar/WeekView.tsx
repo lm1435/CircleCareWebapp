@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { shiftTaskMeta } from '@/components/shifts/shiftTasks';
 import type { TFunction } from 'i18next';
 import type { CalendarEvent, EventType } from '@/api/calendarEvents';
 import { Card, Icon, Modal, Text } from '@/components/ui';
@@ -117,7 +118,7 @@ export function WeekView({
   onAsNeededOpen,
   onDayOpen,
 }: WeekViewProps): ReactElement {
-  const { t } = useTranslation(['calendar', 'common', 'meds']);
+  const { t } = useTranslation(['calendar', 'common', 'meds', 'shifts']);
   // Viewer's 12h/24h clock — every rendered time goes through it, the hour axis included
   // (formatHourOfDay: the app's MERIDIEM table, same rule as mobile's week rail).
   const hourCycle = useHourCycle();
@@ -232,7 +233,7 @@ export function WeekView({
     // many notes it has. Both are ALWAYS in the accessible name (mobile's
     // a11yLabel order: name, time, assignee, notes), even when the chip is too
     // small to print them.
-    const assigneeName = eventAssigneeName(event);
+    const assigneeName = shiftTaskMeta(event, (t as unknown as (k: string, o?: Record<string, unknown>) => string)) ?? eventAssigneeName(event);
     const noteCount = eventNoteCount(event);
     const noteLabel = noteCount > 0 ? t('calendar:notes.noteCount', { count: noteCount }) : null;
     const ariaLabel = [

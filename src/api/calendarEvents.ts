@@ -34,6 +34,26 @@ export interface EventUser {
   last_name: string | null;
 }
 
+/**
+ * SHIFT TASKS (docs/plans/shift-tasks.md section 4): on GET /events, /events/:id and /tasks a task
+ * that was added to a shift carries this link, resolved server-side at read time. `assigned_to` is
+ * NEVER overwritten (it stays null), so read the person from `assignee`. Windows are naive local
+ * `YYYY-MM-DDTHH:MM:SS` in the recipient's zone, and null when no occurrence owns the date.
+ */
+export type ShiftTaskStatus = 'covered' | 'open' | 'outside';
+
+export interface ShiftTaskLink {
+  /** The shift segment root the task is linked to. */
+  root_id: string;
+  /** The shift occurrence date (`YYYY-MM-DD`) this task row belongs to (not necessarily its own date). */
+  date: string;
+  title: string;
+  assignee: { id: string; first_name: string | null } | null;
+  status: ShiftTaskStatus;
+  window_start: string | null;
+  window_end: string | null;
+}
+
 export interface CalendarEvent {
   id: string;
   circle_id: string;
@@ -125,6 +145,8 @@ export interface CalendarEvent {
 
   // Task-specific
   assigned_to?: string | null;
+  /** Shift tasks only: the link to the shift occurrence (see `ShiftTaskLink`). Absent / null = a plain task. */
+  shift?: ShiftTaskLink | null;
   completed_at?: string | null;
   /**
    * Who marked the task done. A user id; the embedded row is `completed_by_user`.

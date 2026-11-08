@@ -266,5 +266,56 @@
     "open_other": "{{count}} Schichten · {{open}}",
     "count_one": "{{count}} Schicht",
     "count_other": "{{count}} Schichten"
+  },
+  "tasks": {
+    "addTask": "Aufgabe zu dieser Schicht hinzufügen",
+    "added": "Aufgabe hinzugefügt",
+    "form": {
+      "title": "Aufgabe hinzufügen",
+      "name": "Name der Aufgabe",
+      "namePlaceholder": "z. B. Beim Mittagessen helfen",
+      "time": "Uhrzeit",
+      "timeHint": "Zwischen {{start}} und {{end}}",
+      "onlyDate": "Nur am {{date}}",
+      "onlyDateHint": "Sonst wiederholt sich diese Aufgabe mit der Schicht und geht an die Person, die sie übernimmt.",
+      "save": "Aufgabe hinzufügen",
+      "errorName": "Geben Sie einen Namen für die Aufgabe ein.",
+      "errorOutside": "Wählen Sie eine Uhrzeit innerhalb dieser Schicht.",
+      "errorUnsupported": "Eine monatliche oder jährliche Schicht kann keine Aufgabe nach Mitternacht wiederholen. Wählen Sie eine andere Uhrzeit oder „Nur am {{date}}“.",
+      "editTitle": "Aufgabe bearbeiten",
+      "explainOnce": "Sie geht an die Person, die diese Schicht hat.",
+      "delete": "Aufgabe löschen",
+      "errorEnded": "Diese Schicht ist beendet, deshalb können keine Aufgaben mehr hinzugefügt werden.",
+      "errorGone": "Diese Schicht gibt es nicht mehr.",
+      "errorInvalidDate": "Dieser Tag gehört nicht zu dieser Schicht.",
+      "errorGeneric": "Die Aufgabe konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
+    },
+    "list": {
+      "titleNamed": "Liste von {{name}} · {{done}} von {{total}} erledigt",
+      "titleYou": "Ihre Liste · {{done}} von {{total}} erledigt",
+      "titleOpen": "Liste dieser Schicht · {{done}} von {{total}} erledigt",
+      "empty": "Auf der Liste dieser Schicht steht noch nichts.",
+      "error": "Die Liste dieser Schicht konnte nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "alsoHappening": "Auch während dieser Schicht ({{count}})",
+      "done": "Erledigt",
+      "taken": "Eingenommen",
+      "skipped": "Ausgelassen",
+      "doneLabel": "Erledigt, {{name}}",
+      "takenLabel": "Eingenommen, {{name}}",
+      "missed": "Nicht eingetragen"
+    },
+    "card": {
+      "count_one": "{{count}} Aufgabe · {{done}} erledigt",
+      "count_other": "{{count}} Aufgaben · {{done}} erledigt"
+    },
+    "meta": {
+      "line": "Aufgabe · {{who}} · {{title}}",
+      "open": "Offene Schicht"
+    },
+    "editWarning_one": "{{count}} Aufgabe liegt außerhalb der neuen Zeiten. Sie bleibt als Aufgabe für Jeden im Kalender.",
+    "editWarning_other": "{{count}} Aufgaben liegen außerhalb der neuen Zeiten. Sie bleiben als Aufgaben für Jeden im Kalender.",
+    "deleteImpact_one": "Dadurch wird auch die bevorstehende Aufgabe ({{count}}) gelöscht. Erledigte Aufgaben bleiben im Verlauf.",
+    "deleteImpact_other": "Dadurch werden auch die {{count}} bevorstehenden Aufgaben gelöscht. Erledigte Aufgaben bleiben im Verlauf."
   }
 }

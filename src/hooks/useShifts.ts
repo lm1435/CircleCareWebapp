@@ -225,6 +225,10 @@ export function useShiftSeriesRootForEdit(
 function invalidateShifts(queryClient: ReturnType<typeof useQueryClient>, circleId: string): void {
   void queryClient.invalidateQueries({ queryKey: queryKeys.shifts(circleId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed(circleId) });
+  // A shift action (take, drop, assign, delete) changes who its linked tasks belong to, or removes
+  // them: refresh the task reads that carry `shift.assignee` (docs/plans/shift-tasks.md).
+  void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(circleId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.calendarEvents(circleId) });
 }
 
 /** Shared failure handling for every shift write (see `docs/plans/care-shifts.md` UI States). */
@@ -237,7 +241,7 @@ type ShiftAction = 'take' | 'drop' | 'assign' | 'save' | 'delete';
  * winner; a stale row disappears), prompt the owner-aware paywall, refresh the
  * access flags on a permission refusal.
  */
-function useShiftMutationOnError(
+export function useShiftMutationOnError(
   circleId: string,
   action: FailureAction
 ): (error: unknown) => void {

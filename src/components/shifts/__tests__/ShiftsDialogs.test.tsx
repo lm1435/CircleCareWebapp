@@ -33,8 +33,23 @@ vi.mock('@/api/shifts', async (importOriginal) => ({
 }));
 vi.mock('@/hooks/useCircle', () => ({ useCircle: vi.fn() }));
 vi.mock('@/hooks/useHourCycle', () => ({ useHourCycle: () => '12h' }));
+// The detail's task list reads the day's events and the delete confirm reads the delete-impact counts
+// (hooks/useShiftTasks); here they are controllable and loaded (the list has its own tests).
+const taskHooks = vi.hoisted(() => ({
+  impact: undefined as { occurrence: number; future: number; all: number } | undefined,
+}));
+vi.mock('@/hooks/useShiftTasks', () => ({
+  useShiftOccurrenceEvents: () => ({ events: [], isLoading: false, isError: false, refetch: vi.fn() }),
+  useShiftTaskDeleteImpact: () => taskHooks.impact,
+  useLinkedOpenTasks: () => [],
+  useAddShiftTask: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock('@/lib/analytics', () => ({
   Analytics: {
+    shiftTaskListViewed: vi.fn(),
+    shiftAlsoHappeningExpanded: vi.fn(),
+    shiftTaskDeleted: vi.fn(),
+    shiftTaskAdded: vi.fn(),
     shiftDropped: vi.fn(),
     shiftAssigned: vi.fn(),
     shiftDeleted: vi.fn(),
@@ -120,6 +135,7 @@ async function openDetail(s: CalendarEvent) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  taskHooks.impact = undefined;
   useAuthStore.setState({
     user: { id: 'u-ana', email: 'a@x.test', first_name: 'Ana', last_name: 'R' },
     isAuthenticated: true,
@@ -439,6 +455,71 @@ describe('Delete', () => {
         scheduledDate: '2026-10-21',
       })
     );
+  });
+
+  // docs/plans/shift-tasks.md "Decided additions": the confirm states how many upcoming LINKED tasks the
+  // chosen scope removes (the server's count; overlapping regular tasks are never in it), hidden at 0.
+  describe('upcoming linked tasks line', () => {
+    async function openConfirm(s = shift()) {
+      const { user, dialog } = await openDetail(s);
+      await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+      const confirm = await screen.findByRole('dialog', { name: 'Delete shift' });
+      return { user, confirm };
+    }
+
+    it('is scope-aware: this shift says 2, "this and future" says 5, back to 2', async () => {
+      taskHooks.impact = { occurrence: 2, future: 5, all: 5 };
+      const { user, confirm } = await openConfirm();
+      expect(within(confirm).getByTestId('shift-delete-impact')).toHaveTextContent(
+        'This also removes its 2 upcoming tasks. Completed tasks stay in history.'
+      );
+      await user.click(within(confirm).getByRole('radio', { name: 'This and future shifts' }));
+      expect(within(confirm).getByTestId('shift-delete-impact')).toHaveTextContent(
+        'This also removes its 5 upcoming tasks.'
+      );
+      await user.click(within(confirm).getByRole('radio', { name: 'This shift' }));
+      expect(within(confirm).getByTestId('shift-delete-impact')).toHaveTextContent('its 2 upcoming tasks');
+    });
+
+    it('one task reads singular', async () => {
+      taskHooks.impact = { occurrence: 1, future: 1, all: 1 };
+      const { confirm } = await openConfirm();
+      expect(within(confirm).getByTestId('shift-delete-impact')).toHaveTextContent(
+        'This also removes its 1 upcoming task. Completed tasks stay in history.'
+      );
+    });
+
+    it.each([
+      ['a 0 count (regular overlapping tasks are never counted)', { occurrence: 0, future: 0, all: 0 }],
+      ['no answer yet', undefined],
+    ])('is hidden for %s', async (_name, impact) => {
+      taskHooks.impact = impact;
+      const { confirm } = await openConfirm();
+      expect(within(confirm).queryByTestId('shift-delete-impact')).not.toBeInTheDocument();
+      expect(within(confirm).queryByText(/upcoming task/)).not.toBeInTheDocument();
+    });
+
+    it('a one-off shift uses the "all" count', async () => {
+      taskHooks.impact = { occurrence: 0, future: 0, all: 3 };
+      const { confirm } = await openConfirm(shift({ id: 'one', parent_event_id: null, recurrence_rule: null }));
+      expect(within(confirm).getByTestId('shift-delete-impact')).toHaveTextContent('its 3 upcoming tasks');
+    });
+
+    it('fires shift_task_deleted with the chosen scope only when tasks went with it', async () => {
+      taskHooks.impact = { occurrence: 2, future: 5, all: 5 };
+      const { user, confirm } = await openConfirm();
+      await user.click(within(confirm).getByRole('radio', { name: 'This and future shifts' }));
+      await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(Analytics.shiftTaskDeleted).toHaveBeenCalledWith({ scope: 'future' }));
+    });
+
+    it('does not fire shift_task_deleted when no task was removed', async () => {
+      taskHooks.impact = { occurrence: 0, future: 0, all: 0 };
+      const { user, confirm } = await openConfirm();
+      await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(deleteEvent).toHaveBeenCalled());
+      expect(Analytics.shiftTaskDeleted).not.toHaveBeenCalled();
+    });
   });
 
   it('a one-off deletes by its own id with no scope', async () => {

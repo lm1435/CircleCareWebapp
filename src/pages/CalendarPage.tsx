@@ -298,6 +298,16 @@ export default function CalendarPage(): ReactElement {
     shiftsMode
   );
   const { shifts } = shiftsQuery;
+  // The non-shift events around the Shifts range (+1 day: an overnight shift's last window), for each
+  // card's "3 tasks · 1 done". Day and Week only; the Month view draws no cards. A failed or slow
+  // read just leaves the chip off.
+  const shiftCardEventsQuery = useCalendarEvents(
+    circleId,
+    range?.start ?? '',
+    range ? addDays(range.end, 1) : '',
+    { enabled: shiftsMode && view !== 'month' }
+  );
+  const shiftCardEvents = shiftCardEventsQuery.events;
   // Open-shift count: feeds only the shifts_view_opened `open_count_bucket` (no UI shows it).
   const openCount = useOpenShiftCount(circleId, timezone, shiftsReadable);
   // The same 7-day window's rows: the empty state needs "nothing anywhere" too.
@@ -772,6 +782,7 @@ export default function CalendarPage(): ReactElement {
                   <ShiftsDayList
                     date={anchor}
                     shifts={shifts}
+                    events={shiftCardEvents}
                     timezone={timezone}
                     members={members}
                     viewerId={viewerId}
@@ -791,6 +802,7 @@ export default function CalendarPage(): ReactElement {
               <ShiftsWeekView
                 days={getWeekDays(range.start)}
                 shifts={shifts}
+                events={shiftCardEvents}
                 timezone={timezone}
                 todayStr={todayStr}
                 members={members}

@@ -168,3 +168,58 @@ describe('ShiftCard: ended shifts', () => {
     expect(screen.getByTestId('shift-open-word')).toHaveTextContent('Not covered');
   });
 });
+
+describe('ShiftCard task count chip (docs/plans/shift-tasks.md)', () => {
+  const DAY = '2026-10-19';
+  const onShift = shift({ assigned_to: 'u-ana', parent_event_id: 'root' });
+  const link = {
+    root_id: 'root',
+    date: DAY,
+    title: 'Night',
+    assignee: { id: 'u-ana', first_name: 'Ana' },
+    status: 'covered' as const,
+    window_start: `${DAY}T20:00:00`,
+    window_end: `${DAY}T23:59:00`,
+  };
+  const task = (id: string, over: Partial<CalendarEvent>): CalendarEvent =>
+    ({
+      id,
+      circle_id: 'c',
+      event_type: 'task',
+      title: id,
+      scheduled_date: DAY,
+      scheduled_time: '21:00:00',
+      assigned_to: null,
+      created_at: '',
+      updated_at: '',
+      ...over,
+    }) as CalendarEvent;
+
+  it('reads "3 tasks · 1 done": linked tasks plus the person\'s overlapping regular task, never others\'', () => {
+    renderCard(onShift, {
+      events: [
+        task('linked-a', { shift: link }),
+        task('linked-b', { shift: link, completed_at: '2026-10-19T21:30:00Z' }),
+        task('regular-ana', { assigned_to: 'u-ana', scheduled_time: '22:00:00' }),
+        task('regular-other', { assigned_to: 'u-me', scheduled_time: '22:00:00' }),
+        task('regular-anyone', { scheduled_time: '22:30:00' }),
+      ],
+    });
+    expect(screen.getByTestId('shift-card-task-count')).toHaveTextContent('3 tasks · 1 done');
+  });
+
+  it('one task is singular', () => {
+    renderCard(onShift, { events: [task('linked-a', { shift: link })] });
+    expect(screen.getByTestId('shift-card-task-count')).toHaveTextContent('1 task · 0 done');
+  });
+
+  it('is hidden at 0 and while the events have not loaded', () => {
+    renderCard(onShift, { events: [task('regular-other', { assigned_to: 'u-me' })] });
+    expect(screen.queryByTestId('shift-card-task-count')).not.toBeInTheDocument();
+  });
+
+  it('is part of the card\'s accessible name', () => {
+    renderCard(onShift, { events: [task('linked-a', { shift: link })] });
+    expect(screen.getByRole('button', { name: /1 task · 0 done/ })).toBeInTheDocument();
+  });
+});

@@ -330,6 +330,10 @@ export function EventDetailActions({
       // `completed_at` is what every "is this done?" read in the UI keys on, so
       // it must not be left empty by a response that omitted it: the write
       // succeeded, and the exact millisecond is cosmetic next to that.
+      // A task that belongs to a shift is measured (docs/plans/shift-tasks.md section 8): surface only.
+      if (event.event_type === 'task' && event.shift && event.shift.status !== 'outside') {
+        Analytics.shiftTaskCompleted({ surface: 'calendar' });
+      }
       const stampedAt = completed?.completed_at ?? new Date().toISOString();
       showToast(t('eventDetail.completedToast'), 'success');
       setLocallyCompletedAt(stampedAt);

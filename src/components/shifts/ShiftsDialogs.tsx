@@ -11,16 +11,19 @@ import {
   useShiftSeriesRoot,
   useHandleShiftFailure,
 } from '@/hooks/useShifts';
+import { useShiftTaskDeleteImpact } from '@/hooks/useShiftTasks';
+import { Analytics } from '@/lib/analytics';
 import { ShiftComposer } from './ShiftComposer';
 import { ShiftDetailModal, type ShiftDetailAction } from './ShiftDetailModal';
 import { ShiftFormModal, type ShiftFormSource } from './ShiftFormModal';
 import { ShiftScopeDialog } from './ShiftScopeDialog';
+import { ShiftTaskFormModal } from './ShiftTaskFormModal';
 import { TakeShiftDialog } from './TakeShiftDialog';
 import { holdsOnlyThisDay, isShiftRepeating, memberShortName } from './shiftUtils';
 
 type Active =
   | { kind: 'detail'; shift: CalendarEvent }
-  | { kind: 'take' | 'drop' | 'assign' | 'edit' | 'delete'; shift: CalendarEvent }
+  | { kind: 'take' | 'drop' | 'assign' | 'edit' | 'delete' | 'addTask'; shift: CalendarEvent }
   | { kind: 'create'; source: ShiftFormSource; date?: string };
 
 export interface ShiftsDialogsApi {
@@ -64,6 +67,20 @@ export function useShiftsDialogs(circleId: string): ShiftsDialogsApi {
   return { openDetail, openTake, openCreate, element };
 }
 
+/**
+ * The number the confirm states: the server's count for the chosen scope (a one-off shift has only
+ * "all"). 0 while the answer is not in, so the line stays hidden rather than guessed. Only LINKED
+ * tasks are ever counted by the server; regular tasks that overlap the shift are never in it.
+ */
+export function deleteImpactCount(
+  impact: { occurrence: number; future: number; all: number } | undefined,
+  scope: 'occurrence' | 'future',
+  repeating: boolean
+): number {
+  if (!impact) return 0;
+  return repeating ? impact[scope] : impact.all;
+}
+
 function ActiveDialog({
   circleId,
   active,
@@ -87,6 +104,11 @@ function ActiveDialog({
   const [error, setError] = useState('');
   // The series root (cached with the detail modal's): tells "holds only this day" apart.
   const seriesRoot = useShiftSeriesRoot(circleId, active.kind === 'create' ? null : active.shift);
+  // What each delete scope would take with it: only the delete confirm asks.
+  const impact = useShiftTaskDeleteImpact(
+    circleId,
+    active.kind === 'delete' ? active.shift : null
+  );
 
   // Classified failures close the dialog with a toast; a network / server failure
   // stays open with the message inline so the action can be retried.
@@ -124,6 +146,20 @@ function ActiveDialog({
           }
         />
       ) : null;
+    case 'addTask':
+      return (
+        <ShiftTaskFormModal
+          circleId={circleId}
+          shift={shift}
+          source="shift_detail"
+          onClose={onClose}
+          onAdded={() => {
+            showToast(t('shifts:tasks.added'), 'success');
+            // Back to the detail, where the new task is now on the list.
+            setActive({ kind: 'detail', shift });
+          }}
+        />
+      );
     case 'take':
       return <TakeShiftDialog circleId={circleId} shift={shift} onClose={onClose} />;
     case 'edit':
@@ -221,10 +257,22 @@ function ActiveDialog({
           loading={del.isPending}
           onCancel={onClose}
           error={error}
+          scopeNote={(scope) => {
+            const count = deleteImpactCount(impact, scope, repeating);
+            return count > 0 ? (
+              <p className="m-0 text-base text-ink-2" data-testid="shift-delete-impact">
+                {t('shifts:tasks.deleteImpact', { count })}
+              </p>
+            ) : null;
+          }}
           onConfirm={async (scope) => {
             setError('');
+            const removing = deleteImpactCount(impact, scope, repeating);
             try {
               await del.mutateAsync({ shift, scope });
+              if (removing > 0) {
+                Analytics.shiftTaskDeleted({ scope: repeating ? scope : 'all' });
+              }
               showToast(t('shifts:toast.deleted'), 'success');
               onClose();
             } catch (err) {
