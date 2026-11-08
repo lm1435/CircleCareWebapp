@@ -41,13 +41,14 @@ describe('unreadBucket / inboxTypeEnum', () => {
 });
 
 describe('groupInbox (viewer-local days)', () => {
-  it('buckets Today / Yesterday / 2 days ago and drops older rows', () => {
+  it('buckets Today / Yesterday / 2 days ago, with older rows under Earlier', () => {
     const today = makeItem({ updated_at: local(2026, 10, 29, 0, 5) });
     const yesterdayLate = makeItem({ updated_at: local(2026, 10, 28, 23, 55) });
     const two = makeItem({ updated_at: local(2026, 10, 27, 0, 1) });
     const old = makeItem({ updated_at: local(2026, 10, 26, 23, 59) });
     const sections = groupInbox([old, two, yesterdayLate, today], NOW);
-    expect(sections.map((s) => s.key)).toEqual(['today', 'yesterday', 'twoDaysAgo']);
+    expect(sections.map((s) => s.key)).toEqual(['today', 'yesterday', 'twoDaysAgo', 'earlier']);
+    expect(sections[3].items).toEqual([old]);
     expect(sections[0].items).toEqual([today]);
     expect(sections[1].items).toEqual([yesterdayLate]);
     expect(sections[2].items).toEqual([two]);

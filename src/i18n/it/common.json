@@ -223,7 +223,8 @@
     "sections": {
       "today": "Oggi",
       "yesterday": "Ieri",
-      "twoDaysAgo": "2 giorni fa"
+      "twoDaysAgo": "2 giorni fa",
+      "earlier": "In precedenza"
     },
     "meta": "{{circle}} · {{time}}",
     "dose": {

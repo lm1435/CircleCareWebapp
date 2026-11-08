@@ -101,13 +101,8 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
   // Every row on a circle's own inbox is that circle: naming it on each row is noise.
   const showCircle = !scoped && (circles?.length ?? 0) >= 2;
   const circle = circleId ? circles?.find((c) => c.id === circleId) : undefined;
-  // The subtitle's count is the SERVER's (same 72h rule as the circle card's count,
-  // so the two always match). An older backend that returned other circles' rows
-  // falls back to counting this circle's rows here.
-  const scopedUnread =
-    data && items.length === data.items.length
-      ? data.unread_count
-      : items.filter((item) => !item.read_at).length;
+  // The subtitle counts exactly the rows listed below (never a row that is not shown).
+  const scopedUnread = unreadVisible;
   // The source arrives once, with the navigation that opened this page.
   const viewSource = useRef(inboxSourceFromState(location.state));
 
@@ -127,6 +122,7 @@ export function InboxPage({ circleId }: InboxPageProps = {}): ReactElement {
     today: t('inbox.sections.today'),
     yesterday: t('inbox.sections.yesterday'),
     twoDaysAgo: t('inbox.sections.twoDaysAgo'),
+    earlier: t('inbox.sections.earlier'),
   };
 
   const t2 = t as unknown as (key: string, options?: Record<string, unknown>) => string;

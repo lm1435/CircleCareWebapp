@@ -84,7 +84,7 @@ describe('NotificationsPage', () => {
     expect(mockGet).not.toHaveBeenCalled();
   });
 
-  it('groups into Today / Yesterday / 2 days ago and drops older rows', async () => {
+  it('groups into Today / Yesterday / 2 days ago, then Earlier', async () => {
     serve([
       makeItem({ title: 'T-today', updated_at: local(2026, 10, 29, 9) }),
       makeItem({ title: 'T-yest', updated_at: local(2026, 10, 28, 9) }),
@@ -94,10 +94,10 @@ describe('NotificationsPage', () => {
     renderPage();
     expect(await screen.findByText('T-today')).toBeInTheDocument();
     const heads = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(heads).toEqual(expect.arrayContaining(['Today', 'Yesterday', '2 days ago']));
+    expect(heads).toEqual(expect.arrayContaining(['Today', 'Yesterday', '2 days ago', 'Earlier']));
     expect(screen.getByText('T-yest')).toBeInTheDocument();
     expect(screen.getByText('T-two')).toBeInTheDocument();
-    expect(screen.queryByText('T-old')).toBeNull();
+    expect(screen.getByText('T-old')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Notifications' })).toBeInTheDocument();
   });
 
@@ -148,8 +148,20 @@ describe('NotificationsPage', () => {
     expect(await screen.findByText('Mom · 2:10 PM')).toBeInTheDocument();
   });
 
+  it('only Earlier rows: listed, subtitle count matches, empty state hidden', async () => {
+    serve([
+      makeItem({ title: 'E1', updated_at: local(2026, 10, 26, 9) }),
+      makeItem({ title: 'E2', updated_at: local(2026, 10, 26, 8) }),
+    ]);
+    renderPage();
+    expect(await screen.findByText('E1')).toBeInTheDocument();
+    expect(screen.getByText('E2')).toBeInTheDocument();
+    expect(screen.queryByTestId('inbox-empty')).toBeNull();
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toContain('Earlier');
+  });
+
   it('empty state', async () => {
-    serve([makeItem({ updated_at: local(2026, 10, 20, 9) })]);
+    serve([]);
     renderPage();
     expect(await screen.findByTestId('inbox-empty')).toHaveTextContent(
       'Reminders and updates from your circles show up here for 3 days. Older ones live in Activity.'
@@ -352,6 +364,20 @@ describe('NotificationsPage', () => {
     }
 
     beforeEach(() => circles(2));
+
+    it('3-local-days-old rows (inside the 72h window) are listed and counted: "2 new" with 2 rows', async () => {
+      mockGet.mockResolvedValue({
+        items: [
+          makeItem({ updated_at: local(2026, 10, 26, 9) }),
+          makeItem({ updated_at: local(2026, 10, 26, 8) }),
+        ],
+        unread_count: 2,
+      });
+      renderScoped();
+      expect(await screen.findAllByTestId('inbox-row')).toHaveLength(2);
+      expect(screen.getByTestId('inbox-scoped-subtitle')).toHaveTextContent('Mom · 2 new');
+      expect(screen.queryByTestId('inbox-empty')).toBeNull();
+    });
 
     it('asks for that circle only and shows "Notifications" + "Mom · N new"', async () => {
       mockGet.mockResolvedValue({ items: [makeItem(), makeItem()], unread_count: 2 });

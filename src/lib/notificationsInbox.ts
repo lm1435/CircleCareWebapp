@@ -110,8 +110,13 @@ export function unreadBucket(count: number): UnreadBucket {
 
 // ── 3-day window (viewer-local days) ──────────────────────────────────────
 
-export type InboxSectionKey = 'today' | 'yesterday' | 'twoDaysAgo';
-export const SECTION_ORDER: readonly InboxSectionKey[] = ['today', 'yesterday', 'twoDaysAgo'];
+export type InboxSectionKey = 'today' | 'yesterday' | 'twoDaysAgo' | 'earlier';
+export const SECTION_ORDER: readonly InboxSectionKey[] = [
+  'today',
+  'yesterday',
+  'twoDaysAgo',
+  'earlier',
+];
 
 function localMidnight(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -122,14 +127,18 @@ export function localDayDiff(then: Date, now: Date): number {
   return Math.round((localMidnight(now) - localMidnight(then)) / 86_400_000);
 }
 
-export function sectionFor(item: InboxItem, now: Date): InboxSectionKey | null {
+/**
+ * Every row the server returns lands in a section (its 72h window can reach 3 local days back), so
+ * a row is never counted without being listed. Unparseable dates fall into 'earlier'.
+ */
+export function sectionFor(item: InboxItem, now: Date): InboxSectionKey {
   const at = new Date(item.updated_at);
-  if (Number.isNaN(at.getTime())) return null;
+  if (Number.isNaN(at.getTime())) return 'earlier';
   const diff = localDayDiff(at, now);
   if (diff <= 0) return 'today'; // a skewed clock never hides a row
   if (diff === 1) return 'yesterday';
   if (diff === 2) return 'twoDaysAgo';
-  return null; // older than "2 days ago": dropped
+  return 'earlier';
 }
 
 export interface InboxSection {
@@ -137,16 +146,16 @@ export interface InboxSection {
   items: InboxItem[];
 }
 
-/** Newest first within each section; empty sections omitted; older rows dropped. */
+/** Newest first within each section; empty sections omitted; nothing is dropped. */
 export function groupInbox(items: readonly InboxItem[], now: Date): InboxSection[] {
   const buckets: Record<InboxSectionKey, InboxItem[]> = {
     today: [],
     yesterday: [],
     twoDaysAgo: [],
+    earlier: [],
   };
   for (const item of items) {
-    const key = sectionFor(item, now);
-    if (key) buckets[key].push(item);
+    buckets[sectionFor(item, now)].push(item);
   }
   return SECTION_ORDER.filter((key) => buckets[key].length > 0).map((key) => ({
     key,
