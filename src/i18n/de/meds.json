@@ -104,7 +104,16 @@
     "weekReport": "Bericht",
     "anytime": "Jederzeit",
     "zoneBehindHm": "Die Zeiten gelten für {{name}} · {{hours}} Std. {{minutes}} Min. hinter Ihnen",
-    "zoneAheadHm": "Die Zeiten gelten für {{name}} · {{hours}} Std. {{minutes}} Min. vor Ihnen"
+    "zoneAheadHm": "Die Zeiten gelten für {{name}} · {{hours}} Std. {{minutes}} Min. vor Ihnen",
+    "summary": {
+      "none": "Noch keine Medikamente.",
+      "scheduled_one": "{{count}} Medikament",
+      "scheduled_other": "{{count}} Medikamente",
+      "mixed_one": "{{scheduled}} geplant · {{asNeeded}} bei Bedarf",
+      "mixed_other": "{{scheduled}} geplant · {{asNeeded}} bei Bedarf",
+      "asNeededOnly": "{{asNeeded}} bei Bedarf"
+    },
+    "historySubtitle": "Verfolgen Sie die Einnahmetreue und sehen Sie, was wann eingenommen wurde."
   },
   "needsAttention": "Braucht Aufmerksamkeit",
   "needsAttentionHint": "Dosen von gestern, auf die niemand geantwortet hat",

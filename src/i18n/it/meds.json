@@ -104,7 +104,16 @@
     "weekReport": "Report",
     "anytime": "Qualsiasi ora",
     "zoneBehindHm": "Gli orari sono quelli di {{name}} · {{hours}} h {{minutes}} min indietro rispetto a te",
-    "zoneAheadHm": "Gli orari sono quelli di {{name}} · {{hours}} h {{minutes}} min avanti rispetto a te"
+    "zoneAheadHm": "Gli orari sono quelli di {{name}} · {{hours}} h {{minutes}} min avanti rispetto a te",
+    "summary": {
+      "none": "Ancora nessun farmaco.",
+      "scheduled_one": "{{count}} farmaco",
+      "scheduled_other": "{{count}} farmaci",
+      "mixed_one": "{{scheduled}} programmato · {{asNeeded}} al bisogno",
+      "mixed_other": "{{scheduled}} programmati · {{asNeeded}} al bisogno",
+      "asNeededOnly": "{{asNeeded}} al bisogno"
+    },
+    "historySubtitle": "Monitora l'aderenza e rivedi cosa è stato preso e quando."
   },
   "needsAttention": "Richiede attenzione",
   "needsAttentionHint": "Dosi di ieri non ancora segnate",

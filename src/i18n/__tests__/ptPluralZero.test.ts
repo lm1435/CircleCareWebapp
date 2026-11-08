@@ -35,6 +35,10 @@ const RENDERED_ONLY_ABOVE_ZERO: Record<string, string> = {
   'shifts:duration.hours': 'durationLabel renders hours only when hours > 0',
   'shifts:duration.minutes': 'durationLabel renders minutes only for a 15-minute-or-longer shift',
   'shifts:notCoveredCount': 'coverageLabel asks for it only when notCovered > 0',
+  // Meds tab summary line: scheduled / mixed only exist when the roster has >= 1 medication
+  // (an empty roster reads meds:page.summary.none), see lib/medicationsSummary.
+  'meds:page.summary.scheduled': 'summary shows the none-copy at 0, so a count is always >= 1',
+  'meds:page.summary.mixed': 'summary shows the none-copy at 0, so a count is always >= 1',
   // Notifications inbox per-circle counts: the card count / bell only renders when count > 0
   // (CircleCard `unread > 0`), and the scoped subtitle falls back to the bare circle name at 0
   // (NotificationsPage `scopedUnread > 0`).

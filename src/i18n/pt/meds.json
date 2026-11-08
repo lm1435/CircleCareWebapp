@@ -104,7 +104,16 @@
     "weekReport": "Relatório",
     "anytime": "Qualquer hora",
     "zoneBehindHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min a menos que você",
-    "zoneAheadHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min a mais que você"
+    "zoneAheadHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min a mais que você",
+    "summary": {
+      "none": "Nenhum medicamento ainda.",
+      "scheduled_one": "{{count}} medicamento",
+      "scheduled_other": "{{count}} medicamentos",
+      "mixed_one": "{{scheduled}} programado · {{asNeeded}} se necessário",
+      "mixed_other": "{{scheduled}} programados · {{asNeeded}} se necessário",
+      "asNeededOnly": "{{asNeeded}} se necessário"
+    },
+    "historySubtitle": "Acompanhe a adesão e veja o que foi tomado e quando."
   },
   "needsAttention": "Requer atenção",
   "needsAttentionHint": "Doses de ontem que ninguém respondeu",

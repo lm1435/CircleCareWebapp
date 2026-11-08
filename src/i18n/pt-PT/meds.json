@@ -43,7 +43,10 @@
     "zoneAhead_one": "Os horários são os de {{name}} · {{hours}} h à frente da sua hora",
     "zoneAhead_other": "Os horários são os de {{name}} · {{hours}} h à frente da sua hora",
     "zoneBehindHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min atrás da sua hora",
-    "zoneAheadHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min à frente da sua hora"
+    "zoneAheadHm": "Os horários são os de {{name}} · {{hours}} h {{minutes}} min à frente da sua hora",
+    "summary": {
+      "none": "Ainda sem medicamentos."
+    }
   },
   "history": {
     "loading": "A carregar histórico…",

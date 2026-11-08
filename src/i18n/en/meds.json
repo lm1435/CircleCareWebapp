@@ -104,7 +104,16 @@
     "weekReport": "Report",
     "anytime": "Anytime",
     "zoneBehindHm": "Times are {{name}}'s time · {{hours}} h {{minutes}} min behind you",
-    "zoneAheadHm": "Times are {{name}}'s time · {{hours}} h {{minutes}} min ahead of you"
+    "zoneAheadHm": "Times are {{name}}'s time · {{hours}} h {{minutes}} min ahead of you",
+    "summary": {
+      "none": "No medications yet.",
+      "scheduled_one": "{{count}} medication",
+      "scheduled_other": "{{count}} medications",
+      "mixed_one": "{{scheduled}} scheduled · {{asNeeded}} as needed",
+      "mixed_other": "{{scheduled}} scheduled · {{asNeeded}} as needed",
+      "asNeededOnly": "{{asNeeded}} as needed"
+    },
+    "historySubtitle": "Track adherence and review what was taken when."
   },
   "needsAttention": "Needs attention",
   "needsAttentionHint": "Doses from yesterday nobody answered",

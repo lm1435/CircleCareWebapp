@@ -1,5 +1,13 @@
 {
   "export": {
     "healthVitals": "Signes vitaux"
+  },
+  "page": {
+    "summary": {
+      "none": "Aucun médicament pour le moment.",
+      "mixed_one": "{{scheduled}} planifié · {{asNeeded}} au besoin",
+      "mixed_other": "{{scheduled}} planifiés · {{asNeeded}} au besoin",
+      "asNeededOnly": "{{asNeeded}} au besoin"
+    }
   }
 }

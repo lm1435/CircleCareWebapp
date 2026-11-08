@@ -68,6 +68,7 @@ import { useMedicationConfirmations, useWeeklyAdherence } from '@/hooks/useMedCo
 import { dayPartForTime, doseSortKey, groupByDayPart, type MedDayPart } from '@/lib/medTimeOfDay';
 import { useLargeTextLayoutEvent } from '@/lib/largeText';
 import { zoneGap } from '@/utils/zoneGap';
+import { medicationsSummaryText } from '@/lib/medicationsSummary';
 import { useHourCycle } from '@/hooks/useHourCycle';
 import type { HourCycle } from '@/utils/hourCycle';
 import {
@@ -76,6 +77,7 @@ import {
   getCachedDateTimeFormat,
   getDateInTimezone,
   getDeviceTimezone,
+  getTimezoneLabel,
 } from '@/utils/timezone';
 import { Analytics } from '@/lib/analytics';
 
@@ -1024,6 +1026,18 @@ export default function MedicationsPage(): ReactElement {
           minutes: gapMinutes,
         })
     : null;
+  // ONE subtitle line on EVERY tab, same slot: the segmented control sits right under it, so a tab
+  // with no line (or two) moves everything below when you switch. Medications: a summary of the
+  // ACTIVE roster already loaded, with the recipient's short zone appended when the clocks differ
+  // (the full sentence goes to screen readers, below). A non-breaking space holds the line's height
+  // until the roster answers.
+  const rosterSettled = !rosterQuery.isLoading && !rosterQuery.isError && timezone !== null;
+  const medsSummary = rosterSettled ? medicationsSummaryText(active) : null;
+  const zoneShort = zoneLine && timezone ? getTimezoneLabel(timezone) : '';
+  const medsSubtitle = medsSummary
+    ? t(medsSummary.key, medsSummary.options) + (zoneShort ? ` \u00b7 ${zoneShort}` : '')
+    : '\u00a0';
+  const mastheadSubtitle = tab === 'medications' ? medsSubtitle : t('meds:page.historySubtitle');
   // The weekly adherence summary (moved here from the Overview): hidden when there
   // is nothing scheduled or the read failed, like the card it replaces.
   const weekly_ = weekly.data;
@@ -1219,7 +1233,7 @@ export default function MedicationsPage(): ReactElement {
         section={t('common:nav.meds')}
         tone="clay"
         title={pageTitle}
-        subtitle={zoneLine ?? undefined}
+        subtitle={mastheadSubtitle}
         rightAction={
           canEdit
             ? {
@@ -1244,6 +1258,12 @@ export default function MedicationsPage(): ReactElement {
           onDismiss={() => setMedicationLinkGone(false)}
         />
       ) : null}
+
+      {tab === 'medications' && zoneLine && (
+        <p className="sr-only" data-testid="meds-zone-sr">
+          {zoneLine}
+        </p>
+      )}
 
       <div className="px-5 pt-1">
         <SegmentedControl

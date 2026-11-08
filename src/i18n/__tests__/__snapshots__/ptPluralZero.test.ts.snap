@@ -197,6 +197,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Dias restantes: 1",
     "2 dias restantes",
   ],
+  "pt meds:page.summary.mixed": [
+    "{{scheduled}} programado · {{asNeeded}} se necessário",
+    "{{scheduled}} programado · {{asNeeded}} se necessário",
+    "{{scheduled}} programados · {{asNeeded}} se necessário",
+  ],
+  "pt meds:page.summary.scheduled": [
+    "0 medicamento",
+    "1 medicamento",
+    "2 medicamentos",
+  ],
   "pt meds:page.zoneAhead": [
     "Os horários são os de Ana · {{hours}} h a mais que você",
     "Os horários são os de Ana · {{hours}} h a mais que você",
@@ -556,6 +566,16 @@ exports[`pt / pt-PT plural keys read correctly at count 0 > review artifact: eve
     "Dias restantes: 0",
     "Dias restantes: 1",
     "2 dias restantes",
+  ],
+  "pt-PT meds:page.summary.mixed": [
+    "{{scheduled}} programado · {{asNeeded}} se necessário",
+    "{{scheduled}} programado · {{asNeeded}} se necessário",
+    "{{scheduled}} programados · {{asNeeded}} se necessário",
+  ],
+  "pt-PT meds:page.summary.scheduled": [
+    "0 medicamento",
+    "1 medicamento",
+    "2 medicamentos",
   ],
   "pt-PT meds:page.zoneAhead": [
     "Os horários são os de Ana · {{hours}} h à frente da sua hora",

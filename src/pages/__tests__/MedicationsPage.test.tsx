@@ -1654,6 +1654,102 @@ describe('MedicationsPage — simple UI', () => {
     expect(screen.queryByText(/Times are/)).toBeNull();
   });
 
+  describe('one-line summary on both tabs (no layout jump between Medications | History)', () => {
+    const med = (id: string, name: string, over: Partial<CalendarEvent> = {}) =>
+      makeMed({ id, medication_name: name, title: name, ...over });
+    const prn = (id: string, name: string) =>
+      med(id, name, { as_needed: true, recurrence_rule: null, scheduled_time: null });
+    const denver = { ...rosa, timezone: 'America/Denver' };
+    const subtitle = () => screen.getAllByTestId('page-subtitle');
+
+    it('none: "No medications yet."', () => {
+      mockUseCircle.mockReturnValue(denver);
+      mockUseMedicationRoster.mockReturnValue(rosterResult([]));
+      renderPage();
+      expect(subtitle()).toHaveLength(1);
+      expect(subtitle()[0]).toHaveTextContent(/^No medications yet\.$/);
+    });
+
+    it('scheduled only, singular and plural', () => {
+      mockUseCircle.mockReturnValue(denver);
+      mockUseMedicationRoster.mockReturnValue(rosterResult([med('a', 'Metformin')]));
+      const { unmount } = renderPage();
+      expect(subtitle()[0]).toHaveTextContent(/^1 medication$/);
+      unmount();
+      mockUseMedicationRoster.mockReturnValue(
+        rosterResult([med('a', 'Metformin'), med('b', 'Aspirin')])
+      );
+      renderPage();
+      expect(subtitle()[0]).toHaveTextContent(/^2 medications$/);
+    });
+
+    it('mixed: "{scheduled} scheduled · {asNeeded} as needed"', () => {
+      mockUseCircle.mockReturnValue(denver);
+      mockUseMedicationRoster.mockReturnValue(
+        rosterResult([med('a', 'Metformin'), med('b', 'Aspirin'), prn('c', 'Ibuprofen')])
+      );
+      renderPage();
+      expect(subtitle()[0]).toHaveTextContent(/^2 scheduled \u00b7 1 as needed$/);
+    });
+
+    it('as-needed only: "{asNeeded} as needed"', () => {
+      mockUseCircle.mockReturnValue(denver);
+      mockUseMedicationRoster.mockReturnValue(
+        rosterResult([prn('c', 'Ibuprofen'), prn('d', 'Tylenol')])
+      );
+      renderPage();
+      expect(subtitle()[0]).toHaveTextContent(/^2 as needed$/);
+    });
+
+    it('ended and discontinued medications are not counted', () => {
+      mockUseCircle.mockReturnValue(denver);
+      mockUseMedicationRoster.mockReturnValue(
+        rosterResult([
+          med('a', 'Metformin'),
+          med('b', 'Warfarin', { discontinued_at: '2026-07-20T12:00:00Z' }),
+          med('c', 'Amoxicillin', { scheduled_date: '2026-07-01', recurrence_end_date: '2026-08-19' }),
+        ])
+      );
+      renderPage();
+      expect(subtitle()[0]).toHaveTextContent(/^1 medication$/);
+    });
+
+    it('zone differs: the SAME single line gets a short zone suffix; the full sentence is for screen readers', () => {
+      mockUseCircle.mockReturnValue(rosa);
+      mockUseMedicationRoster.mockReturnValue(rosterResult([med('a', 'Metformin')]));
+      renderPage();
+      expect(subtitle()).toHaveLength(1);
+      expect(subtitle()[0]).toHaveTextContent(/^1 medication \u00b7 New York$/);
+      expect(screen.getByTestId('meds-zone-sr')).toHaveTextContent(
+        "Times are Rosa's time · 2 hours ahead of you"
+      );
+      expect(screen.getByTestId('meds-zone-sr')).toHaveClass('sr-only');
+    });
+
+    it('holds the line (a non-breaking space) while the roster loads, so nothing moves when it lands', () => {
+      mockUseCircle.mockReturnValue(denver);
+      mockUseMedicationRoster.mockReturnValue(rosterResult([], { isLoading: true }));
+      renderPage();
+      expect(subtitle()).toHaveLength(1);
+      expect(subtitle()[0].textContent).toBe('\u00a0');
+    });
+
+    it('BOTH tabs render exactly one subtitle, in the same element and style', async () => {
+      const user = userEvent.setup();
+      mockUseCircle.mockReturnValue(denver);
+      mockUseMedicationRoster.mockReturnValue(rosterResult([med('a', 'Metformin')]));
+      renderPage();
+      const onMeds = subtitle();
+      expect(onMeds).toHaveLength(1);
+      const cls = onMeds[0].className;
+      await user.click(screen.getByRole('tab', { name: 'History' }));
+      const onHistory = subtitle();
+      expect(onHistory).toHaveLength(1);
+      expect(onHistory[0]).toHaveTextContent('Track adherence and review what was taken when.');
+      expect(onHistory[0].className).toBe(cls);
+    });
+  });
+
   it('groups by the dose’s own time: Morning, Midday, Evening, Bedtime, then When needed', () => {
     mockUseCircle.mockReturnValue(rosa);
     mockUseMedicationRoster.mockReturnValue(

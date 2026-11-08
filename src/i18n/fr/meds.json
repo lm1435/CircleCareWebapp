@@ -104,7 +104,16 @@
     "weekReport": "Rapport",
     "anytime": "À tout moment",
     "zoneBehindHm": "Les heures sont celles de {{name}} · {{hours}} h {{minutes}} min de moins que vous",
-    "zoneAheadHm": "Les heures sont celles de {{name}} · {{hours}} h {{minutes}} min de plus que vous"
+    "zoneAheadHm": "Les heures sont celles de {{name}} · {{hours}} h {{minutes}} min de plus que vous",
+    "summary": {
+      "none": "Aucun médicament pour l’instant.",
+      "scheduled_one": "{{count}} médicament",
+      "scheduled_other": "{{count}} médicaments",
+      "mixed_one": "{{scheduled}} planifié · {{asNeeded}} si besoin",
+      "mixed_other": "{{scheduled}} planifiés · {{asNeeded}} si besoin",
+      "asNeededOnly": "{{asNeeded}} si besoin"
+    },
+    "historySubtitle": "Suivez l’observance et consultez ce qui a été pris, et quand."
   },
   "needsAttention": "À vérifier",
   "needsAttentionHint": "Doses d’hier restées sans réponse",
